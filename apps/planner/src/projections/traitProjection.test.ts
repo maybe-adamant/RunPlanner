@@ -133,9 +133,7 @@ describe('route trait projection', () => {
   it('aggregates divergent branch evidence and sorts rows by engine chronology', () => {
     const source = createGoldenFGHIProject();
     const assembly = simulateProjectAssembly(catalog, source);
-    const route = assembly.evaluation.routes.find(
-      (candidate) => candidate.routeKey === 'Underworld',
-    );
+    const route = assembly.evaluation.route;
     const fEvaluation = route?.biomes.find((biome) => biome.biomeKey === 'F');
     const traces =
       fEvaluation !== undefined && 'rewards' in fEvaluation
@@ -192,31 +190,25 @@ describe('route trait projection', () => {
     const otherTrace = Object.freeze({ ...secondTrace, chronologicalIndex: 7 });
     const modifiedEvaluation = Object.freeze({
       ...assembly.evaluation,
-      routes: Object.freeze(
-        assembly.evaluation.routes.map((candidate) =>
-          candidate.routeKey !== 'Underworld'
-            ? candidate
-            : Object.freeze({
-                ...candidate,
-                biomes: Object.freeze(
-                  candidate.biomes.map((biome) => {
-                    if (!('rewards' in biome)) return biome;
-                    return Object.freeze({
-                      ...biome,
-                      rewards: Object.freeze({
-                        ...biome.rewards,
-                        selectedTraitOffers: Object.freeze(
-                          biome.biomeKey === 'F'
-                            ? [validTrace, otherTrace, invalidTrace]
-                            : biome.rewards.selectedTraitOffers,
-                        ),
-                      }),
-                    });
-                  }),
+      route: Object.freeze({
+        ...assembly.evaluation.route,
+        biomes: Object.freeze(
+          assembly.evaluation.route.biomes.map((biome) => {
+            if (!('rewards' in biome)) return biome;
+            return Object.freeze({
+              ...biome,
+              rewards: Object.freeze({
+                ...biome.rewards,
+                selectedTraitOffers: Object.freeze(
+                  biome.biomeKey === 'F'
+                    ? [validTrace, otherTrace, invalidTrace]
+                    : biome.rewards.selectedTraitOffers,
                 ),
               }),
+            });
+          }),
         ),
-      ),
+      }),
     }) as ProjectEvaluation;
     const workspace = structuredWorkspace.project(assembly);
     const rows = projectRouteTraitOffers(
@@ -267,9 +259,7 @@ describe('route trait projection', () => {
   it('resolves duplicate occurrence IDs within the owning biome', () => {
     const source = createGoldenFGHIProject();
     const assembly = simulateProjectAssembly(catalog, source);
-    const routeEvaluation = assembly.evaluation.routes.find(
-      (route) => route.routeKey === 'Underworld',
-    );
+    const routeEvaluation = assembly.evaluation.route;
     const gEvaluation = routeEvaluation?.biomes.find((biome) => biome.biomeKey === 'G');
     const trace =
       gEvaluation !== undefined && 'rewards' in gEvaluation
@@ -285,7 +275,7 @@ describe('route trait projection', () => {
     if (!('biomeKey' in traceAddress) || !('occurrenceId' in traceAddress)) {
       throw new Error('G trait trace address is not occurrence-owned');
     }
-    const sourceRoute = source.routes.find((route) => route.routeKey === 'Underworld');
+    const sourceRoute = source.route;
     const fBiome = sourceRoute?.biomes.find((biome) => biome.biomeKey === 'F');
     const fOccurrence = fBiome?.topology?.occurrences[0];
     if (sourceRoute === undefined || fBiome === undefined || fOccurrence === undefined) {
@@ -296,34 +286,28 @@ describe('route trait projection', () => {
     // G owner so a route-wide scan would return the wrong game name.
     const project = Object.freeze({
       ...source,
-      routes: Object.freeze(
-        source.routes.map((route) =>
-          route.routeKey !== 'Underworld'
-            ? route
-            : Object.freeze({
-                ...route,
-                biomes: Object.freeze(
-                  route.biomes.map((biome) =>
-                    biome.biomeKey !== 'F' || biome.topology === null
-                      ? biome
-                      : Object.freeze({
-                          ...biome,
-                          topology: Object.freeze({
-                            ...biome.topology,
-                            occurrences: Object.freeze([
-                              Object.freeze({
-                                ...fOccurrence,
-                                occurrenceId: traceAddress.occurrenceId,
-                              }),
-                              ...biome.topology.occurrences.slice(1),
-                            ]),
-                          }),
-                        }),
-                  ),
-                ),
-              }),
+      route: Object.freeze({
+        ...source.route,
+        biomes: Object.freeze(
+          source.route.biomes.map((biome) =>
+            biome.biomeKey !== 'F' || biome.topology === null
+              ? biome
+              : Object.freeze({
+                  ...biome,
+                  topology: Object.freeze({
+                    ...biome.topology,
+                    occurrences: Object.freeze([
+                      Object.freeze({
+                        ...fOccurrence,
+                        occurrenceId: traceAddress.occurrenceId,
+                      }),
+                      ...biome.topology.occurrences.slice(1),
+                    ]),
+                  }),
+                }),
+          ),
         ),
-      ),
+      }),
     });
     const workspace = structuredWorkspace.project(assembly);
     const rows = projectRouteTraitOffers(

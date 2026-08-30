@@ -37,17 +37,15 @@ describe('authored-project project-state commands', () => {
     );
     const seeded = loadSurfaceNOProject();
     expect(
-      seeded.routes
-        .find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'O')
+      seeded.route.biomes
+        .find((biome) => biome.biomeKey === 'O')
         ?.topology?.occurrences.some(
           (candidate) => candidate.occurrenceId === forcedOccurrence.occurrenceId,
         ),
     ).toBe(true);
     const occurrenceState = (project: ReturnType<typeof loadSurfaceNOProject>) =>
-      project.routes
-        .find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'O')
+      project.route.biomes
+        .find((biome) => biome.biomeKey === 'O')
         ?.topology?.occurrences.find(
           (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
         );
@@ -114,11 +112,9 @@ describe('authored-project project-state commands', () => {
       generationKey: 'initial:first',
       purchase: { delay: 2, rushed: false },
     });
-    const postboss = purchased.routes
-      .find((candidate) => candidate.routeKey === 'Surface')
-      ?.biomes[0]?.topology?.occurrences.find(
-        (candidate) => candidate.occurrenceId === 'surface-n-preboss:postboss',
-      );
+    const postboss = purchased.route?.biomes[0]?.topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === 'surface-n-preboss:postboss',
+    );
     expect(postboss?.hermesShrine?.purchaseBySlot?.first).toEqual({ delay: 2, rushed: false });
     expect(postboss?.roomActions.order).not.toContainEqual(
       expect.objectContaining({ siteKey: 'hermesShrineDelivery' }),
@@ -150,11 +146,9 @@ describe('authored-project project-state commands', () => {
       generationKey: 'travelDealRefill',
       purchase: null,
     });
-    const clearedPostboss = refillCleared.routes
-      .find((candidate) => candidate.routeKey === 'Surface')
-      ?.biomes[0]?.topology?.occurrences.find(
-        (candidate) => candidate.occurrenceId === 'surface-n-preboss:postboss',
-      );
+    const clearedPostboss = refillCleared.route?.biomes[0]?.topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === 'surface-n-preboss:postboss',
+    );
     expect(clearedPostboss?.hermesShrine?.travelDealRefill).toMatchObject({
       offer: { rewardType: 'SpellDrop' },
     });
@@ -238,19 +232,14 @@ describe('authored-project project-state commands', () => {
       occurrenceId: string,
       mutateOccurrence: (occurrence: Record<string, unknown>) => void,
     ) => {
-      const routes = document.routes as Record<string, unknown>[];
-      for (const route of routes) {
-        for (const biome of route.biomes as Record<string, unknown>[]) {
-          const topology = biome.topology as Record<string, unknown> | null;
-          const occurrences =
-            (topology?.occurrences as Record<string, unknown>[] | undefined) ?? [];
-          const occurrence = occurrences.find(
-            (candidate) => candidate.occurrenceId === occurrenceId,
-          );
-          if (occurrence !== undefined) {
-            mutateOccurrence(occurrence);
-            return;
-          }
+      const route = document.route as Record<string, unknown>;
+      for (const biome of route.biomes as Record<string, unknown>[]) {
+        const topology = biome.topology as Record<string, unknown> | null;
+        const occurrences = (topology?.occurrences as Record<string, unknown>[] | undefined) ?? [];
+        const occurrence = occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
+        if (occurrence !== undefined) {
+          mutateOccurrence(occurrence);
+          return;
         }
       }
       throw new Error(`missing encoded ${occurrenceId}`);
@@ -320,11 +309,9 @@ describe('authored-project project-state commands', () => {
       generationKey: 'initial:first',
       purchase: { delay: 2, rushed: true },
     });
-    const occurrenceState = authored.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes[0]?.topology?.occurrences.find(
-        (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
-      );
+    const occurrenceState = authored.route.biomes[0]?.topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+    );
     expect(occurrenceState?.hermesShrine?.offerBySlot.first).toEqual({ rewardType: 'GiftDrop' });
     const entryKey = hermesShrineDeliveryEntryKey(occurrence, 'initial:first');
     expect(occurrenceState?.roomActions.order).toContainEqual({
@@ -344,11 +331,9 @@ describe('authored-project project-state commands', () => {
       catalog,
     );
     expect(
-      roundTripped.routes
-        .find((route) => route.routeKey === 'Surface')
-        ?.biomes[0]?.topology?.occurrences.find(
-          (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
-        )?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey]
+      roundTripped.route.biomes[0]?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+      )?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey]
         ?.levelResolutionsByAcquisitionRole?.self,
     ).toEqual({ kind: 'random', targetTraitKey: null });
   });
@@ -401,11 +386,9 @@ describe('authored-project project-state commands', () => {
     });
 
     expect(
-      project.routes
-        .find((route) => route.routeKey === 'Surface')
-        ?.biomes[0]?.topology?.occurrences.find(
-          (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
-        )?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey]
+      project.route.biomes[0]?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+      )?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey]
         ?.traitOffersByAcquisitionRole.hiddenSource,
     ).toEqual(offer);
   });
@@ -423,9 +406,10 @@ describe('authored-project project-state commands', () => {
     };
     const document = createProjectDocument(withoutRack, {
       projectId: 'fountain-without-rack',
-      configuredBiomeCounts: { Underworld: 1 },
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
     });
-    expect(document.routes[0]?.biomes[0]?.topology).toBeNull();
+    expect(document.route?.biomes[0]?.topology).toBeNull();
   });
 
   it('keeps Boss declaration on the biome and Postboss selection on the route', () => {
@@ -471,7 +455,7 @@ describe('authored-project project-state commands', () => {
         route,
         arcanaKeys: exactSelection,
       });
-      expect(exact.routes[0]?.loadout.manualArcanaKeys).toHaveLength(exactSelection.length);
+      expect(exact.route?.loadout.manualArcanaKeys).toHaveLength(exactSelection.length);
       expect(() =>
         applyProjectCommand(exact, catalog, {
           kind: 'ReplaceManualArcanaSelection',
@@ -515,7 +499,7 @@ describe('authored-project project-state commands', () => {
       occurrenceId: createOccurrenceId('retained-f-start'),
       gameName: 'F_Opening01',
     });
-    const retainedF = authored.routes[0]?.biomes[0];
+    const retainedF = authored.route?.biomes[0];
 
     const grown = applyProjectCommand(authored, catalog, {
       kind: 'ConfigureRoutePrefix',
@@ -523,13 +507,13 @@ describe('authored-project project-state commands', () => {
       configuredBiomeCount: 4,
     });
 
-    expect(grown.routes[0]?.biomes.map((biome) => biome.biomeKey)).toEqual(['F', 'G', 'H', 'I']);
-    expect(grown.routes[0]?.biomes[0]).toEqual(retainedF);
-    for (const biome of grown.routes[0]?.biomes.slice(1) ?? []) {
+    expect(grown.route?.biomes.map((biome) => biome.biomeKey)).toEqual(['F', 'G', 'H', 'I']);
+    expect(grown.route?.biomes[0]).toEqual(retainedF);
+    for (const biome of grown.route?.biomes.slice(1) ?? []) {
       expect(biome.topology).toBeNull();
       expect(biome.topology).toBeNull();
     }
-    expect(grown.routes[0]?.biomes[3]).toMatchObject({
+    expect(grown.route?.biomes[3]).toMatchObject({
       biomeKey: 'I',
       state: { maxNonGoalRewards: null },
     });
@@ -546,8 +530,8 @@ describe('authored-project project-state commands', () => {
       route: underworld,
       configuredBiomeCount: 2,
     });
-    expect(shrunk.routes[0]?.biomes.map((biome) => biome.biomeKey)).toEqual(['F', 'G']);
-    expect(shrunk.routes[0]?.biomes[0]).toEqual(retainedF);
+    expect(shrunk.route?.biomes.map((biome) => biome.biomeKey)).toEqual(['F', 'G']);
+    expect(shrunk.route?.biomes[0]).toEqual(retainedF);
   });
 
   it('authors Arcana and Fear independently from weapon, aspect, and biome state', () => {
@@ -571,13 +555,13 @@ describe('authored-project project-state commands', () => {
       aspectKey: 'DaggerBackstabAspect',
     });
 
-    expect(withWeapon.routes[0]?.loadout).toMatchObject({
+    expect(withWeapon.route?.loadout).toMatchObject({
       weaponKey: 'WeaponDagger',
       aspectKey: 'DaggerBackstabAspect',
       manualArcanaKeys: ['ChanneledCast', 'CastCount'],
       fearRanks: { EnemyDamageShrineUpgrade: 3 },
     });
-    expect(withWeapon.routes[0]?.biomes).toEqual(original.routes[0]?.biomes);
+    expect(withWeapon.route?.biomes).toEqual(original.route?.biomes);
     expect(
       applyProjectCommand(withWeapon, catalog, {
         kind: 'ReplaceFearVowRank',
@@ -603,7 +587,7 @@ describe('authored-project project-state commands', () => {
       weaponKey: 'WeaponSuit',
       aspectKey: 'SuitHexAspect',
     });
-    const initialTree = selene.routes[0]!.loadout.aspectHexTree;
+    const initialTree = selene.route!.loadout.aspectHexTree;
     expect(initialTree).toEqual({
       layoutKey: 'Lung',
       rareTalentKeys: ['MoonBeamConsecutiveDamageTalent', 'MoonBeamDefenseTalent'],
@@ -623,7 +607,7 @@ describe('authored-project project-state commands', () => {
         epicTalentKeys: ['MoonBeamTargetTalent', 'MoonBeamExBeamBonusTalent'],
       },
     });
-    expect(changed.present.routes[0]!.loadout.aspectHexTree?.layoutKey).toBe('Maze');
+    expect(changed.present.route!.loadout.aspectHexTree?.layoutKey).toBe('Maze');
     expect(undoProjectHistory(changed).present).toBe(history.present);
     expect(redoProjectHistory(changed).present).toBe(changed.present);
     const ordinary = applyProjectCommand(selene, catalog, {
@@ -632,7 +616,7 @@ describe('authored-project project-state commands', () => {
       weaponKey: 'WeaponSuit',
       aspectKey: 'BaseSuitAspect',
     });
-    expect(ordinary.routes[0]!.loadout).not.toHaveProperty('aspectHexTree');
+    expect(ordinary.route!.loadout).not.toHaveProperty('aspectHexTree');
     expect(() =>
       applyProjectCommand(ordinary, catalog, {
         kind: 'ReplaceAspectHexTree',
@@ -663,7 +647,7 @@ describe('authored-project project-state commands', () => {
       rank: 4,
     });
 
-    const derived = deriveRouteLoadout(catalog, project.routes[0]!.loadout);
+    const derived = deriveRouteLoadout(catalog, project.route!.loadout);
     expect(derived.automaticArcanaKeys).toEqual([
       'SorceryRegenUpgrade',
       'BonusRarity',
@@ -721,7 +705,7 @@ describe('authored-project project-state commands', () => {
       value: 5,
     });
 
-    expect(replaced.routes[0]?.biomes[3]?.state).toEqual({ maxNonGoalRewards: 5 });
+    expect(replaced.route?.biomes[3]?.state).toEqual({ maxNonGoalRewards: 5 });
     expect(
       applyProjectCommand(replaced, catalog, {
         kind: 'ReplaceBiomeField',

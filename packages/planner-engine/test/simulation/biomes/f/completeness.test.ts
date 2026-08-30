@@ -31,9 +31,7 @@ import {
 } from '../../support/f-takeover-project';
 
 function fPlan(project: ProjectDocument) {
-  const plan = project.routes
-    .find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((biome) => biome.biomeKey === 'F');
+  const plan = project.route.biomes.find((biome) => biome.biomeKey === 'F');
   if (plan === undefined) throw new Error('missing F takeover plan');
   return plan;
 }

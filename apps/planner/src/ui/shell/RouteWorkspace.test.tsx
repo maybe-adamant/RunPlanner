@@ -21,6 +21,7 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { RouteWorkspace } from './RouteWorkspace';
 import { semanticOwnerElementId } from '../feedback/semanticOwner';
+import { createOpenTestApplication } from '@planner-test/fixtures/renderPlanner';
 
 function routeWorkspaceMarkup(
   application: ReturnType<typeof createApplication>,
@@ -28,13 +29,15 @@ function routeWorkspaceMarkup(
 ): string {
   const state = application.store.getState();
   const navigation = application.editorNavigation.routes.byKey[routeKey];
-  const workspace = application.selectStructuredWorkspace(state);
-  const workspaceRoute = workspace.routes.find((route) => route.routeKey === routeKey);
-  const feedback = projectFeedbackHierarchy(state.projectWorkspace.assembly.evaluation).routes.get(
-    routeKey,
-  );
-  if (navigation === undefined || workspaceRoute === undefined || feedback === undefined)
+  const workspace = application.selectStructuredWorkspace(state)!;
+  if (
+    navigation === undefined ||
+    workspace === undefined ||
+    state.projectWorkspace.kind !== 'openProject'
+  )
     throw new Error(`${routeKey} route products are missing`);
+  const workspaceRoute = workspace.route;
+  const feedback = projectFeedbackHierarchy(state.projectWorkspace.assembly.evaluation).route;
 
   return renderToStaticMarkup(
     <Provider store={application.store}>
@@ -54,7 +57,7 @@ function routeWorkspaceMarkup(
 
 describe('RouteWorkspace', () => {
   it('hides empty route indexes and presents Route for a stale empty-index selection', () => {
-    const application = createApplication();
+    const application = createOpenTestApplication('Underworld');
     application.store.dispatch(
       routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'npcIndex' } }),
     );
@@ -71,7 +74,7 @@ describe('RouteWorkspace', () => {
   });
 
   it('orders configured biomes before the non-empty route indexes', () => {
-    const application = createApplication();
+    const application = createOpenTestApplication('Surface');
     application.store.dispatch(authoredProjectReplaced(loadSurfaceNOPQProject()));
 
     const markup = routeWorkspaceMarkup(application, 'Surface');
@@ -92,7 +95,7 @@ describe('RouteWorkspace', () => {
   });
 
   it('presents a selected resource placement by room name instead of occurrence identity', () => {
-    const application = createApplication();
+    const application = createOpenTestApplication('Surface');
     application.store.dispatch(authoredProjectReplaced(loadSurfaceNResourcesProject()));
     application.store.dispatch(
       routePanelSelected({ routeKey: 'Surface', panel: { kind: 'resources' } }),
@@ -104,7 +107,7 @@ describe('RouteWorkspace', () => {
   });
 
   it('renders a configured biome through the shared workspace rather than a biome-kind editor', () => {
-    const application = createApplication();
+    const application = createOpenTestApplication('Underworld');
     application.store.dispatch(
       authoredProjectCommandDispatched({
         kind: 'ConfigureRoutePrefix',
@@ -134,7 +137,7 @@ describe('RouteWorkspace', () => {
   });
 
   it('renders N’s Hub through the same workspace shell and preserves its board owners', () => {
-    const application = createApplication();
+    const application = createOpenTestApplication('Surface');
     application.store.dispatch(authoredProjectReplaced(loadSurfaceNOPQProject()));
     application.store.dispatch(
       routePanelSelected({ routeKey: 'Surface', panel: { kind: 'biome', biomeKey: 'N' } }),

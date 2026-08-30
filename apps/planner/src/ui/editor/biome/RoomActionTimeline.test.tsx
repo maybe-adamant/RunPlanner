@@ -24,7 +24,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createApplication } from '@planner/composition/createApplication';
+import { createOpenTestApplication } from '@planner-test/fixtures/renderPlanner';
 import type { WorkspaceInteractionCatalog } from '@planner/projections/structured-workspace';
 import {
   authoredProjectRedoRequested,
@@ -103,8 +103,7 @@ describe('OccurrenceRoomActions', () => {
     await view.user.selectOptions(outcome, 'timePiece');
     const authoredChaos = view.application.store
       .getState()
-      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F')
+      .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
       ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === chaosOccurrenceId);
     expect(
       authoredChaos?.state.kind === 'fixed' && authoredChaos.state.reward !== null
@@ -114,7 +113,7 @@ describe('OccurrenceRoomActions', () => {
   });
 
   it('reopens the shared Steady Growth target picker on exact finding navigation', async () => {
-    const application = createApplication();
+    const application = createOpenTestApplication('Underworld');
     const outcome = createSteadyGrowthOutcomeAddress(
       createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
       'Encounter',
@@ -168,7 +167,7 @@ describe('OccurrenceRoomActions', () => {
       traitLabel: (traitKey: string) => traitKey,
     };
     application.store.dispatch(semanticOwnerNavigated(outcome));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const interactions = {
       ...workspace.interactions,
       steadyGrowth: new Map([[semanticAddressKey(outcome), interaction]]),
@@ -185,7 +184,7 @@ describe('OccurrenceRoomActions', () => {
   });
 
   it('keeps a stale Steady Growth target visible and exposes its exact clear command', async () => {
-    const application = createApplication();
+    const application = createOpenTestApplication('Surface');
     vi.spyOn(application.store, 'dispatch').mockImplementation(() => undefined as never);
     const outcome = createSteadyGrowthOutcomeAddress(
       createOccurrenceAddress(nBiome, nOccurrenceIds.opening),
@@ -249,7 +248,7 @@ describe('OccurrenceRoomActions', () => {
       }),
       traitLabel: (traitKey: string) => traitKey,
     };
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const interactions = {
       ...workspace.interactions,
       steadyGrowth: new Map([[semanticAddressKey(outcome), interaction]]),
@@ -383,7 +382,7 @@ describe('OccurrenceRoomActions', () => {
     await view.user.click(movePickupEarlier);
     await waitFor(() => {
       const order = occurrenceRoomActionOrder(
-        view.application.store.getState().projectWorkspace.history.present,
+        view.application.store.getState().projectWorkspace.history!.present,
         'Underworld',
         'H',
         occurrenceId,
@@ -418,12 +417,12 @@ describe('OccurrenceRoomActions', () => {
       occurrenceById(occurrenceId),
     );
     openRoomTab('Room Timeline');
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.selectOptions(
       screen.getByRole('combobox', { name: 'Cage for encounter 1' }),
       'Cage01',
     );
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );
     await view.user.selectOptions(
@@ -433,7 +432,7 @@ describe('OccurrenceRoomActions', () => {
 
     const cagePermutation = () =>
       occurrenceRoomActionOrder(
-        view.application.store.getState().projectWorkspace.history.present,
+        view.application.store.getState().projectWorkspace.history!.present,
         'Underworld',
         'H',
         occurrenceId,
@@ -441,7 +440,7 @@ describe('OccurrenceRoomActions', () => {
         reference.kind === 'completeFieldsCage' ? [reference.phaseKey] : [],
       );
     await waitFor(() => expect(cagePermutation()).toEqual(['Cage03', 'Cage01', 'Cage02']));
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
     expect(
@@ -484,8 +483,7 @@ describe('OccurrenceRoomActions', () => {
     expect(cageTwoOption.disabled).toBe(false);
 
     const projected = workspaceProjection(view.application)
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'H')
+      .route?.biomes.find((biome) => biome.biomeKey === 'H')
       ?.nodes.find(
         (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
       );
@@ -505,11 +503,11 @@ describe('OccurrenceRoomActions', () => {
     );
     expect(genericProposal).toMatchObject({ kind: 'move', structurallyAuthorable: false });
 
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.selectOptions(selector, 'Cage02');
     await waitFor(() => {
       const order = occurrenceRoomActionOrder(
-        view.application.store.getState().projectWorkspace.history.present,
+        view.application.store.getState().projectWorkspace.history!.present,
         'Underworld',
         'H',
         occurrenceId,
@@ -521,13 +519,12 @@ describe('OccurrenceRoomActions', () => {
       ).toEqual(['Cage02', 'Cage01']);
       expect(order).toContainEqual({ kind: 'interactGorgon', phaseKey: 'Cage01' });
     });
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
 
     const edited = workspaceProjection(view.application)
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'H')
+      .route?.biomes.find((biome) => biome.biomeKey === 'H')
       ?.nodes.find(
         (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
       );
@@ -546,9 +543,9 @@ describe('OccurrenceRoomActions', () => {
     const malformed = decodeProjectDocument(
       {
         ...authored,
-        routes: authored.routes.map((route) => ({
-          ...route,
-          biomes: route.biomes.map((biome) =>
+        route: {
+          ...authored.route,
+          biomes: authored.route.biomes.map((biome) =>
             biome.biomeKey !== 'H' || biome.topology === null
               ? biome
               : {
@@ -572,7 +569,7 @@ describe('OccurrenceRoomActions', () => {
                   },
                 },
           ),
-        })),
+        },
       },
       catalog,
     );
@@ -651,7 +648,7 @@ describe('OccurrenceRoomActions', () => {
     await waitFor(() =>
       expect(
         occurrenceRoomActionOrder(
-          view.application.store.getState().projectWorkspace.history.present,
+          view.application.store.getState().projectWorkspace.history!.present,
           'Underworld',
           'H',
           occurrenceId,
@@ -701,8 +698,7 @@ describe('OccurrenceRoomActions', () => {
       expect(
         view.application.store
           .getState()
-          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-          ?.biomes.find((biome) => biome.biomeKey === 'F')
+          .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
           ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.purgingPool
           ?.traitKeyBySlot.left,
       ).not.toBeNull(),
@@ -717,8 +713,7 @@ describe('OccurrenceRoomActions', () => {
       expect(
         view.application.store
           .getState()
-          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-          ?.biomes.find((biome) => biome.biomeKey === 'F')
+          .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
           ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.roomActions
           .order,
       ).toContainEqual({ kind: 'sellPurgingPoolTrait', slotKey: 'left' }),
@@ -729,8 +724,7 @@ describe('OccurrenceRoomActions', () => {
       expect(
         view.application.store
           .getState()
-          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-          ?.biomes.find((biome) => biome.biomeKey === 'F')
+          .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
           ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.roomActions
           .order,
       ).toEqual([
@@ -747,8 +741,7 @@ describe('OccurrenceRoomActions', () => {
     const poolActionOrder = () =>
       view.application.store
         .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'F')
+        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
         ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.roomActions.order;
     await waitFor(() =>
       expect(poolActionOrder()).toEqual([
@@ -811,8 +804,7 @@ describe('OccurrenceRoomActions', () => {
     expect(
       view.application.store
         .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'F')
+        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
         ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.purgingPool
         ?.traitKeyBySlot.middle,
     ).not.toBeNull();
@@ -942,9 +934,9 @@ describe('OccurrenceRoomActions', () => {
     const project = decodeProjectDocument(
       {
         ...authored,
-        routes: authored.routes.map((route) => ({
-          ...route,
-          biomes: route.biomes.map((biome) =>
+        route: {
+          ...authored.route,
+          biomes: authored.route.biomes.map((biome) =>
             biome.biomeKey !== 'F' || biome.topology === null
               ? biome
               : {
@@ -959,7 +951,7 @@ describe('OccurrenceRoomActions', () => {
                   },
                 },
           ),
-        })),
+        },
       },
       catalog,
     );
@@ -991,12 +983,12 @@ describe('OccurrenceRoomActions', () => {
         .classList.contains('secondary-action'),
     ).toBe(true);
 
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.click(
       within(repairRow).getByRole('button', { name: 'Restore required action' }),
     );
     await waitFor(() =>
-      expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
         historyBefore + 1,
       ),
     );
@@ -1064,7 +1056,7 @@ describe('OccurrenceRoomActions', () => {
     await waitFor(() => expect(screen.queryByText('Interact with Combat')).toBeNull());
     expect(
       occurrenceRoomActionOrder(
-        view.application.store.getState().projectWorkspace.history.present,
+        view.application.store.getState().projectWorkspace.history!.present,
         'Underworld',
         'F',
         occurrenceId,
@@ -1093,7 +1085,7 @@ describe('OccurrenceRoomActions', () => {
     const combatOne = screen.getByLabelText('Combat 1 ship phase');
     const actionOrder = () =>
       occurrenceRoomActionOrder(
-        view.application.store.getState().projectWorkspace.history.present,
+        view.application.store.getState().projectWorkspace.history!.present,
         'Surface',
         'O',
         occurrenceId,
@@ -1191,12 +1183,12 @@ describe('OccurrenceRoomActions', () => {
     expect(
       (screen.getByRole('checkbox', { name: 'Purchased Offer 1' }) as HTMLInputElement).checked,
     ).toBe(false);
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.click(heal);
     await view.user.click(mana);
     expect(
       occurrenceRoomActionOrder(
-        view.application.store.getState().projectWorkspace.history.present,
+        view.application.store.getState().projectWorkspace.history!.present,
         'Underworld',
         'F',
         occurrenceId,
@@ -1205,7 +1197,7 @@ describe('OccurrenceRoomActions', () => {
       { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
       { kind: 'interactShopOffer', offerKey: 'Minor' },
     ]);
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 2,
     );
 
@@ -1226,7 +1218,7 @@ describe('OccurrenceRoomActions', () => {
     );
     expect(
       occurrenceRoomActionOrder(
-        view.application.store.getState().projectWorkspace.history.present,
+        view.application.store.getState().projectWorkspace.history!.present,
         'Underworld',
         'F',
         occurrenceId,
@@ -1311,7 +1303,7 @@ describe('OccurrenceRoomActions', () => {
     await waitFor(() =>
       expect(
         occurrenceRoomActionOrder(
-          view.application.store.getState().projectWorkspace.history.present,
+          view.application.store.getState().projectWorkspace.history!.present,
           'Underworld',
           'F',
           occurrenceId,
@@ -1354,7 +1346,7 @@ describe('OccurrenceRoomActions', () => {
     await view.user.click(remove);
     expect(
       occurrenceRoomActionOrder(
-        view.application.store.getState().projectWorkspace.history.present,
+        view.application.store.getState().projectWorkspace.history!.present,
         'Underworld',
         'F',
         entered.shopId,

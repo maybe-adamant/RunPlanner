@@ -98,7 +98,7 @@ describe('topology relational closure codec', () => {
   });
 
   it('derives staged selection from the selected spine rather than decision storage order', () => {
-    let document = applyProjectCommand(project('codec-staged-q', { Surface: 4 }), catalog, {
+    let document = applyProjectCommand(project('codec-staged-q', 'Surface', 4), catalog, {
       kind: 'CreateStart',
       biome: qBiome,
       occurrenceId: createOccurrenceId('q-intro'),
@@ -129,7 +129,7 @@ describe('topology relational closure codec', () => {
   });
 
   it('uses selected topology ownership to require active Shop entry state', () => {
-    let document = applyProjectCommand(project('codec-dormant-shop', { Underworld: 1 }), catalog, {
+    let document = applyProjectCommand(project('codec-dormant-shop', 'Underworld', 1), catalog, {
       kind: 'CreateStart',
       biome: fBiome,
       occurrenceId: createOccurrenceId('shop-opening'),
@@ -284,7 +284,7 @@ describe('topology relational closure codec', () => {
 
   it('rejects invalid selection, decision-source, exit-key, reachability, owner, and cycle shapes', () => {
     const widthOne = encodedTopology(
-      applyProjectCommand(project('codec-width-one', { Underworld: 1 }), catalog, {
+      applyProjectCommand(project('codec-width-one', 'Underworld', 1), catalog, {
         kind: 'CreateStart',
         biome: fBiome,
         occurrenceId: createOccurrenceId('f-width-one'),

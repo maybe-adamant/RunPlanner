@@ -77,9 +77,8 @@ describe('authored-project Shop occurrence commands', () => {
       value: { rewardType: 'MaxHealthDrop' },
     });
     project = replaceTestShopOfferActions(project, catalog, shop, ['MajorNonBoon']);
-    const state = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N')
+    const state = project.route.biomes
+      .find((biome) => biome.biomeKey === 'N')
       ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === shopId)?.state;
 
     expect(state).toMatchObject({
@@ -91,9 +90,8 @@ describe('authored-project Shop occurrence commands', () => {
       },
     });
     expect(
-      project.routes
-        .find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N')
+      project.route.biomes
+        .find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === shopId)
         ?.roomActions.order,
     ).toContainEqual({ kind: 'interactShopOffer', offerKey: 'MajorNonBoon' });
@@ -111,9 +109,8 @@ describe('authored-project Shop occurrence commands', () => {
       entry,
       value: { rewardType: 'StackUpgrade' },
     });
-    const occurrence = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N')
+    const occurrence = project.route.biomes
+      .find((biome) => biome.biomeKey === 'N')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopId);
     expect(
       occurrence?.acquisitionSites?.roomExit?.pickupEntries?.infernalContractReward?.offer,

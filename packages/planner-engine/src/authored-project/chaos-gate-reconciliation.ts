@@ -222,14 +222,19 @@ function desiredChaosSatisfaction(
 function locatedBiome(
   document: ProjectDocument,
   catalog: Catalog,
-  routeIndex: number,
   biomeIndex: number,
 ): LocatedBiome {
-  const route = document.routes[routeIndex]!;
+  const route = document.route;
   const plan = route.biomes[biomeIndex]!;
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
   if (layout === undefined) throw new Error(`unknown biome layout ${plan.biomeKey}`);
-  return Object.freeze({ routeIndex, biomeIndex, loadout: route.loadout, plan, layout });
+  return Object.freeze({
+    routeKey: route.routeKey,
+    biomeIndex,
+    loadout: route.loadout,
+    plan,
+    layout,
+  });
 }
 
 function generatedChaosOccurrenceId(topology: BiomeTopology, sourceOccurrenceId: OccurrenceId) {
@@ -294,8 +299,7 @@ export function ixionGeneratedChaosOccurrenceKeysForRoute(
 
 export function ixionGeneratedChaosOccurrenceKeys(document: ProjectDocument): ReadonlySet<string> {
   const generated = new Set<string>();
-  for (const route of document.routes)
-    for (const key of ixionGeneratedChaosOccurrenceKeysForRoute(route)) generated.add(key);
+  for (const key of ixionGeneratedChaosOccurrenceKeysForRoute(document.route)) generated.add(key);
   return generated;
 }
 
@@ -304,8 +308,7 @@ export function forcedChaosOccurrenceKeys(
   catalog: Catalog,
 ): ReadonlySet<string> {
   const forced = new Set<string>();
-  for (const route of document.routes)
-    for (const key of forcedChaosOccurrenceKeysForRoute(route, catalog)) forced.add(key);
+  for (const key of forcedChaosOccurrenceKeysForRoute(document.route, catalog)) forced.add(key);
   return forced;
 }
 
@@ -323,8 +326,8 @@ export function reconcileChaosTopology(
   catalog: Catalog,
 ): ProjectDocument {
   let next = document;
-  for (let routeIndex = 0; routeIndex < next.routes.length; routeIndex += 1) {
-    const route = next.routes[routeIndex]!;
+  {
+    const route = next.route;
     const satisfactions = desiredChaosSatisfaction(route, catalog);
     const retainedOrigins = new Set(
       satisfactions
@@ -337,7 +340,7 @@ export function reconcileChaosTopology(
     );
     const routeKey = route.routeKey;
     for (let biomeIndex = 0; biomeIndex < route.biomes.length; biomeIndex += 1) {
-      const plan = next.routes[routeIndex]!.biomes[biomeIndex]!;
+      const plan = next.route.biomes[biomeIndex]!;
       for (const source of plan.topology?.occurrences ?? []) {
         const generated = source.additionalExits.find(
           (exit) => exit.kind === 'chaos' && exit.origin?.kind === 'ixionGenerated',
@@ -348,7 +351,7 @@ export function reconcileChaosTopology(
           retainedOrigins.has(purchaseKey(generated.origin))
         )
           continue;
-        const located = locatedBiome(next, catalog, routeIndex, biomeIndex);
+        const located = locatedBiome(next, catalog, biomeIndex);
         next = applyRouteDetourCommand(next, catalog, located, {
           kind: 'RemoveGeneratedChaos',
           additional: createAdditionalExitAddress(
@@ -361,16 +364,14 @@ export function reconcileChaosTopology(
     }
     for (const satisfaction of satisfactions.filter((entry) => entry.generated)) {
       const { biomeKey, occurrence } = satisfaction.host;
-      const biomeIndex = next.routes[routeIndex]!.biomes.findIndex(
-        (plan) => plan.biomeKey === biomeKey,
-      );
+      const biomeIndex = next.route.biomes.findIndex((plan) => plan.biomeKey === biomeKey);
       if (biomeIndex < 0) continue;
-      const plan = next.routes[routeIndex]!.biomes[biomeIndex]!;
+      const plan = next.route.biomes[biomeIndex]!;
       const topology = plan.topology;
       const source =
         topology === null ? undefined : occurrenceById(topology, occurrence.occurrenceId);
       if (topology === null || source === undefined || chaosGate(source) !== undefined) continue;
-      const located = locatedBiome(next, catalog, routeIndex, biomeIndex);
+      const located = locatedBiome(next, catalog, biomeIndex);
       next = applyRouteDetourCommand(next, catalog, located, {
         kind: 'GenerateChaos',
         additional: createAdditionalExitAddress(

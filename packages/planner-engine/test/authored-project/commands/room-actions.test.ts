@@ -69,7 +69,8 @@ function unresolvedProject(): ProjectDocument {
   return applyProjectCommand(
     createProjectDocument(catalog, {
       projectId: 'room-actions',
-      configuredBiomeCounts: { Underworld: 1 },
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
     }),
     catalog,
     {
@@ -90,13 +91,13 @@ function project(): ProjectDocument {
 }
 
 function occurrence(document: ProjectDocument) {
-  const value = document.routes[0]?.biomes[0]?.topology?.occurrences[0];
+  const value = document.route?.biomes[0]?.topology?.occurrences[0];
   if (value === undefined) throw new Error('missing F start occurrence');
   return value;
 }
 
 function entryRoom(document: ProjectDocument) {
-  const route = document.routes[0];
+  const route = document.route;
   const plan = route?.biomes[0];
   if (route === undefined || plan === undefined) throw new Error('missing F authored biome');
   const room = materializeBiomePrefix(catalog, biome, plan, route.loadout)?.entryRoom;
@@ -108,9 +109,9 @@ function withoutRequiredRewardAction(document = project()): ProjectDocument {
   return decodeProjectDocument(
     {
       ...document,
-      routes: document.routes.map((route) => ({
-        ...route,
-        biomes: route.biomes.map((plan) =>
+      route: {
+        ...document.route,
+        biomes: document.route.biomes.map((plan) =>
           plan.topology === null
             ? plan
             : {
@@ -125,7 +126,7 @@ function withoutRequiredRewardAction(document = project()): ProjectDocument {
                 },
               },
         ),
-      })),
+      },
     },
     catalog,
   );
@@ -149,7 +150,7 @@ describe('room-action commands', () => {
       value: { kind: 'freeItem' },
       reward: { rewardType: 'ArmorBoost' },
     });
-    const eventOccurrence = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
+    const eventOccurrence = project.route?.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === goldenFOccurrenceId(5, 1),
     );
     if (eventOccurrence === undefined) throw new Error('missing Nemesis occurrence');
@@ -195,7 +196,8 @@ describe('room-action commands', () => {
     let authored = applyProjectCommand(
       createProjectDocument(catalog, {
         projectId: 'room-actions-reprieve',
-        configuredBiomeCounts: { Underworld: 1 },
+        routeKey: 'Underworld',
+        configuredBiomeCount: 1,
       }),
       catalog,
       { kind: 'CreateStart', biome, occurrenceId, gameName: 'F_Opening01' },
@@ -219,7 +221,7 @@ describe('room-action commands', () => {
       reward: createIncomingRewardAddress(biome, reprieveId),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
-    const reprieve = authored.routes[0]?.biomes[0]?.topology?.occurrences.find(
+    const reprieve = authored.route?.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === reprieveId,
     );
     if (reprieve === undefined) throw new Error('normal Reprieve target is missing');
@@ -242,7 +244,7 @@ describe('room-action commands', () => {
       action: createRoomActionAddress(biome, reprieveId, roomActionKey(fountain)),
       toIndex: 0,
     });
-    const reversedReprieve = reversed.routes[0]?.biomes[0]?.topology?.occurrences.find(
+    const reversedReprieve = reversed.route?.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === reprieveId,
     );
     if (reversedReprieve === undefined) throw new Error('moved Reprieve target is missing');
@@ -275,8 +277,7 @@ describe('room-action commands', () => {
     }
 
     const echo = createGoldenFGHProject()
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((plan) => plan.biomeKey === 'H')
+      .route?.biomes.find((plan) => plan.biomeKey === 'H')
       ?.topology?.occurrences.find((candidate) => candidate.gameName === 'H_Bridge01');
     if (echo === undefined) throw new Error('H Echo bridge occurrence is missing');
     expect(activeRoomActionReferences(catalog, goldenHBiome, echo)).not.toContainEqual(fountain);
@@ -341,9 +342,8 @@ describe('room-action commands', () => {
   it('rejects dormant contextual insertions while accepting an active Fields optional', () => {
     const fieldsOccurrenceId = createOccurrenceId('golden-h-combat02');
     const fields = createGoldenFGHProject();
-    const fieldsOccurrence = fields.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((plan) => plan.biomeKey === 'H')
+    const fieldsOccurrence = fields.route.biomes
+      .find((plan) => plan.biomeKey === 'H')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === fieldsOccurrenceId);
     if (fieldsOccurrence === undefined) throw new Error('missing active two-cage Fields room');
     const dormantCage: RoomActionReference = {
@@ -375,9 +375,8 @@ describe('room-action commands', () => {
       index: fieldsOccurrence.roomActions.order.length,
     });
     expect(
-      inserted.routes
-        .find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((plan) => plan.biomeKey === 'H')
+      inserted.route.biomes
+        .find((plan) => plan.biomeKey === 'H')
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === fieldsOccurrenceId)
         ?.roomActions.order,
     ).toContainEqual(optional);
@@ -497,7 +496,7 @@ describe('room-action commands', () => {
       encounterKey: 'ArtemisCombatF',
     });
     const targetOccurrence = (document: ProjectDocument) =>
-      document.routes[0]?.biomes[0]?.topology?.occurrences.find(
+      document.route?.biomes[0]?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === targetId,
       );
     expect(targetOccurrence(authored)?.roomActions.order).toEqual([]);
@@ -637,9 +636,8 @@ describe('room-action commands', () => {
       value: { kind: 'artificer' },
     });
     const fields = (document: ProjectDocument) => {
-      const occurrence = document.routes
-        .find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((plan) => plan.biomeKey === 'H')
+      const occurrence = document.route.biomes
+        .find((plan) => plan.biomeKey === 'H')
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === fieldsOccurrenceId);
       if (occurrence === undefined) throw new Error('Fields occurrence is missing');
       return occurrence;
@@ -737,9 +735,8 @@ describe('room-action commands', () => {
     };
     expect(history.past).toHaveLength(1);
     expect(
-      history.present.routes
-        .find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((plan) => plan.biomeKey === 'H')
+      history.present.route.biomes
+        .find((plan) => plan.biomeKey === 'H')
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === fieldsOccurrenceId)
         ?.roomActions.order,
     ).toContainEqual(replacement);
@@ -755,9 +752,8 @@ describe('room-action commands', () => {
       'Encounter',
     );
     const combatOccurrence = (document: ProjectDocument) => {
-      const candidate = document.routes
-        .find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((plan) => plan.biomeKey === 'F')
+      const candidate = document.route.biomes
+        .find((plan) => plan.biomeKey === 'F')
         ?.topology?.occurrences.find(
           (occurrence) => occurrence.occurrenceId === combatOccurrenceId,
         );
@@ -811,9 +807,9 @@ describe('room-action commands', () => {
     const retained = decodeProjectDocument(
       {
         ...authored,
-        routes: authored.routes.map((route) => ({
-          ...route,
-          biomes: route.biomes.map((plan) =>
+        route: {
+          ...authored.route,
+          biomes: authored.route.biomes.map((plan) =>
             plan.topology === null
               ? plan
               : {
@@ -833,7 +829,7 @@ describe('room-action commands', () => {
                   },
                 },
           ),
-        })),
+        },
       },
       catalog,
     );
@@ -842,9 +838,8 @@ describe('room-action commands', () => {
       action: createRoomActionAddress(goldenHBiome, fieldsOccurrenceId, roomActionKey(optional)),
     });
     const fieldsOccurrence = (document: ProjectDocument) => {
-      const candidate = document.routes
-        .find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((plan) => plan.biomeKey === 'H')
+      const candidate = document.route.biomes
+        .find((plan) => plan.biomeKey === 'H')
         ?.topology?.occurrences.find(
           (occurrence) => occurrence.occurrenceId === fieldsOccurrenceId,
         );
@@ -938,9 +933,8 @@ describe('room-action commands', () => {
       purchased: true,
     });
     const shopOccurrence = () =>
-      history.present.routes
-        .find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((candidate) => candidate.biomeKey === 'N')
+      history.present.route.biomes
+        .find((candidate) => candidate.biomeKey === 'N')
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopId);
     expect(shopOccurrence()?.roomActions.order).toEqual([
       { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
@@ -1022,7 +1016,7 @@ describe('room-action commands', () => {
       keepsakeKey: 'HadesAndPersephoneKeepsake',
     });
     expect(
-      replaced.routes[0]?.biomes[0]?.topology?.occurrences.find(
+      replaced.route?.biomes[0]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === completion.occurrenceId,
       )?.roomActions.order,
     ).toEqual([{ kind: 'useFountain' }, rack]);
@@ -1037,7 +1031,7 @@ describe('room-action commands', () => {
     });
     expect(history.past).toHaveLength(1);
     expect(
-      history.present.routes[0]?.biomes[0]?.topology?.occurrences.find(
+      history.present.route?.biomes[0]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === completion.occurrenceId,
       )?.roomActions.order,
     ).toEqual([rack, { kind: 'useFountain' }]);
@@ -1057,12 +1051,12 @@ describe('room-action commands', () => {
     });
     const retainedAgain = deletedHistory.present;
     expect(
-      retainedAgain.routes[0]?.biomes[0]?.topology?.occurrences.find(
+      retainedAgain.route?.biomes[0]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === completion.occurrenceId,
       )?.keepsakeRack,
     ).toBeUndefined();
     expect(
-      retainedAgain.routes[0]?.biomes[0]?.topology?.occurrences.find(
+      retainedAgain.route?.biomes[0]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === completion.occurrenceId,
       )?.roomActions.order,
     ).toEqual([{ kind: 'useFountain' }]);

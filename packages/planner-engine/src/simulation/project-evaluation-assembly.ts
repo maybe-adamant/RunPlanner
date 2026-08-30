@@ -376,9 +376,12 @@ export function blockedOccurrenceRoomForProjectEvaluationAssembly(
   occurrence: import('../authored-project/addresses').OccurrenceAddress,
 ): CanonicalAuthoredRoom | undefined {
   const exact = requireExactProjectEvaluationAssembly(assembly);
-  const biome = exact.evaluation.routes
-    .find((route) => route.routeKey === occurrence.routeKey)
-    ?.biomes.find((candidate) => candidate.biomeKey === occurrence.biomeKey);
+  const biome =
+    exact.evaluation.route.routeKey === occurrence.routeKey
+      ? exact.evaluation.route.biomes.find(
+          (candidate) => candidate.biomeKey === occurrence.biomeKey,
+        )
+      : undefined;
   if (
     biome?.coverage.kind !== 'prefix' ||
     biome.coverage.blockedAt === undefined ||

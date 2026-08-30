@@ -139,9 +139,9 @@ function directLaterEquip(keepsakeKey: string) {
 }
 
 function evaluatedBiome(project: ReturnType<typeof createGoldenFGHProject>, biomeKey: 'F' | 'G') {
-  const biome = simulateProject(catalog, project)
-    .routes.find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
+  const biome = simulateProject(catalog, project).route?.biomes.find(
+    (candidate) => candidate.biomeKey === biomeKey,
+  );
   if (biome?.authoring !== 'complete' || biome.validity !== 'valid')
     throw new Error(`expected valid ${biomeKey} fixture`);
   return biome;
@@ -153,7 +153,7 @@ function replayBiome(
   initialBranches: readonly RewardBranch[],
 ) {
   const biome = evaluatedBiome(project, biomeKey);
-  const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
+  const route = project.route;
   if (route === undefined) throw new Error('missing Underworld route');
   return evaluateBiomeRewardsAssemblyInternal(
     catalog,

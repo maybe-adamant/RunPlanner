@@ -34,9 +34,10 @@ function fail(detail: string): never {
 }
 
 function planFor(project: ProjectDocument, owner: CountedRewardOwnerAddress): AuthoredBiomePlan {
-  const plan = project.routes
-    .find((route) => route.routeKey === owner.routeKey)
-    ?.biomes.find((biome) => biome.biomeKey === owner.biomeKey);
+  const plan =
+    project.route.routeKey === owner.routeKey
+      ? project.route.biomes.find((biome) => biome.biomeKey === owner.biomeKey)
+      : undefined;
   if (plan === undefined) {
     fail(`reward producer ${semanticAddressKey(owner)} has no authored biome`);
   }
@@ -167,7 +168,7 @@ function authoredStoreKey(
   owner: CountedRewardOwnerAddress,
 ): string | undefined {
   const plan = planFor(project, owner);
-  const route = project.routes.find((candidate) => candidate.routeKey === owner.routeKey);
+  const route = project.route.routeKey === owner.routeKey ? project.route : undefined;
   if (route === undefined)
     fail(`reward producer ${semanticAddressKey(owner)} has no authored route`);
   const occurrence = occurrenceFor(plan, owner);

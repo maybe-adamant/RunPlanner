@@ -436,11 +436,11 @@ describe('Cherished Heirloom active keepsake advance', () => {
 
   it('does not replay the advance during real progressive succeeding-biome evaluation', () => {
     const project = createGoldenFGHProject();
-    const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
+    const route = project.route;
     const plan = route?.biomes.find((biome) => biome.biomeKey === 'G');
-    const previous = simulateProject(catalog, project)
-      .routes.find((candidate) => candidate.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const previous = simulateProject(catalog, project).route?.biomes.find(
+      (biome) => biome.biomeKey === 'F',
+    );
     if (
       route === undefined ||
       plan === undefined ||

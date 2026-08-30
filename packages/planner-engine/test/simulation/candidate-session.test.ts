@@ -111,7 +111,7 @@ describe('candidate session', () => {
     expect('rewardProducerFrontier' in simulationPublic).toBe(false);
     expect('roomLifecycleCandidateContexts' in simulationPublic).toBe(false);
     expect('RoomLifecycleCandidateArtifacts' in simulationPublic).toBe(false);
-    const publicBiome = assembly.evaluation.routes[0]?.biomes[0];
+    const publicBiome = assembly.evaluation.route?.biomes[0];
     if (publicBiome === undefined || !('rewards' in publicBiome)) {
       throw new Error('complete F assembly lost its public reward result');
     }
@@ -123,7 +123,7 @@ describe('candidate session', () => {
 
   it('evaluates an authored incoming reward from its captured producer frontier', () => {
     const project = createCompleteFTakeoverProject();
-    const occurrence = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
+    const occurrence = project.route?.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === 'f-takeover-combat',
     );
     if (occurrence?.state.kind !== 'counted' || occurrence.state.reward === null) {
@@ -146,7 +146,7 @@ describe('candidate session', () => {
 
   it('does not expose a Preboss Shop after its invalid selection boundary', () => {
     const project = createCompleteFTakeoverProject();
-    const occurrence = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
+    const occurrence = project.route?.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === 'f-takeover-preboss-shop',
     );
     if (occurrence?.state.kind !== 'shop' || occurrence.state.shop === undefined) {
@@ -202,7 +202,7 @@ describe('candidate session', () => {
       evidence: { kind: 'upstreamIncomplete', upstreamBiomeKey: 'F' },
     });
     const invalidEvaluation = simulateProject(catalog, invalid);
-    expect(invalidEvaluation.routes[0]?.biomes[0]).toMatchObject({
+    expect(invalidEvaluation.route?.biomes[0]).toMatchObject({
       biomeKey: 'F',
       authoring: 'complete',
       validity: 'invalid',

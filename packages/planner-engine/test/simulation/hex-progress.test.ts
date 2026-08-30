@@ -187,11 +187,11 @@ describe('finite Hex progress', () => {
 
   it('carries an incoming closed-tree seed into the next biome reward-generation frontier', () => {
     const project = createGoldenFGHProject();
-    const routePlan = project.routes.find((route) => route.routeKey === 'Underworld');
+    const routePlan = project.route;
     const gPlan = routePlan?.biomes.find((biome) => biome.biomeKey === 'G');
-    const f = simulateProject(catalog, project)
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const f = simulateProject(catalog, project).route?.biomes.find(
+      (biome) => biome.biomeKey === 'F',
+    );
     if (
       routePlan === undefined ||
       gPlan === undefined ||

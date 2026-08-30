@@ -38,9 +38,7 @@ function project(project: ReturnType<typeof createProjectDocument>): StructuredW
 }
 
 function biome(workspace: StructuredWorkspaceProjection, biomeKey: string): WorkspaceBiome {
-  const result = workspace.routes
-    .flatMap((route) => route.biomes)
-    .find((candidate) => candidate.biomeKey === biomeKey);
+  const result = workspace.route.biomes.find((candidate) => candidate.biomeKey === biomeKey);
   if (result === undefined) throw new Error(`${biomeKey} workspace biome is missing`);
   return result;
 }
@@ -127,21 +125,23 @@ describe('unified structured workspace projection facade', () => {
   it('assembles one frozen public workspace envelope across every supported biome family', () => {
     const { underworld, surface } = representativeWorkspacePair();
 
-    for (const route of [...underworld.routes, ...surface.routes]) {
-      expect(Object.isFrozen(route.biomes)).toBe(true);
-      for (const projectedBiome of route.biomes) {
+    for (const workspaceRoute of [underworld.route, surface.route]) {
+      expect(Object.isFrozen(workspaceRoute.biomes)).toBe(true);
+      for (const projectedBiome of workspaceRoute.biomes) {
         expect('kind' in projectedBiome).toBe(false);
         expect(Object.isFrozen(projectedBiome.nodes)).toBe(true);
         expect(projectedBiome.nodes.every((node) => node.kind in workspaceNodeKinds)).toBe(true);
         expect(projectedBiome.marker.address).toEqual({
           biomeKey: projectedBiome.biomeKey,
           kind: 'biome',
-          routeKey: route.routeKey,
+          routeKey: workspaceRoute.routeKey,
         });
       }
     }
 
-    expect(biome(underworld, 'F').nodes.some((node) => node.kind === 'takeoverBatch')).toBe(true);
+    expect(
+      biome(underworld, 'F').nodes.some((node: WorkspaceNode) => node.kind === 'takeoverBatch'),
+    ).toBe(true);
     expect(biome(underworld, 'I').nodes.some((node) => node.kind === 'mixedBatch')).toBe(true);
     expect(biome(surface, 'N').nodes.some((node) => node.kind === 'hubDecision')).toBe(true);
     expect(biome(surface, 'Q').nodes.some((node) => node.kind === 'ordinaryBatch')).toBe(true);
@@ -213,7 +213,8 @@ describe('unified structured workspace projection facade', () => {
 
   it('registers a coarse finding against only its owning biome shell', () => {
     const authored = createProjectDocument(catalog, {
-      configuredBiomeCounts: { Surface: 1 },
+      routeKey: 'Surface',
+      configuredBiomeCount: 1,
       projectId: 'facade-finding-routing',
     });
     const assembly = simulateProjectAssembly(catalog, authored);

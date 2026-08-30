@@ -152,10 +152,10 @@ describe('Gorgon Amulet lifecycle', () => {
     seed: ReturnType<typeof initializeRewardBranches>[number],
   ) {
     const baseline = simulateProject(catalog, createCompleteFGProject());
-    const underworld = baseline.routes.find((route) => route.routeKey === 'Underworld');
+    const underworld = baseline.route;
     const previous = underworld?.biomes.find((biome) => biome.biomeKey === 'F');
     const authoredProject = project;
-    const route = authoredProject.routes.find((candidate) => candidate.routeKey === 'Underworld');
+    const route = authoredProject.route;
     const plan = route?.biomes.find((biome) => biome.biomeKey === 'G');
     if (
       previous?.authoring !== 'complete' ||
@@ -267,9 +267,7 @@ describe('Gorgon Amulet lifecycle', () => {
       keepsakeKey: 'AthenaEncounterKeepsake',
     });
     const evaluation = assembled(project).evaluation;
-    const g = evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    const g = evaluation.route.biomes.find((biome) => biome.biomeKey === 'G');
     expect(g).toBeDefined();
     if (g === undefined || !('rewards' in g)) return;
     expect(g.rewards.branches[0]?.keepsakes.gorgon).toBeDefined();
@@ -317,9 +315,8 @@ describe('Gorgon Amulet lifecycle', () => {
     });
     project = authorGorgon(project, cage1);
 
-    const occurrence = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'H')
+    const occurrence = project.route.biomes
+      .find((biome) => biome.biomeKey === 'H')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
     expect(
       occurrence?.roomActions.order
@@ -351,7 +348,7 @@ describe('Gorgon Amulet lifecycle', () => {
     });
     const result = createKeepsakeState(catalog, 'AthenaEncounterKeepsake', fear);
     expect(result.gorgon?.status).toBe('pending');
-    expect(project.routes[0]?.loadout.startingKeepsakeKey).toBe('AthenaEncounterKeepsake');
+    expect(project.route?.loadout.startingKeepsakeKey).toBe('AthenaEncounterKeepsake');
   });
 
   it.each(['Epic', 'Heroic'] as const)(
@@ -450,7 +447,7 @@ describe('Gorgon Amulet lifecycle', () => {
       }
     }
 
-    const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
+    const route = project.route;
     if (route === undefined) throw new Error('missing Underworld route');
     const arcanaFear = createArcanaFearState(catalog, route.loadout);
     const initialized = initializeRewardBranches(
@@ -531,9 +528,8 @@ describe('Gorgon Amulet lifecycle', () => {
       phase,
       value: true,
     });
-    const enabledOccurrence = enabled.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'P')
+    const enabledOccurrence = enabled.route.biomes
+      .find((biome) => biome.biomeKey === 'P')
       ?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === pOccurrenceId('P_Combat03', 1, 1),
       );
@@ -547,9 +543,8 @@ describe('Gorgon Amulet lifecycle', () => {
       phase,
       value: false,
     });
-    const disabledOccurrence = disabled.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'P')
+    const disabledOccurrence = disabled.route.biomes
+      .find((biome) => biome.biomeKey === 'P')
       ?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === pOccurrenceId('P_Combat03', 1, 1),
       );
@@ -580,9 +575,8 @@ describe('Gorgon Amulet lifecycle', () => {
     expect(undone.present).toBe(initial);
     const redone = redoProjectHistory(undone);
     expect(redone.present).toEqual(enabled);
-    const result = redone.present.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'P')
+    const result = redone.present.route.biomes
+      .find((biome) => biome.biomeKey === 'P')
       ?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === pOccurrenceId('P_Combat03', 1, 1),
       )?.encounters.gorgonResultByPhase?.Combat;
@@ -612,9 +606,8 @@ describe('Gorgon Amulet lifecycle', () => {
     };
     const command = { kind: 'ReplaceGorgonAthenaOffer' as const, trait, value };
     const changed = applyProjectHistoryCommand(createProjectHistory(initial), catalog, command);
-    const occurrence = changed.present.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'P')
+    const occurrence = changed.present.route.biomes
+      .find((biome) => biome.biomeKey === 'P')
       ?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === pOccurrenceId('P_Combat03', 1, 1),
       );
@@ -660,62 +653,57 @@ describe('Gorgon Amulet lifecycle', () => {
     });
     project = authorGorgon(project, phase);
     project = orderGoldenGorgonAfterIncoming(project);
-    const contextInvalid = project.routes.map((route) =>
-      route.routeKey !== 'Underworld'
-        ? route
-        : Object.freeze({
-            ...route,
-            biomes: Object.freeze(
-              route.biomes.map((biome) =>
-                biome.biomeKey !== 'G'
-                  ? biome
-                  : Object.freeze({
-                      ...biome,
-                      topology:
-                        biome.topology === null
-                          ? null
-                          : Object.freeze({
-                              ...biome.topology,
-                              occurrences: Object.freeze(
-                                biome.topology.occurrences.map((occurrence) =>
-                                  occurrence.occurrenceId !== goldenGOccurrenceId(1, 1)
-                                    ? occurrence
-                                    : Object.freeze({
-                                        ...occurrence,
-                                        encounters: Object.freeze({
-                                          ...occurrence.encounters,
-                                          gorgonResultByPhase: Object.freeze({
-                                            ...(occurrence.encounters.gorgonResultByPhase ?? {}),
-                                            Encounter: Object.freeze({
-                                              athenaTriggerConditionMet: true,
-                                              athenaOffer: Object.freeze({
-                                                ...occurrence.encounters.gorgonResultByPhase
-                                                  ?.Encounter?.athenaOffer,
-                                                traitKeys: Object.freeze([
-                                                  'OlympianSpellCountBoon',
-                                                  'RetaliateInvulnerabilityBoon',
-                                                  'FocusLastStandBoon',
-                                                ]),
-                                              }),
-                                            }),
-                                          }),
+    const contextInvalid = Object.freeze({
+      ...project.route,
+      biomes: Object.freeze(
+        project.route.biomes.map((biome) =>
+          biome.biomeKey !== 'G'
+            ? biome
+            : Object.freeze({
+                ...biome,
+                topology:
+                  biome.topology === null
+                    ? null
+                    : Object.freeze({
+                        ...biome.topology,
+                        occurrences: Object.freeze(
+                          biome.topology.occurrences.map((occurrence) =>
+                            occurrence.occurrenceId !== goldenGOccurrenceId(1, 1)
+                              ? occurrence
+                              : Object.freeze({
+                                  ...occurrence,
+                                  encounters: Object.freeze({
+                                    ...occurrence.encounters,
+                                    gorgonResultByPhase: Object.freeze({
+                                      ...(occurrence.encounters.gorgonResultByPhase ?? {}),
+                                      Encounter: Object.freeze({
+                                        athenaTriggerConditionMet: true,
+                                        athenaOffer: Object.freeze({
+                                          ...occurrence.encounters.gorgonResultByPhase?.Encounter
+                                            ?.athenaOffer,
+                                          traitKeys: Object.freeze([
+                                            'OlympianSpellCountBoon',
+                                            'RetaliateInvulnerabilityBoon',
+                                            'FocusLastStandBoon',
+                                          ] as const),
+                                          selectedOptionKey: 'option1',
                                         }),
                                       }),
-                                ),
-                              ),
-                            }),
-                    }),
-              ),
-            ),
-          }),
-    );
+                                    }),
+                                  }),
+                                }),
+                          ),
+                        ),
+                      }),
+              }),
+        ),
+      ),
+    });
     const evaluation = simulateProjectAssembly(catalog, {
       ...project,
-      routes: Object.freeze(contextInvalid) as typeof project.routes,
+      route: contextInvalid,
     }).evaluation;
-    const g = evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    const g = evaluation.route.biomes.find((biome) => biome.biomeKey === 'G');
     expect(g).toBeDefined();
     if (g === undefined || !('rewards' in g)) return;
     expect(
@@ -728,53 +716,47 @@ describe('Gorgon Amulet lifecycle', () => {
       }),
     );
 
-    const missing = project.routes.map((route) =>
-      route.routeKey !== 'Underworld'
-        ? route
-        : Object.freeze({
-            ...route,
-            biomes: Object.freeze(
-              route.biomes.map((biome) =>
-                biome.biomeKey !== 'G'
-                  ? biome
-                  : Object.freeze({
-                      ...biome,
-                      topology:
-                        biome.topology === null
-                          ? null
-                          : Object.freeze({
-                              ...biome.topology,
-                              occurrences: Object.freeze(
-                                biome.topology.occurrences.map((occurrence) =>
-                                  occurrence.occurrenceId !== goldenGOccurrenceId(1, 1)
-                                    ? occurrence
-                                    : Object.freeze({
-                                        ...occurrence,
-                                        encounters: Object.freeze({
-                                          ...occurrence.encounters,
-                                          gorgonResultByPhase: Object.freeze({
-                                            ...(occurrence.encounters.gorgonResultByPhase ?? {}),
-                                            Encounter: Object.freeze({
-                                              athenaTriggerConditionMet: true,
-                                            }),
-                                          }),
-                                        }),
+    const missing = Object.freeze({
+      ...project.route,
+      biomes: Object.freeze(
+        project.route.biomes.map((biome) =>
+          biome.biomeKey !== 'G'
+            ? biome
+            : Object.freeze({
+                ...biome,
+                topology:
+                  biome.topology === null
+                    ? null
+                    : Object.freeze({
+                        ...biome.topology,
+                        occurrences: Object.freeze(
+                          biome.topology.occurrences.map((occurrence) =>
+                            occurrence.occurrenceId !== goldenGOccurrenceId(1, 1)
+                              ? occurrence
+                              : Object.freeze({
+                                  ...occurrence,
+                                  encounters: Object.freeze({
+                                    ...occurrence.encounters,
+                                    gorgonResultByPhase: Object.freeze({
+                                      ...(occurrence.encounters.gorgonResultByPhase ?? {}),
+                                      Encounter: Object.freeze({
+                                        athenaTriggerConditionMet: true,
                                       }),
-                                ),
-                              ),
-                            }),
-                    }),
-              ),
-            ),
-          }),
-    );
+                                    }),
+                                  }),
+                                }),
+                          ),
+                        ),
+                      }),
+              }),
+        ),
+      ),
+    });
     const missingEvaluation = simulateProjectAssembly(catalog, {
       ...project,
-      routes: Object.freeze(missing) as typeof project.routes,
+      route: missing,
     }).evaluation;
-    const missingG = missingEvaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    const missingG = missingEvaluation.route.biomes.find((biome) => biome.biomeKey === 'G');
     expect(missingG).toBeDefined();
     if (missingG === undefined || !('rewards' in missingG)) return;
     expect(
@@ -803,9 +785,7 @@ describe('Gorgon Amulet lifecycle', () => {
     });
     project = authorGorgon(project, phase);
     const assembly = assembled(project);
-    const p = assembly.evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'P');
+    const p = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'P');
     expect(p).toBeDefined();
     if (p === undefined || !('rewards' in p)) return;
     expect(p.rewards.branches[0]?.keepsakes.gorgon?.status).toBe('consumed');
@@ -849,9 +829,7 @@ describe('Gorgon Amulet lifecycle', () => {
       rarity: 'Epic',
     });
     const trait = createTraitOfferAddress(createGorgonPhaseAddress(phase), 'gorgonAthena');
-    const consumedP = consumed.evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'P');
+    const consumedP = consumed.evaluation.route.biomes.find((biome) => biome.biomeKey === 'P');
     if (consumedP === undefined || !('rewards' in consumedP)) {
       throw new Error('consumed Gorgon evaluation is missing');
     }
@@ -895,9 +873,9 @@ describe('Gorgon Amulet lifecycle', () => {
       keepsakeKey: 'AthenaEncounterKeepsake',
     });
     const nAssembly = assembled(nProject);
-    const nBiomeEvaluation = nAssembly.evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const nBiomeEvaluation = nAssembly.evaluation.route.biomes.find(
+      (biome) => biome.biomeKey === 'N',
+    );
     const nSubEvent =
       nBiomeEvaluation !== undefined && 'history' in nBiomeEvaluation
         ? nBiomeEvaluation.history.events.find(
@@ -941,9 +919,7 @@ describe('Gorgon Amulet lifecycle', () => {
     });
 
     const assembly = assembled(project);
-    const p = assembly.evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'P');
+    const p = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'P');
     expect(p).toBeDefined();
     if (p === undefined || !('rewards' in p)) return;
     expect(
@@ -991,9 +967,7 @@ describe('Gorgon Amulet lifecycle', () => {
       }),
     );
     const naturalFirstAssembly = assembled(project);
-    const p = naturalFirstAssembly.evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'P');
+    const p = naturalFirstAssembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'P');
     expect(p).toBeDefined();
     if (p === undefined || !('rewards' in p)) return;
     expect(p.rewards.branches[0]?.keepsakes.gorgon?.status).toBe('expired');
@@ -1024,12 +998,8 @@ describe('Gorgon Amulet lifecycle', () => {
       value: true,
     });
     const baseline = assembled(loadSurfaceNOPProject()).evaluation;
-    const previous = baseline.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'O');
-    const plan = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'P');
+    const previous = baseline.route.biomes.find((biome) => biome.biomeKey === 'O');
+    const plan = project.route.biomes.find((biome) => biome.biomeKey === 'P');
     expect(previous).toBeDefined();
     expect(plan).toBeDefined();
     if (

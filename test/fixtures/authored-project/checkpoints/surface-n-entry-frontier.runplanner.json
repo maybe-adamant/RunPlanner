@@ -1,209 +1,172 @@
 {
-  "schemaVersion": 72,
+  "schemaVersion": 73,
   "projectId": "surface-1",
   "catalogVersion": "0.51.0-biome-i-encounter-profiles",
-  "routes": [
-    {
-      "routeKey": "Underworld",
-      "resourcePlacements": {
-        "Pickaxe": null,
-        "Exorcism": null,
-        "Shovel": null,
-        "Fishing": null
-      },
-      "loadout": {
-        "weaponKey": "WeaponStaffSwing",
-        "aspectKey": "BaseStaffAspect",
-        "manualArcanaKeys": [],
-        "fearRanks": {
-          "HealingReductionShrineUpgrade": 0,
-          "ShopPricesShrineUpgrade": 0,
-          "EnemyHealthShrineUpgrade": 0,
-          "EnemyDamageShrineUpgrade": 0,
-          "EnemySpeedShrineUpgrade": 0,
-          "EnemyShieldShrineUpgrade": 0,
-          "EnemyCountShrineUpgrade": 0,
-          "EnemyRespawnShrineUpgrade": 0,
-          "NextBiomeEnemyShrineUpgrade": 0,
-          "BiomeSpeedShrineUpgrade": 0,
-          "MinibossCountShrineUpgrade": 0,
-          "BossDifficultyShrineUpgrade": 0,
-          "BoonSkipShrineUpgrade": 0,
-          "BoonManaReserveShrineUpgrade": 0,
-          "BanUnpickedBoonsShrineUpgrade": 0,
-          "LimitGraspShrineUpgrade": 0,
-          "EnemyEliteShrineUpgrade": 0
-        },
-        "startingKeepsakeKey": "ManaOverTimeRefundKeepsake"
-      },
-      "biomes": []
+  "route": {
+    "routeKey": "Surface",
+    "resourcePlacements": {
+      "Pickaxe": null,
+      "Exorcism": null,
+      "Shovel": null,
+      "Fishing": null
     },
-    {
-      "routeKey": "Surface",
-      "resourcePlacements": {
-        "Pickaxe": null,
-        "Exorcism": null,
-        "Shovel": null,
-        "Fishing": null
+    "loadout": {
+      "weaponKey": "WeaponStaffSwing",
+      "aspectKey": "BaseStaffAspect",
+      "manualArcanaKeys": [],
+      "fearRanks": {
+        "HealingReductionShrineUpgrade": 0,
+        "ShopPricesShrineUpgrade": 0,
+        "EnemyHealthShrineUpgrade": 0,
+        "EnemyDamageShrineUpgrade": 0,
+        "EnemySpeedShrineUpgrade": 0,
+        "EnemyShieldShrineUpgrade": 0,
+        "EnemyCountShrineUpgrade": 0,
+        "EnemyRespawnShrineUpgrade": 0,
+        "NextBiomeEnemyShrineUpgrade": 0,
+        "BiomeSpeedShrineUpgrade": 0,
+        "MinibossCountShrineUpgrade": 0,
+        "BossDifficultyShrineUpgrade": 0,
+        "BoonSkipShrineUpgrade": 0,
+        "BoonManaReserveShrineUpgrade": 0,
+        "BanUnpickedBoonsShrineUpgrade": 0,
+        "LimitGraspShrineUpgrade": 0,
+        "EnemyEliteShrineUpgrade": 0
       },
-      "loadout": {
-        "weaponKey": "WeaponStaffSwing",
-        "aspectKey": "BaseStaffAspect",
-        "manualArcanaKeys": [],
-        "fearRanks": {
-          "HealingReductionShrineUpgrade": 0,
-          "ShopPricesShrineUpgrade": 0,
-          "EnemyHealthShrineUpgrade": 0,
-          "EnemyDamageShrineUpgrade": 0,
-          "EnemySpeedShrineUpgrade": 0,
-          "EnemyShieldShrineUpgrade": 0,
-          "EnemyCountShrineUpgrade": 0,
-          "EnemyRespawnShrineUpgrade": 0,
-          "NextBiomeEnemyShrineUpgrade": 0,
-          "BiomeSpeedShrineUpgrade": 0,
-          "MinibossCountShrineUpgrade": 0,
-          "BossDifficultyShrineUpgrade": 0,
-          "BoonSkipShrineUpgrade": 0,
-          "BoonManaReserveShrineUpgrade": 0,
-          "BanUnpickedBoonsShrineUpgrade": 0,
-          "LimitGraspShrineUpgrade": 0,
-          "EnemyEliteShrineUpgrade": 0
-        },
-        "startingKeepsakeKey": "ManaOverTimeRefundKeepsake"
-      },
-      "biomes": [
-        {
-          "biomeKey": "N",
-          "state": {},
-          "topology": {
-            "startOccurrenceId": "surface-n-opening",
-            "occurrences": [
-              {
-                "occurrenceId": "surface-n-opening",
-                "gameName": "N_Opening01",
-                "state": {
-                  "kind": "counted",
-                  "reward": {
-                    "offer": {
-                      "rewardType": "Boon",
-                      "payload": {
-                        "kind": "BoonSource",
-                        "source": "ApolloUpgrade"
-                      }
-                    },
-                    "traitOffersByAcquisitionRole": {
-                      "source": null
-                    },
-                    "dispositionByAcquisitionRole": {
-                      "source": {
-                        "kind": "normal"
-                      }
+      "startingKeepsakeKey": "ManaOverTimeRefundKeepsake"
+    },
+    "biomes": [
+      {
+        "biomeKey": "N",
+        "state": {},
+        "topology": {
+          "startOccurrenceId": "surface-n-opening",
+          "occurrences": [
+            {
+              "occurrenceId": "surface-n-opening",
+              "gameName": "N_Opening01",
+              "state": {
+                "kind": "counted",
+                "reward": {
+                  "offer": {
+                    "rewardType": "Boon",
+                    "payload": {
+                      "kind": "BoonSource",
+                      "source": "ApolloUpgrade"
                     }
-                  }
-                },
-                "encounters": {
-                  "encounterKeyByPhase": {},
-                  "figLeafSkipByPhase": {
-                    "Encounter": false
                   },
-                  "gorgonResultByPhase": {
-                    "Encounter": {
-                      "athenaTriggerConditionMet": false
-                    }
-                  }
-                },
-                "roomActions": {
-                  "order": []
-                },
-                "additionalExits": []
-              },
-              {
-                "occurrenceId": "surface-n-prehub",
-                "gameName": "N_PreHub01",
-                "state": {
-                  "kind": "counted",
-                  "reward": {
-                    "offer": {
-                      "rewardType": "Boon",
-                      "payload": {
-                        "kind": "BoonSource",
-                        "source": "AresUpgrade"
-                      }
-                    },
-                    "traitOffersByAcquisitionRole": {
-                      "source": null
-                    },
-                    "dispositionByAcquisitionRole": {
-                      "source": {
-                        "kind": "normal"
-                      }
-                    }
-                  }
-                },
-                "encounters": {
-                  "encounterKeyByPhase": {},
-                  "figLeafSkipByPhase": {
-                    "Encounter": false
+                  "traitOffersByAcquisitionRole": {
+                    "source": null
                   },
-                  "gorgonResultByPhase": {
-                    "Encounter": {
-                      "athenaTriggerConditionMet": false
+                  "dispositionByAcquisitionRole": {
+                    "source": {
+                      "kind": "normal"
                     }
                   }
-                },
-                "roomActions": {
-                  "order": []
-                },
-                "additionalExits": []
-              }
-            ],
-            "decisions": [
-              {
-                "kind": "exit",
-                "source": {
-                  "kind": "occurrence",
-                  "occurrenceId": "surface-n-opening"
-                },
-                "normal": {
-                  "kind": "batch",
-                  "rewardStore": {
-                    "kind": "none"
-                  },
-                  "batchState": null,
-                  "targets": [
-                    {
-                      "exitKey": "prehub",
-                      "occurrenceId": "surface-n-prehub"
-                    }
-                  ]
-                },
-                "selection": {
-                  "kind": "derived"
                 }
               },
-              {
-                "kind": "exit",
-                "source": {
-                  "kind": "occurrence",
-                  "occurrenceId": "surface-n-prehub"
+              "encounters": {
+                "encounterKeyByPhase": {},
+                "figLeafSkipByPhase": {
+                  "Encounter": false
                 },
-                "normal": {
-                  "kind": "batch",
-                  "rewardStore": {
-                    "kind": "none"
-                  },
-                  "batchState": null,
-                  "targets": []
-                },
-                "selection": {
-                  "kind": "unresolved"
+                "gorgonResultByPhase": {
+                  "Encounter": {
+                    "athenaTriggerConditionMet": false
+                  }
                 }
+              },
+              "roomActions": {
+                "order": []
+              },
+              "additionalExits": []
+            },
+            {
+              "occurrenceId": "surface-n-prehub",
+              "gameName": "N_PreHub01",
+              "state": {
+                "kind": "counted",
+                "reward": {
+                  "offer": {
+                    "rewardType": "Boon",
+                    "payload": {
+                      "kind": "BoonSource",
+                      "source": "AresUpgrade"
+                    }
+                  },
+                  "traitOffersByAcquisitionRole": {
+                    "source": null
+                  },
+                  "dispositionByAcquisitionRole": {
+                    "source": {
+                      "kind": "normal"
+                    }
+                  }
+                }
+              },
+              "encounters": {
+                "encounterKeyByPhase": {},
+                "figLeafSkipByPhase": {
+                  "Encounter": false
+                },
+                "gorgonResultByPhase": {
+                  "Encounter": {
+                    "athenaTriggerConditionMet": false
+                  }
+                }
+              },
+              "roomActions": {
+                "order": []
+              },
+              "additionalExits": []
+            }
+          ],
+          "decisions": [
+            {
+              "kind": "exit",
+              "source": {
+                "kind": "occurrence",
+                "occurrenceId": "surface-n-opening"
+              },
+              "normal": {
+                "kind": "batch",
+                "rewardStore": {
+                  "kind": "none"
+                },
+                "batchState": null,
+                "targets": [
+                  {
+                    "exitKey": "prehub",
+                    "occurrenceId": "surface-n-prehub"
+                  }
+                ]
+              },
+              "selection": {
+                "kind": "derived"
               }
-            ],
-            "fixedRoomLinks": []
-          }
+            },
+            {
+              "kind": "exit",
+              "source": {
+                "kind": "occurrence",
+                "occurrenceId": "surface-n-prehub"
+              },
+              "normal": {
+                "kind": "batch",
+                "rewardStore": {
+                  "kind": "none"
+                },
+                "batchState": null,
+                "targets": []
+              },
+              "selection": {
+                "kind": "unresolved"
+              }
+            }
+          ],
+          "fixedRoomLinks": []
         }
-      ]
-    }
-  ]
+      }
+    ]
+  }
 }

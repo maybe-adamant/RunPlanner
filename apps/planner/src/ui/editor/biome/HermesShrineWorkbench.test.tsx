@@ -201,8 +201,7 @@ describe('Hermes Shrine workbench', () => {
     const currentOccurrence = () =>
       application.store
         .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N')
+        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === postbossId);
 
     openOverview();
@@ -484,8 +483,7 @@ describe('Hermes Shrine workbench', () => {
       expect(
         application.store
           .getState()
-          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-          ?.biomes.find((biome) => biome.biomeKey === 'O')
+          .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'O')
           ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === hostId)
           ?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey]?.offer,
       ).toMatchObject({
@@ -527,8 +525,7 @@ describe('Hermes Shrine workbench', () => {
     );
     const host = application.store
       .getState()
-      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'O')
+      .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'O')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === hostId);
     const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
     expect(host?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey]).toMatchObject({
@@ -567,8 +564,7 @@ describe('Hermes Shrine workbench', () => {
     expect(
       application.store
         .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N')
+        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === hostId)
         ?.acquisitionSites?.hermesShrineDelivery,
     ).toBeUndefined();
@@ -577,9 +573,8 @@ describe('Hermes Shrine workbench', () => {
     const sourceDestination = before.focusByOwner.get(semanticAddressKey(source));
     if (sourceDestination === undefined)
       throw new Error('side-room Shrine source destination is missing');
-    const sourceNode = before.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N')
+    const sourceNode = before.route.biomes
+      .find((biome) => biome.biomeKey === 'N')
       ?.nodes.find(
         (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === sourceId,
       );
@@ -596,8 +591,7 @@ describe('Hermes Shrine workbench', () => {
       expect(
         application.store
           .getState()
-          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-          ?.biomes.find((biome) => biome.biomeKey === 'N')
+          .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'N')
           ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === hostId)
           ?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey],
       ).toBeDefined(),
@@ -607,8 +601,7 @@ describe('Hermes Shrine workbench', () => {
       semanticAddressKey(entry),
     );
     const hostNode = workspaceProjection(application)
-      .routes.find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N')
+      .route?.biomes.find((biome) => biome.biomeKey === 'N')
       ?.nodes.find(
         (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === hostId,
       );
@@ -675,9 +668,7 @@ describe('Hermes Shrine workbench', () => {
   it('indexes only present Shrines and navigates to their owning room', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(completeOrdinaryShrine()));
-    const route = workspaceProjection(application).routes.find(
-      (candidate) => candidate.routeKey === 'Surface',
-    );
+    const route = workspaceProjection(application).route;
     if (route === undefined) throw new Error('Surface route is missing');
     const user = userEvent.setup();
     render(
@@ -690,7 +681,7 @@ describe('Hermes Shrine workbench', () => {
     expect(inspect).toHaveLength(3);
     expect(screen.queryByText('HealBigDrop')).toBeNull();
     await user.click(inspect[1]!);
-    expect(application.store.getState().editorSession.activePanelByRoute.Surface).toEqual({
+    expect(application.store.getState().editorSession.activePanel).toEqual({
       kind: 'biome',
       biomeKey: 'O',
     });

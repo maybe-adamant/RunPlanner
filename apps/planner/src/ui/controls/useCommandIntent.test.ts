@@ -40,7 +40,7 @@ describe('command-intent dispatch adapter', () => {
 
   it('applies declared after-focus even when the command produces no authored transition', () => {
     const application = createApplication();
-    const before = application.store.getState().projectWorkspace.history;
+    const before = application.store.getState().projectWorkspace.history!;
     const dispatch = vi.spyOn(application.store, 'dispatch');
     const owner = createRouteAddress('Underworld');
 
@@ -49,7 +49,7 @@ describe('command-intent dispatch adapter', () => {
       focus: { owner, timing: 'after' },
     });
 
-    expect(application.store.getState().projectWorkspace.history).toBe(before);
+    expect(application.store.getState().projectWorkspace.history!).toBe(before);
     expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
     expect(
       dispatch.mock.calls.map(([action]) =>

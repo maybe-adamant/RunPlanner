@@ -41,7 +41,7 @@ describe('Aromatic Phial authored fountain result', () => {
       targetTraitKey: 'ApolloWeaponBoon',
     });
     expect(
-      selected.routes[0]?.biomes[0]?.topology?.occurrences.find(
+      selected.route?.biomes[0]?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
       )?.fountainRarityResult,
     ).toEqual({ targetTraitKey: 'ApolloWeaponBoon' });
@@ -51,7 +51,7 @@ describe('Aromatic Phial authored fountain result', () => {
       targetTraitKey: null,
     });
     expect(
-      cleared.routes[0]?.biomes[0]?.topology?.occurrences.find(
+      cleared.route?.biomes[0]?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
       )?.fountainRarityResult,
     ).toBeUndefined();
@@ -67,13 +67,13 @@ describe('Aromatic Phial authored fountain result', () => {
       targetTraitKey: 'ApolloWeaponBoon',
     });
     const encoded = JSON.parse(encodeProjectDocument(selected)) as {
-      routes: Array<{
+      route: {
         biomes: Array<{
           topology: { occurrences: Array<Record<string, unknown>> } | null;
         }>;
-      }>;
+      };
     };
-    const completion = encoded.routes[0]?.biomes[0]?.topology?.occurrences.find(
+    const completion = encoded.route.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
     );
     if (completion === undefined) throw new Error('missing encoded Postboss occurrence');
@@ -105,7 +105,7 @@ describe('Aromatic Phial authored fountain result', () => {
 
   it('rejects a useFountain target owned by a non-fountain topology declaration', () => {
     const document = project();
-    const topology = document.routes[0]?.biomes[0]?.topology;
+    const topology = document.route?.biomes[0]?.topology;
     const nonFountain = topology?.occurrences.find(
       (candidate) =>
         !activeRoomActionReferences(catalog, goldenFBiome, candidate).some(
@@ -134,15 +134,13 @@ describe('Aromatic Phial authored fountain result', () => {
       roomActions: { order: Array<Record<string, unknown>> };
     };
     const encoded = JSON.parse(encodeProjectDocument(project())) as {
-      routes: Array<{
+      route: {
         biomes: Array<{
-          topology: {
-            occurrences: Array<EncodedOccurrence>;
-          } | null;
+          topology: { occurrences: Array<EncodedOccurrence> } | null;
         }>;
-      }>;
+      };
     };
-    const topology = encoded.routes[0]?.biomes[0]?.topology;
+    const topology = encoded.route.biomes[0]?.topology;
     const nonFountain = topology?.occurrences.find(
       (candidate) =>
         !candidate.roomActions.order.some((reference) => reference.kind === 'useFountain'),
@@ -164,7 +162,7 @@ describe('Aromatic Phial authored fountain result', () => {
       targetTraitKey: 'ApolloWeaponBoon',
     });
     expect(
-      history.present.routes[0]?.biomes[0]?.topology?.occurrences.find(
+      history.present.route?.biomes[0]?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
       )?.fountainRarityResult,
     ).toEqual({ targetTraitKey: 'ApolloWeaponBoon' });

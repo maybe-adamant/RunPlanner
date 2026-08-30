@@ -49,8 +49,7 @@ function isEncounterLifecycleEvent(event: HistoryEvent): event is EncounterLifec
 }
 
 function withFigLeaf(project = createCompleteFGProject()) {
-  const routeKey =
-    project.routes.find((route) => route.biomes.length > 0)?.routeKey ?? 'Underworld';
+  const routeKey = project.route.routeKey ?? 'Underworld';
   const result = applyProjectCommand(project, catalog, {
     kind: 'ReplaceStartingKeepsake',
     selection: createRouteStartKeepsakeSelectionAddress(routeKey),
@@ -63,8 +62,8 @@ describe('Fig Leaf state contract', () => {
   it('walks a real authored F/G project with Fig Leaf equipped', () => {
     const project = withFigLeaf();
     const evaluation = simulateProject(catalog, project);
-    expect(evaluation.routes[0]?.biomes[0]).toMatchObject({ biomeKey: 'F', validity: 'valid' });
-    expect('rewards' in evaluation.routes[0]!.biomes[0]!).toBe(true);
+    expect(evaluation.route?.biomes[0]).toMatchObject({ biomeKey: 'F', validity: 'valid' });
+    expect('rewards' in evaluation.route!.biomes[0]!).toBe(true);
   });
 
   it('consumes one legal skip and preserves the later same-biome guard through the real walker', () => {
@@ -89,7 +88,7 @@ describe('Fig Leaf state contract', () => {
       value: true,
     });
     const evaluation = simulateProject(catalog, project);
-    const biome = evaluation.routes[0]?.biomes.find((entry) => entry.biomeKey === 'F');
+    const biome = evaluation.route?.biomes.find((entry) => entry.biomeKey === 'F');
     if (biome === undefined || !('rewards' in biome))
       throw new Error('F reward evaluation missing');
     expect(biome.rewards.validity).toBe('invalid');
@@ -141,7 +140,7 @@ describe('Fig Leaf state contract', () => {
     ['N/O/P/Q', loadSurfaceNOPQProject],
   ])('walks the real %s route with persistent Fig Leaf state', (_name, createProject) => {
     const evaluation = simulateProject(catalog, withFigLeaf(createProject()));
-    const route = evaluation.routes.find((candidate) => candidate.biomes.length > 0);
+    const route = evaluation.route;
     expect(route).toBeDefined();
     expect(route?.biomes.every((biome) => 'rewards' in biome)).toBe(true);
     for (const biome of route?.biomes ?? []) {
@@ -151,7 +150,7 @@ describe('Fig Leaf state contract', () => {
 
   it('publishes O phase opportunities independently and keeps P/Q declaration support narrow', () => {
     const evaluation = simulateProject(catalog, withFigLeaf(loadSurfaceNOPQProject()));
-    const route = evaluation.routes.find((candidate) => candidate.biomes.length > 0);
+    const route = evaluation.route;
     if (route === undefined) throw new Error('route missing');
     const rewardBiomes = route.biomes.filter(
       (biome): biome is Extract<(typeof route.biomes)[number], { readonly rewards: unknown }> =>
@@ -209,9 +208,7 @@ describe('Fig Leaf state contract', () => {
       value: true,
     });
     const evaluation = simulateProject(catalog, project);
-    const o = evaluation.routes
-      .flatMap((route) => route.biomes)
-      .find((biome) => biome.biomeKey === 'O');
+    const o = evaluation.route.biomes.find((biome) => biome.biomeKey === 'O');
     if (o === undefined || !('history' in o)) throw new Error('O history missing');
     const events = o.history.events
       .filter(isEncounterLifecycleEvent)
@@ -247,9 +244,7 @@ describe('Fig Leaf state contract', () => {
       value: true,
     });
     const evaluation = simulateProject(catalog, project);
-    const n = evaluation.routes
-      .flatMap((route) => route.biomes)
-      .find((biome) => biome.biomeKey === 'N');
+    const n = evaluation.route.biomes.find((biome) => biome.biomeKey === 'N');
     if (n === undefined || !('history' in n)) throw new Error('N history missing');
     const openingEvents = n.history.events
       .filter(isEncounterLifecycleEvent)
@@ -281,9 +276,7 @@ describe('Fig Leaf state contract', () => {
       value: true,
     });
     const evaluation = simulateProject(catalog, project);
-    const q = evaluation.routes
-      .flatMap((route) => route.biomes)
-      .find((biome) => biome.biomeKey === 'Q');
+    const q = evaluation.route.biomes.find((biome) => biome.biomeKey === 'Q');
     if (q === undefined || !('history' in q) || !('rewards' in q)) {
       throw new Error('Q evaluation missing');
     }
@@ -321,9 +314,7 @@ describe('Fig Leaf state contract', () => {
       value: true,
     });
     const evaluation = simulateProject(catalog, project);
-    const f = evaluation.routes
-      .flatMap((route) => route.biomes)
-      .find((biome) => biome.biomeKey === 'F');
+    const f = evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
     if (f === undefined || !('history' in f) || !('rewards' in f))
       throw new Error('F history missing');
     const events = f.history.events
@@ -377,9 +368,7 @@ describe('Fig Leaf state contract', () => {
       });
     }
     const evaluation = simulateProject(catalog, project);
-    const q = evaluation.routes
-      .flatMap((route) => route.biomes)
-      .find((biome) => biome.biomeKey === 'Q');
+    const q = evaluation.route.biomes.find((biome) => biome.biomeKey === 'Q');
     if (q === undefined || !('history' in q)) throw new Error('Q history missing');
     const qEvents = q.history.events
       .filter(isEncounterLifecycleEvent)
@@ -422,7 +411,7 @@ describe('Fig Leaf state contract', () => {
       keepsakeKey: 'GoldifyKeepsake',
     });
     const evaluation = simulateProject(catalog, replacement);
-    const route = evaluation.routes.find((candidate) => candidate.biomes.length > 0);
+    const route = evaluation.route;
     if (route === undefined) throw new Error('route missing');
     const n = route.biomes.find((biome) => biome.biomeKey === 'N');
     const o = route.biomes.find((biome) => biome.biomeKey === 'O');
@@ -494,9 +483,7 @@ describe('Fig Leaf state contract', () => {
       value: true,
     });
     const evaluation = simulateProject(catalog, authored);
-    const p = evaluation.routes
-      .flatMap((route) => route.biomes)
-      .find((biome) => biome.biomeKey === 'P');
+    const p = evaluation.route.biomes.find((biome) => biome.biomeKey === 'P');
     expect(p).toBeDefined();
     if (p === undefined || !('history' in p)) throw new Error('P history missing');
     const encounters = p.history.events.filter(
@@ -574,15 +561,12 @@ describe('Fig Leaf state contract', () => {
       value: true,
     });
     const evaluation = simulateProject(catalog, authored);
-    const n = evaluation.routes
-      .flatMap((route) => route.biomes)
-      .find((biome) => biome.biomeKey === 'N');
+    const n = evaluation.route.biomes.find((biome) => biome.biomeKey === 'N');
     const blocked = n?.findings.find((finding) => finding.code === 'figLeafSkipUnavailable');
     expect(blocked).toBeDefined();
     expect(blocked && semanticAddressKey(blocked.origin)).toBe(semanticAddressKey(phase));
     expect(blocked?.evidence.reason).toBe('envelopeBlocker');
-    const localRoom = authored.routes
-      .flatMap((route) => route.biomes)
+    const localRoom = authored.route.biomes
       .find((biome) => biome.biomeKey === 'N')
       ?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === nLocalOccurrenceId('combat02', 'sideDoor1'),

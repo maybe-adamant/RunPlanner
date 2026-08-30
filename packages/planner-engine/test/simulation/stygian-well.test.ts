@@ -59,9 +59,9 @@ describe('Stygian Well consequential purchase state', () => {
       expect(candidate?.assessments.every((assessment) => assessment.inventory?.complete)).toBe(
         true,
       );
-      const biome = assembly.evaluation.routes
-        .find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((candidateBiome) => candidateBiome.biomeKey === 'F');
+      const biome = assembly.evaluation.route.biomes.find(
+        (candidateBiome) => candidateBiome.biomeKey === 'F',
+      );
       if (biome?.authoring !== 'complete') throw new Error('expected complete F Well evaluation');
       expect(biome.rewards.findings).not.toContainEqual(
         expect.objectContaining({ code: 'stygianWellTravelDealRefillUnavailable' }),
@@ -94,17 +94,13 @@ describe('Stygian Well consequential purchase state', () => {
       occurrence: well,
       itemKey: 'TemporaryForcedSecretDoorTrait',
     });
-    const gTopology = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G')?.topology;
+    const gTopology = project.route.biomes.find((biome) => biome.biomeKey === 'G')?.topology;
     expect(
       gTopology?.occurrences.find((occurrence) => occurrence.occurrenceId === goldenGStartId)
         ?.additionalExits,
     ).toEqual([expect.objectContaining({ kind: 'chaos', key: 'chaos' })]);
     const assembly = simulateProjectAssembly(catalog, project);
-    const g = assembly.evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    const g = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'G');
     expect(g?.findings).not.toContainEqual(
       expect.objectContaining({ code: 'ixionChaosUnavailable' }),
     );
@@ -115,9 +111,8 @@ describe('Stygian Well consequential purchase state', () => {
 
   it('places a G Postboss Ixion-generated gate at H Intro and removes it with the purchase', () => {
     let project = createGoldenFGHProject();
-    const gPostboss = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G')
+    const gPostboss = project.route.biomes
+      .find((biome) => biome.biomeKey === 'G')
       ?.topology?.occurrences.find((occurrence) => occurrence.gameName === 'G_PostBoss01');
     if (gPostboss === undefined) throw new Error('expected fixed G Postboss');
     const well = createOccurrenceAddress(goldenGBiome, gPostboss.occurrenceId);
@@ -139,9 +134,8 @@ describe('Stygian Well consequential purchase state', () => {
       purchased: true,
     });
     const generatedAtHIntro = () =>
-      project.routes
-        .find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'H')
+      project.route.biomes
+        .find((biome) => biome.biomeKey === 'H')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === goldenHStartId)
         ?.additionalExits.find((exit) => exit.kind === 'chaos');
     expect(generatedAtHIntro()).toEqual(
@@ -196,9 +190,7 @@ describe('Stygian Well consequential purchase state', () => {
       occurrence: well,
       itemKey: 'TemporaryForcedSecretDoorTrait',
     });
-    const g = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G')?.topology;
+    const g = project.route.biomes.find((biome) => biome.biomeKey === 'G')?.topology;
     const intro = g?.occurrences.find((occurrence) => occurrence.occurrenceId === goldenGStartId);
     expect(intro?.additionalExits).toEqual([
       {
@@ -225,9 +217,7 @@ describe('Stygian Well consequential purchase state', () => {
       generationKey: 'travelDealRefill',
       purchased: false,
     });
-    const restoredG = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G')?.topology;
+    const restoredG = project.route.biomes.find((biome) => biome.biomeKey === 'G')?.topology;
     expect(
       restoredG?.occurrences.find((occurrence) => occurrence.occurrenceId === goldenGStartId)
         ?.additionalExits,
@@ -271,9 +261,7 @@ describe('Stygian Well consequential purchase state', () => {
       additional,
     });
 
-    const topology = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G')?.topology;
+    const topology = project.route.biomes.find((biome) => biome.biomeKey === 'G')?.topology;
     const host = topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === goldenGStartId,
     );
@@ -298,9 +286,8 @@ describe('Stygian Well consequential purchase state', () => {
   it('consumes two pending purchases across two capable rooms without doubling a gate', () => {
     let project = createGoldenFGHProject();
     const finalCombatWell = createOccurrenceAddress(goldenGBiome, goldenGOccurrenceId(7, 1));
-    const gPostboss = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G')
+    const gPostboss = project.route.biomes
+      .find((biome) => biome.biomeKey === 'G')
       ?.topology?.occurrences.find((occurrence) => occurrence.gameName === 'G_PostBoss01');
     if (gPostboss === undefined) throw new Error('expected fixed G Postboss');
     const postbossWell = createOccurrenceAddress(goldenGBiome, gPostboss.occurrenceId);
@@ -334,9 +321,7 @@ describe('Stygian Well consequential purchase state', () => {
       },
     ])
       project = applyProjectCommand(project, catalog, command);
-    const h = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'H')?.topology;
+    const h = project.route.biomes.find((biome) => biome.biomeKey === 'H')?.topology;
     const intro = h?.occurrences.find((occurrence) => occurrence.occurrenceId === goldenHStartId);
     const introDecision = h?.decisions.find(
       (decision) =>
@@ -381,17 +366,15 @@ describe('Stygian Well consequential purchase state', () => {
       itemKey: 'TemporaryForcedSecretDoorTrait',
     });
     const chaosOrigins = () =>
-      project.routes
-        .find((route) => route.routeKey === 'Underworld')
-        ?.biomes.flatMap((biome) =>
-          (biome.topology?.occurrences ?? []).flatMap((occurrence) =>
-            occurrence.additionalExits.flatMap((exit) =>
-              exit.kind === 'chaos' && exit.origin?.kind === 'ixionGenerated'
-                ? [exit.origin.generationKey]
-                : [],
-            ),
+      project.route.biomes.flatMap((biome) =>
+        (biome.topology?.occurrences ?? []).flatMap((occurrence) =>
+          occurrence.additionalExits.flatMap((exit) =>
+            exit.kind === 'chaos' && exit.origin?.kind === 'ixionGenerated'
+              ? [exit.origin.generationKey]
+              : [],
           ),
-        ) ?? [];
+        ),
+      ) ?? [];
     expect(chaosOrigins()).toEqual([
       'initial:secondLeft',
       'initial:secondRight',
@@ -425,9 +408,7 @@ describe('Stygian Well consequential purchase state', () => {
       slotKey: 'secondLeft',
       itemKey: 'TemporaryForcedSecretDoorTrait',
     });
-    const baselineG = baseline.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G')?.topology;
+    const baselineG = baseline.route.biomes.find((biome) => biome.biomeKey === 'G')?.topology;
     const generatedSources =
       baselineG?.occurrences.filter((occurrence) =>
         occurrence.additionalExits.some(
@@ -511,9 +492,7 @@ describe('Stygian Well consequential purchase state', () => {
     );
 
     project = reconcileChaosTopology(project, catalog);
-    const finalG = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G')?.topology;
+    const finalG = project.route.biomes.find((biome) => biome.biomeKey === 'G')?.topology;
     const finalFirstHost = finalG?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === firstHost.occurrenceId,
     );
@@ -531,9 +510,8 @@ describe('Stygian Well consequential purchase state', () => {
 
   it('skips incapable I Intro and places the pending gate at the first selected I combat', () => {
     let project = createGoldenFGHIProject();
-    const hPostboss = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'H')
+    const hPostboss = project.route.biomes
+      .find((biome) => biome.biomeKey === 'H')
       ?.topology?.occurrences.find((occurrence) => occurrence.gameName === 'H_PostBoss01');
     if (hPostboss === undefined) throw new Error('expected fixed H Postboss');
     const well = createOccurrenceAddress(goldenHBiome, hPostboss.occurrenceId);
@@ -553,9 +531,7 @@ describe('Stygian Well consequential purchase state', () => {
       },
     ])
       project = applyProjectCommand(project, catalog, command);
-    const i = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'I')?.topology;
+    const i = project.route.biomes.find((biome) => biome.biomeKey === 'I')?.topology;
     const intro = i?.occurrences.find((occurrence) => occurrence.occurrenceId === goldenIStartId);
     const introDecision = i?.decisions.find(
       (decision) =>
@@ -591,9 +567,7 @@ describe('Stygian Well consequential purchase state', () => {
       purchased: true,
     });
     const assembly = simulateProjectAssembly(catalog, project);
-    const f = assembly.evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const f = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
     if (f?.authoring !== 'complete') throw new Error('expected complete F Last Stand evaluation');
     expect(f.rewards.runtimeOfferFallbacks).toContainEqual(
       expect.objectContaining({
@@ -625,9 +599,7 @@ describe('Stygian Well consequential purchase state', () => {
       itemKey: 'LastStandShopItem',
     });
     const assembly = simulateProjectAssembly(catalog, project);
-    const f = assembly.evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const f = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
     if (f?.authoring !== 'complete') throw new Error('expected complete F Twist evaluation');
     expect(f.rewards.runtimeOfferFallbacks).toContainEqual(
       expect.objectContaining({
@@ -683,9 +655,7 @@ describe('Stygian Well consequential purchase state', () => {
       purchased: true,
     });
     const assembly = simulateProjectAssembly(catalog, project);
-    const g = assembly.evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    const g = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'G');
     if (g?.authoring !== 'complete') throw new Error('expected complete G Boss evaluation');
     expect(g.rewards.branches.every((branch) => branch.stygianWell?.discountUses[0] === -1)).toBe(
       true,

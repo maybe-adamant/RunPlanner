@@ -656,9 +656,8 @@ describe('trait-offer-interactions', () => {
       ),
       'selection',
     );
-    const bridge = project.routes
-      .find((route) => route.routeKey === 'Underworld')!
-      .biomes.find((biome) => biome.biomeKey === 'H')!
+    const bridge = project.route.biomes
+      .find((biome) => biome.biomeKey === 'H')!
       .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
     const authoredOffer = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
     if (authoredOffer?.kind !== 'traits') throw new Error('Echo offer is missing');
@@ -737,9 +736,8 @@ describe('trait-offer-interactions', () => {
       ),
       'selection',
     );
-    const bridge = project.routes
-      .find((route) => route.routeKey === 'Underworld')!
-      .biomes.find((biome) => biome.biomeKey === 'H')!
+    const bridge = project.route.biomes
+      .find((biome) => biome.biomeKey === 'H')!
       .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
     const authoredOffer = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
     if (authoredOffer?.kind !== 'traits') throw new Error('Echo offer is missing');
@@ -818,9 +816,9 @@ describe('trait-offer-interactions', () => {
       ),
       'selection',
     );
-    const bridge = project.routes[0]!.biomes.find(
-      (biome) => biome.biomeKey === 'H',
-    )!.topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
+    const bridge = project
+      .route!.biomes.find((biome) => biome.biomeKey === 'H')!
+      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
     const authoredOffer = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
     if (authoredOffer?.kind !== 'traits') throw new Error('Echo offer is missing');
     const rewardOffer = Object.freeze({

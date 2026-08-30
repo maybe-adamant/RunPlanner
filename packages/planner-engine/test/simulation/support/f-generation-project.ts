@@ -124,7 +124,8 @@ export function createFGenerationProject(
 ): ProjectDocument {
   let project = createProjectDocument(catalog, {
     projectId: 'f-generation',
-    configuredBiomeCounts: { Underworld: 1 },
+    routeKey: 'Underworld',
+    configuredBiomeCount: 1,
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',

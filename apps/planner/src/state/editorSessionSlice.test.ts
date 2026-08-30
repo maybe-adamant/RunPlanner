@@ -9,6 +9,7 @@ import {
   createRoomRunStateCheckpointAddress,
   createRouteAddress,
   createTraitOfferAddress,
+  createProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
 import type { Catalog, RouteDeclaration } from '@run-planner/engine/catalog-schema';
@@ -27,6 +28,7 @@ import {
   settingsSelected,
   traitOfferDialogOpened,
 } from './editorSessionSlice';
+import { authoredProjectReplaced } from './projectWorkspaceSlice';
 
 const reducer = createEditorSessionReducer(catalog);
 
@@ -55,14 +57,14 @@ describe('editor session navigation', () => {
       }),
     );
 
-    expect(initial.activeRouteKey).toBe('Alternate');
-    expect(selected.activePanelByRoute.Alternate).toEqual({ kind: 'biome', biomeKey: 'F' });
+    expect(initial.activeSection).toBe('route');
+    expect(selected.activePanel).toEqual({ kind: 'biome', biomeKey: 'F' });
   });
 
-  it('seeds the first declared route and one tagged panel slot per declaration', () => {
+  it('starts with one route panel and no duplicated route session state', () => {
     expect(reducer(undefined, { type: 'test/initialize' })).toEqual({
-      activeRouteKey: 'Underworld',
-      activePanelByRoute: { Underworld: { kind: 'overview' }, Surface: { kind: 'overview' } },
+      activeSection: 'route',
+      activePanel: { kind: 'overview' },
       focusedSemanticOwner: null,
       selectedFinding: null,
       semanticNavigationRevision: 0,
@@ -138,22 +140,14 @@ describe('editor session navigation', () => {
     expect(selected.traitDialogTarget).toBeNull();
   });
 
-  it('selects route panels without losing another route panel selection', () => {
-    const underworld = reducer(
+  it('selects the one route panel without retaining a panel map', () => {
+    const selected = reducer(
       undefined,
       routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'biome', biomeKey: 'G' } }),
     );
-    const surface = reducer(
-      underworld,
-      routePanelSelected({ routeKey: 'Surface', panel: { kind: 'npcIndex' } }),
-    );
-    const returned = reducer(surface, routeSelected('Underworld'));
-
-    expect(returned.activeRouteKey).toBe('Underworld');
-    expect(returned.activePanelByRoute).toEqual({
-      Underworld: { kind: 'biome', biomeKey: 'G' },
-      Surface: { kind: 'npcIndex' },
-    });
+    expect(selected.activeSection).toBe('route');
+    expect(selected.activePanel).toEqual({ kind: 'biome', biomeKey: 'G' });
+    expect(reducer(selected, routeSelected('Surface')).activePanel).toEqual({ kind: 'overview' });
   });
 
   it('routes biome and route findings through their semantic owner', () => {
@@ -168,11 +162,9 @@ describe('editor session navigation', () => {
       findingSelected({ key: 'route-finding', origin: createRouteAddress('Underworld') }),
     );
 
-    expect(selectedBiome.activeRouteKey).toBe('Surface');
-    expect(selectedBiome.activePanelByRoute.Surface).toEqual({ kind: 'biome', biomeKey: 'O' });
+    expect(selectedBiome.activePanel).toEqual({ kind: 'biome', biomeKey: 'O' });
     expect(selectedBiome.focusedSemanticOwner).toEqual(biomeSelection.origin);
-    expect(selectedRoute.activeRouteKey).toBe('Underworld');
-    expect(selectedRoute.activePanelByRoute.Underworld).toEqual({ kind: 'overview' });
+    expect(selectedRoute.activePanel).toEqual({ kind: 'overview' });
   });
 
   it('issues a new navigation request when the same finding is selected again', () => {
@@ -201,12 +193,12 @@ describe('editor session navigation', () => {
     const navigatedAgain = reducer(navigated, semanticOwnerNavigated(owner));
 
     expect(navigated).toMatchObject({
-      activeRouteKey: 'Surface',
+      activeSection: 'route',
       focusedSemanticOwner: owner,
       selectedFinding: null,
       semanticNavigationRevision: 2,
     });
-    expect(navigated.activePanelByRoute.Surface).toEqual({ kind: 'biome', biomeKey: 'N' });
+    expect(navigated.activePanel).toEqual({ kind: 'biome', biomeKey: 'N' });
     expect(navigatedAgain.semanticNavigationRevision).toBe(3);
   });
 
@@ -221,8 +213,7 @@ describe('editor session navigation', () => {
     const selection = { key: 'project-finding-key', origin: createProjectAddress() } as const;
     const selected = reducer(biomePanel, findingSelected(selection));
 
-    expect(selected.activeRouteKey).toBe('Underworld');
-    expect(selected.activePanelByRoute.Underworld).toEqual({ kind: 'biome', biomeKey: 'F' });
+    expect(selected.activePanel).toEqual({ kind: 'biome', biomeKey: 'F' });
     expect(selected.selectedFinding).toBe(selection);
     expect(selected.focusedSemanticOwner).toEqual(selection.origin);
     expect(selected.semanticNavigationRevision).toBe(1);
@@ -257,12 +248,38 @@ describe('editor session navigation', () => {
     );
 
     expect(reconciled).toMatchObject({
-      activePanelByRoute: selected.activePanelByRoute,
-      activeRouteKey: 'Underworld',
+      activePanel: selected.activePanel,
       semanticNavigationRevision: 1,
       focusedSemanticOwner: null,
       selectedFinding: null,
     });
+  });
+
+  it('resets route-local navigation when a replacement document is published', () => {
+    const selected = reducer(
+      reducer(
+        undefined,
+        routePanelSelected({
+          routeKey: 'Underworld',
+          panel: { kind: 'biome', biomeKey: 'F' },
+        }),
+      ),
+      findingSelected({ key: 'selected-finding', origin: createBiomeAddress('Underworld', 'F') }),
+    );
+    const replacement = reducer(
+      selected,
+      authoredProjectReplaced(
+        createProjectDocument(catalog, { projectId: 'replacement', routeKey: 'Surface' }),
+      ),
+    );
+
+    expect(replacement).toMatchObject({
+      activeSection: 'route',
+      activePanel: { kind: 'overview' },
+      focusedSemanticOwner: null,
+      selectedFinding: null,
+    });
+    expect(replacement.semanticNavigationRevision).toBe(selected.semanticNavigationRevision);
   });
 
   it('rejects session addresses outside the declared route structure', () => {

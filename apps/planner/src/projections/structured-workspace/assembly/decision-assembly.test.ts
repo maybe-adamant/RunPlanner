@@ -60,9 +60,7 @@ function biomeSource(
   const assembly = simulateProjectAssembly(catalog, project);
   const source = createWorkspaceProjectSourceIndex(catalog, project, assembly.evaluation, (phase) =>
     encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
-  )
-    .routes.find((route) => route.routeKey === routeKey)
-    ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
+  ).route?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
   if (source === undefined) throw new Error(`${routeKey}/${biomeKey} source is missing`);
   return source;
 }
@@ -148,30 +146,26 @@ function catalogWithNonFieldsBoundedRoom(gameName: string): Catalog {
 function withUnresolvedFOpening(project: ProjectDocument): ProjectDocument {
   return {
     ...project,
-    routes: project.routes.map((route) =>
-      route.routeKey !== 'Underworld'
-        ? route
-        : {
-            ...route,
-            biomes: route.biomes.map((plan) =>
-              plan.biomeKey !== 'F' || plan.topology === null
-                ? plan
-                : {
-                    ...plan,
-                    topology: {
-                      ...plan.topology,
-                      decisions: plan.topology.decisions.map((decision) =>
-                        decision.kind === 'exit' &&
-                        decision.source.kind === 'occurrence' &&
-                        decision.source.occurrenceId === goldenFStartId
-                          ? { ...decision, selection: { kind: 'unresolved' as const } }
-                          : decision,
-                      ),
-                    },
-                  },
-            ),
-          },
-    ),
+    route: {
+      ...project.route,
+      biomes: project.route.biomes.map((plan) =>
+        plan.biomeKey !== 'F' || plan.topology === null
+          ? plan
+          : {
+              ...plan,
+              topology: {
+                ...plan.topology,
+                decisions: plan.topology.decisions.map((decision) =>
+                  decision.kind === 'exit' &&
+                  decision.source.kind === 'occurrence' &&
+                  decision.source.occurrenceId === goldenFStartId
+                    ? { ...decision, selection: { kind: 'unresolved' as const } }
+                    : decision,
+                ),
+              },
+            },
+      ),
+    },
   };
 }
 
@@ -638,7 +632,8 @@ describe('structured workspace decision assembly', () => {
   it('keeps the Fields outcome control available while a retained batch awaits its outcome', () => {
     const start = createOccurrenceId('retained-fields-awaiting-start');
     let project = createProjectDocument(catalog, {
-      configuredBiomeCounts: { Underworld: 3 },
+      routeKey: 'Underworld',
+      configuredBiomeCount: 3,
       projectId: 'retained-fields-awaiting-outcome',
     });
     project = applyProjectCommand(project, catalog, {
@@ -1024,7 +1019,8 @@ describe('structured workspace decision assembly', () => {
   it('publishes only the next physical target after declaration-owned batch setup', () => {
     const startId = createOccurrenceId('decision-assembly-setup-start');
     let project = createProjectDocument(catalog, {
-      configuredBiomeCounts: { Underworld: 1 },
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
       projectId: 'decision-assembly-setup',
     });
     project = applyProjectCommand(project, catalog, {
@@ -1189,9 +1185,7 @@ describe('structured workspace decision assembly', () => {
     );
 
     const base = createGoldenFGHIProject();
-    const gPlan = base.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'G');
+    const gPlan = base.route.biomes.find((candidate) => candidate.biomeKey === 'G');
     const gTakeover = gPlan?.topology?.decisions.find(
       (decision) =>
         decision.kind === 'exit' &&

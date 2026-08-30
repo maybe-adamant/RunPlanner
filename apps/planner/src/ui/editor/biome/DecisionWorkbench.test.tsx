@@ -82,15 +82,16 @@ afterEach(() => {
 function emptyProject(routeKey: 'Surface' | 'Underworld'): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: `decision-workbench-empty-${routeKey}`,
-    configuredBiomeCounts: { [routeKey]: 1 },
+    routeKey,
+    configuredBiomeCount: 1,
   });
 }
 
 function blockHCombat05Trait(): ProjectDocument {
   const completeProject = authorLegalTraitOffers(createGoldenFGHIProject());
-  const complete = simulateProject(catalog, completeProject)
-    .routes.find((candidate) => candidate.routeKey === 'Underworld')
-    ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+  const complete = simulateProject(catalog, completeProject).route?.biomes.find(
+    (candidate) => candidate.biomeKey === 'H',
+  );
   if (complete?.authoring !== 'complete' || complete.validity !== 'valid') {
     throw new Error('H fixture did not produce a complete-valid baseline');
   }
@@ -149,15 +150,13 @@ function occurrenceForId(occurrenceId: string) {
 
 function authoredNaturalChaosFixture() {
   const base = createGoldenFGHIProject();
-  const located = base.routes.flatMap((route) =>
-    route.biomes.flatMap((plan) =>
-      (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
-        const room = catalog.rooms.byKey[occurrence.gameName];
-        return room?.additionalExits.some((exit) => exit.kind === 'chaos')
-          ? [{ occurrence, plan, route }]
-          : [];
-      }),
-    ),
+  const located = base.route.biomes.flatMap((plan) =>
+    (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
+      const room = catalog.rooms.byKey[occurrence.gameName];
+      return room?.additionalExits.some((exit) => exit.kind === 'chaos')
+        ? [{ occurrence, plan, route: base.route }]
+        : [];
+    }),
   )[0];
   if (located === undefined) throw new Error('Golden natural Chaos source is missing');
   const biome = createBiomeAddress(located.route.routeKey, located.plan.biomeKey);
@@ -247,9 +246,7 @@ function nOpeningDecisionProject(): ProjectDocument {
 }
 
 function takeoverDecision(project: ProjectDocument) {
-  const plan = project.routes
-    .find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((biome) => biome.biomeKey === 'G');
+  const plan = project.route.biomes.find((biome) => biome.biomeKey === 'G');
   const decision = plan?.topology?.decisions.find(
     (candidate) =>
       candidate.kind === 'exit' &&
@@ -276,9 +273,7 @@ function requiredTakeoverOwner(
   biome: BiomeAddress,
   gameName: string,
 ): { readonly owner: ReturnType<typeof createExitDecisionAddress>; readonly targetCount: number } {
-  const plan = project.routes
-    .find((route) => route.routeKey === routeKey)
-    ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey);
+  const plan = project.route.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey);
   const decision = plan?.topology?.decisions.find(
     (candidate) =>
       candidate.kind === 'exit' &&
@@ -337,16 +332,17 @@ describe('DecisionWorkbench', () => {
     );
     await sourceView.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     const features = screen.getByLabelText('Room features');
-    const before = sourceView.application.store.getState().projectWorkspace.history.past.length;
+    const before = sourceView.application.store.getState().projectWorkspace.history!.past.length;
     await sourceView.user.click(within(features).getByRole('checkbox', { name: 'Chaos Gate' }));
-    expect(sourceView.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(sourceView.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       before + 1,
     );
     expect(
       sourceView.application.store
         .getState()
-        .projectWorkspace.history.present.routes.flatMap((route) => route.biomes)
-        .find((biomePlan) => biomePlan.biomeKey === located.plan.biomeKey)
+        .projectWorkspace.history!.present.route.biomes.find(
+          (biomePlan) => biomePlan.biomeKey === located.plan.biomeKey,
+        )
         ?.topology?.occurrences.find(
           (occurrence) => occurrence.occurrenceId === source.occurrenceId,
         )
@@ -392,15 +388,13 @@ describe('DecisionWorkbench', () => {
 
   it('renders an authored Zagreus exit in its owning decision, not the Midshop workbench', async () => {
     const base = createGoldenFGHIProject();
-    const located = base.routes.flatMap((route) =>
-      route.biomes.flatMap((plan) =>
-        (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
-          const room = catalog.rooms.byKey[occurrence.gameName];
-          return room?.additionalExits.some((exit) => exit.kind === 'zagreusContract')
-            ? [{ occurrence, plan, route }]
-            : [];
-        }),
-      ),
+    const located = base.route.biomes.flatMap((plan) =>
+      (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
+        const room = catalog.rooms.byKey[occurrence.gameName];
+        return room?.additionalExits.some((exit) => exit.kind === 'zagreusContract')
+          ? [{ occurrence, plan, route: base.route }]
+          : [];
+      }),
     )[0];
     if (located === undefined) throw new Error('Golden selected Midshop is missing');
     const biome = createBiomeAddress(located.route.routeKey, located.plan.biomeKey);
@@ -458,9 +452,8 @@ describe('DecisionWorkbench', () => {
       kind: 'CreateBatch',
       decision: outgoingOwner,
     });
-    const incomingDecision = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F')
+    const incomingDecision = project.route.biomes
+      .find((biome) => biome.biomeKey === 'F')
       ?.topology?.decisions.find(
         (decision) =>
           decision.kind === 'exit' &&
@@ -499,8 +492,7 @@ describe('DecisionWorkbench', () => {
     await view.user.click(screen.getByRole('button', { name: 'Start biome' }));
     const plan = view.application.store
       .getState()
-      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N');
+      .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'N');
     const openingId = plan?.topology?.startOccurrenceId;
     if (openingId === undefined) throw new Error('N Opening was not authored');
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
@@ -514,18 +506,18 @@ describe('DecisionWorkbench', () => {
 
     expect(screen.queryByRole('button', { name: 'Add fixed next room' })).toBeNull();
 
-    const before = view.application.store.getState().projectWorkspace.history.past.length;
+    const before = view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
     await view.user.click(within(screen.getByRole('listbox')).getByRole('option'));
     await waitFor(() =>
       expect(
         view.application.store
           .getState()
-          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-          ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology?.decisions[0],
+          .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'N')
+          ?.topology?.decisions[0],
       ).toMatchObject({ normal: { targets: [{ exitKey: 'prehub' }] } }),
     );
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       before + 1,
     );
   });
@@ -533,7 +525,8 @@ describe('DecisionWorkbench', () => {
   it('uses the same generic start action for an Intro biome', async () => {
     const view = renderDecisionWorkbench(
       createProjectDocument(catalog, {
-        configuredBiomeCounts: { Surface: 4 },
+        routeKey: 'Surface',
+        configuredBiomeCount: 4,
         projectId: 'decision-workbench-intro-start',
       }),
       'Surface',
@@ -546,8 +539,7 @@ describe('DecisionWorkbench', () => {
     await view.user.click(screen.getByRole('button', { name: 'Start biome' }));
     const plan = view.application.store
       .getState()
-      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'P');
+      .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'P');
     expect(plan?.topology?.occurrences[0]?.gameName).toBe('P_Intro');
   });
 
@@ -575,8 +567,7 @@ describe('DecisionWorkbench', () => {
       expect(
         view.application.store
           .getState()
-          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-          ?.biomes.find((biome) => biome.biomeKey === 'N')
+          .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'N')
           ?.topology?.occurrences.some((occurrence) => occurrence.gameName === 'N_PreHub01'),
       ).toBe(true),
     );
@@ -587,7 +578,7 @@ describe('DecisionWorkbench', () => {
     const view = renderDecisionWorkbench(project, 'Underworld', 'F', subjectForOwner(owner));
     expect(screen.queryByText('partial')).toBeNull();
     const targetOwner = createTargetAddress(goldenFBiome, owner.source, 'exit1');
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     expect(screen.getByRole('button', { name: 'Door 1 room' })).not.toHaveProperty(
       'disabled',
       true,
@@ -620,7 +611,7 @@ describe('DecisionWorkbench', () => {
     );
     if (rewardTarget === null) throw new Error('F selected offer reward target is missing');
     await waitFor(() => expect(document.activeElement).toBe(rewardTarget));
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
@@ -643,9 +634,9 @@ describe('DecisionWorkbench', () => {
     if (authoredTarget === undefined) throw new Error('F authored target is missing');
     const selectionBeforeOpen = authoredDecision.selection;
     const historyBeforeOpen =
-      view.application.store.getState().projectWorkspace.history.past.length;
+      view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.click(openRoom);
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBeforeOpen,
     );
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
@@ -699,8 +690,9 @@ describe('DecisionWorkbench', () => {
     await waitFor(() => {
       const topology = view.application.store
         .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'P')?.topology;
+        .projectWorkspace.history!.present.route?.biomes.find(
+          (biome) => biome.biomeKey === 'P',
+        )?.topology;
       expect(
         topology?.decisions.some(
           (decision) =>
@@ -751,10 +743,10 @@ describe('DecisionWorkbench', () => {
     if (roomLabel === undefined) throw new Error('P unpicked room label is missing');
 
     const historyBeforePick =
-      view.application.store.getState().projectWorkspace.history.past.length;
+      view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.click(unpicked);
     await waitFor(() => expect((unpicked as HTMLInputElement).checked).toBe(true));
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBeforePick + 1,
     );
 
@@ -767,9 +759,9 @@ describe('DecisionWorkbench', () => {
     const selectedTarget = selectedNode.targets.find((target) => target.room.label === roomLabel);
     if (selectedTarget === undefined) throw new Error('P selected target is missing');
     const historyBeforeOpen =
-      view.application.store.getState().projectWorkspace.history.past.length;
+      view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBeforeOpen,
     );
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
@@ -791,7 +783,7 @@ describe('DecisionWorkbench', () => {
       kind: 'CreateBatch',
     });
     const view = renderDecisionWorkbench(project, 'Underworld', 'F', subjectForOwner(owner));
-    const before = view.application.store.getState().projectWorkspace.history.past.length;
+    const before = view.application.store.getState().projectWorkspace.history!.past.length;
     expect(screen.getByRole('button', { name: 'Door 1 room' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Check Preboss rooms' })).toBeNull();
     await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
@@ -800,7 +792,7 @@ describe('DecisionWorkbench', () => {
       .find((option) => option.getAttribute('data-candidate-state') === 'forced');
     if (preboss === undefined) throw new Error('F terminal Door 1 has no forced Preboss choice');
     await view.user.click(preboss);
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       before + 1,
     );
     const authored = workspaceBiome(view.application, 'Underworld', 'F').nodes.find(
@@ -1152,30 +1144,26 @@ describe('DecisionWorkbench', () => {
     const base = createGoldenFGHIProject();
     const blocked = {
       ...base,
-      routes: base.routes.map((route) =>
-        route.routeKey !== 'Underworld'
-          ? route
-          : {
-              ...route,
-              biomes: route.biomes.map((plan) =>
-                plan.biomeKey !== 'F' || plan.topology === null
-                  ? plan
-                  : {
-                      ...plan,
-                      topology: {
-                        ...plan.topology,
-                        decisions: plan.topology.decisions.map((decision) =>
-                          decision.kind === 'exit' &&
-                          decision.source.kind === 'occurrence' &&
-                          decision.source.occurrenceId === goldenFOccurrenceId(1, 1)
-                            ? { ...decision, selection: { kind: 'unresolved' as const } }
-                            : decision,
-                        ),
-                      },
-                    },
-              ),
-            },
-      ),
+      route: {
+        ...base.route,
+        biomes: base.route.biomes.map((plan) =>
+          plan.biomeKey !== 'F' || plan.topology === null
+            ? plan
+            : {
+                ...plan,
+                topology: {
+                  ...plan.topology,
+                  decisions: plan.topology.decisions.map((decision) =>
+                    decision.kind === 'exit' &&
+                    decision.source.kind === 'occurrence' &&
+                    decision.source.occurrenceId === goldenFOccurrenceId(1, 1)
+                      ? { ...decision, selection: { kind: 'unresolved' as const } }
+                      : decision,
+                  ),
+                },
+              },
+        ),
+      },
     };
     const selector = (biome: WorkspaceBiome): DecisionWorkbenchSubject | undefined => {
       const node = biome.nodes.find(
@@ -1234,14 +1222,12 @@ describe('DecisionWorkbench', () => {
       decision: qOwner,
     });
     const encoded = JSON.parse(encodeProjectDocument(withoutQ)) as {
-      routes: Array<{
+      route: {
         routeKey: string;
         biomes: Array<{ biomeKey: string; topology: { decisions: unknown[] } | null }>;
-      }>;
+      };
     };
-    const qTopology = encoded.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'Q')?.topology;
+    const qTopology = encoded.route.biomes.find((biome) => biome.biomeKey === 'Q')?.topology;
     if (qTopology === undefined || qTopology === null) throw new Error('Q topology is missing');
     qTopology.decisions.reverse();
     cases.push({
@@ -1313,7 +1299,7 @@ describe('DecisionWorkbench', () => {
       createApplication({ observeEvaluationWork: (event) => work.push(event) }),
     );
     work.length = 0;
-    const before = view.application.store.getState().projectWorkspace.history.past.length;
+    const before = view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
     const unavailable = within(screen.getByRole('listbox'))
       .getAllByRole('option')
@@ -1325,7 +1311,7 @@ describe('DecisionWorkbench', () => {
     if (unavailable === undefined) throw new Error('Q unavailable Door 1 choice is missing');
     expect(unavailable.getAttribute('aria-disabled')).toBe('true');
     expect(work.filter((event) => event.kind === 'queryBatch')).toHaveLength(2);
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(before);
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(before);
   });
 
   it('dispatches immediate decision, staged, and biome removals without confirmation', async () => {
@@ -1373,8 +1359,8 @@ describe('DecisionWorkbench', () => {
       expect(
         opening.application.store
           .getState()
-          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-          ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology?.decisions,
+          .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'N')
+          ?.topology?.decisions,
       ).toHaveLength(0),
     );
     cleanup();
@@ -1385,8 +1371,8 @@ describe('DecisionWorkbench', () => {
       expect(
         clearing.application.store
           .getState()
-          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-          ?.biomes.find((biome) => biome.biomeKey === 'F')?.topology,
+          .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
+          ?.topology,
       ).toBeNull(),
     );
   });
@@ -1519,7 +1505,7 @@ describe('DecisionWorkbench', () => {
     );
     const card = screen.getByRole('article', { name: `${target.room.label} room offer` });
     expect(within(card).getByRole('button', { name: `Door ${target.index} room` })).toBeTruthy();
-    const historyBefore = application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = application.store.getState().projectWorkspace.history!.past.length;
 
     await view.user.click(within(card).getByRole('button', { name: `Door ${target.index} room` }));
     const replacement = within(await screen.findByRole('listbox'))
@@ -1544,15 +1530,14 @@ describe('DecisionWorkbench', () => {
     expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(
       target.marker.address,
     );
-    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
     application.store.dispatch(authoredProjectUndoRequested());
     expect(
       application.store
         .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'F')
+        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
         ?.topology?.occurrences.find(
           (occurrence) => occurrence.occurrenceId === target.room.occurrenceId,
         )?.gameName,

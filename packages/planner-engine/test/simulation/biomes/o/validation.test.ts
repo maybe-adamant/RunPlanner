@@ -35,9 +35,7 @@ import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-
 
 function evaluateO(project = loadSurfaceNOProject()) {
   const evaluation = simulateProject(catalog, project);
-  const biome = evaluation.routes
-    .find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+  const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'O');
   if (biome?.authoring !== 'complete') throw new Error('O fixture did not complete');
   return { project, evaluation, biome };
 }
@@ -76,7 +74,7 @@ function materializedORoom(
   project: ReturnType<typeof loadSurfaceNOProject>,
   occurrenceId: typeof oOccurrenceIds.combat07,
 ) {
-  const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
+  const route = project.route;
   const plan = route?.biomes.find((candidate) => candidate.biomeKey === 'O');
   if (route === undefined || plan === undefined) throw new Error('O fixture plan is missing');
   const completeness = evaluateBiomeCompleteness(catalog, oBiome, plan);
@@ -94,9 +92,8 @@ describe('selected O validation', () => {
   it('adds the third-phase required cohort atomically and reuses retained ranks after reactivation', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const initial = loadSurfaceNOProject();
-    const beforeOrder = initial.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((plan) => plan.biomeKey === 'O')
+    const beforeOrder = initial.route.biomes
+      .find((plan) => plan.biomeKey === 'O')
       ?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
       )?.roomActions.order;
@@ -108,9 +105,8 @@ describe('selected O validation', () => {
       encounterCount: 3,
     });
     const expanded = expandedHistory.present;
-    const expandedOrder = expanded.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((plan) => plan.biomeKey === 'O')
+    const expandedOrder = expanded.route.biomes
+      .find((plan) => plan.biomeKey === 'O')
       ?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
       )?.roomActions.order;
@@ -150,9 +146,8 @@ describe('selected O validation', () => {
       occurrence,
       encounterCount: 3,
     });
-    const restoredOrder = restored.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((plan) => plan.biomeKey === 'O')
+    const restoredOrder = restored.route.biomes
+      .find((plan) => plan.biomeKey === 'O')
       ?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
       )?.roomActions.order;
@@ -282,9 +277,8 @@ describe('selected O validation', () => {
       { kind: 'chooseRewardWheel', wheelKey: 'wheel2' },
       { kind: 'interactWheelReward', wheelKey: 'wheel2' },
     ]);
-    const authoredOccurrence = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((plan) => plan.biomeKey === 'O')
+    const authoredOccurrence = project.route.biomes
+      .find((plan) => plan.biomeKey === 'O')
       ?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
       );
@@ -709,9 +703,7 @@ describe('selected O validation', () => {
       },
     });
     const assembly = simulateProjectAssembly(catalog, project);
-    const evaluated = assembly.evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'O');
+    const evaluated = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'O');
     if (evaluated?.authoring !== 'complete' || evaluated.validity !== 'invalid') {
       throw new Error('invalid Devotion chosen offer did not block complete O');
     }
@@ -940,9 +932,7 @@ describe('selected O validation', () => {
   it('uses acquired reward history for an uncommitted Trial target', () => {
     const { project, target } = createEmptyTrialDecision();
     const assembly = simulateProjectAssembly(catalog, project);
-    const o = assembly.evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'O');
+    const o = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'O');
     if (o === undefined || !('rewards' in o)) {
       throw new Error('O prefix did not publish reward checkpoints');
     }
@@ -969,9 +959,8 @@ describe('selected O validation', () => {
 
   it('keeps Ship and every reward-wheel candidate family in the engine', () => {
     const { project } = evaluateO();
-    const occurrence = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'O')
+    const occurrence = project.route.biomes
+      .find((biome) => biome.biomeKey === 'O')
       ?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === oOccurrenceIds.combat04,
       );
@@ -1078,7 +1067,7 @@ describe('selected O validation', () => {
       encounterCount: 3,
     });
     project = authorLegalTraitOffers(project);
-    const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
+    const route = project.route;
     if (route === undefined) throw new Error('O fixture has no Surface route');
     const replacementWeapon = catalog.weapons.values.find(
       (weapon) => weapon.key !== route.loadout.weaponKey,
@@ -1092,9 +1081,9 @@ describe('selected O validation', () => {
     });
 
     const assembly = simulateProjectAssembly(catalog, project);
-    const evaluated = assembly.evaluation.routes
-      .find((candidate) => candidate.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    const evaluated = assembly.evaluation.route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'O',
+    );
     if (evaluated?.authoring !== 'complete' || evaluated.validity !== 'invalid') {
       throw new Error('stale Hammer fixture did not block complete O');
     }
@@ -1266,9 +1255,9 @@ describe('selected O validation', () => {
       offer,
       value: { rewardType: 'MetaCurrencyBigDrop' },
     });
-    const evaluated = simulateProjectAssembly(catalog, project)
-      .evaluation.routes.find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'O');
+    const evaluated = simulateProjectAssembly(catalog, project).evaluation.route?.biomes.find(
+      (biome) => biome.biomeKey === 'O',
+    );
     if (evaluated === undefined || !('rewards' in evaluated)) {
       throw new Error('O wheel-store finding fixture did not publish reward evaluation');
     }

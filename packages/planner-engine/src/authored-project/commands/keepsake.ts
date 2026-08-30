@@ -118,48 +118,34 @@ export function applyKeepsakeCommand(
       transcendentEmbryo: Object.freeze({ blessingKey: command.value.blessingKey }),
     });
     if (selection.kind === 'echoKeepsakeReplay') {
-      const route = document.routes.find((candidate) => candidate.routeKey === selection.routeKey);
+      const route = document.route.routeKey === selection.routeKey ? document.route : undefined;
       const biome = route?.biomes.find((candidate) => candidate.biomeKey === selection.biomeKey);
       if (biome === undefined) failCommand(command, 'unknown Echo keepsake replay biome');
       return {
         ...document,
-        routes: document.routes.map((candidate) =>
-          candidate.routeKey !== selection.routeKey
-            ? candidate
-            : {
-                ...candidate,
-                biomes: candidate.biomes.map((plan) =>
-                  plan.biomeKey !== selection.biomeKey
-                    ? plan
-                    : {
-                        ...plan,
-                        echoKeepsakeReplayResults: update(plan.echoKeepsakeReplayResults),
-                      },
-                ),
-              },
-        ),
+        route: {
+          ...route!,
+          biomes: route!.biomes.map((plan) =>
+            plan.biomeKey !== selection.biomeKey
+              ? plan
+              : { ...plan, echoKeepsakeReplayResults: update(plan.echoKeepsakeReplayResults) },
+          ),
+        },
       };
     }
     if (selection.owner === 'routeStart') {
-      const routeIndex = document.routes.findIndex(
-        (route) => route.routeKey === selection.routeKey,
-      );
-      const route = document.routes[routeIndex];
+      const route = document.route.routeKey === selection.routeKey ? document.route : undefined;
       if (route === undefined || embryoKeepsakeKey !== route.loadout.startingKeepsakeKey)
         failCommand(command, 'result does not match the current selection');
       return {
         ...document,
-        routes: document.routes.map((candidate, index) =>
-          index !== routeIndex
-            ? candidate
-            : {
-                ...candidate,
-                loadout: {
-                  ...candidate.loadout,
-                  keepsakeEquipResults: update(candidate.loadout.keepsakeEquipResults),
-                },
-              },
-        ),
+        route: {
+          ...route!,
+          loadout: {
+            ...route!.loadout,
+            keepsakeEquipResults: update(route!.loadout.keepsakeEquipResults),
+          },
+        },
       };
     }
     const located = locateBiome(document, catalog, command);
@@ -189,33 +175,23 @@ export function applyKeepsakeCommand(
       experimentalHammer: Object.freeze({ ...command.value }),
     });
     if (selection.kind === 'echoKeepsakeReplay') {
-      const route = document.routes.find((candidate) => candidate.routeKey === selection.routeKey);
+      const route = document.route.routeKey === selection.routeKey ? document.route : undefined;
       const biome = route?.biomes.find((candidate) => candidate.biomeKey === selection.biomeKey);
       if (biome === undefined) failCommand(command, 'unknown Echo keepsake replay biome');
       return {
         ...document,
-        routes: document.routes.map((candidate) =>
-          candidate.routeKey !== selection.routeKey
-            ? candidate
-            : {
-                ...candidate,
-                biomes: candidate.biomes.map((plan) =>
-                  plan.biomeKey !== selection.biomeKey
-                    ? plan
-                    : {
-                        ...plan,
-                        echoKeepsakeReplayResults: update(plan.echoKeepsakeReplayResults),
-                      },
-                ),
-              },
-        ),
+        route: {
+          ...route!,
+          biomes: route!.biomes.map((plan) =>
+            plan.biomeKey !== selection.biomeKey
+              ? plan
+              : { ...plan, echoKeepsakeReplayResults: update(plan.echoKeepsakeReplayResults) },
+          ),
+        },
       };
     }
     if (selection.owner === 'routeStart') {
-      const routeIndex = document.routes.findIndex(
-        (route) => route.routeKey === selection.routeKey,
-      );
-      const route = document.routes[routeIndex];
+      const route = document.route.routeKey === selection.routeKey ? document.route : undefined;
       if (
         route === undefined ||
         catalog.keepsakes.byKey[route.loadout.startingKeepsakeKey]?.effect?.kind !==
@@ -224,17 +200,13 @@ export function applyKeepsakeCommand(
         failCommand(command, 'result does not match the current selection');
       return {
         ...document,
-        routes: document.routes.map((candidate, index) =>
-          index === routeIndex
-            ? {
-                ...candidate,
-                loadout: {
-                  ...candidate.loadout,
-                  keepsakeEquipResults: update(candidate.loadout.keepsakeEquipResults),
-                },
-              }
-            : candidate,
-        ),
+        route: {
+          ...route!,
+          loadout: {
+            ...route!.loadout,
+            keepsakeEquipResults: update(route!.loadout.keepsakeEquipResults),
+          },
+        },
       };
     }
     const located = locateBiome(document, catalog, command);
@@ -288,29 +260,22 @@ export function applyKeepsakeCommand(
     if (selection.kind === 'echoKeepsakeReplay')
       failCommand(command, 'Jeweled Pom is not supported by Echo keepsake replay');
     if (selection.owner === 'routeStart') {
-      const routeIndex = document.routes.findIndex(
-        (route) => route.routeKey === selection.routeKey,
-      );
-      const route = document.routes[routeIndex];
+      const route = document.route.routeKey === selection.routeKey ? document.route : undefined;
       if (route === undefined) failCommand(command, 'unknown route');
       if (route.loadout.startingKeepsakeKey !== descriptorOwnerKey(catalog, descriptor))
         failCommand(command, 'result does not match the current selection');
       return {
         ...document,
-        routes: document.routes.map((candidate, index) =>
-          index !== routeIndex
-            ? candidate
-            : {
-                ...route,
-                loadout: {
-                  ...route.loadout,
-                  keepsakeEquipResults: {
-                    ...route.loadout.keepsakeEquipResults,
-                    jeweledPom: completeValue,
-                  },
-                },
-              },
-        ),
+        route: {
+          ...route!,
+          loadout: {
+            ...route!.loadout,
+            keepsakeEquipResults: {
+              ...route!.loadout.keepsakeEquipResults,
+              jeweledPom: completeValue,
+            },
+          },
+        },
       };
     }
     const located = locateBiome(document, catalog, command);

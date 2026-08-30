@@ -106,12 +106,17 @@ export function createEditorSessionReconciliationCoordinator(options: {
   readonly store: PlannerStore;
   readonly structuredWorkspace: StructuredWorkspaceProjectionService;
 }): EditorSessionReconciliationCoordinator {
-  let observedAssembly = options.store.getState().projectWorkspace.assembly;
+  const initialWorkspace = options.store.getState().projectWorkspace;
+  let observedAssembly =
+    initialWorkspace.kind === 'openProject' ? initialWorkspace.assembly : undefined;
   const unsubscribe = options.store.subscribe(() => {
     const state = options.store.getState();
-    const assembly = state.projectWorkspace.assembly;
+    const assembly =
+      state.projectWorkspace.kind === 'openProject' ? state.projectWorkspace.assembly : undefined;
     if (assembly === observedAssembly) return;
     observedAssembly = assembly;
+
+    if (assembly === undefined) return;
 
     if (
       state.editorSession.focusedSemanticOwner === null &&

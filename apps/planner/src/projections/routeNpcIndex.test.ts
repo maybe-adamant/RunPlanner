@@ -59,11 +59,7 @@ function selectEncounter(
 function underworldRoute(
   application: ReturnType<typeof createApplication>,
 ): ProjectRouteEvaluation {
-  const route = application.store
-    .getState()
-    .projectWorkspace.assembly.evaluation.routes.find(
-      (candidate) => candidate.routeKey === 'Underworld',
-    );
+  const route = application.store.getState().projectWorkspace.assembly!.evaluation.route;
   if (route === undefined) throw new Error('Underworld evaluation is missing');
   return route;
 }
@@ -71,7 +67,8 @@ function underworldRoute(
 function routeIndexFixture(project: ProjectDocument) {
   const application = createApplication();
   application.store.dispatch(authoredProjectReplaced(project));
-  const workspace = application.selectStructuredWorkspace(application.store.getState());
+  const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+  if (workspace === undefined) throw new Error('route NPC fixture has no workspace');
   return Object.freeze({ application, route: underworldRoute(application), workspace });
 }
 
@@ -328,13 +325,8 @@ describe('route NPC index projection', () => {
           fArtemisPhase,
         ),
       );
-      const metadataFreeRoute = metadataFreeAssembly.evaluation.routes.find(
-        (route) => route.routeKey === 'Underworld',
-      );
-      const standardRoute = simulateProjectAssembly(
-        catalog,
-        authoredProject,
-      ).evaluation.routes.find((route) => route.routeKey === 'Underworld');
+      const metadataFreeRoute = metadataFreeAssembly.evaluation.route;
+      const standardRoute = simulateProjectAssembly(catalog, authoredProject).evaluation.route;
       if (metadataFreeRoute === undefined)
         throw new Error('metadata-free Underworld route is missing');
       if (standardRoute === undefined) throw new Error('standard Underworld route is missing');

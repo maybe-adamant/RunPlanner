@@ -14,7 +14,7 @@ export function completeBiome(
   routeKey: string,
   biomeKey: string,
 ): CompleteBiomeProjectEvaluation | undefined {
-  const route = evaluation.routes.find((candidate) => candidate.routeKey === routeKey);
+  const route = evaluation.route.routeKey === routeKey ? evaluation.route : undefined;
   const biome = route?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
   return biome?.authoring === 'complete' ? biome : undefined;
 }
@@ -24,7 +24,7 @@ export function prefixBiome(
   routeKey: string,
   biomeKey: string,
 ): PrefixIncompleteBiomeProjectEvaluation | undefined {
-  const route = evaluation.routes.find((candidate) => candidate.routeKey === routeKey);
+  const route = evaluation.route.routeKey === routeKey ? evaluation.route : undefined;
   const biome = route?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
   return biome?.authoring === 'incomplete' && 'materializedPrefix' in biome ? biome : undefined;
 }
@@ -74,8 +74,8 @@ export function planFor(
   project: ProjectDocument,
   routeKey: string,
   biomeKey: string,
-): ProjectDocument['routes'][number]['biomes'][number] {
-  const route = project.routes.find((candidate) => candidate.routeKey === routeKey);
+): ProjectDocument['route']['biomes'][number] {
+  const route = project.route.routeKey === routeKey ? project.route : undefined;
   const plan = route?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
   if (plan === undefined) {
     throw new CandidateEvaluationContractError(
@@ -90,7 +90,7 @@ export function completeBiomeCount(
   routeKey: string,
   biomeKey: string,
 ): number {
-  const route = evaluation.routes.find((candidate) => candidate.routeKey === routeKey);
+  const route = evaluation.route.routeKey === routeKey ? evaluation.route : undefined;
   const index = route?.biomes.findIndex((candidate) => candidate.biomeKey === biomeKey) ?? -1;
   return index + 1;
 }

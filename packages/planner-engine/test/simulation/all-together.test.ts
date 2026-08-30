@@ -487,7 +487,7 @@ describe('All Together direct trait settlement', () => {
     const evaluated = evaluateAllTogetherSetDomain(
       catalog,
       {} as never,
-      { routes: [] } as never,
+      { route: {} } as never,
       divergentArtifacts,
       {
         kind: 'allTogetherSetDomain',

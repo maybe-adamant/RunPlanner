@@ -1,4 +1,7 @@
-import { type EncounterPhaseAddress } from '@run-planner/engine/authored-project';
+import {
+  type EncounterPhaseAddress,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { type ProjectEvaluation } from '@run-planner/engine/simulation';
 import { useEffect, useRef } from 'react';
@@ -15,7 +18,7 @@ import {
 } from '@planner/projections/routeRoomFeatureIndex';
 import { projectRouteTraitOffers } from '@planner/projections/traitProjection';
 import { routePanelSelected, semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
-import { type RootState, useAppDispatch, useAppSelector } from '@planner/state/store';
+import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import type {
   StructuredWorkspaceProjection,
   WorkspaceInteractionCatalog,
@@ -51,19 +54,14 @@ export function RouteWorkspace({
   readonly navigation: RouteEditorNavigation;
   readonly feedback: RouteFeedbackPresentation;
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly project: RootState['projectWorkspace']['history']['present'];
+  readonly project: ProjectDocument;
   readonly projectEvaluation: ProjectEvaluation;
   readonly workspace: StructuredWorkspaceProjection;
   readonly workspaceRoute: WorkspaceRoute;
 }) {
   const dispatch = useAppDispatch();
   const pendingNpcPhaseFocus = useRef<EncounterPhaseAddress | null>(null);
-  const activePanel = useAppSelector(
-    (state) => state.editorSession.activePanelByRoute[workspaceRoute.routeKey],
-  );
-  if (activePanel === undefined) {
-    throw new Error(`Editor session omitted panel state for ${workspaceRoute.routeKey}`);
-  }
+  const activePanel = useAppSelector((state) => state.editorSession.activePanel);
   const activeBiomeProjection =
     activePanel.kind !== 'biome'
       ? undefined
@@ -71,9 +69,10 @@ export function RouteWorkspace({
   const displayedBiomeKey = activeBiomeProjection?.biomeKey;
   const activeBiomeFeedback =
     displayedBiomeKey === undefined ? undefined : feedback.biomes.get(displayedBiomeKey);
-  const routeEvaluation = projectEvaluation.routes.find(
-    (route) => route.routeKey === workspaceRoute.routeKey,
-  );
+  const routeEvaluation =
+    projectEvaluation.route.routeKey === workspaceRoute.routeKey
+      ? projectEvaluation.route
+      : undefined;
   if (routeEvaluation === undefined) {
     throw new Error(`Project evaluation omitted route ${workspaceRoute.routeKey}`);
   }

@@ -175,7 +175,7 @@ function evaluateShrineOutgoingPrefix(
   project: ReturnType<typeof loadSurfaceNOProject>,
   rewardType: 'HermesUpgrade' | 'SpellDrop' | 'TalentDrop',
 ) {
-  const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
+  const route = project.route;
   const plan = route?.biomes.find((candidate) => candidate.biomeKey === 'O');
   if (route === undefined || plan?.topology === null || plan === undefined)
     throw new Error('fixture lost Surface O topology');
@@ -338,9 +338,9 @@ describe('Hermes Shrine entry inventory gate', () => {
   it('uses an unpurchased visible Shrine inventory for room eligibility without consuming a bag', () => {
     const host = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const oResult = (project: ReturnType<typeof loadSurfaceNOProject>) => {
-      const biome = simulateProject(catalog, project)
-        .routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+      const biome = simulateProject(catalog, project).route?.biomes.find(
+        (candidate) => candidate.biomeKey === 'O',
+      );
       if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
         throw new Error('fixture lost valid O evaluation');
       }
@@ -586,7 +586,7 @@ describe('Hermes Shrine delayed-delivery derivation', () => {
     const evaluation = simulateProjectAssembly(
       catalog,
       createSurfaceNUnresolvedBossHermesDeliveryCheckpoint(),
-    ).evaluation.routes.find((route) => route.routeKey === 'Surface')?.biomes[0];
+    ).evaluation.route?.biomes[0];
     if (
       evaluation?.authoring !== 'complete' ||
       evaluation.validity !== 'invalid' ||
@@ -690,7 +690,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
       entry: refillEntry,
       encounterPhaseKey: deliveryPhaseKey,
     });
-    const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
+    const route = project.route;
     const plan = route?.biomes.find((candidate) => candidate.biomeKey === 'O');
     if (route === undefined || plan === undefined) throw new Error('fixture lost Surface O');
     const snapshot = materializeBiomePrefix(catalog, oBiome, plan, route.loadout);
@@ -751,9 +751,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
       generationKey: 'travelDealRefill',
       purchase: null,
     });
-    const secondPlan = bothRushed.routes
-      .find((candidate) => candidate.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    const secondPlan = bothRushed.route?.biomes.find((candidate) => candidate.biomeKey === 'O');
     if (secondPlan === undefined) throw new Error('fixture lost O after second rush');
     const secondSnapshot = materializeBiomePrefix(catalog, oBiome, secondPlan, route.loadout);
     const secondHistory =
@@ -806,7 +804,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
 describe('Hermes Shrine Spell reservation lifecycle input', () => {
   it('makes a delayed Spell reservation available to later encounter preparation', () => {
     const project = loadSurfaceNOProject();
-    const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
+    const route = project.route;
     const plan = route?.biomes.find((candidate) => candidate.biomeKey === 'O');
     if (route === undefined || plan === undefined) throw new Error('fixture lost Surface O');
     const snapshot = materializeBiomePrefix(catalog, oBiome, plan, route.loadout);
@@ -862,9 +860,7 @@ describe('Hermes Shrine pickup settlement', () => {
       catalog,
       createSurfaceNOHermesShrineDeliveryCheckpoint(),
     );
-    const o = assembly.evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'O');
+    const o = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'O');
     if (o === undefined) throw new Error('fixture lost O evaluation');
     if (!('rewards' in o) || o.authoring !== 'complete' || o.validity !== 'valid')
       throw new Error('fixture did not produce a valid O evaluation');
@@ -953,9 +949,7 @@ describe('Hermes Shrine pickup settlement', () => {
       purchase: { delay: 2, rushed: true },
     });
     const evaluation = simulateProject(catalog, project);
-    const p = evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'P');
+    const p = evaluation.route.biomes.find((biome) => biome.biomeKey === 'P');
     if (p?.authoring !== 'complete' || p.validity !== 'valid') {
       throw new Error(
         `fixture lost valid tail P biome: ${p?.findings.map((finding) => finding.code).join(',')}`,
@@ -968,9 +962,7 @@ describe('Hermes Shrine pickup settlement', () => {
 
   it('locates an unresolved rushed Mystery Boon beneath a fixed Postboss purchase action', () => {
     let project = loadSurfaceNOPProject();
-    const plan = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const plan = project.route.biomes.find((biome) => biome.biomeKey === 'N');
     const postboss = plan?.topology?.occurrences.find(
       (occurrence) => occurrence.gameName === 'N_PostBoss01',
     );
@@ -1049,9 +1041,7 @@ describe('Hermes Shrine pickup settlement', () => {
     });
 
     const evaluation = simulateProject(catalog, project);
-    const o = evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'O');
+    const o = evaluation.route.biomes.find((biome) => biome.biomeKey === 'O');
     if (o?.authoring !== 'complete' || o.validity !== 'valid') {
       throw new Error(
         `fixture lost valid O biome: ${o?.findings.map((finding) => finding.code).join(',')}`,
@@ -1095,9 +1085,8 @@ describe('Hermes Shrine pickup settlement', () => {
       acquisition: createAcquisitionRoleAddress(delayedEntry, 'self'),
       value: { kind: 'timePiece' },
     });
-    const retained = delayed.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'O')
+    const retained = delayed.route.biomes
+      .find((biome) => biome.biomeKey === 'O')
       ?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === delayedHost.occurrenceId,
       )?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[delayedEntry.entryKey];

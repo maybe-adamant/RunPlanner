@@ -330,39 +330,22 @@ describe('evaluation presentation', () => {
         eligibleForExecutionPlan: false,
       },
     } as const satisfies ProjectRouteEvaluation;
-    const surface = {
-      routeKey: 'Surface',
-      status: 'empty',
-      configuredBiomeKeys: [],
-      biomes: [],
-      processing: { completeValidPrefix: [], active: null, blockedSuffix: [] },
-      findings: [],
-      summary: {
-        configuredBiomeCount: 0,
-        evaluatedBiomeCount: 0,
-        validatedBiomeCount: 0,
-        incompleteBiomeCount: 0,
-        invalidBiomeCount: 0,
-        blockedBiomeCount: 0,
-        eligibleForExecutionPlan: false,
-      },
-    } as const satisfies ProjectRouteEvaluation;
     const evaluation = {
       status: 'incomplete',
       projectId: 'feedback-project',
       catalogVersion: catalog.version,
-      routes: [underworld, surface],
+      route: underworld,
       findings: [fFinding],
       summary: underworld.summary,
     } as const satisfies ProjectEvaluation;
 
     const feedback = projectFeedbackHierarchy(evaluation);
-    const fFeedback = feedback.routes.get('Underworld')?.biomes.get('F');
-    const gFeedback = feedback.routes.get('Underworld')?.biomes.get('G');
+    const fFeedback = feedback.route.biomes.get('F');
+    const gFeedback = feedback.route.biomes.get('G');
 
     expect(projectFeedbackHierarchy(evaluation)).toBe(feedback);
     expect(feedback).toMatchObject({ findingCount: 1, status: { tone: 'incomplete' } });
-    expect(feedback.routes.get('Underworld')).toMatchObject({
+    expect(feedback.route).toMatchObject({
       findingCount: 1,
       status: { tone: 'incomplete' },
     });

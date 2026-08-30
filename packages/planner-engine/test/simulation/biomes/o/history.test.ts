@@ -13,12 +13,8 @@ import { loadSurfaceNOProject } from '@run-planner/test-fixtures/surface';
 function fixture() {
   const project = loadSurfaceNOProject();
   const evaluation = simulateProject(catalog, project);
-  const n = evaluation.routes
-    .find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((candidate) => candidate.biomeKey === 'N');
-  const o = evaluation.routes
-    .find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+  const n = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'N');
+  const o = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'O');
   if (
     n?.authoring !== 'complete' ||
     n.validity !== 'valid' ||

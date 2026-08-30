@@ -43,22 +43,24 @@ export interface EncodedTopology {
 }
 
 export interface EncodedProject extends Record<string, unknown> {
-  routes: Array<{
+  route: {
     routeKey: string;
     biomes: Array<{
       biomeKey: string;
       topology: EncodedTopology | null;
     }>;
-  }>;
+  };
 }
 
 export function project(
   projectId: string,
-  configuredBiomeCounts: Partial<Record<'Underworld' | 'Surface', number>>,
+  routeKey: 'Underworld' | 'Surface',
+  configuredBiomeCount: number,
 ): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId,
-    configuredBiomeCounts,
+    routeKey,
+    configuredBiomeCount,
   });
 }
 
@@ -76,17 +78,19 @@ export function encodedTopology(
   readonly path: string;
 } {
   const encoded = encodedProject(document);
-  const routeIndex = encoded.routes.findIndex((route) => route.routeKey === routeKey);
-  const route = encoded.routes[routeIndex];
-  const biomeIndex = route?.biomes.findIndex((biome) => biome.biomeKey === biomeKey) ?? -1;
+  const route = encoded.route;
+  if (route.routeKey !== routeKey) {
+    throw new Error(`missing encoded ${routeKey}/${biomeKey} topology`);
+  }
+  const biomeIndex = route.biomes.findIndex((biome) => biome.biomeKey === biomeKey);
   const topology = route?.biomes[biomeIndex]?.topology;
-  if (routeIndex < 0 || biomeIndex < 0 || topology === null || topology === undefined) {
+  if (biomeIndex < 0 || topology === null || topology === undefined) {
     throw new Error(`missing encoded ${routeKey}/${biomeKey} topology`);
   }
   return {
     document: encoded,
     topology,
-    path: `$.routes[${routeIndex}].biomes[${biomeIndex}].topology`,
+    path: `$.route.biomes[${biomeIndex}].topology`,
   };
 }
 
@@ -95,9 +99,7 @@ export function planFor(
   routeKey: 'Underworld' | 'Surface',
   biomeKey: string,
 ) {
-  const plan = document.routes
-    .find((route) => route.routeKey === routeKey)
-    ?.biomes.find((biome) => biome.biomeKey === biomeKey);
+  const plan = document.route.biomes.find((biome) => biome.biomeKey === biomeKey);
   if (plan === undefined) throw new Error(`missing ${routeKey}/${biomeKey} plan`);
   return plan;
 }
@@ -123,7 +125,7 @@ export function iAtOrdinaryBatchLimit(): {
   readonly terminalSourceId: ReturnType<typeof createOccurrenceId>;
 } {
   const startId = createOccurrenceId('codec-i-bound-start');
-  let document = applyProjectCommand(project('codec-i-bound', { Underworld: 4 }), catalog, {
+  let document = applyProjectCommand(project('codec-i-bound', 'Underworld', 4), catalog, {
     kind: 'CreateStart',
     biome: iBiome,
     occurrenceId: startId,
@@ -213,7 +215,7 @@ export function createBatchTargets(
 }
 
 export function unresolvedFProject(): ProjectDocument {
-  let document = applyProjectCommand(project('codec-unresolved-f', { Underworld: 1 }), catalog, {
+  let document = applyProjectCommand(project('codec-unresolved-f', 'Underworld', 1), catalog, {
     kind: 'CreateStart',
     biome: fBiome,
     occurrenceId: createOccurrenceId('round-trip-f-start'),
@@ -236,16 +238,12 @@ export function unresolvedFProject(): ProjectDocument {
  * branch rather than repairing it during decode.
  */
 export function incompleteZagreusEnvelopeProject(): ProjectDocument {
-  let document = applyProjectCommand(
-    project('codec-zagreus-envelope', { Underworld: 1 }),
-    catalog,
-    {
-      kind: 'CreateStart',
-      biome: fBiome,
-      occurrenceId: createOccurrenceId('zagreus-opening'),
-      gameName: 'F_Opening01',
-    },
-  );
+  let document = applyProjectCommand(project('codec-zagreus-envelope', 'Underworld', 1), catalog, {
+    kind: 'CreateStart',
+    biome: fBiome,
+    occurrenceId: createOccurrenceId('zagreus-opening'),
+    gameName: 'F_Opening01',
+  });
   document = createBatchTargets(document, {
     biome: fBiome,
     sourceOccurrenceId: 'zagreus-opening',
@@ -310,7 +308,7 @@ export function incompleteZagreusEnvelopeProject(): ProjectDocument {
 }
 
 export function selectedFTakeoverProject(): ProjectDocument {
-  let document = applyProjectCommand(project('codec-selected-f', { Underworld: 1 }), catalog, {
+  let document = applyProjectCommand(project('codec-selected-f', 'Underworld', 1), catalog, {
     kind: 'CreateStart',
     biome: fBiome,
     occurrenceId: createOccurrenceId('f-start'),
@@ -343,7 +341,7 @@ export function selectedFTakeoverProject(): ProjectDocument {
 }
 
 export function completeHProject(): ProjectDocument {
-  let document = applyProjectCommand(project('codec-complete-h', { Underworld: 3 }), catalog, {
+  let document = applyProjectCommand(project('codec-complete-h', 'Underworld', 3), catalog, {
     kind: 'CreateStart',
     biome: hBiome,
     occurrenceId: createOccurrenceId('complete-h-start'),
@@ -398,7 +396,7 @@ export function completeHProject(): ProjectDocument {
 }
 
 export function completeOProject(): ProjectDocument {
-  let document = applyProjectCommand(project('codec-complete-o', { Surface: 2 }), catalog, {
+  let document = applyProjectCommand(project('codec-complete-o', 'Surface', 2), catalog, {
     kind: 'CreateStart',
     biome: oBiome,
     occurrenceId: createOccurrenceId('complete-o-start'),
@@ -436,7 +434,7 @@ export function completeOProject(): ProjectDocument {
 }
 
 export function completeQProject(): ProjectDocument {
-  let document = applyProjectCommand(project('codec-complete-q', { Surface: 4 }), catalog, {
+  let document = applyProjectCommand(project('codec-complete-q', 'Surface', 4), catalog, {
     kind: 'CreateStart',
     biome: qBiome,
     occurrenceId: createOccurrenceId('complete-q-start'),
@@ -467,7 +465,7 @@ export function completeQProject(): ProjectDocument {
 }
 
 export function rewardWheelProject(): ProjectDocument {
-  let document = applyProjectCommand(project('codec-wheel-o', { Surface: 2 }), catalog, {
+  let document = applyProjectCommand(project('codec-wheel-o', 'Surface', 2), catalog, {
     kind: 'CreateStart',
     biome: oBiome,
     occurrenceId: createOccurrenceId('o-wheel-intro'),
@@ -491,7 +489,7 @@ export function rewardWheelProject(): ProjectDocument {
 }
 
 export function contextInvalidOverflowProject(): ProjectDocument {
-  let document = applyProjectCommand(project('codec-overflow-f', { Underworld: 1 }), catalog, {
+  let document = applyProjectCommand(project('codec-overflow-f', 'Underworld', 1), catalog, {
     kind: 'CreateStart',
     biome: fBiome,
     occurrenceId: createOccurrenceId('overflow-opening'),

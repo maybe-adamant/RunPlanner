@@ -519,41 +519,36 @@ describe('structured workspace actions assembly', () => {
     const project = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
     const retained: ProjectDocument = {
       ...project,
-      routes: project.routes.map((route) =>
-        route.routeKey !== 'Underworld'
-          ? route
-          : {
-              ...route,
-              biomes: route.biomes.map((biome): typeof biome =>
-                biome.biomeKey !== 'F' || biome.topology === null
-                  ? biome
-                  : {
-                      ...biome,
-                      topology: {
-                        ...biome.topology,
-                        occurrences: biome.topology.occurrences.map(
-                          (occurrence): typeof occurrence =>
-                            occurrence.occurrenceId !== shopId
-                              ? occurrence
-                              : {
-                                  ...occurrence,
-                                  roomActions: {
-                                    order: [
-                                      ...occurrence.roomActions.order,
-                                      {
-                                        kind: 'interactAcquisitionEntry' as const,
-                                        siteKey: 'roomExit',
-                                        entryKey: 'infernalContractReward',
-                                      },
-                                    ],
-                                  },
-                                },
-                        ),
-                      },
-                    },
-              ),
-            },
-      ),
+      route: {
+        ...project.route,
+        biomes: project.route.biomes.map((biome): typeof biome =>
+          biome.biomeKey !== 'F' || biome.topology === null
+            ? biome
+            : {
+                ...biome,
+                topology: {
+                  ...biome.topology,
+                  occurrences: biome.topology.occurrences.map((occurrence): typeof occurrence =>
+                    occurrence.occurrenceId !== shopId
+                      ? occurrence
+                      : {
+                          ...occurrence,
+                          roomActions: {
+                            order: [
+                              ...occurrence.roomActions.order,
+                              {
+                                kind: 'interactAcquisitionEntry' as const,
+                                siteKey: 'roomExit',
+                                entryKey: 'infernalContractReward',
+                              },
+                            ],
+                          },
+                        },
+                  ),
+                },
+              },
+        ),
+      },
     };
     const result = assemble(retained, 'Underworld', 'F', shopId, undefined, () =>
       Object.freeze([]),
@@ -609,8 +604,7 @@ describe('structured workspace actions assembly', () => {
     const base = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
     const occurrenceAddress = createOccurrenceAddress(goldenFBiome, shopId);
     const site = createAcquisitionSiteAddress(occurrenceAddress, 'roomExit');
-    const occurrence = base.routes
-      .flatMap((route) => route.biomes)
+    const occurrence = base.route.biomes
       .find((plan) => plan.biomeKey === 'F')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopId);
     const source =
@@ -619,55 +613,51 @@ describe('structured workspace actions assembly', () => {
     const duplicate = createAcquisitionEntryAddress(site, 'echoDoubleShopReward');
     const project: ProjectDocument = {
       ...base,
-      routes: base.routes.map((route) =>
-        route.routeKey !== 'Underworld'
-          ? route
-          : {
-              ...route,
-              biomes: route.biomes.map((biome): typeof biome => {
-                const topology = biome.topology;
-                return biome.biomeKey !== 'F' || topology === null
-                  ? biome
-                  : {
-                      ...biome,
-                      topology: {
-                        ...topology,
-                        occurrences: topology.occurrences.map((candidate): typeof candidate =>
-                          candidate.occurrenceId !== shopId
-                            ? candidate
-                            : {
-                                ...candidate,
-                                roomActions: {
-                                  order: [
-                                    { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
-                                    {
-                                      kind: 'interactAcquisitionEntry',
-                                      siteKey: 'roomExit',
-                                      entryKey: 'travelDealRefill',
-                                    },
-                                    {
-                                      kind: 'interactAcquisitionEntry',
-                                      siteKey: 'roomExit',
-                                      entryKey: 'echoDoubleShopReward',
-                                    },
-                                  ],
-                                },
-                                acquisitionSites: {
-                                  ...(candidate.acquisitionSites ?? {}),
-                                  roomExit: {
-                                    pickupEntries: {
-                                      travelDealRefill: source,
-                                      echoDoubleShopReward: source,
-                                    },
-                                  },
-                                },
+      route: {
+        ...base.route,
+        biomes: base.route.biomes.map((biome): typeof biome => {
+          const topology = biome.topology;
+          return biome.biomeKey !== 'F' || topology === null
+            ? biome
+            : {
+                ...biome,
+                topology: {
+                  ...topology,
+                  occurrences: topology.occurrences.map((candidate): typeof candidate =>
+                    candidate.occurrenceId !== shopId
+                      ? candidate
+                      : {
+                          ...candidate,
+                          roomActions: {
+                            order: [
+                              { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
+                              {
+                                kind: 'interactAcquisitionEntry',
+                                siteKey: 'roomExit',
+                                entryKey: 'travelDealRefill',
                               },
-                        ),
-                      },
-                    };
-              }),
-            },
-      ),
+                              {
+                                kind: 'interactAcquisitionEntry',
+                                siteKey: 'roomExit',
+                                entryKey: 'echoDoubleShopReward',
+                              },
+                            ],
+                          },
+                          acquisitionSites: {
+                            ...(candidate.acquisitionSites ?? {}),
+                            roomExit: {
+                              pickupEntries: {
+                                travelDealRefill: source,
+                                echoDoubleShopReward: source,
+                              },
+                            },
+                          },
+                        },
+                  ),
+                },
+              };
+        }),
+      },
     };
     const result = assemble(project, 'Underworld', 'F', shopId, undefined, (candidateSite) =>
       semanticAddressKey(candidateSite) !== semanticAddressKey(site)

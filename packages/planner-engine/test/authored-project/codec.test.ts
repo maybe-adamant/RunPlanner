@@ -8,19 +8,14 @@ import {
 } from '@run-planner/engine/authored-project';
 import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
 import surfaceNResourcesRaw from '../../../../test/fixtures/authored-project/checkpoints/surface-n-resources.runplanner.json';
-import naturalChaosRaw from '../../../../test/fixtures/authored-project/checkpoints/natural-chaos-unresolved-trial.runplanner.json';
-// The migration CLI is intentionally not a production engine dependency.
-// @ts-expect-error test contact imports the schema migration boundary directly.
-import { migrateProjectDocument } from '../../../../schema/migrate-project.js';
 
 function encodedFStart(): Record<string, unknown> {
   return JSON.parse(encodeProjectDocument(createCompleteFGProject())) as Record<string, unknown>;
 }
 
 function fTopology(document: Record<string, unknown>): Record<string, unknown> {
-  const routes = document.routes as Array<Record<string, unknown>>;
-  const underworld = routes.find((route) => route.routeKey === 'Underworld');
-  const biome = (underworld?.biomes as Array<Record<string, unknown>> | undefined)?.[0];
+  const route = document.route as Record<string, unknown>;
+  const biome = (route.biomes as Array<Record<string, unknown>> | undefined)?.[0];
   const topology = biome?.topology;
   if (topology === null || topology === undefined || typeof topology !== 'object') {
     throw new Error('missing encoded F topology');
@@ -61,20 +56,17 @@ function replaceTopology(
   document: Record<string, unknown>,
   replacement: Record<string, unknown>,
 ): Record<string, unknown> {
-  const routes = document.routes as Array<Record<string, unknown>>;
+  const route = document.route as Record<string, unknown>;
   return {
-    routes: routes.map((route, index) =>
-      index === 0
-        ? {
-            ...route,
-            biomes: (route.biomes as Array<Record<string, unknown>>).map((biome, biomeIndex) =>
-              biomeIndex === 0
-                ? { ...biome, topology: { ...fTopology(document), ...replacement } }
-                : biome,
-            ),
-          }
-        : route,
-    ),
+    ...document,
+    route: {
+      ...route,
+      biomes: (route.biomes as Array<Record<string, unknown>>).map((biome, biomeIndex) =>
+        biomeIndex === 0
+          ? { ...biome, topology: { ...fTopology(document), ...replacement } }
+          : biome,
+      ),
+    },
   };
 }
 
@@ -92,60 +84,53 @@ const codecRejections: readonly {
     mutate: (document) => ({ ...document, catalogVersion: 'incompatible' }),
   },
   { name: 'an undeclared root field', mutate: (document) => ({ ...document, extra: true }) },
-  { name: 'a missing required route', mutate: (document) => ({ ...document, routes: [] }) },
+  { name: 'a missing required route', mutate: (document) => ({ ...document, route: undefined }) },
   {
-    name: 'a duplicate route',
-    mutate: (document) => ({
-      ...document,
-      routes: [...(document.routes as unknown[]), (document.routes as unknown[])[0]],
-    }),
+    name: 'a legacy routes field',
+    mutate: (document) => ({ ...document, routes: [] }),
   },
   {
     name: 'an unknown route',
     mutate: (document) => ({
       ...document,
-      routes: (document.routes as Array<Record<string, unknown>>).map((route, index) =>
-        index === 0 ? { ...route, routeKey: 'Missing' } : route,
-      ),
+      route: { ...(document.route as Record<string, unknown>), routeKey: 'Missing' },
     }),
   },
   {
     name: 'a route without biomes',
     mutate: (document) => ({
       ...document,
-      routes: (document.routes as Array<Record<string, unknown>>).map((route, index) =>
-        index === 0 ? { routeKey: route.routeKey } : route,
-      ),
+      route: { routeKey: (document.route as Record<string, unknown>).routeKey },
     }),
   },
   {
     name: 'a noncontiguous biome identity',
     mutate: (document) => ({
       ...document,
-      routes: (document.routes as Array<Record<string, unknown>>).map((route, index) =>
-        index === 0
-          ? {
-              ...route,
-              biomes: [{ ...(route.biomes as Record<string, unknown>[])[0], biomeKey: 'G' }],
-            }
-          : route,
-      ),
+      route: {
+        ...(document.route as Record<string, unknown>),
+        biomes: [
+          {
+            ...((document.route as Record<string, unknown>).biomes as Record<string, unknown>[])[0],
+            biomeKey: 'G',
+          },
+        ],
+      },
     }),
   },
   {
     name: 'unknown biome state data',
     mutate: (document) => ({
       ...document,
-      routes: (document.routes as Array<Record<string, unknown>>).map((route, index) =>
-        index === 0
-          ? {
-              ...route,
-              biomes: [
-                { ...(route.biomes as Record<string, unknown>[])[0], state: { unknown: true } },
-              ],
-            }
-          : route,
-      ),
+      route: {
+        ...(document.route as Record<string, unknown>),
+        biomes: [
+          {
+            ...((document.route as Record<string, unknown>).biomes as Record<string, unknown>[])[0],
+            state: { unknown: true },
+          },
+        ],
+      },
     }),
   },
   {
@@ -187,7 +172,7 @@ describe('project document codec', () => {
     firstOccurrence(encoded).roomActions = { order: roomActionReferences };
 
     const decoded = decodeProjectDocument(encoded, catalog);
-    expect(decoded.routes[0]?.biomes[0]?.topology?.occurrences[0]?.roomActions.order).toEqual(
+    expect(decoded.route?.biomes[0]?.topology?.occurrences[0]?.roomActions.order).toEqual(
       roomActionReferences,
     );
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(decoded)), catalog)).toEqual(
@@ -235,7 +220,7 @@ describe('project document codec', () => {
 
     const decoded = decodeProjectDocument(encoded, catalog);
     expect(
-      decoded.routes[0]?.biomes[0]?.topology?.occurrences.find(
+      decoded.route?.biomes[0]?.topology?.occurrences.find(
         (occurrence) => occurrence.gameName === 'F_Boss01',
       )?.encounters.judgmentArcanaKeysByPhase?.Encounter,
     ).toEqual(['CastCount', 'CardDraw']);
@@ -314,11 +299,9 @@ describe('project document codec', () => {
     );
   });
 
-  it('decodes the real Surface resource checkpoint after schema-68 migration', () => {
-    const migrated = migrateProjectDocument(surfaceNResourcesRaw).document;
-    const surface = migrated.routes.find(
-      (route: { routeKey: string }) => route.routeKey === 'Surface',
-    );
+  it('decodes the real Surface resource checkpoint at the current schema boundary', () => {
+    const migrated = surfaceNResourcesRaw;
+    const surface = migrated.route;
     expect(surface?.resourcePlacements.Shovel).toEqual({
       biomeKey: 'N',
       occurrenceId: 'surface-n-preboss:postboss',
@@ -326,53 +309,10 @@ describe('project document codec', () => {
     expect(() => decodeProjectDocument(migrated, catalog)).not.toThrow();
   });
 
-  it('decodes either schema-70 legacy Chaos kind after unified migration', () => {
-    for (const kind of ['naturalChaos', 'sparkChaos']) {
-      const legacy = JSON.parse(JSON.stringify(naturalChaosRaw)) as {
-        schemaVersion: number;
-        catalogVersion: string;
-        routes: Array<{
-          biomes: Array<{
-            topology: {
-              occurrences: Array<{
-                occurrenceId: string;
-                additionalExits: Array<Record<string, unknown>>;
-              }>;
-              decisions: Array<Record<string, unknown>>;
-            };
-          }>;
-        }>;
-      };
-      legacy.schemaVersion = 70;
-      legacy.catalogVersion = '0.49.0-completion-topology';
-      const topology = legacy.routes[0]!.biomes[0]!.topology;
-      const opening = topology.occurrences.find(
-        (occurrence) => occurrence.occurrenceId === 'fixture-chaos-opening',
-      );
-      if (opening === undefined) throw new Error('legacy Chaos opening is missing');
-      const chaos = opening.additionalExits[0];
-      if (chaos === undefined) throw new Error('legacy Chaos gate is missing');
-      chaos.kind = kind;
-      chaos.key = kind;
-      const decision = topology.decisions.find(
-        (candidate) =>
-          candidate.kind === 'exit' &&
-          (candidate.source as { occurrenceId?: string } | undefined)?.occurrenceId ===
-            'fixture-chaos-opening',
-      );
-      if (decision === undefined) throw new Error('legacy Chaos decision is missing');
-      decision.selection = { kind: 'additional', additionalExitKey: kind };
-
-      const migrated = migrateProjectDocument(legacy).document;
-      expect(() => decodeProjectDocument(migrated, catalog)).not.toThrow();
-    }
-  });
-
   it('round-trips the complete Arcana and Fear loadout', () => {
     const encoded = encodedFStart();
-    const routes = encoded.routes as Array<Record<string, unknown>>;
-    const first = routes[0]!;
-    const loadout = first.loadout as Record<string, unknown>;
+    const route = encoded.route as Record<string, unknown>;
+    const loadout = route.loadout as Record<string, unknown>;
     loadout.manualArcanaKeys = ['CastCount', 'ChanneledCast'];
     loadout.fearRanks = {
       ...(loadout.fearRanks as Record<string, number>),
@@ -380,7 +320,7 @@ describe('project document codec', () => {
     };
 
     const decoded = decodeProjectDocument(encoded, catalog);
-    expect(decoded.routes[0]?.loadout).toMatchObject({
+    expect(decoded.route.loadout).toMatchObject({
       manualArcanaKeys: ['ChanneledCast', 'CastCount'],
       fearRanks: { EnemyDamageShrineUpgrade: 3 },
     });
@@ -391,7 +331,7 @@ describe('project document codec', () => {
 
   it('rejects an Aspect Hex tree on a non-Selene route loadout', () => {
     const encoded = encodedFStart();
-    const route = (encoded.routes as Array<Record<string, unknown>>)[0]!;
+    const route = encoded.route as Record<string, unknown>;
     (route.loadout as Record<string, unknown>).aspectHexTree = {
       layoutKey: 'Lung',
       rareTalentKeys: ['MoonBeamConsecutiveDamageTalent', 'MoonBeamDefenseTalent'],
@@ -426,7 +366,7 @@ describe('project document codec', () => {
     ],
   ] as const)('rejects a starting Arcana selection above %s', (_name, keys, voidRank, capacity) => {
     const encoded = encodedFStart();
-    const route = (encoded.routes as Array<Record<string, unknown>>)[0]!;
+    const route = encoded.route as Record<string, unknown>;
     const loadout = route.loadout as Record<string, unknown>;
     loadout.manualArcanaKeys = keys;
     loadout.fearRanks = {
@@ -470,7 +410,7 @@ describe('project document codec', () => {
     ],
   ] as const)('rejects %s', (_name, mutate) => {
     const encoded = encodedFStart();
-    const route = (encoded.routes as Array<Record<string, unknown>>)[0]!;
+    const route = encoded.route as Record<string, unknown>;
     mutate(route.loadout as Record<string, unknown>);
     expect(() => decodeProjectDocument(encoded, catalog)).toThrow();
   });

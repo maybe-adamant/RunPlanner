@@ -592,8 +592,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
       'roomExit',
     );
     const duplicate = createAcquisitionEntryAddress(site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY);
-    const shopOccurrence = project.routes
-      .flatMap((route) => route.biomes)
+    const shopOccurrence = project.route.biomes
       .find((candidate) => candidate.biomeKey === 'F')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopOccurrenceId);
     const source =
@@ -620,8 +619,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
       },
     });
     const occurrence = (document: typeof project) =>
-      document.routes
-        .flatMap((route) => route.biomes)
+      document.route.biomes
         .find((candidate) => candidate.biomeKey === 'F')
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopOccurrenceId);
 
@@ -659,8 +657,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
     );
     const duplicate = createAcquisitionEntryAddress(site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY);
     const occurrence = (document: typeof project) =>
-      document.routes
-        .flatMap((route) => route.biomes)
+      document.route.biomes
         .find((candidate) => candidate.biomeKey === 'F')
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopOccurrenceId);
 
@@ -733,8 +730,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
       },
     });
-    const shopAfterReplacement = history.present.routes
-      .flatMap((route) => route.biomes)
+    const shopAfterReplacement = history.present.route.biomes
       .find((candidate) => candidate.biomeKey === 'F')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopOccurrenceId);
     const blindBox =
@@ -770,8 +766,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
         selectedOptionKey: 'option2',
       },
     });
-    const shop = history.present.routes
-      .flatMap((route) => route.biomes)
+    const shop = history.present.route.biomes
       .find((candidate) => candidate.biomeKey === 'F')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopOccurrenceId);
     expect(
@@ -805,8 +800,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
       },
     });
-    const travelDefault = history.present.routes
-      .flatMap((route) => route.biomes)
+    const travelDefault = history.present.route.biomes
       .find((candidate) => candidate.biomeKey === 'F')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopOccurrenceId)
       ?.acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill;
@@ -832,8 +826,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
       },
     });
     const occurrence = (document: typeof project) =>
-      document.routes
-        .flatMap((route) => route.biomes)
+      document.route.biomes
         .find((candidate) => candidate.biomeKey === 'F')
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopOccurrenceId);
     expect(

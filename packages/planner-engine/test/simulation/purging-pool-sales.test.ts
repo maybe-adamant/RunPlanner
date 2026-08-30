@@ -27,9 +27,9 @@ const occurrence = createOccurrenceAddress(
 );
 
 function fRewards(project: ProjectDocument) {
-  const biomeEvaluation = simulateProjectAssembly(catalog, project)
-    .evaluation.routes.find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+  const biomeEvaluation = simulateProjectAssembly(catalog, project).evaluation.route?.biomes.find(
+    (candidate) => candidate.biomeKey === 'F',
+  );
   if (biomeEvaluation?.authoring !== 'complete') throw new Error('F is not complete');
   return biomeEvaluation.rewards;
 }
@@ -65,16 +65,10 @@ function sell(project: ProjectDocument, slotKey: 'left' | 'middle' | 'right') {
 function asConfiguredTailF(project: ProjectDocument): ProjectDocument {
   return Object.freeze({
     ...project,
-    routes: Object.freeze(
-      project.routes.map((route) =>
-        route.routeKey !== 'Underworld'
-          ? route
-          : Object.freeze({
-              ...route,
-              biomes: Object.freeze(route.biomes.filter((plan) => plan.biomeKey === 'F')),
-            }),
-      ),
-    ),
+    route: Object.freeze({
+      ...project.route,
+      biomes: Object.freeze(project.route.biomes.filter((plan) => plan.biomeKey === 'F')),
+    }),
   });
 }
 
@@ -114,18 +108,16 @@ describe('Purging Pool sales', () => {
       occurrence,
       interacted: false,
     });
-    const pool = disabled.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((plan) => plan.biomeKey === 'F')
+    const pool = disabled.route.biomes
+      .find((plan) => plan.biomeKey === 'F')
       ?.topology?.occurrences.find(
         (entry) => entry.occurrenceId === occurrence.occurrenceId,
       )?.purgingPool;
     expect(pool?.interacted).toBe(false);
     expect(pool?.traitKeyBySlot.left).toBe(equipped[0]);
     expect(
-      disabled.routes
-        .find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((plan) => plan.biomeKey === 'F')
+      disabled.route.biomes
+        .find((plan) => plan.biomeKey === 'F')
         ?.topology?.occurrences.find((entry) => entry.occurrenceId === occurrence.occurrenceId)
         ?.roomActions.order,
     ).not.toContainEqual({ kind: 'sellPurgingPoolTrait', slotKey: 'left' });
@@ -188,42 +180,39 @@ describe('Purging Pool sales', () => {
     if (equipped.length < 2) throw new Error('fixture has too few Pool candidates');
     const [left, middle] = equipped;
     const resolved = withPoolSlots(initial, [left!, middle!]);
+    const sold = sell(resolved, 'left');
     const stale = {
-      ...sell(resolved, 'left'),
-      routes: sell(resolved, 'left').routes.map((route) =>
-        route.routeKey !== 'Underworld'
-          ? route
-          : {
-              ...route,
-              biomes: route.biomes.map((plan) =>
-                plan.biomeKey !== 'F'
-                  ? plan
-                  : {
-                      ...plan,
-                      topology:
-                        plan.topology === null
-                          ? null
-                          : {
-                              ...plan.topology,
-                              occurrences: plan.topology.occurrences.map((entry) =>
-                                entry.occurrenceId !== occurrence.occurrenceId
-                                  ? entry
-                                  : {
-                                      ...entry,
-                                      purgingPool: {
-                                        ...entry.purgingPool!,
-                                        traitKeyBySlot: {
-                                          ...entry.purgingPool!.traitKeyBySlot,
-                                          left: null,
-                                        },
-                                      },
-                                    },
-                              ),
-                            },
-                    },
-              ),
-            },
-      ),
+      ...sold,
+      route: {
+        ...sold.route,
+        biomes: sold.route.biomes.map((plan) =>
+          plan.biomeKey !== 'F'
+            ? plan
+            : {
+                ...plan,
+                topology:
+                  plan.topology === null
+                    ? null
+                    : {
+                        ...plan.topology,
+                        occurrences: plan.topology.occurrences.map((entry) =>
+                          entry.occurrenceId !== occurrence.occurrenceId
+                            ? entry
+                            : {
+                                ...entry,
+                                purgingPool: {
+                                  ...entry.purgingPool!,
+                                  traitKeyBySlot: {
+                                    ...entry.purgingPool!.traitKeyBySlot,
+                                    left: null,
+                                  },
+                                },
+                              },
+                        ),
+                      },
+              },
+        ),
+      },
     };
     const evaluated = fRewards(stale);
     expect(evaluated.findings).toContainEqual(

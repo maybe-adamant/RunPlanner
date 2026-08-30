@@ -75,7 +75,7 @@ describe('authored-project checkpoint integrity', () => {
       expect(encodeProjectDocument(document)).toBe(raw);
       expect(document.schemaVersion).toBe(entry.schemaVersion);
       expect(document.catalogVersion).toBe(entry.catalogVersion);
-      const route = document.routes.find((candidate) => candidate.routeKey === entry.route);
+      const route = document.route.routeKey === entry.route ? document.route : undefined;
       expect(route).toBeDefined();
       expect(route?.biomes.map((biome) => biome.biomeKey)).toEqual(entry.configuredBiomePrefix);
       expect(Object.isFrozen(document)).toBe(true);
@@ -95,9 +95,10 @@ describe('authored-project checkpoint integrity', () => {
   it('keeps the fixed N alias and representative authored state addressable', () => {
     expect(nFixedOccurrenceIds).toBe(nOccurrenceIds);
     const n = loadCheckpoint('surface-n');
-    const occurrenceIds = n.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes[0]?.topology?.occurrences.map((occurrence) => occurrence.occurrenceId);
+    const occurrenceIds =
+      n.route.routeKey === 'Surface'
+        ? n.route.biomes[0]?.topology?.occurrences.map((occurrence) => occurrence.occurrenceId)
+        : undefined;
     expect(occurrenceIds).toContain('surface-n-opening');
     expect(occurrenceIds).toContain('surface-n-prehub');
     expect(checkpointManifest.some((entry) => entry.id === 'surface-n-entry-frontier')).toBe(true);
@@ -105,7 +106,7 @@ describe('authored-project checkpoint integrity', () => {
       checkpointManifest.some((entry) => entry.id === 'underworld-f-midshop-pom-frontier'),
     ).toBe(true);
     const chaos = loadCheckpoint('natural-chaos-unresolved-trial');
-    const occurrences = chaos.routes[0]?.biomes[0]?.topology?.occurrences;
+    const occurrences = chaos.route.biomes[0]?.topology?.occurrences;
     const chaosRoom = occurrences?.find(
       (occurrence) => occurrence.occurrenceId === 'fixture-chaos-room',
     );
@@ -127,9 +128,10 @@ describe('authored-project checkpoint integrity', () => {
     );
 
     const evaluation = simulateProject(catalog, saved);
-    const f = evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const f =
+      evaluation.route.routeKey === 'Underworld'
+        ? evaluation.route.biomes.find((biome) => biome.origin.biomeKey === 'F')
+        : undefined;
     if (f?.authoring !== 'complete') throw new Error('Pool checkpoint did not complete F');
     const poolSnapshot = (checkpoint: 'roomEntered' | 'beforeRoomExit') =>
       f.rewards.runStateSnapshots.find(
@@ -149,9 +151,10 @@ describe('authored-project checkpoint integrity', () => {
 
   it('keeps ordinary Postboss features and terminal I/Q Boss-only topology in canonical checkpoints', () => {
     const postbossFixture = loadCheckpoint('underworld-f-pool');
-    const f = postbossFixture.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const f =
+      postbossFixture.route.routeKey === 'Underworld'
+        ? postbossFixture.route.biomes.find((biome) => biome.biomeKey === 'F')
+        : undefined;
     expect(f?.topology?.fixedRoomLinks).toEqual([
       {
         sourceOccurrenceId: 'golden-f-preboss-shop',
@@ -173,9 +176,10 @@ describe('authored-project checkpoint integrity', () => {
       ['surface-nopq', 'Surface', 'Q', 'surface-q-preboss', 'Q_Boss01'],
     ] as const) {
       const document = loadCheckpoint(id);
-      const biome = document.routes
-        .find((route) => route.routeKey === routeKey)
-        ?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
+      const biome =
+        document.route.routeKey === routeKey
+          ? document.route.biomes.find((candidate) => candidate.biomeKey === biomeKey)
+          : undefined;
       const completion = biome?.topology?.occurrences.filter((occurrence) =>
         occurrence.gameName.endsWith('_Boss01'),
       );
@@ -199,18 +203,21 @@ describe('authored-project checkpoint integrity', () => {
       encodeProjectDocument(createSurfaceNOHermesShrineDeliveryCheckpoint()),
     );
     const evaluation = simulateProject(catalog, saved);
-    const o = evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'O');
+    const o =
+      evaluation.route.routeKey === 'Surface'
+        ? evaluation.route.biomes.find((biome) => biome.origin.biomeKey === 'O')
+        : undefined;
     if (o?.authoring !== 'complete' || o.validity !== 'valid')
       throw new Error('Shrine checkpoint did not complete as a valid Surface O route');
     expect(o.rewards.hermesShrineDeliveries).toEqual([]);
-    const host = saved.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'O')
-      ?.topology?.occurrences.find(
-        (occurrence) => occurrence.occurrenceId === oOccurrenceIds.devotion,
-      );
+    const host =
+      saved.route.routeKey === 'Surface'
+        ? saved.route.biomes
+            .find((biome) => biome.biomeKey === 'O')
+            ?.topology?.occurrences.find(
+              (occurrence) => occurrence.occurrenceId === oOccurrenceIds.devotion,
+            )
+        : undefined;
     expect(host?.roomActions.order).toContainEqual({
       kind: 'interactAcquisitionEntry',
       siteKey: 'hermesShrineDelivery',
@@ -226,9 +233,10 @@ describe('authored-project checkpoint integrity', () => {
     );
     const sourceId = nLocalOccurrenceId('combat11', 'sideDoor1');
     const hostId = nOccurrenceId('combat09');
-    const n = saved.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const n =
+      saved.route.routeKey === 'Surface'
+        ? saved.route.biomes.find((biome) => biome.biomeKey === 'N')
+        : undefined;
     const source = n?.topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === sourceId,
     );
@@ -253,8 +261,8 @@ describe('authored-project checkpoint integrity', () => {
 
   it('keeps the selected N resource-success checkpoint legal, including its side-room Spirit host', () => {
     const project = loadCheckpoint('surface-n-resources');
-    const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
-    if (route === undefined) throw new Error('Surface route is missing');
+    if (project.route.routeKey !== 'Surface') throw new Error('Surface route is missing');
+    const route = project.route;
     const authoring = routeResourceAuthoring(catalog, route);
     expect(authoring.assessmentByFamily.Pickaxe).toEqual({ legal: true, reasons: [] });
     expect(authoring.assessmentByFamily.Exorcism).toEqual({ legal: true, reasons: [] });
@@ -265,9 +273,10 @@ describe('authored-project checkpoint integrity', () => {
     });
 
     const evaluation = simulateProject(catalog, project);
-    const n = evaluation.routes
-      .find((candidate) => candidate.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    const n =
+      evaluation.route.routeKey === 'Surface'
+        ? evaluation.route.biomes.find((candidate) => candidate.origin.biomeKey === 'N')
+        : undefined;
     if (n?.authoring !== 'complete' || n.validity !== 'valid')
       throw new Error('resource checkpoint did not evaluate as a valid complete N');
     const beforeOpeningExit = n.rewards.runStateSnapshots.find(
@@ -289,10 +298,10 @@ describe('authored-project checkpoint integrity', () => {
   it('retains authored incomplete and invalid states while allowing focused deltas', () => {
     const entry = loadCheckpoint('surface-n-entry-frontier');
     const invalid = loadCheckpoint('surface-n-ten-open-invalid');
-    const entryTopology = entry.routes.find((route) => route.routeKey === 'Surface')?.biomes[0]
-      ?.topology;
-    const invalidTopology = invalid.routes.find((route) => route.routeKey === 'Surface')?.biomes[0]
-      ?.topology;
+    const entryTopology =
+      entry.route.routeKey === 'Surface' ? entry.route.biomes[0]?.topology : undefined;
+    const invalidTopology =
+      invalid.route.routeKey === 'Surface' ? invalid.route.biomes[0]?.topology : undefined;
     expect(entryTopology?.occurrences).toHaveLength(2);
     const entryPreHub = entryTopology?.decisions.find(
       (decision) =>

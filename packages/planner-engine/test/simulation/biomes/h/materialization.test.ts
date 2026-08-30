@@ -62,15 +62,13 @@ beforeAll(() => {
 });
 
 function plan(project: ProjectDocument) {
-  const result = project.routes
-    .find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+  const result = project.route.biomes.find((candidate) => candidate.biomeKey === 'H');
   if (result === undefined) throw new Error('fixture has no H plan');
   return result;
 }
 
 function traitContext(project: ProjectDocument) {
-  const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
+  const route = project.route;
   if (route === undefined) throw new Error('fixture has no Underworld route');
   return route.loadout;
 }
@@ -253,7 +251,8 @@ function completeProject(
 
   let project = createProjectDocument(catalog, {
     projectId: 'h-materialization',
-    configuredBiomeCounts: { Underworld: 3 },
+    routeKey: 'Underworld',
+    configuredBiomeCount: 3,
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
@@ -493,9 +492,8 @@ describe('H Fields materialization', () => {
         occurrenceId: start,
       }),
     });
-    const gPostboss = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'G')
+    const gPostboss = project.route.biomes
+      .find((candidate) => candidate.biomeKey === 'G')
       ?.topology?.occurrences.find((occurrence) => occurrence.gameName === 'G_PostBoss01');
     if (gPostboss === undefined) throw new Error('G Postboss is required for the Ixion fixture');
     const well = createOccurrenceAddress(
@@ -831,9 +829,9 @@ describe('H Fields materialization', () => {
   });
 
   it('consumes generated unpicked optionals from only their persistent bag without acquisition history', () => {
-    const selected = simulateProject(catalog, createGoldenFGHProject())
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    const selected = simulateProject(catalog, createGoldenFGHProject()).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'H',
+    );
     if (selected?.authoring !== 'complete' || selected.validity !== 'valid') {
       throw new Error('selected optional fixture must be valid');
     }
@@ -874,9 +872,9 @@ describe('H Fields materialization', () => {
         optionalRewardCount: 0,
       });
     }
-    const noneBiome = simulateProject(catalog, none)
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    const noneBiome = simulateProject(catalog, none).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'H',
+    );
     if (noneBiome?.authoring !== 'complete' || noneBiome.validity !== 'valid') {
       throw new Error('zero optional fixture must be valid');
     }
@@ -917,12 +915,12 @@ describe('H Fields materialization', () => {
       'H_Combat02',
       'RoomRewardHealDrop',
     );
-    const evaluated = simulateProject(narrowedCatalog, project)
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
-    const withoutOptionals = simulateProject(narrowedCatalog, baseline)
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    const evaluated = simulateProject(narrowedCatalog, project).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'H',
+    );
+    const withoutOptionals = simulateProject(narrowedCatalog, baseline).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'H',
+    );
     if (
       evaluated?.authoring !== 'complete' ||
       evaluated.validity !== 'valid' ||
@@ -996,9 +994,9 @@ describe('H Fields materialization', () => {
       });
       return next;
     });
-    const evaluated = simulateProject(catalog, project)
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    const evaluated = simulateProject(catalog, project).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'H',
+    );
     if (evaluated?.authoring !== 'complete' || evaluated.validity !== 'valid') {
       throw new Error('ordered optional fixture must be valid');
     }
@@ -1051,9 +1049,9 @@ describe('H Fields materialization', () => {
       { kind: 'interactLocalReward', groupKey: 'optionalRewards', slotKey: 'optional1' },
       ...order,
     ]);
-    const evaluated = simulateProject(catalog, project)
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    const evaluated = simulateProject(catalog, project).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'H',
+    );
     if (evaluated?.authoring !== 'complete' || evaluated.validity !== 'valid') {
       throw new Error('optional Time Piece fixture must be valid');
     }
@@ -1084,9 +1082,9 @@ describe('H Fields materialization', () => {
       value: { kind: 'timePiece' },
     });
 
-    const evaluated = simulateProject(catalog, project)
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    const evaluated = simulateProject(catalog, project).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'H',
+    );
     if (evaluated?.authoring !== 'complete' || evaluated.validity !== 'valid') {
       throw new Error('dormant optional disposition fixture must be valid');
     }
@@ -1235,9 +1233,7 @@ describe('H Fields materialization', () => {
       ),
     );
     const simulation = simulateProject(catalog, project);
-    const evaluated = simulation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    const evaluated = simulation.route.biomes.find((candidate) => candidate.biomeKey === 'H');
     expect(evaluated?.authoring).toBe('complete');
     if (evaluated === undefined || !('rewards' in evaluated))
       throw new Error('H reward evaluation is missing');
@@ -1456,9 +1452,7 @@ describe('H Fields materialization', () => {
 
   it('settles only active cage slots at their exact local reward sites', () => {
     const evaluation = simulateProject(catalog, createGoldenFGHProject());
-    const h = evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    const h = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'H');
     if (h?.authoring !== 'complete' || h.validity !== 'valid') {
       throw new Error('fixture did not complete valid H');
     }
@@ -1517,9 +1511,9 @@ describe('H Fields materialization', () => {
       acquisition: createAcquisitionRoleAddress(cage, 'self'),
       value: { kind: 'timePiece' },
     });
-    const evaluated = simulateProject(catalog, project)
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    const evaluated = simulateProject(catalog, project).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'H',
+    );
     if (evaluated?.authoring !== 'complete' || evaluated.validity !== 'valid') {
       throw new Error('Time Piece fixture did not complete valid H');
     }

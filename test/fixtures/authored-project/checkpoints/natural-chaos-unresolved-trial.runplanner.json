@@ -1,235 +1,198 @@
 {
-  "schemaVersion": 72,
+  "schemaVersion": 73,
   "projectId": "natural-chaos-unresolved-trial-upgrade",
   "catalogVersion": "0.51.0-biome-i-encounter-profiles",
-  "routes": [
-    {
-      "routeKey": "Underworld",
-      "resourcePlacements": {
-        "Pickaxe": null,
-        "Exorcism": null,
-        "Shovel": null,
-        "Fishing": null
+  "route": {
+    "routeKey": "Underworld",
+    "resourcePlacements": {
+      "Pickaxe": null,
+      "Exorcism": null,
+      "Shovel": null,
+      "Fishing": null
+    },
+    "loadout": {
+      "weaponKey": "WeaponStaffSwing",
+      "aspectKey": "BaseStaffAspect",
+      "manualArcanaKeys": [],
+      "fearRanks": {
+        "HealingReductionShrineUpgrade": 0,
+        "ShopPricesShrineUpgrade": 0,
+        "EnemyHealthShrineUpgrade": 0,
+        "EnemyDamageShrineUpgrade": 0,
+        "EnemySpeedShrineUpgrade": 0,
+        "EnemyShieldShrineUpgrade": 0,
+        "EnemyCountShrineUpgrade": 0,
+        "EnemyRespawnShrineUpgrade": 0,
+        "NextBiomeEnemyShrineUpgrade": 0,
+        "BiomeSpeedShrineUpgrade": 0,
+        "MinibossCountShrineUpgrade": 0,
+        "BossDifficultyShrineUpgrade": 0,
+        "BoonSkipShrineUpgrade": 0,
+        "BoonManaReserveShrineUpgrade": 0,
+        "BanUnpickedBoonsShrineUpgrade": 0,
+        "LimitGraspShrineUpgrade": 0,
+        "EnemyEliteShrineUpgrade": 0
       },
-      "loadout": {
-        "weaponKey": "WeaponStaffSwing",
-        "aspectKey": "BaseStaffAspect",
-        "manualArcanaKeys": [],
-        "fearRanks": {
-          "HealingReductionShrineUpgrade": 0,
-          "ShopPricesShrineUpgrade": 0,
-          "EnemyHealthShrineUpgrade": 0,
-          "EnemyDamageShrineUpgrade": 0,
-          "EnemySpeedShrineUpgrade": 0,
-          "EnemyShieldShrineUpgrade": 0,
-          "EnemyCountShrineUpgrade": 0,
-          "EnemyRespawnShrineUpgrade": 0,
-          "NextBiomeEnemyShrineUpgrade": 0,
-          "BiomeSpeedShrineUpgrade": 0,
-          "MinibossCountShrineUpgrade": 0,
-          "BossDifficultyShrineUpgrade": 0,
-          "BoonSkipShrineUpgrade": 0,
-          "BoonManaReserveShrineUpgrade": 0,
-          "BanUnpickedBoonsShrineUpgrade": 0,
-          "LimitGraspShrineUpgrade": 0,
-          "EnemyEliteShrineUpgrade": 0
-        },
-        "startingKeepsakeKey": "ManaOverTimeRefundKeepsake"
-      },
-      "biomes": [
-        {
-          "biomeKey": "F",
-          "state": {},
-          "topology": {
-            "startOccurrenceId": "fixture-chaos-opening",
-            "occurrences": [
-              {
-                "occurrenceId": "fixture-chaos-opening",
-                "gameName": "F_Opening01",
-                "state": {
-                  "kind": "counted",
-                  "reward": null
+      "startingKeepsakeKey": "ManaOverTimeRefundKeepsake"
+    },
+    "biomes": [
+      {
+        "biomeKey": "F",
+        "state": {},
+        "topology": {
+          "startOccurrenceId": "fixture-chaos-opening",
+          "occurrences": [
+            {
+              "occurrenceId": "fixture-chaos-opening",
+              "gameName": "F_Opening01",
+              "state": {
+                "kind": "counted",
+                "reward": null
+              },
+              "encounters": {
+                "encounterKeyByPhase": {},
+                "figLeafSkipByPhase": {
+                  "Encounter": false
                 },
-                "encounters": {
-                  "encounterKeyByPhase": {},
-                  "figLeafSkipByPhase": {
-                    "Encounter": false
+                "gorgonResultByPhase": {}
+              },
+              "roomActions": {
+                "order": []
+              },
+              "additionalExits": [
+                {
+                  "kind": "chaos",
+                  "key": "chaos",
+                  "occurrenceId": "fixture-chaos-room"
+                }
+              ]
+            },
+            {
+              "occurrenceId": "fixture-chaos-room",
+              "gameName": "Chaos_01",
+              "state": {
+                "kind": "fixed",
+                "reward": {
+                  "offer": {
+                    "rewardType": "TrialUpgrade"
                   },
-                  "gorgonResultByPhase": {}
+                  "traitOffersByAcquisitionRole": {
+                    "self": null
+                  },
+                  "dispositionByAcquisitionRole": {
+                    "self": {
+                      "kind": "normal"
+                    }
+                  }
+                }
+              },
+              "encounters": {
+                "encounterKeyByPhase": {},
+                "figLeafSkipByPhase": {
+                  "Encounter": false
                 },
-                "roomActions": {
-                  "order": []
-                },
-                "additionalExits": [
+                "gorgonResultByPhase": {}
+              },
+              "roomActions": {
+                "order": [
                   {
-                    "kind": "chaos",
-                    "key": "chaos",
-                    "occurrenceId": "fixture-chaos-room"
+                    "kind": "interactIncomingReward",
+                    "producerPoint": "roomRewardPickup",
+                    "acquisitionRole": "self"
                   }
                 ]
               },
-              {
-                "occurrenceId": "fixture-chaos-room",
-                "gameName": "Chaos_01",
-                "state": {
-                  "kind": "fixed",
-                  "reward": {
-                    "offer": {
-                      "rewardType": "TrialUpgrade"
-                    },
-                    "traitOffersByAcquisitionRole": {
-                      "self": null
-                    },
-                    "dispositionByAcquisitionRole": {
-                      "self": {
-                        "kind": "normal"
-                      }
+              "additionalExits": []
+            },
+            {
+              "occurrenceId": "fixture-chaos-return",
+              "gameName": "F_Combat01",
+              "state": {
+                "kind": "counted",
+                "reward": {
+                  "offer": {
+                    "rewardType": "MaxHealthDrop"
+                  },
+                  "traitOffersByAcquisitionRole": {},
+                  "dispositionByAcquisitionRole": {
+                    "self": {
+                      "kind": "normal"
                     }
                   }
-                },
-                "encounters": {
-                  "encounterKeyByPhase": {},
-                  "figLeafSkipByPhase": {
-                    "Encounter": false
-                  },
-                  "gorgonResultByPhase": {}
-                },
-                "roomActions": {
-                  "order": [
-                    {
-                      "kind": "interactIncomingReward",
-                      "producerPoint": "roomRewardPickup",
-                      "acquisitionRole": "self"
-                    }
-                  ]
-                },
-                "additionalExits": []
-              },
-              {
-                "occurrenceId": "fixture-chaos-return",
-                "gameName": "F_Combat01",
-                "state": {
-                  "kind": "counted",
-                  "reward": {
-                    "offer": {
-                      "rewardType": "MaxHealthDrop"
-                    },
-                    "traitOffersByAcquisitionRole": {},
-                    "dispositionByAcquisitionRole": {
-                      "self": {
-                        "kind": "normal"
-                      }
-                    }
-                  }
-                },
-                "encounters": {
-                  "encounterKeyByPhase": {},
-                  "figLeafSkipByPhase": {
-                    "Encounter": false
-                  },
-                  "gorgonResultByPhase": {
-                    "Encounter": {
-                      "athenaTriggerConditionMet": false
-                    }
-                  }
-                },
-                "roomActions": {
-                  "order": [
-                    {
-                      "kind": "interactIncomingReward",
-                      "producerPoint": "roomRewardPickup",
-                      "acquisitionRole": "self"
-                    }
-                  ]
-                },
-                "additionalExits": []
-              }
-            ],
-            "decisions": [
-              {
-                "kind": "exit",
-                "source": {
-                  "kind": "occurrence",
-                  "occurrenceId": "fixture-chaos-opening"
-                },
-                "normal": {
-                  "kind": "batch",
-                  "rewardStore": {
-                    "kind": "authoredBaseStore",
-                    "baseRewardStoreKey": null
-                  },
-                  "batchState": null,
-                  "targets": []
-                },
-                "selection": {
-                  "kind": "additional",
-                  "additionalExitKey": "chaos"
                 }
               },
-              {
-                "kind": "exit",
-                "source": {
-                  "kind": "occurrence",
-                  "occurrenceId": "fixture-chaos-room"
+              "encounters": {
+                "encounterKeyByPhase": {},
+                "figLeafSkipByPhase": {
+                  "Encounter": false
                 },
-                "normal": {
-                  "kind": "batch",
-                  "rewardStore": {
-                    "kind": "authoredBaseStore",
-                    "baseRewardStoreKey": "RunProgress"
-                  },
-                  "batchState": null,
-                  "targets": [
-                    {
-                      "exitKey": "exit1",
-                      "occurrenceId": "fixture-chaos-return"
-                    }
-                  ]
-                },
-                "selection": {
-                  "kind": "derived"
+                "gorgonResultByPhase": {
+                  "Encounter": {
+                    "athenaTriggerConditionMet": false
+                  }
                 }
+              },
+              "roomActions": {
+                "order": [
+                  {
+                    "kind": "interactIncomingReward",
+                    "producerPoint": "roomRewardPickup",
+                    "acquisitionRole": "self"
+                  }
+                ]
+              },
+              "additionalExits": []
+            }
+          ],
+          "decisions": [
+            {
+              "kind": "exit",
+              "source": {
+                "kind": "occurrence",
+                "occurrenceId": "fixture-chaos-opening"
+              },
+              "normal": {
+                "kind": "batch",
+                "rewardStore": {
+                  "kind": "authoredBaseStore",
+                  "baseRewardStoreKey": null
+                },
+                "batchState": null,
+                "targets": []
+              },
+              "selection": {
+                "kind": "additional",
+                "additionalExitKey": "chaos"
               }
-            ],
-            "fixedRoomLinks": []
-          }
+            },
+            {
+              "kind": "exit",
+              "source": {
+                "kind": "occurrence",
+                "occurrenceId": "fixture-chaos-room"
+              },
+              "normal": {
+                "kind": "batch",
+                "rewardStore": {
+                  "kind": "authoredBaseStore",
+                  "baseRewardStoreKey": "RunProgress"
+                },
+                "batchState": null,
+                "targets": [
+                  {
+                    "exitKey": "exit1",
+                    "occurrenceId": "fixture-chaos-return"
+                  }
+                ]
+              },
+              "selection": {
+                "kind": "derived"
+              }
+            }
+          ],
+          "fixedRoomLinks": []
         }
-      ]
-    },
-    {
-      "routeKey": "Surface",
-      "resourcePlacements": {
-        "Pickaxe": null,
-        "Exorcism": null,
-        "Shovel": null,
-        "Fishing": null
-      },
-      "loadout": {
-        "weaponKey": "WeaponStaffSwing",
-        "aspectKey": "BaseStaffAspect",
-        "manualArcanaKeys": [],
-        "fearRanks": {
-          "HealingReductionShrineUpgrade": 0,
-          "ShopPricesShrineUpgrade": 0,
-          "EnemyHealthShrineUpgrade": 0,
-          "EnemyDamageShrineUpgrade": 0,
-          "EnemySpeedShrineUpgrade": 0,
-          "EnemyShieldShrineUpgrade": 0,
-          "EnemyCountShrineUpgrade": 0,
-          "EnemyRespawnShrineUpgrade": 0,
-          "NextBiomeEnemyShrineUpgrade": 0,
-          "BiomeSpeedShrineUpgrade": 0,
-          "MinibossCountShrineUpgrade": 0,
-          "BossDifficultyShrineUpgrade": 0,
-          "BoonSkipShrineUpgrade": 0,
-          "BoonManaReserveShrineUpgrade": 0,
-          "BanUnpickedBoonsShrineUpgrade": 0,
-          "LimitGraspShrineUpgrade": 0,
-          "EnemyEliteShrineUpgrade": 0
-        },
-        "startingKeepsakeKey": "ManaOverTimeRefundKeepsake"
-      },
-      "biomes": []
-    }
-  ]
+      }
+    ]
+  }
 }

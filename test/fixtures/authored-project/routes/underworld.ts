@@ -163,16 +163,10 @@ export function createUnderworldFWellCheckpoint(configuredTail = true): ProjectD
     ? project
     : Object.freeze({
         ...project,
-        routes: Object.freeze(
-          project.routes.map((route) =>
-            route.routeKey === 'Underworld'
-              ? Object.freeze({
-                  ...route,
-                  biomes: Object.freeze(route.biomes.filter((biome) => biome.biomeKey === 'F')),
-                })
-              : route,
-          ),
-        ),
+        route: Object.freeze({
+          ...project.route,
+          biomes: Object.freeze(project.route.biomes.filter((biome) => biome.biomeKey === 'F')),
+        }),
       });
 }
 
@@ -336,9 +330,8 @@ export function createUnderworldFPoolCheckpoint(): ProjectDocument {
     occurrence: createOccurrenceAddress(goldenFBiome, occurrenceId),
     interacted: true,
   });
-  const pool = project.routes
-    .find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((biome) => biome.biomeKey === 'F')
+  const pool = project.route.biomes
+    .find((biome) => biome.biomeKey === 'F')
     ?.topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === occurrenceId,
     )?.purgingPool;

@@ -16,9 +16,8 @@ function occurrence(
   biomeKey: string,
   occurrenceId: string,
 ): RoomOccurrence {
-  const result = project.routes
-    .find((route) => route.routeKey === routeKey)
-    ?.biomes.find((biome) => biome.biomeKey === biomeKey)
+  const result = project.route.biomes
+    .find((biome) => biome.biomeKey === biomeKey)
     ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
   if (result === undefined) throw new Error(`${routeKey}/${biomeKey}/${occurrenceId} is missing`);
   return result;

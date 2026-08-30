@@ -72,7 +72,7 @@ interface TargetSpec {
 }
 
 function fPlan(project: ProjectDocument) {
-  const plan = project.routes.find((route) => route.routeKey === 'Underworld')?.biomes[0];
+  const plan = project.route?.biomes[0];
   if (plan?.biomeKey !== 'F') {
     throw new Error('missing F reward fixture plan');
   }
@@ -80,7 +80,7 @@ function fPlan(project: ProjectDocument) {
 }
 
 function traitContext(project: ProjectDocument) {
-  const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
+  const route = project.route;
   if (route === undefined) throw new Error('fixture has no Underworld route');
   return route.loadout;
 }
@@ -96,7 +96,8 @@ function complete(project: ProjectDocument): CompleteBiomeCompletenessResult {
 function emptyProject(projectId: string): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId,
-    configuredBiomeCounts: { Underworld: 1 },
+    routeKey: 'Underworld',
+    configuredBiomeCount: 1,
   });
 }
 
@@ -1403,7 +1404,7 @@ describe('F reward-history simulation', () => {
     });
     project = authorLegalTraitOffers(project);
     const assembly = simulateProjectAssembly(catalog, project);
-    const evaluated = assembly.evaluation.routes[0]?.biomes[0];
+    const evaluated = assembly.evaluation.route?.biomes[0];
     if (evaluated?.authoring !== 'incomplete' || evaluated.validity !== 'invalid') {
       throw new Error('invalid Shop purchase fixture did not produce a blocked evaluation');
     }

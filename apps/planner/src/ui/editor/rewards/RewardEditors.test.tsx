@@ -95,8 +95,7 @@ function deferredHostYield() {
 }
 
 function projectRewardOffer(project: ProjectDocument): ResolvedRewardOffer {
-  const occurrence = project.routes
-    .flatMap((route) => route.biomes)
+  const occurrence = project.route.biomes
     .flatMap((plan) => plan.topology?.occurrences ?? [])
     .find((candidate) => candidate.occurrenceId === firstReward.occurrenceId);
   if (occurrence?.state.kind !== 'counted' || occurrence.state.reward === null) {
@@ -115,8 +114,8 @@ function StoreRewardHarness({
     <RewardValueEditor
       candidateOwner={firstOwner}
       idPrefix="lifecycle-stale"
-      interactions={structuredWorkspace.project(workspace.assembly).interactions}
-      offer={projectRewardOffer(workspace.history.present)}
+      interactions={structuredWorkspace.project(workspace.assembly!).interactions}
+      offer={projectRewardOffer(workspace.history!.present)}
       onReplace={() => undefined}
     />
   );

@@ -59,10 +59,9 @@ export function replaceBrowserProperty(
 }
 
 export function nHubState(application: PlannerApplication) {
-  const plan = application.store
-    .getState()
-    .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((biome) => biome.biomeKey === 'N');
+  const workspace = application.store.getState().projectWorkspace;
+  if (workspace.kind !== 'openProject') throw new Error('Hub test project is not open');
+  const plan = workspace.history.present.route.biomes.find((biome) => biome.biomeKey === 'N');
   const topology = plan?.topology;
   if (topology === undefined || topology === null) {
     throw new Error('N Hub test project has no authored topology');
@@ -226,36 +225,30 @@ export function startHubPointerDrag(
 export function withRetainedHubBehindMissingLink(project: ProjectDocument): ProjectDocument {
   return Object.freeze({
     ...project,
-    routes: Object.freeze(
-      project.routes.map((route) =>
-        route.routeKey !== 'Surface'
-          ? route
-          : Object.freeze({
-              ...route,
-              biomes: Object.freeze(
-                route.biomes.map((biome) => {
-                  if (biome.biomeKey !== 'N' || biome.topology === null) return biome;
-                  const startOccurrenceId = biome.topology.startOccurrenceId;
-                  return Object.freeze({
-                    ...biome,
-                    topology: Object.freeze({
-                      ...biome.topology,
-                      decisions: Object.freeze(
-                        biome.topology.decisions.filter(
-                          (decision) =>
-                            !(
-                              decision.kind === 'exit' &&
-                              decision.source.kind === 'occurrence' &&
-                              decision.source.occurrenceId === startOccurrenceId
-                            ),
-                        ),
-                      ),
-                    }),
-                  });
-                }),
+    route: Object.freeze({
+      ...project.route,
+      biomes: Object.freeze(
+        project.route.biomes.map((biome) => {
+          if (biome.biomeKey !== 'N' || biome.topology === null) return biome;
+          const startOccurrenceId = biome.topology.startOccurrenceId;
+          return Object.freeze({
+            ...biome,
+            topology: Object.freeze({
+              ...biome.topology,
+              decisions: Object.freeze(
+                biome.topology.decisions.filter(
+                  (decision) =>
+                    !(
+                      decision.kind === 'exit' &&
+                      decision.source.kind === 'occurrence' &&
+                      decision.source.occurrenceId === startOccurrenceId
+                    ),
+                ),
               ),
             }),
+          });
+        }),
       ),
-    ),
+    }),
   });
 }

@@ -12,7 +12,7 @@ import {
 } from '@planner/state/store';
 import { projectHistoryShortcut } from './projectHistoryShortcuts';
 
-export function ProjectHistoryControls() {
+export function ProjectHistoryControls({ hasProject = true }: { readonly hasProject?: boolean }) {
   const canUndo = useAppSelector(selectCanUndoProject);
   const canRedo = useAppSelector(selectCanRedoProject);
   const dispatch = useAppDispatch();
@@ -32,6 +32,7 @@ export function ProjectHistoryControls() {
     return () => globalThis.removeEventListener('keydown', handleKeyDown);
   }, [canRedo, canUndo, dispatch]);
 
+  if (!hasProject) return null;
   return (
     <div aria-label="Project history" className="history-controls" role="group">
       <button

@@ -6,7 +6,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 72 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 73 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -461,5 +461,5 @@ export interface ProjectDocument {
   readonly schemaVersion: typeof PROJECT_DOCUMENT_SCHEMA_VERSION;
   readonly projectId: string;
   readonly catalogVersion: string;
-  readonly routes: readonly AuthoredRoutePlan[];
+  readonly route: AuthoredRoutePlan;
 }

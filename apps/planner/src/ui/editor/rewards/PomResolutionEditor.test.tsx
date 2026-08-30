@@ -40,7 +40,7 @@ describe('Pom resolution editor', () => {
     const application = createApplication();
     const project = createGoldenFGHIProject();
     application.store.dispatch(authoredProjectReplaced(project));
-    const initialWorkspace = application.selectStructuredWorkspace(application.store.getState());
+    const initialWorkspace = application.selectStructuredWorkspace(application.store.getState())!;
     let authoredProject = project;
     let workspace = initialWorkspace;
     let control: WorkspaceLevelResolutionInteraction | undefined;
@@ -53,7 +53,7 @@ describe('Pom resolution editor', () => {
       );
       authoredProject = withPom;
       application.store.dispatch(authoredProjectReplaced(withPom));
-      workspace = application.selectStructuredWorkspace(application.store.getState());
+      workspace = application.selectStructuredWorkspace(application.store.getState())!;
       control = [...workspace.interactions.levelResolutions.values()].find(
         (candidate) => candidate.value.kind === 'choice',
       );
@@ -70,7 +70,7 @@ describe('Pom resolution editor', () => {
       control.intentFor(incompleteValue).command,
     );
     application.store.dispatch(authoredProjectReplaced(incompleteProject));
-    workspace = application.selectStructuredWorkspace(application.store.getState());
+    workspace = application.selectStructuredWorkspace(application.store.getState())!;
     control = workspace.interactions.levelResolutions.get(control.key);
     if (control === undefined) throw new Error('incomplete Pom control is not projected');
 
@@ -78,22 +78,21 @@ describe('Pom resolution editor', () => {
     expect(workspace.focusByOwner.get(control.key)?.ownerAddress).toEqual(control.owner);
 
     const projectedControl = (() => {
-      for (const route of workspace.routes)
-        for (const biome of route.biomes)
-          for (const node of biome.nodes) {
-            const rooms =
-              node.kind === 'occurrenceWorkbench'
-                ? [node.room]
-                : node.kind === 'ordinaryBatch' ||
-                    node.kind === 'mixedBatch' ||
-                    node.kind === 'takeoverBatch'
-                  ? node.targets.map((target) => target.room)
-                  : [];
-            for (const room of rooms)
-              for (const rewardControl of room.rewardControls)
-                for (const resolution of rewardControl.levelResolutions ?? [])
-                  if (resolution.address === control.owner) return resolution;
-          }
+      for (const biome of workspace.route.biomes)
+        for (const node of biome.nodes) {
+          const rooms =
+            node.kind === 'occurrenceWorkbench'
+              ? [node.room]
+              : node.kind === 'ordinaryBatch' ||
+                  node.kind === 'mixedBatch' ||
+                  node.kind === 'takeoverBatch'
+                ? node.targets.map((target) => target.room)
+                : [];
+          for (const room of rooms)
+            for (const rewardControl of room.rewardControls)
+              for (const resolution of rewardControl.levelResolutions ?? [])
+                if (resolution.address === control.owner) return resolution;
+        }
       throw new Error('Pom control has no containing reward surface');
     })();
     const user = userEvent.setup();
@@ -124,7 +123,7 @@ describe('Pom resolution editor', () => {
   it('saves and restores a reached room Pom through the application history', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const interaction = [...workspace.interactions.levelResolutions.values()].find(
       (candidate) => candidate.value.kind === 'choice',
     );
@@ -148,19 +147,19 @@ describe('Pom resolution editor', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Save Pom' }));
     const changed = application
-      .selectStructuredWorkspace(application.store.getState())
+      .selectStructuredWorkspace(application.store.getState())!
       .interactions.levelResolutions.get(interaction.key)?.value;
     expect(changed).not.toEqual(before);
     application.store.dispatch(authoredProjectUndoRequested());
     expect(
       application
-        .selectStructuredWorkspace(application.store.getState())
+        .selectStructuredWorkspace(application.store.getState())!
         .interactions.levelResolutions.get(interaction.key)?.value,
     ).toEqual(before);
     application.store.dispatch(authoredProjectRedoRequested());
     expect(
       application
-        .selectStructuredWorkspace(application.store.getState())
+        .selectStructuredWorkspace(application.store.getState())!
         .interactions.levelResolutions.get(interaction.key)?.value,
     ).toEqual(changed);
     application.dispose();

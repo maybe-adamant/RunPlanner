@@ -13,9 +13,7 @@ import { expectedWorkspaceTopologyManifest } from './expected-topology';
 describe('structured workspace topology expectations', () => {
   it('derives structural owners without turning orphan records into workspace owners', () => {
     const project = loadSurfaceNProject();
-    const plan = project.routes
-      .find((route) => route.routeKey === nBiome.routeKey)
-      ?.biomes.find((biome) => biome.biomeKey === nBiome.biomeKey);
+    const plan = project.route.biomes.find((biome) => biome.biomeKey === nBiome.biomeKey);
     if (plan?.topology === null || plan === undefined) {
       throw new Error('Surface/N topology fixture is missing');
     }

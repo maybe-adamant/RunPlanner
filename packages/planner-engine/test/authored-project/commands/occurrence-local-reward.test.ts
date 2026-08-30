@@ -33,7 +33,7 @@ describe('authored-project local reward commands', () => {
     });
 
     expect(
-      changed.routes[0]?.biomes[2]?.topology?.occurrences.find(
+      changed.route?.biomes[2]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === combatId,
       )?.state,
     ).toMatchObject({
@@ -68,10 +68,10 @@ describe('authored-project local reward commands', () => {
     const initial = createCompleteNProject();
     const combatId = createOccurrenceId('round-trip-n-combat02');
     const located = {
-      routeIndex: 1,
+      routeKey: 'Surface',
       biomeIndex: 0,
-      loadout: initial.routes[1]!.loadout,
-      plan: initial.routes[1]!.biomes[0]!,
+      loadout: initial.route.loadout,
+      plan: initial.route.biomes[0]!,
       layout: catalog.biomeLayouts.byKey.N!,
     };
     const owner = createTraitOfferAddress(
@@ -120,10 +120,10 @@ describe('authored-project local reward commands', () => {
   it('rejects a local reward aimed at an ordinary parent and wrong Fields group', () => {
     const initial = createGoldenFGHProject();
     const located = {
-      routeIndex: 0,
+      routeKey: 'Underworld',
       biomeIndex: 0,
-      loadout: initial.routes[0]!.loadout,
-      plan: initial.routes[0]!.biomes[0]!,
+      loadout: initial.route!.loadout,
+      plan: initial.route!.biomes[0]!,
       layout: catalog.biomeLayouts.byKey.F!,
     };
     const command = (groupKey: string) => ({
@@ -149,13 +149,13 @@ describe('authored-project local reward commands', () => {
     const fieldsDocumentBefore = JSON.stringify(fieldsProject);
     const fieldsOccurrenceId = createOccurrenceId('golden-h-combat02');
     const fieldsLocated = {
-      routeIndex: 0,
+      routeKey: 'Underworld',
       biomeIndex: 2,
-      loadout: fieldsProject.routes[0]!.loadout,
-      plan: fieldsProject.routes[0]!.biomes[2]!,
+      loadout: fieldsProject.route!.loadout,
+      plan: fieldsProject.route!.biomes[2]!,
       layout: catalog.biomeLayouts.byKey.H!,
     };
-    const fieldsBefore = fieldsProject.routes[0]!.biomes[2]!.topology!.occurrences.find(
+    const fieldsBefore = fieldsProject.route!.biomes[2]!.topology!.occurrences.find(
       (occurrence) => occurrence.occurrenceId === fieldsOccurrenceId,
     )!;
     if (fieldsBefore.state.kind !== 'fieldsCombat') throw new Error('missing real Fields branch');
@@ -173,7 +173,7 @@ describe('authored-project local reward commands', () => {
       ).toThrow();
       expect(JSON.stringify(fieldsProject)).toBe(fieldsDocumentBefore);
       expect(
-        fieldsProject.routes[0]!.biomes[2]!.topology!.occurrences.find(
+        fieldsProject.route!.biomes[2]!.topology!.occurrences.find(
           (occurrence) => occurrence.occurrenceId === fieldsOccurrenceId,
         ),
       ).toEqual(fieldsBefore);
@@ -183,13 +183,13 @@ describe('authored-project local reward commands', () => {
     const surfaceDocumentBefore = JSON.stringify(surfaceProject);
     const shipOccurrenceId = oOccurrenceIds.combat04;
     const surfaceLocated = {
-      routeIndex: 1,
+      routeKey: 'Surface',
       biomeIndex: 1,
-      loadout: surfaceProject.routes[1]!.loadout,
-      plan: surfaceProject.routes[1]!.biomes[1]!,
+      loadout: surfaceProject.route.loadout,
+      plan: surfaceProject.route.biomes[1]!,
       layout: catalog.biomeLayouts.byKey.O!,
     };
-    const shipBefore = surfaceProject.routes[1]!.biomes[1]!.topology!.occurrences.find(
+    const shipBefore = surfaceProject.route.biomes[1]!.topology!.occurrences.find(
       (occurrence) => occurrence.occurrenceId === shipOccurrenceId,
     )!;
     if (shipBefore.state.kind !== 'shipCombat') throw new Error('missing real Ship branch');
@@ -208,13 +208,13 @@ describe('authored-project local reward commands', () => {
       expect(JSON.stringify(surfaceProject)).toBe(surfaceDocumentBefore);
     }
     expect(
-      surfaceProject.routes[1]!.biomes[1]!.topology!.occurrences.find(
+      surfaceProject.route.biomes[1]!.topology!.occurrences.find(
         (occurrence) => occurrence.occurrenceId === shipOccurrenceId,
       ),
     ).toEqual(shipBefore);
 
     const shopOccurrenceId = oOccurrenceIds.preboss;
-    const shopBefore = surfaceProject.routes[1]!.biomes[1]!.topology!.occurrences.find(
+    const shopBefore = surfaceProject.route.biomes[1]!.topology!.occurrences.find(
       (occurrence) => occurrence.occurrenceId === shopOccurrenceId,
     )!;
     if (shopBefore.state.kind !== 'shop' || shopBefore.state.shop === undefined) {
@@ -235,7 +235,7 @@ describe('authored-project local reward commands', () => {
     ).toThrow();
     expect(JSON.stringify(surfaceProject)).toBe(surfaceDocumentBefore);
     expect(
-      surfaceProject.routes[1]!.biomes[1]!.topology!.occurrences.find(
+      surfaceProject.route.biomes[1]!.topology!.occurrences.find(
         (occurrence) => occurrence.occurrenceId === shopOccurrenceId,
       ),
     ).toEqual(shopBefore);

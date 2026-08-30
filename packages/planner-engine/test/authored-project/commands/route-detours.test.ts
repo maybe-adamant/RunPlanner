@@ -43,9 +43,7 @@ function biomeTopology(
   routeKey: 'Underworld',
   biomeKey: 'F' | 'G',
 ) {
-  const topology = project.routes
-    .find((route) => route.routeKey === routeKey)
-    ?.biomes.find((biome) => biome.biomeKey === biomeKey)?.topology;
+  const topology = project.route.biomes.find((biome) => biome.biomeKey === biomeKey)?.topology;
   if (topology === null || topology === undefined) throw new Error(`missing ${biomeKey} topology`);
   return topology;
 }
@@ -151,16 +149,15 @@ describe('authored-project route detour commands', () => {
     ).toThrow(/InfernalContractBoon is filtered from this room/);
 
     const encoded = JSON.parse(encodeProjectDocument(switched)) as {
-      routes: Array<{
+      route: {
         biomes: Array<{
           topology?: {
             occurrences: Array<{ occurrenceId: string; state: Record<string, unknown> }>;
           };
         }>;
-      }>;
+      };
     };
-    const encodedAnomaly = encoded.routes
-      .flatMap((route) => route.biomes)
+    const encodedAnomaly = encoded.route.biomes
       .flatMap((biome) => biome.topology?.occurrences ?? [])
       .find((occurrence) => occurrence.occurrenceId === target);
     if (encodedAnomaly === undefined) throw new Error('encoded Anomaly occurrence is missing');

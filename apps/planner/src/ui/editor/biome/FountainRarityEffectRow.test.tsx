@@ -253,20 +253,20 @@ describe('FountainRarityEffectRow', () => {
         />
       </Provider>,
     );
-    const historyBefore = application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = application.store.getState().projectWorkspace.history!.past.length;
     await user.click(screen.getByLabelText('Phial Target'));
     await user.click(screen.getByText('Apollo Attack'));
-    const selected = application.store.getState().projectWorkspace.history.present;
-    const selectedPostboss = selected.routes[0]?.biomes[0]?.topology?.occurrences.find(
+    const selected = application.store.getState().projectWorkspace.history!.present;
+    const selectedPostboss = selected.route?.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === action.occurrenceId,
     );
     expect(selectedPostboss?.fountainRarityResult).toEqual({ targetTraitKey: 'ApolloWeaponBoon' });
-    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
     act(() => application.store.dispatch(authoredProjectUndoRequested()));
-    const undone = application.store.getState().projectWorkspace.history.present;
-    const undonePostboss = undone.routes[0]?.biomes[0]?.topology?.occurrences.find(
+    const undone = application.store.getState().projectWorkspace.history!.present;
+    const undonePostboss = undone.route?.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === action.occurrenceId,
     );
     expect(undonePostboss?.fountainRarityResult).toBeUndefined();

@@ -151,7 +151,7 @@ describe('OccurrenceRoomFeatures', () => {
     openRoomTab('Room Timeline');
     expect(screen.getByRole('button', { name: 'Encounter' })).toBeTruthy();
     const family = screen.getByRole('combobox', { name: 'Nemesis family' });
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     const eventOwner = createNemesisRandomEventAddress(phase);
     const finding = simulateProject(catalog, project).findings.find(
       (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(eventOwner),
@@ -164,7 +164,7 @@ describe('OccurrenceRoomFeatures', () => {
     );
     const eventEditor = screen.getByRole('region', { name: 'Nemesis event' });
     await waitFor(() => expect(eventEditor.contains(document.activeElement)).toBe(true));
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );
     expect(screen.getByText('Choose an event family.')).toBeTruthy();
@@ -198,8 +198,7 @@ describe('OccurrenceRoomFeatures', () => {
     const authoredEvent = () =>
       view.application.store
         .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'F')
+        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId);
     await waitFor(() =>
       expect(authoredEvent()?.encounters.nemesisRandomEventByPhase?.Encounter).toEqual({
@@ -222,7 +221,7 @@ describe('OccurrenceRoomFeatures', () => {
       authoredEvent()?.acquisitionSites?.['nemesisGenerated:Encounter']?.pickupEntries?.result
         ?.offer.rewardType,
     ).toBeTruthy();
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
     const requiredActionKey = roomActionKey({
@@ -295,8 +294,7 @@ describe('OccurrenceRoomFeatures', () => {
     const authoredEncounter = () =>
       view.application.store
         .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'F')
+        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
         ?.encounters.encounterKeyByPhase.Encounter;
 
@@ -319,8 +317,7 @@ describe('OccurrenceRoomFeatures', () => {
       expect(
         view.application.store
           .getState()
-          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-          ?.biomes.find((biome) => biome.biomeKey === 'F')
+          .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
           ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
           ?.encounters.nemesisRandomEventByPhase?.Encounter,
       ).toEqual({ kind: 'goldTrade', response: 'accept' }),
@@ -386,8 +383,7 @@ describe('OccurrenceRoomFeatures', () => {
       expect(
         view.application.store
           .getState()
-          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-          ?.biomes.find((biome) => biome.biomeKey === 'F')
+          .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
           ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
           ?.encounters.nemesisRandomEventByPhase?.Encounter?.kind,
       ).toBe('traitTrade'),
@@ -423,9 +419,8 @@ describe('OccurrenceRoomFeatures', () => {
       application,
     );
     const feature = application
-      .selectStructuredWorkspace(application.store.getState())
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F')
+      .selectStructuredWorkspace(application.store.getState())!
+      .route?.biomes.find((biome) => biome.biomeKey === 'F')
       ?.nodes.find((node) => {
         if (node.kind !== 'occurrenceWorkbench') return false;
         return node.room.occurrenceId === occurrenceId;
@@ -463,9 +458,8 @@ describe('OccurrenceRoomFeatures', () => {
       occurrenceById(occurrenceId),
     );
     const feature = view.application
-      .selectStructuredWorkspace(view.application.store.getState())
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F')
+      .selectStructuredWorkspace(view.application.store.getState())!
+      .route?.biomes.find((biome) => biome.biomeKey === 'F')
       ?.nodes.find((node) => {
         if (node.kind !== 'occurrenceWorkbench') return false;
         return node.room.occurrenceId === occurrenceId;
@@ -496,6 +490,7 @@ describe('OccurrenceRoomFeatures', () => {
       occurrenceById(occurrenceId),
     );
     const workspace = view.application.selectStructuredWorkspace(view.application.store.getState());
+    if (workspace === undefined) throw new Error('workspace projection is unavailable');
     const passive = createEncounterPhaseAddress(
       goldenHBiome,
       { kind: 'occurrence', occurrenceId },
@@ -506,8 +501,7 @@ describe('OccurrenceRoomFeatures', () => {
     const authoredFields = () =>
       view.application.store
         .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'H')
+        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'H')
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
 
     openRoomTab('Room Overview');

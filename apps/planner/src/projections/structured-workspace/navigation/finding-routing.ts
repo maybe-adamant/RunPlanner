@@ -69,7 +69,7 @@ export function isFineGrainedFindingOwner(address: SemanticAddress): boolean {
 export function assertFineGrainedFindingDestination(
   origin: SemanticAddress,
   destination: WorkspaceInspectorDestination | undefined,
-  routes: readonly WorkspaceRoute[],
+  route: WorkspaceRoute,
 ): void {
   const key = semanticAddressKey(origin);
   if (destination === undefined) {
@@ -80,19 +80,20 @@ export function assertFineGrainedFindingDestination(
   const exactNode =
     destination?.routeKey === undefined || destination.biomeKey === undefined
       ? undefined
-      : routes
-          .find((route) => route.routeKey === destination.routeKey)
-          ?.biomes.find((biome) => biome.biomeKey === destination.biomeKey)
-          ?.nodes.find((node) => node.key === destination.nodeKey);
+      : route.routeKey !== destination.routeKey
+        ? undefined
+        : route.biomes
+            .find((biome) => biome.biomeKey === destination.biomeKey)
+            ?.nodes.find((node) => node.key === destination.nodeKey);
   const exactFrontier =
     destination?.routeKey === undefined ||
     destination.biomeKey === undefined ||
     destination.inspectorSubject?.kind !== 'frontier'
       ? undefined
-      : routes
-          .find((route) => route.routeKey === destination.routeKey)
-          ?.biomes.find((biome) => biome.biomeKey === destination.biomeKey)?.frontier?.marker
-          .focusKey === destination.inspectorSubject.frontierFocusKey;
+      : route.routeKey !== destination.routeKey
+        ? false
+        : route.biomes.find((biome) => biome.biomeKey === destination.biomeKey)?.frontier?.marker
+            .focusKey === destination.inspectorSubject.frontierFocusKey;
   if (
     semanticAddressKey(destination.ownerAddress) !== key ||
     destination.region !== 'structure' ||
@@ -122,21 +123,21 @@ function assertFindingDestination(
 }
 
 /**
- * Findings are routed only after every route has published its final inspector
- * destinations. Every live finding must retain an exact destination;
+ * Findings are routed only after the selected route has published its final
+ * inspector destinations. Every live finding must retain an exact destination;
  * coarse owners may inherit their biome shell while fine-grained owners are
  * verified above and never acquire that fallback.
  */
 export function registerWorkspaceFindingDestinations(
   findings: readonly SemanticFinding[],
   focusByOwner: Map<string, WorkspaceInspectorDestination>,
-  routes: readonly WorkspaceRoute[],
+  route: WorkspaceRoute,
 ): void {
   for (const finding of findings) {
     const key = semanticAddressKey(finding.origin);
     const existing = focusByOwner.get(key);
     if (isFineGrainedFindingOwner(finding.origin)) {
-      assertFineGrainedFindingDestination(finding.origin, existing, routes);
+      assertFineGrainedFindingDestination(finding.origin, existing, route);
       continue;
     }
     if (existing !== undefined) {

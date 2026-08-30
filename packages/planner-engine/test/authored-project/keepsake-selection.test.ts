@@ -30,7 +30,7 @@ const fBoss = createOccurrenceAddress(
 describe('keepsake authored selections', () => {
   it('creates mandatory starting and sparse Postboss defaults and round-trips replacements', () => {
     let project = createCompleteFGProject();
-    const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
+    const route = project.route;
     expect(route?.loadout.startingKeepsakeKey).toBe('ManaOverTimeRefundKeepsake');
     expect(
       route?.biomes[0]?.topology?.occurrences.find(
@@ -58,13 +58,13 @@ describe('keepsake authored selections', () => {
   it('rejects an unknown persisted selection while preserving legal context-invalid replacements', () => {
     const project = createProjectDocument(catalog, {
       projectId: 'keepsake-codec',
-      configuredBiomeCounts: { Underworld: 1 },
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
     });
     const encoded = JSON.parse(encodeProjectDocument(project)) as {
-      routes: { routeKey: string; loadout: { startingKeepsakeKey: string } }[];
+      route: { routeKey: string; loadout: { startingKeepsakeKey: string } };
     };
-    encoded.routes.find((route) => route.routeKey === 'Underworld')!.loadout.startingKeepsakeKey =
-      'MissingKeepsake';
+    encoded.route.loadout.startingKeepsakeKey = 'MissingKeepsake';
     expect(() => decodeProjectDocument(encoded, catalog)).toThrow(
       'unknown keepsake MissingKeepsake',
     );
@@ -73,17 +73,16 @@ describe('keepsake authored selections', () => {
   it('rejects a persisted rack leaf on a room without the declaration-owned rack', () => {
     const project = createCompleteFGProject();
     const encoded = JSON.parse(encodeProjectDocument(project)) as {
-      routes: {
+      route: {
         routeKey: string;
         biomes: {
           biomeKey: string;
           topology: { occurrences: Record<string, unknown>[] } | null;
         }[];
-      }[];
+      };
     };
-    const occurrence = encoded.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F')
+    const occurrence = encoded.route.biomes
+      .find((biome) => biome.biomeKey === 'F')
       ?.topology?.occurrences.find((candidate) => candidate.gameName === 'F_Combat02');
     if (occurrence === undefined) throw new Error('expected an Underworld F occurrence');
     occurrence.keepsakeRack = { keepsakeKey: 'ForceZeusBoonKeepsake' };
@@ -128,7 +127,7 @@ describe('keepsake authored selections', () => {
       blessingKey: null,
     });
     expect(
-      project.routes[0]?.biomes[0]?.topology?.occurrences.find(
+      project.route?.biomes[0]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === fBoss.occurrenceId,
       )?.encounters.transcendentEmbryoBlessingByPhase,
     ).toBeUndefined();
@@ -144,10 +143,7 @@ describe('keepsake authored selections', () => {
       selection: start,
       keepsakeKey: 'HadesAndPersephoneKeepsake',
     });
-    expect(
-      project.routes.find((route) => route.routeKey === 'Underworld')?.loadout.keepsakeEquipResults
-        ?.jeweledPom,
-    ).toBeUndefined();
+    expect(project.route?.loadout.keepsakeEquipResults?.jeweledPom).toBeUndefined();
     expect(() =>
       applyProjectCommand(project, catalog, {
         kind: 'ReplaceJeweledPomEquipResult',
@@ -160,10 +156,9 @@ describe('keepsake authored selections', () => {
       result: createKeepsakeEquipResultAddress(start, 'jeweledPom'),
       value: { traitKey: 'HadesCastProjectileBoon' },
     });
-    expect(
-      project.routes.find((route) => route.routeKey === 'Underworld')?.loadout.keepsakeEquipResults
-        ?.jeweledPom,
-    ).toEqual({ traitKey: 'HadesCastProjectileBoon' });
+    expect(project.route?.loadout.keepsakeEquipResults?.jeweledPom).toEqual({
+      traitKey: 'HadesCastProjectileBoon',
+    });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceJeweledPomEquipResult',
       result: createKeepsakeEquipResultAddress(start, 'jeweledPom'),
@@ -181,10 +176,7 @@ describe('keepsake authored selections', () => {
       selection: start,
       keepsakeKey: 'HadesAndPersephoneKeepsake',
     });
-    expect(
-      project.routes.find((route) => route.routeKey === 'Underworld')?.loadout.keepsakeEquipResults
-        ?.jeweledPom,
-    ).toEqual({
+    expect(project.route?.loadout.keepsakeEquipResults?.jeweledPom).toEqual({
       traitKey: 'HadesDeathDefianceDamageBoon',
     });
 
@@ -194,11 +186,9 @@ describe('keepsake authored selections', () => {
       keepsakeKey: 'HadesAndPersephoneKeepsake',
     });
     expect(
-      project.routes
-        .find((route) => route.routeKey === 'Underworld')
-        ?.biomes[0]?.topology?.occurrences.find(
-          (occurrence) => occurrence.occurrenceId === fPostboss.occurrenceId,
-        )?.keepsakeRack?.equipResults?.jeweledPom,
+      project.route.biomes[0]?.topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === fPostboss.occurrenceId,
+      )?.keepsakeRack?.equipResults?.jeweledPom,
     ).toBeUndefined();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceJeweledPomEquipResult',
@@ -216,11 +206,9 @@ describe('keepsake authored selections', () => {
       keepsakeKey: 'HadesAndPersephoneKeepsake',
     });
     expect(
-      project.routes
-        .find((route) => route.routeKey === 'Underworld')
-        ?.biomes[0]?.topology?.occurrences.find(
-          (occurrence) => occurrence.occurrenceId === fPostboss.occurrenceId,
-        )?.keepsakeRack?.equipResults?.jeweledPom,
+      project.route.biomes[0]?.topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === fPostboss.occurrenceId,
+      )?.keepsakeRack?.equipResults?.jeweledPom,
     ).toEqual({ traitKey: 'HadesLifestealBoon' });
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
       project,
@@ -230,7 +218,8 @@ describe('keepsake authored selections', () => {
   it('retains an authored Experimental Hammer result across dormancy and loadout invalidation', () => {
     let project = createProjectDocument(catalog, {
       projectId: 'hammer-result-retention',
-      configuredBiomeCounts: { Underworld: 1 },
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
     });
     const start = createRouteStartKeepsakeSelectionAddress('Underworld');
     project = applyProjectCommand(project, catalog, {
@@ -238,7 +227,7 @@ describe('keepsake authored selections', () => {
       selection: start,
       keepsakeKey: 'TempHammerKeepsake',
     });
-    expect(project.routes[0]?.loadout.keepsakeEquipResults?.experimentalHammer).toBeUndefined();
+    expect(project.route?.loadout.keepsakeEquipResults?.experimentalHammer).toBeUndefined();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceExperimentalHammerEquipResult',
       result: createKeepsakeEquipResultAddress(start, 'experimentalHammer'),
@@ -260,7 +249,7 @@ describe('keepsake authored selections', () => {
       weaponKey: 'WeaponDagger',
       aspectKey: 'DaggerBackstabAspect',
     });
-    expect(project.routes[0]?.loadout.keepsakeEquipResults?.experimentalHammer).toEqual({
+    expect(project.route?.loadout.keepsakeEquipResults?.experimentalHammer).toEqual({
       kind: 'selected',
       traitKey: 'StaffLongAttackTrait',
     });

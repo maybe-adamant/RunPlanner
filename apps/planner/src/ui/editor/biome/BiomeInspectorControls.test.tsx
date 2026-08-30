@@ -123,7 +123,8 @@ function hubRailButton(container: ParentNode = document): HTMLButtonElement {
 function emptyProject(routeKey: 'Surface' | 'Underworld', count: number): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: `empty-${routeKey}-${count}`,
-    configuredBiomeCounts: { [routeKey]: count },
+    routeKey,
+    configuredBiomeCount: count,
   });
 }
 
@@ -192,7 +193,7 @@ describe('Biome inspector controls', () => {
     const workbench = document.querySelector('.biome-occurrence-workbench');
     if (!(workbench instanceof HTMLElement)) throw new Error('start workbench is missing');
     expect(within(workbench).queryByLabelText('Room')).toBeNull();
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
 
     await view.user.click(within(identity).getByRole('button', { name: 'Room' }));
     const replacement = within(await screen.findByRole('listbox'))
@@ -208,15 +209,14 @@ describe('Biome inspector controls', () => {
     const authoredStart = () =>
       view.application.store
         .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'F')
+        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId)
         ?.gameName;
     expect(authoredStart()).not.toBe('F_Opening01');
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
       occurrence,
     );
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
@@ -233,26 +233,26 @@ describe('Biome inspector controls', () => {
     });
     const view = renderWorkspace(started, 'Underworld', 'F');
     const identity = screen.getByRole('region', { name: 'Start room configuration' });
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
 
     await view.user.click(within(identity).getByLabelText('Reward'));
     const listbox = await screen.findByRole('listbox');
     await view.user.click(within(listbox).getByText('Hammer'));
 
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
     expect(
-      view.application.store.getState().projectWorkspace.history.present.routes[0]?.biomes[0]
-        ?.topology?.occurrences[0]?.state,
+      view.application.store.getState().projectWorkspace.history!.present.route?.biomes[0]?.topology
+        ?.occurrences[0]?.state,
     ).toMatchObject({
       kind: 'counted',
       reward: { offer: { rewardType: 'WeaponUpgrade' } },
     });
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(
-      view.application.store.getState().projectWorkspace.history.present.routes[0]?.biomes[0]
-        ?.topology?.occurrences[0]?.state,
+      view.application.store.getState().projectWorkspace.history!.present.route?.biomes[0]?.topology
+        ?.occurrences[0]?.state,
     ).toMatchObject({ kind: 'counted', reward: null });
   });
 
@@ -287,7 +287,7 @@ describe('Biome inspector controls', () => {
       new Set(resourceActions.map((action) => action.closest('.room-feature-presence-row'))).size,
     ).toBe(resourceActions.length);
     expect(within(resources).queryByText('Repair required')).toBeNull();
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
 
     const removeMining = within(resources).getByRole('checkbox', {
       name: 'Successful Mining — Fire',
@@ -295,12 +295,10 @@ describe('Biome inspector controls', () => {
     expect(removeMining).toHaveProperty('checked', true);
     await view.user.click(removeMining);
     const selected = () =>
-      view.application.store
-        .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.resourcePlacements.Pickaxe;
+      view.application.store.getState().projectWorkspace.history!.present.route?.resourcePlacements
+        .Pickaxe;
     expect(selected()).toBeNull();
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
 
@@ -319,21 +317,19 @@ describe('Biome inspector controls', () => {
     expect(fishing).toHaveProperty('checked', false);
     expect(fishing).toHaveProperty('disabled', false);
     const selected = () =>
-      view.application.store
-        .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.resourcePlacements.Fishing;
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+      view.application.store.getState().projectWorkspace.history!.present.route?.resourcePlacements
+        .Fishing;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
 
     await view.user.click(fishing);
     expect(selected()).toEqual({ biomeKey: 'N', occurrenceId: 'surface-n-opening' });
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(selected()).toBeNull();
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );
   });
@@ -371,19 +367,18 @@ describe('Biome inspector controls', () => {
     ]) {
       expect(within(resources).getByRole('checkbox', { name: label })).toBeTruthy();
     }
-    const historyBeforeMove = view.application.store.getState().projectWorkspace.history;
+    const historyBeforeMove = view.application.store.getState().projectWorkspace.history!;
     const legalMove = within(resources).getByRole('checkbox', { name: moved.label });
     await view.user.click(legalMove);
     const movedPlacement = () =>
-      view.application.store
-        .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.resourcePlacements[moved.family];
+      view.application.store.getState().projectWorkspace.history!.present.route?.resourcePlacements[
+        moved.family
+      ];
     expect(movedPlacement()).toEqual({
       biomeKey: opening.room.address.biomeKey,
       occurrenceId: opening.room.occurrenceId,
     });
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBeforeMove.past.length + 1,
     );
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
@@ -391,17 +386,17 @@ describe('Biome inspector controls', () => {
       biomeKey: moved.currentPlacement.biomeKey,
       occurrenceId: moved.currentPlacement.address.occurrenceId,
     });
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBeforeMove.past.length,
     );
 
-    const historyBeforeNavigation = view.application.store.getState().projectWorkspace.history;
+    const historyBeforeNavigation = view.application.store.getState().projectWorkspace.history!;
     const illegalCheckbox = within(resources).getByRole('checkbox', {
       name: 'Successful Seed — Earth',
     });
     expect(illegalCheckbox).toHaveProperty('disabled', true);
     await view.user.click(illegalCheckbox);
-    expect(view.application.store.getState().projectWorkspace.history).toBe(
+    expect(view.application.store.getState().projectWorkspace.history!).toBe(
       historyBeforeNavigation,
     );
 
@@ -413,7 +408,7 @@ describe('Biome inspector controls', () => {
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
       moved.currentPlacement.address,
     );
-    expect(view.application.store.getState().projectWorkspace.history).toBe(
+    expect(view.application.store.getState().projectWorkspace.history!).toBe(
       historyBeforeNavigation,
     );
   });
@@ -456,7 +451,7 @@ describe('Biome inspector controls', () => {
     });
     const finding = view.application.store
       .getState()
-      .projectWorkspace.assembly.evaluation.findings.find(
+      .projectWorkspace.assembly!.evaluation.findings.find(
         (candidate) =>
           candidate.code === 'judgmentOutcomeMissing' &&
           semanticAddressKey(candidate.origin) === semanticAddressKey(owner),
@@ -502,8 +497,7 @@ describe('Biome inspector controls', () => {
     expect(
       view.application.store
         .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N')
+        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.find(
           (occurrence) => occurrence.occurrenceId === createOccurrenceId('surface-n-preboss:boss'),
         )?.encounters.judgmentArcanaKeysByPhase?.Encounter,
@@ -591,8 +585,7 @@ describe('Biome inspector controls', () => {
     const authored = () =>
       view.application.store
         .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N')
+        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.find(
           (occurrence) => occurrence.occurrenceId === createOccurrenceId('surface-n-preboss:boss'),
         )?.encounters;
@@ -629,8 +622,7 @@ describe('Biome inspector controls', () => {
     expect(
       view.application.store
         .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N')
+        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.find(
           (occurrence) =>
             occurrence.occurrenceId === createOccurrenceId('surface-n-preboss:postboss'),
@@ -647,8 +639,7 @@ describe('Biome inspector controls', () => {
     expect(within(timeline).queryByRole('listitem', { name: 'Keepsake Rack' })).toBeNull();
     const orderBeforeChange = view.application.store
       .getState()
-      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N')
+      .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'N')
       ?.topology?.occurrences.find(
         (occurrence) =>
           occurrence.occurrenceId === createOccurrenceId('surface-n-preboss:postboss'),
@@ -658,8 +649,7 @@ describe('Biome inspector controls', () => {
     expect(
       view.application.store
         .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N')
+        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.find(
           (occurrence) =>
             occurrence.occurrenceId === createOccurrenceId('surface-n-preboss:postboss'),
@@ -668,8 +658,7 @@ describe('Biome inspector controls', () => {
     expect(
       view.application.store
         .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N')
+        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.find(
           (occurrence) =>
             occurrence.occurrenceId === createOccurrenceId('surface-n-preboss:postboss'),
@@ -694,8 +683,7 @@ describe('Biome inspector controls', () => {
     expect(
       view.application.store
         .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N')
+        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.find(
           (occurrence) =>
             occurrence.occurrenceId === createOccurrenceId('surface-n-preboss:postboss'),
@@ -756,8 +744,7 @@ describe('Biome inspector controls', () => {
       expect(
         view.application.store
           .getState()
-          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-          ?.biomes.find((biome) => biome.biomeKey === 'F')
+          .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
           ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === postbossId)
           ?.fountainRarityResult?.targetTraitKey,
       ).toBeTruthy(),

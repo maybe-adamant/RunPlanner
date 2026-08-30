@@ -31,6 +31,7 @@ describe('Pom resolution product loop', () => {
     const offer = createShopOfferAddress(goldenFBiome, fMidshopPomShopId, 'Minor');
     application.store.dispatch(authoredProjectReplaced(project));
     const workspace = application.selectStructuredWorkspace(application.store.getState());
+    if (workspace === undefined) throw new Error('workspace projection is unavailable');
     expect(
       [...workspace.interactions.levelResolutions.values()].find(
         (interaction) => semanticAddressKey(interaction.owner.owner) === semanticAddressKey(offer),
@@ -56,6 +57,7 @@ describe('Pom resolution product loop', () => {
     );
     application.store.dispatch(authoredProjectReplaced(project));
     const workspace = application.selectStructuredWorkspace(application.store.getState());
+    if (workspace === undefined) throw new Error('workspace projection is unavailable');
     const interaction = [...workspace.interactions.levelResolutions.values()].find(
       (candidate) =>
         candidate.owner.owner.kind === 'shopOffer' &&
@@ -83,7 +85,7 @@ describe('Pom resolution product loop', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Save Pom' }));
     const saved = application
-      .selectStructuredWorkspace(application.store.getState())
+      .selectStructuredWorkspace(application.store.getState())!
       .interactions.levelResolutions.get(interaction.key)?.value;
     expect(saved).toMatchObject({ kind: 'random' });
     if (saved?.kind !== 'random') throw new Error('random Shop Pom save was not retained');

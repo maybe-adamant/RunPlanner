@@ -60,7 +60,7 @@ export function createDefaultRouteLoadout(catalog: Catalog): RouteLoadout {
     candidate.aspectKeys.includes(candidate.defaultAspectKey),
   );
   if (weapon === undefined) {
-    throw new ProjectDocumentContractError('routes', 'catalog has no weapons');
+    throw new ProjectDocumentContractError('catalog.weapons', 'catalog has no weapons');
   }
   return Object.freeze({
     weaponKey: weapon.key,

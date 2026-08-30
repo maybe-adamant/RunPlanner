@@ -196,7 +196,7 @@ describe('HubVisitRanking', () => {
     const project = twoVisitHubProject();
     const view = renderHubDecisionWorkbench(project);
     const dispatch = vi.spyOn(view.application.store, 'dispatch');
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     const addAsVisitThree = within(hubCard('combat01')).getByRole('button', {
       name: 'Add Combat 01 as visit 3',
     });
@@ -210,7 +210,7 @@ describe('HubVisitRanking', () => {
         'combat01',
       ]),
     );
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
     expect(
@@ -269,7 +269,7 @@ describe('HubVisitRanking', () => {
     const view = renderHubDecisionWorkbench(project);
     selectHubTab('Hub Timeline');
     const dispatch = vi.spyOn(view.application.store, 'dispatch');
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     const authoredBefore = [...nHubState(view.application).decision.visitOrder];
     const tailKeys = (): readonly string[] =>
       Array.from(document.querySelectorAll<HTMLElement>('.hub-ranked-tail [data-hub-slot-key]'))
@@ -289,7 +289,7 @@ describe('HubVisitRanking', () => {
       expect(tailKeys()).toEqual([tailBefore[1], tailBefore[0], ...tailBefore.slice(2)]),
     );
     expect(nHubState(view.application).decision.visitOrder).toEqual(authoredBefore);
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );
     expect(
@@ -302,7 +302,7 @@ describe('HubVisitRanking', () => {
     const view = renderHubDecisionWorkbench(project);
     selectHubTab('Hub Timeline');
     const dispatch = vi.spyOn(view.application.store, 'dispatch');
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     const moved = screen.getByRole('button', { name: 'Move Combat 01 into visit 6' });
 
     await view.user.click(moved);
@@ -317,7 +317,7 @@ describe('HubVisitRanking', () => {
         'combat01',
       ]),
     );
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
     expect(
@@ -343,7 +343,7 @@ describe('HubVisitRanking', () => {
     const view = renderHubDecisionWorkbench(project);
     selectHubTab('Hub Timeline');
     const dispatch = vi.spyOn(view.application.store, 'dispatch');
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     dispatch.mockClear();
     const { board, pointerId, x, y } = startHubPointerDrag(
       'combat01',
@@ -352,7 +352,7 @@ describe('HubVisitRanking', () => {
 
     await waitFor(() => expect(hubCard('combat01').dataset.dragging).toBe('true'));
     expect(document.querySelector('.hub-roster-drag-preview')).not.toBeNull();
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );
     expect(
@@ -378,7 +378,7 @@ describe('HubVisitRanking', () => {
       ]),
     );
     expect(hubCard('combat01').dataset.visitPosition).toBe('1');
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
     expect(
@@ -399,7 +399,7 @@ describe('HubVisitRanking', () => {
     const view = renderHubDecisionWorkbench(project);
     selectHubTab('Hub Timeline');
     const dispatch = vi.spyOn(view.application.store, 'dispatch');
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     const authoredBefore = [...nHubState(view.application).decision.visitOrder];
     const tailBefore = hubTailSlotKeys();
     const [sourceSlotKey, targetSlotKey] = tailBefore;
@@ -412,7 +412,7 @@ describe('HubVisitRanking', () => {
       hubCardPointerHit(targetSlotKey, 'afterSlot'),
     );
 
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );
     fireEvent.pointerUp(board, {
@@ -427,7 +427,7 @@ describe('HubVisitRanking', () => {
       expect(hubTailSlotKeys()).toEqual([targetSlotKey, sourceSlotKey, ...tailBefore.slice(2)]),
     );
     expect(nHubState(view.application).decision.visitOrder).toEqual(authoredBefore);
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );
     expect(
@@ -439,13 +439,13 @@ describe('HubVisitRanking', () => {
     const project = twoVisitHubProject();
     const view = renderHubDecisionWorkbench(project);
     const dispatch = vi.spyOn(view.application.store, 'dispatch');
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     const sourceSlotKey = hubTailSlotKeys()[0];
     if (sourceSlotKey === undefined) throw new Error('partial Hub fixture has no remaining room');
     dispatch.mockClear();
     const { board, pointerId, x, y } = startHubPointerDrag(sourceSlotKey, hubNextVisitPointerHit());
 
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );
     fireEvent.pointerUp(board, {
@@ -464,7 +464,7 @@ describe('HubVisitRanking', () => {
       ]),
     );
     expect(hubCard(sourceSlotKey).dataset.visitPosition).toBe('3');
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
     expect(
@@ -482,7 +482,7 @@ describe('HubVisitRanking', () => {
     const project = loadSurfaceNCompleteHubFrontierProject();
     const view = renderHubDecisionWorkbench(project);
     const dispatch = vi.spyOn(view.application.store, 'dispatch');
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     const authoredBefore = [...nHubState(view.application).decision.visitOrder];
     const tailBefore = hubTailSlotKeys();
     dispatch.mockClear();
@@ -501,7 +501,7 @@ describe('HubVisitRanking', () => {
     });
     expect(nHubState(view.application).decision.visitOrder).toEqual(authoredBefore);
     expect(hubTailSlotKeys()).toEqual(tailBefore);
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );
     expect(
@@ -513,7 +513,7 @@ describe('HubVisitRanking', () => {
     const project = loadSurfaceNCompleteHubFrontierProject();
     const view = renderHubDecisionWorkbench(project);
     const dispatch = vi.spyOn(view.application.store, 'dispatch');
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     dispatch.mockClear();
     const { board, pointerId, x, y } = startHubPointerDrag(
       'combat01',
@@ -546,7 +546,7 @@ describe('HubVisitRanking', () => {
 
     expect(hubCard('combat01').dataset.dragging).toBe('true');
     expect(hubCard('combat03').dataset.dragging).toBeUndefined();
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );
     expect(
@@ -571,7 +571,7 @@ describe('HubVisitRanking', () => {
         'combat23',
       ]),
     );
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
   });

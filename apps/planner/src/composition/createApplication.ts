@@ -19,7 +19,6 @@ import {
   type AutosaveScheduler,
 } from '../persistence/autosaveRecovery';
 import { createEditorNavigation } from '../projections/editorNavigation';
-import { createInitialProject } from './projectBootstrap';
 import { createEditorSessionReconciliationCoordinator } from '../workspace/editorSessionReconciliation';
 import { createProjectOperations } from '../workspace/projectOperations';
 import { allocateOccurrenceId, type OccurrenceIdFactory } from '../workspace/occurrenceIds';
@@ -50,8 +49,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     throw new Error('Autosave recovery adapter and scheduler must be provided together');
   }
   const editorNavigation = createEditorNavigation(catalog);
-  const fallbackProject = createInitialProject(catalog);
-  const startup = restoreStartupProject(fallbackProject, catalog, options.autosaveRecovery);
+  const startup = restoreStartupProject(catalog, options.autosaveRecovery);
   const evaluationCache = new WeakMap<
     ProjectDocument,
     ReturnType<typeof simulateProjectAssembly>
@@ -90,7 +88,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     catalog,
     assembleProjectEvaluation,
     initialProfileSession: startup.profileSession,
-    initialProject: startup.project,
+    ...(startup.project === undefined ? {} : { initialProject: startup.project }),
   });
   const editorSessionReconciliation = createEditorSessionReconciliationCoordinator({
     store,
@@ -114,7 +112,9 @@ export function createApplication(options: CreateApplicationOptions = {}) {
           store,
         });
   const selectStructuredWorkspace = (state: ReturnType<typeof store.getState>) =>
-    structuredWorkspace.project(state.projectWorkspace.assembly);
+    state.projectWorkspace.kind === 'openProject'
+      ? structuredWorkspace.project(state.projectWorkspace.assembly)
+      : undefined;
 
   return {
     catalog,

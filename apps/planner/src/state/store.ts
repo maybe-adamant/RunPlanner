@@ -22,7 +22,7 @@ import {
 
 export interface CreatePlannerStoreOptions {
   readonly catalog: Catalog;
-  readonly initialProject: ProjectDocument;
+  readonly initialProject?: ProjectDocument;
   readonly initialProfileSession?: ProfileSessionState;
   readonly assembleProjectEvaluation: ProjectEvaluationAssembler;
 }
@@ -49,10 +49,16 @@ export type PlannerStore = ReturnType<typeof createPlannerStore>;
 export type RootState = ReturnType<PlannerStore['getState']>;
 export type AppDispatch = PlannerStore['dispatch'];
 
-export const selectProjectHistory = (state: RootState) => state.projectWorkspace.history;
-export const selectPresentProject = (state: RootState) => state.projectWorkspace.history.present;
+export const selectProjectHistory = (state: RootState) =>
+  state.projectWorkspace.kind === 'openProject' ? state.projectWorkspace.history : undefined;
+export const selectPresentProject = (state: RootState) =>
+  state.projectWorkspace.kind === 'openProject'
+    ? state.projectWorkspace.history.present
+    : undefined;
 export const selectProjectEvaluation = (state: RootState) =>
-  state.projectWorkspace.assembly.evaluation;
+  state.projectWorkspace.kind === 'openProject'
+    ? state.projectWorkspace.assembly.evaluation
+    : undefined;
 export const selectExplicitProfileBaselineJson = (state: RootState) =>
   state.profileSession.explicitBaselineJson;
 export const selectProfileSession = (state: RootState) => state.profileSession;
@@ -61,6 +67,7 @@ export const selectProfileStatus = createSelector(
   selectPresentProject,
   selectProfileSession,
   (project, session): ProfileStatus => {
+    if (project === undefined) return 'Unsaved';
     if (session.recoveryStatus === 'recovered') {
       return 'Recovered';
     }
@@ -71,11 +78,13 @@ export const selectProfileStatus = createSelector(
   },
 );
 export const selectProjectFindingsByOwner = createSelector(selectProjectEvaluation, (evaluation) =>
-  indexFindingsByOwner(evaluation.findings),
+  evaluation === undefined ? new Map() : indexFindingsByOwner(evaluation.findings),
 );
 export const selectCanUndoProject = (state: RootState) =>
+  state.projectWorkspace.kind === 'openProject' &&
   canUndoProjectHistory(state.projectWorkspace.history);
 export const selectCanRedoProject = (state: RootState) =>
+  state.projectWorkspace.kind === 'openProject' &&
   canRedoProjectHistory(state.projectWorkspace.history);
 
 export const useAppDispatch = useDispatch.withTypes<AppDispatch>();

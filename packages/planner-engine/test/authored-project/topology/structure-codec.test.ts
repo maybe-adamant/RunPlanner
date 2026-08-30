@@ -161,9 +161,7 @@ describe('topology structural codec', () => {
     'round-trips the complete %s topology with its takeover outside ordinary progression',
     (biomeKey, build, expectedBatchCount, expectedTargetCount) => {
       const document = build();
-      const plan = document.routes
-        .flatMap((route) => route.biomes)
-        .find((biome) => biome.biomeKey === biomeKey);
+      const plan = document.route.biomes.find((biome) => biome.biomeKey === biomeKey);
       const layout = catalog.biomeLayouts.byKey[biomeKey];
       if (
         plan?.topology === null ||
@@ -196,7 +194,7 @@ describe('topology structural codec', () => {
     (takeover.normal as { targets: unknown[] }).targets.reverse();
 
     const decoded = decodeProjectDocument(encoded.document, catalog);
-    const decodedTakeover = decoded.routes[0]?.biomes[0]?.topology?.decisions.find(
+    const decodedTakeover = decoded.route?.biomes[0]?.topology?.decisions.find(
       (decision) =>
         decision.kind === 'exit' &&
         decision.source.kind === 'occurrence' &&
@@ -234,7 +232,7 @@ describe('topology structural codec', () => {
           semanticAddressKey(createExitDecisionAddress(biome, candidate.source)) ===
             semanticAddressKey(decision),
       );
-      const route = document.routes.find((candidate) => candidate.routeKey === routeKey);
+      const route = document.route;
       if (route === undefined) throw new Error(`missing ${routeKey} route`);
       const prefix = materializeBiomePrefix(catalog, biome, plan, route.loadout);
       if (prefix === null) throw new Error(`missing ${biomeKey} terminal prefix`);

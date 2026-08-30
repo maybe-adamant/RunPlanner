@@ -112,7 +112,8 @@ function hubRailButton(container: ParentNode = document): HTMLButtonElement {
 function emptyProject(routeKey: 'Surface' | 'Underworld', count: number): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: `empty-${routeKey}-${count}`,
-    configuredBiomeCounts: { [routeKey]: count },
+    routeKey,
+    configuredBiomeCount: count,
   });
 }
 
@@ -174,9 +175,9 @@ describe('BiomeWorkspace', () => {
     const { user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F', application);
     const launcher = screen.getAllByRole('button', { name: 'Run State' })[0];
     if (launcher === undefined) throw new Error('available Run State launcher is missing');
-    const beforeHistory = application.store.getState().projectWorkspace.history;
+    const beforeHistory = application.store.getState().projectWorkspace.history!;
     const beforeFocus = application.store.getState().editorSession.focusedSemanticOwner;
-    const beforePanel = application.store.getState().editorSession.activePanelByRoute.Underworld;
+    const beforePanel = application.store.getState().editorSession.activePanel;
     const beforeEvaluationEvents = [...evaluationEvents];
 
     await user.click(launcher);
@@ -235,11 +236,9 @@ describe('BiomeWorkspace', () => {
       within(sheet).getAllByRole('list', { name: 'Max Health conditions' })[0]!.textContent,
     ).toContain('No additional condition.');
     expect(sheet.getAttribute('aria-modal')).toBeNull();
-    expect(application.store.getState().projectWorkspace.history).toBe(beforeHistory);
+    expect(application.store.getState().projectWorkspace.history!).toBe(beforeHistory);
     expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(beforeFocus);
-    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual(
-      beforePanel,
-    );
+    expect(application.store.getState().editorSession.activePanel).toEqual(beforePanel);
 
     await user.click(within(sheet).getByRole('button', { name: 'Close Run State' }));
     expect(screen.queryByRole('region', { name: /State before/ })).toBeNull();
@@ -286,8 +285,7 @@ describe('BiomeWorkspace', () => {
     expect(within(identity).getByLabelText('Reward')).toBeTruthy();
     const plan = view.application.store
       .getState()
-      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+      .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F');
     expect(plan?.topology?.occurrences[0]?.gameName).toBe('F_Opening01');
 
     await view.user.click(within(identity).getByRole('button', { name: 'Room' }));
@@ -480,8 +478,9 @@ describe('BiomeWorkspace', () => {
     );
     const localVisit = view.application.store
       .getState()
-      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'N')
+      .projectWorkspace.history!.present.route?.biomes.find(
+        (candidate) => candidate.biomeKey === 'N',
+      )
       ?.topology?.decisions.find(
         (decision) =>
           decision.kind === 'localVisit' &&
@@ -534,7 +533,7 @@ describe('BiomeWorkspace', () => {
     await view.user.click(screen.getByRole('button', { name: /Visit 3 · Combat 02/ }));
 
     const inspector = screen.getByRole('complementary', { name: 'Details' });
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     expect(
       within(inspector).getByRole('heading', { level: 3, name: 'Entering Combat 02' }),
     ).toBeTruthy();
@@ -543,7 +542,7 @@ describe('BiomeWorkspace', () => {
     ).toContain('Big Max Magick');
     expect(within(inspector).queryByRole('region', { name: 'Hub reward' })).toBeNull();
     expect(within(inspector).queryByRole('button', { name: 'Edit Hub reward' })).toBeNull();
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );
   });
@@ -755,7 +754,7 @@ describe('BiomeWorkspace', () => {
     expect(within(inspector).getByRole('heading', { name: 'Configure door offer' })).toBeTruthy();
     expect(within(inspector).queryByText('Continue from this room')).toBeNull();
     expect(within(inspector).queryByRole('button', { name: 'Remove these doors' })).toBeNull();
-    const before = view.application.store.getState().projectWorkspace.history.past.length;
+    const before = view.application.store.getState().projectWorkspace.history!.past.length;
 
     const pool = within(inspector).getByRole('combobox', { name: 'Reward Pool' });
     await view.user.click(pool);
@@ -774,8 +773,7 @@ describe('BiomeWorkspace', () => {
     });
     const authoredDecision = view.application.store
       .getState()
-      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F')
+      .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
       ?.topology?.decisions.find(
         (decision) =>
           decision.kind === 'exit' &&
@@ -790,7 +788,7 @@ describe('BiomeWorkspace', () => {
       rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'MetaProgress' },
       targets: [],
     });
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       before + 1,
     );
     expect(screen.getByRole('button', { name: 'Remove these doors' })).toBeTruthy();
@@ -798,7 +796,7 @@ describe('BiomeWorkspace', () => {
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>
       expect(
-        view.application.store.getState().projectWorkspace.history.present.routes[0]?.biomes[0]
+        view.application.store.getState().projectWorkspace.history!.present.route?.biomes[0]
           ?.topology?.decisions,
       ).toEqual([]),
     );
@@ -892,7 +890,7 @@ describe('BiomeWorkspace', () => {
         (node) => node.kind === 'hubDecision',
       ),
     ).toBe(false);
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
 
     await view.user.click(action);
 
@@ -900,7 +898,7 @@ describe('BiomeWorkspace', () => {
       expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(hub);
       expect(screen.getByRole('region', { name: 'Ephyra Hub' })).toBeTruthy();
     });
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
 
@@ -939,7 +937,7 @@ describe('BiomeWorkspace', () => {
     );
 
     expect(
-      view.application.store.getState().projectWorkspace.assembly.evaluation.findings,
+      view.application.store.getState().projectWorkspace.assembly!.evaluation.findings,
     ).toContainEqual(
       expect.objectContaining({
         code: 'rewardBagEntryUnavailable',
@@ -1127,8 +1125,9 @@ describe('BiomeWorkspace', () => {
 
     const nPlan = view.application.store
       .getState()
-      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+      .projectWorkspace.history!.present.route?.biomes.find(
+        (candidate) => candidate.biomeKey === 'N',
+      );
     expect(
       nPlan?.topology?.decisions.some(
         (decision) =>
@@ -1196,8 +1195,9 @@ describe('BiomeWorkspace', () => {
     await waitFor(() => {
       const plan = view.application.store
         .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+        .projectWorkspace.history!.present.route?.biomes.find(
+          (candidate) => candidate.biomeKey === 'N',
+        );
       expect(plan?.topology?.decisions.some((decision) => decision.kind === 'hub')).toBe(true);
       expect(
         plan?.topology?.decisions.some(
@@ -1356,7 +1356,7 @@ describe('BiomeWorkspace', () => {
     const view = renderWorkspace(project, 'Surface', 'P');
     const finding = view.application.store
       .getState()
-      .projectWorkspace.assembly.evaluation.findings.find(
+      .projectWorkspace.assembly!.evaluation.findings.find(
         (candidate) =>
           candidate.code === 'targetRoomUnavailable' &&
           semanticAddressKey(candidate.origin) === semanticAddressKey(target),

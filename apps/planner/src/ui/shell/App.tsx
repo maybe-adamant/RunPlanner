@@ -25,7 +25,9 @@ interface AppProps {
   readonly catalogSummary: CatalogSummary;
   readonly editorNavigation: EditorNavigation;
   readonly projectOperations: ProjectOperations;
-  readonly selectStructuredWorkspace: (state: RootState) => StructuredWorkspaceProjection;
+  readonly selectStructuredWorkspace: (
+    state: RootState,
+  ) => StructuredWorkspaceProjection | undefined;
 }
 
 export function App({
@@ -35,7 +37,7 @@ export function App({
   projectOperations,
   selectStructuredWorkspace,
 }: AppProps) {
-  const activeRouteKey = useAppSelector((state) => state.editorSession.activeRouteKey);
+  const activeSection = useAppSelector((state) => state.editorSession.activeSection);
   const project = useAppSelector(selectPresentProject);
   const evaluation = useAppSelector(selectProjectEvaluation);
   const workspace = useAppSelector(selectStructuredWorkspace);
@@ -46,20 +48,14 @@ export function App({
     (state) => state.editorSession.levelResolutionDialogTarget ?? null,
   );
   const dispatch = useAppDispatch();
-  const feedback = projectFeedbackHierarchy(evaluation);
+  const feedback = evaluation === undefined ? undefined : projectFeedbackHierarchy(evaluation);
   const activeRouteNavigation =
-    activeRouteKey === null ? undefined : editorNavigation.routes.byKey[activeRouteKey];
-  const activeRouteFeedback =
-    activeRouteKey === null ? undefined : feedback.routes.get(activeRouteKey);
-  const activeWorkspaceRoute = workspace.routes.find((route) => route.routeKey === activeRouteKey);
+    workspace === undefined ? undefined : editorNavigation.routes.byKey[workspace.route.routeKey];
+  const activeRouteFeedback = feedback?.route;
+  const activeWorkspaceRoute = workspace?.route;
 
-  if (
-    activeRouteKey !== null &&
-    (activeRouteNavigation === undefined ||
-      activeRouteFeedback === undefined ||
-      activeWorkspaceRoute === undefined)
-  ) {
-    throw new Error(`Editor session references unavailable route ${activeRouteKey}`);
+  if (workspace !== undefined && activeRouteNavigation === undefined) {
+    throw new Error(`Editor navigation references unavailable route ${workspace.route.routeKey}`);
   }
 
   return (
@@ -68,59 +64,61 @@ export function App({
         <div className="app-brand">
           <h1>Run Planner</h1>
         </div>
-        <ProjectFileControls operations={projectOperations} />
+        <ProjectFileControls
+          hasProject={project !== undefined}
+          operations={projectOperations}
+          routes={editorNavigation.routes.values}
+        />
       </header>
 
       <div className="app-navigation-bar">
         <nav className="route-tabs" aria-label="Planner sections">
-          {editorNavigation.routes.values.map((route) => {
-            const routeFeedback = feedback.routes.get(route.routeKey);
-            if (routeFeedback === undefined) {
-              throw new Error(`Feedback omitted route ${route.routeKey}`);
-            }
-            const feedbackId = `${route.routeKey}-route-feedback`;
-            return (
-              <button
-                aria-current={route.routeKey === activeRouteKey ? 'page' : undefined}
-                aria-describedby={feedbackId}
-                aria-label={route.label}
-                className="route-tab"
-                data-active={route.routeKey === activeRouteKey}
-                key={route.routeKey}
-                onClick={() => dispatch(routeSelected(route.routeKey))}
-                type="button"
+          {activeRouteNavigation !== undefined && activeRouteFeedback !== undefined && (
+            <button
+              aria-current={activeSection === 'route' ? 'page' : undefined}
+              aria-describedby={`${activeRouteNavigation.routeKey}-route-feedback`}
+              aria-label={activeRouteNavigation.label}
+              className="route-tab"
+              data-active={activeSection === 'route'}
+              onClick={() => dispatch(routeSelected(activeRouteNavigation.routeKey))}
+              type="button"
+            >
+              <span>{activeRouteNavigation.label}</span>
+              <span
+                aria-label={`${activeRouteFeedback.status.label}${activeRouteFeedback.findingCount === 0 ? '' : `, ${activeRouteFeedback.findingCount} findings`}`}
+                className="navigation-feedback"
+                id={`${activeRouteNavigation.routeKey}-route-feedback`}
               >
-                <span>{route.label}</span>
-                <span
-                  aria-label={`${routeFeedback.status.label}${routeFeedback.findingCount === 0 ? '' : `, ${routeFeedback.findingCount} findings`}`}
-                  className="navigation-feedback"
-                  id={feedbackId}
-                >
-                  <StatusBadge status={routeFeedback.status} />
-                  <FindingCount
-                    count={routeFeedback.findingCount}
-                    label={`${route.label} findings`}
-                  />
-                </span>
-              </button>
-            );
-          })}
-          <button
-            aria-current={activeRouteKey === null ? 'page' : undefined}
-            className="route-tab"
-            data-active={activeRouteKey === null}
-            onClick={() => dispatch(settingsSelected())}
-            type="button"
-          >
-            Settings
-          </button>
+                <StatusBadge status={activeRouteFeedback.status} />
+                <FindingCount
+                  count={activeRouteFeedback.findingCount}
+                  label={`${activeRouteNavigation.label} findings`}
+                />
+              </span>
+            </button>
+          )}
+          {project !== undefined && (
+            <button
+              aria-current={activeSection === 'settings' ? 'page' : undefined}
+              className="route-tab"
+              data-active={activeSection === 'settings'}
+              onClick={() => dispatch(settingsSelected())}
+              type="button"
+            >
+              Settings
+            </button>
+          )}
         </nav>
-        <ProjectHistoryControls />
+        <ProjectHistoryControls hasProject={project !== undefined} />
       </div>
 
-      {activeRouteNavigation !== undefined &&
+      {project !== undefined &&
+        evaluation !== undefined &&
+        workspace !== undefined &&
+        activeRouteNavigation !== undefined &&
         activeRouteFeedback !== undefined &&
-        activeWorkspaceRoute !== undefined && (
+        activeWorkspaceRoute !== undefined &&
+        activeSection === 'route' && (
           <RouteWorkspace
             catalog={catalog}
             feedback={activeRouteFeedback}
@@ -133,7 +131,7 @@ export function App({
           />
         )}
 
-      {activeRouteKey === null && (
+      {project !== undefined && activeSection === 'settings' && (
         <section className="settings-panel" aria-live="polite">
           <header className="panel-heading">
             <div>
@@ -154,14 +152,14 @@ export function App({
         </section>
       )}
 
-      {traitDialogTarget === null ? null : (
+      {traitDialogTarget === null || workspace === undefined ? null : (
         <TraitOfferDialog
           interactions={workspace.interactions}
           key={semanticAddressKey(traitDialogTarget)}
           target={traitDialogTarget}
         />
       )}
-      {levelResolutionDialogTarget === null ? null : (
+      {levelResolutionDialogTarget === null || workspace === undefined ? null : (
         <PomResolutionDialog
           interactions={workspace.interactions}
           key={semanticAddressKey(levelResolutionDialogTarget)}

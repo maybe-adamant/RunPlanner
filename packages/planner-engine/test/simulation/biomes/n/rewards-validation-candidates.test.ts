@@ -55,9 +55,7 @@ import {
 function completeN(project = loadSurfaceNProject()) {
   project = authorLegalTraitOffers(project);
   const evaluation = simulateProject(catalog, project);
-  const biome = evaluation.routes
-    .find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+  const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'N');
   if (biome?.authoring !== 'complete') throw new Error('N fixture did not complete');
   return { project, evaluation, biome };
 }
@@ -74,7 +72,8 @@ describe('N Hub rewards, validation, and candidates', () => {
     const openingOnly = applyProjectCommand(
       createProjectDocument(catalog, {
         projectId: 'candidate-n-opening-domain',
-        configuredBiomeCounts: { Surface: 1 },
+        routeKey: 'Surface',
+        configuredBiomeCount: 1,
       }),
       catalog,
       { kind: 'CreateStart', biome: nBiome, occurrenceId: openingId },
@@ -395,9 +394,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       hubSlotKeys: ['combat05', 'miniBoss01', 'combat02'],
     });
     const evaluation = simulateProject(catalog, project);
-    const biome = evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'N');
 
     expect(biome).toMatchObject({ authoring: 'incomplete', coverage: { kind: 'prefix' } });
     expect(
@@ -616,9 +613,9 @@ describe('N Hub rewards, validation, and candidates', () => {
       result: { supported: true, findings: [] },
     });
     expect(
-      simulateProject(catalog, project)
-        .routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((candidate) => candidate.biomeKey === 'N'),
+      simulateProject(catalog, project).route?.biomes.find(
+        (candidate) => candidate.biomeKey === 'N',
+      ),
     ).toMatchObject({
       authoring: 'complete',
       validity: 'invalid',
@@ -745,9 +742,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       value: { rewardType: 'WeaponUpgrade' },
     });
     const assembly = simulateProjectAssembly(catalog, project);
-    const biome = assembly.evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    const biome = assembly.evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'N');
     expect(biome).toMatchObject({
       validity: 'invalid',
       findings: [
@@ -794,9 +789,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     });
     const blockedAssembly = simulateProjectAssembly(catalog, blocked);
     expect(
-      blockedAssembly.evaluation.routes
-        .find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((candidate) => candidate.biomeKey === 'N'),
+      blockedAssembly.evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'N'),
     ).toMatchObject({ validity: 'invalid' });
 
     const candidate = createPreparedProjectCandidateSession(catalog, blockedAssembly).evaluate({
@@ -859,7 +852,7 @@ describe('N Hub rewards, validation, and candidates', () => {
 
   it('propagates and acquires a trait-bearing active Ephyra local reward', () => {
     const project = loadSurfaceNProject();
-    const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
+    const route = project.route;
     const plan = route?.biomes.find((candidate) => candidate.biomeKey === 'N');
     const topology = plan?.topology;
     const decision = topology?.decisions.find((candidate) => candidate.kind === 'hub');
@@ -1510,9 +1503,9 @@ describe('N Hub rewards, validation, and candidates', () => {
       kind: 'CloseHubSlot',
       slot: createHubSlotAddress(nBiome, 'hub', 'combat03'),
     });
-    const closedBiome = simulateProject(catalog, closed)
-      .routes.find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const closedBiome = simulateProject(catalog, closed).route?.biomes.find(
+      (biome) => biome.biomeKey === 'N',
+    );
     expect(closedBiome).toMatchObject({
       authoring: 'incomplete',
       findings: [expect.objectContaining({ code: 'hubOpenSetIncomplete' })],

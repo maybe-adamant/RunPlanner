@@ -57,9 +57,7 @@ function biomeSource(
     authoredProject,
     assembly.evaluation,
     (phase) => encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
-  )
-    .routes.find((route) => route.routeKey === routeKey)
-    ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
+  ).route?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
   if (source === undefined) throw new Error(`${routeKey}/${biomeKey} source is missing`);
   return source;
 }
@@ -69,9 +67,9 @@ function blockBiomeAtFirstBoon(
   routeKey: string,
   biomeKey: string,
 ): ProjectDocument {
-  const evaluated = simulateProject(catalog, project)
-    .routes.find((route) => route.routeKey === routeKey)
-    ?.biomes.find((biome) => biome.biomeKey === biomeKey);
+  const evaluated = simulateProject(catalog, project).route?.biomes.find(
+    (biome) => biome.biomeKey === biomeKey,
+  );
   if (evaluated?.authoring !== 'complete' || evaluated.validity !== 'valid') {
     throw new Error(`${routeKey}/${biomeKey} block fixture did not start complete-valid`);
   }
@@ -103,15 +101,13 @@ function blockBiomeAtFirstBoon(
 
 function selectedContractWithoutNormalTargets() {
   const base = createGoldenFGHIProject();
-  const located = base.routes.flatMap((route) =>
-    route.biomes.flatMap((plan) =>
-      (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
-        const room = catalog.rooms.byKey[occurrence.gameName];
-        return room?.additionalExits.some((exit) => exit.kind === 'zagreusContract')
-          ? [{ occurrence, plan, route }]
-          : [];
-      }),
-    ),
+  const located = base.route.biomes.flatMap((plan) =>
+    (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
+      const room = catalog.rooms.byKey[occurrence.gameName];
+      return room?.additionalExits.some((exit) => exit.kind === 'zagreusContract')
+        ? [{ occurrence, plan, route: base.route }]
+        : [];
+    }),
   )[0];
   if (located === undefined) throw new Error('semantic assembly selected contract is missing');
   const biome = createBiomeAddress(located.route.routeKey, located.plan.biomeKey);
@@ -134,7 +130,8 @@ function selectedContractWithoutNormalTargets() {
 
 function emptyNProject(): ProjectDocument {
   return createProjectDocument(catalog, {
-    configuredBiomeCounts: { Surface: 1 },
+    routeKey: 'Surface',
+    configuredBiomeCount: 1,
     projectId: 'empty-n-semantic-assembly',
   });
 }
@@ -498,7 +495,8 @@ describe('structured workspace biome semantic assembly', () => {
 
   it('keeps incomplete and route-prefix-blocked biome products explicit', () => {
     const initial = createProjectDocument(catalog, {
-      configuredBiomeCounts: { Underworld: 2 },
+      routeKey: 'Underworld',
+      configuredBiomeCount: 2,
       projectId: 'semantic-prefix-states',
     });
     const f = assembleWorkspaceBiomeSemantics(catalog, biomeSource(initial, 'Underworld', 'F'));
@@ -529,7 +527,8 @@ describe('structured workspace biome semantic assembly', () => {
 
   it('presents a reached contextual block as invalid ahead of a later authored frontier', () => {
     let project = createProjectDocument(catalog, {
-      configuredBiomeCounts: { Underworld: 1 },
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
       projectId: 'blocked-incomplete-semantic-assembly',
     });
     const openingId = createOccurrenceId('blocked-incomplete-f-opening');

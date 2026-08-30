@@ -381,9 +381,9 @@ describe('Run State presentation', () => {
       ),
       keepsakeKey: 'BossPreDamageKeepsake',
     });
-    const g = simulateProjectAssembly(catalog, project)
-      .evaluation.routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    const g = simulateProjectAssembly(catalog, project).evaluation.route?.biomes.find(
+      (biome) => biome.biomeKey === 'G',
+    );
     if (g?.authoring !== 'complete' || g.validity !== 'valid')
       throw new Error('expected valid G biome');
     const snapshot = g.rewards.runStateSnapshots.find(

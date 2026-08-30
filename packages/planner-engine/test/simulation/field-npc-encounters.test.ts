@@ -175,9 +175,7 @@ function reachedPOutdoorIcarusFixture(): {
 
 function evaluatedBiome(project: ProjectDocument, biomeKey: 'F' | 'G' | 'H' | 'I') {
   const result = simulateProject(catalog, project);
-  const biome = result.routes
-    .find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
+  const biome = result.route.biomes.find((candidate) => candidate.biomeKey === biomeKey);
   if (biome?.authoring !== 'complete') {
     throw new Error(`${biomeKey} did not produce a complete evaluated biome`);
   }
@@ -186,9 +184,7 @@ function evaluatedBiome(project: ProjectDocument, biomeKey: 'F' | 'G' | 'H' | 'I
 
 function evaluatedSurfaceBiome(project: ProjectDocument, biomeKey: 'N' | 'O' | 'P') {
   const result = simulateProject(catalog, project);
-  const biome = result.routes
-    .find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
+  const biome = result.route.biomes.find((candidate) => candidate.biomeKey === biomeKey);
   if (biome?.authoring !== 'complete') {
     throw new Error(`${biomeKey} did not produce a complete evaluated biome`);
   }
@@ -200,8 +196,7 @@ function authoredOccurrence(
   biomeKey: string,
   occurrenceId: OccurrenceId,
 ) {
-  const occurrence = project.routes
-    .flatMap((route) => route.biomes)
+  const occurrence = project.route.biomes
     .find((biome) => biome.biomeKey === biomeKey)
     ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
   if (occurrence === undefined) {
@@ -303,9 +298,7 @@ function oCombatPreparationFixture(): {
   readonly room: CanonicalAuthoredRoom;
 } {
   const result = simulateProject(catalog, loadSurfaceNOPQProject());
-  const biome = result.routes
-    .find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+  const biome = result.route.biomes.find((candidate) => candidate.biomeKey === 'O');
   if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
     throw new Error('O did not produce a complete history fixture');
   }
@@ -331,9 +324,7 @@ function pCombatPreparationFixture(): {
   readonly room: CanonicalAuthoredRoom;
 } {
   const result = simulateProject(catalog, loadSurfaceNOPQProject());
-  const biome = result.routes
-    .find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((candidate) => candidate.biomeKey === 'P');
+  const biome = result.route.biomes.find((candidate) => candidate.biomeKey === 'P');
   if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
     throw new Error('P did not produce a complete history fixture');
   }
@@ -657,7 +648,7 @@ describe('field NPC encounter requirements', () => {
     ).toBeNull();
     const traitAddress = createTraitOfferAddress(fNpcPhase, 'selection');
     const unresolvedAssembly = simulateProjectAssembly(catalog, project);
-    expect(unresolvedAssembly.evaluation.routes[0]?.findings).toContainEqual(
+    expect(unresolvedAssembly.evaluation.route?.findings).toContainEqual(
       expect.objectContaining({ code: 'traitOfferMissing', origin: traitAddress }),
     );
     const initialOffer = createPreparedProjectCandidateSession(
@@ -762,9 +753,7 @@ describe('field NPC encounter requirements', () => {
       selectedOptionKey: 'option2',
     });
     const result = simulateProject(catalog, project);
-    const biome = result.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    const biome = result.route.biomes.find((candidate) => candidate.biomeKey === 'F');
     if (biome?.authoring !== 'complete') throw new Error(JSON.stringify(biome?.findings));
     if (!('rewards' in biome)) throw new Error('F reward evaluation is missing');
     expect(biome.rewards.selectedTraitOffers).toContainEqual(
@@ -1048,9 +1037,7 @@ describe('field NPC encounter requirements', () => {
     expect(editedOffer.selectedOptionKey).toBe('option2');
 
     const evaluation = simulateProject(sideCatalog, project);
-    const biome = evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'N');
     if (biome?.authoring !== 'complete' || !('rewards' in biome)) {
       throw new Error('N side-room Artemis did not produce a complete reward evaluation');
     }
@@ -1217,9 +1204,7 @@ describe('field NPC encounter requirements', () => {
       'damageContest',
     ]);
     expect(
-      assembly.evaluation.routes
-        .flatMap((route) => route.biomes)
-        .find((biome) => biome.origin.biomeKey === 'F')?.findings,
+      assembly.evaluation.route.biomes.find((biome) => biome.origin.biomeKey === 'F')?.findings,
     ).toContainEqual(expect.objectContaining({ code: 'nemesisOutcomeMissing' }));
   });
 

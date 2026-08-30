@@ -151,7 +151,7 @@ function echoReplayEntry() {
 }
 
 function bridgeRoom(project: ReturnType<typeof createGoldenFGHProject>) {
-  const h = simulateProjectAssembly(catalog, project).evaluation.routes[0]!.biomes.find(
+  const h = simulateProjectAssembly(catalog, project).evaluation.route!.biomes.find(
     (biome) => biome.biomeKey === 'H',
   );
   if (h === undefined || !('rewards' in h)) throw new Error('H must be evaluated');
@@ -349,9 +349,7 @@ function priorLeveledTraits() {
 }
 
 function echoOfferInDocument(document: JsonRecord): JsonRecord {
-  const route = (document.routes as JsonRecord[]).find(
-    (candidate) => candidate.routeKey === 'Underworld',
-  )!;
+  const route = document.route as JsonRecord;
   const biome = (route.biomes as JsonRecord[]).find((candidate) => candidate.biomeKey === 'H')!;
   const topology = biome.topology as JsonRecord;
   const occurrence = (topology.occurrences as JsonRecord[]).find(
@@ -508,7 +506,7 @@ describe('Echo Gate A direct choices', () => {
         { traitKey: 'DiminishingHealthAndManaBoon' },
       ]),
     });
-    const h = simulateProjectAssembly(catalog, project).evaluation.routes[0]?.biomes.find(
+    const h = simulateProjectAssembly(catalog, project).evaluation.route?.biomes.find(
       (biome) => biome.biomeKey === 'H',
     );
     if (h === undefined || !('rewards' in h)) throw new Error('H reward evaluation is missing');
@@ -696,9 +694,8 @@ describe('Echo Gate A direct choices', () => {
 
   it('binds the real H Bridge offer, preserves its strict child through codec, and publishes Run State', () => {
     const project = selectGoldenBridge();
-    const bridge = project.routes
-      .find((route) => route.routeKey === 'Underworld')!
-      .biomes.find((biome) => biome.biomeKey === 'H')!
+    const bridge = project.route.biomes
+      .find((biome) => biome.biomeKey === 'H')!
       .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
     const offer = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
     expect(offer).toEqual({
@@ -721,9 +718,7 @@ describe('Echo Gate A direct choices', () => {
       /options\.option1\.rarity: rarityless options have no rarity/,
     );
     const assembly = simulateProjectAssembly(catalog, decoded);
-    const h = assembly.evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')!
-      .biomes.find((biome) => biome.biomeKey === 'H')!;
+    const h = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'H')!;
     if (!('rewards' in h)) throw new Error('H must be evaluated');
     expect(
       h.rewards.runStateSnapshots.some(
@@ -766,9 +761,9 @@ describe('Echo Gate A direct choices', () => {
 
   it('retains the real H invalid Pom outer checkpoint and excludes later state', () => {
     let project = selectGoldenBridge();
-    const bridge = project.routes[0]!.biomes.find(
-      (biome) => biome.biomeKey === 'H',
-    )!.topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
+    const bridge = project
+      .route!.biomes.find((biome) => biome.biomeKey === 'H')!
+      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
     const offer = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
     if (offer?.kind !== 'traits') throw new Error('Echo offer must be traits');
     project = applyProjectCommand(project, catalog, {
@@ -784,7 +779,7 @@ describe('Echo Gate A direct choices', () => {
         ]) as AuthoredTraitOfferTraits['options'],
       }),
     });
-    const h = simulateProjectAssembly(catalog, project).evaluation.routes[0]!.biomes.find(
+    const h = simulateProjectAssembly(catalog, project).evaluation.route!.biomes.find(
       (biome) => biome.biomeKey === 'H',
     )!;
     if (!('rewards' in h)) throw new Error('H must be evaluated');
@@ -815,9 +810,11 @@ describe('Echo Gate A direct choices', () => {
       h.rewards.runStateAvailability.some((entry) => entry.availability === 'unavailable'),
     ).toBe(true);
     expect(
-      project.routes[0]!.biomes.find((biome) => biome.biomeKey === 'H')!.topology!.occurrences.some(
-        (occurrence) => occurrence.occurrenceId === 'golden-h-combat05',
-      ),
+      project
+        .route!.biomes.find((biome) => biome.biomeKey === 'H')!
+        .topology!.occurrences.some(
+          (occurrence) => occurrence.occurrenceId === 'golden-h-combat05',
+        ),
     ).toBe(true);
     expect(
       h.rewards.branches[0]?.events.some(
@@ -1753,9 +1750,9 @@ describe('Echo Gate B Boon Boon Boon', () => {
 
   it('round-trips the strict child and rejects malformed cardinality, sources, rarities, and Duo duplicates', () => {
     let project = selectGoldenBridge();
-    const bridge = project.routes[0]!.biomes.find(
-      (biome) => biome.biomeKey === 'H',
-    )!.topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
+    const bridge = project
+      .route!.biomes.find((biome) => biome.biomeKey === 'H')!
+      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
     const existing = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
     if (existing?.kind !== 'traits') throw new Error('Echo offer is missing');
     const valid = echoBoonOffer(
@@ -1886,7 +1883,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
         ),
       ),
     });
-    const h = simulateProjectAssembly(catalog, project).evaluation.routes[0]!.biomes.find(
+    const h = simulateProjectAssembly(catalog, project).evaluation.route!.biomes.find(
       (biome) => biome.biomeKey === 'H',
     )!;
     if (!('rewards' in h)) throw new Error('H must be evaluated');
@@ -1933,7 +1930,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     });
 
     const assembly = simulateProjectAssembly(catalog, project);
-    const h = assembly.evaluation.routes[0]!.biomes.find((biome) => biome.biomeKey === 'H')!;
+    const h = assembly.evaluation.route!.biomes.find((biome) => biome.biomeKey === 'H')!;
     if (!('rewards' in h)) throw new Error('H must be evaluated');
     expect(
       h.findings.filter(
@@ -1986,7 +1983,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     if (offer.kind !== 'traitOffer') throw new Error('Echo offer candidate is unavailable');
     expect(offer.result.supported).toBe(true);
     expect(offer.result.assessments.every((assessment) => assessment.legal)).toBe(true);
-    const h = assembly.evaluation.routes[0]!.biomes.find((biome) => biome.biomeKey === 'H')!;
+    const h = assembly.evaluation.route!.biomes.find((biome) => biome.biomeKey === 'H')!;
     if (!('rewards' in h)) throw new Error('H must be evaluated');
     expect(h.coverage).toMatchObject({ kind: 'prefix', blockedAt: echoOwner });
     expect(
@@ -2015,7 +2012,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
         ),
       ),
     });
-    const h = simulateProjectAssembly(catalog, project).evaluation.routes[0]!.biomes.find(
+    const h = simulateProjectAssembly(catalog, project).evaluation.route!.biomes.find(
       (biome) => biome.biomeKey === 'H',
     )!;
     if (!('rewards' in h)) throw new Error('H must be evaluated');
@@ -2043,9 +2040,9 @@ describe('Echo Gate C Reward Reward Reward', () => {
       trait: echoOwner,
       value: echoRewardOffer(),
     });
-    const occurrence = project.routes[0]!.biomes.find(
-      (biome) => biome.biomeKey === 'H',
-    )!.topology!.occurrences.find((candidate) => candidate.occurrenceId === bridgeId)!;
+    const occurrence = project
+      .route!.biomes.find((biome) => biome.biomeKey === 'H')!
+      .topology!.occurrences.find((candidate) => candidate.occurrenceId === bridgeId)!;
     expect(occurrence.acquisitionSites?.roomExit).toEqual({
       pickupEntries: { [echoReplayEntryKey]: null },
     });
@@ -2090,7 +2087,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
     });
     project = makeBridgeOutgoingEligible(project);
     const assembly = simulateProjectAssembly(catalog, project);
-    const h = assembly.evaluation.routes[0]!.biomes.find((biome) => biome.biomeKey === 'H')!;
+    const h = assembly.evaluation.route!.biomes.find((biome) => biome.biomeKey === 'H')!;
     if (!('rewards' in h)) throw new Error('H must be evaluated');
     const replayEntry = echoReplayEntry();
     expect(h.findings).not.toContainEqual(expect.objectContaining({ origin: replayEntry }));
@@ -2121,7 +2118,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
     const replacement = replaceLatestGoldenRewardWithConsumable(project);
     project = makeBridgeOutgoingEligible(replacement.project);
     const stale = simulateProjectAssembly(catalog, project);
-    const h = stale.evaluation.routes[0]!.biomes.find((biome) => biome.biomeKey === 'H')!;
+    const h = stale.evaluation.route!.biomes.find((biome) => biome.biomeKey === 'H')!;
     if (!('rewards' in h)) throw new Error('H must be evaluated');
     const replayEntry = echoReplayEntry();
     expect(h.findings).toContainEqual(
@@ -2157,7 +2154,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
       entry: replayEntry,
       value: { rewardType: replacement.rewardType },
     });
-    const repaired = simulateProjectAssembly(catalog, project).evaluation.routes[0]!.biomes.find(
+    const repaired = simulateProjectAssembly(catalog, project).evaluation.route!.biomes.find(
       (biome) => biome.biomeKey === 'H',
     )!;
     if (!('rewards' in repaired)) throw new Error('H must be evaluated');
@@ -2180,9 +2177,9 @@ describe('Echo Gate C Reward Reward Reward', () => {
       trait: echoOwner,
       selectedOptionKey: 'option2',
     });
-    const dormantOccurrence = project.routes[0]!.biomes.find(
-      (biome) => biome.biomeKey === 'H',
-    )!.topology!.occurrences.find((candidate) => candidate.occurrenceId === bridgeId)!;
+    const dormantOccurrence = project
+      .route!.biomes.find((biome) => biome.biomeKey === 'H')!
+      .topology!.occurrences.find((candidate) => candidate.occurrenceId === bridgeId)!;
     expect(dormantOccurrence.acquisitionSites?.roomExit).toMatchObject({
       pickupEntries: { [echoReplayEntryKey]: { offer: { rewardType: 'WeaponUpgrade' } } },
     });
@@ -2216,7 +2213,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
         index: 0,
       }),
     ).toThrow('room action is not active for this occurrence');
-    const dormantH = simulateProjectAssembly(catalog, project).evaluation.routes[0]!.biomes.find(
+    const dormantH = simulateProjectAssembly(catalog, project).evaluation.route!.biomes.find(
       (biome) => biome.biomeKey === 'H',
     )!;
     if (!('rewards' in dormantH)) throw new Error('H must be evaluated');
@@ -2239,9 +2236,9 @@ describe('Echo Gate C Reward Reward Reward', () => {
       trait: echoOwner,
       value: echoRewardOffer(),
     });
-    const restoredOccurrence = project.routes[0]!.biomes.find(
-      (biome) => biome.biomeKey === 'H',
-    )!.topology!.occurrences.find((candidate) => candidate.occurrenceId === bridgeId)!;
+    const restoredOccurrence = project
+      .route!.biomes.find((biome) => biome.biomeKey === 'H')!
+      .topology!.occurrences.find((candidate) => candidate.occurrenceId === bridgeId)!;
     expect(restoredOccurrence.acquisitionSites?.roomExit).toMatchObject({
       pickupEntries: { [echoReplayEntryKey]: { offer: { rewardType: 'WeaponUpgrade' } } },
     });
@@ -2281,7 +2278,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
     );
 
     const forged = JSON.parse(encodeProjectDocument(project)) as JsonRecord;
-    const route = (forged.routes as JsonRecord[])[0]!;
+    const route = forged.route as JsonRecord;
     const biome = (route.biomes as JsonRecord[]).find((candidate) => candidate.biomeKey === 'H')!;
     const topology = biome.topology as JsonRecord;
     const bridge = (topology.occurrences as JsonRecord[]).find(
@@ -2367,9 +2364,9 @@ describe('Echo Gate C Reward Reward Reward', () => {
       siteKey,
       entryKey: 'quickBuckGold',
     };
-    const bridge = project.routes[0]!.biomes.find(
-      (biome) => biome.biomeKey === 'H',
-    )!.topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
+    const bridge = project
+      .route!.biomes.find((biome) => biome.biomeKey === 'H')!
+      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
     project = applyProjectCommand(project, catalog, {
       kind: 'InsertRoomAction',
       action: createRoomActionAddress(goldenHBiome, bridgeId, roomActionKey(reference)),
@@ -2377,9 +2374,10 @@ describe('Echo Gate C Reward Reward Reward', () => {
       index: bridge.roomActions.order.length,
     });
     expect(
-      project.routes[0]!.biomes.find((biome) => biome.biomeKey === 'H')!.topology!.occurrences.find(
-        (occurrence) => occurrence.occurrenceId === bridgeId,
-      )?.acquisitionSites?.[siteKey],
+      project
+        .route!.biomes.find((biome) => biome.biomeKey === 'H')!
+        .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)
+        ?.acquisitionSites?.[siteKey],
     ).toMatchObject({
       pickupEntries: { quickBuckGold: { offer: { rewardType: 'RoomMoneyDrop' } } },
     });
@@ -2416,9 +2414,9 @@ describe('Echo Gate C Reward Reward Reward', () => {
       trait: echoOwner,
       selectedOptionKey: 'option1',
     });
-    const restored = project.routes[0]!.biomes.find(
-      (biome) => biome.biomeKey === 'H',
-    )!.topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
+    const restored = project
+      .route!.biomes.find((biome) => biome.biomeKey === 'H')!
+      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
     expect(restored.acquisitionSites?.[siteKey]).toMatchObject({
       pickupEntries: { quickBuckGold: { offer: { rewardType: 'RoomMoneyDrop' } } },
     });
@@ -2448,7 +2446,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
       acquisition: createAcquisitionRoleAddress(echoReplayEntry(), 'self'),
       value: { kind: 'timePiece' },
     });
-    const h = simulateProjectAssembly(catalog, project).evaluation.routes[0]!.biomes.find(
+    const h = simulateProjectAssembly(catalog, project).evaluation.route!.biomes.find(
       (biome) => biome.biomeKey === 'H',
     )!;
     if (!('rewards' in h)) throw new Error('H must be evaluated');
@@ -2467,7 +2465,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
     project = placeCombat09Cage2Last(project);
     project = makeBridgeOutgoingEligible(project);
     const incomplete = simulateProjectAssembly(catalog, project);
-    const incompleteH = incomplete.evaluation.routes[0]!.biomes.find(
+    const incompleteH = incomplete.evaluation.route!.biomes.find(
       (biome) => biome.biomeKey === 'H',
     )!;
     if (!('rewards' in incompleteH)) throw new Error('H must be evaluated');
@@ -2494,7 +2492,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
     });
     const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
     expect(decoded).toEqual(project);
-    const h = simulateProjectAssembly(catalog, decoded).evaluation.routes[0]!.biomes.find(
+    const h = simulateProjectAssembly(catalog, decoded).evaluation.route!.biomes.find(
       (biome) => biome.biomeKey === 'H',
     )!;
     if (!('rewards' in h)) throw new Error('H must be evaluated');

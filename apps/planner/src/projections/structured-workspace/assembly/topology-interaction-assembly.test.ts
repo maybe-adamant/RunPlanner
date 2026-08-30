@@ -46,9 +46,7 @@ function biomeSource(
   const assembly = simulateProjectAssembly(catalog, project);
   const source = createWorkspaceProjectSourceIndex(catalog, project, assembly.evaluation, (phase) =>
     encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
-  )
-    .routes.find((route) => route.routeKey === routeKey)
-    ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
+  ).route?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
   if (source === undefined) throw new Error(`${routeKey}/${biomeKey} source is missing`);
   return source;
 }
@@ -64,7 +62,8 @@ function assemble(project: ProjectDocument, routeKey: string, biomeKey: string) 
 describe('structured workspace topology interaction assembly', () => {
   it('returns the exact topology-free start requirement without creating removal or takeover packages', () => {
     const project = createProjectDocument(catalog, {
-      configuredBiomeCounts: { Underworld: 1 },
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
       projectId: 'topology-free-f',
     });
     const { assembly } = assemble(project, 'Underworld', 'F');

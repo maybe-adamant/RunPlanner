@@ -29,9 +29,7 @@ import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 
 function completeG(project = createCompleteFGProject()) {
   const result = simulateProject(catalog, project);
-  const g = result.routes
-    .find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((biome) => biome.biomeKey === 'G');
+  const g = result.route.biomes.find((biome) => biome.biomeKey === 'G');
   if (g?.authoring !== 'complete') throw new Error('Golden G fixture is incomplete');
   return { result, g };
 }
@@ -62,7 +60,7 @@ describe('G generation and takeover', () => {
       value: { rewardType: 'StackUpgrade' },
     });
     const result = simulateProject(catalog, authorLegalTraitOffers(project));
-    const g = result.routes[0]?.biomes.find((biome) => biome.biomeKey === 'G');
+    const g = result.route?.biomes.find((biome) => biome.biomeKey === 'G');
 
     expect(result.findings).toEqual([]);
     expect(g).toMatchObject({ authoring: 'complete', validity: 'valid' });
@@ -70,13 +68,13 @@ describe('G generation and takeover', () => {
 
   it('carries the validated F prefix through G’s fixed intro, ordinary spine, and completion', () => {
     const { result, g } = completeG();
-    const f = result.routes[0]?.biomes[0];
+    const f = result.route?.biomes[0];
     if (f?.authoring !== 'complete' || f.validity !== 'valid' || g.validity !== 'valid') {
       throw new Error('Golden F/G prefix is unavailable');
     }
 
     expect(result.status).toBe('valid');
-    expect(result.routes[0]?.processing.completeValidPrefix).toEqual(['F', 'G']);
+    expect(result.route?.processing.completeValidPrefix).toEqual(['F', 'G']);
     expect(g.validity).toBe('valid');
     expect(g.snapshot.entryRoom).toMatchObject({
       gameName: 'G_Intro',
@@ -309,7 +307,7 @@ describe('G generation and takeover', () => {
     );
 
     expect(result.status).toBe('invalid');
-    expect(result.routes[0]?.processing).toEqual({
+    expect(result.route?.processing).toEqual({
       completeValidPrefix: ['F'],
       active: { kind: 'invalid', biomeKey: 'G' },
       blockedSuffix: [],
@@ -342,7 +340,7 @@ describe('G generation and takeover', () => {
       gameName: 'G_Combat10',
     });
     const { result: roomEvaluation } = completeG(roomProject);
-    const f = roomEvaluation.routes[0]?.biomes.find((biome) => biome.biomeKey === 'F');
+    const f = roomEvaluation.route?.biomes.find((biome) => biome.biomeKey === 'F');
     if (f?.authoring !== 'complete' || f.validity !== 'valid')
       throw new Error('G repair fixture must retain complete F history');
     const room = createPreparedProjectCandidateSession(

@@ -19,9 +19,8 @@ const sideDoor2 = createOccurrenceId('round-trip-n-combat02-sideDoor2');
 const order = createLocalVisitOrderAddress(nBiome, combatId, 'sideRooms');
 
 function localVisit(project: ProjectDocument): LocalVisitDecision {
-  const decision = project.routes
-    .find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((biome) => biome.biomeKey === 'N')
+  const decision = project.route.biomes
+    .find((biome) => biome.biomeKey === 'N')
     ?.topology?.decisions.find(
       (candidate): candidate is LocalVisitDecision =>
         candidate.kind === 'localVisit' && candidate.sourceOccurrenceId === combatId,

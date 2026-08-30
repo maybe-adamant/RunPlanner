@@ -64,9 +64,8 @@ function WorkspaceHarness({
   readonly routeKey: 'Surface' | 'Underworld';
 }) {
   const workspace = useAppSelector(application.selectStructuredWorkspace);
-  const biome = workspace.routes
-    .find((route) => route.routeKey === routeKey)
-    ?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
+  if (workspace === undefined) throw new Error('workspace projection is unavailable');
+  const biome = workspace.route.biomes.find((candidate) => candidate.biomeKey === biomeKey);
   if (biome === undefined) throw new Error(`${routeKey}/${biomeKey} workspace biome is missing`);
   return (
     <BiomeWorkspace

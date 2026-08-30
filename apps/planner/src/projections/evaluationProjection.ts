@@ -41,7 +41,7 @@ export interface RouteFeedbackPresentation {
 
 export interface ProjectFeedbackPresentation {
   readonly findingCount: number;
-  readonly routes: ReadonlyMap<string, RouteFeedbackPresentation>;
+  readonly route: RouteFeedbackPresentation;
   readonly status: StatusPresentation;
 }
 
@@ -751,26 +751,21 @@ export function projectFeedbackHierarchy(
   if (existing !== undefined) {
     return existing;
   }
-  const routes = new Map<string, RouteFeedbackPresentation>();
-  for (const route of evaluation.routes) {
-    const biomes = new Map(
-      route.configuredBiomeKeys.map(
-        (biomeKey) => [biomeKey, biomeFeedback(route, biomeKey)] as const,
-      ),
-    );
-    routes.set(
-      route.routeKey,
-      Object.freeze({
-        biomes,
-        findingCount: route.findings.length,
-        routeKey: route.routeKey,
-        status: presentRouteStatus(route),
-      }),
-    );
-  }
+  const route = evaluation.route;
+  const biomes = new Map(
+    route.configuredBiomeKeys.map(
+      (biomeKey) => [biomeKey, biomeFeedback(route, biomeKey)] as const,
+    ),
+  );
+  const routeFeedback = Object.freeze({
+    biomes,
+    findingCount: route.findings.length,
+    routeKey: route.routeKey,
+    status: presentRouteStatus(route),
+  });
   const projected = Object.freeze({
     findingCount: evaluation.findings.length,
-    routes,
+    route: routeFeedback,
     status: presentProjectStatus(evaluation),
   });
   projectFeedbackCache.set(evaluation, projected);

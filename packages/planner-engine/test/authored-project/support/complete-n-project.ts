@@ -44,7 +44,8 @@ export function createCompleteNProject(): ProjectDocument {
   let document = applyProjectCommand(
     createProjectDocument(catalog, {
       projectId: 'authored-complete-n',
-      configuredBiomeCounts: { Surface: 1 },
+      routeKey: 'Surface',
+      configuredBiomeCount: 1,
     }),
     catalog,
     {

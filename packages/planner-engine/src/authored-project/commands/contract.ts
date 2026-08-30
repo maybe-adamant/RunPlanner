@@ -185,7 +185,7 @@ export function failCommand(command: CommandContractSubject, detail: string): ne
 }
 
 export interface LocatedBiome {
-  readonly routeIndex: number;
+  readonly routeKey: string;
   readonly biomeIndex: number;
   readonly loadout: AuthoredRoutePlan['loadout'];
   readonly plan: AuthoredBiomePlan;
@@ -200,17 +200,16 @@ export function locateBiome(
   const address = projectCommandAddress(command);
   if (address.kind === 'project' || address.kind === 'route')
     throw new Error('route command reached biome resolution');
-  const routeIndex = document.routes.findIndex((route) => route.routeKey === address.routeKey);
-  if (routeIndex < 0) failCommand(command, `unknown or unconfigured route ${address.routeKey}`);
-  const route = document.routes[routeIndex];
-  if (route === undefined) failCommand(command, `missing route ${address.routeKey}`);
+  if (document.route.routeKey !== address.routeKey)
+    failCommand(command, `unknown or unconfigured route ${address.routeKey}`);
+  const route = document.route;
   const biomeIndex = route.biomes.findIndex((biome) => biome.biomeKey === address.biomeKey);
   if (biomeIndex < 0) failCommand(command, `unknown or unconfigured biome ${address.biomeKey}`);
   const plan = route.biomes[biomeIndex];
   if (plan === undefined) failCommand(command, `missing biome ${address.biomeKey}`);
   const layout = catalog.biomeLayouts.byKey[address.biomeKey];
   if (layout === undefined) failCommand(command, `catalog has no layout for ${address.biomeKey}`);
-  return { routeIndex, biomeIndex, loadout: route.loadout, plan, layout };
+  return { routeKey: route.routeKey, biomeIndex, loadout: route.loadout, plan, layout };
 }
 
 export function requireTopology(
@@ -252,13 +251,10 @@ export function withBiome(
   located: LocatedBiome,
   plan: AuthoredBiomePlan,
 ): ProjectDocument {
-  const route = document.routes[located.routeIndex];
-  if (route === undefined) throw new Error('located route disappeared');
+  const route = document.route;
   const biomes = route.biomes.map((biome, index) => (index === located.biomeIndex ? plan : biome));
   return {
     ...document,
-    routes: document.routes.map((candidate, index) =>
-      index === located.routeIndex ? { ...route, biomes } : candidate,
-    ),
+    route: { ...route, biomes },
   };
 }

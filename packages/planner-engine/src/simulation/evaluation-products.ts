@@ -133,23 +133,13 @@ export interface ProjectRouteEvaluation {
   readonly summary: RouteEvaluationSummary;
 }
 
-export interface ProjectEvaluationSummary {
-  readonly configuredBiomeCount: number;
-  readonly evaluatedBiomeCount: number;
-  readonly validatedBiomeCount: number;
-  readonly incompleteBiomeCount: number;
-  readonly invalidBiomeCount: number;
-  readonly blockedBiomeCount: number;
-  readonly eligibleForExecutionPlan: boolean;
-}
-
 export interface ProjectEvaluation {
   readonly status: 'empty' | 'incomplete' | 'invalid' | 'valid';
   readonly projectId: string;
   readonly catalogVersion: string;
-  readonly routes: readonly ProjectRouteEvaluation[];
+  readonly route: ProjectRouteEvaluation;
   readonly findings: readonly SemanticFinding[];
-  readonly summary: ProjectEvaluationSummary;
+  readonly summary: RouteEvaluationSummary;
 }
 
 export interface ProjectEvaluationAssembly {
@@ -192,36 +182,5 @@ export function summarizeRoute(
     blockedBiomeCount: processing.blockedSuffix.length,
     eligibleForExecutionPlan:
       configuredBiomeCount > 0 && processing.completeValidPrefix.length === configuredBiomeCount,
-  });
-}
-export function summarizeProject(
-  routes: readonly ProjectRouteEvaluation[],
-): ProjectEvaluationSummary {
-  const totals = routes.reduce(
-    (result, route) => ({
-      configuredBiomeCount: result.configuredBiomeCount + route.summary.configuredBiomeCount,
-      evaluatedBiomeCount: result.evaluatedBiomeCount + route.summary.evaluatedBiomeCount,
-      validatedBiomeCount: result.validatedBiomeCount + route.summary.validatedBiomeCount,
-      incompleteBiomeCount: result.incompleteBiomeCount + route.summary.incompleteBiomeCount,
-      invalidBiomeCount: result.invalidBiomeCount + route.summary.invalidBiomeCount,
-      blockedBiomeCount: result.blockedBiomeCount + route.summary.blockedBiomeCount,
-    }),
-    {
-      configuredBiomeCount: 0,
-      evaluatedBiomeCount: 0,
-      validatedBiomeCount: 0,
-      incompleteBiomeCount: 0,
-      invalidBiomeCount: 0,
-      blockedBiomeCount: 0,
-    },
-  );
-  return Object.freeze({
-    ...totals,
-    eligibleForExecutionPlan:
-      totals.configuredBiomeCount > 0 &&
-      routes.every(
-        (route) =>
-          route.summary.configuredBiomeCount === 0 || route.summary.eligibleForExecutionPlan,
-      ),
   });
 }

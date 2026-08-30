@@ -57,6 +57,7 @@ function createProfileFixture(): ProfileFixture {
 }
 
 function configureF(application: ReturnType<typeof createApplication>): void {
+  application.projectOperations.createNew('Underworld');
   application.store.dispatch(
     authoredProjectCommandDispatched({
       kind: 'ConfigureRoutePrefix',
@@ -66,13 +67,31 @@ function configureF(application: ReturnType<typeof createApplication>): void {
   );
 }
 
+function presentProject(application: ReturnType<typeof createApplication>) {
+  const project = selectPresentProject(application.store.getState());
+  if (project === undefined) throw new Error('expected an open project');
+  return project;
+}
+
+function presentEvaluation(application: ReturnType<typeof createApplication>) {
+  const evaluation = selectProjectEvaluation(application.store.getState());
+  if (evaluation === undefined) throw new Error('expected a project evaluation');
+  return evaluation;
+}
+
+function presentHistory(application: ReturnType<typeof createApplication>) {
+  const history = selectProjectHistory(application.store.getState());
+  if (history === undefined) throw new Error('expected project history');
+  return history;
+}
+
 describe('project profile operations', () => {
   it('saves and loads only the normalized project with a fresh evaluation, history, and baseline', async () => {
     const profile = createProfileFixture();
     const application = createApplication({ profileFile: profile.adapter });
     configureF(application);
-    const savedProject = selectPresentProject(application.store.getState());
-    const savedEvaluation = selectProjectEvaluation(application.store.getState());
+    const savedProject = presentProject(application);
+    const savedEvaluation = presentEvaluation(application);
     const savedJson = encodeProjectDocument(savedProject);
 
     await expect(application.projectOperations.saveProfile()).resolves.toEqual({
@@ -86,16 +105,16 @@ describe('project profile operations', () => {
       'schemaVersion',
       'projectId',
       'catalogVersion',
-      'routes',
+      'route',
     ]);
 
-    expect(application.projectOperations.createNew().status).toBe('success');
-    expect(selectPresentProject(application.store.getState())).not.toEqual(savedProject);
+    expect(application.projectOperations.createNew('Underworld').status).toBe('success');
+    expect(presentProject(application)).not.toEqual(savedProject);
     expect(selectExplicitProfileBaselineJson(application.store.getState())).toBeNull();
     expect(selectProfileSession(application.store.getState()).fileName).toBeNull();
-    expect(selectProjectHistory(application.store.getState()).past).toEqual([]);
-    expect(selectProjectHistory(application.store.getState()).future).toEqual([]);
-    expect(selectProjectEvaluation(application.store.getState()).status).toBe('empty');
+    expect(presentHistory(application).past).toEqual([]);
+    expect(presentHistory(application).future).toEqual([]);
+    expect(presentEvaluation(application).status).toBe('empty');
     profile.setLoadJson(savedJson, 'erebus-route.runplanner.json');
 
     await expect(application.projectOperations.loadProfile()).resolves.toEqual({
@@ -121,9 +140,8 @@ describe('project profile operations', () => {
   it('reconciles a pre-fix Ixion purchase into its forced gate while loading', async () => {
     const profile = createProfileFixture();
     let source = createGoldenFGHProject();
-    const gPostboss = source.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G')
+    const gPostboss = source.route.biomes
+      .find((biome) => biome.biomeKey === 'G')
       ?.topology?.occurrences.find((occurrence) => occurrence.gameName === 'G_PostBoss01');
     if (gPostboss === undefined) throw new Error('expected fixed G Postboss');
     const well = createOccurrenceAddress(goldenGBiome, gPostboss.occurrenceId);
@@ -144,7 +162,7 @@ describe('project profile operations', () => {
     ])
       source = applyProjectCommand(source, catalog, command);
     const raw = JSON.parse(encodeProjectDocument(source)) as {
-      routes: Array<{
+      route: {
         routeKey: string;
         biomes: Array<{
           biomeKey: string;
@@ -160,11 +178,9 @@ describe('project profile operations', () => {
             }>;
           } | null;
         }>;
-      }>;
+      };
     };
-    const h = raw.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'H')?.topology;
+    const h = raw.route.biomes.find((biome) => biome.biomeKey === 'H')?.topology;
     const intro = h?.occurrences.find((occurrence) => occurrence.occurrenceId === goldenHStartId);
     const chaos = intro?.additionalExits.find((exit) => exit.kind === 'chaos');
     if (h == null || intro === undefined || chaos === undefined)
@@ -188,9 +204,8 @@ describe('project profile operations', () => {
       status: 'success',
     });
     expect(
-      selectPresentProject(application.store.getState())
-        .routes.find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'H')
+      presentProject(application)
+        .route.biomes.find((biome) => biome.biomeKey === 'H')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === goldenHStartId)
         ?.additionalExits,
     ).toEqual([expect.objectContaining({ kind: 'chaos', key: 'chaos' })]);
@@ -210,7 +225,7 @@ describe('project profile operations', () => {
     };
     const application = createApplication({ profileFile });
     configureF(application);
-    const pendingSnapshot = selectPresentProject(application.store.getState());
+    const pendingSnapshot = presentProject(application);
     const pendingJson = encodeProjectDocument(pendingSnapshot);
 
     const saving = application.projectOperations.saveProfile();
@@ -227,7 +242,7 @@ describe('project profile operations', () => {
 
     expect(saves).toEqual([{ fileName: 'run-plan.runplanner.json', json: pendingJson }]);
     expect(selectExplicitProfileBaselineJson(application.store.getState())).toBe(pendingJson);
-    expect(selectPresentProject(application.store.getState())).not.toBe(pendingSnapshot);
+    expect(presentProject(application)).not.toBe(pendingSnapshot);
   });
 
   it('preserves the current workspace and baseline across cancellation and adapter failure', async () => {
@@ -257,6 +272,7 @@ describe('project profile operations', () => {
         load: () => Promise.reject(new Error('load denied')),
       },
     });
+    failing.projectOperations.createNew('Underworld');
     const failingState = failing.store.getState();
     await expect(failing.projectOperations.saveProfile()).resolves.toEqual({
       operation: 'saveProfile',
@@ -286,7 +302,9 @@ describe('project profile operations', () => {
     });
     expect(application.store.getState()).toBe(state);
 
-    profile.setLoadJson(encodeProjectDocument(selectPresentProject(state)), '  ');
+    const stateProject = selectPresentProject(state);
+    if (stateProject === undefined) throw new Error('expected an open project');
+    profile.setLoadJson(encodeProjectDocument(stateProject), '  ');
     await expect(application.projectOperations.loadProfile()).resolves.toEqual({
       operation: 'loadProfile',
       status: 'failure',
@@ -300,10 +318,9 @@ describe('project profile operations', () => {
     const application = createApplication({ profileFile: profile.adapter });
     configureF(application);
     const state = application.store.getState();
-    const current = JSON.parse(encodeProjectDocument(selectPresentProject(state))) as Record<
-      string,
-      unknown
-    >;
+    const currentProject = selectPresentProject(state);
+    if (currentProject === undefined) throw new Error('expected an open project');
+    const current = JSON.parse(encodeProjectDocument(currentProject)) as Record<string, unknown>;
 
     for (const json of [
       JSON.stringify({ ...current, schemaVersion: 8 }),

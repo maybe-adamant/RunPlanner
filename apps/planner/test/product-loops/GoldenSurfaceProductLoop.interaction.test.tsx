@@ -129,7 +129,21 @@ function createRecoveryPersistence(): {
 }
 
 function currentProject(application: PlannerApplication) {
-  return application.store.getState().projectWorkspace.history.present;
+  const workspace = application.store.getState().projectWorkspace;
+  if (workspace.kind !== 'openProject') throw new Error('expected an open project');
+  return workspace.history.present;
+}
+
+function currentEvaluation(application: PlannerApplication) {
+  const workspace = application.store.getState().projectWorkspace;
+  if (workspace.kind !== 'openProject') throw new Error('expected an open project');
+  return workspace.assembly.evaluation;
+}
+
+function currentHistory(application: PlannerApplication) {
+  const workspace = application.store.getState().projectWorkspace;
+  if (workspace.kind !== 'openProject') throw new Error('expected an open project');
+  return workspace.history;
 }
 
 function hubRailButton(): HTMLElement {
@@ -153,7 +167,7 @@ describe('surface product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     await view.user.click(hubRailButton());
 
-    expect(application.store.getState().projectWorkspace.assembly.evaluation).toMatchObject({
+    expect(currentEvaluation(application)).toMatchObject({
       findings: [],
       status: 'valid',
       summary: {
@@ -185,9 +199,7 @@ describe('surface product loop', () => {
       expect(document.querySelector('.biome-workspace')).not.toBeNull();
     }
 
-    expect(simulateProject(application.catalog, authored)).toEqual(
-      application.store.getState().projectWorkspace.assembly.evaluation,
-    );
+    expect(simulateProject(application.catalog, authored)).toEqual(currentEvaluation(application));
     recovery.flush();
     expect(recovery.readStoredJson()).toBe(encodeProjectDocument(authored));
 
@@ -197,7 +209,7 @@ describe('surface product loop', () => {
     expect(selectProfileStatus(application.store.getState())).toBe('Clean');
 
     await view.user.click(screen.getByRole('button', { name: 'New' }));
-    expect(application.store.getState().projectWorkspace.assembly.evaluation.status).toBe('empty');
+    expect(currentEvaluation(application).status).toBe('empty');
     await view.user.click(screen.getByRole('button', { name: 'Load Profile' }));
     await screen.findByText('Loaded the profile.');
     expect(currentProject(application)).toEqual(authored);
@@ -217,16 +229,14 @@ describe('surface product loop', () => {
     const application = createApplication();
     const authored = createRepresentativeNOPQShopTraitProject();
     application.store.dispatch(authoredProjectReplaced(authored));
-    expect(application.store.getState().projectWorkspace.assembly.evaluation).toMatchObject({
+    expect(currentEvaluation(application)).toMatchObject({
       status: 'valid',
       summary: { configuredBiomeCount: 4, eligibleForExecutionPlan: true },
     });
 
     const shopOffer = createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'MajorNonBoon');
     const traitOwner = createTraitOfferAddress(shopOffer, 'weaponUpgrade');
-    const surface = application.store
-      .getState()
-      .projectWorkspace.assembly.evaluation.routes.find((route) => route.routeKey === 'Surface');
+    const surface = currentEvaluation(application).route;
     const pEvaluation = surface?.biomes.find((biome) => biome.biomeKey === 'P');
     if (pEvaluation === undefined || !('rewards' in pEvaluation)) {
       throw new Error('complete Surface Shop fixture did not evaluate P rewards');
@@ -256,6 +266,7 @@ describe('surface product loop', () => {
     ).toBeDefined();
 
     const workspace = application.selectStructuredWorkspace(application.store.getState());
+    if (workspace === undefined) throw new Error('workspace projection is unavailable');
     const interaction = workspace.interactions.traitOffers.get(semanticAddressKey(traitOwner));
     expect(interaction).toMatchObject({
       owner: traitOwner,
@@ -296,14 +307,12 @@ describe('surface product loop', () => {
     await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
 
     const moveFinalVisit = screen.getByRole('button', { name: 'Move Combat 09 earlier' });
-    const historyBefore = application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = currentHistory(application).past.length;
 
     await view.user.click(moveFinalVisit);
 
     const edited = currentProject(application);
-    const nTopology = edited.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    const nTopology = edited.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
     const hub = nTopology?.decisions.find((decision) => decision.kind === 'hub');
     if (hub === undefined || hub.kind !== 'hub') throw new Error('edited Hub is missing');
     expect(hub.visitOrder).toEqual([
@@ -320,9 +329,7 @@ describe('surface product loop', () => {
       ),
     ).toBe(true);
     expect(edited).not.toEqual(authored);
-    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
-      historyBefore + 1,
-    );
+    expect(currentHistory(application).past).toHaveLength(historyBefore + 1);
     expect(recovery.hasPendingAutosave()).toBe(true);
     recovery.flush();
     expect(recovery.readStoredJson()).toBe(encodeProjectDocument(edited));
@@ -330,7 +337,7 @@ describe('surface product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
 
     expect(currentProject(application)).toEqual(authored);
-    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(historyBefore);
+    expect(currentHistory(application).past).toHaveLength(historyBefore);
     expect(recovery.hasPendingAutosave()).toBe(true);
     recovery.flush();
     expect(recovery.readStoredJson()).toBe(encodeProjectDocument(authored));
@@ -338,9 +345,7 @@ describe('surface product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Redo' }));
 
     expect(currentProject(application)).toEqual(edited);
-    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
-      historyBefore + 1,
-    );
+    expect(currentHistory(application).past).toHaveLength(historyBefore + 1);
     expect(recovery.hasPendingAutosave()).toBe(true);
     recovery.flush();
     expect(recovery.readStoredJson()).toBe(encodeProjectDocument(edited));
@@ -369,7 +374,7 @@ describe('surface product loop', () => {
     expect(checkbox.checked).toBe(true);
     expect(within(card).queryByText(/Closing this slot removes/)).toBeNull();
 
-    const historyBeforeClose = application.store.getState().projectWorkspace.history.past.length;
+    const historyBeforeClose = currentHistory(application).past.length;
     dispatch.mockClear();
     act(() => checkbox.focus());
     await view.user.keyboard('[Space]');
@@ -379,9 +384,9 @@ describe('surface product loop', () => {
         (screen.getByRole('checkbox', { name: 'Combat 03 open' }) as HTMLInputElement).checked,
       ).toBe(false),
     );
-    const topology = currentProject(application)
-      .routes.find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    const topology = currentProject(application).route?.biomes.find(
+      (biome) => biome.biomeKey === 'N',
+    )?.topology;
     const hub = topology?.decisions.find((decision) => decision.kind === 'hub');
     if (topology === null || topology === undefined || hub?.kind !== 'hub') {
       throw new Error('N Hub topology is missing after closing Combat 03');
@@ -401,12 +406,10 @@ describe('surface product loop', () => {
     expect(
       topology.occurrences.some((occurrence) => occurrence.occurrenceId === nOccurrenceIds.preboss),
     ).toBe(false);
-    expect(application.store.getState().projectWorkspace.assembly.evaluation.findings).toEqual(
+    expect(currentEvaluation(application).findings).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: 'hubOpenSetIncomplete' })]),
     );
-    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
-      historyBeforeClose + 1,
-    );
+    expect(currentHistory(application).past).toHaveLength(historyBeforeClose + 1);
     expect(
       dispatch.mock.calls
         .map(([action]) => action)
@@ -450,9 +453,7 @@ describe('surface product loop', () => {
     const view = renderPlannerForInteraction({ application });
     await view.user.click(screen.getByRole('button', { name: 'Surface' }));
 
-    const surfaceEvaluation = application.store
-      .getState()
-      .projectWorkspace.assembly.evaluation.routes.find((route) => route.routeKey === 'Surface');
+    const surfaceEvaluation = currentEvaluation(application).route;
     if (surfaceEvaluation === undefined) throw new Error('Surface evaluation is missing');
     const findingIndex = surfaceEvaluation.findings.findIndex(
       (finding) =>
@@ -464,18 +465,18 @@ describe('surface product loop', () => {
     }
     const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
     if (findings === null) throw new Error('Findings is missing its section');
-    const historyBefore = application.store.getState().projectWorkspace.history;
+    const historyBefore = currentHistory(application);
     const findingButton = within(findings).getAllByRole('button')[findingIndex];
     if (findingButton === undefined) throw new Error('Findings omitted the target finding');
     await view.user.click(findingButton);
 
     expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(target);
-    expect(application.store.getState().editorSession.activeRouteKey).toBe('Surface');
-    expect(application.store.getState().editorSession.activePanelByRoute.Surface).toEqual({
+    expect(application.store.getState().editorSession.activeSection).toBe('route');
+    expect(application.store.getState().editorSession.activePanel).toEqual({
       kind: 'biome',
       biomeKey: 'P',
     });
-    expect(application.store.getState().projectWorkspace.history).toBe(historyBefore);
+    expect(currentHistory(application)).toBe(historyBefore);
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
     expect(within(inspector).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
@@ -532,8 +533,8 @@ describe('surface product loop', () => {
     });
     application.store.dispatch(authoredProjectReplaced(authored));
 
-    const evaluation = application.store.getState().projectWorkspace.assembly.evaluation;
-    const route = evaluation.routes.find((candidate) => candidate.routeKey === 'Surface');
+    const evaluation = currentEvaluation(application);
+    const route = evaluation.route;
     const branches =
       route?.biomes.flatMap((biome) => ('rewards' in biome ? biome.rewards.branches : [])) ?? [];
     const event = branches
@@ -567,7 +568,7 @@ describe('surface product loop', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(new RegExp(`Replaces ${replacedTraitLabel}`))).toBeTruthy();
     const interaction = application
-      .selectStructuredWorkspace(application.store.getState())
+      .selectStructuredWorkspace(application.store.getState())!
       .interactions.traitOffers.get(semanticAddressKey(traitAddress));
     if (interaction?.value?.kind !== 'traits')
       throw new Error('replacement trait interaction is missing');
@@ -600,11 +601,9 @@ describe('surface product loop', () => {
       aspectKey: 'DaggerBackstabAspect',
     });
     application.store.dispatch(authoredProjectReplaced(authored));
-    const invalid = application.store
-      .getState()
-      .projectWorkspace.assembly.evaluation.findings.find(
-        (finding) => finding.origin.kind === 'traitOffer',
-      );
+    const invalid = currentEvaluation(application).findings.find(
+      (finding) => finding.origin.kind === 'traitOffer',
+    );
     if (invalid === undefined) throw new Error('reached Hammer finding is missing');
 
     const view = renderPlannerForInteraction({ application });
@@ -618,7 +617,7 @@ describe('surface product loop', () => {
     await view.user.click(findingButton);
 
     const destination = application
-      .selectStructuredWorkspace(application.store.getState())
+      .selectStructuredWorkspace(application.store.getState())!
       .focusByOwner.get(semanticAddressKey(invalid.origin));
     if (destination === undefined) throw new Error('invalid Hammer destination is missing');
     expect(destination).toMatchObject({
@@ -637,7 +636,7 @@ describe('surface product loop', () => {
     ).not.toHaveLength(0);
 
     const interaction = application
-      .selectStructuredWorkspace(application.store.getState())
+      .selectStructuredWorkspace(application.store.getState())!
       .interactions.traitOffers.get(semanticAddressKey(invalid.origin));
     if (interaction === undefined) throw new Error('invalid Hammer interaction is missing');
     const correctedTraitKeys = [
@@ -657,11 +656,9 @@ describe('surface product loop', () => {
     await waitFor(() => expect(save).toHaveProperty('disabled', false));
     await view.user.click(save);
     expect(
-      application.store
-        .getState()
-        .projectWorkspace.assembly.evaluation.findings.some(
-          (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(invalid.origin),
-        ),
+      currentEvaluation(application).findings.some(
+        (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(invalid.origin),
+      ),
     ).toBe(false);
   });
 
@@ -688,8 +685,8 @@ describe('surface product loop', () => {
       structure.querySelectorAll<HTMLButtonElement>('[data-workspace-node]'),
     ).find((button) => button.dataset.workspaceNode === semanticAddressKey(decisionOwner));
     if (decisionRail === undefined) throw new Error('Thessaly Decision 1 rail node is missing');
-    const historyBefore = application.store.getState().projectWorkspace.history;
-    const evaluationBefore = application.store.getState().projectWorkspace.assembly.evaluation;
+    const historyBefore = currentHistory(application);
+    const evaluationBefore = currentEvaluation(application);
     work.length = 0;
 
     await view.user.click(decisionRail);
@@ -697,10 +694,8 @@ describe('surface product loop', () => {
     expect(application.store.getState().editorSession.focusedSemanticOwner?.kind).toBe(
       'occurrence',
     );
-    expect(application.store.getState().projectWorkspace.history).toBe(historyBefore);
-    expect(application.store.getState().projectWorkspace.assembly.evaluation).toBe(
-      evaluationBefore,
-    );
+    expect(currentHistory(application)).toBe(historyBefore);
+    expect(currentEvaluation(application)).toBe(evaluationBefore);
     expect(recovery.hasPendingAutosave()).toBe(false);
     expect(work.filter((event) => event.kind === 'projectEvaluation')).toEqual([]);
     expect(work.filter((event) => event.kind === 'queryBatch')).toEqual([]);

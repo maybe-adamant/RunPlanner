@@ -24,9 +24,7 @@ import {
 describe('structured workspace test expectations', () => {
   it('uses exact engine-published support to enumerate top-level and local encounter leaves', () => {
     const project = loadSurfaceNOPQProject();
-    const plan = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const plan = project.route.biomes.find((biome) => biome.biomeKey === 'N');
     if (plan?.topology === null || plan === undefined) {
       throw new Error('complete N topology is missing');
     }
@@ -84,9 +82,7 @@ describe('structured workspace test expectations', () => {
       slot: localSlot,
       generation: 'generated',
     });
-    const plan = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const plan = project.route.biomes.find((biome) => biome.biomeKey === 'N');
     if (plan?.topology === null || plan === undefined) {
       throw new Error('complete N topology is missing');
     }
@@ -150,9 +146,7 @@ describe('structured workspace test expectations', () => {
       slot: localSlot,
       generation: 'notGenerated',
     });
-    const inactivePlan = inactiveProject.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const inactivePlan = inactiveProject.route.biomes.find((biome) => biome.biomeKey === 'N');
     if (inactivePlan?.topology === null || inactivePlan === undefined) {
       throw new Error('complete inactive N topology is missing');
     }

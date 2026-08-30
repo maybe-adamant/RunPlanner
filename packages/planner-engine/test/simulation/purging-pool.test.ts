@@ -47,9 +47,9 @@ function equipped(...entries: readonly (readonly [string, EquippedTrait['rarity'
 }
 
 function underworldFRewards(project: ProjectDocument) {
-  const biome = simulateProjectAssembly(catalog, project)
-    .evaluation.routes.find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+  const biome = simulateProjectAssembly(catalog, project).evaluation.route?.biomes.find(
+    (candidate) => candidate.biomeKey === 'F',
+  );
   if (biome?.authoring !== 'complete') throw new Error('expected complete F evaluation');
   return biome.rewards;
 }
@@ -62,16 +62,10 @@ const fPostboss = createOccurrenceAddress(
 function asConfiguredTailF(project: ProjectDocument): ProjectDocument {
   return Object.freeze({
     ...project,
-    routes: Object.freeze(
-      project.routes.map((route) =>
-        route.routeKey === 'Underworld'
-          ? Object.freeze({
-              ...route,
-              biomes: Object.freeze(route.biomes.filter((biome) => biome.biomeKey === 'F')),
-            })
-          : route,
-      ),
-    ),
+    route: Object.freeze({
+      ...project.route,
+      biomes: Object.freeze(project.route.biomes.filter((biome) => biome.biomeKey === 'F')),
+    }),
   });
 }
 

@@ -49,7 +49,7 @@ describe('Nemesis random events', () => {
   );
 
   function occurrence(project: ProjectDocument) {
-    const selected = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
+    const selected = project.route?.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === goldenFOccurrenceId(5, 1),
     );
     if (selected === undefined) throw new Error('missing selected F Nemesis occurrence');
@@ -168,9 +168,7 @@ describe('Nemesis random events', () => {
           code: expect.stringMatching(/^nemesisOutcome(?:Missing|Unavailable)$/),
         }),
       );
-      const f = evaluated.routes
-        .flatMap((route) => route.biomes)
-        .find((biome) => biome.origin.biomeKey === 'F');
+      const f = evaluated.route.biomes.find((biome) => biome.origin.biomeKey === 'F');
       if (f === undefined || !('rewards' in f)) throw new Error('missing evaluated F rewards');
       expect(
         f.rewards.branches.every((branch) =>
@@ -206,9 +204,7 @@ describe('Nemesis random events', () => {
     });
     project = insertOptionalResult(project);
     const evaluation = simulateProjectAssembly(catalog, project).evaluation;
-    const biome = evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'F');
     if (biome?.authoring !== 'complete') throw new Error('Nemesis F evaluation is incomplete');
     expect(biome.rewards.runtimeOfferFallbacks).toContainEqual(
       expect.objectContaining({
@@ -279,7 +275,7 @@ describe('Nemesis random events', () => {
 
   it('retains F/G incoming draws while the selected event exposes its exact repair domain', () => {
     let project = createGoldenFGHIProject();
-    const before = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
+    const before = project.route?.biomes[0]?.topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === goldenFOccurrenceId(5, 1),
     )?.state;
     project = applyProjectCommand(project, catalog, {
@@ -306,11 +302,11 @@ describe('Nemesis random events', () => {
       phase: laterPhase,
       encounterKey: 'NemesisRandomEvent',
     });
-    const after = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
+    const after = project.route?.biomes[0]?.topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === goldenFOccurrenceId(5, 1),
     )?.state;
     expect(after).toEqual(before);
-    const selectedOccurrence = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
+    const selectedOccurrence = project.route?.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === goldenFOccurrenceId(5, 1),
     );
     if (selectedOccurrence === undefined) throw new Error('missing selected F Nemesis occurrence');
@@ -362,9 +358,7 @@ describe('Nemesis random events', () => {
     expect(assembly.evaluation.findings).toContainEqual(
       expect.objectContaining({ code: 'nemesisOutcomeMissing', origin: event }),
     );
-    const f = assembly.evaluation.routes
-      .flatMap((route) => route.biomes)
-      .find((biome) => biome.origin.biomeKey === 'F');
+    const f = assembly.evaluation.route.biomes.find((biome) => biome.origin.biomeKey === 'F');
     if (f === undefined || !('rewards' in f)) throw new Error('missing evaluated F rewards');
     const incoming = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(5, 1));
     expect(
@@ -397,9 +391,7 @@ describe('Nemesis random events', () => {
     expect(evaluation.findings).toContainEqual(
       expect.objectContaining({ code: 'nemesisOutcomeUnavailable' }),
     );
-    const f = evaluation.routes
-      .flatMap((route) => route.biomes)
-      .find((biome) => biome.origin.biomeKey === 'F');
+    const f = evaluation.route.biomes.find((biome) => biome.origin.biomeKey === 'F');
     if (f === undefined || !('rewards' in f)) throw new Error('missing evaluated F rewards');
     expect(
       f.rewards.branches.some((branch) =>
@@ -425,7 +417,7 @@ describe('Nemesis random events', () => {
       value: { kind: 'goldTrade', response: 'decline' },
       reward: { rewardType: 'MaxHealthDrop' },
     });
-    const occurrence = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
+    const occurrence = project.route?.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === goldenFOccurrenceId(5, 1),
     );
     if (occurrence === undefined) throw new Error('missing declined event occurrence');
@@ -450,9 +442,8 @@ describe('Nemesis random events', () => {
       'Passive',
     );
     let project = createGoldenFGHProject();
-    const before = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'H')
+    const before = project.route.biomes
+      .find((biome) => biome.biomeKey === 'H')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
     if (before?.state.kind !== 'fieldsCombat') throw new Error('missing H Fields occurrence');
     const retainedOptionals = before.state.optionalRewards;
@@ -472,9 +463,8 @@ describe('Nemesis random events', () => {
       value: { kind: 'freeItem' },
       reward: { rewardType: 'ArmorBoost' },
     });
-    const selected = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'H')
+    const selected = project.route.biomes
+      .find((biome) => biome.biomeKey === 'H')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
     if (selected?.state.kind !== 'fieldsCombat') throw new Error('missing selected H occurrence');
     expect(selected.state.optionalRewards).toEqual(retainedOptionals);
@@ -511,9 +501,8 @@ describe('Nemesis random events', () => {
         action: eventActionAddress,
         toIndex,
       });
-      const movedOccurrence = moved.routes
-        .find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'H')
+      const movedOccurrence = moved.route.biomes
+        .find((biome) => biome.biomeKey === 'H')
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
       expect(movedOccurrence?.roomActions.order[toIndex]).toEqual(eventReference);
     }

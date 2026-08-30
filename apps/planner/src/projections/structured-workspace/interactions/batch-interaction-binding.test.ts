@@ -27,7 +27,8 @@ describe('structured workspace interaction binding', () => {
     });
     const project = applyProjectCommand(
       createProjectDocument(catalog, {
-        configuredBiomeCounts: { Underworld: 1 },
+        routeKey: 'Underworld',
+        configuredBiomeCount: 1,
         projectId: 'structural-batch-binding',
       }),
       catalog,
@@ -60,60 +61,56 @@ describe('structured workspace interaction binding', () => {
     const movedDecisionSource = goldenFOccurrenceId(3, 1);
     const withSelectedSpine = (reverse: boolean): ProjectDocument => ({
       ...base,
-      routes: base.routes.map((route) =>
-        route.routeKey !== 'Underworld'
-          ? route
-          : {
-              ...route,
-              biomes: route.biomes.map((plan) =>
-                plan.biomeKey !== 'F' || plan.topology === null
-                  ? plan
-                  : {
-                      ...plan,
-                      topology: {
-                        ...plan.topology,
-                        decisions: (reverse
-                          ? [...plan.topology.decisions].reverse()
-                          : plan.topology.decisions
-                        ).map((decision) => {
-                          if (decision.kind !== 'exit') return decision;
-                          const normal =
-                            decision.normal.kind !== 'batch' || !reverse
-                              ? decision.normal
-                              : {
-                                  ...decision.normal,
-                                  targets: [...decision.normal.targets].reverse(),
-                                };
-                          if (
-                            decision.source.kind === 'occurrence' &&
-                            decision.source.occurrenceId === forkSource
-                          ) {
-                            return {
-                              ...decision,
-                              normal,
-                              selection: { kind: 'normal' as const, exitKey: 'exit2' },
-                            };
-                          }
-                          if (
-                            decision.source.kind === 'occurrence' &&
-                            decision.source.occurrenceId === movedDecisionSource
-                          ) {
-                            return {
-                              ...decision,
-                              normal,
-                              source: {
-                                kind: 'occurrence' as const,
-                                occurrenceId: selectedChildSource,
-                              },
-                            };
-                          }
-                          return normal === decision.normal ? decision : { ...decision, normal };
-                        }),
-                      },
-                    },
-              ),
-            },
-      ),
+      route: {
+        ...base.route,
+        biomes: base.route.biomes.map((plan) =>
+          plan.biomeKey !== 'F' || plan.topology === null
+            ? plan
+            : {
+                ...plan,
+                topology: {
+                  ...plan.topology,
+                  decisions: (reverse
+                    ? [...plan.topology.decisions].reverse()
+                    : plan.topology.decisions
+                  ).map((decision) => {
+                    if (decision.kind !== 'exit') return decision;
+                    const normal =
+                      decision.normal.kind !== 'batch' || !reverse
+                        ? decision.normal
+                        : {
+                            ...decision.normal,
+                            targets: [...decision.normal.targets].reverse(),
+                          };
+                    if (
+                      decision.source.kind === 'occurrence' &&
+                      decision.source.occurrenceId === forkSource
+                    ) {
+                      return {
+                        ...decision,
+                        normal,
+                        selection: { kind: 'normal' as const, exitKey: 'exit2' },
+                      };
+                    }
+                    if (
+                      decision.source.kind === 'occurrence' &&
+                      decision.source.occurrenceId === movedDecisionSource
+                    ) {
+                      return {
+                        ...decision,
+                        normal,
+                        source: {
+                          kind: 'occurrence' as const,
+                          occurrenceId: selectedChildSource,
+                        },
+                      };
+                    }
+                    return normal === decision.normal ? decision : { ...decision, normal };
+                  }),
+                },
+              },
+        ),
+      },
     });
     const interactionFor = (
       project: ProjectDocument,

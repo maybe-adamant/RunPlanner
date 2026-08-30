@@ -16,15 +16,13 @@ import {
 } from './f-generation-project';
 
 export function fPlan(project: ProjectDocument) {
-  const plan = project.routes
-    .find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((biome) => biome.biomeKey === 'F');
+  const plan = project.route.biomes.find((biome) => biome.biomeKey === 'F');
   if (plan === undefined) throw new Error('missing F generation plan');
   return plan;
 }
 
 export function traitContext(project: ProjectDocument) {
-  const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
+  const route = project.route;
   if (route === undefined) throw new Error('fixture has no Underworld route');
   return route.loadout;
 }

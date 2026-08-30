@@ -362,7 +362,7 @@ function completionChainForSelection(
   ) {
     return topology;
   }
-  const route = catalog.routes.values[located.routeIndex];
+  const route = catalog.routes.byKey[located.routeKey];
   if (route === undefined) failCommand(command, 'unknown route for selected biome');
   const bossRoom = requireRoom(
     catalog,

@@ -62,7 +62,8 @@ function biome(projectDocument: ProjectDocument, biomeKey: string): WorkspaceBio
 function emptyProject(routeKey: 'Surface' | 'Underworld', count: number): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: `default-inspector-empty-${routeKey}-${count}`,
-    configuredBiomeCounts: { [routeKey]: count },
+    routeKey,
+    configuredBiomeCount: count,
   });
 }
 
@@ -76,30 +77,26 @@ function withUnresolvedFSelections(
 ): ProjectDocument {
   return {
     ...projectDocument,
-    routes: projectDocument.routes.map((route) =>
-      route.routeKey !== 'Underworld'
-        ? route
-        : {
-            ...route,
-            biomes: route.biomes.map((plan) =>
-              plan.biomeKey !== 'F' || plan.topology === null
-                ? plan
-                : {
-                    ...plan,
-                    topology: {
-                      ...plan.topology,
-                      decisions: plan.topology.decisions.map((decision) =>
-                        decision.kind === 'exit' &&
-                        decision.source.kind === 'occurrence' &&
-                        sourceOccurrenceIds.includes(decision.source.occurrenceId)
-                          ? { ...decision, selection: { kind: 'unresolved' as const } }
-                          : decision,
-                      ),
-                    },
-                  },
-            ),
-          },
-    ),
+    route: {
+      ...projectDocument.route,
+      biomes: projectDocument.route.biomes.map((plan) =>
+        plan.biomeKey !== 'F' || plan.topology === null
+          ? plan
+          : {
+              ...plan,
+              topology: {
+                ...plan.topology,
+                decisions: plan.topology.decisions.map((decision) =>
+                  decision.kind === 'exit' &&
+                  decision.source.kind === 'occurrence' &&
+                  sourceOccurrenceIds.includes(decision.source.occurrenceId)
+                    ? { ...decision, selection: { kind: 'unresolved' as const } }
+                    : decision,
+                ),
+              },
+            },
+      ),
+    },
   };
 }
 

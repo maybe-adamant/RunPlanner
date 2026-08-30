@@ -32,18 +32,17 @@ export function replaceTestRoomActionOrder(
   references: readonly RoomActionReference[],
 ): ProjectDocument {
   let document = initial;
-  const occurrence = initial.routes
-    .find((route) => route.routeKey === biome.routeKey)
-    ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey)
+  const occurrence = initial.route.biomes
+    .find((candidate) => candidate.biomeKey === biome.biomeKey)
     ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
   if (occurrence === undefined) throw new Error('test room-action occurrence is missing');
   const requestedKeys = references.map(roomActionKey);
   if (new Set(requestedKeys).size !== requestedKeys.length) {
     throw new Error('test room-action order contains duplicate references');
   }
-  const topology = initial.routes
-    .find((route) => route.routeKey === biome.routeKey)
-    ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey)?.topology;
+  const topology = initial.route.biomes.find(
+    (candidate) => candidate.biomeKey === biome.biomeKey,
+  )?.topology;
   const domain = roomActionDomainForOccurrence(initial, catalog, biome, occurrenceId)?.domain;
   if (topology === null || topology === undefined || domain === undefined) {
     throw new Error('test room-action domain is missing');
@@ -90,9 +89,8 @@ export function replaceTestRoomActionOrder(
     );
   }
   const currentOccurrence = () =>
-    document.routes
-      .find((route) => route.routeKey === biome.routeKey)
-      ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey)
+    document.route.biomes
+      .find((candidate) => candidate.biomeKey === biome.biomeKey)
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
   for (const reference of references) {
     const current = currentOccurrence();
@@ -160,9 +158,8 @@ export function editTestRoomActionOrder(
   edit: (order: readonly RoomActionReference[]) => readonly RoomActionReference[],
 ): ProjectDocument {
   const biome = createBiomeAddress(owner.routeKey, owner.biomeKey);
-  const occurrence = initial.routes
-    .find((route) => route.routeKey === owner.routeKey)
-    ?.biomes.find((candidate) => candidate.biomeKey === owner.biomeKey)
+  const occurrence = initial.route.biomes
+    .find((candidate) => candidate.biomeKey === owner.biomeKey)
     ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === owner.occurrenceId);
   if (occurrence === undefined) throw new Error('test room-action occurrence is missing');
   return replaceTestRoomActionOrder(

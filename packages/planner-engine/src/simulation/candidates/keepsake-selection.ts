@@ -70,9 +70,7 @@ export function evaluateKeepsakeSelectionCandidate(
       });
     }),
   );
-  const route = _project.routes.find(
-    (candidate) => candidate.routeKey === query.selection.routeKey,
-  );
+  const route = _project.route.routeKey === query.selection.routeKey ? _project.route : undefined;
   const postbossOwner = query.selection.owner === 'routeStart' ? undefined : query.selection.owner;
   const rack =
     postbossOwner === undefined

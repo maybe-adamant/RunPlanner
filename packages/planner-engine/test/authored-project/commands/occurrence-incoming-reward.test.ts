@@ -82,9 +82,9 @@ describe('authored-project incoming reward commands', () => {
         rarificationActions: [],
       },
     });
-    const selectedSpell = project.routes[0]!.biomes.flatMap(
-      (biome) => biome.topology?.occurrences ?? [],
-    ).find((occurrence) => occurrence.occurrenceId === goldenFOccurrenceId(1, 1))?.state;
+    const selectedSpell = project
+      .route!.biomes.flatMap((biome) => biome.topology?.occurrences ?? [])
+      .find((occurrence) => occurrence.occurrenceId === goldenFOccurrenceId(1, 1))?.state;
     const authoredSpell =
       selectedSpell?.kind === 'counted'
         ? selectedSpell.reward?.traitOffersByAcquisitionRole?.self
@@ -117,9 +117,9 @@ describe('authored-project incoming reward commands', () => {
         rarificationActions: [],
       },
     });
-    const changedSpell = changed.present.routes[0]!.biomes.flatMap(
-      (biome) => biome.topology?.occurrences ?? [],
-    ).find((occurrence) => occurrence.occurrenceId === goldenFOccurrenceId(1, 1))?.state;
+    const changedSpell = changed.present
+      .route!.biomes.flatMap((biome) => biome.topology?.occurrences ?? [])
+      .find((occurrence) => occurrence.occurrenceId === goldenFOccurrenceId(1, 1))?.state;
     const changedOffer =
       changedSpell?.kind === 'counted'
         ? changedSpell.reward?.traitOffersByAcquisitionRole?.self
@@ -296,9 +296,9 @@ describe('authored-project incoming reward commands', () => {
         },
       },
     );
-    const occurrence = project.routes[0]!.biomes.flatMap(
-      (biome) => biome.topology?.occurrences ?? [],
-    ).find((candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1));
+    const occurrence = project
+      .route!.biomes.flatMap((biome) => biome.topology?.occurrences ?? [])
+      .find((candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1));
     const offer = occurrence?.state.kind === 'counted' ? occurrence.state.reward : undefined;
     expect(offer?.traitOffersByAcquisitionRole.self).toMatchObject({
       hexTree: {
@@ -331,7 +331,7 @@ describe('authored-project incoming reward commands', () => {
       acquisition: createAcquisitionRoleAddress(reward, 'source'),
       value: { kind: 'timePiece' },
     });
-    const state = project.routes[0]!.biomes[0]!.topology!.occurrences.find(
+    const state = project.route!.biomes[0]!.topology!.occurrences.find(
       (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
     )?.state;
     if (state?.kind !== 'counted' || state.reward === null)
@@ -357,7 +357,7 @@ describe('authored-project incoming reward commands', () => {
       acquisition,
       procced: true,
     });
-    const occurrence = procced.present.routes[0]!.biomes[0]!.topology!.occurrences.find(
+    const occurrence = procced.present.route!.biomes[0]!.topology!.occurrences.find(
       (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
     );
     const siteKey = seaStarDuplicateSiteKey(acquisition);
@@ -403,7 +403,7 @@ describe('authored-project incoming reward commands', () => {
       procced: false,
     });
     expect(
-      cleared.present.routes[0]!.biomes[0]!.topology!.occurrences.find(
+      cleared.present.route!.biomes[0]!.topology!.occurrences.find(
         (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
       )?.acquisitionSites?.[siteKey],
     ).toBeUndefined();
@@ -424,7 +424,7 @@ describe('authored-project incoming reward commands', () => {
       procced: true,
     });
     const occurrence = () =>
-      project.routes[0]!.biomes[0]!.topology!.occurrences.find(
+      project.route!.biomes[0]!.topology!.occurrences.find(
         (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
       )!;
     const siteKey = seaStarDuplicateSiteKey(acquisition);
@@ -442,8 +442,7 @@ describe('authored-project incoming reward commands', () => {
 
   it('keeps a free generated pickup inside a Shop eligible for its own Sea Star child', () => {
     const shop = loadSurfaceNOPQProject()
-      .routes.find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'P')
+      .route?.biomes.find((biome) => biome.biomeKey === 'P')
       ?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === pOccurrenceIds.prebossShop,
       );
@@ -505,7 +504,7 @@ describe('authored-project incoming reward commands', () => {
       reward,
       value: { rewardType: 'StackUpgrade' },
     });
-    const source = project.routes[0]!.biomes[0]!.topology!.occurrences.find(
+    const source = project.route!.biomes[0]!.topology!.occurrences.find(
       (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
     )?.state;
     if (source?.kind !== 'counted' || source.reward === null)
@@ -518,7 +517,7 @@ describe('authored-project incoming reward commands', () => {
       procced: true,
     });
     const siteKey = seaStarDuplicateSiteKey(acquisition);
-    const occurrence = procced.present.routes[0]!.biomes[0]!.topology!.occurrences.find(
+    const occurrence = procced.present.route!.biomes[0]!.topology!.occurrences.find(
       (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
     );
     if (occurrence === undefined) throw new Error('full Pom source occurrence is missing');
@@ -578,7 +577,7 @@ describe('authored-project incoming reward commands', () => {
       value: { kind: 'timePiece' },
     });
     expect(
-      timePieced.routes[0]!.biomes[0]!.topology!.occurrences.find(
+      timePieced.route!.biomes[0]!.topology!.occurrences.find(
         (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
       )?.acquisitionSites?.[siteKey]?.pickupEntries?.[SEA_STAR_DUPLICATE_ENTRY_KEY]
         ?.dispositionByAcquisitionRole.self,
@@ -614,7 +613,7 @@ describe('authored-project incoming reward commands', () => {
         rarificationActions: ['option2', 'option1', 'option2'],
       },
     });
-    const saved = next.routes[0]!.biomes[0]!.topology!.occurrences.find(
+    const saved = next.route!.biomes[0]!.topology!.occurrences.find(
       (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
     )?.state;
     const offer =
@@ -647,8 +646,7 @@ describe('authored-project incoming reward commands', () => {
       selectedOptionKey: 'option2',
     });
 
-    const occurrence = project.routes
-      .flatMap((route) => route.biomes)
+    const occurrence = project.route.biomes
       .flatMap((biome) => biome.topology?.occurrences ?? [])
       .find((candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1));
     const existing =
@@ -683,8 +681,7 @@ describe('authored-project incoming reward commands', () => {
       trait,
       value: apolloOffer,
     });
-    const occurrence = project.routes
-      .flatMap((route) => route.biomes)
+    const occurrence = project.route.biomes
       .flatMap((biome) => biome.topology?.occurrences ?? [])
       .find((candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1));
     const existing =
@@ -738,12 +735,9 @@ describe('authored-project incoming reward commands', () => {
       value: apolloOffer,
     });
     const document = JSON.parse(encodeProjectDocument(project)) as {
-      routes: Array<{
-        biomes: Array<{ topology?: { occurrences: Array<Record<string, unknown>> } }>;
-      }>;
+      route: { biomes: Array<{ topology?: { occurrences: Array<Record<string, unknown>> } }> };
     };
-    const occurrence = document.routes
-      .flatMap((route) => route.biomes)
+    const occurrence = document.route.biomes
       .flatMap((biome) => biome.topology?.occurrences ?? [])
       .find((candidate) => candidate.occurrenceId === goldenFOccurrenceId(6, 2));
     if (occurrence === undefined) throw new Error('missing encoded trait owner');
@@ -785,8 +779,7 @@ describe('authored-project incoming reward commands', () => {
         selectedOptionKey: 'option1',
       },
     });
-    const occurrence = project.routes
-      .flatMap((route) => route.biomes)
+    const occurrence = project.route.biomes
       .flatMap((biome) => biome.topology?.occurrences ?? [])
       .find((candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1));
     expect(occurrence?.state).toMatchObject({
@@ -839,9 +832,8 @@ describe('authored-project incoming reward commands', () => {
     });
 
     expect(
-      changed.routes
-        .find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N')
+      changed.route.biomes
+        .find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === ephyraId)?.state,
     ).toMatchObject({ kind: 'ephyraCombat', reward: { offer: { rewardType: 'MaxManaDropBig' } } });
     expect(
@@ -859,7 +851,7 @@ describe('authored-project incoming reward commands', () => {
       value: { rewardType: 'MetaCurrencyDrop' },
     });
     expect(
-      counted.routes[0]?.biomes[0]?.topology?.occurrences.find(
+      counted.route?.biomes[0]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === countedId,
       )?.state,
     ).toMatchObject({ kind: 'counted', reward: { offer: { rewardType: 'MetaCurrencyDrop' } } });
@@ -871,7 +863,7 @@ describe('authored-project incoming reward commands', () => {
       value: { rewardType: 'MaxHealthDrop' },
     });
     expect(
-      free.routes[0]?.biomes[2]?.topology?.occurrences.find(
+      free.route?.biomes[2]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === freeId,
       )?.state,
     ).toMatchObject({ kind: 'freeReward', reward: { offer: { rewardType: 'MaxHealthDrop' } } });
@@ -894,9 +886,8 @@ describe('authored-project incoming reward commands', () => {
     });
 
     expect(
-      changed.routes
-        .find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'O')
+      changed.route.biomes
+        .find((biome) => biome.biomeKey === 'O')
         ?.topology?.occurrences.find(
           (occurrence) => occurrence.occurrenceId === oOccurrenceIds.devotion,
         )?.state,

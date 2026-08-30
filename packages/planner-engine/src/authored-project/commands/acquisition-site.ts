@@ -38,9 +38,8 @@ function shrineDeliverySource(
 ): import('../model').HermesShrineInventoryOffer | undefined {
   const parsed = parseHermesShrineDeliveryEntryKey(entryKey);
   if (parsed === undefined) return undefined;
-  const source = document.routes
-    .find((route) => route.routeKey === parsed.routeKey)
-    ?.biomes.find((biome) => biome.biomeKey === parsed.biomeKey)
+  const source = (document.route.routeKey === parsed.routeKey ? document.route : undefined)?.biomes
+    .find((biome) => biome.biomeKey === parsed.biomeKey)
     ?.topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === parsed.sourceOccurrenceId,
     );
@@ -96,9 +95,10 @@ export function applyAcquisitionSiteCommand(
     const host = requireOccurrence(located.plan, site.owner.occurrenceId, command);
     const parsed = parseHermesShrineDeliveryEntryKey(command.entry.entryKey);
     if (parsed === undefined) failCommand(command, 'does not name an exact Shrine delivery');
-    const source = document.routes
-      .find((route) => route.routeKey === parsed.routeKey)
-      ?.biomes.find((biome) => biome.biomeKey === parsed.biomeKey)
+    const source = (
+      document.route.routeKey === parsed.routeKey ? document.route : undefined
+    )?.biomes
+      .find((biome) => biome.biomeKey === parsed.biomeKey)
       ?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === parsed.sourceOccurrenceId,
       );
@@ -412,7 +412,7 @@ export function applyAcquisitionSiteCommand(
       failCommand(command, `must retain declared reward type ${pickup.rewardType}`);
     if (entry !== undefined && entry !== null && sameOccurrenceValue(entry.offer, command.value))
       return document;
-    const route = document.routes.find((candidate) => candidate.routeKey === site.routeKey);
+    const route = document.route.routeKey === site.routeKey ? document.route : undefined;
     if (route === undefined) failCommand(command, `unknown route ${site.routeKey}`);
     if (supplementalEntry) {
       if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined)

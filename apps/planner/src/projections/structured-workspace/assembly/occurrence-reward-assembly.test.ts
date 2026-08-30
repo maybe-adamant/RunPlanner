@@ -76,7 +76,7 @@ describe('structured workspace reward assembly', () => {
     // fixture at the strict document boundary so the projection is tested against the
     // persisted recovery state rather than a fabricated command.
     const raw = JSON.parse(encodeProjectDocument(selected)) as {
-      routes: Array<{
+      route: {
         routeKey: string;
         biomes: Array<{
           biomeKey: string;
@@ -87,11 +87,10 @@ describe('structured workspace reward assembly', () => {
             }>;
           } | null;
         }>;
-      }>;
+      };
     };
-    const rawOccurrence = raw.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F')
+    const rawOccurrence = raw.route.biomes
+      .find((biome) => biome.biomeKey === 'F')
       ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId);
     if (rawOccurrence?.state.reward?.traitOffersByAcquisitionRole === undefined) {
       throw new Error('SpellDrop fixture has no self child to unset');
@@ -418,8 +417,7 @@ describe('structured workspace reward assembly', () => {
 
   it('projects the active Narcissus reward editor before its independent pickup choice', () => {
     const project = createGoldenFGHIProject();
-    const occurrence = project.routes
-      .flatMap((route) => route.biomes)
+    const occurrence = project.route.biomes
       .find((biome) => biome.biomeKey === 'G')
       ?.topology?.occurrences.find((candidate) => candidate.gameName === 'G_Story01');
     if (occurrence === undefined) throw new Error('Golden G has no Narcissus story');
@@ -437,8 +435,7 @@ describe('structured workspace reward assembly', () => {
 
   it('projects Psyche and Max Magick as distinct Narcissus action payloads', () => {
     let project = createCompleteFGProject();
-    const occurrence = project.routes
-      .flatMap((route) => route.biomes)
+    const occurrence = project.route.biomes
       .find((biome) => biome.biomeKey === 'G')
       ?.topology?.occurrences.find((candidate) => candidate.gameName === 'G_Story01');
     if (occurrence === undefined) throw new Error('Golden G has no Narcissus story');
@@ -491,8 +488,7 @@ describe('structured workspace reward assembly', () => {
 
   it('projects one picked Narcissus pickup with its fixed type and unresolved payload', () => {
     let project = createCompleteFGProject();
-    const occurrence = project.routes
-      .flatMap((route) => route.biomes)
+    const occurrence = project.route.biomes
       .find((biome) => biome.biomeKey === 'G')
       ?.topology?.occurrences.find((candidate) => candidate.gameName === 'G_Story01');
     if (occurrence === undefined) throw new Error('Golden G has no Narcissus story');
@@ -517,8 +513,7 @@ describe('structured workspace reward assembly', () => {
         selectedOptionKey: 'option1',
       },
     });
-    const current = project.routes
-      .flatMap((route) => route.biomes)
+    const current = project.route.biomes
       .find((biome) => biome.biomeKey === 'G')
       ?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
@@ -611,8 +606,7 @@ describe('structured workspace reward assembly', () => {
 
   it('does not project the retired Shop Death Defiance condition capability', () => {
     const project = createGoldenFGHIProject();
-    const shopOccurrence = project.routes
-      .flatMap((route) => route.biomes)
+    const shopOccurrence = project.route.biomes
       .flatMap((biome) => biome.topology?.occurrences ?? [])
       .find((candidate) => candidate.gameName === 'I_PreBoss02');
     if (shopOccurrence === undefined) throw new Error('missing I shop fixture');

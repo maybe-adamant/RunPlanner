@@ -334,41 +334,39 @@ function assertRenderedNodeControls(
 /** Close rendered structural affordances over their bound interactions. */
 export function assertRenderedWorkspaceStructuralControlClosure(input: {
   readonly interactions: StructuredWorkspaceProjection['interactions'];
-  readonly routes: StructuredWorkspaceProjection['routes'];
+  readonly route: StructuredWorkspaceProjection['route'];
 }): void {
-  for (const route of input.routes) {
-    for (const biome of route.biomes) {
-      for (const node of biome.nodes) assertRenderedNodeControls(node, input.interactions);
-      if (biome.entry !== undefined) {
+  for (const biome of input.route.biomes) {
+    for (const node of biome.nodes) assertRenderedNodeControls(node, input.interactions);
+    if (biome.entry !== undefined) {
+      assertExactObservedInteraction(
+        input.interactions.topologyRemovals.get(biome.marker.focusKey),
+        biome.marker.focusKey,
+        biome.marker.address,
+        `biome topology removal ${biome.marker.focusKey}`,
+      );
+    }
+    const frontier = biome.frontier;
+    if (frontier === null) continue;
+    switch (frontier.kind) {
+      case 'start':
         assertExactObservedInteraction(
-          input.interactions.topologyRemovals.get(biome.marker.focusKey),
-          biome.marker.focusKey,
-          biome.marker.address,
-          `biome topology removal ${biome.marker.focusKey}`,
+          input.interactions.starts.get(frontier.interactionKey),
+          frontier.interactionKey,
+          frontier.owner,
+          `start frontier ${frontier.interactionKey}`,
         );
-      }
-      const frontier = biome.frontier;
-      if (frontier === null) continue;
-      switch (frontier.kind) {
-        case 'start':
-          assertExactObservedInteraction(
-            input.interactions.starts.get(frontier.interactionKey),
-            frontier.interactionKey,
-            frontier.owner,
-            `start frontier ${frontier.interactionKey}`,
-          );
-          break;
-        case 'exitDecision':
-          if (frontier.provisionalBatch !== undefined) {
-            assertRenderedNodeControls(frontier.provisionalBatch, input.interactions);
-          }
-          break;
-        case 'hubOpenSet':
-        case 'hubVisit':
-          break;
-        default:
-          unreachable(frontier);
-      }
+        break;
+      case 'exitDecision':
+        if (frontier.provisionalBatch !== undefined) {
+          assertRenderedNodeControls(frontier.provisionalBatch, input.interactions);
+        }
+        break;
+      case 'hubOpenSet':
+      case 'hubVisit':
+        break;
+      default:
+        unreachable(frontier);
     }
   }
 }

@@ -44,66 +44,62 @@ function reconcileGeneratedPickupProducerState(
   document: ProjectDocument,
   catalog: Catalog,
 ): ProjectDocument {
-  let changed = false;
-  const routes = document.routes.map((route) => {
-    const previousRoute = previous.routes.find(
-      (candidate) => candidate.routeKey === route.routeKey,
+  const route = document.route;
+  const previousRoute = previous.route.routeKey === route.routeKey ? previous.route : undefined;
+  const biomes = route.biomes.map((plan) => {
+    if (plan.topology === null) return plan;
+    const previousPlan = previousRoute?.biomes.find(
+      (candidate) => candidate.biomeKey === plan.biomeKey,
     );
-    const biomes = route.biomes.map((plan) => {
-      if (plan.topology === null) return plan;
-      const previousPlan = previousRoute?.biomes.find(
-        (candidate) => candidate.biomeKey === plan.biomeKey,
+    const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
+    let occurrencesChanged = false;
+    const occurrences = plan.topology.occurrences.map((occurrence) => {
+      const previousOccurrence = previousPlan?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
       );
-      const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
-      let occurrencesChanged = false;
-      const occurrences = plan.topology.occurrences.map((occurrence) => {
-        const previousOccurrence = previousPlan?.topology?.occurrences.find(
-          (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
-        );
-        if (previousOccurrence === occurrence) return occurrence;
-        const reconciled = reconcileSelectedPickupProducerState(catalog, biome, occurrence);
-        if (reconciled !== occurrence) occurrencesChanged = true;
-        return reconciled;
-      });
-      if (!occurrencesChanged) return plan;
-      changed = true;
-      return Object.freeze({
-        ...plan,
-        topology: Object.freeze({ ...plan.topology, occurrences: Object.freeze(occurrences) }),
-      });
+      if (previousOccurrence === occurrence) return occurrence;
+      const reconciled = reconcileSelectedPickupProducerState(catalog, biome, occurrence);
+      if (reconciled !== occurrence) occurrencesChanged = true;
+      return reconciled;
     });
-    if (!biomes.some((biome, index) => biome !== route.biomes[index])) return route;
-    return Object.freeze({ ...route, biomes: Object.freeze(biomes) });
+    if (!occurrencesChanged) return plan;
+    return Object.freeze({
+      ...plan,
+      topology: Object.freeze({ ...plan.topology, occurrences: Object.freeze(occurrences) }),
+    });
   });
-  return changed ? Object.freeze({ ...document, routes: Object.freeze(routes) }) : document;
+  if (!biomes.some((biome, index) => biome !== route.biomes[index])) return document;
+  return Object.freeze({
+    ...document,
+    route: Object.freeze({ ...route, biomes: Object.freeze(biomes) }),
+  });
 }
 
 /** Topology owns occurrence lifetime. A route-owned resource singleton retains
  * through room replacement, but is removed atomically when its exact target is
  * structurally deleted. */
 function reconcileResourcePlacementTopology(document: ProjectDocument): ProjectDocument {
-  let changed = false;
-  const routes = document.routes.map((route) => {
-    const existing = new Set(
-      route.biomes.flatMap((biome) =>
-        (biome.topology?.occurrences ?? []).map(
-          (occurrence) => `${biome.biomeKey}:${occurrence.occurrenceId}`,
-        ),
+  const route = document.route;
+  const existing = new Set(
+    route.biomes.flatMap((biome) =>
+      (biome.topology?.occurrences ?? []).map(
+        (occurrence) => `${biome.biomeKey}:${occurrence.occurrenceId}`,
       ),
-    );
-    const next = { ...route.resourcePlacements };
-    let routeChanged = false;
-    for (const [family, placement] of Object.entries(route.resourcePlacements)) {
-      if (placement !== null && !existing.has(`${placement.biomeKey}:${placement.occurrenceId}`)) {
-        next[family as keyof typeof next] = null;
-        routeChanged = true;
-      }
+    ),
+  );
+  const next = { ...route.resourcePlacements };
+  let routeChanged = false;
+  for (const [family, placement] of Object.entries(route.resourcePlacements)) {
+    if (placement !== null && !existing.has(`${placement.biomeKey}:${placement.occurrenceId}`)) {
+      next[family as keyof typeof next] = null;
+      routeChanged = true;
     }
-    if (!routeChanged) return route;
-    changed = true;
-    return Object.freeze({ ...route, resourcePlacements: Object.freeze(next) });
+  }
+  if (!routeChanged) return document;
+  return Object.freeze({
+    ...document,
+    route: Object.freeze({ ...route, resourcePlacements: Object.freeze(next) }),
   });
-  return changed ? Object.freeze({ ...document, routes: Object.freeze(routes) }) : document;
 }
 
 function derivedPayloadEntryAddress(

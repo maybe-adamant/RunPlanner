@@ -105,8 +105,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(
       view.application.store
         .getState()
-        .projectWorkspace.history.present.routes.flatMap((route) => route.biomes)
-        .find((biome) => biome.biomeKey === 'P')
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'P')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
         ?.encounters.gorgonResultByPhase?.Combat?.athenaTriggerConditionMet,
     ).toBe(true);
@@ -178,8 +177,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     await waitFor(() => {
       const occurrence = view.application.store
         .getState()
-        .projectWorkspace.history.present.routes.flatMap((route) => route.biomes)
-        .find((biome) => biome.biomeKey === 'N')
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.find(
           (candidate) => candidate.occurrenceId === nOccurrenceIds.preHub,
         );
@@ -189,13 +187,11 @@ describe('OccurrenceEncounterWorkbench', () => {
 
   it('authors a Narcissus Blind Box before pickup and acquires it only through undoable order', async () => {
     let project = createCompleteFGProject();
-    const occurrence = project.routes
-      .flatMap((route) => route.biomes)
+    const occurrence = project.route.biomes
       .find((biome) => biome.biomeKey === 'G')
       ?.topology?.occurrences.find((candidate) => candidate.gameName === 'G_Story01');
     if (occurrence === undefined) throw new Error('Golden G has no Narcissus story');
-    const decision = project.routes
-      .flatMap((route) => route.biomes)
+    const decision = project.route.biomes
       .find((biome) => biome.biomeKey === 'G')
       ?.topology?.decisions.find(
         (candidate) =>
@@ -268,8 +264,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     const authoredOccurrence = () =>
       view.application.store
         .getState()
-        .projectWorkspace.history.present.routes.flatMap((route) => route.biomes)
-        .find((biome) => biome.biomeKey === 'G')
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'G')
         ?.topology?.occurrences.find(
           (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
         );
@@ -301,10 +296,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     const hasAcquiredMysteryBoon = () => {
       const evaluated = simulateProject(
         catalog,
-        view.application.store.getState().projectWorkspace.history.present,
-      )
-        .routes.find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'G');
+        view.application.store.getState().projectWorkspace.history!.present,
+      ).route?.biomes.find((biome) => biome.biomeKey === 'G');
       return (
         evaluated !== undefined &&
         'rewards' in evaluated &&
@@ -350,8 +343,7 @@ describe('OccurrenceEncounterWorkbench', () => {
 
   it('picks up and Time Piece-converts Psyche as one undoable Narcissus row edit', async () => {
     let project = createGoldenFGHIProject();
-    const occurrence = project.routes
-      .flatMap((route) => route.biomes)
+    const occurrence = project.route.biomes
       .find((biome) => biome.biomeKey === 'G')
       ?.topology?.occurrences.find((candidate) => candidate.gameName === 'G_Story01');
     if (occurrence === undefined) throw new Error('Golden G has no Narcissus story');
@@ -399,8 +391,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     const authoredOccurrence = () =>
       view.application.store
         .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'G')
+        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'G')
         ?.topology?.occurrences.find(
           (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
         );
@@ -450,8 +441,7 @@ describe('OccurrenceEncounterWorkbench', () => {
 
   it('adds a later Narcissus pickup while an earlier participant is context-invalid', async () => {
     let project = createGoldenFGHIProject();
-    const occurrence = project.routes
-      .flatMap((route) => route.biomes)
+    const occurrence = project.route.biomes
       .find((biome) => biome.biomeKey === 'G')
       ?.topology?.occurrences.find((candidate) => candidate.gameName === 'G_Story01');
     if (occurrence === undefined) throw new Error('Golden G has no Narcissus story');
@@ -524,8 +514,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(
       view.application.store
         .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'G')
+        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'G')
         ?.topology?.occurrences.find(
           (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
         )
@@ -544,14 +533,14 @@ describe('OccurrenceEncounterWorkbench', () => {
       'N',
       occurrenceById(nOccurrenceId('combat02')),
     );
-    const historyLength = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyLength = view.application.store.getState().projectWorkspace.history!.past.length;
     expect(screen.getByRole('heading', { level: 3, name: 'Entering Combat 02' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Incoming reward' }).textContent).toContain(
       'Big Max Magick',
     );
     expect(screen.queryByLabelText('Hub reward')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Edit Hub reward' })).toBeNull();
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyLength,
     );
   });
@@ -677,7 +666,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     openRoomTab('Room Timeline');
     const retainedCombat = occurrenceEncounterSelections(
-      view.application.store.getState().projectWorkspace.history.present,
+      view.application.store.getState().projectWorkspace.history!.present,
       'Surface',
       'P',
       occurrenceId,
@@ -686,7 +675,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     if (retainedCombat === undefined)
       throw new Error('P Combat 02 has no retained Combat selection');
 
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     const introControl = screen.getByLabelText('Opening encounter phase');
     expect(screen.getByLabelText('Follow-up encounter phase')).toBeTruthy();
     expect(
@@ -699,12 +688,12 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.click(screen.getByRole('option', { name: /Heracles combat/ }));
 
     await waitFor(() => expect(screen.queryByLabelText('Follow-up encounter phase')).toBeNull());
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
     expect(
       occurrenceEncounterSelections(
-        view.application.store.getState().projectWorkspace.history.present,
+        view.application.store.getState().projectWorkspace.history!.present,
         'Surface',
         'P',
         occurrenceId,
@@ -723,12 +712,12 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.click(screen.getByRole('option', { name: /Pre-combat/ }));
 
     await waitFor(() => expect(screen.getByLabelText('Follow-up encounter phase')).toBeTruthy());
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 2,
     );
     expect(
       occurrenceEncounterSelections(
-        view.application.store.getState().projectWorkspace.history.present,
+        view.application.store.getState().projectWorkspace.history!.present,
         'Surface',
         'P',
         occurrenceId,
@@ -821,7 +810,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(phaseAddress),
     );
     if (finding === undefined) throw new Error('invalid Ship Combat2 finding is missing');
-    const historyLength = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyLength = view.application.store.getState().projectWorkspace.history!.past.length;
 
     act(() =>
       view.application.store.dispatch(
@@ -829,7 +818,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       ),
     );
     await waitFor(() => expect(phase.contains(document.activeElement)).toBe(true));
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyLength,
     );
     expect(phase.dataset.readOnly).toBeUndefined();
@@ -873,8 +862,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(
       view.application.store
         .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'I')
+        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'I')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
         ?.encounters.encounterKeyByPhase,
     ).toEqual({ Encounter: 'GeneratedI' });
@@ -1104,7 +1092,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Combat 2 Timeline');
     expect(screen.getByLabelText('Combat 2 ship phase')).toBeTruthy();
     expect(screen.queryByLabelText('Ship action repairs')).toBeNull();
-    expect(shipWheel2(view.application.store.getState().projectWorkspace.history.present)).toEqual(
+    expect(shipWheel2(view.application.store.getState().projectWorkspace.history!.present)).toEqual(
       shipWheel2(project),
     );
   });
@@ -1151,7 +1139,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     await waitFor(() => expect(screen.queryByText('Interact with Combat2 encounter')).toBeNull());
     expect(
       occurrenceRoomActionOrder(
-        view.application.store.getState().projectWorkspace.history.present,
+        view.application.store.getState().projectWorkspace.history!.present,
         'Surface',
         'O',
         occurrenceId,
@@ -1229,7 +1217,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     await waitFor(() => expect(screen.getByLabelText('Combat 2 ship phase')).toBeTruthy());
     expect(
       occurrenceState(
-        view.application.store.getState().projectWorkspace.history.present,
+        view.application.store.getState().projectWorkspace.history!.present,
         'Surface',
         'O',
         occurrence.occurrenceId,
@@ -1316,7 +1304,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       }),
     );
     expect(
-      shipWheel(view.application.store.getState().projectWorkspace.history.present, 'wheel1')
+      shipWheel(view.application.store.getState().projectWorkspace.history!.present, 'wheel1')
         .pickedOfferIndex,
     ).toBe(2);
 
@@ -1341,8 +1329,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     await waitFor(() => expect(within(rewardWheel).queryByLabelText('Offer 2')).toBeNull());
     expect(screen.getByRole('region', { name: 'Room Timeline' })).toBeTruthy();
     expect(
-      shipWheel(view.application.store.getState().projectWorkspace.history.present, 'wheel1').offers
-        .offer2,
+      shipWheel(view.application.store.getState().projectWorkspace.history!.present, 'wheel1')
+        .offers.offer2,
     ).toEqual({
       offer: { rewardType: 'HermesUpgrade' },
       dispositionByAcquisitionRole: { self: { kind: 'normal' } },
@@ -1387,7 +1375,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.selectOptions(pool, 'MetaProgress');
     await waitFor(() => expect(pool.value).toBe('MetaProgress'));
     expect(
-      shipWheel(view.application.store.getState().projectWorkspace.history.present, 'wheel1')
+      shipWheel(view.application.store.getState().projectWorkspace.history!.present, 'wheel1')
         .storeKey,
     ).toBe('MetaProgress');
 
@@ -1397,7 +1385,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.selectOptions(count, '2');
     await waitFor(() => expect(count.value).toBe('2'));
     expect(
-      shipWheel(view.application.store.getState().projectWorkspace.history.present, 'wheel1')
+      shipWheel(view.application.store.getState().projectWorkspace.history!.present, 'wheel1')
         .offerCount,
     ).toBe(2);
 
@@ -1419,13 +1407,13 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     await waitFor(() =>
       expect(
-        shipWheel(view.application.store.getState().projectWorkspace.history.present, 'wheel1')
+        shipWheel(view.application.store.getState().projectWorkspace.history!.present, 'wheel1')
           .pickedOfferIndex,
       ).toBe(2),
     );
 
     expect(
-      shipWheel(view.application.store.getState().projectWorkspace.history.present, 'wheel1'),
+      shipWheel(view.application.store.getState().projectWorkspace.history!.present, 'wheel1'),
     ).toMatchObject({
       storeKey: 'MetaProgress',
       offerCount: 2,
@@ -1473,8 +1461,7 @@ describe('OccurrenceEncounterWorkbench', () => {
 
   it('removes the Shop Death Defiance repair control while retaining purchase authoring', async () => {
     const project = createGoldenFGHIProject();
-    const shop = project.routes
-      .flatMap((route) => route.biomes)
+    const shop = project.route.biomes
       .flatMap((biome) => biome.topology?.occurrences ?? [])
       .find((candidate) => candidate.gameName === 'I_PreBoss02');
     if (shop === undefined) throw new Error('missing I Shop fixture');
@@ -1487,10 +1474,10 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(screen.queryByLabelText('Death Defiance condition met')).toBeNull();
     const control = screen.getByRole('checkbox', { name: 'Purchased Offer 3' }) as HTMLInputElement;
     expect(control.checked).toBe(false);
-    const before = view.application.store.getState().projectWorkspace.history.past.length;
+    const before = view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.click(control);
     expect(control.checked).toBe(true);
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       before + 1,
     );
   });

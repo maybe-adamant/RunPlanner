@@ -43,7 +43,7 @@ describe('resolution outcomes', () => {
   it('renders the bound greatest-level Echo Pom domain and saves its exact target', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const base = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind !== 'hammer',
     );
@@ -144,7 +144,7 @@ describe('resolution outcomes', () => {
   it('renders the source-resolved Echo Boon domain and saves its selected nested outcome', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const base = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind !== 'hammer',
     );
@@ -455,7 +455,7 @@ describe('resolution outcomes', () => {
   it('shows the Echo generated-pickup summary without nesting payload in the trait', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const base = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind !== 'hammer',
     );

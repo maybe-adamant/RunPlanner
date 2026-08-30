@@ -30,10 +30,8 @@ import {
 import { nBiome, nProject } from '../support/configured-projects';
 
 function topologyFor(project: ProjectDocument, biomeKey: string): BiomeTopology {
-  for (const route of project.routes) {
-    const topology = route.biomes.find((biome) => biome.biomeKey === biomeKey)?.topology;
-    if (topology !== null && topology !== undefined) return topology;
-  }
+  const topology = project.route.biomes.find((biome) => biome.biomeKey === biomeKey)?.topology;
+  if (topology !== null && topology !== undefined) return topology;
   throw new Error(`${biomeKey} topology is required`);
 }
 

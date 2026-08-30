@@ -26,7 +26,7 @@ import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
 
 describe('topology leaf codecs', () => {
   it('keeps optional Well absence and rejects non-host, unknown-item, and missing forced Well shapes', () => {
-    let document = applyProjectCommand(project('codec-stygian-well', { Underworld: 1 }), catalog, {
+    let document = applyProjectCommand(project('codec-stygian-well', 'Underworld', 1), catalog, {
       kind: 'CreateStart',
       biome: fBiome,
       occurrenceId: createOccurrenceId('well-codec-opening'),
@@ -44,7 +44,7 @@ describe('topology leaf codecs', () => {
       occurrence: createOccurrenceAddress(fBiome, createOccurrenceId('well-codec-host')),
     });
     const encoded = encodedProject(document);
-    const fPlan = encoded.routes[0]!.biomes[0]! as unknown as { topology: EncodedTopology };
+    const fPlan = encoded.route!.biomes[0]! as unknown as { topology: EncodedTopology };
     const hostIndex = fPlan.topology.occurrences.findIndex(
       (room) => room.occurrenceId === 'well-codec-host',
     );
@@ -55,12 +55,12 @@ describe('topology leaf codecs', () => {
     fPlan.topology.occurrences[openingIndex]!.stygianWell =
       fPlan.topology.occurrences[hostIndex]!.stygianWell;
     expectDocumentError(encoded, {
-      path: `$.routes[0].biomes[0].topology.occurrences[${openingIndex}].stygianWell`,
+      path: `$.route.biomes[0].topology.occurrences[${openingIndex}].stygianWell`,
       detail: 'requires an eligible ordinary RoomShop Well host',
     });
 
     const unknown = encodedProject(document);
-    const unknownF = unknown.routes[0]!.biomes[0]! as unknown as { topology: EncodedTopology };
+    const unknownF = unknown.route!.biomes[0]! as unknown as { topology: EncodedTopology };
     const unknownHost = unknownF.topology.occurrences.find(
       (room) => room.occurrenceId === 'well-codec-host',
     )!;
@@ -68,12 +68,12 @@ describe('topology leaf codecs', () => {
       unknownHost.stygianWell as { offerKeyBySlot: { healing: string | null } }
     ).offerKeyBySlot.healing = 'UnknownWellItem';
     expectDocumentError(unknown, {
-      path: `$.routes[0].biomes[0].topology.occurrences[${hostIndex}].stygianWell.offerKeyBySlot.healing`,
+      path: `$.route.biomes[0].topology.occurrences[${hostIndex}].stygianWell.offerKeyBySlot.healing`,
       detail: 'unknown RoomShop item UnknownWellItem',
     });
 
     const uninteractedPurchase = encodedProject(document);
-    const uninteractedF = uninteractedPurchase.routes[0]!.biomes[0]! as unknown as {
+    const uninteractedF = uninteractedPurchase.route!.biomes[0]! as unknown as {
       topology: EncodedTopology;
     };
     const uninteractedHost = uninteractedF.topology.occurrences.find(
@@ -90,12 +90,12 @@ describe('topology leaf codecs', () => {
       generationKey: 'initial:healing',
     });
     expectDocumentError(uninteractedPurchase, {
-      path: `$.routes[0].biomes[0].topology.occurrences[${hostIndex}].roomActions.order`,
+      path: `$.route.biomes[0].topology.occurrences[${hostIndex}].roomActions.order`,
       detail: 'an uninteracted Well must not retain purchase intent or purchase actions',
     });
 
     const missingForced = encodedProject(createCompleteFGProject());
-    const missingF = missingForced.routes[0]!.biomes[0]! as unknown as {
+    const missingF = missingForced.route!.biomes[0]! as unknown as {
       topology: EncodedTopology;
     };
     const postbossIndex = missingF.topology.occurrences.findIndex(
@@ -103,14 +103,14 @@ describe('topology leaf codecs', () => {
     );
     delete missingF.topology.occurrences[postbossIndex]!.stygianWell;
     expectDocumentError(missingForced, {
-      path: `$.routes[0].biomes[0].topology.occurrences[${postbossIndex}].stygianWell`,
+      path: `$.route.biomes[0].topology.occurrences[${postbossIndex}].stygianWell`,
       detail: 'must be an object',
     });
   });
 
   it('round-trips retained purchased Well generations after their initial or refill source is cleared', () => {
     let document = applyProjectCommand(
-      project('codec-retained-well-purchase', { Underworld: 1 }),
+      project('codec-retained-well-purchase', 'Underworld', 1),
       catalog,
       {
         kind: 'CreateStart',

@@ -33,7 +33,7 @@ describe('HubCompletionHandoff', () => {
     selectHubTab('Hub Exit');
     const handoff = document.querySelector<HTMLElement>('[data-hub-exit-door="true"]');
     if (handoff === null) throw new Error('completed Hub handoff control is missing');
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.click(within(handoff).getByRole('button'));
     const owner = createExitDecisionAddress(nBiome, {
       decisionKey: 'hub',
@@ -49,7 +49,7 @@ describe('HubCompletionHandoff', () => {
         ),
       ).toBe(true),
     );
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
@@ -58,9 +58,9 @@ describe('HubCompletionHandoff', () => {
     expect(openedDoor.dataset.hubExitState).toBe('opened');
     expect(within(openedDoor).getByText('Opened')).toBeTruthy();
     const historyAfterCreation =
-      view.application.store.getState().projectWorkspace.history.past.length;
+      view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.click(within(openedDoor).getByRole('button', { name: 'Open next room' }));
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyAfterCreation,
     );
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));

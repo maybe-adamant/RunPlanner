@@ -128,7 +128,8 @@ function expectNodeRailDestination(
 function emptyProject(routeKey: 'Surface' | 'Underworld', count: number): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: `inspector-destinations-empty-${routeKey}-${count}`,
-    configuredBiomeCounts: { [routeKey]: count },
+    routeKey,
+    configuredBiomeCount: count,
   });
 }
 
@@ -199,8 +200,7 @@ function echoReplayProject(child?: {
     kind: 'interactEncounter' as const,
     phaseKey: 'Encounter',
   };
-  const bridge = document.routes
-    .flatMap((route) => route.biomes)
+  const bridge = document.route.biomes
     .find((biome) => biome.biomeKey === 'H')
     ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId);
   if (bridge === undefined) throw new Error('Golden H Echo bridge is missing');
@@ -468,34 +468,32 @@ describe('workspace inspector destinations', () => {
   it('routes nested trait owners to their containing Fields, Ephyra, Ship, and Shop workbenches', () => {
     for (const document of [createGoldenFGHIProject(), loadSurfaceNOPQProject()]) {
       const workspace = project(document);
-      for (const route of workspace.routes) {
-        for (const projectedBiome of route.biomes) {
-          for (const node of projectedBiome.nodes) {
-            if (node.kind === 'occurrenceWorkbench') {
-              for (const marker of node.room.localDetailMarkers) {
-                if (marker.address.kind !== 'traitOffer') continue;
-                expect(destination(workspace, marker.address)).toMatchObject({
-                  ownerAddress: marker.address,
-                  inspectorSubject: { kind: 'node', nodeKey: node.key },
-                });
-              }
-              continue;
+      for (const projectedBiome of workspace.route.biomes) {
+        for (const node of projectedBiome.nodes) {
+          if (node.kind === 'occurrenceWorkbench') {
+            for (const marker of node.room.localDetailMarkers) {
+              if (marker.address.kind !== 'traitOffer') continue;
+              expect(destination(workspace, marker.address)).toMatchObject({
+                ownerAddress: marker.address,
+                inspectorSubject: { kind: 'node', nodeKey: node.key },
+              });
             }
-            if (
-              node.kind !== 'ordinaryBatch' &&
-              node.kind !== 'mixedBatch' &&
-              node.kind !== 'takeoverBatch'
-            ) {
-              continue;
-            }
-            for (const target of node.targets) {
-              for (const marker of target.room.localDetailMarkers) {
-                if (marker.address.kind !== 'traitOffer') continue;
-                expect(destination(workspace, marker.address)).toMatchObject({
-                  ownerAddress: marker.address,
-                  inspectorSubject: { kind: 'node' },
-                });
-              }
+            continue;
+          }
+          if (
+            node.kind !== 'ordinaryBatch' &&
+            node.kind !== 'mixedBatch' &&
+            node.kind !== 'takeoverBatch'
+          ) {
+            continue;
+          }
+          for (const target of node.targets) {
+            for (const marker of target.room.localDetailMarkers) {
+              if (marker.address.kind !== 'traitOffer') continue;
+              expect(destination(workspace, marker.address)).toMatchObject({
+                ownerAddress: marker.address,
+                inspectorSubject: { kind: 'node' },
+              });
             }
           }
         }

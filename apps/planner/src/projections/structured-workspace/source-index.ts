@@ -167,13 +167,13 @@ export interface WorkspaceBiomeSource {
 
 export interface WorkspaceRouteSource {
   readonly biomes: readonly WorkspaceBiomeSource[];
-  readonly evaluation: ProjectEvaluation['routes'][number] | undefined;
+  readonly evaluation: ProjectEvaluation['route'] | undefined;
   readonly resourceAuthoring: RouteResourceAuthoring;
   readonly routeKey: string;
 }
 
 export interface WorkspaceProjectSourceIndex {
-  readonly routes: readonly WorkspaceRouteSource[];
+  readonly route: WorkspaceRouteSource;
 }
 
 /**
@@ -869,44 +869,40 @@ export function createWorkspaceProjectSourceIndex(
   zagreusContractAssessment: WorkspaceBiomeSource['zagreusContractAssessment'] = () => undefined,
 ): WorkspaceProjectSourceIndex {
   const ixionGeneratedChaos = ixionGeneratedChaosOccurrenceKeys(project);
+  const route = project.route;
+  const resources = routeResourceAuthoring(catalog, route);
+  const routeEvaluation =
+    evaluation.route.routeKey === route.routeKey ? evaluation.route : undefined;
   return Object.freeze({
-    routes: Object.freeze(
-      project.routes.map((route) => {
-        const resources = routeResourceAuthoring(catalog, route);
-        const routeEvaluation = evaluation.routes.find(
-          (candidate) => candidate.routeKey === route.routeKey,
-        );
-        return Object.freeze({
-          biomes: Object.freeze(
-            route.biomes.map((plan) =>
-              createWorkspaceBiomeSource(
-                catalog,
-                route.routeKey,
-                route.biomes.map((candidate) => candidate.biomeKey),
-                plan,
-                routeEvaluation?.biomes.find((candidate) => candidate.biomeKey === plan.biomeKey),
-                encounterPhaseStatus,
-                figLeafSupport,
-                gorgonSupport,
-                derivedAcquisitionEntries,
-                isActiveTraitOffer,
-                blockedOccurrenceRoom,
-                purgingPoolAssessment,
-                hermesShrineAssessment,
-                stygianWellAssessment,
-                resources,
-                acquisitionConversionCandidate,
-                chaosAssessment,
-                (owner) => ixionGeneratedChaos.has(semanticAddressKey(owner)),
-                zagreusContractAssessment,
-              ),
-            ),
+    route: Object.freeze({
+      biomes: Object.freeze(
+        route.biomes.map((plan) =>
+          createWorkspaceBiomeSource(
+            catalog,
+            route.routeKey,
+            route.biomes.map((candidate) => candidate.biomeKey),
+            plan,
+            routeEvaluation?.biomes.find((candidate) => candidate.biomeKey === plan.biomeKey),
+            encounterPhaseStatus,
+            figLeafSupport,
+            gorgonSupport,
+            derivedAcquisitionEntries,
+            isActiveTraitOffer,
+            blockedOccurrenceRoom,
+            purgingPoolAssessment,
+            hermesShrineAssessment,
+            stygianWellAssessment,
+            resources,
+            acquisitionConversionCandidate,
+            chaosAssessment,
+            (owner) => ixionGeneratedChaos.has(semanticAddressKey(owner)),
+            zagreusContractAssessment,
           ),
-          evaluation: routeEvaluation,
-          resourceAuthoring: resources,
-          routeKey: route.routeKey,
-        });
-      }),
-    ),
+        ),
+      ),
+      evaluation: routeEvaluation,
+      resourceAuthoring: resources,
+      routeKey: route.routeKey,
+    }),
   });
 }

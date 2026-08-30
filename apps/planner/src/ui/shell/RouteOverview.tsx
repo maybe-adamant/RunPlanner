@@ -4,12 +4,13 @@ import {
   createRouteStartKeepsakeSelectionAddress,
   createKeepsakeEquipResultAddress,
   deriveRouteLoadout,
+  type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { type RouteFeedbackPresentation } from '@planner/projections/evaluationProjection';
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
-import { type RootState, useAppDispatch } from '@planner/state/store';
+import { useAppDispatch } from '@planner/state/store';
 import type {
   WorkspaceInteractionCatalog,
   WorkspaceRoute,
@@ -63,7 +64,7 @@ export function RouteOverview({
   readonly label: string;
   readonly navigation: RouteEditorNavigation;
   readonly feedback: RouteFeedbackPresentation;
-  readonly project: RootState['projectWorkspace']['history']['present'];
+  readonly project: ProjectDocument;
   readonly workspaceRoute: WorkspaceRoute;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
@@ -79,7 +80,8 @@ export function RouteOverview({
     configuredBiomeLabels.length === 0
       ? 'No biomes configured.'
       : `Configuring ${presentBiomeList(configuredBiomeLabels)}.`;
-  const authoredRoute = project.routes.find((route) => route.routeKey === workspaceRoute.routeKey);
+  const authoredRoute =
+    project.route.routeKey === workspaceRoute.routeKey ? project.route : undefined;
   if (authoredRoute === undefined)
     throw new Error(`Missing authored route ${workspaceRoute.routeKey}`);
   const weapon = catalog.weapons.byKey[authoredRoute.loadout.weaponKey];

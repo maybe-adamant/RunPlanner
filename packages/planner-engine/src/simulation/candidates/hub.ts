@@ -144,8 +144,8 @@ interface CandidateHubState {
     Catalog['biomeLayouts']['values'][number]['progression'],
     { readonly kind: 'hub' }
   >;
-  readonly plan: ProjectDocument['routes'][number]['biomes'][number];
-  readonly topology: NonNullable<ProjectDocument['routes'][number]['biomes'][number]['topology']>;
+  readonly plan: ProjectDocument['route']['biomes'][number];
+  readonly topology: NonNullable<ProjectDocument['route']['biomes'][number]['topology']>;
   readonly decision: HubDecision;
 }
 
@@ -154,7 +154,7 @@ function previousCompleteValidBiome(
   routeKey: string,
   biomeKey: string,
 ) {
-  const route = evaluation.routes.find((candidate) => candidate.routeKey === routeKey);
+  const route = evaluation.route.routeKey === routeKey ? evaluation.route : undefined;
   const index = route?.biomes.findIndex((candidate) => candidate.biomeKey === biomeKey) ?? -1;
   if (index <= 0 || route === undefined) return undefined;
   for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
@@ -172,7 +172,7 @@ function hubAlternativeContext(
   routeKey: string,
   biomeKey: string,
 ) {
-  const route = project.routes.find((candidate) => candidate.routeKey === routeKey);
+  const route = project.route.routeKey === routeKey ? project.route : undefined;
   if (route === undefined) {
     throw new CandidateEvaluationContractError(`project has no configured ${routeKey} route`);
   }

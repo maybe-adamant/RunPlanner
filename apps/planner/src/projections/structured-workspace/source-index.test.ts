@@ -41,9 +41,7 @@ function biomeSource(
   routeKey: string,
   biomeKey: string,
 ) {
-  const source = index.routes
-    .find((route) => route.routeKey === routeKey)
-    ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
+  const source = index.route.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
   if (source === undefined) throw new Error(`${routeKey}/${biomeKey} source is missing`);
   return source;
 }
@@ -71,38 +69,32 @@ function reversedFDecisionSerialization() {
   const project = createGoldenFGHIProject();
   return {
     ...project,
-    routes: project.routes.map((route) =>
-      route.routeKey !== 'Underworld'
-        ? route
-        : {
-            ...route,
-            biomes: route.biomes.map((plan) =>
-              plan.biomeKey !== 'F' || plan.topology === null
-                ? plan
-                : {
-                    ...plan,
-                    topology: {
-                      ...plan.topology,
-                      decisions: Object.freeze([...plan.topology.decisions].reverse()),
-                    },
-                  },
-            ),
-          },
-    ),
+    route: {
+      ...project.route,
+      biomes: project.route.biomes.map((plan) =>
+        plan.biomeKey !== 'F' || plan.topology === null
+          ? plan
+          : {
+              ...plan,
+              topology: {
+                ...plan.topology,
+                decisions: Object.freeze([...plan.topology.decisions].reverse()),
+              },
+            },
+      ),
+    },
   };
 }
 
 function selectedContractWithoutNormalTargets() {
   const base = createGoldenFGHIProject();
-  const located = base.routes.flatMap((route) =>
-    route.biomes.flatMap((plan) =>
-      (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
-        const room = catalog.rooms.byKey[occurrence.gameName];
-        return room?.additionalExits.some((exit) => exit.kind === 'zagreusContract')
-          ? [{ occurrence, plan, route }]
-          : [];
-      }),
-    ),
+  const located = base.route.biomes.flatMap((plan) =>
+    (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
+      const room = catalog.rooms.byKey[occurrence.gameName];
+      return room?.additionalExits.some((exit) => exit.kind === 'zagreusContract')
+        ? [{ occurrence, plan, route: base.route }]
+        : [];
+    }),
   )[0];
   if (located === undefined) throw new Error('source-index selected contract is missing');
   const biome = createBiomeAddress(located.route.routeKey, located.plan.biomeKey);
@@ -125,15 +117,13 @@ function selectedContractWithoutNormalTargets() {
 
 function selectedAdditionalExitWithDownstream(kind: 'chaos' | 'zagreusContract') {
   const base = createGoldenFGHIProject();
-  const located = base.routes.flatMap((route) =>
-    route.biomes.flatMap((plan) =>
-      (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
-        const room = catalog.rooms.byKey[occurrence.gameName];
-        return room?.additionalExits.some((exit) => exit.kind === kind)
-          ? [{ occurrence, plan, route }]
-          : [];
-      }),
-    ),
+  const located = base.route.biomes.flatMap((plan) =>
+    (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
+      const room = catalog.rooms.byKey[occurrence.gameName];
+      return room?.additionalExits.some((exit) => exit.kind === kind)
+        ? [{ occurrence, plan, route: base.route }]
+        : [];
+    }),
   )[0];
   if (located === undefined) throw new Error(`source-index ${kind} source is missing`);
   const biome = createBiomeAddress(located.route.routeKey, located.plan.biomeKey);
@@ -227,9 +217,9 @@ describe('structured workspace source index', () => {
   it('indexes an evaluated selected continuation without manufacturing a partial normal batch, and rejects an orphan continuation owner', () => {
     const fixture = selectedContractWithoutNormalTargets();
     const evaluation = simulateProject(catalog, fixture.project);
-    const evaluatedBiome = evaluation.routes
-      .find((route) => route.routeKey === fixture.biome.routeKey)
-      ?.biomes.find((biome) => biome.biomeKey === fixture.biome.biomeKey);
+    const evaluatedBiome = evaluation.route.biomes.find(
+      (biome) => biome.biomeKey === fixture.biome.biomeKey,
+    );
     if (
       evaluatedBiome?.authoring !== 'incomplete' ||
       evaluatedBiome.coverage.kind !== 'prefix' ||
@@ -273,20 +263,14 @@ describe('structured workspace source index', () => {
     });
     const malformedEvaluation = Object.freeze({
       ...evaluation,
-      routes: Object.freeze(
-        evaluation.routes.map((route) =>
-          route.routeKey !== fixture.biome.routeKey
-            ? route
-            : Object.freeze({
-                ...route,
-                biomes: Object.freeze(
-                  route.biomes.map((biome) =>
-                    biome.biomeKey === fixture.biome.biomeKey ? malformedBiome : biome,
-                  ),
-                ),
-              }),
+      route: Object.freeze({
+        ...evaluation.route,
+        biomes: Object.freeze(
+          evaluation.route.biomes.map((biome) =>
+            biome.biomeKey === fixture.biome.biomeKey ? malformedBiome : biome,
+          ),
         ),
-      ),
+      }),
     });
     expect(() => sourceIndexForForgedEvaluation(fixture.project, malformedEvaluation)).toThrow(
       /evaluated additional continuations without an authored batch decision/,
@@ -295,9 +279,9 @@ describe('structured workspace source index', () => {
 
   it('keeps complete authored suffixes while limiting evaluator overlays to the assessed prefix', () => {
     const base = createGoldenFGHIProject();
-    const validF = simulateProject(catalog, base)
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const validF = simulateProject(catalog, base).route?.biomes.find(
+      (biome) => biome.biomeKey === 'F',
+    );
     if (validF?.authoring !== 'complete' || validF.validity !== 'valid') {
       throw new Error('source-index F fixture did not complete-valid');
     }
@@ -326,9 +310,7 @@ describe('structured workspace source index', () => {
       },
     });
     const evaluation = simulateProject(catalog, project);
-    const invalidF = evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const invalidF = evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
     if (
       invalidF?.authoring !== 'complete' ||
       invalidF.validity !== 'invalid' ||
@@ -347,9 +329,8 @@ describe('structured workspace source index', () => {
 
     expect(source.completeness.completion).toBe('complete');
     expect(source.exitDecisions).toHaveLength(
-      project.routes
-        .find((route) => route.routeKey === 'Underworld')!
-        .biomes.find((biome) => biome.biomeKey === 'F')!
+      project.route.biomes
+        .find((biome) => biome.biomeKey === 'F')!
         .topology!.decisions.filter((decision) => decision.kind === 'exit').length,
     );
     expect(source.evaluatedBatch(later)).toBeUndefined();
@@ -365,18 +346,12 @@ describe('structured workspace source index', () => {
     });
     const malformedEvaluation = Object.freeze({
       ...evaluation,
-      routes: Object.freeze(
-        evaluation.routes.map((route) =>
-          route.routeKey !== 'Underworld'
-            ? route
-            : Object.freeze({
-                ...route,
-                biomes: Object.freeze(
-                  route.biomes.map((biome) => (biome.biomeKey === 'F' ? malformedF : biome)),
-                ),
-              }),
+      route: Object.freeze({
+        ...evaluation.route,
+        biomes: Object.freeze(
+          evaluation.route.biomes.map((biome) => (biome.biomeKey === 'F' ? malformedF : biome)),
         ),
-      ),
+      }),
     });
     expect(() => sourceIndexForForgedEvaluation(project, malformedEvaluation)).toThrow(
       /assessment prefix extends beyond declared coverage/,
@@ -401,40 +376,32 @@ describe('structured workspace source index', () => {
       snapshot: { owner: roomOwner, checkpoint: 'roomEntered' },
     });
 
-    const fEvaluation = evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')!
-      .biomes.find((biome) => biome.biomeKey === 'F')!;
+    const fEvaluation = evaluation.route.biomes.find((biome) => biome.biomeKey === 'F')!;
     const unavailableEvaluation = Object.freeze({
       ...evaluation,
-      routes: Object.freeze(
-        evaluation.routes.map((route) =>
-          route.routeKey !== 'Underworld'
-            ? route
-            : Object.freeze({
-                ...route,
-                biomes: Object.freeze(
-                  route.biomes.map((biome) =>
-                    biome !== fEvaluation || !('rewards' in biome)
-                      ? biome
-                      : Object.freeze({
-                          ...biome,
-                          rewards: Object.freeze({
-                            ...biome.rewards,
-                            runStateAvailability: Object.freeze([
-                              {
-                                availability: 'unavailable' as const,
-                                owner,
-                                reason: 'coverageNotReached' as const,
-                              },
-                            ]),
-                            runStateSnapshots: Object.freeze([]),
-                          }),
-                        }),
-                  ),
-                ),
-              }),
+      route: Object.freeze({
+        ...evaluation.route,
+        biomes: Object.freeze(
+          evaluation.route.biomes.map((biome) =>
+            biome !== fEvaluation || !('rewards' in biome)
+              ? biome
+              : Object.freeze({
+                  ...biome,
+                  rewards: Object.freeze({
+                    ...biome.rewards,
+                    runStateAvailability: Object.freeze([
+                      {
+                        availability: 'unavailable' as const,
+                        owner,
+                        reason: 'coverageNotReached' as const,
+                      },
+                    ]),
+                    runStateSnapshots: Object.freeze([]),
+                  }),
+                }),
+          ),
         ),
-      ),
+      }),
     });
     const unavailable = biomeSource(
       sourceIndexForForgedEvaluation(project, unavailableEvaluation),
@@ -445,30 +412,24 @@ describe('structured workspace source index', () => {
 
     const malformedEvaluation = Object.freeze({
       ...unavailableEvaluation,
-      routes: Object.freeze(
-        unavailableEvaluation.routes.map((route) =>
-          route.routeKey !== 'Underworld'
-            ? route
-            : Object.freeze({
-                ...route,
-                biomes: Object.freeze(
-                  route.biomes.map((biome) =>
-                    biome.biomeKey !== 'F' || !('rewards' in biome)
-                      ? biome
-                      : Object.freeze({
-                          ...biome,
-                          rewards: Object.freeze({
-                            ...biome.rewards,
-                            runStateAvailability: Object.freeze([
-                              { availability: 'available' as const, owner },
-                            ]),
-                          }),
-                        }),
-                  ),
-                ),
-              }),
+      route: Object.freeze({
+        ...unavailableEvaluation.route,
+        biomes: Object.freeze(
+          unavailableEvaluation.route.biomes.map((biome) =>
+            biome.biomeKey !== 'F' || !('rewards' in biome)
+              ? biome
+              : Object.freeze({
+                  ...biome,
+                  rewards: Object.freeze({
+                    ...biome.rewards,
+                    runStateAvailability: Object.freeze([
+                      { availability: 'available' as const, owner },
+                    ]),
+                  }),
+                }),
+          ),
         ),
-      ),
+      }),
     });
     expect(() =>
       biomeSource(
@@ -512,60 +473,56 @@ describe('structured workspace source index', () => {
     const withSelectedSpine = (reverse: boolean): typeof base =>
       ({
         ...base,
-        routes: base.routes.map((route) =>
-          route.routeKey !== 'Underworld'
-            ? route
-            : {
-                ...route,
-                biomes: route.biomes.map((plan) =>
-                  plan.biomeKey !== 'F' || plan.topology === null
-                    ? plan
-                    : {
-                        ...plan,
-                        topology: {
-                          ...plan.topology,
-                          decisions: (reverse
-                            ? [...plan.topology.decisions].reverse()
-                            : plan.topology.decisions
-                          ).map((decision) => {
-                            if (decision.kind !== 'exit') return decision;
-                            const normal =
-                              decision.normal.kind !== 'batch' || !reverse
-                                ? decision.normal
-                                : {
-                                    ...decision.normal,
-                                    targets: [...decision.normal.targets].reverse(),
-                                  };
-                            if (
-                              decision.source.kind === 'occurrence' &&
-                              decision.source.occurrenceId === forkSource
-                            ) {
-                              return {
-                                ...decision,
-                                normal,
-                                selection: { kind: 'normal' as const, exitKey: 'exit2' },
-                              };
-                            }
-                            if (
-                              decision.source.kind === 'occurrence' &&
-                              decision.source.occurrenceId === movedDecisionSource
-                            ) {
-                              return {
-                                ...decision,
-                                normal,
-                                source: {
-                                  kind: 'occurrence' as const,
-                                  occurrenceId: selectedChildSource,
-                                },
-                              };
-                            }
-                            return normal === decision.normal ? decision : { ...decision, normal };
-                          }),
-                        },
-                      },
-                ),
-              },
-        ),
+        route: {
+          ...base.route,
+          biomes: base.route.biomes.map((plan) =>
+            plan.biomeKey !== 'F' || plan.topology === null
+              ? plan
+              : {
+                  ...plan,
+                  topology: {
+                    ...plan.topology,
+                    decisions: (reverse
+                      ? [...plan.topology.decisions].reverse()
+                      : plan.topology.decisions
+                    ).map((decision) => {
+                      if (decision.kind !== 'exit') return decision;
+                      const normal =
+                        decision.normal.kind !== 'batch' || !reverse
+                          ? decision.normal
+                          : {
+                              ...decision.normal,
+                              targets: [...decision.normal.targets].reverse(),
+                            };
+                      if (
+                        decision.source.kind === 'occurrence' &&
+                        decision.source.occurrenceId === forkSource
+                      ) {
+                        return {
+                          ...decision,
+                          normal,
+                          selection: { kind: 'normal' as const, exitKey: 'exit2' },
+                        };
+                      }
+                      if (
+                        decision.source.kind === 'occurrence' &&
+                        decision.source.occurrenceId === movedDecisionSource
+                      ) {
+                        return {
+                          ...decision,
+                          normal,
+                          source: {
+                            kind: 'occurrence' as const,
+                            occurrenceId: selectedChildSource,
+                          },
+                        };
+                      }
+                      return normal === decision.normal ? decision : { ...decision, normal };
+                    }),
+                  },
+                },
+          ),
+        },
       }) as typeof base;
     const orderedSources = (project: typeof base) =>
       biomeSource(sourceIndexForExactProject(project), 'Underworld', 'F').exitDecisions.map(
@@ -596,30 +553,26 @@ describe('structured workspace source index', () => {
     const base = createGoldenFGHIProject();
     const incomplete = {
       ...base,
-      routes: base.routes.map((route) =>
-        route.routeKey !== 'Underworld'
-          ? route
-          : {
-              ...route,
-              biomes: route.biomes.map((plan) =>
-                plan.biomeKey !== 'F' || plan.topology === null
-                  ? plan
-                  : {
-                      ...plan,
-                      topology: {
-                        ...plan.topology,
-                        decisions: plan.topology.decisions.map((decision) =>
-                          decision.kind === 'exit' &&
-                          decision.source.kind === 'occurrence' &&
-                          decision.source.occurrenceId === goldenFStartId
-                            ? { ...decision, selection: { kind: 'unresolved' as const } }
-                            : decision,
-                        ),
-                      },
-                    },
-              ),
-            },
-      ),
+      route: {
+        ...base.route,
+        biomes: base.route.biomes.map((plan) =>
+          plan.biomeKey !== 'F' || plan.topology === null
+            ? plan
+            : {
+                ...plan,
+                topology: {
+                  ...plan.topology,
+                  decisions: plan.topology.decisions.map((decision) =>
+                    decision.kind === 'exit' &&
+                    decision.source.kind === 'occurrence' &&
+                    decision.source.occurrenceId === goldenFStartId
+                      ? { ...decision, selection: { kind: 'unresolved' as const } }
+                      : decision,
+                  ),
+                },
+              },
+        ),
+      },
     };
     const source = biomeSource(sourceIndexForExactProject(incomplete), 'Underworld', 'F');
     const owner = createExitDecisionAddress(goldenFBiome, {
@@ -644,29 +597,25 @@ describe('structured workspace source index', () => {
     const complete = createGoldenFGHIProject();
     const project = {
       ...complete,
-      routes: complete.routes.map((route) =>
-        route.routeKey !== 'Underworld'
-          ? route
-          : {
-              ...route,
-              biomes: route.biomes.map((plan) =>
-                plan.biomeKey !== 'F' || plan.topology === null
-                  ? plan
-                  : {
-                      ...plan,
-                      topology: {
-                        ...plan.topology,
-                        decisions: plan.topology.decisions.filter(
-                          (decision) =>
-                            decision.kind !== 'exit' ||
-                            decision.source.kind !== 'occurrence' ||
-                            decision.source.occurrenceId !== goldenFOccurrenceId(1, 1),
-                        ),
-                      },
-                    },
-              ),
-            },
-      ),
+      route: {
+        ...complete.route,
+        biomes: complete.route.biomes.map((plan) =>
+          plan.biomeKey !== 'F' || plan.topology === null
+            ? plan
+            : {
+                ...plan,
+                topology: {
+                  ...plan.topology,
+                  decisions: plan.topology.decisions.filter(
+                    (decision) =>
+                      decision.kind !== 'exit' ||
+                      decision.source.kind !== 'occurrence' ||
+                      decision.source.occurrenceId !== goldenFOccurrenceId(1, 1),
+                  ),
+                },
+              },
+        ),
+      },
     };
     const decision = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
@@ -701,9 +650,7 @@ describe('structured workspace source index', () => {
     const source = biomeSource(sourceIndexForExactProject(project), 'Surface', 'N');
     const visited = nOccurrenceId('combat05');
     const dormant = nOccurrenceId('combat10');
-    const nTopology = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    const nTopology = project.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
     const localOccurrence = (sourceOccurrenceId: typeof visited) => {
       const decision = nTopology?.decisions.find(
         (candidate) =>

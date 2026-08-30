@@ -44,7 +44,7 @@ import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createKeepsakeState } from '../../src/simulation/keepsakes';
 
 function route(project: ReturnType<typeof createCompleteFGProject>) {
-  const value = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
+  const value = project.route;
   if (value === undefined) throw new Error('missing Underworld route');
   return value;
 }
@@ -68,9 +68,9 @@ function automaticOccurrence(
 }
 
 function evaluatedBiome(project: ReturnType<typeof createCompleteFGProject>, key: 'F' | 'G' | 'H') {
-  const value = simulateProject(catalog, project)
-    .routes.find((candidate) => candidate.routeKey === 'Underworld')
-    ?.biomes.find((candidate) => candidate.biomeKey === key);
+  const value = simulateProject(catalog, project).route?.biomes.find(
+    (candidate) => candidate.biomeKey === key,
+  );
   if (value?.authoring !== 'complete' || value.validity !== 'valid')
     throw new Error(`expected valid ${key} lifecycle fixture`);
   return value;
@@ -191,9 +191,7 @@ describe('Experimental Hammer', () => {
         ),
       }),
     );
-    const missingRoute = missingAssembly.evaluation.routes.find(
-      (candidate) => candidate.routeKey === 'Underworld',
-    );
+    const missingRoute = missingAssembly.evaluation.route;
     expect(missingRoute).toMatchObject({
       status: 'incomplete',
       biomes: [],
@@ -224,7 +222,7 @@ describe('Experimental Hammer', () => {
       kind: 'selected',
       traitKey: 'DaggerBlinkAoETrait',
     });
-    expect(invalidAssembly.evaluation.routes[0]).toMatchObject({
+    expect(invalidAssembly.evaluation.route).toMatchObject({
       status: 'invalid',
       biomes: [],
       processing: { completeValidPrefix: [], active: null, blockedSuffix: ['F', 'G'] },
@@ -239,7 +237,7 @@ describe('Experimental Hammer', () => {
       result,
       value: { kind: 'selected', traitKey: 'StaffOneWayAttackTrait' },
     });
-    const completedRoute = simulateProjectAssembly(catalog, completed).evaluation.routes[0];
+    const completedRoute = simulateProjectAssembly(catalog, completed).evaluation.route;
     expect(completedRoute).toMatchObject({
       status: 'valid',
       processing: { completeValidPrefix: ['F', 'G'], active: null, blockedSuffix: [] },
@@ -433,10 +431,10 @@ describe('Experimental Hammer', () => {
 
   it('advances once for every active O ordered phase', () => {
     const project = loadSurfaceNOProject();
-    const routePlan = project.routes.find((candidate) => candidate.routeKey === 'Surface');
-    const evaluated = simulateProject(catalog, project)
-      .routes.find((candidate) => candidate.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    const routePlan = project.route;
+    const evaluated = simulateProject(catalog, project).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'O',
+    );
     if (
       routePlan === undefined ||
       evaluated?.authoring !== 'complete' ||
@@ -501,12 +499,8 @@ describe('Experimental Hammer', () => {
       value: true,
     });
     const evaluation = simulateProject(catalog, project);
-    const n = evaluation.routes
-      .find((candidate) => candidate.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
-    const o = evaluation.routes
-      .find((candidate) => candidate.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    const n = evaluation.route?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    const o = evaluation.route?.biomes.find((candidate) => candidate.biomeKey === 'O');
     if (n === undefined || !('rewards' in n) || o === undefined || !('rewards' in o)) {
       throw new Error('expected valid N/O reward lifecycle');
     }
@@ -565,9 +559,7 @@ describe('Experimental Hammer', () => {
       ['normal', normal],
       ['figLeaf', simulateProject(catalog, skipped)],
     ] as const) {
-      const p = evaluation.routes
-        .find((candidate) => candidate.routeKey === 'Surface')
-        ?.biomes.find((candidate) => candidate.biomeKey === 'P');
+      const p = evaluation.route?.biomes.find((candidate) => candidate.biomeKey === 'P');
       if (p === undefined || !('rewards' in p)) throw new Error(`${label} P evaluation missing`);
       const endEffects = p.history.events.filter(
         (event) => event.kind === 'encounterEndEffectsApplied',
@@ -714,9 +706,9 @@ describe('Experimental Hammer', () => {
       occurrenceIds: [],
     });
     const evaluateN = (project: typeof base) => {
-      const biome = simulateProject(catalog, project)
-        .routes.find((candidate) => candidate.routeKey === 'Surface')
-        ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+      const biome = simulateProject(catalog, project).route?.biomes.find(
+        (candidate) => candidate.biomeKey === 'N',
+      );
       if (biome?.authoring !== 'complete' || biome.validity !== 'valid')
         throw new Error('expected valid N side-room fixture');
       return biome;
@@ -730,7 +722,7 @@ describe('Experimental Hammer', () => {
         biome.snapshot,
         biome.history,
         1,
-        project.routes.find((candidate) => candidate.routeKey === 'Surface')!.loadout,
+        project.route!.loadout,
         [seed],
       ).simulation.branches[0]!.keepsakes.experimentalHammers.at(-1)?.remainingUses;
     };
@@ -795,41 +787,33 @@ describe('Experimental Hammer', () => {
 
     const invalid = {
       ...project,
-      routes: project.routes.map((candidate) =>
-        candidate.routeKey !== 'Underworld'
-          ? candidate
-          : {
-              ...candidate,
-              loadout: {
-                ...candidate.loadout,
-                keepsakeEquipResults: {
-                  experimentalHammer: {
-                    kind: 'selected' as const,
-                    traitKey: 'ApolloWeaponBoon',
-                  },
-                },
-              },
+      route: {
+        ...project.route,
+        loadout: {
+          ...project.route.loadout,
+          keepsakeEquipResults: {
+            experimentalHammer: {
+              kind: 'selected' as const,
+              traitKey: 'ApolloWeaponBoon',
             },
-      ),
+          },
+        },
+      },
     };
     expect(simulateProjectAssembly(catalog, invalid).evaluation.findings).toContainEqual(
       expect.objectContaining({ code: 'keepsakeEquipResultUnavailable' }),
     );
     const prematurelyExhausted = {
       ...project,
-      routes: project.routes.map((candidate) =>
-        candidate.routeKey !== 'Underworld'
-          ? candidate
-          : {
-              ...candidate,
-              loadout: {
-                ...candidate.loadout,
-                keepsakeEquipResults: {
-                  experimentalHammer: { kind: 'exhausted' as const },
-                },
-              },
-            },
-      ),
+      route: {
+        ...project.route,
+        loadout: {
+          ...project.route.loadout,
+          keepsakeEquipResults: {
+            experimentalHammer: { kind: 'exhausted' as const },
+          },
+        },
+      },
     };
     expect(
       simulateProjectAssembly(catalog, prematurelyExhausted).evaluation.findings,
@@ -855,42 +839,38 @@ describe('Experimental Hammer', () => {
     ).toBeDefined();
     const invalid = {
       ...project,
-      routes: project.routes.map((candidate) =>
-        candidate.routeKey !== 'Underworld'
-          ? candidate
-          : {
-              ...candidate,
-              biomes: candidate.biomes.map((biome) =>
-                biome.biomeKey !== 'F'
-                  ? biome
-                  : {
-                      ...biome,
-                      topology:
-                        biome.topology === null
-                          ? null
-                          : {
-                              ...biome.topology,
-                              occurrences: biome.topology.occurrences.map((occurrence) =>
-                                occurrence.occurrenceId !== 'golden-f-preboss-shop:postboss'
-                                  ? occurrence
-                                  : {
-                                      ...occurrence,
-                                      keepsakeRack: {
-                                        ...occurrence.keepsakeRack!,
-                                        equipResults: {
-                                          experimentalHammer: {
-                                            kind: 'selected' as const,
-                                            traitKey: 'ApolloWeaponBoon',
-                                          },
-                                        },
-                                      },
+      route: {
+        ...project.route,
+        biomes: project.route.biomes.map((biome) =>
+          biome.biomeKey !== 'F'
+            ? biome
+            : {
+                ...biome,
+                topology:
+                  biome.topology === null
+                    ? null
+                    : {
+                        ...biome.topology,
+                        occurrences: biome.topology.occurrences.map((occurrence) =>
+                          occurrence.occurrenceId !== 'golden-f-preboss-shop:postboss'
+                            ? occurrence
+                            : {
+                                ...occurrence,
+                                keepsakeRack: {
+                                  ...occurrence.keepsakeRack!,
+                                  equipResults: {
+                                    experimentalHammer: {
+                                      kind: 'selected' as const,
+                                      traitKey: 'ApolloWeaponBoon',
                                     },
-                              ),
-                            },
-                    },
-              ),
-            },
-      ),
+                                  },
+                                },
+                              },
+                        ),
+                      },
+              },
+        ),
+      },
     };
     const invalidAssembly = simulateProjectAssembly(catalog, invalid);
     expect(invalidAssembly.evaluation.findings).toContainEqual(
@@ -901,39 +881,35 @@ describe('Experimental Hammer', () => {
     ).toBeDefined();
     const prematurelyExhausted = {
       ...project,
-      routes: project.routes.map((candidate) =>
-        candidate.routeKey !== 'Underworld'
-          ? candidate
-          : {
-              ...candidate,
-              biomes: candidate.biomes.map((biome) =>
-                biome.biomeKey !== 'F'
-                  ? biome
-                  : {
-                      ...biome,
-                      topology:
-                        biome.topology === null
-                          ? null
-                          : {
-                              ...biome.topology,
-                              occurrences: biome.topology.occurrences.map((occurrence) =>
-                                occurrence.occurrenceId !== 'golden-f-preboss-shop:postboss'
-                                  ? occurrence
-                                  : {
-                                      ...occurrence,
-                                      keepsakeRack: {
-                                        ...occurrence.keepsakeRack!,
-                                        equipResults: {
-                                          experimentalHammer: { kind: 'exhausted' as const },
-                                        },
-                                      },
-                                    },
-                              ),
-                            },
-                    },
-              ),
-            },
-      ),
+      route: {
+        ...project.route,
+        biomes: project.route.biomes.map((biome) =>
+          biome.biomeKey !== 'F'
+            ? biome
+            : {
+                ...biome,
+                topology:
+                  biome.topology === null
+                    ? null
+                    : {
+                        ...biome.topology,
+                        occurrences: biome.topology.occurrences.map((occurrence) =>
+                          occurrence.occurrenceId !== 'golden-f-preboss-shop:postboss'
+                            ? occurrence
+                            : {
+                                ...occurrence,
+                                keepsakeRack: {
+                                  ...occurrence.keepsakeRack!,
+                                  equipResults: {
+                                    experimentalHammer: { kind: 'exhausted' as const },
+                                  },
+                                },
+                              },
+                        ),
+                      },
+              },
+        ),
+      },
     };
     expect(
       simulateProjectAssembly(catalog, prematurelyExhausted).evaluation.findings,

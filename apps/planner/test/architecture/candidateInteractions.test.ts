@@ -124,7 +124,8 @@ describe('workspace candidate interaction families', () => {
     const biome = createBiomeAddress('Underworld', 'F');
     const project = createProjectDocument(catalog, {
       projectId: 'candidate-interaction-start',
-      configuredBiomeCounts: { Underworld: 1 },
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
     });
     const interactions = services.structuredWorkspace.project(
       simulateProjectAssembly(catalog, project),
@@ -147,7 +148,8 @@ describe('workspace candidate interaction families', () => {
     const project = applyProjectCommand(
       createProjectDocument(catalog, {
         projectId: 'candidate-interaction-takeover',
-        configuredBiomeCounts: { Underworld: 1 },
+        routeKey: 'Underworld',
+        configuredBiomeCount: 1,
       }),
       catalog,
       {
@@ -198,7 +200,8 @@ describe('workspace candidate interaction families', () => {
     const started = applyProjectCommand(
       createProjectDocument(catalog, {
         projectId: 'candidate-interaction-existing-takeover',
-        configuredBiomeCounts: { Underworld: 1 },
+        routeKey: 'Underworld',
+        configuredBiomeCount: 1,
       }),
       catalog,
       {
@@ -317,7 +320,8 @@ describe('workspace candidate interaction families', () => {
     });
     const started = applyProjectCommand(
       createProjectDocument(catalog, {
-        configuredBiomeCounts: { Underworld: 1 },
+        routeKey: 'Underworld',
+        configuredBiomeCount: 1,
         projectId: 'candidate-interaction-unavailable-direct-entry',
       }),
       catalog,

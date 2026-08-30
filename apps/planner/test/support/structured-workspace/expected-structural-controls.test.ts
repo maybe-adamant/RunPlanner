@@ -14,9 +14,9 @@ import { expectedWorkspaceStructuralControls } from './expected-structural-contr
 const biome = createBiomeAddress('Surface', 'N');
 
 function nPlan() {
-  const plan = loadSurfaceNProject()
-    .routes.find((route) => route.routeKey === biome.routeKey)
-    ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey);
+  const plan = loadSurfaceNProject().route?.biomes.find(
+    (candidate) => candidate.biomeKey === biome.biomeKey,
+  );
   if (plan === undefined) throw new Error('Surface/N fixture is missing');
   return plan;
 }

@@ -20,9 +20,7 @@ export function requireWorkspaceBiome(
   workspace: StructuredWorkspaceProjection,
   biomeKey: string,
 ): WorkspaceBiome {
-  const biome = workspace.routes
-    .flatMap((route) => route.biomes)
-    .find((candidate) => candidate.biomeKey === biomeKey);
+  const biome = workspace.route.biomes.find((candidate) => candidate.biomeKey === biomeKey);
   if (biome === undefined) throw new Error(`${biomeKey} has no workspace projection`);
   return biome;
 }

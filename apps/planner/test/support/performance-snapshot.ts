@@ -88,6 +88,12 @@ function observedApplication(): ObservedApplication {
   };
 }
 
+function currentWorkspace(application: PlannerApplication) {
+  const workspace = application.store.getState().projectWorkspace;
+  if (workspace.kind !== 'openProject') throw new Error('expected an open project');
+  return workspace;
+}
+
 function snapshotEvents(
   events: readonly ApplicationEvaluationEvent[],
 ): readonly ApplicationEvaluationEvent[] {
@@ -104,6 +110,7 @@ const routeDefinitions: Readonly<Record<PerformanceRoute, RouteDefinition>> = Ob
         'exit1',
       );
       const workspace = application.selectStructuredWorkspace(application.store.getState());
+      if (workspace === undefined) throw new Error('workspace projection is unavailable');
       const roomCandidates = workspace.interactions.rooms.get(semanticAddressKey(target));
       if (roomCandidates === undefined) {
         throw new Error('G cold room-candidate interaction is missing');
@@ -125,6 +132,7 @@ const routeDefinitions: Readonly<Record<PerformanceRoute, RouteDefinition>> = Ob
     prepareCandidate: (application) => {
       const hubSlot = createHubSlotAddress(nBiome, 'hub', 'miniBoss02');
       const workspace = application.selectStructuredWorkspace(application.store.getState());
+      if (workspace === undefined) throw new Error('workspace projection is unavailable');
       const hubCandidates = workspace.interactions.hubSlots.get(semanticAddressKey(hubSlot));
       if (hubCandidates === undefined || hubCandidates.selected) {
         throw new Error('N cold Hub-slot candidate interaction is missing');
@@ -151,7 +159,7 @@ function runFullRebuildSamples(definition: RouteDefinition): {
   const { application, events } = observedApplication();
   const project = definition.createProject();
   application.store.dispatch(authoredProjectReplaced(project));
-  const baseline = application.store.getState().projectWorkspace.assembly.evaluation;
+  const baseline = currentWorkspace(application).assembly.evaluation;
   events.length = 0;
   simulateProject(application.catalog, project);
   const rebuilds = Object.freeze(
@@ -190,7 +198,7 @@ function runEditSamples(definition: RouteDefinition): readonly TimedPerformanceS
       application.store.dispatch(authoredProjectReplaced(project));
       events.length = 0;
       const edit = measure(() => definition.applyEdit(application));
-      const present = application.store.getState().projectWorkspace.history.present;
+      const present = currentWorkspace(application).history.present;
       application.dispose();
       return Object.freeze({
         ...edit,
@@ -207,12 +215,12 @@ function runUndoSamples(definition: RouteDefinition): readonly TimedPerformanceS
       const { application, events } = observedApplication();
       const project = definition.createProject();
       application.store.dispatch(authoredProjectReplaced(project));
-      const baseline = application.store.getState().projectWorkspace.assembly.evaluation;
+      const baseline = currentWorkspace(application).assembly.evaluation;
       definition.applyEdit(application);
       events.length = 0;
       const undo = measure(() => application.store.dispatch(authoredProjectUndoRequested()));
-      const present = application.store.getState().projectWorkspace.history.present;
-      const evaluation = application.store.getState().projectWorkspace.assembly.evaluation;
+      const present = currentWorkspace(application).history.present;
+      const evaluation = currentWorkspace(application).assembly.evaluation;
       application.dispose();
       return Object.freeze({
         ...undo,

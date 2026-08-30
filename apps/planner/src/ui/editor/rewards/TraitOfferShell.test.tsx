@@ -39,7 +39,7 @@ describe('ordinary offer shell', () => {
       observeEvaluationWork: (event) => events.push(event),
     });
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const interaction = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind !== 'hammer',
     );
@@ -59,7 +59,7 @@ describe('ordinary offer shell', () => {
   it('does not render a generic Death Defiance control in an offer draft', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const base = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind !== 'hammer',
     );
@@ -87,7 +87,7 @@ describe('ordinary offer shell', () => {
     const application = createApplication();
     const project = loadSurfaceNStoryBoardProject();
     application.store.dispatch(authoredProjectReplaced(project));
-    const initialWorkspace = application.selectStructuredWorkspace(application.store.getState());
+    const initialWorkspace = application.selectStructuredWorkspace(application.store.getState())!;
     const initial = [...initialWorkspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.key === 'Medea',
     );
@@ -106,7 +106,7 @@ describe('ordinary offer shell', () => {
       },
     });
     application.store.dispatch(authoredProjectReplaced(invalidProject));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const interaction = workspace.interactions.traitOffers.get(initial.key);
     if (interaction === undefined) throw new Error('edited Medea trait interaction is missing');
     render(
@@ -127,7 +127,7 @@ describe('ordinary offer shell', () => {
       observeEvaluationWork: (event) => events.push(event),
     });
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const interaction = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind !== 'hammer',
     );
@@ -165,7 +165,7 @@ describe('ordinary offer shell', () => {
   it('ignores a late focused-domain result after a sibling draft revision', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const interaction = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind !== 'hammer',
     );
@@ -257,7 +257,7 @@ describe('ordinary offer shell', () => {
   it('renders the selected targeted acquisition step before loading and saves its exact target', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const base = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind !== 'hammer',
     );
@@ -418,7 +418,7 @@ describe('ordinary offer shell', () => {
   it('does not render a rarity picker for rarityless Icarus offers', () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const base = [...workspace.interactions.traitOffers.values()][0];
     const icarus = application.catalog.traitGivers.byKey.Icarus;
     if (base === undefined || icarus === undefined) {
@@ -499,7 +499,7 @@ describe('ordinary offer shell', () => {
   it('renders a fixed high-tier rarity as read-only instead of a picker', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const base = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind === 'olympian',
     );
@@ -565,7 +565,7 @@ describe('ordinary offer shell', () => {
   it('omits offer-shape actions when no optional high-tier draft is available', () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const base = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.value?.kind === 'traits',
     );
@@ -609,7 +609,7 @@ describe('ordinary offer shell', () => {
   it('uses engine-backed append and fallback drafts without rendering fallback child controls', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const base = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.value?.kind === 'traits',
     );
@@ -701,7 +701,7 @@ describe('ordinary offer shell', () => {
   it('authors a bounded Persephone contribution and preserves the complete offer', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const base = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.value?.kind === 'traits',
     );
@@ -792,7 +792,7 @@ describe('ordinary offer shell', () => {
   it('preserves dormant Persephone detail when changing a trait away and back', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const base = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.value?.kind === 'traits',
     );

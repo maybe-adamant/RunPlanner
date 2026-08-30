@@ -71,8 +71,7 @@ describe('reward-payload-interactions', () => {
 
   it('binds a picked Narcissus pickup payload to its entry replacement command', () => {
     let project = createCompleteFGProject();
-    const occurrence = project.routes
-      .flatMap((route) => route.biomes)
+    const occurrence = project.route.biomes
       .find((biome) => biome.biomeKey === 'G')
       ?.topology?.occurrences.find((candidate) => candidate.gameName === 'G_Story01');
     if (occurrence === undefined) throw new Error('Golden G has no Narcissus story');
@@ -97,8 +96,7 @@ describe('reward-payload-interactions', () => {
         selectedOptionKey: 'option1',
       },
     });
-    const current = project.routes
-      .flatMap((route) => route.biomes)
+    const current = project.route.biomes
       .find((biome) => biome.biomeKey === 'G')
       ?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
@@ -134,7 +132,7 @@ describe('reward-payload-interactions', () => {
 
   it('seeds an unresolved fixed Trial reward from its declaration-owned Devotion type', async () => {
     const raw = JSON.parse(encodeProjectDocument(loadSurfaceNOPQProject())) as {
-      routes: Array<{
+      route: {
         routeKey: string;
         biomes: Array<{
           biomeKey: string;
@@ -145,11 +143,10 @@ describe('reward-payload-interactions', () => {
             }>;
           } | null;
         }>;
-      }>;
+      };
     };
-    const devotion = raw.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'O')
+    const devotion = raw.route.biomes
+      .find((biome) => biome.biomeKey === 'O')
       ?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === oOccurrenceIds.devotion,
       );

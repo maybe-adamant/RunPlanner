@@ -12,9 +12,8 @@ import {
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 
 function shipState(project: ProjectDocument, occurrenceId = oOccurrenceIds.combat04) {
-  const state = project.routes
-    .find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((biome) => biome.biomeKey === 'O')
+  const state = project.route.biomes
+    .find((biome) => biome.biomeKey === 'O')
     ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)?.state;
   if (state?.kind !== 'shipCombat') throw new Error(`missing Ship state ${occurrenceId}`);
   return state;
