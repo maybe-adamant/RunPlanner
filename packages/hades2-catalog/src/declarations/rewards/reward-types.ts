@@ -58,7 +58,7 @@ export const rewardTypes = [
   directReward('ElementalBoost', 'Elemental Essence', 'consumable'),
   directReward('StoreRewardRandomStack', 'Pom Slice', 'consumable'),
   directReward('LastStandDrop', 'Death Defiance', 'consumable'),
-  directReward('ChaosWeaponUpgrade', 'Chaos Hammer', 'consumable'),
+  directReward('ChaosWeaponUpgrade', 'Anvil of Fates', 'consumable'),
   directReward('InfernalContractBoon', 'Infernal Contract', 'loot'),
   {
     gameName: 'TrialUpgrade',

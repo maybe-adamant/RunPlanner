@@ -339,7 +339,7 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
       ElementalBoost: 'Elemental Essence',
       StoreRewardRandomStack: 'Pom Slice',
       LastStandDrop: 'Death Defiance',
-      ChaosWeaponUpgrade: 'Chaos Hammer',
+      ChaosWeaponUpgrade: 'Anvil of Fates',
       InfernalContractBoon: 'Infernal Contract',
       TrialUpgrade: 'Chaos Blessing',
       GiftDrop: 'Nectar',
