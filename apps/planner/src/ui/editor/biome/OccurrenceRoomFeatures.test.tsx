@@ -149,6 +149,7 @@ describe('OccurrenceRoomFeatures', () => {
       occurrenceById(occurrenceId),
     );
     openRoomTab('Room Timeline');
+    expect(screen.getByRole('button', { name: 'Encounter' })).toBeTruthy();
     const family = screen.getByRole('combobox', { name: 'Nemesis family' });
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
     const eventOwner = createNemesisRandomEventAddress(phase);
@@ -166,14 +167,25 @@ describe('OccurrenceRoomFeatures', () => {
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       historyBefore,
     );
+    expect(screen.getByText('Choose an event family.')).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Save event' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
 
     await view.user.click(family);
     await waitFor(() =>
-      expect(within(family).getByRole('option', { name: 'gold Trade' })).toBeTruthy(),
+      expect(within(family).getByRole('option', { name: 'Gold trade' })).toBeTruthy(),
     );
     await view.user.selectOptions(family, 'goldTrade');
-    expect(screen.getByRole('combobox', { name: 'Nemesis response' })).toBeTruthy();
-    expect(screen.getByRole('combobox', { name: 'Nemesis reward' })).toBeTruthy();
+    const response = screen.getByRole('combobox', { name: 'Nemesis response' });
+    expect(within(response).getByRole('option', { name: 'Accept' })).toBeTruthy();
+    const reward = screen.getByRole('combobox', { name: 'Nemesis reward' });
+    expect(within(reward).getByRole('option', { name: 'Max Health' })).toBeTruthy();
+    expect(within(reward).queryByRole('option', { name: 'MaxHealthDrop' })).toBeNull();
+    expect(screen.getByText('Generated result: Max Health.')).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Save event' }) as HTMLButtonElement).disabled).toBe(
+      false,
+    );
     expect(
       screen.getByRole('button', { name: 'Save event' }).classList.contains('primary-action'),
     ).toBe(true);
@@ -194,6 +206,11 @@ describe('OccurrenceRoomFeatures', () => {
         kind: 'goldTrade',
         response: 'accept',
       }),
+    );
+    await waitFor(() =>
+      expect((screen.getByRole('button', { name: 'Saved' }) as HTMLButtonElement).disabled).toBe(
+        true,
+      ),
     );
     expect(
       authoredEvent()?.acquisitionSites?.['nemesisGenerated:Encounter']?.pickupEntries?.result
@@ -228,13 +245,14 @@ describe('OccurrenceRoomFeatures', () => {
     const restoredFamily = screen.getByRole('combobox', { name: 'Nemesis family' });
     await view.user.click(restoredFamily);
     await waitFor(() =>
-      expect(within(restoredFamily).getByRole('option', { name: 'gold Trade' })).toBeTruthy(),
+      expect(within(restoredFamily).getByRole('option', { name: 'Gold trade' })).toBeTruthy(),
     );
     await view.user.selectOptions(restoredFamily, 'goldTrade');
     await view.user.selectOptions(
       screen.getByRole('combobox', { name: 'Nemesis response' }),
       'decline',
     );
+    expect(screen.getByRole('button', { name: 'Save event' })).toBeTruthy();
     await view.user.click(screen.getByRole('button', { name: 'Save event' }));
     await waitFor(() =>
       expect(authoredEvent()?.encounters.nemesisRandomEventByPhase?.Encounter).toEqual({
@@ -251,6 +269,57 @@ describe('OccurrenceRoomFeatures', () => {
         (row) => row.dataset.roomActionKey === requiredActionKey,
       ),
     ).toBe(false);
+  });
+
+  it('keeps the encounter picker available after settling a Nemesis event', async () => {
+    const occurrenceId = goldenFOccurrenceId(5, 1);
+    const view = renderOccurrenceWorkbench(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'F',
+      occurrenceById(occurrenceId),
+    );
+    const authoredEncounter = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'F')
+        ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
+        ?.encounters.encounterKeyByPhase.Encounter;
+
+    openRoomTab('Room Timeline');
+    const encounter = screen.getByRole('button', { name: 'Encounter' });
+    await view.user.click(encounter);
+    const nemesis = await screen.findByRole('option', { name: 'Nemesis event' });
+    expect(nemesis.getAttribute('aria-disabled')).not.toBe('true');
+    await view.user.click(nemesis);
+    await waitFor(() => expect(authoredEncounter()).toBe('NemesisRandomEvent'));
+
+    const family = screen.getByRole('combobox', { name: 'Nemesis family' });
+    await view.user.click(family);
+    await waitFor(() =>
+      expect(within(family).getByRole('option', { name: 'Gold trade' })).toBeTruthy(),
+    );
+    await view.user.selectOptions(family, 'goldTrade');
+    await view.user.click(screen.getByRole('button', { name: 'Save event' }));
+    await waitFor(() =>
+      expect(
+        view.application.store
+          .getState()
+          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+          ?.biomes.find((biome) => biome.biomeKey === 'F')
+          ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
+          ?.encounters.nemesisRandomEventByPhase?.Encounter,
+      ).toEqual({ kind: 'goldTrade', response: 'accept' }),
+    );
+
+    const retainedPicker = screen.getByRole('button', { name: 'Encounter' });
+    expect(retainedPicker.textContent).toContain('Nemesis event');
+    await view.user.click(retainedPicker);
+    const standard = await screen.findByRole('option', { name: 'Combat' });
+    expect(standard.getAttribute('aria-disabled')).not.toBe('true');
+    await view.user.click(standard);
+    await waitFor(() => expect(authoredEncounter()).not.toBe('NemesisRandomEvent'));
   });
 
   it('edits a Nemesis trait trade target through the contextual picker', async () => {
@@ -288,7 +357,7 @@ describe('OccurrenceRoomFeatures', () => {
     const family = screen.getByRole('combobox', { name: 'Nemesis family' });
     await view.user.click(family);
     await waitFor(() =>
-      expect(within(family).getByRole('option', { name: 'trait Trade' })).toBeTruthy(),
+      expect(within(family).getByRole('option', { name: 'Trait trade' })).toBeTruthy(),
     );
     await view.user.selectOptions(family, 'traitTrade');
     const trait = await screen.findByRole('button', { name: 'Nemesis trait' });
