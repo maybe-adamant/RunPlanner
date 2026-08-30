@@ -129,6 +129,7 @@ export type {
 } from './trait-offer';
 export type {
   ConcaveStoneCandidateBranch,
+  TraitOfferGenerationState,
   ChaosOfferDomain,
   ChaosOfferCurseOptionDomain,
 } from './trait-offer-capability';

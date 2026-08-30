@@ -1154,9 +1154,16 @@ item, Arcana, or active-Proper context makes that fresh rarity impossible;
 structurally unsupported values continue to use `freshRarityUnavailable`.
 Contextual picker availability comes from the bound candidate artifact, so
 React does not calculate percentages, inspect Proper Upbringing, infer
-Miniboss or Shop context, or introduce an activation control or special panel.
-Run State may show the engine-derived `Proper Upbringing active` status, but it
-does not display a global rarity ledger.
+Miniboss or Shop context, or introduce an activation control. Reached Olympian
+and Hermes dialogs may disclose the engine's branch-correlated **Offer State**:
+the exact ordered Rare, Epic, Duo, and Legendary check values plus effective
+replacement chance, eligible/allowed/required replacement counts, and the
+forced-roll versus shortage source of any requirement. These checks are not
+normalized final-outcome probabilities. Equivalent complete branch states may
+collapse for presentation; disagreeing states remain separate. The disclosure
+observes the live draft but does not persist any new authored data. Run State
+may show the engine-derived `Proper Upbringing active` status, but it does not
+display a global rarity or replacement ledger.
 
 ## Initial F Editor Acceptance
 

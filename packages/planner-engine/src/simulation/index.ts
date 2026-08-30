@@ -33,6 +33,7 @@ export {
 } from './fields-optional-count';
 export {
   deriveBoonRarityLedger,
+  deriveBoonRarityValues,
   boonRarityRollUnavailable,
   BOON_RARITY_CHECKS,
   type BoonRarityFacts,
@@ -157,6 +158,7 @@ export {
   type EvaluatedTraitAcquisitionTargetDomain,
   type EvaluatedTraitOfferCandidate,
   type ConcaveStoneCandidateBranch,
+  type TraitOfferGenerationState,
   type ChaosOfferDomain,
   type ChaosOfferCurseOptionDomain,
   type EvaluatedTraitOfferFocusedOptionCandidate,

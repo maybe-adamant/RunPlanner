@@ -29,6 +29,7 @@ import type {
   StructuredWorkspaceProjection,
   WorkspaceInteractionCatalog,
   WorkspaceTraitOfferControl,
+  WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace';
 import { TraitOfferDialog, TraitOfferEditor, TraitOfferLauncher } from './TraitOfferEditor';
 import {
@@ -116,6 +117,7 @@ describe('trait offer editor entry and dialog', () => {
     expect(screen.queryByRole('status', { name: 'Offer feedback' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Add option' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Select Fallback Gold' })).toBeNull();
+    expect(screen.queryByText('Offer State')).toBeNull();
 
     const historyDepth = application.store.getState().projectWorkspace.history.past.length;
     const option2 = screen.getAllByRole('radio', { name: 'Selected' })[1];
@@ -307,6 +309,122 @@ describe('trait offer editor entry and dialog', () => {
     expect(effectiveSummary.textContent).toContain('Effective rarityHeroic');
     expect(effectiveSummary.textContent).toContain('Effective level');
     expect(screen.getAllByRole('button', { name: 'Rarify' })[0]).toHaveProperty('disabled', true);
+    application.dispose();
+  });
+
+  it('shows the exact offer-local rarity checks and replacement pressure', async () => {
+    const application = createApplication();
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
+    const address = createTraitOfferAddress(reward, 'source');
+    const project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    application.store.dispatch(authoredProjectReplaced(project));
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const user = userEvent.setup();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor address={address} interactions={workspace.interactions} />
+      </Provider>,
+    );
+
+    const summary = await screen.findByText('Offer State');
+    await user.click(summary);
+    const state = screen.getByRole('region', { name: 'Offer generation state' });
+    expect(state.textContent).toContain('Rare');
+    expect(state.textContent).toContain('Epic');
+    expect(state.textContent).toContain('Duo');
+    expect(state.textContent).toContain('Legendary');
+    expect(state.textContent).toContain('Replacement chance10%');
+    expect(state.textContent).toContain('Eligible replacement traits');
+    expect(state.textContent).toContain('Required by shortage');
+    expect(screen.getByText(/ordered roll checks, not final outcome odds/)).toBeTruthy();
+    application.dispose();
+  });
+
+  it('refreshes offer state from the live unsaved draft', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (candidate) => candidate.value?.kind === 'traits' && candidate.value.options.length === 3,
+    );
+    if (base === undefined || base.value?.kind !== 'traits') {
+      throw new Error('three-row trait interaction is missing');
+    }
+    const value = base.value;
+    const interaction = Object.freeze({
+      ...base,
+      load: (draft: AuthoredTraitOffer = value) => {
+        const forced = draft.kind === 'traits' && draft.selectedOptionKey === 'option2';
+        return Object.freeze([
+          Object.freeze({
+            value: draft,
+            evaluation: Object.freeze({
+              kind: 'traitOffer' as const,
+              result: Object.freeze({
+                assessments: Object.freeze([]),
+                branches: Object.freeze([
+                  Object.freeze({
+                    assessments: Object.freeze([]),
+                    composition: Object.freeze({
+                      applies: true,
+                      legal: true,
+                      findings: Object.freeze([]),
+                    }),
+                    offerGenerationState: Object.freeze({
+                      rarity: Object.freeze({
+                        kind: 'orderedChecks' as const,
+                        values: Object.freeze({ Rare: 0.2, Epic: 0.05, Duo: 0, Legendary: 0 }),
+                      }),
+                      replacementRollChance: forced ? 1 : 0.1,
+                      eligibleReplacementCount: 1,
+                      maximumReplacementCount: 1,
+                      requiredReplacementCount: forced ? 1 : 0,
+                      shortageRequiredReplacementCount: 0,
+                      forcedRollRequiredReplacementCount: forced ? 1 : 0,
+                    }),
+                    persephoneLevelBonusMaximums: Object.freeze([]),
+                    effectiveLevels: Object.freeze([]),
+                  }),
+                ]),
+                persephoneLevelBonusMaximums: Object.freeze([]),
+                effectiveLevels: Object.freeze([]),
+                findings: Object.freeze([]),
+                supported: true,
+              }),
+            }),
+          }),
+        ]);
+      },
+    }) satisfies WorkspaceTraitOfferInteraction;
+    const interactions = Object.freeze({
+      ...workspace.interactions,
+      traitOffers: new Map([[interaction.key, interaction]]),
+    }) as WorkspaceInteractionCatalog;
+    const user = userEvent.setup();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor address={interaction.owner} interactions={interactions} />
+      </Provider>,
+    );
+
+    await user.click(await screen.findByText('Offer State'));
+    expect(screen.getByRole('region', { name: 'Offer generation state' }).textContent).toContain(
+      'Replacement chance10%',
+    );
+    await user.click(screen.getAllByRole('radio', { name: 'Selected' })[1]!);
+    await waitFor(() =>
+      expect(screen.getByRole('region', { name: 'Offer generation state' }).textContent).toContain(
+        'Replacement chance100%',
+      ),
+    );
+    expect(screen.getByRole('region', { name: 'Offer generation state' }).textContent).toContain(
+      'Required replacements1',
+    );
+    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(0);
     application.dispose();
   });
 

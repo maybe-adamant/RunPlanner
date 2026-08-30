@@ -4,7 +4,12 @@ import {
   type TraitOfferAddress,
   type NaturalSelectionResultAddress,
 } from '../../authored-project/addresses';
-import type { Catalog, TraitOrdinaryBoonSlot } from '../../catalog-schema';
+import type {
+  BoonRarityValues,
+  Catalog,
+  TraitOrdinaryBoonSlot,
+  TraitRarity,
+} from '../../catalog-schema';
 import type {
   AuthoredLevelResolution,
   AuthoredTraitOffer,
@@ -37,6 +42,7 @@ import {
   evaluateReachedTraitOffer,
   recordReachedTraitOffer,
   type RansomAssessment,
+  boonRarityFactsForOffer,
 } from '../traits';
 import {
   advanceCurrentKeepsake,
@@ -46,6 +52,7 @@ import {
 } from '../keepsakes';
 import type { AuthoredConcaveStoneResult } from '../../authored-project/traits';
 import { resolveTraitOfferOptionLevel } from '../trait-offer-levels';
+import { deriveBoonRarityValues } from '../boon-rarity';
 
 export interface ConcaveStoneCandidateBranch {
   readonly procSupport: number;
@@ -54,6 +61,22 @@ export interface ConcaveStoneCandidateBranch {
   readonly supported: boolean;
   readonly resultSupport: 'forced' | 'possible' | 'impossible';
   readonly result?: AuthoredConcaveStoneResult;
+}
+
+export interface TraitOfferGenerationState {
+  readonly rarity:
+    | { readonly kind: 'orderedChecks'; readonly values: BoonRarityValues }
+    | { readonly kind: 'fixed'; readonly rarity: TraitRarity };
+  readonly replacementRollChance: number;
+  readonly eligibleReplacementCount: number;
+  readonly maximumReplacementCount: number;
+  readonly requiredReplacementCount: number;
+  readonly shortageRequiredReplacementCount: number;
+  readonly forcedRollRequiredReplacementCount: number;
+}
+
+export interface TraitOfferCandidateBranchAssessment extends TraitOfferBranchAssessment {
+  readonly offerGenerationState?: TraitOfferGenerationState;
 }
 
 function traitOfferCandidateContext(
@@ -71,7 +94,9 @@ function traitOfferCandidateContext(
  * through this capability; they are not part of the public simulation data.
  */
 export interface TraitOfferCandidateCapability {
-  readonly evaluateOffer: (value: AuthoredTraitOffer) => readonly TraitOfferBranchAssessment[];
+  readonly evaluateOffer: (
+    value: AuthoredTraitOffer,
+  ) => readonly TraitOfferCandidateBranchAssessment[];
   readonly callingCard: (value: AuthoredTraitOffer) => readonly {
     readonly effectiveOffer: AuthoredTraitOffer;
     readonly remainingCharges: number | undefined;
@@ -301,6 +326,44 @@ export function createTraitOfferCandidateArtifacts(
                 context.context,
                 value,
               );
+              const giver = catalog.traitGivers.byKey[value.giverKey];
+              const rarityFacts = boonRarityFactsForOffer(
+                catalog,
+                context.before,
+                resolvedContext,
+                context.arcanaFear,
+              );
+              const rarity =
+                rarityFacts !== undefined
+                  ? Object.freeze({
+                      kind: 'orderedChecks' as const,
+                      values: deriveBoonRarityValues(rarityFacts),
+                    })
+                  : resolvedContext.freshRarityOverride === undefined
+                    ? undefined
+                    : Object.freeze({
+                        kind: 'fixed' as const,
+                        rarity: resolvedContext.freshRarityOverride,
+                      });
+              const offerGenerationState =
+                value.kind !== 'traits' ||
+                (giver?.providerKind !== 'olympian' && giver?.providerKind !== 'hermes') ||
+                rarity === undefined
+                  ? undefined
+                  : Object.freeze({
+                      rarity,
+                      replacementRollChance:
+                        resolvedContext.replacementRollChance ?? catalog.boonReplacementChance,
+                      eligibleReplacementCount:
+                        base.replacementComposition.eligibleReplacementCount,
+                      maximumReplacementCount: base.replacementComposition.maximumReplacementCount,
+                      requiredReplacementCount:
+                        base.replacementComposition.requiredReplacementCount,
+                      shortageRequiredReplacementCount:
+                        base.replacementComposition.shortageRequiredReplacementCount,
+                      forcedRollRequiredReplacementCount:
+                        base.replacementComposition.forcedRollRequiredReplacementCount,
+                    });
               const levelResolutions =
                 value.kind !== 'traits'
                   ? Object.freeze([])
@@ -340,6 +403,7 @@ export function createTraitOfferCandidateArtifacts(
                 assessments,
                 composition: base.composition,
                 replacementComposition: base.replacementComposition,
+                ...(offerGenerationState === undefined ? {} : { offerGenerationState }),
                 persephoneLevelBonusMaximums: Object.freeze(
                   levelResolutions.map((resolution) => resolution?.persephoneLevelBonusMaximum),
                 ),

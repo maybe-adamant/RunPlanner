@@ -555,6 +555,9 @@ describe('Sacrificial Hymn replacement composition', () => {
     expect(filled).toMatchObject({
       legal: true,
       maximumReplacementCount: 2,
+      requiredReplacementCount: 2,
+      shortageRequiredReplacementCount: 2,
+      forcedRollRequiredReplacementCount: 1,
       replacementCount: 2,
     });
 

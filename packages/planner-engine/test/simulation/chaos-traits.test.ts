@@ -490,6 +490,11 @@ describe('Chaos paired-trait history', () => {
         .filter((option) => option.rarity !== 'Rare')
         .every((option) => option.rarity === 'Common'),
     ).toBe(true);
+    expect(capability?.evaluateOffer(replacement)[0]?.offerGenerationState).toMatchObject({
+      rarity: { kind: 'fixed', rarity: 'Common' },
+      replacementRollChance: 1,
+      forcedRollRequiredReplacementCount: 1,
+    });
 
     const rejectedHistory = pairHistory(chaos('ChaosRestrictBoonCurse', 'ChaosElementalBlessing'));
     const rejected: AuthoredTraitOfferTraits = Object.freeze({

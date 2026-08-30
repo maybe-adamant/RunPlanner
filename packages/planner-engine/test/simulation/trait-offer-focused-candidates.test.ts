@@ -223,6 +223,52 @@ describe('focused trait offer candidates', () => {
     expect(rare.result.supported).toBe(true);
   });
 
+  it('publishes exact branch-correlated rarity and replacement generation state', () => {
+    const qOverride = catalog.rooms.byKey.Q_MiniBoss02?.boonRarityOverride;
+    if (qOverride === undefined) throw new Error('missing Q Miniboss rarity override');
+    const value = offer(
+      'Apollo',
+      Object.freeze([
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Rare' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Rare' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Rare' },
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
+    );
+    const result = evaluateTraitOfferCandidate(
+      catalog,
+      project,
+      evaluation,
+      artifacts([
+        Object.freeze({
+          before: createTraitHistoryState(),
+          context: Object.freeze({ resolvedProviderKey: 'Apollo' }),
+        }),
+        Object.freeze({
+          before: createTraitHistoryState(),
+          context: Object.freeze({
+            resolvedProviderKey: 'Apollo',
+            boonRarityRoomOverride: qOverride,
+            limitedSwapUses: 1,
+          }),
+        }),
+      ]),
+      { kind: 'traitOffer', trait, value },
+    );
+    if (result.kind !== 'traitOffer') throw new Error('offer candidate was unavailable');
+
+    expect(result.result.branches.map((branch) => branch.offerGenerationState)).toEqual([
+      expect.objectContaining({
+        rarity: { kind: 'orderedChecks', values: catalog.boonRarityBases.olympian },
+        replacementRollChance: 0.1,
+      }),
+      expect.objectContaining({
+        rarity: { kind: 'orderedChecks', values: qOverride },
+        replacementRollChance: 1,
+        forcedRollRequiredReplacementCount: expect.any(Number),
+      }),
+    ]);
+  });
+
   it('attributes duplicate offers to every participating focus without poisoning siblings', () => {
     const focusedDuplicate = offer(
       'Apollo',
