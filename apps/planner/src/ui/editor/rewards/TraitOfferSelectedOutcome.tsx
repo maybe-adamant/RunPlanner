@@ -214,9 +214,6 @@ export function TraitOfferSelectedOutcome({
                     ? 'Evaluating Boon Boon Boon choice…'
                     : 'Boon Boon Boon summary unavailable'))}
             </p>
-            <p className="trait-selected-outcome-detail">
-              Resolved immediately after Echo's outer choice.
-            </p>
           </div>
           <button
             className="quiet-action action-compact"
