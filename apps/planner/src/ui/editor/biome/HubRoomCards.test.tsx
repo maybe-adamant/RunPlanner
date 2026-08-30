@@ -102,7 +102,7 @@ describe('HubRoomCards', () => {
     );
     act(() => close.focus());
     const historyBeforeClose =
-      view.application.store.getState().projectWorkspace.history.past.length;
+      view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.keyboard('[Space]');
     await waitFor(() =>
       expect(
@@ -111,7 +111,7 @@ describe('HubRoomCards', () => {
         ),
       ).toBe(false),
     );
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBeforeClose + 1,
     );
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBeNull();
@@ -188,7 +188,7 @@ describe('HubRoomCards', () => {
   it('keeps exact closed-slot focus visible in the complete Overview set without authoring history', () => {
     const project = loadSurfaceNProject();
     const view = renderHubDecisionWorkbench(project);
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
 
     act(() =>
       view.application.store.dispatch(
@@ -199,7 +199,7 @@ describe('HubRoomCards', () => {
       'true',
     );
     expect(screen.getByRole('article', { name: 'Combat 04 Hub room' }).dataset.open).toBe('false');
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );
   });

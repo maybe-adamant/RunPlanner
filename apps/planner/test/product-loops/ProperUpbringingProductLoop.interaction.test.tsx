@@ -28,6 +28,12 @@ const qMinibossReward = createIncomingRewardAddress(
 );
 const qMinibossTrait = createTraitOfferAddress(qMinibossReward, 'source');
 
+function currentFindings(application: ReturnType<typeof createApplication>) {
+  const workspace = application.store.getState().projectWorkspace;
+  if (workspace.kind !== 'openProject') throw new Error('workspace is not open');
+  return workspace.assembly.evaluation.findings;
+}
+
 describe('Q Miniboss rarity repair product loop', () => {
   it('repairs the manifest-backed Common witness to Rare in one edit and Undo restores it', async () => {
     const application = createApplication();
@@ -48,14 +54,14 @@ describe('Q Miniboss rarity repair product loop', () => {
         },
       });
       application.store.dispatch(authoredProjectReplaced(stale));
+      const currentWorkspace = application.store.getState().projectWorkspace;
+      if (currentWorkspace.kind !== 'openProject') throw new Error('workspace is not open');
       expect(
-        application.store
-          .getState()
-          .projectWorkspace.assembly.evaluation.findings.some(
-            (finding) =>
-              finding.code === 'rarityRollUnavailable' &&
-              semanticAddressKey(finding.origin) === semanticAddressKey(qMinibossTrait),
-          ),
+        currentWorkspace.assembly.evaluation.findings.some(
+          (finding) =>
+            finding.code === 'rarityRollUnavailable' &&
+            semanticAddressKey(finding.origin) === semanticAddressKey(qMinibossTrait),
+        ),
       ).toBe(true);
 
       const view = renderPlannerForInteraction({ application });
@@ -79,24 +85,19 @@ describe('Q Miniboss rarity repair product loop', () => {
       await view.user.click(within(dialog).getByRole('button', { name: 'Save trait offer' }));
       await waitFor(() =>
         expect(
-          application.store
-            .getState()
-            .projectWorkspace.assembly.evaluation.findings.some(
-              (finding) =>
-                semanticAddressKey(finding.origin) === semanticAddressKey(qMinibossTrait),
-            ),
+          currentFindings(application).some(
+            (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(qMinibossTrait),
+          ),
         ).toBe(false),
       );
       await view.user.click(screen.getByRole('button', { name: 'Undo' }));
       await waitFor(() =>
         expect(
-          application.store
-            .getState()
-            .projectWorkspace.assembly.evaluation.findings.some(
-              (finding) =>
-                finding.code === 'rarityRollUnavailable' &&
-                semanticAddressKey(finding.origin) === semanticAddressKey(qMinibossTrait),
-            ),
+          currentFindings(application).some(
+            (finding) =>
+              finding.code === 'rarityRollUnavailable' &&
+              semanticAddressKey(finding.origin) === semanticAddressKey(qMinibossTrait),
+          ),
         ).toBe(true),
       );
     } finally {

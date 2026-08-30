@@ -27,9 +27,10 @@ function authoredValue(
   project: ProjectDocument,
   address: FountainRarityOutcomeAddress,
 ): AuthoredFountainRarityResult | undefined {
-  const plan = project.routes
-    .find((route) => route.routeKey === address.routeKey)
-    ?.biomes.find((biome) => biome.biomeKey === address.biomeKey);
+  const plan =
+    project.route.routeKey === address.routeKey
+      ? project.route.biomes.find((biome) => biome.biomeKey === address.biomeKey)
+      : undefined;
   return (plan?.topology?.occurrences ?? []).find(
     (occurrence) => occurrence.occurrenceId === address.action.occurrenceId,
   )?.fountainRarityResult;

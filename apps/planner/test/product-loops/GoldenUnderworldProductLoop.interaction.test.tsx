@@ -52,6 +52,20 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+function currentWorkspace(application: ReturnType<typeof createApplication>) {
+  const workspace = application.store.getState().projectWorkspace;
+  if (workspace.kind !== 'openProject') throw new Error('expected an open project');
+  return workspace;
+}
+
+function currentProject(application: ReturnType<typeof createApplication>) {
+  return currentWorkspace(application).history.present;
+}
+
+function currentEvaluation(application: ReturnType<typeof createApplication>) {
+  return currentWorkspace(application).assembly.evaluation;
+}
+
 describe('underworld product loop', () => {
   it('shows Moon Beam banked Path progress in Run State without inventing a Hex-node editor', async () => {
     const application = createApplication();
@@ -132,7 +146,8 @@ describe('underworld product loop', () => {
       authoredProjectReplaced(
         createProjectDocument(application.catalog, {
           projectId: 'mandatory-default-product',
-          configuredBiomeCounts: { Underworld: 1 },
+          routeKey: 'Underworld',
+          configuredBiomeCount: 1,
         }),
       ),
     );
@@ -144,8 +159,8 @@ describe('underworld product loop', () => {
         gameName: 'F_Opening01',
       }),
     );
-    const beforeReward = application.store.getState().projectWorkspace.history.present;
-    const historyBefore = application.store.getState().projectWorkspace.history.past.length;
+    const beforeReward = currentProject(application);
+    const historyBefore = currentWorkspace(application).history.past.length;
     application.store.dispatch(
       authoredProjectCommandDispatched({
         kind: 'ReplaceIncomingReward',
@@ -157,10 +172,8 @@ describe('underworld product loop', () => {
       }),
     );
     const authoredOccurrence = () =>
-      application.store
-        .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((plan) => plan.biomeKey === 'F')
+      currentProject(application)
+        .route.biomes.find((plan) => plan.biomeKey === 'F')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId);
     expect(authoredOccurrence()?.roomActions.order).toEqual([
       {
@@ -169,9 +182,7 @@ describe('underworld product loop', () => {
         acquisitionRole: 'source',
       },
     ]);
-    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
-      historyBefore + 1,
-    );
+    expect(currentWorkspace(application).history.past).toHaveLength(historyBefore + 1);
 
     const view = renderPlannerForInteraction({ application });
     await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
@@ -181,7 +192,7 @@ describe('underworld product loop', () => {
         semanticOwnerFocused(createOccurrenceAddress(biome, occurrenceId)),
       ),
     );
-    const evaluationBefore = application.store.getState().projectWorkspace.assembly.evaluation;
+    const evaluationBefore = currentEvaluation(application);
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const requiredRow = within(actions)
@@ -194,12 +205,10 @@ describe('underworld product loop', () => {
     });
     expect((deleteButton as HTMLButtonElement).disabled).toBe(true);
     expect(deleteButton.classList.contains('quiet-action')).toBe(true);
-    expect(application.store.getState().projectWorkspace.assembly.evaluation).toBe(
-      evaluationBefore,
-    );
+    expect(currentEvaluation(application)).toBe(evaluationBefore);
 
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
-    expect(application.store.getState().projectWorkspace.history.present).toBe(beforeReward);
+    expect(currentProject(application)).toBe(beforeReward);
   });
 
   it('renders F through I through one shared biome workspace surface', async () => {
@@ -219,7 +228,7 @@ describe('underworld product loop', () => {
       expect(document.querySelector('.biome-workspace')).not.toBeNull();
     }
 
-    const evaluation = application.store.getState().projectWorkspace.assembly.evaluation;
+    const evaluation = currentEvaluation(application);
     expect(evaluation).toMatchObject({
       findings: [],
       status: 'valid',
@@ -289,27 +298,22 @@ describe('underworld product loop', () => {
       reward: createLocalRewardAddress(goldenHBiome, combat09, 'cages', 'cage2'),
       value: { rewardType: 'MaxHealthDrop' },
     });
-    const roomActionOrderBefore = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'H')
+    const roomActionOrderBefore = project.route.biomes
+      .find((biome) => biome.biomeKey === 'H')
       ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)
       ?.roomActions.order;
     if (roomActionOrderBefore === undefined) throw new Error('Echo room action order is missing');
     application.store.dispatch(authoredProjectReplaced(project));
 
-    const staleFinding = application.store
-      .getState()
-      .projectWorkspace.assembly.evaluation.findings.find(
-        (finding) =>
-          finding.code === 'rewardSourceUnavailable' &&
-          semanticAddressKey(finding.origin) === semanticAddressKey(replayEntry),
-      );
+    const staleFinding = currentEvaluation(application).findings.find(
+      (finding) =>
+        finding.code === 'rewardSourceUnavailable' &&
+        semanticAddressKey(finding.origin) === semanticAddressKey(replayEntry),
+    );
     if (staleFinding === undefined) throw new Error('stale Echo replay finding is missing');
-    const findingIndex = application.store
-      .getState()
-      .projectWorkspace.assembly.evaluation.findings.indexOf(staleFinding);
+    const findingIndex = currentEvaluation(application).findings.indexOf(staleFinding);
     const rewardInteraction = application
-      .selectStructuredWorkspace(application.store.getState())
+      .selectStructuredWorkspace(application.store.getState())!
       .interactions.rewards.get(semanticAddressKey(replayEntry));
     if (rewardInteraction === undefined) throw new Error('Echo replay interaction is missing');
     expect(rewardInteraction).toMatchObject({ selected: { rewardType: 'WeaponUpgrade' } });
@@ -324,7 +328,7 @@ describe('underworld product loop', () => {
     await view.user.click(findingButton);
 
     expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(replayEntry);
-    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
+    expect(application.store.getState().editorSession.activePanel).toEqual({
       kind: 'biome',
       biomeKey: 'H',
     });
@@ -339,10 +343,8 @@ describe('underworld product loop', () => {
     );
 
     const authoredOccurrence = () =>
-      application.store
-        .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'H')
+      currentProject(application)
+        .route.biomes.find((biome) => biome.biomeKey === 'H')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId);
     await waitFor(() => {
       expect(authoredOccurrence()?.roomActions.order).toEqual(roomActionOrderBefore);
@@ -351,11 +353,9 @@ describe('underworld product loop', () => {
       });
     });
     expect(
-      application.store
-        .getState()
-        .projectWorkspace.assembly.evaluation.findings.some(
-          (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(replayEntry),
-        ),
+      currentEvaluation(application).findings.some(
+        (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(replayEntry),
+      ),
     ).toBe(false);
 
     act(() => application.store.dispatch(authoredProjectUndoRequested()));
@@ -404,13 +404,11 @@ describe('underworld product loop', () => {
       },
     });
     application.store.dispatch(authoredProjectReplaced(project));
-    const finding = application.store
-      .getState()
-      .projectWorkspace.assembly.evaluation.findings.find(
-        (candidate) =>
-          candidate.code === 'echoLastRunBoonMissing' &&
-          semanticAddressKey(candidate.origin) === semanticAddressKey(child),
-      );
+    const finding = currentEvaluation(application).findings.find(
+      (candidate) =>
+        candidate.code === 'echoLastRunBoonMissing' &&
+        semanticAddressKey(candidate.origin) === semanticAddressKey(child),
+    );
     if (finding === undefined) throw new Error('BBB child finding is missing');
 
     const view = renderPlannerForInteraction({ application });
@@ -422,7 +420,7 @@ describe('underworld product loop', () => {
     );
 
     const destination = application
-      .selectStructuredWorkspace(application.store.getState())
+      .selectStructuredWorkspace(application.store.getState())!
       .focusByOwner.get(semanticAddressKey(child));
     if (destination === undefined) throw new Error('BBB child destination is missing');
     expect(destination).toMatchObject({
@@ -450,7 +448,8 @@ describe('underworld product loop', () => {
     const application = createApplication();
     const opening = createOccurrenceId('product-natural-chaos-opening');
     let project = createProjectDocument(application.catalog, {
-      configuredBiomeCounts: { Underworld: 1 },
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
       projectId: 'natural-chaos-product-loop',
     });
     project = applyProjectCommand(project, application.catalog, {
@@ -481,10 +480,7 @@ describe('underworld product loop', () => {
     await view.user.click(screen.getByRole('checkbox', { name: 'Chaos Gate' }));
 
     const topology = () =>
-      application.store
-        .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'F')?.topology;
+      currentProject(application).route.biomes.find((biome) => biome.biomeKey === 'F')?.topology;
     const authoredGate = topology()
       ?.occurrences.find((occurrence) => occurrence.occurrenceId === opening)
       ?.additionalExits.find((additional) => additional.kind === 'chaos');
@@ -515,7 +511,7 @@ describe('underworld product loop', () => {
     if (normalTarget === undefined) throw new Error('natural Chaos normal target is missing');
     const normalReward = createIncomingRewardAddress(goldenFBiome, normalTarget.occurrenceId);
     const rewardInteraction = application
-      .selectStructuredWorkspace(application.store.getState())
+      .selectStructuredWorkspace(application.store.getState())!
       .interactions.rewards.get(semanticAddressKey(normalReward));
     if (rewardInteraction === undefined) throw new Error('natural Chaos reward editor is missing');
     const rewardDomain = await rewardInteraction.load();
@@ -564,9 +560,7 @@ describe('underworld product loop', () => {
       selection: { kind: 'additional', additionalExitKey: 'chaos' },
     });
     application.store.dispatch(
-      authoredProjectReplaced(
-        authorLegalTraitOffers(application.store.getState().projectWorkspace.history.present),
-      ),
+      authoredProjectReplaced(authorLegalTraitOffers(currentProject(application))),
     );
     const erebusRail = screen
       .getByRole('region', { name: 'Erebus route structure' })
@@ -648,18 +642,12 @@ describe('underworld product loop', () => {
     expect(screen.getByRole('button', { name: 'Door 1 room' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Remove these doors' })).toBeNull();
     expect(screen.queryByText('Add doors')).toBeNull();
-    const g = application.store
-      .getState()
-      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    const g = currentProject(application).route.biomes.find((biome) => biome.biomeKey === 'G');
     expect(g?.topology).not.toBeNull();
 
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Start biome' })).toBeTruthy());
-    const undone = application.store
-      .getState()
-      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    const undone = currentProject(application).route.biomes.find((biome) => biome.biomeKey === 'G');
     expect(undone?.topology).toBeNull();
   });
 
@@ -680,17 +668,17 @@ describe('underworld product loop', () => {
         occurrenceId: createOccurrenceId('underworld-prefix-undo-start'),
       }),
     );
-    const beforeShrink = application.store.getState().projectWorkspace.history.present;
+    const beforeShrink = currentProject(application);
     const view = renderPlannerForInteraction({ application });
     const confirmation = vi.spyOn(globalThis, 'confirm');
 
     await view.user.click(screen.getByRole('button', { name: 'Route' }));
     await view.user.selectOptions(screen.getByLabelText('Configure route up to'), '0');
-    expect(application.store.getState().projectWorkspace.assembly.evaluation.status).toBe('empty');
+    expect(currentEvaluation(application).status).toBe('empty');
     expect(confirmation).not.toHaveBeenCalled();
 
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
-    expect(application.store.getState().projectWorkspace.history.present).toBe(beforeShrink);
+    expect(currentProject(application)).toBe(beforeShrink);
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
     expect(screen.getByRole('button', { name: /Opening/ })).toBeTruthy();
   });
@@ -831,11 +819,10 @@ describe('underworld product loop', () => {
     );
 
     await view.user.click(screen.getByRole('checkbox', { name: 'Cleared' }));
-    const failed = application.store.getState().projectWorkspace.history.present;
+    const failed = currentProject(application);
     expect(
-      failed.routes
-        .find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'G')
+      failed.route.biomes
+        .find((biome) => biome.biomeKey === 'G')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === anomaly)?.state,
     ).toMatchObject({ kind: 'anomaly', success: false });
     act(() =>
@@ -856,10 +843,8 @@ describe('underworld product loop', () => {
     expect(within(automaticReturn).getByText('Reward hidden on this door.')).toBeTruthy();
     const returnReward = createIncomingRewardAddress(goldenGBiome, returned);
     const returnRewardOffer = () => {
-      const state = application.store
-        .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'G')
+      const state = currentProject(application)
+        .route.biomes.find((biome) => biome.biomeKey === 'G')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === returned)?.state;
       return state !== undefined && 'reward' in state
         ? state.reward === null
@@ -868,13 +853,11 @@ describe('underworld product loop', () => {
         : undefined;
     };
     const missingReturnReward = () =>
-      application.store
-        .getState()
-        .projectWorkspace.assembly.evaluation.findings.some(
-          (finding) =>
-            finding.code === 'rewardMissing' &&
-            semanticAddressKey(finding.origin) === semanticAddressKey(returnReward),
-        );
+      currentEvaluation(application).findings.some(
+        (finding) =>
+          finding.code === 'rewardMissing' &&
+          semanticAddressKey(finding.origin) === semanticAddressKey(returnReward),
+      );
     expect(returnRewardOffer()).toBeNull();
     await view.user.click(within(automaticReturn).getByRole('button', { name: 'Reward' }));
     const replacement = within(await screen.findByRole('listbox'))
@@ -894,9 +877,7 @@ describe('underworld product loop', () => {
     });
     expect(screen.getByRole('button', { name: 'Open next room' })).toBeTruthy();
     const evaluation = simulateProject(application.catalog, failed);
-    const gEvaluation = evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    const gEvaluation = evaluation.route.biomes.find((biome) => biome.biomeKey === 'G');
     if (gEvaluation === undefined || !('rewards' in gEvaluation)) {
       throw new Error('Anomaly failure must retain an evaluated G reward prefix');
     }
@@ -979,7 +960,7 @@ describe('underworld product loop', () => {
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     expect(within(contractWorkbench).getByRole('region', { name: 'Room Timeline' })).toBeTruthy();
     expect(within(contractWorkbench).queryByText(/Incoming door reward/)).toBeNull();
-    let selected = application.store.getState().projectWorkspace.history.present;
+    let selected = currentProject(application);
     selected = applyProjectCommand(selected, application.catalog, {
       kind: 'CreateBatch',
       decision: createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: contract }),
@@ -999,9 +980,9 @@ describe('underworld product loop', () => {
       gameName: 'G_Combat04',
     });
     const selectedEvaluation = simulateProject(application.catalog, selected);
-    const gEvaluation = selectedEvaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'G');
+    const gEvaluation = selectedEvaluation.route.biomes.find(
+      (candidate) => candidate.biomeKey === 'G',
+    );
     if (
       gEvaluation === undefined ||
       (!('snapshot' in gEvaluation) && !('materializedPrefix' in gEvaluation))

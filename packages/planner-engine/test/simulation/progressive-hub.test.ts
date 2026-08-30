@@ -87,7 +87,8 @@ function openHub(slotCount: number, resolvedBoardRewards = false) {
   const preHub = createOccurrenceId('progressive-n-prehub');
   let project = createProjectDocument(catalog, {
     projectId: `progressive-n-${slotCount}`,
-    configuredBiomeCounts: { Surface: 1 },
+    routeKey: 'Surface',
+    configuredBiomeCount: 1,
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
@@ -226,17 +227,15 @@ function openHub(slotCount: number, resolvedBoardRewards = false) {
 }
 
 function nEvaluation(project: ReturnType<typeof openHub>) {
-  const biome = simulateProject(catalog, project)
-    .routes.find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+  const biome = simulateProject(catalog, project).route?.biomes.find(
+    (candidate) => candidate.biomeKey === 'N',
+  );
   if (biome === undefined) throw new Error('project lost N');
   return biome;
 }
 
 function progressiveN(project: ReturnType<typeof openHub>) {
-  const plan = project.routes
-    .find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((biome) => biome.biomeKey === 'N');
+  const plan = project.route.biomes.find((biome) => biome.biomeKey === 'N');
   if (plan === undefined) throw new Error('project lost authored N');
   const progressive = evaluateProgressiveBiome(catalog, nBiome, plan, {
     enteredBiomeCount: 1,
@@ -251,7 +250,8 @@ describe('Hub progressive biome evaluation', () => {
   it('retains an unopened Hub as incomplete rather than manufacturing a board', () => {
     const project = createProjectDocument(catalog, {
       projectId: 'progressive-n-empty',
-      configuredBiomeCounts: { Surface: 1 },
+      routeKey: 'Surface',
+      configuredBiomeCount: 1,
     });
     const biome = nEvaluation(project as ReturnType<typeof openHub>);
 
@@ -310,9 +310,8 @@ describe('Hub progressive biome evaluation', () => {
     'authors every participant on a %i-door board before any Hub visit is selected',
     (slotCount) => {
       const project = openHub(slotCount);
-      const hub = project.routes
-        .find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N')
+      const hub = project.route.biomes
+        .find((biome) => biome.biomeKey === 'N')
         ?.topology?.decisions.find((decision) => decision.kind === 'hub');
       if (hub?.kind !== 'hub') throw new Error('partial Hub board lost its authored decision');
       expect(hub.openTargets).toHaveLength(slotCount);
@@ -394,9 +393,7 @@ describe('Hub progressive biome evaluation', () => {
       const biome = simulateProject(
         catalogWithImpossibleEncounters(impossibleEncounterKeys),
         project,
-      )
-        .routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+      ).route?.biomes.find((candidate) => candidate.biomeKey === 'N');
       if (
         biome?.authoring !== 'complete' ||
         biome.validity !== 'invalid' ||
@@ -459,9 +456,10 @@ describe('Hub progressive biome evaluation', () => {
       ),
       encounterKey: 'ArtemisCombatN',
     });
-    const biome = simulateProject(catalogWithImpossibleEncounters(['ArtemisCombatN']), project)
-      .routes.find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    const biome = simulateProject(
+      catalogWithImpossibleEncounters(['ArtemisCombatN']),
+      project,
+    ).route?.biomes.find((candidate) => candidate.biomeKey === 'N');
     if (
       biome?.authoring !== 'complete' ||
       biome.validity !== 'invalid' ||
@@ -512,9 +510,10 @@ describe('Hub progressive biome evaluation', () => {
       ),
       encounterKey: 'GeneratedNSubRoom_Bigger',
     });
-    const biome = simulateProject(catalogWithImpossibleEncounters(['GeneratedNSubRoom']), project)
-      .routes.find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    const biome = simulateProject(
+      catalogWithImpossibleEncounters(['GeneratedNSubRoom']),
+      project,
+    ).route?.biomes.find((candidate) => candidate.biomeKey === 'N');
     if (
       biome?.authoring !== 'complete' ||
       biome.validity !== 'invalid' ||
@@ -749,7 +748,8 @@ describe('Hub progressive biome evaluation', () => {
 
     const empty = createProjectDocument(catalog, {
       projectId: 'progressive-n-candidate-empty',
-      configuredBiomeCounts: { Surface: 1 },
+      routeKey: 'Surface',
+      configuredBiomeCount: 1,
     });
     expect(
       createPreparedProjectCandidateSession(
@@ -799,9 +799,8 @@ describe('Hub progressive biome evaluation', () => {
       occurrenceId: firstSlot.occurrenceId,
       localOccurrenceIdsBySlot: firstSlot.localOccurrenceIdsBySlot,
     });
-    const hub = withFirstSlot.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N')
+    const hub = withFirstSlot.route.biomes
+      .find((biome) => biome.biomeKey === 'N')
       ?.topology?.decisions.find((decision) => decision.kind === 'hub');
     expect(hub).toMatchObject({ kind: 'hub', openTargets: [{ hubSlotKey: nOpenSlotKeys[0] }] });
   });
@@ -812,9 +811,7 @@ describe('Hub progressive biome evaluation', () => {
       hub: createHubDecisionAddress(nBiome, 'hub'),
       hubSlotKeys: ['combat05'],
     });
-    const plan = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const plan = project.route.biomes.find((biome) => biome.biomeKey === 'N');
 
     expect(plan?.topology?.decisions).toContainEqual(
       expect.objectContaining({ kind: 'hub', visitOrder: ['combat05'] }),

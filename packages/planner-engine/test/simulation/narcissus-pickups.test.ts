@@ -48,8 +48,7 @@ import {
 import { createCompleteNProject } from '../authored-project/support/complete-n-project';
 
 function narcissusOccurrence(project: ProjectDocument) {
-  const occurrence = project.routes
-    .flatMap((route) => route.biomes)
+  const occurrence = project.route.biomes
     .find((biome) => biome.biomeKey === 'G')
     ?.topology?.occurrences.find((candidate) => candidate.gameName === 'G_Story01');
   if (occurrence === undefined)
@@ -102,9 +101,7 @@ function selectNarcissus(project: ProjectDocument, traitKeys: readonly [string, 
 }
 
 function evaluatedG(project: ProjectDocument) {
-  const g = simulateProject(catalog, project)
-    .routes.find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((biome) => biome.biomeKey === 'G');
+  const g = simulateProject(catalog, project).route?.biomes.find((biome) => biome.biomeKey === 'G');
   if (g === undefined || !('rewards' in g)) throw new Error('G did not publish reward products');
   return g;
 }
@@ -306,8 +303,7 @@ describe('Narcissus pickup producer', () => {
       ),
     ).toBe(true);
 
-    const laterOccurrence = project.routes
-      .flatMap((route) => route.biomes)
+    const laterOccurrence = project.route.biomes
       .find((biome) => biome.biomeKey === 'G')
       ?.topology?.occurrences.find(
         (candidate) =>
@@ -500,9 +496,7 @@ describe('Narcissus pickup producer', () => {
     });
 
     const simulation = simulateProject(catalog, project);
-    const g = simulation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    const g = simulation.route.biomes.find((biome) => biome.biomeKey === 'G');
     if (g?.authoring !== 'complete') throw new Error('Golden G did not simulate');
     const histories = g.rewards.branches.map((branch) => branch.traitHistory);
     expect(histories[0]?.events.filter((event) => event.kind === 'elementContribution')).toEqual(
@@ -588,9 +582,9 @@ describe('Narcissus pickup producer', () => {
       'NarcissusB',
       'NarcissusC',
     ]);
-    const disabledG = simulateProject(catalog, disabled)
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    const disabledG = simulateProject(catalog, disabled).route?.biomes.find(
+      (biome) => biome.biomeKey === 'G',
+    );
     expect(disabledG?.authoring).toBe('complete');
     const site = pickupSite(disabled);
     expect(narcissusOccurrence(disabled).acquisitionSites?.[site.pointKey]).toMatchObject({
@@ -623,7 +617,7 @@ describe('Narcissus pickup producer', () => {
       index: occurrence.roomActions.order.length,
     });
     expect(ordered.present).toMatchObject({
-      routes: expect.any(Array),
+      route: expect.any(Object),
     });
     expect(undoProjectHistory(ordered).present).toBe(history.present);
     const redone = redoProjectHistory(undoProjectHistory(ordered)).present;
@@ -691,12 +685,12 @@ describe('Narcissus pickup producer', () => {
       'NarcissusC',
     ]);
     const encoded = JSON.parse(encodeProjectDocument(project)) as {
-      routes: Array<{
+      route: {
         biomes: Array<{ topology: { occurrences: Array<Record<string, unknown>> } | null }>;
-      }>;
+      };
     };
     expect(decodeProjectDocument(encoded, catalog)).toEqual(project);
-    const story = encoded.routes[0]!.biomes[1]!.topology!.occurrences.find(
+    const story = encoded.route!.biomes[1]!.topology!.occurrences.find(
       (entry) => entry.gameName === 'G_Story01',
     )!;
     const sourceSiteKey = pickupSite(project).pointKey;
@@ -708,7 +702,7 @@ describe('Narcissus pickup producer', () => {
     expect(() => decodeProjectDocument(encoded, catalog)).toThrow(/pickupEntries/);
 
     const forged = JSON.parse(encodeProjectDocument(project)) as typeof encoded;
-    const forgedStory = forged.routes[0]!.biomes[1]!.topology!.occurrences.find(
+    const forgedStory = forged.route!.biomes[1]!.topology!.occurrences.find(
       (entry) => entry.gameName === 'G_Story01',
     )!;
     (forgedStory.acquisitionSites as Record<string, unknown>)['traitGenerated:forged:option1'] = {
@@ -719,7 +713,7 @@ describe('Narcissus pickup producer', () => {
     );
 
     const malformed = JSON.parse(encodeProjectDocument(project)) as typeof encoded;
-    const malformedStory = malformed.routes[0]!.biomes[1]!.topology!.occurrences.find(
+    const malformedStory = malformed.route!.biomes[1]!.topology!.occurrences.find(
       (entry) => entry.gameName === 'G_Story01',
     )!;
     (malformedStory.acquisitionSites as Record<string, unknown>)['traitGenerated:'] = {
@@ -737,11 +731,11 @@ describe('Narcissus pickup producer', () => {
       'NarcissusC',
     ]);
     const encoded = JSON.parse(encodeProjectDocument(project)) as {
-      routes: Array<{
+      route: {
         biomes: Array<{ topology: { occurrences: Array<Record<string, unknown>> } | null }>;
-      }>;
+      };
     };
-    const story = encoded.routes[0]!.biomes[1]!.topology!.occurrences.find(
+    const story = encoded.route!.biomes[1]!.topology!.occurrences.find(
       (entry) => entry.gameName === 'G_Story01',
     )!;
     const sourceSiteKey = pickupSite(project).pointKey;
@@ -754,12 +748,12 @@ describe('Narcissus pickup producer', () => {
   it('preserves ordinary Shop schema-34 state and rejects non-derived pickup entries', () => {
     const shop = createCompleteNProject();
     const encoded = JSON.parse(encodeProjectDocument(shop)) as {
-      routes: Array<{
+      route: {
         biomes: Array<{ topology: { occurrences: Array<Record<string, unknown>> } | null }>;
-      }>;
+      };
     };
     expect(decodeProjectDocument(encoded, catalog)).toEqual(shop);
-    const occurrence = encoded.routes[1]!.biomes[0]!.topology!.occurrences.find(
+    const occurrence = encoded.route!.biomes[0]!.topology!.occurrences.find(
       (entry) =>
         (entry.state as { kind?: string } | undefined)?.kind === 'shop' &&
         (entry.acquisitionSites as { roomExit?: unknown } | undefined)?.roomExit !== undefined,
@@ -788,9 +782,7 @@ describe('Narcissus pickup producer', () => {
     const entry = occurrence.acquisitionSites?.[pickup.site.pointKey]?.pickupEntries?.mysteryBoon;
     expect(entry).toBeNull();
     let simulation = simulateProject(catalog, project);
-    let g = simulation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    let g = simulation.route.biomes.find((biome) => biome.biomeKey === 'G');
     if (g?.authoring !== 'complete') throw new Error('Golden G did not simulate');
     expect(
       g.rewards.branches[0]?.traitHistory?.events.some(
@@ -822,9 +814,7 @@ describe('Narcissus pickup producer', () => {
     });
     project = replacePickupActions(project, pickup.site, ['mysteryBoon']);
     simulation = simulateProject(catalog, project);
-    g = simulation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    g = simulation.route.biomes.find((biome) => biome.biomeKey === 'G');
     if (g?.authoring !== 'complete') throw new Error('Golden G did not simulate');
     expect(g.rewards.selectedTraitOffers).toContainEqual(
       expect.objectContaining({
@@ -1159,9 +1149,9 @@ describe('Narcissus pickup producer', () => {
       narcissusOccurrence(applied).acquisitionSites?.[entry.site.pointKey]?.pickupEntries
         ?.mysteryBoon?.traitOffersByAcquisitionRole.hiddenSource?.giverKey,
     ).toBe('Hestia');
-    const appliedG = simulateProject(catalog, applied)
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    const appliedG = simulateProject(catalog, applied).route?.biomes.find(
+      (biome) => biome.biomeKey === 'G',
+    );
     if (appliedG?.authoring !== 'complete') throw new Error('applied Narcissus G did not simulate');
     // Completing the exact entry-owned reward and fresh trait offer retains
     // the reachable acquisition product.
@@ -1189,9 +1179,7 @@ describe('Narcissus pickup producer', () => {
       entryKey: 'mysteryBoon',
     });
     const assembly = simulateProjectAssembly(catalog, project);
-    const evaluated = assembly.evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    const evaluated = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'G');
     expect(evaluated?.findings).toContainEqual(
       expect.objectContaining({ code: 'rewardMissing', origin: entry }),
     );

@@ -35,7 +35,8 @@ function currentNEntryProject() {
 function blankNEntryProject() {
   let project = createProjectDocument(catalog, {
     projectId: 'n-b2-blank-entry-candidate',
-    configuredBiomeCounts: { Surface: 1 },
+    routeKey: 'Surface',
+    configuredBiomeCount: 1,
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
@@ -72,9 +73,9 @@ function blankNEntryProject() {
 }
 
 function nBiomeEvaluation(project: ProjectDocument) {
-  const biome = simulateProject(catalog, project)
-    .routes.find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+  const biome = simulateProject(catalog, project).route?.biomes.find(
+    (candidate) => candidate.biomeKey === 'N',
+  );
   if (biome === undefined) throw new Error('N baseline fixture lost its biome');
   return biome;
 }
@@ -83,7 +84,8 @@ describe('N B1 entry and terminal baseline', () => {
   it('keeps a fresh zero-target Hub open-set finding alongside an unresolved entry reward', () => {
     let project = createProjectDocument(catalog, {
       projectId: 'n-zero-target-hub-finding',
-      configuredBiomeCounts: { Surface: 1 },
+      routeKey: 'Surface',
+      configuredBiomeCount: 1,
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateStart',

@@ -26,7 +26,7 @@ describe('progressive assembly witness', () => {
       { result: firstUnderworld, routeKey: 'Underworld' },
       { result: surfaceResult, routeKey: 'Surface' },
     ] as const) {
-      const evaluatedRoute = result.routes.find((candidate) => candidate.routeKey === routeKey);
+      const evaluatedRoute = result.route;
       if (evaluatedRoute === undefined) throw new Error(`missing ${routeKey} route`);
       expect(evaluatedRoute.processing.active).toBeNull();
       expect(evaluatedRoute.processing.blockedSuffix).toEqual([]);
@@ -42,31 +42,29 @@ describe('progressive assembly witness', () => {
       );
     }
     expect(Object.isFrozen(firstUnderworld)).toBe(true);
-    expect(Object.isFrozen(firstUnderworld.routes)).toBe(true);
+    expect(Object.isFrozen(firstUnderworld.route)).toBe(true);
   });
 
   it('keeps every active occurrence in the representative F-through-Q fixtures closed over required actions', () => {
     const missing: string[] = [];
     for (const project of [createGoldenFGHIProject(), loadSurfaceNOPQProject()]) {
-      for (const route of project.routes) {
-        for (const plan of route.biomes) {
-          if (plan.topology === null) continue;
-          const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
-          for (const occurrenceId of structurallyActiveOccurrenceIds(plan.topology)) {
-            const resolved = roomActionDomainForOccurrence(project, catalog, biome, occurrenceId);
-            if (resolved === undefined)
-              throw new Error(`missing active ${plan.biomeKey} occurrence`);
-            const authored = new Set(resolved.occurrence.roomActions.order.map(roomActionKey));
-            for (const contribution of resolved.domain.contributions) {
-              if (
-                contribution.kind === 'action' &&
-                contribution.participation === 'required' &&
-                !authored.has(roomActionKey(contribution.reference))
-              ) {
-                missing.push(
-                  `${route.routeKey}/${plan.biomeKey}/${occurrenceId}/${roomActionKey(contribution.reference)}`,
-                );
-              }
+      const route = project.route;
+      for (const plan of route.biomes) {
+        if (plan.topology === null) continue;
+        const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
+        for (const occurrenceId of structurallyActiveOccurrenceIds(plan.topology)) {
+          const resolved = roomActionDomainForOccurrence(project, catalog, biome, occurrenceId);
+          if (resolved === undefined) throw new Error(`missing active ${plan.biomeKey} occurrence`);
+          const authored = new Set(resolved.occurrence.roomActions.order.map(roomActionKey));
+          for (const contribution of resolved.domain.contributions) {
+            if (
+              contribution.kind === 'action' &&
+              contribution.participation === 'required' &&
+              !authored.has(roomActionKey(contribution.reference))
+            ) {
+              missing.push(
+                `${route.routeKey}/${plan.biomeKey}/${occurrenceId}/${roomActionKey(contribution.reference)}`,
+              );
             }
           }
         }

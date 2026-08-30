@@ -66,12 +66,10 @@ function coverageFor(
   if (!('routeKey' in owner) || !('biomeKey' in owner)) {
     return Object.freeze({ kind: 'none', reason: 'notEvaluated' });
   }
-  return (
-    evaluation.routes
-      .find((route) => route.routeKey === owner.routeKey)
-      ?.biomes.find((biome) => biome.biomeKey === owner.biomeKey)?.coverage ??
-    Object.freeze({ kind: 'none', reason: 'notEvaluated' })
-  );
+  return evaluation.route.routeKey === owner.routeKey
+    ? (evaluation.route.biomes.find((biome) => biome.biomeKey === owner.biomeKey)?.coverage ??
+        Object.freeze({ kind: 'none', reason: 'notEvaluated' }))
+    : Object.freeze({ kind: 'none', reason: 'notEvaluated' });
 }
 
 export function coverageUnavailable(
@@ -102,7 +100,7 @@ export function unavailableForBiome(
   owner: SemanticAddress,
   checkpoint: BiomeEvaluationCheckpoint,
 ): CandidateContextUnavailable {
-  const route = evaluation.routes.find((candidate) => candidate.routeKey === routeKey);
+  const route = evaluation.route.routeKey === routeKey ? evaluation.route : undefined;
   if (route === undefined) return coverageUnavailable(evaluation, owner, checkpoint);
   if (route.biomes.some((candidate) => candidate.biomeKey === biomeKey)) {
     return coverageUnavailable(evaluation, owner, checkpoint);

@@ -33,7 +33,8 @@ const startCases = [
 function projectFor(routeKey: string, count: number) {
   return createProjectDocument(catalog, {
     projectId: `defaults-${routeKey}-${count}`,
-    configuredBiomeCounts: { [routeKey]: count },
+    routeKey,
+    configuredBiomeCount: count,
   });
 }
 
@@ -42,9 +43,7 @@ function routeBiome(
   routeKey: string,
   biomeKey: string,
 ) {
-  const biome = project.routes
-    .find((route) => route.routeKey === routeKey)
-    ?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
+  const biome = project.route.biomes.find((candidate) => candidate.biomeKey === biomeKey);
   if (biome === undefined) throw new Error(`missing ${routeKey}/${biomeKey}`);
   return biome;
 }

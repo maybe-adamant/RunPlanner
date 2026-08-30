@@ -99,9 +99,7 @@ function biomeSource(
     (address) => acquisitionConversionCandidateForProjectEvaluationAssembly(assembly, address),
     (address) => chaosCandidateForProjectEvaluationAssembly(assembly, address),
     (address) => zagreusContractCandidateForProjectEvaluationAssembly(assembly, address),
-  )
-    .routes.find((route) => route.routeKey === routeKey)
-    ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
+  ).route?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
   if (source === undefined) throw new Error(`${routeKey}/${biomeKey} source is missing`);
   return source;
 }

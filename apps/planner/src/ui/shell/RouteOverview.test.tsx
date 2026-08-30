@@ -7,18 +7,21 @@ import { createApplication } from '@planner/composition/createApplication';
 import { projectFeedbackHierarchy } from '@planner/projections/evaluationProjection';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { RouteOverview } from './RouteOverview';
+import { createOpenTestApplication } from '@planner-test/fixtures/renderPlanner';
 
 function routeOverviewMarkup(application: ReturnType<typeof createApplication>): string {
   const state = application.store.getState();
   const routeKey = 'Underworld';
   const navigation = application.editorNavigation.routes.byKey[routeKey];
-  const workspace = application.selectStructuredWorkspace(state);
-  const workspaceRoute = workspace.routes.find((route) => route.routeKey === routeKey);
-  const feedback = projectFeedbackHierarchy(state.projectWorkspace.assembly.evaluation).routes.get(
-    routeKey,
-  );
-  if (navigation === undefined || workspaceRoute === undefined || feedback === undefined)
+  const workspace = application.selectStructuredWorkspace(state)!;
+  if (
+    navigation === undefined ||
+    workspace === undefined ||
+    state.projectWorkspace.kind !== 'openProject'
+  )
     throw new Error('Underworld route products are missing');
+  const workspaceRoute = workspace.route;
+  const feedback = projectFeedbackHierarchy(state.projectWorkspace.assembly.evaluation).route;
 
   return renderToStaticMarkup(
     <Provider store={application.store}>
@@ -37,7 +40,7 @@ function routeOverviewMarkup(application: ReturnType<typeof createApplication>):
 
 describe('RouteOverview', () => {
   it('presents the configured route extent and included biomes', () => {
-    const application = createApplication();
+    const application = createOpenTestApplication('Underworld');
 
     for (const [configuredBiomeCount, extent, description] of [
       [1, 'Through Erebus', 'Configuring Erebus.'],
@@ -61,7 +64,7 @@ describe('RouteOverview', () => {
   });
 
   it('presents Aspect of Selene Hex controls only for the active aspect', () => {
-    const application = createApplication();
+    const application = createOpenTestApplication('Underworld');
     application.store.dispatch(
       authoredProjectCommandDispatched({
         kind: 'ReplaceRouteLoadout',

@@ -75,16 +75,16 @@ const replayOwner = createEchoKeepsakeReplayAddress(createBiomeAddress('Underwor
 
 function route() {
   const project = createGoldenFGHProject();
-  const value = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
+  const value = project.route;
   if (value === undefined) throw new Error('missing Underworld route');
   return { project, value };
 }
 
 function evaluatedG() {
   const { project } = route();
-  const value = evaluatedProject(project)
-    .routes.find((candidate) => candidate.routeKey === 'Underworld')
-    ?.biomes.find((candidate) => candidate.biomeKey === 'G');
+  const value = evaluatedProject(project).route?.biomes.find(
+    (candidate) => candidate.biomeKey === 'G',
+  );
   if (value?.authoring !== 'complete' || value.validity !== 'valid')
     throw new Error('expected valid G fixture');
   return value;
@@ -620,14 +620,13 @@ describe('Echo Gift Gift Gift', () => {
     });
     const roundTrip = decodeProjectDocument(JSON.parse(encodeProjectDocument(selected)), catalog);
     expect(
-      roundTrip.routes[0]?.biomes.find((biome) => biome.biomeKey === 'G')
-        ?.echoKeepsakeReplayResults,
+      roundTrip.route?.biomes.find((biome) => biome.biomeKey === 'G')?.echoKeepsakeReplayResults,
     ).toEqual({ experimentalHammer: { kind: 'selected', traitKey: 'StaffLongAttackTrait' } });
 
     const malformed = JSON.parse(encodeProjectDocument(selected)) as {
-      routes: { biomes: { biomeKey: string; echoKeepsakeReplayResults?: unknown }[] }[];
+      route: { biomes: { biomeKey: string; echoKeepsakeReplayResults?: unknown }[] };
     };
-    const g = malformed.routes[0]!.biomes.find((biome) => biome.biomeKey === 'G')!;
+    const g = malformed.route!.biomes.find((biome) => biome.biomeKey === 'G')!;
     g.echoKeepsakeReplayResults = { experimentalHammer: { traitKey: 'StaffLongAttackTrait' } };
     expect(() => decodeProjectDocument(malformed, catalog)).toThrow(/kind/);
 
@@ -637,12 +636,12 @@ describe('Echo Gift Gift Gift', () => {
       value: { kind: 'exhausted' },
     });
     expect(
-      history.present.routes[0]?.biomes.find((biome) => biome.biomeKey === 'G')
+      history.present.route?.biomes.find((biome) => biome.biomeKey === 'G')
         ?.echoKeepsakeReplayResults,
     ).toEqual({ experimentalHammer: { kind: 'exhausted' } });
     const undone = undoProjectHistory(history);
     expect(
-      undone.present.routes[0]?.biomes.find((biome) => biome.biomeKey === 'G')
+      undone.present.route?.biomes.find((biome) => biome.biomeKey === 'G')
         ?.echoKeepsakeReplayResults,
     ).toBeUndefined();
     expect(redoProjectHistory(undone).present).toBe(history.present);
@@ -686,7 +685,7 @@ describe('Echo Gift Gift Gift', () => {
         rarificationActions: Object.freeze([]),
       },
     });
-    const h = evaluatedProject(project).routes[0]?.biomes.find((biome) => biome.biomeKey === 'H');
+    const h = evaluatedProject(project).route?.biomes.find((biome) => biome.biomeKey === 'H');
     if (h?.authoring !== 'complete') throw new Error('expected complete H');
     expect(h.rewards.branches[0]?.traitHistory?.equippedTraits[giftTraitKey]).toMatchObject({
       echoRepeatedKeepsakeKey: 'GoldifyKeepsake',
@@ -727,7 +726,7 @@ describe('Echo Gift Gift Gift', () => {
     });
     // Derive the reached history before replacing the target: replacement
     // correctly clears its authored reward leaf in the current strict schema.
-    const reachedH = evaluatedProject(project).routes[0]?.biomes.find(
+    const reachedH = evaluatedProject(project).route?.biomes.find(
       (biome) => biome.biomeKey === 'H',
     );
     if (
@@ -737,7 +736,7 @@ describe('Echo Gift Gift Gift', () => {
     )
       throw new Error('expected reached forced H miniboss frontier');
     const before = reachedH.rewards.branches[0].traitHistory ?? createTraitHistoryState();
-    const loadout = project.routes[0]!.loadout;
+    const loadout = project.route!.loadout;
     // Echo lengthens this characterized route into H's forced-miniboss window.
     // Reauthor only that target and its Boon leaf: retaining H_Combat05's old
     // Apollo leaf after changing the room would be chronologically false.
@@ -848,7 +847,7 @@ describe('Echo Gift Gift Gift', () => {
       result: iReplay,
       value: selected.value,
     });
-    const i = evaluatedProject(project).routes[0]?.biomes.find((biome) => biome.biomeKey === 'I');
+    const i = evaluatedProject(project).route?.biomes.find((biome) => biome.biomeKey === 'I');
     if (i?.authoring !== 'complete' || i.validity !== 'valid')
       throw new Error(`expected valid I replay, got ${i?.validity ?? 'missing'}`);
     expect(i.rewards.branches[0]?.traitHistory?.events).toContainEqual(

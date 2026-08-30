@@ -46,9 +46,7 @@ type IncomingRewardValue = Extract<
 >['value'];
 
 function plan(project: ProjectDocument): AuthoredBiomePlan {
-  const result = project.routes
-    .find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((candidate) => candidate.biomeKey === 'I');
+  const result = project.route.biomes.find((candidate) => candidate.biomeKey === 'I');
   if (result === undefined) {
     throw new Error('fixture lost I plan');
   }
@@ -56,7 +54,7 @@ function plan(project: ProjectDocument): AuthoredBiomePlan {
 }
 
 function traitContext(project: ProjectDocument) {
-  const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
+  const route = project.route;
   if (route === undefined) throw new Error('fixture lost Underworld route');
   return route.loadout;
 }
@@ -109,7 +107,8 @@ function occurrence(key: string): OccurrenceId {
 function createIProject(projectId: string): ProjectDocument {
   const project = createProjectDocument(catalog, {
     projectId,
-    configuredBiomeCounts: { Underworld: 4 },
+    routeKey: 'Underworld',
+    configuredBiomeCount: 4,
   });
   const started = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',

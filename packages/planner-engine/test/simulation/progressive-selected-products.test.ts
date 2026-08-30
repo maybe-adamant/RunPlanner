@@ -65,9 +65,9 @@ const {
 describe('progressive selected and blocked products', () => {
   it('retains the complete H batch when its picked miniboss trait child blocks', () => {
     const completeProject = authorLegalTraitOffers(createGoldenFGHIProject());
-    const complete = simulateProject(catalog, completeProject)
-      .routes.find((candidate) => candidate.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    const complete = simulateProject(catalog, completeProject).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'H',
+    );
     if (complete?.authoring !== 'complete' || complete.validity !== 'valid') {
       throw new Error('H fixture did not produce a complete-valid baseline');
     }
@@ -93,9 +93,9 @@ describe('progressive selected and blocked products', () => {
         selectedOptionKey: 'option1',
       },
     });
-    const blocked = simulateProject(catalog, blockedProject)
-      .routes.find((candidate) => candidate.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    const blocked = simulateProject(catalog, blockedProject).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'H',
+    );
     if (blocked?.authoring !== 'complete' || blocked.validity !== 'invalid') {
       throw new Error('H miniboss trait block did not produce a complete-invalid prefix');
     }
@@ -163,9 +163,9 @@ describe('progressive selected and blocked products', () => {
     const chaosOccurrenceId = createOccurrenceId('progressive-selected-chaos');
     const additional = createAdditionalExitAddress(goldenFBiome, sourceOccurrenceId, 'chaos');
     const completeProject = authorLegalTraitOffers(createCompleteFGProject());
-    const complete = simulateProject(catalog, completeProject)
-      .routes.find((candidate) => candidate.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    const complete = simulateProject(catalog, completeProject).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'F',
+    );
     if (complete?.authoring !== 'complete' || complete.validity !== 'valid') {
       throw new Error('selected Chaos fixture has no complete-valid F baseline');
     }
@@ -201,9 +201,9 @@ describe('progressive selected and blocked products', () => {
       gameName: 'F_Combat02',
     });
     const blockedAssembly = simulateProjectAssembly(catalog, blockedProject);
-    const blocked = blockedAssembly.evaluation.routes
-      .find((candidate) => candidate.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    const blocked = blockedAssembly.evaluation.route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'F',
+    );
     if (
       blocked === undefined ||
       blocked.validity !== 'invalid' ||
@@ -287,9 +287,9 @@ describe('progressive selected and blocked products', () => {
       trait,
       value: completeOffer,
     });
-    const complete = simulateProject(catalog, completeProject)
-      .routes.find((candidate) => candidate.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    const complete = simulateProject(catalog, completeProject).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'H',
+    );
     if (complete?.authoring !== 'complete' || complete.validity !== 'valid') {
       throw new Error('targeted trait fixture did not produce a complete-valid baseline');
     }
@@ -307,9 +307,9 @@ describe('progressive selected and blocked products', () => {
       value: blockedOffer,
     });
     const blockedAssembly = simulateProjectAssembly(catalog, blockedProject);
-    const blocked = blockedAssembly.evaluation.routes
-      .find((candidate) => candidate.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    const blocked = blockedAssembly.evaluation.route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'H',
+    );
     if (
       blocked?.authoring !== 'complete' ||
       blocked.validity !== 'invalid' ||
@@ -392,9 +392,9 @@ describe('progressive selected and blocked products', () => {
 
   it('retains the complete H batch and level repair capability when a Pom target is unresolved', () => {
     const completeProject = authorLegalTraitOffers(createGoldenFGHIProject());
-    const complete = simulateProject(catalog, completeProject)
-      .routes.find((candidate) => candidate.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    const complete = simulateProject(catalog, completeProject).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'H',
+    );
     if (complete?.authoring !== 'complete' || complete.validity !== 'valid') {
       throw new Error('Pom fixture did not produce a complete-valid baseline');
     }
@@ -415,9 +415,9 @@ describe('progressive selected and blocked products', () => {
       },
     });
     const blockedAssembly = simulateProjectAssembly(catalog, blockedProject);
-    const blocked = blockedAssembly.evaluation.routes
-      .find((candidate) => candidate.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    const blocked = blockedAssembly.evaluation.route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'H',
+    );
     if (
       blocked?.authoring !== 'complete' ||
       blocked.validity !== 'invalid' ||
@@ -588,8 +588,7 @@ describe('progressive selected and blocked products', () => {
   it('rejects a duplicate sibling trait through the candidate authority', () => {
     const project = authorLegalTraitOffers(createGoldenFGHProject());
     const assembly = simulateProjectAssembly(catalog, project);
-    const trace = assembly.evaluation.routes
-      .flatMap((route) => route.biomes)
+    const trace = assembly.evaluation.route.biomes
       .flatMap((biome) => ('rewards' in biome ? biome.rewards.selectedTraitOffers : []))
       .find((candidate) =>
         candidate.branches.every((branch) =>
@@ -657,13 +656,9 @@ describe('progressive selected and blocked products', () => {
       ?.rewardProducers.at(firstFReward);
 
     const fixture = partialGWithInvalidSecondPhysicalTarget();
-    const routeEvaluation = simulateProject(catalog, fixture.project).routes.find(
-      (candidate) => candidate.routeKey === 'Underworld',
-    );
+    const routeEvaluation = simulateProject(catalog, fixture.project).route;
     const previous = routeEvaluation?.biomes.find((candidate) => candidate.biomeKey === 'F');
-    const plan = fixture.project.routes
-      .find((candidate) => candidate.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'G');
+    const plan = fixture.project.route?.biomes.find((candidate) => candidate.biomeKey === 'G');
     if (previous?.authoring !== 'complete' || previous.validity !== 'valid' || plan === undefined) {
       throw new Error('progressive artifact fixture has no valid F seed or G plan');
     }
@@ -713,13 +708,11 @@ describe('progressive selected and blocked products', () => {
     expect(beforeClampInvalidContext).not.toBe(clampedFrontierContext);
 
     const blocked = partialGWithEarlierInvalidReward();
-    const blockedRoute = simulateProject(catalog, blocked.project).routes.find(
-      (candidate) => candidate.routeKey === 'Underworld',
-    );
+    const blockedRoute = simulateProject(catalog, blocked.project).route;
     const blockedPrevious = blockedRoute?.biomes.find((candidate) => candidate.biomeKey === 'F');
-    const blockedPlan = blocked.project.routes
-      .find((candidate) => candidate.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'G');
+    const blockedPlan = blocked.project.route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'G',
+    );
     if (
       blockedPrevious?.authoring !== 'complete' ||
       blockedPrevious.validity !== 'valid' ||
@@ -774,9 +767,7 @@ describe('progressive selected and blocked products', () => {
   it('does not publish broad interaction replay products after an earlier reward block', () => {
     let project = authorLegalTraitOffers(createCompleteFGProject());
     const baseline = simulateProjectAssembly(catalog, project).evaluation;
-    const baselineF = baseline.routes
-      .find((candidate) => candidate.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    const baselineF = baseline.route?.biomes.find((candidate) => candidate.biomeKey === 'F');
     if (baselineF?.authoring !== 'complete') throw new Error('missing complete F baseline');
     const laterTrait = baselineF.rewards.selectedTraitOffers.find(
       (offer) =>
@@ -825,9 +816,9 @@ describe('progressive selected and blocked products', () => {
     });
 
     const assembly = simulateProjectAssembly(catalog, project);
-    const evaluation = assembly.evaluation.routes
-      .find((candidate) => candidate.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    const evaluation = assembly.evaluation.route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'F',
+    );
     if (
       evaluation?.authoring !== 'complete' ||
       evaluation.validity !== 'invalid' ||
@@ -888,13 +879,9 @@ describe('progressive selected and blocked products', () => {
       wheel: createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1'),
       storeKey: 'MetaProgress',
     });
-    const routeEvaluation = simulateProject(catalog, invalid).routes.find(
-      (candidate) => candidate.routeKey === 'Surface',
-    );
+    const routeEvaluation = simulateProject(catalog, invalid).route;
     const previous = routeEvaluation?.biomes.find((candidate) => candidate.biomeKey === 'N');
-    const plan = invalid.routes
-      .find((candidate) => candidate.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    const plan = invalid.route?.biomes.find((candidate) => candidate.biomeKey === 'O');
     if (previous?.authoring !== 'complete' || previous.validity !== 'valid' || plan === undefined) {
       throw new Error('lifecycle artifact fixture has no valid N seed or O plan');
     }

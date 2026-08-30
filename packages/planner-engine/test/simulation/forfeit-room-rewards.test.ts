@@ -49,14 +49,14 @@ function simulated(rewardType: 'Boon' | 'HermesUpgrade') {
     });
   }
   const result = simulateProject(catalog, project);
-  const f = result.routes.find((route) => route.routeKey === 'Underworld')?.biomes[0];
+  const f = result.route?.biomes[0];
   if (f?.authoring !== 'complete') throw new Error('expected complete F simulation');
   return f.rewards;
 }
 
 function rewardsFor(project: ReturnType<typeof createCompleteFGProject>) {
   const result = simulateProject(catalog, project);
-  const f = result.routes.find((route) => route.routeKey === 'Underworld')?.biomes[0];
+  const f = result.route?.biomes[0];
   if (f?.authoring !== 'complete') throw new Error('expected complete F simulation');
   return f.rewards;
 }

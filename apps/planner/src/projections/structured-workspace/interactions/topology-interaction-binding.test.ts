@@ -73,7 +73,8 @@ describe('structured workspace interaction binding', () => {
 
   it('binds a fixed start to one generic command and after-focus intent', () => {
     const project = createProjectDocument(catalog, {
-      configuredBiomeCounts: { Surface: 1 },
+      routeKey: 'Surface',
+      configuredBiomeCount: 1,
       projectId: 'fixed-start-binding',
     });
     const occurrenceId = createOccurrenceId('bound-fixed-start');
@@ -98,7 +99,8 @@ describe('structured workspace interaction binding', () => {
   it('binds an authored-choice start to the same generic command', () => {
     const biome = createBiomeAddress('Underworld', 'F');
     const project = createProjectDocument(catalog, {
-      configuredBiomeCounts: { Underworld: 1 },
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
       projectId: 'choice-start-binding',
     });
     const occurrenceId = createOccurrenceId('bound-choice-start');
@@ -136,7 +138,8 @@ describe('structured workspace interaction binding', () => {
     const missingTarget = createTargetAddress(goldenFBiome, source, 'exit2');
     let project = applyProjectCommand(
       createProjectDocument(catalog, {
-        configuredBiomeCounts: { Underworld: 1 },
+        routeKey: 'Underworld',
+        configuredBiomeCount: 1,
         projectId: 'target-interaction-binding',
       }),
       catalog,
@@ -282,7 +285,8 @@ describe('structured workspace interaction binding', () => {
     });
     const started = applyProjectCommand(
       createProjectDocument(catalog, {
-        configuredBiomeCounts: { Underworld: 1 },
+        routeKey: 'Underworld',
+        configuredBiomeCount: 1,
         projectId: 'unresolved-direct-f-entry',
       }),
       catalog,
@@ -355,9 +359,7 @@ describe('structured workspace interaction binding', () => {
 
   it('binds I’s empty-decision Preboss through the ordinary target path', () => {
     let project = createGoldenFGHIProject();
-    const iPlan = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'I');
+    const iPlan = project.route.biomes.find((biome) => biome.biomeKey === 'I');
     const prebossOccurrenceId = iPlan?.topology?.occurrences.find(
       (occurrence) => occurrence.gameName === 'I_PreBoss02',
     )?.occurrenceId;
@@ -487,7 +489,8 @@ describe('structured workspace interaction binding', () => {
     });
     let project = applyProjectCommand(
       createProjectDocument(catalog, {
-        configuredBiomeCounts: { Underworld: 1 },
+        routeKey: 'Underworld',
+        configuredBiomeCount: 1,
         projectId: 'retained-prefix-direct-entry',
       }),
       catalog,
@@ -568,9 +571,7 @@ describe('structured workspace interaction binding', () => {
 
   it('retains a blocked takeover repair binding at its exact decision owner', () => {
     const base = createGoldenFGHIProject();
-    const gPlan = base.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'G');
+    const gPlan = base.route.biomes.find((candidate) => candidate.biomeKey === 'G');
     const gTakeover = gPlan?.topology?.decisions.find(
       (decision) =>
         decision.kind === 'exit' &&

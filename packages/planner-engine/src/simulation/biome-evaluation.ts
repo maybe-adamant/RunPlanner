@@ -327,8 +327,8 @@ export function replayProjectBiomeFromEvaluatedPredecessor(
   selected: ProjectEvaluation,
   biome: BiomeAddress,
 ): ProjectBiomeEvaluation {
-  const route = project.routes.find((candidate) => candidate.routeKey === biome.routeKey);
-  const selectedRoute = selected.routes.find((candidate) => candidate.routeKey === biome.routeKey);
+  const route = project.route.routeKey === biome.routeKey ? project.route : undefined;
+  const selectedRoute = selected.route.routeKey === biome.routeKey ? selected.route : undefined;
   const biomeIndex = route?.biomes.findIndex((candidate) => candidate.biomeKey === biome.biomeKey);
   if (
     route === undefined ||

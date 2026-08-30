@@ -40,7 +40,7 @@ describe('selected outcomes', () => {
   it('starts All Together unresolved and applies one complete four-role draft', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const base = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind !== 'hammer',
     );
@@ -187,7 +187,7 @@ describe('selected outcomes', () => {
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
     });
     application.store.dispatch(authoredProjectReplaced(project));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const base = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind !== 'hammer',
     );
@@ -279,7 +279,7 @@ describe('selected outcomes', () => {
       traitOffers: new Map([[base.key, interaction]]),
     }) as unknown as WorkspaceInteractionCatalog;
     application.store.dispatch(semanticOwnerNavigated(result));
-    const historyDepth = application.store.getState().projectWorkspace.history.past.length;
+    const historyDepth = application.store.getState().projectWorkspace.history!.past.length;
     const user = userEvent.setup();
     render(
       <Provider store={application.store}>
@@ -298,18 +298,18 @@ describe('selected outcomes', () => {
     expect(screen.getAllByRole('button', { name: /Position \d+:/ })).toHaveLength(8);
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
     expect(seenPrefixes).toContainEqual(authoredTargets.slice(0, 7));
-    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyDepth + 1,
     );
     application.store.dispatch(authoredProjectUndoRequested());
-    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(historyDepth);
+    expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(historyDepth);
     application.dispose();
   });
 
   it('keeps an engine-backed early-exhausted Natural Selection result compact and saveable', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const base = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind !== 'hammer',
     );
@@ -416,7 +416,7 @@ describe('selected outcomes', () => {
   it('reopens a retained-invalid Natural position, preserves it as disabled, and saves one replacement offer', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const base = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind !== 'hammer',
     );
@@ -579,7 +579,7 @@ describe('selected outcomes', () => {
   it('renders the selected Ransom preview from its derived assessment', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const base = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind !== 'hammer',
     );
@@ -659,7 +659,7 @@ describe('selected outcomes', () => {
   it('renders only the branch-variation message for a selected Ransom', () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const base = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind !== 'hammer',
     );
@@ -728,7 +728,7 @@ describe('selected outcomes', () => {
     async (effect, label, choiceLabel) => {
       const application = createApplication();
       application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-      const workspace = application.selectStructuredWorkspace(application.store.getState());
+      const workspace = application.selectStructuredWorkspace(application.store.getState())!;
       const base = [...workspace.interactions.traitOffers.values()].find(
         (candidate) => candidate.giver.providerKind !== 'hammer',
       );
@@ -888,7 +888,7 @@ describe('selected outcomes', () => {
     ) => {
       const application = createApplication();
       application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-      const workspace = application.selectStructuredWorkspace(application.store.getState());
+      const workspace = application.selectStructuredWorkspace(application.store.getState())!;
       const base = [...workspace.interactions.traitOffers.values()].find(
         (candidate) => candidate.value?.kind === 'traits',
       );

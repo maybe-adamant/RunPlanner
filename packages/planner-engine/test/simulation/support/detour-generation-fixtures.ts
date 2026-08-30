@@ -29,8 +29,12 @@ function source(occurrenceId: OccurrenceId) {
   return { kind: 'occurrence' as const, occurrenceId };
 }
 
-function projectFor(configuredBiomeCounts: { readonly Underworld: number }): ProjectDocument {
-  return createProjectDocument(catalog, { projectId: 'generation-detour', configuredBiomeCounts });
+function projectFor(configuredBiomeCount: number): ProjectDocument {
+  return createProjectDocument(catalog, {
+    projectId: 'generation-detour',
+    routeKey: 'Underworld',
+    configuredBiomeCount,
+  });
 }
 
 function createBatch(project: ProjectDocument, parent: OccurrenceId): ProjectDocument {
@@ -104,7 +108,7 @@ export function buildBelowDepthAnomalyProject() {
   const start = createOccurrenceId('generation-detour-below-depth-start');
   const first = createOccurrenceId('generation-detour-below-depth-first');
   const second = createOccurrenceId('generation-detour-below-depth-second');
-  let project = projectFor({ Underworld: 2 });
+  let project = projectFor(2);
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
     biome: detourGBiome,
@@ -135,7 +139,7 @@ export function buildAnomalyCapProject(firstAnomalySelected: boolean) {
   const laterAnomaly = createOccurrenceId(`generation-detour-cap-${suffix}-later-anomaly`);
   const laterPeer1 = createOccurrenceId(`generation-detour-cap-${suffix}-later-peer1`);
   const laterPeer2 = createOccurrenceId(`generation-detour-cap-${suffix}-later-peer2`);
-  let project = projectFor({ Underworld: 2 });
+  let project = projectFor(2);
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
     biome: detourGBiome,
@@ -196,7 +200,7 @@ export function buildShopSourceAnomalyProject() {
   const shop = createOccurrenceId('generation-detour-shop');
   const target = createOccurrenceId('generation-detour-shop-target');
   const peer = createOccurrenceId('generation-detour-shop-peer');
-  let project = projectFor({ Underworld: 2 });
+  let project = projectFor(2);
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
     biome: detourGBiome,
@@ -236,7 +240,8 @@ export function createSelectedContractContinuationProject() {
   const contract = createOccurrenceId('batch-materialization-contract');
   let project = createProjectDocument(catalog, {
     projectId: 'batch-materialization-contract',
-    configuredBiomeCounts: { Underworld: 1 },
+    routeKey: 'Underworld',
+    configuredBiomeCount: 1,
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',

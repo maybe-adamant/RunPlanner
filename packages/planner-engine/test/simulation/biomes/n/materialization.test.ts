@@ -26,9 +26,7 @@ import {
 function completeN() {
   const project = loadSurfaceNProject();
   const evaluation = simulateProject(catalog, project);
-  const biome = evaluation.routes
-    .find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+  const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'N');
   if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
     throw new Error('N fixture did not complete-valid');
   }
@@ -36,7 +34,7 @@ function completeN() {
 }
 
 function traitContext(project: ReturnType<typeof loadSurfaceNProject>) {
-  const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
+  const route = project.route;
   if (route === undefined) throw new Error('N fixture has no Surface route');
   return route.loadout;
 }
@@ -45,11 +43,12 @@ describe('canonical N Hub materialization', () => {
   it('keeps an unopened Hub structurally incomplete without inventing a board', () => {
     const project = createProjectDocument(catalog, {
       projectId: 'n-incomplete',
-      configuredBiomeCounts: { Surface: 1 },
+      routeKey: 'Surface',
+      configuredBiomeCount: 1,
     });
-    const biome = simulateProject(catalog, project)
-      .routes.find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    const biome = simulateProject(catalog, project).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'N',
+    );
 
     expect(biome).toMatchObject({
       authoring: 'incomplete',
@@ -61,7 +60,8 @@ describe('canonical N Hub materialization', () => {
   it('marks the exact empty bounded entry for full Opening lifecycle without widening ordinary frontiers', () => {
     let project = createProjectDocument(catalog, {
       projectId: 'n-empty-entry-lifecycle',
-      configuredBiomeCounts: { Surface: 1 },
+      routeKey: 'Surface',
+      configuredBiomeCount: 1,
     });
     const openingDecision = createExitDecisionAddress(nBiome, {
       kind: 'occurrence',
@@ -97,9 +97,8 @@ describe('canonical N Hub materialization', () => {
       decision: openingDecision,
     });
 
-    const authoredOpening = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((plan) => plan.biomeKey === 'N')
+    const authoredOpening = project.route.biomes
+      .find((plan) => plan.biomeKey === 'N')
       ?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === nOccurrenceIds.opening,
       );
@@ -111,9 +110,9 @@ describe('canonical N Hub materialization', () => {
       },
     ]);
 
-    const biome = simulateProject(catalog, project)
-      .routes.find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    const biome = simulateProject(catalog, project).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'N',
+    );
     if (
       biome?.authoring !== 'incomplete' ||
       !('materializedPrefix' in biome) ||
@@ -217,9 +216,7 @@ describe('canonical N Hub materialization', () => {
 
   it('keeps the selected PreHub terminal envelope explicit until its source-bearing Hub takeover', () => {
     const project = loadSurfaceNEntryFrontierResolvedProject();
-    const plan = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const plan = project.route.biomes.find((biome) => biome.biomeKey === 'N');
     if (plan === undefined) throw new Error('N terminal-envelope fixture lost its biome plan');
     const prefix = materializeBiomePrefix(catalog, nBiome, plan, traitContext(project));
     if (prefix === null) {
@@ -245,9 +242,7 @@ describe('canonical N Hub materialization', () => {
     });
 
     const evaluation = simulateProject(catalog, project);
-    const biome = evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'N');
     if (biome?.authoring !== 'incomplete' || !('history' in biome)) {
       throw new Error('N terminal envelope did not publish a history prefix');
     }
@@ -275,9 +270,7 @@ describe('canonical N Hub materialization', () => {
       }),
       hub: createHubDecisionAddress(nBiome, 'hub'),
     });
-    const plan = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const plan = project.route.biomes.find((biome) => biome.biomeKey === 'N');
     if (plan === undefined) throw new Error('N Hub-source fixture lost its biome plan');
     const prefix = materializeBiomePrefix(catalog, nBiome, plan, traitContext(project));
     if (prefix === null) throw new Error('N Hub-source fixture did not materialize');
@@ -359,9 +352,9 @@ describe('canonical N Hub materialization', () => {
         decisionKey: 'hub',
       }),
     });
-    const biome = simulateProject(catalog, withoutHandoff)
-      .routes.find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    const biome = simulateProject(catalog, withoutHandoff).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'N',
+    );
     if (biome?.authoring !== 'incomplete') throw new Error('N handoff fixture did not remain open');
     if (biome.coverage.kind !== 'prefix') throw new Error('N handoff fixture lost prefix coverage');
     if (!('history' in biome)) throw new Error('N handoff fixture did not compose history');

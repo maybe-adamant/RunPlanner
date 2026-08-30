@@ -33,10 +33,8 @@ import {
 } from './support/detour-generation-fixtures';
 
 function prefix(project: ProjectDocument) {
-  const plan = project.routes
-    .find((route) => route.routeKey === detourGBiome.routeKey)
-    ?.biomes.find((biome) => biome.biomeKey === detourGBiome.biomeKey);
-  const route = project.routes.find((candidate) => candidate.routeKey === detourGBiome.routeKey);
+  const plan = project.route.biomes.find((biome) => biome.biomeKey === detourGBiome.biomeKey);
+  const route = project.route;
   if (plan === undefined || route === undefined) throw new Error('G detour fixture is missing');
   const snapshot = materializeBiomePrefix(catalog, detourGBiome, plan, route.loadout);
   if (snapshot === null || snapshot.entryRoom === undefined)
@@ -120,9 +118,7 @@ describe('first-target and takeover generation support', () => {
   });
   it('does not let an aggregate-invalid three-door takeover suppress ordinary Door 1 support', () => {
     let project = createCompleteFGProject();
-    const plan = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    const plan = project.route.biomes.find((biome) => biome.biomeKey === 'G');
     if (plan?.topology === null || plan === undefined) throw new Error('G topology is missing');
     const takeover = plan.topology.decisions.find(
       (candidate) =>

@@ -459,9 +459,7 @@ describe('Pom level resolutions', () => {
       value: { rewardType: 'StackUpgrade' },
     });
     const assembly = simulateProjectAssembly(catalog, project);
-    const o = assembly.evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'O');
+    const o = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'O');
     if (o === undefined || !('rewards' in o)) throw new Error('missing evaluated O reward product');
     expect(o.rewards.selectedLevelResolutions).toContainEqual(
       expect.objectContaining({ address, branches: expect.any(Array) }),
@@ -481,9 +479,7 @@ describe('Pom level resolutions', () => {
       'self',
     );
     const assembly = simulateProjectAssembly(catalog, project);
-    const f = assembly.evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const f = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
     if (f === undefined || !('rewards' in f) || !('materializedPrefix' in f)) {
       throw new Error('missing progressive F rewards');
     }
@@ -514,9 +510,9 @@ describe('Pom level resolutions', () => {
       value: { kind: 'random', targetTraitKey },
     });
     const repairedAssembly = simulateProjectAssembly(catalog, repaired);
-    const repairedF = repairedAssembly.evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const repairedF = repairedAssembly.evaluation.route.biomes.find(
+      (biome) => biome.biomeKey === 'F',
+    );
     if (repairedF === undefined || !('rewards' in repairedF)) {
       throw new Error('missing repaired progressive F rewards');
     }
@@ -577,9 +573,7 @@ describe('Pom level resolutions', () => {
     const frontierAssembly = simulateProjectAssembly(catalog, frontier);
     const continuedAssembly = simulateProjectAssembly(catalog, continued);
     const rewardProduct = (assembly: ReturnType<typeof simulateProjectAssembly>) => {
-      const evaluated = assembly.evaluation.routes
-        .find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'F');
+      const evaluated = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
       if (evaluated === undefined || !('rewards' in evaluated)) {
         throw new Error('Midshop fixture did not publish F rewards');
       }
@@ -687,9 +681,7 @@ describe('Pom level resolutions', () => {
       },
     });
     const assembly = simulateProjectAssembly(catalog, project);
-    const f = assembly.evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const f = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
     if (f === undefined || !('rewards' in f)) throw new Error('missing evaluated F reward product');
     const findings = f.rewards.findings.filter(
       (finding) => finding.origin.kind === 'levelResolution',

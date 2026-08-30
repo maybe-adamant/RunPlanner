@@ -276,7 +276,7 @@ function decodeRoutePlan(
 
 export function decodeProjectDocument(value: unknown, catalog: Catalog): ProjectDocument {
   const document = expectRecord(value, '$');
-  expectExactKeys(document, ['schemaVersion', 'projectId', 'catalogVersion', 'routes'], '$');
+  expectExactKeys(document, ['schemaVersion', 'projectId', 'catalogVersion', 'route'], '$');
 
   if (document.schemaVersion !== PROJECT_DOCUMENT_SCHEMA_VERSION) {
     fail(
@@ -294,40 +294,17 @@ export function decodeProjectDocument(value: unknown, catalog: Catalog): Project
     );
   }
 
-  const rawRoutes = expectArray(document.routes, '$.routes');
-  const routesByKey = new Map<string, AuthoredRoutePlan>();
-
-  for (const [index, rawRoute] of rawRoutes.entries()) {
-    const path = `$.routes[${index}]`;
-    const routeRecord = expectRecord(rawRoute, path);
-    const routeKey = expectString(routeRecord.routeKey, `${path}.routeKey`);
-    const route = catalog.routes.byKey[routeKey];
-    if (route === undefined) {
-      fail(`${path}.routeKey`, `unknown route ${routeKey}`);
-    }
-    if (routesByKey.has(routeKey)) {
-      fail(`${path}.routeKey`, `duplicates route ${routeKey}`);
-    }
-    routesByKey.set(routeKey, decodeRoutePlan(routeRecord, path, route, catalog));
-  }
-
-  const routes = catalog.routes.values.map((route) => {
-    const plan = routesByKey.get(route.key);
-    if (plan === undefined) {
-      fail('$.routes', `missing route ${route.key}`);
-    }
-    return plan;
-  });
-
-  if (routesByKey.size !== catalog.routes.values.length) {
-    fail('$.routes', `must contain exactly ${catalog.routes.values.length} routes`);
-  }
+  const rawRoute = expectRecord(document.route, '$.route');
+  const routeKey = expectString(rawRoute.routeKey, '$.route.routeKey');
+  const route = catalog.routes.byKey[routeKey];
+  if (route === undefined) fail('$.route.routeKey', `unknown route ${routeKey}`);
+  const decodedRoute = decodeRoutePlan(rawRoute, '$.route', route, catalog);
 
   return Object.freeze({
     schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
     projectId,
     catalogVersion,
-    routes: Object.freeze(routes),
+    route: decodedRoute,
   });
 }
 

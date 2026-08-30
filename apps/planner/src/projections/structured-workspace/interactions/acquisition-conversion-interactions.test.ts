@@ -164,9 +164,8 @@ describe('acquisition-conversion-interactions', () => {
       acquisition,
       procced: true,
     });
-    const shop = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'P')
+    const shop = project.route.biomes
+      .find((biome) => biome.biomeKey === 'P')
       ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === shopId);
     if (shop === undefined) throw new Error('paid shop source occurrence is missing');
     expect(activeRoomActionReferences(catalog, pBiome, shop)).not.toContainEqual(
@@ -183,9 +182,7 @@ describe('acquisition-conversion-interactions', () => {
     expect(candidate.result.unsupportedEvidence).toEqual(
       expect.arrayContaining([expect.objectContaining({ instanceProvenance: 'paid' })]),
     );
-    const p = assembly.evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'P');
+    const p = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'P');
     if (p === undefined || !('rewards' in p)) throw new Error('missing evaluated paid shop');
     expect(p.rewards.findings).toContainEqual(
       expect.objectContaining({ code: 'seaStarDuplicationUnavailable', origin: acquisition }),

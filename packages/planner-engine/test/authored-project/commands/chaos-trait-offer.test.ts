@@ -21,9 +21,6 @@ import { candidateArtifactsForProjectEvaluationAssembly } from '../../../src/sim
 
 import naturalChaosRaw from '../../../../../test/fixtures/authored-project/checkpoints/natural-chaos-unresolved-trial.runplanner.json';
 import type { AuthoredChaosTraitOffer } from '../../../src/authored-project/traits';
-// The standalone JSON migration CLI deliberately has no production package surface.
-// @ts-expect-error test contact imports that engine-consumed CLI output directly.
-import { migrateProjectDocument } from '../../../../../schema/migrate-project.js';
 
 const chaosReward = createIncomingRewardAddress(
   createBiomeAddress('Underworld', 'F'),
@@ -32,7 +29,7 @@ const chaosReward = createIncomingRewardAddress(
 const chaosTrait = createTraitOfferAddress(chaosReward, 'self');
 
 function unresolvedProject() {
-  return decodeProjectDocument(migrateProjectDocument(naturalChaosRaw).document, catalog);
+  return decodeProjectDocument(naturalChaosRaw, catalog);
 }
 
 /** The named checkpoint intentionally retains only the Chaos child unresolved.
@@ -101,18 +98,15 @@ describe('Chaos TrialUpgrade authored child', () => {
   it('round-trips its unresolved default and atomically replaces the whole selected pair', () => {
     const unresolved = unresolvedProject();
     const serializedUnresolved = JSON.parse(encodeProjectDocument(unresolved)) as {
-      routes: readonly {
-        readonly biomes: readonly {
-          readonly topology: {
-            readonly occurrences: readonly {
-              readonly occurrenceId: string;
-              readonly state: unknown;
-            }[];
+      route: {
+        biomes: readonly {
+          topology: {
+            occurrences: readonly { occurrenceId: string; state: unknown }[];
           };
         }[];
-      }[];
+      };
     };
-    const chaosOccurrence = serializedUnresolved.routes[0]?.biomes[0]?.topology.occurrences.find(
+    const chaosOccurrence = serializedUnresolved.route.biomes[0]?.topology.occurrences.find(
       (occurrence) => occurrence.occurrenceId === 'fixture-chaos-room',
     );
     expect(chaosOccurrence).toMatchObject({
@@ -282,73 +276,5 @@ describe('Chaos TrialUpgrade authored child', () => {
         }),
       )[0]?.rarities,
     ).toEqual(['Legendary']);
-  });
-
-  it('migrates schema-63 projects into the current strict decoder path', () => {
-    const legacy = JSON.parse(JSON.stringify(naturalChaosRaw)) as {
-      schemaVersion: number;
-      catalogVersion: string;
-    };
-    legacy.schemaVersion = 63;
-    legacy.catalogVersion = '0.46.0-vow-forfeit-red-onion';
-    const migrated = migrateProjectDocument(legacy).document;
-    expect(migrated.schemaVersion).toBe(72);
-    expect(migrated.catalogVersion).toBe('0.51.0-biome-i-encounter-profiles');
-    expect(() => decodeProjectDocument(migrated, catalog)).not.toThrow();
-  });
-
-  it('migrates a schema-65 selected Chaos pair into three repeated options without adding bans', () => {
-    type LegacyOccurrence = {
-      occurrenceId: string;
-      state: {
-        reward: {
-          traitOffersByAcquisitionRole: Record<string, unknown>;
-        };
-      };
-    };
-    type LegacyDocument = {
-      schemaVersion: number;
-      catalogVersion: string;
-      routes: { biomes: { topology: { occurrences: LegacyOccurrence[] } }[] }[];
-    };
-    const legacy = JSON.parse(JSON.stringify(naturalChaosRaw)) as unknown as LegacyDocument;
-    legacy.schemaVersion = 65;
-    legacy.catalogVersion = '0.48.0-hex-talent-layouts';
-    const occurrence = legacy.routes[0]?.biomes[0]?.topology.occurrences.find(
-      (entry) => entry.occurrenceId === 'fixture-chaos-room',
-    );
-    if (occurrence === undefined) throw new Error('legacy Chaos occurrence is missing');
-    occurrence.state.reward.traitOffersByAcquisitionRole.self = {
-      kind: 'chaos',
-      giverKey: 'Chaos',
-      curseKey: 'ChaosHealthCurse',
-      duration: 4,
-      curseValues: { healthPenalty: -24 },
-      blessingKey: 'ChaosWeaponBlessing',
-      rarity: 'Common',
-      blessingValues: { damageBonus: 0.2 },
-    };
-    const migrated = migrateProjectDocument(legacy).document as unknown as LegacyDocument;
-    const migratedOccurrence = migrated.routes[0]?.biomes[0]?.topology.occurrences.find(
-      (entry) => entry.occurrenceId === 'fixture-chaos-room',
-    );
-    if (migratedOccurrence === undefined) throw new Error('migrated Chaos occurrence is missing');
-    const migratedOffer = migratedOccurrence.state.reward.traitOffersByAcquisitionRole.self;
-    expect(migratedOffer).toMatchObject({
-      curseOptions: [
-        { curseKey: 'ChaosHealthCurse', requirementCount: 4 },
-        { curseKey: 'ChaosHealthCurse', requirementCount: 4 },
-        { curseKey: 'ChaosHealthCurse', requirementCount: 4 },
-      ],
-      selectedOptionKey: 'option1',
-      selectedCurseValues: { healthPenalty: -24 },
-      blessingKey: 'ChaosWeaponBlessing',
-      rarity: 'Common',
-      blessingValues: { damageBonus: 0.2 },
-    });
-    expect(migratedOffer).not.toHaveProperty('curseKey');
-    expect(migratedOffer).not.toHaveProperty('duration');
-    expect(migratedOffer).not.toHaveProperty('curseValues');
-    expect(decodeProjectDocument(migrated, catalog)).toBeTruthy();
   });
 });

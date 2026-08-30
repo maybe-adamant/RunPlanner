@@ -98,8 +98,7 @@ describe('occurrence room facts', () => {
       'roomExit',
     );
     let project = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
-    const initialOccurrence = project.routes
-      .flatMap((route) => route.biomes)
+    const initialOccurrence = project.route.biomes
       .find((biome) => biome.biomeKey === 'F')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopId);
     const source =
@@ -179,8 +178,7 @@ describe('occurrence room facts', () => {
   it('projects active Contract and generated Travel rows but never the disabled placeholder', () => {
     const shopId = createOccurrenceId('golden-f-preboss-shop');
     const project = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
-    const shopOccurrence = project.routes
-      .flatMap((route) => route.biomes)
+    const shopOccurrence = project.route.biomes
       .find((biome) => biome.biomeKey === 'F')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopId);
     const shop = shopOccurrence?.state.kind === 'shop' ? shopOccurrence.state.shop : undefined;

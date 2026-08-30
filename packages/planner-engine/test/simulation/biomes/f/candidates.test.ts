@@ -156,7 +156,8 @@ function selectedNaturalChaosFrontier(): {
   const openingOccurrenceId = createOccurrenceId('candidate-natural-chaos-opening');
   const chaosOccurrenceId = createOccurrenceId('candidate-natural-chaos-room');
   let project = createProjectDocument(catalog, {
-    configuredBiomeCounts: { Underworld: 1 },
+    routeKey: 'Underworld',
+    configuredBiomeCount: 1,
     projectId: 'selected-natural-chaos-candidate-frontier',
   });
   project = applyProjectCommand(project, catalog, {
@@ -221,7 +222,7 @@ describe('F candidate support', () => {
     });
     const reward = createIncomingRewardAddress(fBiome, fStartId);
     const assembly = simulateProjectAssembly(catalog, project);
-    const biome = assembly.evaluation.routes[0]?.biomes[0];
+    const biome = assembly.evaluation.route?.biomes[0];
 
     expect(biome).toMatchObject({
       authoring: 'incomplete',
@@ -267,9 +268,7 @@ describe('F candidate support', () => {
 
   it('shares terminal empty-decision force support between Door 1 and the takeover batch', () => {
     let project = createCompleteFGProject();
-    const plan = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const plan = project.route.biomes.find((biome) => biome.biomeKey === 'F');
     if (plan?.topology === null || plan === undefined) throw new Error('F topology is missing');
     const takeoverDecision = plan.topology.decisions.find(
       (candidate) =>
@@ -369,7 +368,7 @@ describe('F candidate support', () => {
       occurrence: createOccurrenceAddress(fBiome, fGenerationOccurrenceId(1, 1)),
       gameName: 'F_Combat01',
     });
-    const selectedBiome = simulateProject(catalog, selected).routes[0]?.biomes[0];
+    const selectedBiome = simulateProject(catalog, selected).route?.biomes[0];
 
     expect(candidate).toMatchObject({
       kind: 'roomTarget',
@@ -413,7 +412,7 @@ describe('F candidate support', () => {
   it('evaluates an entered ordinary Shop while retaining its unpicked peer as a non-owner', () => {
     const project = shopPrefixProject();
     const shopId = fGenerationOccurrenceId(5, 1);
-    const shop = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
+    const shop = project.route?.biomes[0]?.topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === shopId,
     );
     if (shop?.state.kind !== 'shop' || shop.state.shop === undefined) {
@@ -460,9 +459,8 @@ describe('F candidate support', () => {
     if (site.owner.kind !== 'occurrence') throw new Error('F Shop site must be occurrence-owned');
     const ordered = replaceTestShopOfferActions(project, catalog, site.owner, ['Boon', 'Minor']);
     expect(
-      ordered.routes
-        .find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'F')
+      ordered.route.biomes
+        .find((biome) => biome.biomeKey === 'F')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === fMidshopPomShopId)
         ?.roomActions.order,
     ).toEqual(
@@ -619,7 +617,7 @@ describe('F candidate support', () => {
   it('evaluates store and Door 1 from the selected natural Chaos return checkpoint', () => {
     const fixture = selectedNaturalChaosFrontier();
     const assembly = simulateProjectAssembly(catalog, fixture.project);
-    const biome = assembly.evaluation.routes[0]?.biomes[0];
+    const biome = assembly.evaluation.route?.biomes[0];
     if (biome === undefined || !('history' in biome)) {
       throw new Error('selected natural Chaos frontier has no evaluated history');
     }
@@ -724,10 +722,10 @@ describe('F candidate support', () => {
 
   it('keeps the covered combat reward available while blocking an invalid Preboss Shop', () => {
     const project = createCompleteFTakeoverProject();
-    const combat = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
+    const combat = project.route?.biomes[0]?.topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === fCombatId,
     );
-    const shop = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
+    const shop = project.route?.biomes[0]?.topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === 'f-takeover-preboss-shop',
     );
     if (combat?.state.kind !== 'counted' || combat.state.reward === null) {

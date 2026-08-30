@@ -18,17 +18,13 @@ function routeForCommand(
     | { readonly kind: 'ReplaceStartingKeepsake' }
   >,
 ) {
-  const routeIndex = document.routes.findIndex(
-    (route) =>
-      route.routeKey ===
-      (command.kind === 'ReplaceStartingKeepsake'
-        ? command.selection.routeKey
-        : command.route.routeKey),
-  );
-  if (routeIndex < 0) failCommand(command, `project is missing route`);
-  const route = document.routes[routeIndex];
-  if (route === undefined) failCommand(command, `project is missing route`);
-  return { route, routeIndex };
+  const routeKey =
+    command.kind === 'ReplaceStartingKeepsake'
+      ? command.selection.routeKey
+      : command.route.routeKey;
+  if (document.route.routeKey !== routeKey)
+    failCommand(command, `project is missing route ${routeKey}`);
+  return { route: document.route };
 }
 
 function isSeleneAspect(catalog: Catalog, aspectKey: string): boolean {
@@ -54,16 +50,10 @@ function configureRoutePrefix(
       `configuredBiomeCount exceeds the ${routeDeclaration.biomeKeys.length}-biome route`,
     );
   }
-  const routeIndex = document.routes.findIndex(
-    (route) => route.routeKey === command.route.routeKey,
-  );
-  if (routeIndex < 0) {
+  if (document.route.routeKey !== command.route.routeKey) {
     failCommand(command, `project is missing route ${command.route.routeKey}`);
   }
-  const route = document.routes[routeIndex];
-  if (route === undefined) {
-    failCommand(command, `project is missing route ${command.route.routeKey}`);
-  }
+  const route = document.route;
   if (route.biomes.length === configuredBiomeCount) {
     return document;
   }
@@ -85,9 +75,7 @@ function configureRoutePrefix(
   const replacement = { ...route, biomes: [...retainedBiomes, ...addedBiomes] };
   return {
     ...document,
-    routes: document.routes.map((candidate, index) =>
-      index === routeIndex ? replacement : candidate,
-    ),
+    route: replacement,
   };
 }
 
@@ -100,7 +88,7 @@ export function applyProjectStateCommand(
     case 'ConfigureRoutePrefix':
       return configureRoutePrefix(document, catalog, command);
     case 'ReplaceRouteLoadout': {
-      const { route, routeIndex } = routeForCommand(document, command);
+      const { route } = routeForCommand(document, command);
       const weapon = catalog.weapons.byKey[command.weaponKey];
       if (weapon === undefined) failCommand(command, `unknown weapon ${command.weaponKey}`);
       if (!weapon.aspectKeys.includes(command.aspectKey)) {
@@ -121,23 +109,19 @@ export function applyProjectStateCommand(
       void _oldAspectHexTree;
       return {
         ...document,
-        routes: document.routes.map((candidate, index) =>
-          index === routeIndex
-            ? {
-                ...candidate,
-                loadout: {
-                  ...loadoutWithoutAspectHexTree,
-                  weaponKey: command.weaponKey,
-                  aspectKey: command.aspectKey,
-                  ...(aspectHexTree === undefined ? {} : { aspectHexTree }),
-                },
-              }
-            : candidate,
-        ),
+        route: {
+          ...route,
+          loadout: {
+            ...loadoutWithoutAspectHexTree,
+            weaponKey: command.weaponKey,
+            aspectKey: command.aspectKey,
+            ...(aspectHexTree === undefined ? {} : { aspectHexTree }),
+          },
+        },
       };
     }
     case 'ReplaceAspectHexTree': {
-      const { route, routeIndex } = routeForCommand(document, command);
+      const { route } = routeForCommand(document, command);
       if (!isSeleneAspect(catalog, route.loadout.aspectKey))
         failCommand(command, 'Aspect Hex trees are supported only by Aspect of Selene');
       let value;
@@ -149,35 +133,24 @@ export function applyProjectStateCommand(
       if (JSON.stringify(route.loadout.aspectHexTree) === JSON.stringify(value)) return document;
       return {
         ...document,
-        routes: document.routes.map((candidate, index) =>
-          index === routeIndex
-            ? { ...candidate, loadout: { ...route.loadout, aspectHexTree: value } }
-            : candidate,
-        ),
+        route: { ...route, loadout: { ...route.loadout, aspectHexTree: value } },
       };
     }
     case 'ReplaceStartingKeepsake': {
-      const { route, routeIndex } = routeForCommand(document, command);
+      const { route } = routeForCommand(document, command);
       if (catalog.keepsakes.byKey[command.keepsakeKey] === undefined)
         failCommand(command, `unknown keepsake ${command.keepsakeKey}`);
       if (route.loadout.startingKeepsakeKey === command.keepsakeKey) return document;
       return {
         ...document,
-        routes: document.routes.map((candidate, index) =>
-          index === routeIndex
-            ? {
-                ...candidate,
-                loadout: {
-                  ...route.loadout,
-                  startingKeepsakeKey: command.keepsakeKey,
-                },
-              }
-            : candidate,
-        ),
+        route: {
+          ...route,
+          loadout: { ...route.loadout, startingKeepsakeKey: command.keepsakeKey },
+        },
       };
     }
     case 'ReplaceManualArcanaSelection': {
-      const { route, routeIndex } = routeForCommand(document, command);
+      const { route } = routeForCommand(document, command);
       const seen = new Set<string>();
       for (const key of command.arcanaKeys) {
         const card = catalog.arcanaCards.byKey[key];
@@ -203,18 +176,11 @@ export function applyProjectStateCommand(
       }
       return {
         ...document,
-        routes: document.routes.map((candidate, index) =>
-          index === routeIndex
-            ? {
-                ...candidate,
-                loadout: { ...route.loadout, manualArcanaKeys: Object.freeze(keys) },
-              }
-            : candidate,
-        ),
+        route: { ...route, loadout: { ...route.loadout, manualArcanaKeys: Object.freeze(keys) } },
       };
     }
     case 'ReplaceFearVowRank': {
-      const { route, routeIndex } = routeForCommand(document, command);
+      const { route } = routeForCommand(document, command);
       const vow = catalog.fearVows.byKey[command.vowKey];
       if (
         vow === undefined ||
@@ -237,17 +203,7 @@ export function applyProjectStateCommand(
       if (route.loadout.fearRanks[command.vowKey] === command.rank) return document;
       return {
         ...document,
-        routes: document.routes.map((candidate, index) =>
-          index === routeIndex
-            ? {
-                ...candidate,
-                loadout: {
-                  ...route.loadout,
-                  fearRanks,
-                },
-              }
-            : candidate,
-        ),
+        route: { ...route, loadout: { ...route.loadout, fearRanks } },
       };
     }
     case 'ReplaceBiomeField': {

@@ -330,322 +330,312 @@ export function createStructuredWorkspaceProjection(
           }
         },
       );
-      const routes = sources.routes.map((routeSource) => {
-        const authoredRoute = project.routes.find(
-          (route) => route.routeKey === routeSource.routeKey,
-        );
-        if (authoredRoute === undefined)
-          throw new Error(`Missing authored route ${routeSource.routeKey}`);
-        const routeStartKeepsake = createRouteStartKeepsakeSelectionAddress(routeSource.routeKey);
-        keepsakeSelectionControls.set(
-          semanticAddressKey(routeStartKeepsake),
+      const routeSource = sources.route;
+      const authoredRoute =
+        project.route.routeKey === routeSource.routeKey ? project.route : undefined;
+      if (authoredRoute === undefined)
+        throw new Error(`Missing authored route ${routeSource.routeKey}`);
+      const routeStartKeepsake = createRouteStartKeepsakeSelectionAddress(routeSource.routeKey);
+      keepsakeSelectionControls.set(
+        semanticAddressKey(routeStartKeepsake),
+        Object.freeze({
+          address: routeStartKeepsake,
+          selectedKeepsakeKey: authoredRoute.loadout.startingKeepsakeKey,
+        }),
+      );
+      const routeStartEffect =
+        catalog.keepsakes.byKey[authoredRoute.loadout.startingKeepsakeKey]?.effect;
+      if (
+        routeStartEffect?.kind === 'jeweledPom' ||
+        routeStartEffect?.kind === 'experimentalHammer' ||
+        routeStartEffect?.kind === 'transcendentEmbryo'
+      ) {
+        const address = createKeepsakeEquipResultAddress(routeStartKeepsake, routeStartEffect.kind);
+        keepsakeEquipResultControls.set(
+          semanticAddressKey(address),
           Object.freeze({
-            address: routeStartKeepsake,
-            selectedKeepsakeKey: authoredRoute.loadout.startingKeepsakeKey,
+            address,
+            value: authoredRoute.loadout.keepsakeEquipResults?.[routeStartEffect.kind],
           }),
         );
-        const routeStartEffect =
-          catalog.keepsakes.byKey[authoredRoute.loadout.startingKeepsakeKey]?.effect;
-        if (
-          routeStartEffect?.kind === 'jeweledPom' ||
-          routeStartEffect?.kind === 'experimentalHammer' ||
-          routeStartEffect?.kind === 'transcendentEmbryo'
-        ) {
-          const address = createKeepsakeEquipResultAddress(
-            routeStartKeepsake,
-            routeStartEffect.kind,
-          );
-          keepsakeEquipResultControls.set(
-            semanticAddressKey(address),
-            Object.freeze({
+      }
+      const biomes = routeSource.biomes.map((biomeSource) => {
+        const projected = projectBiome(
+          catalog,
+          biomeSource,
+          (address) => candidates.keepsakeEquipResult(address).length > 0,
+          (address) => {
+            const occurrence = biomeSource.occurrence(address.occurrenceId);
+            if (occurrence === undefined) return undefined;
+            const candidate = candidates.judgmentArcana(
               address,
-              value: authoredRoute.loadout.keepsakeEquipResults?.[routeStartEffect.kind],
+              occurrence.encounters.judgmentArcanaKeysByPhase?.[address.phaseKey] ??
+                Object.freeze([]),
+            );
+            return candidate.kind === 'judgmentArcana' ? candidate.result : undefined;
+          },
+          (address) => {
+            const occurrence = biomeSource.occurrence(address.occurrenceId);
+            if (occurrence === undefined) return undefined;
+            const candidate = candidates.figurineArcana(
+              address,
+              occurrence.encounters.figurineArcanaKeysByPhase?.[address.phaseKey] ??
+                Object.freeze([]),
+            );
+            return candidate.kind === 'figurineArcana' ? candidate.result : undefined;
+          },
+          (address, targetTraitKey) => candidates.fountainRarityOutcome(address, targetTraitKey),
+        );
+        appendUniqueFocusDestinations(focusByOwner, projected.focusDestinations.entries());
+        for (const [key, launcher] of projected.runStateLaunchers) {
+          if (runStateLaunchers.has(key)) throw new Error(`${key} has duplicate Run State`);
+          runStateLaunchers.set(key, launcher);
+        }
+        if (projected.biome.echoKeepsakeReplay !== undefined) {
+          const result = projected.biome.echoKeepsakeReplay.address;
+          keepsakeEquipResultControls.set(
+            semanticAddressKey(result),
+            Object.freeze({
+              address: result,
+              value: biomeSource.plan.echoKeepsakeReplayResults?.[result.resultKind],
             }),
           );
         }
-        const biomes = routeSource.biomes.map((biomeSource) => {
-          const projected = projectBiome(
-            catalog,
-            biomeSource,
-            (address) => candidates.keepsakeEquipResult(address).length > 0,
-            (address) => {
-              const occurrence = biomeSource.occurrence(address.occurrenceId);
-              if (occurrence === undefined) return undefined;
-              const candidate = candidates.judgmentArcana(
-                address,
-                occurrence.encounters.judgmentArcanaKeysByPhase?.[address.phaseKey] ??
-                  Object.freeze([]),
-              );
-              return candidate.kind === 'judgmentArcana' ? candidate.result : undefined;
-            },
-            (address) => {
-              const occurrence = biomeSource.occurrence(address.occurrenceId);
-              if (occurrence === undefined) return undefined;
-              const candidate = candidates.figurineArcana(
-                address,
-                occurrence.encounters.figurineArcanaKeysByPhase?.[address.phaseKey] ??
-                  Object.freeze([]),
-              );
-              return candidate.kind === 'figurineArcana' ? candidate.result : undefined;
-            },
-            (address, targetTraitKey) => candidates.fountainRarityOutcome(address, targetTraitKey),
-          );
-          appendUniqueFocusDestinations(focusByOwner, projected.focusDestinations.entries());
-          for (const [key, launcher] of projected.runStateLaunchers) {
-            if (runStateLaunchers.has(key)) throw new Error(`${key} has duplicate Run State`);
-            runStateLaunchers.set(key, launcher);
+        appendUniqueOccurrenceInteractionRequirements(
+          occurrenceInteractionRequirements,
+          projected.occurrenceInteractionRequirements.values(),
+        );
+        appendUniqueBatchInteractionRequirements(
+          batchInteractionRequirements,
+          projected.batchInteractionRequirements.values(),
+        );
+        appendUniqueHubInteractionRequirements(
+          hubInteractionRequirements,
+          projected.hubInteractionRequirements.values(),
+        );
+        appendUniqueTopologyRemovalInteractionRequirements(
+          topologyRemovalInteractionRequirements,
+          projected.topologyRemovalInteractionRequirements.values(),
+        );
+        appendUniqueStartInteractionRequirements(
+          startInteractionRequirements,
+          projected.startInteractionRequirements.values(),
+        );
+        appendUniqueTakeoverInteractionRequirements(
+          takeoverInteractionRequirements,
+          projected.takeoverInteractionRequirements.values(),
+        );
+        appendUniqueRoomControls(roomControls, projected.roomControls.values());
+        appendUniqueRewardControls(rewardControls, projected.rewardControls.values());
+        for (const rewardControl of projected.rewardControls.values()) {
+          for (const traitControl of rewardControl.traitOffers ?? []) {
+            const key = semanticAddressKey(traitControl.address);
+            if (traitControls.has(key)) {
+              throw new Error(`${key} has multiple projected trait controls`);
+            }
+            traitControls.set(key, traitControl);
           }
-          if (projected.biome.echoKeepsakeReplay !== undefined) {
-            const result = projected.biome.echoKeepsakeReplay.address;
-            keepsakeEquipResultControls.set(
-              semanticAddressKey(result),
+          for (const control of rewardControl.levelResolutions ?? []) {
+            const key = semanticAddressKey(control.address);
+            if (levelResolutionControls.has(key)) {
+              throw new Error(`${key} has multiple projected Pom controls`);
+            }
+            levelResolutionControls.set(key, control);
+          }
+        }
+        for (const node of projected.biome.nodes) {
+          if (node.kind === 'occurrenceWorkbench') {
+            if (node.room.judgment !== undefined) {
+              judgmentArcanaControls.set(
+                semanticAddressKey(node.room.judgment.address),
+                node.room.judgment,
+              );
+            }
+            if (node.room.figurine !== undefined) {
+              figurineArcanaControls.set(
+                semanticAddressKey(node.room.figurine.address),
+                node.room.figurine,
+              );
+            }
+            for (const control of node.room.roomActions?.steadyGrowth ?? []) {
+              steadyGrowthControls.set(semanticAddressKey(control.address), control);
+            }
+            for (const control of node.room.roomActions?.transcendentEmbryo ?? []) {
+              transcendentEmbryoControls.set(semanticAddressKey(control.address), control);
+            }
+            for (const row of node.room.roomActions?.rows ?? []) {
+              if (row.fountainRarity !== undefined) {
+                fountainRarityControls.set(
+                  semanticAddressKey(row.fountainRarity.address),
+                  row.fountainRarity,
+                );
+              }
+            }
+          }
+          if (node.kind === 'occurrenceWorkbench' && node.room.keepsakeSelection !== undefined) {
+            keepsakeSelectionControls.set(
+              semanticAddressKey(node.room.keepsakeSelection.address),
               Object.freeze({
-                address: result,
-                value: biomeSource.plan.echoKeepsakeReplayResults?.[result.resultKind],
+                address: node.room.keepsakeSelection.address,
+                ...(node.room.keepsakeSelection.selectedKeepsakeKey === undefined
+                  ? {}
+                  : { selectedKeepsakeKey: node.room.keepsakeSelection.selectedKeepsakeKey }),
               }),
             );
-          }
-          appendUniqueOccurrenceInteractionRequirements(
-            occurrenceInteractionRequirements,
-            projected.occurrenceInteractionRequirements.values(),
-          );
-          appendUniqueBatchInteractionRequirements(
-            batchInteractionRequirements,
-            projected.batchInteractionRequirements.values(),
-          );
-          appendUniqueHubInteractionRequirements(
-            hubInteractionRequirements,
-            projected.hubInteractionRequirements.values(),
-          );
-          appendUniqueTopologyRemovalInteractionRequirements(
-            topologyRemovalInteractionRequirements,
-            projected.topologyRemovalInteractionRequirements.values(),
-          );
-          appendUniqueStartInteractionRequirements(
-            startInteractionRequirements,
-            projected.startInteractionRequirements.values(),
-          );
-          appendUniqueTakeoverInteractionRequirements(
-            takeoverInteractionRequirements,
-            projected.takeoverInteractionRequirements.values(),
-          );
-          appendUniqueRoomControls(roomControls, projected.roomControls.values());
-          appendUniqueRewardControls(rewardControls, projected.rewardControls.values());
-          for (const rewardControl of projected.rewardControls.values()) {
-            for (const traitControl of rewardControl.traitOffers ?? []) {
-              const key = semanticAddressKey(traitControl.address);
-              if (traitControls.has(key)) {
-                throw new Error(`${key} has multiple projected trait controls`);
-              }
-              traitControls.set(key, traitControl);
-            }
-            for (const control of rewardControl.levelResolutions ?? []) {
-              const key = semanticAddressKey(control.address);
-              if (levelResolutionControls.has(key)) {
-                throw new Error(`${key} has multiple projected Pom controls`);
-              }
-              levelResolutionControls.set(key, control);
-            }
-          }
-          for (const node of projected.biome.nodes) {
-            if (node.kind === 'occurrenceWorkbench') {
-              if (node.room.judgment !== undefined) {
-                judgmentArcanaControls.set(
-                  semanticAddressKey(node.room.judgment.address),
-                  node.room.judgment,
-                );
-              }
-              if (node.room.figurine !== undefined) {
-                figurineArcanaControls.set(
-                  semanticAddressKey(node.room.figurine.address),
-                  node.room.figurine,
-                );
-              }
-              for (const control of node.room.roomActions?.steadyGrowth ?? []) {
-                steadyGrowthControls.set(semanticAddressKey(control.address), control);
-              }
-              for (const control of node.room.roomActions?.transcendentEmbryo ?? []) {
-                transcendentEmbryoControls.set(semanticAddressKey(control.address), control);
-              }
-              for (const row of node.room.roomActions?.rows ?? []) {
-                if (row.fountainRarity !== undefined) {
-                  fountainRarityControls.set(
-                    semanticAddressKey(row.fountainRarity.address),
-                    row.fountainRarity,
-                  );
-                }
-              }
-            }
-            if (node.kind === 'occurrenceWorkbench' && node.room.keepsakeSelection !== undefined) {
-              keepsakeSelectionControls.set(
-                semanticAddressKey(node.room.keepsakeSelection.address),
+            const equipResult = node.room.keepsakeSelection.equipResult;
+            if (equipResult !== undefined) {
+              keepsakeEquipResultControls.set(
+                semanticAddressKey(equipResult.address),
                 Object.freeze({
-                  address: node.room.keepsakeSelection.address,
-                  ...(node.room.keepsakeSelection.selectedKeepsakeKey === undefined
-                    ? {}
-                    : { selectedKeepsakeKey: node.room.keepsakeSelection.selectedKeepsakeKey }),
+                  address: equipResult.address,
+                  value: biomeSource.occurrence(node.room.occurrenceId)?.keepsakeRack
+                    ?.equipResults?.[equipResult.address.resultKind],
                 }),
               );
-              const equipResult = node.room.keepsakeSelection.equipResult;
-              if (equipResult !== undefined) {
-                keepsakeEquipResultControls.set(
-                  semanticAddressKey(equipResult.address),
-                  Object.freeze({
-                    address: equipResult.address,
-                    value: biomeSource.occurrence(node.room.occurrenceId)?.keepsakeRack
-                      ?.equipResults?.[equipResult.address.resultKind],
-                  }),
-                );
-              }
-            }
-            if (node.kind === 'occurrenceWorkbench') {
-              appendEncounterTraitControls(traitControls, [node.room]);
-            } else if (
-              node.kind === 'ordinaryBatch' ||
-              node.kind === 'takeoverBatch' ||
-              node.kind === 'mixedBatch'
-            ) {
-              appendEncounterTraitControls(
-                traitControls,
-                node.targets.map((target) => target.room),
-              );
-            } else if (node.kind === 'hubDecision') {
-              appendEncounterTraitControls(
-                traitControls,
-                node.slots.flatMap((slot) => (slot.room === undefined ? [] : [slot.room])),
-              );
-              appendEncounterTraitControls(
-                traitControls,
-                node.visits.flatMap((visit) => (visit.room === undefined ? [] : [visit.room])),
-              );
             }
           }
-          return projected.biome;
+          if (node.kind === 'occurrenceWorkbench') {
+            appendEncounterTraitControls(traitControls, [node.room]);
+          } else if (
+            node.kind === 'ordinaryBatch' ||
+            node.kind === 'takeoverBatch' ||
+            node.kind === 'mixedBatch'
+          ) {
+            appendEncounterTraitControls(
+              traitControls,
+              node.targets.map((target) => target.room),
+            );
+          } else if (node.kind === 'hubDecision') {
+            appendEncounterTraitControls(
+              traitControls,
+              node.slots.flatMap((slot) => (slot.room === undefined ? [] : [slot.room])),
+            );
+            appendEncounterTraitControls(
+              traitControls,
+              node.visits.flatMap((visit) => (visit.room === undefined ? [] : [visit.room])),
+            );
+          }
+        }
+        return projected.biome;
+      });
+      const routeAddress = { kind: 'route' as const, routeKey: routeSource.routeKey };
+      const routeMarker = Object.freeze({
+        address: routeAddress,
+        assessment:
+          routeSource.evaluation === undefined ? ('blocked' as const) : ('assessed' as const),
+        findingCount: routeSource.evaluation?.findings.length ?? 0,
+        focusKey: semanticAddressKey(routeAddress),
+      });
+      const routeDestination = (ownerAddress: typeof routeAddress | typeof routeStartKeepsake) =>
+        Object.freeze<WorkspaceInspectorDestination>({
+          focusAddress: routeAddress,
+          focusKey: routeMarker.focusKey,
+          nodeKey: `route:${routeSource.routeKey}`,
+          ownerAddress,
+          region: 'routeRail',
+          routeKey: routeSource.routeKey,
         });
-        const routeAddress = { kind: 'route' as const, routeKey: routeSource.routeKey };
-        const routeMarker = Object.freeze({
-          address: routeAddress,
-          assessment:
-            routeSource.evaluation === undefined ? ('blocked' as const) : ('assessed' as const),
-          findingCount: routeSource.evaluation?.findings.length ?? 0,
-          focusKey: semanticAddressKey(routeAddress),
-        });
-        const routeDestination = (ownerAddress: typeof routeAddress | typeof routeStartKeepsake) =>
-          Object.freeze<WorkspaceInspectorDestination>({
-            focusAddress: routeAddress,
-            focusKey: routeMarker.focusKey,
-            nodeKey: `route:${routeSource.routeKey}`,
-            ownerAddress,
-            region: 'routeRail',
-            routeKey: routeSource.routeKey,
-          });
-        const routeStartResults = [
-          createKeepsakeEquipResultAddress(routeStartKeepsake, 'jeweledPom'),
-          createKeepsakeEquipResultAddress(routeStartKeepsake, 'experimentalHammer'),
-          createKeepsakeEquipResultAddress(routeStartKeepsake, 'transcendentEmbryo'),
-        ] as const;
-        const activeAspect = catalog.aspects.byKey[authoredRoute.loadout.aspectKey];
-        const aspectHex = catalog.hexes.byKey['SpellMoonBeamTrait'];
-        const aspectHexTree =
-          activeAspect?.startingTrait?.traitKey === 'SpellMoonBeamTrait' && aspectHex !== undefined
-            ? (() => {
-                const value =
-                  authoredRoute.loadout.aspectHexTree ??
-                  createDefaultAuthoredHexTree(catalog, 'SpellMoonBeamTrait');
-                const domain = projectHexTreeDomain(catalog, 'SpellMoonBeamTrait', value);
-                if (domain === undefined) return undefined;
-                const control: WorkspaceAspectHexTreeControl = {
-                  address: routeAddress,
-                  declaration: aspectHex,
-                  marker: routeMarker,
-                  value,
-                  domain,
-                  transitionFor: (layoutKey) =>
-                    transitionAuthoredHexTreeLayout(
-                      catalog,
-                      'SpellMoonBeamTrait',
-                      value,
-                      layoutKey,
-                    ),
-                  intentFor: (nextValue) =>
-                    Object.freeze({
-                      command: Object.freeze({
-                        kind: 'ReplaceAspectHexTree' as const,
-                        route: routeAddress,
-                        value: nextValue,
-                      }),
+      const routeStartResults = [
+        createKeepsakeEquipResultAddress(routeStartKeepsake, 'jeweledPom'),
+        createKeepsakeEquipResultAddress(routeStartKeepsake, 'experimentalHammer'),
+        createKeepsakeEquipResultAddress(routeStartKeepsake, 'transcendentEmbryo'),
+      ] as const;
+      const activeAspect = catalog.aspects.byKey[authoredRoute.loadout.aspectKey];
+      const aspectHex = catalog.hexes.byKey['SpellMoonBeamTrait'];
+      const aspectHexTree =
+        activeAspect?.startingTrait?.traitKey === 'SpellMoonBeamTrait' && aspectHex !== undefined
+          ? (() => {
+              const value =
+                authoredRoute.loadout.aspectHexTree ??
+                createDefaultAuthoredHexTree(catalog, 'SpellMoonBeamTrait');
+              const domain = projectHexTreeDomain(catalog, 'SpellMoonBeamTrait', value);
+              if (domain === undefined) return undefined;
+              const control: WorkspaceAspectHexTreeControl = {
+                address: routeAddress,
+                declaration: aspectHex,
+                marker: routeMarker,
+                value,
+                domain,
+                transitionFor: (layoutKey) =>
+                  transitionAuthoredHexTreeLayout(catalog, 'SpellMoonBeamTrait', value, layoutKey),
+                intentFor: (nextValue) =>
+                  Object.freeze({
+                    command: Object.freeze({
+                      kind: 'ReplaceAspectHexTree' as const,
+                      route: routeAddress,
+                      value: nextValue,
                     }),
-                };
-                return Object.freeze(control);
-              })()
-            : undefined;
-        appendUniqueFocusDestinations(focusByOwner, [
-          [routeMarker.focusKey, routeDestination(routeAddress)],
-          [semanticAddressKey(routeStartKeepsake), routeDestination(routeStartKeepsake)],
-          ...routeStartResults.flatMap((routeStartResult) =>
-            keepsakeEquipResultControls.has(semanticAddressKey(routeStartResult))
-              ? ([
-                  [
-                    semanticAddressKey(routeStartResult),
-                    Object.freeze<WorkspaceInspectorDestination>({
-                      ...routeDestination(routeAddress),
-                      ownerAddress: routeStartResult,
-                    }),
-                  ],
-                ] as const)
-              : [],
-          ),
-        ]);
-        return Object.freeze({
-          ...(aspectHexTree === undefined ? {} : { aspectHexTree }),
-          biomes: Object.freeze(biomes),
-          label: catalog.routes.byKey[routeSource.routeKey]?.label ?? routeSource.routeKey,
-          marker: routeMarker,
-          rail: Object.freeze(
-            biomes.map((biome) =>
-              Object.freeze({
-                biomeKey: biome.biomeKey,
-                label: biome.label,
-                marker: biome.marker,
-                source: biome.source,
-                status: biome.status,
-              }),
-            ),
-          ),
-          resources: Object.freeze(
-            (['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const).map((family) => {
-              const placement = routeSource.resourceAuthoring.placements[family];
-              const assessment = routeSource.resourceAuthoring.assessmentByFamily[family];
-              const presentedPlacement =
-                placement === null
-                  ? undefined
-                  : (() => {
-                      const entry = routeSource.resourceAuthoring.entered.find(
-                        (candidate) =>
-                          candidate.biomeKey === placement.biomeKey &&
-                          candidate.origin.kind === 'occurrence' &&
-                          candidate.origin.occurrenceId === placement.occurrenceId,
-                      );
-                      return Object.freeze({
-                        ...placement,
-                        locationLabel:
-                          entry === undefined
-                            ? 'Unavailable room'
-                            : requireWorkspaceRoom(catalog, entry.gameName).label,
-                      });
-                    })();
-              return Object.freeze({
-                family,
-                ...(presentedPlacement === undefined ? {} : { placement: presentedPlacement }),
-                reasons: assessment?.reasons ?? Object.freeze([]),
-                valid: assessment?.legal ?? placement === null,
-              });
+                  }),
+              };
+              return Object.freeze(control);
+            })()
+          : undefined;
+      appendUniqueFocusDestinations(focusByOwner, [
+        [routeMarker.focusKey, routeDestination(routeAddress)],
+        [semanticAddressKey(routeStartKeepsake), routeDestination(routeStartKeepsake)],
+        ...routeStartResults.flatMap((routeStartResult) =>
+          keepsakeEquipResultControls.has(semanticAddressKey(routeStartResult))
+            ? ([
+                [
+                  semanticAddressKey(routeStartResult),
+                  Object.freeze<WorkspaceInspectorDestination>({
+                    ...routeDestination(routeAddress),
+                    ownerAddress: routeStartResult,
+                  }),
+                ],
+              ] as const)
+            : [],
+        ),
+      ]);
+      const route = Object.freeze({
+        ...(aspectHexTree === undefined ? {} : { aspectHexTree }),
+        biomes: Object.freeze(biomes),
+        label: catalog.routes.byKey[routeSource.routeKey]?.label ?? routeSource.routeKey,
+        marker: routeMarker,
+        rail: Object.freeze(
+          biomes.map((biome) =>
+            Object.freeze({
+              biomeKey: biome.biomeKey,
+              label: biome.label,
+              marker: biome.marker,
+              source: biome.source,
+              status: biome.status,
             }),
           ),
-          routeKey: routeSource.routeKey,
-          status:
-            routeSource.evaluation === undefined ? 'blocked' : routeStatus(routeSource.evaluation),
-        });
+        ),
+        resources: Object.freeze(
+          (['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const).map((family) => {
+            const placement = routeSource.resourceAuthoring.placements[family];
+            const assessment = routeSource.resourceAuthoring.assessmentByFamily[family];
+            const presentedPlacement =
+              placement === null
+                ? undefined
+                : (() => {
+                    const entry = routeSource.resourceAuthoring.entered.find(
+                      (candidate) =>
+                        candidate.biomeKey === placement.biomeKey &&
+                        candidate.origin.kind === 'occurrence' &&
+                        candidate.origin.occurrenceId === placement.occurrenceId,
+                    );
+                    return Object.freeze({
+                      ...placement,
+                      locationLabel:
+                        entry === undefined
+                          ? 'Unavailable room'
+                          : requireWorkspaceRoom(catalog, entry.gameName).label,
+                    });
+                  })();
+            return Object.freeze({
+              family,
+              ...(presentedPlacement === undefined ? {} : { placement: presentedPlacement }),
+              reasons: assessment?.reasons ?? Object.freeze([]),
+              valid: assessment?.legal ?? placement === null,
+            });
+          }),
+        ),
+        routeKey: routeSource.routeKey,
+        status:
+          routeSource.evaluation === undefined ? 'blocked' : routeStatus(routeSource.evaluation),
       });
       const interactions = bindWorkspaceInteractions({
         allocateOccurrenceId,
@@ -670,7 +660,7 @@ export function createStructuredWorkspaceProjection(
         takeoverInteractionRequirements,
         topologyRemovalInteractionRequirements,
       });
-      registerWorkspaceFindingDestinations(evaluation.findings, focusByOwner, routes);
+      registerWorkspaceFindingDestinations(evaluation.findings, focusByOwner, route);
       const projectAddress = { kind: 'project' as const };
       const result = Object.freeze({
         focusByOwner,
@@ -682,7 +672,7 @@ export function createStructuredWorkspaceProjection(
           focusKey: semanticAddressKey(projectAddress),
         }),
         runStateLaunchers,
-        routes: Object.freeze(routes),
+        route,
         status: evaluation.status,
       });
       cache.set(assembly, result);

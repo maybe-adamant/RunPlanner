@@ -21,10 +21,18 @@ import { newProjectCreated, profileLoadSucceeded } from './profileSessionSlice';
 
 export type ProjectEvaluationAssembler = (project: ProjectDocument) => ProjectEvaluationAssembly;
 
-export interface ProjectWorkspaceState {
+export interface OpenProjectWorkspaceState {
+  readonly kind: 'openProject';
   readonly assembly: ProjectEvaluationAssembly;
   readonly history: ProjectHistory;
 }
+export interface NoProjectWorkspaceState {
+  readonly kind: 'noProject';
+  /** Absent at runtime; these optional members make the union ergonomic for callers after narrowing. */
+  readonly assembly?: never;
+  readonly history?: never;
+}
+export type ProjectWorkspaceState = OpenProjectWorkspaceState | NoProjectWorkspaceState;
 
 export const authoredProjectCommandDispatched = createAction<ProjectCommand>(
   'projectWorkspace/commandDispatched',
@@ -45,6 +53,7 @@ function publishWorkspace(
     throw new Error('project evaluation assembly does not match authored workspace identity');
   }
   return Object.freeze({
+    kind: 'openProject' as const,
     assembly,
     history,
   });
@@ -52,16 +61,17 @@ function publishWorkspace(
 
 export function createProjectWorkspaceReducer(
   catalog: Catalog,
-  initialProject: ProjectDocument,
+  initialProject: ProjectDocument | undefined,
   assembleProjectEvaluation: ProjectEvaluationAssembler,
 ): Reducer<ProjectWorkspaceState> {
-  const initialState = publishWorkspace(
-    createProjectHistory(initialProject),
-    assembleProjectEvaluation,
-  );
+  const initialState: ProjectWorkspaceState =
+    initialProject === undefined
+      ? Object.freeze({ kind: 'noProject' })
+      : publishWorkspace(createProjectHistory(initialProject), assembleProjectEvaluation);
 
   return (state = initialState, action) => {
     if (authoredProjectCommandDispatched.match(action)) {
+      if (state.kind === 'noProject') return state;
       const history = (() => {
         if (action.payload.kind !== 'SetHermesShrinePurchase') {
           return applyProjectHistoryCommand(state.history, catalog, action.payload);
@@ -85,12 +95,14 @@ export function createProjectWorkspaceReducer(
         : publishWorkspace(history, assembleProjectEvaluation);
     }
     if (authoredProjectUndoRequested.match(action)) {
+      if (state.kind === 'noProject') return state;
       const history = undoProjectHistory(state.history);
       return history === state.history
         ? state
         : publishWorkspace(history, assembleProjectEvaluation);
     }
     if (authoredProjectRedoRequested.match(action)) {
+      if (state.kind === 'noProject') return state;
       const history = redoProjectHistory(state.history);
       return history === state.history
         ? state

@@ -56,9 +56,8 @@ describe('authored pickup producers', () => {
 
   it('discovers and preserves Quick Buck’s selected producer site, entry, and source action', () => {
     const project = loadSurfaceNQuickBuckCheckpoint();
-    const occurrence = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'N')
+    const occurrence = project.route.biomes
+      .find((candidate) => candidate.biomeKey === 'N')
       ?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === nOccurrenceIds.opening,
       );

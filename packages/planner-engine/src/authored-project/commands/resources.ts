@@ -8,10 +8,9 @@ export function applyResourcePlacementCommand(
   _catalog: Catalog,
   command: ResourcePlacementCommand,
 ): ProjectDocument {
-  const index = document.routes.findIndex((route) => route.routeKey === command.route.routeKey);
-  if (index < 0)
+  if (document.route.routeKey !== command.route.routeKey)
     throw new ProjectCommandContractError(command.kind, command.route, 'unknown route');
-  const route = document.routes[index]!;
+  const route = document.route;
   if (command.value !== null) {
     const biome = route.biomes.find((candidate) => candidate.biomeKey === command.value!.biomeKey);
     if (biome === undefined)
@@ -37,10 +36,6 @@ export function applyResourcePlacementCommand(
   });
   return Object.freeze({
     ...document,
-    routes: Object.freeze(
-      document.routes.map((candidate, routeIndex) =>
-        routeIndex === index ? Object.freeze({ ...candidate, resourcePlacements }) : candidate,
-      ),
-    ),
+    route: Object.freeze({ ...route, resourcePlacements }),
   });
 }

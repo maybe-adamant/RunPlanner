@@ -34,7 +34,7 @@ const defaultRouteLoadout = createDefaultRouteLoadout(catalog);
 
 function completeP() {
   const evaluation = simulateProject(catalog, loadSurfaceNOPProject());
-  const route = evaluation.routes.find((candidate) => candidate.routeKey === 'Surface');
+  const route = evaluation.route;
   const biome = route?.biomes.find((candidate) => candidate.biomeKey === 'P');
   if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
     throw new Error('P fixture did not complete validly');
@@ -144,9 +144,7 @@ describe('P core loop', () => {
       gameName: 'P_Combat02',
     });
     const evaluation = simulateProject(catalog, project);
-    const p = evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'P');
+    const p = evaluation.route.biomes.find((biome) => biome.biomeKey === 'P');
     if (p?.authoring !== 'complete') throw new Error('P fixture did not complete');
 
     expect(p.validity).toBe('invalid');
@@ -228,7 +226,7 @@ describe('P core loop', () => {
     );
     const assembly = simulateProjectAssembly(catalog, project);
     const evaluation = assembly.evaluation;
-    const surface = evaluation.routes.find((route) => route.routeKey === 'Surface');
+    const surface = evaluation.route;
     const p = surface?.biomes.find((biome) => biome.biomeKey === 'P');
 
     expect(evaluation.findings).toContainEqual(
@@ -236,9 +234,7 @@ describe('P core loop', () => {
     );
     expect(p).toMatchObject({ authoring: 'complete', validity: 'invalid' });
     const previous = surface?.biomes.find((biome) => biome.biomeKey === 'O');
-    const plan = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'P');
+    const plan = project.route.biomes.find((biome) => biome.biomeKey === 'P');
     const progressive =
       previous?.authoring === 'complete' && previous.validity === 'valid' && plan !== undefined
         ? evaluateProgressiveBiomeAssembly(catalog, pBiome, plan, {
@@ -254,9 +250,8 @@ describe('P core loop', () => {
     expect(progressive).not.toBeNull();
     expect(progressive?.evaluation.blockedAt).toEqual(purchase);
     expect(
-      project.routes
-        .find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'P')
+      project.route.biomes
+        .find((biome) => biome.biomeKey === 'P')
         ?.topology?.occurrences.find(
           (occurrence) => occurrence.occurrenceId === pOccurrenceIds.prebossShop,
         )?.roomActions.order,

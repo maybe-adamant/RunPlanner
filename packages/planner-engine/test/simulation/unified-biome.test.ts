@@ -50,7 +50,7 @@ function assembledProject(project: ReturnType<typeof createProjectDocument>) {
 }
 
 function traitContext(project: ReturnType<typeof createProjectDocument>, routeKey: string) {
-  const route = project.routes.find((candidate) => candidate.routeKey === routeKey);
+  const route = project.route;
   if (route === undefined) throw new Error(`missing ${routeKey} route`);
   return route.loadout;
 }
@@ -226,7 +226,8 @@ function incompleteFPrefixProject() {
   const biome = createBiomeAddress('Underworld', 'F');
   let project = createProjectDocument(catalog, {
     projectId: 'unified-f-prefix',
-    configuredBiomeCounts: { Underworld: 1 },
+    routeKey: 'Underworld',
+    configuredBiomeCount: 1,
   });
   const startId = createOccurrenceId('f-prefix-start');
   project = applyProjectCommand(project, catalog, {
@@ -338,7 +339,7 @@ function withIEncounterSelection(
   encounterKey: string,
 ) {
   const encoded = JSON.parse(encodeProjectDocument(project)) as {
-    routes: Array<{
+    route: {
       routeKey: string;
       biomes: Array<{
         biomeKey: string;
@@ -349,11 +350,10 @@ function withIEncounterSelection(
           }>;
         } | null;
       }>;
-    }>;
+    };
   };
-  const occurrence = encoded.routes
-    .find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((biome) => biome.biomeKey === 'I')
+  const occurrence = encoded.route.biomes
+    .find((biome) => biome.biomeKey === 'I')
     ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
   if (occurrence === undefined) throw new Error(`I fixture lost ${occurrenceId}`);
   occurrence.encounters.encounterKeyByPhase.Encounter = encounterKey;
@@ -364,7 +364,8 @@ function completeIProject() {
   const biome = createBiomeAddress('Underworld', 'I');
   let project = createProjectDocument(catalog, {
     projectId: 'unified-i',
-    configuredBiomeCounts: { Underworld: 4 },
+    routeKey: 'Underworld',
+    configuredBiomeCount: 4,
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
@@ -453,7 +454,7 @@ describe('unified biome simulation', () => {
   it('materializes a selected takeover Preboss as an ordered normal-door batch', () => {
     const project = createCompleteFGProject();
     const evaluation = evaluatedProject(project);
-    const biome = evaluation.routes[0]?.biomes[0];
+    const biome = evaluation.route?.biomes[0];
     expect(biome?.authoring).toBe('complete');
     if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
       throw new Error('F should be complete-valid');
@@ -517,7 +518,7 @@ describe('unified biome simulation', () => {
   it('keeps a structurally complete F prefix evaluated through its next decision frontier', () => {
     const project = incompleteFPrefixProject();
     const evaluation = evaluatedProject(project);
-    const biome = evaluation.routes[0]?.biomes[0];
+    const biome = evaluation.route?.biomes[0];
     expect(biome?.authoring).toBe('incomplete');
     if (biome?.authoring !== 'incomplete') throw new Error('F prefix should be incomplete');
     expect(biome.coverage.kind).toBe('prefix');
@@ -581,7 +582,7 @@ describe('unified biome simulation', () => {
       storeKey: 'RunProgress',
     });
     const evaluation = evaluatedProject(project);
-    const result = evaluation.routes[0]?.biomes[0];
+    const result = evaluation.route?.biomes[0];
     expect(result?.authoring).toBe('incomplete');
     if (result?.authoring !== 'incomplete' || !('materializedPrefix' in result)) {
       throw new Error('invalid F prefix should retain a materialized prefix');
@@ -598,17 +599,15 @@ describe('unified biome simulation', () => {
     expect(result.findings.map((finding) => finding.code)).not.toContain('continuationMissing');
     expect(result.findings.map((finding) => finding.code)).toContain('baseRewardStoreUnavailable');
     expect(
-      project.routes[0]?.biomes[0]?.topology?.occurrences.map(
-        (occurrence) => occurrence.occurrenceId,
-      ),
+      project.route?.biomes[0]?.topology?.occurrences.map((occurrence) => occurrence.occurrenceId),
     ).toContain('f-prefix-combat');
   });
 
   it('runs the Fields chain and no-store takeover through the same evaluator', () => {
     const project = legalHFieldsProject();
-    const biome = evaluatedProject(project)
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    const biome = evaluatedProject(project).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'H',
+    );
     if (biome === undefined) throw new Error('missing H evaluation');
     expect(biome.authoring).toBe('complete');
     if (biome.authoring !== 'complete' || biome.validity !== 'valid') {
@@ -631,7 +630,7 @@ describe('unified biome simulation', () => {
 
   it('keeps width-one and staged progression in the common batch evaluator', () => {
     const oProject = legalOProject();
-    const oPlan = oProject.routes[1]?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    const oPlan = oProject.route?.biomes.find((candidate) => candidate.biomeKey === 'O');
     if (oPlan === undefined) throw new Error('missing O plan');
     const o = evaluateBiome(catalog, 'Surface', oPlan, {
       enteredBiomeCount: 2,
@@ -649,9 +648,9 @@ describe('unified biome simulation', () => {
     });
 
     const qProject = loadSurfaceNOPQProject();
-    const qPlan = qProject.routes[1]?.biomes.find((candidate) => candidate.biomeKey === 'Q');
+    const qPlan = qProject.route?.biomes.find((candidate) => candidate.biomeKey === 'Q');
     if (qPlan === undefined) throw new Error('missing Q plan');
-    const q = simulateProject(catalog, qProject).routes[1]?.biomes.find(
+    const q = simulateProject(catalog, qProject).route.biomes.find(
       (candidate) => candidate.biomeKey === 'Q',
     );
     if (q === undefined) throw new Error('missing Q evaluation');
@@ -684,7 +683,7 @@ describe('unified biome simulation', () => {
 
   it('derives Clockwork batch state and reward timing from the selected I spine', () => {
     const project = legalIProject();
-    const plan = project.routes[0]?.biomes.find((candidate) => candidate.biomeKey === 'I');
+    const plan = project.route?.biomes.find((candidate) => candidate.biomeKey === 'I');
     if (plan === undefined) throw new Error('missing I plan');
     const biome = evaluateBiome(catalog, 'Underworld', plan, {
       enteredBiomeCount: 4,
@@ -720,15 +719,15 @@ describe('unified biome simulation', () => {
   });
 
   it.each([
-    ['G', createCompleteFGProject(), 'Underworld'],
-    ['P', loadSurfaceNOPProject(), 'Surface'],
+    ['G', createCompleteFGProject()],
+    ['P', loadSurfaceNOPProject()],
   ] as const)(
     'gives %s takeover batches their declaration-owned shop and free-reward roles',
-    (biomeKey, project, routeKey) => {
+    (biomeKey, project) => {
       const legalProject = authorLegalTraitOffers(project);
-      const biome = simulateProject(catalog, legalProject)
-        .routes.find((route) => route.routeKey === routeKey)
-        ?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
+      const biome = simulateProject(catalog, legalProject).route?.biomes.find(
+        (candidate) => candidate.biomeKey === biomeKey,
+      );
       if (biome === undefined) throw new Error(`missing ${biomeKey} evaluation`);
       expect(biome.authoring).toBe('complete');
       if (biome.authoring !== 'complete' || biome.validity !== 'valid') {
@@ -749,7 +748,7 @@ describe('unified biome simulation', () => {
 
   it('retains a Hub decision and its source-owned Preboss handoff in complete authorship', () => {
     const evaluation = simulateProject(catalog, loadSurfaceNProject());
-    const biome = evaluation.routes[1]?.biomes[0];
+    const biome = evaluation.route?.biomes[0];
     expect(biome?.authoring).toBe('complete');
     if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
       throw new Error('N should be complete-valid');

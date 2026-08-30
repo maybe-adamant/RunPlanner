@@ -24,6 +24,7 @@ import {
   authoredProjectReplaced,
 } from '@planner/state/projectWorkspaceSlice';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { createOpenTestApplication } from '@planner-test/fixtures/renderPlanner';
 import { App } from './App';
 import { semanticOwnerElementId } from '../feedback/semanticOwner';
 
@@ -48,6 +49,7 @@ function findingsMarkup(markup: string): string {
 }
 
 function configureF(application: ReturnType<typeof createApplication>): void {
+  application.projectOperations.createNew('Underworld');
   application.store.dispatch(
     authoredProjectCommandDispatched({
       kind: 'ConfigureRoutePrefix',
@@ -68,13 +70,13 @@ describe('App', () => {
     expect(markup).toContain('Run Planner');
     expect(markup).toContain('Underworld');
     expect(markup).toContain('Surface');
-    expect(markup).toContain('Settings');
+    expect(markup).not.toContain('Settings');
     expect(markup).not.toContain('Hades II Run Director');
     expect(markup).not.toContain('Project editor');
   });
 
   it('shows Findings only for the selected route, not Settings', () => {
-    const application = createApplication();
+    const application = createOpenTestApplication();
 
     expect(appMarkup(application)).toContain('class="project-findings"');
 
@@ -85,45 +87,39 @@ describe('App', () => {
 
   it('limits Findings to the selected route', () => {
     const application = createApplication();
-    for (const routeKey of ['Underworld', 'Surface'] as const) {
-      application.store.dispatch(
-        authoredProjectCommandDispatched({
-          kind: 'ConfigureRoutePrefix',
-          configuredBiomeCount: 1,
-          route: createRouteAddress(routeKey),
-        }),
-      );
-    }
+    application.projectOperations.createNew('Underworld');
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ConfigureRoutePrefix',
+        configuredBiomeCount: 1,
+        route: createRouteAddress('Underworld'),
+      }),
+    );
 
-    application.store.dispatch(routeSelected('Underworld'));
     expect(findingsMarkup(appMarkup(application))).toContain('Erebus');
     expect(findingsMarkup(appMarkup(application))).not.toContain('Ephyra');
-
-    application.store.dispatch(routeSelected('Surface'));
-    expect(findingsMarkup(appMarkup(application))).toContain('Ephyra');
-    expect(findingsMarkup(appMarkup(application))).not.toContain('Erebus');
   });
 
   it('navigates an incomplete finding to its exact shared-workspace frontier without authoring history', () => {
     const application = createApplication();
     configureF(application);
-    const finding = application.store.getState().projectWorkspace.assembly.evaluation.findings[0];
+    const finding = application.store.getState().projectWorkspace.assembly!.evaluation.findings[0];
     if (finding === undefined) throw new Error('configured F should have an incomplete finding');
 
     application.store.dispatch(settingsSelected());
-    const historyBeforeNavigation = application.store.getState().projectWorkspace.history;
+    const historyBeforeNavigation = application.store.getState().projectWorkspace.history!;
     application.store.dispatch(
       findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
     );
 
     const markup = appMarkup(application);
     expect(finding.code).toBe('biomeTopologyMissing');
-    expect(application.store.getState().editorSession.activeRouteKey).toBe('Underworld');
-    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
+    expect(application.store.getState().editorSession.activeSection).toBe('route');
+    expect(application.store.getState().editorSession.activePanel).toEqual({
       kind: 'biome',
       biomeKey: 'F',
     });
-    expect(application.store.getState().projectWorkspace.history).toBe(historyBeforeNavigation);
+    expect(application.store.getState().projectWorkspace.history!).toBe(historyBeforeNavigation);
     expect(markup).toContain('Start this biome');
     expect(markup).toContain('Create its opening room before building the route.');
     expect(markup).toContain(semanticOwnerElementId(finding.origin));
@@ -135,6 +131,7 @@ describe('App', () => {
     const biome = createBiomeAddress('Surface', 'N');
     const opening = createOccurrenceId('app-n-open-set-opening');
     const preHub = createOccurrenceId('app-n-open-set-prehub');
+    application.projectOperations.createNew('Surface');
     application.store.dispatch(
       authoredProjectCommandDispatched({
         kind: 'ConfigureRoutePrefix',
@@ -173,15 +170,15 @@ describe('App', () => {
         kind: 'ReplaceWithHubDecision',
       }),
     );
-    const project = application.store.getState().projectWorkspace.history.present;
+    const project = application.store.getState().projectWorkspace.history!.present;
     application.store.dispatch(authoredProjectReplaced(authorLegalTraitOffers(project)));
     const finding = application.store
       .getState()
-      .projectWorkspace.assembly.evaluation.findings.find(
+      .projectWorkspace.assembly!.evaluation.findings.find(
         (candidate) => candidate.code === 'hubOpenSetIncomplete',
       );
     if (finding === undefined) throw new Error('fresh N Hub board has no open-set finding');
-    const historyBeforeNavigation = application.store.getState().projectWorkspace.history;
+    const historyBeforeNavigation = application.store.getState().projectWorkspace.history!;
 
     application.store.dispatch(settingsSelected());
     application.store.dispatch(
@@ -192,20 +189,20 @@ describe('App', () => {
     const markup = appMarkup(application);
     expect(finding.origin).toEqual(openSet);
     expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(openSet);
-    expect(application.store.getState().projectWorkspace.history).toBe(historyBeforeNavigation);
+    expect(application.store.getState().projectWorkspace.history!).toBe(historyBeforeNavigation);
     expect(markup).toContain('Hub Overview');
     expect(markup).toContain(semanticOwnerElementId(openSet));
   });
 
   it('keeps route and settings navigation outside authored history', () => {
-    const application = createApplication();
+    const application = createOpenTestApplication();
     application.store.dispatch(
       routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'overview' } }),
     );
     expect(appMarkup(application)).toContain('Route settings');
 
-    application.store.dispatch(routeSelected('Surface'));
-    expect(appMarkup(application)).toContain('No biomes configured.');
-    expect(application.store.getState().projectWorkspace.history.past).toEqual([]);
+    application.store.dispatch(routeSelected('Underworld'));
+    expect(appMarkup(application)).toContain('Route settings');
+    expect(application.store.getState().projectWorkspace.history!.past).toEqual([]);
   });
 });

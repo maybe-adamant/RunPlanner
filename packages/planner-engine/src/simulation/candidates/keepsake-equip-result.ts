@@ -46,7 +46,7 @@ function authoredValue(
   project: ProjectDocument,
   address: KeepsakeEquipResultAddress,
 ): AuthoredKeepsakeEquipResults[keyof AuthoredKeepsakeEquipResults] | undefined {
-  const route = project.routes.find((candidate) => candidate.routeKey === address.routeKey);
+  const route = project.route.routeKey === address.routeKey ? project.route : undefined;
   if (address.selection.kind === 'echoKeepsakeReplay') {
     const replay = route?.biomes.find(
       (biome) => biome.biomeKey === address.biomeKey,

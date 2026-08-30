@@ -9,10 +9,21 @@ import { App } from '@planner/ui/shell/App';
 interface RenderPlannerOptions {
   readonly application?: PlannerApplication;
   readonly companion?: ReactNode;
+  /** Most editor interaction tests need an explicitly open route. */
+  readonly startWithProject?: boolean;
+}
+
+/** Creates the explicit open-project state used by editor interaction tests. */
+export function createOpenTestApplication(routeKey = 'Underworld'): PlannerApplication {
+  const application = createApplication();
+  application.projectOperations.createNew(routeKey);
+  return application;
 }
 
 export function renderPlannerForInteraction(options: RenderPlannerOptions = {}) {
-  const application = options.application ?? createApplication();
+  const application =
+    options.application ??
+    (options.startWithProject === false ? createApplication() : createOpenTestApplication());
   const user = userEvent.setup();
   const view = render(
     <Provider store={application.store}>

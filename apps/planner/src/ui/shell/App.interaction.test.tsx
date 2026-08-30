@@ -47,7 +47,10 @@ import {
   semanticOwnerNavigated,
   traitOfferDialogOpened,
 } from '@planner/state/editorSessionSlice';
-import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
+import {
+  createOpenTestApplication,
+  renderPlannerForInteraction,
+} from '@planner-test/fixtures/renderPlanner';
 import {
   createGoldenEchoGiftHammerPendingProject,
   echoGiftHammerReplayAddress,
@@ -82,7 +85,7 @@ afterEach(cleanup);
 function configuredBiomeCount(
   application: ReturnType<typeof renderPlannerForInteraction>['application'],
 ) {
-  return application.store.getState().projectWorkspace.history.present.routes[0]?.biomes.length;
+  return application.store.getState().projectWorkspace.history!.present.route?.biomes.length;
 }
 
 function projectWithArtemisInErebus() {
@@ -115,7 +118,8 @@ function seaStarRewardFixture() {
   const targetReward = createIncomingRewardAddress(goldenFBiome, target);
   let project = createProjectDocument(catalog, {
     projectId: 'sea-star-app-workflow',
-    configuredBiomeCounts: { Underworld: 1 },
+    routeKey: 'Underworld',
+    configuredBiomeCount: 1,
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
@@ -472,7 +476,7 @@ describe('planner history interaction', () => {
     await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
 
     expect(configuredBiomeCount(application)).toBe(1);
-    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(1);
+    expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(1);
     expect(undo).toHaveProperty('disabled', false);
     expect(redo).toHaveProperty('disabled', true);
 
@@ -537,36 +541,40 @@ describe('planner history interaction', () => {
     const editable = screen.getByRole('textbox', { name: 'Notes draft' });
     expect(fireEvent.keyDown(editable, { ctrlKey: true, key: 'z' })).toBe(true);
     expect(configuredBiomeCount(application)).toBe(1);
-    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(1);
+    expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(1);
   });
 
   it('keeps navigation outside authored history', async () => {
-    const { application, user } = renderPlannerForInteraction();
+    const { application, user } = renderPlannerForInteraction({ startWithProject: false });
 
     await user.click(screen.getByRole('button', { name: 'Surface' }));
 
-    expect(application.store.getState().editorSession.activeRouteKey).toBe('Surface');
-    expect(application.store.getState().projectWorkspace.history.past).toEqual([]);
+    expect(application.store.getState().editorSession.activeSection).toBe('route');
+    expect(application.store.getState().projectWorkspace.kind).toBe('openProject');
+    expect(application.store.getState().projectWorkspace.history?.present.route.routeKey).toBe(
+      'Surface',
+    );
+    expect(application.store.getState().projectWorkspace.history!.past).toEqual([]);
   });
 
-  it('activates route and configured-biome navigation from the keyboard', async () => {
-    const { application, user } = renderPlannerForInteraction();
-
-    const surface = screen.getByRole('button', { name: 'Surface' });
-    surface.focus();
-    await user.keyboard('{Enter}');
-    expect(application.store.getState().editorSession.activeRouteKey).toBe('Surface');
-    expect(surface.getAttribute('aria-current')).toBe('page');
+  it('activates the selected route and configured-biome navigation from the keyboard', async () => {
+    const { application, user } = renderPlannerForInteraction({ startWithProject: false });
 
     const underworld = screen.getByRole('button', { name: 'Underworld' });
     underworld.focus();
-    await user.keyboard(' ');
+    await user.keyboard('{Enter}');
+    expect(application.store.getState().projectWorkspace.history?.present.route.routeKey).toBe(
+      'Underworld',
+    );
+    expect(screen.getByRole('button', { name: 'Underworld' }).getAttribute('aria-current')).toBe(
+      'page',
+    );
     await user.selectOptions(screen.getByLabelText('Configure route up to'), '4');
 
     const oceanus = screen.getByRole('button', { name: 'Oceanus' });
     oceanus.focus();
     await user.keyboard('{Enter}');
-    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
+    expect(application.store.getState().editorSession.activePanel).toEqual({
       kind: 'biome',
       biomeKey: 'G',
     });
@@ -575,7 +583,7 @@ describe('planner history interaction', () => {
     const tartarus = screen.getByRole('button', { name: 'Tartarus' });
     tartarus.focus();
     await user.keyboard(' ');
-    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
+    expect(application.store.getState().editorSession.activePanel).toEqual({
       kind: 'biome',
       biomeKey: 'I',
     });
@@ -584,7 +592,7 @@ describe('planner history interaction', () => {
     const route = screen.getByRole('button', { name: 'Route' });
     route.focus();
     await user.keyboard(' ');
-    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
+    expect(application.store.getState().editorSession.activePanel).toEqual({
       kind: 'overview',
     });
     expect(route.getAttribute('aria-current')).toBe('page');
@@ -597,7 +605,7 @@ describe('planner history interaction', () => {
     const view = renderPlannerForInteraction({ application });
 
     await view.user.click(screen.getByRole('button', { name: 'NPCs' }));
-    const historyBeforeNavigation = application.store.getState().projectWorkspace.history;
+    const historyBeforeNavigation = application.store.getState().projectWorkspace.history!;
     const npcEntry = screen.getByRole('button', {
       name: 'Inspect Artemis combat in Erebus · Encounter',
     });
@@ -605,15 +613,15 @@ describe('planner history interaction', () => {
     await view.user.keyboard('{Enter}');
 
     expect(application.store.getState().editorSession).toMatchObject({
-      activeRouteKey: 'Underworld',
+      activeSection: 'route',
       focusedSemanticOwner: phase,
       selectedFinding: null,
     });
-    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
+    expect(application.store.getState().editorSession.activePanel).toEqual({
       kind: 'biome',
       biomeKey: 'F',
     });
-    expect(application.store.getState().projectWorkspace.history).toBe(historyBeforeNavigation);
+    expect(application.store.getState().projectWorkspace.history!).toBe(historyBeforeNavigation);
     const encounter = screen.getByRole('button', { name: 'Encounter' });
     expect(encounter.textContent).toContain('Artemis combat');
     await waitFor(() => expect(document.activeElement).toBe(encounter));
@@ -628,7 +636,7 @@ describe('planner history interaction', () => {
     expect(application.store.getState().editorSession.traitDialogTarget).toEqual(traitAddress);
     expect(
       application
-        .selectStructuredWorkspace(application.store.getState())
+        .selectStructuredWorkspace(application.store.getState())!
         .interactions.traitOffers.get(semanticAddressKey(traitAddress)),
     ).toBeDefined();
 
@@ -637,16 +645,16 @@ describe('planner history interaction', () => {
     await view.user.click(selectedOption);
     const save = within(dialog).getByRole('button', { name: 'Save trait offer' });
     await waitFor(() => expect(save).toHaveProperty('disabled', false));
-    const historyBeforeSave = application.store.getState().projectWorkspace.history;
+    const historyBeforeSave = application.store.getState().projectWorkspace.history!;
     await view.user.click(save);
 
     const savedInteraction = application
-      .selectStructuredWorkspace(application.store.getState())
+      .selectStructuredWorkspace(application.store.getState())!
       .interactions.traitOffers.get(semanticAddressKey(traitAddress));
     if (savedInteraction?.value?.kind !== 'traits')
       throw new Error('saved Artemis offer must contain traits');
     expect(savedInteraction.value.selectedOptionKey).toBe('option2');
-    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBeforeSave.past.length + 1,
     );
 
@@ -657,13 +665,13 @@ describe('planner history interaction', () => {
     );
     expect(
       application
-        .selectStructuredWorkspace(application.store.getState())
+        .selectStructuredWorkspace(application.store.getState())!
         .interactions.traitOffers.get(semanticAddressKey(traitAddress))?.value,
     ).toBeNull();
 
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     const restoredInteraction = application
-      .selectStructuredWorkspace(application.store.getState())
+      .selectStructuredWorkspace(application.store.getState())!
       .interactions.traitOffers.get(semanticAddressKey(traitAddress));
     if (restoredInteraction?.value?.kind !== 'traits') {
       throw new Error('restored Artemis offer must contain traits');
@@ -677,10 +685,8 @@ describe('planner history interaction', () => {
     application.store.dispatch(
       routePanelSelected({ routeKey: 'Surface', panel: { kind: 'biome', biomeKey: 'N' } }),
     );
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
-    const n = workspace.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const n = workspace.route.biomes.find((biome) => biome.biomeKey === 'N');
     const hub = n?.rail.find(
       (entry): entry is Extract<(typeof n.rail)[number], { readonly kind: 'hubGroup' }> =>
         entry.kind === 'hubGroup',
@@ -746,24 +752,24 @@ describe('planner history interaction', () => {
       routePanelSelected({ routeKey: 'Surface', panel: { kind: 'resources' } }),
     );
     const view = renderPlannerForInteraction({ application });
-    const historyBeforeNavigation = application.store.getState().projectWorkspace.history;
+    const historyBeforeNavigation = application.store.getState().projectWorkspace.history!;
 
     const miningRow = screen.getByText('Mining').closest('li');
     if (miningRow === null) throw new Error('Mining resource row is missing');
     await view.user.click(within(miningRow).getByRole('button', { name: 'Inspect placement' }));
 
     expect(application.store.getState().editorSession).toMatchObject({
-      activeRouteKey: 'Surface',
+      activeSection: 'route',
       focusedSemanticOwner: createOccurrenceAddress(
         { kind: 'biome', routeKey: 'Surface', biomeKey: 'N' },
         createOccurrenceId('surface-n-opening'),
       ),
     });
-    expect(application.store.getState().editorSession.activePanelByRoute.Surface).toEqual({
+    expect(application.store.getState().editorSession.activePanel).toEqual({
       kind: 'biome',
       biomeKey: 'N',
     });
-    expect(application.store.getState().projectWorkspace.history).toBe(historyBeforeNavigation);
+    expect(application.store.getState().projectWorkspace.history!).toBe(historyBeforeNavigation);
   });
 
   it('authors and undoes the exact Sea Star checkbox row in the room timeline', async () => {
@@ -778,13 +784,13 @@ describe('planner history interaction', () => {
     );
     application.store.dispatch(semanticOwnerFocused(targetAcquisition));
     const conversion = application
-      .selectStructuredWorkspace(application.store.getState())
+      .selectStructuredWorkspace(application.store.getState())!
       .interactions.acquisitionConversions.get(semanticAddressKey(targetAcquisition));
     if (conversion === undefined)
       throw new Error(
         `Sea Star target conversion is absent: ${application.store
           .getState()
-          .projectWorkspace.assembly.evaluation.findings.map((finding) => finding.code)
+          .projectWorkspace.assembly!.evaluation.findings.map((finding) => finding.code)
           .join(', ')}`,
       );
     expect(conversion.seaStarSupported).toBe(true);
@@ -794,11 +800,11 @@ describe('planner history interaction', () => {
       name: 'Sea Star procced for Reward',
     });
     expect(checkbox).toHaveProperty('checked', false);
-    const historyBefore = application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = application.store.getState().projectWorkspace.history!.past.length;
     await view.user.click(checkbox);
 
     await waitFor(() => expect(checkbox).toHaveProperty('checked', true));
-    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
     const siteKey = seaStarDuplicateSiteKey(targetAcquisition);
@@ -816,7 +822,7 @@ describe('planner history interaction', () => {
     expect(
       application.store
         .getState()
-        .projectWorkspace.history.present.routes[0]!.biomes[0]!.topology!.occurrences.find(
+        .projectWorkspace.history!.present.route!.biomes[0]!.topology!.occurrences.find(
           (occurrence) => occurrence.occurrenceId === target,
         )?.acquisitionSites?.[siteKey]?.pickupEntries?.seaStarDuplicate?.offer,
     ).toEqual({ rewardType: 'RoomMoneyDrop' });
@@ -827,7 +833,7 @@ describe('planner history interaction', () => {
     expect(
       application.store
         .getState()
-        .projectWorkspace.history.present.routes[0]!.biomes[0]!.topology!.occurrences.find(
+        .projectWorkspace.history!.present.route!.biomes[0]!.topology!.occurrences.find(
           (occurrence) => occurrence.occurrenceId === target,
         )?.acquisitionSites?.[siteKey],
     ).toBeUndefined();
@@ -843,7 +849,7 @@ describe('planner history interaction', () => {
     );
     const beforeOpen = [
       ...application
-        .selectStructuredWorkspace(application.store.getState())
+        .selectStructuredWorkspace(application.store.getState())!
         .interactions.traitOffers.values(),
     ]
       .flatMap((interaction) => {
@@ -866,13 +872,13 @@ describe('planner history interaction', () => {
     const checkbox = await screen.findByRole('checkbox', { name: 'Concave Stone procced' });
     expect(checkbox).toHaveProperty('checked', false);
     expect(checkbox).toHaveProperty('disabled', false);
-    const historyBefore = application.store.getState().projectWorkspace.history.past.length;
+    const historyBefore = application.store.getState().projectWorkspace.history!.past.length;
 
     await view.user.click(checkbox);
 
     await waitFor(() => expect(checkbox).toHaveProperty('checked', true));
     const persisted = application
-      .selectStructuredWorkspace(application.store.getState())
+      .selectStructuredWorkspace(application.store.getState())!
       .interactions.traitOffers.get(semanticAddressKey(target))?.value;
     expect(persisted).toMatchObject({
       kind: 'traits',
@@ -881,7 +887,7 @@ describe('planner history interaction', () => {
     expect(
       screen.getByRole('button', { name: 'Concave Stone residual trait' }).textContent,
     ).toBeTruthy();
-    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
 
@@ -894,7 +900,7 @@ describe('planner history interaction', () => {
     );
     expect(
       application
-        .selectStructuredWorkspace(application.store.getState())
+        .selectStructuredWorkspace(application.store.getState())!
         .interactions.traitOffers.get(semanticAddressKey(target))?.value,
     ).toMatchObject({ concaveStoneResult: { kind: 'noProc' } });
 
@@ -907,7 +913,7 @@ describe('planner history interaction', () => {
     );
     expect(
       application
-        .selectStructuredWorkspace(application.store.getState())
+        .selectStructuredWorkspace(application.store.getState())!
         .interactions.traitOffers.get(semanticAddressKey(target))?.value,
     ).toMatchObject({ concaveStoneResult: { kind: 'proc', optionKey: 'option2' } });
   });
@@ -930,7 +936,7 @@ describe('planner history interaction', () => {
       await screen.findByRole('button', { name: 'Clear unavailable Concave Stone result' }),
     ).toBeTruthy();
     expect(
-      application.store.getState().projectWorkspace.assembly.evaluation.findings,
+      application.store.getState().projectWorkspace.assembly!.evaluation.findings,
     ).toContainEqual(
       expect.objectContaining({ code: 'concaveStoneResultUnavailable', origin: target }),
     );
@@ -941,7 +947,7 @@ describe('planner history interaction', () => {
     await waitFor(() =>
       expect(
         application
-          .selectStructuredWorkspace(application.store.getState())
+          .selectStructuredWorkspace(application.store.getState())!
           .interactions.traitOffers.get(semanticAddressKey(target))?.value,
       ).not.toMatchObject({ concaveStoneResult: expect.anything() }),
     );
@@ -949,7 +955,7 @@ describe('planner history interaction', () => {
     await waitFor(() =>
       expect(
         application
-          .selectStructuredWorkspace(application.store.getState())
+          .selectStructuredWorkspace(application.store.getState())!
           .interactions.traitOffers.get(semanticAddressKey(target))?.value,
       ).toMatchObject({ concaveStoneResult: { kind: 'proc', optionKey: 'option2' } }),
     );
@@ -957,7 +963,7 @@ describe('planner history interaction', () => {
     await waitFor(() =>
       expect(
         application
-          .selectStructuredWorkspace(application.store.getState())
+          .selectStructuredWorkspace(application.store.getState())!
           .interactions.traitOffers.get(semanticAddressKey(target))?.value,
       ).not.toMatchObject({ concaveStoneResult: expect.anything() }),
     );
@@ -971,7 +977,7 @@ describe('planner history interaction', () => {
       routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'biome', biomeKey: 'F' } }),
     );
     const interaction = application
-      .selectStructuredWorkspace(application.store.getState())
+      .selectStructuredWorkspace(application.store.getState())!
       .interactions.traitOffers.get(semanticAddressKey(target));
     if (interaction?.value?.kind !== 'traits') throw new Error('Heroic Stone offer is absent');
     const domain = interaction
@@ -1004,7 +1010,7 @@ describe('planner history interaction', () => {
       throw new Error('route trait navigation did not retain the exact trait owner');
     }
     expect(session.traitDialogTarget).toEqual(session.focusedSemanticOwner);
-    expect(session.activePanelByRoute.Underworld).toEqual({
+    expect(session.activePanel).toEqual({
       kind: 'biome',
       biomeKey: session.focusedSemanticOwner.biomeKey,
     });
@@ -1050,7 +1056,7 @@ describe('planner history interaction', () => {
   it('resets an open trait editor across parent replacement and undo', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const initialWorkspace = application.selectStructuredWorkspace(application.store.getState());
+    const initialWorkspace = application.selectStructuredWorkspace(application.store.getState())!;
     const traitInteraction = [...initialWorkspace.interactions.traitOffers.values()].find(
       (candidate) => {
         if (
@@ -1095,7 +1101,7 @@ describe('planner history interaction', () => {
       }),
     );
     const replacement = application
-      .selectStructuredWorkspace(application.store.getState())
+      .selectStructuredWorkspace(application.store.getState())!
       .interactions.traitOffers.get(semanticAddressKey(target));
     if (replacement === undefined) throw new Error('replacement trait interaction is missing');
     expect(replacement.value).toBeNull();
@@ -1114,7 +1120,7 @@ describe('planner history interaction', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     const restored = application
-      .selectStructuredWorkspace(application.store.getState())
+      .selectStructuredWorkspace(application.store.getState())!
       .interactions.traitOffers.get(semanticAddressKey(target));
     if (restored === undefined) throw new Error('restored trait interaction is missing');
     const restoredValue = restored.value;
@@ -1143,7 +1149,7 @@ describe('planner history interaction', () => {
       value: { kind: 'normal', exitKey: 'exit2' },
     });
     const raw = JSON.parse(encodeProjectDocument(selected)) as {
-      routes: Array<{
+      route: {
         routeKey: string;
         biomes: Array<{
           biomeKey: string;
@@ -1154,11 +1160,10 @@ describe('planner history interaction', () => {
             }>;
           } | null;
         }>;
-      }>;
+      };
     };
-    const rawOccurrence = raw.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F')
+    const rawOccurrence = raw.route.biomes
+      .find((biome) => biome.biomeKey === 'F')
       ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId);
     if (rawOccurrence?.state.reward?.traitOffersByAcquisitionRole === undefined) {
       throw new Error('SpellDrop fixture has no self child to unset');
@@ -1171,7 +1176,7 @@ describe('planner history interaction', () => {
     );
     const finding = application.store
       .getState()
-      .projectWorkspace.assembly.evaluation.findings.find(
+      .projectWorkspace.assembly!.evaluation.findings.find(
         (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(target),
       );
     if (finding === undefined) throw new Error('reached SpellDrop missing finding is absent');
@@ -1184,7 +1189,7 @@ describe('planner history interaction', () => {
     if (findingButton === undefined) throw new Error('SpellDrop finding is not presented');
     await view.user.click(findingButton);
     const destination = application
-      .selectStructuredWorkspace(application.store.getState())
+      .selectStructuredWorkspace(application.store.getState())!
       .focusByOwner.get(semanticAddressKey(target));
     if (destination === undefined) throw new Error('SpellDrop destination is missing');
     expect(destination).toMatchObject({
@@ -1225,11 +1230,11 @@ describe('planner history interaction', () => {
       createIncomingRewardAddress(goldenFBiome, occurrenceId),
       'self',
     );
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     expect(
       application.store
         .getState()
-        .projectWorkspace.assembly.evaluation.findings.filter(
+        .projectWorkspace.assembly!.evaluation.findings.filter(
           (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(target),
         ),
     ).toEqual([]);
@@ -1251,7 +1256,7 @@ describe('planner history interaction', () => {
     );
     const invalid = application.store
       .getState()
-      .projectWorkspace.assembly.evaluation.findings.find(
+      .projectWorkspace.assembly!.evaluation.findings.find(
         (finding) => finding.origin.kind === 'traitOffer',
       );
     if (invalid === undefined) throw new Error('invalid reached Hammer finding is missing');
@@ -1265,7 +1270,7 @@ describe('planner history interaction', () => {
     await view.user.click(findingButton);
 
     const destination = application
-      .selectStructuredWorkspace(application.store.getState())
+      .selectStructuredWorkspace(application.store.getState())!
       .focusByOwner.get(semanticAddressKey(invalid.origin));
     if (destination === undefined) throw new Error('invalid Hammer destination is missing');
     expect(destination).toMatchObject({
@@ -1285,7 +1290,7 @@ describe('planner history interaction', () => {
     expect(within(dialog).getByRole('status')).toBeTruthy();
 
     const interaction = application
-      .selectStructuredWorkspace(application.store.getState())
+      .selectStructuredWorkspace(application.store.getState())!
       .interactions.traitOffers.get(semanticAddressKey(invalid.origin));
     if (interaction === undefined) throw new Error('invalid Hammer interaction is missing');
     const correctedTraitKeys = [
@@ -1307,7 +1312,7 @@ describe('planner history interaction', () => {
     expect(
       application.store
         .getState()
-        .projectWorkspace.assembly.evaluation.findings.some(
+        .projectWorkspace.assembly!.evaluation.findings.some(
           (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(invalid.origin),
         ),
     ).toBe(false);
@@ -1334,7 +1339,7 @@ describe('planner history interaction', () => {
       }),
     );
     const derived = derivedAcquisitionEntriesForProjectEvaluationAssembly(
-      application.store.getState().projectWorkspace.assembly,
+      application.store.getState().projectWorkspace.assembly!,
       site,
     ).find((entry) => entry.kind === 'echoDoubleShopReward');
     if (derived?.sourceOfferKey === undefined) throw new Error('Gold source offer is missing');
@@ -1372,7 +1377,7 @@ describe('planner history interaction', () => {
     );
     const finding = application.store
       .getState()
-      .projectWorkspace.assembly.evaluation.findings.find(
+      .projectWorkspace.assembly!.evaluation.findings.find(
         (candidate) =>
           candidate.code === 'shopPurchaseUnavailable' &&
           semanticAddressKey(candidate.origin) === semanticAddressKey(gold),
@@ -1394,7 +1399,7 @@ describe('planner history interaction', () => {
     );
     expect(
       application
-        .selectStructuredWorkspace(application.store.getState())
+        .selectStructuredWorkspace(application.store.getState())!
         .focusByOwner.get(semanticAddressKey(gold)),
     ).toMatchObject({ ownerAddress: gold, biomeKey: 'H' });
     const marker = document.getElementById(semanticOwnerElementId(gold));
@@ -1409,7 +1414,7 @@ describe('planner history interaction', () => {
     application.store.dispatch(authoredProjectReplaced(project));
     const finding = application.store
       .getState()
-      .projectWorkspace.assembly.evaluation.findings.find(
+      .projectWorkspace.assembly!.evaluation.findings.find(
         (candidate) =>
           candidate.code === 'allTogetherResultUnavailable' &&
           semanticAddressKey(candidate.origin) === semanticAddressKey(set),
@@ -1499,7 +1504,7 @@ describe('planner history interaction', () => {
     application.store.dispatch(authoredProjectReplaced(project));
     const finding = application.store
       .getState()
-      .projectWorkspace.assembly.evaluation.findings.find(
+      .projectWorkspace.assembly!.evaluation.findings.find(
         (candidate) =>
           candidate.code === 'targetedAcquisitionTargetMissing' &&
           semanticAddressKey(candidate.origin) === semanticAddressKey(child),
@@ -1515,7 +1520,7 @@ describe('planner history interaction', () => {
     await view.user.click(findingButton);
 
     const destination = application
-      .selectStructuredWorkspace(application.store.getState())
+      .selectStructuredWorkspace(application.store.getState())!
       .focusByOwner.get(semanticAddressKey(child));
     if (destination === undefined) throw new Error('targeted acquisition destination is missing');
     expect(destination).toMatchObject({
@@ -1562,7 +1567,7 @@ describe('planner history interaction', () => {
 
     const interactions = application.selectStructuredWorkspace(
       application.store.getState(),
-    ).interactions;
+    )!.interactions;
     const visibleLauncher = (
       kind: 'olympian' | 'hermes' | 'hammer',
       ownerKind?: string,
@@ -1639,7 +1644,7 @@ describe('planner history interaction', () => {
     await view.user.click(screen.getByRole('button', { name: 'Traits' }));
     const interactions = application.selectStructuredWorkspace(
       application.store.getState(),
-    ).interactions;
+    )!.interactions;
     const hermes = interactions.traitOffers.get(
       semanticAddressKey(
         createTraitOfferAddress(
@@ -1668,7 +1673,7 @@ describe('planner history interaction', () => {
     expect(within(dialog).getByLabelText('option1 rarity')).toBeTruthy();
   });
 
-  it('keeps blocked and cross-route biome pages visible and editable', async () => {
+  it('keeps blocked biome pages visible and editable within the selected route', async () => {
     const { user } = renderPlannerForInteraction();
 
     await user.selectOptions(screen.getByLabelText('Configure route up to'), '4');
@@ -1688,33 +1693,9 @@ describe('planner history interaction', () => {
     expect(blockedBanner.closest('.editor-panel')?.getAttribute('aria-live')).toBe('polite');
     expect(screen.getByRole('button', { name: 'Start biome' })).toHaveProperty('disabled', false);
 
-    await user.click(screen.getByRole('button', { name: 'Surface' }));
-    await user.selectOptions(screen.getByLabelText('Configure route up to'), '4');
-    // Route composition blocks the complete suffix at the first incomplete
-    // biome. O/P/Q therefore retain their own structural frontiers while
-    // each names N/Ephyra as the shared upstream semantic blocker.
-    for (const [label, predecessor] of [
-      ['Thessaly', 'Ephyra'],
-      ['Olympus', 'Ephyra'],
-      ['Summit', 'Ephyra'],
-    ] as const) {
-      const blockedSurfaceBiome = screen.getByRole('button', { name: label });
-      expect(within(blockedSurfaceBiome).getByTitle('Blocked')).toBeTruthy();
-      await user.click(blockedSurfaceBiome);
-      expect(
-        screen.getByText(
-          new RegExp(`Finish and fix ${predecessor} before ${label} can be evaluated`),
-        ),
-      ).toBeTruthy();
-      expect(screen.getByRole('button', { name: 'Start biome' })).toHaveProperty('disabled', false);
-    }
-
-    const ephyra = screen.getByRole('button', { name: 'Ephyra' });
-    expect(within(ephyra).getByTitle('Incomplete')).toBeTruthy();
-
-    await user.click(ephyra);
-    expect(screen.getByText('Ephyra is not evaluated yet. You can still edit it.')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Start biome' })).toHaveProperty('disabled', false);
+    // A project owns one route, so sibling-route pages are no longer
+    // available to switch into from this workspace.
+    expect(screen.queryByRole('button', { name: 'Surface' })).toBeNull();
   });
 });
 
@@ -1797,7 +1778,7 @@ describe('route loadout interaction', () => {
     await user.click(within(keepsakeList).getByText('Time Piece'));
 
     expect(
-      application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
+      application.store.getState().projectWorkspace.history!.present.route?.loadout
         .startingKeepsakeKey,
     ).toBe('GoldifyKeepsake');
     expect(selector.textContent).toContain('Time Piece');
@@ -1814,12 +1795,10 @@ describe('route loadout interaction', () => {
     await user.click(within(screen.getByRole('listbox')).getByText('Jeweled Pom'));
 
     expect(
-      application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
+      application.store.getState().projectWorkspace.history!.present.route?.loadout
         .keepsakeEquipResults?.jeweledPom,
     ).toBeUndefined();
-    expect(
-      application.store.getState().projectWorkspace.assembly.evaluation.routes[0],
-    ).toMatchObject({
+    expect(application.store.getState().projectWorkspace.assembly!.evaluation.route).toMatchObject({
       status: 'incomplete',
       biomes: [],
       processing: { active: null, blockedSuffix: ['F'] },
@@ -1829,7 +1808,7 @@ describe('route loadout interaction', () => {
     const result = await screen.findByRole('button', { name: 'Jeweled Pom result' });
     const missingFinding = application.store
       .getState()
-      .projectWorkspace.assembly.evaluation.findings.find(
+      .projectWorkspace.assembly!.evaluation.findings.find(
         (finding) => finding.code === 'keepsakeEquipResultMissing',
       );
     if (missingFinding === undefined) throw new Error('missing Jeweled Pom finding is absent');
@@ -1845,13 +1824,13 @@ describe('route loadout interaction', () => {
     await user.click(within(resultList).getByText('Last Gasp'));
 
     expect(
-      application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
+      application.store.getState().projectWorkspace.history!.present.route?.loadout
         .keepsakeEquipResults?.jeweledPom,
     ).toEqual({
       traitKey: 'HadesDeathDefianceDamageBoon',
     });
     expect(
-      application.store.getState().projectWorkspace.assembly.evaluation.routes[0]?.biomes,
+      application.store.getState().projectWorkspace.assembly!.evaluation.route?.biomes,
     ).toHaveLength(1);
 
     expect(screen.queryByRole('checkbox', { name: 'Death Defiance condition met' })).toBeNull();
@@ -1865,12 +1844,10 @@ describe('route loadout interaction', () => {
     await user.click(within(screen.getByRole('listbox')).getByText('Experimental Hammer'));
 
     expect(
-      application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
+      application.store.getState().projectWorkspace.history!.present.route?.loadout
         .keepsakeEquipResults?.experimentalHammer,
     ).toBeUndefined();
-    expect(
-      application.store.getState().projectWorkspace.assembly.evaluation.routes[0],
-    ).toMatchObject({
+    expect(application.store.getState().projectWorkspace.assembly!.evaluation.route).toMatchObject({
       status: 'incomplete',
       biomes: [],
       processing: { active: null, blockedSuffix: ['F'] },
@@ -1880,7 +1857,7 @@ describe('route loadout interaction', () => {
     const result = await screen.findByRole('button', { name: 'Experimental Hammer result' });
     const finding = application.store
       .getState()
-      .projectWorkspace.assembly.evaluation.findings.find(
+      .projectWorkspace.assembly!.evaluation.findings.find(
         (candidate) => candidate.code === 'keepsakeEquipResultMissing',
       );
     if (finding === undefined) throw new Error('missing Hammer finding is absent');
@@ -1897,11 +1874,11 @@ describe('route loadout interaction', () => {
     );
     await user.click(within(resultList).getByText('Wicked Thrasher'));
     expect(
-      application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
+      application.store.getState().projectWorkspace.history!.present.route?.loadout
         .keepsakeEquipResults?.experimentalHammer,
     ).toEqual({ kind: 'selected', traitKey: authoredTraitKey });
     expect(
-      application.store.getState().projectWorkspace.assembly.evaluation.routes[0]?.biomes,
+      application.store.getState().projectWorkspace.assembly!.evaluation.route?.biomes,
     ).toHaveLength(1);
     expect(result.textContent).toContain('Wicked Thrasher');
 
@@ -1910,7 +1887,7 @@ describe('route loadout interaction', () => {
       screen.getByRole('button', { name: 'Experimental Hammer result' }).textContent,
     ).toContain('Choose compatible Hammer');
     expect(
-      application.store.getState().projectWorkspace.assembly.evaluation.routes[0]?.biomes,
+      application.store.getState().projectWorkspace.assembly!.evaluation.route?.biomes,
     ).toHaveLength(0);
   });
 
@@ -1919,14 +1896,14 @@ describe('route loadout interaction', () => {
     application.store.dispatch(authoredProjectReplaced(createGoldenEchoGiftHammerPendingProject()));
     const missing = application.store
       .getState()
-      .projectWorkspace.assembly.evaluation.findings.find(
+      .projectWorkspace.assembly!.evaluation.findings.find(
         (finding) =>
           finding.code === 'keepsakeEquipResultMissing' &&
           semanticAddressKey(finding.origin) === semanticAddressKey(echoGiftHammerReplayAddress),
       );
     if (missing === undefined) throw new Error('I Gift Hammer finding is missing');
     const interaction = application
-      .selectStructuredWorkspace(application.store.getState())
+      .selectStructuredWorkspace(application.store.getState())!
       .interactions.keepsakeEquipResults.get(semanticAddressKey(echoGiftHammerReplayAddress));
     if (interaction?.owner.resultKind !== 'experimentalHammer')
       throw new Error('I Gift Hammer interaction is missing');
@@ -1946,7 +1923,7 @@ describe('route loadout interaction', () => {
     expect(application.store.getState().editorSession.selectedFinding?.origin).toEqual(
       echoGiftHammerReplayAddress,
     );
-    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
+    expect(application.store.getState().editorSession.activePanel).toEqual({
       kind: 'biome',
       biomeKey: 'I',
     });
@@ -1968,14 +1945,13 @@ describe('route loadout interaction', () => {
     expect(
       application.store
         .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'I')?.echoKeepsakeReplayResults
-        ?.experimentalHammer,
+        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'I')
+        ?.echoKeepsakeReplayResults?.experimentalHammer,
     ).toEqual({ kind: 'selected', traitKey: candidate.value });
     expect(
       application.store
         .getState()
-        .projectWorkspace.assembly.evaluation.findings.some(
+        .projectWorkspace.assembly!.evaluation.findings.some(
           (finding) =>
             semanticAddressKey(finding.origin) === semanticAddressKey(echoGiftHammerReplayAddress),
         ),
@@ -1996,19 +1972,19 @@ describe('route loadout interaction', () => {
     await user.click(screen.getByRole('checkbox', { name: /The Sorceress/ }));
 
     expect(
-      application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
+      application.store.getState().projectWorkspace.history!.present.route?.loadout
         .manualArcanaKeys,
     ).toEqual(['ChanneledCast']);
     expect(screen.getByRole('group', { name: 'Arcana, 3 active' })).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(
-      application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
+      application.store.getState().projectWorkspace.history!.present.route?.loadout
         .manualArcanaKeys,
     ).toEqual([]);
     await user.click(screen.getByRole('button', { name: 'Redo' }));
     expect(
-      application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
+      application.store.getState().projectWorkspace.history!.present.route?.loadout
         .manualArcanaKeys,
     ).toEqual(['ChanneledCast']);
 
@@ -2019,7 +1995,7 @@ describe('route loadout interaction', () => {
     await user.selectOptions(screen.getByLabelText('Vow of Pain rank'), '3');
 
     expect(
-      application.store.getState().projectWorkspace.history.present.routes[0]?.loadout.fearRanks
+      application.store.getState().projectWorkspace.history!.present.route?.loadout.fearRanks
         .EnemyDamageShrineUpgrade,
     ).toBe(3);
     expect(screen.getByRole('group', { name: 'Fear, 5 total' })).toBeTruthy();
@@ -2055,6 +2031,12 @@ describe('project profile interaction', () => {
     expect(
       screen.getByRole('button', { name: 'Load Profile' }).classList.contains('danger-action'),
     ).toBe(true);
+    expect(screen.queryByText('Unsaved')).toBeNull();
+    await user.click(
+      within(screen.getByRole('group', { name: 'Choose route' })).getByRole('button', {
+        name: 'Underworld',
+      }),
+    );
     expect(screen.getByText('Unsaved')).toBeTruthy();
     await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
     application.store.dispatch(
@@ -2072,7 +2054,7 @@ describe('project profile interaction', () => {
         rank: 3,
       }),
     );
-    const savedEvaluation = application.store.getState().projectWorkspace.assembly.evaluation;
+    const savedEvaluation = application.store.getState().projectWorkspace.assembly!.evaluation;
     await user.click(screen.getByRole('button', { name: 'Save Profile' }));
     expect(await screen.findByText('Saved the profile.')).toBeTruthy();
     expect(screen.getByText('Clean')).toBeTruthy();
@@ -2092,6 +2074,11 @@ describe('project profile interaction', () => {
     expect(profileJson).not.toBeNull();
 
     await user.click(screen.getByRole('button', { name: 'New' }));
+    await user.click(
+      within(screen.getByRole('group', { name: 'Choose route' })).getByRole('button', {
+        name: 'Underworld',
+      }),
+    );
     expect(configuredBiomeCount(application)).toBe(0);
     expect(screen.getByText('Created a new project.')).toBeTruthy();
     expect(screen.getByText('Unsaved')).toBeTruthy();
@@ -2100,22 +2087,22 @@ describe('project profile interaction', () => {
     expect(await screen.findByText('Loaded the profile.')).toBeTruthy();
     expect(configuredBiomeCount(application)).toBe(1);
     expect(
-      application.store.getState().projectWorkspace.history.present.routes[0]?.loadout,
+      application.store.getState().projectWorkspace.history!.present.route?.loadout,
     ).toMatchObject({
       manualArcanaKeys: ['ChanneledCast'],
       fearRanks: { EnemyDamageShrineUpgrade: 3 },
     });
-    expect(application.store.getState().projectWorkspace.history.past).toEqual([]);
-    expect(application.store.getState().projectWorkspace.history.future).toEqual([]);
-    expect(application.store.getState().projectWorkspace.assembly.evaluation).toEqual(
+    expect(application.store.getState().projectWorkspace.history!.past).toEqual([]);
+    expect(application.store.getState().projectWorkspace.history!.future).toEqual([]);
+    expect(application.store.getState().projectWorkspace.assembly!.evaluation).toEqual(
       savedEvaluation,
     );
     expect(screen.getByText('Clean')).toBeTruthy();
   });
 
   it('presents a restored startup project as recovered', () => {
-    const source = createApplication();
-    const json = encodeProjectDocument(source.store.getState().projectWorkspace.history.present);
+    const source = createOpenTestApplication();
+    const json = encodeProjectDocument(source.store.getState().projectWorkspace.history!.present);
     const application = createApplication({
       autosaveRecovery: {
         read: () => json,
@@ -2148,12 +2135,12 @@ describe('project profile interaction', () => {
       autosaveRecovery: recovery,
       autosaveScheduler: scheduler,
     });
-    const { user } = renderPlannerForInteraction({ application });
+    const { user } = renderPlannerForInteraction({ application, startWithProject: false });
 
     expect(screen.getByRole('alert').textContent).toBe(
       'Autosave recovery failed: $: must be valid JSON',
     );
-    expect(screen.getByText('Unsaved')).toBeTruthy();
+    expect(screen.queryByText('Unsaved')).toBeNull();
     const discard = screen.getByRole('button', { name: 'Discard Autosave' });
     expect(discard.classList.contains('danger-action')).toBe(true);
     await user.click(discard);
@@ -2180,5 +2167,42 @@ describe('project profile interaction', () => {
       'Load Profile failed: $: must be valid JSON',
     );
     expect(application.store.getState().projectWorkspace).toBe(workspace);
+    expect(screen.getByRole('group', { name: 'Choose route' })).toBeTruthy();
+  });
+
+  it('closes the initial route chooser after loading a valid current-schema route', async () => {
+    const source = createOpenTestApplication('Surface');
+    const profileJson = encodeProjectDocument(
+      source.store.getState().projectWorkspace.history!.present,
+    );
+    const application = createApplication({
+      profileFile: {
+        save: () => Promise.resolve('saved'),
+        load: () => Promise.resolve({ fileName: 'surface.runplanner.json', json: profileJson }),
+      },
+    });
+    const { user } = renderPlannerForInteraction({ application, startWithProject: false });
+
+    expect(screen.getByRole('group', { name: 'Choose route' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Load Profile' }));
+
+    expect(await screen.findByText('Loaded the profile.')).toBeTruthy();
+    expect(screen.queryByRole('group', { name: 'Choose route' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Surface' })).toBeTruthy();
+  });
+
+  it('preserves the initial route chooser when loading is cancelled', async () => {
+    const application = createApplication({
+      profileFile: {
+        save: () => Promise.resolve('saved'),
+        load: () => Promise.resolve(null),
+      },
+    });
+    const { user } = renderPlannerForInteraction({ application, startWithProject: false });
+
+    await user.click(screen.getByRole('button', { name: 'Load Profile' }));
+
+    expect(await screen.findByText('Load Profile cancelled.')).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Choose route' })).toBeTruthy();
   });
 });

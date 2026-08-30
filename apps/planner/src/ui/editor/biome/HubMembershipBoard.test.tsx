@@ -96,14 +96,14 @@ describe('HubMembershipBoard', () => {
 
     fireEvent.pointerDown(opening);
     expect(allocated).toEqual(allocatedThrough(9));
-    const historyBeforeOpen = application.store.getState().projectWorkspace.history.past.length;
+    const historyBeforeOpen = application.store.getState().projectWorkspace.history!.past.length;
     fireEvent.click(opening);
     await waitFor(() =>
       expect(nHubOccurrence(application, 'combat04').occurrenceId).toBe(
         createOccurrenceId('hub-opening-attempt-7'),
       ),
     );
-    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBeforeOpen + 1,
     );
     expect(application.store.getState().editorSession.focusedSemanticOwner).toBeNull();

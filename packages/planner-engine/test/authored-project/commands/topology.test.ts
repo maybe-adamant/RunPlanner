@@ -23,6 +23,7 @@ import {
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
+import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
 import {
   composeBiomeHistoryPrefix,
   materializeBiomePrefix,
@@ -45,23 +46,48 @@ import {
 } from '../support/configured-projects';
 
 function startedNTopology(project: ReturnType<typeof nProject>) {
-  const topology = project.routes
-    .find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+  const topology = project.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
   if (topology === null || topology === undefined) throw new Error('missing N topology');
   return topology;
 }
 
 describe('authored-project commands and topology', () => {
+  it('rejects a Surface-addressed biome command against an Underworld document without mutation', () => {
+    const project = fProject();
+    const encodedBefore = encodeProjectDocument(project);
+
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'CreateStart',
+        biome: nBiome,
+        occurrenceId: createOccurrenceId('surface-addressed-start'),
+        gameName: 'N_Opening01',
+      }),
+    ).toThrowError(ProjectCommandContractError);
+
+    expect(encodeProjectDocument(project)).toBe(encodedBefore);
+  });
+
+  it('keeps the single Surface completion chain route-qualified', () => {
+    const evaluation = simulateProject(catalog, loadSurfaceNProject());
+    const n = evaluation.route.biomes.find((biome) => biome.biomeKey === 'N');
+    if (n?.authoring !== 'complete' || n.validity !== 'valid') {
+      throw new Error('complete N project did not produce a canonical Surface biome');
+    }
+
+    expect(n.snapshot.fixedRoomLinks.map((link) => link.target.gameName)).toEqual([
+      'N_Boss01',
+      'N_PostBoss01',
+    ]);
+  });
+
   it('removes the completed-Hub Preboss handoff when an aggregate visit order shortens the Hub', () => {
     const project = applyProjectCommand(createCompleteNProject(), catalog, {
       kind: 'ReplaceHubVisitOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
       hubSlotKeys: ['combat01', 'combat02', 'combat03', 'combat04', 'combat05'],
     });
-    const topology = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    const topology = project.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
     if (topology === null || topology === undefined) throw new Error('N topology is required');
 
     expect(
@@ -83,9 +109,7 @@ describe('authored-project commands and topology', () => {
       hub: createHubDecisionAddress(nBiome, 'hub'),
       hubSlotKeys: ['combat06', 'combat05', 'combat04', 'combat03', 'combat02', 'combat01'],
     });
-    const topology = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    const topology = project.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
     if (topology === null || topology === undefined) throw new Error('N topology is required');
 
     expect(topology.decisions.find((decision) => decision.kind === 'hub')).toMatchObject({
@@ -125,9 +149,7 @@ describe('authored-project commands and topology', () => {
       kind: 'CloseHubSlot',
       slot: createHubSlotAddress(nBiome, 'hub', 'combat07'),
     });
-    const topology = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    const topology = project.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
     if (topology === null || topology === undefined) throw new Error('N topology is required');
     const hub = topology.decisions.find((decision) => decision.kind === 'hub');
     if (hub?.kind !== 'hub') throw new Error('N Hub decision is required');
@@ -148,7 +170,7 @@ describe('authored-project commands and topology', () => {
 
   it('requires topology null until an authored start exists and preserves selected starts', () => {
     let project = fProject();
-    expect(project.routes[0]?.biomes[0]).toMatchObject({ biomeKey: 'F', topology: null });
+    expect(project.route?.biomes[0]).toMatchObject({ biomeKey: 'F', topology: null });
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateStart',
       biome: fBiome,
@@ -194,7 +216,7 @@ describe('authored-project commands and topology', () => {
       cageOutcome: 'min',
     });
     expect(
-      minimum.routes[0]?.biomes[2]?.topology?.decisions.find(
+      minimum.route?.biomes[2]?.topology?.decisions.find(
         (candidate) =>
           candidate.kind === 'exit' &&
           candidate.source.kind === 'occurrence' &&
@@ -215,7 +237,7 @@ describe('authored-project commands and topology', () => {
       cageOutcome: 'max',
     });
     expect(
-      maximum.routes[0]?.biomes[2]?.topology?.decisions.find(
+      maximum.route?.biomes[2]?.topology?.decisions.find(
         (candidate) =>
           candidate.kind === 'exit' &&
           candidate.source.kind === 'occurrence' &&
@@ -267,9 +289,7 @@ describe('authored-project commands and topology', () => {
       decision: hDecision,
       edit: { kind: 'fieldsCageOutcome', cageOutcome: 'max' },
     });
-    const fieldsTopology = fields.routes[0]?.biomes.find(
-      (biome) => biome.biomeKey === 'H',
-    )?.topology;
+    const fieldsTopology = fields.route?.biomes.find((biome) => biome.biomeKey === 'H')?.topology;
     expect(
       fieldsTopology && fieldsTopology.decisions.find((candidate) => candidate.kind === 'exit'),
     ).toMatchObject({ normal: { batchState: { cageOutcome: 'max' }, targets: [] } });
@@ -295,9 +315,7 @@ describe('authored-project commands and topology', () => {
         gameName: 'N_PreHub01',
       },
     });
-    const targetTopology = target.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    const targetTopology = target.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
     expect(
       targetTopology && targetTopology.decisions.find((candidate) => candidate.kind === 'exit'),
     ).toMatchObject({ normal: { targets: [{ exitKey: 'prehub', occurrenceId: prehubId }] } });
@@ -832,7 +850,7 @@ describe('authored-project commands and topology', () => {
       kind: 'occurrence',
       occurrenceId: createOccurrenceId('round-trip-n-opening'),
     });
-    const plan = project.routes.find((route) => route.routeKey === 'Surface')?.biomes[0];
+    const plan = project.route?.biomes[0];
     expect(plan?.topology).toMatchObject({
       startOccurrenceId: 'round-trip-n-opening',
       occurrences: expect.arrayContaining([
@@ -863,9 +881,7 @@ describe('authored-project commands and topology', () => {
       kind: 'RemoveExitDecision',
       decision: openingDecision,
     });
-    expect(
-      project.routes.find((route) => route.routeKey === 'Surface')?.biomes[0]?.topology,
-    ).toMatchObject({
+    expect(project.route?.biomes[0]?.topology).toMatchObject({
       occurrences: [{ occurrenceId: 'round-trip-n-opening' }],
       decisions: [],
     });
@@ -914,9 +930,7 @@ describe('authored-project commands and topology', () => {
       hub,
     });
     project = applyProjectCommand(project, catalog, { kind: 'RemoveHubDecision', hub });
-    const topology = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    const topology = project.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
     expect(topology?.decisions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -983,11 +997,7 @@ describe('authored-project commands and topology', () => {
       biome: nBiome,
     });
 
-    expect(
-      project.routes
-        .find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology,
-    ).toBeNull();
+    expect(project.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology).toBeNull();
   });
 
   it('addresses selection by semantic decision source and rejects absent target choices', () => {
@@ -1247,9 +1257,9 @@ describe('authored-project commands and topology', () => {
     expect(undoProjectHistory(reanchoredHistory).present).toBe(project);
     expect(redoProjectHistory(undoProjectHistory(reanchoredHistory)).present).toEqual(reanchored);
 
-    const plan = reanchored.routes[0]?.biomes[0];
+    const plan = reanchored.route?.biomes[0];
     if (plan === undefined) throw new Error('re-anchor F plan is missing');
-    const route = reanchored.routes.find((candidate) => candidate.routeKey === fBiome.routeKey);
+    const route = reanchored.route;
     if (route === undefined) throw new Error('re-anchor F route is missing');
     const prefix = materializeBiomePrefix(catalog, fBiome, plan, route.loadout);
     if (prefix?.entryRoom === undefined) throw new Error('re-anchor prefix did not materialize');
@@ -1264,7 +1274,7 @@ describe('authored-project commands and topology', () => {
       parent: { occurrenceId: nextId },
     });
     expect(historyPrefix).not.toBeNull();
-    const evaluated = simulateProject(catalog, reanchored).routes[0]?.biomes[0];
+    const evaluated = simulateProject(catalog, reanchored).route?.biomes[0];
     if (evaluated === undefined || !('history' in evaluated)) {
       throw new Error('re-anchor simulation did not retain its reached history');
     }
@@ -1414,7 +1424,7 @@ describe('authored-project commands and topology', () => {
       gameName: 'G_PreBoss01',
       targetOccurrenceIds: { exit1: createOccurrenceId('g-shop') },
     });
-    const repaired = project.routes[0]?.biomes[1]?.topology?.decisions.find(
+    const repaired = project.route?.biomes[1]?.topology?.decisions.find(
       (decision) =>
         decision.kind === 'exit' &&
         decision.source.kind === 'occurrence' &&
@@ -1457,10 +1467,7 @@ describe('authored-project commands and topology', () => {
       occurrenceId: createOccurrenceId('i-preboss'),
       gameName: 'I_PreBoss02',
     });
-    expect(
-      project.routes.find((route) => route.routeKey === 'Underworld')?.biomes[3]?.topology
-        ?.occurrences,
-    ).toContainEqual(
+    expect(project.route?.biomes[3]?.topology?.occurrences).toContainEqual(
       expect.objectContaining({
         occurrenceId: 'i-preboss',
         state: expect.objectContaining({ kind: 'shop', shop: expect.any(Object) }),
@@ -1480,10 +1487,7 @@ describe('authored-project commands and topology', () => {
       occurrenceId: createOccurrenceId('i-peer'),
       gameName: 'I_Combat02',
     });
-    expect(
-      project.routes.find((route) => route.routeKey === 'Underworld')?.biomes[3]?.topology
-        ?.occurrences,
-    ).toContainEqual(
+    expect(project.route?.biomes[3]?.topology?.occurrences).toContainEqual(
       expect.objectContaining({ occurrenceId: 'i-preboss', state: { kind: 'shop' } }),
     );
     project = applyProjectCommand(project, catalog, {

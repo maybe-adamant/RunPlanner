@@ -7,9 +7,9 @@ import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
 
 function fixture() {
   const project = loadSurfaceNProject();
-  const biome = simulateProject(catalog, project)
-    .routes.find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+  const biome = simulateProject(catalog, project).route?.biomes.find(
+    (candidate) => candidate.biomeKey === 'N',
+  );
   if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
     throw new Error('N fixture did not complete validly');
   }

@@ -47,22 +47,21 @@ function findTraitOfferControl(
   address: import('@run-planner/engine/authored-project').TraitOfferAddress,
 ): WorkspaceTraitOfferControl {
   const key = semanticAddressKey(address);
-  for (const route of workspace.routes)
-    for (const biome of route.biomes)
-      for (const node of biome.nodes) {
-        const rooms =
-          node.kind === 'occurrenceWorkbench'
-            ? [node.room]
-            : node.kind === 'ordinaryBatch' ||
-                node.kind === 'mixedBatch' ||
-                node.kind === 'takeoverBatch'
-              ? node.targets.map((target) => target.room)
-              : [];
-        for (const room of rooms)
-          for (const reward of room.rewardControls)
-            for (const control of reward.traitOffers ?? [])
-              if (semanticAddressKey(control.address) === key) return control;
-      }
+  for (const biome of workspace.route.biomes)
+    for (const node of biome.nodes) {
+      const rooms =
+        node.kind === 'occurrenceWorkbench'
+          ? [node.room]
+          : node.kind === 'ordinaryBatch' ||
+              node.kind === 'mixedBatch' ||
+              node.kind === 'takeoverBatch'
+            ? node.targets.map((target) => target.room)
+            : [];
+      for (const room of rooms)
+        for (const reward of room.rewardControls)
+          for (const control of reward.traitOffers ?? [])
+            if (semanticAddressKey(control.address) === key) return control;
+    }
   throw new Error('Trait offer control is not projected');
 }
 
@@ -84,7 +83,7 @@ describe('trait offer editor entry and dialog', () => {
       createIncomingRewardAddress(goldenFBiome, occurrenceId),
       'self',
     );
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     expect(workspace.interactions.traitOffers.has(semanticAddressKey(address))).toBe(true);
     const initialInteraction = workspace.interactions.traitOffers.get(semanticAddressKey(address));
     if (initialInteraction === undefined) throw new Error('SpellDrop interaction is missing');
@@ -119,7 +118,7 @@ describe('trait offer editor entry and dialog', () => {
     expect(screen.queryByRole('button', { name: 'Select Fallback Gold' })).toBeNull();
     expect(screen.queryByText('Offer State')).toBeNull();
 
-    const historyDepth = application.store.getState().projectWorkspace.history.past.length;
+    const historyDepth = application.store.getState().projectWorkspace.history!.past.length;
     const option2 = screen.getAllByRole('radio', { name: 'Selected' })[1];
     if (option2 === undefined) throw new Error('Spell option 2 selector is missing');
     const user = userEvent.setup();
@@ -129,13 +128,12 @@ describe('trait offer editor entry and dialog', () => {
     await user.click(screen.getByRole('button', { name: 'Rare Hex node 1' }));
     await user.click(screen.getByRole('option', { name: 'Splendor' }));
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
-    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
+    expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyDepth + 1,
     );
     const changedOccurrence = application.store
       .getState()
-      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F')
+      .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
       ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId);
     const changed =
       changedOccurrence?.state.kind === 'counted' && changedOccurrence.state.reward !== null
@@ -149,7 +147,7 @@ describe('trait offer editor entry and dialog', () => {
       },
     });
     cleanup();
-    const changedWorkspace = application.selectStructuredWorkspace(application.store.getState());
+    const changedWorkspace = application.selectStructuredWorkspace(application.store.getState())!;
     const changedInteraction = changedWorkspace.interactions.traitOffers.get(
       semanticAddressKey(address),
     );
@@ -172,8 +170,7 @@ describe('trait offer editor entry and dialog', () => {
     application.store.dispatch(authoredProjectUndoRequested());
     const restoredOccurrence = application.store
       .getState()
-      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F')
+      .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
       ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId);
     const restored =
       restoredOccurrence?.state.kind === 'counted' && restoredOccurrence.state.reward !== null
@@ -199,7 +196,7 @@ describe('trait offer editor entry and dialog', () => {
       value: { kind: 'normal', exitKey: 'exit2' },
     });
     const raw = JSON.parse(encodeProjectDocument(selected)) as {
-      routes: Array<{
+      route: {
         routeKey: string;
         biomes: Array<{
           biomeKey: string;
@@ -210,11 +207,10 @@ describe('trait offer editor entry and dialog', () => {
             }>;
           } | null;
         }>;
-      }>;
+      };
     };
-    const rawOccurrence = raw.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F')
+    const rawOccurrence = raw.route.biomes
+      .find((biome) => biome.biomeKey === 'F')
       ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId);
     if (rawOccurrence?.state.reward?.traitOffersByAcquisitionRole === undefined) {
       throw new Error('SpellDrop fixture has no self child to unset');
@@ -222,7 +218,7 @@ describe('trait offer editor entry and dialog', () => {
     rawOccurrence.state.reward.traitOffersByAcquisitionRole.self = null;
     const project = decodeProjectDocument(raw, application.catalog);
     application.store.dispatch(authoredProjectReplaced(project));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const interaction = workspace.interactions.traitOffers.get(semanticAddressKey(address));
     if (interaction === undefined) throw new Error('unresolved SpellDrop interaction is missing');
     expect(interaction.value).toBeNull();
@@ -268,7 +264,7 @@ describe('trait offer editor entry and dialog', () => {
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
     application.store.dispatch(authoredProjectReplaced(project));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const interaction = workspace.interactions.traitOffers.get(semanticAddressKey(address));
     if (interaction === undefined || interaction.value?.kind !== 'traits')
       throw new Error('Calling Card Apollo interaction is missing');
@@ -322,7 +318,7 @@ describe('trait offer editor entry and dialog', () => {
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
     application.store.dispatch(authoredProjectReplaced(project));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const user = userEvent.setup();
     render(
       <Provider store={application.store}>
@@ -347,7 +343,7 @@ describe('trait offer editor entry and dialog', () => {
   it('refreshes offer state from the live unsaved draft', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const base = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.value?.kind === 'traits' && candidate.value.options.length === 3,
     );
@@ -424,14 +420,14 @@ describe('trait offer editor entry and dialog', () => {
     expect(screen.getByRole('region', { name: 'Offer generation state' }).textContent).toContain(
       'Required replacements1',
     );
-    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(0);
+    expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(0);
     application.dispose();
   });
 
   it('repairs a required Rejected row, keeps that row unavailable, and saves one undoable offer edit', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const base = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.value?.kind === 'traits' && candidate.value.options.length === 3,
     );
@@ -511,13 +507,13 @@ describe('trait offer editor entry and dialog', () => {
     expect(save).toHaveProperty('disabled', false);
     await user.click(save);
     const saved = findTraitOfferControl(
-      application.selectStructuredWorkspace(application.store.getState()),
+      application.selectStructuredWorkspace(application.store.getState())!,
       interaction.owner,
     );
     expect(saved.offer).toMatchObject({ rejectedOptionKey: 'option2' });
     application.store.dispatch(authoredProjectUndoRequested());
     const restored = findTraitOfferControl(
-      application.selectStructuredWorkspace(application.store.getState()),
+      application.selectStructuredWorkspace(application.store.getState())!,
       interaction.owner,
     );
     expect(restored.offer).not.toMatchObject({ rejectedOptionKey: 'option2' });
@@ -527,7 +523,7 @@ describe('trait offer editor entry and dialog', () => {
   it('refreshes an open editor when an external persisted Persephone result changes', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const base = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.value?.kind === 'traits',
     );

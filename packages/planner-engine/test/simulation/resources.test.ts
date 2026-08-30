@@ -40,7 +40,7 @@ const enteredAt = (biomeKey: string, occurrenceId: string, gameName: string) => 
 describe('selected resource success legality', () => {
   it('counts the N Hub as entered spacing without exposing it as a placement target', () => {
     const project = loadSurfaceNProject();
-    const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
+    const route = project.route;
     if (route === undefined) throw new Error('expected Surface fixture route');
     const authoring = routeResourceAuthoring(catalog, route);
     const openingIndex = authoring.entered.findIndex(
@@ -144,7 +144,7 @@ describe('selected resource success legality', () => {
     expect(before.properUpbringingActive).toBeUndefined();
 
     const project = createFGenerationProject();
-    const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld')!;
+    const route = project.route!;
     const plan = route.biomes.find((candidate) => candidate.biomeKey === 'F')!;
     const completeness = evaluateBiomeCompleteness(catalog, fGenerationBiome, plan);
     if (completeness.completion !== 'complete') throw new Error('expected complete F fixture');
@@ -249,7 +249,7 @@ describe('selected resource success legality', () => {
 
   it('retains an invalid selected placement at its exact room and reports it without granting it', () => {
     const project = createFGenerationProject();
-    const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld')!;
+    const route = project.route!;
     const plan = route.biomes.find((candidate) => candidate.biomeKey === 'F')!;
     const completeness = evaluateBiomeCompleteness(catalog, fGenerationBiome, plan);
     if (completeness.completion !== 'complete') throw new Error('expected complete F fixture');
@@ -259,14 +259,10 @@ describe('selected resource success legality', () => {
     const placement = at('F', host.occurrenceId);
     const invalidProject = {
       ...project,
-      routes: project.routes.map((candidate) =>
-        candidate.routeKey !== 'Underworld'
-          ? candidate
-          : {
-              ...candidate,
-              resourcePlacements: { ...none(), Pickaxe: placement, Shovel: placement },
-            },
-      ),
+      route: {
+        ...project.route,
+        resourcePlacements: { ...none(), Pickaxe: placement, Shovel: placement },
+      },
     };
     const evaluated = simulateProject(catalog, invalidProject);
     expect(evaluated.findings).toContainEqual(
@@ -277,12 +273,10 @@ describe('selected resource success legality', () => {
         evidence: expect.objectContaining({ family: 'Shovel' }),
       }),
     );
-    const f = evaluated.routes
-      .find((candidate) => candidate.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    const f = evaluated.route?.biomes.find((candidate) => candidate.biomeKey === 'F');
     if (f?.authoring !== 'complete') throw new Error('expected complete F evaluation');
     expect(f.validity).toBe('invalid');
-    const underworld = evaluated.routes.find((candidate) => candidate.routeKey === 'Underworld');
+    const underworld = evaluated.route;
     expect(underworld?.status).toBe('invalid');
     expect(underworld?.summary.eligibleForExecutionPlan).toBe(false);
     expect(evaluated.summary.eligibleForExecutionPlan).toBe(false);

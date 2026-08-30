@@ -7,8 +7,10 @@ export function encoded(project: ProjectDocument): JsonRecord {
 }
 
 export function biome(document: JsonRecord, routeKey: string, biomeKey: string): JsonRecord {
-  const routes = document.routes as JsonRecord[];
-  const route = routes.find((candidate) => candidate.routeKey === routeKey);
+  const route = document.route as JsonRecord | undefined;
+  if (route !== undefined && route.routeKey !== routeKey) {
+    throw new Error(`document contains ${String(route.routeKey)}, not ${routeKey}`);
+  }
   const plan = (route?.biomes as JsonRecord[] | undefined)?.find(
     (candidate) => candidate.biomeKey === biomeKey,
   );

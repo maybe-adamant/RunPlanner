@@ -55,9 +55,8 @@ describe('run-impacting trait checkpoint recipes', () => {
 
   it('retains compact N Quick Buck and Buried Treasure pickup workflows at their source owners', () => {
     const generatedEntries = (project: ReturnType<typeof createSurfaceNQuickBuckCheckpoint>) =>
-      project.routes
-        .find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N')
+      project.route.biomes
+        .find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.flatMap((occurrence) =>
           Object.entries(occurrence.acquisitionSites ?? {}).flatMap(([siteKey, site]) =>
             siteKey.startsWith('traitGenerated:')
@@ -75,9 +74,8 @@ describe('run-impacting trait checkpoint recipes', () => {
       ],
     ]);
     const producerPlacement = (project: ReturnType<typeof createSurfaceNQuickBuckCheckpoint>) => {
-      const occurrence = project.routes
-        .find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N')
+      const occurrence = project.route.biomes
+        .find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.find((candidate) => candidate.acquisitionSites !== undefined);
       if (occurrence === undefined) throw new Error('Generated-pickup source owner is missing');
       return selectedPickupProducers(catalog, nBiome, occurrence)[0]?.placement;
@@ -108,9 +106,8 @@ describe('run-impacting trait checkpoint recipes', () => {
       },
     });
     const occurrence = () =>
-      project.routes
-        .find((route) => route.routeKey === 'Surface')!
-        .biomes.find((biome) => biome.biomeKey === 'N')!
+      project.route.biomes
+        .find((biome) => biome.biomeKey === 'N')!
         .topology!.occurrences.find(
           (candidate) => candidate.occurrenceId === nOccurrenceIds.preHub,
         )!;
@@ -195,12 +192,10 @@ describe('run-impacting trait checkpoint recipes', () => {
   it("settles Queen's Ransom and continues through the complete N route", () => {
     const assembly = simulateProjectAssembly(catalog, createSurfaceNQueensRansomCheckpoint());
     expect(assembly.evaluation.findings).toEqual([]);
-    const histories = assembly.evaluation.routes.flatMap((route) =>
-      route.biomes.flatMap((biome) =>
-        'rewards' in biome
-          ? biome.rewards.branches.flatMap((branch) => branch.traitHistory ?? [])
-          : [],
-      ),
+    const histories = assembly.evaluation.route.biomes.flatMap((biome) =>
+      'rewards' in biome
+        ? biome.rewards.branches.flatMap((branch) => branch.traitHistory ?? [])
+        : [],
     );
     expect(
       histories.some((history) => {
@@ -225,12 +220,10 @@ describe('run-impacting trait checkpoint recipes', () => {
     const findings = assembly.evaluation.findings.filter(
       (candidate) => candidate.code === 'steadyGrowthOutcomeMissing',
     );
-    const histories = assembly.evaluation.routes.flatMap((route) =>
-      route.biomes.flatMap((biome) =>
-        'rewards' in biome
-          ? biome.rewards.branches.flatMap((branch) => branch.traitHistory ?? [])
-          : [],
-      ),
+    const histories = assembly.evaluation.route.biomes.flatMap((biome) =>
+      'rewards' in biome
+        ? biome.rewards.branches.flatMap((branch) => branch.traitHistory ?? [])
+        : [],
     );
     expect(histories).toHaveLength(1);
     expect(findings).toHaveLength(1);

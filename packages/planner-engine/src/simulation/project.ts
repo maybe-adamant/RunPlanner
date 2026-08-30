@@ -32,7 +32,6 @@ import {
 import { evaluateBiomeAssembly, materializedBiomePrefixCoveragePoint } from './biome-evaluation';
 import {
   routeStatus,
-  summarizeProject,
   summarizeRoute,
   type ActiveRouteBiome,
   type ProjectBiomeEvaluation,
@@ -47,22 +46,15 @@ function assertProjectMatchesCatalog(catalog: Catalog, project: ProjectDocument)
       `project catalog ${project.catalogVersion} does not match ${catalog.version}`,
     );
   }
-  if (project.routes.length !== catalog.routes.values.length) {
-    throw new ProjectSimulationContractError('project routes do not match the catalog');
+  const declaration = catalog.routes.byKey[project.route.routeKey];
+  if (declaration === undefined) {
+    throw new ProjectSimulationContractError(`project route ${project.route.routeKey} is unknown`);
   }
-  for (const [routeIndex, declaration] of catalog.routes.values.entries()) {
-    const route = project.routes[routeIndex];
-    if (route?.routeKey !== declaration.key) {
+  for (const [biomeIndex, plan] of project.route.biomes.entries()) {
+    if (plan.biomeKey !== declaration.biomeKeys[biomeIndex]) {
       throw new ProjectSimulationContractError(
-        `project route ${routeIndex} does not match ${declaration.key}`,
+        `${project.route.routeKey} biome ${biomeIndex} is not the declared route prefix`,
       );
-    }
-    for (const [biomeIndex, plan] of route.biomes.entries()) {
-      if (plan.biomeKey !== declaration.biomeKeys[biomeIndex]) {
-        throw new ProjectSimulationContractError(
-          `${route.routeKey} biome ${biomeIndex} is not the declared route prefix`,
-        );
-      }
     }
   }
 }
@@ -327,33 +319,23 @@ export function simulateProjectAssembly(
   project: ProjectDocument,
 ): ProjectEvaluationAssembly {
   assertProjectMatchesCatalog(catalog, project);
-  const assembledRoutes = project.routes.map((route) => evaluateRouteAssembly(catalog, route));
-  const routes = Object.freeze(assembledRoutes.map((route) => route.evaluation));
-  const summary = summarizeProject(routes);
+  const assembledRoute = evaluateRouteAssembly(catalog, project.route);
+  const route = assembledRoute.evaluation;
   const evaluation = Object.freeze({
-    status:
-      summary.configuredBiomeCount === 0
-        ? 'empty'
-        : routes.some((route) => route.status === 'invalid')
-          ? 'invalid'
-          : routes.some((route) => route.status === 'incomplete')
-            ? 'incomplete'
-            : 'valid',
+    status: route.status,
     projectId: project.projectId,
     catalogVersion: project.catalogVersion,
-    routes,
-    findings: Object.freeze(routes.flatMap((route) => route.findings)),
-    summary,
+    route,
+    findings: Object.freeze(route.findings),
+    summary: route.summary,
   });
   return createExactProjectEvaluationAssembly(
     project,
     evaluation,
     createProjectCandidateArtifacts(
-      assembledRoutes.flatMap((route) => route.candidateArtifacts),
-      new Map(assembledRoutes.flatMap((route) => [...route.routeStartKeepsakes.entries()])),
-      new Map(
-        assembledRoutes.flatMap((route) => [...route.routeStartKeepsakeEquipResults.entries()]),
-      ),
+      assembledRoute.candidateArtifacts,
+      assembledRoute.routeStartKeepsakes,
+      assembledRoute.routeStartKeepsakeEquipResults,
     ),
   );
 }

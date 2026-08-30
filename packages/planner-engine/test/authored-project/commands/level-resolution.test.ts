@@ -93,9 +93,8 @@ describe('level-resolution commands', () => {
       levelResolution: createLevelResolutionAddress(entry, 'self'),
       value,
     });
-    const authoredOccurrence = updated.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'O')
+    const authoredOccurrence = updated.route.biomes
+      .find((biome) => biome.biomeKey === 'O')
       ?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === oOccurrenceIds.combat02,
       );

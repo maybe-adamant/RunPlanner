@@ -43,7 +43,7 @@ import {
 
 function route(project: ProjectDocument, routeKey: string) {
   const result = simulateProject(catalog, project);
-  const evaluatedRoute = result.routes.find((candidate) => candidate.routeKey === routeKey);
+  const evaluatedRoute = result.route;
   if (evaluatedRoute === undefined) throw new Error(`fixture has no ${routeKey} route`);
   return { result, route: evaluatedRoute };
 }
@@ -62,14 +62,12 @@ describe('project simulation composition', () => {
   it('reports an unconfigured project as empty rather than valid', () => {
     const project = createProjectDocument(catalog, {
       projectId: 'empty-project',
+      routeKey: 'Underworld',
     });
     const result = simulateProject(catalog, project);
 
     expect(result.status).toBe('empty');
-    expect(result.routes.map((evaluatedRoute) => evaluatedRoute.status)).toEqual([
-      'empty',
-      'empty',
-    ]);
+    expect(result.route.status).toBe('empty');
     expect(result.findings).toEqual([]);
     expect(result.summary).toEqual({
       configuredBiomeCount: 0,
@@ -85,7 +83,8 @@ describe('project simulation composition', () => {
   it('keeps the first incomplete biome active and leaves the configured suffix blocked', () => {
     const project = createProjectDocument(catalog, {
       projectId: 'incomplete-underworld-project',
-      configuredBiomeCounts: { Underworld: 2 },
+      routeKey: 'Underworld',
+      configuredBiomeCount: 2,
     });
     const { result, route: underworld } = route(project, 'Underworld');
 
@@ -484,8 +483,8 @@ describe('project simulation composition', () => {
     expect(simulateProject(rebuiltCatalog, project)).toEqual(first);
     expect(JSON.stringify(project)).toBe(before);
     expect(Object.isFrozen(first)).toBe(true);
-    expect(Object.isFrozen(first.routes)).toBe(true);
-    expect(Object.isFrozen(first.routes[1]?.biomes)).toBe(true);
+    expect(Object.isFrozen(first.route)).toBe(true);
+    expect(Object.isFrozen(first.route.biomes)).toBe(true);
     expect(completeBiome(project, 'Surface', 'N').snapshot).toBeTruthy();
   });
 });

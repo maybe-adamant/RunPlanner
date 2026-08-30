@@ -193,10 +193,8 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
 
   it('rejects a valid-shaped Shrine shell on a non-host completion room', () => {
     const document = encoded(createCompleteFGProject());
-    const underworld = (document.routes as JsonRecord[]).find(
-      (route) => route.routeKey === 'Underworld',
-    );
-    const fBiome = (underworld?.biomes as JsonRecord[]).find((biome) => biome.biomeKey === 'F');
+    const underworld = document.route as JsonRecord;
+    const fBiome = (underworld.biomes as JsonRecord[]).find((biome) => biome.biomeKey === 'F');
     const postboss = ((fBiome?.topology as JsonRecord | null)?.occurrences as JsonRecord[]).find(
       (completion) => completion.gameName === 'F_PostBoss01',
     );
@@ -293,7 +291,7 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
     );
     const retained = decodeProjectDocument(malformed('echoDoubleShopReward', false), catalog);
     expect(
-      retained.routes[0]?.biomes[0]?.topology?.occurrences.find(
+      retained.route?.biomes[0]?.topology?.occurrences.find(
         (candidate) => candidate.gameName === 'F_PreBoss01',
       )?.roomActions.order,
     ).toContainEqual({
@@ -580,9 +578,8 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
 
   it('round-trips complete Fig Leaf phase maps as immutable nested state', () => {
     const decoded = decodeProjectDocument(encoded(loadSurfaceNOPProject()), catalog);
-    const occurrence = decoded.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((plan) => plan.biomeKey === 'P')
+    const occurrence = decoded.route.biomes
+      .find((plan) => plan.biomeKey === 'P')
       ?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === pOccurrenceId('P_Combat03', 1, 1),
       );
@@ -637,9 +634,8 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
   it('round-trips a fixed Arachne Story offer through the encounter codec', () => {
     const project = arachneStoryProject();
     const decoded = decodeProjectDocument(encoded(project), catalog);
-    const fixed = decoded.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((plan) => plan.biomeKey === 'F')
+    const fixed = decoded.route.biomes
+      .find((plan) => plan.biomeKey === 'F')
       ?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === goldenFOccurrenceId(7, 1),
       );

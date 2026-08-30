@@ -38,9 +38,7 @@ import {
 import { resolveCountedRewardTypeDomain } from '../../src/simulation/rewards/authoring-domain';
 
 function plan(project: ProjectDocument, routeKey: string, biomeKey: string): AuthoredBiomePlan {
-  const result = project.routes
-    .find((route) => route.routeKey === routeKey)
-    ?.biomes.find((biome) => biome.biomeKey === biomeKey);
+  const result = project.route.biomes.find((biome) => biome.biomeKey === biomeKey);
   if (result === undefined) throw new Error(`${routeKey}.${biomeKey} plan is missing`);
   return result;
 }
@@ -89,113 +87,93 @@ function catalogWithRoom(room: RoomDeclaration): Catalog {
 function withBlockedUnderworldSuffix(project: ProjectDocument): ProjectDocument {
   return Object.freeze({
     ...project,
-    routes: Object.freeze(
-      project.routes.map((route) =>
-        route.routeKey !== 'Underworld'
-          ? route
-          : Object.freeze({
-              ...route,
-              biomes: Object.freeze(
-                route.biomes.map((biome) => {
-                  if (biome.biomeKey !== 'F' || biome.topology === null) return biome;
-                  const first = biome.topology.decisions.find(
-                    (decision) => decision.kind === 'exit',
-                  );
-                  if (first?.kind !== 'exit') throw new Error('F first decision is missing');
-                  return Object.freeze({
-                    ...biome,
-                    topology: Object.freeze({
-                      ...biome.topology,
-                      decisions: Object.freeze(
-                        biome.topology.decisions.map((decision) =>
-                          decision === first
-                            ? Object.freeze({
-                                ...decision,
-                                selection: { kind: 'unresolved' as const },
-                              })
-                            : decision,
-                        ),
-                      ),
-                    }),
-                  });
-                }),
+    route: Object.freeze({
+      ...project.route,
+      biomes: Object.freeze(
+        project.route.biomes.map((biome) => {
+          if (biome.biomeKey !== 'F' || biome.topology === null) return biome;
+          const first = biome.topology.decisions.find((decision) => decision.kind === 'exit');
+          if (first?.kind !== 'exit') throw new Error('F first decision is missing');
+          return Object.freeze({
+            ...biome,
+            topology: Object.freeze({
+              ...biome.topology,
+              decisions: Object.freeze(
+                biome.topology.decisions.map((decision) =>
+                  decision === first
+                    ? Object.freeze({
+                        ...decision,
+                        selection: { kind: 'unresolved' as const },
+                      })
+                    : decision,
+                ),
               ),
             }),
+          });
+        }),
       ),
-    ),
+    }),
   });
 }
 
 function withIncompleteHubVisits(project: ProjectDocument): ProjectDocument {
   return Object.freeze({
     ...project,
-    routes: Object.freeze(
-      project.routes.map((route) =>
-        route.routeKey !== 'Surface'
-          ? route
-          : Object.freeze({
-              ...route,
-              biomes: Object.freeze(
-                route.biomes.map((biome) => {
-                  if (biome.biomeKey !== 'N' || biome.topology === null) return biome;
-                  return Object.freeze({
-                    ...biome,
-                    topology: Object.freeze({
-                      ...biome.topology,
-                      decisions: Object.freeze(
-                        biome.topology.decisions.map((decision) =>
-                          decision.kind === 'hub'
-                            ? Object.freeze({
-                                ...decision,
-                                visitOrder: decision.visitOrder.slice(0, 5),
-                              })
-                            : decision,
-                        ),
-                      ),
-                    }),
-                  });
-                }),
+    route: Object.freeze({
+      ...project.route,
+      biomes: Object.freeze(
+        project.route.biomes.map((biome) => {
+          if (biome.biomeKey !== 'N' || biome.topology === null) return biome;
+          return Object.freeze({
+            ...biome,
+            topology: Object.freeze({
+              ...biome.topology,
+              decisions: Object.freeze(
+                biome.topology.decisions.map((decision) =>
+                  decision.kind === 'hub'
+                    ? Object.freeze({
+                        ...decision,
+                        visitOrder: decision.visitOrder.slice(0, 5),
+                      })
+                    : decision,
+                ),
               ),
             }),
+          });
+        }),
       ),
-    ),
+    }),
   });
 }
 
 function withRetainedHubBehindMissingLink(project: ProjectDocument): ProjectDocument {
   return Object.freeze({
     ...project,
-    routes: Object.freeze(
-      project.routes.map((route) =>
-        route.routeKey !== 'Surface'
-          ? route
-          : Object.freeze({
-              ...route,
-              biomes: Object.freeze(
-                route.biomes.map((biome) => {
-                  if (biome.biomeKey !== 'N' || biome.topology === null) return biome;
-                  const startOccurrenceId = biome.topology.startOccurrenceId;
-                  return Object.freeze({
-                    ...biome,
-                    topology: Object.freeze({
-                      ...biome.topology,
-                      decisions: Object.freeze(
-                        biome.topology.decisions.filter(
-                          (decision) =>
-                            !(
-                              decision.kind === 'exit' &&
-                              decision.source.kind === 'occurrence' &&
-                              decision.source.occurrenceId === startOccurrenceId
-                            ),
-                        ),
-                      ),
-                    }),
-                  });
-                }),
+    route: Object.freeze({
+      ...project.route,
+      biomes: Object.freeze(
+        project.route.biomes.map((biome) => {
+          if (biome.biomeKey !== 'N' || biome.topology === null) return biome;
+          const startOccurrenceId = biome.topology.startOccurrenceId;
+          return Object.freeze({
+            ...biome,
+            topology: Object.freeze({
+              ...biome.topology,
+              decisions: Object.freeze(
+                biome.topology.decisions.filter(
+                  (decision) =>
+                    !(
+                      decision.kind === 'exit' &&
+                      decision.source.kind === 'occurrence' &&
+                      decision.source.occurrenceId === startOccurrenceId
+                    ),
+                ),
               ),
             }),
+          });
+        }),
       ),
-    ),
+    }),
   });
 }
 
@@ -207,42 +185,36 @@ function withReversedBatchTargets(
 ): ProjectDocument {
   return Object.freeze({
     ...project,
-    routes: Object.freeze(
-      project.routes.map((route) =>
-        route.routeKey !== routeKey
-          ? route
-          : Object.freeze({
-              ...route,
-              biomes: Object.freeze(
-                route.biomes.map((biome) => {
-                  if (biome.biomeKey !== biomeKey || biome.topology === null) return biome;
-                  return Object.freeze({
-                    ...biome,
-                    topology: Object.freeze({
-                      ...biome.topology,
-                      decisions: Object.freeze(
-                        biome.topology.decisions.map((decision) =>
-                          decision.kind === 'exit' &&
-                          decision.source.kind === 'occurrence' &&
-                          decision.source.occurrenceId === sourceOccurrenceId &&
-                          decision.normal.kind === 'batch'
-                            ? Object.freeze({
-                                ...decision,
-                                normal: Object.freeze({
-                                  ...decision.normal,
-                                  targets: Object.freeze([...decision.normal.targets].reverse()),
-                                }),
-                              })
-                            : decision,
-                        ),
-                      ),
-                    }),
-                  });
-                }),
+    route: Object.freeze({
+      ...project.route,
+      biomes: Object.freeze(
+        project.route.biomes.map((biome) => {
+          if (biome.biomeKey !== biomeKey || biome.topology === null) return biome;
+          return Object.freeze({
+            ...biome,
+            topology: Object.freeze({
+              ...biome.topology,
+              decisions: Object.freeze(
+                biome.topology.decisions.map((decision) =>
+                  decision.kind === 'exit' &&
+                  decision.source.kind === 'occurrence' &&
+                  decision.source.occurrenceId === sourceOccurrenceId &&
+                  decision.normal.kind === 'batch'
+                    ? Object.freeze({
+                        ...decision,
+                        normal: Object.freeze({
+                          ...decision.normal,
+                          targets: Object.freeze([...decision.normal.targets].reverse()),
+                        }),
+                      })
+                    : decision,
+                ),
               ),
             }),
+          });
+        }),
       ),
-    ),
+    }),
   });
 }
 
@@ -284,7 +256,8 @@ function sourceOfferPointProject(testCatalog: Catalog): {
   const targetId = createOccurrenceId('source-offer-o-target');
   let project = createProjectDocument(testCatalog, {
     projectId: 'source-offer-domain',
-    configuredBiomeCounts: { Surface: 2 },
+    routeKey: 'Surface',
+    configuredBiomeCount: 2,
   });
   project = applyProjectCommand(project, testCatalog, {
     kind: 'CreateStart',
@@ -541,7 +514,8 @@ describe('counted reward authoring domains', () => {
     const forcedRunId = createOccurrenceId('forced-shared-run');
     let project = createProjectDocument(catalog, {
       projectId: 'forced-shared-domain',
-      configuredBiomeCounts: { Underworld: 2 },
+      routeKey: 'Underworld',
+      configuredBiomeCount: 2,
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateStart',

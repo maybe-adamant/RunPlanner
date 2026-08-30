@@ -2873,7 +2873,7 @@ export interface StructuredWorkspaceProjection {
   readonly interactions: WorkspaceInteractionCatalog;
   readonly marker: WorkspaceMarker;
   readonly runStateLaunchers: ReadonlyMap<string, WorkspaceRunStateLauncher>;
-  readonly routes: readonly WorkspaceRoute[];
+  readonly route: WorkspaceRoute;
   readonly status: WorkspaceStatus;
 }
 

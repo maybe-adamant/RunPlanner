@@ -94,28 +94,29 @@ function mapOccurrences(
   transform: (routeKey: string, biomeKey: string, occurrence: RoomOccurrence) => RoomOccurrence,
 ): ProjectDocument {
   let changed = false;
-  const routes = document.routes.map((route) => {
-    const biomes = route.biomes.map((biome) => {
-      if (biome.topology === null) return biome;
-      const occurrences = biome.topology.occurrences.map((occurrence) => {
-        const next = transform(route.routeKey, biome.biomeKey, occurrence);
-        if (next !== occurrence) changed = true;
-        return next;
-      });
-      return occurrences.some(
-        (occurrence, index) => occurrence !== biome.topology!.occurrences[index],
-      )
-        ? Object.freeze({
-            ...biome,
-            topology: Object.freeze({ ...biome.topology, occurrences: Object.freeze(occurrences) }),
-          })
-        : biome;
+  const route = document.route;
+  const biomes = route.biomes.map((biome) => {
+    if (biome.topology === null) return biome;
+    const occurrences = biome.topology.occurrences.map((occurrence) => {
+      const next = transform(route.routeKey, biome.biomeKey, occurrence);
+      if (next !== occurrence) changed = true;
+      return next;
     });
-    return biomes.some((biome, index) => biome !== route.biomes[index])
-      ? Object.freeze({ ...route, biomes: Object.freeze(biomes) })
-      : route;
+    return occurrences.some(
+      (occurrence, index) => occurrence !== biome.topology!.occurrences[index],
+    )
+      ? Object.freeze({
+          ...biome,
+          topology: Object.freeze({ ...biome.topology, occurrences: Object.freeze(occurrences) }),
+        })
+      : biome;
   });
-  return changed ? Object.freeze({ ...document, routes: Object.freeze(routes) }) : document;
+  return changed
+    ? Object.freeze({
+        ...document,
+        route: Object.freeze({ ...route, biomes: Object.freeze(biomes) }),
+      })
+    : document;
 }
 
 function occurrenceMatchesAddress(
@@ -172,18 +173,17 @@ export function retainedHermesShrineDeliveryReward(
 ): AuthoredRewardState | null | undefined {
   let fallback: AuthoredRewardState | null | undefined;
   let foundFallback = false;
-  for (const route of document.routes) {
-    for (const biome of route.biomes) {
-      for (const occurrence of biome.topology?.occurrences ?? []) {
-        const retained =
-          occurrence.acquisitionSites?.[HERMES_SHRINE_DELIVERY_SITE_KEY]?.pickupEntries?.[entryKey];
-        if (retained === undefined) continue;
-        if (occurrenceMatchesAddress(route.routeKey, biome.biomeKey, occurrence, preferredHost))
-          return retained;
-        if (!foundFallback) {
-          fallback = retained;
-          foundFallback = true;
-        }
+  const route = document.route;
+  for (const biome of route.biomes) {
+    for (const occurrence of biome.topology?.occurrences ?? []) {
+      const retained =
+        occurrence.acquisitionSites?.[HERMES_SHRINE_DELIVERY_SITE_KEY]?.pickupEntries?.[entryKey];
+      if (retained === undefined) continue;
+      if (occurrenceMatchesAddress(route.routeKey, biome.biomeKey, occurrence, preferredHost))
+        return retained;
+      if (!foundFallback) {
+        fallback = retained;
+        foundFallback = true;
       }
     }
   }

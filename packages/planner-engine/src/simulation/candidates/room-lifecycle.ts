@@ -243,9 +243,7 @@ export function evaluateShipEncounterCountCandidate(
     );
   }
   const ship = shipState(catalog, project, query.occurrence);
-  const route = project.routes.find(
-    (candidate) => candidate.routeKey === query.occurrence.routeKey,
-  );
+  const route = project.route.routeKey === query.occurrence.routeKey ? project.route : undefined;
   if (route === undefined) {
     throw new CandidateEvaluationContractError(
       `candidate owner has no ${query.occurrence.routeKey} route`,

@@ -138,9 +138,8 @@ export function createNemesisFieldsCheckpoint(): ProjectDocument {
     value: { kind: 'freeItem' },
     reward: { rewardType },
   });
-  const selected = project.routes
-    .find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((biome) => biome.biomeKey === 'H')
+  const selected = project.route.biomes
+    .find((biome) => biome.biomeKey === 'H')
     ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
   if (selected === undefined) throw new Error('H Nemesis fixture occurrence is missing');
   const firstCageIndex = selected.roomActions.order.findIndex(

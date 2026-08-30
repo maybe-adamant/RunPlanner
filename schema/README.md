@@ -1,30 +1,25 @@
-# Project schema migrations
+# Project schema boundary
 
-`migrate-project.js` upgrades readable Run Planner project JSON through the explicit migrations
-registered in the script. It never migrates backwards and refuses to skip an unimplemented schema
-step.
+Schema 73 is the current Run Planner document baseline. A schema-72 document
+contains two independent route plans, so the boundary is a reviewed one-to-many
+split rather than a route-selection migration.
 
 ```bash
-npm run schema:migrate -- path/to/project.json
-npm run schema:migrate -- --output path/to/migrated.json path/to/project.json
-npm run schema:migrate -- --in-place test/fixtures/authored-project/checkpoints/example.runplanner.json
+npm run schema:split-72-to-73 -- path/to/schema-72-project.runplanner.json
 ```
 
-The default command writes a sibling file whose name ends in the target schema. `--in-place` is
-intended for version-controlled fixtures after their semantic intent has been reviewed.
+The command writes two sibling files, suffixed with `-Underworld-schema73` and
+`-Surface-schema73`. It validates the exact schema-72 catalog boundary,
+preserves each route subtree and root metadata, and refuses to overwrite either
+output. It has no route-selection, in-place, or target-version mode.
 
-The current `49 -> 50` migration adds the new SpellDrop trait-offer owner as `null`. Schema 49 did
-not record which three spells appeared or which was selected, so the generic migrator preserves that
-unknown state instead of inventing an outcome. The schema-50 editor can then resolve the retained
-missing child normally.
+The same pure transformation is exported from
+`schema/split-project-72-to-73.js` for checkpoint conversion. The source value
+is never mutated. The production decoder accepts schema 73 only; schema 72 and
+older documents are not migrated in the application.
 
-For a future schema bump, add exactly one `N -> N+1` function and register it in `migrations`. Keep a
-migration only when old state has an unambiguous representation or can be preserved as an explicit
-incomplete value. If a bump requires reconstructing lost player intent, use a one-off reviewed
-migration instead of adding a guess to this tool.
-
-Run the migration tests with:
+Run the focused boundary tests with:
 
 ```bash
-npm run test:schema:migrations
+npm run test:schema:split
 ```

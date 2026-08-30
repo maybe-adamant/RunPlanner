@@ -43,9 +43,11 @@ export function bindAcquisitionConversionInteractions(input: {
       const occurrence =
         occurrenceId === undefined
           ? undefined
-          : input.project.routes
-              .find((route) => route.routeKey === conversion.address.routeKey)
-              ?.biomes.find((biome) => biome.biomeKey === conversion.address.biomeKey)
+          : (input.project.route.routeKey === conversion.address.routeKey
+              ? input.project.route
+              : undefined
+            )?.biomes
+              .find((biome) => biome.biomeKey === conversion.address.biomeKey)
               ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
       const seaStarProcced =
         occurrence?.acquisitionSites?.[seaStarDuplicateSiteKey(conversion.address)]

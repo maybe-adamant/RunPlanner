@@ -7,6 +7,9 @@ import type {
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { RunStateOwner } from '@run-planner/engine/simulation';
 
+import { authoredProjectReplaced } from './projectWorkspaceSlice';
+import { newProjectCreated, profileLoadSucceeded } from './profileSessionSlice';
+
 export interface FindingSelection {
   /** Presentation-resolved visible control that receives navigation focus. */
   readonly focusAddress?: SemanticAddress;
@@ -27,7 +30,7 @@ export interface EditorSessionReconciliation {
   readonly clearRunStateTarget?: boolean;
 }
 
-/** One catalog-driven panel selection retained independently for each route. */
+/** A panel selection for the one route in the open project. */
 export type RoutePanel =
   | { readonly kind: 'overview' }
   | { readonly kind: 'npcIndex' }
@@ -43,8 +46,9 @@ export interface RoutePanelSelection {
 }
 
 export interface EditorSessionState {
-  readonly activeRouteKey: string | null;
-  readonly activePanelByRoute: Readonly<Record<string, RoutePanel>>;
+  /** Whether the shell is showing the selected route or application settings. */
+  readonly activeSection: 'route' | 'settings';
+  readonly activePanel: RoutePanel;
   readonly focusedSemanticOwner: SemanticAddress | null;
   readonly selectedFinding: FindingSelection | null;
   /** Exact transient trait dialog target; never part of authored history. */
@@ -60,8 +64,8 @@ export interface EditorSessionState {
 const routeOverviewPanel: RoutePanel = Object.freeze({ kind: 'overview' });
 
 const emptyState: EditorSessionState = {
-  activeRouteKey: null,
-  activePanelByRoute: {},
+  activeSection: 'route',
+  activePanel: routeOverviewPanel,
   focusedSemanticOwner: null,
   selectedFinding: null,
   semanticNavigationRevision: 0,
@@ -93,22 +97,27 @@ const editorSessionSlice = createSlice({
   initialState: emptyState,
   reducers: {
     routeSelected(state, action: PayloadAction<string>) {
-      state.activeRouteKey = action.payload;
+      void action;
+      // The route key is validated by the reducer wrapper. The open project's
+      // route is the only route that can be rendered; this action merely
+      // returns the shell to its route section.
+      state.activeSection = 'route';
+      state.activePanel = routeOverviewPanel;
       state.focusedSemanticOwner = null;
       state.traitDialogTarget = null;
       state.levelResolutionDialogTarget = null;
       state.runStateTarget = null;
     },
     settingsSelected(state) {
-      state.activeRouteKey = null;
+      state.activeSection = 'settings';
       state.focusedSemanticOwner = null;
       state.traitDialogTarget = null;
       state.levelResolutionDialogTarget = null;
       state.runStateTarget = null;
     },
     routePanelSelected(state, action: PayloadAction<RoutePanelSelection>) {
-      state.activeRouteKey = action.payload.routeKey;
-      state.activePanelByRoute[action.payload.routeKey] = action.payload.panel;
+      state.activeSection = 'route';
+      state.activePanel = action.payload.panel;
       state.focusedSemanticOwner = null;
       state.traitDialogTarget = null;
       state.levelResolutionDialogTarget = null;
@@ -133,8 +142,8 @@ const editorSessionSlice = createSlice({
       if (route === null) {
         return;
       }
-      state.activeRouteKey = route;
-      state.activePanelByRoute[route] = panelForOrigin(action.payload);
+      state.activeSection = 'route';
+      state.activePanel = panelForOrigin(action.payload);
     },
     findingSelected(state, action: PayloadAction<FindingSelection>) {
       state.selectedFinding = action.payload;
@@ -158,8 +167,8 @@ const editorSessionSlice = createSlice({
       if (route === null) {
         return;
       }
-      state.activeRouteKey = route;
-      state.activePanelByRoute[route] = panelForOrigin(focusAddress);
+      state.activeSection = 'route';
+      state.activePanel = panelForOrigin(focusAddress);
     },
     editorSessionReconciled(state, action: PayloadAction<EditorSessionReconciliation>) {
       if (action.payload.clearFocusedSemanticOwner) {
@@ -235,16 +244,27 @@ function requirePanel(catalog: Catalog, selection: RoutePanelSelection): void {
 }
 
 export function createEditorSessionReducer(catalog: Catalog): Reducer<EditorSessionState> {
-  const activePanelByRoute = Object.fromEntries(
-    catalog.routes.values.map((route) => [route.key, routeOverviewPanel]),
-  );
   const initialState: EditorSessionState = {
     ...emptyState,
-    activeRouteKey: catalog.routes.values[0]?.key ?? null,
-    activePanelByRoute,
   };
 
   return (state = initialState, action) => {
+    if (
+      authoredProjectReplaced.match(action) ||
+      newProjectCreated.match(action) ||
+      profileLoadSucceeded.match(action)
+    ) {
+      // A new document owns a new route-local workspace. Preserve the
+      // monotonic navigation revision for React focus effects, but do not
+      // carry a panel or semantic owner into the replacement route.
+      return {
+        ...emptyState,
+        traitDialogTarget: null,
+        levelResolutionDialogTarget: null,
+        runStateTarget: null,
+        semanticNavigationRevision: state.semanticNavigationRevision,
+      };
+    }
     if (routeSelected.match(action)) {
       requireRoute(catalog, action.payload);
     } else if (routePanelSelected.match(action)) {

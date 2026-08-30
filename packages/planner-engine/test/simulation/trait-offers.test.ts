@@ -89,10 +89,8 @@ function reachedTraitOffers(
   evaluation: ProjectEvaluation,
 ): readonly SelectedTraitOfferAssessment[] {
   return Object.freeze(
-    evaluation.routes.flatMap((route) =>
-      route.biomes.flatMap((biome) =>
-        'rewards' in biome ? biome.rewards.selectedTraitOffers : [],
-      ),
+    evaluation.route.biomes.flatMap((biome) =>
+      'rewards' in biome ? biome.rewards.selectedTraitOffers : [],
     ),
   );
 }
@@ -1029,9 +1027,7 @@ describe('trait legality and derived facts', () => {
   ] as const)(
     'carries concrete trait state across the complete %s route',
     (routeKey, createProject) => {
-      const evaluation = simulateProject(catalog, createProject()).routes.find(
-        (route) => route.routeKey === routeKey,
-      );
+      const evaluation = simulateProject(catalog, createProject()).route;
       if (evaluation === undefined) throw new Error(`${routeKey} route is missing`);
       expect(evaluation.findings).toEqual([]);
       expect(evaluation.status).toBe('valid');
@@ -1298,7 +1294,7 @@ describe('reached trait offer chronology', () => {
       value: invalidFirstOffer,
     });
     const evaluation = simulateProject(catalog, project);
-    const route = evaluation.routes.find((candidate) => candidate.routeKey === 'Underworld');
+    const route = evaluation.route;
     const f = route?.biomes.find((candidate) => candidate.biomeKey === 'F');
     if (f === undefined || !('rewards' in f)) throw new Error('F reward evaluation is missing');
 

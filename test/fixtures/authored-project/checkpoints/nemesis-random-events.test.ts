@@ -36,9 +36,8 @@ function occurrence(
   biomeKey: 'F' | 'H',
   id: string,
 ) {
-  const selected = project.routes
-    .find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((biome) => biome.biomeKey === biomeKey)
+  const selected = project.route.biomes
+    .find((biome) => biome.biomeKey === biomeKey)
     ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === id);
   if (selected === undefined) throw new Error(`Nemesis checkpoint occurrence ${id} is missing`);
   return selected;
@@ -77,9 +76,9 @@ describe('Nemesis random-event checkpoint recipes', () => {
       expect.objectContaining({ kind: 'interactIncomingReward' }),
     );
     const incoming = createIncomingRewardAddress(goldenFBiome, id);
-    const f = simulateProjectAssembly(catalog, project)
-      .evaluation.routes.flatMap((route) => route.biomes)
-      .find((biome) => biome.origin.biomeKey === 'F');
+    const f = simulateProjectAssembly(catalog, project).evaluation.route.biomes.find(
+      (biome) => biome.origin.biomeKey === 'F',
+    );
     if (f === undefined || !('rewards' in f)) throw new Error('F reward evaluation is missing');
     expect(
       f.rewards.branches.every((branch) =>
@@ -91,9 +90,8 @@ describe('Nemesis random-event checkpoint recipes', () => {
       ),
     ).toBe(true);
     const sourceDecision = (value: ReturnType<typeof createGoldenFGHIProject>) =>
-      value.routes
-        .find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'F')
+      value.route.biomes
+        .find((biome) => biome.biomeKey === 'F')
         ?.topology?.decisions.find(
           (decision) =>
             decision.kind === 'exit' &&

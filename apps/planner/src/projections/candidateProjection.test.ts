@@ -80,9 +80,7 @@ function takeoverCandidate(
 }
 
 function fPlan(project: ReturnType<typeof createGoldenFGHIProject>) {
-  const plan = project.routes
-    .find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((biome) => biome.biomeKey === 'F');
+  const plan = project.route.biomes.find((biome) => biome.biomeKey === 'F');
   if (plan?.topology === null || plan === undefined) throw new Error('F topology is missing');
   return plan;
 }
@@ -156,7 +154,8 @@ describe('candidate projection', () => {
   it('returns typed unavailable evidence when a target lies behind an incomplete upstream biome', () => {
     const project = createProjectDocument(catalog, {
       projectId: 'upstream',
-      configuredBiomeCounts: { Underworld: 2 },
+      routeKey: 'Underworld',
+      configuredBiomeCount: 2,
     });
     const withGStart = applyProjectCommand(project, catalog, {
       kind: 'CreateStart',

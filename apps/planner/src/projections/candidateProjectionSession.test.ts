@@ -7,9 +7,7 @@ import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 import { candidateSupport, createCandidateSessionFactory } from './candidateProjection';
 
 function fPlan(project: ReturnType<typeof createGoldenFGHIProject>) {
-  const plan = project.routes
-    .find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((biome) => biome.biomeKey === 'F');
+  const plan = project.route.biomes.find((biome) => biome.biomeKey === 'F');
   if (plan?.topology === null || plan === undefined) throw new Error('F topology is missing');
   return plan;
 }

@@ -64,9 +64,8 @@ function openOverview(): void {
 describe('Stygian Well workbench', () => {
   it('authors ordinary presence separately from interaction', async () => {
     const project = loadUnderworldFGProject();
-    const occurrenceId = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F')
+    const occurrenceId = project.route.biomes
+      .find((biome) => biome.biomeKey === 'F')
       ?.topology?.occurrences.find((room) => {
         const host = catalog.rooms.byKey[room.gameName]?.roomShop;
         return host !== undefined && host.forced !== true;
@@ -192,9 +191,7 @@ describe('Stygian Well workbench', () => {
   it('indexes present Wells and navigates to the owning room', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(authoredWell()));
-    const route = workspaceProjection(application).routes.find(
-      (candidate) => candidate.routeKey === 'Underworld',
-    );
+    const route = workspaceProjection(application).route;
     if (route === undefined) throw new Error('Underworld route is missing');
     const user = userEvent.setup();
     render(
@@ -207,7 +204,7 @@ describe('Stygian Well workbench', () => {
     expect(inspect).toHaveLength(2);
     expect(screen.getByText(/Fateful Twist/)).toBeTruthy();
     await user.click(inspect[0]!);
-    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
+    expect(application.store.getState().editorSession.activePanel).toEqual({
       kind: 'biome',
       biomeKey: 'F',
     });

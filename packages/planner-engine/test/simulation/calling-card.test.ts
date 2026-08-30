@@ -56,9 +56,7 @@ function projectWithCallingCard(actions: readonly ('option1' | 'option2' | 'opti
 }
 
 function rewards(project: ReturnType<typeof projectWithCallingCard>) {
-  const f = simulateProject(catalog, project).routes.find(
-    (route) => route.routeKey === 'Underworld',
-  )?.biomes[0];
+  const f = simulateProject(catalog, project).route?.biomes[0];
   if (f?.authoring !== 'complete') throw new Error('expected complete F');
   return f.rewards;
 }

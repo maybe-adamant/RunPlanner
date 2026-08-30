@@ -275,9 +275,7 @@ describe('run-impacting trait candidate contacts', () => {
       value: selectedNaturalOffer(),
     });
     const missing = simulateProjectAssembly(catalog, project);
-    const f = missing.evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')!
-      .biomes.find((candidate) => candidate.biomeKey === 'F')!;
+    const f = missing.evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'F')!;
     expect(f).toMatchObject({
       authoring: 'complete',
       validity: 'invalid',
@@ -321,9 +319,9 @@ describe('run-impacting trait candidate contacts', () => {
         ],
       },
     });
-    const repaired = simulateProjectAssembly(catalog, project)
-      .evaluation.routes.find((route) => route.routeKey === 'Underworld')!
-      .biomes.find((candidate) => candidate.biomeKey === 'F')!;
+    const repaired = simulateProjectAssembly(catalog, project).evaluation.route!.biomes.find(
+      (candidate) => candidate.biomeKey === 'F',
+    )!;
     expect(
       repaired.findings.some(
         (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(result),
@@ -378,9 +376,8 @@ describe('run-impacting trait candidate contacts', () => {
     });
 
     const project = loadSurfaceNOProject();
-    const actualOccurrence = project.routes
-      .find((route) => route.routeKey === 'Surface')!
-      .biomes.find((candidate) => candidate.biomeKey === 'N')!.topology!.startOccurrenceId;
+    const actualOccurrence = project.route.biomes.find((candidate) => candidate.biomeKey === 'N')!
+      .topology!.startOccurrenceId;
     const actualOutcome = createSteadyGrowthOutcomeAddress(
       createOccurrenceAddress(biome, actualOccurrence),
       'Encounter',
@@ -390,9 +387,8 @@ describe('run-impacting trait candidate contacts', () => {
       outcome: actualOutcome,
       targetTraitKey: 'ApolloWeaponBoon',
     });
-    const repairedOccurrence = repaired.routes
-      .find((route) => route.routeKey === 'Surface')!
-      .biomes.find((candidate) => candidate.biomeKey === 'N')!
+    const repairedOccurrence = repaired.route.biomes
+      .find((candidate) => candidate.biomeKey === 'N')!
       .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === actualOccurrence)!;
     expect(repairedOccurrence.encounters.steadyGrowthTargetByPhase).toMatchObject({
       Encounter: 'ApolloWeaponBoon',
@@ -410,9 +406,8 @@ describe('run-impacting trait candidate contacts', () => {
       targetTraitKey: 'ApolloWeaponBoon',
     });
     expect(
-      selected.present.routes
-        .find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((candidate) => candidate.biomeKey === 'N')
+      selected.present.route.biomes
+        .find((candidate) => candidate.biomeKey === 'N')
         ?.topology?.occurrences.find(
           (occurrence) => occurrence.occurrenceId === bossOwner.occurrenceId,
         )?.encounters.steadyGrowthTargetByPhase?.Encounter,
@@ -431,9 +426,7 @@ describe('run-impacting trait candidate contacts', () => {
       targetTraitKey: null,
     });
     expect(
-      cleared.present.routes
-        .find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((candidate) => candidate.biomeKey === 'N'),
+      cleared.present.route.biomes.find((candidate) => candidate.biomeKey === 'N'),
     ).not.toHaveProperty('bossCompletionSteadyGrowthTarget');
     expect(undoProjectHistory(cleared).present).toBe(selected.present);
   });

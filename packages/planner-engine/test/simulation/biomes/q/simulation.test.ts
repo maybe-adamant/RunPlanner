@@ -18,7 +18,7 @@ import { loadSurfaceNOPQProject, qBiome, qOccurrenceIds } from '@run-planner/tes
 
 function completeQ(project = loadSurfaceNOPQProject()) {
   const evaluation = simulateProject(catalog, project);
-  const route = evaluation.routes.find((candidate) => candidate.routeKey === 'Surface');
+  const route = evaluation.route;
   const biome = route?.biomes.find((candidate) => candidate.biomeKey === 'Q');
   if (biome?.authoring !== 'complete') throw new Error('Q fixture did not complete');
   return { project, evaluation, route, biome };

@@ -48,22 +48,20 @@ function destination(
   };
 }
 
-const routes = [
-  {
-    biomes: [{ biomeKey: biome.biomeKey, nodes: [{ key: 'containing-node' }] }],
-    routeKey: biome.routeKey,
-  },
-] as unknown as readonly WorkspaceRoute[];
+const route = {
+  biomes: [{ biomeKey: biome.biomeKey, nodes: [{ key: 'containing-node' }] }],
+  routeKey: biome.routeKey,
+} as unknown as WorkspaceRoute;
 
 describe('fine-grained finding routing', () => {
   it('requires an exact final structural inspector subject, not a default fallback', () => {
-    expect(() => assertFineGrainedFindingDestination(owner, destination(), routes)).not.toThrow();
+    expect(() => assertFineGrainedFindingDestination(owner, destination(), route)).not.toThrow();
 
     expect(() =>
       assertFineGrainedFindingDestination(
         owner,
         destination({ inspectorSubject: { kind: 'node', nodeKey: 'default-node' } }),
-        routes,
+        route,
       ),
     ).toThrow(/finding has no exact workspace inspector destination/);
   });
@@ -80,25 +78,23 @@ describe('fine-grained finding routing', () => {
           focusKey: semanticAddressKey(hub),
           ownerAddress: reward,
         }),
-        routes,
+        route,
       ),
     ).not.toThrow();
   });
 
   it('accepts an exact fine owner rendered by the active authoring frontier', () => {
     const frontierKey = 'active-authoring-frontier';
-    const frontierRoutes = [
-      {
-        biomes: [
-          {
-            biomeKey: biome.biomeKey,
-            frontier: { marker: { focusKey: frontierKey } },
-            nodes: [],
-          },
-        ],
-        routeKey: biome.routeKey,
-      },
-    ] as unknown as readonly WorkspaceRoute[];
+    const frontierRoute = {
+      biomes: [
+        {
+          biomeKey: biome.biomeKey,
+          frontier: { marker: { focusKey: frontierKey } },
+          nodes: [],
+        },
+      ],
+      routeKey: biome.routeKey,
+    } as unknown as WorkspaceRoute;
     expect(() =>
       assertFineGrainedFindingDestination(
         owner,
@@ -106,7 +102,7 @@ describe('fine-grained finding routing', () => {
           inspectorSubject: { kind: 'frontier', frontierFocusKey: frontierKey },
           nodeKey: semanticAddressKey(owner),
         }),
-        frontierRoutes,
+        frontierRoute,
       ),
     ).not.toThrow();
   });
@@ -119,7 +115,7 @@ describe('fine-grained finding routing', () => {
           nodeKey: 'missing-node',
           inspectorSubject: { kind: 'node', nodeKey: 'missing-node' },
         }),
-        routes,
+        route,
       ),
     ).toThrow(/finding has no exact workspace inspector destination/);
   });
@@ -133,7 +129,7 @@ describe('fine-grained finding routing', () => {
       severity: 'error',
     } as const satisfies SemanticFinding;
 
-    expect(() => registerWorkspaceFindingDestinations([finding], new Map(), routes)).toThrow(
+    expect(() => registerWorkspaceFindingDestinations([finding], new Map(), route)).toThrow(
       /finding has no exact workspace destination/,
     );
   });
@@ -152,7 +148,7 @@ describe('fine-grained finding routing', () => {
       severity: 'error',
     } as const satisfies SemanticFinding;
 
-    expect(() => registerWorkspaceFindingDestinations([finding], new Map(), routes)).toThrow(
+    expect(() => registerWorkspaceFindingDestinations([finding], new Map(), route)).toThrow(
       /finding has no exact workspace destination/,
     );
   });
@@ -180,7 +176,7 @@ describe('fine-grained finding routing', () => {
 
     expect(isFineGrainedFindingOwner(set)).toBe(true);
     expect(() =>
-      registerWorkspaceFindingDestinations([finding], focusByOwner, routes),
+      registerWorkspaceFindingDestinations([finding], focusByOwner, route),
     ).not.toThrow();
     expect(focusByOwner.get(semanticAddressKey(set))?.traitDialogTarget).toEqual(trait);
   });
@@ -204,7 +200,7 @@ describe('fine-grained finding routing', () => {
       ownerAddress: finding.origin,
     });
     const focusByOwner = new Map([[semanticAddressKey(finding.origin), exact]]);
-    registerWorkspaceFindingDestinations([finding], focusByOwner, routes);
+    registerWorkspaceFindingDestinations([finding], focusByOwner, route);
     expect(focusByOwner.get(semanticAddressKey(finding.origin))).toEqual(exact);
   });
 
@@ -236,9 +232,9 @@ describe('fine-grained finding routing', () => {
         ),
       ),
     ).toBe(false);
-    registerWorkspaceFindingDestinations([finding], focusByOwner, routes);
+    registerWorkspaceFindingDestinations([finding], focusByOwner, route);
     expect(focusByOwner.get(semanticAddressKey(result))).toEqual(exact);
-    expect(() => registerWorkspaceFindingDestinations([finding], new Map(), routes)).toThrow(
+    expect(() => registerWorkspaceFindingDestinations([finding], new Map(), route)).toThrow(
       /finding has no exact workspace destination/,
     );
   });
@@ -253,7 +249,7 @@ describe('fine-grained finding routing', () => {
       severity: 'error',
     } as const satisfies SemanticFinding;
 
-    expect(() => registerWorkspaceFindingDestinations([finding], new Map(), routes)).toThrow(
+    expect(() => registerWorkspaceFindingDestinations([finding], new Map(), route)).toThrow(
       /finding has no exact workspace destination/,
     );
 
@@ -263,7 +259,7 @@ describe('fine-grained finding routing', () => {
       ownerAddress: biome,
     });
     const focusByOwner = new Map([[semanticAddressKey(biome), fallback]]);
-    registerWorkspaceFindingDestinations([finding], focusByOwner, routes);
+    registerWorkspaceFindingDestinations([finding], focusByOwner, route);
 
     expect(focusByOwner.get(semanticAddressKey(hub))?.ownerAddress).toEqual(hub);
   });

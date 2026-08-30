@@ -41,9 +41,7 @@ import { evaluate } from './support/f-generation-evaluation';
 import { createSelectedContractContinuationProject } from './support/detour-generation-fixtures';
 
 function fPlan(project: ProjectDocument) {
-  const plan = project.routes
-    .find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((biome) => biome.biomeKey === 'F');
+  const plan = project.route.biomes.find((biome) => biome.biomeKey === 'F');
   if (plan === undefined) throw new Error('missing F takeover plan');
   return plan;
 }
@@ -51,17 +49,15 @@ function fPlan(project: ProjectDocument) {
 function materialize(project: ProjectDocument) {
   const completeness = evaluateBiomeCompleteness(catalog, fBiome, fPlan(project));
   if (completeness.completion !== 'complete') throw new Error('F fixture is incomplete');
-  const loadout = project.routes.find((route) => route.routeKey === 'Underworld')?.loadout;
+  const loadout = project.route?.loadout;
   if (loadout === undefined) throw new Error('F fixture has no loadout');
   return materializeBiome(catalog, fBiome, completeness, loadout);
 }
 
 function completeBiomeSnapshot(project: ProjectDocument, biomeKey: 'H' | 'I' | 'N') {
   const routeKey = biomeKey === 'N' ? 'Surface' : 'Underworld';
-  const plan = project.routes
-    .find((route) => route.routeKey === routeKey)
-    ?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
-  const loadout = project.routes.find((route) => route.routeKey === routeKey)?.loadout;
+  const plan = project.route.biomes.find((candidate) => candidate.biomeKey === biomeKey);
+  const loadout = project.route?.loadout;
   const biome = createBiomeAddress(routeKey, biomeKey);
   if (plan === undefined || loadout === undefined) {
     throw new Error(`${biomeKey} fixture is missing direct materialization inputs`);
@@ -258,10 +254,8 @@ describe('batch materialization', () => {
 
   it('materializes the selected Contract continuation from its additional exit', () => {
     const { project, contract, additional } = createSelectedContractContinuationProject();
-    const plan = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
-    const loadout = project.routes.find((route) => route.routeKey === 'Underworld')?.loadout;
+    const plan = project.route.biomes.find((biome) => biome.biomeKey === 'F');
+    const loadout = project.route?.loadout;
     if (plan === undefined || loadout === undefined) {
       throw new Error('Contract fixture has no Underworld materialization inputs');
     }

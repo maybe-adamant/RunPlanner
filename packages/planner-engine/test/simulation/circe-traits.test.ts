@@ -78,9 +78,7 @@ function withCirce(
 
 function oEvaluation(project: ProjectDocument) {
   const assembly = simulateProjectAssembly(catalog, project);
-  const biome = assembly.evaluation.routes
-    .find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+  const biome = assembly.evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'O');
   if (biome === undefined || biome.authoring !== 'complete') throw new Error('O must be evaluated');
   return { assembly, biome };
 }
@@ -88,9 +86,8 @@ function oEvaluation(project: ProjectDocument) {
 function authoredCirceOffer(
   project: ProjectDocument,
 ): Extract<AuthoredTraitOffer, { kind: 'traits' }> {
-  const value = project.routes
-    .find((route) => route.routeKey === 'Surface')!
-    .biomes.find((biome) => biome.biomeKey === 'O')!
+  const value = project.route.biomes
+    .find((biome) => biome.biomeKey === 'O')!
     .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === oOccurrenceIds.story)!
     .encounters.traitOffersByPhase!.Encounter!.Story_Circe_01;
   if (value === undefined) throw new Error('Circe offer must be authored');
@@ -327,9 +324,8 @@ describe('Circe selected trait acquisition', () => {
     const domain = createPreparedProjectCandidateSession(catalog, assembly).evaluate({
       kind: 'circeResolutionDomain',
       trait: circeOwner,
-      value: project.routes
-        .find((route) => route.routeKey === 'Surface')!
-        .biomes.find((biome) => biome.biomeKey === 'O')!
+      value: project.route.biomes
+        .find((biome) => biome.biomeKey === 'O')!
         .topology!.occurrences.find(
           (occurrence) => occurrence.occurrenceId === oOccurrenceIds.story,
         )!.encounters.traitOffersByPhase!.Encounter!.Story_Circe_01!,
@@ -405,10 +401,8 @@ describe('Circe selected trait acquisition', () => {
     expect(authoredCirceOffer(dormant).options[0].circeResolution).toEqual(resolution);
 
     const encoded = JSON.parse(encodeProjectDocument(project)) as Record<string, unknown>;
-    const routes = encoded.routes as Record<string, unknown>[];
-    const o = (
-      routes.find((route) => route.routeKey === 'Surface')!.biomes as Record<string, unknown>[]
-    ).find((biome) => biome.biomeKey === 'O')!;
+    const route = encoded.route as Record<string, unknown>;
+    const o = (route.biomes as Record<string, unknown>[]).find((biome) => biome.biomeKey === 'O')!;
     const story = (
       (o.topology as Record<string, unknown>).occurrences as Record<string, unknown>[]
     ).find((occurrence) => occurrence.occurrenceId === oOccurrenceIds.story)!;
@@ -472,7 +466,7 @@ describe('Circe selected trait acquisition', () => {
     const evaluated = evaluateCirceResolutionDomain(
       catalog,
       {} as never,
-      { routes: [] } as never,
+      { route: {} } as never,
       createTraitOfferCandidateArtifacts(catalog, products.candidateContexts),
       {
         kind: 'circeResolutionDomain',

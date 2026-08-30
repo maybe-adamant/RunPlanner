@@ -289,7 +289,7 @@ function ownerLocation(
     readonly occurrenceId: string;
   },
 ): string {
-  const route = project.routes.find((candidate) => candidate.routeKey === owner.routeKey);
+  const route = project.route.routeKey === owner.routeKey ? project.route : undefined;
   const biome = route?.biomes.find((candidate) => candidate.biomeKey === owner.biomeKey);
   const occurrence = biome?.topology?.occurrences.find(
     (candidate) => candidate.occurrenceId === owner.occurrenceId,
@@ -415,9 +415,7 @@ function presentReplacement(
  * assessment evidence so a single invalid branch cannot be hidden by the
  * first branch encountered.
  */
-function groupedTraitTraces(
-  route: ProjectEvaluation['routes'][number],
-): readonly AggregatedTraitTrace[] {
+function groupedTraitTraces(route: ProjectEvaluation['route']): readonly AggregatedTraitTrace[] {
   const grouped = new Map<string, AggregatedTraitTrace>();
   for (const [biomeOrder, biome] of route.biomes.entries()) {
     if (!('rewards' in biome)) continue;
@@ -471,7 +469,7 @@ export function projectRouteTraitOffers(
   routeKey: string,
   interactions: WorkspaceInteractionCatalog,
 ): readonly RouteTraitOfferProjection[] {
-  const route = evaluation.routes.find((candidate) => candidate.routeKey === routeKey);
+  const route = evaluation.route.routeKey === routeKey ? evaluation.route : undefined;
   if (route === undefined) return Object.freeze([]);
   const rows: RouteTraitOfferProjection[] = [];
   for (const grouped of groupedTraitTraces(route)) {

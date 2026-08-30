@@ -210,9 +210,7 @@ describe('OccurrenceWorkbench', () => {
     );
     openRoomTab('Combat 1 Timeline');
     const workspace = workspaceProjection(view.application);
-    const biome = workspace.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    const biome = workspace.route.biomes.find((candidate) => candidate.biomeKey === 'O');
     if (biome === undefined) throw new Error('O workspace is missing');
     const nextNode = occurrenceById(oOccurrenceIds.combat04)(biome);
     if (nextNode === undefined) throw new Error('second O occurrence is missing');

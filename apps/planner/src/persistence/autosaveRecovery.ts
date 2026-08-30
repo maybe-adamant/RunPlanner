@@ -24,7 +24,7 @@ export interface AutosaveScheduler {
 }
 
 export interface StartupProjectState {
-  readonly project: ProjectDocument;
+  readonly project?: ProjectDocument;
   readonly profileSession: ProfileSessionState;
 }
 
@@ -33,13 +33,11 @@ function errorDetail(error: unknown): string {
 }
 
 export function restoreStartupProject(
-  fallbackProject: ProjectDocument,
   catalog: Catalog,
   recovery: AutosaveRecoveryAdapter | undefined,
 ): StartupProjectState {
   if (recovery === undefined) {
     return Object.freeze({
-      project: fallbackProject,
       profileSession: createInitialProfileSessionState(),
     });
   }
@@ -47,7 +45,6 @@ export function restoreStartupProject(
     const json = recovery.read();
     if (json === null) {
       return Object.freeze({
-        project: fallbackProject,
         profileSession: createInitialProfileSessionState(),
       });
     }
@@ -57,7 +54,6 @@ export function restoreStartupProject(
     });
   } catch (error) {
     return Object.freeze({
-      project: fallbackProject,
       profileSession: createInitialProfileSessionState({
         recoveryStatus: 'blocked',
         recoveryError: `Autosave recovery failed: ${errorDetail(error)}`,
@@ -95,6 +91,9 @@ export function createAutosaveCoordinator(options: {
     cancelPending?.();
     cancelPending = null;
     if (recoveryStatus === 'blocked') {
+      return;
+    }
+    if (project === undefined) {
       return;
     }
     const snapshot = project;

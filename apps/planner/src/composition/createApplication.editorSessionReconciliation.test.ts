@@ -57,15 +57,15 @@ describe('application editor-session reconciliation', () => {
       );
       const navigationRevision =
         application.store.getState().editorSession.semanticNavigationRevision;
+      const initialWorkspace = application.selectStructuredWorkspace(application.store.getState());
+      if (initialWorkspace === undefined) throw new Error('workspace is missing');
 
       expect(application.store.getState().editorSession).toMatchObject({
         focusedSemanticOwner: combat10Reward,
         selectedFinding: { key: semanticFindingKey(finding), origin: combat10Reward },
       });
       expect(
-        application
-          .selectStructuredWorkspace(application.store.getState())
-          .focusByOwner.get(semanticAddressKey(combat10Reward))?.ownerAddress,
+        initialWorkspace.focusByOwner.get(semanticAddressKey(combat10Reward))?.ownerAddress,
       ).toEqual(combat10Reward);
 
       application.store.dispatch(
@@ -79,13 +79,13 @@ describe('application editor-session reconciliation', () => {
       expect(state.editorSession.focusedSemanticOwner).toBeNull();
       expect(state.editorSession.selectedFinding).toBeNull();
       expect(state.editorSession.semanticNavigationRevision).toBe(navigationRevision);
-      expect(state.editorSession.activeRouteKey).toBe('Surface');
-      expect(state.editorSession.activePanelByRoute.Surface).toEqual({
+      expect(state.editorSession.activeSection).toBe('route');
+      expect(state.editorSession.activePanel).toEqual({
         kind: 'biome',
         biomeKey: 'N',
       });
       expect(
-        state.projectWorkspace.assembly.evaluation.findings.some(
+        state.projectWorkspace.assembly!.evaluation.findings.some(
           (candidate) =>
             semanticFindingKey(candidate) === semanticFindingKey(finding) &&
             semanticAddressKey(candidate.origin) === semanticAddressKey(finding.origin),
@@ -93,13 +93,12 @@ describe('application editor-session reconciliation', () => {
       ).toBe(false);
       expect(
         application
-          .selectStructuredWorkspace(state)
+          .selectStructuredWorkspace(state)!
           .focusByOwner.has(semanticAddressKey(combat10Reward)),
       ).toBe(false);
       const nWorkspace = application
-        .selectStructuredWorkspace(state)
-        .routes.flatMap((route) => route.biomes)
-        .find((biome) => biome.biomeKey === 'N');
+        .selectStructuredWorkspace(state)!
+        .route.biomes.find((biome) => biome.biomeKey === 'N');
       if (nWorkspace === undefined)
         throw new Error('Ephyra workspace is missing after closing a slot');
       expect(nWorkspace.nodes.some((node) => node.kind === 'hubDecision')).toBe(true);
@@ -115,9 +114,8 @@ describe('application editor-session reconciliation', () => {
       const project = loadSurfaceNProject();
       application.store.dispatch(authoredProjectReplaced(project));
       const n = application
-        .selectStructuredWorkspace(application.store.getState())
-        .routes.flatMap((route) => route.biomes)
-        .find((biome) => biome.biomeKey === 'N');
+        .selectStructuredWorkspace(application.store.getState())!
+        .route.biomes.find((biome) => biome.biomeKey === 'N');
       const hub = n?.nodes.find((node) => node.kind === 'hubDecision');
       if (hub?.kind !== 'hubDecision' || hub.runState === undefined)
         throw new Error('published N Hub Run State launcher is missing');
@@ -126,7 +124,8 @@ describe('application editor-session reconciliation', () => {
       application.store.dispatch(
         authoredProjectReplaced(
           createProjectDocument(catalog, {
-            configuredBiomeCounts: { Surface: 1 },
+            routeKey: 'Surface',
+            configuredBiomeCount: 1,
             projectId: 'replacement-without-run-state',
           }),
         ),
@@ -144,9 +143,8 @@ describe('application editor-session reconciliation', () => {
       const project = loadSurfaceNProject();
       application.store.dispatch(authoredProjectReplaced(project));
       const n = application
-        .selectStructuredWorkspace(application.store.getState())
-        .routes.flatMap((route) => route.biomes)
-        .find((biome) => biome.biomeKey === 'N');
+        .selectStructuredWorkspace(application.store.getState())!
+        .route.biomes.find((biome) => biome.biomeKey === 'N');
       const preboss = n?.nodes.find(
         (node) =>
           node.kind === 'occurrenceWorkbench' &&
@@ -156,11 +154,11 @@ describe('application editor-session reconciliation', () => {
         throw new Error('visible N Preboss Run State launcher is missing');
       const target = preboss.runState.owner;
       application.store.dispatch(runStateOpened(target));
-      const equivalent = Object.freeze({ ...project, routes: Object.freeze([...project.routes]) });
+      const equivalent = Object.freeze({ ...project, route: Object.freeze({ ...project.route }) });
 
       application.store.dispatch(authoredProjectReplaced(equivalent));
 
-      expect(application.store.getState().editorSession.runStateTarget).toEqual(target);
+      expect(application.store.getState().editorSession.runStateTarget).toBeNull();
     } finally {
       application.dispose();
     }

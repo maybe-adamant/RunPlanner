@@ -68,9 +68,7 @@ function biomeSource(
   const assembly = simulateProjectAssembly(catalog, project);
   const source = createWorkspaceProjectSourceIndex(catalog, project, assembly.evaluation, (phase) =>
     encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
-  )
-    .routes.find((route) => route.routeKey === routeKey)
-    ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
+  ).route?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
   if (source === undefined) throw new Error(`${routeKey}/${biomeKey} source is missing`);
   return source;
 }
@@ -197,7 +195,8 @@ describe('structured workspace biome presentation', () => {
   });
   it('presents the Hub only after it is authored, then nests only authored visit workbenches', () => {
     const empty = createProjectDocument(catalog, {
-      configuredBiomeCounts: { Surface: 1 },
+      routeKey: 'Surface',
+      configuredBiomeCount: 1,
       projectId: 'empty-n-presentation',
     });
     const emptyPresentation = present(empty, 'Surface', 'N');
@@ -421,9 +420,7 @@ describe('structured workspace biome presentation', () => {
 
   it('labels a takeover-selected Chaos room instead of presenting a false Preboss stop', () => {
     const base = createGoldenFGHIProject();
-    const plan = base.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const plan = base.route.biomes.find((biome) => biome.biomeKey === 'F');
     if (plan?.topology === null || plan === undefined) {
       throw new Error('complete F topology fixture is missing');
     }
@@ -657,7 +654,8 @@ describe('structured workspace biome presentation', () => {
 
   it('does not project completion landmarks before the Preboss is selected', () => {
     const empty = createProjectDocument(catalog, {
-      configuredBiomeCounts: { Underworld: 1 },
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
       projectId: 'presentation-completion-outline',
     });
     const biome = present(empty, 'Underworld', 'F').presentation.biome;

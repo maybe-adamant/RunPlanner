@@ -41,9 +41,8 @@ interface ProjectedHarnessProps {
 
 function ProjectedHarness({ application, biomeKey, renderBiome, routeKey }: ProjectedHarnessProps) {
   const workspace = useAppSelector(application.selectStructuredWorkspace);
-  const biome = workspace.routes
-    .find((candidate) => candidate.routeKey === routeKey)
-    ?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
+  if (workspace === undefined) throw new Error('workspace projection is unavailable');
+  const biome = workspace.route.biomes.find((candidate) => candidate.biomeKey === biomeKey);
   if (biome === undefined) throw new Error(`${routeKey}/${biomeKey} has no workspace biome`);
   return renderBiome(biome, workspace);
 }
@@ -98,15 +97,15 @@ function staticBiome(
   routeKey: string,
   biomeKey: string,
 ): WorkspaceBiome {
-  const biome = workspace.routes
-    .find((route) => route.routeKey === routeKey)
-    ?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
+  const biome = workspace.route.biomes.find((candidate) => candidate.biomeKey === biomeKey);
   if (biome === undefined) throw new Error(`${routeKey}/${biomeKey} has no workspace biome`);
   return biome;
 }
 
 export function workspaceProjection(application: PlannerApplication) {
   const state = application.store.getState().projectWorkspace;
+  if (state.kind !== 'openProject')
+    throw new Error('workspace projection requires an open project');
   return application.structuredWorkspace.project(state.assembly);
 }
 
@@ -115,9 +114,9 @@ export function workspaceBiome(
   routeKey: string,
   biomeKey: string,
 ): WorkspaceBiome {
-  const biome = workspaceProjection(application)
-    .routes.find((route) => route.routeKey === routeKey)
-    ?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
+  const biome = workspaceProjection(application).route?.biomes.find(
+    (candidate) => candidate.biomeKey === biomeKey,
+  );
   if (biome === undefined) {
     throw new Error(`${routeKey}/${biomeKey} has no projected workspace biome`);
   }

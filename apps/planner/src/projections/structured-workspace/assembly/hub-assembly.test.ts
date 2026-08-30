@@ -34,9 +34,7 @@ function biomeSource(project: ProjectDocument): WorkspaceBiomeSource {
   const assembly = simulateProjectAssembly(catalog, project);
   const source = createWorkspaceProjectSourceIndex(catalog, project, assembly.evaluation, (phase) =>
     encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
-  )
-    .routes.find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((biome) => biome.plan.biomeKey === 'N');
+  ).route?.biomes.find((biome) => biome.plan.biomeKey === 'N');
   if (source === undefined) throw new Error('Surface/N source is missing');
   return source;
 }

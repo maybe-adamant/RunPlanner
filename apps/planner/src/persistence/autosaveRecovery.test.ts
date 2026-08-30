@@ -114,6 +114,9 @@ function createSchedulerFixture(): SchedulerFixture {
 }
 
 function configureF(application: ReturnType<typeof createApplication>): void {
+  if (selectPresentProject(application.store.getState()) === undefined) {
+    application.projectOperations.createNew('Underworld');
+  }
   application.store.dispatch(
     authoredProjectCommandDispatched({
       kind: 'ConfigureRoutePrefix',
@@ -121,6 +124,12 @@ function configureF(application: ReturnType<typeof createApplication>): void {
       configuredBiomeCount: 1,
     }),
   );
+}
+
+function presentProject(application: ReturnType<typeof createApplication>) {
+  const project = selectPresentProject(application.store.getState());
+  if (project === undefined) throw new Error('project workspace is not open');
+  return project;
 }
 
 function setFearRank(application: ReturnType<typeof createApplication>, rank: number): void {
@@ -152,7 +161,7 @@ describe('profile status', () => {
     application.store.dispatch(authoredProjectUndoRequested());
     expect(selectProfileStatus(application.store.getState())).toBe('Clean');
 
-    application.projectOperations.createNew();
+    application.projectOperations.createNew('Surface');
     expect(selectProfileStatus(application.store.getState())).toBe('Unsaved');
   });
 });
@@ -161,7 +170,8 @@ describe('autosave recovery lifecycle', () => {
   it('blocks and preserves schema-21 and stale-catalog autosaves without migrating either payload', () => {
     const fallback = createProjectDocument(catalog, {
       projectId: 'fallback',
-      configuredBiomeCounts: { Underworld: 1 },
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
     });
     const current = JSON.parse(encodeProjectDocument(fallback)) as Record<string, unknown>;
     const legacy = createRecoveryFixture(
@@ -172,8 +182,8 @@ describe('autosave recovery lifecycle', () => {
     );
 
     for (const recovery of [legacy, stale]) {
-      const startup = restoreStartupProject(fallback, catalog, recovery);
-      expect(startup.project).toBe(fallback);
+      const startup = restoreStartupProject(catalog, recovery);
+      expect(startup.project).toBeUndefined();
       expect(startup.profileSession.recoveryStatus).toBe('blocked');
       expect(recovery.raw).not.toBeNull();
       expect(recovery.clearCount).toBe(0);
@@ -188,7 +198,13 @@ describe('autosave recovery lifecycle', () => {
       autosaveRecovery: recovery,
       autosaveScheduler: scheduler,
     });
-    const baselineJson = encodeProjectDocument(selectPresentProject(application.store.getState()));
+    application.projectOperations.createNew('Underworld');
+    // Route selection is itself an autosave-observable publication. Flush it
+    // before establishing the explicit profile baseline for this test.
+    scheduler.flush();
+    scheduler.delays.length = 0;
+    recovery.writes.length = 0;
+    const baselineJson = encodeProjectDocument(presentProject(application));
 
     application.store.dispatch(settingsSelected());
     application.store.dispatch(
@@ -206,9 +222,7 @@ describe('autosave recovery lifecycle', () => {
     setFearRank(application, 1);
     expect(scheduler.delays).toEqual([25, 25]);
     scheduler.flush();
-    expect(recovery.writes).toEqual([
-      encodeProjectDocument(selectPresentProject(application.store.getState())),
-    ]);
+    expect(recovery.writes).toEqual([encodeProjectDocument(presentProject(application))]);
     expect(selectExplicitProfileBaselineJson(application.store.getState())).toBe(baselineJson);
 
     application.store.dispatch(authoredProjectUndoRequested());
@@ -219,7 +233,7 @@ describe('autosave recovery lifecycle', () => {
   it('restores a valid project with fresh history and evaluation without writing on boot', () => {
     const source = createApplication();
     configureF(source);
-    const recoveredProject = selectPresentProject(source.store.getState());
+    const recoveredProject = presentProject(source);
     const recovery = createRecoveryFixture(encodeProjectDocument(recoveredProject));
     const scheduler = createSchedulerFixture();
 
@@ -229,14 +243,14 @@ describe('autosave recovery lifecycle', () => {
     });
     const state = application.store.getState();
 
-    expect(selectPresentProject(state)).toEqual(recoveredProject);
+    expect(presentProject(application)).toEqual(recoveredProject);
     expect(selectProjectHistory(state)).toEqual({
       past: [],
       present: recoveredProject,
       future: [],
     });
     expect(selectProjectEvaluation(state)).toEqual(
-      source.store.getState().projectWorkspace.assembly.evaluation,
+      source.store.getState().projectWorkspace.assembly!.evaluation,
     );
     expect(selectProfileStatus(state)).toBe('Recovered');
     expect(selectExplicitProfileBaselineJson(state)).toBeNull();
@@ -261,9 +275,9 @@ describe('autosave recovery lifecycle', () => {
       recoveryStatus: 'blocked',
       recoveryError: 'Autosave recovery failed: $: must be valid JSON',
     });
-    expect(selectProjectEvaluation(application.store.getState()).status).toBe('empty');
+    expect(selectProjectEvaluation(application.store.getState())).toBeUndefined();
     configureF(application);
-    application.projectOperations.createNew();
+    application.projectOperations.createNew('Underworld');
     expect(recovery.raw).toBe('{not json');
     expect(recovery.writes).toEqual([]);
     expect(scheduler.delays).toEqual([]);
@@ -278,9 +292,7 @@ describe('autosave recovery lifecycle', () => {
     expect(selectProfileStatus(application.store.getState())).toBe('Unsaved');
     expect(scheduler.delays).toEqual([500]);
     scheduler.flush();
-    expect(recovery.raw).toBe(
-      encodeProjectDocument(selectPresentProject(application.store.getState())),
-    );
+    expect(recovery.raw).toBe(encodeProjectDocument(presentProject(application)));
   });
 
   it('blocks on recovery read failure and keeps the fallback editor available', () => {
@@ -295,15 +307,16 @@ describe('autosave recovery lifecycle', () => {
       recoveryStatus: 'blocked',
       recoveryError: 'Autosave recovery failed: storage denied',
     });
-    expect(selectProjectEvaluation(application.store.getState()).status).toBe('empty');
+    expect(selectProjectEvaluation(application.store.getState())).toBeUndefined();
     configureF(application);
-    expect(selectPresentProject(application.store.getState()).routes[0]?.biomes).toHaveLength(1);
+    expect(presentProject(application).route.biomes).toHaveLength(1);
   });
 
   it('restores a structurally valid activated I recovery', () => {
     const iProject = createProjectDocument(catalog, {
       projectId: 'i-recovery',
-      configuredBiomeCounts: { Underworld: 4 },
+      routeKey: 'Underworld',
+      configuredBiomeCount: 4,
     });
     const recovery = createRecoveryFixture(encodeProjectDocument(iProject));
     const application = createApplication({
@@ -312,8 +325,8 @@ describe('autosave recovery lifecycle', () => {
     });
 
     expect(selectProfileSession(application.store.getState()).recoveryStatus).toBe('recovered');
-    expect(selectPresentProject(application.store.getState())).toEqual(iProject);
-    expect(selectProjectEvaluation(application.store.getState()).status).toBe('incomplete');
+    expect(presentProject(application)).toEqual(iProject);
+    expect(selectProjectEvaluation(application.store.getState())?.status).toBe('incomplete');
     expect(recovery.raw).toBe(encodeProjectDocument(iProject));
   });
 
@@ -327,9 +340,9 @@ describe('autosave recovery lifecycle', () => {
     });
 
     configureF(application);
-    const editedProject = selectPresentProject(application.store.getState());
+    const editedProject = presentProject(application);
     scheduler.flush();
-    expect(selectPresentProject(application.store.getState())).toBe(editedProject);
+    expect(presentProject(application)).toBe(editedProject);
     expect(selectProfileSession(application.store.getState()).autosaveError).toBe(
       'Autosave failed: quota exceeded',
     );
@@ -344,7 +357,7 @@ describe('autosave recovery lifecycle', () => {
   it('clears a corrupt recovery only after a valid profile has decoded', async () => {
     const validSource = createApplication();
     configureF(validSource);
-    const validJson = encodeProjectDocument(selectPresentProject(validSource.store.getState()));
+    const validJson = encodeProjectDocument(presentProject(validSource));
     const recovery = createRecoveryFixture('{bad recovery');
     const scheduler = createSchedulerFixture();
     const application = createApplication({
@@ -368,7 +381,7 @@ describe('autosave recovery lifecycle', () => {
   it('preserves the current workspace and corrupt value when clearing recovery fails', async () => {
     const source = createApplication();
     configureF(source);
-    const validJson = encodeProjectDocument(selectPresentProject(source.store.getState()));
+    const validJson = encodeProjectDocument(presentProject(source));
     const recovery = createRecoveryFixture('{bad recovery');
     recovery.clearError = new Error('clear denied');
     const application = createApplication({

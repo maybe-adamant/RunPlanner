@@ -50,10 +50,8 @@ export function reachedTraitOffers(
 ): readonly SelectedTraitOfferAssessment[] {
   const evaluation = preparedCandidateProjectFor(project).assembly.evaluation;
   return Object.freeze(
-    evaluation.routes.flatMap((route) =>
-      route.biomes.flatMap((biome) =>
-        'rewards' in biome ? biome.rewards.selectedTraitOffers : [],
-      ),
+    evaluation.route.biomes.flatMap((biome) =>
+      'rewards' in biome ? biome.rewards.selectedTraitOffers : [],
     ),
   );
 }
@@ -170,11 +168,9 @@ export function authorLegalTraitOffers(project: ProjectDocument): ProjectDocumen
     const assembly = preparedCandidateProjectFor(current).assembly;
     const evaluation = assembly.evaluation;
     const session = createPreparedProjectCandidateSession(catalog, assembly);
-    const missing = evaluation.routes
-      .flatMap((route) => route.findings)
-      .find(
-        (finding) => finding.code === 'traitOfferMissing' && finding.origin.kind === 'traitOffer',
-      );
+    const missing = evaluation.route.findings.find(
+      (finding) => finding.code === 'traitOfferMissing' && finding.origin.kind === 'traitOffer',
+    );
     if (missing !== undefined && missing.origin.kind === 'traitOffer') {
       let authored: ProjectDocument | undefined;
       for (const giver of catalog.traitGivers.values) {
@@ -199,20 +195,18 @@ export function authorLegalTraitOffers(project: ProjectDocument): ProjectDocumen
       current = authored;
       continue;
     }
-    const invalids = evaluation.routes.flatMap((route) =>
-      route.biomes.flatMap((biome) =>
-        'rewards' in biome
-          ? biome.rewards.selectedTraitOffers.filter((offer) =>
-              offer.branches.some(
-                (branch) =>
-                  branch.assessments.some((assessment) => !assessment.legal) ||
-                  !branch.composition.legal ||
-                  !branch.replacementComposition.legal ||
-                  !branch.targetedAcquisition.legal,
-              ),
-            )
-          : [],
-      ),
+    const invalids = evaluation.route.biomes.flatMap((biome) =>
+      'rewards' in biome
+        ? biome.rewards.selectedTraitOffers.filter((offer) =>
+            offer.branches.some(
+              (branch) =>
+                branch.assessments.some((assessment) => !assessment.legal) ||
+                !branch.composition.legal ||
+                !branch.replacementComposition.legal ||
+                !branch.targetedAcquisition.legal,
+            ),
+          )
+        : [],
     );
     let changed = false;
     for (const invalid of invalids) {
@@ -244,10 +238,8 @@ function normalizePomResolutions(
   project: ProjectDocument,
   assembly: ReturnType<typeof simulateProjectAssembly>,
 ): ProjectDocument {
-  const resolutions = assembly.evaluation.routes.flatMap((route) =>
-    route.biomes.flatMap((biome) =>
-      'rewards' in biome ? biome.rewards.selectedLevelResolutions : [],
-    ),
+  const resolutions = assembly.evaluation.route.biomes.flatMap((biome) =>
+    'rewards' in biome ? biome.rewards.selectedLevelResolutions : [],
   );
   let current = project;
   for (const resolution of resolutions) {
@@ -305,10 +297,8 @@ export function prepareLegalPomTraitOffers(project: ProjectDocument): {
       return Object.freeze({
         project: current,
         offers: Object.freeze(
-          assembly.evaluation.routes.flatMap((route) =>
-            route.biomes.flatMap((biome) =>
-              'rewards' in biome ? biome.rewards.selectedTraitOffers : [],
-            ),
+          assembly.evaluation.route.biomes.flatMap((biome) =>
+            'rewards' in biome ? biome.rewards.selectedTraitOffers : [],
           ),
         ),
       });

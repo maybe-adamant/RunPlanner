@@ -77,8 +77,7 @@ function withAssembly(project: ProjectDocument) {
 }
 
 function occurrence(project: ProjectDocument, biomeKey: string, occurrenceId: string) {
-  const value = project.routes
-    .flatMap((route) => route.biomes)
+  const value = project.route.biomes
     .find((biome) => biome.biomeKey === biomeKey)
     ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
   if (value === undefined) throw new Error(`missing ${biomeKey} occurrence ${occurrenceId}`);
@@ -205,7 +204,7 @@ describe('authored encounter occurrence commands', () => {
       reward: { rewardType: 'MaxHealthDrop' },
     });
     expect(
-      restoredDetail.routes[0]?.biomes[0]?.topology?.occurrences.find(
+      restoredDetail.route?.biomes[0]?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === goldenFOccurrenceId(5, 1),
       )?.acquisitionSites?.['nemesisGenerated:Encounter']?.pickupEntries?.result
         ?.dispositionByAcquisitionRole.self,
@@ -682,8 +681,7 @@ describe('authored encounter occurrence commands', () => {
     });
 
     expect(
-      closed.present.routes
-        .flatMap((route) => route.biomes)
+      closed.present.route.biomes
         .find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.some((candidate) => candidate.occurrenceId === nCombatId),
     ).toBe(false);

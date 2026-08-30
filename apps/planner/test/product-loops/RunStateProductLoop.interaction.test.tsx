@@ -61,6 +61,7 @@ function projectedRunStateTitles(
   biomeKey: string,
 ): readonly string[] {
   const workspace = application.selectStructuredWorkspace(application.store.getState());
+  if (workspace === undefined) throw new Error('workspace projection is unavailable');
   return [...workspace.runStateLaunchers.values()]
     .filter(
       (launcher) => launcher.owner.routeKey === routeKey && launcher.owner.biomeKey === biomeKey,

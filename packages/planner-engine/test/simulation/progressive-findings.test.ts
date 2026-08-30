@@ -32,7 +32,7 @@ const {
 describe('progressive finding ancestry and chronology', () => {
   it('assesses a stale Hammer loadout in an incomplete prefix with the route context', () => {
     const initial = createGoldenFGHProject();
-    const route = initial.routes.find((candidate) => candidate.routeKey === 'Underworld');
+    const route = initial.route;
     if (route === undefined) throw new Error('missing Underworld route');
     const replacementWeapon = catalog.weapons.values.find(
       (weapon) => weapon.key !== route.loadout.weaponKey,
@@ -51,9 +51,9 @@ describe('progressive finding ancestry and chronology', () => {
         occurrenceId: goldenFOccurrenceId(8, 1),
       }),
     });
-    const evaluation = simulateProject(catalog, project)
-      .routes.find((candidate) => candidate.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    const evaluation = simulateProject(catalog, project).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'F',
+    );
     expect(evaluation?.authoring).toBe('incomplete');
     expect(evaluation?.findings).toContainEqual(
       expect.objectContaining({
@@ -78,11 +78,9 @@ describe('progressive finding ancestry and chronology', () => {
     expect(new Set(retainedHammerFindings?.map((finding) => finding.evidence.traitKey)).size).toBe(
       3,
     );
-    const plan = project.routes
-      .find((candidate) => candidate.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    const plan = project.route?.biomes.find((candidate) => candidate.biomeKey === 'F');
     if (plan === undefined) throw new Error('stale Hammer plan is missing');
-    const currentRoute = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
+    const currentRoute = project.route;
     if (currentRoute === undefined) throw new Error('stale Hammer route is missing');
     // @ts-expect-error public materialization requires a route-owned loadout
     expect(() => materializeBiomePrefix(catalog, goldenFBiome, plan, {})).toThrowError(
@@ -167,9 +165,9 @@ describe('progressive finding ancestry and chronology', () => {
     });
     const encounterCatalog = catalogWithImpossibleEncounter('ArtemisCombatG');
     const assembly = simulateProjectAssembly(encounterCatalog, project);
-    const evaluation = assembly.evaluation.routes
-      .find((candidate) => candidate.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'G');
+    const evaluation = assembly.evaluation.route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'G',
+    );
     if (
       evaluation?.authoring !== 'complete' ||
       evaluation.validity !== 'invalid' ||
@@ -194,9 +192,10 @@ describe('progressive finding ancestry and chronology', () => {
   it('orders sibling additional continuations before normal targets deterministically', () => {
     const fixture = partialFWithInvalidSiblingAdditionsAndNormalTarget();
     const evaluate = () => {
-      const evaluation = simulateProject(fixture.evaluationCatalog, fixture.project)
-        .routes.find((candidate) => candidate.routeKey === 'Underworld')
-        ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+      const evaluation = simulateProject(
+        fixture.evaluationCatalog,
+        fixture.project,
+      ).route?.biomes.find((candidate) => candidate.biomeKey === 'F');
       if (
         evaluation?.authoring !== 'incomplete' ||
         evaluation.validity !== 'invalid' ||

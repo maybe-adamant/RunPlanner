@@ -85,9 +85,9 @@ function withPomResult(
 }
 
 function keepsakesAfter(project: ReturnType<typeof createGoldenFGHProject>, biomeKey: string) {
-  const biome = simulateProjectAssembly(catalog, project)
-    .evaluation.routes.find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
+  const biome = simulateProjectAssembly(catalog, project).evaluation.route?.biomes.find(
+    (candidate) => candidate.biomeKey === biomeKey,
+  );
   if (biome?.authoring !== 'complete' || biome.validity !== 'valid')
     throw new Error(`expected valid ${biomeKey} fixture`);
   return biome.rewards.branches[0]?.keepsakes;
@@ -119,9 +119,7 @@ describe('keepsake selection candidates', () => {
       selection: nPostboss,
       keepsakeKey: 'ForceZeusBoonKeepsake',
     });
-    const route = simulateProjectAssembly(catalog, project).evaluation.routes.find(
-      (candidate) => candidate.routeKey === 'Surface',
-    );
+    const route = simulateProjectAssembly(catalog, project).evaluation.route;
     const n = route?.biomes.find((biome) => biome.biomeKey === 'N');
     const o = route?.biomes.find((biome) => biome.biomeKey === 'O');
     if (n?.authoring !== 'complete' || o?.authoring !== 'complete') {
@@ -146,6 +144,7 @@ describe('keepsake selection candidates', () => {
   it('publishes the complete rank-III inventory at route start without inheriting baseline Fated restrictions', () => {
     const project = createProjectDocument(catalog, {
       projectId: 'keepsake-start-domain',
+      routeKey: 'Underworld',
     });
     const session = createPreparedProjectCandidateSession(
       catalog,
@@ -214,9 +213,9 @@ describe('keepsake selection candidates', () => {
       selection: fPostboss,
       keepsakeKey: 'ForceZeusBoonKeepsake',
     });
-    const f = simulateProjectAssembly(catalog, replaced)
-      .evaluation.routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const f = simulateProjectAssembly(catalog, replaced).evaluation.route?.biomes.find(
+      (biome) => biome.biomeKey === 'F',
+    );
     if (f === undefined || f.authoring !== 'complete' || f.validity !== 'valid')
       throw new Error('expected reached F biome');
     const postbossEvents = f.history.events.filter(
@@ -259,9 +258,9 @@ describe('keepsake selection candidates', () => {
       ),
       toIndex: 0,
     });
-    const f = simulateProjectAssembly(catalog, reordered)
-      .evaluation.routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const f = simulateProjectAssembly(catalog, reordered).evaluation.route?.biomes.find(
+      (biome) => biome.biomeKey === 'F',
+    );
     if (f === undefined || f.authoring !== 'complete' || f.validity !== 'valid')
       throw new Error('expected reached F biome');
     expect(
@@ -292,9 +291,7 @@ describe('keepsake selection candidates', () => {
       keepsakeKey: 'ManaOverTimeRefundKeepsake',
     });
     const assembled = simulateProjectAssembly(catalog, project);
-    const g = assembled.evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    const g = assembled.evaluation.route.biomes.find((biome) => biome.biomeKey === 'G');
     expect(g?.findings).toContainEqual(
       expect.objectContaining({ code: 'keepsakeUnavailable', origin: gPostboss }),
     );
@@ -326,9 +323,7 @@ describe('keepsake selection candidates', () => {
       candidates.result.options.find((option) => option.key === 'ManaOverTimeRefundKeepsake'),
     ).toMatchObject({ selectedPossible: false, unavailableReason: 'alreadyEquipped' });
 
-    const f = assembled.evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const f = assembled.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
     expect(f?.findings).toContainEqual(
       expect.objectContaining({ code: 'keepsakeUnavailable', origin: fPostboss }),
     );
@@ -414,7 +409,7 @@ describe('keepsake selection candidates', () => {
 
   it('derives Unfated from normalized incompatible Arcana and filters Fated Arcana domains', () => {
     const loadout = {
-      ...createCompleteFGProject().routes.find((route) => route.routeKey === 'Underworld')!.loadout,
+      ...createCompleteFGProject().route!.loadout,
       manualArcanaKeys: ['DoorReroll'],
     };
     const arcanaFear = createArcanaFearState(catalog, loadout);
@@ -494,7 +489,7 @@ describe('keepsake selection candidates', () => {
     expect(missingStart.evaluation.findings).toContainEqual(
       expect.objectContaining({ code: 'keepsakeEquipResultMissing', origin: startResult }),
     );
-    expect(missingStart.evaluation.routes[0]).toMatchObject({
+    expect(missingStart.evaluation.route).toMatchObject({
       status: 'incomplete',
       biomes: [],
       processing: { completeValidPrefix: [], active: null, blockedSuffix: ['F', 'G'] },
@@ -513,7 +508,7 @@ describe('keepsake selection candidates', () => {
       result: startResult,
       value: { traitKey: 'HadesLifestealBoon' },
     });
-    const resumedStart = simulateProjectAssembly(catalog, completedStart).evaluation.routes[0];
+    const resumedStart = simulateProjectAssembly(catalog, completedStart).evaluation.route;
     expect(resumedStart).toMatchObject({
       status: 'valid',
       processing: { completeValidPrefix: ['F', 'G'], active: null, blockedSuffix: [] },
@@ -590,9 +585,7 @@ describe('keepsake selection candidates', () => {
       keepsakeKey: 'ForceZeusBoonKeepsake',
     });
 
-    const underworld = simulateProjectAssembly(catalog, project).evaluation.routes.find(
-      (route) => route.routeKey === 'Underworld',
-    );
+    const underworld = simulateProjectAssembly(catalog, project).evaluation.route;
     const f = underworld?.biomes.find((biome) => biome.biomeKey === 'F');
     const g = underworld?.biomes.find((biome) => biome.biomeKey === 'G');
     if (f === undefined || g === undefined || !('rewards' in f) || !('rewards' in g))

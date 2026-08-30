@@ -869,10 +869,10 @@ describe('Chaos paired-trait history', () => {
       ['normal', loadSurfaceNOPProject()],
       ['figLeaf', figLeafProject],
     ] as const) {
-      const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
-      const p = simulateProject(catalog, project)
-        .routes.find((candidate) => candidate.routeKey === 'Surface')
-        ?.biomes.find((candidate) => candidate.biomeKey === 'P');
+      const route = project.route;
+      const p = simulateProject(catalog, project).route?.biomes.find(
+        (candidate) => candidate.biomeKey === 'P',
+      );
       if (
         route === undefined ||
         p === undefined ||

@@ -513,7 +513,7 @@ describe('Shop trait acquisition processing', () => {
     const project = createRepresentativeNOPQShopTraitProject();
     const evaluation = simulateProject(catalog, project);
     expect(evaluation.status).toBe('valid');
-    const surface = evaluation.routes.find((route) => route.routeKey === 'Surface');
+    const surface = evaluation.route;
     const pEvaluation = surface?.biomes.find((biome) => biome.biomeKey === 'P');
     if (pEvaluation === undefined || !('rewards' in pEvaluation)) {
       throw new Error('complete Surface fixture did not evaluate P rewards');

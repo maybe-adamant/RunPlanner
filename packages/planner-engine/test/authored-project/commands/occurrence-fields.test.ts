@@ -16,9 +16,8 @@ function fieldsState(
   project: ProjectDocument,
   occurrenceId: ReturnType<typeof createOccurrenceId>,
 ): FieldsCombatState {
-  const state = project.routes
-    .find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((biome) => biome.biomeKey === 'H')
+  const state = project.route.biomes
+    .find((biome) => biome.biomeKey === 'H')
     ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId)?.state;
   if (state?.kind !== 'fieldsCombat') throw new Error('missing Fields occurrence');
   return state;
@@ -28,9 +27,8 @@ function fieldsOccurrence(
   project: ProjectDocument,
   occurrenceId: ReturnType<typeof createOccurrenceId>,
 ) {
-  const occurrence = project.routes
-    .find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((biome) => biome.biomeKey === 'H')
+  const occurrence = project.route.biomes
+    .find((biome) => biome.biomeKey === 'H')
     ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
   if (occurrence === undefined) throw new Error('missing Fields occurrence');
   return occurrence;

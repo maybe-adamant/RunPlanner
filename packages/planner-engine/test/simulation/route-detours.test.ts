@@ -59,14 +59,14 @@ function source(occurrenceId: OccurrenceId) {
 }
 
 function plan(project: ProjectDocument, biome: BiomeAddress) {
-  const route = project.routes.find((candidate) => candidate.routeKey === biome.routeKey);
+  const route = project.route;
   const result = route?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey);
   if (result === undefined) throw new Error(`missing ${biome.biomeKey} plan`);
   return result;
 }
 
 function traitContext(project: ProjectDocument, biome: BiomeAddress) {
-  const route = project.routes.find((candidate) => candidate.routeKey === biome.routeKey);
+  const route = project.route;
   if (route === undefined) throw new Error(`missing ${biome.routeKey} route`);
   return route.loadout;
 }
@@ -100,7 +100,8 @@ function projectFor(
 ): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: `route-detour-${routeKey}-${configuredBiomeCount}`,
-    configuredBiomeCounts: { [routeKey]: configuredBiomeCount },
+    routeKey,
+    configuredBiomeCount,
   });
 }
 
@@ -568,14 +569,13 @@ describe('route-detour simulation', () => {
       occurrenceId: chaos,
     });
     const encoded = JSON.parse(encodeProjectDocument(project)) as {
-      routes: Array<{
+      route: {
         biomes: Array<{
           topology: { occurrences: Array<{ occurrenceId: string; gameName: string }> } | null;
         }>;
-      }>;
+      };
     };
-    const encodedChaos = encoded.routes
-      .flatMap((route) => route.biomes)
+    const encodedChaos = encoded.route.biomes
       .flatMap((biome) => biome.topology?.occurrences ?? [])
       .find((occurrence) => occurrence.occurrenceId === chaos);
     if (encodedChaos === undefined) throw new Error('encoded Chaos occurrence is missing');
@@ -711,9 +711,9 @@ describe('route-detour simulation', () => {
         occurrenceId: createOccurrenceId(`cross-biome-chaos-g-${fBatchIndex}`),
       });
 
-      const g = simulateProject(catalog, project)
-        .routes.find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'G');
+      const g = simulateProject(catalog, project).route?.biomes.find(
+        (biome) => biome.biomeKey === 'G',
+      );
       const spacingFinding = g?.findings.find(
         (finding) =>
           semanticAddressKey(finding.origin) === semanticAddressKey(secondAdditional) &&

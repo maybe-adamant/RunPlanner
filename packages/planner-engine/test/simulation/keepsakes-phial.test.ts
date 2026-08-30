@@ -212,9 +212,9 @@ describe('Aromatic Phial fountain lifecycle', () => {
       keepsakeKey: 'FountainRarityKeepsake',
     });
     project = authorLegalTraitOffers(project);
-    const missing = simulateProjectAssembly(catalog, project)
-      .evaluation.routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const missing = simulateProjectAssembly(catalog, project).evaluation.route?.biomes.find(
+      (biome) => biome.biomeKey === 'F',
+    );
     expect(missing?.findings).toContainEqual(
       expect.objectContaining({
         code: 'fountainRarityResultMissing',
@@ -231,22 +231,18 @@ describe('Aromatic Phial fountain lifecycle', () => {
       targetTraitKey: 'ApolloWeaponBoon',
     });
     expect(
-      project.routes
-        .find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((candidate) => candidate.biomeKey === 'F')
+      project.route.biomes
+        .find((candidate) => candidate.biomeKey === 'F')
         ?.topology?.occurrences.map((candidate) => [candidate.occurrenceId, candidate.gameName]),
     ).toContainEqual([reprieveId, 'F_Reprieve01']);
     expect(
-      project.routes
-        .find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((candidate) => candidate.biomeKey === 'F')
+      project.route.biomes
+        .find((candidate) => candidate.biomeKey === 'F')
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === reprieveId)
         ?.fountainRarityResult,
     ).toEqual({ targetTraitKey: 'ApolloWeaponBoon' });
     const evaluation = simulateProjectAssembly(catalog, project).evaluation;
-    const f = evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biomeEvaluation) => biomeEvaluation.biomeKey === 'F');
+    const f = evaluation.route.biomes.find((biomeEvaluation) => biomeEvaluation.biomeKey === 'F');
     if (f === undefined || f.authoring !== 'complete' || f.validity !== 'valid')
       throw new Error(
         `expected valid ordinary Reprieve evaluation: ${JSON.stringify({
@@ -286,9 +282,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
       targetTraitKey: 'ApolloWeaponBoon',
     });
     const evaluation = simulateProjectAssembly(catalog, authorLegalTraitOffers(project)).evaluation;
-    const f = evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biomeEvaluation) => biomeEvaluation.biomeKey === 'F');
+    const f = evaluation.route.biomes.find((biomeEvaluation) => biomeEvaluation.biomeKey === 'F');
     if (f === undefined || f.authoring !== 'complete' || f.validity !== 'valid')
       throw new Error('expected valid fixed-linked Postboss evaluation');
     const postbossEvents = f.history.events.filter(
@@ -340,9 +334,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
     });
 
     const missing = simulateProjectAssembly(catalog, project);
-    const fMissing = missing.evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const fMissing = missing.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
     expect(fMissing?.findings).toContainEqual(
       expect.objectContaining({ code: 'fountainRarityResultMissing', origin: outcome }),
     );
@@ -357,9 +349,9 @@ describe('Aromatic Phial fountain lifecycle', () => {
       outcome,
       targetTraitKey: targetTraitKey!,
     });
-    const resolved = simulateProjectAssembly(catalog, project)
-      .evaluation.routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const resolved = simulateProjectAssembly(catalog, project).evaluation.route?.biomes.find(
+      (biome) => biome.biomeKey === 'F',
+    );
     if (resolved?.authoring !== 'complete' || resolved.validity !== 'valid') {
       throw new Error(
         `expected valid Phial Postboss result: ${JSON.stringify(resolved?.findings)}`,

@@ -113,8 +113,8 @@ type WorkspaceBatchNode =
 function createStructuralFrontierProject(biomeKey: 'G' | 'H' | 'P'): ProjectDocument {
   const routeKey = biomeKey === 'P' ? 'Surface' : 'Underworld';
   const project = createProjectDocument(catalog, {
-    configuredBiomeCounts:
-      routeKey === 'Surface' ? { Surface: 3 } : { Underworld: biomeKey === 'G' ? 2 : 3 },
+    routeKey,
+    configuredBiomeCount: routeKey === 'Surface' ? 3 : biomeKey === 'G' ? 2 : 3,
     projectId: `structural-frontier-${biomeKey.toLowerCase()}`,
   });
   return applyProjectCommand(project, catalog, {
@@ -181,20 +181,18 @@ function withMalformedAuthoredBiome(
   biomeKey: string,
   transform: (plan: AuthoredBiomePlan) => AuthoredBiomePlan,
 ): ProjectDocument {
+  if (project.route.routeKey !== routeKey) throw new Error('authored route is missing');
   let replaced = false;
-  const routes = project.routes.map((route) => {
-    if (route.routeKey !== routeKey) return route;
-    return {
-      ...route,
-      biomes: route.biomes.map((plan) => {
-        if (plan.biomeKey !== biomeKey) return plan;
-        replaced = true;
-        return transform(plan);
-      }),
-    };
-  });
+  const route = {
+    ...project.route,
+    biomes: project.route.biomes.map((plan) => {
+      if (plan.biomeKey !== biomeKey) return plan;
+      replaced = true;
+      return transform(plan);
+    }),
+  };
   if (!replaced) throw new Error('authored biome is missing');
-  return { ...project, routes };
+  return { ...project, route };
 }
 
 function postbossOccurrence(routeKey: string, biomeKey: string) {
@@ -249,23 +247,21 @@ function withMalformedFSnapshot(
   evaluation: ProjectEvaluation,
   transform: (snapshot: CanonicalBiome) => CanonicalBiome,
 ): ProjectEvaluation {
+  if (evaluation.route.routeKey !== 'Underworld') throw new Error('Underworld route is missing');
   let replaced = false;
-  const routes = evaluation.routes.map((route) => {
-    if (route.routeKey !== 'Underworld') return route;
-    return {
-      ...route,
-      biomes: route.biomes.map((biome) => {
-        if (biome.biomeKey !== 'F') return biome;
-        if (biome.authoring !== 'complete' || biome.validity !== 'valid') {
-          throw new Error('F fixture must be complete-valid');
-        }
-        replaced = true;
-        return { ...biome, snapshot: transform(biome.snapshot) };
-      }),
-    };
-  });
+  const route = {
+    ...evaluation.route,
+    biomes: evaluation.route.biomes.map((biome) => {
+      if (biome.biomeKey !== 'F') return biome;
+      if (biome.authoring !== 'complete' || biome.validity !== 'valid') {
+        throw new Error('F fixture must be complete-valid');
+      }
+      replaced = true;
+      return { ...biome, snapshot: transform(biome.snapshot) };
+    }),
+  };
   if (!replaced) throw new Error('complete F fixture was not evaluated');
-  return { ...evaluation, routes };
+  return { ...evaluation, route };
 }
 
 function withMalformedPrefix(
@@ -274,51 +270,47 @@ function withMalformedPrefix(
   biomeKey: string,
   transform: (prefix: MaterializedBiomePrefix) => MaterializedBiomePrefix,
 ): ProjectEvaluation {
+  if (evaluation.route.routeKey !== routeKey) throw new Error(`${routeKey} route is missing`);
   let replaced = false;
-  const routes = evaluation.routes.map((route) => {
-    if (route.routeKey !== routeKey) return route;
-    return {
-      ...route,
-      biomes: route.biomes.map((biome) => {
-        if (biome.biomeKey !== biomeKey) return biome;
-        if (!('materializedPrefix' in biome))
-          throw new Error(`${biomeKey} fixture must have a prefix`);
-        replaced = true;
-        return {
-          ...biome,
-          materializedPrefix: transform(biome.materializedPrefix),
-          ...(biome.assessmentPrefix === undefined
-            ? {}
-            : { assessmentPrefix: transform(biome.assessmentPrefix) }),
-        };
-      }),
-    };
-  });
+  const route = {
+    ...evaluation.route,
+    biomes: evaluation.route.biomes.map((biome) => {
+      if (biome.biomeKey !== biomeKey) return biome;
+      if (!('materializedPrefix' in biome))
+        throw new Error(`${biomeKey} fixture must have a prefix`);
+      replaced = true;
+      return {
+        ...biome,
+        materializedPrefix: transform(biome.materializedPrefix),
+        ...(biome.assessmentPrefix === undefined
+          ? {}
+          : { assessmentPrefix: transform(biome.assessmentPrefix) }),
+      };
+    }),
+  };
   if (!replaced) throw new Error(`${biomeKey} prefix fixture was not evaluated`);
-  return { ...evaluation, routes };
+  return { ...evaluation, route };
 }
 
 function withMalformedNSnapshot(
   evaluation: ProjectEvaluation,
   transform: (snapshot: CanonicalBiome) => CanonicalBiome,
 ): ProjectEvaluation {
+  if (evaluation.route.routeKey !== 'Surface') throw new Error('Surface route is missing');
   let replaced = false;
-  const routes = evaluation.routes.map((route) => {
-    if (route.routeKey !== 'Surface') return route;
-    return {
-      ...route,
-      biomes: route.biomes.map((biome) => {
-        if (biome.biomeKey !== 'N') return biome;
-        if (biome.authoring !== 'complete' || biome.validity !== 'valid') {
-          throw new Error('N fixture must be complete-valid');
-        }
-        replaced = true;
-        return { ...biome, snapshot: transform(biome.snapshot) };
-      }),
-    };
-  });
+  const route = {
+    ...evaluation.route,
+    biomes: evaluation.route.biomes.map((biome) => {
+      if (biome.biomeKey !== 'N') return biome;
+      if (biome.authoring !== 'complete' || biome.validity !== 'valid') {
+        throw new Error('N fixture must be complete-valid');
+      }
+      replaced = true;
+      return { ...biome, snapshot: transform(biome.snapshot) };
+    }),
+  };
   if (!replaced) throw new Error('complete N fixture was not evaluated');
-  return { ...evaluation, routes };
+  return { ...evaluation, route };
 }
 
 function nHub(snapshot: CanonicalBiome): CanonicalHubDecision {
@@ -664,9 +656,8 @@ describe('structured workspace overlay contract', () => {
         ]),
       }),
     );
-    const fCompletion = invalidProjected.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F')
+    const fCompletion = invalidProjected.route.biomes
+      .find((biome) => biome.biomeKey === 'F')
       ?.nodes.find((node) => node.kind === 'occurrenceWorkbench' && node.room.kind === 'PostBoss');
     if (
       fCompletion?.kind !== 'occurrenceWorkbench' ||
@@ -716,9 +707,8 @@ describe('structured workspace overlay contract', () => {
     ).toBeUndefined();
     const unavailableProjected = projection().project(unavailableAssembly);
     const unavailableKey = semanticAddressKey(hHammerResult);
-    const hCompletion = unavailableProjected.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'H')
+    const hCompletion = unavailableProjected.route.biomes
+      .find((biome) => biome.biomeKey === 'H')
       ?.nodes.find((node) => node.kind === 'occurrenceWorkbench' && node.room.kind === 'PostBoss');
     if (hCompletion?.kind !== 'occurrenceWorkbench')
       throw new Error('reached H Postboss completion is missing');
@@ -736,12 +726,11 @@ describe('structured workspace overlay contract', () => {
     });
     missingStartHammer = {
       ...missingStartHammer,
-      routes: missingStartHammer.routes.map((route) => {
-        if (route.routeKey !== 'Underworld') return route;
-        const { keepsakeEquipResults: _discarded, ...loadout } = route.loadout;
+      route: (() => {
+        const { keepsakeEquipResults: _discarded, ...loadout } = missingStartHammer.route.loadout;
         void _discarded;
-        return { ...route, loadout };
-      }),
+        return { ...missingStartHammer.route, loadout };
+      })(),
     };
     const startProjected = projectWorkspace(missingStartHammer);
     const startKey = semanticAddressKey(startHammerResult);
@@ -764,9 +753,7 @@ describe('structured workspace overlay contract', () => {
     );
 
     const projected = projection().project(assembly);
-    const i = projected.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'I');
+    const i = projected.route.biomes.find((biome) => biome.biomeKey === 'I');
     if (i === undefined) throw new Error('reached I workspace is missing');
     expect(i.echoKeepsakeReplay?.address).toEqual(echoGiftHammerReplayAddress);
 
@@ -794,11 +781,10 @@ describe('structured workspace overlay contract', () => {
       const base = createGoldenFGHIProject();
       return {
         ...base,
-        routes: base.routes.map((route) =>
-          route.routeKey !== 'Underworld'
-            ? route
-            : { ...route, biomes: route.biomes.filter((biome) => biome.biomeKey === 'F') },
-        ),
+        route: {
+          ...base.route,
+          biomes: base.route.biomes.filter((biome) => biome.biomeKey === 'F'),
+        },
       };
     };
     const start = createRouteStartKeepsakeSelectionAddress('Underworld');
@@ -948,9 +934,7 @@ describe('structured workspace overlay contract', () => {
 
   it('rejects an independently expected editable leaf omitted from projection products', () => {
     const project = loadSurfaceNOPQProject();
-    const plan = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const plan = project.route.biomes.find((biome) => biome.biomeKey === 'N');
     if (plan?.topology === null || plan === undefined) {
       throw new Error('complete N topology is missing');
     }
@@ -964,9 +948,7 @@ describe('structured workspace overlay contract', () => {
     if (requirement === undefined) throw new Error('N side-room reward requirement is missing');
 
     const projected = projectWorkspace(project);
-    const n = projected.routes
-      .flatMap((route) => route.biomes)
-      .find((biome) => biome.biomeKey === 'N');
+    const n = projected.route.biomes.find((biome) => biome.biomeKey === 'N');
     if (n === undefined) throw new Error('projected N biome is missing');
 
     // The Hub node owns main reward focus, but its room-local reward exists
@@ -1047,26 +1029,24 @@ describe('structured workspace overlay contract', () => {
     for (const project of [createGoldenFGHIProject(), loadSurfaceNOPQProject()]) {
       const assembly = simulateProjectAssembly(catalog, project);
       const projected = projection().project(assembly);
-      for (const route of project.routes) {
-        for (const plan of route.biomes) {
-          const nodes = projected.routes
-            .find((candidate) => candidate.routeKey === route.routeKey)
-            ?.biomes.find((candidate) => candidate.biomeKey === plan.biomeKey)?.nodes;
-          if (nodes === undefined) throw new Error(`${plan.biomeKey} workspace biome is missing`);
-          const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
-          const requirements = [
-            ...expectedWorkspaceLeafRequirements(catalog, biome, plan, (resolution) =>
-              levelResolutionCandidateForProjectEvaluationAssembly(assembly, resolution),
-            ),
-            ...expectedWorkspaceEncounterPhaseLeafRequirements(catalog, biome, plan, (phase) =>
-              encounterPhaseCandidateSupportForProjectEvaluationAssembly(assembly, phase),
-            ),
-          ];
-          for (const expected of requirements) {
-            for (const interaction of expected.interactions) {
-              if (!examples.has(interaction.kind)) {
-                examples.set(interaction.kind, { expected, interaction, nodes, projected });
-              }
+      for (const plan of project.route.biomes) {
+        const nodes = projected.route?.biomes.find(
+          (candidate) => candidate.biomeKey === plan.biomeKey,
+        )?.nodes;
+        if (nodes === undefined) throw new Error(`${plan.biomeKey} workspace biome is missing`);
+        const biome = createBiomeAddress(project.route.routeKey, plan.biomeKey);
+        const requirements = [
+          ...expectedWorkspaceLeafRequirements(catalog, biome, plan, (resolution) =>
+            levelResolutionCandidateForProjectEvaluationAssembly(assembly, resolution),
+          ),
+          ...expectedWorkspaceEncounterPhaseLeafRequirements(catalog, biome, plan, (phase) =>
+            encounterPhaseCandidateSupportForProjectEvaluationAssembly(assembly, phase),
+          ),
+        ];
+        for (const expected of requirements) {
+          for (const interaction of expected.interactions) {
+            if (!examples.has(interaction.kind)) {
+              examples.set(interaction.kind, { expected, interaction, nodes, projected });
             }
           }
         }
@@ -1134,63 +1114,60 @@ describe('structured workspace overlay contract', () => {
     });
     for (const project of [createGoldenFGHIProject(), surface]) {
       const projected = projection().project(simulateProjectAssembly(catalog, project));
-      for (const route of project.routes) {
-        for (const plan of route.biomes) {
-          const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
-          const workspaceBiome = projected.routes
-            .find((candidate) => candidate.routeKey === route.routeKey)
-            ?.biomes.find((candidate) => candidate.biomeKey === plan.biomeKey);
-          if (workspaceBiome === undefined)
-            throw new Error(`${plan.biomeKey} workspace is missing`);
-          const observed = observeWorkspaceProducts({
-            focusByOwner: projected.focusByOwner,
-            interactions: projected.interactions,
-            nodes: workspaceBiome.nodes,
-          });
-          for (const requirement of expectedWorkspaceLeafRequirements(catalog, biome, plan).filter(
-            (candidate) => candidate.address.kind === 'traitOffer',
-          )) {
-            const traitAddress = requirement.address as TraitOfferAddress;
-            ownerKinds.add(traitAddress.owner.kind);
-            assertExpectedWorkspaceLeafClosure({ expected: [requirement], observed });
+      for (const plan of project.route.biomes) {
+        const biome = createBiomeAddress(project.route.routeKey, plan.biomeKey);
+        const workspaceBiome = projected.route?.biomes.find(
+          (candidate) => candidate.biomeKey === plan.biomeKey,
+        );
+        if (workspaceBiome === undefined) throw new Error(`${plan.biomeKey} workspace is missing`);
+        const observed = observeWorkspaceProducts({
+          focusByOwner: projected.focusByOwner,
+          interactions: projected.interactions,
+          nodes: workspaceBiome.nodes,
+        });
+        for (const requirement of expectedWorkspaceLeafRequirements(catalog, biome, plan).filter(
+          (candidate) => candidate.address.kind === 'traitOffer',
+        )) {
+          const traitAddress = requirement.address as TraitOfferAddress;
+          ownerKinds.add(traitAddress.owner.kind);
+          assertExpectedWorkspaceLeafClosure({ expected: [requirement], observed });
 
-            const missingMarker = new Map(observed.markersByOwner);
-            missingMarker.delete(semanticAddressKey(traitAddress));
-            expect(() =>
-              assertExpectedWorkspaceLeafClosure({
-                expected: [requirement],
-                observed: { ...observed, markersByOwner: missingMarker },
-              }),
-            ).toThrow(/required authored leaf has no workspace marker/);
+          const missingMarker = new Map(observed.markersByOwner);
+          missingMarker.delete(semanticAddressKey(traitAddress));
+          expect(() =>
+            assertExpectedWorkspaceLeafClosure({
+              expected: [requirement],
+              observed: { ...observed, markersByOwner: missingMarker },
+            }),
+          ).toThrow(/required authored leaf has no workspace marker/);
 
-            const missingDestination = new Map(observed.focusByOwner);
-            missingDestination.delete(semanticAddressKey(traitAddress));
-            expect(() =>
-              assertExpectedWorkspaceLeafClosure({
-                expected: [requirement],
-                observed: { ...observed, focusByOwner: missingDestination },
-              }),
-            ).toThrow(/destination is missing|has no workspace destination/);
+          const missingDestination = new Map(observed.focusByOwner);
+          missingDestination.delete(semanticAddressKey(traitAddress));
+          expect(() =>
+            assertExpectedWorkspaceLeafClosure({
+              expected: [requirement],
+              observed: { ...observed, focusByOwner: missingDestination },
+            }),
+          ).toThrow(/destination is missing|has no workspace destination/);
 
-            const missingTraitInteraction = new Map(observed.interactions.traitOffers);
-            const traitInteraction = missingTraitInteraction.get(semanticAddressKey(traitAddress));
-            if (traitInteraction === undefined) {
-              throw new Error('expected trait interaction is missing from the observed workspace');
-            }
-            missingTraitInteraction.delete(traitInteraction.key);
-            expect(() =>
-              assertExpectedWorkspaceLeafClosure({
-                expected: [requirement],
-                observed: {
-                  ...observed,
-                  interactions: {
-                    ...observed.interactions,
-                    traitOffers: missingTraitInteraction,
-                  },
-                },
-              }),
-            ).toThrow(/authored trait offer leaf .* has no exact workspace interaction/);
+          const missingTraitInteraction = new Map(observed.interactions.traitOffers);
+          const traitInteraction = missingTraitInteraction.get(semanticAddressKey(traitAddress));
+          if (traitInteraction === undefined) {
+            throw new Error('expected trait interaction is missing from the observed workspace');
           }
+          missingTraitInteraction.delete(traitInteraction.key);
+          expect(() =>
+            assertExpectedWorkspaceLeafClosure({
+              expected: [requirement],
+              observed: {
+                ...observed,
+                interactions: {
+                  ...observed.interactions,
+                  traitOffers: missingTraitInteraction,
+                },
+              },
+            }),
+          ).toThrow(/authored trait offer leaf .* has no exact workspace interaction/);
         }
       }
     }
@@ -1202,9 +1179,7 @@ describe('structured workspace overlay contract', () => {
   it('closes exact top-level, local-child, and invalid active multi-choice Ship encounter phase leaves', () => {
     const valid = loadSurfaceNOPQProject();
     const validAssembly = simulateProjectAssembly(catalog, valid);
-    const nPlan = valid.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const nPlan = valid.route.biomes.find((biome) => biome.biomeKey === 'N');
     if (nPlan === undefined) throw new Error('N plan is missing');
     const topLevelN = createEncounterPhaseAddress(
       nBiome,
@@ -1233,12 +1208,8 @@ describe('structured workspace overlay contract', () => {
     });
     const invalidAssembly = simulateProjectAssembly(catalog, invalid);
     const projected = projection().project(invalidAssembly);
-    const oPlan = invalid.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'O');
-    const oWorkspace = projected.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'O');
+    const oPlan = invalid.route.biomes.find((biome) => biome.biomeKey === 'O');
+    const oWorkspace = projected.route.biomes.find((biome) => biome.biomeKey === 'O');
     if (oPlan === undefined || oWorkspace === undefined)
       throw new Error('O phase fixture is missing');
     const combat2 = createEncounterPhaseAddress(
@@ -1314,41 +1285,37 @@ describe('structured workspace overlay contract', () => {
   it('independently closes persisted decisions, targets, occurrences, and Hub ownership', () => {
     for (const project of [createGoldenFGHIProject(), loadSurfaceNOPQProject()]) {
       const projected = projectWorkspace(project);
-      for (const route of project.routes) {
-        for (const plan of route.biomes) {
-          if (plan.topology === null) continue;
-          const biome = projected.routes
-            .find((candidate) => candidate.routeKey === route.routeKey)
-            ?.biomes.find((candidate) => candidate.biomeKey === plan.biomeKey);
-          if (biome === undefined) throw new Error(`${plan.biomeKey} workspace biome is missing`);
-          const address = {
-            biomeKey: plan.biomeKey,
-            kind: 'biome' as const,
-            routeKey: route.routeKey,
-          };
-          assertExpectedWorkspaceTopologyClosure({
-            expected: expectedWorkspaceTopologyManifest(address, plan),
-            observed: observeWorkspaceProducts({
-              focusByOwner: projected.focusByOwner,
-              interactions: projected.interactions,
-              nodes: biome.nodes,
-            }),
-          });
-        }
+      for (const plan of project.route.biomes) {
+        if (plan.topology === null) continue;
+        const biome = projected.route?.biomes.find(
+          (candidate) => candidate.biomeKey === plan.biomeKey,
+        );
+        if (biome === undefined) throw new Error(`${plan.biomeKey} workspace biome is missing`);
+        const address = {
+          biomeKey: plan.biomeKey,
+          kind: 'biome' as const,
+          routeKey: project.route.routeKey,
+        };
+        assertExpectedWorkspaceTopologyClosure({
+          expected: expectedWorkspaceTopologyManifest(address, plan),
+          observed: observeWorkspaceProducts({
+            focusByOwner: projected.focusByOwner,
+            interactions: projected.interactions,
+            nodes: biome.nodes,
+          }),
+        });
       }
     }
   });
 
   it('closes the selected Midshop Zagreus sibling through its containing workbench', () => {
     const base = createGoldenFGHIProject();
-    const declaration = base.routes.flatMap((route) =>
-      route.biomes.flatMap((plan) =>
-        expectedWorkspaceStructuralControls(
-          catalog,
-          createBiomeAddress(route.routeKey, plan.biomeKey),
-          plan,
-        ).filter((control) => control.kind === 'zagreusSpawn'),
-      ),
+    const declaration = base.route.biomes.flatMap((plan) =>
+      expectedWorkspaceStructuralControls(
+        catalog,
+        createBiomeAddress(base.route.routeKey, plan.biomeKey),
+        plan,
+      ).filter((control) => control.kind === 'zagreusSpawn'),
     )[0];
     if (declaration?.kind !== 'zagreusSpawn' || declaration.owner.kind !== 'additionalExit') {
       throw new Error('selected Midshop contract declaration is missing');
@@ -1360,9 +1327,9 @@ describe('structured workspace overlay contract', () => {
       occurrenceId: createOccurrenceId('workspace-zagreus-contract'),
     });
     const projected = projectWorkspace(authored);
-    const workspace = projected.routes
-      .find((route) => route.routeKey === additional.routeKey)
-      ?.biomes.find((biome) => biome.biomeKey === additional.biomeKey);
+    const workspace = projected.route.biomes.find(
+      (biome) => biome.biomeKey === additional.biomeKey,
+    );
     if (workspace === undefined) throw new Error('selected Midshop workspace is missing');
     const observed = observeWorkspaceProducts({
       focusByOwner: projected.focusByOwner,
@@ -1373,9 +1340,7 @@ describe('structured workspace overlay contract', () => {
       assertExpectedWorkspaceTopologyClosure({
         expected: expectedWorkspaceTopologyManifest(
           createBiomeAddress(additional.routeKey, additional.biomeKey),
-          authored.routes
-            .find((route) => route.routeKey === additional.routeKey)!
-            .biomes.find((biome) => biome.biomeKey === additional.biomeKey)!,
+          authored.route.biomes.find((biome) => biome.biomeKey === additional.biomeKey)!,
         ),
         observed,
       }),
@@ -1389,15 +1354,13 @@ describe('structured workspace overlay contract', () => {
   it('routes an authored Chaos gate and its fixed room package to the source decision', () => {
     const base = createGoldenFGHIProject();
     const available = projectWorkspace(base);
-    const located = base.routes.flatMap((route) =>
-      route.biomes.flatMap((plan) =>
-        (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
-          const room = catalog.rooms.byKey[occurrence.gameName];
-          return room?.additionalExits.some((exit) => exit.kind === 'chaos')
-            ? [{ occurrence, plan, route }]
-            : [];
-        }),
-      ),
+    const located = base.route.biomes.flatMap((plan) =>
+      (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
+        const room = catalog.rooms.byKey[occurrence.gameName];
+        return room?.additionalExits.some((exit) => exit.kind === 'chaos')
+          ? [{ occurrence, plan, route: base.route }]
+          : [];
+      }),
     )[0];
     if (located === undefined) throw new Error('selected Chaos source is missing');
     const biome = createBiomeAddress(located.route.routeKey, located.plan.biomeKey);
@@ -1414,9 +1377,9 @@ describe('structured workspace overlay contract', () => {
       occurrenceId: chaosId,
     });
     const projected = projectWorkspace(authored);
-    const workspace = projected.routes
-      .find((route) => route.routeKey === biome.routeKey)
-      ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey);
+    const workspace = projected.route.biomes.find(
+      (candidate) => candidate.biomeKey === biome.biomeKey,
+    );
     const batch = workspace?.nodes.find(
       (node): node is WorkspaceBatchNode =>
         (node.kind === 'ordinaryBatch' ||
@@ -1429,9 +1392,7 @@ describe('structured workspace overlay contract', () => {
       assertExpectedWorkspaceTopologyClosure({
         expected: expectedWorkspaceTopologyManifest(
           biome,
-          authored.routes
-            .find((route) => route.routeKey === biome.routeKey)!
-            .biomes.find((candidate) => candidate.biomeKey === biome.biomeKey)!,
+          authored.route.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey)!,
         ),
         observed: observeWorkspaceProducts({
           focusByOwner: projected.focusByOwner,
@@ -1474,9 +1435,7 @@ describe('structured workspace overlay contract', () => {
     }
     const expected = expectedWorkspaceTopologyManifest(
       biome,
-      authored.routes
-        .find((route) => route.routeKey === biome.routeKey)!
-        .biomes.find((candidate) => candidate.biomeKey === biome.biomeKey)!,
+      authored.route.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey)!,
     );
     const missingDestination = new Map(projected.focusByOwner);
     missingDestination.delete(semanticAddressKey(additional));
@@ -1495,7 +1454,7 @@ describe('structured workspace overlay contract', () => {
     expect(() =>
       assertRenderedWorkspaceStructuralControlClosure({
         interactions: { ...projected.interactions, chaosExits },
-        routes: projected.routes,
+        route: projected.route,
       }),
     ).toThrow(/Chaos .* exact workspace interaction/);
   });
@@ -1533,15 +1492,13 @@ describe('structured workspace overlay contract', () => {
 
   it('keeps selected-contract and automatic-return packages in their respective decisions', () => {
     const base = createGoldenFGHIProject();
-    const located = base.routes.flatMap((route) =>
-      route.biomes.flatMap((plan) =>
-        (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
-          const room = catalog.rooms.byKey[occurrence.gameName];
-          return room?.additionalExits.some((exit) => exit.kind === 'zagreusContract')
-            ? [{ occurrence, plan, route }]
-            : [];
-        }),
-      ),
+    const located = base.route.biomes.flatMap((plan) =>
+      (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
+        const room = catalog.rooms.byKey[occurrence.gameName];
+        return room?.additionalExits.some((exit) => exit.kind === 'zagreusContract')
+          ? [{ occurrence, plan, route: base.route }]
+          : [];
+      }),
     )[0];
     if (located === undefined) throw new Error('selected Midshop is missing');
     const biome = createBiomeAddress(located.route.routeKey, located.plan.biomeKey);
@@ -1595,9 +1552,9 @@ describe('structured workspace overlay contract', () => {
     project = authorLegalTraitOffers(project);
 
     const projected = projectWorkspace(project);
-    const workspace = projected.routes
-      .find((route) => route.routeKey === biome.routeKey)
-      ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey);
+    const workspace = projected.route.biomes.find(
+      (candidate) => candidate.biomeKey === biome.biomeKey,
+    );
     if (workspace === undefined) throw new Error('Midshop workspace is missing');
     const observed = observeWorkspaceProducts({
       focusByOwner: projected.focusByOwner,
@@ -1686,12 +1643,8 @@ describe('structured workspace overlay contract', () => {
   it('closes structural occurrence packages without requiring standalone workbench nodes', () => {
     const project = createGoldenFGHIProject();
     const projected = projectWorkspace(project);
-    const plan = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
-    const f = projected.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const plan = project.route.biomes.find((biome) => biome.biomeKey === 'F');
+    const f = projected.route.biomes.find((biome) => biome.biomeKey === 'F');
     if (plan?.topology === null || plan === undefined || f === undefined) {
       throw new Error('complete F topology fixture is missing');
     }
@@ -1765,12 +1718,8 @@ describe('structured workspace overlay contract', () => {
   it('makes target and authored Hub sub-owner markers and exact destinations observable', () => {
     const fProject = createGoldenFGHIProject();
     const fProjected = projectWorkspace(fProject);
-    const fPlan = fProject.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
-    const f = fProjected.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const fPlan = fProject.route.biomes.find((biome) => biome.biomeKey === 'F');
+    const f = fProjected.route.biomes.find((biome) => biome.biomeKey === 'F');
     if (fPlan?.topology === null || fPlan === undefined || f === undefined) {
       throw new Error('complete F topology fixture is missing');
     }
@@ -1855,12 +1804,8 @@ describe('structured workspace overlay contract', () => {
 
     const nProject = loadSurfaceNOPQProject();
     const nProjected = projectWorkspace(nProject);
-    const nPlan = nProject.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N');
-    const n = nProjected.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const nPlan = nProject.route.biomes.find((biome) => biome.biomeKey === 'N');
+    const n = nProjected.route.biomes.find((biome) => biome.biomeKey === 'N');
     if (nPlan?.topology === null || nPlan === undefined || n === undefined) {
       throw new Error('complete N topology fixture is missing');
     }
@@ -1971,11 +1916,13 @@ describe('structured workspace overlay contract', () => {
 
   it('independently closes structural control identities and rendered interaction handoff', () => {
     const emptyN = createProjectDocument(catalog, {
-      configuredBiomeCounts: { Surface: 1 },
+      routeKey: 'Surface',
+      configuredBiomeCount: 1,
       projectId: 'structural-oracle-empty-n',
     });
     const emptyF = createProjectDocument(catalog, {
-      configuredBiomeCounts: { Underworld: 1 },
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
       projectId: 'structural-oracle-frontier-f',
     });
     const fFrontier = applyProjectCommand(emptyF, catalog, {
@@ -2009,19 +1956,17 @@ describe('structured workspace overlay contract', () => {
       const projected = projectWorkspace(project);
       assertRenderedWorkspaceStructuralControlClosure({
         interactions: projected.interactions,
-        routes: projected.routes,
+        route: projected.route,
       });
-      for (const route of project.routes) {
-        for (const plan of route.biomes) {
-          assertExpectedWorkspaceStructuralControlClosure({
-            expected: expectedWorkspaceStructuralControls(
-              catalog,
-              { biomeKey: plan.biomeKey, kind: 'biome', routeKey: route.routeKey },
-              plan,
-            ),
-            interactions: projected.interactions,
-          });
-        }
+      for (const plan of project.route.biomes) {
+        assertExpectedWorkspaceStructuralControlClosure({
+          expected: expectedWorkspaceStructuralControls(
+            catalog,
+            { biomeKey: plan.biomeKey, kind: 'biome', routeKey: project.route.routeKey },
+            plan,
+          ),
+          interactions: projected.interactions,
+        });
       }
     }
 
@@ -2031,14 +1976,10 @@ describe('structured workspace overlay contract', () => {
       [hFrontier, 'Underworld', 'H', ['fieldsCageOutcome', 'decisionEntryRoomPicker']],
       [pFrontier, 'Surface', 'P', ['batchRewardStore', 'decisionEntryRoomPicker']],
     ] as const) {
-      const plan = project.routes
-        .find((route) => route.routeKey === routeKey)
-        ?.biomes.find((biome) => biome.biomeKey === biomeKey);
+      const plan = project.route.biomes.find((biome) => biome.biomeKey === biomeKey);
       if (plan === undefined) throw new Error(`missing ${biomeKey} structural frontier`);
       const projected = projectWorkspace(project);
-      const projectedBiome = projected.routes
-        .find((route) => route.routeKey === routeKey)
-        ?.biomes.find((biome) => biome.biomeKey === biomeKey);
+      const projectedBiome = projected.route.biomes.find((biome) => biome.biomeKey === biomeKey);
       if (
         projectedBiome?.frontier?.kind !== 'exitDecision' ||
         projectedBiome.frontier.provisionalBatch === undefined
@@ -2061,11 +2002,13 @@ describe('structured workspace overlay contract', () => {
 
   it('makes every independently expected structural interaction family observable', () => {
     const emptyN = createProjectDocument(catalog, {
-      configuredBiomeCounts: { Surface: 1 },
+      routeKey: 'Surface',
+      configuredBiomeCount: 1,
       projectId: 'structural-mutation-empty-n',
     });
     const emptyF = createProjectDocument(catalog, {
-      configuredBiomeCounts: { Underworld: 1 },
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
       projectId: 'structural-mutation-f',
     });
     const fFrontier = applyProjectCommand(emptyF, catalog, {
@@ -2104,17 +2047,15 @@ describe('structured workspace overlay contract', () => {
       nTerminal,
     ]) {
       const projected = projectWorkspace(project);
-      for (const route of project.routes) {
-        for (const plan of route.biomes) {
-          const controls = expectedWorkspaceStructuralControls(
-            catalog,
-            { biomeKey: plan.biomeKey, kind: 'biome', routeKey: route.routeKey },
-            plan,
-          );
-          for (const control of controls) {
-            if (!examples.has(control.kind)) {
-              examples.set(control.kind, { control, interactions: projected.interactions });
-            }
+      for (const plan of project.route.biomes) {
+        const controls = expectedWorkspaceStructuralControls(
+          catalog,
+          { biomeKey: plan.biomeKey, kind: 'biome', routeKey: project.route.routeKey },
+          plan,
+        );
+        for (const control of controls) {
+          if (!examples.has(control.kind)) {
+            examples.set(control.kind, { control, interactions: projected.interactions });
           }
         }
       }
@@ -2146,8 +2087,7 @@ describe('structured workspace overlay contract', () => {
 
     const surface = loadSurfaceNOPQProject();
     const projected = projectWorkspace(surface);
-    const hub = projected.routes
-      .flatMap((route) => route.biomes)
+    const hub = projected.route.biomes
       .flatMap((biome) => biome.nodes)
       .find((node) => node.kind === 'hubDecision');
     const closable =
@@ -2168,7 +2108,7 @@ describe('structured workspace overlay contract', () => {
     expect(() =>
       assertRenderedWorkspaceStructuralControlClosure({
         interactions: { ...projected.interactions, hubSlots },
-        routes: projected.routes,
+        route: projected.route,
       }),
     ).toThrow(/closable Hub slot has no exact close interaction/);
 
@@ -2184,19 +2124,17 @@ describe('structured workspace overlay contract', () => {
     expect(() =>
       assertRenderedWorkspaceStructuralControlClosure({
         interactions: { ...projected.interactions, hubVisitOrders },
-        routes: projected.routes,
+        route: projected.route,
       }),
     ).toThrow(/Hub visit order .* has no exact workspace interaction/);
 
     const base = createGoldenFGHIProject();
-    const declaration = base.routes.flatMap((route) =>
-      route.biomes.flatMap((plan) =>
-        expectedWorkspaceStructuralControls(
-          catalog,
-          createBiomeAddress(route.routeKey, plan.biomeKey),
-          plan,
-        ).filter((control) => control.kind === 'zagreusSpawn'),
-      ),
+    const declaration = base.route.biomes.flatMap((plan) =>
+      expectedWorkspaceStructuralControls(
+        catalog,
+        createBiomeAddress(base.route.routeKey, plan.biomeKey),
+        plan,
+      ).filter((control) => control.kind === 'zagreusSpawn'),
     )[0];
     if (declaration?.kind !== 'zagreusSpawn' || declaration.owner.kind !== 'additionalExit') {
       throw new Error('Zagreus structural mutation declaration is missing');
@@ -2207,8 +2145,7 @@ describe('structured workspace overlay contract', () => {
       occurrenceId: createOccurrenceId('structural-mutation-zagreus-contract'),
     });
     const contractProjected = projectWorkspace(withContract);
-    const contractNode = contractProjected.routes
-      .flatMap((route) => route.biomes)
+    const contractNode = contractProjected.route.biomes
       .flatMap((biome) => biome.nodes)
       .find(
         (node): node is WorkspaceBatchNode =>
@@ -2225,7 +2162,7 @@ describe('structured workspace overlay contract', () => {
     expect(() =>
       assertRenderedWorkspaceStructuralControlClosure({
         interactions: { ...contractProjected.interactions, zagreusContracts },
-        routes: contractProjected.routes,
+        route: contractProjected.route,
       }),
     ).toThrow(/Zagreus contract .* has no exact workspace interaction/);
   });
@@ -2238,7 +2175,8 @@ describe('structured workspace overlay contract', () => {
     });
     const started = applyProjectCommand(
       createProjectDocument(catalog, {
-        configuredBiomeCounts: { Underworld: 1 },
+        routeKey: 'Underworld',
+        configuredBiomeCount: 1,
         projectId: 'decision-entry-closure',
       }),
       catalog,
@@ -2246,9 +2184,7 @@ describe('structured workspace overlay contract', () => {
     );
     const project = applyProjectCommand(started, catalog, { decision, kind: 'CreateBatch' });
     const projected = projectWorkspace(project);
-    const f = projected.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const f = projected.route.biomes.find((biome) => biome.biomeKey === 'F');
     if (f === undefined) throw new Error('empty F decision entry biome is missing');
     const workbench = f.nodes.find(
       (node): node is Extract<(typeof f.nodes)[number], { readonly kind: 'ordinaryBatch' }> =>

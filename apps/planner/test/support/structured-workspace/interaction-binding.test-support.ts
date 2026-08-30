@@ -159,7 +159,8 @@ export function selectedNChaosFrontierProject(persistTerminalDecision = true): P
   const preHub = createOccurrenceId('interaction-binding-n-chaos-prehub');
   const chaos = createOccurrenceId('interaction-binding-n-chaos-room');
   let project = createProjectDocument(catalog, {
-    configuredBiomeCounts: { Surface: 1 },
+    routeKey: 'Surface',
+    configuredBiomeCount: 1,
     projectId: 'interaction-binding-n-chaos-frontier',
   });
   project = applyProjectCommand(project, catalog, {
@@ -223,7 +224,8 @@ export function enteredShopProject(): {
   const shop = createOccurrenceId('interaction-binding-shop');
   let project = createProjectDocument(catalog, {
     projectId: 'interaction-binding-entered-shop',
-    configuredBiomeCounts: { Underworld: 1 },
+    routeKey: 'Underworld',
+    configuredBiomeCount: 1,
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
@@ -337,9 +339,7 @@ export function bind(
     undefined,
     (address) =>
       traitOfferCandidateForProjectEvaluationAssembly(projectAssembly, address) !== undefined,
-  )
-    .routes.find((route) => route.routeKey === routeKey)
-    ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
+  ).route?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
   if (source === undefined) throw new Error(`${routeKey}/${biomeKey} source is missing`);
   const assembly = assembleWorkspaceBiomeSemantics(catalog, source);
   const traitControls = new Map(

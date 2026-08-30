@@ -45,7 +45,7 @@ function projectWithUnrankedDeliveryHost() {
   const sourceId = nLocalOccurrenceId('combat02', 'sideDoor1');
   const hostId = createOccurrenceId('round-trip-n-combat03');
   let project = createEnteredNLocalProject();
-  const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
+  const route = project.route;
   const plan = route?.biomes.find((candidate) => candidate.biomeKey === 'N');
   const source = plan?.topology?.occurrences.find(
     (candidate) => candidate.occurrenceId === sourceId,
@@ -73,18 +73,14 @@ function projectWithUnrankedDeliveryHost() {
   });
   project = {
     ...project,
-    routes: project.routes.map((candidate) =>
-      candidate.routeKey !== route.routeKey
-        ? candidate
-        : {
-            ...candidate,
-            biomes: candidate.biomes.map((candidateBiome) =>
-              candidateBiome.biomeKey === plan.biomeKey
-                ? Object.freeze({ ...candidateBiome, topology })
-                : candidateBiome,
-            ),
-          },
-    ),
+    route: Object.freeze({
+      ...route,
+      biomes: route.biomes.map((candidateBiome) =>
+        candidateBiome.biomeKey === plan.biomeKey
+          ? Object.freeze({ ...candidateBiome, topology })
+          : candidateBiome,
+      ),
+    }),
   };
   return Object.freeze({
     project,
@@ -107,9 +103,8 @@ describe('Hermes Shrine delivery placement', () => {
       entry,
       encounterPhaseKey: 'Encounter',
     });
-    const placedHost = placed.routes
-      .find((route) => route.routeKey === biome.routeKey)
-      ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey)
+    const placedHost = placed.route.biomes
+      .find((candidate) => candidate.biomeKey === biome.biomeKey)
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === host.occurrenceId);
     expect(placedHost?.roomActions.order).toContainEqual({
       kind: 'interactAcquisitionEntry',
@@ -124,9 +119,8 @@ describe('Hermes Shrine delivery placement', () => {
       JSON.parse(encodeProjectDocument(placed)) as unknown,
       catalog,
     );
-    const decodedHost = decoded.routes
-      .find((route) => route.routeKey === biome.routeKey)
-      ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey)
+    const decodedHost = decoded.route.biomes
+      .find((candidate) => candidate.biomeKey === biome.biomeKey)
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === host.occurrenceId);
     expect(decodedHost?.roomActions.order).toContainEqual({
       kind: 'interactAcquisitionEntry',
@@ -378,9 +372,8 @@ describe('Hermes Shrine delivery placement', () => {
       entry,
       encounterPhaseKey: 'LaterEncounter',
     });
-    const repairedHost = repaired.routes
-      .find((route) => route.routeKey === biome.routeKey)
-      ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey)
+    const repairedHost = repaired.route.biomes
+      .find((candidate) => candidate.biomeKey === biome.biomeKey)
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === host.occurrenceId);
     const deliveryActions = repairedHost?.roomActions.order.filter(
       (reference) =>

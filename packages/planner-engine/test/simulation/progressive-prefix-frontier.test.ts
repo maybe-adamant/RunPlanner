@@ -156,9 +156,7 @@ describe('progressive prefix and frontier products', () => {
     const fixture = partialGWithOnePhysicalTarget();
     const { evaluation } = prefix(fixture.project, 'Underworld', 'G');
     const frontier = evaluation.materializedPrefix.frontier;
-    const topology = fixture.project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'G')?.topology;
+    const topology = fixture.project.route.biomes.find((biome) => biome.biomeKey === 'G')?.topology;
     const persisted = topology?.decisions.find(
       (decision) =>
         decision.kind === 'exit' &&
@@ -359,9 +357,7 @@ describe('progressive prefix and frontier products', () => {
     });
     const evaluatedRoute = route(project, 'Underworld');
     const previous = evaluatedRoute.biomes.find((candidate) => candidate.biomeKey === 'G');
-    const plan = project.routes
-      .find((candidate) => candidate.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    const plan = project.route?.biomes.find((candidate) => candidate.biomeKey === 'H');
     if (previous?.authoring !== 'complete' || previous.validity !== 'valid' || plan === undefined) {
       throw new Error('invalid Fields fixture has no valid G seed or H plan');
     }

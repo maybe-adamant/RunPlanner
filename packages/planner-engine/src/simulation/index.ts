@@ -414,7 +414,6 @@ export type {
   ProjectBiomeEvaluation,
   ProjectEvaluation,
   ProjectEvaluationAssembly,
-  ProjectEvaluationSummary,
   ProjectRouteEvaluation,
   RouteEvaluationSummary,
   RouteProcessingRegions,

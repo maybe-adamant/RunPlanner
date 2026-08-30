@@ -107,9 +107,9 @@ describe('progressive clamp products', () => {
 
     const assembly = simulateProjectAssembly(catalog, project);
     expect(() => simulateProject(catalog, project)).not.toThrow();
-    const evaluation = assembly.evaluation.routes
-      .find((candidate) => candidate.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    const evaluation = assembly.evaluation.route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'F',
+    );
     const artifacts =
       candidateArtifactsForProjectEvaluationAssembly(assembly).biomeAt(goldenFBiome);
     const firstReward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(5, 1));

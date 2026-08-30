@@ -53,8 +53,8 @@ function session(options: {
   readonly runStateTarget?: EditorSessionState['runStateTarget'];
 }): EditorSessionState {
   return {
-    activePanelByRoute: { Underworld: { kind: 'biome', biomeKey: 'F' } },
-    activeRouteKey: 'Underworld',
+    activeSection: 'route',
+    activePanel: { kind: 'biome', biomeKey: 'F' },
     semanticNavigationRevision: 1,
     focusedSemanticOwner: options.focusedSemanticOwner ?? null,
     selectedFinding: options.selectedFinding ?? null,

@@ -11,7 +11,8 @@ import { createDefaultRouteLoadout } from './loadout';
 
 export interface CreateProjectDocumentOptions {
   readonly projectId: string;
-  readonly configuredBiomeCounts?: Readonly<Record<string, number | undefined>>;
+  readonly routeKey: string;
+  readonly configuredBiomeCount?: number;
 }
 
 /** Explicit empty route resource record for direct, route-less evaluation adapters. */
@@ -26,33 +27,25 @@ export function createProjectDocument(
   catalog: Catalog,
   options: CreateProjectDocumentOptions,
 ): ProjectDocument {
-  const configuredBiomeCounts = options.configuredBiomeCounts ?? {};
-
-  for (const routeKey of Object.keys(configuredBiomeCounts)) {
-    if (catalog.routes.byKey[routeKey] === undefined) {
-      throw new ProjectDocumentContractError(
-        `configuredBiomeCounts.${routeKey}`,
-        `unknown route ${routeKey}`,
-      );
-    }
+  const route = catalog.routes.byKey[options.routeKey];
+  if (route === undefined) {
+    throw new ProjectDocumentContractError('routeKey', `unknown route ${options.routeKey}`);
   }
-
-  const routes = catalog.routes.values.map((route) => {
+  const configuredCount = options.configuredBiomeCount ?? 0;
+  if (!Number.isInteger(configuredCount) || configuredCount < 0) {
+    throw new ProjectDocumentContractError(
+      'configuredBiomeCount',
+      'must be a non-negative integer',
+    );
+  }
+  if (configuredCount > route.biomeKeys.length) {
+    throw new ProjectDocumentContractError(
+      'configuredBiomeCount',
+      `exceeds the ${route.biomeKeys.length}-biome route`,
+    );
+  }
+  const routePlan = (() => {
     const loadout = createDefaultRouteLoadout(catalog);
-    const configuredCount = configuredBiomeCounts[route.key] ?? 0;
-    if (!Number.isInteger(configuredCount) || configuredCount < 0) {
-      throw new ProjectDocumentContractError(
-        `configuredBiomeCounts.${route.key}`,
-        'must be a non-negative integer',
-      );
-    }
-    if (configuredCount > route.biomeKeys.length) {
-      throw new ProjectDocumentContractError(
-        `configuredBiomeCounts.${route.key}`,
-        `exceeds the ${route.biomeKeys.length}-biome route`,
-      );
-    }
-
     return {
       routeKey: route.key,
       loadout,
@@ -61,7 +54,7 @@ export function createProjectDocument(
         const layout = catalog.biomeLayouts.byKey[biomeKey];
         if (layout === undefined) {
           throw new ProjectDocumentContractError(
-            `configuredBiomeCounts.${route.key}`,
+            `configuredBiomeCount`,
             `${biomeKey} has no authored plan initializer`,
           );
         }
@@ -72,14 +65,14 @@ export function createProjectDocument(
         };
       }),
     };
-  });
+  })();
 
   return decodeProjectDocument(
     {
       schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
       projectId: options.projectId,
       catalogVersion: catalog.version,
-      routes,
+      route: routePlan,
     },
     catalog,
   );
@@ -87,9 +80,7 @@ export function createProjectDocument(
 
 export function createEmptyProjectDocument(
   catalog: Catalog,
-  options: Omit<CreateProjectDocumentOptions, 'configuredBiomeCounts'>,
+  options: CreateProjectDocumentOptions,
 ): ProjectDocument {
-  return createProjectDocument(catalog, {
-    projectId: options.projectId,
-  });
+  return createProjectDocument(catalog, options);
 }

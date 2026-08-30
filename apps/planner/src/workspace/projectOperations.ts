@@ -21,7 +21,7 @@ export type ProjectOperationResult = {
 };
 
 export interface ProjectOperations {
-  createNew(): ProjectOperationResult;
+  createNew(routeKey: string): ProjectOperationResult;
   discardAutosaveRecovery(): ProjectOperationResult;
   saveProfile(): Promise<ProjectOperationResult>;
   loadProfile(): Promise<ProjectOperationResult>;
@@ -74,9 +74,9 @@ export function createProjectOperations(
 ): ProjectOperations {
   const currentProject = () => selectPresentProject(options.store.getState());
   return Object.freeze({
-    createNew(): ProjectOperationResult {
+    createNew(routeKey: string): ProjectOperationResult {
       try {
-        options.store.dispatch(newProjectCreated(createInitialProject(options.catalog)));
+        options.store.dispatch(newProjectCreated(createInitialProject(options.catalog, routeKey)));
         return result('new', 'success', 'Created a new project.');
       } catch (error) {
         return failure('new', error);
@@ -100,6 +100,9 @@ export function createProjectOperations(
     async saveProfile(): Promise<ProjectOperationResult> {
       try {
         const snapshot = currentProject();
+        if (snapshot === undefined) {
+          throw new Error('No project is open');
+        }
         const fileName =
           selectProfileSession(options.store.getState()).fileName ?? DEFAULT_PROFILE_FILE_NAME;
         const baselineJson = encodeProjectDocument(snapshot);

@@ -28,9 +28,9 @@ import {
 import { nLocalOccurrenceIds } from '../support/n-local-occurrences';
 
 function sourceDecision(project: ReturnType<typeof surfaceProject>, biome = oBiome) {
-  const topology = project.routes
-    .find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey)?.topology;
+  const topology = project.route.biomes.find(
+    (candidate) => candidate.biomeKey === biome.biomeKey,
+  )?.topology;
   if (topology === null || topology === undefined) throw new Error('expected topology');
   return topology.decisions.find(
     (decision) =>
@@ -82,7 +82,7 @@ describe('authored-project room replacement commands', () => {
 
   it('leaves replacement Shop inventory unresolved after a route loadout change', () => {
     const initial = fProject();
-    const initialLoadout = initial.routes.find((route) => route.routeKey === 'Underworld')?.loadout;
+    const initialLoadout = initial.route?.loadout;
     const replacementWeapon = catalog.weapons.values.find(
       (weapon) => weapon.key !== initialLoadout?.weaponKey,
     );
@@ -126,7 +126,7 @@ describe('authored-project room replacement commands', () => {
       gameName: 'F_Shop01',
     });
 
-    const occurrence = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
+    const occurrence = project.route?.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === targetId,
     );
     if (occurrence?.state.kind !== 'shop' || occurrence.state.shop === undefined) {
@@ -149,7 +149,7 @@ describe('authored-project room replacement commands', () => {
       gameName: 'F_Opening02',
     });
 
-    expect(changed.routes[0]?.biomes[0]?.topology?.occurrences).toContainEqual(
+    expect(changed.route?.biomes[0]?.topology?.occurrences).toContainEqual(
       expect.objectContaining({ occurrenceId: 'replacement-start', gameName: 'F_Opening02' }),
     );
     expect(
@@ -298,7 +298,7 @@ describe('authored-project room replacement commands', () => {
       occurrence: createOccurrenceAddress(gBiome, createOccurrenceId('widening-source')),
       gameName: 'G_Combat02',
     });
-    const retained = takeover.routes[0]?.biomes[1]?.topology;
+    const retained = takeover.route?.biomes[1]?.topology;
     expect(
       retained?.decisions.find(
         (decision) =>
@@ -326,7 +326,7 @@ describe('authored-project room replacement commands', () => {
         exit3: createOccurrenceId('widening-free-3'),
       },
     });
-    const widenedTopology = takeover.routes[0]?.biomes[1]?.topology;
+    const widenedTopology = takeover.route?.biomes[1]?.topology;
     expect(widenedTopology?.occurrences).toContainEqual(
       expect.objectContaining({
         occurrenceId: 'widening-shop',
@@ -394,10 +394,9 @@ describe('authored-project room replacement commands', () => {
       occurrence: createOccurrenceAddress(qBiome, createOccurrenceId('q-first-fork')),
       gameName: 'Q_Combat05',
     });
-    expect(
-      replaced.routes.find((route) => route.routeKey === 'Surface')?.biomes[3]?.topology
-        ?.occurrences,
-    ).toContainEqual(expect.objectContaining({ gameName: 'Q_Combat05' }));
+    expect(replaced.route?.biomes[3]?.topology?.occurrences).toContainEqual(
+      expect.objectContaining({ gameName: 'Q_Combat05' }),
+    );
   });
 
   it('reconciles an outgoing generated batch store from the replacement source without removing targets', () => {

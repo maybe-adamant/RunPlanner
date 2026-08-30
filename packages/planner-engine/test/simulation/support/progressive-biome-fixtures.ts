@@ -171,9 +171,7 @@ function incompleteAtMissingDecision(
 }
 
 function route(project: ProjectDocument, routeKey: string) {
-  const result = simulateProject(catalog, project).routes.find(
-    (candidate) => candidate.routeKey === routeKey,
-  );
+  const result = simulateProject(catalog, project).route;
   if (result === undefined) throw new Error(`fixture has no ${routeKey} route`);
   return result;
 }

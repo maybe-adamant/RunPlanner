@@ -94,7 +94,7 @@ export function SemanticOwnerMarker({ address }: { readonly address: SemanticAdd
     selectedFinding === null
       ? undefined
       : (projectFindings.get(semanticAddressKey(selectedFinding.origin)) ?? []).find(
-          (finding) => semanticFindingKey(finding) === selectedFinding.key,
+          (finding: SemanticFinding) => semanticFindingKey(finding) === selectedFinding.key,
         );
   const presentedFindings =
     findings.length > 0

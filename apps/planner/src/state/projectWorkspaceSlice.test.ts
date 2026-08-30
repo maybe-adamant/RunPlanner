@@ -58,9 +58,29 @@ function createStore() {
   const store = createPlannerStore({
     assembleProjectEvaluation,
     catalog,
-    initialProject: createInitialProject(catalog),
+    initialProject: createInitialProject(catalog, 'Underworld'),
   });
   return { assembleProjectEvaluation, store };
+}
+
+type WorkspaceStore = ReturnType<typeof createStore>['store'];
+type WorkspaceState = Parameters<typeof selectPresentProject>[0];
+type WorkspaceSource = WorkspaceStore | WorkspaceState;
+
+function workspaceState(source: WorkspaceSource): WorkspaceState {
+  return 'getState' in source ? source.getState() : source;
+}
+
+function presentProject(source: WorkspaceSource): ProjectDocument {
+  const project = selectPresentProject(workspaceState(source));
+  if (project === undefined) throw new Error('project workspace is not open');
+  return project;
+}
+
+function projectHistory(source: WorkspaceSource) {
+  const history = selectProjectHistory(workspaceState(source));
+  if (history === undefined) throw new Error('project workspace history is not open');
+  return history;
 }
 
 describe('project workspace application state', () => {
@@ -84,7 +104,7 @@ describe('project workspace application state', () => {
       }),
     );
     const exactWorkspace = store.getState().projectWorkspace;
-    expect(exactWorkspace.history.present.routes[0]?.loadout.manualArcanaKeys).toHaveLength(7);
+    expect(exactWorkspace.history!.present.route.loadout.manualArcanaKeys).toHaveLength(7);
 
     expect(() =>
       store.dispatch(
@@ -101,48 +121,36 @@ describe('project workspace application state', () => {
   it('atomically boots one empty authored history and its exact evaluation', () => {
     const { assembleProjectEvaluation, store } = createStore();
     const state = store.getState();
-    const project = selectPresentProject(state);
+    const project = presentProject(store);
 
     expect(project.projectId).toBe('run-plan');
-    expect(project.routes).toEqual([
-      {
-        routeKey: 'Underworld',
-        loadout: createDefaultRouteLoadout(catalog),
-        resourcePlacements: {
-          Exorcism: null,
-          Fishing: null,
-          Pickaxe: null,
-          Shovel: null,
-        },
-        biomes: [],
+    expect(project.route).toEqual({
+      routeKey: 'Underworld',
+      loadout: createDefaultRouteLoadout(catalog),
+      resourcePlacements: {
+        Exorcism: null,
+        Fishing: null,
+        Pickaxe: null,
+        Shovel: null,
       },
-      {
-        routeKey: 'Surface',
-        loadout: createDefaultRouteLoadout(catalog),
-        resourcePlacements: {
-          Exorcism: null,
-          Fishing: null,
-          Pickaxe: null,
-          Shovel: null,
-        },
-        biomes: [],
-      },
-    ]);
+      biomes: [],
+    });
     expect(selectProjectEvaluation(state)).toBe(
       assembleProjectEvaluation.mock.results[0]?.value.evaluation,
     );
-    expect(state.projectWorkspace.assembly.project).toBe(project);
-    expect(selectProjectEvaluation(state)).toBe(state.projectWorkspace.assembly.evaluation);
+    expect(state.projectWorkspace.assembly!.project).toBe(project);
+    expect(selectProjectEvaluation(state)).toBe(state.projectWorkspace.assembly!.evaluation);
     expect(assembleProjectEvaluation.mock.calls[0]?.[0]).toBe(project);
-    expect(selectProjectEvaluation(state).status).toBe('empty');
+    expect(selectProjectEvaluation(state)?.status).toBe('empty');
     expect(selectCanUndoProject(state)).toBe(false);
     expect(selectCanRedoProject(state)).toBe(false);
   });
 
   it('rejects an otherwise valid assembly for a different authored identity', () => {
-    const initialProject = createInitialProject(catalog);
+    const initialProject = createInitialProject(catalog, 'Underworld');
     const foreignProject = createEmptyProjectDocument(catalog, {
       projectId: 'foreign-assembly',
+      routeKey: 'Surface',
     });
 
     expect(() =>
@@ -156,7 +164,7 @@ describe('project workspace application state', () => {
 
   it('publishes one replacement evaluation after edit, undo, and redo', () => {
     const { assembleProjectEvaluation, store } = createStore();
-    const original = selectPresentProject(store.getState());
+    const original = presentProject(store);
     store.dispatch(
       authoredProjectCommandDispatched({
         kind: 'ConfigureRoutePrefix',
@@ -164,7 +172,7 @@ describe('project workspace application state', () => {
         configuredBiomeCount: 1,
       }),
     );
-    const configured = selectPresentProject(store.getState());
+    const configured = presentProject(store);
     const command = {
       kind: 'CreateStart',
       biome: createBiomeAddress('Underworld', 'F'),
@@ -174,8 +182,8 @@ describe('project workspace application state', () => {
 
     store.dispatch(authoredProjectCommandDispatched(command));
     const editedState = store.getState();
-    const editedHistory = selectProjectHistory(editedState);
-    const editedPlan = editedHistory.present.routes[0]?.biomes[0];
+    const editedHistory = projectHistory(store);
+    const editedPlan = editedHistory.present.route.biomes[0];
     if (editedPlan === undefined) throw new Error('expected edited F plan');
     expect(editedHistory.past).toEqual([original, configured]);
     expect(editedPlan.topology?.startOccurrenceId).toBe('f-start');
@@ -188,8 +196,8 @@ describe('project workspace application state', () => {
 
     store.dispatch(authoredProjectUndoRequested());
     const undoneState = store.getState();
-    expect(selectPresentProject(undoneState)).toBe(configured);
-    expect(selectProjectHistory(undoneState).future).toEqual([editedHistory.present]);
+    expect(presentProject(undoneState)).toBe(configured);
+    expect(projectHistory(store).future).toEqual([editedHistory.present]);
     expect(assembleProjectEvaluation).toHaveBeenCalledTimes(4);
     expect(assembleProjectEvaluation.mock.calls[3]?.[0]).toBe(configured);
     expect(selectProjectEvaluation(undoneState)).toBe(
@@ -198,7 +206,7 @@ describe('project workspace application state', () => {
 
     store.dispatch(authoredProjectRedoRequested());
     const redoneState = store.getState();
-    expect(selectPresentProject(redoneState)).toBe(editedHistory.present);
+    expect(presentProject(redoneState)).toBe(editedHistory.present);
     expect(assembleProjectEvaluation).toHaveBeenCalledTimes(5);
     expect(assembleProjectEvaluation.mock.calls[4]?.[0]).toBe(editedHistory.present);
     expect(selectProjectEvaluation(redoneState)).toBe(
@@ -220,10 +228,8 @@ describe('project workspace application state', () => {
         purchase: { delay: 2, rushed: false },
       }),
     );
-    const delayTwo = selectPresentProject(store.getState());
-    const nPlanAtDelayTwo = delayTwo.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const delayTwo = presentProject(store.getState());
+    const nPlanAtDelayTwo = delayTwo.route.biomes.find((biome) => biome.biomeKey === 'N');
     const delayTwoHost = nPlanAtDelayTwo?.topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === nOccurrenceId('combat09'),
     );
@@ -239,10 +245,8 @@ describe('project workspace application state', () => {
         purchase: { delay: 3, rushed: false },
       }),
     );
-    const delayThree = selectPresentProject(store.getState());
-    const nPlanAtDelayThree = delayThree.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const delayThree = presentProject(store.getState());
+    const nPlanAtDelayThree = delayThree.route.biomes.find((biome) => biome.biomeKey === 'N');
     const deliveryOwners = nPlanAtDelayThree?.topology?.occurrences.filter(
       (occurrence) =>
         occurrence.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey] !== undefined,
@@ -261,14 +265,14 @@ describe('project workspace application state', () => {
     expect(
       store
         .getState()
-        .projectWorkspace.assembly.evaluation.findings.some(
+        .projectWorkspace.assembly!.evaluation.findings.some(
           (finding) =>
             finding.origin.kind === 'acquisitionEntry' && finding.origin.entryKey === entryKey,
         ),
     ).toBe(false);
 
     store.dispatch(authoredProjectUndoRequested());
-    expect(selectPresentProject(store.getState())).toBe(delayTwo);
+    expect(presentProject(store)).toBe(delayTwo);
   });
 
   it('undoes and redoes one atomic Echo Pom child edit with its outer selection', () => {
@@ -314,10 +318,10 @@ describe('project workspace application state', () => {
       ),
       'selection',
     );
-    const before = selectPresentProject(store.getState());
-    const bridge = before.routes[0]!.biomes.find(
-      (biome) => biome.biomeKey === 'H',
-    )!.topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
+    const before = presentProject(store.getState());
+    const bridge = before
+      .route!.biomes.find((biome) => biome.biomeKey === 'H')!
+      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
     const offer = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
     if (offer?.kind !== 'traits') throw new Error('Echo offer is missing');
     const editedOffer = Object.freeze({
@@ -332,13 +336,13 @@ describe('project workspace application state', () => {
     store.dispatch(
       authoredProjectCommandDispatched({ kind: 'ReplaceTraitOffer', trait, value: editedOffer }),
     );
-    const edited = selectPresentProject(store.getState());
+    const edited = presentProject(store.getState());
     expect(edited).not.toBe(before);
 
     store.dispatch(authoredProjectUndoRequested());
-    expect(selectPresentProject(store.getState())).toBe(before);
+    expect(presentProject(store.getState())).toBe(before);
     store.dispatch(authoredProjectRedoRequested());
-    expect(selectPresentProject(store.getState())).toBe(edited);
+    expect(presentProject(store.getState())).toBe(edited);
   });
 
   it('undoes and redoes one atomic complete All Together result edit', () => {
@@ -376,7 +380,7 @@ describe('project workspace application state', () => {
       value: initialOffer,
     });
     store.dispatch(authoredProjectReplaced(project));
-    const before = selectPresentProject(store.getState());
+    const before = presentProject(store.getState());
     store.dispatch(
       authoredProjectCommandDispatched({
         kind: 'ReplaceTraitOffer',
@@ -397,14 +401,14 @@ describe('project workspace application state', () => {
         }),
       }),
     );
-    const edited = selectPresentProject(store.getState());
+    const edited = presentProject(store.getState());
     expect(JSON.stringify(edited)).toContain('ElementalOlympianDamageBoon');
     expect(JSON.stringify(edited)).toContain('ElementalBaseDamageBoon');
 
     store.dispatch(authoredProjectUndoRequested());
-    expect(selectPresentProject(store.getState())).toBe(before);
+    expect(presentProject(store.getState())).toBe(before);
     store.dispatch(authoredProjectRedoRequested());
-    expect(selectPresentProject(store.getState())).toBe(edited);
+    expect(presentProject(store.getState())).toBe(edited);
   });
 
   it('undoes and redoes one atomic Echo Boon child edit with its outer selection', () => {
@@ -450,10 +454,10 @@ describe('project workspace application state', () => {
       ),
       'selection',
     );
-    const before = selectPresentProject(store.getState());
-    const bridge = before.routes[0]!.biomes.find(
-      (biome) => biome.biomeKey === 'H',
-    )!.topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
+    const before = presentProject(store.getState());
+    const bridge = before
+      .route!.biomes.find((biome) => biome.biomeKey === 'H')!
+      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
     const offer = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
     if (offer?.kind !== 'traits') throw new Error('Echo offer is missing');
     const editedOffer = Object.freeze({
@@ -481,13 +485,13 @@ describe('project workspace application state', () => {
     store.dispatch(
       authoredProjectCommandDispatched({ kind: 'ReplaceTraitOffer', trait, value: editedOffer }),
     );
-    const edited = selectPresentProject(store.getState());
+    const edited = presentProject(store.getState());
     expect(edited).not.toBe(before);
 
     store.dispatch(authoredProjectUndoRequested());
-    expect(selectPresentProject(store.getState())).toBe(before);
+    expect(presentProject(store.getState())).toBe(before);
     store.dispatch(authoredProjectRedoRequested());
-    expect(selectPresentProject(store.getState())).toBe(edited);
+    expect(presentProject(store.getState())).toBe(edited);
   });
 
   it('undoes and redoes an Echo replay selection with its required generated row', () => {
@@ -533,10 +537,10 @@ describe('project workspace application state', () => {
       ),
       'selection',
     );
-    const before = selectPresentProject(store.getState());
-    const bridge = before.routes[0]!.biomes.find(
-      (biome) => biome.biomeKey === 'H',
-    )!.topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
+    const before = presentProject(store.getState());
+    const bridge = before
+      .route!.biomes.find((biome) => biome.biomeKey === 'H')!
+      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
     const offer = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
     if (offer?.kind !== 'traits') throw new Error('Echo offer is missing');
     const editedOffer = Object.freeze({
@@ -546,11 +550,11 @@ describe('project workspace application state', () => {
     store.dispatch(
       authoredProjectCommandDispatched({ kind: 'ReplaceTraitOffer', trait, value: editedOffer }),
     );
-    const edited = selectPresentProject(store.getState());
+    const edited = presentProject(store.getState());
     expect(edited).not.toBe(before);
-    const editedBridge = edited.routes[0]!.biomes.find(
-      (biome) => biome.biomeKey === 'H',
-    )!.topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
+    const editedBridge = edited
+      .route!.biomes.find((biome) => biome.biomeKey === 'H')!
+      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
     expect(editedBridge.roomActions.order).toEqual([
       { kind: 'interactEncounter', phaseKey: 'Encounter' },
       {
@@ -566,9 +570,9 @@ describe('project workspace application state', () => {
     ).toBeDefined();
 
     store.dispatch(authoredProjectUndoRequested());
-    expect(selectPresentProject(store.getState())).toBe(before);
+    expect(presentProject(store.getState())).toBe(before);
     store.dispatch(authoredProjectRedoRequested());
-    expect(selectPresentProject(store.getState())).toBe(edited);
+    expect(presentProject(store.getState())).toBe(edited);
   });
 
   it('retains the coherent workspace without resimulation for semantic and history no-ops', () => {
@@ -600,12 +604,13 @@ describe('project workspace application state', () => {
     );
     const replacement = createEmptyProjectDocument(catalog, {
       projectId: 'replacement',
+      routeKey: 'Underworld',
     });
 
     store.dispatch(authoredProjectReplaced(replacement));
     const state = store.getState();
-    expect(selectProjectHistory(state)).toEqual({ past: [], present: replacement, future: [] });
-    expect(selectProjectEvaluation(state).status).toBe('empty');
+    expect(projectHistory(state)).toEqual({ past: [], present: replacement, future: [] });
+    expect(selectProjectEvaluation(state)?.status).toBe('empty');
     expect(assembleProjectEvaluation).toHaveBeenCalledTimes(3);
     expect(assembleProjectEvaluation.mock.calls[2]?.[0]).toBe(replacement);
     expect(selectProjectEvaluation(state)).toBe(
@@ -636,10 +641,13 @@ describe('project workspace application state', () => {
       }),
     );
     const fghiState = store.getState();
-    expect(
-      selectPresentProject(fghiState).routes[0]?.biomes.map((biome) => biome.biomeKey),
-    ).toEqual(['F', 'G', 'H', 'I']);
-    expect(selectProjectEvaluation(fghiState).status).toBe('incomplete');
+    expect(presentProject(store).route.biomes.map((biome) => biome.biomeKey)).toEqual([
+      'F',
+      'G',
+      'H',
+      'I',
+    ]);
+    expect(selectProjectEvaluation(fghiState)?.status).toBe('incomplete');
     expect(assembleProjectEvaluation).toHaveBeenCalledTimes(2);
   });
 
@@ -647,11 +655,12 @@ describe('project workspace application state', () => {
     const { assembleProjectEvaluation, store } = createStore();
     const replacement = createProjectDocument(catalog, {
       projectId: 'i-replacement',
-      configuredBiomeCounts: { Underworld: 4 },
+      routeKey: 'Underworld',
+      configuredBiomeCount: 4,
     });
 
     store.dispatch(authoredProjectReplaced(replacement));
-    expect(selectPresentProject(store.getState())).toBe(replacement);
+    expect(presentProject(store.getState())).toBe(replacement);
     expect(selectProjectEvaluation(store.getState())).toBe(
       assembleProjectEvaluation.mock.results[1]?.value.evaluation,
     );

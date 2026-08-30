@@ -36,9 +36,8 @@ describe('structured workspace features assembly', () => {
 
   it('omits Chaos authoring on a host-only room', () => {
     const project = createGoldenFGHIProject();
-    const intro = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'H')
+    const intro = project.route.biomes
+      .find((biome) => biome.biomeKey === 'H')
       ?.topology?.occurrences.find((occurrence) => occurrence.gameName === 'H_Intro');
     if (intro === undefined) throw new Error('H Intro is missing');
 

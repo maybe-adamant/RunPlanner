@@ -96,9 +96,7 @@ describe('structured workspace interaction binding', () => {
       focus: { owner: createHubDecisionAddress(nBiome, 'hub'), timing: 'after' },
     });
     const authored = applyProjectCommand(project, catalog, roomPicker.intentFor('N_Hub').command);
-    const topology = authored.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    const topology = authored.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
     expect(topology?.decisions).toContainEqual(
       expect.objectContaining({
         kind: 'hub',
@@ -147,9 +145,7 @@ describe('structured workspace interaction binding', () => {
       focus: { owner: createHubDecisionAddress(nBiome, 'hub'), timing: 'after' },
     });
     const authored = applyProjectCommand(project, catalog, intent.command);
-    const topology = authored.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    const topology = authored.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
     expect(topology?.decisions).toContainEqual(
       expect.objectContaining({
         kind: 'hub',

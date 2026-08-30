@@ -79,7 +79,8 @@ export function openRoomTab(name: string): void {
 export function emptyFProject(): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: 'occurrence-workbench-empty-f',
-    configuredBiomeCounts: { Underworld: 1 },
+    routeKey: 'Underworld',
+    configuredBiomeCount: 1,
   });
 }
 
@@ -93,7 +94,8 @@ export function authoredAnomalyProject(): {
   const source = { kind: 'occurrence' as const, occurrenceId: start };
   let project = createProjectDocument(catalog, {
     projectId: 'occurrence-workbench-anomaly',
-    configuredBiomeCounts: { Underworld: 2 },
+    routeKey: 'Underworld',
+    configuredBiomeCount: 2,
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
@@ -128,9 +130,8 @@ export function occurrenceState(
   biomeKey: string,
   occurrenceId: string,
 ) {
-  const state = project.routes
-    .find((route) => route.routeKey === routeKey)
-    ?.biomes.find((biome) => biome.biomeKey === biomeKey)
+  const state = project.route.biomes
+    .find((biome) => biome.biomeKey === biomeKey)
     ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)?.state;
   if (state === undefined) throw new Error(`${occurrenceId} state is missing`);
   return state;
@@ -143,9 +144,8 @@ export function insertRoomAction(
   reference: RoomActionReference,
   index: number,
 ): ProjectDocument {
-  const alreadyOrdered = project.routes
-    .find((route) => route.routeKey === biome.routeKey)
-    ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey)
+  const alreadyOrdered = project.route.biomes
+    .find((candidate) => candidate.biomeKey === biome.biomeKey)
     ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
     ?.roomActions.order.some((candidate) => roomActionKey(candidate) === roomActionKey(reference));
   if (alreadyOrdered === true) return project;
@@ -163,9 +163,8 @@ export function occurrenceRoomActionOrder(
   biomeKey: string,
   occurrenceId: OccurrenceId,
 ) {
-  return project.routes
-    .find((route) => route.routeKey === routeKey)
-    ?.biomes.find((biome) => biome.biomeKey === biomeKey)
+  return project.route.biomes
+    .find((biome) => biome.biomeKey === biomeKey)
     ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
     ?.roomActions.order;
 }
@@ -174,9 +173,8 @@ export function selectedNarcissusPickupSite(
   project: ProjectDocument,
   occurrenceId: OccurrenceId,
 ): string {
-  const occurrence = project.routes
-    .find((route) => route.routeKey === 'Underworld')
-    ?.biomes.find((biome) => biome.biomeKey === 'G')
+  const occurrence = project.route.biomes
+    .find((biome) => biome.biomeKey === 'G')
     ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
   if (occurrence === undefined) throw new Error('Narcissus occurrence is missing');
   const producer = selectedPickupProducers(catalog, goldenGBiome, occurrence).find(
@@ -248,9 +246,8 @@ export function occurrenceEncounterSelections(
   biomeKey: string,
   occurrenceId: string,
 ) {
-  const selections = project.routes
-    .find((route) => route.routeKey === routeKey)
-    ?.biomes.find((biome) => biome.biomeKey === biomeKey)
+  const selections = project.route.biomes
+    .find((biome) => biome.biomeKey === biomeKey)
     ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
     ?.encounters.encounterKeyByPhase;
   if (selections === undefined) throw new Error(`${occurrenceId} encounter selections are missing`);

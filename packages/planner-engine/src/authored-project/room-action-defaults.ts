@@ -236,25 +236,24 @@ function activeDomains(
   biomeKeys: ReadonlySet<string>,
 ): ReadonlyMap<string, RoomActionDomain> {
   const result = new Map<string, RoomActionDomain>();
-  for (const route of document.routes) {
-    for (const plan of route.biomes) {
-      if (!biomeKeys.has(JSON.stringify([route.routeKey, plan.biomeKey]))) continue;
-      if (plan.topology === null) continue;
-      const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
-      const active = structurallyActiveOccurrenceIds(plan.topology);
-      for (const occurrence of [
-        ...plan.topology.occurrences.filter((candidate) => active.has(candidate.occurrenceId)),
-      ]) {
-        result.set(
-          JSON.stringify([route.routeKey, plan.biomeKey, occurrence.occurrenceId]),
-          assembleRoomActionDomain({
-            catalog,
-            biome,
-            occurrence,
-            ...roomActionDomainContext(catalog, plan, plan.topology, occurrence),
-          }),
-        );
-      }
+  const route = document.route;
+  for (const plan of route.biomes) {
+    if (!biomeKeys.has(JSON.stringify([route.routeKey, plan.biomeKey]))) continue;
+    if (plan.topology === null) continue;
+    const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
+    const active = structurallyActiveOccurrenceIds(plan.topology);
+    for (const occurrence of plan.topology.occurrences.filter((candidate) =>
+      active.has(candidate.occurrenceId),
+    )) {
+      result.set(
+        JSON.stringify([route.routeKey, plan.biomeKey, occurrence.occurrenceId]),
+        assembleRoomActionDomain({
+          catalog,
+          biome,
+          occurrence,
+          ...roomActionDomainContext(catalog, plan, plan.topology, occurrence),
+        }),
+      );
     }
   }
   return result;
@@ -262,13 +261,13 @@ function activeDomains(
 
 function changedBiomeKeys(before: ProjectDocument, proposed: ProjectDocument): ReadonlySet<string> {
   const beforePlans = new Map(
-    before.routes.flatMap((route) =>
-      route.biomes.map((plan) => [JSON.stringify([route.routeKey, plan.biomeKey]), plan] as const),
+    before.route.biomes.map(
+      (plan) => [JSON.stringify([before.route.routeKey, plan.biomeKey]), plan] as const,
     ),
   );
   const afterPlans = new Map(
-    proposed.routes.flatMap((route) =>
-      route.biomes.map((plan) => [JSON.stringify([route.routeKey, plan.biomeKey]), plan] as const),
+    proposed.route.biomes.map(
+      (plan) => [JSON.stringify([proposed.route.routeKey, plan.biomeKey]), plan] as const,
     ),
   );
   return new Set(
@@ -358,9 +357,10 @@ export function reconcileNewRequiredRoomActions(
     );
     if (newlyRequired.size === 0) continue;
     const [routeKey, biomeKey, occurrenceId] = JSON.parse(ownerKey) as [string, string, string];
-    const plan = proposed.routes
-      .find((route) => route.routeKey === routeKey)
-      ?.biomes.find((plan) => plan.biomeKey === biomeKey);
+    const plan =
+      proposed.route.routeKey === routeKey
+        ? proposed.route.biomes.find((candidate) => candidate.biomeKey === biomeKey)
+        : undefined;
     const owner = plan?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === occurrenceId,
     );
@@ -374,36 +374,29 @@ export function reconcileNewRequiredRoomActions(
     if (order !== owner.roomActions.order) replacements.set(ownerKey, order);
   }
   if (replacements.size === 0) return proposed;
+  const route = proposed.route;
   return frozen({
     ...proposed,
-    routes: frozen(
-      proposed.routes.map((route) =>
-        frozen({
-          ...route,
-          biomes: frozen(
-            route.biomes.map((plan): AuthoredBiomePlan => {
-              const replaceOrder = (occurrence: RoomOccurrence): RoomOccurrence => {
-                const key = JSON.stringify([
-                  route.routeKey,
-                  plan.biomeKey,
-                  occurrence.occurrenceId,
-                ]);
-                const order = replacements.get(key);
-                return order === undefined
-                  ? occurrence
-                  : frozen({ ...occurrence, roomActions: frozen({ order }) });
-              };
-              if (plan.topology === null) return plan;
-              const occurrences = plan.topology.occurrences.map(replaceOrder);
-              return frozen({
-                ...plan,
-                topology: frozen({ ...plan.topology, occurrences: frozen(occurrences) }),
-              });
-            }),
-          ),
+    route: frozen({
+      ...route,
+      biomes: frozen(
+        route.biomes.map((plan): AuthoredBiomePlan => {
+          const replaceOrder = (occurrence: RoomOccurrence): RoomOccurrence => {
+            const key = JSON.stringify([route.routeKey, plan.biomeKey, occurrence.occurrenceId]);
+            const order = replacements.get(key);
+            return order === undefined
+              ? occurrence
+              : frozen({ ...occurrence, roomActions: frozen({ order }) });
+          };
+          if (plan.topology === null) return plan;
+          const occurrences = plan.topology.occurrences.map(replaceOrder);
+          return frozen({
+            ...plan,
+            topology: frozen({ ...plan.topology, occurrences: frozen(occurrences) }),
+          });
         }),
       ),
-    ),
+    }),
   });
 }
 
@@ -413,9 +406,10 @@ export function roomActionDomainForOccurrence(
   biome: BiomeAddress,
   occurrenceId: OccurrenceId,
 ): { readonly occurrence: RoomOccurrence; readonly domain: RoomActionDomain } | undefined {
-  const plan = document.routes
-    .find((route) => route.routeKey === biome.routeKey)
-    ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey);
+  const plan =
+    document.route.routeKey === biome.routeKey
+      ? document.route.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey)
+      : undefined;
   const occurrence = plan?.topology?.occurrences.find(
     (candidate) => candidate.occurrenceId === occurrenceId,
   );

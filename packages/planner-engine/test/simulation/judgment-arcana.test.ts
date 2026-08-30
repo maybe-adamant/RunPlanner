@@ -109,9 +109,7 @@ function evaluatedBiome(
   evaluation: ReturnType<typeof simulateProject>,
   key: 'N' | 'O' | 'P' | 'Q',
 ) {
-  const value = evaluation.routes
-    .find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((candidate) => candidate.biomeKey === key);
+  const value = evaluation.route.biomes.find((candidate) => candidate.biomeKey === key);
   if (value?.authoring !== 'complete') throw new Error(`${key} did not reach complete evaluation`);
   return value;
 }
@@ -160,7 +158,7 @@ function evaluateNBossLifecycle(
     }),
     evaluated.history,
     1,
-    project.routes.find((route) => route.routeKey === 'Surface')!.loadout,
+    project.route!.loadout,
     [
       publicRewardBranch(
         Object.freeze({
@@ -184,7 +182,7 @@ describe('Judgment fixed Boss ownership', () => {
       judgment,
       arcanaKeys: ['CardDraw', 'CastCount'],
     });
-    const authoredBoss = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
+    const authoredBoss = project.route?.biomes[0]?.topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === boss.occurrenceId,
     );
     expect(authoredBoss?.encounters.judgmentArcanaKeysByPhase).toEqual({
@@ -199,7 +197,7 @@ describe('Judgment fixed Boss ownership', () => {
       figurine,
       arcanaKeys: ['CardDraw', 'CastCount'],
     });
-    const authoredBoss = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
+    const authoredBoss = project.route?.biomes[0]?.topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === boss.occurrenceId,
     );
     expect(authoredBoss?.encounters.figurineArcanaKeysByPhase).toEqual({
@@ -404,7 +402,7 @@ describe('Judgment fixed Boss lifecycle', () => {
       }),
       evaluated.history,
       1,
-      project.routes.find((route) => route.routeKey === 'Surface')!.loadout,
+      project.route!.loadout,
     );
     expect(directPrefixRewards.simulation.findings).toEqual(
       expect.arrayContaining([
@@ -432,10 +430,7 @@ describe('Judgment fixed Boss lifecycle', () => {
           entry.owner.occurrenceId === owner.occurrenceId,
       ),
     ).toBe(true);
-    expect(
-      assembly.evaluation.routes.find((route) => route.routeKey === 'Surface')?.processing
-        .blockedSuffix,
-    ).toEqual(['O']);
+    expect(assembly.evaluation.route?.processing.blockedSuffix).toEqual(['O']);
 
     const candidate = createPreparedProjectCandidateSession(catalog, assembly).evaluate({
       kind: 'judgmentArcana',
@@ -471,7 +466,7 @@ describe('Judgment fixed Boss lifecycle', () => {
       evaluated.snapshot,
       evaluated.history,
       4,
-      project.routes.find((route) => route.routeKey === 'Surface')!.loadout,
+      project.route!.loadout,
       [Object.freeze({ ...priorBranch, keepsakes })],
     );
 

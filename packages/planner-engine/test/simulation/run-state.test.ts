@@ -214,9 +214,7 @@ describe('decision run-state snapshots', () => {
 
   it('publishes distinct ordinary room-entry and pre-exit checkpoints', () => {
     const evaluation = simulateProject(catalog, createCompleteFGProject());
-    const biome = evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'F');
     if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
       throw new Error('F did not evaluate validly');
     }
@@ -247,9 +245,7 @@ describe('decision run-state snapshots', () => {
 
   it('publishes Ship pre-start checkpoints from exact phase views without a room-entry owner', () => {
     const evaluation = simulateProject(catalog, loadSurfaceNOProject());
-    const biome = evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'O');
     if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
       throw new Error('O did not evaluate validly');
     }
@@ -299,9 +295,7 @@ describe('decision run-state snapshots', () => {
 
   it('publishes snapshots for reached F decisions', () => {
     const evaluation = simulateProject(catalog, createCompleteFGProject());
-    const biome = evaluation.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'F');
     if (biome?.authoring !== 'complete') throw new Error('F did not evaluate');
     expect(biome.validity).toBe('valid');
     const decisions = decisionSnapshots(biome.rewards.runStateSnapshots);
@@ -326,9 +320,7 @@ describe('decision run-state snapshots', () => {
 
   it('publishes every outer N decision while excluding Hub visits', () => {
     const evaluation = simulateProject(catalog, loadSurfaceNProject());
-    const biome = evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'N');
     if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
       throw new Error('N did not evaluate validly');
     }
@@ -361,9 +353,7 @@ describe('decision run-state snapshots', () => {
 
   it('publishes the reached N Preboss frontier before its handoff is authored', () => {
     const evaluation = simulateProject(catalog, loadSurfaceNCompleteHubFrontierProject());
-    const biome = evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'N');
     if (biome?.authoring !== 'incomplete' || !('rewards' in biome)) {
       throw new Error('N frontier did not remain incomplete');
     }
@@ -388,9 +378,7 @@ describe('decision run-state snapshots', () => {
 
   it('keeps N main and side pre-exit checkpoints chronological without restore duplicates', () => {
     const evaluation = simulateProject(catalog, loadSurfaceNProject());
-    const biome = evaluation.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'N');
     if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
       throw new Error('N did not evaluate validly');
     }
@@ -443,9 +431,9 @@ describe('decision run-state snapshots', () => {
         [{ kind: 'interactShopOffer', offerKey: 'Boon' }],
       ),
     );
-    const biome = simulateProject(catalog, project)
-      .routes.find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    const biome = simulateProject(catalog, project).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'O',
+    );
     if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
       throw new Error('O Shop fixture did not evaluate validly');
     }
@@ -504,9 +492,9 @@ describe('decision run-state snapshots', () => {
         },
       },
     });
-    const biome = simulateProject(catalog, project)
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    const biome = simulateProject(catalog, project).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'F',
+    );
     if (biome?.authoring !== 'incomplete' || !('materializedPrefix' in biome)) {
       throw new Error('expected incomplete F prefix');
     }
@@ -558,9 +546,9 @@ describe('decision run-state snapshots', () => {
       value: { rewardType: 'WeaponUpgrade' },
     });
     const firstF = (project: typeof base) => {
-      const biome = simulateProject(catalog, project)
-        .routes.find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+      const biome = simulateProject(catalog, project).route?.biomes.find(
+        (candidate) => candidate.biomeKey === 'F',
+      );
       if (biome?.authoring !== 'complete') throw new Error('F did not evaluate');
       return biome.rewards.runStateSnapshots[0];
     };
@@ -583,12 +571,12 @@ describe('decision run-state snapshots', () => {
         },
       },
     });
-    const plan = project.routes.find((route) => route.routeKey === 'Underworld')?.biomes[0];
+    const plan = project.route?.biomes[0];
     if (plan === undefined) throw new Error('missing F plan');
     const progressive = evaluateProgressiveBiome(catalog, biomeAddress, plan, {
       enteredBiomeCount: 1,
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
-      loadout: project.routes.find((route) => route.routeKey === 'Underworld')!.loadout,
+      loadout: project.route!.loadout,
     });
     const decisions = decisionSnapshots(progressive?.rewards.runStateSnapshots ?? []);
     expect(decisions).toHaveLength(1);
@@ -641,9 +629,9 @@ describe('decision run-state snapshots', () => {
         },
       },
     });
-    const biome = simulateProject(catalog, project)
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    const biome = simulateProject(catalog, project).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'F',
+    );
     if (biome?.authoring !== 'complete' || biome.validity !== 'invalid') {
       throw new Error('expected complete-invalid F evaluation');
     }
@@ -699,10 +687,7 @@ describe('decision run-state snapshots', () => {
       vowKey: 'EnemyDamageShrineUpgrade',
       rank: 2,
     });
-    const active = deriveRouteLoadout(
-      catalog,
-      project.routes.find((candidate) => candidate.routeKey === 'Underworld')!.loadout,
-    ).activeArcanaKeys;
+    const active = deriveRouteLoadout(catalog, project.route!.loadout).activeArcanaKeys;
     const fJudgment = catalog.arcanaCards.values
       .filter((card) => !active.includes(card.key))
       .slice(0, 5)
@@ -733,9 +718,7 @@ describe('decision run-state snapshots', () => {
       ),
       arcanaKeys: gJudgment,
     });
-    const evaluation = simulateProject(catalog, project).routes.find(
-      (entry) => entry.routeKey === 'Underworld',
-    );
+    const evaluation = simulateProject(catalog, project).route;
     const f = evaluation?.biomes.find((biome) => biome.biomeKey === 'F');
     const g = evaluation?.biomes.find((biome) => biome.biomeKey === 'G');
     if (
@@ -768,9 +751,9 @@ describe('decision run-state snapshots', () => {
       occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat04),
       encounterCount: 3,
     });
-    const biome = simulateProject(catalog, project)
-      .routes.find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    const biome = simulateProject(catalog, project).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'O',
+    );
     if (biome?.authoring !== 'complete' || biome.validity !== 'invalid') {
       throw new Error('expected complete encounter-blocked O evaluation');
     }
@@ -809,12 +792,12 @@ describe('decision run-state snapshots', () => {
   });
 
   it('retains offer-time depletion and transitions Hammer eligibility at the declared boundary', () => {
-    const f = simulateProject(catalog, createCompleteFGProject())
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
-    const h = simulateProject(catalog, createGoldenFGHProject())
-      .routes.find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'H');
+    const f = simulateProject(catalog, createCompleteFGProject()).route?.biomes.find(
+      (biome) => biome.biomeKey === 'F',
+    );
+    const h = simulateProject(catalog, createGoldenFGHProject()).route?.biomes.find(
+      (biome) => biome.biomeKey === 'H',
+    );
     if (f?.authoring !== 'complete' || h?.authoring !== 'complete') {
       throw new Error('expected complete F and H fixtures');
     }

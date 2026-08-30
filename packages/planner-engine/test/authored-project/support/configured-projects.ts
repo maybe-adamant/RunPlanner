@@ -16,47 +16,53 @@ export const qBiome = createBiomeAddress('Surface', 'Q');
 export function fProject(): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: 'commands-f',
-    configuredBiomeCounts: { Underworld: 1 },
+    routeKey: 'Underworld',
+    configuredBiomeCount: 1,
   });
 }
 
 export function gProject(): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: 'commands-g',
-    configuredBiomeCounts: { Underworld: 2 },
+    routeKey: 'Underworld',
+    configuredBiomeCount: 2,
   });
 }
 
 export function hProject(): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: 'commands-h',
-    configuredBiomeCounts: { Underworld: 3 },
+    routeKey: 'Underworld',
+    configuredBiomeCount: 3,
   });
 }
 
 export function iProject(): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: 'commands-i',
-    configuredBiomeCounts: { Underworld: 4 },
+    routeKey: 'Underworld',
+    configuredBiomeCount: 4,
   });
 }
 
 export function nProject(): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: 'commands-n',
-    configuredBiomeCounts: { Surface: 1 },
+    routeKey: 'Surface',
+    configuredBiomeCount: 1,
   });
 }
 
 export function surfaceProject(configuredBiomeCount: number): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: `commands-surface-${configuredBiomeCount}`,
-    configuredBiomeCounts: { Surface: configuredBiomeCount },
+    routeKey: 'Surface',
+    configuredBiomeCount: configuredBiomeCount,
   });
 }
 
 export function fTopology(project: ProjectDocument) {
-  const topology = project.routes[0]?.biomes[0]?.topology;
+  const topology = project.route?.biomes[0]?.topology;
   if (topology === null || topology === undefined) throw new Error('missing F topology');
   return topology;
 }
