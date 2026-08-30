@@ -24,7 +24,9 @@ describe('unified workspace ownership boundary', () => {
     const importerPaths = productionSources(plannerSourceRoot).filter((path) =>
       readFileSync(path, 'utf8').includes('evaluateBiomeCompleteness'),
     );
-    const importers = importerPaths.map((path) => relative(plannerSourceRoot, path));
+    const importers = importerPaths.map((path) =>
+      relative(plannerSourceRoot, path).replaceAll('\\', '/'),
+    );
 
     expect(importers).toEqual(['projections/structured-workspace/source-index.ts']);
     expect([
