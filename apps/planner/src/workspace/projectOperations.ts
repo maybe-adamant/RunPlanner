@@ -20,7 +20,7 @@ import type { PreparedProjectWorkspace } from '../state/projectWorkspaceSlice';
 import { selectPresentProject, selectProfileSession, type PlannerStore } from '../state/store';
 
 export type ProjectOperation =
-  'discardRecovery' | 'loadProfile' | 'new' | 'publishGame' | 'saveProfile';
+  'discardRecovery' | 'exportRecovery' | 'loadProfile' | 'new' | 'publishGame' | 'saveProfile';
 
 export type ProjectOperationResult = {
   readonly operation: ProjectOperation;
@@ -31,6 +31,7 @@ export type ProjectOperationResult = {
 export interface ProjectOperations {
   createNew(routeKey: string): ProjectOperationResult;
   discardAutosaveRecovery(): ProjectOperationResult;
+  exportAutosaveRecovery(): Promise<ProjectOperationResult>;
   readonly gamePlanAvailable: boolean;
   discoverGameProfiles(): Promise<GamePlanDiscovery>;
   publishGame(targetId: string): Promise<ProjectOperationResult>;
@@ -49,12 +50,14 @@ interface CreateProjectOperationsOptions {
 
 const operationLabels: Readonly<Record<ProjectOperation, string>> = Object.freeze({
   discardRecovery: 'Discard Autosave',
+  exportRecovery: 'Export Autosave',
   loadProfile: 'Load Profile',
   new: 'New project',
   publishGame: 'Publish to Game',
   saveProfile: 'Save Profile',
 });
 export const DEFAULT_PROFILE_FILE_NAME = 'run-plan.runplanner.json';
+export const DEFAULT_AUTOSAVE_EXPORT_FILE_NAME = 'run-planner-autosave.runplanner.json';
 
 function errorDetail(error: unknown): string {
   return error instanceof Error ? error.message : 'Unknown project operation failure';
@@ -113,6 +116,24 @@ export function createProjectOperations(
         return result('discardRecovery', 'success', 'Discarded the unreadable autosave.');
       } catch (error) {
         return failure('discardRecovery', error);
+      }
+    },
+    async exportAutosaveRecovery(): Promise<ProjectOperationResult> {
+      try {
+        if (options.autosaveRecovery === undefined) {
+          throw new Error('Autosave recovery is unavailable in this environment');
+        }
+        const json = options.autosaveRecovery.read();
+        if (json === null) {
+          throw new Error('No autosave recovery copy is available');
+        }
+        const exported = await options.profileFile.saveAs(DEFAULT_AUTOSAVE_EXPORT_FILE_NAME, json);
+        if (exported === null) {
+          return result('exportRecovery', 'cancelled', 'Export Autosave cancelled.');
+        }
+        return result('exportRecovery', 'success', 'Exported the autosave copy.');
+      } catch (error) {
+        return failure('exportRecovery', error);
       }
     },
     async discoverGameProfiles(): Promise<GamePlanDiscovery> {

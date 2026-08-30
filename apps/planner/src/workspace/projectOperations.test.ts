@@ -16,7 +16,11 @@ import { describe, expect, it } from 'vitest';
 import { createApplication } from '../composition/createApplication';
 import type { GamePlanPublisher } from '../persistence/gamePlanPublisher';
 import type { AutosaveRecoveryAdapter, AutosaveScheduler } from '../persistence/autosaveRecovery';
-import { createProjectOperations, DEFAULT_PROFILE_FILE_NAME } from './projectOperations';
+import {
+  createProjectOperations,
+  DEFAULT_AUTOSAVE_EXPORT_FILE_NAME,
+  DEFAULT_PROFILE_FILE_NAME,
+} from './projectOperations';
 import type { ProfileFileAdapter, ProfileFileReference } from '../persistence/profileFile';
 import {
   authoredProjectCommandDispatched,
@@ -431,6 +435,51 @@ describe('project profile operations', () => {
       message: 'Load Profile failed: load denied',
     });
     expect(failing.store.getState()).toBe(failingState);
+  });
+
+  it('exports the untouched autosave without clearing recovery or changing project state', async () => {
+    const rawAutosave = '{not json';
+    let recoveryRaw: string | null = rawAutosave;
+    let clearCount = 0;
+    const profile = createProfileFixture();
+    const application = createApplication({
+      autosaveRecovery: {
+        read: () => recoveryRaw,
+        write: (json) => {
+          recoveryRaw = json;
+        },
+        clear: () => {
+          clearCount += 1;
+          recoveryRaw = null;
+        },
+      },
+      autosaveScheduler: { schedule: () => () => undefined },
+      profileFile: profile.adapter,
+    });
+    const state = application.store.getState();
+
+    await expect(application.projectOperations.exportAutosaveRecovery()).resolves.toEqual({
+      operation: 'exportRecovery',
+      status: 'success',
+      message: 'Exported the autosave copy.',
+    });
+
+    expect(profile.saves).toEqual([
+      { fileName: DEFAULT_AUTOSAVE_EXPORT_FILE_NAME, json: rawAutosave },
+    ]);
+    expect(application.store.getState()).toBe(state);
+    expect(recoveryRaw).toBe(rawAutosave);
+    expect(clearCount).toBe(0);
+
+    profile.setSaveCancelled(true);
+    await expect(application.projectOperations.exportAutosaveRecovery()).resolves.toEqual({
+      operation: 'exportRecovery',
+      status: 'cancelled',
+      message: 'Export Autosave cancelled.',
+    });
+    expect(application.store.getState()).toBe(state);
+    expect(recoveryRaw).toBe(rawAutosave);
+    expect(clearCount).toBe(0);
   });
 
   it('rejects malformed profiles atomically', async () => {

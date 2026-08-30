@@ -160,14 +160,30 @@ export function ProjectFileControls({
             {pendingOperation === 'loadProfile' ? 'Loading…' : 'Load'}
           </button>
           {profileSession.recoveryStatus === 'blocked' && (
-            <button
-              className="danger-action"
-              onClick={() => setResult(operations.discardAutosaveRecovery())}
-              type="button"
-            >
-              <ActionIcon name="discard" />
-              Discard
-            </button>
+            <>
+              <button
+                className="secondary-action"
+                disabled={pendingOperation !== null}
+                onClick={() =>
+                  void runProfileOperation('exportRecovery', () =>
+                    operations.exportAutosaveRecovery(),
+                  )
+                }
+                type="button"
+              >
+                <ActionIcon name="save" />
+                {pendingOperation === 'exportRecovery' ? 'Exporting…' : 'Export Autosave'}
+              </button>
+              <button
+                className="danger-action"
+                disabled={pendingOperation !== null}
+                onClick={() => setResult(operations.discardAutosaveRecovery())}
+                type="button"
+              >
+                <ActionIcon name="discard" />
+                Discard
+              </button>
+            </>
           )}
           {hasProject && (
             <button className="quiet-action" onClick={() => onEntryOpenChange(false)} type="button">
@@ -255,14 +271,30 @@ export function ProjectFileControls({
           </>
         )}
         {profileSession.recoveryStatus === 'blocked' && (
-          <button
-            className="danger-action action-compact"
-            onClick={() => setResult(operations.discardAutosaveRecovery())}
-            type="button"
-          >
-            <ActionIcon name="discard" />
-            Discard
-          </button>
+          <>
+            <button
+              className="secondary-action action-compact"
+              disabled={pendingOperation !== null}
+              onClick={() =>
+                void runProfileOperation('exportRecovery', () =>
+                  operations.exportAutosaveRecovery(),
+                )
+              }
+              type="button"
+            >
+              <ActionIcon name="save" />
+              {pendingOperation === 'exportRecovery' ? 'Exporting…' : 'Export Autosave'}
+            </button>
+            <button
+              className="danger-action action-compact"
+              disabled={pendingOperation !== null}
+              onClick={() => setResult(operations.discardAutosaveRecovery())}
+              type="button"
+            >
+              <ActionIcon name="discard" />
+              Discard
+            </button>
+          </>
         )}
       </div>
     </section>

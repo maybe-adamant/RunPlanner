@@ -980,9 +980,12 @@ A production shell-level fault boundary remains available after a later render
 or unhandled browser failure. It does not attempt to continue an unknown partial
 interaction. It preserves the source profile, presents technical details, and
 allows another profile to pass through the same preparation boundary before the
-editor is remounted. The user may also explicitly discard only the autosave
-recovery copy and restart at the route chooser; this never modifies the source
-profile file.
+editor is remounted. Both this surface and blocked startup recovery allow the
+untouched raw autosave value to be exported through the host's normal Save As
+flow for diagnosis. Export neither decodes nor migrates the value, does not make
+the exported file the active project target, and does not clear recovery. The
+user may also explicitly discard only the autosave recovery copy and restart at
+the route chooser; this never modifies the source profile file.
 
 Autosave is a distinct recovery channel, not an implicit Save Profile action.
 It observes effective authored changes only and is debounced. Navigation,
