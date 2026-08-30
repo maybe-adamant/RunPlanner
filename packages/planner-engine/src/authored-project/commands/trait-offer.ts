@@ -24,7 +24,7 @@ import {
 } from '../addresses';
 import type { ProjectDocument, RoomOccurrence, AuthoredRewardState } from '../model';
 import type { AuthoredLevelResolution } from '../traits';
-import { selectedEncounterDefinitionKey } from '../room-state/encounter-envelope';
+import { selectedEncounterAuthoringProfileKey } from '../room-state/encounter-envelope';
 import { requireShipCombatWheels } from '../room-state/declaration';
 import { incomingLevelEffectSource } from '../room-state/level-effects';
 import { parseArtificerReplacementEntryKey } from '../artificer';
@@ -787,7 +787,7 @@ export function applyTraitOfferCommand(
     const phaseGorgon = isGorgon ? currentEncounters.gorgonResultByPhase?.[phaseKey] : undefined;
     const phaseOffersValue = currentEncounters.traitOffersByPhase?.[phaseKey];
     const phaseOffers = phaseOffersValue;
-    const encounterKey = selectedEncounterDefinitionKey(
+    const encounterKey = selectedEncounterAuthoringProfileKey(
       catalog,
       encounterRoom,
       currentEncounters,

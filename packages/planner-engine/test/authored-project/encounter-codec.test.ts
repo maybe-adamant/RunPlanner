@@ -781,7 +781,7 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
         selections(occurrence(document, 'P', pOccurrenceId('P_Combat03', 1, 1))).Intro =
           'UnknownEncounter';
       },
-      message: 'UnknownEncounter is not a member of PCombat03IntroEncounters',
+      message: 'UnknownEncounter is not an authored choice from PCombat03IntroEncounters',
     },
     {
       label: 'a known encounter outside the declared set',
@@ -789,7 +789,7 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
         selections(occurrence(document, 'P', pOccurrenceId('P_Combat03', 1, 1))).Intro =
           'GeneratedP';
       },
-      message: 'GeneratedP is not a member of PCombat03IntroEncounters',
+      message: 'GeneratedP is not an authored choice from PCombat03IntroEncounters',
     },
     {
       label: 'a redundant fixed-phase selection',

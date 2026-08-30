@@ -30,7 +30,7 @@ import {
 import type { RoomActionReference, RoomOccurrence } from './model';
 import {
   encounterEnvelopeSlots,
-  selectedEncounterDefinitionKey,
+  selectedEncounterAuthoringProfileKey,
 } from './room-state/encounter-envelope';
 import { activeRoomActionReferences, roomActionKey } from './room-actions';
 import { selectedPickupProducerForEntry } from './pickup-producers';
@@ -342,7 +342,7 @@ function baseContribution(
         lifecycleProfileKey === 'FieldsCombatRoom' && attachment?.kind === 'localReward'
           ? frozen({ kind: 'completeFieldsCage' as const, phaseKey: reference.phaseKey })
           : undefined;
-      const encounterKey = selectedEncounterDefinitionKey(
+      const encounterKey = selectedEncounterAuthoringProfileKey(
         catalog,
         declaration,
         occurrence.encounters,
@@ -466,7 +466,7 @@ export function assembleRoomLifecycleStructure(options: {
     ) {
       return false;
     }
-    const encounterKey = selectedEncounterDefinitionKey(
+    const encounterKey = selectedEncounterAuthoringProfileKey(
       options.catalog,
       options.declaration,
       options.occurrence.encounters,
@@ -759,7 +759,7 @@ export function assembleRoomActionDomain(options: {
               declaration,
               declaration.gameName,
             ).some((slot) => {
-              const selected = selectedEncounterDefinitionKey(
+              const selected = selectedEncounterAuthoringProfileKey(
                 options.catalog,
                 declaration,
                 options.occurrence.encounters,

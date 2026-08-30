@@ -306,11 +306,14 @@ directly under `Room features`; they do not add a duplicate Chaos-gate or
 Zagreus-contract heading above that action.
 
 For encounter selection, meaningful means a set-backed phase with two or more
-declaration-owned choices; it does not mean that two candidates happen to be
-eligible in the current evaluation. The control projects the exact
-`EncounterPhaseAddress`, selected concrete definition, bound candidate
-interaction, marker, and reset intent. React does not inspect a set, evaluate a
-requirement, or decide whether a phase terminates another phase.
+declaration-owned authored profiles; it does not mean that two exact game
+definitions or two candidates happen to be eligible in the current evaluation.
+The control projects the exact `EncounterPhaseAddress`, selected authored
+profile, bound candidate interaction, marker, and reset intent. A profile may
+resolve to one declaration-owned contextual definition during preparation, as
+Biome I Combat resolves its Goal or NonGoal game identity. React does not
+inspect a set, evaluate a requirement, resolve a contextual definition, or
+decide whether a phase terminates another phase.
 
 A singleton set remains a semantic phase owner with an exact marker and focus
 destination, but it does not produce a one-option picker or no-op reset button.

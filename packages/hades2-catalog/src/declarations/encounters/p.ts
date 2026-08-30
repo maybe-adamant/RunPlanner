@@ -264,12 +264,12 @@ export const pEncounterSets = [
       'Empty',
       'PIntroCombat_SapperOverlook',
     ],
-    defaultEncounterDefinitionKey: 'PIntroCombat01',
+    defaultAuthoringProfileKey: 'PIntroCombat01',
   },
   {
     key: 'PEncountersIntros',
     encounterDefinitionKeys: ['GeneratedP_PreCombat', 'HeraclesCombatP'],
-    defaultEncounterDefinitionKey: 'GeneratedP_PreCombat',
+    defaultAuthoringProfileKey: 'GeneratedP_PreCombat',
   },
   {
     key: 'PCombat01IntroEncounters',
@@ -281,7 +281,7 @@ export const pEncounterSets = [
       'P_Combat01_PreCombat03',
       'P_Combat01_PreCombat04',
     ],
-    defaultEncounterDefinitionKey: 'GeneratedP_PreCombat',
+    defaultAuthoringProfileKey: 'GeneratedP_PreCombat',
   },
   {
     key: 'PCombat02IntroEncounters',
@@ -292,7 +292,7 @@ export const pEncounterSets = [
       'P_Combat02_PreCombat02',
       'P_Combat02_PreCombat03',
     ],
-    defaultEncounterDefinitionKey: 'GeneratedP_PreCombat',
+    defaultAuthoringProfileKey: 'GeneratedP_PreCombat',
   },
   {
     key: 'PCombat03IntroEncounters',
@@ -303,7 +303,7 @@ export const pEncounterSets = [
       'P_Combat03_PreCombat02',
       'P_Combat03_PreCombat03',
     ],
-    defaultEncounterDefinitionKey: 'GeneratedP_PreCombat',
+    defaultAuthoringProfileKey: 'GeneratedP_PreCombat',
   },
   {
     key: 'PCombat04IntroEncounters',
@@ -314,7 +314,7 @@ export const pEncounterSets = [
       'P_Combat04_PreCombat02',
       'P_Combat04_PreCombat03',
     ],
-    defaultEncounterDefinitionKey: 'GeneratedP_PreCombat',
+    defaultAuthoringProfileKey: 'GeneratedP_PreCombat',
   },
   {
     key: 'PCombat05IntroEncounters',
@@ -325,7 +325,7 @@ export const pEncounterSets = [
       'P_Combat05_PreCombat02',
       'P_Combat05_PreCombat03',
     ],
-    defaultEncounterDefinitionKey: 'GeneratedP_PreCombat',
+    defaultAuthoringProfileKey: 'GeneratedP_PreCombat',
   },
   {
     key: 'PCombat06IntroEncounters',
@@ -337,7 +337,7 @@ export const pEncounterSets = [
       'P_Combat06_PreCombat03',
       'P_Combat06_PreCombat04',
     ],
-    defaultEncounterDefinitionKey: 'GeneratedP_PreCombat',
+    defaultAuthoringProfileKey: 'GeneratedP_PreCombat',
   },
   {
     key: 'PCombat07IntroEncounters',
@@ -348,7 +348,7 @@ export const pEncounterSets = [
       'P_Combat07_PreCombat02',
       'P_Combat07_PreCombat03',
     ],
-    defaultEncounterDefinitionKey: 'GeneratedP_PreCombat',
+    defaultAuthoringProfileKey: 'GeneratedP_PreCombat',
   },
   {
     key: 'PCombat08IntroEncounters',
@@ -359,7 +359,7 @@ export const pEncounterSets = [
       'P_Combat08_PreCombat02',
       'P_Combat08_PreCombat03',
     ],
-    defaultEncounterDefinitionKey: 'GeneratedP_PreCombat',
+    defaultAuthoringProfileKey: 'GeneratedP_PreCombat',
   },
   {
     key: 'PCombat09IntroEncounters',
@@ -370,7 +370,7 @@ export const pEncounterSets = [
       'P_Combat09_PreCombat02',
       'P_Combat09_PreCombat03',
     ],
-    defaultEncounterDefinitionKey: 'GeneratedP_PreCombat',
+    defaultAuthoringProfileKey: 'GeneratedP_PreCombat',
   },
   {
     key: 'PCombat10IntroEncounters',
@@ -381,7 +381,7 @@ export const pEncounterSets = [
       'P_Combat10_PreCombat02',
       'P_Combat10_PreCombat03',
     ],
-    defaultEncounterDefinitionKey: 'GeneratedP_PreCombat',
+    defaultAuthoringProfileKey: 'GeneratedP_PreCombat',
   },
   {
     key: 'PCombat11IntroEncounters',
@@ -393,7 +393,7 @@ export const pEncounterSets = [
       'P_Combat11_PreCombat03',
       'P_Combat11_PreCombat04',
     ],
-    defaultEncounterDefinitionKey: 'GeneratedP_PreCombat',
+    defaultAuthoringProfileKey: 'GeneratedP_PreCombat',
   },
   {
     key: 'PCombat12IntroEncounters',
@@ -404,7 +404,7 @@ export const pEncounterSets = [
       'P_Combat12_PreCombat02',
       'P_Combat12_PreCombat03',
     ],
-    defaultEncounterDefinitionKey: 'GeneratedP_PreCombat',
+    defaultAuthoringProfileKey: 'GeneratedP_PreCombat',
   },
   {
     key: 'PCombat13IntroEncounters',
@@ -415,7 +415,7 @@ export const pEncounterSets = [
       'P_Combat13_PreCombat02',
       'P_Combat13_PreCombat03',
     ],
-    defaultEncounterDefinitionKey: 'GeneratedP_PreCombat',
+    defaultAuthoringProfileKey: 'GeneratedP_PreCombat',
   },
   {
     key: 'PCombat14IntroEncounters',
@@ -426,7 +426,7 @@ export const pEncounterSets = [
       'P_Combat14_PreCombat02',
       'P_Combat14_PreCombat03',
     ],
-    defaultEncounterDefinitionKey: 'GeneratedP_PreCombat',
+    defaultAuthoringProfileKey: 'GeneratedP_PreCombat',
   },
   {
     key: 'PCombat15IntroEncounters',
@@ -438,7 +438,7 @@ export const pEncounterSets = [
       'P_Combat15_PreCombat03',
       'P_Combat15_PreCombat04',
     ],
-    defaultEncounterDefinitionKey: 'GeneratedP_PreCombat',
+    defaultAuthoringProfileKey: 'GeneratedP_PreCombat',
   },
   {
     key: 'PCombat16IntroEncounters',
@@ -449,11 +449,11 @@ export const pEncounterSets = [
       'P_Combat16_PreCombat02',
       'P_Combat16_PreCombat03',
     ],
-    defaultEncounterDefinitionKey: 'GeneratedP_PreCombat',
+    defaultAuthoringProfileKey: 'GeneratedP_PreCombat',
   },
   {
     key: 'PEncountersDefault',
     encounterDefinitionKeys: ['GeneratedP', 'GeneratedP_Large', 'AthenaCombatP', 'IcarusCombatP'],
-    defaultEncounterDefinitionKey: 'GeneratedP',
+    defaultAuthoringProfileKey: 'GeneratedP',
   },
 ] as const satisfies readonly RawEncounterSetDeclaration[];

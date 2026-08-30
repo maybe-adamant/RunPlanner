@@ -12,7 +12,7 @@ import {
   type SemanticAddress,
 } from '../../../../authored-project/addresses';
 import { materializeGorgonAthenaOffer } from '../../../../authored-project/traits';
-import { selectedEncounterDefinitionKey } from '../../../../authored-project/room-state/encounter-envelope';
+import { selectedEncounterAuthoringProfileKey } from '../../../../authored-project/room-state/encounter-envelope';
 import type { RouteLoadout } from '../../../../authored-project/model';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../../materialization';
@@ -591,7 +591,7 @@ export function applyEncounterSettlementTransition(inputs: {
       gorgonEvaluationBlocked,
       ...(blockGorgonPhaseKey === undefined ? {} : { blockGorgonPhaseKey }),
     });
-  const encounterKey = selectedEncounterDefinitionKey(
+  const encounterKey = selectedEncounterAuthoringProfileKey(
     catalog,
     declaration,
     room.encounters,

@@ -169,26 +169,26 @@ export const nEncounterSets = [
   {
     key: 'NEncountersDefault',
     encounterDefinitionKeys: ['GeneratedN', 'ArtemisCombatN', 'HeraclesCombatN'],
-    defaultEncounterDefinitionKey: 'GeneratedN',
+    defaultAuthoringProfileKey: 'GeneratedN',
   },
   {
     key: 'NEncountersSmaller',
     encounterDefinitionKeys: ['GeneratedN_Smaller', 'ArtemisCombatN', 'HeraclesCombatN'],
-    defaultEncounterDefinitionKey: 'GeneratedN_Smaller',
+    defaultAuthoringProfileKey: 'GeneratedN_Smaller',
   },
   {
     key: 'NEncountersBigger',
     encounterDefinitionKeys: ['GeneratedN_Bigger', 'ArtemisCombatN', 'HeraclesCombatN'],
-    defaultEncounterDefinitionKey: 'GeneratedN_Bigger',
+    defaultAuthoringProfileKey: 'GeneratedN_Bigger',
   },
   {
     key: 'NEncountersSubRoom',
     encounterDefinitionKeys: ['GeneratedNSubRoom', 'GeneratedNSubRoom_Bigger'],
-    defaultEncounterDefinitionKey: 'GeneratedNSubRoom',
+    defaultAuthoringProfileKey: 'GeneratedNSubRoom',
   },
   {
     key: 'NEncountersSubRoomLight',
     encounterDefinitionKeys: ['GeneratedNSubRoom', 'Empty'],
-    defaultEncounterDefinitionKey: 'GeneratedNSubRoom',
+    defaultAuthoringProfileKey: 'GeneratedNSubRoom',
   },
 ] as const satisfies readonly RawEncounterSetDeclaration[];

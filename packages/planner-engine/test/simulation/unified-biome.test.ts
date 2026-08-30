@@ -102,8 +102,8 @@ function legalOProject() {
 function legalIProject() {
   let project = completeIProject();
   project = withIEncounterSelection(project, 'i-combat06', 'GeneratedI');
-  project = withIEncounterSelection(project, 'i-combat11', 'GeneratedI_GoalReward');
-  project = withIEncounterSelection(project, 'i-combat12-entered', 'GeneratedI_GoalReward');
+  project = withIEncounterSelection(project, 'i-combat11', 'GeneratedI');
+  project = withIEncounterSelection(project, 'i-combat12-entered', 'GeneratedI');
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(
@@ -439,10 +439,10 @@ function completeIProject() {
     );
   }
   for (const [occurrenceId, encounterKey] of [
-    ['i-combat01', 'GeneratedI_GoalReward'],
-    ['i-combat03', 'GeneratedI_Small_GoalReward'],
-    ['i-combat09', 'GeneratedI_GoalReward'],
-    ['i-combat06', 'GeneratedI_GoalReward'],
+    ['i-combat01', 'GeneratedI'],
+    ['i-combat03', 'GeneratedI_Small'],
+    ['i-combat09', 'GeneratedI'],
+    ['i-combat06', 'GeneratedI'],
   ] as const) {
     project = withIEncounterSelection(project, occurrenceId, encounterKey);
   }

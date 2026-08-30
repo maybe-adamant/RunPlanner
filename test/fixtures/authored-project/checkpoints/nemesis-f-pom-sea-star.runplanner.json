@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 71,
+  "schemaVersion": 72,
   "projectId": "golden-fg",
-  "catalogVersion": "0.50.0-unified-chaos-gates",
+  "catalogVersion": "0.51.0-biome-i-encounter-profiles",
   "routes": [
     {
       "routeKey": "Underworld",
@@ -3817,7 +3817,7 @@
                 },
                 "encounters": {
                   "encounterKeyByPhase": {
-                    "Encounter": "GeneratedI_GoalReward"
+                    "Encounter": "GeneratedI"
                   },
                   "figLeafSkipByPhase": {
                     "Encounter": false
@@ -3842,7 +3842,7 @@
                 },
                 "encounters": {
                   "encounterKeyByPhase": {
-                    "Encounter": "GeneratedI_Small_GoalReward"
+                    "Encounter": "GeneratedI_Small"
                   },
                   "figLeafSkipByPhase": {
                     "Encounter": false
@@ -3902,7 +3902,7 @@
                 },
                 "encounters": {
                   "encounterKeyByPhase": {
-                    "Encounter": "GeneratedI_Small_GoalReward"
+                    "Encounter": "GeneratedI_Small"
                   },
                   "figLeafSkipByPhase": {
                     "Encounter": false
@@ -3968,7 +3968,7 @@
                 },
                 "encounters": {
                   "encounterKeyByPhase": {
-                    "Encounter": "GeneratedI_GoalReward"
+                    "Encounter": "GeneratedI"
                   },
                   "figLeafSkipByPhase": {
                     "Encounter": false
@@ -3993,7 +3993,7 @@
                 },
                 "encounters": {
                   "encounterKeyByPhase": {
-                    "Encounter": "GeneratedI_GoalReward"
+                    "Encounter": "GeneratedI"
                   },
                   "figLeafSkipByPhase": {
                     "Encounter": false

@@ -993,6 +993,56 @@ test('70 -> 71 unifies each individual legacy Chaos gate as one authored gate', 
   }
 });
 
+test('71 -> 72 collapses exact Biome I Goal definitions into authored Combat profiles', () => {
+  const source = {
+    schemaVersion: 71,
+    catalogVersion: '0.50.0-unified-chaos-gates',
+    projectId: 'biome-i-encounter-profile-migration',
+    routes: [
+      {
+        routeKey: 'Underworld',
+        biomes: [
+          {
+            biomeKey: 'I',
+            topology: {
+              occurrences: [
+                {
+                  occurrenceId: 'i-standard-goal',
+                  encounters: {
+                    encounterKeyByPhase: { Encounter: 'GeneratedI_GoalReward' },
+                  },
+                },
+                {
+                  occurrenceId: 'i-small-goal',
+                  encounters: {
+                    encounterKeyByPhase: { Encounter: 'GeneratedI_Small_GoalReward' },
+                  },
+                },
+                {
+                  occurrenceId: 'i-nemesis',
+                  encounters: { encounterKeyByPhase: { Encounter: 'NemesisCombatI' } },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  };
+
+  const result = migrateProjectDocument(source, 72);
+
+  assert.equal(result.document.schemaVersion, 72);
+  assert.equal(result.document.catalogVersion, '0.51.0-biome-i-encounter-profiles');
+  assert.deepEqual(
+    result.document.routes[0].biomes[0].topology.occurrences.map(
+      (occurrence) => occurrence.encounters.encounterKeyByPhase.Encounter,
+    ),
+    ['GeneratedI', 'GeneratedI_Small', 'NemesisCombatI'],
+  );
+  assert.deepEqual(result.changes['71->72'], { encounterSelectionsCollapsed: 2 });
+});
+
 test('58 -> 59 seeds Well shells only on exact forced Underworld Postboss identities', () => {
   const source = {
     schemaVersion: 58,
@@ -1100,8 +1150,8 @@ test('67 -> current moves a Surface completion chain and rewrites its resource p
     ['N_Boss01', 'N_PostBoss01'].includes(occurrence.gameName),
   );
 
-  assert.equal(result.document.schemaVersion, 71);
-  assert.equal(result.document.catalogVersion, '0.50.0-unified-chaos-gates');
+  assert.equal(result.document.schemaVersion, 72);
+  assert.equal(result.document.catalogVersion, '0.51.0-biome-i-encounter-profiles');
   assert.equal('completionOccurrences' in biome, false);
   assert.deepEqual(
     completion.map((occurrence) => [occurrence.occurrenceId, occurrence.gameName]),

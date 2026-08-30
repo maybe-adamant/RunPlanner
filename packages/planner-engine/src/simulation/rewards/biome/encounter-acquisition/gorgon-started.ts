@@ -12,7 +12,7 @@ import {
   attestPendingGorgonRarity,
   expirePendingGorgon,
 } from '../../../keepsakes';
-import { selectedEncounterDefinitionKey } from '../../../../authored-project/room-state/encounter-envelope';
+import { selectedEncounterAuthoringProfileKey } from '../../../../authored-project/room-state/encounter-envelope';
 import type { RewardBranchState } from '../../branch-primitives';
 import type { GorgonPhaseCandidateSupport } from '../../model';
 
@@ -43,7 +43,7 @@ export function applyGorgonStartedTransition(inputs: {
     });
   const status = attestGorgonBranchState(inputs.branches);
   const rarity = attestPendingGorgonRarity(inputs.branches);
-  const selectedEncounterKey = selectedEncounterDefinitionKey(
+  const selectedEncounterKey = selectedEncounterAuthoringProfileKey(
     catalog,
     declaration,
     room.encounters,

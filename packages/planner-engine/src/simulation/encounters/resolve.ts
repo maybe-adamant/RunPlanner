@@ -2,7 +2,7 @@ import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { RoomEncounterState } from '../../authored-project/model';
 import {
   encounterEnvelopeSlots,
-  selectedEncounterDefinitionKey,
+  selectedEncounterAuthoringProfileKey,
 } from '../../authored-project/room-state/encounter-envelope';
 import type { ResolvedEncounterPhase } from './model';
 
@@ -15,6 +15,37 @@ export class EncounterResolutionContractError extends Error {
 
 function fail(detail: string): never {
   throw new EncounterResolutionContractError(detail);
+}
+
+export function resolvedEncounterPhaseForDefinition(
+  catalog: Catalog,
+  phase: Pick<
+    ResolvedEncounterPhase,
+    'slotKey' | 'envelopeKey' | 'figLeafSkip' | 'rewardAttachment'
+  >,
+  encounterKey: string,
+): ResolvedEncounterPhase {
+  const definition = catalog.encounterDefinitions.byKey[encounterKey];
+  if (definition === undefined) return fail(`lost encounter ${encounterKey}`);
+  return Object.freeze({
+    slotKey: phase.slotKey,
+    envelopeKey: phase.envelopeKey,
+    encounterKey: definition.key,
+    label: definition.label,
+    kind: definition.kind,
+    countsEncounterDepth: definition.countsEncounterDepth,
+    advancesHermesShrineDeliveryUses: definition.advancesHermesShrineDeliveryUses,
+    canEncounterSkip: definition.canEncounterSkip === true,
+    blocksFigLeaf: definition.blocksFigLeaf === true,
+    blocksGorgon: definition.blocksGorgon === true,
+    hostsGorgon: definition.hostsGorgon === true,
+    skipEndEncounterEffects: definition.skipEndEncounterEffects === true,
+    figLeafSkip: phase.figLeafSkip,
+    ...(phase.rewardAttachment === undefined ? {} : { rewardAttachment: phase.rewardAttachment }),
+    ...(definition.sequenceEffect === undefined
+      ? {}
+      : { sequenceEffect: definition.sequenceEffect }),
+  });
 }
 
 /**
@@ -48,28 +79,27 @@ export function resolveEncounterPhases(
     activeSlotKeys.map((slotKey) => {
       const slot = slotByKey.get(slotKey);
       if (slot === undefined) return fail(`${room.gameName} has no encounter slot ${slotKey}`);
-      const encounterKey = selectedEncounterDefinitionKey(catalog, room, encounters, slotKey, path);
+      const encounterKey = selectedEncounterAuthoringProfileKey(
+        catalog,
+        room,
+        encounters,
+        slotKey,
+        path,
+      );
       const definition = catalog.encounterDefinitions.byKey[encounterKey];
       if (definition === undefined) return fail(`${room.gameName} lost encounter ${encounterKey}`);
-      return Object.freeze({
-        slotKey,
-        envelopeKey: room.encounterEnvelopeKey,
-        encounterKey: definition.key,
-        label: definition.label,
-        kind: definition.kind,
-        countsEncounterDepth: definition.countsEncounterDepth,
-        advancesHermesShrineDeliveryUses: definition.advancesHermesShrineDeliveryUses,
-        canEncounterSkip: definition.canEncounterSkip === true,
-        blocksFigLeaf: definition.blocksFigLeaf === true,
-        blocksGorgon: definition.blocksGorgon === true,
-        hostsGorgon: definition.hostsGorgon === true,
-        skipEndEncounterEffects: definition.skipEndEncounterEffects === true,
-        figLeafSkip: encounters.figLeafSkipByPhase[slotKey] === true,
-        ...(definition.sequenceEffect === undefined
-          ? {}
-          : { sequenceEffect: definition.sequenceEffect }),
-        ...(slot.rewardAttachment === undefined ? {} : { rewardAttachment: slot.rewardAttachment }),
-      });
+      return resolvedEncounterPhaseForDefinition(
+        catalog,
+        {
+          slotKey,
+          envelopeKey: room.encounterEnvelopeKey,
+          figLeafSkip: encounters.figLeafSkipByPhase[slotKey] === true,
+          ...(slot.rewardAttachment === undefined
+            ? {}
+            : { rewardAttachment: slot.rewardAttachment }),
+        },
+        definition.key,
+      );
     }),
   );
 }

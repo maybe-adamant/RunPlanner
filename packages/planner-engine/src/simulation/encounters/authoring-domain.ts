@@ -6,6 +6,7 @@ import {
   type BiomeAddress,
 } from '../../authored-project/addresses';
 import {
+  encounterAuthoringProfiles,
   encounterBindingsBySlot,
   encounterEnvelopeSlots,
   encounterSetForBinding,
@@ -111,7 +112,9 @@ export function encounterPhaseAuthoringDomainForRoom(
     const declaredEncounterKeys =
       binding.kind === 'fixed'
         ? [binding.encounterDefinitionKey]
-        : encounterSetForBinding(catalog, binding, room.gameName).encounterDefinitionKeys;
+        : encounterAuthoringProfiles(encounterSetForBinding(catalog, binding, room.gameName)).map(
+            (profile) => profile.key,
+          );
     if (!declaredEncounterKeys.includes(selectedEncounterKey)) {
       throw new Error(
         `${room.gameName}.${binding.slotKey} selected ${selectedEncounterKey} outside its declaration`,
@@ -126,7 +129,7 @@ export function encounterPhaseAuthoringDomainForRoom(
         defaultEncounterKey:
           binding.kind === 'fixed'
             ? binding.encounterDefinitionKey
-            : encounterSetForBinding(catalog, binding, room.gameName).defaultEncounterDefinitionKey,
+            : encounterSetForBinding(catalog, binding, room.gameName).defaultAuthoringProfileKey,
       }),
     );
   }

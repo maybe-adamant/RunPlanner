@@ -376,7 +376,7 @@ describe('authored encounter occurrence commands', () => {
     const fSet = catalog.encounterSets.byKey.FEncountersDefault!;
     const defaultArtemisSet = Object.freeze({
       ...fSet,
-      defaultEncounterDefinitionKey: 'ArtemisCombatF',
+      defaultAuthoringProfileKey: 'ArtemisCombatF',
     });
     const encounterSetValues = Object.freeze(
       catalog.encounterSets.values.map((set) => (set.key === fSet.key ? defaultArtemisSet : set)),

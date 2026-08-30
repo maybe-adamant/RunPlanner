@@ -411,11 +411,18 @@ export interface EncounterDefinition {
   };
 }
 
-/** Unique possibility support for one selectable slot, with a static default. */
+/** One authored encounter choice backed by one or more contextual game definitions. */
+export interface EncounterAuthoringProfile {
+  readonly key: string;
+  readonly encounterDefinitionKeys: readonly string[];
+}
+
+/** Exact game support plus the smaller authored choice domain for one selectable slot. */
 export interface EncounterSet {
   readonly key: string;
   readonly encounterDefinitionKeys: readonly string[];
-  readonly defaultEncounterDefinitionKey: string;
+  readonly defaultAuthoringProfileKey: string;
+  readonly authoringProfiles?: readonly EncounterAuthoringProfile[];
 }
 
 /** Complete room-declaration binding for one stable envelope slot. */

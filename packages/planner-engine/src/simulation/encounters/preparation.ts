@@ -5,6 +5,7 @@ import {
   type EncounterPhaseAddress,
 } from '../../authored-project/addresses';
 import {
+  encounterAuthoringProfiles,
   encounterBindingsBySlot,
   encounterEnvelopeSlots,
   encounterSetForBinding,
@@ -21,6 +22,7 @@ import type { HistoryStateView } from '../history/model';
 import type { CanonicalAuthoredRoom } from '../materialization';
 import type { SemanticFinding } from '../model';
 import type { ResolvedEncounterPhase } from './model';
+import { resolvedEncounterPhaseForDefinition } from './resolve';
 
 export interface EncounterPhaseCandidateSupport {
   readonly origin: EncounterPhaseAddress;
@@ -315,17 +317,26 @@ export function prepareRoomEncounterPhases(
       pendingSpellDrop,
       allSpellInvested,
     );
+    const profiles = encounterAuthoringProfiles(set);
+    const eligibleDefinitionsByProfile = new Map(
+      profiles.map((profile) => [
+        profile.key,
+        profile.encounterDefinitionKeys.filter((key) => {
+          const definition = catalog.encounterDefinitions.byKey[key];
+          if (definition === undefined) {
+            throw new Error(`${set.key} lost encounter ${key}`);
+          }
+          return (
+            definition.requirements === undefined ||
+            evaluateRequirement(definition.requirements, context)
+          );
+        }),
+      ]),
+    );
     const candidateEncounterKeys = Object.freeze(
-      set.encounterDefinitionKeys.filter((key) => {
-        const definition = catalog.encounterDefinitions.byKey[key];
-        if (definition === undefined) {
-          throw new Error(`${set.key} lost encounter ${key}`);
-        }
-        return (
-          definition.requirements === undefined ||
-          evaluateRequirement(definition.requirements, context)
-        );
-      }),
+      profiles
+        .filter((profile) => (eligibleDefinitionsByProfile.get(profile.key)?.length ?? 0) > 0)
+        .map((profile) => profile.key),
     );
     const support: EncounterPhaseCandidateSupport = Object.freeze({
       origin,
@@ -349,14 +360,25 @@ export function prepareRoomEncounterPhases(
       continue;
     }
     if (prefixValid) {
-      validPrefix.push(phase);
+      const eligibleSelectedDefinitions = eligibleDefinitionsByProfile.get(phase.encounterKey);
+      if (eligibleSelectedDefinitions?.length !== 1) {
+        throw new Error(
+          `${set.key}.${phase.encounterKey} resolved ${eligibleSelectedDefinitions?.length ?? 0} exact encounters`,
+        );
+      }
+      const resolvedPhase = resolvedEncounterPhaseForDefinition(
+        catalog,
+        phase,
+        eligibleSelectedDefinitions[0]!,
+      );
+      validPrefix.push(resolvedPhase);
       preparation = projectEncounterRecordPreparation(
         preparation,
         room.origin,
         room.gameName,
-        phase,
+        resolvedPhase,
       );
-      if (phase.sequenceEffect?.kind === 'terminateSuffix') suffixTerminated = true;
+      if (resolvedPhase.sequenceEffect?.kind === 'terminateSuffix') suffixTerminated = true;
     }
   }
 

@@ -296,6 +296,13 @@ ordinary generators:
 The source does not identify a deterministic winner for the overlapping P
 depth-9 case. Multiplicity gives both generators equal raw list weight there.
 
+Planner disposition: the mutually exclusive I ordinary/Goal pairs are one
+authored Combat profile per room-declared set. Clockwork reward realization
+selects the exact eligible member during encounter preparation, so the exact
+Goal keys remain history facts but are not separate authoring choices. The
+overlapping P generators remain separate because the source does not provide
+the same exclusive contextual partition.
+
 ### Fixed combat support
 
 The following fixed combat-bearing route rooms do not admit a field NPC through

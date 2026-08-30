@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const CURRENT_SCHEMA_VERSION = 71;
+const CURRENT_SCHEMA_VERSION = 72;
 const SCHEMA_49_CATALOG_VERSION = '0.27.0-arcana-fear-loadout';
 const SCHEMA_50_CATALOG_VERSION = '0.30.0-boon-rarity-ledger';
 const SCHEMA_51_CATALOG_VERSION = '0.31.0-chaos-traits';
@@ -28,6 +28,7 @@ const SCHEMA_65_CATALOG_VERSION = '0.48.0-hex-talent-layouts';
 const SCHEMA_68_CATALOG_VERSION = '0.49.0-completion-topology';
 const SCHEMA_70_CATALOG_VERSION = '0.49.0-completion-topology';
 const SCHEMA_71_CATALOG_VERSION = '0.50.0-unified-chaos-gates';
+const SCHEMA_72_CATALOG_VERSION = '0.51.0-biome-i-encounter-profiles';
 
 const HEX_DEFAULTS = {
   SpellPolymorphTrait: {
@@ -1048,6 +1049,32 @@ function migrate70To71(document) {
   return { chaosGatesUnified };
 }
 
+function migrate71To72(document) {
+  if (document.catalogVersion !== SCHEMA_71_CATALOG_VERSION) {
+    throw new Error(
+      `schema 71 expects catalog ${SCHEMA_71_CATALOG_VERSION}, received ${String(document.catalogVersion)}`,
+    );
+  }
+  const authoredProfileByExactKey = {
+    GeneratedI_GoalReward: 'GeneratedI',
+    GeneratedI_Small_GoalReward: 'GeneratedI_Small',
+  };
+  let encounterSelectionsCollapsed = 0;
+  visitRecords(document, (record) => {
+    const selections = record.encounterKeyByPhase;
+    if (selections === null || typeof selections !== 'object' || Array.isArray(selections)) return;
+    for (const [phaseKey, encounterKey] of Object.entries(selections)) {
+      const authoredKey = authoredProfileByExactKey[encounterKey];
+      if (authoredKey === undefined) continue;
+      selections[phaseKey] = authoredKey;
+      encounterSelectionsCollapsed += 1;
+    }
+  });
+  document.schemaVersion = 72;
+  document.catalogVersion = SCHEMA_72_CATALOG_VERSION;
+  return { encounterSelectionsCollapsed };
+}
+
 const migrations = new Map([
   [49, migrate49To50],
   [50, migrate50To51],
@@ -1071,6 +1098,7 @@ const migrations = new Map([
   [68, migrate68To69],
   [69, migrate69To70],
   [70, migrate70To71],
+  [71, migrate71To72],
 ]);
 
 export function migrateProjectDocument(value, targetVersion = CURRENT_SCHEMA_VERSION) {

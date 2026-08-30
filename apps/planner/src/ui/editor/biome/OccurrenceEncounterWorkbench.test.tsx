@@ -6,7 +6,6 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
-  createBiomeAddress,
   createEncounterPhaseAddress,
   createExitSelectionAddress,
   createGorgonPhaseAddress,
@@ -850,64 +849,35 @@ describe('OccurrenceEncounterWorkbench', () => {
     ).toBe(true);
   });
 
-  it('keeps an invalid I default selected while exposing only its exact Goal correction', async () => {
+  it('keeps I Combat selected without exposing its topology-derived Goal variant', async () => {
     const occurrenceId = createOccurrenceId('golden-i-combat01');
-    const phase = createEncounterPhaseAddress(
-      createBiomeAddress('Underworld', 'I'),
-      { kind: 'occurrence', occurrenceId },
-      'Encounter',
-    );
     const initial = createGoldenFGHIProject();
-    const reset = applyProjectCommand(initial, catalog, { kind: 'ResetEncounter', phase });
-    const view = renderOccurrenceWorkbench(reset, 'Underworld', 'I', occurrenceById(occurrenceId));
+    const view = renderOccurrenceWorkbench(
+      initial,
+      'Underworld',
+      'I',
+      occurrenceById(occurrenceId),
+    );
     openRoomTab('Room Timeline');
     expect(
       within(screen.getByRole('region', { name: 'Room Timeline' })).queryByText(
         'Outgoing generation',
       ),
     ).toBeNull();
-    const finding = simulateProject(catalog, reset).findings.find(
-      (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(phase),
-    );
-    if (finding === undefined) throw new Error('invalid I encounter finding is missing');
-    const historyLength = view.application.store.getState().projectWorkspace.history.past.length;
     const encounter = screen.getByLabelText('Encounter encounter phase');
-    act(() =>
-      view.application.store.dispatch(
-        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
-      ),
-    );
-    await waitFor(() => expect(encounter.contains(document.activeElement)).toBe(true));
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
-      historyLength,
-    );
     const picker = within(encounter).getByRole('button', { name: 'Encounter' });
 
     await view.user.click(picker);
-    await waitFor(() => {
-      expect(picker.getAttribute('data-candidate-state')).toBe('impossible');
-      expect(screen.getByText('Current selection')).toBeTruthy();
-      expect(
-        screen.getAllByText('This encounter does not meet the current encounter requirements.'),
-      ).not.toHaveLength(0);
-      expect(screen.getByText('Goal combat')).toBeTruthy();
-    });
-
-    await view.user.click(screen.getByText('Goal combat'));
-    await waitFor(() =>
-      expect(
-        view.application.store
-          .getState()
-          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-          ?.biomes.find((biome) => biome.biomeKey === 'I')
-          ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
-          ?.encounters.encounterKeyByPhase,
-      ).toEqual({ Encounter: 'GeneratedI_GoalReward' }),
-    );
+    expect(screen.getAllByText('Combat')).not.toHaveLength(0);
+    expect(screen.queryByText('Goal combat')).toBeNull();
     expect(
-      simulateProject(catalog, view.application.store.getState().projectWorkspace.history.present)
-        .status,
-    ).toBe('valid');
+      view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'I')
+        ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
+        ?.encounters.encounterKeyByPhase,
+    ).toEqual({ Encounter: 'GeneratedI' });
   });
 
   it('keeps an unavailable opening Ship Combat2 count visible and disabled', async () => {

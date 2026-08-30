@@ -234,7 +234,7 @@ describe('encounter envelope catalog', () => {
         const encounterSet = catalog.encounterSets.byKey[binding.encounterSetKey];
         expect(encounterSet).toBeDefined();
         expect(encounterSet?.encounterDefinitionKeys).toContain(
-          encounterSet?.defaultEncounterDefinitionKey,
+          encounterSet?.defaultAuthoringProfileKey,
         );
       }
     }
@@ -271,11 +271,18 @@ describe('encounter envelope catalog', () => {
     expect(catalog.encounterDefinitions.byKey).not.toHaveProperty('Story_Chronos_01');
     expect(catalog.encounterSets.byKey.IEncountersDefault).toMatchObject({
       encounterDefinitionKeys: ['GeneratedI', 'GeneratedI_GoalReward', 'NemesisCombatI'],
-      defaultEncounterDefinitionKey: 'GeneratedI',
+      defaultAuthoringProfileKey: 'GeneratedI',
+      authoringProfiles: [
+        {
+          key: 'GeneratedI',
+          encounterDefinitionKeys: ['GeneratedI', 'GeneratedI_GoalReward'],
+        },
+        { key: 'NemesisCombatI', encounterDefinitionKeys: ['NemesisCombatI'] },
+      ],
     });
     expect(catalog.encounterSets.byKey.PEncountersDefault).toMatchObject({
       encounterDefinitionKeys: ['GeneratedP', 'GeneratedP_Large', 'AthenaCombatP', 'IcarusCombatP'],
-      defaultEncounterDefinitionKey: 'GeneratedP',
+      defaultAuthoringProfileKey: 'GeneratedP',
     });
     expect(catalog.rooms.byKey.N_Sub09).toMatchObject({
       encounterEnvelopeKey: 'SingleEncounter',
