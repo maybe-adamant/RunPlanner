@@ -178,10 +178,12 @@ profile. The contract item is nevertheless a separately generated physical
 object in that room: it is not inserted into the Shop profile's `GroupsOf`
 array or its ordinary spawned-item inventory. The two I declarations are
 alternative Preboss maps that share the same `I_WorldShop` profile, not two
-contract or Shop opportunities in one ordinary run. The planner's progressed-save,
-non-Dream-Run baseline models only the `I_PreBoss02` variant, so the supported
-Gate B destination matrix includes that declaration and does not add
-`I_PreBoss01` as a second modeled room.
+contract or Shop opportunities in one ordinary run. `I_PreBoss01` is eligible
+in Dream Runs (and ordinary runs before the true ending); `I_PreBoss02`
+requires the true ending and a non-Dream Run. The planner's progressed-save
+Underworld baseline therefore selects only `I_PreBoss02`; a later Dream Dive
+route selects only `I_PreBoss01`. Neither route exposes both as authoring
+choices.
 
 ### Pedestal pool
 
