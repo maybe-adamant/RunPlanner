@@ -28,6 +28,7 @@ import {
 } from '../persistence/profileFile';
 import type { GamePlanPublisher } from '../persistence/gamePlanPublisher';
 import { createPlannerStore } from '../state/store';
+import type { PreparedProjectWorkspace } from '../state/projectWorkspaceSlice';
 
 export interface CreateApplicationOptions {
   readonly allocateOccurrenceId?: OccurrenceIdFactory;
@@ -51,7 +52,6 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     throw new Error('Autosave recovery adapter and scheduler must be provided together');
   }
   const editorNavigation = createEditorNavigation(catalog);
-  const startup = restoreStartupProject(catalog, options.autosaveRecovery);
   const evaluationCache = new WeakMap<
     ProjectDocument,
     ReturnType<typeof simulateProjectAssembly>
@@ -86,11 +86,20 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     },
     options.allocateOccurrenceId ?? allocateOccurrenceId,
   );
+  const prepareProjectWorkspace = (project: ProjectDocument): PreparedProjectWorkspace => {
+    const assembly = assembleProjectEvaluation(project);
+    const workspace = structuredWorkspace.project(assembly);
+    if (editorNavigation.routes.byKey[workspace.route.routeKey] === undefined) {
+      throw new Error(`Editor navigation references unavailable route ${workspace.route.routeKey}`);
+    }
+    return Object.freeze({ assembly, project });
+  };
+  const startup = restoreStartupProject(catalog, options.autosaveRecovery, prepareProjectWorkspace);
   const store = createPlannerStore({
     catalog,
     assembleProjectEvaluation,
     initialProfileSession: startup.profileSession,
-    ...(startup.project === undefined ? {} : { initialProject: startup.project }),
+    ...(startup.preparedProject === undefined ? {} : { initialWorkspace: startup.preparedProject }),
   });
   const editorSessionReconciliation = createEditorSessionReconciliationCoordinator({
     store,
@@ -102,6 +111,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
       : { autosaveRecovery: options.autosaveRecovery }),
     catalog,
     profileFile: options.profileFile ?? createUnavailableProfileFileAdapter(),
+    prepareProjectWorkspace,
     ...(options.gamePlanPublisher === undefined
       ? {}
       : { gamePlanPublisher: options.gamePlanPublisher }),

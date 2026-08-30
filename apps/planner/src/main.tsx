@@ -16,9 +16,13 @@ import {
 import { createApplication } from './composition/createApplication';
 import './ui/styles.css';
 import { App } from './ui/shell/App';
+import { ApplicationFaultBoundary } from './ui/shell/ApplicationFaultBoundary';
 
 const devBrowserErrorReporter = installDevBrowserErrorReporter();
 const rootElement = document.getElementById('root');
+const autosaveRecovery = createBrowserAutosaveRecoveryAdapter({
+  storage: () => globalThis.localStorage,
+});
 const profileFile = isTauri()
   ? createTauriProfileFileAdapter({
       open: (options) =>
@@ -54,9 +58,7 @@ if (rootElement === null) {
 }
 
 const application = createApplication({
-  autosaveRecovery: createBrowserAutosaveRecoveryAdapter({
-    storage: () => globalThis.localStorage,
-  }),
+  autosaveRecovery,
   autosaveScheduler: createBrowserAutosaveScheduler<number>({
     clearTimeout: (handle) => globalThis.window.clearTimeout(handle),
     setTimeout: (task, delayMs) => globalThis.window.setTimeout(task, delayMs),
@@ -67,14 +69,27 @@ const application = createApplication({
 
 createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
   <StrictMode>
-    <Provider store={application.store}>
-      <App
-        catalog={application.catalog}
-        catalogSummary={application.catalogSummary}
-        editorNavigation={application.editorNavigation}
-        projectOperations={application.projectOperations}
-        selectStructuredWorkspace={application.selectStructuredWorkspace}
-      />
-    </Provider>
+    <ApplicationFaultBoundary
+      discardRecoveryAndReload={() => {
+        application.dispose();
+        autosaveRecovery.clear();
+        globalThis.window.location.reload();
+      }}
+      loadProfile={() => application.projectOperations.loadProfile()}
+      reload={() => {
+        application.dispose();
+        globalThis.window.location.reload();
+      }}
+    >
+      <Provider store={application.store}>
+        <App
+          catalog={application.catalog}
+          catalogSummary={application.catalogSummary}
+          editorNavigation={application.editorNavigation}
+          projectOperations={application.projectOperations}
+          selectStructuredWorkspace={application.selectStructuredWorkspace}
+        />
+      </Provider>
+    </ApplicationFaultBoundary>
   </StrictMode>,
 );

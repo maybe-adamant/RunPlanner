@@ -968,9 +968,21 @@ Profile suggests `run-plan.runplanner.json`. The filename never enters the
 authored document, undo history, or dirty-state comparison.
 
 Explicit profile replacement is atomic: successful load resets undo/redo,
-runs one fresh simulation, installs the loaded document as the clean baseline,
-and then queues recovery autosave. Cancellation is a no-op. Decode failure
-leaves the current project, history, evaluation, and clean baseline untouched.
+runs one fresh simulation, proves the immediate structured workspace can be
+projected, installs that prepared workspace as the clean baseline, and then
+queues recovery autosave. The host file does not become the active Save target
+and a blocked recovery is not cleared until preparation succeeds. Cancellation
+is a no-op. Read, decode, simulation, or immediate-projection failure leaves the
+current project, history, evaluation, clean baseline, host file target, and
+recovery value untouched.
+
+A production shell-level fault boundary remains available after a later render
+or unhandled browser failure. It does not attempt to continue an unknown partial
+interaction. It preserves the source profile, presents technical details, and
+allows another profile to pass through the same preparation boundary before the
+editor is remounted. The user may also explicitly discard only the autosave
+recovery copy and restart at the route chooser; this never modifies the source
+profile file.
 
 Autosave is a distinct recovery channel, not an implicit Save Profile action.
 It observes effective authored changes only and is debounced. Navigation,
@@ -992,8 +1004,9 @@ an imperative flag:
 | Restore autosave at startup | recovered project         | Recovered / Unsaved            |
 | Autosave write              | unchanged                 | No dirty-state change          |
 
-On startup, a valid recovery document is decoded through the same catalog-aware
-project boundary and receives a fresh history and simulation. Before a route is
+On startup, a valid recovery document is decoded and prepared through the same
+catalog-aware project boundary and receives a fresh history, simulation, and
+immediate workspace projection. Before a route is
 selected, no authored project, history, evaluation, or dirty status exists. If
 recovery is corrupt, the editor remains in the no-project state, reports the
 failure, preserves the raw recovery value, and suspends further autosave. The

@@ -23,8 +23,8 @@ export interface AutosaveScheduler {
   schedule(delayMs: number, task: () => void): () => void;
 }
 
-export interface StartupProjectState {
-  readonly project?: ProjectDocument;
+export interface StartupProjectState<TPrepared> {
+  readonly preparedProject?: TPrepared;
   readonly profileSession: ProfileSessionState;
 }
 
@@ -32,10 +32,11 @@ function errorDetail(error: unknown): string {
   return error instanceof Error ? error.message : 'Unknown autosave recovery failure';
 }
 
-export function restoreStartupProject(
+export function restoreStartupProject<TPrepared>(
   catalog: Catalog,
   recovery: AutosaveRecoveryAdapter | undefined,
-): StartupProjectState {
+  prepareProject: (project: ProjectDocument) => TPrepared,
+): StartupProjectState<TPrepared> {
   if (recovery === undefined) {
     return Object.freeze({
       profileSession: createInitialProfileSessionState(),
@@ -48,8 +49,9 @@ export function restoreStartupProject(
         profileSession: createInitialProfileSessionState(),
       });
     }
+    const project = parseProjectDocument(json, catalog);
     return Object.freeze({
-      project: parseProjectDocument(json, catalog),
+      preparedProject: prepareProject(project),
       profileSession: createInitialProfileSessionState({ recoveryStatus: 'recovered' }),
     });
   } catch (error) {

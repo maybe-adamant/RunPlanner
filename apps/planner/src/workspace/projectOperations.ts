@@ -1,4 +1,8 @@
-import { encodeProjectDocument, parseProjectDocument } from '@run-planner/engine/authored-project';
+import {
+  encodeProjectDocument,
+  parseProjectDocument,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { compileExecutionPlan, encodeExecutionPlan } from '@run-planner/engine/execution-plan';
 
@@ -12,6 +16,7 @@ import {
   profileSaveSucceeded,
   recoveryDiscarded,
 } from '../state/profileSessionSlice';
+import type { PreparedProjectWorkspace } from '../state/projectWorkspaceSlice';
 import { selectPresentProject, selectProfileSession, type PlannerStore } from '../state/store';
 
 export type ProjectOperation =
@@ -37,6 +42,7 @@ interface CreateProjectOperationsOptions {
   readonly autosaveRecovery?: AutosaveRecoveryAdapter;
   readonly catalog: Catalog;
   readonly profileFile: ProfileFileAdapter;
+  readonly prepareProjectWorkspace: (project: ProjectDocument) => PreparedProjectWorkspace;
   readonly gamePlanPublisher?: GamePlanPublisher;
   readonly store: PlannerStore;
 }
@@ -184,14 +190,22 @@ export function createProjectOperations(
         const project = parseProjectDocument(loaded.json, options.catalog);
         const baselineJson = encodeProjectDocument(project);
         const fileName = loadedProfileFileName(loaded.file.fileName);
+        const prepared = options.prepareProjectWorkspace(project);
         if (selectProfileSession(options.store.getState()).recoveryStatus === 'blocked') {
           if (options.autosaveRecovery === undefined) {
             throw new Error('Autosave recovery is unavailable in this environment');
           }
           options.autosaveRecovery.clear();
         }
+        options.store.dispatch(
+          profileLoadSucceeded({
+            assembly: prepared.assembly,
+            project,
+            baselineJson,
+            fileName,
+          }),
+        );
         activeProfileFile = loaded.file;
-        options.store.dispatch(profileLoadSucceeded({ project, baselineJson, fileName }));
         return result('loadProfile', 'success', 'Loaded the profile.');
       } catch (error) {
         return failure('loadProfile', error);

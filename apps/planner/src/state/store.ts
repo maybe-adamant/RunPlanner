@@ -2,7 +2,6 @@ import { configureStore, createSelector } from '@reduxjs/toolkit';
 import {
   canRedoProjectHistory,
   canUndoProjectHistory,
-  type ProjectDocument,
   encodeProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
@@ -18,11 +17,12 @@ import {
 import {
   createProjectWorkspaceReducer,
   type ProjectEvaluationAssembler,
+  type PreparedProjectWorkspace,
 } from './projectWorkspaceSlice';
 
 export interface CreatePlannerStoreOptions {
   readonly catalog: Catalog;
-  readonly initialProject?: ProjectDocument;
+  readonly initialWorkspace?: PreparedProjectWorkspace;
   readonly initialProfileSession?: ProfileSessionState;
   readonly assembleProjectEvaluation: ProjectEvaluationAssembler;
 }
@@ -34,7 +34,7 @@ export function createPlannerStore(options: CreatePlannerStoreOptions) {
     reducer: {
       projectWorkspace: createProjectWorkspaceReducer(
         options.catalog,
-        options.initialProject,
+        options.initialWorkspace,
         options.assembleProjectEvaluation,
       ),
       editorSession: createEditorSessionReducer(options.catalog),

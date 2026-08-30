@@ -16,7 +16,7 @@ import { describe, expect, it } from 'vitest';
 import { createApplication } from '../composition/createApplication';
 import type { GamePlanPublisher } from '../persistence/gamePlanPublisher';
 import type { AutosaveRecoveryAdapter, AutosaveScheduler } from '../persistence/autosaveRecovery';
-import { DEFAULT_PROFILE_FILE_NAME } from './projectOperations';
+import { createProjectOperations, DEFAULT_PROFILE_FILE_NAME } from './projectOperations';
 import type { ProfileFileAdapter, ProfileFileReference } from '../persistence/profileFile';
 import {
   authoredProjectCommandDispatched,
@@ -457,6 +457,70 @@ describe('project profile operations', () => {
       message: 'Load Profile failed: Loaded profile filename must be non-blank',
     });
     expect(application.store.getState()).toBe(state);
+  });
+
+  it('does not clear recovery or replace the native Save target when preparation fails', async () => {
+    let recoveryRaw: string | null = '{bad recovery';
+    let clearCount = 0;
+    let establishedTargetWrites = 0;
+    let rejectedTargetWrites = 0;
+    const recovery: AutosaveRecoveryAdapter = {
+      read: () => recoveryRaw,
+      write: (json) => {
+        recoveryRaw = json;
+      },
+      clear: () => {
+        clearCount += 1;
+        recoveryRaw = null;
+      },
+    };
+    const application = createApplication({
+      autosaveRecovery: recovery,
+      autosaveScheduler: { schedule: () => () => undefined },
+    });
+    application.projectOperations.createNew('Underworld');
+    const project = presentProject(application);
+    const establishedFile: ProfileFileReference = {
+      fileName: 'current.runplanner.json',
+      write: () => {
+        establishedTargetWrites += 1;
+        return Promise.resolve();
+      },
+    };
+    const rejectedFile: ProfileFileReference = {
+      fileName: 'rejected.runplanner.json',
+      write: () => {
+        rejectedTargetWrites += 1;
+        return Promise.resolve();
+      },
+    };
+    const operations = createProjectOperations({
+      autosaveRecovery: recovery,
+      catalog,
+      prepareProjectWorkspace: () => {
+        throw new Error('workspace projection failed');
+      },
+      profileFile: {
+        saveAs: () => Promise.resolve(establishedFile),
+        load: () => Promise.resolve({ file: rejectedFile, json: encodeProjectDocument(project) }),
+      },
+      store: application.store,
+    });
+
+    await expect(operations.saveProfile()).resolves.toMatchObject({ status: 'success' });
+    const state = application.store.getState();
+    await expect(operations.loadProfile()).resolves.toEqual({
+      operation: 'loadProfile',
+      status: 'failure',
+      message: 'Load Profile failed: workspace projection failed',
+    });
+
+    expect(application.store.getState()).toBe(state);
+    expect(recoveryRaw).toBe('{bad recovery');
+    expect(clearCount).toBe(0);
+    await expect(operations.saveProfile()).resolves.toMatchObject({ status: 'success' });
+    expect(establishedTargetWrites).toBe(1);
+    expect(rejectedTargetWrites).toBe(0);
   });
 
   it('rejects schema-8 and stale-catalog profiles without replacing the current workspace', async () => {

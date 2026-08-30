@@ -1,5 +1,6 @@
 import { createAction, createReducer, type Reducer } from '@reduxjs/toolkit';
 import type { ProjectDocument } from '@run-planner/engine/authored-project';
+import type { ProjectEvaluationAssembly } from '@run-planner/engine/simulation';
 
 export interface ProfileSessionState {
   readonly explicitBaselineJson: string | null;
@@ -11,6 +12,7 @@ export interface ProfileSessionState {
 
 export const newProjectCreated = createAction<ProjectDocument>('profile/newProjectCreated');
 export const profileLoadSucceeded = createAction<{
+  readonly assembly: ProjectEvaluationAssembly;
   readonly project: ProjectDocument;
   readonly baselineJson: string;
   readonly fileName: string;
