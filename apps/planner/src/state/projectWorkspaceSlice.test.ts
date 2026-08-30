@@ -55,10 +55,11 @@ function createStore() {
   const assembleProjectEvaluation = vi.fn((project: ProjectDocument) =>
     simulateProjectAssembly(catalog, project),
   );
+  const project = createInitialProject(catalog, 'Underworld');
   const store = createPlannerStore({
     assembleProjectEvaluation,
     catalog,
-    initialProject: createInitialProject(catalog, 'Underworld'),
+    initialWorkspace: { project, assembly: assembleProjectEvaluation(project) },
   });
   return { assembleProjectEvaluation, store };
 }
@@ -157,7 +158,10 @@ describe('project workspace application state', () => {
       createPlannerStore({
         assembleProjectEvaluation: () => simulateProjectAssembly(catalog, foreignProject),
         catalog,
-        initialProject,
+        initialWorkspace: {
+          project: initialProject,
+          assembly: simulateProjectAssembly(catalog, foreignProject),
+        },
       }),
     ).toThrow(/does not match authored workspace identity/);
   });

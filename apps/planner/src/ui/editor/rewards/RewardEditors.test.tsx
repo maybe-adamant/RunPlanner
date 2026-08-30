@@ -387,7 +387,7 @@ describe('reward editor projections', () => {
     const store = createPlannerStore({
       assembleProjectEvaluation: (current) => simulateProjectAssembly(catalog, current),
       catalog,
-      initialProject: project,
+      initialWorkspace: { project, assembly: simulateProjectAssembly(catalog, project) },
     });
     const user = userEvent.setup();
     renderStoreReward(store, structuredWorkspace);
@@ -415,6 +415,7 @@ describe('reward editor projections', () => {
     act(() => {
       store.dispatch(
         profileLoadSucceeded({
+          assembly: simulateProjectAssembly(catalog, loadedProject),
           baselineJson: encodeProjectDocument(loadedProject),
           fileName: 'loaded-profile.runplanner.json',
           project: loadedProject,

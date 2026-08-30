@@ -34,6 +34,11 @@ export interface NoProjectWorkspaceState {
 }
 export type ProjectWorkspaceState = OpenProjectWorkspaceState | NoProjectWorkspaceState;
 
+export interface PreparedProjectWorkspace {
+  readonly assembly: ProjectEvaluationAssembly;
+  readonly project: ProjectDocument;
+}
+
 export const authoredProjectCommandDispatched = createAction<ProjectCommand>(
   'projectWorkspace/commandDispatched',
 );
@@ -59,15 +64,30 @@ function publishWorkspace(
   });
 }
 
+function publishPreparedWorkspace(
+  history: ProjectHistory,
+  prepared: PreparedProjectWorkspace,
+): ProjectWorkspaceState {
+  assertProjectEvaluationAssembly(prepared.assembly);
+  if (prepared.project !== history.present || prepared.assembly.project !== history.present) {
+    throw new Error('prepared project workspace does not match authored workspace identity');
+  }
+  return Object.freeze({
+    kind: 'openProject' as const,
+    assembly: prepared.assembly,
+    history,
+  });
+}
+
 export function createProjectWorkspaceReducer(
   catalog: Catalog,
-  initialProject: ProjectDocument | undefined,
+  initialWorkspace: PreparedProjectWorkspace | undefined,
   assembleProjectEvaluation: ProjectEvaluationAssembler,
 ): Reducer<ProjectWorkspaceState> {
   const initialState: ProjectWorkspaceState =
-    initialProject === undefined
+    initialWorkspace === undefined
       ? Object.freeze({ kind: 'noProject' })
-      : publishWorkspace(createProjectHistory(initialProject), assembleProjectEvaluation);
+      : publishPreparedWorkspace(createProjectHistory(initialWorkspace.project), initialWorkspace);
 
   return (state = initialState, action) => {
     if (authoredProjectCommandDispatched.match(action)) {
@@ -115,10 +135,7 @@ export function createProjectWorkspaceReducer(
       return publishWorkspace(createProjectHistory(action.payload), assembleProjectEvaluation);
     }
     if (profileLoadSucceeded.match(action)) {
-      return publishWorkspace(
-        createProjectHistory(action.payload.project),
-        assembleProjectEvaluation,
-      );
+      return publishPreparedWorkspace(createProjectHistory(action.payload.project), action.payload);
     }
     return state;
   };

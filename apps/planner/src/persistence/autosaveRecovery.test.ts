@@ -186,12 +186,33 @@ describe('autosave recovery lifecycle', () => {
     );
 
     for (const recovery of [legacy, stale]) {
-      const startup = restoreStartupProject(catalog, recovery);
-      expect(startup.project).toBeUndefined();
+      const startup = restoreStartupProject(catalog, recovery, (project) => project);
+      expect(startup.preparedProject).toBeUndefined();
       expect(startup.profileSession.recoveryStatus).toBe('blocked');
       expect(recovery.raw).not.toBeNull();
       expect(recovery.clearCount).toBe(0);
     }
+  });
+
+  it('blocks and preserves a parseable autosave when workspace preparation fails', () => {
+    const project = createProjectDocument(catalog, {
+      projectId: 'preparation-failure',
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
+    });
+    const recovery = createRecoveryFixture(encodeProjectDocument(project));
+
+    const startup = restoreStartupProject(catalog, recovery, () => {
+      throw new Error('workspace projection failed');
+    });
+
+    expect(startup.preparedProject).toBeUndefined();
+    expect(startup.profileSession).toMatchObject({
+      recoveryStatus: 'blocked',
+      recoveryError: 'Autosave recovery failed: workspace projection failed',
+    });
+    expect(recovery.raw).toBe(encodeProjectDocument(project));
+    expect(recovery.clearCount).toBe(0);
   });
 
   it('debounces only effective authored replacements and never changes the explicit baseline', () => {
