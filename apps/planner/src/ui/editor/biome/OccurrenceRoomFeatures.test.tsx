@@ -212,6 +212,12 @@ describe('OccurrenceRoomFeatures', () => {
         true,
       ),
     );
+    const savedReward = screen.getByRole('combobox', { name: 'Nemesis reward' });
+    expect(within(savedReward).queryByRole('option', { name: 'Max Magick' })).toBeNull();
+    await view.user.click(savedReward);
+    await waitFor(() =>
+      expect(within(savedReward).getByRole('option', { name: 'Max Magick' })).toBeTruthy(),
+    );
     expect(
       authoredEvent()?.acquisitionSites?.['nemesisGenerated:Encounter']?.pickupEntries?.result
         ?.offer.rewardType,
@@ -259,6 +265,13 @@ describe('OccurrenceRoomFeatures', () => {
         kind: 'goldTrade',
         response: 'decline',
       }),
+    );
+    await screen.findByRole('button', { name: 'Saved' });
+    const savedResponse = screen.getByRole('combobox', { name: 'Nemesis response' });
+    expect(within(savedResponse).queryByRole('option', { name: 'Accept' })).toBeNull();
+    await view.user.click(savedResponse);
+    await waitFor(() =>
+      expect(within(savedResponse).getByRole('option', { name: 'Accept' })).toBeTruthy(),
     );
     expect(
       authoredEvent()?.acquisitionSites?.['nemesisGenerated:Encounter']?.pickupEntries?.result

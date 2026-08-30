@@ -1030,9 +1030,20 @@ button:disabled {
 }
 
 .trait-offer-fixed-rarity {
-  color: var(--muted, #98a2b3);
-  font-size: 0.84rem;
-  margin: 0;
+  min-width: 0;
+}
+
+.trait-offer-fixed-rarity > strong {
+  align-items: center;
+  background: #202128;
+  border: 1px solid #42434d;
+  border-radius: 8px;
+  color: #f2ede5;
+  display: flex;
+  font-size: 0.9rem;
+  font-weight: 400;
+  min-height: 36px;
+  padding: 6px 9px;
 }
 
 .trait-offer-shape-actions {

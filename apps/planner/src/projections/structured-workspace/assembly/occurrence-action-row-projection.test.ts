@@ -28,8 +28,33 @@ import {
   withFPrebossSelection,
   type ProjectDocument,
 } from '@planner-test/support/structured-workspace/occurrence-assembly.test-support';
+import { occurrenceActionLabel } from './occurrence-action-label';
 
 describe('structured workspace actions assembly', () => {
+  it('labels a stale Shrine delivery without exposing its persisted entry key', () => {
+    const entryKey = hermesShrineDeliveryEntryKey(
+      createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
+      'initial:secondLeft',
+    );
+
+    const label = occurrenceActionLabel(
+      catalog,
+      {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'hermesShrineDelivery',
+        entryKey,
+        encounterPhaseKey: 'Encounter',
+      },
+      { kind: 'none' },
+      [],
+      undefined,
+      {},
+    );
+
+    expect(label).toBe('Receive Hermes Shrine delivery');
+    expect(label).not.toContain('hermesShrineDelivery:');
+  });
+
   it('carries a reached O Ship Steady Growth effect in engine timeline order', () => {
     const occurrenceId = oOccurrenceIds.combat04;
     const owner = createOccurrenceAddress(oBiome, occurrenceId);
