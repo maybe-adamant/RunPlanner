@@ -7,19 +7,17 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 71 Boundary
+## Schema 73 Boundary
 
-Schema 71 is the sole persisted authored-project contract. The codec rejects
+Schema 73 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
-state for a stale document. The migration CLI performs the explicit 49-to-50,
-50-to-51, 51-to-52, 52-to-53, 53-to-54, 54-to-55, 55-to-56, 56-to-57,
-57-to-58, 58-to-59, 59-to-60, 60-to-61, 61-to-62, 62-to-63, 63-to-64,
-64-to-65, 65-to-66, 66-to-67, 67-to-68, 68-to-69, 69-to-70, and 70-to-71
-migrations outside the production decoder. It advances the corresponding
-catalog metadata from `0.32.0-run-impacting-traits` through
-`0.50.0-unified-chaos-gates` without inventing authored outcomes.
-Catalog versions must match exactly after migration. The strict production
-decoder has no implicit stale-schema compatibility path.
+state for a stale document. The only conversion retained at this boundary is
+the standalone, lossless schema-72-to-73 splitter: schema 72 contains two
+independent route plans, so it emits one schema-73 document for each route.
+The accumulated 49-to-72 migration chain is retired; schema 71 and older are
+unsupported migration inputs. Future migrations begin as a new linear chain
+from schema 73. Catalog versions must match exactly at decode contact, and the
+strict production decoder has no implicit stale-schema compatibility path.
 
 Schemas 46 and 47 completed the occurrence-owned topology and chronology
 cutover: every supported authored main or N side room is a `RoomOccurrence`,
@@ -125,6 +123,13 @@ player actually selects a replacement. The 66-to-67 migration deletes retained
 no-op leaves and compacts replacement leaves without changing their selected
 key or immediate equip-result children.
 
+Schema 73 makes the project document single-route. Its `route` is the only
+authored run in the file; the catalog's route collection remains the source of
+available route choices, not a persisted sibling-run collection. A schema-72
+source is split by copying each complete route subtree without reconstructing
+or choosing authored state. The current document cannot contain a `routes`
+array or a compatibility route wrapper.
+
 There is one biome plan and one topology language. Production state and
 semantic addresses have no layout-specific plan family, completion-transition
 decision, fixed-entry slot, continuation, or picked contract. Fixed Boss and
@@ -218,10 +223,12 @@ not a second chronology. UI state owns no domain topology.
 
 ## Route Scope
 
-Routes persist a contiguous configured prefix in catalog order. Expansion
-creates biome plans with `topology: null`; shrinking explicitly removes the
-discarded plans and their state. `ConfigureRoutePrefix` is the only normal
-scope-edit command and undo restores the prior snapshot.
+One document persists one selected route and its contiguous configured biome
+prefix in catalog order. Expansion creates biome plans with `topology: null`;
+shrinking explicitly removes the discarded plans and their state.
+`ConfigureRoutePrefix` is the only normal scope-edit command and undo restores
+the prior snapshot. Selecting another catalog route creates or opens another
+document; it does not switch a hidden sibling route inside the current one.
 
 ```text
 Underworld: [] -> [F] -> [F, G] -> [F, G, H] -> [F, G, H, I]
@@ -814,10 +821,10 @@ stable indented JSON with a trailing newline:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 71;
+  schemaVersion: 73;
   projectId: string;
   catalogVersion: string;
-  routes: readonly AuthoredRoutePlan[];
+  route: AuthoredRoutePlan;
 }
 ```
 

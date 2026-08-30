@@ -22,7 +22,7 @@ authored project + simulation result
 The UI may tolerate incomplete and invalid authored plans. It must not hide,
 repair, or silently delete them merely to keep the view visually legal.
 
-The batch-level projection follows the locked all-biome project contract.
+The batch-level projection follows the selected-route project contract.
 F/G/P author an ordinary batch Reward Pool, H authors its Fields outcome, I
 authors one biome-wide Clockwork limit without a base store, O may derive its
 outgoing store from a source wheel, and Q owns no ordinary base store. N first
@@ -32,10 +32,10 @@ ownership rules.
 
 ## Application Shell
 
-The initial shell should preserve the useful high-level navigation proven by
-the ImGui prototype:
+The shell preserves the useful high-level navigation proven by the ImGui
+prototype while keeping route choice at the project boundary:
 
-- one horizontal tab per catalog route, followed by Settings;
+- one horizontal tab for the selected route, followed by Settings;
 - route-local biome navigation;
 - a route settings panel;
 - one shared route-structure workspace;
@@ -45,24 +45,26 @@ the ImGui prototype:
 The exact desktop composition may evolve. Tabs and panels are presentation,
 not project identity.
 
-Route and panel navigation is one generic UI-session model. The active route
-is a nullable catalog route key, where `null` selects Settings, and each route
-retains one tagged panel independently: route overview, one catalog biome, or a
-route-local read-only index. The route navigation presents Route followed by its
-ordered biome rail as the primary run structure. A separator then introduces
-only the non-empty NPC, Traits, Resources, Shrines, and Wells indexes. Index
-visibility uses the same application-projected rows as its panel; it does not
-create an empty authoring destination. If project replacement or Undo removes
-the active index's last row, the route overview is the safe fallback.
-Application state and React
-composition do not define separate Underworld, Surface, F, G, NPC, or other
-route-specific navigation fields. The ordered route tabs, labels, valid biome
-panels, and initial route come from the normalized catalog. A semantic finding
-selects its
-owning route and biome through the same generic session action; route-owned
-findings select the route overview and project-owned findings retain the
-current top-level location. A separate exact-owner navigation action moves from
-the NPC index to the containing biome and opens its existing room-local detail
+Route and panel navigation is one generic UI-session model. Before a project is
+open, the application presents a catalog-driven route chooser. Once open, the
+active route is the document's `route.routeKey`, while a nullable top-level
+section selects Settings; the session retains one tagged route panel: overview,
+one catalog biome, or a route-local read-only index. The route navigation
+presents the selected Route followed by its ordered biome rail as the primary
+run structure. A separator then introduces only the non-empty NPC, Traits,
+Resources, Shrines, and Wells indexes. Index visibility uses the same
+application-projected rows as its panel; it does not create an empty authoring
+destination. If project replacement or Undo removes the active index's last
+row, the route overview is the safe fallback.
+
+Application state and React composition do not define separate Underworld,
+Surface, F, G, NPC, or other route-specific navigation fields. The selected
+route label, valid biome panels, and initial route contents come from the
+normalized catalog and the open document. A semantic finding selects its
+owning biome through the same generic session action; route-owned findings
+select the route overview and project-owned findings retain the current
+top-level location. A separate exact-owner navigation action moves from the
+NPC index to the containing biome and opens its existing room-local detail
 surface without creating authored history.
 
 ## Product Language Boundary
@@ -949,7 +951,8 @@ reads its already-published workspace product.
 
 The user-facing project lifecycle has one explicit file workflow:
 
-- **New** creates a fresh project;
+- **New** opens the catalog-driven route chooser and creates a fresh project
+  only after a route is selected;
 - **Save Profile** writes the normalized `ProjectDocument` through the
   platform profile-file adapter;
 - **Load Profile** decodes one selected profile file and replaces the project
@@ -979,21 +982,24 @@ an imperative flag:
 
 | Action                      | Explicit profile baseline | Resulting status               |
 | --------------------------- | ------------------------- | ------------------------------ |
-| New                         | none                      | Unsaved                        |
+| Fresh startup               | none                      | No project before route choice |
+| Open New chooser            | unchanged                 | Unchanged until route choice   |
+| Select route through New    | none                      | Unsaved                        |
 | Save Profile succeeds       | serialized snapshot       | Clean only if still equal      |
 | Semantic edit               | unchanged                 | Dirty if unequal               |
 | Undo/redo                   | unchanged                 | Clean exactly when equal again |
 | Load Profile succeeds       | loaded project            | Clean                          |
-| Restore autosave at startup | none                      | Recovered / Unsaved            |
+| Restore autosave at startup | recovered project         | Recovered / Unsaved            |
 | Autosave write              | unchanged                 | No dirty-state change          |
 
 On startup, a valid recovery document is decoded through the same catalog-aware
-project boundary and receives a fresh history and simulation.
-If recovery is corrupt, the editor opens a safe new project, reports the
+project boundary and receives a fresh history and simulation. Before a route is
+selected, no authored project, history, evaluation, or dirty status exists. If
+recovery is corrupt, the editor remains in the no-project state, reports the
 failure, preserves the raw recovery value, and suspends further autosave. The
-user may explicitly Discard Autosave, or successfully load a profile, to clear
-that blockade. The app must never overwrite corrupt recovery merely because a
-blank fallback project booted successfully.
+route chooser remains available; the user may explicitly Discard Autosave, or
+successfully load a profile, to clear that blockade. The app must never
+overwrite corrupt recovery merely because the chooser is visible.
 
 ## Graph Policy
 

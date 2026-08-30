@@ -209,6 +209,12 @@ describe('surface product loop', () => {
     expect(selectProfileStatus(application.store.getState())).toBe('Clean');
 
     await view.user.click(screen.getByRole('button', { name: 'New' }));
+    expect(currentEvaluation(application).status).toBe('valid');
+    await view.user.click(
+      within(screen.getByRole('group', { name: 'Choose route' })).getByRole('button', {
+        name: 'Surface',
+      }),
+    );
     expect(currentEvaluation(application).status).toBe('empty');
     await view.user.click(screen.getByRole('button', { name: 'Load Profile' }));
     await screen.findByText('Loaded the profile.');
