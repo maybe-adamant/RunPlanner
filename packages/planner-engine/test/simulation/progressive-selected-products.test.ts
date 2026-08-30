@@ -63,6 +63,38 @@ const {
 } = fixture;
 
 describe('progressive selected and blocked products', () => {
+  it('retains reached Well and Shrine placement capabilities before biome completion', () => {
+    const incompleteF = createFGenerationProject(undefined, { includeTakeover: false });
+    const fAssembly = simulateProjectAssembly(catalog, incompleteF);
+    const fHost = createOccurrenceAddress(fGenerationBiome, fGenerationOccurrenceId(1, 1));
+    expect(
+      candidateArtifactsForProjectEvaluationAssembly(fAssembly)
+        .biomeAt(fGenerationBiome)
+        ?.stygianWells.at(fHost),
+    ).toMatchObject({
+      placementEligible: true,
+      required: false,
+      present: false,
+    });
+
+    const incompleteO = incompleteAtMissingDecision(
+      loadSurfaceNOPQProject(),
+      oBiome,
+      oOccurrenceIds.combat07,
+    );
+    const oAssembly = simulateProjectAssembly(catalog, incompleteO);
+    const oHost = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    expect(
+      candidateArtifactsForProjectEvaluationAssembly(oAssembly)
+        .biomeAt(oBiome)
+        ?.hermesShrines.at(oHost),
+    ).toMatchObject({
+      placementEligible: true,
+      required: false,
+      present: false,
+    });
+  });
+
   it('retains the complete H batch when its picked miniboss trait child blocks', () => {
     const completeProject = authorLegalTraitOffers(createGoldenFGHIProject());
     const complete = simulateProject(catalog, completeProject).route?.biomes.find(
