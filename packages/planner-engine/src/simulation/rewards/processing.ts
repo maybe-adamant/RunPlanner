@@ -203,7 +203,12 @@ export function initializeRewardBranches(
           }),
     ]);
   }
-  return Object.freeze(
+  // A completed predecessor publishes every concrete path that reached its
+  // frontier. Begin-biome resets can erase the last forward distinction
+  // between several of those paths, so canonicalize only after applying every
+  // reset. This keeps distinct bags and persistent run state while preventing
+  // historical path multiplicity from multiplying the successor chronology.
+  return mergeEquivalentRewardBranches(
     initialBranches.map((branch) =>
       Object.freeze({
         bags: branch.bags,
