@@ -367,6 +367,21 @@ function normalizeCompletion(
   if (bossRoom.kind !== 'Boss') {
     fail(`${path}.bossRoomGameName`, `${bossRoom.gameName} must be a Boss room`);
   }
+  const rivalsBossRoom =
+    rawCompletion.rivalsBossRoomGameName === undefined
+      ? undefined
+      : requireRoom(
+          rawCompletion.rivalsBossRoomGameName,
+          biomeKey,
+          rooms,
+          `${path}.rivalsBossRoomGameName`,
+        );
+  if (rivalsBossRoom !== undefined && rivalsBossRoom.kind !== 'Boss') {
+    fail(`${path}.rivalsBossRoomGameName`, `${rivalsBossRoom.gameName} must be a Boss room`);
+  }
+  if (rivalsBossRoom?.gameName === bossRoom.gameName) {
+    fail(`${path}.rivalsBossRoomGameName`, 'must name a distinct Boss room');
+  }
   const expectedAxes = ['biomeDepthCache', 'biomeEncounterDepth'] as const;
   if (rawCompletion.transitionEffects.length !== expectedAxes.length) {
     fail(`${path}.transitionEffects`, `requires resets for ${expectedAxes.join(', ')}`);
@@ -379,6 +394,7 @@ function normalizeCompletion(
   });
   return Object.freeze({
     bossRoomGameName: bossRoom.gameName,
+    ...(rivalsBossRoom === undefined ? {} : { rivalsBossRoomGameName: rivalsBossRoom.gameName }),
     transitionEffects: Object.freeze(transitionEffects),
   });
 }

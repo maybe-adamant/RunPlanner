@@ -157,6 +157,19 @@ describe('execution plan compiler', () => {
     expect(plan.extent.biomeKeys).toEqual(['F', 'G']);
   });
 
+  it('emits the resolved Rivals Boss room with its declaration-fixed encounter', () => {
+    const rivals = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      vowKey: 'BossDifficultyShrineUpgrade',
+      rank: 2,
+    });
+    const plan = compileExecutionPlan({ assembly: simulateProjectAssembly(catalog, rivals) });
+    expect(plan.rooms.find((room) => room.gameName === 'G_Boss02')).toMatchObject({
+      contents: { encounterPhases: [{ slotKey: 'Encounter', encounterKey: 'BossScylla02' }] },
+    });
+  });
+
   it('projects a complete F/G prefix through peer and fixed links', () => {
     const project = createCompleteFGProject();
     const fg = Object.freeze({

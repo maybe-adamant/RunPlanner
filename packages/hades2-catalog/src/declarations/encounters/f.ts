@@ -308,6 +308,13 @@ export const fEncounterDefinitions = [
     countsEncounterDepth: false,
     blocksGorgon: true,
   },
+  {
+    key: 'BossHecate02',
+    label: 'Hecate',
+    kind: 'boss',
+    countsEncounterDepth: false,
+    blocksGorgon: true,
+  },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 
 export const fEncounterSets = [

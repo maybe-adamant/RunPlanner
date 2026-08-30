@@ -1,7 +1,7 @@
 {
   "schemaVersion": 73,
   "projectId": "natural-chaos-unresolved-trial-upgrade",
-  "catalogVersion": "0.51.0-biome-i-encounter-profiles",
+  "catalogVersion": "0.52.0-boss-preboss-variants",
   "route": {
     "routeKey": "Underworld",
     "resourcePlacements": {

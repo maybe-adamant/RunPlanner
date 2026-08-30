@@ -6,6 +6,7 @@ import { test } from 'node:test';
 
 import {
   outputPaths,
+  OUTPUT_CATALOG_VERSION,
   SOURCE_CATALOG_VERSION,
   splitProjectDocument,
 } from './split-project-72-to-73.js';
@@ -32,6 +33,38 @@ function sourceDocument() {
   };
 }
 
+function completedBiome(biomeKey) {
+  const prebossId = `${biomeKey.toLowerCase()}-preboss`;
+  const bossId = `${prebossId}:boss`;
+  return {
+    biomeKey,
+    preservedBiomeState: { marker: biomeKey },
+    topology: {
+      occurrences: [
+        { occurrenceId: prebossId, gameName: `${biomeKey}_PreBoss01`, state: { kind: 'shop' } },
+        {
+          occurrenceId: bossId,
+          gameName: `${biomeKey}_Boss01`,
+          state: { preservedBossLeaf: true },
+          encounters: { encounterKeyByPhase: {} },
+        },
+      ],
+      fixedRoomLinks: [{ sourceOccurrenceId: prebossId, targetOccurrenceId: bossId }],
+    },
+  };
+}
+
+function completedSource(rank) {
+  const source = sourceDocument();
+  source.routes[0] = {
+    ...source.routes[0],
+    loadout: { fearRanks: { BossDifficultyShrineUpgrade: rank } },
+    resourcePlacements: { Pickaxe: { biomeKey: 'F', occurrenceId: 'f-preboss:boss' } },
+    biomes: [completedBiome('F'), completedBiome('G')],
+  };
+  return source;
+}
+
 test('splits both routes, preserves exact subtrees, and leaves the source immutable', () => {
   const source = sourceDocument();
   const before = structuredClone(source);
@@ -51,7 +84,7 @@ test('splits both routes, preserves exact subtrees, and leaves the source immuta
     {
       schemaVersion: 73,
       projectId: before.projectId,
-      catalogVersion: before.catalogVersion,
+      catalogVersion: OUTPUT_CATALOG_VERSION,
     },
   );
 });
@@ -78,6 +111,30 @@ test('rejects non-boundary schemas, wrong catalogs, and malformed route sets', (
       }),
     /route Underworld exactly once/,
   );
+});
+
+test('reconciles fixed completion Boss variants from the stored Rivals rank without moving state', () => {
+  const source = completedSource(2);
+  const before = structuredClone(source);
+  const underworld = splitProjectDocument(source).documents.Underworld.route;
+  const f = underworld.biomes[0];
+  const g = underworld.biomes[1];
+  assert.equal(f.topology.occurrences[1].gameName, 'F_Boss02');
+  assert.equal(g.topology.occurrences[1].gameName, 'G_Boss02');
+  assert.deepEqual(f.topology.occurrences[1], {
+    ...before.routes[0].biomes[0].topology.occurrences[1],
+    gameName: 'F_Boss02',
+  });
+  assert.deepEqual(f.topology.fixedRoomLinks, before.routes[0].biomes[0].topology.fixedRoomLinks);
+  assert.deepEqual(underworld.resourcePlacements, before.routes[0].resourcePlacements);
+  assert.deepEqual(source, before);
+
+  const rankOne = splitProjectDocument(completedSource(1)).documents.Underworld.route;
+  assert.equal(rankOne.biomes[0].topology.occurrences[1].gameName, 'F_Boss02');
+  assert.equal(rankOne.biomes[1].topology.occurrences[1].gameName, 'G_Boss01');
+  const rankZero = splitProjectDocument(completedSource(0)).documents.Underworld.route;
+  assert.equal(rankZero.biomes[0].topology.occurrences[1].gameName, 'F_Boss01');
+  assert.equal(rankZero.biomes[1].topology.occurrences[1].gameName, 'G_Boss01');
 });
 
 test('CLI writes both outputs and preflights existing siblings', async () => {

@@ -1284,11 +1284,18 @@ export function decodeTopologyStructure(
     const validBossLink = sourceRoom.kind === 'Boss' && targetRoom.kind === 'PostBoss';
     if (!validPrebossLink && !validBossLink)
       failProjectDocument(linkPath, 'must link Preboss to Boss or Boss to PostBoss');
-    if (validPrebossLink && targetRoom.gameName !== layout.completion.bossRoomGameName)
+    const route = catalog.routes.byKey[routeKey];
+    const biomeIndex = route?.biomeKeys.indexOf(layout.biomeKey) ?? -1;
+    if (validPrebossLink && route?.prebossRoomGameNames?.[biomeIndex] !== sourceRoom.gameName) {
+      failProjectDocument(linkPath, 'must originate from this route position Preboss');
+    }
+    if (
+      validPrebossLink &&
+      targetRoom.gameName !== layout.completion.bossRoomGameName &&
+      targetRoom.gameName !== layout.completion.rivalsBossRoomGameName
+    )
       failProjectDocument(linkPath, 'must target this biome completion Boss');
     if (validBossLink) {
-      const route = catalog.routes.byKey[routeKey];
-      const biomeIndex = route?.biomeKeys.indexOf(layout.biomeKey) ?? -1;
       const expected = biomeIndex < 0 ? undefined : route?.postbossRoomGameNames[biomeIndex];
       if (expected === undefined || targetRoom.gameName !== expected)
         failProjectDocument(linkPath, 'must target this route position PostBoss');

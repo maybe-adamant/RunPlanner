@@ -66,6 +66,7 @@ export function validateRoomCollectionClosure(
     'F_PreBoss01',
     'G_PreBoss01',
     'H_PreBoss01',
+    'I_PreBoss01',
     'I_PreBoss02',
     'N_PreBoss01',
     'O_PreBoss01',

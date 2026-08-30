@@ -23,6 +23,7 @@ export const oBiomeLayout = {
   },
   completion: {
     bossRoomGameName: 'O_Boss01',
+    rivalsBossRoomGameName: 'O_Boss02',
     transitionEffects: [
       { kind: 'resetCounter', axis: 'biomeDepthCache' },
       { kind: 'resetCounter', axis: 'biomeEncounterDepth' },

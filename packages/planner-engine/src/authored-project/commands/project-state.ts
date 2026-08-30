@@ -2,6 +2,12 @@ import type { Catalog } from '../../catalog-schema';
 import { createInitialBiomeState, replaceBiomeStateField } from '../biomeState';
 import { assessStartingArcanaGrasp } from '../loadout';
 import { createDefaultAuthoredHexTree, normalizeAuthoredHexTree } from '../hex-tree';
+import { resolveCompletionBoss } from '../completion-boss';
+import { fixedCompletionOccurrenceId } from '../fixed-room-links';
+import { createDefaultRoomState } from '../room-state/defaults';
+import { createDefaultRoomEncounterState } from '../room-state/encounter-envelope';
+import { reconcileReplacementRoomState } from '../room-state/replacement';
+import { reconcileRoomEncounterState } from '../room-state/encounter-reconciliation';
 import type { ProjectDocument } from '../model';
 
 import { failCommand, locateBiome, withBiome } from './contract';
@@ -77,6 +83,77 @@ function configureRoutePrefix(
     ...document,
     route: replacement,
   };
+}
+
+/** Rivals changes physical fixed Boss declarations without changing topology ownership. */
+function reconcileCompletionBosses(
+  document: ProjectDocument,
+  catalog: Catalog,
+  rivalsRank: number,
+): ProjectDocument {
+  const route = document.route;
+  let changed = false;
+  const biomes = route.biomes.map((plan) => {
+    const topology = plan.topology;
+    if (topology === null) return plan;
+    const expected = resolveCompletionBoss(catalog, route.routeKey, plan.biomeKey, rivalsRank);
+    const occurrences = topology.occurrences.map((occurrence) => {
+      const prebossLink = topology.fixedRoomLinks.find(
+        (link) => link.targetOccurrenceId === occurrence.occurrenceId,
+      );
+      if (
+        prebossLink === undefined ||
+        occurrence.occurrenceId !==
+          fixedCompletionOccurrenceId(prebossLink.sourceOccurrenceId, 'boss') ||
+        occurrence.gameName === expected.gameName
+      ) {
+        return occurrence;
+      }
+      const previous = catalog.rooms.byKey[occurrence.gameName];
+      if (previous?.kind !== 'Boss') return occurrence;
+      const replacementState = createDefaultRoomState(catalog, expected, {
+        role: 'ordinary',
+        entryActive: true,
+        loadout: route.loadout,
+      });
+      const replacementEncounters = createDefaultRoomEncounterState(
+        catalog,
+        expected,
+        `occurrences.${occurrence.occurrenceId}.encounters`,
+      );
+      changed = true;
+      return Object.freeze({
+        ...occurrence,
+        gameName: expected.gameName,
+        state: reconcileReplacementRoomState(
+          catalog,
+          previous,
+          occurrence.state,
+          expected,
+          replacementState,
+        ),
+        encounters: reconcileRoomEncounterState(
+          catalog,
+          previous,
+          occurrence.encounters,
+          expected,
+          replacementEncounters,
+        ),
+      });
+    });
+    if (!occurrences.some((occurrence, index) => occurrence !== topology.occurrences[index]))
+      return plan;
+    return Object.freeze({
+      ...plan,
+      topology: Object.freeze({ ...topology, occurrences: Object.freeze(occurrences) }),
+    });
+  });
+  return changed
+    ? Object.freeze({
+        ...document,
+        route: Object.freeze({ ...route, biomes: Object.freeze(biomes) }),
+      })
+    : document;
 }
 
 export function applyProjectStateCommand(
@@ -201,10 +278,13 @@ export function applyProjectStateCommand(
         );
       }
       if (route.loadout.fearRanks[command.vowKey] === command.rank) return document;
-      return {
+      const replacement = {
         ...document,
         route: { ...route, loadout: { ...route.loadout, fearRanks } },
       };
+      return command.vowKey === 'BossDifficultyShrineUpgrade'
+        ? reconcileCompletionBosses(replacement, catalog, command.rank)
+        : replacement;
     }
     case 'ReplaceBiomeField': {
       const located = locateBiome(document, catalog, command);

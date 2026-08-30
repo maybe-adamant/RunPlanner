@@ -32,6 +32,23 @@ export function normalizeRoutes(
       return biomeKey;
     });
 
+    if (route.prebossRoomGameNames.length !== biomeKeys.length) {
+      fail(
+        `${routePath}.prebossRoomGameNames`,
+        'must contain exactly one entry for every route biome',
+      );
+    }
+    const prebossRoomGameNames = route.prebossRoomGameNames.map((roomGameName, index) => {
+      const path = `${routePath}.prebossRoomGameNames[${index}]`;
+      requireNonEmpty(roomGameName, path);
+      const room = rooms.byKey[roomGameName];
+      if (room === undefined) fail(path, `unknown Preboss room ${roomGameName}`);
+      if (room.kind !== 'Preboss' || room.roomSetKey !== biomeKeys[index]) {
+        fail(path, `${roomGameName} must be the Preboss for route biome ${biomeKeys[index]}`);
+      }
+      return room.gameName;
+    });
+
     if (route.postbossRoomGameNames.length !== biomeKeys.length) {
       fail(
         `${routePath}.postbossRoomGameNames`,
@@ -61,6 +78,7 @@ export function normalizeRoutes(
       key: route.key,
       label: route.label,
       biomeKeys: Object.freeze(biomeKeys),
+      prebossRoomGameNames: Object.freeze(prebossRoomGameNames),
       postbossRoomGameNames: Object.freeze(postbossRoomGameNames),
     });
   });

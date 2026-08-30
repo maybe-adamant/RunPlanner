@@ -381,7 +381,10 @@ function firstTargetGenerationSupport(
     pendingSpellDrop,
   );
   const counts = roomGenerationCounts(before, source.origin);
-  const domain = firstTargetCandidateDomain(catalog, layout, ordinaryBatchIndex);
+  const route = catalog.routes.byKey[source.origin.routeKey];
+  if (route === undefined)
+    throw new BiomeRoomGenerationContractError(`unknown route ${source.origin.routeKey}`);
+  const domain = firstTargetCandidateDomain(catalog, layout, ordinaryBatchIndex, route);
   const ordinary = domain.ordinary.map((room) =>
     evaluateCandidate(catalog, source, sourceDeclaration, exit, counts, room, context),
   );
@@ -494,7 +497,12 @@ export function roomTargetCandidateContextAtFrontier(
   }
   return prepareTargetGameNameContext(
     catalog,
-    stagedCandidatePool(catalog, layout, ordinaryBatchIndex),
+    stagedCandidatePool(
+      catalog,
+      layout,
+      ordinaryBatchIndex,
+      catalog.routes.byKey[source.origin.routeKey]!,
+    ),
     source,
     targetOrigin,
     exit,

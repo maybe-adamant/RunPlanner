@@ -17,7 +17,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['F', 'G'],
     scenario: 'Canonical Underworld F/G route prefix',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'saved canonical Underworld F/G checkpoint',
   },
   {
@@ -27,7 +27,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['F', 'G'],
     scenario: 'F Postboss Pool sells a stacked trait while earlier picks remain recorded',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'semantic-command recipe from canonical Underworld F/G checkpoint',
   },
   {
@@ -37,7 +37,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['F'],
     scenario: 'F forced Postboss Well with Travel Deal refill, Yarn, Hymn, and Extended purchases',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'semantic-command recipe from canonical Underworld F/G checkpoint',
   },
   {
@@ -47,7 +47,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['F', 'G', 'H'],
     scenario: 'Canonical Underworld F/G/H route prefix',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'saved canonical Underworld F/G/H checkpoint',
   },
   {
@@ -57,7 +57,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['F', 'G', 'H', 'I'],
     scenario: 'Canonical Underworld F/G/H/I route prefix',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'saved canonical Underworld F/G/H/I checkpoint',
   },
   {
@@ -67,7 +67,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['F'],
     scenario: 'F Midshop Pom resolution frontier',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -77,7 +77,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['N'],
     scenario: 'Canonical Surface N Hub route prefix',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -87,7 +87,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['N'],
     scenario: 'N selected Natural Selection with unresolved eight-target result',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
   },
   {
@@ -97,7 +97,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['N'],
     scenario: "N Queen's Ransom acquisition with two Zeus removals",
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
   },
   {
@@ -107,7 +107,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['N'],
     scenario: 'N Epic Steady Growth at its first unresolved main-room threshold',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
   },
   {
@@ -117,7 +117,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['N'],
     scenario: 'N Quick Buck acquisition with one optional same-room Gold pickup',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
   },
   {
@@ -127,7 +127,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['N'],
     scenario: 'N Buried Treasure acquisition with six optional same-room pickups',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
   },
   {
@@ -137,7 +137,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['N'],
     scenario: 'N selected Mining, Spirit, and Seed successes including a side-room Spirit host',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
   },
   {
@@ -148,7 +148,7 @@ export const checkpointManifest = Object.freeze([
     scenario:
       'Visited N side-room Shrine schedules an unplaced required delivery at a later main Hub visit',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
   },
   {
@@ -158,7 +158,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['N', 'O'],
     scenario: 'Canonical Surface N/O route prefix',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -169,7 +169,7 @@ export const checkpointManifest = Object.freeze([
     scenario:
       'O ordinary Hermes Shrine rushes one offer and matures a delayed offer with the host reward',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'semantic-command recipe from the canonical Surface N/O checkpoint',
   },
   {
@@ -179,7 +179,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['N', 'O', 'P'],
     scenario: 'Canonical Surface N/O/P route prefix',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -189,7 +189,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['N', 'O', 'P', 'Q'],
     scenario: 'Canonical Surface N/O/P/Q route prefix',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -199,7 +199,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['N'],
     scenario: 'N entry frontier with unresolved terminal envelope',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'saved N entry frontier checkpoint',
   },
   {
@@ -209,7 +209,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['N'],
     scenario: 'N entry frontier with trait-resolved terminal envelope',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'saved N entry frontier checkpoint with resolved traits',
   },
   {
@@ -219,7 +219,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['N'],
     scenario: 'N complete Hub frontier before Preboss handoff',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'saved normalized N complete Hub frontier checkpoint',
   },
   {
@@ -229,7 +229,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['N'],
     scenario: 'N partial Hub visit-order frontier',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'saved normalized N partial Hub frontier checkpoint',
   },
   {
@@ -239,7 +239,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['N'],
     scenario: 'N Hub Story board with Story visit selected',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'saved normalized N Story board checkpoint',
   },
   {
@@ -249,7 +249,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['N'],
     scenario: 'N Hub invalid ten-open board with reward mutation',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'saved N ten-open invalid checkpoint',
   },
   {
@@ -259,7 +259,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['F'],
     scenario: 'Selected natural Chaos room with unresolved TrialUpgrade child and ordinary return',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'command-authored natural Chaos required-pickup frontier',
   },
   {
@@ -270,7 +270,7 @@ export const checkpointManifest = Object.freeze([
     scenario:
       'F accepted Nemesis trait trade with required Triple Gold and suppressed incoming reward',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'semantic-command recipe using the reached shared Nemesis trait candidate',
   },
   {
@@ -281,7 +281,7 @@ export const checkpointManifest = Object.freeze([
     scenario:
       'H physical-four Fields room with Passive Nemesis and three effective optional rewards',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'semantic-command recipe with free result interleaved among Fields cage actions',
   },
   {
@@ -291,7 +291,7 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['F', 'G', 'H', 'I'],
     scenario: 'F accepted Nemesis Pom or Hammer trade with Sea Star generated acquisition child',
     schemaVersion: 73,
-    catalogVersion: '0.51.0-biome-i-encounter-profiles',
+    catalogVersion: '0.52.0-boss-preboss-variants',
     provenance: 'semantic-command recipe using a reached Pom/Hammer candidate and Sea Star child',
   },
 ] as const satisfies readonly AuthoredProjectCheckpointManifestEntry[]);
