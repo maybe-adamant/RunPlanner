@@ -226,7 +226,7 @@ describe('repository test execution policy', () => {
     expect(outsideCorrectnessGlobs).toEqual([]);
 
     for (const fixtureTest of testFilesUnder(`${repositoryRoot}/test`).map((path) =>
-      relative(repositoryRoot, path),
+      relative(repositoryRoot, path).replaceAll('\\', '/'),
     )) {
       expect(fixtureConfig).toContain(fixtureTest);
     }
