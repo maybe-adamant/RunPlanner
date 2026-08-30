@@ -146,6 +146,13 @@ export const gEncounterDefinitions = [
     countsEncounterDepth: false,
     blocksGorgon: true,
   },
+  {
+    key: 'BossScylla02',
+    label: 'Scylla',
+    kind: 'boss',
+    countsEncounterDepth: false,
+    blocksGorgon: true,
+  },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 
 export const gEncounterSets = [

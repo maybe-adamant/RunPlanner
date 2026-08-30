@@ -4,7 +4,7 @@ import type { ProjectEvaluationAssembly } from '../simulation/evaluation-product
 /** The only execution artifact currently supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
 export const EXECUTION_PROTOCOL_VERSION = 3 as const;
-export const EXECUTION_CATALOG_VERSION = '0.51.0-biome-i-encounter-profiles' as const;
+export const EXECUTION_CATALOG_VERSION = '0.52.0-boss-preboss-variants' as const;
 
 export type ExecutionRunStateCount =
   | { readonly kind: 'exact'; readonly count: number }

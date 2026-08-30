@@ -7,7 +7,19 @@ import { pathToFileURL } from 'node:url';
 export const SOURCE_SCHEMA_VERSION = 72;
 export const OUTPUT_SCHEMA_VERSION = 73;
 export const SOURCE_CATALOG_VERSION = '0.51.0-biome-i-encounter-profiles';
+export const OUTPUT_CATALOG_VERSION = '0.52.0-boss-preboss-variants';
 export const SPLIT_ROUTE_KEYS = Object.freeze(['Underworld', 'Surface']);
+
+// Migration-local historical mapping. Schema 72 persisted only Boss01; schema 73
+// names the physical Rivals room selected by the already-stored Vow rank.
+const RIVALS_BOSS_VARIANTS = Object.freeze({
+  F: 'F_Boss02',
+  G: 'G_Boss02',
+  H: 'H_Boss02',
+  N: 'N_Boss02',
+  O: 'O_Boss02',
+  Q: 'Q_Boss02',
+});
 
 function expectRecord(value, label) {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
@@ -46,6 +58,48 @@ function validateSource(value) {
   return source;
 }
 
+function reconcileCompletionBossVariants(route) {
+  const rank = route?.loadout?.fearRanks?.BossDifficultyShrineUpgrade;
+  if (!Number.isInteger(rank) || rank <= 0 || !Array.isArray(route.biomes)) return route;
+  return {
+    ...route,
+    biomes: route.biomes.map((biome, routePosition) => {
+      const variant = RIVALS_BOSS_VARIANTS[biome?.biomeKey];
+      const topology = biome?.topology;
+      if (
+        variant === undefined ||
+        rank < routePosition + 1 ||
+        !Array.isArray(topology?.occurrences)
+      ) {
+        return biome;
+      }
+      const fixedTargets = new Set(
+        (Array.isArray(topology.fixedRoomLinks) ? topology.fixedRoomLinks : [])
+          .filter(
+            (link) =>
+              typeof link?.sourceOccurrenceId === 'string' &&
+              typeof link?.targetOccurrenceId === 'string' &&
+              link.targetOccurrenceId === `${link.sourceOccurrenceId}:boss`,
+          )
+          .map((link) => link.targetOccurrenceId),
+      );
+      if (fixedTargets.size === 0) return biome;
+      return {
+        ...biome,
+        topology: {
+          ...topology,
+          occurrences: topology.occurrences.map((occurrence) =>
+            fixedTargets.has(occurrence?.occurrenceId) &&
+            occurrence.gameName === `${biome.biomeKey}_Boss01`
+              ? { ...occurrence, gameName: variant }
+              : occurrence,
+          ),
+        },
+      };
+    }),
+  };
+}
+
 /** Split the immediately preceding two-route document into two independent documents. */
 export function splitProjectDocument(value) {
   const source = validateSource(value);
@@ -54,9 +108,13 @@ export function splitProjectDocument(value) {
     SPLIT_ROUTE_KEYS.map((routeKey) => {
       const route = sourceClone.routes.find((candidate) => candidate.routeKey === routeKey);
       if (route === undefined) throw new Error(`missing route ${routeKey}`);
-      const document = { ...sourceClone, route: structuredClone(route) };
+      const document = {
+        ...sourceClone,
+        route: reconcileCompletionBossVariants(structuredClone(route)),
+      };
       delete document.routes;
       document.schemaVersion = OUTPUT_SCHEMA_VERSION;
+      document.catalogVersion = OUTPUT_CATALOG_VERSION;
       return [routeKey, document];
     }),
   );

@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.51.0-biome-i-encounter-profiles',
+  version: '0.52.0-boss-preboss-variants',
   biomes,
   routes,
   arcanaCards,

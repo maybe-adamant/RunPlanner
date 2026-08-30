@@ -163,6 +163,13 @@ export const nEncounterDefinitions = [
     countsEncounterDepth: false,
     blocksGorgon: true,
   },
+  {
+    key: 'BossPolyphemus02',
+    label: 'Polyphemus',
+    kind: 'boss',
+    countsEncounterDepth: false,
+    blocksGorgon: true,
+  },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 
 export const nEncounterSets = [

@@ -67,6 +67,13 @@ export const qEncounterDefinitions = [
     countsEncounterDepth: false,
     blocksGorgon: true,
   },
+  {
+    key: 'BossTyphonHead02',
+    label: 'Typhon',
+    kind: 'boss',
+    countsEncounterDepth: false,
+    blocksGorgon: true,
+  },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 
 export const qEncounterSets = [] as const satisfies readonly RawEncounterSetDeclaration[];

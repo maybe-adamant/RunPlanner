@@ -8,6 +8,7 @@ describe('room collection closure', () => {
       'F_PreBoss01',
       'G_PreBoss01',
       'H_PreBoss01',
+      'I_PreBoss01',
       'I_PreBoss02',
       'N_PreBoss01',
       'O_PreBoss01',
@@ -33,7 +34,7 @@ describe('room collection closure', () => {
         ],
       });
     }
-    expect(catalog.rooms.byKey.I_PreBoss01).toBeUndefined();
+    expect(catalog.rooms.byKey.I_PreBoss01?.infernalContractReward).toBeDefined();
     for (const midshop of ['F_Shop01', 'G_Shop01', 'O_Shop01', 'P_Shop01']) {
       expect(catalog.rooms.byKey[midshop]?.infernalContractReward, midshop).toBeUndefined();
     }

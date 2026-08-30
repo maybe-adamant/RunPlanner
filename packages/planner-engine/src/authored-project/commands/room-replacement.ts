@@ -290,6 +290,16 @@ export function applyRoomReplacementCommand(
   const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
   if (occurrence.gameName === command.gameName) return document;
   const replacementRoom = requireRoom(catalog, command.gameName, located.layout.biomeKey, command);
+  if (
+    replacementRoom.kind === 'Preboss' &&
+    catalog.routes.byKey[located.routeKey]?.prebossRoomGameNames?.[located.biomeIndex] !==
+      replacementRoom.gameName
+  ) {
+    failCommand(
+      command,
+      `${replacementRoom.gameName} is not this route position's declared Preboss`,
+    );
+  }
   if (current.startOccurrenceId === occurrence.occurrenceId) {
     const allowed =
       located.layout.start.kind === 'authoredChoice'

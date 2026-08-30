@@ -6,7 +6,7 @@ import { declarations } from '@run-planner/hades2-catalog/test-support';
 describe('unified biome decisions catalog', () => {
   it('assembles every supported biome through the common immutable catalog envelope', () => {
     const catalog = createCatalog(declarations);
-    expect(catalog.version).toBe('0.51.0-biome-i-encounter-profiles');
+    expect(catalog.version).toBe('0.52.0-boss-preboss-variants');
     expect(catalog.biomeLayouts.values.map((layout) => layout.biomeKey)).toEqual([
       'F',
       'G',

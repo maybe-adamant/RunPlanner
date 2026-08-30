@@ -35,6 +35,7 @@ export const hBiomeLayout = {
   },
   completion: {
     bossRoomGameName: 'H_Boss01',
+    rivalsBossRoomGameName: 'H_Boss02',
     transitionEffects: [
       { kind: 'resetCounter', axis: 'biomeDepthCache' },
       { kind: 'resetCounter', axis: 'biomeEncounterDepth' },

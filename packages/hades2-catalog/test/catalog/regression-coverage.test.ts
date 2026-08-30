@@ -92,14 +92,14 @@ const biomeContracts = [
 ] as const;
 
 const roomCounts = [
-  ['F', 34, 34],
-  ['G', 30, 30],
-  ['H', 22, 22],
-  ['I', 31, 31],
-  ['N', 47, 46],
-  ['O', 25, 25],
+  ['F', 35, 35],
+  ['G', 31, 31],
+  ['H', 23, 23],
+  ['I', 32, 32],
+  ['N', 48, 47],
+  ['O', 26, 26],
   ['P', 28, 28],
-  ['Q', 23, 23],
+  ['Q', 24, 24],
 ] as const;
 
 const prebossPolicies = [
@@ -158,14 +158,14 @@ const roomFacts = [
 ] as const;
 
 const normalizedBiomeSnapshotHashes = [
-  ['F', 'e37d6668f4f12289'],
-  ['G', '2d28fd72afd2ddb4'],
-  ['H', '4241d902c365f1cf'],
-  ['I', '0fc47a0e4c682827'],
-  ['N', '598defa5ff676ec2'],
-  ['O', '16c89344f258c6a4'],
+  ['F', 'ff60fd61e38f80c4'],
+  ['G', '81a019b54ac539d2'],
+  ['H', '961604e42f82742a'],
+  ['I', 'dd143ba30223d03d'],
+  ['N', '976fcf929f024fa3'],
+  ['O', '80a1bb53ad57c3af'],
   ['P', '8424c2f97cfb7372'],
-  ['Q', 'b328e69cea8908d5'],
+  ['Q', 'b3be45b100208ead'],
 ] as const;
 
 function normalizedBiomeSnapshot(biomeKey: string) {
@@ -356,6 +356,7 @@ describe('catalog regression coverage retained through unified decisions', () =>
       G_Shop01: 'WorldShop',
       G_PreBoss01: 'WorldShop',
       H_PreBoss01: 'WorldShop',
+      I_PreBoss01: 'I_WorldShop',
       I_PreBoss02: 'I_WorldShop',
       N_PreBoss01: 'WorldShop',
       O_Shop01: 'WorldShop',

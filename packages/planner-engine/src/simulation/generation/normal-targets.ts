@@ -600,7 +600,11 @@ function evaluateCandidate(
   });
 }
 
-function normalCandidatePool(catalog: Catalog, layout: BiomeLayout): readonly RoomDeclaration[] {
+function normalCandidatePool(
+  catalog: Catalog,
+  layout: BiomeLayout,
+  route: import('../../catalog-schema').RouteDeclaration,
+): readonly RoomDeclaration[] {
   const progression = normalDecisionProgressionForLayout(layout);
   if (progression === undefined) {
     throw new BiomeRoomGenerationContractError(
@@ -618,6 +622,7 @@ function normalCandidatePool(catalog: Catalog, layout: BiomeLayout): readonly Ro
         room.roomSetKey === layout.biomeKey &&
         room.mode.kind === 'authored' &&
         room.prebossBatchPolicy?.kind !== 'takeOverNormalDoors' &&
+        (room.kind !== 'Preboss' || route.prebossRoomGameNames.includes(room.gameName)) &&
         !startNames.has(room.gameName),
     ),
   );
@@ -627,6 +632,7 @@ function stagedCandidatePool(
   catalog: Catalog,
   layout: BiomeLayout,
   batchIndex: number,
+  route: import('../../catalog-schema').RouteDeclaration,
 ): readonly RoomDeclaration[] {
   const progression = normalDecisionProgressionForLayout(layout);
   if (progression === undefined) {
@@ -634,7 +640,7 @@ function stagedCandidatePool(
   }
   const policy = progression.progressionPolicy;
   if (policy.kind !== 'staged') {
-    return normalCandidatePool(catalog, layout);
+    return normalCandidatePool(catalog, layout, route);
   }
   const stage = policy.stages[batchIndex];
   if (stage === undefined) {
@@ -661,12 +667,13 @@ function firstTargetCandidateDomain(
   catalog: Catalog,
   layout: BiomeLayout,
   ordinaryBatchIndex: number,
+  route: import('../../catalog-schema').RouteDeclaration,
 ): FirstTargetCandidateDomain {
   return Object.freeze({
-    ordinary: stagedCandidatePool(catalog, layout, ordinaryBatchIndex),
+    ordinary: stagedCandidatePool(catalog, layout, ordinaryBatchIndex, route),
     takeover:
       layout.progression.kind === 'generated'
-        ? takeoverCandidatePool(catalog, layout.biomeKey)
+        ? takeoverCandidatePool(catalog, layout.biomeKey, route)
         : Object.freeze([]),
   });
 }
@@ -1104,11 +1111,17 @@ export type {
   TargetRewardRequirementFacts,
 };
 
-function takeoverCandidatePool(catalog: Catalog, biomeKey: string): readonly RoomDeclaration[] {
+function takeoverCandidatePool(
+  catalog: Catalog,
+  biomeKey: string,
+  route: import('../../catalog-schema').RouteDeclaration,
+): readonly RoomDeclaration[] {
   return Object.freeze(
     catalog.rooms.values.filter(
       (room) =>
-        room.roomSetKey === biomeKey && room.prebossBatchPolicy?.kind === 'takeOverNormalDoors',
+        room.roomSetKey === biomeKey &&
+        room.prebossBatchPolicy?.kind === 'takeOverNormalDoors' &&
+        route.prebossRoomGameNames.includes(room.gameName),
     ),
   );
 }

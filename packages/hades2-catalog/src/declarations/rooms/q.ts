@@ -631,4 +631,23 @@ export const qRooms = [
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
+  {
+    gameName: 'Q_Boss02',
+    resourcePointSupport: normalResourcePointSupport([]),
+    label: 'Typhon',
+    roomSetKey: 'Q',
+    advancesExperimentalHammerUses: true,
+    kind: 'Boss',
+    mode: { kind: 'authored', templateKey: 'Boss' },
+    structuralTags: [],
+    exits: [{ index: 1, type: 'TyphonExitDoor' }],
+    incomingReward: { kind: 'none' },
+    enteredRewardStoreHistory: { kind: 'none' },
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BossTyphonHead02' },
+    ],
+    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
+    caps: { maxAppearancesThisBiome: 1 },
+  },
 ] as const satisfies readonly RawRoomDeclaration[];

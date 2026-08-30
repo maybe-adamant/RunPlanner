@@ -74,6 +74,8 @@ export interface RouteDeclaration {
   readonly biomeKeys: readonly string[];
   /** Exact Postboss room for each route position; terminal positions are null. */
   readonly postbossRoomGameNames: readonly (string | null)[];
+  /** The sole route-selected Preboss map for each route position. */
+  readonly prebossRoomGameNames: readonly string[];
 }
 
 export type ArcanaActivationRule =
@@ -933,7 +935,10 @@ export interface BiomeTransitionCounterReset {
 }
 
 export interface CompletionDescriptor {
+  /** Normal physical Boss map; retained as the default completion identity. */
   readonly bossRoomGameName: string;
+  /** Distinct physical Rivals map, when the biome declares one. */
+  readonly rivalsBossRoomGameName?: string;
   readonly transitionEffects: readonly BiomeTransitionCounterReset[];
 }
 

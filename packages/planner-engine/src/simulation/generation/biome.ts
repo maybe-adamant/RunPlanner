@@ -231,7 +231,12 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
     const targets = evaluateTargetSlots(
       catalog,
       layout,
-      stagedCandidatePool(catalog, layout, ordinaryBatchIndex),
+      stagedCandidatePool(
+        catalog,
+        layout,
+        ordinaryBatchIndex,
+        catalog.routes.byKey[source.origin.routeKey]!,
+      ),
       source,
       sourceBeforeGeneration,
       batch.origin,

@@ -239,12 +239,11 @@ function diagnostic(value: unknown, label: string) {
   );
   const equipped = array(traits.equipped, `${label}.traits.equipped`, 128).map((entry, index) => {
     const trait = object(entry, `${label}.traits.equipped[${index}]`);
-    exact(
-      trait,
-      ['traitKey'],
-      `${label}.traits.equipped[${index}]`,
-      ['rarity', 'level', 'hammerRank'],
-    );
+    exact(trait, ['traitKey'], `${label}.traits.equipped[${index}]`, [
+      'rarity',
+      'level',
+      'hammerRank',
+    ]);
     return Object.freeze({
       traitKey: stringValue(trait.traitKey, `${label}.traits.equipped[${index}].traitKey`),
       ...(trait.rarity === undefined

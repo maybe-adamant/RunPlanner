@@ -23,6 +23,7 @@ const hFishingDisabled = [
   'H_Combat09',
   'H_Combat13',
   'H_Boss01',
+  'H_Boss02',
 ] as const;
 const iFishingDisabled = [
   'I_Combat02',
@@ -79,10 +80,13 @@ const roomsWithNoResourceFamilies = [
   'B_Combat21',
   'C_Boss01',
   'G_Boss01',
+  'G_Boss02',
+  'H_Boss02',
   'H_PostBoss01',
   'N_Hub',
   'O_PostBoss01',
   'Q_Boss01',
+  'Q_Boss02',
 ] as const;
 const roomsIgnoringBiomeLimit = [
   'F_Reprieve01',
@@ -159,13 +163,13 @@ describe('selected resource-success catalog facts', () => {
     const sorted = (values: readonly string[]) => [...values].sort();
 
     expect(namesWithoutFishing('F_')).toEqual(sorted(fFishingDisabled));
-    expect(namesWithoutFishing('G_')).toEqual(['G_Boss01']);
+    expect(namesWithoutFishing('G_')).toEqual(['G_Boss01', 'G_Boss02']);
     expect(namesWithoutFishing('H_')).toEqual(sorted([...hFishingDisabled, 'H_PostBoss01']));
     expect(namesWithoutFishing('I_')).toEqual(sorted(iFishingDisabled));
     expect(namesWithFishing('N_')).toEqual(sorted(nFishingEnabled));
-    expect(namesWithFishing('O_')).toEqual(sorted(oFishingEnabled));
+    expect(namesWithFishing('O_')).toEqual(sorted([...oFishingEnabled, 'O_Boss02']));
     expect(namesWithoutFishing('P_')).toEqual(sorted(pFishingDisabled));
-    expect(namesWithoutFishing('Q_')).toEqual(['Q_Boss01', 'Q_Combat03', 'Q_Combat08']);
+    expect(namesWithoutFishing('Q_')).toEqual(['Q_Boss01', 'Q_Boss02', 'Q_Combat03', 'Q_Combat08']);
 
     for (const gameName of nFishingEnabled)
       expect(catalog.rooms.byKey[gameName]?.resourcePointSupport.families).toEqual(families);
@@ -193,7 +197,7 @@ describe('selected resource-success catalog facts', () => {
       expect(catalog.rooms.byKey[gameName]?.resourcePointSupport.families).toEqual(
         ordinaryFamiliesWithoutFishing,
       );
-    for (const gameName of hFishingDisabled)
+    for (const gameName of hFishingDisabled.filter((gameName) => gameName !== 'H_Boss02'))
       expect(catalog.rooms.byKey[gameName]?.resourcePointSupport.families).toEqual(
         ordinaryFamiliesWithoutFishing,
       );

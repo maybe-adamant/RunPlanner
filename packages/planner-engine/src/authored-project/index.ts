@@ -62,6 +62,7 @@ export {
   createProjectDocument,
   type CreateProjectDocumentOptions,
 } from './defaults';
+export { resolveCompletionBoss } from './completion-boss';
 export {
   createBiomeAddress,
   createBiomeFieldAddress,

@@ -12,7 +12,7 @@ the active frontier needed to orient the next delivery.
 ## Current Snapshot
 
 The current persisted contract is strict authored schema 73 with catalog
-`0.51.0-biome-i-encounter-profiles`. Each project contains one selected route;
+`0.52.0-boss-preboss-variants`. Each project contains one selected route;
 the browser product supports the eight catalog biomes across the two current
 route choices:
 
@@ -99,7 +99,7 @@ milestones without repeating the delivery chronology.
 | Schema 73          | Each project became a single selected-route document; the legacy schema-72 dual-route shape is converted by a lossless two-document splitter, and the older migration chain was retired. |
 
 Catalog versions advanced alongside these boundaries. The current catalog is
-`0.51.0-biome-i-encounter-profiles`; exact declaration facts and source contacts
+`0.52.0-boss-preboss-variants`; exact declaration facts and source contacts
 remain in the catalog package and focused audits rather than this status
 ledger.
 

@@ -24,6 +24,7 @@ import type {
   RoomOccurrence,
 } from '../model';
 import { fixedCompletionOccurrenceId, fixedRoomLink } from '../fixed-room-links';
+import { resolveCompletionBoss } from '../completion-boss';
 import { requireEphyraSideRooms, type RoomOccurrenceRole } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
 import { createDefaultRoomEncounterState } from '../room-state/encounter-envelope';
@@ -364,11 +365,11 @@ function completionChainForSelection(
   }
   const route = catalog.routes.byKey[located.routeKey];
   if (route === undefined) failCommand(command, 'unknown route for selected biome');
-  const bossRoom = requireRoom(
+  const bossRoom = resolveCompletionBoss(
     catalog,
-    located.layout.completion.bossRoomGameName,
+    located.routeKey,
     located.layout.biomeKey,
-    command,
+    located.loadout.fearRanks.BossDifficultyShrineUpgrade ?? 0,
   );
   const postbossGameName = route.postbossRoomGameNames[located.biomeIndex];
   const postbossRoom =
@@ -672,6 +673,13 @@ function createTarget(
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
   const room = requireRoom(catalog, command.gameName, located.layout.biomeKey, command);
+  if (
+    room.kind === 'Preboss' &&
+    catalog.routes.byKey[located.routeKey]?.prebossRoomGameNames?.[located.biomeIndex] !==
+      room.gameName
+  ) {
+    failCommand(command, `${room.gameName} is not this route position's declared Preboss`);
+  }
   const eligibility = ordinaryTargetAuthoringEligibility(
     catalog,
     located.layout,
@@ -863,6 +871,11 @@ function replaceTakeoverBatch(
   const room = requireRoom(catalog, command.gameName, located.layout.biomeKey, command);
   if (room.prebossBatchPolicy?.kind !== 'takeOverNormalDoors')
     failCommand(command, `${room.gameName} is not a takeover Preboss declaration`);
+  if (
+    catalog.routes.byKey[located.routeKey]?.prebossRoomGameNames[located.biomeIndex] !==
+    room.gameName
+  )
+    failCommand(command, `${room.gameName} is not this route position's declared Preboss`);
   const exitKeys = exitKeysForSource(catalog, located, command.decision.source, command);
   const supplied = Object.keys(command.targetOccurrenceIds);
   if (

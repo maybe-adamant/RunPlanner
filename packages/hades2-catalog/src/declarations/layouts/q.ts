@@ -41,6 +41,7 @@ export const qBiomeLayout = {
   },
   completion: {
     bossRoomGameName: 'Q_Boss01',
+    rivalsBossRoomGameName: 'Q_Boss02',
     transitionEffects: [
       { kind: 'resetCounter', axis: 'biomeDepthCache' },
       { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
