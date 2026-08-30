@@ -231,8 +231,7 @@ export {
 export {
   declaredPhysicalExits,
   hostContinuationExitForDetourRoom,
-  fixedWidthOneTakeoverForLayout,
-  fixedWidthOneTakeoverTransitionForSource,
+  completedHubHandoffForSource,
   hubTerminalTakeoverForSource,
   isExactTerminalTakeoverEnvelope,
   normalDecisionProgressionForLayout,
@@ -244,7 +243,7 @@ export {
   selectedExitContinuation,
   selectedExitTarget,
   type DeclaredPhysicalExit,
-  type FixedWidthOneTakeoverTransition,
+  type CompletedHubHandoff,
   type OrdinaryTargetAuthoringEligibility,
   type SelectedExitContinuation,
 } from './topology/query';

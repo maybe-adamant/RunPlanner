@@ -6,7 +6,7 @@ export const oBiomeLayout = {
   start: { kind: 'fixedAuthored', roomGameName: 'O_Intro' },
   progression: {
     kind: 'generated',
-    progressionPolicy: { kind: 'fixedCount', continuationCount: 6 },
+    progressionPolicy: { kind: 'eligibilityDriven' },
     batchPolicy: { kind: 'standard', fields: [] },
     rewardStorePolicy: {
       kind: 'authoredBaseStore',
@@ -20,7 +20,6 @@ export const oBiomeLayout = {
         policy: { kind: 'sourceOfferPoint', selector: 'lastActiveWheel' },
       },
     ],
-    bounds: { maxBatches: 6, maxTargets: 6 },
   },
   completion: {
     bossRoomGameName: 'O_Boss01',

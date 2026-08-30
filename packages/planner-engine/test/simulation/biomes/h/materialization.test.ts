@@ -9,6 +9,7 @@ import {
   createBiomeAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
+  createIncomingRewardAddress,
   createEncounterPhaseAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
@@ -18,6 +19,7 @@ import {
   createRouteStartKeepsakeSelectionAddress,
   createTargetAddress,
   createTraitOfferAddress,
+  echoLastRewardPickupEntryKey,
   encodeProjectDocument,
   roomActionKey,
   semanticAddressKey,
@@ -373,7 +375,270 @@ function replaceFieldsActions(
   );
 }
 
+function selectGeneratedChaos(
+  project: ProjectDocument,
+  sourceOccurrenceId: OccurrenceId,
+  abandonedOccurrenceId: OccurrenceId,
+  abandonedGameName: 'H_Combat01' | 'H_Combat07',
+  cageOutcome: 'min' | 'max',
+) {
+  const chaosOccurrenceId = plan(project)
+    .topology?.occurrences.find((occurrence) => occurrence.occurrenceId === sourceOccurrenceId)
+    ?.additionalExits.find((exit) => exit.kind === 'chaos')?.occurrenceId;
+  if (chaosOccurrenceId === undefined) {
+    throw new Error(`Ixion did not generate H Chaos at ${sourceOccurrenceId}`);
+  }
+  const decision = createExitDecisionAddress(biome, {
+    kind: 'occurrence',
+    occurrenceId: sourceOccurrenceId,
+  });
+  let next = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceFieldsCageOutcome',
+    decision,
+    cageOutcome,
+  });
+  next = applyProjectCommand(next, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(biome, decision.source, 'exit1'),
+    occurrenceId: abandonedOccurrenceId,
+    gameName: abandonedGameName,
+  });
+  for (const [slotKey, rewardType] of [
+    ['cage1', 'MaxHealthDrop'],
+    ['cage2', 'MaxManaDrop'],
+  ] as const) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: createLocalRewardAddress(biome, abandonedOccurrenceId, 'cages', slotKey),
+      value: { rewardType },
+    });
+  }
+  next = applyProjectCommand(next, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(biome, decision.source),
+    value: { kind: 'additional', additionalExitKey: 'chaos' },
+  });
+  return Object.freeze({ project: next, chaosOccurrenceId });
+}
+
+function authorThreeFieldsCages(
+  project: ProjectDocument,
+  occurrenceId: OccurrenceId,
+): ProjectDocument {
+  let next = project;
+  for (const [slotKey, rewardType] of [
+    ['cage1', 'MaxHealthDrop'],
+    ['cage2', 'MaxManaDrop'],
+    ['cage3', 'RoomMoneyDrop'],
+  ] as const) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: createLocalRewardAddress(biome, occurrenceId, 'cages', slotKey),
+      value: { rewardType },
+    });
+  }
+  return authorFieldsOptionals(next, occurrenceId);
+}
+
+function authorThreeFieldsBoonCages(
+  project: ProjectDocument,
+  occurrenceId: OccurrenceId,
+): ProjectDocument {
+  let next = project;
+  for (const [slotKey, source] of [
+    ['cage1', 'ApolloUpgrade'],
+    ['cage2', 'HestiaUpgrade'],
+    ['cage3', 'HeraUpgrade'],
+  ] as const) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: createLocalRewardAddress(biome, occurrenceId, 'cages', slotKey),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source } },
+    });
+  }
+  return authorFieldsOptionals(next, occurrenceId);
+}
+
+function authorFieldsOptionals(
+  project: ProjectDocument,
+  occurrenceId: OccurrenceId,
+): ProjectDocument {
+  let next = project;
+  for (const [slotKey, rewardType] of [
+    ['optional1', 'MaxManaDropSmall'],
+    ['optional2', 'MaxHealthDropSmall'],
+  ] as const) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: createLocalRewardAddress(biome, occurrenceId, 'optionalRewards', slotKey),
+      value: { rewardType },
+    });
+  }
+  return next;
+}
+
 describe('H Fields materialization', () => {
+  it('keeps H completion room-history-driven across a selected Chaos detour', () => {
+    const start = goldenHStartId;
+    const abandoned = createOccurrenceId('h-condition-abandoned');
+    const miniboss = createOccurrenceId('h-condition-miniboss');
+    const combat = createOccurrenceId('h-condition-combat');
+    const combatPeer = createOccurrenceId('h-condition-combat-peer');
+    const bridge = createOccurrenceId('h-condition-bridge');
+    const bridgePeer = createOccurrenceId('h-condition-bridge-peer');
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision: createExitDecisionAddress(biome, {
+        kind: 'occurrence',
+        occurrenceId: start,
+      }),
+    });
+    const gPostboss = project.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'G')
+      ?.topology?.occurrences.find((occurrence) => occurrence.gameName === 'G_PostBoss01');
+    if (gPostboss === undefined) throw new Error('G Postboss is required for the Ixion fixture');
+    const well = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'G'),
+      gPostboss.occurrenceId,
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellInteraction',
+      occurrence: well,
+      interacted: true,
+    });
+    for (const [slotKey, itemKey] of [
+      ['healing', 'HealDropRange'],
+      ['secondLeft', 'TemporaryForcedSecretDoorTrait'],
+      ['secondRight', 'TemporaryMoveSpeedTrait'],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceStygianWellOffer',
+        occurrence: well,
+        slotKey,
+        itemKey,
+      });
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: well,
+      generationKey: 'initial:secondLeft',
+      purchased: true,
+    });
+    const firstChaos = selectGeneratedChaos(project, start, abandoned, 'H_Combat07', 'min');
+    project = firstChaos.project;
+    project = appendBatch(
+      project,
+      firstChaos.chaosOccurrenceId,
+      [{ occurrenceId: miniboss, gameName: 'H_MiniBoss01' }],
+      1,
+      'min',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(biome, miniboss),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
+    });
+    project = appendBatch(
+      project,
+      miniboss,
+      [
+        { occurrenceId: combat, gameName: 'H_Combat02' },
+        { occurrenceId: combatPeer, gameName: 'H_Combat03' },
+      ],
+      1,
+      'max',
+    );
+    project = authorThreeFieldsCages(project, combat);
+    project = authorThreeFieldsBoonCages(project, combatPeer);
+    project = appendBatch(
+      project,
+      combat,
+      [
+        { occurrenceId: bridge, gameName: 'H_Bridge01' },
+        { occurrenceId: bridgePeer, gameName: 'H_Combat04' },
+      ],
+      1,
+      'max',
+    );
+    project = authorThreeFieldsCages(project, bridgePeer);
+    project = authorLegalTraitOffers(project);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(createOccurrenceAddress(biome, bridge), 'roomExit'),
+        echoLastRewardPickupEntryKey('Encounter', 'Story_Echo_01', 'option1'),
+      ),
+      value: { rewardType: 'RoomMoneyDrop' },
+    });
+
+    const beforeFourthAssembly = simulateProjectAssembly(catalog, project);
+
+    const fourthDecision = createExitDecisionAddress(biome, {
+      kind: 'occurrence',
+      occurrenceId: bridge,
+    });
+    const beforeFourth = createPreparedProjectCandidateSession(
+      catalog,
+      beforeFourthAssembly,
+    ).evaluate([
+      {
+        kind: 'roomTarget',
+        target: createTargetAddress(biome, fourthDecision.source, 'exit1'),
+        gameName: 'H_Combat04',
+      },
+      {
+        kind: 'takeoverPrebossBatch',
+        source: fourthDecision,
+        gameName: 'H_PreBoss01',
+      },
+    ]);
+    expect(beforeFourth[0]).toMatchObject({
+      kind: 'roomTarget',
+      result: { pressure: { selectedPossible: true } },
+    });
+    expect(beforeFourth[1]).toMatchObject({
+      kind: 'takeoverPrebossBatch',
+      result: { support: 'impossible', selectedPossible: false },
+    });
+  });
+
+  it('requires the H takeover only after the fourth qualifying room is entered', () => {
+    const source = createOccurrenceId('golden-h-combat05');
+    const decision = createExitDecisionAddress(biome, {
+      kind: 'occurrence',
+      occurrenceId: source,
+    });
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision,
+    });
+    project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFieldsCageOutcome',
+      decision,
+      cageOutcome: 'max',
+    });
+
+    expect(
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).evaluate({
+        kind: 'takeoverPrebossBatch',
+        source: decision,
+        gameName: 'H_PreBoss01',
+      }),
+    ).toMatchObject({
+      kind: 'takeoverPrebossBatch',
+      result: {
+        support: 'required',
+        selectedPossible: true,
+        requiredExitKeys: ['exit1', 'exit2'],
+      },
+    });
+  });
+
   it('spends an Olympian provider when a Fields cage creates its matching Boon', () => {
     const occurrenceId = createOccurrenceId('golden-h-combat02');
     const cage = createLocalRewardAddress(biome, occurrenceId, 'cages', 'cage1');

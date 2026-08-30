@@ -19,9 +19,8 @@ import {
 
 import {
   declaredPhysicalExits,
+  completedHubHandoffForSource,
   exitDecisionForSource,
-  fixedWidthOneTakeoverForSource,
-  fixedWidthOneTakeoverTransitionForSource,
   hostContinuationExitForDetourRoom,
   selectedExitKey,
   selectedExitTarget,
@@ -178,15 +177,13 @@ describe('authored topology queries', () => {
     expect(selectedOrdinaryBatchIndex(cyclic, qOccurrenceIds.foyer)).toBeUndefined();
   });
 
-  it('preserves declaration-owned physical exits and bounded takeover transitions', () => {
+  it('preserves declaration-owned physical exits and the completed-Hub transition', () => {
     const surface = loadSurfaceNOPQProject();
     const nTopology = topologyFor(surface, 'N');
     const oTopology = topologyFor(surface, 'O');
-    const qTopology = topologyFor(surface, 'Q');
     const nLayout = catalog.biomeLayouts.byKey.N;
     const oLayout = catalog.biomeLayouts.byKey.O;
-    const qLayout = catalog.biomeLayouts.byKey.Q;
-    if (nLayout === undefined || oLayout === undefined || qLayout === undefined) {
+    if (nLayout === undefined || oLayout === undefined) {
       throw new Error('Surface layouts are required');
     }
 
@@ -258,28 +255,10 @@ describe('authored topology queries', () => {
     ).toBeUndefined();
 
     expect(
-      fixedWidthOneTakeoverTransitionForSource(catalog, nLayout, nTopology, {
+      completedHubHandoffForSource(catalog, nLayout, nTopology, {
         kind: 'hubDecision',
         decisionKey: 'hub',
       }),
     ).toMatchObject({ kind: 'completedHubHandoff', room: { gameName: 'N_PreBoss01' } });
-    expect(
-      fixedWidthOneTakeoverForSource(catalog, oLayout, oTopology, {
-        kind: 'occurrence',
-        occurrenceId: oOccurrenceIds.combat02,
-      }),
-    ).toMatchObject({ gameName: 'O_PreBoss01' });
-    expect(
-      fixedWidthOneTakeoverTransitionForSource(catalog, qLayout, qTopology, {
-        kind: 'occurrence',
-        occurrenceId: qOccurrenceIds.secondMiniboss1,
-      }),
-    ).toMatchObject({ kind: 'fixedWidthOneTakeover', room: { gameName: 'Q_PreBoss01' } });
-    expect(
-      fixedWidthOneTakeoverForSource(catalog, qLayout, qTopology, {
-        kind: 'occurrence',
-        occurrenceId: qOccurrenceIds.secondFork,
-      }),
-    ).toBeUndefined();
   });
 });

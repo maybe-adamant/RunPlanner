@@ -17,7 +17,6 @@ import {
   encodedTopology,
   expectDocumentError,
   fBiome,
-  hBiome,
   incompleteZagreusEnvelopeProject,
   loadSurfaceNOPQProject,
   materializeBiomePrefix,
@@ -155,12 +154,12 @@ describe('topology structural codec', () => {
   });
 
   it.each([
-    ['H', completeHProject, 9],
-    ['O', completeOProject, 7],
-    ['Q', completeQProject, 7],
+    ['H', completeHProject, 5, 9],
+    ['O', completeOProject, 7, 7],
+    ['Q', completeQProject, 7, 7],
   ] as const)(
-    'does not count the complete %s takeover against generated progression bounds',
-    (biomeKey, build, expectedTargetCount) => {
+    'round-trips the complete %s topology with its takeover outside ordinary progression',
+    (biomeKey, build, expectedBatchCount, expectedTargetCount) => {
       const document = build();
       const plan = document.routes
         .flatMap((route) => route.biomes)
@@ -179,7 +178,7 @@ describe('topology structural codec', () => {
       const targets = batches.flatMap((decision) =>
         decision.kind === 'exit' && decision.normal.kind === 'batch' ? decision.normal.targets : [],
       );
-      expect(batches).toHaveLength(layout.progression.bounds.maxBatches + 1);
+      expect(batches).toHaveLength(expectedBatchCount);
       expect(targets).toHaveLength(expectedTargetCount);
       expect(decodeProjectDocument(encodedProject(document), catalog)).toEqual(document);
     },
@@ -214,12 +213,11 @@ describe('topology structural codec', () => {
   });
 
   it.each([
-    ['H', 'Underworld', hBiome, completeHProject, 'complete-h-07', 'H_Combat02'],
-    ['O', 'Surface', oBiome, completeOProject, 'complete-o-6', 'O_Combat01'],
-    ['Q', 'Surface', qBiome, loadSurfaceNOPQProject, 'surface-q-second-miniboss-1', 'Q_Combat10'],
+    ['O', 'Surface', oBiome, completeOProject, 'complete-o-6'],
+    ['Q', 'Surface', qBiome, loadSurfaceNOPQProject, 'surface-q-second-miniboss-1'],
   ] as const)(
-    'retains the declaration-admitted terminal %s envelope outside realized ordinary progression',
-    (biomeKey, routeKey, biome, build, sourceOccurrenceId, ordinaryGameName) => {
+    'round-trips the declaration-evaluated terminal %s envelope',
+    (biomeKey, routeKey, biome, build, sourceOccurrenceId) => {
       const document = terminalEnvelope(build(), biome, sourceOccurrenceId);
       const plan = planFor(document, routeKey, biomeKey);
       const layout = catalog.biomeLayouts.byKey[biomeKey];
@@ -247,9 +245,7 @@ describe('topology structural codec', () => {
         selection: { kind: 'unresolved' },
       });
       expect(decodeProjectDocument(encodedProject(document), catalog)).toEqual(document);
-      expect(prefix.decisions.filter((candidate) => candidate.kind === 'batch')).toHaveLength(
-        layout.progression.bounds.maxBatches,
-      );
+      expect(prefix.decisions.filter((candidate) => candidate.kind === 'batch')).toHaveLength(6);
       expect(prefix.frontier).toMatchObject({
         kind: 'exitDecision',
         origin: decision,
@@ -261,27 +257,25 @@ describe('topology structural codec', () => {
           (event) => semanticAddressKey(event.origin) === semanticAddressKey(decision),
         ),
       ).toBe(false);
-      expect(
-        ordinaryTargetAuthoringEligibility(
-          catalog,
-          layout,
-          plan.topology,
-          createTargetAddress(biome, decision.source, 'exit1'),
-          ordinaryGameName,
-        ),
-      ).toMatchObject({ kind: 'unavailable', reason: 'batchBound' });
-      expect(() =>
-        applyProjectCommand(document, catalog, {
-          kind: 'CreateTarget',
-          target: createTargetAddress(biome, decision.source, 'exit1'),
-          occurrenceId: createOccurrenceId(`over-bound-${biomeKey.toLowerCase()}-ordinary`),
-          gameName: ordinaryGameName,
-        }),
-      ).toThrowError(
-        expect.objectContaining({
-          detail: 'normal progression has reached its declaration-owned batch bound',
-        }),
-      );
     },
   );
+
+  it('rejects a seventh Q ordinary target through its exhausted staged pool', () => {
+    const document = terminalEnvelope(
+      loadSurfaceNOPQProject(),
+      qBiome,
+      'surface-q-second-miniboss-1',
+    );
+    const plan = planFor(document, 'Surface', 'Q');
+    const layout = catalog.biomeLayouts.byKey.Q;
+    if (plan.topology === null || layout === undefined) throw new Error('missing Q topology');
+    const target = createTargetAddress(
+      qBiome,
+      { kind: 'occurrence', occurrenceId: createOccurrenceId('surface-q-second-miniboss-1') },
+      'exit1',
+    );
+    expect(
+      ordinaryTargetAuthoringEligibility(catalog, layout, plan.topology, target, 'Q_Combat10'),
+    ).toMatchObject({ kind: 'unavailable', reason: 'stage', stageKey: '?' });
+  });
 });

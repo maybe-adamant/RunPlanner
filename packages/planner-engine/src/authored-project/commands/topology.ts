@@ -28,7 +28,6 @@ import { requireEphyraSideRooms, type RoomOccurrenceRole } from '../room-state/d
 import { createDefaultRoomState } from '../room-state/defaults';
 import { createDefaultRoomEncounterState } from '../room-state/encounter-envelope';
 import {
-  admitsTerminalTakeoverEnvelope,
   hostContinuationExitForDetourRoom,
   additionalExitsForDecision,
   declaredPhysicalExitKeys,
@@ -541,12 +540,12 @@ function createBatch(
   if (
     batchEligibility.kind === 'ordinaryBatchLimitReached' &&
     (room === undefined || hostContinuationExitForDetourRoom(room) === undefined) &&
-    !admitsTerminalTakeoverEnvelope(
+    hubTerminalTakeoverForSource(
       catalog,
       located.layout,
       topology,
       sourceFromAddress(command.decision.source),
-    )
+    ) === undefined
   ) {
     failCommand(command, 'normal progression has reached its declaration-owned batch bound');
   }

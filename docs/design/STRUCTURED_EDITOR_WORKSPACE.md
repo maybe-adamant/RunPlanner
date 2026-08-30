@@ -678,15 +678,15 @@ room-local, or finding products.
   normal-door takeover at the declaration-admitted terminal source. N uses the
   same flow for its required Hub candidate after PreHub or selected natural
   Chaos.
-- H retains four realized Fields decisions; its fifth empty decision can only
-  resolve to the required takeover, even if its ordinary Fields setup is still
-  unresolved.
+- H exposes the required takeover only after four qualifying H room records;
+  detours can therefore leave another ordinary Fields frontier even when four
+  topology transitions already exist.
 - I's Preboss remains a generated ordinary peer after Goal completion; it has
   no over-bound terminal envelope and closes the biome only when picked.
-- O and Q each add a terminal empty decision after their six ordinary units;
-  only the declaration-fixed width-one Preboss is authorable there. The
-  ordinary declaration domain may remain visible as disabled options rather
-  than being hidden by terminal invalidity.
+- O and Q reach a width-one takeover when their Preboss declarations become
+  eligible and required at depth 7. Q's exhausted stage sequence contributes no
+  seventh ordinary candidates; O's ordinary candidates are excluded by the
+  required Preboss pressure.
 
 The shared rail and inspector share a direct room-choice surface, not a
 universal ownership model or a separate Preboss action.

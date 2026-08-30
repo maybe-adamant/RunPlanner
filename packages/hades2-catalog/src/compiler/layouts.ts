@@ -11,7 +11,6 @@ import type {
   HubDecisionDescriptor,
   HubTerminalTakeoverDescriptor,
   NormalDoorBatchPolicy,
-  NormalDecisionProgressionDescriptor,
   OceanusAnomalyReplacementDescriptor,
   ProgressionDescriptor,
   RewardStorePolicy,
@@ -152,15 +151,6 @@ function normalizeProgressionPolicy(
   const receivedKind: unknown = (rawPolicy as { readonly kind?: unknown }).kind;
   if (rawPolicy.kind === 'eligibilityDriven') {
     return Object.freeze({ kind: 'eligibilityDriven' });
-  }
-  if (rawPolicy.kind === 'fixedCount') {
-    return Object.freeze({
-      kind: 'fixedCount',
-      continuationCount: requirePositiveInteger(
-        rawPolicy.continuationCount,
-        `${path}.continuationCount`,
-      ),
-    });
   }
   if (rawPolicy.kind === 'staged') {
     const stageKeys = freezeUniqueStrings(
@@ -397,20 +387,19 @@ type RawNormalDecisionProgression = {
   readonly batchPolicy: NormalDoorBatchPolicy;
   readonly rewardStorePolicy: RewardStorePolicy;
   readonly rewardStoreOverrides?: readonly SourceRewardStorePolicyOverride[];
-  readonly bounds: {
+  readonly bounds?: {
     readonly maxBatches: number;
     readonly maxTargets: number;
   };
 };
 
-function normalizeNormalDecisionProgression(
+function normalizeNormalDecisionProgressionCommon(
   raw: RawNormalDecisionProgression,
-  progressionPolicy: GeneratedProgressionPolicy,
   biomeKey: string,
   rooms: CatalogCollection<RoomDeclaration>,
   rewardStores: CatalogCollection<RewardStoreDeclaration>,
   path: string,
-): NormalDecisionProgressionDescriptor {
+) {
   const batchPolicy = normalizeBatchPolicy(raw.batchPolicy, `${path}.batchPolicy`);
   if (batchPolicy.kind === 'fields') {
     for (const room of rooms.values) {
@@ -434,19 +423,7 @@ function normalizeNormalDecisionProgression(
       }
     }
   }
-  const maxBatches = requirePositiveInteger(raw.bounds.maxBatches, `${path}.bounds.maxBatches`);
-  const maxTargets = requirePositiveInteger(raw.bounds.maxTargets, `${path}.bounds.maxTargets`);
-  const requiredBatchCount =
-    progressionPolicy.kind === 'fixedCount'
-      ? progressionPolicy.continuationCount
-      : progressionPolicy.kind === 'staged'
-        ? progressionPolicy.stages.length
-        : undefined;
-  if (requiredBatchCount !== undefined && requiredBatchCount > maxBatches) {
-    fail(`${path}.bounds.maxBatches`, 'must cover every declared normal-door batch');
-  }
   return Object.freeze({
-    progressionPolicy,
     batchPolicy,
     rewardStorePolicy: normalizeRewardStorePolicy(
       raw.rewardStorePolicy,
@@ -460,7 +437,6 @@ function normalizeNormalDecisionProgression(
       rewardStores,
       `${path}.rewardStoreOverrides`,
     ),
-    bounds: Object.freeze({ maxBatches, maxTargets }),
   });
 }
 
@@ -544,32 +520,36 @@ function normalizeHubEntry(
   if (exitKey !== 'prehub') {
     fail(`${path}.exitKey`, 'must be prehub');
   }
-  const entry = normalizeNormalDecisionProgression(
-    raw,
-    normalizeHubEntryProgressionPolicy(
-      raw.progressionPolicy,
-      biomeKey,
-      rooms,
-      `${path}.progressionPolicy`,
-    ),
+  const progressionPolicy = normalizeHubEntryProgressionPolicy(
+    raw.progressionPolicy,
     biomeKey,
     rooms,
-    rewardStores,
-    path,
+    `${path}.progressionPolicy`,
   );
-  if (entry.batchPolicy.kind !== 'standard') {
+  const common = normalizeNormalDecisionProgressionCommon(raw, biomeKey, rooms, rewardStores, path);
+  if (common.batchPolicy.kind !== 'standard') {
     fail(`${path}.batchPolicy.kind`, 'must be standard');
   }
-  if (entry.rewardStorePolicy.kind !== 'none') {
+  if (common.rewardStorePolicy.kind !== 'none') {
     fail(`${path}.rewardStorePolicy.kind`, 'must be none');
   }
-  if (entry.rewardStoreOverrides.length !== 0) {
+  if (common.rewardStoreOverrides.length !== 0) {
     fail(`${path}.rewardStoreOverrides`, 'must be empty');
   }
-  if (entry.bounds.maxBatches !== 1 || entry.bounds.maxTargets !== 1) {
+  if (raw.bounds === undefined) {
+    fail(`${path}.bounds`, 'Hub entry progression requires structural bounds');
+  }
+  const maxBatches = requirePositiveInteger(raw.bounds.maxBatches, `${path}.bounds.maxBatches`);
+  const maxTargets = requirePositiveInteger(raw.bounds.maxTargets, `${path}.bounds.maxTargets`);
+  if (maxBatches !== 1 || maxTargets !== 1) {
     fail(`${path}.bounds`, 'must bound the entry decision to one batch and one target');
   }
-  return Object.freeze({ exitKey, ...entry });
+  return Object.freeze({
+    exitKey,
+    progressionPolicy,
+    ...common,
+    bounds: Object.freeze({ maxBatches, maxTargets }),
+  });
 }
 
 function normalizeHubTerminal(
@@ -605,16 +585,13 @@ function normalizeGeneratedProgression(
     rooms,
     `${path}.progressionPolicy`,
   );
+  if ('bounds' in raw && raw.bounds !== undefined) {
+    fail(`${path}.bounds`, 'generated progression cannot declare structural bounds');
+  }
   return Object.freeze({
     kind: 'generated',
-    ...normalizeNormalDecisionProgression(
-      raw,
-      progressionPolicy,
-      biomeKey,
-      rooms,
-      rewardStores,
-      path,
-    ),
+    progressionPolicy,
+    ...normalizeNormalDecisionProgressionCommon(raw, biomeKey, rooms, rewardStores, path),
     ...(raw.anomalyReplacement === undefined
       ? {}
       : {

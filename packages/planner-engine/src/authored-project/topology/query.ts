@@ -273,15 +273,20 @@ function realizedOrdinaryTargetCount(catalog: Catalog, topology: BiomeTopology):
 }
 
 /**
- * Centralizes the realized ordinary-batch boundary shared by creating an
- * envelope and committing its first ordinary target. A terminal takeover
- * envelope is a caller-owned exception layered over `ordinaryBatchLimitReached`.
+ * Centralizes structural batch capacity. Generated progression remains open
+ * so evaluated room candidates decide its frontier; only bounded Hub entry can
+ * reach the structural limit.
  */
 export function ordinaryBatchCreationEligibility(
   catalog: Catalog,
   layout: BiomeLayout,
   topology: BiomeTopology,
 ): OrdinaryBatchCreationEligibility {
+  const progression = normalDecisionProgressionForLayout(layout);
+  if (progression === undefined) return Object.freeze({ kind: 'notGenerated' });
+  if (layout.progression.kind === 'generated') {
+    return Object.freeze({ kind: 'withinOrdinaryBatchLimit' });
+  }
   const ordinaryBatchLimit = ordinaryProgressionBatchLimit(layout);
   if (ordinaryBatchLimit === undefined) return Object.freeze({ kind: 'notGenerated' });
   return realizedOrdinaryBatchCount(catalog, topology) >= ordinaryBatchLimit
@@ -362,7 +367,10 @@ export function ordinaryTargetAuthoringEligibility(
   ) {
     return Object.freeze({ kind: 'unavailable', reason: 'batchBound' });
   }
-  if (realizedOrdinaryTargetCount(catalog, topology) >= progression.bounds.maxTargets) {
+  if (
+    'bounds' in progression &&
+    realizedOrdinaryTargetCount(catalog, topology) >= progression.bounds.maxTargets
+  ) {
     return Object.freeze({ kind: 'unavailable', reason: 'targetBound' });
   }
   if (progression.progressionPolicy.kind === 'staged') {
@@ -534,17 +542,16 @@ export function selectedOrdinaryBatchIndex(
 }
 
 /**
- * Fixed and staged declarations own their terminal ordinary ordinal directly;
- * eligibility-driven layouts use their declared generated capacity.  This is
- * intentionally separate from the persisted zero-target envelope shape.
+ * The bounded Hub entry owns its terminal ordinary ordinal directly.
+ * Generated layouts have no structural terminal ordinal: staged pools may
+ * constrain ordinary candidates, while evaluated room eligibility and force
+ * decide when generated progression closes.
  */
 export function ordinaryProgressionBatchLimit(layout: BiomeLayout): number | undefined {
   const progression = normalDecisionProgressionForLayout(layout);
-  if (progression === undefined) return undefined;
-  const policy = progression.progressionPolicy;
-  if (policy.kind === 'fixedCount') return policy.continuationCount;
-  if (policy.kind === 'staged') return policy.stages.length;
-  return progression.bounds.maxBatches;
+  return layout.progression.kind === 'hub' && progression?.progressionPolicy.kind === 'staged'
+    ? progression.progressionPolicy.stages.length
+    : undefined;
 }
 
 export interface HubTerminalTakeoverForSource {
@@ -659,128 +666,37 @@ export function hubTerminalTakeoverForSource(
 }
 
 /**
- * A generated decision with no targets is normally just the next uncommitted
- * ordinary batch.  Once the ordinary bound is already realized, the catalog
- * may still admit one such selected-spine envelope so a declaration-owned
- * normal-door takeover Preboss can replace it atomically.  The zero-target
- * shape itself is not a progression unit.
- */
-export function admitsTerminalTakeoverEnvelope(
-  catalog: Catalog,
-  layout: BiomeLayout,
-  topology: SelectedSpineTopology,
-  source: ExitDecisionSource,
-): boolean {
-  if (hubTerminalTakeoverForSource(catalog, layout, topology, source) !== undefined) return true;
-  if (layout.progression.kind !== 'generated' || source.kind !== 'occurrence') return false;
-  const terminalOrdinal = ordinaryProgressionBatchLimit(layout);
-  if (
-    terminalOrdinal === undefined ||
-    selectedOrdinaryBatchIndex(topology, source.occurrenceId) !== terminalOrdinal
-  ) {
-    return false;
-  }
-  return catalog.rooms.values.some(
-    (room) =>
-      room.roomSetKey === layout.biomeKey &&
-      room.mode.kind === 'authored' &&
-      room.kind === 'Preboss' &&
-      room.prebossBatchPolicy?.kind === 'takeOverNormalDoors',
-  );
-}
-
-/**
- * Returns the fixed width-one takeover required after a bounded generated
- * spine reaches its final ordinary decision. This is derived from normalized
- * progression and Preboss policy; Hub handoff and counted takeovers
- * intentionally do not match.
- */
-export function fixedWidthOneTakeoverForLayout(
-  catalog: Catalog,
-  layout: BiomeLayout,
-): RoomDeclaration | undefined {
-  if (layout.progression.kind !== 'generated') return undefined;
-  const policy = layout.progression.progressionPolicy;
-  if (policy.kind !== 'fixedCount' && policy.kind !== 'staged') return undefined;
-  const candidates = catalog.rooms.values.filter(
-    (room) =>
-      room.roomSetKey === layout.biomeKey &&
-      room.prebossBatchPolicy?.kind === 'takeOverNormalDoors',
-  );
-  const [candidate] = candidates;
-  const candidatePolicy = candidate?.prebossBatchPolicy;
-  return candidates.length === 1 &&
-    candidatePolicy?.kind === 'takeOverNormalDoors' &&
-    candidatePolicy.remainingOffers.kind === 'none'
-    ? candidate
-    : undefined;
-}
-
-/**
- * Returns the fixed width-one takeover required at a particular source after
- * a bounded generated spine reaches its final ordinary decision. This is
- * derived from normalized progression and Preboss policy; Hub handoff and
- * counted takeovers intentionally do not match.
- */
-export function fixedWidthOneTakeoverForSource(
-  catalog: Catalog,
-  layout: BiomeLayout,
-  topology: BiomeTopology,
-  source: ExitDecisionSource,
-): RoomDeclaration | undefined {
-  if (source.kind !== 'occurrence') return undefined;
-  const candidate = fixedWidthOneTakeoverForLayout(catalog, layout);
-  if (candidate === undefined || layout.progression.kind !== 'generated') return undefined;
-  const policy = layout.progression.progressionPolicy;
-  const finalOrdinaryBatchCount =
-    policy.kind === 'fixedCount'
-      ? policy.continuationCount
-      : policy.kind === 'staged'
-        ? policy.stages.length
-        : undefined;
-  return finalOrdinaryBatchCount !== undefined &&
-    selectedOrdinaryBatchIndex(topology, source.occurrenceId) === finalOrdinaryBatchCount
-    ? candidate
-    : undefined;
-}
-
-/**
- * A fixed width-one takeover is declared by its progression source, not
- * inferred by the application from a room name or a candidate domain. The
- * bounded-spine transition still needs contextual candidate validation; the
- * completed Hub handoff exists only after its declaration-owned board and
+ * The completed Hub handoff exists only after its declaration-owned board and
  * visit prerequisites are structurally ready, then creates its one fixed
- * target directly.
+ * target directly. Generated Preboss takeovers remain room-candidate results
+ * governed by their own eligibility and force declarations.
  */
-export type FixedWidthOneTakeoverTransition =
-  | { readonly kind: 'completedHubHandoff'; readonly room: RoomDeclaration }
-  | { readonly kind: 'fixedWidthOneTakeover'; readonly room: RoomDeclaration };
+export interface CompletedHubHandoff {
+  readonly kind: 'completedHubHandoff';
+  readonly room: RoomDeclaration;
+}
 
-export function fixedWidthOneTakeoverTransitionForSource(
+export function completedHubHandoffForSource(
   catalog: Catalog,
   layout: BiomeLayout,
   topology: BiomeTopology,
   source: ExitDecisionSource,
-): FixedWidthOneTakeoverTransition | undefined {
-  if (source.kind === 'hubDecision') {
-    const progression = layout.progression;
-    if (progression.kind !== 'hub' || source.decisionKey !== progression.hubKey) {
-      return undefined;
-    }
-    const hub = topology.decisions.find(
-      (decision): decision is HubDecision =>
-        decision.kind === 'hub' && decision.hubKey === progression.hubKey,
-    );
-    if (hubDecisionHandoffReadiness(progression, hub).kind !== 'ready') {
-      return undefined;
-    }
-    const room = catalog.rooms.byKey[progression.completedExit.roomGameName];
-    return room === undefined
-      ? undefined
-      : Object.freeze({ kind: 'completedHubHandoff' as const, room });
+): CompletedHubHandoff | undefined {
+  const progression = layout.progression;
+  if (
+    source.kind !== 'hubDecision' ||
+    progression.kind !== 'hub' ||
+    source.decisionKey !== progression.hubKey
+  ) {
+    return undefined;
   }
-  const room = fixedWidthOneTakeoverForSource(catalog, layout, topology, source);
+  const hub = topology.decisions.find(
+    (decision): decision is HubDecision =>
+      decision.kind === 'hub' && decision.hubKey === progression.hubKey,
+  );
+  if (hubDecisionHandoffReadiness(progression, hub).kind !== 'ready') return undefined;
+  const room = catalog.rooms.byKey[progression.completedExit.roomGameName];
   return room === undefined
     ? undefined
-    : Object.freeze({ kind: 'fixedWidthOneTakeover' as const, room });
+    : Object.freeze({ kind: 'completedHubHandoff' as const, room });
 }

@@ -1429,7 +1429,7 @@ describe('selected O validation', () => {
     ).toMatchObject({ kind: 'takeoverPrebossBatch', result: { requiredExitKeys: ['exit1'] } });
   });
 
-  it('keeps the declaration-fixed terminal takeover assessable from its empty envelope', () => {
+  it('keeps the declaration-driven terminal takeover assessable from its empty envelope', () => {
     const decision = createExitDecisionAddress(oBiome, {
       kind: 'occurrence',
       occurrenceId: oOccurrenceIds.combat02,

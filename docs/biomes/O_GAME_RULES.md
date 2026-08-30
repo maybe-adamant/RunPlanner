@@ -5,7 +5,7 @@
 This document is the game-rule authority for Thessaly (`O`) under the
 progressed-save static baseline with supported Heracles and Icarus combat. Shared behavior is owned by
 [`GAME_GENERATION_RULES.md`](../design/GAME_GENERATION_RULES.md); O
-declarations own its fixed count, ShipCombat room template and Encounter
+declarations own its eligibility-driven completion, ShipCombat room template and Encounter
 Envelope bindings, physical exits, and
 completion rooms.
 
@@ -15,8 +15,9 @@ encounter data, `RunLogic.lua`, and `RoomLogic.lua` on 2026-07-18.
 ## Authored shape
 
 - `O_Intro` is the fixed authored start.
-- Six realized ordinary normal-door batches and six ordinary target occurrences
-  are supported.
+- Ordinary normal-door progression is eligibility-driven. On the standard
+  route, six entered ordinary targets advance `BiomeDepthCache` from 1 to the
+  Preboss force depth of 7.
   Every supported normal source has one `ShipsExitDoor`, so selection is
   declaration-derived rather than an authored fork.
 - ShipCombat occurrences own encounter count, both reward wheels, active offer
@@ -27,14 +28,11 @@ encounter data, `RunLogic.lua`, and `RoomLogic.lua` on 2026-07-18.
 - Selecting it creates the ordinary `O_Boss01` and route-position
   `O_PostBoss01` occurrences through fixed links.
 
-The final ordinary source reaches the preboss frontier at the declared depth.
-No second physical exit exists there, so no peer or synthetic free reward is
-created.
-
-After six realized ordinary one-door batches, O admits one terminal zero-target
-normal decision envelope. Its only authorable result is the fixed width-one
-`O_PreBoss01` takeover; a seventh ordinary Ship target is not structurally
-authorable.
+The final ordinary source reaches the preboss frontier when the evaluated
+history makes `O_PreBoss01` eligible and required at `BiomeDepthCache = 7`.
+The six-step standard route is therefore a consequence of entered-room counter
+history, not a second structural batch bound. No second physical exit exists
+there, so no peer or synthetic free reward is created.
 
 ## Reward and lifecycle facts
 
@@ -109,7 +107,7 @@ nothing. The planner therefore retains the declaration-owned producer and
 history semantics rather than treating every outgoing store as a generated
 reward bag.
 
-### Candidate families and declaration-fixed completion
+### Candidate families and declaration-driven completion
 
 O combat declarations retain three game-data families: the ordinary recent
 ShipCombat-phase family, early depth-limited maps that replace that inherited
@@ -120,8 +118,8 @@ weights.
 
 Miniboss, Story, Reprieve, Devotion, and Shop declarations retain their own
 physical one-door shape, caps, force pressure, and producers. Wheel offer
-count is not a second room exit. The sixth ordinary one-door target reaches
-the declared Preboss frontier; the width-one O takeover creates the entered
+count is not a second room exit. Once entered-room history reaches the exact
+Preboss depth, the width-one O takeover creates the entered
 WorldShop and then the fixed-link `O_Boss01`, `O_PostBoss01` rooms. Weighted replay,
 NPC random/interaction behavior, optional actions, and automatic boss drops
 remain outside the canonical projection.

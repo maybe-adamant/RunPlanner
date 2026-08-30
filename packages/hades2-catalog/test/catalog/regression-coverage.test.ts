@@ -11,7 +11,7 @@ const biomeContracts = [
       kind: 'generated',
       policy: 'eligibilityDriven',
       batch: 'standard',
-      bounds: [10, 20],
+      bounds: null,
     },
     completion: ['F_Boss01', 'F_PostBoss01'],
   },
@@ -23,7 +23,7 @@ const biomeContracts = [
       kind: 'generated',
       policy: 'eligibilityDriven',
       batch: 'standard',
-      bounds: [7, 21],
+      bounds: null,
     },
     completion: ['G_Boss01', 'G_PostBoss01'],
   },
@@ -31,7 +31,12 @@ const biomeContracts = [
     biomeKey: 'H',
     routeKey: 'Underworld',
     start: { kind: 'fixedAuthored', roomGameName: 'H_Intro' },
-    progression: { kind: 'generated', policy: 'fixedCount', batch: 'fields', bounds: [4, 7] },
+    progression: {
+      kind: 'generated',
+      policy: 'eligibilityDriven',
+      batch: 'fields',
+      bounds: null,
+    },
     completion: ['H_Boss01', 'H_PostBoss01'],
   },
   {
@@ -42,7 +47,7 @@ const biomeContracts = [
       kind: 'generated',
       policy: 'eligibilityDriven',
       batch: 'clockwork',
-      bounds: [13, 23],
+      bounds: null,
     },
     completion: ['I_Boss01'],
   },
@@ -57,7 +62,12 @@ const biomeContracts = [
     biomeKey: 'O',
     routeKey: 'Surface',
     start: { kind: 'fixedAuthored', roomGameName: 'O_Intro' },
-    progression: { kind: 'generated', policy: 'fixedCount', batch: 'standard', bounds: [6, 6] },
+    progression: {
+      kind: 'generated',
+      policy: 'eligibilityDriven',
+      batch: 'standard',
+      bounds: null,
+    },
     completion: ['O_Boss01', 'O_PostBoss01'],
   },
   {
@@ -68,7 +78,7 @@ const biomeContracts = [
       kind: 'generated',
       policy: 'eligibilityDriven',
       batch: 'standard',
-      bounds: [8, 16],
+      bounds: null,
     },
     completion: ['P_Boss01', 'P_PostBoss01'],
   },
@@ -76,7 +86,7 @@ const biomeContracts = [
     biomeKey: 'Q',
     routeKey: 'Surface',
     start: { kind: 'fixedAuthored', roomGameName: 'Q_Intro' },
-    progression: { kind: 'generated', policy: 'staged', batch: 'standard', bounds: [6, 8] },
+    progression: { kind: 'generated', policy: 'staged', batch: 'standard', bounds: null },
     completion: ['Q_Boss01'],
   },
 ] as const;
@@ -148,14 +158,14 @@ const roomFacts = [
 ] as const;
 
 const normalizedBiomeSnapshotHashes = [
-  ['F', 'b951e12fc6f85333'],
-  ['G', '139a194880c7b749'],
-  ['H', '02287e55303867fb'],
-  ['I', 'e32ede371003114d'],
+  ['F', '19ca4266d58f616f'],
+  ['G', 'de873a539f5564b6'],
+  ['H', '4564de66dd0981cd'],
+  ['I', '4da14584e543309d'],
   ['N', 'a5537f01698ce22e'],
-  ['O', 'f23fa2b26522c07d'],
-  ['P', '3b766354254ad248'],
-  ['Q', '410448887641ce96'],
+  ['O', 'a85c5be6ee4e7582'],
+  ['P', '432304bbe033a974'],
+  ['Q', 'b328e69cea8908d5'],
 ] as const;
 
 function normalizedBiomeSnapshot(biomeKey: string) {
@@ -226,10 +236,8 @@ describe('catalog regression coverage retained through unified decisions', () =>
       if (fixture.progression.kind === 'generated' && layout?.progression.kind === 'generated') {
         expect(layout.progression.progressionPolicy.kind).toBe(fixture.progression.policy);
         expect(layout.progression.batchPolicy.kind).toBe(fixture.progression.batch);
-        expect([
-          layout.progression.bounds.maxBatches,
-          layout.progression.bounds.maxTargets,
-        ]).toEqual(fixture.progression.bounds);
+        expect(layout.progression).not.toHaveProperty('bounds');
+        expect(fixture.progression.bounds).toBeNull();
       }
     },
   );

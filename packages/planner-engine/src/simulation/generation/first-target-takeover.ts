@@ -399,11 +399,7 @@ function firstTargetGenerationSupport(
       ...takeovers.map((candidate) =>
         Object.freeze({
           eligible: candidate.entries.every((entry) => entry.reasons.length === 0),
-          forceSupport:
-            candidate.candidate.gameName === domain.fixedTakeover?.gameName &&
-            candidate.entries.every((entry) => entry.reasons.length === 0)
-              ? ('required' as const)
-              : candidate.forceSupport,
+          forceSupport: candidate.forceSupport,
           gameName: candidate.candidate.gameName,
         }),
       ),

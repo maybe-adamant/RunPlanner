@@ -15,7 +15,6 @@ export const gBiomeLayout = {
       targetMetaRewardsAdjustSpeed: 10,
     },
     rewardStoreOverrides: [],
-    bounds: { maxBatches: 7, maxTargets: 21 },
     anomalyReplacement: {
       kind: 'oceanusAnomaly',
       source: {

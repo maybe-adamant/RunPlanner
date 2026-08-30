@@ -7,8 +7,8 @@ import {
   createHubSlotAddress,
   createOccurrenceAddress,
   createTargetAddress,
+  completedHubHandoffForSource,
   declaredPhysicalExits,
-  fixedWidthOneTakeoverTransitionForSource,
   hubTerminalTakeoverForSource,
   isExactTerminalTakeoverEnvelope,
   normalDecisionProgressionForLayout,
@@ -315,12 +315,7 @@ export function expectedWorkspaceStructuralControls(
       const owner = completeness.frontier;
       const ownerKey = workspaceTestOwnerKey(owner);
       const existing = decisionsByOwner.get(ownerKey);
-      const fixedTransition = fixedWidthOneTakeoverTransitionForSource(
-        catalog,
-        layout,
-        topology,
-        owner.source,
-      );
+      const fixedTransition = completedHubHandoffForSource(catalog, layout, topology, owner.source);
       if (
         existing === undefined &&
         fixedTransition?.kind === 'completedHubHandoff' &&

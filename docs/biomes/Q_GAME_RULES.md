@@ -13,15 +13,16 @@ data, encounter data, `RunLogic.lua`, and `RoomLogic.lua` on 2026-07-18.
 ## Authored shape
 
 - `Q_Intro` is the fixed authored start.
-- The generated progression has six declaration-owned stages and a maximum of
-  eight target occurrences. Each stage admits only its named candidate pool;
-  room replacement cannot bypass that pool.
+- The generated progression has six declaration-owned candidate stages. Each
+  stage admits only its named candidate pool; room replacement cannot bypass
+  that pool. The stages constrain candidates rather than imposing a separate
+  generated-progression bound.
 - Q's forced two-door rooms and miniboss stages are ordinary batches with
   declaration-owned exit keys. A selected normal target remains the only
   editable traversal spine.
-- `Q_PreBoss01` is a width-one atomic takeover Preboss at the declared final
-  frontier. It owns a single Q World Shop occurrence and has no remaining free
-  offer.
+- `Q_PreBoss01` is a width-one atomic takeover Preboss that becomes eligible
+  and required at `BiomeDepthCache = 7`. It owns a single Q World Shop
+  occurrence and has no remaining free offer.
 - Selecting the Preboss creates the ordinary `Q_Boss01` occurrence through a
   fixed link. Q has no modeled Postboss at route position four.
 
@@ -29,10 +30,10 @@ The width-one rule is physical: Q does not create an unpicked peer and does
 not need a second offer owner. The Preboss occurrence is real authored state
 and its shop inventory materializes on entry.
 
-The six declared stages are six realized ordinary units. After the second
-miniboss stage, one terminal zero-target normal decision envelope is admitted
-solely for the fixed width-one `Q_PreBoss01` takeover; it has no seventh
-ordinary stage or ordinary target domain.
+The six declared stages are the ordinary candidate sequence. After the second
+miniboss stage there is no seventh ordinary stage or ordinary target domain;
+the empty frontier instead evaluates the declaration-owned `Q_PreBoss01`
+eligibility and force at depth 7.
 
 ## Staged candidates and repair
 
@@ -67,11 +68,11 @@ collapsed into a generic combat-reward UI state.
 
 ## Final Shop and declared completion
 
-After the second miniboss stage, `Q_PreBoss01` takes over the final one
-physical normal exit. Its width-one batch has only the entry-time `Q_WorldShop`
-occurrence and no synthetic free reward. Selecting that occurrence closes the
-editable Q body and creates the ordinary `Q_Boss01` occurrence through its
-fixed link.
+After the second miniboss stage, entered-room history reaches the exact depth
+where `Q_PreBoss01` takes over the final one physical normal exit. Its
+width-one batch has only the entry-time `Q_WorldShop` occurrence and no
+synthetic free reward. Selecting that occurrence closes the editable Q body
+and creates the ordinary `Q_Boss01` occurrence through its fixed link.
 
 `Q_WorldShop` filters its option entries from the entered-biome history at
 entry: `enteredBiomes <= 2` admits first-half entries and `enteredBiomes >= 3`

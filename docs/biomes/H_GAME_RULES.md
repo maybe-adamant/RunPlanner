@@ -15,9 +15,9 @@ rechecked on 2026-08-15; source details remain in the focused audit.
 ## Authored shape
 
 - `H_Intro` is the fixed authored start.
-- H has at most four realized ordinary Fields batches and seven ordinary target
-  occurrences. Each Fields batch has explicit `cageOutcome` state (`min` or
-  `max`) before targets can be authored.
+- H completion is eligibility-driven. `H_PreBoss01` becomes required after four
+  entered H combat, miniboss, or Bridge occurrences. Each Fields batch has
+  explicit `cageOutcome` state (`min` or `max`) before targets can be authored.
 - A FieldsCombat occurrence owns its declaration-bounded cage offers. Active
   and dormant cages remain stable occurrence-owned leaves; changing a room
   reconciles only compatible cage keys.
@@ -39,12 +39,15 @@ It is not a separate room family, and it cannot be edited one target at a
 time. Reconciliation retains state only at the same exit key and allocates a
 new occurrence ID only for a newly required key.
 
-After four realized ordinary Fields batches, H admits one terminal zero-target
-normal decision envelope. It resolves only to the required `H_PreBoss01`
-normal-door takeover; a fifth ordinary Fields target remains out of bounds. An
-unresolved Fields cage outcome is ordinary setup for that envelope and does
-not remove the supported Preboss resolution; takeover discards that
-ordinary-only setup.
+After four qualifying H occurrences have been entered, the next normal decision
+resolves only to the required `H_PreBoss01` normal-door takeover. An unresolved
+Fields cage outcome is ordinary setup for that envelope and does not remove the
+supported Preboss resolution; takeover discards that ordinary-only setup.
+Additional exits do not satisfy this room-history requirement. A selected Chaos
+gate still advances its declared depth counters and Fields depth effects, while
+the abandoned normal batch does not consume one of H's four qualifying
+progression steps. Returning from Chaos therefore exposes another Fields batch
+until the fourth qualifying H occurrence has actually been entered.
 
 ## Fields constraints
 

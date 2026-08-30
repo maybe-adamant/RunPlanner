@@ -6,7 +6,7 @@ export const hBiomeLayout = {
   start: { kind: 'fixedAuthored', roomGameName: 'H_Intro' },
   progression: {
     kind: 'generated',
-    progressionPolicy: { kind: 'fixedCount', continuationCount: 4 },
+    progressionPolicy: { kind: 'eligibilityDriven' },
     batchPolicy: {
       kind: 'fields',
       minDoorCageRewards: 2,
@@ -27,7 +27,6 @@ export const hBiomeLayout = {
     },
     rewardStorePolicy: { kind: 'none' },
     rewardStoreOverrides: [],
-    bounds: { maxBatches: 4, maxTargets: 7 },
   },
   chaos: {
     roomGameNames: ['Chaos_01', 'Chaos_02', 'Chaos_03', 'Chaos_04', 'Chaos_05', 'Chaos_06'],

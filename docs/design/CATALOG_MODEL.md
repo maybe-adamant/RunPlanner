@@ -264,15 +264,16 @@ Biome layout declarations own one immutable common envelope:
   carried by route simulation rather than restated by each layout;
 - an `authoredChoice` or one-identity `fixedAuthored` start;
 - either generated normal-door progression or an N Hub decision progression;
-- generated progression policy: eligibility-driven, fixed-count, or an ordered
-  staged candidate-pool sequence;
+- generated progression policy: eligibility-driven or an ordered staged
+  candidate-pool sequence;
 - standard, Fields, or Clockwork generated-batch policy, including any
   policy-owned authored fields and the Fields Min/Max support contract;
 - generated reward-store policy: authored base store, source offer point, or
   explicit no-store, plus optional source-room-template overrides; O maps
   `ShipCombat` sources to their active wheel and otherwise requires an
   authored store;
-- declaration-proven generated batch and target bounds;
+- structural bounds only for the N Hub's fixed one-step entry; generated biome
+  completion remains declaration-eligibility-driven;
 - persistent Hub structure where applicable: semantic Hub key, fixed physical
   slots, open-set constraints, visit rules, restores, and its dedicated fixed
   completed-Hub exit;
