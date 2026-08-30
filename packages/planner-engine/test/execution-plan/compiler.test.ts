@@ -1,7 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
-import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
+import {
+  createCompleteFGProject,
+  goldenFBiome,
+  goldenFOccurrenceId,
+} from '@run-planner/test-fixtures/underworld';
 import { catalog } from '@run-planner/hades2-catalog';
+import {
+  applyProjectCommand,
+  createIncomingRewardAddress,
+  createKeepsakeEquipResultAddress,
+  createOccurrenceAddress,
+  createRouteStartKeepsakeSelectionAddress,
+  createTraitOfferAddress,
+  createTranscendentEmbryoOutcomeAddress,
+} from '../../src/authored-project';
 import { simulateProjectAssembly } from '../../src/simulation';
 import {
   compileExecutionPlan,
@@ -15,8 +28,7 @@ import fgFixture from './fixtures/fg.execution.json';
 import malformedFixture from './fixtures/malformed.execution.json';
 import unsupportedFixture from './fixtures/unsupported.execution.json';
 
-function fOnlyProject() {
-  const project = createCompleteFGProject();
+function fOnlyProject(project = createCompleteFGProject()) {
   return Object.freeze({
     ...project,
     route: Object.freeze({
@@ -24,6 +36,61 @@ function fOnlyProject() {
       biomes: Object.freeze(project.route.biomes.slice(0, 1)),
     }),
   });
+}
+
+function fAutomaticOutcomeProject() {
+  let project = createCompleteFGProject();
+  const selection = createRouteStartKeepsakeSelectionAddress('Underworld');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceStartingKeepsake',
+    selection,
+    keepsakeKey: 'RandomBlessingKeepsake',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTranscendentEmbryoEquipResult',
+    result: createKeepsakeEquipResultAddress(selection, 'transcendentEmbryo'),
+    value: { blessingKey: 'ChaosWeaponBlessing' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTranscendentEmbryoTransformation',
+    outcome: createTranscendentEmbryoOutcomeAddress(
+      createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(7, 1)),
+      'Encounter',
+    ),
+    blessingKey: 'ChaosElementalBlessing',
+  });
+  const growthReward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(6, 1));
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: growthReward,
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(growthReward, 'source'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Demeter',
+      options: [
+        { traitKey: 'BoonGrowthBoon', rarity: 'Epic' },
+        { traitKey: 'ReserveManaHitShieldBoon', rarity: 'Epic' },
+        { traitKey: 'PlantHealthBoon', rarity: 'Epic' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  const frontier = simulateProjectAssembly(catalog, fOnlyProject(project));
+  const missing = frontier.evaluation.findings.find(
+    (finding) => finding.code === 'steadyGrowthOutcomeMissing',
+  )?.origin;
+  if (missing?.kind !== 'steadyGrowthOutcome')
+    throw new Error('automatic outcome fixture did not reach Steady Growth');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceSteadyGrowthTarget',
+    outcome: missing,
+    targetTraitKey: 'ApolloWeaponBoon',
+  });
+  return fOnlyProject(project);
 }
 
 describe('execution plan compiler', () => {
@@ -40,7 +107,7 @@ describe('execution plan compiler', () => {
 
     expect(plan).toMatchObject({
       format: 'run-planner-execution',
-      protocolVersion: 2,
+      protocolVersion: 3,
       routeKey: 'Underworld',
       extent: { kind: 'configuredPrefix', biomeKeys: ['F'], terminalBiomeKey: 'F' },
     });
@@ -58,8 +125,20 @@ describe('execution plan compiler', () => {
       },
       entered: true,
       trace: [
-        { kind: 'roomEntered', checkpoint: 'roomEntered' },
-        { kind: 'beforeRoomExit', checkpoint: 'beforeRoomExit' },
+        { kind: 'roomEntered' },
+        {
+          kind: 'acquireReward',
+          roles: [
+            {
+              role: 'source',
+              traitOffer: { kind: 'traits', giver: 'Apollo', selected: 'option1' },
+            },
+          ],
+        },
+        { kind: 'encounterStart', phase: 'Encounter' },
+        { kind: 'encounterEnd', phase: 'Encounter' },
+        { kind: 'cleanup' },
+        { kind: 'beforeRoomExit' },
       ],
       outgoing: {
         targets: [{ exitKey: 'exit1', index: 1, type: 'ErebusExitDoor', picked: true }],
@@ -139,11 +218,35 @@ describe('execution plan compiler', () => {
         .map((room) => room.gameName),
     ).toEqual(['F_PostBoss01']);
     for (const room of plan.rooms.filter((candidate) => candidate.entered)) {
-      expect(room.trace).toHaveLength(2);
-      expect(room.trace[0]?.runState).toBeDefined();
-      expect(room.trace[1]?.runState).toBeDefined();
+      const entry = room.trace[0];
+      const exit = room.trace.at(-1);
+      expect(entry).toMatchObject({ kind: 'roomEntered' });
+      expect(exit).toMatchObject({ kind: 'beforeRoomExit' });
+      expect(entry !== undefined && 'runState' in entry ? entry.runState : undefined).toBeDefined();
+      expect(exit !== undefined && 'runState' in exit ? exit.runState : undefined).toBeDefined();
     }
     expect(decodeExecutionPlan(fgFixture)).toEqual(plan);
+  });
+
+  it('projects reached automatic outcomes at their encounter-end owners', () => {
+    const plan = compileExecutionPlan({
+      assembly: simulateProjectAssembly(catalog, fAutomaticOutcomeProject()),
+    });
+    expect(plan.rooms.flatMap((room) => room.trace)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'transcendentEmbryo',
+          source: 'ChaosWeaponBlessing',
+          target: 'ChaosElementalBlessing',
+          rarity: 'Epic',
+        }),
+        expect.objectContaining({
+          kind: 'steadyGrowth',
+          source: 'BoonGrowthBoon',
+          target: 'ApolloWeaponBoon',
+        }),
+      ]),
+    );
   });
 
   it('requires the simulator-owned exact assembly at the compiler boundary', () => {
@@ -240,7 +343,7 @@ describe('execution plan compiler', () => {
         ...plan,
         rooms: [{ ...plan.rooms[0], trace: [] }],
       }),
-    ).toThrow(/owned room-entry/);
+    ).toThrow(/trace/);
     expect(() =>
       decodeExecutionPlan({
         ...plan,
@@ -252,6 +355,193 @@ describe('execution plan compiler', () => {
         ],
       }),
     ).toThrow(/owner mismatch/);
+
+    const entry = opening.trace.find((step) => step.kind === 'roomEntered');
+    const acquisition = opening.trace.find((step) => step.kind === 'acquireReward');
+    const encounterStart = opening.trace.find((step) => step.kind === 'encounterStart');
+    if (
+      entry?.kind !== 'roomEntered' ||
+      acquisition?.kind !== 'acquireReward' ||
+      encounterStart?.kind !== 'encounterStart'
+    )
+      throw new Error('opening trace is missing Gate C witnesses');
+    const acquisitionRole = acquisition.roles[0];
+    if (acquisitionRole?.traitOffer?.kind !== 'traits')
+      throw new Error('opening acquisition is missing its ordinary trait offer');
+
+    expect(() =>
+      decodeExecutionPlan({
+        ...plan,
+        rooms: [
+          {
+            ...opening,
+            trace: opening.trace.map((step) =>
+              step === entry
+                ? { ...entry, runState: { ...entry.runState, internalState: true } }
+                : step,
+            ),
+          },
+        ],
+      }),
+    ).toThrow(/unknown field internalState/);
+    expect(() =>
+      decodeExecutionPlan({
+        ...plan,
+        rooms: [
+          {
+            ...opening,
+            trace: opening.trace.map((step) =>
+              step === entry
+                ? { ...entry, runState: { ...entry.runState, owner: 'another-checkpoint' } }
+                : step,
+            ),
+          },
+        ],
+      }),
+    ).toThrow(/runState owner mismatch/);
+    expect(() =>
+      decodeExecutionPlan({
+        ...plan,
+        rooms: [
+          {
+            ...opening,
+            trace: opening.trace.map((step) =>
+              step === acquisition
+                ? {
+                    ...acquisition,
+                    roles: [{ ...acquisitionRole, internalRole: true }],
+                  }
+                : step,
+            ),
+          },
+        ],
+      }),
+    ).toThrow(/unknown field internalRole/);
+    expect(() =>
+      decodeExecutionPlan({
+        ...plan,
+        rooms: [
+          {
+            ...opening,
+            trace: opening.trace.map((step) =>
+              step === acquisition
+                ? {
+                    ...acquisition,
+                    roles: [
+                      {
+                        ...acquisitionRole,
+                        traitOffer: {
+                          ...acquisitionRole.traitOffer,
+                          selected: 'option4',
+                        },
+                      },
+                    ],
+                  }
+                : step,
+            ),
+          },
+        ],
+      }),
+    ).toThrow(/selected must identify a declared option/);
+    expect(() =>
+      decodeExecutionPlan({
+        ...plan,
+        rooms: [
+          {
+            ...opening,
+            trace: opening.trace.map((step) =>
+              step === acquisition
+                ? { ...acquisition, producerLifecycleKey: 'differentLifecycle' }
+                : step,
+            ),
+          },
+        ],
+      }),
+    ).toThrow(/must match reward provenance/);
+    expect(() =>
+      decodeExecutionPlan({
+        ...plan,
+        rooms: [
+          {
+            ...opening,
+            trace: opening.trace.map((step) =>
+              step === encounterStart ? { ...encounterStart, phase: 'UnknownPhase' } : step,
+            ),
+          },
+        ],
+      }),
+    ).toThrow(/declared encounter phase/);
+    const differentSource = '["incomingReward","Underworld","F","another-occurrence"]';
+    expect(() =>
+      decodeExecutionPlan({
+        ...plan,
+        rooms: [
+          {
+            ...opening,
+            trace: opening.trace.map((step) =>
+              step === acquisition
+                ? {
+                    ...acquisition,
+                    owner: JSON.stringify([
+                      'acquisitionRole',
+                      'Underworld',
+                      'F',
+                      differentSource,
+                      acquisitionRole.role,
+                    ]),
+                    sourceOwner: differentSource,
+                  }
+                : step,
+            ),
+          },
+        ],
+      }),
+    ).toThrow(/does not belong to this room/);
+    if (acquisitionRole.settlement === undefined)
+      throw new Error('opening acquisition is missing settlement provenance');
+    const wrongEntry = JSON.stringify([
+      'acquisitionEntry',
+      'Underworld',
+      'F',
+      acquisitionRole.settlement.site,
+      'wrong-role',
+    ]);
+    expect(() =>
+      decodeExecutionPlan({
+        ...plan,
+        rooms: [
+          {
+            ...opening,
+            trace: opening.trace.map((step) =>
+              step === acquisition
+                ? {
+                    ...acquisition,
+                    roles: [
+                      {
+                        ...acquisitionRole,
+                        settlement: { ...acquisitionRole.settlement, entry: wrongEntry },
+                      },
+                    ],
+                  }
+                : step,
+            ),
+          },
+        ],
+      }),
+    ).toThrow(/entry does not match its site and role/);
+    expect(() =>
+      decodeExecutionPlan({
+        ...plan,
+        rooms: [
+          {
+            ...opening,
+            trace: opening.trace.map((step) =>
+              step === encounterStart ? { ...encounterStart, flags: [] } : step,
+            ),
+          },
+        ],
+      }),
+    ).toThrow(/unknown field flags/);
     expect(ExecutionCompilerError).toBeDefined();
   });
 });
