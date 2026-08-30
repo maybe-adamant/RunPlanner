@@ -389,6 +389,36 @@ owners; public catalog and engine contacts, authored schema 59, catalog
 version, simulation results, candidates, findings, persistence, and editor
 behavior remain unchanged.
 
+### Outgoing-batch progressive retention closure
+
+The 2026-08-29 outgoing-batch correction groups ordinary generation evidence
+under its real decision owner: Fields support belongs to the source decision,
+while ordered target assessments carry target pressure and target-local
+generation evidence. Progressive retention now follows the frozen lifecycle
+boundary. A generation-time block retains only the reached physical prefix and
+its bounded repair contact; a later acquisition or room-lifecycle block keeps
+the complete already-generated source batch while withholding the unresolved
+child's effect and downstream capabilities. The prior flat generation ledgers
+and selected-pressure-only retention path were removed; no authored schema,
+catalog fact, or UI fallback was added.
+
+The implementation is recorded in commit `b2e64e39`. Focused pre-review
+verification ran sequentially across seven owning engine/planner files and 88
+tests. Accepted review remediation then reran the affected two files and 33
+tests; no production changes occurred between the split focused passes except
+the explicitly accepted Chaos/additional-exit remediation before that 33-test
+pass. Composite closure evidence includes successful cross-workspace and
+fixture typechecking, 22 fixture-integrity tests, the 17-test performance
+policy suite and relative eight-metric comparison, lint, formatting, and the
+production build. The correctness lane passed 255 of 257 files and 2,625 of
+2,627 tests; its two stale Preboss-envelope witnesses were updated for the
+earlier eligibility-driven progression correction and their two owning files
+then passed all 20 tests sequentially without rerunning the unchanged 255
+files. The retained witnesses cover the H Fields
+reproduction, generation-time prefix cutoff, targeted-trait and Pom child
+horizons, complete physical peers, no lifecycle leakage, and the application
+projection of the preserved Fields maximum.
+
 ### Editor control system closure
 
 The editor now has one explicit four-tone command hierarchy: Primary for the

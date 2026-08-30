@@ -223,6 +223,36 @@ declared scoped alternative replay owned by the candidate family itself, such
 as one proposed Hub visit order, side-room region, Shop order, or joint reward
 group.
 
+### Outgoing-batch repair horizon
+
+An ordinary outgoing decision has one generation horizon owned by its source
+decision. The candidate session consumes the grouped generation assessment
+published by selected or progressive evaluation; it does not rebuild separate
+Fields, target-pressure, or target-local generation views. The exact horizon is
+chronological:
+
+| First blocking position                                                                     | Candidate generation evidence                                                                                                                                                                                                                                                                             |
+| ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Before the source reaches outgoing generation                                               | No outgoing-batch assessment or target-generation candidate is claimed. The source's pre-outgoing repair contact remains the boundary.                                                                                                                                                                    |
+| During physical target or incoming-offer generation                                         | The source decision, completed physical target prefix, and any bounded repair assessment for the blocking target remain. Later physical targets have no candidate artifact and report `coverageNotReached`.                                                                                               |
+| After the source batch has completed, in the picked target's acquisition or later lifecycle | The complete source batch and every generated peer remain available with their previously reached generation capabilities. The blocking child remains repairable with its own capability; only unexecuted target lifecycle work, later outgoing decisions, and downstream owners remain outside coverage. |
+
+The second row may retain a blocking target's authored repair contact without
+claiming that its room or incoming offer completed generation. This distinction
+keeps an invalid target editable while preserving the physical prefix
+horizon. The third row applies even when the blocker is nested under an
+incoming reward: trait offers, targeted trait targets, Pom level resolution,
+and other supported acquisition children occur after the source batch is
+frozen and therefore cannot erase its generation evidence.
+
+The horizon is derived from canonical ancestry, evaluator chronology, and
+target-generation completion markers. It is not inferred from finding order,
+reward/provider identity, biome name, authored batch count, or rendered
+control position. A retained batch assessment supplies evidence for its own
+decision only; it does not make a later room candidate, target lifecycle, or
+downstream decision reachable. This is the repair boundary for contextual
+candidate products, not a second selected-path simulation.
+
 ## Evaluation Strategies
 
 Not every candidate requires the same replay scope.
