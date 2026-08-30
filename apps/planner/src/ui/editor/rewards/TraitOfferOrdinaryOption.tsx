@@ -130,7 +130,13 @@ export function TraitOfferOrdinaryOption({
       />
       {!hasEditableRarity ? (
         option.rarity === undefined ? null : (
-          <p className="trait-offer-fixed-rarity">Rarity: {rarityLabel(option.rarity)}</p>
+          <div
+            aria-label={`${optionKey} fixed rarity`}
+            className="field-control trait-offer-fixed-rarity"
+          >
+            <span>Rarity</span>
+            <strong>{rarityLabel(option.rarity)}</strong>
+          </div>
         )
       ) : value.kind !== 'traits' ? null : (
         <ContextualPicker

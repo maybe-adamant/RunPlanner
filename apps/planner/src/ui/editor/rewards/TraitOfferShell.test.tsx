@@ -555,7 +555,9 @@ describe('ordinary offer shell', () => {
       </Provider>,
     );
 
-    expect(await screen.findByText('Rarity: Duo')).toBeTruthy();
+    const fixedRarity = await screen.findByLabelText('option1 fixed rarity');
+    expect(fixedRarity.classList.contains('field-control')).toBe(true);
+    expect(fixedRarity.textContent).toBe('RarityDuo');
     expect(screen.queryByLabelText('option1 rarity')).toBeNull();
     application.dispose();
   });

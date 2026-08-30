@@ -89,6 +89,8 @@ export function NemesisEventEditor({
             <span>Response</span>
             <select
               aria-label="Nemesis response"
+              onFocus={candidate.activate}
+              onPointerDown={candidate.activate}
               onChange={(event) =>
                 setDraft({ ...draft, response: event.target.value as 'accept' | 'decline' })
               }
@@ -107,6 +109,8 @@ export function NemesisEventEditor({
             <span>Result</span>
             <select
               aria-label="Nemesis contest result"
+              onFocus={candidate.activate}
+              onPointerDown={candidate.activate}
               onChange={(event) =>
                 setDraft({
                   kind: 'damageContest',
@@ -143,6 +147,8 @@ export function NemesisEventEditor({
             <span>Reward</span>
             <select
               aria-label="Nemesis reward"
+              onFocus={candidate.activate}
+              onPointerDown={candidate.activate}
               onChange={(event) => setRewardType(event.target.value)}
               value={selectedRewardType ?? ''}
             >

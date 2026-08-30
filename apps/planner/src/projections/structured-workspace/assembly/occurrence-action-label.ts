@@ -139,7 +139,9 @@ export function occurrenceActionLabel(
             : rewardControl?.kind === 'explicitReward' && rewardControl.rewardTypes.length === 1
               ? (catalog.rewards.rewardTypes.byKey[rewardControl.rewardTypes[0]!]?.label ??
                 reference.entryKey)
-              : reference.entryKey;
+              : shrineDelivery !== undefined
+                ? 'Hermes Shrine delivery'
+                : reference.entryKey;
       if (shrineDelivery !== undefined) {
         if (rewardControl?.offer?.rewardType === 'BlindBoxLoot') {
           return `Receive ${entryLabel}`;
