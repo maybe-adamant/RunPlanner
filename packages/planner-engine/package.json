@@ -8,7 +8,8 @@
     "./authored-project": "./src/authored-project/index.ts",
     "./requirements": "./src/requirements/index.ts",
     "./reward-kernel": "./src/reward-kernel/index.ts",
-    "./simulation": "./src/simulation/index.ts"
+    "./simulation": "./src/simulation/index.ts",
+    "./execution-plan": "./src/execution-plan/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --project tsconfig.json"

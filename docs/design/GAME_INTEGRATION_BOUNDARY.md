@@ -1,20 +1,21 @@
-# Future Game Integration Boundary
+# Game Integration Boundary
 
 ## Status
 
-Game integration is deliberately deferred. This document records only the
-boundary constraints that the app must preserve while its simulator and editor
-stabilize.
+Gate A now defines the first live boundary: a complete-valid configured F
+prefix compiles to a separate execution-only JSON artifact and the desktop
+publisher writes it to the Plan Executor's fixed inbox. The browser build has
+no game publication capability. This document records the durable ownership
+and trust constraints; the versioned wire shape lives in the engine's
+execution-plan contract and the locked F/G delivery plan.
 
-It is not an execution-plan schema and does not authorize game-module work.
-
-## Why Integration Is Deferred
+## Boundary progression
 
 The app already has enough verified game rules to build and test the majority
 of meaningful route simulation. Designing the runtime payload first would
 prematurely constrain the app around assumptions about hooks and transport.
 
-The correct order is:
+The boundary is expanded only by a complete vertical slice:
 
 ```text
 stable authored model
@@ -24,7 +25,7 @@ stable authored model
   -> smallest justified execution-plan document
 ```
 
-## Eventual Boundary
+## Current Boundary
 
 The app will export a declarative JSON execution plan. It will never export
 Lua, callbacks, expressions, or executable code.
@@ -39,8 +40,10 @@ The plan is expected to describe semantic desired and predicted facts such as:
 - stable authored occurrence identity beside concrete game names for audit
   reports.
 
-The precise record shape remains deferred until app simulation fixtures show
-which facts are actually necessary.
+Gate A's protocol is intentionally limited to one Underworld/F opening room,
+its incoming reward, room-entry trace, and first outgoing target batch. It is
+strict, bounded, deterministic, and data-only. It carries resolved facts, not
+authored commands, findings, candidate products, UI labels, callbacks, or Lua.
 
 ## Future Responsibilities
 
@@ -103,7 +106,7 @@ second source of hidden correction logic.
 
 ## App Constraints Preserved Now
 
-Although the payload is deferred, current app design must preserve:
+The authored and execution layers remain separate. The app must preserve:
 
 - concrete game room and reward identifiers beside player-facing labels;
 - stable occurrence IDs distinct from repeatable game room names;
@@ -198,16 +201,13 @@ for execution.
 
 ## Explicitly Deferred
 
-- exact JSON execution-plan schema;
 - clipboard wrapper or compression;
-- game hook selection;
-- exact runtime mechanism that realizes G's open-picked-exit baseline;
+- F/G room and outgoing expansion beyond Gate A's opening contact;
+- Run State checkpoint diagnostics until their active runtime observer is
+  delivered in the planned F/G gate;
 - exact runtime adapters that realize selected combat definitions, supported
   `NemesisRandomEvent` interaction/result settlement,
   Anomaly/Zagreus/natural-Chaos detours, and suppression of other unmodeled NPC
   event systems;
-- runtime command handlers;
-- strict versus diagnostic mismatch policy;
 - automatic diagnostic import;
-- catalog fingerprint algorithm;
-- game module UI beyond the likely paste/status surface.
+- game module UI beyond the fixed status surface.

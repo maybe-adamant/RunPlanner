@@ -373,6 +373,7 @@ export type {
   ZagreusContractCandidateCapability,
 } from './candidate-artifacts';
 export {
+  assertExactProjectEvaluationAssembly,
   assertProjectEvaluationAssembly,
   assertProjectEvaluationSource,
   countedRewardTypeDomain,

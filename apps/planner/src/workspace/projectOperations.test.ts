@@ -6,6 +6,7 @@ import {
   encodeProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  createCompleteFGProject,
   createGoldenFGHProject,
   goldenGBiome,
   goldenHStartId,
@@ -13,9 +14,14 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '../composition/createApplication';
+import type { GamePlanPublisher } from '../persistence/gamePlanPublisher';
+import type { AutosaveRecoveryAdapter, AutosaveScheduler } from '../persistence/autosaveRecovery';
 import { DEFAULT_PROFILE_FILE_NAME } from './projectOperations';
 import type { ProfileFileAdapter, ProfileFileReference } from '../persistence/profileFile';
-import { authoredProjectCommandDispatched } from '../state/projectWorkspaceSlice';
+import {
+  authoredProjectCommandDispatched,
+  authoredProjectReplaced,
+} from '../state/projectWorkspaceSlice';
 import {
   selectExplicitProfileBaselineJson,
   selectPresentProject,
@@ -99,7 +105,97 @@ function presentHistory(application: ReturnType<typeof createApplication>) {
   return history;
 }
 
+function createPublicationAutosaveFixture(): {
+  readonly recovery: AutosaveRecoveryAdapter;
+  readonly scheduler: AutosaveScheduler & { readonly pendingCount: number };
+} {
+  const tasks: { cancelled: boolean; task: () => void }[] = [];
+  const recovery: AutosaveRecoveryAdapter = {
+    read: () => null,
+    write: () => undefined,
+    clear: () => undefined,
+  };
+  const scheduler = {
+    get pendingCount() {
+      return tasks.filter((entry) => !entry.cancelled).length;
+    },
+    schedule: (_delayMs: number, task: () => void) => {
+      const entry = { cancelled: false, task };
+      tasks.push(entry);
+      return () => {
+        entry.cancelled = true;
+      };
+    },
+  } satisfies AutosaveScheduler & { readonly pendingCount: number };
+  return { recovery, scheduler };
+}
+
 describe('project profile operations', () => {
+  it('publishes a complete F prefix through the separate game capability', async () => {
+    const published: { targetId: string; json: string }[] = [];
+    const profile = createProfileFixture();
+    const autosave = createPublicationAutosaveFixture();
+    const gamePlanPublisher: GamePlanPublisher = {
+      discoverProfiles: () =>
+        Promise.resolve({ status: 'available', targets: [], message: 'Choose a profile.' }),
+      publish: (targetId, json) => {
+        published.push({ targetId, json });
+        return Promise.resolve({ status: 'published', message: 'Published.' });
+      },
+    };
+    const application = createApplication({
+      gamePlanPublisher,
+      profileFile: profile.adapter,
+      autosaveRecovery: autosave.recovery,
+      autosaveScheduler: autosave.scheduler,
+    });
+    const complete = createCompleteFGProject();
+    application.store.dispatch(
+      authoredProjectReplaced({
+        ...complete,
+        route: { ...complete.route, biomes: complete.route.biomes.slice(0, 1) },
+      }),
+    );
+    await expect(application.projectOperations.saveProfile()).resolves.toMatchObject({
+      status: 'success',
+    });
+    const beforePublication = application.store.getState();
+    const beforeWorkspace = beforePublication.projectWorkspace;
+    const beforeHistory = presentHistory(application);
+    const beforeBaseline = selectExplicitProfileBaselineJson(beforePublication);
+    const beforeProfileSession = selectProfileSession(beforePublication);
+    const beforePendingAutosaves = autosave.scheduler.pendingCount;
+    const beforeAutosaveWrites = profile.saves.length;
+
+    await expect(application.projectOperations.publishGame('profile-a')).resolves.toEqual({
+      operation: 'publishGame',
+      status: 'success',
+      message: 'Published.',
+    });
+    expect(published).toHaveLength(1);
+    const publication = published[0];
+    if (publication === undefined) throw new Error('publication was not recorded');
+    expect(JSON.parse(publication.json)).toMatchObject({
+      routeKey: 'Underworld',
+      extent: { biomeKeys: ['F'] },
+    });
+    expect(application.store.getState()).toBe(beforePublication);
+    expect(application.store.getState().projectWorkspace).toBe(beforeWorkspace);
+    expect(presentHistory(application)).toBe(beforeHistory);
+    expect(selectExplicitProfileBaselineJson(application.store.getState())).toBe(beforeBaseline);
+    expect(selectProfileSession(application.store.getState())).toBe(beforeProfileSession);
+    expect(autosave.scheduler.pendingCount).toBe(beforePendingAutosaves);
+    expect(profile.saves).toHaveLength(beforeAutosaveWrites);
+
+    // Publication does not replace the active host-file reference: the next
+    // explicit save still writes in place rather than opening a new file.
+    await expect(application.projectOperations.saveProfile()).resolves.toMatchObject({
+      status: 'success',
+    });
+    expect(profile.saveAsCount()).toBe(1);
+    expect(profile.saves.at(-1)?.fileName).toBe(DEFAULT_PROFILE_FILE_NAME);
+  });
+
   it('reuses one host file reference until New clears it', async () => {
     let saveAsCount = 0;
     let writeCount = 0;
