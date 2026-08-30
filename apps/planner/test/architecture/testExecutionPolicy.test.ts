@@ -217,7 +217,7 @@ describe('repository test execution policy', () => {
     const performanceFile = `${repositoryRoot}/apps/planner/test/product-loops/UnifiedBiomePerformance.test.ts`;
     expect(appAndPackageTests).toContain(performanceFile);
     const outsideCorrectnessGlobs = appAndPackageTests
-      .map((path) => relative(repositoryRoot, path))
+      .map((path) => relative(repositoryRoot, path).replaceAll('\\', '/'))
       .filter(
         (path) =>
           !/^packages\/[^/]+\/test\/.+\.test\.ts$/.test(path) &&
