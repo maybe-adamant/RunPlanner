@@ -635,6 +635,36 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(screen.queryByRole('button', { name: 'Reset to default' })).toBeNull();
   });
 
+  it('keeps the P entrance encounter picker available after selecting Empty', async () => {
+    const view = renderOccurrenceWorkbench(
+      loadSurfaceNOPQProject(),
+      'Surface',
+      'P',
+      occurrenceById(pOccurrenceIds.intro),
+    );
+    openRoomTab('Room Timeline');
+
+    const encounterControl = screen.getByLabelText('Encounter encounter phase');
+    await view.user.click(within(encounterControl).getByRole('button', { name: 'Encounter' }));
+    await view.user.click(screen.getByRole('option', { name: 'Empty' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Encounter encounter phase')).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Encounter' }).textContent).toContain('Empty');
+    });
+
+    const retainedControl = screen.getByLabelText('Encounter encounter phase');
+    await view.user.click(within(retainedControl).getByRole('button', { name: 'Encounter' }));
+    await view.user.click(screen.getByRole('option', { name: 'Opening combat 01' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Encounter encounter phase')).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Encounter' }).textContent).toContain(
+        'Opening combat 01',
+      );
+    });
+  });
+
   it('withholds and restores the P Combat suffix after a terminating Heracles Intro selection', async () => {
     const occurrenceId = pOccurrenceId('P_Combat02', 2, 1);
     const owner = { kind: 'occurrence' as const, occurrenceId };
