@@ -60,6 +60,8 @@ export interface RawRewardStoreEntryDeclaration {
 export interface RawRewardStoreDeclaration {
   readonly key: string;
   readonly entries: readonly RawRewardStoreEntryDeclaration[];
+  /** Same-name entries whose exact identity has no distinct future once both are eligible. */
+  readonly interchangeableRewardTypes?: readonly string[];
 }
 
 export interface RawShopOptionEntryDeclaration {

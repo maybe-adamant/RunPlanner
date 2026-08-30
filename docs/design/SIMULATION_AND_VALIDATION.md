@@ -1396,10 +1396,12 @@ outside the ordinary god-source domain. Policy dispatch is registry-based;
 simulation does not switch on reward names.
 
 Duplicate compatible entries with different downstream behavior branch latent
-bag state. The simulator may merge equivalent resulting states, but it must not
-select one entry by declaration order. A later authored offer is valid if at
-least one reachable state supports it; the next state frontier contains every
-supporting result.
+bag state. Declaration-certified interchangeable same-name entries instead
+merge their equivalent resulting aggregate counts at the transition boundary;
+their exact requirements and order remain in the catalog. The simulator must
+not select one random entry by declaration order. A later authored offer is
+valid if at least one reachable state supports it; the next state frontier
+contains every future-distinct supporting result.
 
 For F/G takeover Preboss batches, each physical target is a
 distinct occurrence referencing the same preboss declaration. Every target

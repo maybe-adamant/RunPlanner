@@ -155,6 +155,15 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
         (entry) => entry.allowDuplicates,
       ),
     ).toHaveLength(4);
+    expect(rewardKernelCatalog.stores.byKey.RunProgress?.interchangeableRewardTypes).toEqual([
+      'MaxHealthDrop',
+      'MaxManaDrop',
+      'RoomMoneyDrop',
+      'StackUpgrade',
+    ]);
+    expect(rewardKernelCatalog.stores.byKey.TartarusRewards?.interchangeableRewardTypes).toBe(
+      undefined,
+    );
     expect(
       Object.fromEntries(
         rewardKernelCatalog.stores.values.map((store) => [
@@ -290,6 +299,21 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
         rewardKernelCatalog.stores.byKey[storeKey]?.entries.map((entry) => entry.rewardType),
       ).toEqual(entries);
     }
+  });
+
+  it('rejects an interchangeable reward type without repeated entries in its store', () => {
+    expect(() =>
+      createRewardKernelCatalog(
+        rawInput({
+          ...rewardKernelDeclarations,
+          stores: rewardKernelDeclarations.stores.map((store) =>
+            store.key === 'RunProgress'
+              ? { ...store, interchangeableRewardTypes: ['HermesUpgrade'] }
+              : store,
+          ),
+        }),
+      ),
+    ).toThrow(/interchangeableRewardTypes.*at least two HermesUpgrade entries/);
   });
 
   it('keeps every reward type label, default, and acquisition role exact', () => {

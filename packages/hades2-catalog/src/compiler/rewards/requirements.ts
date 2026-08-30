@@ -99,7 +99,30 @@ export function normalizeStores(
               }),
         });
       });
-      return Object.freeze({ key: store.key, entries: Object.freeze(entries) });
+      const interchangeableRewardTypes = store.interchangeableRewardTypes ?? [];
+      const seenInterchangeableRewardTypes = new Set<string>();
+      interchangeableRewardTypes.forEach((rewardType, rewardTypeIndex) => {
+        const rewardTypePath = `${path}.interchangeableRewardTypes[${rewardTypeIndex}]`;
+        requireNonEmpty(rewardType, rewardTypePath);
+        if (seenInterchangeableRewardTypes.has(rewardType)) {
+          fail(rewardTypePath, `duplicates reward type ${rewardType}`);
+        }
+        seenInterchangeableRewardTypes.add(rewardType);
+        const matchingEntries = entries.filter((entry) => entry.rewardType === rewardType);
+        if (matchingEntries.length < 2) {
+          fail(rewardTypePath, `must identify at least two ${rewardType} entries in this store`);
+        }
+        if (new Set(matchingEntries.map((entry) => entry.allowDuplicates)).size > 1) {
+          fail(rewardTypePath, `requires matching allowDuplicates values for ${rewardType}`);
+        }
+      });
+      return Object.freeze({
+        key: store.key,
+        entries: Object.freeze(entries),
+        ...(interchangeableRewardTypes.length === 0
+          ? {}
+          : { interchangeableRewardTypes: Object.freeze([...interchangeableRewardTypes]) }),
+      });
     }),
     'stores',
     (store) => store.key,

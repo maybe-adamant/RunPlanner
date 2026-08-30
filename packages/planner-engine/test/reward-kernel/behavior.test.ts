@@ -356,11 +356,40 @@ describe('reward eligibility requirements', () => {
 describe('counted reward bags', () => {
   const runProgress = rewardKernelCatalog.stores.byKey.RunProgress!;
 
-  it('branches when one offer can consume entries with different future requirements', () => {
+  it.each(['MaxHealthDrop', 'MaxManaDrop', 'RoomMoneyDrop', 'StackUpgrade'])(
+    'collapses declaration-certified interchangeable %s entries after ordinary loot is acquired',
+    (rewardType) => {
+      const next = consumeCountedOffer(
+        rewardKernelCatalog,
+        runProgress,
+        createRewardBagState(runProgress),
+        { rewardType },
+        facts(['ApolloUpgrade'], {
+          counters: { ...requirementContext().counters, upgradableTraitCount: 1 },
+        }),
+      );
+      const matchingIndexes = runProgress.entries.flatMap((entry, index) =>
+        entry.rewardType === rewardType ? [index] : [],
+      );
+      expect(next).toHaveLength(1);
+      expect(
+        matchingIndexes.reduce(
+          (total, index) => total + (next[0]?.remainingEntryCounts[index] ?? 0),
+          0,
+        ),
+      ).toBe(1);
+    },
+  );
+
+  it('retains latent branches for differing requirements without declared interchangeability', () => {
+    const futureDistinct = Object.freeze({
+      key: runProgress.key,
+      entries: runProgress.entries,
+    });
     const next = consumeCountedOffer(
       rewardKernelCatalog,
-      runProgress,
-      createRewardBagState(runProgress),
+      futureDistinct,
+      createRewardBagState(futureDistinct),
       { rewardType: 'MaxHealthDrop' },
       facts(['ApolloUpgrade']),
     );
