@@ -12,5 +12,10 @@ export {
   type ExecutionRoom,
   type ExecutionRunStateCount,
   type ExecutionRunStateDiagnostic,
+  type ExecutionAcquisitionRole,
+  type ExecutionLevelResolution,
+  type ExecutionTraitOffer,
   type ExecutionTraceStep,
+  type ExecutionTraitOptionKey,
+  type ExecutionTraitSlot,
 } from './model';
