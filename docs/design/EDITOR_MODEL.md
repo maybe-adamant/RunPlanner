@@ -129,6 +129,12 @@ adapts this room-owned product for the editor, while React does not infer reward
 presence from biome, room name, template, or room-local chronology. This also
 covers H's active Fields cage offer group.
 
+Inside F/G/I room pickers, Combat candidates append their declaration-owned
+normal-door count, such as `Combat 02 (2 Doors)`, so downstream capacity is
+visible before selection. The suffix is picker-only: selected triggers, room
+titles, rails, timelines, history, and persisted catalog labels retain the
+canonical room label. Additional exits do not contribute to this count.
+
 `HubDecisionWorkbench` is the sole N-specific renderer inside
 `BiomeWorkspace`. Its occurrence-like tabs make the persistent board readable
 without changing its model: Hub Overview renders the complete fixed-slot set
