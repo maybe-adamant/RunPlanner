@@ -244,6 +244,21 @@ the contributions from rank one through the selected rank.
 Vow of Rivals is the only declaration with
 `IneligibleForCirceRemoval = true`.
 
+### Vow of Rivals boss routing
+
+`IsBossDifficultyShrineUpgradeActive` compares the configured Rivals rank with
+`CurrentRun.EnteredBiomes`. The enhanced boss is active when the rank reaches
+the current one-based route position. This is route-position behavior, not a
+fixed rank attached to a biome identity: a reused biome in a Dream Run consults
+its position in that Dream route.
+
+F, G, H, N, O, and Q declare separate `Boss01` and `Boss02` rooms and matching
+boss encounters. P and I keep one Boss room while the same named requirement
+changes behavior inside it. Dream Runs additionally require the applicable
+enhanced encounter to have been seen or completed previously. The planner's
+fully progressed baseline treats that persistent-history requirement as met;
+it does not add a save-profile input.
+
 ## Run-Local Fear Suppression
 
 Black Night Banishment (`RemoveShrineTrait`) is offered only when at least one
@@ -302,6 +317,9 @@ The two domains otherwise remain separate until Circe:
    loadout and to calculate its Fear total.
 6. Black Night disables one eligible active Vow for the run without altering
    its configured rank. Vow of Rivals is the sole excluded target.
+7. Vow of Rivals selects a distinct Boss02 room where one exists when its rank
+   reaches the current route position; otherwise the physical Boss01 room is
+   used. P and I retain Boss01 at every rank.
 
 ## Planner Disposition
 
