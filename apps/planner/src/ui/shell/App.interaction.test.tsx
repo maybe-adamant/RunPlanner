@@ -2158,6 +2158,7 @@ describe('project profile interaction', () => {
 
   it('presents corrupt recovery and exposes its explicit discard action', async () => {
     let recoveryJson: string | null = '{not json';
+    const exported: { fileName: string; json: string }[] = [];
     const recovery: AutosaveRecoveryAdapter = {
       read: () => recoveryJson,
       write: (json) => {
@@ -2173,6 +2174,13 @@ describe('project profile interaction', () => {
     const application = createApplication({
       autosaveRecovery: recovery,
       autosaveScheduler: scheduler,
+      profileFile: {
+        saveAs: (fileName, json) => {
+          exported.push({ fileName, json });
+          return Promise.resolve(profileReference(fileName));
+        },
+        load: () => Promise.resolve(null),
+      },
     });
     const { user } = renderPlannerForInteraction({ application, startWithProject: false });
 
@@ -2180,6 +2188,12 @@ describe('project profile interaction', () => {
       'Autosave recovery failed: $: must be valid JSON',
     );
     expect(screen.queryByText('Unsaved')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Export Autosave' }));
+    expect(exported).toEqual([
+      { fileName: 'run-planner-autosave.runplanner.json', json: '{not json' },
+    ]);
+    expect(recoveryJson).toBe('{not json');
+    expect(screen.getByText('Exported the autosave copy.')).toBeTruthy();
     const discard = screen.getByRole('button', { name: 'Discard' });
     expect(discard.classList.contains('danger-action')).toBe(true);
     await user.click(discard);

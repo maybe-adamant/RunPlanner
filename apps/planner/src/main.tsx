@@ -75,6 +75,7 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
         autosaveRecovery.clear();
         globalThis.window.location.reload();
       }}
+      exportAutosaveRecovery={() => application.projectOperations.exportAutosaveRecovery()}
       loadProfile={() => application.projectOperations.loadProfile()}
       reload={() => {
         application.dispose();

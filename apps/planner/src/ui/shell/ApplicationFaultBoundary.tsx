@@ -6,13 +6,14 @@ import { ActionIcon } from '../controls/ActionIcon';
 interface ApplicationFaultBoundaryProps {
   readonly children: ReactNode;
   readonly discardRecoveryAndReload: () => void;
+  readonly exportAutosaveRecovery: () => Promise<ProjectOperationResult>;
   readonly loadProfile: () => Promise<ProjectOperationResult>;
   readonly reload: () => void;
 }
 
 interface ApplicationFaultBoundaryState {
   readonly error: Error | null;
-  readonly loading: boolean;
+  readonly pendingOperation: 'exportRecovery' | 'loadProfile' | null;
   readonly result: ProjectOperationResult | null;
 }
 
@@ -32,12 +33,12 @@ export class ApplicationFaultBoundary extends Component<
 > {
   override state: ApplicationFaultBoundaryState = {
     error: null,
-    loading: false,
+    pendingOperation: null,
     result: null,
   };
 
   static getDerivedStateFromError(error: unknown): Partial<ApplicationFaultBoundaryState> {
-    return { error: normalizedError(error), loading: false };
+    return { error: normalizedError(error), pendingOperation: null };
   }
 
   override componentDidMount(): void {
@@ -55,15 +56,18 @@ export class ApplicationFaultBoundary extends Component<
   }
 
   private readonly onWindowError = (event: ErrorEvent): void => {
-    this.setState({ error: normalizedError(event.error ?? event.message), loading: false });
+    this.setState({
+      error: normalizedError(event.error ?? event.message),
+      pendingOperation: null,
+    });
   };
 
   private readonly onUnhandledRejection = (event: PromiseRejectionEvent): void => {
-    this.setState({ error: normalizedError(event.reason), loading: false });
+    this.setState({ error: normalizedError(event.reason), pendingOperation: null });
   };
 
   private readonly loadAnotherProfile = async (): Promise<void> => {
-    this.setState({ loading: true, result: null });
+    this.setState({ pendingOperation: 'loadProfile', result: null });
     let result: ProjectOperationResult;
     try {
       result = await this.props.loadProfile();
@@ -75,10 +79,25 @@ export class ApplicationFaultBoundary extends Component<
       };
     }
     if (result.status === 'success') {
-      this.setState({ error: null, loading: false, result: null });
+      this.setState({ error: null, pendingOperation: null, result: null });
       return;
     }
-    this.setState({ loading: false, result });
+    this.setState({ pendingOperation: null, result });
+  };
+
+  private readonly exportAutosave = async (): Promise<void> => {
+    this.setState({ pendingOperation: 'exportRecovery', result: null });
+    let result: ProjectOperationResult;
+    try {
+      result = await this.props.exportAutosaveRecovery();
+    } catch (error) {
+      result = {
+        operation: 'exportRecovery',
+        status: 'failure',
+        message: `Export Autosave failed: ${normalizedError(error).message}`,
+      };
+    }
+    this.setState({ pendingOperation: null, result });
   };
 
   override render(): ReactNode {
@@ -90,8 +109,8 @@ export class ApplicationFaultBoundary extends Component<
           <p className="eyebrow">Recovery</p>
           <h1 id="application-fault-title">Run Planner could not display this project</h1>
           <p>
-            The project file was not changed. Load another project to continue, or reload the
-            application and return to the startup recovery flow.
+            The project file was not changed. You can export the autosave for debugging, load
+            another project, or reload the application and return to startup recovery.
           </p>
           {this.state.result === null ? null : (
             <p
@@ -105,12 +124,21 @@ export class ApplicationFaultBoundary extends Component<
           <div className="application-fault-actions">
             <button
               className="secondary-action"
-              disabled={this.state.loading}
+              disabled={this.state.pendingOperation !== null}
               onClick={() => void this.loadAnotherProfile()}
               type="button"
             >
               <ActionIcon name="load" />
-              {this.state.loading ? 'Loading…' : 'Load another project'}
+              {this.state.pendingOperation === 'loadProfile' ? 'Loading…' : 'Load another project'}
+            </button>
+            <button
+              className="secondary-action"
+              disabled={this.state.pendingOperation !== null}
+              onClick={() => void this.exportAutosave()}
+              type="button"
+            >
+              <ActionIcon name="save" />
+              {this.state.pendingOperation === 'exportRecovery' ? 'Exporting…' : 'Export Autosave'}
             </button>
             <button className="quiet-action" onClick={this.props.reload} type="button">
               Reload application

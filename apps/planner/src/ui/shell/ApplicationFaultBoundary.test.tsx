@@ -31,6 +31,13 @@ describe('application fault recovery', () => {
     render(
       <ApplicationFaultBoundary
         discardRecoveryAndReload={() => undefined}
+        exportAutosaveRecovery={() =>
+          Promise.resolve({
+            operation: 'exportRecovery',
+            status: 'success',
+            message: 'Exported the autosave copy.',
+          })
+        }
         loadProfile={loadProfile}
         reload={() => undefined}
       >
@@ -64,6 +71,13 @@ describe('application fault recovery', () => {
     render(
       <ApplicationFaultBoundary
         discardRecoveryAndReload={() => undefined}
+        exportAutosaveRecovery={() =>
+          Promise.resolve({
+            operation: 'exportRecovery',
+            status: 'success',
+            message: 'Exported the autosave copy.',
+          })
+        }
         loadProfile={loadProfile}
         reload={() => undefined}
       >
@@ -83,9 +97,15 @@ describe('application fault recovery', () => {
 
   it('turns an unhandled asynchronous failure into the same recovery surface', async () => {
     const discardRecoveryAndReload = vi.fn();
+    const exportAutosaveRecovery = vi.fn(async () => ({
+      operation: 'exportRecovery' as const,
+      status: 'success' as const,
+      message: 'Exported the autosave copy.',
+    }));
     render(
       <ApplicationFaultBoundary
         discardRecoveryAndReload={discardRecoveryAndReload}
+        exportAutosaveRecovery={exportAutosaveRecovery}
         loadProfile={() =>
           Promise.resolve({
             operation: 'loadProfile',
@@ -109,6 +129,9 @@ describe('application fault recovery', () => {
       screen.getByRole('heading', { name: 'Run Planner could not display this project' }),
     ).toBeTruthy();
     expect(screen.getByText('async project failure')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Export Autosave' }));
+    expect(exportAutosaveRecovery).toHaveBeenCalledOnce();
+    expect(await screen.findByText('Exported the autosave copy.')).toBeTruthy();
     await userEvent.click(screen.getByRole('button', { name: 'Start without recovered project' }));
     expect(discardRecoveryAndReload).toHaveBeenCalledOnce();
   });
