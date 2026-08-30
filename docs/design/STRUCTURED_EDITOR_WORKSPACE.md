@@ -98,16 +98,19 @@ one document-flow column rather than retaining nested scrollports. These are
 CSS presentation boundaries only: scroll position remains transient and no
 layout state enters the authored project or semantic commands.
 
-The existing horizontal route tabs remain the top-level route/Settings
-navigation. The route rail is the selected route's local overview and biome
+Before a project is open, the application presents a catalog-driven route
+chooser. Once a route is selected, the existing horizontal tabs provide the
+selected route and Settings; they do not switch between sibling authored
+runs. The route rail is the selected route's local overview and biome
 navigation, not a competing second route selector.
 
 ### Route Rail
 
-The route rail projects the normalized catalog route order and current project
-evaluation. It shows route settings, each configured biome, its status, and
-whether contextual evaluation is active, complete, or blocked by an earlier
-biome.
+The route rail projects the selected route's normalized biome order and current
+project evaluation. It shows route settings, each configured biome, its
+status, and whether contextual evaluation is active, complete, or blocked by an
+earlier biome. The catalog route collection is used only to populate the
+chooser; it is not rendered as sibling project workspaces.
 
 Selecting a biome changes UI-session navigation only. A downstream biome remains
 editable when blocked, but its contextual state remains unassessed.

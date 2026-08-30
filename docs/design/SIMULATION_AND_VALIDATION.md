@@ -14,13 +14,13 @@ it will not duplicate it.
 
 The possibility-support, materialization, reward-store, fixed-slot, and
 persistent-hub contracts in this document are globally locked by the completed
-F/G/P/Q/H/O/I/N audit set. All eight biomes participate in one public
-schema-50 occurrence/topology evaluator: completeness, materialization, lifecycle,
-event-folded history, room generation, reward simulation, selected-plan
-validation, and candidate support consume the same explicit biome-evaluation
-products.
-The application publishes those derived results to the editor, profiles, and
-recovery workflow; it does not select a separate simulator by biome family.
+F/G/P/Q/H/O/I/N audit set. Every configured biome from those declarations is
+evaluated by the same occurrence/topology pipeline: completeness,
+materialization, lifecycle, event-folded history, room generation, reward
+simulation, selected-plan validation, and candidate support consume the same
+explicit biome-evaluation products. A project evaluates one selected route at
+a time; the application publishes that route's derived results to the editor,
+profiles, and recovery workflow rather than aggregating sibling route runs.
 
 ## Core Contract
 
@@ -64,8 +64,8 @@ replays, or probability-based candidate ordering.
 
 ```text
 normalized catalog + authored project
-  -> normalize every configured topology
-  -> walk routes and configured biomes in order
+  -> normalize the selected route's configured topology
+  -> walk its configured biomes in order
       -> completeness gate
       -> retained authored materialization
       -> selected-path lifecycle, history, rewards, and validation
@@ -1597,9 +1597,9 @@ interface ProjectEvaluation {
   status: 'empty' | 'valid' | 'incomplete' | 'invalid';
   projectId: string;
   catalogVersion: string;
-  routes: readonly ProjectRouteEvaluation[];
+  route: ProjectRouteEvaluation;
   findings: readonly SemanticFinding[];
-  summary: ProjectEvaluationSummary;
+  summary: RouteEvaluationSummary;
 }
 ```
 
@@ -1847,7 +1847,7 @@ Required categories include:
 - one golden project, canonical snapshot, history, and finding set per focused
   biome scenario;
 - complete-valid, complete-blocked, incomplete-prefix, selected-invalid,
-  retained, and upstream-blocked schema-50 fixtures across F through Q;
+  retained, and upstream-blocked schema-73 fixtures across F through Q;
 - declaration-order target creation and non-authoritative persisted decision
   order;
 - ordinary target exclusion and source-owned candidate support for every

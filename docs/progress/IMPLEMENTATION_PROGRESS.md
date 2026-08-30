@@ -11,8 +11,10 @@ the active frontier needed to orient the next delivery.
 
 ## Current Snapshot
 
-The current persisted contract is strict authored schema 69 with catalog
-`0.49.0-completion-topology`. The browser product supports all eight route biomes:
+The current persisted contract is strict authored schema 73 with catalog
+`0.51.0-biome-i-encounter-profiles`. Each project contains one selected route;
+the browser product supports the eight catalog biomes across the two current
+route choices:
 
 ```text
 Underworld: F -> G -> H -> I
@@ -40,6 +42,11 @@ planner or simulator.
 
 ## Active Frontier and Blockers
 
+The single-route project delivery is complete. Schema 73, its focused
+schema-72 splitter, no-project startup, catalog-driven route choice, singular
+evaluation/workspace pipeline, and owning product witnesses are closed with no
+recorded blocker.
+
 The next product boundary is Phase 9, Simulation Conformance and Game
 Protocol. It is gated by the readiness conditions in
 [`GAME_INTEGRATION_BOUNDARY.md`](../design/GAME_INTEGRATION_BOUNDARY.md).
@@ -57,39 +64,40 @@ integration exclusions remain outside the current simulation contract.
 The following table preserves the major persisted-contract and catalog
 milestones without repeating the delivery chronology.
 
-| Contract milestone | Durable outcome                                                                                                                                     |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Schema 1           | Initial strict `ProjectDocument`, F/G route spine, semantic addresses, authored occurrence identity, and JSON boundary.                             |
-| Schema 2           | Batch-owned reward stores and the first connected reward authority; the pre-release leaf-store model was rejected.                                  |
-| Schema 3           | Global biome declarations, route placement, shared layout vocabulary, and dormant cross-biome declaration isolation.                                |
-| Schema 7           | I's authored Entrance, generated Story peer, and explicit bounded non-goal roll.                                                                    |
-| Schema 8           | Batch authoring defaults and strict replacement of the prior latent-default contract.                                                               |
-| Schema 9           | Unified biome decisions, common exits/batches, and the application capability boundary.                                                             |
-| Schema 11          | Exact authored Shop purchase order replaced the purchased-set contract.                                                                             |
-| Schema 20          | Canonical acquisition settlement across ordinary rewards, O wheels, Fields, N rooms, and Shops.                                                     |
-| Schema 30          | Keepsake identity/equip chronology and supported-rank effect transitions.                                                                           |
-| Schema 35          | Echo's complete player-rarityless provider and replay child products.                                                                               |
-| Schemas 36-38      | All Together, Infernal Contract, Travel Deal, Gold, Shop-trait effects, and one acquisition chronology.                                             |
-| Schemas 39-41      | Narcissus pickups, Fields cage/optional chronology, Artificer conversion, and source-owned replacement acquisition.                                 |
-| Schemas 42-43      | Unresolved-or-complete authored rewards and encounter-owned trait offers, with strict retained invalidity.                                          |
-| Schemas 44-45      | Atomic direct selected-trait outcomes and generated-pickup ownership for Reward Reward Reward/Boon Boon Boon.                                       |
-| Schema 47          | The occurrence-owned Room Action order absorbed the prior acquisition chronology.                                                                   |
-| Schema 48          | Required Room Action defaults, explicit Shop/optional participation, fixture-integrity checkpoint corpus, and no private purchase order.            |
-| Schema 49          | Fountain/Postboss completion lifecycle, required fountain use, optional keepsake rack, and derived `bossDefeated`.                                  |
-| Schema 50          | Selene's rarityless spells, Spell Drop lifecycle, equipped-slot ledger, and Echo replay correction.                                                 |
-| Schema 51          | Chaos Trial Upgrade paired traits, closed curse/blessing pools, and maturation effects.                                                             |
-| Schema 52          | Natural Selection, King's/Queen's Ransom, Steady Growth, shared Hephaestus cooldown limits, and retained offer history.                             |
-| Schema 53          | Nemesis combat/random-event authoring and generated-pickup settlement.                                                                              |
-| Schemas 54-59      | Runtime fallback policy, fixed completion-room feature occurrences, Resources, Pools, Hermes Shrines, and Stygian Wells.                            |
-| Schemas 60-63      | Aromatic Phial fountain rarity, Crystal Figurine Boss activation, Concave Stone residual boons, and Transcendent Embryo transformations.            |
-| Schema 64          | Optional frozen Aspect of Persephone offer contributions, chronological Premium Service range expansion, and derived effective trait levels.        |
-| Schema 65          | Frozen selected-Hex layouts and high-value identities, finite Path capacity, latched Talent Drop closure, and persistent God Sent extension.        |
-| Schema 66          | Three-option Chaos Trial Upgrade envelopes, selected-pair settlement, exact Denial peer-curse bans, and ordinary Rejected row locking.              |
-| Schema 67          | Sparse Postboss Keepsake Rack changes: declaration-owned availability, explicit add/change/delete, and no authored retain no-op.                    |
-| Schema 68          | Boss and Postboss completion rooms became ordinary topology occurrences connected by fixed links; unreachable terminal I/Q Postboss drafts retired. |
+| Contract milestone | Durable outcome                                                                                                                                                                          |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Schema 1           | Initial strict `ProjectDocument`, F/G route spine, semantic addresses, authored occurrence identity, and JSON boundary.                                                                  |
+| Schema 2           | Batch-owned reward stores and the first connected reward authority; the pre-release leaf-store model was rejected.                                                                       |
+| Schema 3           | Global biome declarations, route placement, shared layout vocabulary, and dormant cross-biome declaration isolation.                                                                     |
+| Schema 7           | I's authored Entrance, generated Story peer, and explicit bounded non-goal roll.                                                                                                         |
+| Schema 8           | Batch authoring defaults and strict replacement of the prior latent-default contract.                                                                                                    |
+| Schema 9           | Unified biome decisions, common exits/batches, and the application capability boundary.                                                                                                  |
+| Schema 11          | Exact authored Shop purchase order replaced the purchased-set contract.                                                                                                                  |
+| Schema 20          | Canonical acquisition settlement across ordinary rewards, O wheels, Fields, N rooms, and Shops.                                                                                          |
+| Schema 30          | Keepsake identity/equip chronology and supported-rank effect transitions.                                                                                                                |
+| Schema 35          | Echo's complete player-rarityless provider and replay child products.                                                                                                                    |
+| Schemas 36-38      | All Together, Infernal Contract, Travel Deal, Gold, Shop-trait effects, and one acquisition chronology.                                                                                  |
+| Schemas 39-41      | Narcissus pickups, Fields cage/optional chronology, Artificer conversion, and source-owned replacement acquisition.                                                                      |
+| Schemas 42-43      | Unresolved-or-complete authored rewards and encounter-owned trait offers, with strict retained invalidity.                                                                               |
+| Schemas 44-45      | Atomic direct selected-trait outcomes and generated-pickup ownership for Reward Reward Reward/Boon Boon Boon.                                                                            |
+| Schema 47          | The occurrence-owned Room Action order absorbed the prior acquisition chronology.                                                                                                        |
+| Schema 48          | Required Room Action defaults, explicit Shop/optional participation, fixture-integrity checkpoint corpus, and no private purchase order.                                                 |
+| Schema 49          | Fountain/Postboss completion lifecycle, required fountain use, optional keepsake rack, and derived `bossDefeated`.                                                                       |
+| Schema 50          | Selene's rarityless spells, Spell Drop lifecycle, equipped-slot ledger, and Echo replay correction.                                                                                      |
+| Schema 51          | Chaos Trial Upgrade paired traits, closed curse/blessing pools, and maturation effects.                                                                                                  |
+| Schema 52          | Natural Selection, King's/Queen's Ransom, Steady Growth, shared Hephaestus cooldown limits, and retained offer history.                                                                  |
+| Schema 53          | Nemesis combat/random-event authoring and generated-pickup settlement.                                                                                                                   |
+| Schemas 54-59      | Runtime fallback policy, fixed completion-room feature occurrences, Resources, Pools, Hermes Shrines, and Stygian Wells.                                                                 |
+| Schemas 60-63      | Aromatic Phial fountain rarity, Crystal Figurine Boss activation, Concave Stone residual boons, and Transcendent Embryo transformations.                                                 |
+| Schema 64          | Optional frozen Aspect of Persephone offer contributions, chronological Premium Service range expansion, and derived effective trait levels.                                             |
+| Schema 65          | Frozen selected-Hex layouts and high-value identities, finite Path capacity, latched Talent Drop closure, and persistent God Sent extension.                                             |
+| Schema 66          | Three-option Chaos Trial Upgrade envelopes, selected-pair settlement, exact Denial peer-curse bans, and ordinary Rejected row locking.                                                   |
+| Schema 67          | Sparse Postboss Keepsake Rack changes: declaration-owned availability, explicit add/change/delete, and no authored retain no-op.                                                         |
+| Schema 68          | Boss and Postboss completion rooms became ordinary topology occurrences connected by fixed links; unreachable terminal I/Q Postboss drafts retired.                                      |
+| Schema 73          | Each project became a single selected-route document; the legacy schema-72 dual-route shape is converted by a lossless two-document splitter, and the older migration chain was retired. |
 
 Catalog versions advanced alongside these boundaries. The current catalog is
-`0.49.0-completion-topology`; exact declaration facts and source contacts
+`0.51.0-biome-i-encounter-profiles`; exact declaration facts and source contacts
 remain in the catalog package and focused audits rather than this status
 ledger.
 
@@ -489,6 +497,43 @@ largest increase was 31.65 ms on Underworld representative-edit publication,
 which exceeded the percentage threshold but remained below the required
 100 ms absolute increase. The build retained only the existing greater-than-
 500-kB application chunk advisory.
+
+### Single-route project closure
+
+The single-route project delivery completed Gate A in commit `bb009caa`
+(`feat(planner): make projects single-route`). Schema 73 now stores exactly
+one selected catalog route per document. Engine evaluation, candidates,
+findings, structured workspace projection, and application history are
+singular through that route; a fresh or blocked-recovery application remains
+in a no-project state until the user selects a route or successfully loads a
+profile. The catalog still supplies the available route choices and the route
+qualified semantic addresses remain unchanged.
+
+The schema boundary is intentionally narrow. The retired schema-49-through-72
+linear migration chain is not supported; the standalone schema-72-to-73
+splitter emits both complete route documents, copies each route subtree
+without inference or mutation, and refuses silent overwrite. Canonical
+checkpoint fixtures were split once and each manifest row retains only its
+declared route. No Dream Dive route was introduced.
+
+Gate A owning-lane and review remediation passed the engine and planner suites,
+the focused splitter and fixture-integrity suites, workspace and fixture
+typechecking, ESLint, formatting, diff checks, and the production build. Gate B
+absorbed the route contract into the authored-model, simulation, architecture,
+editor, and structured-workspace authorities, corrected their current schema
+references, and removed the temporary plan. The single post-absorption
+`npm run check` passed workspace, catalog, engine, and fixture typechecking and
+fixture integrity at 3 files/22 tests. Correctness then passed 256 files and
+2,639 tests before exposing five stale Gate A product-loop assertions in the
+remaining three files: they still assumed immediate New replacement,
+implicitly open startup projects, or retained DOM navigation after project
+replacement. Those witnesses were reconciled to the single-route lifecycle,
+and the focused three-file lane then passed all 21 tests, completing cumulative
+correctness coverage at 259 files/2,644 tests without rerunning the unchanged
+passing files. The 17-test performance policy suite and same-host comparison,
+ESLint, repository-wide Prettier, and the production build all passed; the
+build retained only the existing greater-than-500-kB chunk advisory. No
+production behavior changed during closure remediation.
 
 ## Validation Record
 

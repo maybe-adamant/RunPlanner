@@ -312,8 +312,12 @@ biome-field mappings, along with intentionally retained fixed owner-plus-value
 controls, remain direct semantic dispatches. Scoped import restrictions enforce
 only the completed intent-bound feature neighborhoods; the application does not
 claim a project-wide zero-command-literal boundary.
-Route tabs and per-route panel selection are catalog-driven UI-session state;
-they do not introduce route-specific reducers or authored fields.
+The selected route and its panel are catalog-driven UI-session state; they do
+not introduce route-specific reducers or authored fields. A project document
+contains one route, so the shell presents that route and Settings rather than
+switchable sibling authored runs. A fresh session has no project until the
+user chooses a catalog route, and the no-project state has no evaluation,
+history, Save, Undo, or Redo product to publish.
 
 ## Technology Responsibilities
 
@@ -357,7 +361,7 @@ runs pure package tests and focused UI-adapter tests. Type checking remains a
 separate required command because test transformation alone is not a type
 proof.
 
-Test-only authored-project checkpoints are strict, schema-encoded
+Test-only authored-project checkpoints are strict, schema-73-encoded
 `ProjectDocument` inputs under `test/fixtures/authored-project/checkpoints/`.
 Static route-scoped imports feed lazy loaders that decode and freeze each
 checkpoint through the production codec; tests never load serialized
@@ -382,7 +386,9 @@ A shape-only schema bump may use a temporary raw JSON transformer in that same
 schema commit: parse the prior documents as unknown, transform the exact shape,
 strict-decode with the new codec and catalog, canonical-encode the replacements,
 update manifest metadata and hashes, run fixture integrity and the complete
-gate, then delete the transformer. Semantic changes require a per-checkpoint
+gate, then delete the transformer. The schema-72-to-73 route split is the
+deliberate one-to-many exception: it emits one complete document per route and
+does not choose or discard a sibling. Semantic changes require a per-checkpoint
 intent decision; production compatibility decoding and a permanent fixture
 migration framework remain out of scope.
 
@@ -469,7 +475,8 @@ the authored plan.
 The initial lifecycle is intentionally simple:
 
 ```text
-create/load project
+choose a catalog route, or load a profile
+  -> create/load one project
   -> decode and normalize authored state
   -> run full pure simulation
   -> atomically publish authored project + exact evaluation assembly
@@ -485,6 +492,11 @@ undo/redo
   -> run full pure simulation
   -> atomically publish replacement exact evaluation assembly
 ```
+
+Before route choice or a successful load, the application publishes a
+no-project workspace. It has no authored history, evaluation assembly, or
+autosave publication. New route selection creates one route document; it does
+not create a placeholder or retain another route in the same project.
 
 There is no source revision, rebuild revision, incremental invalidation graph,
 or background worker in the initial architecture. The complete route model is
@@ -521,9 +533,9 @@ interface ProjectEvaluation {
   status: 'empty' | 'valid' | 'incomplete' | 'invalid';
   projectId: string;
   catalogVersion: string;
-  routes: readonly ProjectRouteEvaluation[];
+  route: ProjectRouteEvaluation;
   findings: readonly SemanticFinding[];
-  summary: ProjectEvaluationSummary;
+  summary: RouteEvaluationSummary;
 }
 ```
 
@@ -630,14 +642,15 @@ The app persists an authored project document, not Redux state and not a
 simulation cache. The document contains only durable semantic choices and its
 schema version.
 
-The normalized `ProjectDocument` is also the portable profile-file format. The
-product does not wrap it in a second profile document: a profile is one saved
-planning workspace. A filename belongs to the application profile session,
-not the authored document. Load captures the selected file's basename, later
-saves reuse it, and New or recovery-only startup clears it so Save falls back
-to `run-plan.runplanner.json`. A future wrapper is justified only if one
-profile must own durable data that is not part of one authored project, such
-as several projects or application preferences.
+The normalized schema-73 `ProjectDocument` is also the portable profile-file
+format. It contains exactly one selected route and its authored state; a
+profile is one saved planning workspace, not a container for sibling runs. A
+filename belongs to the application profile session, not the authored
+document. Load captures the selected file's basename, later saves reuse it,
+and New or recovery-only startup clears it so Save falls back to
+`run-plan.runplanner.json`. A future wrapper is justified only if one profile
+must own durable data that is not part of one authored project, such as several
+projects or application preferences.
 
 Manual profile persistence and automatic recovery are separate application
 authorities:
@@ -672,12 +685,13 @@ explicit baseline is therefore clean even without another save, while
 restoring an autosave is always reported as recovered and unsaved.
 
 Autosave observes only effective authored-project replacements, including
-semantic edits, undo/redo, New, and successful profile load. It is debounced
-and ignores navigation, findings, and derived simulation publication. A
-corrupt recovery value is preserved for diagnosis or explicit discard: startup
-uses a safe new project, presents the failure, and suspends further autosave so
-the raw value cannot be overwritten accidentally. Successful profile load or
-explicit Discard Autosave clears that recovery blockade.
+semantic edits, undo/redo, route selection through New, and successful profile
+load. It is debounced and ignores navigation, findings, and derived simulation
+publication. A corrupt recovery value is preserved for diagnosis or explicit
+discard: startup remains in the no-project state, presents the route chooser
+and failure, and suspends further autosave so the raw value cannot be
+overwritten accidentally. Successful profile load or explicit Discard Autosave
+clears that recovery blockade; selecting a route while blocked does not.
 
 Authored room identity is occurrence-based: each persisted occurrence has an
 opaque stable ID, selected game room name, and local state. The catalog keeps

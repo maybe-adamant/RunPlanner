@@ -562,6 +562,8 @@ describe('underworld product loop', () => {
     application.store.dispatch(
       authoredProjectReplaced(authorLegalTraitOffers(currentProject(application))),
     );
+    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
+    await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
     const erebusRail = screen
       .getByRole('region', { name: 'Erebus route structure' })
       .querySelector('.biome-rail');
@@ -574,8 +576,9 @@ describe('underworld product loop', () => {
       createOccurrenceAddress(goldenFBiome, chaosOccurrenceId),
     );
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    expect(within(enteredChaos).getByRole('region', { name: 'Room Timeline' })).toBeTruthy();
-    expect(within(enteredChaos).queryByText(/Incoming door reward/)).toBeNull();
+    const reopenedChaos = screen.getByRole('complementary', { name: 'Details' });
+    expect(within(reopenedChaos).getByRole('region', { name: 'Room Timeline' })).toBeTruthy();
+    expect(within(reopenedChaos).queryByText(/Incoming door reward/)).toBeNull();
 
     await view.user.click(screen.getByRole('button', { name: /Next step.*Continue route/ }));
     expect(
@@ -624,6 +627,7 @@ describe('underworld product loop', () => {
 
   it('keeps a blocked downstream biome structurally authorable through the workspace', async () => {
     const application = createApplication();
+    application.projectOperations.createNew('Underworld');
     const view = renderPlannerForInteraction({ application });
 
     await view.user.selectOptions(screen.getByLabelText('Configure route up to'), '2');
@@ -653,6 +657,7 @@ describe('underworld product loop', () => {
 
   it('shrinks a route prefix immediately and preserves existing undo behavior', async () => {
     const application = createApplication();
+    application.projectOperations.createNew('Underworld');
     application.store.dispatch(
       authoredProjectCommandDispatched({
         configuredBiomeCount: 1,
