@@ -36,10 +36,11 @@ import {
   type AcquisitionRoleAddress,
 } from '@run-planner/engine/authored-project';
 import { traitGiverForAcquisitionRole } from '@run-planner/engine/authored-project';
-import type {
-  Catalog,
-  EncounterRewardWheelAttachment,
-  RoomDeclaration,
+import {
+  isCombatBearingEncounterPhaseKind,
+  type Catalog,
+  type EncounterRewardWheelAttachment,
+  type RoomDeclaration,
 } from '@run-planner/engine/catalog-schema';
 import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type {
@@ -837,6 +838,7 @@ export function activeEncounterPhasesForOwner(
       room.mode.kind === 'authored' &&
       room.mode.templateKey === 'FieldsCombat' &&
       domain.slotKey === 'Passive';
+    const customizable = domain.declaredEncounterKeys.length > 1 && !fieldsPassive;
     const fixedHasTraitOffer =
       fixedPhase &&
       input.catalog.encounterDefinitions.byKey[domain.selectedEncounterKey]?.traitOfferProducer !==
@@ -1101,7 +1103,7 @@ export function activeEncounterPhasesForOwner(
       Object.freeze({
         address,
         candidateChoices,
-        customizable: domain.declaredEncounterKeys.length > 1 && !fieldsPassive,
+        customizable,
         label:
           room.encounterEnvelopeKey === 'PEncounter'
             ? domain.slotKey === 'Intro'
@@ -1114,7 +1116,8 @@ export function activeEncounterPhasesForOwner(
         timelineAnchor:
           selectedDefinition.key === 'NemesisRandomEvent'
             ? 'action'
-            : fieldsPassive
+            : fieldsPassive ||
+                (customizable && !isCombatBearingEncounterPhaseKind(selectedDefinition.kind))
               ? 'roomEntered'
               : 'encounterStart',
         ...(figLeafSupport !== undefined || authoredFigLeafSkip
