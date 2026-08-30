@@ -85,7 +85,9 @@ complete gate.
 ## Desktop preview
 
 The desktop host wraps the same production Vite build without adding
-Rust-side domain behavior. On a machine with the platform's Tauri
+Rust-side domain behavior. Its native Open/Save flow remembers the selected
+project file and overwrites it on later saves; the browser build retains
+portable upload/download behavior. On a machine with the platform's Tauri
 prerequisites:
 
 ```bash

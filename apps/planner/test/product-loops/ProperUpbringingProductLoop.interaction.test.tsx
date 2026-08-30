@@ -65,7 +65,6 @@ describe('Q Miniboss rarity repair product loop', () => {
       ).toBe(true);
 
       const view = renderPlannerForInteraction({ application });
-      await view.user.click(screen.getByRole('button', { name: 'Surface' }));
       await view.user.click(screen.getByRole('button', { name: 'Traits' }));
       const launcher = document.getElementById(
         `trait-launcher-${semanticAddressKey(qMinibossTrait)}`,

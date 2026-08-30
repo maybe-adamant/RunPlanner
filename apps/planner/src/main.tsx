@@ -1,9 +1,13 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
+import { isTauri } from '@tauri-apps/api/core';
+import { open, save } from '@tauri-apps/plugin-dialog';
+import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 
 import { installDevBrowserErrorReporter } from './diagnostics/devBrowserErrorReporter';
 import { createBrowserProfileFileAdapter } from './persistence/browserProfileFileAdapter';
+import { createTauriProfileFileAdapter } from './persistence/tauriProfileFileAdapter';
 import {
   createBrowserAutosaveRecoveryAdapter,
   createBrowserAutosaveScheduler,
@@ -14,6 +18,35 @@ import { App } from './ui/shell/App';
 
 const devBrowserErrorReporter = installDevBrowserErrorReporter();
 const rootElement = document.getElementById('root');
+const profileFile = isTauri()
+  ? createTauriProfileFileAdapter({
+      open: (options) =>
+        open({
+          directory: false,
+          filters: options.filters.map((filter) => ({
+            extensions: [...filter.extensions],
+            name: filter.name,
+          })),
+          multiple: false,
+          title: options.title,
+        }),
+      readTextFile,
+      save: (options) =>
+        save({
+          ...(options.defaultPath === undefined ? {} : { defaultPath: options.defaultPath }),
+          filters: options.filters.map((filter) => ({
+            extensions: [...filter.extensions],
+            name: filter.name,
+          })),
+          title: options.title,
+        }),
+      writeTextFile,
+    })
+  : createBrowserProfileFileAdapter({
+      Blob: globalThis.Blob,
+      URL: globalThis.URL,
+      document: globalThis.document,
+    });
 
 if (rootElement === null) {
   throw new Error('Run Planner root element is missing');
@@ -27,11 +60,7 @@ const application = createApplication({
     clearTimeout: (handle) => globalThis.window.clearTimeout(handle),
     setTimeout: (task, delayMs) => globalThis.window.setTimeout(task, delayMs),
   }),
-  profileFile: createBrowserProfileFileAdapter({
-    Blob: globalThis.Blob,
-    URL: globalThis.URL,
-    document: globalThis.document,
-  }),
+  profileFile,
 });
 
 createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(

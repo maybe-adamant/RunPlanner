@@ -82,7 +82,6 @@ describe('underworld product loop', () => {
     application.store.dispatch(authoredProjectReplaced(authorLegalTraitOffers(project)));
     const view = renderPlannerForInteraction({ application });
 
-    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
     await view.user.click(screen.getByRole('button', { name: /^OpeningEvaluated/ }));
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
@@ -116,7 +115,6 @@ describe('underworld product loop', () => {
     application.store.dispatch(authoredProjectReplaced(authorLegalTraitOffers(project)));
     const view = renderPlannerForInteraction({ application });
 
-    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
     await view.user.click(screen.getByRole('button', { name: /^OpeningEvaluated/ }));
     expect(screen.getByRole('button', { name: /^OpeningEvaluated/ }).textContent).toContain(
@@ -185,7 +183,6 @@ describe('underworld product loop', () => {
     expect(currentWorkspace(application).history.past).toHaveLength(historyBefore + 1);
 
     const view = renderPlannerForInteraction({ application });
-    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
     act(() =>
       application.store.dispatch(
@@ -216,7 +213,6 @@ describe('underworld product loop', () => {
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
     const view = renderPlannerForInteraction({ application });
 
-    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
     for (const [label, structure] of [
       ['Erebus', 'Erebus route structure'],
       ['Oceanus', 'Oceanus route structure'],
@@ -320,7 +316,6 @@ describe('underworld product loop', () => {
     const repairRewardType = rewardInteraction.authoredRewardTypes[0];
     if (repairRewardType === undefined) throw new Error('Echo replay has no repair reward');
     const view = renderPlannerForInteraction({ application });
-    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
     const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
     if (findings === null) throw new Error('Findings panel is missing');
     const findingButton = within(findings).getAllByRole('button')[findingIndex];
@@ -412,7 +407,6 @@ describe('underworld product loop', () => {
     if (finding === undefined) throw new Error('BBB child finding is missing');
 
     const view = renderPlannerForInteraction({ application });
-    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
     const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
     if (findings === null) throw new Error('Findings panel is missing');
     await view.user.click(
@@ -470,7 +464,6 @@ describe('underworld product loop', () => {
     application.store.dispatch(authoredProjectReplaced(project));
     const view = renderPlannerForInteraction({ application });
 
-    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
     act(() =>
       application.store.dispatch(
@@ -562,7 +555,6 @@ describe('underworld product loop', () => {
     application.store.dispatch(
       authoredProjectReplaced(authorLegalTraitOffers(currentProject(application))),
     );
-    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
     const erebusRail = screen
       .getByRole('region', { name: 'Erebus route structure' })
@@ -693,7 +685,6 @@ describe('underworld product loop', () => {
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
     const view = renderPlannerForInteraction({ application });
 
-    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
     const fStructure = screen.getByRole('region', { name: 'Erebus route structure' });
     const ordinary = fStructure.querySelector<HTMLButtonElement>(
@@ -725,7 +716,6 @@ describe('underworld product loop', () => {
     expect(screen.getByRole('heading', { level: 3, name: /^Entering Preboss/ })).toBeTruthy();
 
     act(() => application.store.dispatch(authoredProjectReplaced(loadSurfaceNOPQProject())));
-    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     const nStructure = screen.getByRole('region', { name: 'Ephyra route structure' });
     const preHub = Array.from(
@@ -815,7 +805,6 @@ describe('underworld product loop', () => {
     });
     application.store.dispatch(authoredProjectReplaced(project));
     const view = renderPlannerForInteraction({ application });
-    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
     await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
     act(() =>
       application.store.dispatch(
@@ -927,7 +916,6 @@ describe('underworld product loop', () => {
     project = authorLegalTraitOffers(project);
     application.store.dispatch(authoredProjectReplaced(project));
     const view = renderPlannerForInteraction({ application });
-    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
     await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
     act(() =>
       application.store.dispatch(semanticOwnerFocused(createExitDecisionAddress(biome, source))),

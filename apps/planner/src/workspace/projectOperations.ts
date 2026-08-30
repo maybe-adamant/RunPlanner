@@ -3,7 +3,7 @@ import { type Catalog } from '@run-planner/engine/catalog-schema';
 
 import type { AutosaveRecoveryAdapter } from '../persistence/autosaveRecovery';
 import { createInitialProject } from '../composition/projectBootstrap';
-import type { ProfileFileAdapter } from '../persistence/profileFile';
+import type { ProfileFileAdapter, ProfileFileReference } from '../persistence/profileFile';
 import {
   newProjectCreated,
   profileLoadSucceeded,
@@ -72,11 +72,14 @@ function loadedProfileFileName(fileName: string): string {
 export function createProjectOperations(
   options: CreateProjectOperationsOptions,
 ): ProjectOperations {
+  let activeProfileFile: ProfileFileReference | null = null;
   const currentProject = () => selectPresentProject(options.store.getState());
   return Object.freeze({
     createNew(routeKey: string): ProjectOperationResult {
       try {
-        options.store.dispatch(newProjectCreated(createInitialProject(options.catalog, routeKey)));
+        const project = createInitialProject(options.catalog, routeKey);
+        activeProfileFile = null;
+        options.store.dispatch(newProjectCreated(project));
         return result('new', 'success', 'Created a new project.');
       } catch (error) {
         return failure('new', error);
@@ -103,14 +106,22 @@ export function createProjectOperations(
         if (snapshot === undefined) {
           throw new Error('No project is open');
         }
-        const fileName =
+        const suggestedFileName =
           selectProfileSession(options.store.getState()).fileName ?? DEFAULT_PROFILE_FILE_NAME;
         const baselineJson = encodeProjectDocument(snapshot);
-        const saveResult = await options.profileFile.save(fileName, baselineJson);
-        if (saveResult === 'cancelled') {
-          return result('saveProfile', 'cancelled', 'Save Profile cancelled.');
+        let savedFile = activeProfileFile;
+        if (savedFile === null) {
+          savedFile = await options.profileFile.saveAs(suggestedFileName, baselineJson);
+          if (savedFile === null) {
+            return result('saveProfile', 'cancelled', 'Save Profile cancelled.');
+          }
+        } else {
+          await savedFile.write(baselineJson);
         }
-        options.store.dispatch(profileSaveSucceeded({ baselineJson, fileName }));
+        activeProfileFile = savedFile;
+        options.store.dispatch(
+          profileSaveSucceeded({ baselineJson, fileName: savedFile.fileName }),
+        );
         return result('saveProfile', 'success', 'Saved the profile.');
       } catch (error) {
         return failure('saveProfile', error);
@@ -124,13 +135,14 @@ export function createProjectOperations(
         }
         const project = parseProjectDocument(loaded.json, options.catalog);
         const baselineJson = encodeProjectDocument(project);
-        const fileName = loadedProfileFileName(loaded.fileName);
+        const fileName = loadedProfileFileName(loaded.file.fileName);
         if (selectProfileSession(options.store.getState()).recoveryStatus === 'blocked') {
           if (options.autosaveRecovery === undefined) {
             throw new Error('Autosave recovery is unavailable in this environment');
           }
           options.autosaveRecovery.clear();
         }
+        activeProfileFile = loaded.file;
         options.store.dispatch(profileLoadSucceeded({ project, baselineJson, fileName }));
         return result('loadProfile', 'success', 'Loaded the profile.');
       } catch (error) {

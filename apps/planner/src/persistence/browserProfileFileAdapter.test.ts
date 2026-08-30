@@ -21,15 +21,16 @@ describe('browser profile-file adapter', () => {
       document,
     });
 
-    await expect(adapter.save('erebus-route.runplanner.json', '{"project":true}')).resolves.toBe(
-      'saved',
-    );
+    const file = await adapter.saveAs('erebus-route.runplanner.json', '{"project":true}');
+    expect(file?.fileName).toBe('erebus-route.runplanner.json');
+    await file?.write('{"project":"updated"}');
 
     const blob = createObjectURL.mock.calls[0]?.[0];
     expect(blob).toBeInstanceOf(Blob);
     expect(blob?.type).toBe('application/json');
-    expect(click).toHaveBeenCalledOnce();
-    expect(revokeObjectURL).toHaveBeenCalledWith('blob:run-planner');
+    expect(click).toHaveBeenCalledTimes(2);
+    expect(revokeObjectURL).toHaveBeenCalledTimes(2);
+    expect(revokeObjectURL).toHaveBeenLastCalledWith('blob:run-planner');
     expect(document.querySelector('a')).toBeNull();
   });
 
@@ -54,10 +55,9 @@ describe('browser profile-file adapter', () => {
     });
     fireEvent.change(input);
 
-    await expect(load).resolves.toEqual({
-      fileName: 'erebus-route.runplanner.json',
-      json: '{"project":true}',
-    });
+    const loaded = await load;
+    expect(loaded?.file.fileName).toBe('erebus-route.runplanner.json');
+    expect(loaded?.json).toBe('{"project":true}');
     expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 

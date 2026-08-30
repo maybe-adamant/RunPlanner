@@ -144,7 +144,7 @@ const intentBoundEditorRestrictedImportOptions = {
 
 export default tseslint.config(
   {
-    ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**'],
+    ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**', '**/target/**'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
