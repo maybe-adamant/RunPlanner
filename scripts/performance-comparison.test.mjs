@@ -12,6 +12,7 @@ import {
   PerformanceCommandError,
   PerformanceSnapshotError,
   resolveBaseReference,
+  resolveProcessInvocation,
   runPerformanceComparison,
   performanceMetricNames,
   performanceSnapshotFormat,
@@ -198,6 +199,45 @@ describe('performance snapshot comparison', () => {
 });
 
 describe('performance comparison command', () => {
+  it('uses the Windows command processor only for npm command scripts', () => {
+    const npmArgs = ['run', 'test:performance:snapshot'];
+
+    assert.deepEqual(
+      resolveProcessInvocation('npm.cmd', npmArgs, {
+        platform: 'win32',
+        comSpec: 'C:\\Windows\\System32\\cmd.exe',
+      }),
+      {
+        command: 'C:\\Windows\\System32\\cmd.exe',
+        args: ['/d', '/s', '/c', 'npm.cmd', ...npmArgs],
+      },
+    );
+    assert.deepEqual(
+      resolveProcessInvocation('npm.cmd', npmArgs, {
+        platform: 'win32',
+        comSpec: '',
+      }),
+      {
+        command: 'cmd.exe',
+        args: ['/d', '/s', '/c', 'npm.cmd', ...npmArgs],
+      },
+    );
+    assert.deepEqual(resolveProcessInvocation('npm', npmArgs, { platform: 'linux' }), {
+      command: 'npm',
+      args: npmArgs,
+    });
+    assert.deepEqual(
+      resolveProcessInvocation('git', ['status'], {
+        platform: 'win32',
+        comSpec: 'C:\\Windows\\System32\\cmd.exe',
+      }),
+      {
+        command: 'git',
+        args: ['status'],
+      },
+    );
+  });
+
   it('exits nonzero for a synthetic regression', () => {
     const directory = join(tmpdir(), `run-planner-performance-test-${process.pid}-${Date.now()}`);
     temporaryDirectories.push(directory);

@@ -210,9 +210,25 @@ export function resolveBaseReference({ dirty, candidateRevision, baseRef, resolv
   return Object.freeze({ requestedBaseRef, resolvedBaseRevision });
 }
 
+export function resolveProcessInvocation(
+  command,
+  args,
+  { platform = process.platform, comSpec = process.env.ComSpec } = {},
+) {
+  if (platform === 'win32' && command === 'npm.cmd') {
+    return {
+      command: typeof comSpec === 'string' && comSpec.length > 0 ? comSpec : 'cmd.exe',
+      args: ['/d', '/s', '/c', command, ...args],
+    };
+  }
+
+  return { command, args };
+}
+
 function runProcess(command, args, { cwd, env } = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
+    const invocation = resolveProcessInvocation(command, args);
+    const child = spawn(invocation.command, invocation.args, {
       cwd,
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
