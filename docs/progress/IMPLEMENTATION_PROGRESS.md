@@ -36,9 +36,11 @@ Hermes Shrines, and Stygian Wells. The engine models supported possibility,
 not probability; unresolved and context-invalid authored state remains visible
 and repairable.
 
-The Phase 8 permission-minimal Tauri 2 Windows preview is complete. The game
-module remains a later declarative consumer and runtime auditor, not a second
-planner or simulator.
+The Phase 8 permission-minimal Tauri 2 Windows preview is complete. Its native
+profile flow now retains an opened or first-saved project target for in-place
+Save, while the browser retains upload/download behavior. The game module
+remains a later declarative consumer and runtime auditor, not a second planner
+or simulator.
 
 ## Active Frontier and Blockers
 

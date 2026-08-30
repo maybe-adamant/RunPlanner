@@ -14,7 +14,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '../composition/createApplication';
 import { DEFAULT_PROFILE_FILE_NAME } from './projectOperations';
-import type { ProfileFileAdapter, ProfileSaveResult } from '../persistence/profileFile';
+import type { ProfileFileAdapter, ProfileFileReference } from '../persistence/profileFile';
 import { authoredProjectCommandDispatched } from '../state/projectWorkspaceSlice';
 import {
   selectExplicitProfileBaselineJson,
@@ -27,31 +27,45 @@ import {
 interface ProfileFixture {
   readonly adapter: ProfileFileAdapter;
   readonly saves: { fileName: string; json: string }[];
+  saveAsCount(): number;
   setLoadJson(json: string | null, fileName?: string): void;
-  setSaveResult(result: ProfileSaveResult): void;
+  setSaveCancelled(cancelled: boolean): void;
 }
 
 function createProfileFixture(): ProfileFixture {
   let loadJson: string | null = null;
   let loadFileName = 'loaded-route.runplanner.json';
-  let saveResult: ProfileSaveResult = 'saved';
+  let saveCancelled = false;
+  let saveAsCount = 0;
   const saves: { fileName: string; json: string }[] = [];
+  const referenceFor = (fileName: string): ProfileFileReference => ({
+    fileName,
+    write: (json) => {
+      saves.push({ fileName, json });
+      return Promise.resolve();
+    },
+  });
   return {
     adapter: {
-      save: (fileName, json) => {
+      saveAs: (fileName, json) => {
+        saveAsCount += 1;
+        if (saveCancelled) return Promise.resolve(null);
         saves.push({ fileName, json });
-        return Promise.resolve(saveResult);
+        return Promise.resolve(referenceFor(fileName));
       },
       load: () =>
-        Promise.resolve(loadJson === null ? null : { fileName: loadFileName, json: loadJson }),
+        Promise.resolve(
+          loadJson === null ? null : { file: referenceFor(loadFileName), json: loadJson },
+        ),
     },
     saves,
+    saveAsCount: () => saveAsCount,
     setLoadJson: (json, fileName = 'loaded-route.runplanner.json') => {
       loadJson = json;
       loadFileName = fileName;
     },
-    setSaveResult: (result) => {
-      saveResult = result;
+    setSaveCancelled: (cancelled) => {
+      saveCancelled = cancelled;
     },
   };
 }
@@ -86,6 +100,34 @@ function presentHistory(application: ReturnType<typeof createApplication>) {
 }
 
 describe('project profile operations', () => {
+  it('reuses one host file reference until New clears it', async () => {
+    let saveAsCount = 0;
+    let writeCount = 0;
+    const profileFile: ProfileFileAdapter = {
+      saveAs: (fileName) => {
+        saveAsCount += 1;
+        return Promise.resolve({
+          fileName,
+          write: () => {
+            writeCount += 1;
+            return Promise.resolve();
+          },
+        });
+      },
+      load: () => Promise.resolve(null),
+    };
+    const application = createApplication({ profileFile });
+
+    configureF(application);
+    await application.projectOperations.saveProfile();
+    await application.projectOperations.saveProfile();
+    expect({ saveAsCount, writeCount }).toEqual({ saveAsCount: 1, writeCount: 1 });
+
+    application.projectOperations.createNew('Surface');
+    await application.projectOperations.saveProfile();
+    expect({ saveAsCount, writeCount }).toEqual({ saveAsCount: 2, writeCount: 1 });
+  });
+
   it('saves and loads only the normalized project with a fresh evaluation, history, and baseline', async () => {
     const profile = createProfileFixture();
     const application = createApplication({ profileFile: profile.adapter });
@@ -100,6 +142,7 @@ describe('project profile operations', () => {
       message: 'Saved the profile.',
     });
     expect(profile.saves).toEqual([{ fileName: DEFAULT_PROFILE_FILE_NAME, json: savedJson }]);
+    expect(profile.saveAsCount()).toBe(1);
     expect(selectExplicitProfileBaselineJson(application.store.getState())).toBe(savedJson);
     expect(Object.keys(JSON.parse(savedJson))).toEqual([
       'schemaVersion',
@@ -135,6 +178,7 @@ describe('project profile operations', () => {
       fileName: 'erebus-route.runplanner.json',
       json: savedJson,
     });
+    expect(profile.saveAsCount()).toBe(1);
   });
 
   it('reconciles a pre-fix Ixion purchase into its forced gate while loading', async () => {
@@ -212,10 +256,10 @@ describe('project profile operations', () => {
   });
 
   it('establishes the exact pending-save snapshot as baseline after a later edit', async () => {
-    let resolveSave: ((result: ProfileSaveResult) => void) | undefined;
+    let resolveSave: ((file: ProfileFileReference) => void) | undefined;
     const saves: { fileName: string; json: string }[] = [];
     const profileFile: ProfileFileAdapter = {
-      save: (fileName, json) => {
+      saveAs: (fileName, json) => {
         saves.push({ fileName, json });
         return new Promise((resolve) => {
           resolveSave = resolve;
@@ -237,7 +281,7 @@ describe('project profile operations', () => {
         rank: 1,
       }),
     );
-    resolveSave?.('saved');
+    resolveSave?.({ fileName: DEFAULT_PROFILE_FILE_NAME, write: () => Promise.resolve() });
     await expect(saving).resolves.toMatchObject({ status: 'success' });
 
     expect(saves).toEqual([{ fileName: 'run-plan.runplanner.json', json: pendingJson }]);
@@ -253,11 +297,6 @@ describe('project profile operations', () => {
     const workspace = application.store.getState().projectWorkspace;
     const baseline = selectExplicitProfileBaselineJson(application.store.getState());
 
-    profile.setSaveResult('cancelled');
-    await expect(application.projectOperations.saveProfile()).resolves.toMatchObject({
-      operation: 'saveProfile',
-      status: 'cancelled',
-    });
     profile.setLoadJson(null);
     await expect(application.projectOperations.loadProfile()).resolves.toMatchObject({
       operation: 'loadProfile',
@@ -266,9 +305,20 @@ describe('project profile operations', () => {
     expect(application.store.getState().projectWorkspace).toBe(workspace);
     expect(selectExplicitProfileBaselineJson(application.store.getState())).toBe(baseline);
 
+    const cancelledProfile = createProfileFixture();
+    cancelledProfile.setSaveCancelled(true);
+    const cancelled = createApplication({ profileFile: cancelledProfile.adapter });
+    configureF(cancelled);
+    const cancelledState = cancelled.store.getState();
+    await expect(cancelled.projectOperations.saveProfile()).resolves.toMatchObject({
+      operation: 'saveProfile',
+      status: 'cancelled',
+    });
+    expect(cancelled.store.getState()).toBe(cancelledState);
+
     const failing = createApplication({
       profileFile: {
-        save: () => Promise.reject(new Error('save denied')),
+        saveAs: () => Promise.reject(new Error('save denied')),
         load: () => Promise.reject(new Error('load denied')),
       },
     });

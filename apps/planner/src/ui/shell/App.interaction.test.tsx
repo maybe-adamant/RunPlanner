@@ -36,7 +36,7 @@ import type {
   AutosaveRecoveryAdapter,
   AutosaveScheduler,
 } from '@planner/persistence/autosaveRecovery';
-import type { ProfileFileAdapter } from '@planner/persistence/profileFile';
+import type { ProfileFileAdapter, ProfileFileReference } from '@planner/persistence/profileFile';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
@@ -81,6 +81,10 @@ import {
 } from '@run-planner/test-fixtures/surface';
 
 afterEach(cleanup);
+
+function profileReference(fileName: string): ProfileFileReference {
+  return { fileName, write: () => Promise.resolve() };
+}
 
 function configuredBiomeCount(
   application: ReturnType<typeof renderPlannerForInteraction>['application'],
@@ -2021,17 +2025,24 @@ describe('project profile interaction', () => {
   it('saves, replaces, and reloads the project through the visible profile controls', async () => {
     let profileJson: string | null = null;
     let profileFileName: string | null = null;
+    const storedFile = (fileName: string): ProfileFileReference => ({
+      fileName,
+      write: (json) => {
+        profileJson = json;
+        return Promise.resolve();
+      },
+    });
     const profileFile: ProfileFileAdapter = {
-      save: (fileName, json) => {
+      saveAs: (fileName, json) => {
         profileFileName = fileName;
         profileJson = json;
-        return Promise.resolve('saved');
+        return Promise.resolve(storedFile(fileName));
       },
       load: () =>
         Promise.resolve(
           profileJson === null || profileFileName === null
             ? null
-            : { fileName: profileFileName, json: profileJson },
+            : { file: storedFile(profileFileName), json: profileJson },
         ),
     };
     const application = createApplication({ profileFile });
@@ -2182,8 +2193,9 @@ describe('project profile interaction', () => {
   it('presents a load failure and retains the current workspace', async () => {
     const application = createApplication({
       profileFile: {
-        save: () => Promise.resolve('saved'),
-        load: () => Promise.resolve({ fileName: 'broken.runplanner.json', json: '{not json' }),
+        saveAs: (fileName) => Promise.resolve(profileReference(fileName)),
+        load: () =>
+          Promise.resolve({ file: profileReference('broken.runplanner.json'), json: '{not json' }),
       },
     });
     const workspace = application.store.getState().projectWorkspace;
@@ -2205,8 +2217,9 @@ describe('project profile interaction', () => {
     );
     const application = createApplication({
       profileFile: {
-        save: () => Promise.resolve('saved'),
-        load: () => Promise.resolve({ fileName: 'surface.runplanner.json', json: profileJson }),
+        saveAs: (fileName) => Promise.resolve(profileReference(fileName)),
+        load: () =>
+          Promise.resolve({ file: profileReference('surface.runplanner.json'), json: profileJson }),
       },
     });
     const { user } = renderPlannerForInteraction({ application, startWithProject: false });
@@ -2222,7 +2235,7 @@ describe('project profile interaction', () => {
   it('preserves the initial route chooser when loading is cancelled', async () => {
     const application = createApplication({
       profileFile: {
-        save: () => Promise.resolve('saved'),
+        saveAs: (fileName) => Promise.resolve(profileReference(fileName)),
         load: () => Promise.resolve(null),
       },
     });

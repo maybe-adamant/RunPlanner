@@ -443,14 +443,13 @@ small, inspectable, and aligned with the editor's design language.
 ### Tauri
 
 Tauri is a permission-minimal host around the same Vite application used by
-browser development. Its current responsibility is limited to native window
-creation and no-install platform packaging. The first supported artifact is a
-Windows x64 ZIP containing the unbundled executable; later Linux and macOS
-artifacts may use their platform-native unpack-and-run formats.
+browser development. Its current responsibility is native window creation,
+no-install platform packaging, and native project-file persistence. The first
+supported artifact is a Windows x64 ZIP containing the unbundled executable;
+later Linux and macOS artifacts may use their platform-native unpack-and-run
+formats.
 
-The desktop host deliberately reuses the browser profile and recovery adapters
-until a focused desktop-file slice replaces them through the existing
-application contracts. Its eventual responsibilities remain narrow:
+The desktop host's responsibilities remain narrow:
 
 - native window and packaging;
 - open/save dialogs;
@@ -458,10 +457,11 @@ application contracts. Its eventual responsibilities remain narrow:
 - clipboard integration;
 - application preferences and update plumbing if later required.
 
-No simulator rule moves into Rust merely because Tauri is present. The current
-host registers no application commands or plugins and grants no frontend
-capabilities. Tauri's native file-drop interception is disabled so ordinary
-HTML pointer and drag interactions retain browser parity.
+No simulator rule moves into Rust merely because Tauri is present. The host
+enables only native Open/Save dialogs and text reads/writes for paths selected
+through those dialogs; their dynamic filesystem scope is not persisted across
+application restarts. Tauri's native file-drop interception remains disabled
+so ordinary HTML pointer and drag interactions retain browser parity.
 
 ### React Flow
 
@@ -657,8 +657,13 @@ authorities:
 
 ```ts
 interface ProfileFileAdapter {
-  save(suggestedFileName: string, json: string): Promise<'saved' | 'cancelled'>;
-  load(): Promise<{ readonly fileName: string; readonly json: string } | null>;
+  saveAs(suggestedFileName: string, json: string): Promise<ProfileFileReference | null>;
+  load(): Promise<{ readonly file: ProfileFileReference; readonly json: string } | null>;
+}
+
+interface ProfileFileReference {
+  readonly fileName: string;
+  write(json: string): Promise<void>;
 }
 
 interface AutosaveRecoveryAdapter {
@@ -668,12 +673,19 @@ interface AutosaveRecoveryAdapter {
 }
 ```
 
-`ProfileFileAdapter` owns explicit user-directed Save Profile and Load Profile
-operations. The browser implementation uses download/upload; a later Tauri
-implementation may use native dialogs without changing the application
-contract. `AutosaveRecoveryAdapter` owns a separate browser-local recovery key
-and never substitutes for an explicit profile file. Browser globals remain
-confined to the browser adapter composition.
+`ProfileFileAdapter` owns explicit user-directed Save and Load operations. A
+successful Load or first Save returns one host-owned file reference. Project
+operations retain that reference outside Redux, authored JSON, and undo/redo;
+later Save calls write through it, while New clears it. The reference from an
+invalid or cancelled Load is never established.
+
+The browser adapter deliberately keeps one portable behavior: references write
+through ordinary downloads and Load uses an HTML file input. The Tauri adapter
+uses native dialogs and a dynamically scoped native path, so later Save
+overwrites the opened or first-saved file in place. `AutosaveRecoveryAdapter`
+owns a separate browser-local recovery key and never substitutes for an
+explicit profile file. Browser and native globals remain confined to their
+own adapters and application composition.
 
 The application keeps the fingerprint of the last successfully saved snapshot
 or explicitly loaded profile as session state. Dirty state is derived by

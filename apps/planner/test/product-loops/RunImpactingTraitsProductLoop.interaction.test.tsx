@@ -22,7 +22,6 @@ describe('run-impacting trait product loops', () => {
     application.store.dispatch(authoredProjectReplaced(loadSurfaceNQuickBuckCheckpoint()));
     const view = renderPlannerForInteraction({ application });
 
-    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     const roomButton = (label: string) => {
       const ephyraStructure = screen.getByRole('region', { name: 'Ephyra route structure' });
@@ -39,7 +38,6 @@ describe('run-impacting trait product loops', () => {
     await waitFor(() => expect(pickupRow('quickBuckGold')).not.toBeNull());
 
     application.store.dispatch(authoredProjectReplaced(loadSurfaceNBuriedTreasureCheckpoint()));
-    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     await view.user.click(roomButton('Pre-Hub'));
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));

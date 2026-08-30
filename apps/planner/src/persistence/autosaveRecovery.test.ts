@@ -13,7 +13,7 @@ import {
 } from './autosaveRecovery';
 import { createApplication } from '../composition/createApplication';
 import { settingsSelected } from '../state/editorSessionSlice';
-import type { ProfileFileAdapter } from './profileFile';
+import type { ProfileFileAdapter, ProfileFileReference } from './profileFile';
 import { profileSaveSucceeded } from '../state/profileSessionSlice';
 import {
   authoredProjectCommandDispatched,
@@ -35,6 +35,10 @@ interface RecoveryFixture extends AutosaveRecoveryAdapter {
   readError: Error | null;
   writeError: Error | null;
   clearError: Error | null;
+}
+
+function profileReference(fileName: string): ProfileFileReference {
+  return { fileName, write: () => Promise.resolve() };
 }
 
 function createRecoveryFixture(raw: string | null = null): RecoveryFixture {
@@ -146,7 +150,7 @@ function setFearRank(application: ReturnType<typeof createApplication>, rank: nu
 describe('profile status', () => {
   it('derives clean and dirty from the normalized explicit baseline, including undo-to-clean', async () => {
     const profileFile: ProfileFileAdapter = {
-      save: () => Promise.resolve('saved'),
+      saveAs: (fileName) => Promise.resolve(profileReference(fileName)),
       load: () => Promise.resolve(null),
     };
     const application = createApplication({ profileFile });
@@ -364,8 +368,12 @@ describe('autosave recovery lifecycle', () => {
       autosaveRecovery: recovery,
       autosaveScheduler: scheduler,
       profileFile: {
-        save: () => Promise.resolve('saved'),
-        load: () => Promise.resolve({ fileName: 'valid-profile.runplanner.json', json: validJson }),
+        saveAs: (fileName) => Promise.resolve(profileReference(fileName)),
+        load: () =>
+          Promise.resolve({
+            file: profileReference('valid-profile.runplanner.json'),
+            json: validJson,
+          }),
       },
     });
 
@@ -388,8 +396,12 @@ describe('autosave recovery lifecycle', () => {
       autosaveRecovery: recovery,
       autosaveScheduler: createSchedulerFixture(),
       profileFile: {
-        save: () => Promise.resolve('saved'),
-        load: () => Promise.resolve({ fileName: 'valid-profile.runplanner.json', json: validJson }),
+        saveAs: (fileName) => Promise.resolve(profileReference(fileName)),
+        load: () =>
+          Promise.resolve({
+            file: profileReference('valid-profile.runplanner.json'),
+            json: validJson,
+          }),
       },
     });
     const state = application.store.getState();

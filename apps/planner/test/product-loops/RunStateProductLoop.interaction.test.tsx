@@ -79,7 +79,6 @@ describe('Run State product loop', () => {
     expect(titles).not.toContain('Decision 1');
     const view = renderPlannerForInteraction({ application });
 
-    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
     await view.user.click(screen.getByRole('button', { name: /^OpeningEvaluated/ }));
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
@@ -125,7 +124,6 @@ describe('Run State product loop', () => {
     expect(nRunStateTitles).not.toContain('Decision 1');
     const view = renderPlannerForInteraction({ application });
 
-    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     await view.user.click(screen.getByRole('button', { name: /Hub.*visits/ }));
     const hub = screen.getByRole('region', { name: 'Ephyra Hub' });
@@ -168,7 +166,6 @@ describe('Run State product loop', () => {
     application.store.dispatch(authoredProjectReplaced(project));
     const view = renderPlannerForInteraction({ application });
 
-    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     await view.user.click(screen.getByRole('button', { name: /Hub.*visits/ }));
     await view.user.click(screen.getByRole('tab', { name: 'Hub Exit' }));
