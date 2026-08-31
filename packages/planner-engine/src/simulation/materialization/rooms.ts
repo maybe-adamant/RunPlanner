@@ -793,6 +793,18 @@ export function materializeAuthoredRoom(
 ): CanonicalAuthoredRoom {
   if (context.room.mode.kind === 'derived')
     fail(`${context.room.gameName} is not an occurrence room`);
+  const anomalyReplacement =
+    context.occurrence.anomalyReplacement === undefined
+      ? undefined
+      : Object.freeze({
+          replacedRoomGameName: context.occurrence.anomalyReplacement.replacedRoomGameName,
+          success:
+            context.occurrence.state.kind === 'anomaly'
+              ? context.occurrence.state.success
+              : fail(
+                  `Anomaly replacement ${context.occurrence.occurrenceId} lacks its authored Anomaly state`,
+                ),
+        });
   const leaf: MaterializedRoomLeaf = authoredMaterializer(
     context.room.mode.templateKey,
     context.room.gameName,
@@ -857,9 +869,7 @@ export function materializeAuthoredRoom(
     origin: createOccurrenceAddress(context.biome, context.occurrence.occurrenceId),
     occurrenceId: context.occurrence.occurrenceId,
     gameName: context.room.gameName,
-    ...(context.occurrence.anomalyReplacement === undefined
-      ? {}
-      : { anomalyReplacement: context.occurrence.anomalyReplacement }),
+    ...(anomalyReplacement === undefined ? {} : { anomalyReplacement }),
     encounters: context.occurrence.encounters,
     encounterEnvelopeKey: context.room.encounterEnvelopeKey,
     encounterPhases: selectedEncounterPhases,

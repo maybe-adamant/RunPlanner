@@ -1,5 +1,7 @@
 import {
   createRoomRunStateCheckpointAddress,
+  createEncounterPhaseAddress,
+  createBiomeAddress,
   createLevelResolutionAddress,
   createTraitOfferAddress,
   semanticAddressKey,
@@ -84,6 +86,7 @@ function executionReward(room: CanonicalAuthoredRoom): ExecutionReward | undefin
     incoming.offer,
     incoming.producerLifecycleKey,
     incoming.resolvedStoreKey,
+    incoming.acquisitionEnabled,
   );
 }
 
@@ -91,12 +94,16 @@ function executionRewardFromOffer(
   offer: ResolvedRewardOffer,
   producerLifecycleKey: string,
   resolvedStoreKey?: string,
+  acquisitionEnabled?: boolean,
 ): ExecutionReward {
   const payload = offer.payload;
   return Object.freeze({
     rewardType: offer.rewardType,
     producerLifecycleKey,
     ...(resolvedStoreKey === undefined ? {} : { resolvedStoreKey }),
+    ...(acquisitionEnabled === undefined || acquisitionEnabled
+      ? {}
+      : { acquisitionEnabled: false }),
     ...(payload?.kind === 'BoonSource' ? { source: payload.source } : {}),
     ...(payload?.kind === 'DevotionPair'
       ? { source: payload.chosenSource, spurnedSource: payload.spurnedSource }
@@ -682,12 +689,43 @@ function executionTrace(
       timeline.action.reference.kind === 'interactEncounter' ||
       timeline.action.reference.kind === 'interactGorgon'
     ) {
+      const phaseKey = timeline.phaseKey ?? timeline.action.reference.phaseKey;
+      const encounterKey = room.encounters.encounterKeyByPhase[phaseKey];
+      const phase = createEncounterPhaseAddress(
+        createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+        { kind: 'occurrence', occurrenceId: room.occurrenceId },
+        phaseKey,
+      );
+      // Encounter-owned screens (Narcissus, Artemis and Gorgon) are authored
+      // on the phase's selection role. `self` belongs to an acquisition role;
+      // consulting it here silently omitted an otherwise complete NPC screen.
+      // Some story interactions have no entry in the encounter-key map even
+      // though their timeline phase owns a fully resolved selection screen.
+      // The selection address itself is the authoritative join key.
+      const selectedOffer = traitOffer(phase, 'selection');
+      const nemesis = room.encounters.nemesisRandomEventByPhase?.[phaseKey];
+      if (encounterKey === 'NemesisRandomEvent' && nemesis === null)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `unresolved Nemesis event ${owner}:${phaseKey}`,
+        );
       result.push(
         Object.freeze({
           id: `${owner}:${timeline.action.key}`,
           kind: 'encounterInteraction' as const,
           owner: semanticAddressKey(timeline.action.owner),
-          phaseKey: timeline.phaseKey ?? timeline.action.reference.phaseKey,
+          phaseKey,
+          ...(selectedOffer === undefined
+            ? {}
+            : { resolution: Object.freeze({ kind: 'traitOffer' as const, offer: selectedOffer }) }),
+          ...(nemesis === undefined || nemesis === null
+            ? {}
+            : {
+                resolution: Object.freeze({
+                  kind: 'nemesisRandomEvent' as const,
+                  outcome: nemesis,
+                }),
+              }),
         }),
       );
       continue;
@@ -1185,6 +1223,9 @@ function executionRoom(
           }),
       ...(resources === undefined ? {} : { resources }),
     }),
+    ...(room.anomalyReplacement === undefined
+      ? {}
+      : { anomaly: Object.freeze({ ...room.anomalyReplacement }) }),
     trace: executionTrace(room, snapshots, biome),
     outgoing: executionOutgoing(room, batches, fixedTargets, crossBiomeTarget, crossBiomeSourceId),
   });
