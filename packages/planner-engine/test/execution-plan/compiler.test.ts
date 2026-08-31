@@ -217,6 +217,22 @@ function fixtureClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+interface MutableRunStateFrame {
+  frame: number;
+  owner: string;
+  checkpoint: 'roomEntered' | 'beforeRoomExit';
+  replace: Record<string, unknown>;
+}
+
+function runStateFrames(value: unknown): MutableRunStateFrame[] {
+  const plan = value as { rooms: { trace: Record<string, unknown>[] }[] };
+  return plan.rooms.flatMap((room) =>
+    room.trace.filter((step): step is Record<string, unknown> & MutableRunStateFrame =>
+      Object.hasOwn(step, 'frame'),
+    ),
+  );
+}
+
 it('builds the F-to-G Ixion Chaos route from a fresh G authoring spine', () => {
   const assembly = simulateProjectAssembly(catalog, createCompleteFGIxionChaosProject());
   const invalid = assembly.evaluation.findings.filter((finding) => finding.severity === 'error');
@@ -399,7 +415,7 @@ describe('execution plan compiler', () => {
 
     expect(plan).toMatchObject({
       format: 'run-planner-execution',
-      protocolVersion: 6,
+      protocolVersion: 7,
       routeKey: 'Underworld',
       extent: { kind: 'configuredPrefix', biomeKeys: ['F'], terminalBiomeKey: 'F' },
     });
@@ -477,36 +493,105 @@ describe('execution plan compiler', () => {
 
   it('requires the complete run-state diagnostic surface', () => {
     const missingKeepsakes = fixtureClone(positiveFixture) as {
-      rooms: { trace: { runState: Record<string, unknown> }[] }[];
+      rooms: { trace: { replace: Record<string, unknown> }[] }[];
     };
-    delete missingKeepsakes.rooms[0]!.trace[0]!.runState.keepsakes;
+    delete missingKeepsakes.rooms[0]!.trace[0]!.replace.keepsakes;
     expect(() => decodeExecutionPlan(missingKeepsakes)).toThrow(ExecutionPlanCodecError);
 
     const missingPriorities = fixtureClone(positiveFixture) as {
-      rooms: { trace: { runState: Record<string, unknown> }[] }[];
+      rooms: { trace: { replace: Record<string, unknown> }[] }[];
     };
-    delete missingPriorities.rooms[0]!.trace[0]!.runState.rewardPriorities;
+    delete missingPriorities.rooms[0]!.trace[0]!.replace.rewardPriorities;
     expect(() => decodeExecutionPlan(missingPriorities)).toThrow(ExecutionPlanCodecError);
 
     const missingHex = fixtureClone(positiveFixture) as {
-      rooms: { trace: { runState: Record<string, unknown> }[] }[];
+      rooms: { trace: { replace: Record<string, unknown> }[] }[];
     };
-    delete missingHex.rooms[0]!.trace[0]!.runState.hexProgress;
+    delete missingHex.rooms[0]!.trace[0]!.replace.hexProgress;
     expect(() => decodeExecutionPlan(missingHex)).toThrow(ExecutionPlanCodecError);
 
     const missingArtificer = fixtureClone(positiveFixture) as {
-      rooms: { trace: { runState: Record<string, unknown> }[] }[];
+      rooms: { trace: { replace: Record<string, unknown> }[] }[];
     };
-    delete missingArtificer.rooms[0]!.trace[0]!.runState.artificer;
+    delete missingArtificer.rooms[0]!.trace[0]!.replace.artificer;
     expect(() => decodeExecutionPlan(missingArtificer)).toThrow(ExecutionPlanCodecError);
 
     const duplicatePriorities = fixtureClone(positiveFixture) as {
-      rooms: { trace: { runState: { rewardPriorities: string[] } }[] }[];
+      rooms: { trace: { replace: { rewardPriorities: string[] } }[] }[];
     };
-    duplicatePriorities.rooms[0]!.trace[0]!.runState.rewardPriorities = ['Boon', 'Boon'];
+    duplicatePriorities.rooms[0]!.trace[0]!.replace.rewardPriorities = ['Boon', 'Boon'];
     const decodedPriorities = decodeExecutionPlan(duplicatePriorities).rooms[0]!.trace[0]!;
     if (decodedPriorities.kind !== 'roomEntered') throw new Error('fixture lacks entry checkpoint');
     expect(decodedPriorities.runState.rewardPriorities).toEqual(['Boon', 'Boon']);
+  });
+
+  it('strictly reconstructs sequential top-level run-state replacement frames', () => {
+    const project = fOnlyProject();
+    const plan = compileExecutionPlan({
+      assembly: simulateProjectAssembly(catalog, project),
+    });
+    const expanded = JSON.stringify(plan);
+    const encoded = encodeExecutionPlan(plan);
+    const wire = JSON.parse(encoded) as unknown;
+    const frames = runStateFrames(wire);
+    const diagnosticSections = [
+      'counters',
+      'bags',
+      'godPool',
+      'traits',
+      'arcana',
+      'vows',
+      'forfeit',
+      'chaos',
+      'keepsakes',
+      'rewardPriorities',
+      'hexProgress',
+      'artificer',
+    ];
+
+    expect(encoded.length).toBeLessThan(expanded.length);
+    expect(frames.length).toBeGreaterThan(2);
+    expect(frames.map((frame) => frame.frame)).toEqual(frames.map((_, index) => index));
+    expect(Object.keys(frames[0]!.replace).sort()).toEqual(diagnosticSections.sort());
+    expect(frames.some((frame) => Object.keys(frame.replace).length === 0)).toBe(true);
+    expect(
+      (wire as { rooms: { trace: Record<string, unknown>[] }[] }).rooms
+        .flatMap((room) => room.trace)
+        .every((step) => !Object.hasOwn(step, 'id')),
+    ).toBe(true);
+    expect(decodeExecutionPlan(wire)).toEqual(plan);
+
+    for (const invalidFrame of [-1, 0, 2, 1.5]) {
+      const malformed = fixtureClone(wire);
+      runStateFrames(malformed)[1]!.frame = invalidFrame;
+      expect(() => decodeExecutionPlan(malformed)).toThrow(ExecutionPlanCodecError);
+    }
+
+    const unknown = fixtureClone(wire);
+    runStateFrames(unknown)[1]!.replace.internalState = true;
+    expect(() => decodeExecutionPlan(unknown)).toThrow(/unknown field internalState/);
+
+    const malformedBags = fixtureClone(wire);
+    runStateFrames(malformedBags)[1]!.replace.bags = 'not-bags';
+    expect(() => decodeExecutionPlan(malformedBags)).toThrow(ExecutionPlanCodecError);
+  });
+
+  it('distinguishes an absent Artificer replacement from an explicit null clear', () => {
+    const wire = fixtureClone(positiveFixture);
+    const frames = runStateFrames(wire);
+    frames[0]!.replace.artificer = { usedCount: 1, remainingCount: 2 };
+    frames[1]!.replace.artificer = null;
+
+    const decoded = decodeExecutionPlan(wire);
+    const checkpoints = decoded.rooms.flatMap((room) =>
+      room.trace.filter(
+        (step): step is Extract<typeof step, { kind: 'roomEntered' | 'beforeRoomExit' }> =>
+          step.kind === 'roomEntered' || step.kind === 'beforeRoomExit',
+      ),
+    );
+    expect(checkpoints[0]!.runState.artificer).toEqual({ usedCount: 1, remainingCount: 2 });
+    expect(checkpoints[1]!.runState.artificer).toBeNull();
+    expect(checkpoints[2]!.runState.artificer).toBeNull();
   });
 
   it('keeps additional continuations distinct and closes exactly one selected continuation', () => {

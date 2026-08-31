@@ -38,9 +38,9 @@ and repairable.
 
 The Phase 8 permission-minimal Tauri 2 Windows preview is complete. Its native
 profile flow now retains an opened or first-saved project target for in-place
-Save, while the browser retains upload/download behavior. The game module
-remains a later declarative consumer and runtime auditor, not a second planner
-or simulator.
+Save, while the browser retains upload/download behavior. The separate Plan
+Executor now consumes the supported F/G execution prefix as a thin declarative
+runtime auditor; it is not a second planner or simulator.
 
 ## Active Frontier and Blockers
 
@@ -49,11 +49,11 @@ schema-72 splitter, no-project startup, catalog-driven route choice, singular
 evaluation/workspace pipeline, and owning product witnesses are closed with no
 recorded blocker.
 
-The next product boundary is Phase 9, Simulation Conformance and Game
-Protocol. It is gated by the readiness conditions in
+Phase 9, Simulation Conformance and Game Protocol, has closed the F/G execution
+boundary described by
 [`GAME_INTEGRATION_BOUNDARY.md`](../design/GAME_INTEGRATION_BOUNDARY.md).
-The application-to-game execution-plan schema, compiler, importer, runtime
-auditor, and conformance traces have not started.
+Later biomes and live-host verification remain future gates; no native game
+probe is claimed without a Hades II host.
 
 There is no recorded active correctness queue in the former polish tracker.
 Future product observations must first identify their owning authority and,
@@ -759,7 +759,7 @@ configuration/schema change; it is not rerun merely to create review evidence.
 
 ## F/G Execution Boundary
 
-The F/G execution boundary is protocol v6. It exports only the exact
+The F/G execution boundary is protocol v7. It exports only the exact
 complete-valid simulation assembly; the Plan Executor remains a strict decoder
 and native-seam translator rather than a second planner. The shared F/G
 closure fixture includes an F Postboss Spark of Ixion, the generated G Intro
@@ -769,6 +769,25 @@ also covers matching and deliberately divergent exact counter, bounded bag,
 trait, and retained-state Run State observations. Native game probes are not
 recorded as passed without a Hades II host; fixture success is compiler/decoder
 and session-contract evidence only.
+
+Protocol v7 keeps complete Run State diagnostics in the planner's semantic
+plan while encoding them as one complete opening frame followed by strictly
+sequential top-level replacement frames. The Executor applies each frame only
+at its matching observed checkpoint, including explicit Artificer clearing;
+empty replacements retain prior expected state. Synthetic trace IDs were
+removed in favor of existing semantic owners. This reduced the representative
+F/G wire fixtures to about 156 kB each without changing fingerprints,
+checkpoints, comparison semantics, or first-mismatch blocking.
+
+The protocol-v7 closure ran its one authorized `npm run check` on 2026-08-30.
+Workspace and fixture typechecking, fixture integrity at 3 files/22 tests,
+correctness at 264 files/2,692 tests, the 18-test performance policy suite, the
+same-host eight-metric comparison, and ESLint passed. The gate then stopped on
+formatting of the three regenerated JSON fixtures; after their mechanical
+normalization, the format check and production build passed without rerunning
+the completed lanes. The mirrored Executor fixtures are byte-identical; its
+Lua suite passed at 97 tests, all Lua sources parsed, and Luacheck reported no
+errors (11 pre-existing-style warnings).
 
 ## Retired Delivery Scaffolding
 

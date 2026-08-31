@@ -576,7 +576,6 @@ function executionTrace(
   };
   const result: ExecutionTraceStep[] = [
     Object.freeze({
-      id: `${owner}:roomEntered`,
       kind: 'roomEntered' as const,
       owner,
       runState: entry,
@@ -605,7 +604,6 @@ function executionTrace(
           );
         result.push(
           Object.freeze({
-            id: `${owner}:${boundary.key}`,
             kind: 'encounterStart' as const,
             owner,
             phase: boundary.phaseKey,
@@ -616,7 +614,6 @@ function executionTrace(
       } else if (boundary.kind === 'encounterEnd' || boundary.kind === 'bossDefeated') {
         result.push(
           Object.freeze({
-            id: `${owner}:${boundary.key}`,
             kind: 'encounterEnd' as const,
             owner,
             phase: boundary.phaseKey,
@@ -624,7 +621,7 @@ function executionTrace(
           }),
         );
       } else if (boundary.kind === 'cleanup')
-        result.push(Object.freeze({ id: `${owner}:cleanup`, kind: 'cleanup' as const, owner }));
+        result.push(Object.freeze({ kind: 'cleanup' as const, owner }));
       continue;
     }
     if (timeline.kind === 'automaticEffect') {
@@ -646,7 +643,6 @@ function executionTrace(
           );
         result.push(
           Object.freeze({
-            id: `${owner}:steady:${timeline.phaseKey}`,
             kind: 'steadyGrowth' as const,
             owner,
             phase: timeline.phaseKey,
@@ -673,7 +669,6 @@ function executionTrace(
           );
         result.push(
           Object.freeze({
-            id: `${owner}:embryo:${timeline.phaseKey}`,
             kind: 'transcendentEmbryo' as const,
             owner,
             phase: timeline.phaseKey,
@@ -711,7 +706,6 @@ function executionTrace(
         );
       result.push(
         Object.freeze({
-          id: `${owner}:${timeline.action.key}`,
           kind: 'encounterInteraction' as const,
           owner: semanticAddressKey(timeline.action.owner),
           phaseKey,
@@ -747,7 +741,6 @@ function executionTrace(
           );
         result.push(
           Object.freeze({
-            id: `${owner}:${timeline.action.key}`,
             kind: 'purgingPoolSale' as const,
             owner: semanticAddressKey(timeline.action.owner),
             slotKey: reference.slotKey,
@@ -763,7 +756,6 @@ function executionTrace(
           );
         result.push(
           Object.freeze({
-            id: `${owner}:${timeline.action.key}`,
             kind: 'keepsakeRackChange' as const,
             owner: semanticAddressKey(timeline.action.owner),
             keepsakeKey,
@@ -799,7 +791,6 @@ function executionTrace(
       } else if (reference.kind === 'useFountain') {
         result.push(
           Object.freeze({
-            id: `${owner}:${timeline.action.key}`,
             kind: 'fountainUse' as const,
             owner: semanticAddressKey(timeline.action.owner),
             ...(room.fountainRarityResult === undefined
@@ -831,7 +822,6 @@ function executionTrace(
         ];
       result.push(
         Object.freeze({
-          id: `${owner}:${timeline.action.key}:purchase`,
           kind: 'stygianWellPurchase' as const,
           owner: semanticAddressKey(timeline.action.owner),
           generationKey,
@@ -852,7 +842,6 @@ function executionTrace(
         );
       result.push(
         Object.freeze({
-          id: `${owner}:${timeline.action.key}:purchase`,
           kind: 'worldShopPurchase' as const,
           owner: semanticAddressKey(timeline.action.owner),
           offerKey: offer.offerKey,
@@ -990,7 +979,6 @@ function executionTrace(
     });
     result.push(
       Object.freeze({
-        id: `${owner}:${timeline.action.key}`,
         kind: 'acquireReward' as const,
         owner: semanticAddressKey(timeline.action.owner),
         sourceOwner: semanticAddressKey(source),
@@ -1002,7 +990,6 @@ function executionTrace(
   }
   result.push(
     Object.freeze({
-      id: `${owner}:beforeRoomExit`,
       kind: 'beforeRoomExit' as const,
       owner,
       runState: exit,

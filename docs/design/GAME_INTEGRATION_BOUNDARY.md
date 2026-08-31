@@ -2,7 +2,7 @@
 
 ## Current contract
 
-Protocol v6 carries a complete-valid configured F or F/G prefix. The desktop
+Protocol v7 carries a complete-valid configured F or F/G prefix. The desktop
 publisher writes an execution-only JSON artifact to the Plan Executor's fixed
 inbox; the browser build has no publication capability. Publication is a
 start-of-run operation. The Executor cannot truthfully attach midway through a
@@ -90,12 +90,15 @@ hide it with fallback planning.
 
 ## Compatibility, transport, and security
 
-The transport is canonical data-only JSON with a strict protocol-v6 decoder,
+The transport is canonical data-only JSON with a strict protocol-v7 decoder,
 exact catalog compatibility, bounded collections, closed unions, and no silent
 coercion. It permits no dynamic evaluation, executable expressions, arbitrary
 paths or commands, or class reconstruction from untrusted names. Compression
 or an outer checksum is unnecessary unless later transport evidence justifies
-it.
+it. Run State diagnostics remain complete in the planner's semantic plan; on
+the wire, frame zero replaces every closed top-level diagnostic section and
+later sequential frames replace only changed sections. `artificer: null` is an
+explicit replacement that clears prior state.
 
 The Plan Executor verifies protocol and catalog identity before opening a
 session. Runtime identifier existence and checkpoint contact are conformance
