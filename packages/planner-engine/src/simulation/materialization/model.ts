@@ -139,7 +139,11 @@ export interface CanonicalAuthoredRoom {
    * Keep that authored provenance on the canonical room rather than asking a
    * later simulation stage to rediscover topology ownership from a game name.
    */
-  readonly anomalyReplacement?: { readonly replacedRoomGameName: string };
+  readonly anomalyReplacement?: {
+    readonly replacedRoomGameName: string;
+    /** Authored result of the one closed Anomaly capture-point encounter. */
+    readonly success: boolean;
+  };
   readonly encounters: RoomEncounterState;
   readonly encounterEnvelopeKey: string;
   readonly encounterPhases: readonly ResolvedEncounterPhase[];

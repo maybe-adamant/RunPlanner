@@ -752,6 +752,14 @@ Each special behavior is a closed semantic command compiled from the existing
 canonical product. No generic biome callback or command-expression language is
 introduced.
 
+**Gate F protocol correction.** The canonical Anomaly room product retains its
+authored success/failure alongside remembered replacement provenance. Protocol
+v6 carries that closed Anomaly command and a closed encounter-interaction
+resolution for an encounter-owned selected trait offer or exact
+`NemesisRandomEvent` outcome. Consequential Narcissus and Nemesis pickups
+remain their independently ordered ordinary acquisition rows; they are not
+folded into the outer interaction command.
+
 ### Gate G — Full F/G closure and conformance handoff
 
 **Outcome:** every canonical fact in the agreed F/G surface has a disposition,

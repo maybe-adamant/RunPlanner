@@ -3,7 +3,7 @@ import type { ProjectEvaluationAssembly } from '../simulation/evaluation-product
 
 /** The only execution artifact currently supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 5 as const;
+export const EXECUTION_PROTOCOL_VERSION = 6 as const;
 export const EXECUTION_CATALOG_VERSION = '0.52.0-boss-preboss-variants' as const;
 
 export type ExecutionRunStateCount =
@@ -101,6 +101,8 @@ export interface ExecutionReward {
   readonly resolvedStoreKey?: string;
   readonly source?: string;
   readonly spurnedSource?: string;
+  /** False when an encounter consumes the draw but owns the replacement reward. */
+  readonly acquisitionEnabled?: boolean;
 }
 
 export interface ExecutionRoomContents {
@@ -268,6 +270,24 @@ export type ExecutionTraceStep =
       readonly kind: 'encounterInteraction';
       readonly owner: string;
       readonly phaseKey: string;
+      /** Closed player-triggered encounter result; later pickups remain separate trace rows. */
+      readonly resolution?:
+        | { readonly kind: 'traitOffer'; readonly offer: ExecutionTraitOffer }
+        | {
+            readonly kind: 'nemesisRandomEvent';
+            readonly outcome:
+              | { readonly kind: 'freeItem' }
+              | {
+                  readonly kind: 'goldTrade' | 'damageTrade';
+                  readonly response: 'accept' | 'decline';
+                }
+              | {
+                  readonly kind: 'traitTrade';
+                  readonly traitKey: string;
+                  readonly response: 'accept' | 'decline';
+                }
+              | { readonly kind: 'damageContest'; readonly result: 'success' | 'failure' };
+          };
     }
   | {
       readonly id: string;
@@ -383,6 +403,8 @@ export interface ExecutionRoom {
   readonly kind: string;
   readonly entered: boolean;
   readonly contents: ExecutionRoomContents;
+  /** G-only closed replacement command; it is never inferred from a room name at runtime. */
+  readonly anomaly?: { readonly replacedRoomGameName: string; readonly success: boolean };
   readonly trace: readonly ExecutionTraceStep[];
   readonly outgoing: ExecutionOutgoing;
 }

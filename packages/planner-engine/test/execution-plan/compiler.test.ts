@@ -4,11 +4,14 @@ import {
   createCompleteFGProject,
   goldenFBiome,
   goldenFOccurrenceId,
+  goldenGBiome,
+  goldenGOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createIncomingRewardAddress,
+  createEncounterPhaseAddress,
   createKeepsakeEquipResultAddress,
   createOccurrenceAddress,
   createRouteStartKeepsakeSelectionAddress,
@@ -36,6 +39,32 @@ function fOnlyProject(project = createCompleteFGProject()) {
       biomes: Object.freeze(project.route.biomes.slice(0, 1)),
     }),
   });
+}
+
+function narcissusSelectedProject() {
+  let project = createCompleteFGProject();
+  const occurrence = project.route.biomes
+    .find((biome) => biome.biomeKey === 'G')
+    ?.topology?.occurrences.find((room) => room.gameName === 'G_Story01');
+  if (occurrence === undefined) throw new Error('Golden G project lacks Narcissus');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        goldenGBiome,
+        { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+        'Encounter',
+      ),
+      'selection',
+    ),
+    value: {
+      kind: 'traits',
+      giverKey: 'Narcissus',
+      options: [{ traitKey: 'NarcissusA' }, { traitKey: 'NarcissusB' }, { traitKey: 'NarcissusC' }],
+      selectedOptionKey: 'option1',
+    },
+  });
+  return project;
 }
 
 function fixtureClone<T>(value: T): T {
@@ -111,7 +140,7 @@ describe('execution plan compiler', () => {
 
     expect(plan).toMatchObject({
       format: 'run-planner-execution',
-      protocolVersion: 5,
+      protocolVersion: 6,
       routeKey: 'Underworld',
       extent: { kind: 'configuredPrefix', biomeKeys: ['F'], terminalBiomeKey: 'F' },
     });
@@ -154,7 +183,40 @@ describe('execution plan compiler', () => {
     expect(decodeExecutionPlan(positiveFixture)).toEqual(plan);
   });
 
-  it('requires the complete v5 diagnostic surface', () => {
+  it('projects the selected Narcissus descriptor at its encounter interaction', () => {
+    const assembly = simulateProjectAssembly(catalog, narcissusSelectedProject());
+    const g = assembly.evaluation.route?.biomes.find((biome) => biome.biomeKey === 'G');
+    if (g === undefined || !('rewards' in g)) throw new Error('G reward assembly missing');
+    const narcissus = g.rewards.selectedTraitOffers.find(
+      (candidate) => candidate.offer.giverKey === 'Narcissus',
+    );
+    expect(narcissus).toBeDefined();
+    // Keep the canonical address visible in a failure: this is the exact
+    // producer/consumer contract the execution trace must join.
+    expect(narcissus?.address).toEqual(
+      createTraitOfferAddress(
+        createEncounterPhaseAddress(
+          goldenGBiome,
+          { kind: 'occurrence', occurrenceId: goldenGOccurrenceId(3, 1) },
+          'Encounter',
+        ),
+        'selection',
+      ),
+    );
+    const plan = compileExecutionPlan({ assembly });
+    const interaction = plan.rooms
+      .flatMap((room) => room.trace)
+      .find((step) => step.kind === 'encounterInteraction' && step.resolution !== undefined);
+    expect(interaction).toMatchObject({
+      kind: 'encounterInteraction',
+      resolution: {
+        kind: 'traitOffer',
+        offer: { giver: 'Narcissus', selected: 'option1' },
+      },
+    });
+  });
+
+  it('requires the complete run-state diagnostic surface', () => {
     const missingKeepsakes = fixtureClone(positiveFixture) as {
       rooms: { trace: { runState: Record<string, unknown> }[] }[];
     };

@@ -205,6 +205,7 @@ function reward(value: unknown, label: string) {
     'resolvedStoreKey',
     'source',
     'spurnedSource',
+    'acquisitionEnabled',
   ]);
   return Object.freeze({
     rewardType: stringValue(record.rewardType, `${label}.rewardType`),
@@ -218,6 +219,14 @@ function reward(value: unknown, label: string) {
     ...(record.spurnedSource === undefined
       ? {}
       : { spurnedSource: stringValue(record.spurnedSource, `${label}.spurnedSource`) }),
+    ...(record.acquisitionEnabled === undefined
+      ? {}
+      : {
+          acquisitionEnabled: booleanValue(
+            record.acquisitionEnabled,
+            `${label}.acquisitionEnabled`,
+          ),
+        }),
   });
 }
 function diagnostic(value: unknown, label: string) {
@@ -686,15 +695,75 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
     });
   }
   if (record.kind === 'encounterInteraction') {
-    exact(record, ['id', 'kind', 'owner', 'phaseKey'], label);
+    exact(record, ['id', 'kind', 'owner', 'phaseKey'], label, ['resolution']);
     const phaseKey = stringValue(record.phaseKey, `${label}.phaseKey`);
     if (validateEncounterAddress(stepOwner, context, `${label}.owner`) !== phaseKey)
       fail(`${label}.owner and phaseKey mismatch`);
+    const resolution =
+      record.resolution === undefined
+        ? undefined
+        : (() => {
+            const value = object(record.resolution, `${label}.resolution`);
+            if (value.kind === 'traitOffer') {
+              exact(value, ['kind', 'offer'], `${label}.resolution`);
+              return Object.freeze({
+                kind: 'traitOffer' as const,
+                offer: traitOffer(value.offer, `${label}.resolution.offer`),
+              });
+            }
+            if (value.kind === 'nemesisRandomEvent') {
+              exact(value, ['kind', 'outcome'], `${label}.resolution`);
+              const outcome = object(value.outcome, `${label}.resolution.outcome`);
+              if (outcome.kind === 'freeItem') {
+                exact(outcome, ['kind'], `${label}.resolution.outcome`);
+                return Object.freeze({
+                  kind: 'nemesisRandomEvent' as const,
+                  outcome: Object.freeze({ kind: 'freeItem' as const }),
+                });
+              }
+              if (outcome.kind === 'goldTrade' || outcome.kind === 'damageTrade') {
+                exact(outcome, ['kind', 'response'], `${label}.resolution.outcome`);
+                if (outcome.response !== 'accept' && outcome.response !== 'decline')
+                  fail(`${label}.resolution outcome response invalid`);
+                return Object.freeze({
+                  kind: 'nemesisRandomEvent' as const,
+                  outcome: Object.freeze({ kind: outcome.kind, response: outcome.response }),
+                });
+              }
+              if (outcome.kind === 'traitTrade') {
+                exact(outcome, ['kind', 'traitKey', 'response'], `${label}.resolution.outcome`);
+                if (outcome.response !== 'accept' && outcome.response !== 'decline')
+                  fail(`${label}.resolution outcome response invalid`);
+                return Object.freeze({
+                  kind: 'nemesisRandomEvent' as const,
+                  outcome: Object.freeze({
+                    kind: 'traitTrade' as const,
+                    traitKey: stringValue(outcome.traitKey, `${label}.resolution.outcome.traitKey`),
+                    response: outcome.response,
+                  }),
+                });
+              }
+              if (outcome.kind === 'damageContest') {
+                exact(outcome, ['kind', 'result'], `${label}.resolution.outcome`);
+                if (outcome.result !== 'success' && outcome.result !== 'failure')
+                  fail(`${label}.resolution outcome result invalid`);
+                return Object.freeze({
+                  kind: 'nemesisRandomEvent' as const,
+                  outcome: Object.freeze({
+                    kind: 'damageContest' as const,
+                    result: outcome.result,
+                  }),
+                });
+              }
+            }
+            fail(`${label}.resolution unsupported`);
+          })();
     return Object.freeze({
       id,
       kind: 'encounterInteraction',
       owner: stepOwner,
       phaseKey,
+      ...(resolution === undefined ? {} : { resolution }),
     });
   }
   if (record.kind === 'steadyGrowth' || record.kind === 'transcendentEmbryo') {
@@ -1429,6 +1498,7 @@ function room(value: unknown, index: number): ExecutionRoom {
     record,
     ['id', 'owner', 'biomeKey', 'gameName', 'kind', 'entered', 'contents', 'trace', 'outgoing'],
     label,
+    ['anomaly'],
   );
   const roomId = stringValue(record.id, `${label}.id`);
   const biomeKey = stringValue(record.biomeKey, `${label}.biomeKey`);
@@ -1438,6 +1508,20 @@ function room(value: unknown, index: number): ExecutionRoom {
     fail(`${label}.owner does not identify this occurrence`);
   const entered = booleanValue(record.entered, `${label}.entered`);
   const contents = roomContents(record.contents, `${label}.contents`);
+  const anomaly =
+    record.anomaly === undefined
+      ? undefined
+      : (() => {
+          const value = object(record.anomaly, `${label}.anomaly`);
+          exact(value, ['replacedRoomGameName', 'success'], `${label}.anomaly`);
+          return Object.freeze({
+            replacedRoomGameName: stringValue(
+              value.replacedRoomGameName,
+              `${label}.anomaly.replacedRoomGameName`,
+            ),
+            success: booleanValue(value.success, `${label}.anomaly.success`),
+          });
+        })();
   const phases = contents.encounterPhases;
   const phaseMap = new Map(
     phases.map((phase) => [phase.slotKey, { encounterKey: phase.encounterKey, kind: phase.kind }]),
@@ -1496,6 +1580,7 @@ function room(value: unknown, index: number): ExecutionRoom {
     kind: stringValue(record.kind, `${label}.kind`),
     entered,
     contents,
+    ...(anomaly === undefined ? {} : { anomaly }),
     trace: Object.freeze(steps),
     outgoing: outgoing(record.outgoing, `${label}.outgoing`),
   });
