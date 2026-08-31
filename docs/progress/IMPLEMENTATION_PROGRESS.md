@@ -757,6 +757,19 @@ Focused validation remains the normal implementation practice. A complete
 `npm run check` is reserved for the declared phase closure or a shared
 configuration/schema change; it is not rerun merely to create review evidence.
 
+## F/G Execution Boundary
+
+The F/G execution boundary is protocol v6. It exports only the exact
+complete-valid simulation assembly; the Plan Executor remains a strict decoder
+and native-seam translator rather than a second planner. The shared F/G
+closure fixture includes an F Postboss Spark of Ixion, the generated G Intro
+Chaos sibling, three distinct displayed curse options, the selected
+curse/blessing acquisition, and its fixed G return. The Lua session fixture
+also covers matching and deliberately divergent exact counter, bounded bag,
+trait, and retained-state Run State observations. Native game probes are not
+recorded as passed without a Hades II host; fixture success is compiler/decoder
+and session-contract evidence only.
+
 ## Retired Delivery Scaffolding
 
 Completed feature plans were reviewed and deleted; Git is the archive. The

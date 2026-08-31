@@ -2,23 +2,35 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createCompleteFGProject,
+  createCompleteFGIxionChaosProject,
+  createUnderworldFPoolCheckpoint,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenGBiome,
   goldenGOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
+import { createNemesisTraitTradeCheckpoint } from '../../../../test/fixtures/authored-project/routes/nemesis-random-events';
+import {
+  authorLegalTraitOffers,
+  replaceTestShopOfferActions,
+} from '@run-planner/test-fixtures/shared';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAdditionalExitAddress,
   createIncomingRewardAddress,
   createEncounterPhaseAddress,
   createKeepsakeEquipResultAddress,
+  createNemesisRandomEventAddress,
   createOccurrenceAddress,
+  createOccurrenceId,
+  createPostbossKeepsakeSelectionAddress,
   createRouteStartKeepsakeSelectionAddress,
+  createTargetAddress,
   createTraitOfferAddress,
   createTranscendentEmbryoOutcomeAddress,
 } from '../../src/authored-project';
-import { simulateProjectAssembly } from '../../src/simulation';
+import { routeResourceAuthoring, simulateProjectAssembly } from '../../src/simulation';
 import {
   compileExecutionPlan,
   decodeExecutionPlan,
@@ -28,6 +40,7 @@ import {
 } from '../../src/execution-plan';
 import positiveFixture from './fixtures/f-opening.execution.json';
 import fgFixture from './fixtures/fg.execution.json';
+import ixionChaosFixture from './fixtures/fg-ixion-chaos.execution.json';
 import malformedFixture from './fixtures/malformed.execution.json';
 import unsupportedFixture from './fixtures/unsupported.execution.json';
 
@@ -67,9 +80,255 @@ function narcissusSelectedProject() {
   return project;
 }
 
+function artemisSelectedProject() {
+  return authorLegalTraitOffers(
+    applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase: createEncounterPhaseAddress(
+        goldenFBiome,
+        { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+        'Encounter',
+      ),
+      encounterKey: 'ArtemisCombatF',
+    }),
+  );
+}
+
+function anomalySelectedProject() {
+  let project = createCompleteFGProject();
+  const biome = project.route.biomes.find((candidate) => candidate.biomeKey === 'G');
+  const decisions = biome?.topology?.decisions.filter((candidate) => {
+    if (candidate.kind !== 'exit' || candidate.source.kind !== 'occurrence') return false;
+    const sourceOccurrenceId = candidate.source.occurrenceId;
+    return (
+      biome.topology?.occurrences
+        .find((occurrence) => occurrence.occurrenceId === sourceOccurrenceId)
+        ?.gameName.startsWith('G_Combat') === true &&
+      candidate.normal.targets.some((target) =>
+        biome.topology?.occurrences
+          .find((occurrence) => occurrence.occurrenceId === target.occurrenceId)
+          ?.gameName.startsWith('G_Combat'),
+      )
+    );
+  });
+  const decision = decisions?.[1];
+  if (decision === undefined || decision.kind !== 'exit')
+    throw new Error('complete F/G fixture lacks an anomaly-capable target');
+  const target = decision.normal.targets.find((candidate) =>
+    biome?.topology?.occurrences
+      .find((occurrence) => occurrence.occurrenceId === candidate.occurrenceId)
+      ?.gameName.startsWith('G_Combat'),
+  );
+  if (target === undefined) throw new Error('complete F/G fixture lacks an anomaly-capable room');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SwitchTargetToAnomaly',
+    target: createTargetAddress(goldenGBiome, decision.source, target.exitKey),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceAnomalySuccess',
+    occurrence: createOccurrenceAddress(goldenGBiome, target.occurrenceId),
+    success: true,
+  });
+  project = authorLegalTraitOffers(project);
+  const invalid = simulateProjectAssembly(catalog, project).evaluation.findings.filter(
+    (finding) => finding.severity === 'error',
+  );
+  if (invalid.length > 0) throw new Error(`anomaly fixture invalid: ${JSON.stringify(invalid)}`);
+  return project;
+}
+
+function nemesisSelectedProject() {
+  let project = createNemesisTraitTradeCheckpoint();
+  const phase = createEncounterPhaseAddress(
+    goldenFBiome,
+    { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+    'Encounter',
+  );
+  const occurrence = project.route.biomes
+    .find((biome) => biome.biomeKey === 'F')
+    ?.topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === goldenFOccurrenceId(5, 1),
+    );
+  const event = occurrence?.encounters.nemesisRandomEventByPhase?.Encounter;
+  if (event?.kind !== 'traitTrade')
+    throw new Error('Nemesis fixture lacks its selected trait trade');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceNemesisRandomEventOutcome',
+    event: createNemesisRandomEventAddress(phase),
+    value: { kind: 'traitTrade', traitKey: event.traitKey, response: 'decline' },
+    reward: { rewardType: 'RoomMoneyTripleDrop' },
+  });
+  return fOnlyProject(project);
+}
+
+function zagreusContractProject() {
+  let project = createCompleteFGProject();
+  const shop = project.route.biomes
+    .find((biome) => biome.biomeKey === 'G')
+    ?.topology?.occurrences.find((occurrence) => occurrence.gameName === 'G_Shop01');
+  if (shop === undefined) throw new Error('complete F/G fixture lacks its G shop');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'AddZagreusContract',
+    additional: createAdditionalExitAddress(goldenGBiome, shop.occurrenceId, 'zagreusContract'),
+    occurrenceId: createOccurrenceId('compiler-coverage-zagreus-contract'),
+  });
+  return project;
+}
+
+function purchasedWorldShopProject() {
+  const project = createCompleteFGProject();
+  const shop = project.route.biomes
+    .find((biome) => biome.biomeKey === 'G')
+    ?.topology?.occurrences.find((occurrence) => occurrence.gameName === 'G_Shop01');
+  if (shop === undefined) throw new Error('complete F/G fixture lacks its G shop');
+  return replaceTestShopOfferActions(
+    project,
+    catalog,
+    createOccurrenceAddress(goldenGBiome, shop.occurrenceId),
+    ['Minor'],
+  );
+}
+
+function changedPostbossKeepsakeProject() {
+  const postboss = createOccurrenceAddress(
+    goldenFBiome,
+    createOccurrenceId('golden-f-preboss-shop:postboss'),
+  );
+  return applyProjectCommand(createCompleteFGProject(), catalog, {
+    kind: 'ReplacePostbossKeepsake',
+    selection: createPostbossKeepsakeSelectionAddress(postboss),
+    keepsakeKey: 'ForceZeusBoonKeepsake',
+  });
+}
+
+function successfulResourceProject() {
+  const project = createCompleteFGProject();
+  const target = routeResourceAuthoring(catalog, project.route).legalTargetsByFamily.Pickaxe[0];
+  if (target === undefined) throw new Error('complete F/G fixture lacks a Pickaxe resource target');
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceResourcePlacement',
+    route: { kind: 'route', routeKey: 'Underworld' },
+    family: 'Pickaxe',
+    value: target,
+  });
+}
+
 function fixtureClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
+
+it('builds the F-to-G Ixion Chaos route from a fresh G authoring spine', () => {
+  const assembly = simulateProjectAssembly(catalog, createCompleteFGIxionChaosProject());
+  const invalid = assembly.evaluation.findings.filter((finding) => finding.severity === 'error');
+  expect(invalid).toEqual([]);
+  const plan = compileExecutionPlan({ assembly });
+  expect(plan.rooms.some((room) => room.gameName.startsWith('Chaos_'))).toBe(true);
+  expect(decodeExecutionPlan(ixionChaosFixture)).toEqual(plan);
+});
+
+it('audits every semantic owner across representative complete-valid F/G products', () => {
+  const compilerProducts = [
+    decodeExecutionPlan(fgFixture),
+    decodeExecutionPlan(ixionChaosFixture),
+    compileExecutionPlan({
+      assembly: simulateProjectAssembly(catalog, narcissusSelectedProject()),
+    }),
+    compileExecutionPlan({ assembly: simulateProjectAssembly(catalog, artemisSelectedProject()) }),
+    compileExecutionPlan({
+      assembly: simulateProjectAssembly(catalog, nemesisSelectedProject()),
+    }),
+    compileExecutionPlan({ assembly: simulateProjectAssembly(catalog, anomalySelectedProject()) }),
+    compileExecutionPlan({
+      assembly: simulateProjectAssembly(catalog, zagreusContractProject()),
+    }),
+    compileExecutionPlan({
+      assembly: simulateProjectAssembly(catalog, purchasedWorldShopProject()),
+    }),
+    compileExecutionPlan({
+      assembly: simulateProjectAssembly(catalog, fOnlyProject(createUnderworldFPoolCheckpoint())),
+    }),
+    compileExecutionPlan({
+      assembly: simulateProjectAssembly(catalog, fOnlyProject(changedPostbossKeepsakeProject())),
+    }),
+    compileExecutionPlan({
+      assembly: simulateProjectAssembly(catalog, successfulResourceProject()),
+    }),
+    compileExecutionPlan({
+      assembly: simulateProjectAssembly(catalog, fAutomaticOutcomeProject()),
+    }),
+  ];
+  const rooms = compilerProducts.flatMap((plan) => plan.rooms);
+  const traceKinds = new Set(rooms.flatMap((room) => room.trace.map((step) => step.kind)));
+  const contentOwners = new Set(rooms.flatMap((room) => Object.keys(room.contents)));
+  const outgoingKinds = new Set(rooms.map((room) => room.outgoing.kind));
+  const additionalKinds = new Set(
+    rooms
+      .flatMap((room) => (room.outgoing.kind === 'batch' ? room.outgoing.additional : []))
+      .map((additional) => additional.kind),
+  );
+  const acquisitionOwners = new Set(
+    rooms.flatMap((room) =>
+      room.trace.flatMap((step) =>
+        step.kind === 'acquireReward'
+          ? step.roles.map(
+              (role) => `${role.disposition}/${role.traitOffer?.kind ?? 'no-trait-offer'}`,
+            )
+          : [],
+      ),
+    ),
+  );
+  const encounterResolutions = new Set(
+    rooms.flatMap((room) =>
+      room.trace.flatMap((step) =>
+        step.kind === 'encounterInteraction' && step.resolution !== undefined
+          ? [step.resolution.kind]
+          : [],
+      ),
+    ),
+  );
+  const anomalyKinds = new Set(
+    rooms.flatMap((room) => (room.anomaly === undefined ? [] : [room.anomaly.success])),
+  );
+
+  // This is deliberately closed rather than a loose “contains” assertion.
+  // A newly emitted semantic owner must acquire an explicit compiler/runtime
+  // disposition before the closure fixture can be accepted.
+  expect([...traceKinds].sort()).toEqual([
+    'acquireReward',
+    'beforeRoomExit',
+    'cleanup',
+    'encounterEnd',
+    'encounterInteraction',
+    'encounterStart',
+    'fountainUse',
+    'keepsakeRackChange',
+    'purgingPoolSale',
+    'roomEntered',
+    'steadyGrowth',
+    'stygianWellPurchase',
+    'transcendentEmbryo',
+    'worldShopPurchase',
+  ]);
+  expect([...contentOwners].sort()).toEqual([
+    'encounterPhases',
+    'incomingReward',
+    'keepsakeRack',
+    'purgingPool',
+    'requiredObjects',
+    'resources',
+    'shop',
+    'stygianWell',
+  ]);
+  expect([...outgoingKinds].sort()).toEqual(['batch', 'fixed', 'terminal']);
+  expect([...additionalKinds].sort()).toEqual(['chaos', 'zagreusContract']);
+  expect([...acquisitionOwners].sort()).toEqual([
+    'normal/chaos',
+    'normal/no-trait-offer',
+    'normal/traits',
+  ]);
+  expect([...encounterResolutions].sort()).toEqual(['nemesisRandomEvent', 'traitOffer']);
+  expect([...anomalyKinds]).toEqual([true]);
+});
 
 function fAutomaticOutcomeProject() {
   let project = createCompleteFGProject();

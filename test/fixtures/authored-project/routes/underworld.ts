@@ -14,6 +14,7 @@ import {
   createRoomActionAddress,
   roomActionKey,
   createRouteStartKeepsakeSelectionAddress,
+  createRouteAddress,
   createShopOfferAddress,
   createTargetAddress,
   createTraitOfferAddress,
@@ -223,6 +224,249 @@ export function createCompleteFGProject(options: GoldenGProjectOptions = {}): Pr
       });
     }
   }
+  return authorLegalTraitOffers(project);
+}
+
+/**
+ * Canonical F/G closure witness: the F Postboss Well buys Spark of Ixion, then
+ * G takes the generated Chaos sibling and completes its newly-authored G spine.
+ *
+ * The G topology is authored from the F-only checkpoint rather than repaired
+ * from the ordinary golden G route: Chaos changes the later G eligibility
+ * frontier, so retaining that old spine would not be evidence for this route.
+ */
+export function createCompleteFGIxionChaosProject(): ProjectDocument {
+  const well = createOccurrenceAddress(
+    goldenFBiome,
+    createOccurrenceId('golden-f-preboss-shop:postboss'),
+  );
+  let project = createUnderworldFWellCheckpoint(false);
+  for (const generationKey of [
+    'initial:secondLeft',
+    'initial:secondRight',
+    'travelDealRefill',
+  ] as const) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: well,
+      generationKey,
+      purchased: false,
+    });
+  }
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceStygianWellOffer',
+    occurrence: well,
+    slotKey: 'secondLeft',
+    itemKey: 'TemporaryForcedSecretDoorTrait',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetStygianWellPurchase',
+    occurrence: well,
+    generationKey: 'initial:secondLeft',
+    purchased: true,
+  });
+
+  // Seed F remains the already-complete checkpoint. G is deliberately fresh:
+  // commands below are the same authoring surface a user exercises.
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ConfigureRoutePrefix',
+    route: createRouteAddress('Underworld'),
+    configuredBiomeCount: 1,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ConfigureRoutePrefix',
+    route: createRouteAddress('Underworld'),
+    configuredBiomeCount: 2,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome: goldenGBiome,
+    occurrenceId: goldenGStartId,
+  });
+
+  const batches = [
+    { sourceId: goldenGStartId, targets: ['G_Combat01'], store: 'RunProgress' as const },
+    {
+      sourceId: goldenGOccurrenceId(1, 1),
+      targets: ['G_Combat02', 'G_Combat03'],
+      store: 'MetaProgress' as const,
+    },
+    {
+      sourceId: goldenGOccurrenceId(2, 1),
+      targets: ['G_Combat04', 'G_Combat05', 'G_Combat06'],
+      store: 'RunProgress' as const,
+    },
+    {
+      sourceId: goldenGOccurrenceId(3, 1),
+      targets: ['G_Combat06', 'G_Combat07'],
+      store: 'RunProgress' as const,
+    },
+    {
+      sourceId: goldenGOccurrenceId(4, 1),
+      targets: ['G_Shop01', 'G_Combat09'],
+      store: 'RunProgress' as const,
+    },
+    {
+      sourceId: goldenGOccurrenceId(5, 1),
+      targets: ['G_MiniBoss01', 'G_MiniBoss02'],
+      store: 'MetaProgress' as const,
+    },
+    {
+      sourceId: goldenGOccurrenceId(6, 1),
+      targets: ['G_Combat12', 'G_Combat13'],
+      store: 'MetaProgress' as const,
+    },
+  ];
+  for (const [offset, batch] of batches.entries()) {
+    const source = { kind: 'occurrence' as const, occurrenceId: batch.sourceId };
+    const batchIndex = offset + 1;
+    if (offset > 0) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'CreateBatch',
+        decision: createExitDecisionAddress(goldenGBiome, source),
+      });
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(goldenGBiome, source),
+      storeKey: batch.store,
+    });
+    for (const [targetOffset, gameName] of batch.targets.entries()) {
+      const exitIndex = targetOffset + 1;
+      const occurrenceId = goldenGOccurrenceId(batchIndex, exitIndex);
+      project = applyProjectCommand(project, catalog, {
+        kind: 'CreateTarget',
+        target: createTargetAddress(goldenGBiome, source, `exit${exitIndex}`),
+        occurrenceId,
+        gameName,
+      });
+      const value =
+        batchIndex === 1
+          ? {
+              rewardType: 'Boon' as const,
+              payload: { kind: 'BoonSource' as const, source: 'HeraUpgrade' as const },
+            }
+          : batch.store === 'MetaProgress'
+            ? targetOffset === 0
+              ? { rewardType: 'MetaCurrencyBigDrop' as const }
+              : { rewardType: 'MetaCardPointsCommonBigDrop' as const }
+            : batchIndex === 4
+              ? targetOffset === 0
+                ? { rewardType: 'SpellDrop' as const }
+                : { rewardType: 'StackUpgrade' as const }
+              : targetOffset === 0
+                ? { rewardType: 'MaxManaDrop' as const }
+                : targetOffset === 1
+                  ? { rewardType: 'RoomMoneyDrop' as const }
+                  : { rewardType: 'MaxHealthDrop' as const };
+      if (gameName.startsWith('G_MiniBoss')) {
+        const source = gameName === 'G_MiniBoss01' ? 'HestiaUpgrade' : 'ZeusUpgrade';
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceIncomingReward',
+          reward: createIncomingRewardAddress(goldenGBiome, occurrenceId),
+          value: {
+            rewardType: 'Boon',
+            payload: { kind: 'BoonSource', source },
+          },
+        });
+      } else if (gameName !== 'G_Shop01') {
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceIncomingReward',
+          reward: createIncomingRewardAddress(goldenGBiome, occurrenceId),
+          value,
+        });
+      }
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenGBiome, source),
+      value: { kind: 'normal', exitKey: 'exit1' },
+    });
+  }
+  const finalSource = { kind: 'occurrence' as const, occurrenceId: goldenGOccurrenceId(7, 1) };
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    decision: createExitDecisionAddress(goldenGBiome, finalSource),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceWithTakeoverBatch',
+    decision: createExitDecisionAddress(goldenGBiome, finalSource),
+    gameName: 'G_PreBoss01',
+    targetOccurrenceIds: {
+      exit1: createOccurrenceId('ixion-chaos-g-preboss-shop'),
+      exit2: createOccurrenceId('ixion-chaos-g-preboss-free-2'),
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(
+      goldenGBiome,
+      createOccurrenceId('ixion-chaos-g-preboss-free-2'),
+    ),
+    value: { rewardType: 'MaxManaDrop' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenGBiome, finalSource),
+    value: { kind: 'normal', exitKey: 'exit1' },
+  });
+
+  for (const shop of [
+    goldenGOccurrenceId(5, 1),
+    createOccurrenceId('ixion-chaos-g-preboss-shop'),
+  ]) {
+    for (const [offerKey, value] of Object.entries({
+      Boon: {
+        rewardType: 'RandomLoot' as const,
+        payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' as const },
+      },
+      MajorNonBoon: { rewardType: 'WeaponUpgradeDrop' as const },
+      Minor: { rewardType: 'MaxManaDrop' as const },
+    })) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceShopOffer',
+        offer: createShopOfferAddress(goldenGBiome, shop, offerKey),
+        value,
+      });
+    }
+  }
+
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenGBiome, {
+      kind: 'occurrence',
+      occurrenceId: goldenGStartId,
+    }),
+    value: { kind: 'additional', additionalExitKey: 'chaos' },
+  });
+  const chaosOccurrenceId = project.route.biomes
+    .find((biome) => biome.biomeKey === 'G')
+    ?.topology?.occurrences.find((occurrence) =>
+      occurrence.gameName.startsWith('Chaos_'),
+    )?.occurrenceId;
+  if (chaosOccurrenceId === undefined)
+    throw new Error('Ixion did not create the G Chaos occurrence');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createIncomingRewardAddress(goldenGBiome, chaosOccurrenceId),
+      'self',
+    ),
+    value: {
+      kind: 'chaos',
+      giverKey: 'Chaos',
+      curseOptions: [
+        { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+        { curseKey: 'ChaosHealthCurse', requirementCount: 3 },
+        { curseKey: 'ChaosDamageCurse', requirementCount: 3 },
+      ],
+      selectedOptionKey: 'option1',
+      selectedCurseValues: {},
+      blessingKey: 'ChaosWeaponBlessing',
+      rarity: 'Common',
+      blessingValues: { damageBonus: 0.2 },
+    },
+  });
   return authorLegalTraitOffers(project);
 }
 
