@@ -186,6 +186,14 @@ describe('Run State presentation', () => {
         bankedPathPoints: 2,
         investedPathPoints: 5,
       },
+      hexObserver: {
+        spellTraitKey: 'SpellMoonBeamTrait',
+        layoutKey: 'Maze',
+        talentKeys: [],
+        closed: false,
+        bankedPathPoints: 2,
+        investedPathPoints: 5,
+      },
       forfeitStatus: 'consumed',
       bags: [
         {

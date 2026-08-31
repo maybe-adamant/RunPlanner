@@ -38,6 +38,10 @@ function fOnlyProject(project = createCompleteFGProject()) {
   });
 }
 
+function fixtureClone<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
 function fAutomaticOutcomeProject() {
   let project = createCompleteFGProject();
   const selection = createRouteStartKeepsakeSelectionAddress('Underworld');
@@ -107,7 +111,7 @@ describe('execution plan compiler', () => {
 
     expect(plan).toMatchObject({
       format: 'run-planner-execution',
-      protocolVersion: 3,
+      protocolVersion: 4,
       routeKey: 'Underworld',
       extent: { kind: 'configuredPrefix', biomeKeys: ['F'], terminalBiomeKey: 'F' },
     });
@@ -148,6 +152,124 @@ describe('execution plan compiler', () => {
     expect(plan.planFingerprint).toMatch(/^[0-9a-f]{8}$/);
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
     expect(decodeExecutionPlan(positiveFixture)).toEqual(plan);
+  });
+
+  it('requires the complete v4 Gate-D diagnostic surface', () => {
+    const missingKeepsakes = fixtureClone(positiveFixture) as {
+      rooms: { trace: { runState: Record<string, unknown> }[] }[];
+    };
+    delete missingKeepsakes.rooms[0]!.trace[0]!.runState.keepsakes;
+    expect(() => decodeExecutionPlan(missingKeepsakes)).toThrow(ExecutionPlanCodecError);
+
+    const missingPriorities = fixtureClone(positiveFixture) as {
+      rooms: { trace: { runState: Record<string, unknown> }[] }[];
+    };
+    delete missingPriorities.rooms[0]!.trace[0]!.runState.rewardPriorities;
+    expect(() => decodeExecutionPlan(missingPriorities)).toThrow(ExecutionPlanCodecError);
+
+    const missingHex = fixtureClone(positiveFixture) as {
+      rooms: { trace: { runState: Record<string, unknown> }[] }[];
+    };
+    delete missingHex.rooms[0]!.trace[0]!.runState.hexProgress;
+    expect(() => decodeExecutionPlan(missingHex)).toThrow(ExecutionPlanCodecError);
+
+    const missingArtificer = fixtureClone(positiveFixture) as {
+      rooms: { trace: { runState: Record<string, unknown> }[] }[];
+    };
+    delete missingArtificer.rooms[0]!.trace[0]!.runState.artificer;
+    expect(() => decodeExecutionPlan(missingArtificer)).toThrow(ExecutionPlanCodecError);
+
+    const duplicatePriorities = fixtureClone(positiveFixture) as {
+      rooms: { trace: { runState: { rewardPriorities: string[] } }[] }[];
+    };
+    duplicatePriorities.rooms[0]!.trace[0]!.runState.rewardPriorities = ['Boon', 'Boon'];
+    const decodedPriorities = decodeExecutionPlan(duplicatePriorities).rooms[0]!.trace[0]!;
+    if (decodedPriorities.kind !== 'roomEntered') throw new Error('fixture lacks entry checkpoint');
+    expect(decodedPriorities.runState.rewardPriorities).toEqual(['Boon', 'Boon']);
+  });
+
+  it('closes Shop Travel Deal and room-object trace records against their contents', () => {
+    const malformedTravelDeal = fixtureClone(positiveFixture) as {
+      rooms: { contents: { shop?: Record<string, unknown> } }[];
+    };
+    const shop = malformedTravelDeal.rooms.find((room) => room.contents.shop !== undefined)
+      ?.contents.shop;
+    if (shop === undefined) throw new Error('fixture lacks World Shop');
+    shop.travelDealRefill = {
+      sourceOfferKey: 'not-a-slot',
+      slotIndex: 0,
+      optionKey: 'RoomRewardHealDrop',
+      reward: { rewardType: 'MajorNonBoon', producerLifecycleKey: 'Shop' },
+    };
+    expect(() => decodeExecutionPlan(malformedTravelDeal)).toThrow(ExecutionPlanCodecError);
+
+    const malformedShopPurchase = fixtureClone(positiveFixture) as {
+      rooms: {
+        owner: string;
+        contents: {
+          shop?: { offers: { offerKey: string; rewardType: string }[] };
+        };
+        trace: unknown[];
+      }[];
+    };
+    const shopRoom = malformedShopPurchase.rooms.find((room) => room.contents.shop !== undefined);
+    const shopOffer = shopRoom?.contents.shop?.offers[0];
+    if (shopRoom === undefined || shopOffer === undefined)
+      throw new Error('fixture lacks World Shop offer');
+    shopRoom.trace.splice(-1, 0, {
+      id: 'bad-shop-purchase',
+      kind: 'worldShopPurchase',
+      owner: shopRoom.owner,
+      offerKey: shopOffer.offerKey,
+      rewardType: `${shopOffer.rewardType}:wrong`,
+    });
+    expect(() => decodeExecutionPlan(malformedShopPurchase)).toThrow(ExecutionPlanCodecError);
+
+    const malformedWellTrace = fixtureClone(positiveFixture) as {
+      rooms: { trace: unknown[] }[];
+    };
+    malformedWellTrace.rooms[0]!.trace.splice(1, 0, {
+      id: 'bad-well',
+      kind: 'stygianWellPurchase',
+      owner: '["roomAction","Underworld","F","golden-f-start","bad"]',
+      generationKey: 'initial:healing',
+      offerKey: 'HealDropRange',
+    });
+    expect(() => decodeExecutionPlan(malformedWellTrace)).toThrow(ExecutionPlanCodecError);
+
+    const malformedFountainOwner = fixtureClone(positiveFixture) as {
+      rooms: { trace: { kind: string; owner: string }[] }[];
+    };
+    const fountain = malformedFountainOwner.rooms
+      .flatMap((room) => room.trace)
+      .find((step) => step.kind === 'fountainUse');
+    if (fountain === undefined) throw new Error('fixture lacks fountain use');
+    fountain.owner = fountain.owner.replace('[\\"useFountain\\"]', '[\\"interactKeepsakeRack\\"]');
+    expect(() => decodeExecutionPlan(malformedFountainOwner)).toThrow(ExecutionPlanCodecError);
+  });
+
+  it('decodes only an exact successful resource outcome', () => {
+    const withResource = fixtureClone(positiveFixture) as {
+      rooms: { contents: Record<string, unknown> }[];
+    };
+    withResource.rooms[0]!.contents.resources = [
+      {
+        acquisitionRole: 'resource:FireEssence',
+        grantedTraitKey: 'FireEssence',
+        contributions: { Fire: 1 },
+      },
+    ];
+    expect(decodeExecutionPlan(withResource).rooms[0]!.contents.resources).toEqual([
+      {
+        acquisitionRole: 'resource:FireEssence',
+        grantedTraitKey: 'FireEssence',
+        contributions: { Fire: 1 },
+      },
+    ]);
+    (
+      withResource.rooms[0]!.contents.resources as { acquisitionRole: string }[]
+    )[0]!.acquisitionRole = 'resource:AirEssence';
+    expect(() => decodeExecutionPlan(withResource)).toThrow(ExecutionPlanCodecError);
   });
 
   it('admits only the configured complete-valid F/G prefix', () => {
@@ -355,6 +477,14 @@ describe('execution plan compiler', () => {
       decodeExecutionPlan({
         ...plan,
         rooms: [{ ...plan.rooms[0], trace: [] }],
+      }),
+    ).toThrow(/trace/);
+    // Lua applies the same 64-step cap before it inspects lifecycle shape.
+    // Keep the producer decoder from accepting a plan the executor refuses.
+    expect(() =>
+      decodeExecutionPlan({
+        ...plan,
+        rooms: [{ ...plan.rooms[0], trace: Array.from({ length: 65 }, () => opening.trace[0]!) }],
       }),
     ).toThrow(/trace/);
     expect(() =>

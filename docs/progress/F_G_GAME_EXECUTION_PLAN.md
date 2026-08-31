@@ -678,6 +678,21 @@ Included where reachable in F/G:
   nested acquisition chronology when their canonical sites occur; and
 - deterministic automatic effects triggered by those actions.
 
+Inventory realization is generation-owned, not a post-generation filter. The
+compiler publishes each initial Shop slot and Well generation separately with
+its selected normalized option identity and resolved Boon source where
+applicable. The executor scopes those facts to the matching native inventory
+generation and drives the native selector before the option record is built;
+it must not reject a legal plan merely because the game's unmodified random
+roll selected another legal option first. A Well's optional Travel Deal refill
+is a later generation and is never demanded from the initial three offers.
+
+World Shop Travel Deal additionally publishes one closed refill result tied to
+the purchased source offer and physical slot. The executor uses that product at
+`RestockWorldItem`; it does not infer the replacement from authored state, a
+future trace search, or the live random result. The later player purchase of
+the replacement remains ordinary acquisition chronology.
+
 Sim-neutral quantities remain unmodeled, but an interaction that changes later
 canonical eligibility or chronology must be observed and verified.
 
