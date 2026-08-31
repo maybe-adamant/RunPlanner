@@ -95,6 +95,18 @@ npm run desktop:dev
 npm run desktop:build
 ```
 
+To cross-build the portable Windows executable directly from WSL, install the
+Rust target once and run the dedicated build command:
+
+```bash
+sudo apt install gcc-mingw-w64-x86-64-posix
+rustup target add x86_64-pc-windows-gnu
+npm run desktop:build:windows
+```
+
+The executable is written to
+`apps/planner/src-tauri/target/x86_64-pc-windows-gnu/release/run-planner.exe`.
+
 ## Source evidence
 
 The earlier Lua/ImGui prototype is retained at

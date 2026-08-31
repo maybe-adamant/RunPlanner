@@ -8,6 +8,7 @@
     "desktop:dev": "tauri dev",
     "desktop:check": "cargo check --release --manifest-path src-tauri/Cargo.toml --locked",
     "desktop:build": "tauri build --no-bundle -- --locked",
+    "desktop:build:windows": "tauri build --target x86_64-pc-windows-gnu --no-bundle -- --locked",
     "build": "vite build",
     "typecheck": "tsc --project tsconfig.json"
   },
