@@ -67,14 +67,22 @@ silently deleted. `ReconcileBatchExitCapacity` is the explicit topology-removal
 repair: it removes unavailable targets and their downstream subtree, then
 normalizes selection from the retained keys.
 
-Selecting another compatible ordinary normal target does not discard an already
-authored next decision. `SetExitSelection` atomically re-anchors that outgoing
-decision to the new selected occurrence, retaining its structural exits,
-targets, and descendants. This is only valid between ordinary continuations:
-additional selections and terminal sources remain incompatible with a retained
-downstream decision. Additional exits remain owned by their original source
-occurrence and therefore become dormant rather than moving to the new source.
-The former selected target is again an unpicked dead leaf.
+Selecting another continuation does not discard an already authored next
+decision. `SetExitSelection` atomically re-anchors that outgoing decision to the
+new selected occurrence, then reconciles it against that occurrence's declared
+physical exits. The same primitive supports ordinary targets, Chaos additional
+exits, and Zagreus-contract additional exits. Matching targets and descendants
+survive; excess targets are removed with their descendants. Source-owned
+additional exits remain with the old occurrence rather than moving. The former
+selected occurrence becomes an unpicked leaf. Re-anchoring rejects a destination
+that already owns a decision, Preboss or fixed-completion involvement, and
+cycles. Explicit detour removal still removes that detour and its descendants.
+
+Anomaly takeover performs the same exit-capacity reconciliation atomically with
+its room replacement. Every Anomaly declaration owns only `exit1`, so a matching
+continuation survives as the declaration-derived hidden return while excess G
+targets, their descendants, and G-owned additional exits are removed. Revert
+restores the remembered G declaration without recreating removed exits.
 
 The retained-key rule is intentionally narrow. The codec accepts only normal
 exit keys present in the biome's authored declarations (or the one fixed Hub

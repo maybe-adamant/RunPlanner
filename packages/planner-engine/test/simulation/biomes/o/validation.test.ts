@@ -523,37 +523,6 @@ describe('selected O validation', () => {
         },
       },
     });
-    for (const [occurrenceId, references] of [
-      [
-        oOccurrenceIds.devotion,
-        [
-          {
-            kind: 'interactIncomingReward' as const,
-            producerPoint: 'beforeCombat',
-            acquisitionRole: 'chosenSource',
-          },
-          {
-            kind: 'interactIncomingReward' as const,
-            producerPoint: 'afterCombat',
-            acquisitionRole: 'spurnedSource',
-          },
-        ],
-      ],
-      [
-        oOccurrenceIds.combat02,
-        [
-          { kind: 'chooseRewardWheel' as const, wheelKey: 'wheel1' },
-          { kind: 'interactWheelReward' as const, wheelKey: 'wheel1' },
-        ],
-      ],
-    ] as const) {
-      for (const reference of references) {
-        project = applyProjectCommand(project, catalog, {
-          kind: 'RemoveRoomAction',
-          action: createRoomActionAddress(oBiome, occurrenceId, roomActionKey(reference)),
-        });
-      }
-    }
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateBatch',
       decision: terminalDecision,

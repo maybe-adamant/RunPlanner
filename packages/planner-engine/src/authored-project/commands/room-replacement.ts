@@ -1,5 +1,6 @@
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type {
+  AuthoredAcquisitionSiteState,
   BiomeTopology,
   ExitDecision,
   ExitDecisionSource,
@@ -7,11 +8,19 @@ import type {
   ProjectDocument,
   RoomOccurrence,
 } from '../model';
+import { createBiomeAddress, createOccurrenceAddress } from '../addresses';
+import { authoredAcquisitionSources } from '../acquisition-sources';
+import {
+  acquisitionSiteStorageKey,
+  artificerAcquisitionSite,
+  artificerReplacementEntryKey,
+} from '../artificer';
 import type { RoomOccurrenceRole, RoomStateContext } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
 import { reconcileRoomEncounterState } from '../room-state/encounter-reconciliation';
 import { createDefaultRoomEncounterState } from '../room-state/encounter-envelope';
 import { createInfernalContractEntries } from '../shop';
+import { activeRoomActionReferences, roomActionKey } from '../room-actions';
 import { reconcileReplacementRoomState } from '../room-state/replacement';
 import {
   normalDecisionProgressionForLayout,
@@ -90,6 +99,62 @@ interface OccurrenceContext {
   readonly entryActive: boolean;
   readonly resolvedStoreKey?: string;
   readonly owner?: ExitDecision;
+}
+
+function reconcileReplacementAcquisitionSites(
+  located: LocatedBiome,
+  previous: RoomOccurrence,
+  replacement: RoomOccurrence,
+): Readonly<Record<string, AuthoredAcquisitionSiteState>> | undefined {
+  const biome = createBiomeAddress(located.routeKey, located.layout.biomeKey);
+  const owner = createOccurrenceAddress(biome, replacement.occurrenceId);
+  const sites: Record<string, AuthoredAcquisitionSiteState> = {
+    ...(replacement.acquisitionSites ?? {}),
+  };
+  for (const source of authoredAcquisitionSources(biome, replacement)) {
+    const sourceOwner = source.acquisition.owner;
+    const role = source.acquisition.acquisitionRole;
+    if (source.reward.dispositionByAcquisitionRole[role]?.kind !== 'artificer') continue;
+    const siteKey = acquisitionSiteStorageKey(artificerAcquisitionSite(owner, sourceOwner));
+    const entryKey = artificerReplacementEntryKey(sourceOwner, role);
+    const previousEntries = previous.acquisitionSites?.[siteKey]?.pickupEntries;
+    if (previousEntries === undefined || !Object.hasOwn(previousEntries, entryKey)) continue;
+    const current = sites[siteKey];
+    sites[siteKey] = Object.freeze({
+      ...current,
+      pickupEntries: Object.freeze({
+        ...(current?.pickupEntries ?? {}),
+        [entryKey]: previousEntries[entryKey]!,
+      }),
+    });
+  }
+  return Object.keys(sites).length === 0 ? undefined : Object.freeze(sites);
+}
+
+function reconcileReplacementRoomLocalState(
+  catalog: Catalog,
+  located: LocatedBiome,
+  previous: RoomOccurrence,
+  replacement: RoomOccurrence,
+): RoomOccurrence {
+  const acquisitionSites = reconcileReplacementAcquisitionSites(located, previous, replacement);
+  const withSites = Object.freeze({
+    ...replacement,
+    ...(acquisitionSites === undefined ? {} : { acquisitionSites }),
+    roomActions: previous.roomActions,
+  });
+  const biome = createBiomeAddress(located.routeKey, located.layout.biomeKey);
+  const activeKeys = new Set(
+    activeRoomActionReferences(catalog, biome, withSites).map(roomActionKey),
+  );
+  return Object.freeze({
+    ...withSites,
+    roomActions: Object.freeze({
+      order: Object.freeze(
+        previous.roomActions.order.filter((reference) => activeKeys.has(roomActionKey(reference))),
+      ),
+    }),
+  });
 }
 
 function occurrenceContext(
@@ -377,7 +442,7 @@ export function applyRoomReplacementCommand(
     replacementRoom,
     replacementDefault,
   );
-  const replacement: RoomOccurrence = Object.freeze({
+  const replacementDraft: RoomOccurrence = Object.freeze({
     occurrenceId: occurrence.occurrenceId,
     gameName: replacementRoom.gameName,
     ...(occurrence.fountainRarityResult !== undefined &&
@@ -413,6 +478,12 @@ export function applyRoomReplacementCommand(
     roomActions: occurrence.roomActions,
     additionalExits: occurrence.additionalExits ?? Object.freeze([]),
   });
+  const replacement = reconcileReplacementRoomLocalState(
+    catalog,
+    located,
+    occurrence,
+    replacementDraft,
+  );
   return updateOccurrenceTopology(
     document,
     located,

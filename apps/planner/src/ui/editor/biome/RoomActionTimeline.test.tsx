@@ -1316,7 +1316,7 @@ describe('OccurrenceRoomActions', () => {
     expect(document.querySelector('.hub-roster-drag-preview')).toBeNull();
   });
 
-  it('repairs a retained Shop purchase after its occurrence is no longer a Shop', async () => {
+  it('removes a Shop purchase atomically when its occurrence is no longer a Shop', () => {
     const entered = enteredShopProject();
     const offer = createShopOfferAddress(goldenFBiome, entered.shopId, 'MajorNonBoon');
     let project = applyProjectCommand(entered.project, catalog, {
@@ -1329,28 +1329,9 @@ describe('OccurrenceRoomActions', () => {
       occurrence: createOccurrenceAddress(goldenFBiome, entered.shopId),
       gameName: 'F_Combat04',
     });
-    const view = renderOccurrenceWorkbench(
-      project,
-      'Underworld',
-      'F',
-      occurrenceById(entered.shopId),
-    );
+    expect(occurrenceRoomActionOrder(project, 'Underworld', 'F', entered.shopId)).toEqual([]);
+    renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(entered.shopId));
     openRoomTab('Room Timeline');
-    const repairs = screen.getByRole('region', { name: 'Timeline repairs' });
-    expect(within(repairs).getByText('Buy MajorNonBoon')).toBeTruthy();
-    const remove = within(repairs).getByRole('button', {
-      name: 'Remove Buy MajorNonBoon from timeline',
-    });
-    expect((remove as HTMLButtonElement).disabled).toBe(false);
-    expect(remove.classList.contains('danger-action')).toBe(true);
-    await view.user.click(remove);
-    expect(
-      occurrenceRoomActionOrder(
-        view.application.store.getState().projectWorkspace.history!.present,
-        'Underworld',
-        'F',
-        entered.shopId,
-      ),
-    ).toEqual([]);
+    expect(screen.queryByRole('region', { name: 'Timeline repairs' })).toBeNull();
   });
 });

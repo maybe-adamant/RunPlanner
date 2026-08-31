@@ -35,6 +35,7 @@ import {
 } from './contract';
 import { replaceOccurrence } from './occurrence-mutation';
 import { reconcileNormalTargetEntryStates } from './selection-state';
+import { reconcileExitDecisionToDeclaredCapacity } from './topology';
 import type { RouteDetourCommand } from './types';
 
 function sourceEquals(left: ExitDecisionSource, right: ExitDecisionSourceAddress): boolean {
@@ -193,34 +194,6 @@ function requireAnomalyOccurrence(
   return Object.freeze({ occurrence: anomalyOccurrence, rememberedRoom });
 }
 
-function removeOutgoingDecision(
-  topology: BiomeTopology,
-  occurrenceId: OccurrenceId,
-): BiomeTopology {
-  const source = { kind: 'occurrence' as const, occurrenceId };
-  const decision = exitDecisionForSource(topology, source);
-  if (decision === undefined) return topology;
-  // Anomaly replaces the source room's normal continuation. Additional exits
-  // are source-owned and stay dormant with the occurrence, so only ordinary
-  // targets and their descendants participate in this removal closure.
-  const impact = describeTopologyRemovalImpact(
-    topology,
-    new Set(decision.normal.targets.map((target) => target.occurrenceId)),
-  );
-  const withoutNormalBranch = applyTopologyRemovalImpact(topology, impact);
-  return Object.freeze({
-    ...withoutNormalBranch,
-    decisions: Object.freeze(
-      withoutNormalBranch.decisions.filter(
-        (candidate) =>
-          candidate.kind !== 'exit' ||
-          candidate.source.kind !== 'occurrence' ||
-          candidate.source.occurrenceId !== occurrenceId,
-      ),
-    ),
-  });
-}
-
 function switchTargetToAnomaly(
   document: ProjectDocument,
   catalog: Catalog,
@@ -255,7 +228,6 @@ function switchTargetToAnomaly(
     descriptor.defaultReplacementRoomGameName,
     command,
   );
-  const withoutOutgoing = removeOutgoingDecision(topology, occurrence.occurrenceId);
   const replacement: RoomOccurrence = Object.freeze({
     occurrenceId: occurrence.occurrenceId,
     gameName: replacementRoom.gameName,
@@ -271,9 +243,35 @@ function switchTargetToAnomaly(
       `occurrences.${occurrence.occurrenceId}.encounters`,
     ),
     roomActions: occurrence.roomActions,
-    additionalExits: occurrence.additionalExits ?? Object.freeze([]),
+    additionalExits: Object.freeze([]),
   });
-  return updateTopology(document, located, replaceOccurrence(withoutOutgoing, replacement));
+  const source = {
+    kind: 'occurrence',
+    occurrenceId: occurrence.occurrenceId,
+  } as const;
+  const outgoing = exitDecisionForSource(topology, source);
+  const additionalRoots = new Set(
+    (occurrence.additionalExits ?? []).map((additionalExit) => additionalExit.occurrenceId),
+  );
+  const withoutAdditionalExits =
+    additionalRoots.size === 0
+      ? topology
+      : applyTopologyRemovalImpact(
+          topology,
+          describeTopologyRemovalImpact(topology, additionalRoots),
+        );
+  const withReplacement = replaceOccurrence(withoutAdditionalExits, replacement);
+  const reconciled =
+    outgoing === undefined
+      ? withReplacement
+      : reconcileExitDecisionToDeclaredCapacity(
+          catalog,
+          located,
+          withReplacement,
+          outgoing,
+          command,
+        );
+  return updateTopology(document, located, reconciled);
 }
 
 function replaceAnomalyMap(
@@ -357,12 +355,11 @@ function revertAnomaly(
     command,
   );
   requireCountedBinding(rememberedRoom, rememberedRoom.gameName);
-  const withoutOutgoing = removeOutgoingDecision(topology, occurrence.occurrenceId);
   return updateTopology(
     document,
     located,
     replaceOccurrence(
-      withoutOutgoing,
+      topology,
       Object.freeze({
         occurrenceId: occurrence.occurrenceId,
         gameName: rememberedRoom.gameName,

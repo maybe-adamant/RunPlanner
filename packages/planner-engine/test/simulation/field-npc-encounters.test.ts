@@ -12,9 +12,7 @@ import {
   createTraitOfferAddress,
   createOccurrenceId,
   createOccurrenceAddress,
-  createRoomActionAddress,
   createRewardWheelOfferAddress,
-  roomActionKey,
   semanticAddressKey,
   type BiomeAddress,
   type AuthoredTraitOffer,
@@ -722,18 +720,6 @@ describe('field NPC encounter requirements', () => {
       authoredOccurrence(project, 'F', occurrenceId).encounters.traitOffersByPhase?.Encounter
         ?.Story_Arachne_01,
     ).toBeNull();
-    project = applyProjectCommand(project, catalog, {
-      kind: 'RemoveRoomAction',
-      action: createRoomActionAddress(
-        goldenFBiome,
-        occurrenceId,
-        roomActionKey({
-          kind: 'interactIncomingReward',
-          producerPoint: 'roomRewardPickup',
-          acquisitionRole: 'self',
-        }),
-      ),
-    });
     project = authorLegalTraitOffers(project);
     const selected = authoredOccurrence(project, 'F', occurrenceId);
     const initialOffer = selected.encounters.traitOffersByPhase?.Encounter?.Story_Arachne_01;
