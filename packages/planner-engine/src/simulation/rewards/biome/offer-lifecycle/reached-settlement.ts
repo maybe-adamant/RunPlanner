@@ -94,6 +94,7 @@ export function applyReachedOfferSettlement(
           Object.freeze({
             ...picked,
             producerLifecycleKey: wheel.producerLifecycleKey,
+            resolvedStoreKey: wheel.storeKey,
             instanceProvenance: 'free',
           }),
         ),

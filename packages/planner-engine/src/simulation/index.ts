@@ -298,6 +298,7 @@ export {
   type CountedRewardOwnerAddress,
   type RewardBranch,
   type RewardEvent,
+  type ResolvedAcquisitionSource,
   type RewardSimulation,
   type RewardStoreCandidateSupport,
   type RewardStoreSupportEntry,

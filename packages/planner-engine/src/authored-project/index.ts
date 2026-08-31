@@ -231,7 +231,8 @@ export {
 } from './chaos-gate-reconciliation';
 export {
   declaredPhysicalExits,
-  hostContinuationExitForDetourRoom,
+  automaticHostContinuationExitForDetourRoom,
+  isHostRouteDetourRoom,
   completedHubHandoffForSource,
   hubTerminalTakeoverForSource,
   isExactTerminalTakeoverEnvelope,

@@ -22,7 +22,8 @@ Chaos gate, not a second gate kind.
 
 The route evidence was checked against the installed game scripts and map
 assets on 2026-08-04. The Spark physical-host matrix was refreshed against the
-same installed maps on 2026-08-24. Primary sources are:
+same installed maps on 2026-08-24, and the Chaos return-door counts were
+refreshed on 2026-08-31. Primary sources are:
 
 - `RunLogic.lua`, especially `CreateRoom`, `ChooseNextRoomData`,
   `UpdateRunHistoryCache`, `GetRunDepth`, and `GetBiomeDepth`;
@@ -204,11 +205,38 @@ behavior is equivalent to `Empty`, but the planner retains the exact
 `Empty_Chaos` encounter identity as declaration data while collapsing the Nyx
 behavior. That does not create a separate lifecycle path.
 
-`UsePreviousRoomSet` makes the Chaos room generate a fresh target from the
-host source's room set. Chaos maps use ordinary `ExitDoor` objects rather than
-`AnomalyAutoExitDoor`: the resumed target is a normal generated continuation,
-and its reward preview is not generically hidden or auto-selected by the Chaos
-room contract.
+`UsePreviousRoomSet` makes the Chaos room generate fresh targets from the host
+source's room set. The concrete map assets contain these return-door counts:
+
+| Chaos map  | `SecretExitDoor` instances in the `ExitDoors` group |
+| ---------- | --------------------------------------------------: |
+| `Chaos_01` |                                                   2 |
+| `Chaos_02` |                                                   2 |
+| `Chaos_03` |                                                   1 |
+| `Chaos_04` |                                                   2 |
+| `Chaos_05` |                                                   3 |
+| `Chaos_06` |                                                   1 |
+
+Each count is established by paired `SecretExitDoor` and `ExitDoors` entries
+in that map's `.thing_bin`; `Chaos_06` separately contains three start/end
+placements, which do not add return doors. `RoomDataChaos.lua` does not prune
+these doors with `UnavailableDoorIds` or another per-map exit override.
+
+`SecretExitDoor` keeps its reward preview visible and uses the ordinary
+player-selected exit path. `DoUnlockRoomExits` collapses every physical member
+of `MapState.OfferedExitDoors`, calls `ChooseNextRoomData` for each door, and
+then calls `ChooseRoomReward` separately for every generated target. The return
+is therefore an ordinary one-to-three-offer batch, not one automatic or hidden
+continuation. All offers use the batch's selected reward store unless a target
+declares an override, and every generated offer withdraws its own reward-bag
+entry. The player enters only the selected target; unselected targets do not
+enter room history or grant their rewards.
+
+A live `Chaos_01` probe independently observed two generated return offers,
+matching its two physical doors. It also showed that an unentered host-room
+offer had already withdrawn its individual bag entry but had not entered
+reward-store ratio history; the Chaos return batch consequently selected its
+store from entered history and generated both offers from that store.
 
 The earlier focused Preboss probe also established:
 
@@ -549,11 +577,11 @@ automatic. They do not share the reward lifecycle of their entry rooms.
 
 ## Comparative fact matrix
 
-| Feature          | Entry form                                           | Room output                                                        | Resume form                                       | Resume reward behavior            | Pauses biome-state trait? |
-| ---------------- | ---------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------- | --------------------------------- | ------------------------- |
-| Chaos gate       | additional secret exit (authored or Ixion-generated) | `TrialUpgrade` through the `Secrets` store; empty encounter        | ordinary exit to a fresh previous-room-set target | ordinarily previewed and consumed | yes                       |
-| G Anomaly        | replacement on the existing normal exit              | ordinary reward consumed on offer, acquired only on success        | one automatic exit to a fresh G target            | consumed normally, preview hidden | no                        |
-| Zagreus contract | additional Midshop contract exit                     | `InfernalContractBoon` plus forced `GemPointsBigDrop` in game data | one automatic exit to a fresh previous-set target | consumed normally, preview hidden | yes                       |
+| Feature          | Entry form                                           | Room output                                                        | Resume form                                           | Resume reward behavior            | Pauses biome-state trait? |
+| ---------------- | ---------------------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------- | --------------------------------- | ------------------------- |
+| Chaos gate       | additional secret exit (authored or Ixion-generated) | `TrialUpgrade` through the `Secrets` store; empty encounter        | 1–3 ordinary exits to fresh previous-room-set targets | ordinarily previewed and consumed | yes                       |
+| G Anomaly        | replacement on the existing normal exit              | ordinary reward consumed on offer, acquired only on success        | one automatic exit to a fresh G target                | consumed normally, preview hidden | no                        |
+| Zagreus contract | additional Midshop contract exit                     | `InfernalContractBoon` plus forced `GemPointsBigDrop` in game data | one automatic exit to a fresh previous-set target     | consumed normally, preview hidden | yes                       |
 
 All three supported detour families create real entered room occurrences,
 record their own reward and encounter lifecycle, contribute history and depth,
@@ -578,9 +606,9 @@ Without choosing a schema yet, the live evidence creates these constraints:
   latter.
 - `UsePreviousRoomSet` is a generation rule for a fresh return target, not a
   pointer to a previously authored or discarded occurrence.
-- The return continuation has at least two player-visible forms: ordinary
-  reward-bearing selection after Chaos and one-target automatic hidden-reward
-  entry after Anomaly/Zagreus.
+- The return continuation has at least two player-visible forms: a map-sized
+  ordinary reward-bearing batch after Chaos and one-target automatic
+  hidden-reward entry after Anomaly/Zagreus.
 - Hidden automatic continuation still performs ordinary target and reward
   selection and consumes the selected reward-store entry before traversal.
 - Anomaly reward selection and reward acquisition are different events; a
@@ -594,6 +622,9 @@ Without choosing a schema yet, the live evidence creates these constraints:
   traits are temporarily suspended.
 - Concrete map capability matters. Neither a nonzero chance nor a forced trait
   can produce a Chaos gate without a `SecretPoint`.
+- Concrete Chaos return-door count also matters. It controls the number of
+  independently generated targets and reward-bag withdrawals available in the
+  entered Chaos room.
 
 These are source constraints consumed by the implemented unified Chaos
 additional-exit contract, not a commitment to a generic topology type or
@@ -630,7 +661,8 @@ The unified Chaos plan may treat these product choices as closed:
   `TrialUpgrade`, to one direct fixed planner reward presented as **Chaos
   Blessing**;
 - preserve fixed `Empty_Chaos`, the source-level offer marker, the
-  prior-ten-room spacing window, and the ordinary visible fresh continuation;
+  prior-ten-room spacing window, and each Chaos map's ordinary visible fresh
+  return batch;
 - omit `BaseChaos.PauseBiomeState` from production modeling because the planner
   has no biome-state trait lifecycle input or consumer;
 - keep ordinary `canSpawn` eligibility separate from Ixion host pressure; a
@@ -640,6 +672,14 @@ The unified Chaos plan may treat these product choices as closed:
 
 The direct reward is a deliberate one-entry-store normalization, not evidence
 that the game bypasses `Secrets`.
+
+### Planner return-count disposition
+
+The catalog retains the semantic `ChaosReturnExitDoor` type while declaring
+the concrete per-map counts above. An authored Chaos occurrence therefore owns
+the same one-, two-, or three-offer ordinary batch the game generates. This
+does not change the separate rule that the host room has at most one Chaos
+entrance gate.
 
 ## Required fixture ownership
 

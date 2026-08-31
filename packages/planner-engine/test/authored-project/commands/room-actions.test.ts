@@ -283,6 +283,100 @@ describe('room-action commands', () => {
     expect(activeRoomActionReferences(catalog, goldenHBiome, echo)).not.toContainEqual(fountain);
   });
 
+  it('keeps a Well purchase after the required Artificer replacement clears outgoing generation', () => {
+    const startId = createOccurrenceId('well-after-artificer-start');
+    const hostId = createOccurrenceId('well-after-artificer-host');
+    let authored = applyProjectCommand(
+      createProjectDocument(catalog, {
+        projectId: 'well-after-artificer',
+        routeKey: 'Underworld',
+        configuredBiomeCount: 1,
+      }),
+      catalog,
+      { kind: 'CreateStart', biome, occurrenceId: startId, gameName: 'F_Opening01' },
+    );
+    const start = { kind: 'occurrence' as const, occurrenceId: startId };
+    const decision = createExitDecisionAddress(biome, start);
+    authored = applyProjectCommand(authored, catalog, { kind: 'CreateBatch', decision });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, start),
+      storeKey: 'MetaProgress',
+    });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(biome, start, 'exit1'),
+      occurrenceId: hostId,
+      gameName: 'F_Combat08',
+    });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(biome, hostId),
+      value: { rewardType: 'MetaCurrencyDrop' },
+    });
+    const host = createOccurrenceAddress(biome, hostId);
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'AddStygianWell',
+      occurrence: host,
+    });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'SetStygianWellInteraction',
+      occurrence: host,
+      interacted: true,
+    });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceStygianWellOffer',
+      occurrence: host,
+      slotKey: 'healing',
+      itemKey: 'ArmorBoostStore',
+    });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: host,
+      generationKey: 'initial:healing',
+      purchased: true,
+    });
+    const incoming = createIncomingRewardAddress(biome, hostId);
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition: createAcquisitionRoleAddress(incoming, 'self'),
+      value: { kind: 'artificer' },
+    });
+
+    const hostOccurrence = authored.route.biomes[0]?.topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === hostId,
+    );
+    if (hostOccurrence === undefined) throw new Error('missing Well host');
+    const domain = assembleRoomActionDomain({ catalog, biome, occurrence: hostOccurrence });
+    const roster = assembleRoomActionRoster({
+      owner: host,
+      order: hostOccurrence.roomActions.order,
+      contributions: domain.contributions,
+      lifecycleStructure: domain.lifecycleStructure,
+    });
+    const replacement: RoomActionReference = {
+      kind: 'interactAcquisitionEntry',
+      siteKey: acquisitionSiteStorageKey(artificerAcquisitionSite(host, incoming)),
+      entryKey: artificerReplacementEntryKey(incoming, 'self'),
+    };
+    const purchase: RoomActionReference = {
+      kind: 'purchaseStygianWellOffer',
+      generationKey: 'initial:healing',
+    };
+    expect(roster.valid).toBe(true);
+    expect(
+      roster.rows.find((row) => roomActionKey(row.reference) === roomActionKey(purchase))?.window,
+    ).toEqual({ kind: 'postOutgoing' });
+    expect(
+      roster.proposals.find(
+        (proposal) =>
+          proposal.kind === 'move' &&
+          roomActionKey(proposal.reference) === roomActionKey(replacement) &&
+          proposal.toIndex === hostOccurrence.roomActions.order.length - 1,
+      ),
+    ).toMatchObject({ structurallyAuthorable: false });
+  });
+
   it('rejects mismatched references, duplicates, unknown rows, and invalid indices', () => {
     const initial = withoutRequiredRewardAction();
     expect(() =>

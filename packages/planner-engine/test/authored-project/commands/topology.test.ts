@@ -471,6 +471,91 @@ describe('authored-project commands and topology', () => {
     });
   });
 
+  it('keeps an established derived continuation selected while adding its sibling target', () => {
+    const startId = createOccurrenceId('progressive-sibling-start');
+    const sourceId = createOccurrenceId('progressive-sibling-source');
+    const selectedId = createOccurrenceId('progressive-sibling-selected');
+    const siblingId = createOccurrenceId('progressive-sibling-peer');
+    let project = applyProjectCommand(fProject(), catalog, {
+      kind: 'CreateStart',
+      biome: fBiome,
+      occurrenceId: startId,
+      gameName: 'F_Opening01',
+    });
+    const opening = { kind: 'occurrence' as const, occurrenceId: startId };
+    const openingDecision = createExitDecisionAddress(fBiome, opening);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: openingDecision,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, opening),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, opening, 'exit1'),
+      occurrenceId: sourceId,
+      gameName: 'F_Combat08',
+    });
+
+    const source = { kind: 'occurrence' as const, occurrenceId: sourceId };
+    const sourceDecision = createExitDecisionAddress(fBiome, source);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: sourceDecision,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, source),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, source, 'exit1'),
+      occurrenceId: selectedId,
+      gameName: 'F_Combat04',
+    });
+    const selected = { kind: 'occurrence' as const, occurrenceId: selectedId };
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: createExitDecisionAddress(fBiome, selected),
+    });
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, source, 'exit2'),
+      occurrenceId: siblingId,
+      gameName: 'F_Combat01',
+    });
+
+    expect(
+      fTopology(project).decisions.find(
+        (decision) =>
+          decision.kind === 'exit' &&
+          decision.source.kind === 'occurrence' &&
+          decision.source.occurrenceId === sourceId,
+      ),
+    ).toMatchObject({
+      normal: {
+        targets: [
+          { exitKey: 'exit1', occurrenceId: selectedId },
+          { exitKey: 'exit2', occurrenceId: siblingId },
+        ],
+      },
+      selection: { kind: 'normal', exitKey: 'exit1' },
+    });
+    expect(
+      fTopology(project).decisions.some(
+        (decision) =>
+          decision.kind === 'exit' &&
+          decision.source.kind === 'occurrence' &&
+          decision.source.occurrenceId === selectedId,
+      ),
+    ).toBe(true);
+  });
+
   it('reserves Boss and Postboss declarations for the fixed Preboss completion chain', () => {
     const startId = createOccurrenceId('fixed-completion-domain-start');
     let project = applyProjectCommand(fProject(), catalog, {

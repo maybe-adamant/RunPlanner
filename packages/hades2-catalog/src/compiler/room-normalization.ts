@@ -655,12 +655,19 @@ export function normalizeRoom(
       fail(`${path}.roomSetKey`, 'Chaos room set requires authored Chaos rooms');
     }
     if (
-      exits.length !== 1 ||
-      exits[0]?.type !== 'ChaosReturnExitDoor' ||
-      exits[0].behavior.kind !== 'playerSelected' ||
-      exits[0].behavior.rewardPreview !== 'visible'
+      exits.length === 0 ||
+      exits.some(
+        (exit, index) =>
+          exit.index !== index + 1 ||
+          exit.type !== 'ChaosReturnExitDoor' ||
+          exit.behavior.kind !== 'playerSelected' ||
+          exit.behavior.rewardPreview !== 'visible',
+      )
     ) {
-      fail(`${path}.exits`, 'Chaos rooms require one visible player-selected ChaosReturnExitDoor');
+      fail(
+        `${path}.exits`,
+        'Chaos rooms require ordered visible player-selected ChaosReturnExitDoors',
+      );
     }
     const encounter = encounterSlotBindings[0];
     if (

@@ -288,7 +288,7 @@ export function createCompleteFGIxionChaosProject(): ProjectDocument {
     { sourceId: goldenGStartId, targets: ['G_Combat01'], store: 'RunProgress' as const },
     {
       sourceId: goldenGOccurrenceId(1, 1),
-      targets: ['G_Combat02', 'G_Combat03'],
+      targets: ['G_Combat02', 'G_Combat18'],
       store: 'MetaProgress' as const,
     },
     {

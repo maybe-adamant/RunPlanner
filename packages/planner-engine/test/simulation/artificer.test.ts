@@ -366,6 +366,7 @@ describe('The Artificer', () => {
   it('settles the retained Sea Star object as its own optional second pickup and blocks recursion', () => {
     const occurrenceId = createOccurrenceId('sea-star-retained');
     const siteOwner = createOccurrenceAddress(biome, occurrenceId);
+    const sourceOwner = createIncomingRewardAddress(biome, occurrenceId);
     const site = createAcquisitionSiteAddress(siteOwner, 'seaStarDuplicate:test:self');
     const retained = createUnresolvedAcquisitionRewardState(
       catalog,
@@ -381,6 +382,13 @@ describe('The Artificer', () => {
         entries: Object.freeze({ seaStarDuplicate: retained }),
         order: Object.freeze(['seaStarDuplicate']),
         producerLifecycleKey: 'RoomReward',
+        producerByEntryKey: Object.freeze({
+          seaStarDuplicate: Object.freeze({
+            kind: 'seaStarDuplicate',
+            sourceOwner,
+            sourceRole: 'self',
+          }),
+        }),
         requiredEntryKeys: new Set(),
         seaStarDuplicateEntryKeys: new Set(['seaStarDuplicate']),
         historySequence: 1,
@@ -391,6 +399,14 @@ describe('The Artificer', () => {
     expect(product.entries[0]?.participation).toBe('optional');
     expect(product.branches[0]?.history.consumableRecord.GiftDrop).toBe(1);
     expect(product.roleFrontiers?.[0]?.source.blocksSeaStarDuplication).toBe(true);
+    expect(product.branches[0]?.events).toContainEqual(
+      expect.objectContaining({
+        kind: 'concreteAcquisition',
+        source: expect.objectContaining({
+          producer: { kind: 'seaStarDuplicate', sourceOwner, sourceRole: 'self' },
+        }),
+      }),
+    );
   });
 
   it('settles a picked Sea Star-recreated Path reward through the shared concrete acquisition', () => {
@@ -898,5 +914,19 @@ describe('The Artificer', () => {
       ),
     );
     expect(acquired.entries[0]?.participation).toBe('mandatory');
+    expect(acquired.branches[0]?.events).toContainEqual(
+      expect.objectContaining({
+        kind: 'concreteAcquisition',
+        source: expect.objectContaining({
+          offer: conversion.replacement.offer,
+          producerLifecycleKey: 'RoomReward',
+          producer: {
+            kind: 'artificerReplacement',
+            sourceOwner: conversion.origin,
+            sourceRole: 'self',
+          },
+        }),
+      }),
+    );
   });
 });

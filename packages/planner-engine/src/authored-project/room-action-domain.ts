@@ -207,7 +207,7 @@ function baseContribution(
         occurrence,
         reference,
         'optional',
-        frozen({ kind: 'standard', phase: 'afterCombat' }),
+        frozen({ kind: 'postOutgoing' }),
       );
     case 'completeFieldsCage':
       return contribution(biome, occurrence, reference, 'required', frozen({ kind: 'fields' }));

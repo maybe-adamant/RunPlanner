@@ -23,7 +23,8 @@ import { fixedCompletionOccurrenceId } from '../fixed-room-links';
 import { requireCountedBinding, type RoomOccurrenceRole } from '../room-state/declaration';
 import {
   declaredPhysicalExitsForSourceRoom,
-  hostContinuationExitForDetourRoom,
+  automaticHostContinuationExitForDetourRoom,
+  isHostRouteDetourRoom,
   hubDecisionHandoffReadiness,
   hubTerminalTakeoverForSource,
   isExactTerminalTakeoverEnvelope,
@@ -579,7 +580,7 @@ function validateNormalDecisionProgressionBounds(
     const sourceOccurrence = occurrences.get(decision.source.occurrenceId);
     const sourceRoom =
       sourceOccurrence === undefined ? undefined : requireKnownRoom(sourceOccurrence, catalog);
-    if (sourceRoom !== undefined && hostContinuationExitForDetourRoom(sourceRoom) !== undefined) {
+    if (sourceRoom !== undefined && isHostRouteDetourRoom(sourceRoom)) {
       continue;
     }
     const ordinal = selectedOrdinaryBatchIndex(selectedSpine, decision.source.occurrenceId);
@@ -1129,7 +1130,8 @@ function validateDetourAutomaticContinuationDecision(
   if (source === undefined) return;
   const sourceRoom = requireKnownRoom(source, catalog);
   if (sourceRoom.roomSetKey === layout.biomeKey) return;
-  const continuation = hostContinuationExitForDetourRoom(sourceRoom);
+  if (sourceRoom.mode.kind === 'authored' && sourceRoom.mode.templateKey === 'Chaos') return;
+  const continuation = automaticHostContinuationExitForDetourRoom(sourceRoom);
   if (continuation === undefined) {
     failProjectDocument(
       `${decisionPath}.source.occurrenceId`,

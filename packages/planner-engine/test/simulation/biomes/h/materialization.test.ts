@@ -525,13 +525,32 @@ describe('H Fields materialization', () => {
     });
     const firstChaos = selectGeneratedChaos(project, start, abandoned, 'H_Combat07', 'min');
     project = firstChaos.project;
+    const chaosOccurrence = plan(project).topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === firstChaos.chaosOccurrenceId,
+    );
+    const chaosExitCount =
+      chaosOccurrence === undefined
+        ? undefined
+        : catalog.rooms.byKey[chaosOccurrence.gameName]?.exits.length;
+    if (chaosExitCount === undefined) throw new Error('generated H Chaos return batch is missing');
+    const chaosReturnPeers = Array.from({ length: chaosExitCount - 1 }, (_, index) => ({
+      occurrenceId: createOccurrenceId(`h-condition-chaos-peer-${index + 1}`),
+      gameName: index === 0 ? 'H_MiniBoss02' : 'H_Combat03',
+    }));
     project = appendBatch(
       project,
       firstChaos.chaosOccurrenceId,
-      [{ occurrenceId: miniboss, gameName: 'H_MiniBoss01' }],
+      [{ occurrenceId: miniboss, gameName: 'H_MiniBoss01' }, ...chaosReturnPeers],
       1,
       'min',
     );
+    for (const peer of chaosReturnPeers) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(biome, peer.occurrenceId),
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+      });
+    }
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(biome, miniboss),
@@ -549,6 +568,11 @@ describe('H Fields materialization', () => {
     );
     project = authorThreeFieldsCages(project, combat);
     project = authorThreeFieldsBoonCages(project, combatPeer);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: createLocalRewardAddress(biome, combatPeer, 'cages', 'cage3'),
+      value: { rewardType: 'StackUpgrade' },
+    });
     project = appendBatch(
       project,
       combat,

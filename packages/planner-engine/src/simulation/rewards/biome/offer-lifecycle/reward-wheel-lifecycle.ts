@@ -266,6 +266,7 @@ export function prepareShipLifecycleCandidateContext(
             source: Object.freeze({
               ...picked,
               producerLifecycleKey: wheel.producerLifecycleKey,
+              resolvedStoreKey: wheel.storeKey,
               instanceProvenance: 'free',
             }),
             historySequence: lifecycleView.acquisitionSequence,

@@ -4,6 +4,7 @@ import {
   createCompleteFGProject,
   createCompleteFGIxionChaosProject,
   createUnderworldFPoolCheckpoint,
+  authorTestArtificerReplacement,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenGBiome,
@@ -17,6 +18,9 @@ import {
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  acquisitionSiteFromStorageKey,
+  createAcquisitionRoleAddress,
+  createAcquisitionEntryAddress,
   createAdditionalExitAddress,
   createIncomingRewardAddress,
   createEncounterPhaseAddress,
@@ -26,9 +30,11 @@ import {
   createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
   createRouteStartKeepsakeSelectionAddress,
+  createRoomActionAddress,
   createTargetAddress,
   createTraitOfferAddress,
   createTranscendentEmbryoOutcomeAddress,
+  roomActionKey,
 } from '../../src/authored-project';
 import { routeResourceAuthoring, simulateProjectAssembly } from '../../src/simulation';
 import {
@@ -213,6 +219,95 @@ function successfulResourceProject() {
   });
 }
 
+function artificerCreatedBoonProject() {
+  const source = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+  let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+    kind: 'ReplaceManualArcanaSelection',
+    route: { kind: 'route', routeKey: 'Underworld' },
+    arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],
+  });
+  project = authorTestArtificerReplacement(
+    project,
+    catalog,
+    createAcquisitionRoleAddress(source, 'self'),
+    Object.freeze({
+      offer: Object.freeze({
+        rewardType: 'Boon',
+        payload: Object.freeze({ kind: 'BoonSource' as const, source: 'ZeusUpgrade' }),
+      }),
+      traitOffersByAcquisitionRole: Object.freeze({ source: null }),
+      dispositionByAcquisitionRole: Object.freeze({
+        source: Object.freeze({ kind: 'normal' as const }),
+      }),
+    }),
+  );
+  return fOnlyProject(authorLegalTraitOffers(project));
+}
+
+function narcissusMysteryBoonProject() {
+  let project = createCompleteFGProject();
+  const occurrence = project.route.biomes
+    .find((biome) => biome.biomeKey === 'G')
+    ?.topology?.occurrences.find((room) => room.gameName === 'G_Story01');
+  if (occurrence === undefined) throw new Error('Golden G project lacks Narcissus');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        goldenGBiome,
+        { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+        'Encounter',
+      ),
+      'selection',
+    ),
+    value: {
+      kind: 'traits',
+      giverKey: 'Narcissus',
+      options: [{ traitKey: 'NarcissusA' }, { traitKey: 'NarcissusI' }, { traitKey: 'NarcissusC' }],
+      selectedOptionKey: 'option2',
+    },
+  });
+  const updated = project.route.biomes
+    .find((biome) => biome.biomeKey === 'G')
+    ?.topology?.occurrences.find((room) => room.occurrenceId === occurrence.occurrenceId);
+  const generated = Object.entries(updated?.acquisitionSites ?? {}).find(([, site]) =>
+    Object.hasOwn(site.pickupEntries ?? {}, 'mysteryBoon'),
+  );
+  const generatedSite =
+    generated === undefined
+      ? undefined
+      : acquisitionSiteFromStorageKey(
+          createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
+          generated[0],
+        );
+  if (generated === undefined || generatedSite === undefined)
+    throw new Error('Narcissus did not create its Mystery Boon');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceAcquisitionEntryOffer',
+    entry: createAcquisitionEntryAddress(generatedSite, 'mysteryBoon'),
+    value: {
+      rewardType: 'BlindBoxLoot',
+      payload: { kind: 'BoonSource', source: 'HeraUpgrade' },
+    },
+  });
+  const reference = {
+    kind: 'interactAcquisitionEntry' as const,
+    siteKey: generated[0],
+    entryKey: 'mysteryBoon',
+  };
+  project = applyProjectCommand(project, catalog, {
+    kind: 'InsertRoomAction',
+    action: createRoomActionAddress(
+      goldenGBiome,
+      occurrence.occurrenceId,
+      roomActionKey(reference),
+    ),
+    reference,
+    index: updated?.roomActions.order.length ?? 0,
+  });
+  return authorLegalTraitOffers(project);
+}
+
 function fixtureClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -240,6 +335,55 @@ it('builds the F-to-G Ixion Chaos route from a fresh G authoring spine', () => {
   const plan = compileExecutionPlan({ assembly });
   expect(plan.rooms.some((room) => room.gameName.startsWith('Chaos_'))).toBe(true);
   expect(decodeExecutionPlan(ixionChaosFixture)).toEqual(plan);
+});
+
+it('compiles an Artificer-created Boon through its generated source role', () => {
+  const assembly = simulateProjectAssembly(catalog, artificerCreatedBoonProject());
+  expect(assembly.evaluation.findings.filter((finding) => finding.severity === 'error')).toEqual(
+    [],
+  );
+  const plan = compileExecutionPlan({ assembly });
+  const replacement = plan.rooms
+    .flatMap((room) => room.trace)
+    .find(
+      (step) =>
+        step.kind === 'acquireReward' &&
+        step.roles.some((role) => role.producer?.kind === 'artificerReplacement'),
+    );
+  expect(replacement).toMatchObject({
+    kind: 'acquireReward',
+    roles: [
+      expect.objectContaining({
+        role: 'source',
+        producer: expect.objectContaining({ kind: 'artificerReplacement', sourceRole: 'self' }),
+      }),
+    ],
+  });
+  expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+});
+
+it('compiles a generated Narcissus Mystery Boon as one multi-role acquisition', () => {
+  const assembly = simulateProjectAssembly(catalog, narcissusMysteryBoonProject());
+  expect(assembly.evaluation.findings.filter((finding) => finding.severity === 'error')).toEqual(
+    [],
+  );
+  const plan = compileExecutionPlan({ assembly });
+  const mysteryBoon = plan.rooms
+    .flatMap((room) => room.trace)
+    .find(
+      (step) =>
+        step.kind === 'acquireReward' &&
+        step.reward.rewardType === 'BlindBoxLoot' &&
+        step.sourceOwner.includes('traitGenerated'),
+    );
+  expect(mysteryBoon).toMatchObject({
+    kind: 'acquireReward',
+    roles: [
+      expect.objectContaining({ role: 'box' }),
+      expect.objectContaining({ role: 'hiddenSource' }),
+    ],
+  });
+  expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
 });
 
 it('audits every semantic owner across representative complete-valid F/G products', () => {
@@ -401,6 +545,22 @@ function fAutomaticOutcomeProject() {
   return fOnlyProject(project);
 }
 
+function fStartingJeweledPomProject() {
+  let project = createCompleteFGProject();
+  const selection = createRouteStartKeepsakeSelectionAddress('Underworld');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceStartingKeepsake',
+    selection,
+    keepsakeKey: 'HadesAndPersephoneKeepsake',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceJeweledPomEquipResult',
+    result: createKeepsakeEquipResultAddress(selection, 'jeweledPom'),
+    value: { traitKey: 'HadesDashSweepBoon' },
+  });
+  return fOnlyProject(authorLegalTraitOffers(project));
+}
+
 describe('execution plan compiler', () => {
   it('projects the complete-valid F opening into an execution-only artifact', () => {
     const project = fOnlyProject();
@@ -415,8 +575,9 @@ describe('execution plan compiler', () => {
 
     expect(plan).toMatchObject({
       format: 'run-planner-execution',
-      protocolVersion: 7,
+      protocolVersion: 9,
       routeKey: 'Underworld',
+      startingKeepsake: { keepsakeKey: 'ManaOverTimeRefundKeepsake' },
       extent: { kind: 'configuredPrefix', biomeKeys: ['F'], terminalBiomeKey: 'F' },
     });
     expect(plan.rooms[0]).toMatchObject({
@@ -456,6 +617,16 @@ describe('execution plan compiler', () => {
     expect(plan.planFingerprint).toMatch(/^[0-9a-f]{8}$/);
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
     expect(decodeExecutionPlan(positiveFixture)).toEqual(plan);
+  });
+
+  it('preserves present uninteracted Wells and Pools without inventing inventory', () => {
+    const plan = compileExecutionPlan({
+      assembly: simulateProjectAssembly(catalog, fOnlyProject()),
+    });
+    const postboss = plan.rooms.find((room) => room.gameName === 'F_PostBoss01');
+    expect(postboss?.contents.stygianWell).toEqual({ interacted: false });
+    expect(postboss?.contents.purgingPool).toEqual({ interacted: false });
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
   });
 
   it('projects the selected Narcissus descriptor at its encounter interaction', () => {
@@ -739,6 +910,32 @@ describe('execution plan compiler', () => {
     expect(() => decodeExecutionPlan(malformedFountainOwner)).toThrow(ExecutionPlanCodecError);
   });
 
+  it('closes feature interaction against runtime-random and authored inventory', () => {
+    const missingWellInventory = fixtureClone(positiveFixture) as {
+      rooms: {
+        gameName: string;
+        contents: { stygianWell?: { interacted: boolean; offers?: unknown[] } };
+      }[];
+    };
+    const postboss = missingWellInventory.rooms.find((room) => room.gameName === 'F_PostBoss01');
+    if (postboss?.contents.stygianWell === undefined)
+      throw new Error('fixture lacks uninteracted Well');
+    postboss.contents.stygianWell.interacted = true;
+    expect(() => decodeExecutionPlan(missingWellInventory)).toThrow(ExecutionPlanCodecError);
+
+    const inventedPoolInventory = fixtureClone(positiveFixture) as {
+      rooms: {
+        gameName: string;
+        contents: { purgingPool?: { interacted: boolean; traits?: unknown[] } };
+      }[];
+    };
+    const pool = inventedPoolInventory.rooms.find((room) => room.gameName === 'F_PostBoss01')
+      ?.contents.purgingPool;
+    if (pool === undefined) throw new Error('fixture lacks uninteracted Pool');
+    pool.traits = [];
+    expect(() => decodeExecutionPlan(inventedPoolInventory)).toThrow(ExecutionPlanCodecError);
+  });
+
   it('decodes only an exact successful resource outcome', () => {
     const withResource = fixtureClone(positiveFixture) as {
       rooms: { contents: Record<string, unknown> }[];
@@ -858,6 +1055,12 @@ describe('execution plan compiler', () => {
     const plan = compileExecutionPlan({
       assembly: simulateProjectAssembly(catalog, fAutomaticOutcomeProject()),
     });
+    expect(plan.startingKeepsake).toEqual({
+      keepsakeKey: 'RandomBlessingKeepsake',
+      equipResults: {
+        transcendentEmbryo: { blessingKey: 'ChaosWeaponBlessing' },
+      },
+    });
     expect(plan.rooms.flatMap((room) => room.trace)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -873,6 +1076,24 @@ describe('execution plan compiler', () => {
         }),
       ]),
     );
+  });
+
+  it('copies the planner-owned starting Jeweled Pom result before the opening room', () => {
+    const assembly = simulateProjectAssembly(catalog, fStartingJeweledPomProject());
+    expect(assembly.evaluation.findings.filter((finding) => finding.severity === 'error')).toEqual(
+      [],
+    );
+    const plan = compileExecutionPlan({ assembly });
+    expect(plan.startingKeepsake).toEqual({
+      keepsakeKey: 'HadesAndPersephoneKeepsake',
+      equipResults: { jeweledPom: { traitKey: 'HadesDashSweepBoon' } },
+    });
+    expect(plan.rooms[0]?.trace[0]).toMatchObject({
+      kind: 'roomEntered',
+      runState: {
+        traits: { equipped: expect.arrayContaining([{ traitKey: 'HadesDashSweepBoon' }]) },
+      },
+    });
   });
 
   it('requires the simulator-owned exact assembly at the compiler boundary', () => {
@@ -901,6 +1122,18 @@ describe('execution plan compiler', () => {
     expect(() => decodeExecutionPlan({ ...plan, planFingerprint: 'not-a-fingerprint' })).toThrow(
       /planFingerprint/,
     );
+    expect(() => decodeExecutionPlan({ ...plan, startingKeepsake: undefined })).toThrow(
+      /startingKeepsake/,
+    );
+    expect(() =>
+      decodeExecutionPlan({
+        ...plan,
+        startingKeepsake: {
+          keepsakeKey: plan.startingKeepsake.keepsakeKey,
+          equipResults: { experimentalHammer: { kind: 'selected' } },
+        },
+      }),
+    ).toThrow(/experimentalHammer/);
     const opening = plan.rooms[0];
     if (opening === undefined || opening.outgoing.kind !== 'batch')
       throw new Error('opening batch is missing');
@@ -1133,12 +1366,14 @@ describe('execution plan compiler', () => {
     ).toThrow(/does not belong to this room/);
     if (acquisitionRole.settlement === undefined)
       throw new Error('opening acquisition is missing settlement provenance');
+    const siteParts = JSON.parse(acquisitionRole.settlement.site) as unknown[];
+    const wrongSite = JSON.stringify([...siteParts.slice(0, 4), 'wrong-point']);
     const wrongEntry = JSON.stringify([
       'acquisitionEntry',
       'Underworld',
       'F',
-      acquisitionRole.settlement.site,
-      'wrong-role',
+      wrongSite,
+      acquisitionRole.role,
     ]);
     expect(() =>
       decodeExecutionPlan({
@@ -1162,7 +1397,7 @@ describe('execution plan compiler', () => {
           },
         ],
       }),
-    ).toThrow(/entry does not match its site and role/);
+    ).toThrow(/entry does not match its site/);
     expect(() =>
       decodeExecutionPlan({
         ...plan,

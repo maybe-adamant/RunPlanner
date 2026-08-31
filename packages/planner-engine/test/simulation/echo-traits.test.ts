@@ -74,6 +74,14 @@ const echoOwner = createTraitOfferAddress(
   ),
   'selection',
 );
+const echoRewardProducerOwner = createTraitOfferAddress(
+  createEncounterPhaseAddress(
+    goldenHBiome,
+    { kind: 'occurrence', occurrenceId: bridgeId },
+    'Encounter',
+  ),
+  'Story_Echo_01',
+);
 
 function echoOffer(
   selectedOptionKey: AuthoredTraitOfferTraits['selectedOptionKey'],
@@ -2101,6 +2109,26 @@ describe('Echo Gate C Reward Reward Reward', () => {
         ),
       ),
     ).toBe(true);
+    expect(
+      h.rewards.branches
+        .flatMap((branch) => branch.events)
+        .find(
+          (event) =>
+            event.kind === 'concreteAcquisition' &&
+            event.settlement !== undefined &&
+            semanticAddressKey(event.settlement.entry) === semanticAddressKey(replayEntry),
+        ),
+    ).toEqual(
+      expect.objectContaining({
+        source: expect.objectContaining({
+          producer: {
+            kind: 'echoLastReward',
+            sourceOwner: echoRewardProducerOwner,
+            sourceRole: 'self',
+          },
+        }),
+      }),
+    );
   });
 
   it('retains a stale generated pickup at its exact entry and repairs changed history', () => {

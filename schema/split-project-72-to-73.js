@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 export const SOURCE_SCHEMA_VERSION = 72;
 export const OUTPUT_SCHEMA_VERSION = 73;
 export const SOURCE_CATALOG_VERSION = '0.51.0-biome-i-encounter-profiles';
-export const OUTPUT_CATALOG_VERSION = '0.52.0-boss-preboss-variants';
+export const OUTPUT_CATALOG_VERSION = '0.53.0-chaos-return-batches';
 export const SPLIT_ROUTE_KEYS = Object.freeze(['Underworld', 'Surface']);
 
 // Migration-local historical mapping. Schema 72 persisted only Boss01; schema 73

@@ -12,7 +12,7 @@ the active frontier needed to orient the next delivery.
 ## Current Snapshot
 
 The current persisted contract is strict authored schema 73 with catalog
-`0.52.0-boss-preboss-variants`. Each project contains one selected route;
+`0.53.0-chaos-return-batches`. Each project contains one selected route;
 the browser product supports the eight catalog biomes across the two current
 route choices:
 
@@ -99,7 +99,7 @@ milestones without repeating the delivery chronology.
 | Schema 73          | Each project became a single selected-route document; the legacy schema-72 dual-route shape is converted by a lossless two-document splitter, and the older migration chain was retired. |
 
 Catalog versions advanced alongside these boundaries. The current catalog is
-`0.52.0-boss-preboss-variants`; exact declaration facts and source contacts
+`0.53.0-chaos-return-batches`; exact declaration facts and source contacts
 remain in the catalog package and focused audits rather than this status
 ledger.
 
@@ -401,7 +401,7 @@ behavior remain unchanged.
 
 ### Boss and Preboss variant correction closure
 
-Catalog `0.52.0-boss-preboss-variants` now contains the distinct F/G/H/N/O/Q
+Catalog `0.52.0-boss-preboss-variants` introduced the distinct F/G/H/N/O/Q
 Boss02 rooms and encounters. Biome completion declarations own their normal
 and optional Rivals Boss identities, while route declarations own one exact
 Preboss identity per position. Fixed completion creation resolves Rivals by
@@ -759,18 +759,26 @@ configuration/schema change; it is not rerun merely to create review evidence.
 
 ## F/G Execution Boundary
 
-The F/G execution boundary is protocol v7. It exports only the exact
+The F/G execution boundary is protocol v9. It exports only the exact
 complete-valid simulation assembly; the Plan Executor remains a strict decoder
 and native-seam translator rather than a second planner. The shared F/G
 closure fixture includes an F Postboss Spark of Ixion, the generated G Intro
 Chaos sibling, three distinct displayed curse options, the selected
-curse/blessing acquisition, and its fixed G return. The Lua session fixture
+curse/blessing acquisition, and its declaration-sized visible G return batch.
+The Lua session fixture
 also covers matching and deliberately divergent exact counter, bounded bag,
 trait, and retained-state Run State observations. Native game probes are not
 recorded as passed without a Hades II host; fixture success is compiler/decoder
 and session-contract evidence only.
 
-Protocol v7 keeps complete Run State diagnostics in the planner's semantic
+Live Chaos probing corrected the six return maps to physical exit counts
+`2/2/1/2/3/1`. The executor retains native lifecycle hooks for realization and
+scheduling, but blocking conformance is now attached to room boundaries,
+completed exit batches, selected traversal, and future-relevant semantic
+Timeline transactions. Incidental encounter callbacks are not independent
+trace mismatches.
+
+Protocol v8 keeps complete Run State diagnostics in the planner's semantic
 plan while encoding them as one complete opening frame followed by strictly
 sequential top-level replacement frames. The Executor applies each frame only
 at its matching observed checkpoint, including explicit Artificer clearing;
@@ -778,6 +786,14 @@ empty replacements retain prior expected state. Synthetic trace IDs were
 removed in favor of existing semantic owners. This reduced the representative
 F/G wire fixtures to about 156 kB each without changing fingerprints,
 checkpoints, comparison semantics, or first-mismatch blocking.
+
+Protocol v9 closes the route-start keepsake lifecycle that live testing exposed.
+The wire now carries the planner-owned starting keepsake and exact immediate
+equip result. The Executor freezes the plan at the nested run-start
+`EquipKeepsake` seam, before Jeweled Pom, Experimental Hammer, or Transcendent
+Embryo selects its native result; Postboss rack changes reuse the same scoped
+acquire adapters. The opening room remains the first room trace contact, while
+the delayed run-start presentation remains presentation-only.
 
 The protocol-v7 closure ran its one authorized `npm run check` on 2026-08-30.
 Workspace and fixture typechecking, fixture integrity at 3 files/22 tests,

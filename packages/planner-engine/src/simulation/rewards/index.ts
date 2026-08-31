@@ -12,6 +12,7 @@ export type {
   BiomeRewardSimulation,
   RewardBranch,
   RewardEvent,
+  ResolvedAcquisitionSource,
   RewardSimulation,
   RewardStoreCandidateSupport,
   RewardStoreSupportEntry,

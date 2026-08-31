@@ -204,6 +204,13 @@ export function settleAuthoredAcquisitionSite(
           entries: Object.freeze({ [SEA_STAR_DUPLICATE_ENTRY_KEY]: effectiveDuplicateEntry }),
           order: activationOnly ? Object.freeze([]) : Object.freeze([SEA_STAR_DUPLICATE_ENTRY_KEY]),
           producerLifecycleKey,
+          producerByEntryKey: Object.freeze({
+            [SEA_STAR_DUPLICATE_ENTRY_KEY]: Object.freeze({
+              kind: 'seaStarDuplicate' as const,
+              sourceOwner: source.owner,
+              sourceRole: seaStarDuplicate.acquisitionRole,
+            }),
+          }),
           requiredEntryKeys: new Set(
             forfeitApplied || duplicateUsesFreshObject ? [SEA_STAR_DUPLICATE_ENTRY_KEY] : [],
           ),
@@ -338,6 +345,17 @@ export function settleAuthoredAcquisitionSite(
                 )
               : Object.freeze([onlyEntry.entryKey]),
           producerLifecycleKey: producer.producerLifecycleKey,
+          ...(echoReplay && replayEntryKey !== undefined
+            ? {
+                producerByEntryKey: Object.freeze({
+                  [replayEntryKey]: Object.freeze({
+                    kind: 'echoLastReward' as const,
+                    sourceOwner: producer.source,
+                    sourceRole: 'self',
+                  }),
+                }),
+              }
+            : {}),
           authoredSeaStarDuplicateSiteKeys,
           requiredEntryKeys,
           historySequence,

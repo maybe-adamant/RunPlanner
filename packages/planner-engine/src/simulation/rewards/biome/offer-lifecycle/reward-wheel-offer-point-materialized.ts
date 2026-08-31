@@ -262,6 +262,7 @@ export function applyRewardWheelOfferPointMaterialization(
           ...selectedOffer,
           offer,
           producerLifecycleKey: wheel.producerLifecycleKey,
+          resolvedStoreKey: wheel.storeKey,
           instanceProvenance: 'free',
         });
         settleOwnedAcquisitionSite(

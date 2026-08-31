@@ -1,7 +1,7 @@
 {
   "schemaVersion": 73,
   "projectId": "natural-chaos-unresolved-trial-upgrade",
-  "catalogVersion": "0.52.0-boss-preboss-variants",
+  "catalogVersion": "0.53.0-chaos-return-batches",
   "route": {
     "routeKey": "Underworld",
     "resourcePlacements": {

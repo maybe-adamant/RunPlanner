@@ -708,6 +708,13 @@ describe('Hermes Shrine Travel Deal generation', () => {
       entryKey: refillEntry.entryKey,
       encounterPhaseKey: deliveryPhaseKey,
     });
+    expect(
+      materializedRefillHost?.roomActionRoster.rows.find(
+        (row) =>
+          row.reference.kind === 'interactAcquisitionEntry' &&
+          row.reference.entryKey === refillEntry.entryKey,
+      )?.window,
+    ).toEqual({ kind: 'encounterEnd', phaseKey: deliveryPhaseKey });
     const completeSnapshot = snapshot as typeof snapshot & {
       readonly entryRoom: NonNullable<typeof snapshot.entryRoom>;
     };
@@ -792,6 +799,15 @@ describe('Hermes Shrine Travel Deal generation', () => {
         },
       ]),
     );
+    expect(
+      bothRushedHost?.roomActionRoster.rows
+        .filter(
+          (row) =>
+            row.reference.kind === 'interactAcquisitionEntry' &&
+            row.reference.siteKey === 'hermesShrineDelivery',
+        )
+        .map((row) => row.window),
+    ).toEqual([{ kind: 'postOutgoing' }, { kind: 'postOutgoing' }]);
     expect(
       bothRushedResult.hermesShrineDeliveries.map((delivery) => delivery.sourceKey),
     ).not.toContain(hermesShrineDeliveryEntryKey(host, 'initial:first'));

@@ -21,7 +21,8 @@ import {
   declaredPhysicalExits,
   completedHubHandoffForSource,
   exitDecisionForSource,
-  hostContinuationExitForDetourRoom,
+  automaticHostContinuationExitForDetourRoom,
+  declaredPhysicalExitsForSourceRoom,
   selectedExitKey,
   selectedExitTarget,
   selectedOrdinaryBatchIndex,
@@ -74,15 +75,30 @@ describe('authored topology queries', () => {
   });
 
   it('keeps automatic special returns hidden while an entered Chaos return stays visible', () => {
-    expect(hostContinuationExitForDetourRoom(catalog.rooms.byKey.B_Combat01!)).toMatchObject({
+    expect(
+      automaticHostContinuationExitForDetourRoom(catalog.rooms.byKey.B_Combat01!),
+    ).toMatchObject({
       behavior: { kind: 'automaticHostContinuation', rewardPreview: 'hidden' },
     });
-    expect(hostContinuationExitForDetourRoom(catalog.rooms.byKey.C_Boss01!)).toMatchObject({
-      behavior: { kind: 'automaticHostContinuation', rewardPreview: 'hidden' },
-    });
-    expect(hostContinuationExitForDetourRoom(catalog.rooms.byKey.Chaos_01!)).toMatchObject({
-      behavior: { kind: 'playerSelected', rewardPreview: 'visible' },
-    });
+    expect(automaticHostContinuationExitForDetourRoom(catalog.rooms.byKey.C_Boss01!)).toMatchObject(
+      {
+        behavior: { kind: 'automaticHostContinuation', rewardPreview: 'hidden' },
+      },
+    );
+    expect(
+      automaticHostContinuationExitForDetourRoom(catalog.rooms.byKey.Chaos_01!),
+    ).toBeUndefined();
+    expect(
+      declaredPhysicalExitsForSourceRoom(
+        catalog.biomeLayouts.byKey.G!,
+        createOccurrenceId('start'),
+        { kind: 'occurrence', occurrenceId: createOccurrenceId('chaos') },
+        catalog.rooms.byKey.Chaos_01,
+      ),
+    ).toMatchObject([
+      { exitKey: 'exit1', behavior: { kind: 'playerSelected', rewardPreview: 'visible' } },
+      { exitKey: 'exit2', behavior: { kind: 'playerSelected', rewardPreview: 'visible' } },
+    ]);
   });
 
   it('looks up exact occurrence and Hub sources without conflating either address kind', () => {

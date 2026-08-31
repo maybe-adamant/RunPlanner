@@ -1,15 +1,16 @@
 import {
   createRoomRunStateCheckpointAddress,
+  createRoomActionAddress,
   createEncounterPhaseAddress,
   createBiomeAddress,
   createLevelResolutionAddress,
   createTraitOfferAddress,
   semanticAddressKey,
 } from '../authored-project/addresses';
-import { parseSeaStarDuplicateSiteKey } from '../authored-project/sea-star';
-import { parseArtificerReplacementEntryKey } from '../authored-project/artificer';
+import { roomActionKey } from '../authored-project/room-action-key';
 import type { TraitOfferOwnerAddress } from '../authored-project/addresses';
 import type { CanonicalAuthoredRoom, CanonicalBatch } from '../simulation/materialization';
+import type { AuthoredKeepsakeEquipResults } from '../authored-project/model';
 import { assertExactProjectEvaluationAssembly } from '../simulation/project-evaluation-assembly';
 import type { CompleteValidBiomeProjectEvaluation } from '../simulation/evaluation-products';
 import type { RunStateSnapshot } from '../simulation/rewards/run-state';
@@ -33,9 +34,27 @@ import {
   type ExecutionRunStateDiagnostic,
   type ExecutionAcquisitionRole,
   type ExecutionLevelResolution,
+  type ExecutionKeepsakeEquipResults,
   type ExecutionTraceStep,
   type ExecutionTraitOffer,
 } from './model';
+
+function executionKeepsakeEquipResults(
+  results: AuthoredKeepsakeEquipResults | undefined,
+): ExecutionKeepsakeEquipResults | undefined {
+  if (results === undefined) return undefined;
+  return Object.freeze({
+    ...(results.jeweledPom === undefined
+      ? {}
+      : { jeweledPom: Object.freeze({ ...results.jeweledPom }) }),
+    ...(results.experimentalHammer === undefined
+      ? {}
+      : { experimentalHammer: Object.freeze({ ...results.experimentalHammer }) }),
+    ...(results.transcendentEmbryo === undefined
+      ? {}
+      : { transcendentEmbryo: Object.freeze({ ...results.transcendentEmbryo }) }),
+  });
+}
 
 class CompilerError extends Error {
   readonly code: NonNullable<import('./model').ExecutionCompilerError['code']>;
@@ -447,11 +466,6 @@ function executionTrace(
   }
   const sourceForAction = (actionOwner: (typeof room.roomActionRoster.rows)[number]['owner']) =>
     actionOwner.kind === 'acquisitionRole' ? actionOwner.owner : actionOwner;
-  const only = <T>(values: readonly T[], label: string): T => {
-    if (values.length !== 1 || values[0] === undefined)
-      throw new CompilerError('executionCoverageMissing', `${room.gameName} is missing ${label}`);
-    return values[0];
-  };
   const traitOffer = (
     source: TraitOfferOwnerAddress,
     role: string,
@@ -759,32 +773,10 @@ function executionTrace(
             kind: 'keepsakeRackChange' as const,
             owner: semanticAddressKey(timeline.action.owner),
             keepsakeKey,
-            ...(room.keepsakeRack?.equipResults === undefined
+            ...(executionKeepsakeEquipResults(room.keepsakeRack?.equipResults) === undefined
               ? {}
               : {
-                  equipResults: Object.freeze({
-                    ...(room.keepsakeRack.equipResults.jeweledPom === undefined
-                      ? {}
-                      : {
-                          jeweledPom: Object.freeze({
-                            ...room.keepsakeRack.equipResults.jeweledPom,
-                          }),
-                        }),
-                    ...(room.keepsakeRack.equipResults.experimentalHammer === undefined
-                      ? {}
-                      : {
-                          experimentalHammer: Object.freeze({
-                            ...room.keepsakeRack.equipResults.experimentalHammer,
-                          }),
-                        }),
-                    ...(room.keepsakeRack.equipResults.transcendentEmbryo === undefined
-                      ? {}
-                      : {
-                          transcendentEmbryo: Object.freeze({
-                            ...room.keepsakeRack.equipResults.transcendentEmbryo,
-                          }),
-                        }),
-                  }),
+                  equipResults: executionKeepsakeEquipResults(room.keepsakeRack?.equipResults)!,
                 }),
           }),
         );
@@ -843,7 +835,13 @@ function executionTrace(
       result.push(
         Object.freeze({
           kind: 'worldShopPurchase' as const,
-          owner: semanticAddressKey(timeline.action.owner),
+          owner: semanticAddressKey(
+            createRoomActionAddress(
+              createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+              room.occurrenceId,
+              roomActionKey(actionReference),
+            ),
+          ),
           offerKey: offer.offerKey,
           rewardType: offer.offer.rewardType,
         }),
@@ -866,124 +864,90 @@ function executionTrace(
       );
     }
     const branchRows = biome.rewards.branches.map((branch) => {
-      const event = only(
-        branch.events.filter(
-          (
-            candidate,
-          ): candidate is Extract<
-            RewardEvent,
-            | { readonly kind: 'concreteAcquisition' }
-            | { readonly kind: 'conversionToGold' }
-            | { readonly kind: 'artificerConversion' }
-          > =>
-            (candidate.kind === 'concreteAcquisition' ||
-              candidate.kind === 'conversionToGold' ||
-              candidate.kind === 'artificerConversion') &&
-            semanticAddressKey(candidate.origin) === semanticAddressKey(source) &&
-            candidate.acquisition.role ===
-              (timeline.action.owner.kind === 'acquisitionRole'
-                ? timeline.action.owner.acquisitionRole
-                : 'self'),
-        ),
-        `acquisition ${semanticAddressKey(source)}`,
+      const authoredRole =
+        timeline.action.owner.kind === 'acquisitionRole'
+          ? timeline.action.owner.acquisitionRole
+          : undefined;
+      const events = branch.events.filter(
+        (
+          candidate,
+        ): candidate is Extract<
+          RewardEvent,
+          | { readonly kind: 'concreteAcquisition' }
+          | { readonly kind: 'conversionToGold' }
+          | { readonly kind: 'artificerConversion' }
+        > =>
+          (candidate.kind === 'concreteAcquisition' ||
+            candidate.kind === 'conversionToGold' ||
+            candidate.kind === 'artificerConversion') &&
+          semanticAddressKey(candidate.origin) === semanticAddressKey(source) &&
+          (authoredRole === undefined || candidate.acquisition.role === authoredRole),
       );
-      const offered = only(
-        branch.events.filter(
-          (candidate): candidate is Extract<RewardEvent, { readonly kind: 'rewardOffered' }> =>
-            candidate.kind === 'rewardOffered' &&
-            semanticAddressKey(candidate.origin) === semanticAddressKey(source),
-        ),
-        `reward provenance ${semanticAddressKey(source)}`,
-      );
-      return Object.freeze({ event, offered });
+      if (events.length === 0)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} is missing acquisition ${semanticAddressKey(source)}`,
+        );
+      return Object.freeze(events);
     });
     const row = agreement(
       branchRows.map((candidate) => candidate),
       `acquisition ${semanticAddressKey(source)}`,
     );
-    const role = row.event.acquisition.role;
-    const offer = traitOffer(source, role);
-    const level = levelResolution(source, role);
-    const seaStarDuplicate =
-      source.kind === 'acquisitionEntry'
-        ? parseSeaStarDuplicateSiteKey(source.site.pointKey)
-        : undefined;
-    const artificerReplacement =
-      source.kind === 'acquisitionEntry'
-        ? parseArtificerReplacementEntryKey(source.site.pointKey)
-        : undefined;
-    const pickupProducer =
-      source.kind === 'acquisitionEntry'
-        ? room.pickupProducers?.find((candidate) =>
-            candidate.pickups.some((pickup) => pickup.key === source.site.pointKey),
-          )
-        : undefined;
-    const roles: readonly ExecutionAcquisitionRole[] = Object.freeze([
-      Object.freeze({
-        role,
-        disposition:
-          row.event.kind === 'conversionToGold'
-            ? ('timePiece' as const)
-            : row.event.kind === 'artificerConversion'
-              ? ('artificer' as const)
-              : ('normal' as const),
-        ...(seaStarDuplicate !== undefined
-          ? {
-              producer: Object.freeze({
-                kind: 'seaStarDuplicate' as const,
-                sourceOwner: seaStarDuplicate.sourceKey,
-                sourceRole: seaStarDuplicate.acquisitionRole,
-              }),
-            }
-          : artificerReplacement !== undefined
-            ? {
+    const acquisitionSource = agreement(
+      row.map((event) => event.source),
+      `acquisition source ${semanticAddressKey(source)}`,
+    );
+    const roles: readonly ExecutionAcquisitionRole[] = Object.freeze(
+      row.map((event) => {
+        const role = event.acquisition.role;
+        const offer = traitOffer(source, role);
+        const level = levelResolution(source, role);
+        return Object.freeze({
+          role,
+          disposition:
+            event.kind === 'conversionToGold'
+              ? ('timePiece' as const)
+              : event.kind === 'artificerConversion'
+                ? ('artificer' as const)
+                : ('normal' as const),
+          ...(event.source.producer === undefined
+            ? {}
+            : {
                 producer: Object.freeze({
-                  kind: 'artificerReplacement' as const,
-                  sourceOwner: artificerReplacement.sourceKey,
-                  sourceRole: artificerReplacement.acquisitionRole,
+                  kind: event.source.producer.kind,
+                  sourceOwner: semanticAddressKey(event.source.producer.sourceOwner),
+                  sourceRole: event.source.producer.sourceRole,
                 }),
-              }
-            : pickupProducer?.producerLifecycleKey === 'EchoLastReward'
-              ? {
-                  producer: Object.freeze({
-                    kind: 'echoLastReward' as const,
-                    sourceOwner: semanticAddressKey(pickupProducer.source),
-                    sourceRole: 'self',
-                  }),
-                }
-              : {}),
-        lifecyclePoint: row.event.acquisition.lifecyclePoint,
-        kind: row.event.acquisition.acquisition.kind,
-        gameName: row.event.acquisition.acquisition.gameName,
-        ...(row.event.settlement === undefined
-          ? {}
-          : {
-              settlement: Object.freeze({
-                site: semanticAddressKey(row.event.settlement.site),
-                entry: semanticAddressKey(row.event.settlement.entry),
               }),
-            }),
-        ...(offer === undefined ? {} : { traitOffer: offer }),
-        ...(level === undefined ? {} : { levelResolution: level }),
+          lifecyclePoint: event.acquisition.lifecyclePoint,
+          kind: event.acquisition.acquisition.kind,
+          gameName: event.acquisition.acquisition.gameName,
+          ...(event.settlement === undefined
+            ? {}
+            : {
+                settlement: Object.freeze({
+                  site: semanticAddressKey(event.settlement.site),
+                  entry: semanticAddressKey(event.settlement.entry),
+                }),
+              }),
+          ...(offer === undefined ? {} : { traitOffer: offer }),
+          ...(level === undefined ? {} : { levelResolution: level }),
+        });
       }),
-    ]);
-    const offered = row.offered.offer;
-    const reward: ExecutionReward = Object.freeze({
-      rewardType: offered.rewardType,
-      producerLifecycleKey: row.event.acquisition.lifecyclePoint,
-      ...(row.offered.storeKey === undefined ? {} : { resolvedStoreKey: row.offered.storeKey }),
-      ...(offered.payload?.kind === 'BoonSource' ? { source: offered.payload.source } : {}),
-      ...(offered.payload?.kind === 'DevotionPair'
-        ? { source: offered.payload.chosenSource, spurnedSource: offered.payload.spurnedSource }
-        : {}),
-    });
+    );
+    const reward = executionRewardFromOffer(
+      acquisitionSource.offer,
+      acquisitionSource.producerLifecycleKey,
+      acquisitionSource.resolvedStoreKey,
+    );
     result.push(
       Object.freeze({
         kind: 'acquireReward' as const,
         owner: semanticAddressKey(timeline.action.owner),
         sourceOwner: semanticAddressKey(source),
         reward,
-        producerLifecycleKey: row.event.acquisition.lifecyclePoint,
+        producerLifecycleKey: acquisitionSource.producerLifecycleKey,
         roles,
       }),
     );
@@ -1143,59 +1107,72 @@ function executionRoom(
               ...(refill === undefined ? {} : { travelDealRefill: refill }),
             }),
           }),
-      ...(room.stygianWell?.interacted !== true
+      ...(room.stygianWell === undefined
         ? {}
         : {
             stygianWell: Object.freeze({
-              offers: Object.freeze(
-                (
-                  [
-                    [
-                      'initial:healing',
-                      room.stygianWell.offerKeyBySlot.healing,
-                      room.stygianWell.twistResultKeyBySlot?.healing,
-                    ],
-                    [
-                      'initial:secondLeft',
-                      room.stygianWell.offerKeyBySlot.secondLeft,
-                      room.stygianWell.twistResultKeyBySlot?.secondLeft,
-                    ],
-                    [
-                      'initial:secondRight',
-                      room.stygianWell.offerKeyBySlot.secondRight,
-                      room.stygianWell.twistResultKeyBySlot?.secondRight,
-                    ],
-                    [
-                      'travelDealRefill',
-                      room.stygianWell.travelDealRefillKey,
-                      room.stygianWell.twistResultKeyBySlot?.travelDealRefill,
-                    ],
-                  ] as const
-                ).flatMap(([generationKey, offerKey, twistResultKey]) =>
-                  offerKey === null || offerKey === undefined
-                    ? []
-                    : [
-                        Object.freeze({
-                          generationKey,
-                          offerKey,
-                          ...(twistResultKey === undefined || twistResultKey === null
-                            ? {}
-                            : { twistResultKey }),
-                        }),
-                      ],
-                ),
-              ),
+              interacted: room.stygianWell.interacted,
+              ...(room.stygianWell.interacted
+                ? {
+                    offers: Object.freeze(
+                      (
+                        [
+                          [
+                            'initial:healing',
+                            room.stygianWell.offerKeyBySlot.healing,
+                            room.stygianWell.twistResultKeyBySlot?.healing,
+                          ],
+                          [
+                            'initial:secondLeft',
+                            room.stygianWell.offerKeyBySlot.secondLeft,
+                            room.stygianWell.twistResultKeyBySlot?.secondLeft,
+                          ],
+                          [
+                            'initial:secondRight',
+                            room.stygianWell.offerKeyBySlot.secondRight,
+                            room.stygianWell.twistResultKeyBySlot?.secondRight,
+                          ],
+                          [
+                            'travelDealRefill',
+                            room.stygianWell.travelDealRefillKey,
+                            room.stygianWell.twistResultKeyBySlot?.travelDealRefill,
+                          ],
+                        ] as const
+                      ).flatMap(([generationKey, offerKey, twistResultKey]) =>
+                        offerKey === null || offerKey === undefined
+                          ? []
+                          : [
+                              Object.freeze({
+                                generationKey,
+                                offerKey,
+                                ...(twistResultKey === undefined || twistResultKey === null
+                                  ? {}
+                                  : { twistResultKey }),
+                              }),
+                            ],
+                      ),
+                    ),
+                  }
+                : {}),
             }),
           }),
-      ...(room.purgingPool?.interacted !== true
+      ...(room.purgingPool === undefined
         ? {}
         : {
             purgingPool: Object.freeze({
-              traits: Object.freeze(
-                (['left', 'middle', 'right'] as const).map((slotKey) =>
-                  Object.freeze({ slotKey, traitKey: room.purgingPool!.traitKeyBySlot[slotKey] }),
-                ),
-              ),
+              interacted: room.purgingPool.interacted,
+              ...(room.purgingPool.interacted
+                ? {
+                    traits: Object.freeze(
+                      (['left', 'middle', 'right'] as const).map((slotKey) =>
+                        Object.freeze({
+                          slotKey,
+                          traitKey: room.purgingPool!.traitKeyBySlot[slotKey],
+                        }),
+                      ),
+                    ),
+                  }
+                : {}),
             }),
           }),
       ...(room.keepsakeRack === undefined
@@ -1298,12 +1275,19 @@ export function compileExecutionPlan({ assembly }: ExecutionCompilerInput): Exec
     biomeKeys: Object.freeze([...keys]) as readonly ['F'] | readonly ['F', 'G'],
     terminalBiomeKey: keys[keys.length - 1] as 'F' | 'G',
   });
+  const startingEquipResults = executionKeepsakeEquipResults(
+    assembly.project.route.loadout.keepsakeEquipResults,
+  );
   const base = Object.freeze({
     format: EXECUTION_PLAN_FORMAT,
     protocolVersion: EXECUTION_PROTOCOL_VERSION,
     catalogVersion: evaluation.catalogVersion,
     projectId: evaluation.projectId,
     routeKey: 'Underworld' as const,
+    startingKeepsake: Object.freeze({
+      keepsakeKey: assembly.project.route.loadout.startingKeepsakeKey,
+      ...(startingEquipResults === undefined ? {} : { equipResults: startingEquipResults }),
+    }),
     extent,
     rooms: Object.freeze(executionRooms),
   });
