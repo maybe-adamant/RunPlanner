@@ -631,7 +631,6 @@ function traitOffer(value: unknown, label: string) {
 function trace(value: unknown, label: string, context: TraceContext): ExecutionTraceStep {
   const record = object(value, label);
   const stepOwner = stringValue(record.owner, `${label}.owner`);
-  const id = stringValue(record.id, `${label}.id`);
   const requireRoomOwner = (): void => {
     if (stepOwner !== context.owner) fail(`${label}.owner mismatch`);
   };
@@ -642,7 +641,7 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
       fail(`${label}.owner does not identify its canonical room action`);
   };
   if (record.kind === 'roomEntered' || record.kind === 'beforeRoomExit') {
-    exact(record, ['id', 'kind', 'owner', 'runState'], label);
+    exact(record, ['kind', 'owner', 'runState'], label);
     const state = diagnostic(record.runState, `${label}.runState`);
     requireRoomOwner();
     if (state.checkpoint !== record.kind) fail(`${label}.runState checkpoint mismatch`);
@@ -654,15 +653,15 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
       record.kind,
     ]);
     if (state.owner !== expectedDiagnosticOwner) fail(`${label}.runState owner mismatch`);
-    return Object.freeze({ id, kind: record.kind, owner: stepOwner, runState: state });
+    return Object.freeze({ kind: record.kind, owner: stepOwner, runState: state });
   }
   if (record.kind === 'cleanup') {
-    exact(record, ['id', 'kind', 'owner'], label);
+    exact(record, ['kind', 'owner'], label);
     requireRoomOwner();
-    return Object.freeze({ id, kind: 'cleanup', owner: stepOwner });
+    return Object.freeze({ kind: 'cleanup', owner: stepOwner });
   }
   if (record.kind === 'encounterStart') {
-    exact(record, ['id', 'kind', 'owner', 'phase', 'encounter', 'encounterKind'], label);
+    exact(record, ['kind', 'owner', 'phase', 'encounter', 'encounterKind'], label);
     requireRoomOwner();
     const phase = stringValue(record.phase, `${label}.phase`);
     const declared = context.phases.get(phase);
@@ -673,7 +672,6 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
     )
       fail(`${label} does not match a declared encounter phase`);
     return Object.freeze({
-      id,
       kind: 'encounterStart',
       owner: stepOwner,
       phase,
@@ -682,12 +680,11 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
     });
   }
   if (record.kind === 'encounterEnd') {
-    exact(record, ['id', 'kind', 'owner', 'phase', 'endEffectsExpected'], label);
+    exact(record, ['kind', 'owner', 'phase', 'endEffectsExpected'], label);
     requireRoomOwner();
     const phase = stringValue(record.phase, `${label}.phase`);
     if (!context.phases.has(phase)) fail(`${label} names an undeclared encounter phase`);
     return Object.freeze({
-      id,
       kind: 'encounterEnd',
       owner: stepOwner,
       phase,
@@ -695,7 +692,7 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
     });
   }
   if (record.kind === 'encounterInteraction') {
-    exact(record, ['id', 'kind', 'owner', 'phaseKey'], label, ['resolution']);
+    exact(record, ['kind', 'owner', 'phaseKey'], label, ['resolution']);
     const phaseKey = stringValue(record.phaseKey, `${label}.phaseKey`);
     if (validateEncounterAddress(stepOwner, context, `${label}.owner`) !== phaseKey)
       fail(`${label}.owner and phaseKey mismatch`);
@@ -759,7 +756,6 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
             fail(`${label}.resolution unsupported`);
           })();
     return Object.freeze({
-      id,
       kind: 'encounterInteraction',
       owner: stepOwner,
       phaseKey,
@@ -770,15 +766,14 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
     exact(
       record,
       record.kind === 'steadyGrowth'
-        ? ['id', 'kind', 'owner', 'phase', 'source', 'target']
-        : ['id', 'kind', 'owner', 'phase', 'source', 'target', 'rarity'],
+        ? ['kind', 'owner', 'phase', 'source', 'target']
+        : ['kind', 'owner', 'phase', 'source', 'target', 'rarity'],
       label,
     );
     requireRoomOwner();
     const phase = stringValue(record.phase, `${label}.phase`);
     if (!context.phases.has(phase)) fail(`${label} names an undeclared encounter phase`);
     const base = {
-      id,
       owner: stepOwner,
       phase,
       source: stringValue(record.source, `${label}.source`),
@@ -795,7 +790,7 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
   if (record.kind === 'acquireReward') {
     exact(
       record,
-      ['id', 'kind', 'owner', 'sourceOwner', 'reward', 'producerLifecycleKey', 'roles'],
+      ['kind', 'owner', 'sourceOwner', 'reward', 'producerLifecycleKey', 'roles'],
       label,
     );
     const roles = array(record.roles, `${label}.roles`, 16).map((entry, index) => {
@@ -956,7 +951,6 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
     if (parsedReward.producerLifecycleKey !== producerLifecycleKey)
       fail(`${label}.producerLifecycleKey must match reward provenance`);
     return Object.freeze({
-      id,
       kind: 'acquireReward',
       owner: stepOwner,
       sourceOwner,
@@ -966,14 +960,13 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
     });
   }
   if (record.kind === 'purgingPoolSale') {
-    exact(record, ['id', 'kind', 'owner', 'slotKey', 'traitKey'], label);
+    exact(record, ['kind', 'owner', 'slotKey', 'traitKey'], label);
     const slotKey =
       record.slotKey === 'left' || record.slotKey === 'middle' || record.slotKey === 'right'
         ? record.slotKey
         : fail(`${label}.slotKey unsupported`);
     requireRoomActionOwner(JSON.stringify(['sellPurgingPoolTrait', slotKey]));
     return Object.freeze({
-      id,
       kind: 'purgingPoolSale' as const,
       owner: stepOwner,
       slotKey,
@@ -981,11 +974,10 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
     });
   }
   if (record.kind === 'stygianWellPurchase') {
-    exact(record, ['id', 'kind', 'owner', 'generationKey', 'offerKey'], label, ['twistResultKey']);
+    exact(record, ['kind', 'owner', 'generationKey', 'offerKey'], label, ['twistResultKey']);
     const generationKey = wellGeneration(record.generationKey, `${label}.generationKey`);
     requireRoomActionOwner(JSON.stringify(['purchaseStygianWellOffer', generationKey]));
     return Object.freeze({
-      id,
       kind: 'stygianWellPurchase' as const,
       owner: stepOwner,
       generationKey,
@@ -996,11 +988,10 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
     });
   }
   if (record.kind === 'worldShopPurchase') {
-    exact(record, ['id', 'kind', 'owner', 'offerKey', 'rewardType'], label);
+    exact(record, ['kind', 'owner', 'offerKey', 'rewardType'], label);
     const offerKey = stringValue(record.offerKey, `${label}.offerKey`);
     requireRoomActionOwner(JSON.stringify(['interactShopOffer', offerKey]));
     return Object.freeze({
-      id,
       kind: 'worldShopPurchase' as const,
       owner: stepOwner,
       offerKey,
@@ -1008,10 +999,9 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
     });
   }
   if (record.kind === 'keepsakeRackChange') {
-    exact(record, ['id', 'kind', 'owner', 'keepsakeKey'], label, ['equipResults']);
+    exact(record, ['kind', 'owner', 'keepsakeKey'], label, ['equipResults']);
     requireRoomActionOwner(JSON.stringify(['interactKeepsakeRack']));
     return Object.freeze({
-      id,
       kind: 'keepsakeRackChange' as const,
       owner: stepOwner,
       keepsakeKey: stringValue(record.keepsakeKey, `${label}.keepsakeKey`),
@@ -1021,10 +1011,9 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
     });
   }
   if (record.kind === 'fountainUse') {
-    exact(record, ['id', 'kind', 'owner'], label, ['aromaticPhialTarget']);
+    exact(record, ['kind', 'owner'], label, ['aromaticPhialTarget']);
     requireRoomActionOwner(JSON.stringify(['useFountain']));
     return Object.freeze({
-      id,
       kind: 'fountainUse' as const,
       owner: stepOwner,
       ...(record.aromaticPhialTarget === undefined
@@ -1585,11 +1574,100 @@ function room(value: unknown, index: number): ExecutionRoom {
     outgoing: outgoing(record.outgoing, `${label}.outgoing`),
   });
 }
+const diagnosticSections = [
+  'counters',
+  'bags',
+  'godPool',
+  'traits',
+  'arcana',
+  'vows',
+  'forfeit',
+  'chaos',
+  'keepsakes',
+  'rewardPriorities',
+  'hexProgress',
+  'artificer',
+] as const;
+
+function wirePlan(value: unknown): Record<string, unknown> {
+  const plan = object(value, 'execution plan');
+  const rooms = array(plan.rooms, 'rooms', 256);
+  let expectedFrame = 0;
+  let prior: Record<string, unknown> | undefined;
+  const expandedRooms = rooms.map((roomValue, roomIndex) => {
+    const room = object(roomValue, `rooms[${roomIndex}]`);
+    const traceEntries = array(room.trace, `rooms[${roomIndex}].trace`, 64);
+    const trace = traceEntries.map((stepValue, traceIndex) => {
+      const step = object(stepValue, `rooms[${roomIndex}].trace[${traceIndex}]`);
+      if (!('frame' in step)) return step;
+      exact(
+        step,
+        ['frame', 'owner', 'checkpoint', 'replace'],
+        `rooms[${roomIndex}].trace[${traceIndex}]`,
+      );
+      const frame = integer(step.frame, `rooms[${roomIndex}].trace[${traceIndex}].frame`);
+      if (frame !== expectedFrame)
+        fail(`rooms[${roomIndex}].trace[${traceIndex}] frame is not sequential`);
+      expectedFrame += 1;
+      const checkpoint = step.checkpoint;
+      if (checkpoint !== 'roomEntered' && checkpoint !== 'beforeRoomExit')
+        fail(`rooms[${roomIndex}].trace[${traceIndex}].checkpoint unsupported`);
+      const owner = stringValue(step.owner, `rooms[${roomIndex}].trace[${traceIndex}].owner`);
+      const replace = object(step.replace, `rooms[${roomIndex}].trace[${traceIndex}].replace`);
+      for (const key of Object.keys(replace))
+        if (!diagnosticSections.includes(key as (typeof diagnosticSections)[number]))
+          fail(`rooms[${roomIndex}].trace[${traceIndex}].replace has unknown field ${key}`);
+      if (frame === 0 && diagnosticSections.some((key) => !(key in replace)))
+        fail(
+          `rooms[${roomIndex}].trace[${traceIndex}] frame zero must replace every diagnostic section`,
+        );
+      if (prior === undefined) prior = {};
+      prior = { ...prior, ...replace };
+      return {
+        kind: checkpoint,
+        owner: JSON.stringify(['occurrence', 'Underworld', room.biomeKey, room.id]),
+        runState: { owner, checkpoint, ...prior },
+      };
+    });
+    return { ...room, trace };
+  });
+  return { ...plan, rooms: expandedRooms };
+}
+
+function wireTrace(
+  step: ExecutionTraceStep,
+  frame: number,
+  prior: Record<string, unknown> | undefined,
+) {
+  if (step.kind !== 'roomEntered' && step.kind !== 'beforeRoomExit') {
+    return step;
+  }
+  const state = step.runState as unknown as Record<string, unknown>;
+  const replace: Record<string, unknown> = {};
+  for (const section of diagnosticSections) {
+    if (frame === 0 || JSON.stringify(state[section]) !== JSON.stringify(prior?.[section]))
+      replace[section] = state[section];
+  }
+  return { frame, owner: state.owner, checkpoint: state.checkpoint, replace };
+}
 export function encodeExecutionPlan(plan: ExecutionPlan): string {
-  return JSON.stringify(plan);
+  let frame = 0;
+  let prior: Record<string, unknown> | undefined;
+  const rooms = plan.rooms.map((room) => ({
+    ...room,
+    trace: room.trace.map((step) => {
+      const encoded = wireTrace(step, frame, prior);
+      if (step.kind === 'roomEntered' || step.kind === 'beforeRoomExit') {
+        prior = step.runState as unknown as Record<string, unknown>;
+        frame += 1;
+      }
+      return encoded;
+    }),
+  }));
+  return JSON.stringify({ ...plan, rooms });
 }
 export function decodeExecutionPlan(value: unknown): ExecutionPlan {
-  const record = object(value, 'execution plan');
+  const record = wirePlan(value);
   exact(
     record,
     [

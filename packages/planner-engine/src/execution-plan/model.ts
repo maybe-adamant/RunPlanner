@@ -3,7 +3,7 @@ import type { ProjectEvaluationAssembly } from '../simulation/evaluation-product
 
 /** The only execution artifact currently supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 6 as const;
+export const EXECUTION_PROTOCOL_VERSION = 7 as const;
 export const EXECUTION_CATALOG_VERSION = '0.52.0-boss-preboss-variants' as const;
 
 export type ExecutionRunStateCount =
@@ -231,18 +231,15 @@ export interface ExecutionKeepsakeEquipResults {
 
 export type ExecutionTraceStep =
   | {
-      readonly id: string;
       readonly kind: 'roomEntered' | 'beforeRoomExit';
       readonly owner: string;
       readonly runState: ExecutionRunStateDiagnostic;
     }
   | {
-      readonly id: string;
       readonly kind: 'cleanup';
       readonly owner: string;
     }
   | {
-      readonly id: string;
       readonly kind: 'encounterStart';
       readonly owner: string;
       readonly phase: string;
@@ -250,14 +247,12 @@ export type ExecutionTraceStep =
       readonly encounterKind: string;
     }
   | {
-      readonly id: string;
       readonly kind: 'encounterEnd';
       readonly owner: string;
       readonly phase: string;
       readonly endEffectsExpected: boolean;
     }
   | {
-      readonly id: string;
       readonly kind: 'acquireReward';
       readonly owner: string;
       readonly sourceOwner: string;
@@ -266,7 +261,6 @@ export type ExecutionTraceStep =
       readonly roles: readonly ExecutionAcquisitionRole[];
     }
   | {
-      readonly id: string;
       readonly kind: 'encounterInteraction';
       readonly owner: string;
       readonly phaseKey: string;
@@ -290,7 +284,6 @@ export type ExecutionTraceStep =
           };
     }
   | {
-      readonly id: string;
       readonly kind: 'steadyGrowth';
       readonly owner: string;
       readonly phase: string;
@@ -298,7 +291,6 @@ export type ExecutionTraceStep =
       readonly target: string;
     }
   | {
-      readonly id: string;
       readonly kind: 'transcendentEmbryo';
       readonly owner: string;
       readonly phase: string;
@@ -307,14 +299,12 @@ export type ExecutionTraceStep =
       readonly rarity: string;
     }
   | {
-      readonly id: string;
       readonly kind: 'purgingPoolSale';
       readonly owner: string;
       readonly slotKey: 'left' | 'middle' | 'right';
       readonly traitKey: string;
     }
   | {
-      readonly id: string;
       readonly kind: 'stygianWellPurchase';
       readonly owner: string;
       readonly generationKey:
@@ -323,21 +313,18 @@ export type ExecutionTraceStep =
       readonly twistResultKey?: string;
     }
   | {
-      readonly id: string;
       readonly kind: 'worldShopPurchase';
       readonly owner: string;
       readonly offerKey: string;
       readonly rewardType: string;
     }
   | {
-      readonly id: string;
       readonly kind: 'keepsakeRackChange';
       readonly owner: string;
       readonly keepsakeKey: string;
       readonly equipResults?: ExecutionKeepsakeEquipResults;
     }
   | {
-      readonly id: string;
       readonly kind: 'fountainUse';
       readonly owner: string;
       readonly aromaticPhialTarget?: string;
