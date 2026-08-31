@@ -111,7 +111,7 @@ describe('execution plan compiler', () => {
 
     expect(plan).toMatchObject({
       format: 'run-planner-execution',
-      protocolVersion: 4,
+      protocolVersion: 5,
       routeKey: 'Underworld',
       extent: { kind: 'configuredPrefix', biomeKeys: ['F'], terminalBiomeKey: 'F' },
     });
@@ -154,7 +154,7 @@ describe('execution plan compiler', () => {
     expect(decodeExecutionPlan(positiveFixture)).toEqual(plan);
   });
 
-  it('requires the complete v4 Gate-D diagnostic surface', () => {
+  it('requires the complete v5 diagnostic surface', () => {
     const missingKeepsakes = fixtureClone(positiveFixture) as {
       rooms: { trace: { runState: Record<string, unknown> }[] }[];
     };
@@ -186,6 +186,91 @@ describe('execution plan compiler', () => {
     const decodedPriorities = decodeExecutionPlan(duplicatePriorities).rooms[0]!.trace[0]!;
     if (decodedPriorities.kind !== 'roomEntered') throw new Error('fixture lacks entry checkpoint');
     expect(decodedPriorities.runState.rewardPriorities).toEqual(['Boon', 'Boon']);
+  });
+
+  it('keeps additional continuations distinct and closes exactly one selected continuation', () => {
+    // Route-detour/Stygian Well suites own real Ixion topology policy. This
+    // codec witness covers only the v5 execution-wire translation boundary.
+    type MutableRoom = {
+      id: string;
+      owner: string;
+      biomeKey: string;
+      gameName: string;
+      entered: boolean;
+      trace: unknown[];
+      outgoing: {
+        owner: string;
+        kind: string;
+        additional?: {
+          kind: string;
+          key: string;
+          owner: string;
+          room: { id: string; biomeKey: string; gameName: string };
+          picked: boolean;
+        }[];
+        [key: string]: unknown;
+      };
+    };
+    const plan = fixtureClone(positiveFixture) as unknown as { rooms: MutableRoom[] };
+    const sourceRoom = plan.rooms[0];
+    const templateRoom = plan.rooms[1];
+    if (sourceRoom === undefined || templateRoom === undefined)
+      throw new Error('fixture lacks codec rooms');
+    const outgoing = sourceRoom.outgoing;
+    const chaosRoom = fixtureClone(templateRoom);
+    chaosRoom.id = 'codec-chaos-room';
+    chaosRoom.owner = '["occurrence","Underworld","F","codec-chaos-room"]';
+    chaosRoom.gameName = 'Chaos_01';
+    chaosRoom.entered = false;
+    chaosRoom.trace = [];
+    chaosRoom.outgoing = { owner: chaosRoom.owner, kind: 'terminal' };
+    plan.rooms.push(chaosRoom);
+    outgoing.additional = [
+      {
+        kind: 'chaos',
+        key: 'chaos',
+        owner: '["additionalExit","Underworld","F","golden-f-start","chaos"]',
+        room: { id: chaosRoom.id, biomeKey: 'F', gameName: chaosRoom.gameName },
+        picked: false,
+      },
+    ];
+    expect(decodeExecutionPlan(plan).rooms[0]!.outgoing).toMatchObject({
+      additional: [{ key: 'chaos' }],
+    });
+    const additional = outgoing.additional[0];
+    if (additional === undefined) throw new Error('fixture lacks additional exit');
+    additional.picked = true;
+    expect(() => decodeExecutionPlan(plan)).toThrow(ExecutionPlanCodecError);
+    additional.picked = false;
+    delete outgoing.additional;
+    expect(() => decodeExecutionPlan(plan)).toThrow(ExecutionPlanCodecError);
+  });
+
+  it('accepts repeated Chaos curse identities and decimal selected operands', () => {
+    type MutableTrace = {
+      kind: string;
+      roles?: { traitOffer?: Record<string, unknown> }[];
+    };
+    const plan = fixtureClone(positiveFixture) as unknown as {
+      rooms: { trace: MutableTrace[] }[];
+    };
+    const role = plan.rooms[0]!.trace.find((step) => step.kind === 'acquireReward')?.roles?.[0];
+    if (role === undefined) throw new Error('fixture lacks an acquisition role');
+    role.traitOffer = {
+      kind: 'chaos',
+      giver: 'Chaos',
+      curseOptions: [
+        { curseKey: 'ChaosSpeedCurse', requirementCount: 3 },
+        { curseKey: 'ChaosSpeedCurse', requirementCount: 4 },
+        { curseKey: 'ChaosStunCurse', requirementCount: 5 },
+      ],
+      selected: 'option1',
+      selectedCurseValues: { speedMultiplier: 0.45 },
+      blessingKey: 'ChaosExSpeedBlessing',
+      rarity: 'Rare',
+      blessingValues: { weaponSpeed: 0.82, propertySpeed: 0.83 },
+    };
+    expect(() => decodeExecutionPlan(plan)).not.toThrow();
   });
 
   it('closes Shop Travel Deal and room-object trace records against their contents', () => {
