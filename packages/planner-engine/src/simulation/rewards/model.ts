@@ -73,6 +73,19 @@ interface RewardEventBase {
   readonly origin: SemanticAddress;
 }
 
+/** Engine-owned provenance for one concrete acquisition recorded in the reward ledger. */
+export interface ResolvedAcquisitionSource {
+  readonly offer: ResolvedRewardOffer;
+  readonly producerLifecycleKey: string;
+  readonly resolvedStoreKey?: string;
+  /** Present only when this acquisition is a generated child of an earlier source role. */
+  readonly producer?: {
+    readonly kind: 'seaStarDuplicate' | 'artificerReplacement' | 'echoLastReward';
+    readonly sourceOwner: SemanticAddress;
+    readonly sourceRole: string;
+  };
+}
+
 export type RewardEvent =
   | (RewardEventBase & {
       readonly kind: 'rewardOffered';
@@ -81,6 +94,7 @@ export type RewardEvent =
     })
   | (RewardEventBase & {
       readonly kind: 'concreteAcquisition';
+      readonly source: ResolvedAcquisitionSource;
       readonly acquisition: ConcreteAcquisitionEvent;
       /** Present when the acquisition was applied by a canonical settlement site. */
       readonly settlement?: {
@@ -91,6 +105,7 @@ export type RewardEvent =
   | (RewardEventBase & {
       /** Source was destroyed and a separate RunProgress replacement was generated. */
       readonly kind: 'artificerConversion';
+      readonly source: ResolvedAcquisitionSource;
       readonly acquisition: ConcreteAcquisitionEvent;
       readonly replacement: ResolvedRewardOffer;
       readonly settlement?: {
@@ -101,6 +116,7 @@ export type RewardEvent =
   | (RewardEventBase & {
       /** Evidence of a Time Piece choice; intentionally no Gold acquisition exists. */
       readonly kind: 'conversionToGold';
+      readonly source: ResolvedAcquisitionSource;
       readonly acquisition: ConcreteAcquisitionEvent;
       readonly settlement?: {
         readonly site: AcquisitionSiteAddress;

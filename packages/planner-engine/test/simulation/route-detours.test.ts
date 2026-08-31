@@ -409,6 +409,7 @@ function buildNaturalChaosProject() {
   const opening = createOccurrenceId('natural-chaos-f-opening');
   const chaos = createOccurrenceId('natural-chaos-f-room');
   const returned = createOccurrenceId('natural-chaos-f-return');
+  const returnedPeer = createOccurrenceId('natural-chaos-f-return-peer');
   let project = projectFor('Underworld', 1);
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
@@ -424,9 +425,14 @@ function buildNaturalChaosProject() {
     occurrenceId: chaos,
   });
   project = setAdditionalSelection(project, fBiome, opening, 'chaos');
-  project = appendSingleTargetBatch(project, fBiome, chaos, returned, 'F_Combat01', 'RunProgress');
+  project = createBatch(project, fBiome, chaos);
+  project = replaceBatchStore(project, fBiome, chaos, 'RunProgress');
+  project = addTarget(project, fBiome, chaos, 'exit1', returned, 'F_Combat01');
+  project = addTarget(project, fBiome, chaos, 'exit2', returnedPeer, 'F_Combat02');
+  project = setNormalSelection(project, fBiome, chaos, 'exit1');
   project = replaceIncomingReward(project, fBiome, returned, 'MaxHealthDrop');
-  return { project, opening, chaos, returned, additional };
+  project = replaceIncomingReward(project, fBiome, returnedPeer, 'MaxManaDrop');
+  return { project, opening, chaos, returned, returnedPeer, additional };
 }
 
 interface ContractReturnHost {

@@ -28,6 +28,11 @@ function stringValue(value: unknown, label: string): string {
   if (value.length === 0 || value.length > 512) fail(`${label} must be a bounded non-empty string`);
   return value;
 }
+function addressValue(value: unknown, label: string): string {
+  if (typeof value !== 'string' || value.length === 0 || value.length > 8192)
+    fail(`${label} must be a bounded non-empty address`);
+  return value;
+}
 function integer(
   value: unknown,
   label: string,
@@ -120,7 +125,7 @@ function validateEncounterAddress(value: string, context: TraceContext, label: s
 function validateSiteAddress(value: string, context: TraceContext, label: string): void {
   const parts = addressParts(value, label);
   exactAddressBase(parts, 'acquisitionSite', 5, context, label);
-  const nestedOwner = stringValue(parts[3], `${label} owner`);
+  const nestedOwner = addressValue(parts[3], `${label} owner`);
   const ownerParts = addressParts(nestedOwner, `${label} owner`);
   const ownerKind = ownerParts[0];
   if (ownerKind === 'occurrence') {
@@ -150,18 +155,31 @@ function validateAcquisitionSource(value: string, context: TraceContext, label: 
     stringValue(parts[5], `${label} slot`);
     return;
   }
+  if (kind === 'rewardWheelOffer') {
+    exactAddressBase(parts, 'rewardWheelOffer', 6, context, label);
+    if (parts[3] !== context.roomId) fail(`${label} does not belong to this room`);
+    stringValue(parts[4], `${label} wheel`);
+    stringValue(parts[5], `${label} offer`);
+    return;
+  }
+  if (kind === 'shopOffer') {
+    exactAddressBase(parts, 'shopOffer', 5, context, label);
+    if (parts[3] !== context.roomId) fail(`${label} does not belong to this room`);
+    stringValue(parts[4], `${label} offer`);
+    return;
+  }
   if (kind === 'encounterPhase') {
     validateEncounterAddress(value, context, label);
     return;
   }
   if (kind === 'gorgonPhase') {
     exactAddressBase(parts, 'gorgonPhase', 4, context, label);
-    validateEncounterAddress(stringValue(parts[3], `${label} encounter`), context, label);
+    validateEncounterAddress(addressValue(parts[3], `${label} encounter`), context, label);
     return;
   }
   if (kind === 'acquisitionEntry') {
     exactAddressBase(parts, 'acquisitionEntry', 5, context, label);
-    validateSiteAddress(stringValue(parts[3], `${label} site`), context, `${label} site`);
+    validateSiteAddress(addressValue(parts[3], `${label} site`), context, `${label} site`);
     stringValue(parts[4], `${label} entry`);
     return;
   }
@@ -630,7 +648,7 @@ function traitOffer(value: unknown, label: string) {
 }
 function trace(value: unknown, label: string, context: TraceContext): ExecutionTraceStep {
   const record = object(value, label);
-  const stepOwner = stringValue(record.owner, `${label}.owner`);
+  const stepOwner = addressValue(record.owner, `${label}.owner`);
   const requireRoomOwner = (): void => {
     if (stepOwner !== context.owner) fail(`${label}.owner mismatch`);
   };
@@ -835,8 +853,8 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
       )
         fail(`${label}.roles[${index}].disposition unsupported`);
       if (settlement !== undefined) {
-        const site = stringValue(settlement.site, `${label}.roles[${index}].settlement.site`);
-        const entryAddress = stringValue(
+        const site = addressValue(settlement.site, `${label}.roles[${index}].settlement.site`);
+        const entryAddress = addressValue(
           settlement.entry,
           `${label}.roles[${index}].settlement.entry`,
         );
@@ -849,8 +867,8 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
           context,
           `${label}.roles[${index}].settlement.entry`,
         );
-        if (entryParts[3] !== site || entryParts[4] !== roleKey)
-          fail(`${label}.roles[${index}].settlement entry does not match its site and role`);
+        if (entryParts[3] !== site)
+          fail(`${label}.roles[${index}].settlement entry does not match its site`);
       }
       const level =
         role.levelResolution === undefined
@@ -892,6 +910,7 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
       if (
         levelResolution?.selectedTarget !== null &&
         levelResolution?.selectedTarget !== undefined &&
+        levelResolution.offeredTargets.length > 0 &&
         !levelResolution.offeredTargets.includes(levelResolution.selectedTarget)
       )
         fail(`${label}.roles[${index}].levelResolution selected target was not offered`);
@@ -921,8 +940,8 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
           ? {}
           : {
               settlement: Object.freeze({
-                site: stringValue(settlement.site, `${label}.roles[${index}].settlement.site`),
-                entry: stringValue(settlement.entry, `${label}.roles[${index}].settlement.entry`),
+                site: addressValue(settlement.site, `${label}.roles[${index}].settlement.site`),
+                entry: addressValue(settlement.entry, `${label}.roles[${index}].settlement.entry`),
               }),
             }),
         ...(role.traitOffer === undefined
@@ -938,12 +957,22 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
     )
       fail(`${label}.roles has duplicate identities`);
     const parsedReward = reward(record.reward, `${label}.reward`);
-    const sourceOwner = stringValue(record.sourceOwner, `${label}.sourceOwner`);
+    const sourceOwner = addressValue(record.sourceOwner, `${label}.sourceOwner`);
     validateAcquisitionSource(sourceOwner, context, `${label}.sourceOwner`);
+    const sourceParts = addressParts(sourceOwner, `${label}.sourceOwner`);
+    if (sourceParts[0] === 'acquisitionEntry')
+      for (const [index, role] of roles.entries())
+        if (role.settlement !== undefined && role.settlement.entry !== sourceOwner)
+          fail(`${label}.roles[${index}].settlement entry does not match its source`);
     const actionOwner = addressParts(stepOwner, `${label}.owner`);
-    exactAddressBase(actionOwner, 'acquisitionRole', 5, context, `${label}.owner`);
-    if (actionOwner[3] !== sourceOwner || !roles.some((role) => role.role === actionOwner[4]))
-      fail(`${label}.owner does not identify a declared source role`);
+    if (actionOwner[0] === 'acquisitionRole') {
+      exactAddressBase(actionOwner, 'acquisitionRole', 5, context, `${label}.owner`);
+      if (actionOwner[3] !== sourceOwner || !roles.some((role) => role.role === actionOwner[4]))
+        fail(`${label}.owner does not identify a declared source role`);
+    } else {
+      validateAcquisitionSource(stepOwner, context, `${label}.owner`);
+      if (stepOwner !== sourceOwner) fail(`${label}.owner does not identify its source action`);
+    }
     const producerLifecycleKey = stringValue(
       record.producerLifecycleKey,
       `${label}.producerLifecycleKey`,
@@ -1195,9 +1224,19 @@ function roomContents(value: unknown, label: string): ExecutionRoom['contents'] 
     contents.stygianWell === undefined
       ? undefined
       : object(contents.stygianWell, `${label}.stygianWell`);
-  if (well !== undefined) exact(well, ['offers'], `${label}.stygianWell`);
-  const wellOffers =
+  if (well !== undefined) exact(well, ['interacted'], `${label}.stygianWell`, ['offers']);
+  const wellInteracted =
     well === undefined
+      ? undefined
+      : booleanValue(well.interacted, `${label}.stygianWell.interacted`);
+  if (
+    well !== undefined &&
+    ((wellInteracted === true && well.offers === undefined) ||
+      (wellInteracted === false && well.offers !== undefined))
+  )
+    fail(`${label}.stygianWell offers must exist exactly when interacted`);
+  const wellOffers =
+    well === undefined || well.offers === undefined
       ? undefined
       : array(well.offers, `${label}.stygianWell.offers`, 4).map((entry, i) => {
           const offer = object(entry, `${label}.stygianWell.offers[${i}]`);
@@ -1229,9 +1268,19 @@ function roomContents(value: unknown, label: string): ExecutionRoom['contents'] 
     contents.purgingPool === undefined
       ? undefined
       : object(contents.purgingPool, `${label}.purgingPool`);
-  if (pool !== undefined) exact(pool, ['traits'], `${label}.purgingPool`);
-  const poolTraits =
+  if (pool !== undefined) exact(pool, ['interacted'], `${label}.purgingPool`, ['traits']);
+  const poolInteracted =
     pool === undefined
+      ? undefined
+      : booleanValue(pool.interacted, `${label}.purgingPool.interacted`);
+  if (
+    pool !== undefined &&
+    ((poolInteracted === true && pool.traits === undefined) ||
+      (poolInteracted === false && pool.traits !== undefined))
+  )
+    fail(`${label}.purgingPool traits must exist exactly when interacted`);
+  const poolTraits =
+    pool === undefined || pool.traits === undefined
       ? undefined
       : array(pool.traits, `${label}.purgingPool.traits`, 3).map((entry, i) => {
           const trait = object(entry, `${label}.purgingPool.traits[${i}]`);
@@ -1315,10 +1364,20 @@ function roomContents(value: unknown, label: string): ExecutionRoom['contents'] 
         }),
     ...(well === undefined
       ? {}
-      : { stygianWell: Object.freeze({ offers: Object.freeze(wellOffers!) }) }),
+      : {
+          stygianWell: Object.freeze({
+            interacted: wellInteracted!,
+            ...(wellOffers === undefined ? {} : { offers: Object.freeze(wellOffers) }),
+          }),
+        }),
     ...(pool === undefined
       ? {}
-      : { purgingPool: Object.freeze({ traits: Object.freeze(poolTraits!) }) }),
+      : {
+          purgingPool: Object.freeze({
+            interacted: poolInteracted!,
+            ...(poolTraits === undefined ? {} : { traits: Object.freeze(poolTraits) }),
+          }),
+        }),
     ...(rack === undefined
       ? {}
       : {
@@ -1533,7 +1592,7 @@ function room(value: unknown, index: number): ExecutionRoom {
         fail(`${label}.trace World Shop purchase does not close inventory`);
     }
     if (step.kind === 'stygianWellPurchase') {
-      const offer = contents.stygianWell?.offers.find(
+      const offer = contents.stygianWell?.offers?.find(
         (candidate) => candidate.generationKey === step.generationKey,
       );
       if (offer === undefined || offer.offerKey !== step.offerKey)
@@ -1542,7 +1601,7 @@ function room(value: unknown, index: number): ExecutionRoom {
         fail(`${label}.trace Well twist does not close inventory`);
     }
     if (step.kind === 'purgingPoolSale') {
-      const trait = contents.purgingPool?.traits.find(
+      const trait = contents.purgingPool?.traits?.find(
         (candidate) => candidate.slotKey === step.slotKey,
       );
       if (trait === undefined || trait.traitKey !== step.traitKey)
@@ -1677,6 +1736,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
       'projectId',
       'planFingerprint',
       'routeKey',
+      'startingKeepsake',
       'extent',
       'rooms',
     ],
@@ -1688,6 +1748,19 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
   if (record.catalogVersion !== EXECUTION_CATALOG_VERSION)
     fail('unsupported execution catalog version');
   if (record.routeKey !== 'Underworld') fail('unsupported execution route');
+  const startingKeepsake = object(record.startingKeepsake, 'startingKeepsake');
+  exact(startingKeepsake, ['keepsakeKey'], 'startingKeepsake', ['equipResults']);
+  const decodedStartingKeepsake = Object.freeze({
+    keepsakeKey: stringValue(startingKeepsake.keepsakeKey, 'startingKeepsake.keepsakeKey'),
+    ...(startingKeepsake.equipResults === undefined
+      ? {}
+      : {
+          equipResults: keepsakeEquipResults(
+            startingKeepsake.equipResults,
+            'startingKeepsake.equipResults',
+          ),
+        }),
+  });
   const extent = object(record.extent, 'extent');
   exact(extent, ['kind', 'biomeKeys', 'terminalBiomeKey'], 'extent');
   const keys = strings(extent.biomeKeys, 'extent.biomeKeys', 2);
@@ -1771,6 +1844,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     projectId: stringValue(record.projectId, 'projectId'),
     planFingerprint: fingerprint,
     routeKey: 'Underworld',
+    startingKeepsake: decodedStartingKeepsake,
     extent: Object.freeze({
       kind: 'configuredPrefix',
       biomeKeys: Object.freeze(keys) as readonly ['F'] | readonly ['F', 'G'],

@@ -29,7 +29,7 @@ import { requireEphyraSideRooms, type RoomOccurrenceRole } from '../room-state/d
 import { createDefaultRoomState } from '../room-state/defaults';
 import { createDefaultRoomEncounterState } from '../room-state/encounter-envelope';
 import {
-  hostContinuationExitForDetourRoom,
+  isHostRouteDetourRoom,
   additionalExitsForDecision,
   declaredPhysicalExitKeys,
   exitDecisionForSource,
@@ -109,10 +109,7 @@ function sourceRoom(
   const room = catalog.rooms.byKey[gameName];
   if (room === undefined) failCommand(command, `unknown room ${gameName}`);
   if (room.mode.kind !== 'authored') failCommand(command, `${gameName} is layout-derived`);
-  if (
-    room.roomSetKey !== located.layout.biomeKey &&
-    hostContinuationExitForDetourRoom(room) === undefined
-  ) {
+  if (room.roomSetKey !== located.layout.biomeKey && !isHostRouteDetourRoom(room)) {
     failCommand(command, `${gameName} belongs to ${room.roomSetKey}`);
   }
   return room;
@@ -550,7 +547,7 @@ function createBatch(
   }
   if (
     batchEligibility.kind === 'ordinaryBatchLimitReached' &&
-    (room === undefined || hostContinuationExitForDetourRoom(room) === undefined) &&
+    (room === undefined || !isHostRouteDetourRoom(room)) &&
     hubTerminalTakeoverForSource(
       catalog,
       located.layout,
@@ -725,32 +722,36 @@ function createTarget(
     ],
     allowed,
   );
+  const previouslySelectedExitKey = selectedExitKey(decision);
+  const previousTarget = decision.normal.targets.find(
+    (target) => target.exitKey === previouslySelectedExitKey,
+  );
+  const previousTargetOwnsDownstreamDecision =
+    previousTarget !== undefined &&
+    topology.decisions.some(
+      (candidate) =>
+        candidate.kind === 'exit' &&
+        candidate.source.kind === 'occurrence' &&
+        candidate.source.occurrenceId === previousTarget.occurrenceId,
+    );
   const selection: ExitSelection =
     targets.length === 1 && additionalExitsForDecision(topology, decision).length === 0
       ? Object.freeze({ kind: 'derived' })
       : decision.selection.kind === 'normal' || decision.selection.kind === 'additional'
         ? decision.selection
-        : Object.freeze({ kind: 'unresolved' });
+        : decision.selection.kind === 'derived' &&
+            previouslySelectedExitKey !== undefined &&
+            previousTargetOwnsDownstreamDecision
+          ? Object.freeze({ kind: 'normal', exitKey: previouslySelectedExitKey })
+          : Object.freeze({ kind: 'unresolved' });
   const nextDecision: ExitDecision = Object.freeze({
     ...decision,
     normal: Object.freeze({ ...decision.normal, targets }),
     selection,
   });
-  const previouslySelectedExitKey = selectedExitKey(decision);
   const nextSelectedExitKey = selectedExitKey(nextDecision);
   if (previouslySelectedExitKey !== nextSelectedExitKey) {
-    const previousTarget = decision.normal.targets.find(
-      (target) => target.exitKey === previouslySelectedExitKey,
-    );
-    if (
-      previousTarget !== undefined &&
-      topology.decisions.some(
-        (candidate) =>
-          candidate.kind === 'exit' &&
-          candidate.source.kind === 'occurrence' &&
-          candidate.source.occurrenceId === previousTarget.occurrenceId,
-      )
-    ) {
+    if (previousTargetOwnsDownstreamDecision) {
       failCommand(command, 'remove the prior selected target’s downstream decision first');
     }
   }
@@ -824,10 +825,6 @@ function createTarget(
       ? occurrenceId
       : undefined;
   };
-  const previousTarget =
-    previouslySelectedExitKey === undefined
-      ? undefined
-      : decision.normal.targets.find((target) => target.exitKey === previouslySelectedExitKey);
   const previousPreboss = prebossFor(topology, previousTarget?.occurrenceId);
   const nextPreboss = prebossFor(next, selectedTarget);
   return updateTopology(

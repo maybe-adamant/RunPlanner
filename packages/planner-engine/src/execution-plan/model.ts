@@ -3,8 +3,8 @@ import type { ProjectEvaluationAssembly } from '../simulation/evaluation-product
 
 /** The only execution artifact currently supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 7 as const;
-export const EXECUTION_CATALOG_VERSION = '0.52.0-boss-preboss-variants' as const;
+export const EXECUTION_PROTOCOL_VERSION = 9 as const;
+export const EXECUTION_CATALOG_VERSION = '0.53.0-chaos-return-batches' as const;
 
 export type ExecutionRunStateCount =
   | { readonly kind: 'exact'; readonly count: number }
@@ -131,9 +131,10 @@ export interface ExecutionRoomContents {
       readonly reward: ExecutionReward;
     };
   };
-  /** The complete entered Well inventory, including selected nested results. */
+  /** Feature presence plus complete inventory only when the Well was entered. */
   readonly stygianWell?: {
-    readonly offers: readonly {
+    readonly interacted: boolean;
+    readonly offers?: readonly {
       readonly generationKey:
         'initial:healing' | 'initial:secondLeft' | 'initial:secondRight' | 'travelDealRefill';
       readonly offerKey: string;
@@ -141,7 +142,8 @@ export interface ExecutionRoomContents {
     }[];
   };
   readonly purgingPool?: {
-    readonly traits: readonly {
+    readonly interacted: boolean;
+    readonly traits?: readonly {
       readonly slotKey: 'left' | 'middle' | 'right';
       readonly traitKey: string | null;
     }[];
@@ -227,6 +229,12 @@ export interface ExecutionKeepsakeEquipResults {
   readonly experimentalHammer?:
     { readonly kind: 'selected'; readonly traitKey: string } | { readonly kind: 'exhausted' };
   readonly transcendentEmbryo?: { readonly blessingKey: string };
+}
+
+/** Exact route-start equip and its already-authored immediate native result. */
+export interface ExecutionStartingKeepsake {
+  readonly keepsakeKey: string;
+  readonly equipResults?: ExecutionKeepsakeEquipResults;
 }
 
 export type ExecutionTraceStep =
@@ -403,6 +411,7 @@ export interface ExecutionPlan {
   readonly projectId: string;
   readonly planFingerprint: string;
   readonly routeKey: 'Underworld';
+  readonly startingKeepsake: ExecutionStartingKeepsake;
   readonly extent: {
     readonly kind: 'configuredPrefix';
     readonly biomeKeys: readonly ['F'] | readonly ['F', 'G'];

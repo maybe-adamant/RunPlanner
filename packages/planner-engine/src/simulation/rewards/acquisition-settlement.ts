@@ -72,6 +72,7 @@ import {
   type ReachedTraitChildCheckpoint,
 } from './trait-settlement';
 import { addRewardFinding, rewardFinding } from './findings';
+import type { ResolvedAcquisitionSource } from './model';
 
 export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalVisitRoom;
 
@@ -234,6 +235,9 @@ export interface AcquisitionSource {
   readonly origin: TraitOfferOwnerAddress;
   readonly offer: ResolvedRewardOffer;
   readonly producerLifecycleKey: string;
+  readonly resolvedStoreKey?: string;
+  /** Exact generated-parent provenance; consumers must never recover this from encoded keys. */
+  readonly producer?: ResolvedAcquisitionSource['producer'];
   readonly producerKind?: CanonicalResolvedIncomingReward['producerKind'];
   /** Instance fact supplied by the producer, never inferred from an owner label. */
   readonly instanceProvenance: 'free' | 'paid';
@@ -254,6 +258,15 @@ export interface AcquisitionSource {
   readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
   /** A Sea Star second interaction is never eligible to produce a third. */
   readonly blocksSeaStarDuplication?: true;
+}
+
+function resolvedAcquisitionSource(source: AcquisitionSource): ResolvedAcquisitionSource {
+  return Object.freeze({
+    offer: source.offer,
+    producerLifecycleKey: source.producerLifecycleKey,
+    ...(source.resolvedStoreKey === undefined ? {} : { resolvedStoreKey: source.resolvedStoreKey }),
+    ...(source.producer === undefined ? {} : { producer: source.producer }),
+  });
 }
 
 export type RewardFactsFactory = (
@@ -707,6 +720,11 @@ export function settleArtificerReplacementAcquisition(
         origin: address,
         offer: replacement.offer,
         producerLifecycleKey: 'RoomReward',
+        producer: Object.freeze({
+          kind: 'artificerReplacement' as const,
+          sourceOwner: request.sourceOrigin,
+          sourceRole: request.acquisitionRole,
+        }),
         instanceProvenance: 'free',
         roomRewardForfeitEligible: true as const,
         traitOffersByAcquisitionRole: replacement.traitOffersByAcquisitionRole,
@@ -781,6 +799,10 @@ export function settlePickupAcquisitionSite(
     ) => AcquisitionSiteAddress;
     /** Closed entry identities that represent Sea Star's already-retained object. */
     readonly seaStarDuplicateEntryKeys?: ReadonlySet<string>;
+    /** Engine-owned generated-parent provenance keyed by the concrete entry. */
+    readonly producerByEntryKey?: Readonly<
+      Record<string, NonNullable<ResolvedAcquisitionSource['producer']>>
+    >;
     /** Exact authored Sea Star result sites whose source frontier must be retained. */
     readonly authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string>;
     /** Candidate-only outer reward probes do not publish the child's own frontier. */
@@ -879,6 +901,9 @@ export function settlePickupAcquisitionSite(
             origin: entry,
             offer: reward.offer,
             producerLifecycleKey: request.producerLifecycleKey,
+            ...(request.producerByEntryKey?.[key] === undefined
+              ? {}
+              : { producer: request.producerByEntryKey[key] }),
             instanceProvenance: 'free',
             traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
             ...(reward.levelResolutionsByAcquisitionRole === undefined
@@ -1000,6 +1025,9 @@ export function settlePickupAcquisitionSite(
           origin: entry,
           offer: reward.offer,
           producerLifecycleKey: request.producerLifecycleKey,
+          ...(request.producerByEntryKey?.[key] === undefined
+            ? {}
+            : { producer: request.producerByEntryKey[key] }),
           instanceProvenance: 'free',
           traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
           ...(reward.levelResolutionsByAcquisitionRole === undefined
@@ -1222,6 +1250,7 @@ export function applyProducerRoleHistory(
           {
             kind: 'conversionToGold',
             origin: incoming.origin,
+            source: resolvedAcquisitionSource(incoming),
             acquisition: realizedAcquisition,
             settlement,
           },
@@ -1256,6 +1285,7 @@ export function applyProducerRoleHistory(
           {
             kind: 'concreteAcquisition',
             origin: incoming.origin,
+            source: resolvedAcquisitionSource(incoming),
             acquisition: realizedAcquisition,
             settlement,
           },
@@ -1391,6 +1421,7 @@ export function applyProducerRoleHistory(
             {
               kind: 'artificerConversion',
               origin: incoming.origin,
+              source: resolvedAcquisitionSource(incoming),
               acquisition,
               replacement: artificerReplacement.offer,
               settlement,
@@ -1412,6 +1443,11 @@ export function applyProducerRoleHistory(
                 origin: replacementAddress,
                 offer: artificerReplacement.offer,
                 producerLifecycleKey: 'RoomReward',
+                producer: Object.freeze({
+                  kind: 'artificerReplacement' as const,
+                  sourceOwner: incoming.origin,
+                  sourceRole: resolution.role,
+                }),
                 instanceProvenance: 'free',
                 roomRewardForfeitEligible: true as const,
                 traitOffersByAcquisitionRole: artificerReplacement.traitOffersByAcquisitionRole,
@@ -1549,6 +1585,7 @@ export function applyProducerRoleHistory(
     const withEvent = appendRewardEvent(settledTraitBranch, resolution.historySequence, {
       kind: 'concreteAcquisition',
       origin: incoming.origin,
+      source: resolvedAcquisitionSource(incoming),
       acquisition,
       settlement,
     });

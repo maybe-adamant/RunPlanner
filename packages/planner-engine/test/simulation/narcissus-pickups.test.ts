@@ -23,6 +23,7 @@ import {
   encodeProjectDocument,
   redoProjectHistory,
   roomActionKey,
+  semanticAddressKey,
   type ProjectDocument,
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
@@ -1065,7 +1066,27 @@ describe('Narcissus pickup producer', () => {
       },
     });
     blindBox = authorLegalTraitOffers(blindBox);
-    const blindBoxHistory = evaluatedG(blindBox).rewards.branches[0]?.traitHistory;
+    const blindBoxEvaluation = evaluatedG(blindBox);
+    expect(
+      blindBoxEvaluation.rewards.branches
+        .flatMap((branch) => branch.events)
+        .find(
+          (event) =>
+            event.kind === 'concreteAcquisition' &&
+            semanticAddressKey(event.origin) === semanticAddressKey(blindBoxEntry),
+        ),
+    ).toEqual(
+      expect.objectContaining({
+        source: expect.objectContaining({
+          offer: {
+            rewardType: 'BlindBoxLoot',
+            payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+          },
+          producerLifecycleKey: 'NarcissusPickup',
+        }),
+      }),
+    );
+    const blindBoxHistory = blindBoxEvaluation.rewards.branches[0]?.traitHistory;
     const blindBoxOffer = blindBoxHistory?.events.find(
       (event): event is Extract<TraitHistoryEvent, { readonly kind: 'traitOffer' }> =>
         event.kind === 'traitOffer' &&

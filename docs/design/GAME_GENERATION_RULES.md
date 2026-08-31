@@ -67,6 +67,12 @@ silently deleted. `ReconcileBatchExitCapacity` is the explicit topology-removal
 repair: it removes unavailable targets and their downstream subtree, then
 normalizes selection from the retained keys.
 
+When a progressively authored width-one target already owns the next decision,
+adding another declared physical target promotes the derived continuation to an
+explicit normal selection. The established downstream subtree remains attached
+to that selected occurrence; completing a sibling door does not require the
+user to delete and recreate later authorship.
+
 Selecting another continuation does not discard an already authored next
 decision. `SetExitSelection` atomically re-anchors that outgoing decision to the
 new selected occurrence, then reconciles it against that occurrence's declared

@@ -106,20 +106,27 @@ function physicalExit(
   });
 }
 
+/** Closed route detours admitted as sources of a host-biome continuation. */
+export function isHostRouteDetourRoom(room: RoomDeclaration): boolean {
+  return (
+    room.mode.kind === 'authored' &&
+    (room.mode.templateKey === 'Anomaly' ||
+      room.mode.templateKey === 'ContractBoss' ||
+      room.mode.templateKey === 'Chaos')
+  );
+}
+
 /**
- * Closed detour rooms own one declaration-defined host continuation. Anomaly
- * and the Zagreus contract return automatically; Chaos returns through its
- * visible ordinary door. This deliberately recognizes only the closed
- * authored templates, not every declaration with a similar exit behavior.
+ * Anomaly and the Zagreus contract own one automatic host continuation.
+ * Chaos deliberately does not participate: its map-declared visible exits
+ * form an ordinary player-selected batch.
  */
-export function hostContinuationExitForDetourRoom(
+export function automaticHostContinuationExitForDetourRoom(
   room: RoomDeclaration,
 ): DeclaredPhysicalExit | undefined {
   if (
     room.mode.kind !== 'authored' ||
-    (room.mode.templateKey !== 'Anomaly' &&
-      room.mode.templateKey !== 'ContractBoss' &&
-      room.mode.templateKey !== 'Chaos')
+    (room.mode.templateKey !== 'Anomaly' && room.mode.templateKey !== 'ContractBoss')
   ) {
     return undefined;
   }
@@ -128,9 +135,7 @@ export function hostContinuationExitForDetourRoom(
     room.exits.length !== 1 ||
     exit === undefined ||
     exit.index !== 1 ||
-    (room.mode.templateKey === 'Chaos'
-      ? exit.behavior.kind !== 'playerSelected' || exit.behavior.rewardPreview !== 'visible'
-      : exit.behavior.kind !== 'automaticHostContinuation')
+    exit.behavior.kind !== 'automaticHostContinuation'
   ) {
     return undefined;
   }
@@ -158,7 +163,13 @@ export function declaredPhysicalExitsForSourceRoom(
   }
   if (sourceRoom === undefined) return undefined;
   if (sourceRoom.roomSetKey !== layout.biomeKey) {
-    const continuation = hostContinuationExitForDetourRoom(sourceRoom);
+    if (!isHostRouteDetourRoom(sourceRoom)) return undefined;
+    if (sourceRoom.mode.kind === 'authored' && sourceRoom.mode.templateKey === 'Chaos') {
+      return Object.freeze(
+        sourceRoom.exits.map((exit) => physicalExit('normal', `exit${exit.index}`, exit)),
+      );
+    }
+    const continuation = automaticHostContinuationExitForDetourRoom(sourceRoom);
     return continuation === undefined ? undefined : Object.freeze([continuation]);
   }
   if (layout.progression.kind === 'hub') {
