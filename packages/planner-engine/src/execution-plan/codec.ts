@@ -5,6 +5,8 @@ import {
   type ExecutionPlan,
   type ExecutionRoom,
   type ExecutionTraceStep,
+  type ExecutionRunStateDiagnostic,
+  type ExecutionKeepsakeEquipResults,
 } from './model';
 
 export class ExecutionPlanCodecError extends Error {
@@ -57,10 +59,12 @@ function exact(
     if (!required.includes(key) && !optional.includes(key))
       fail(`${label} has unknown field ${key}`);
 }
-function strings(value: unknown, label: string, maximum: number): readonly string[] {
-  return Object.freeze(
-    array(value, label, maximum).map((entry, index) => stringValue(entry, `${label}[${index}]`)),
+function strings(value: unknown, label: string, maximum: number, unique = true): readonly string[] {
+  const entries = array(value, label, maximum).map((entry, index) =>
+    stringValue(entry, `${label}[${index}]`),
   );
+  if (unique && new Set(entries).size !== entries.length) fail(`${label} has duplicate values`);
+  return Object.freeze(entries);
 }
 interface TraceContext {
   readonly owner: string;
@@ -208,7 +212,21 @@ function diagnostic(value: unknown, label: string) {
   const record = object(value, label);
   exact(
     record,
-    ['owner', 'checkpoint', 'counters', 'bags', 'godPool', 'traits', 'arcana', 'vows', 'forfeit'],
+    [
+      'owner',
+      'checkpoint',
+      'counters',
+      'bags',
+      'godPool',
+      'traits',
+      'arcana',
+      'vows',
+      'forfeit',
+      'keepsakes',
+      'rewardPriorities',
+      'hexProgress',
+      'artificer',
+    ],
     label,
   );
   if (record.checkpoint !== 'roomEntered' && record.checkpoint !== 'beforeRoomExit')
@@ -309,6 +327,55 @@ function diagnostic(value: unknown, label: string) {
     record.forfeit !== 'consumed'
   )
     fail(`${label}.forfeit unsupported`);
+  const keepsakes = object(record.keepsakes, `${label}.keepsakes`);
+  exact(keepsakes, ['currentKey', 'usedKeys', 'blockedKeys', 'fatedStatus'], `${label}.keepsakes`);
+  const rewardPriorities = strings(record.rewardPriorities, `${label}.rewardPriorities`, 32, false);
+  const hex = object(record.hexProgress, `${label}.hexProgress`);
+  exact(
+    hex,
+    ['talentKeys', 'closed', 'bankedPathPoints', 'investedPathPoints'],
+    `${label}.hexProgress`,
+    ['spellTraitKey', 'layoutKey'],
+  );
+  const artificer =
+    record.artificer === null ? null : object(record.artificer, `${label}.artificer`);
+  if (artificer !== null) exact(artificer, ['usedCount', 'remainingCount'], `${label}.artificer`);
+  const gateD = {
+    keepsakes: Object.freeze({
+      currentKey: stringValue(keepsakes.currentKey, `${label}.keepsakes.currentKey`),
+      usedKeys: strings(keepsakes.usedKeys, `${label}.keepsakes.usedKeys`, 16),
+      blockedKeys: strings(keepsakes.blockedKeys, `${label}.keepsakes.blockedKeys`, 32),
+      fatedStatus:
+        keepsakes.fatedStatus === 'Unknown' ||
+        keepsakes.fatedStatus === 'Fated' ||
+        keepsakes.fatedStatus === 'Unfated'
+          ? keepsakes.fatedStatus
+          : fail(`${label}.keepsakes.fatedStatus unsupported`),
+    }),
+    rewardPriorities: Object.freeze(rewardPriorities),
+    hexProgress: Object.freeze({
+      ...(hex.spellTraitKey === undefined
+        ? {}
+        : { spellTraitKey: stringValue(hex.spellTraitKey, `${label}.hexProgress.spellTraitKey`) }),
+      ...(hex.layoutKey === undefined
+        ? {}
+        : { layoutKey: stringValue(hex.layoutKey, `${label}.hexProgress.layoutKey`) }),
+      talentKeys: strings(hex.talentKeys, `${label}.hexProgress.talentKeys`, 16),
+      closed: booleanValue(hex.closed, `${label}.hexProgress.closed`),
+      bankedPathPoints: integer(hex.bankedPathPoints, `${label}.hexProgress.bankedPathPoints`),
+      investedPathPoints: integer(
+        hex.investedPathPoints,
+        `${label}.hexProgress.investedPathPoints`,
+      ),
+    }),
+    artificer:
+      artificer === null
+        ? null
+        : Object.freeze({
+            usedCount: integer(artificer.usedCount, `${label}.artificer.usedCount`),
+            remainingCount: integer(artificer.remainingCount, `${label}.artificer.remainingCount`),
+          }),
+  };
   return Object.freeze({
     owner: stringValue(record.owner, `${label}.owner`),
     checkpoint: record.checkpoint,
@@ -356,7 +423,8 @@ function diagnostic(value: unknown, label: string) {
       disabledKeys: strings(vows.disabledKeys, `${label}.vows.disabledKeys`, 128),
     }),
     forfeit: record.forfeit,
-  });
+    ...gateD,
+  }) as unknown as ExecutionRunStateDiagnostic;
 }
 function traitOffer(value: unknown, label: string) {
   const record = object(value, label);
@@ -461,6 +529,12 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
   const requireRoomOwner = (): void => {
     if (stepOwner !== context.owner) fail(`${label}.owner mismatch`);
   };
+  const requireRoomActionOwner = (actionKey: string): void => {
+    const parts = addressParts(stepOwner, `${label}.owner`);
+    exactAddressBase(parts, 'roomAction', 5, context, `${label}.owner`);
+    if (parts[3] !== context.roomId || parts[4] !== actionKey)
+      fail(`${label}.owner does not identify its canonical room action`);
+  };
   if (record.kind === 'roomEntered' || record.kind === 'beforeRoomExit') {
     exact(record, ['id', 'kind', 'owner', 'runState'], label);
     const state = diagnostic(record.runState, `${label}.runState`);
@@ -560,11 +634,12 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
     );
     const roles = array(record.roles, `${label}.roles`, 16).map((entry, index) => {
       const role = object(entry, `${label}.roles[${index}]`);
-      exact(role, ['role', 'lifecyclePoint', 'kind', 'gameName'], `${label}.roles[${index}]`, [
-        'settlement',
-        'traitOffer',
-        'levelResolution',
-      ]);
+      exact(
+        role,
+        ['role', 'disposition', 'lifecyclePoint', 'kind', 'gameName'],
+        `${label}.roles[${index}]`,
+        ['settlement', 'producer', 'traitOffer', 'levelResolution'],
+      );
       const settlement =
         role.settlement === undefined
           ? undefined
@@ -572,6 +647,32 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
       if (settlement !== undefined)
         exact(settlement, ['site', 'entry'], `${label}.roles[${index}].settlement`);
       const roleKey = stringValue(role.role, `${label}.roles[${index}].role`);
+      const producer =
+        role.producer === undefined
+          ? undefined
+          : object(role.producer, `${label}.roles[${index}].producer`);
+      if (producer !== undefined) {
+        const kind = stringValue(producer.kind, `${label}.roles[${index}].producer.kind`);
+        if (
+          kind === 'seaStarDuplicate' ||
+          kind === 'artificerReplacement' ||
+          kind === 'echoLastReward'
+        ) {
+          exact(
+            producer,
+            ['kind', 'sourceOwner', 'sourceRole'],
+            `${label}.roles[${index}].producer`,
+          );
+        } else {
+          fail(`${label}.roles[${index}].producer.kind unsupported`);
+        }
+      }
+      if (
+        role.disposition !== 'normal' &&
+        role.disposition !== 'timePiece' &&
+        role.disposition !== 'artificer'
+      )
+        fail(`${label}.roles[${index}].disposition unsupported`);
       if (settlement !== undefined) {
         const site = stringValue(settlement.site, `${label}.roles[${index}].settlement.site`);
         const entryAddress = stringValue(
@@ -635,9 +736,26 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
         fail(`${label}.roles[${index}].levelResolution selected target was not offered`);
       return Object.freeze({
         role: roleKey,
+        disposition: role.disposition,
         lifecyclePoint: stringValue(role.lifecyclePoint, `${label}.roles[${index}].lifecyclePoint`),
         kind: stringValue(role.kind, `${label}.roles[${index}].kind`),
         gameName: stringValue(role.gameName, `${label}.roles[${index}].gameName`),
+        ...(producer === undefined
+          ? {}
+          : {
+              producer: Object.freeze({
+                kind: producer.kind as
+                  'seaStarDuplicate' | 'artificerReplacement' | 'echoLastReward',
+                sourceOwner: stringValue(
+                  producer.sourceOwner,
+                  `${label}.roles[${index}].producer.sourceOwner`,
+                ),
+                sourceRole: stringValue(
+                  producer.sourceRole,
+                  `${label}.roles[${index}].producer.sourceRole`,
+                ),
+              }),
+            }),
         ...(settlement === undefined
           ? {}
           : {
@@ -681,7 +799,390 @@ function trace(value: unknown, label: string, context: TraceContext): ExecutionT
       roles: Object.freeze(roles),
     });
   }
+  if (record.kind === 'purgingPoolSale') {
+    exact(record, ['id', 'kind', 'owner', 'slotKey', 'traitKey'], label);
+    const slotKey =
+      record.slotKey === 'left' || record.slotKey === 'middle' || record.slotKey === 'right'
+        ? record.slotKey
+        : fail(`${label}.slotKey unsupported`);
+    requireRoomActionOwner(JSON.stringify(['sellPurgingPoolTrait', slotKey]));
+    return Object.freeze({
+      id,
+      kind: 'purgingPoolSale' as const,
+      owner: stepOwner,
+      slotKey,
+      traitKey: stringValue(record.traitKey, `${label}.traitKey`),
+    });
+  }
+  if (record.kind === 'stygianWellPurchase') {
+    exact(record, ['id', 'kind', 'owner', 'generationKey', 'offerKey'], label, ['twistResultKey']);
+    const generationKey = wellGeneration(record.generationKey, `${label}.generationKey`);
+    requireRoomActionOwner(JSON.stringify(['purchaseStygianWellOffer', generationKey]));
+    return Object.freeze({
+      id,
+      kind: 'stygianWellPurchase' as const,
+      owner: stepOwner,
+      generationKey,
+      offerKey: stringValue(record.offerKey, `${label}.offerKey`),
+      ...(record.twistResultKey === undefined
+        ? {}
+        : { twistResultKey: stringValue(record.twistResultKey, `${label}.twistResultKey`) }),
+    });
+  }
+  if (record.kind === 'worldShopPurchase') {
+    exact(record, ['id', 'kind', 'owner', 'offerKey', 'rewardType'], label);
+    const offerKey = stringValue(record.offerKey, `${label}.offerKey`);
+    requireRoomActionOwner(JSON.stringify(['interactShopOffer', offerKey]));
+    return Object.freeze({
+      id,
+      kind: 'worldShopPurchase' as const,
+      owner: stepOwner,
+      offerKey,
+      rewardType: stringValue(record.rewardType, `${label}.rewardType`),
+    });
+  }
+  if (record.kind === 'keepsakeRackChange') {
+    exact(record, ['id', 'kind', 'owner', 'keepsakeKey'], label, ['equipResults']);
+    requireRoomActionOwner(JSON.stringify(['interactKeepsakeRack']));
+    return Object.freeze({
+      id,
+      kind: 'keepsakeRackChange' as const,
+      owner: stepOwner,
+      keepsakeKey: stringValue(record.keepsakeKey, `${label}.keepsakeKey`),
+      ...(record.equipResults === undefined
+        ? {}
+        : { equipResults: keepsakeEquipResults(record.equipResults, `${label}.equipResults`) }),
+    });
+  }
+  if (record.kind === 'fountainUse') {
+    exact(record, ['id', 'kind', 'owner'], label, ['aromaticPhialTarget']);
+    requireRoomActionOwner(JSON.stringify(['useFountain']));
+    return Object.freeze({
+      id,
+      kind: 'fountainUse' as const,
+      owner: stepOwner,
+      ...(record.aromaticPhialTarget === undefined
+        ? {}
+        : {
+            aromaticPhialTarget: stringValue(
+              record.aromaticPhialTarget,
+              `${label}.aromaticPhialTarget`,
+            ),
+          }),
+    });
+  }
   fail(`${label}.kind unsupported`);
+}
+function wellGeneration(
+  value: unknown,
+  label: string,
+): 'initial:healing' | 'initial:secondLeft' | 'initial:secondRight' | 'travelDealRefill' {
+  if (
+    value === 'initial:healing' ||
+    value === 'initial:secondLeft' ||
+    value === 'initial:secondRight' ||
+    value === 'travelDealRefill'
+  )
+    return value;
+  return fail(`${label} unsupported`);
+}
+function keepsakeEquipResults(value: unknown, label: string): ExecutionKeepsakeEquipResults {
+  const record = object(value, label);
+  exact(record, [], label, ['jeweledPom', 'experimentalHammer', 'transcendentEmbryo']);
+  const jeweledPom =
+    record.jeweledPom === undefined ? undefined : object(record.jeweledPom, `${label}.jeweledPom`);
+  if (jeweledPom !== undefined) exact(jeweledPom, ['traitKey'], `${label}.jeweledPom`, ['rarity']);
+  const hammer =
+    record.experimentalHammer === undefined
+      ? undefined
+      : object(record.experimentalHammer, `${label}.experimentalHammer`);
+  if (hammer !== undefined) {
+    if (hammer.kind === 'selected')
+      exact(hammer, ['kind', 'traitKey'], `${label}.experimentalHammer`);
+    else if (hammer.kind === 'exhausted') exact(hammer, ['kind'], `${label}.experimentalHammer`);
+    else fail(`${label}.experimentalHammer.kind unsupported`);
+  }
+  const embryo =
+    record.transcendentEmbryo === undefined
+      ? undefined
+      : object(record.transcendentEmbryo, `${label}.transcendentEmbryo`);
+  if (embryo !== undefined) exact(embryo, ['blessingKey'], `${label}.transcendentEmbryo`);
+  return Object.freeze({
+    ...(jeweledPom === undefined
+      ? {}
+      : {
+          jeweledPom: Object.freeze({
+            traitKey: stringValue(jeweledPom.traitKey, `${label}.jeweledPom.traitKey`),
+            ...(jeweledPom.rarity === undefined
+              ? {}
+              : { rarity: stringValue(jeweledPom.rarity, `${label}.jeweledPom.rarity`) }),
+          }),
+        }),
+    ...(hammer === undefined
+      ? {}
+      : {
+          experimentalHammer:
+            hammer.kind === 'selected'
+              ? Object.freeze({
+                  kind: 'selected' as const,
+                  traitKey: stringValue(hammer.traitKey, `${label}.experimentalHammer.traitKey`),
+                })
+              : Object.freeze({ kind: 'exhausted' as const }),
+        }),
+    ...(embryo === undefined
+      ? {}
+      : {
+          transcendentEmbryo: Object.freeze({
+            blessingKey: stringValue(embryo.blessingKey, `${label}.transcendentEmbryo.blessingKey`),
+          }),
+        }),
+  });
+}
+function roomContents(value: unknown, label: string): ExecutionRoom['contents'] {
+  const contents = object(value, label);
+  exact(contents, ['encounterPhases', 'requiredObjects'], label, [
+    'incomingReward',
+    'shop',
+    'stygianWell',
+    'purgingPool',
+    'keepsakeRack',
+    'fountain',
+    'resources',
+  ]);
+  const encounterPhases = array(contents.encounterPhases, `${label}.encounterPhases`, 16).map(
+    (entry, i) => {
+      const phase = object(entry, `${label}.encounterPhases[${i}]`);
+      exact(phase, ['slotKey', 'encounterKey', 'kind'], `${label}.encounterPhases[${i}]`);
+      return Object.freeze({
+        slotKey: stringValue(phase.slotKey, `${label}.encounterPhases[${i}].slotKey`),
+        encounterKey: stringValue(
+          phase.encounterKey,
+          `${label}.encounterPhases[${i}].encounterKey`,
+        ),
+        kind: stringValue(phase.kind, `${label}.encounterPhases[${i}].kind`),
+      });
+    },
+  );
+  if (new Set(encounterPhases.map((phase) => phase.slotKey)).size !== encounterPhases.length)
+    fail(`${label}.encounterPhases has duplicate slots`);
+  const shop = contents.shop === undefined ? undefined : object(contents.shop, `${label}.shop`);
+  if (shop !== undefined)
+    exact(shop, ['profileKey', 'offers'], `${label}.shop`, ['travelDealRefill']);
+  const shopOffers =
+    shop === undefined
+      ? undefined
+      : array(shop.offers, `${label}.shop.offers`, 16).map((entry, i) => {
+          const offer = object(entry, `${label}.shop.offers[${i}]`);
+          exact(offer, ['offerKey', 'optionKey', 'rewardType'], `${label}.shop.offers[${i}]`, [
+            'source',
+            'spurnedSource',
+          ]);
+          return Object.freeze({
+            offerKey: stringValue(offer.offerKey, `${label}.shop.offers[${i}].offerKey`),
+            optionKey: stringValue(offer.optionKey, `${label}.shop.offers[${i}].optionKey`),
+            rewardType: stringValue(offer.rewardType, `${label}.shop.offers[${i}].rewardType`),
+            ...(offer.source === undefined
+              ? {}
+              : { source: stringValue(offer.source, `${label}.shop.offers[${i}].source`) }),
+            ...(offer.spurnedSource === undefined
+              ? {}
+              : {
+                  spurnedSource: stringValue(
+                    offer.spurnedSource,
+                    `${label}.shop.offers[${i}].spurnedSource`,
+                  ),
+                }),
+          });
+        });
+  if (
+    shopOffers !== undefined &&
+    new Set(shopOffers.map((offer) => offer.offerKey)).size !== shopOffers.length
+  )
+    fail(`${label}.shop.offers has duplicate keys`);
+  const shopTravelDealRefill =
+    shop === undefined || shop.travelDealRefill === undefined
+      ? undefined
+      : object(shop.travelDealRefill, `${label}.shop.travelDealRefill`);
+  if (shopTravelDealRefill !== undefined)
+    exact(
+      shopTravelDealRefill,
+      ['sourceOfferKey', 'slotIndex', 'optionKey', 'reward'],
+      `${label}.shop.travelDealRefill`,
+    );
+  const decodedShopTravelDealRefill =
+    shopTravelDealRefill === undefined
+      ? undefined
+      : Object.freeze({
+          sourceOfferKey: stringValue(
+            shopTravelDealRefill.sourceOfferKey,
+            `${label}.shop.travelDealRefill.sourceOfferKey`,
+          ),
+          slotIndex: integer(
+            shopTravelDealRefill.slotIndex,
+            `${label}.shop.travelDealRefill.slotIndex`,
+            0,
+            15,
+          ),
+          optionKey: stringValue(
+            shopTravelDealRefill.optionKey,
+            `${label}.shop.travelDealRefill.optionKey`,
+          ),
+          reward: reward(shopTravelDealRefill.reward, `${label}.shop.travelDealRefill.reward`),
+        });
+  if (
+    decodedShopTravelDealRefill !== undefined &&
+    (shopOffers === undefined ||
+      shopOffers[decodedShopTravelDealRefill.slotIndex]?.offerKey !==
+        decodedShopTravelDealRefill.sourceOfferKey)
+  )
+    fail(`${label}.shop.travelDealRefill source slot does not close inventory`);
+  const well =
+    contents.stygianWell === undefined
+      ? undefined
+      : object(contents.stygianWell, `${label}.stygianWell`);
+  if (well !== undefined) exact(well, ['offers'], `${label}.stygianWell`);
+  const wellOffers =
+    well === undefined
+      ? undefined
+      : array(well.offers, `${label}.stygianWell.offers`, 4).map((entry, i) => {
+          const offer = object(entry, `${label}.stygianWell.offers[${i}]`);
+          exact(offer, ['generationKey', 'offerKey'], `${label}.stygianWell.offers[${i}]`, [
+            'twistResultKey',
+          ]);
+          return Object.freeze({
+            generationKey: wellGeneration(
+              offer.generationKey,
+              `${label}.stygianWell.offers[${i}].generationKey`,
+            ),
+            offerKey: stringValue(offer.offerKey, `${label}.stygianWell.offers[${i}].offerKey`),
+            ...(offer.twistResultKey === undefined
+              ? {}
+              : {
+                  twistResultKey: stringValue(
+                    offer.twistResultKey,
+                    `${label}.stygianWell.offers[${i}].twistResultKey`,
+                  ),
+                }),
+          });
+        });
+  if (
+    wellOffers !== undefined &&
+    new Set(wellOffers.map((offer) => offer.generationKey)).size !== wellOffers.length
+  )
+    fail(`${label}.stygianWell.offers has duplicate generations`);
+  const pool =
+    contents.purgingPool === undefined
+      ? undefined
+      : object(contents.purgingPool, `${label}.purgingPool`);
+  if (pool !== undefined) exact(pool, ['traits'], `${label}.purgingPool`);
+  const poolTraits =
+    pool === undefined
+      ? undefined
+      : array(pool.traits, `${label}.purgingPool.traits`, 3).map((entry, i) => {
+          const trait = object(entry, `${label}.purgingPool.traits[${i}]`);
+          exact(trait, ['slotKey', 'traitKey'], `${label}.purgingPool.traits[${i}]`);
+          if (trait.slotKey !== 'left' && trait.slotKey !== 'middle' && trait.slotKey !== 'right')
+            fail(`${label}.purgingPool.traits[${i}].slotKey unsupported`);
+          if (trait.traitKey !== null && typeof trait.traitKey !== 'string')
+            fail(`${label}.purgingPool.traits[${i}].traitKey must be string or null`);
+          return Object.freeze({
+            slotKey: trait.slotKey,
+            traitKey:
+              trait.traitKey === null
+                ? null
+                : stringValue(trait.traitKey, `${label}.purgingPool.traits[${i}].traitKey`),
+          });
+        });
+  if (
+    poolTraits !== undefined &&
+    (poolTraits.length !== 3 ||
+      poolTraits.map((trait) => trait.slotKey).join(',') !== 'left,middle,right')
+  )
+    fail(`${label}.purgingPool.traits must preserve all canonical slots`);
+  const rack =
+    contents.keepsakeRack === undefined
+      ? undefined
+      : object(contents.keepsakeRack, `${label}.keepsakeRack`);
+  if (rack !== undefined) exact(rack, ['keepsakeKey'], `${label}.keepsakeRack`);
+  const fountain =
+    contents.fountain === undefined ? undefined : object(contents.fountain, `${label}.fountain`);
+  if (fountain !== undefined) exact(fountain, [], `${label}.fountain`, ['aromaticPhialTarget']);
+  const resources =
+    contents.resources === undefined
+      ? undefined
+      : array(contents.resources, `${label}.resources`, 4).map((entry, i) => {
+          const resource = object(entry, `${label}.resources[${i}]`);
+          exact(
+            resource,
+            ['acquisitionRole', 'grantedTraitKey', 'contributions'],
+            `${label}.resources[${i}]`,
+          );
+          const acquisitionRole = stringValue(
+            resource.acquisitionRole,
+            `${label}.resources[${i}].acquisitionRole`,
+          );
+          const grantedTraitKey = stringValue(
+            resource.grantedTraitKey,
+            `${label}.resources[${i}].grantedTraitKey`,
+          );
+          if (acquisitionRole !== `resource:${grantedTraitKey}`)
+            fail(`${label}.resources[${i}].acquisitionRole must match granted trait`);
+          return Object.freeze({
+            acquisitionRole,
+            grantedTraitKey,
+            contributions: numbers(
+              resource.contributions,
+              `${label}.resources[${i}].contributions`,
+            ),
+          });
+        });
+  if (
+    resources !== undefined &&
+    new Set(resources.map((resource) => resource.acquisitionRole)).size !== resources.length
+  )
+    fail(`${label}.resources has duplicate acquisition roles`);
+  return Object.freeze({
+    encounterPhases: Object.freeze(encounterPhases),
+    requiredObjects: strings(contents.requiredObjects, `${label}.requiredObjects`, 64),
+    ...(contents.incomingReward === undefined
+      ? {}
+      : { incomingReward: reward(contents.incomingReward, `${label}.incomingReward`) }),
+    ...(shop === undefined
+      ? {}
+      : {
+          shop: Object.freeze({
+            profileKey: stringValue(shop.profileKey, `${label}.shop.profileKey`),
+            offers: Object.freeze(shopOffers!),
+            ...(decodedShopTravelDealRefill === undefined
+              ? {}
+              : { travelDealRefill: decodedShopTravelDealRefill }),
+          }),
+        }),
+    ...(well === undefined
+      ? {}
+      : { stygianWell: Object.freeze({ offers: Object.freeze(wellOffers!) }) }),
+    ...(pool === undefined
+      ? {}
+      : { purgingPool: Object.freeze({ traits: Object.freeze(poolTraits!) }) }),
+    ...(rack === undefined
+      ? {}
+      : {
+          keepsakeRack: Object.freeze({
+            keepsakeKey: stringValue(rack.keepsakeKey, `${label}.keepsakeRack.keepsakeKey`),
+          }),
+        }),
+    ...(fountain === undefined || fountain.aromaticPhialTarget === undefined
+      ? {}
+      : {
+          fountain: Object.freeze({
+            aromaticPhialTarget: stringValue(
+              fountain.aromaticPhialTarget,
+              `${label}.fountain.aromaticPhialTarget`,
+            ),
+          }),
+        }),
+    ...(resources === undefined ? {} : { resources: Object.freeze(resources) }),
+  });
 }
 function outgoing(value: unknown, label: string) {
   const record = object(value, label);
@@ -765,28 +1266,12 @@ function room(value: unknown, index: number): ExecutionRoom {
   if (owner !== occurrenceOwner({ ...contextBase, phases: new Map() }))
     fail(`${label}.owner does not identify this occurrence`);
   const entered = booleanValue(record.entered, `${label}.entered`);
-  const contents = object(record.contents, `${label}.contents`);
-  exact(contents, ['encounterPhases', 'requiredObjects'], `${label}.contents`, ['incomingReward']);
-  const phases = array(contents.encounterPhases, `${label}.contents.encounterPhases`, 16).map(
-    (entry, i) => {
-      const phase = object(entry, `${label}.contents.encounterPhases[${i}]`);
-      exact(phase, ['slotKey', 'encounterKey', 'kind'], `${label}.contents.encounterPhases[${i}]`);
-      return Object.freeze({
-        slotKey: stringValue(phase.slotKey, `${label}.contents.encounterPhases[${i}].slotKey`),
-        encounterKey: stringValue(
-          phase.encounterKey,
-          `${label}.contents.encounterPhases[${i}].encounterKey`,
-        ),
-        kind: stringValue(phase.kind, `${label}.contents.encounterPhases[${i}].kind`),
-      });
-    },
-  );
-  if (new Set(phases.map((phase) => phase.slotKey)).size !== phases.length)
-    fail(`${label}.contents.encounterPhases has duplicate slots`);
+  const contents = roomContents(record.contents, `${label}.contents`);
+  const phases = contents.encounterPhases;
   const phaseMap = new Map(
     phases.map((phase) => [phase.slotKey, { encounterKey: phase.encounterKey, kind: phase.kind }]),
   );
-  const steps = array(record.trace, `${label}.trace`, 128).map((entry, i) =>
+  const steps = array(record.trace, `${label}.trace`, 64).map((entry, i) =>
     trace(entry, `${label}.trace[${i}]`, { ...contextBase, phases: phaseMap }),
   );
   if (
@@ -797,6 +1282,41 @@ function room(value: unknown, index: number): ExecutionRoom {
     (!entered && steps.length !== 0)
   )
     fail(`${label}.trace has invalid lifecycle bounds`);
+  for (const step of steps) {
+    if (step.kind === 'worldShopPurchase') {
+      const offer = contents.shop?.offers.find((candidate) => candidate.offerKey === step.offerKey);
+      if (offer === undefined || offer.rewardType !== step.rewardType)
+        fail(`${label}.trace World Shop purchase does not close inventory`);
+    }
+    if (step.kind === 'stygianWellPurchase') {
+      const offer = contents.stygianWell?.offers.find(
+        (candidate) => candidate.generationKey === step.generationKey,
+      );
+      if (offer === undefined || offer.offerKey !== step.offerKey)
+        fail(`${label}.trace Well purchase does not close inventory`);
+      if (step.twistResultKey !== undefined && offer.twistResultKey !== step.twistResultKey)
+        fail(`${label}.trace Well twist does not close inventory`);
+    }
+    if (step.kind === 'purgingPoolSale') {
+      const trait = contents.purgingPool?.traits.find(
+        (candidate) => candidate.slotKey === step.slotKey,
+      );
+      if (trait === undefined || trait.traitKey !== step.traitKey)
+        fail(`${label}.trace Pool sale does not close inventory`);
+    }
+    if (step.kind === 'keepsakeRackChange') {
+      if (contents.keepsakeRack?.keepsakeKey !== step.keepsakeKey)
+        fail(`${label}.trace rack change does not close contents`);
+    }
+    if (step.kind === 'fountainUse') {
+      if (
+        (step.aromaticPhialTarget !== undefined && contents.fountain === undefined) ||
+        (step.aromaticPhialTarget !== undefined &&
+          contents.fountain?.aromaticPhialTarget !== step.aromaticPhialTarget)
+      )
+        fail(`${label}.trace fountain use does not close contents`);
+    }
+  }
   return Object.freeze({
     id: roomId,
     owner,
@@ -804,13 +1324,7 @@ function room(value: unknown, index: number): ExecutionRoom {
     gameName: stringValue(record.gameName, `${label}.gameName`),
     kind: stringValue(record.kind, `${label}.kind`),
     entered,
-    contents: Object.freeze({
-      ...(contents.incomingReward === undefined
-        ? {}
-        : { incomingReward: reward(contents.incomingReward, `${label}.contents.incomingReward`) }),
-      encounterPhases: Object.freeze(phases),
-      requiredObjects: strings(contents.requiredObjects, `${label}.contents.requiredObjects`, 64),
-    }),
+    contents,
     trace: Object.freeze(steps),
     outgoing: outgoing(record.outgoing, `${label}.outgoing`),
   });

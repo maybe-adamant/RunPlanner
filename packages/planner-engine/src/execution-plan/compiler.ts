@@ -4,12 +4,16 @@ import {
   createTraitOfferAddress,
   semanticAddressKey,
 } from '../authored-project/addresses';
+import { parseSeaStarDuplicateSiteKey } from '../authored-project/sea-star';
+import { parseArtificerReplacementEntryKey } from '../authored-project/artificer';
 import type { TraitOfferOwnerAddress } from '../authored-project/addresses';
 import type { CanonicalAuthoredRoom, CanonicalBatch } from '../simulation/materialization';
 import { assertExactProjectEvaluationAssembly } from '../simulation/project-evaluation-assembly';
 import type { CompleteValidBiomeProjectEvaluation } from '../simulation/evaluation-products';
 import type { RunStateSnapshot } from '../simulation/rewards/run-state';
 import type { RewardEvent } from '../simulation/rewards/model';
+import type { TraitHistoryEvent } from '../simulation/trait-history';
+import type { ResolvedRewardOffer } from '../reward-kernel';
 import {
   appendSteadyGrowthTimelineEffects,
   appendTranscendentEmbryoTimelineEffects,
@@ -53,6 +57,13 @@ function stableJson(value: unknown): string {
     .join(',')}}`;
 }
 
+function agreement<T>(values: readonly T[], label: string): T {
+  const first = values[0];
+  if (first === undefined || values.some((value) => stableJson(value) !== stableJson(first)))
+    throw new CompilerError('executionCoverageMissing', `divergent ${label}`);
+  return first;
+}
+
 function fingerprint(value: unknown): string {
   let hash = 2166136261;
   for (const character of stableJson(value)) {
@@ -69,13 +80,23 @@ function ownerKey(room: CanonicalAuthoredRoom): string {
 function executionReward(room: CanonicalAuthoredRoom): ExecutionReward | undefined {
   const incoming = room.incomingReward;
   if (incoming === undefined) return undefined;
-  const payload = incoming.offer.payload;
+  return executionRewardFromOffer(
+    incoming.offer,
+    incoming.producerLifecycleKey,
+    incoming.resolvedStoreKey,
+  );
+}
+
+function executionRewardFromOffer(
+  offer: ResolvedRewardOffer,
+  producerLifecycleKey: string,
+  resolvedStoreKey?: string,
+): ExecutionReward {
+  const payload = offer.payload;
   return Object.freeze({
-    rewardType: incoming.offer.rewardType,
-    producerLifecycleKey: incoming.producerLifecycleKey,
-    ...(incoming.resolvedStoreKey === undefined
-      ? {}
-      : { resolvedStoreKey: incoming.resolvedStoreKey }),
+    rewardType: offer.rewardType,
+    producerLifecycleKey,
+    ...(resolvedStoreKey === undefined ? {} : { resolvedStoreKey }),
     ...(payload?.kind === 'BoonSource' ? { source: payload.source } : {}),
     ...(payload?.kind === 'DevotionPair'
       ? { source: payload.chosenSource, spurnedSource: payload.spurnedSource }
@@ -87,6 +108,136 @@ function executionCount(value: ExecutionRunStateCount): ExecutionRunStateCount {
   return value.kind === 'exact'
     ? Object.freeze({ kind: 'exact', count: value.count })
     : Object.freeze({ kind: 'range', min: value.min, max: value.max });
+}
+
+function executionResources(
+  room: CanonicalAuthoredRoom,
+  biome: CompleteValidBiomeProjectEvaluation,
+): ExecutionRoom['contents']['resources'] | undefined {
+  const owner = ownerKey(room);
+  const rows = biome.rewards.branches.map((branch) =>
+    (branch.traitHistory?.events ?? [])
+      .filter(
+        (event): event is Extract<TraitHistoryEvent, { readonly kind: 'elementContribution' }> =>
+          event.kind === 'elementContribution' &&
+          semanticAddressKey(event.owner) === owner &&
+          event.acquisitionPoint === 'roomExited' &&
+          event.acquisitionRole.startsWith('resource:'),
+      )
+      .map((event) =>
+        Object.freeze({
+          acquisitionRole: event.acquisitionRole,
+          grantedTraitKey: event.acquisitionRole.slice('resource:'.length),
+          contributions: Object.freeze({ ...event.contributions }),
+        }),
+      ),
+  );
+  const first = rows[0];
+  if (first === undefined || first.length === 0) return undefined;
+  if (rows.some((row) => stableJson(row) !== stableJson(first)))
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} has divergent successful resource outcomes`,
+    );
+  return Object.freeze(first);
+}
+
+function shopOptionKeys(room: CanonicalAuthoredRoom, biome: CompleteValidBiomeProjectEvaluation) {
+  const owner = ownerKey(room);
+  const offerCount = room.entryState?.offers.length ?? 0;
+  const rows = biome.rewards.branches.map((branch) =>
+    branch.events
+      .filter(
+        (event): event is Extract<RewardEvent, { readonly kind: 'shopInventorySupported' }> =>
+          event.kind === 'shopInventorySupported' && semanticAddressKey(event.origin) === owner,
+      )
+      .map((event) => event.optionKeys),
+  );
+  const first = rows[0]?.[0];
+  if (
+    first === undefined ||
+    first.length !== offerCount ||
+    rows.some((row) => row.length !== 1 || row[0]?.length !== offerCount)
+  )
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} lacks Shop inventory evidence`,
+    );
+  return agreement(
+    rows.map((row) => row[0]),
+    `${room.gameName} Shop option order`,
+  );
+}
+
+function travelDealRefill(
+  room: CanonicalAuthoredRoom,
+  biome: CompleteValidBiomeProjectEvaluation,
+  offers: readonly { readonly offerKey: string }[],
+):
+  | {
+      readonly sourceOfferKey: string;
+      readonly slotIndex: number;
+      readonly optionKey: string;
+      readonly reward: ExecutionReward;
+    }
+  | undefined {
+  const rows = biome.rewards.derivedAcquisitionEntries.filter(
+    (entry) =>
+      entry.kind === 'travelDealRefill' &&
+      entry.sourceOfferKey !== undefined &&
+      offers.some((offer) => offer.offerKey === entry.sourceOfferKey),
+  );
+  if (rows.length === 0) return undefined;
+  const row = rows[0]!;
+  agreement(
+    rows.map((candidate) =>
+      Object.freeze({
+        address: semanticAddressKey(candidate.address),
+        sourceOfferKey: candidate.sourceOfferKey,
+        slotIndex: candidate.slotIndex,
+      }),
+    ),
+    `${room.gameName} Travel Deal refill`,
+  );
+  if (row.sourceOfferKey === undefined || row.slotIndex === undefined)
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} lacks Travel Deal source`,
+    );
+  const entry = Object.values(room.acquisitionSites)
+    .map((site) => site.entries.travelDealRefill)
+    .find((candidate) => candidate !== undefined);
+  if (entry === undefined || entry === null)
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} lacks Travel Deal result`,
+    );
+  const optionRows = biome.rewards.branches.map((branch) =>
+    branch.events
+      .filter(
+        (event): event is Extract<RewardEvent, { readonly kind: 'shopInventorySupported' }> =>
+          event.kind === 'shopInventorySupported' &&
+          semanticAddressKey(event.origin) === semanticAddressKey(row.address),
+      )
+      .map((event) => event.optionKeys[row.slotIndex!]),
+  );
+  const optionKey = agreement(
+    optionRows.map((options) => {
+      if (options.length !== 1 || options[0] === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} lacks Travel Deal option`,
+        );
+      return options[0];
+    }),
+    `${room.gameName} Travel Deal option`,
+  );
+  return Object.freeze({
+    sourceOfferKey: row.sourceOfferKey,
+    slotIndex: row.slotIndex,
+    optionKey,
+    reward: executionRewardFromOffer(entry.offer, 'Shop'),
+  });
 }
 
 function diagnostic(
@@ -151,6 +302,26 @@ function diagnostic(
       disabledKeys: Object.freeze([...snapshot.arcanaFear.fear.disabledVowKeys]),
     }),
     forfeit: snapshot.forfeitStatus,
+    keepsakes: Object.freeze({
+      currentKey: snapshot.keepsakes.currentKey,
+      usedKeys: Object.freeze(snapshot.keepsakes.history.map((entry) => entry.key)),
+      blockedKeys: Object.freeze([...snapshot.keepsakes.removedKeys]),
+      fatedStatus: snapshot.keepsakes.fatedStatus,
+    }),
+    rewardPriorities: Object.freeze([...snapshot.rewardPriorities]),
+    hexProgress: Object.freeze({
+      ...(snapshot.hexObserver.spellTraitKey === undefined
+        ? {}
+        : { spellTraitKey: snapshot.hexObserver.spellTraitKey }),
+      ...(snapshot.hexObserver.layoutKey === undefined
+        ? {}
+        : { layoutKey: snapshot.hexObserver.layoutKey }),
+      talentKeys: snapshot.hexObserver.talentKeys,
+      closed: snapshot.hexObserver.closed,
+      bankedPathPoints: snapshot.hexObserver.bankedPathPoints,
+      investedPathPoints: snapshot.hexObserver.investedPathPoints,
+    }),
+    artificer: snapshot.artificer === undefined ? null : Object.freeze({ ...snapshot.artificer }),
   });
 }
 
@@ -248,15 +419,6 @@ function executionTrace(
   }
   const sourceForAction = (actionOwner: (typeof room.roomActionRoster.rows)[number]['owner']) =>
     actionOwner.kind === 'acquisitionRole' ? actionOwner.owner : actionOwner;
-  const agreement = <T>(values: readonly T[], label: string): T => {
-    const first = values[0];
-    if (first === undefined || values.some((value) => stableJson(value) !== stableJson(first)))
-      throw new CompilerError(
-        'executionCoverageMissing',
-        `${room.gameName} has divergent ${label}`,
-      );
-    return first;
-  };
   const only = <T>(values: readonly T[], label: string): T => {
     if (values.length !== 1 || values[0] === undefined)
       throw new CompilerError('executionCoverageMissing', `${room.gameName} is missing ${label}`);
@@ -497,9 +659,132 @@ function executionTrace(
     if (
       timeline.action.reference.kind !== 'interactIncomingReward' &&
       timeline.action.reference.kind !== 'interactLocalReward' &&
-      timeline.action.reference.kind !== 'interactAcquisitionEntry'
+      timeline.action.reference.kind !== 'interactAcquisitionEntry' &&
+      timeline.action.reference.kind !== 'interactShopOffer' &&
+      timeline.action.reference.kind !== 'purchaseStygianWellOffer'
     ) {
+      const reference = timeline.action.reference;
+      if (reference.kind === 'sellPurgingPoolTrait') {
+        const traitKey = room.purgingPool?.traitKeyBySlot[reference.slotKey];
+        if (traitKey === null || traitKey === undefined)
+          throw new CompilerError(
+            'executionCoverageMissing',
+            `${room.gameName} lacks selected Pool sale ${reference.slotKey}`,
+          );
+        result.push(
+          Object.freeze({
+            id: `${owner}:${timeline.action.key}`,
+            kind: 'purgingPoolSale' as const,
+            owner: semanticAddressKey(timeline.action.owner),
+            slotKey: reference.slotKey,
+            traitKey,
+          }),
+        );
+      } else if (reference.kind === 'interactKeepsakeRack') {
+        const keepsakeKey = room.keepsakeRack?.keepsakeKey;
+        if (keepsakeKey === undefined)
+          throw new CompilerError(
+            'executionCoverageMissing',
+            `${room.gameName} lacks selected keepsake rack target`,
+          );
+        result.push(
+          Object.freeze({
+            id: `${owner}:${timeline.action.key}`,
+            kind: 'keepsakeRackChange' as const,
+            owner: semanticAddressKey(timeline.action.owner),
+            keepsakeKey,
+            ...(room.keepsakeRack?.equipResults === undefined
+              ? {}
+              : {
+                  equipResults: Object.freeze({
+                    ...(room.keepsakeRack.equipResults.jeweledPom === undefined
+                      ? {}
+                      : {
+                          jeweledPom: Object.freeze({
+                            ...room.keepsakeRack.equipResults.jeweledPom,
+                          }),
+                        }),
+                    ...(room.keepsakeRack.equipResults.experimentalHammer === undefined
+                      ? {}
+                      : {
+                          experimentalHammer: Object.freeze({
+                            ...room.keepsakeRack.equipResults.experimentalHammer,
+                          }),
+                        }),
+                    ...(room.keepsakeRack.equipResults.transcendentEmbryo === undefined
+                      ? {}
+                      : {
+                          transcendentEmbryo: Object.freeze({
+                            ...room.keepsakeRack.equipResults.transcendentEmbryo,
+                          }),
+                        }),
+                  }),
+                }),
+          }),
+        );
+      } else if (reference.kind === 'useFountain') {
+        result.push(
+          Object.freeze({
+            id: `${owner}:${timeline.action.key}`,
+            kind: 'fountainUse' as const,
+            owner: semanticAddressKey(timeline.action.owner),
+            ...(room.fountainRarityResult === undefined
+              ? {}
+              : { aromaticPhialTarget: room.fountainRarityResult.targetTraitKey }),
+          }),
+        );
+      }
       continue;
+    }
+    if (timeline.action.reference.kind === 'purchaseStygianWellOffer') {
+      const generationKey = timeline.action.reference.generationKey;
+      const slot =
+        generationKey === 'travelDealRefill'
+          ? undefined
+          : (generationKey.slice('initial:'.length) as 'healing' | 'secondLeft' | 'secondRight');
+      const offerKey =
+        generationKey === 'travelDealRefill'
+          ? room.stygianWell?.travelDealRefillKey
+          : room.stygianWell?.offerKeyBySlot[slot!];
+      if (offerKey === undefined || offerKey === null)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} lacks Well inventory for ${generationKey}`,
+        );
+      const twistResultKey =
+        room.stygianWell?.twistResultKeyBySlot?.[
+          generationKey === 'travelDealRefill' ? 'travelDealRefill' : slot!
+        ];
+      result.push(
+        Object.freeze({
+          id: `${owner}:${timeline.action.key}:purchase`,
+          kind: 'stygianWellPurchase' as const,
+          owner: semanticAddressKey(timeline.action.owner),
+          generationKey,
+          offerKey,
+          ...(twistResultKey === undefined || twistResultKey === null ? {} : { twistResultKey }),
+        }),
+      );
+    }
+    const actionReference = timeline.action.reference;
+    if (actionReference.kind === 'interactShopOffer') {
+      const offer = room.entryState?.offers.find(
+        (candidate) => candidate.offerKey === actionReference.offerKey,
+      );
+      if (offer === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} lacks World Shop offer ${actionReference.offerKey}`,
+        );
+      result.push(
+        Object.freeze({
+          id: `${owner}:${timeline.action.key}:purchase`,
+          kind: 'worldShopPurchase' as const,
+          owner: semanticAddressKey(timeline.action.owner),
+          offerKey: offer.offerKey,
+          rewardType: offer.offer.rewardType,
+        }),
+      );
     }
     const source = sourceForAction(timeline.action.owner);
     if (
@@ -522,8 +807,15 @@ function executionTrace(
         branch.events.filter(
           (
             candidate,
-          ): candidate is Extract<RewardEvent, { readonly kind: 'concreteAcquisition' }> =>
-            candidate.kind === 'concreteAcquisition' &&
+          ): candidate is Extract<
+            RewardEvent,
+            | { readonly kind: 'concreteAcquisition' }
+            | { readonly kind: 'conversionToGold' }
+            | { readonly kind: 'artificerConversion' }
+          > =>
+            (candidate.kind === 'concreteAcquisition' ||
+              candidate.kind === 'conversionToGold' ||
+              candidate.kind === 'artificerConversion') &&
             semanticAddressKey(candidate.origin) === semanticAddressKey(source) &&
             candidate.acquisition.role ===
               (timeline.action.owner.kind === 'acquisitionRole'
@@ -549,9 +841,54 @@ function executionTrace(
     const role = row.event.acquisition.role;
     const offer = traitOffer(source, role);
     const level = levelResolution(source, role);
+    const seaStarDuplicate =
+      source.kind === 'acquisitionEntry'
+        ? parseSeaStarDuplicateSiteKey(source.site.pointKey)
+        : undefined;
+    const artificerReplacement =
+      source.kind === 'acquisitionEntry'
+        ? parseArtificerReplacementEntryKey(source.site.pointKey)
+        : undefined;
+    const pickupProducer =
+      source.kind === 'acquisitionEntry'
+        ? room.pickupProducers?.find((candidate) =>
+            candidate.pickups.some((pickup) => pickup.key === source.site.pointKey),
+          )
+        : undefined;
     const roles: readonly ExecutionAcquisitionRole[] = Object.freeze([
       Object.freeze({
         role,
+        disposition:
+          row.event.kind === 'conversionToGold'
+            ? ('timePiece' as const)
+            : row.event.kind === 'artificerConversion'
+              ? ('artificer' as const)
+              : ('normal' as const),
+        ...(seaStarDuplicate !== undefined
+          ? {
+              producer: Object.freeze({
+                kind: 'seaStarDuplicate' as const,
+                sourceOwner: seaStarDuplicate.sourceKey,
+                sourceRole: seaStarDuplicate.acquisitionRole,
+              }),
+            }
+          : artificerReplacement !== undefined
+            ? {
+                producer: Object.freeze({
+                  kind: 'artificerReplacement' as const,
+                  sourceOwner: artificerReplacement.sourceKey,
+                  sourceRole: artificerReplacement.acquisitionRole,
+                }),
+              }
+            : pickupProducer?.producerLifecycleKey === 'EchoLastReward'
+              ? {
+                  producer: Object.freeze({
+                    kind: 'echoLastReward' as const,
+                    sourceOwner: semanticAddressKey(pickupProducer.source),
+                    sourceRole: 'self',
+                  }),
+                }
+              : {}),
         lifecyclePoint: row.event.acquisition.lifecyclePoint,
         kind: row.event.acquisition.acquisition.kind,
         gameName: row.event.acquisition.acquisition.gameName,
@@ -663,6 +1000,30 @@ function executionRoom(
   biome: CompleteValidBiomeProjectEvaluation,
 ): ExecutionRoom {
   const reward = executionReward(room);
+  const resources = executionResources(room, biome);
+  const optionKeys = room.entryState === undefined ? undefined : shopOptionKeys(room, biome);
+  const shopOffers =
+    room.entryState === undefined
+      ? undefined
+      : Object.freeze(
+          room.entryState.offers.map((offer, index) =>
+            Object.freeze({
+              offerKey: offer.offerKey,
+              optionKey: optionKeys![index]!,
+              rewardType: offer.offer.rewardType,
+              ...(offer.offer.payload?.kind === 'BoonSource'
+                ? { source: offer.offer.payload.source }
+                : {}),
+              ...(offer.offer.payload?.kind === 'DevotionPair'
+                ? {
+                    source: offer.offer.payload.chosenSource,
+                    spurnedSource: offer.offer.payload.spurnedSource,
+                  }
+                : {}),
+            }),
+          ),
+        );
+  const refill = shopOffers === undefined ? undefined : travelDealRefill(room, biome, shopOffers);
   return Object.freeze({
     id: room.occurrenceId,
     owner: ownerKey(room),
@@ -682,6 +1043,81 @@ function executionRoom(
         ),
       ),
       requiredObjects: Object.freeze((room.requiredObjects ?? []).map((object) => object.key)),
+      ...(room.entryState === undefined
+        ? {}
+        : {
+            shop: Object.freeze({
+              profileKey: room.entryState.profileKey,
+              offers: shopOffers!,
+              ...(refill === undefined ? {} : { travelDealRefill: refill }),
+            }),
+          }),
+      ...(room.stygianWell?.interacted !== true
+        ? {}
+        : {
+            stygianWell: Object.freeze({
+              offers: Object.freeze(
+                (
+                  [
+                    [
+                      'initial:healing',
+                      room.stygianWell.offerKeyBySlot.healing,
+                      room.stygianWell.twistResultKeyBySlot?.healing,
+                    ],
+                    [
+                      'initial:secondLeft',
+                      room.stygianWell.offerKeyBySlot.secondLeft,
+                      room.stygianWell.twistResultKeyBySlot?.secondLeft,
+                    ],
+                    [
+                      'initial:secondRight',
+                      room.stygianWell.offerKeyBySlot.secondRight,
+                      room.stygianWell.twistResultKeyBySlot?.secondRight,
+                    ],
+                    [
+                      'travelDealRefill',
+                      room.stygianWell.travelDealRefillKey,
+                      room.stygianWell.twistResultKeyBySlot?.travelDealRefill,
+                    ],
+                  ] as const
+                ).flatMap(([generationKey, offerKey, twistResultKey]) =>
+                  offerKey === null || offerKey === undefined
+                    ? []
+                    : [
+                        Object.freeze({
+                          generationKey,
+                          offerKey,
+                          ...(twistResultKey === undefined || twistResultKey === null
+                            ? {}
+                            : { twistResultKey }),
+                        }),
+                      ],
+                ),
+              ),
+            }),
+          }),
+      ...(room.purgingPool?.interacted !== true
+        ? {}
+        : {
+            purgingPool: Object.freeze({
+              traits: Object.freeze(
+                (['left', 'middle', 'right'] as const).map((slotKey) =>
+                  Object.freeze({ slotKey, traitKey: room.purgingPool!.traitKeyBySlot[slotKey] }),
+                ),
+              ),
+            }),
+          }),
+      ...(room.keepsakeRack === undefined
+        ? {}
+        : { keepsakeRack: Object.freeze({ keepsakeKey: room.keepsakeRack.keepsakeKey }) }),
+      ...(room.fountainRarityResult === undefined
+        ? {}
+        : {
+            fountain: Object.freeze({
+              aromaticPhialTarget: room.fountainRarityResult.targetTraitKey,
+            }),
+          }),
+      ...(resources === undefined ? {} : { resources }),
     }),
     trace: executionTrace(room, snapshots, biome),
     outgoing: executionOutgoing(room, batches, fixedTargets, crossBiomeTarget, crossBiomeSourceId),

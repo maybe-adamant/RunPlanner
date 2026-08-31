@@ -3,7 +3,7 @@ import type { ProjectEvaluationAssembly } from '../simulation/evaluation-product
 
 /** The only execution artifact currently supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 3 as const;
+export const EXECUTION_PROTOCOL_VERSION = 4 as const;
 export const EXECUTION_CATALOG_VERSION = '0.52.0-boss-preboss-variants' as const;
 
 export type ExecutionRunStateCount =
@@ -60,6 +60,25 @@ export interface ExecutionRunStateDiagnostic {
     readonly disabledKeys: readonly string[];
   };
   readonly forfeit: 'inactive' | 'available' | 'consumed';
+  /** Gate D's bounded observable keepsake facts; it is not a second keepsake model. */
+  readonly keepsakes: {
+    readonly currentKey: string;
+    readonly usedKeys: readonly string[];
+    readonly blockedKeys: readonly string[];
+    readonly fatedStatus: 'Unknown' | 'Fated' | 'Unfated';
+  };
+  readonly rewardPriorities: readonly string[];
+  readonly hexProgress: {
+    readonly spellTraitKey?: string;
+    readonly layoutKey?: string;
+    /** Exact installed Rare/Epic nodes, observable from the slotted spell talent list. */
+    readonly talentKeys: readonly string[];
+    readonly closed: boolean;
+    readonly bankedPathPoints: number;
+    readonly investedPathPoints: number;
+  };
+  /** Null when Artificer is not active; no planner chronology is serialized. */
+  readonly artificer: { readonly usedCount: number; readonly remainingCount: number } | null;
 }
 
 export interface ExecutionReward {
@@ -78,6 +97,47 @@ export interface ExecutionRoomContents {
     readonly kind: string;
   }[];
   readonly requiredObjects: readonly string[];
+  /** World-Shop identity only. CanonicalShopOffer has no producer lifecycle. */
+  readonly shop?: {
+    readonly profileKey: string;
+    readonly offers: readonly {
+      readonly offerKey: string;
+      readonly optionKey: string;
+      readonly rewardType: string;
+      readonly source?: string;
+      readonly spurnedSource?: string;
+    }[];
+    /** The first paid World-Shop slot may be replaced by Travel Deal. */
+    readonly travelDealRefill?: {
+      readonly sourceOfferKey: string;
+      readonly slotIndex: number;
+      readonly optionKey: string;
+      readonly reward: ExecutionReward;
+    };
+  };
+  /** The complete entered Well inventory, including selected nested results. */
+  readonly stygianWell?: {
+    readonly offers: readonly {
+      readonly generationKey:
+        'initial:healing' | 'initial:secondLeft' | 'initial:secondRight' | 'travelDealRefill';
+      readonly offerKey: string;
+      readonly twistResultKey?: string;
+    }[];
+  };
+  readonly purgingPool?: {
+    readonly traits: readonly {
+      readonly slotKey: 'left' | 'middle' | 'right';
+      readonly traitKey: string | null;
+    }[];
+  };
+  readonly keepsakeRack?: { readonly keepsakeKey: string };
+  readonly fountain?: { readonly aromaticPhialTarget?: string };
+  /** Successful automatic resource collection settled at this room's exit. */
+  readonly resources?: readonly {
+    readonly acquisitionRole: string;
+    readonly grantedTraitKey: string;
+    readonly contributions: Readonly<Record<string, number>>;
+  }[];
 }
 
 export type ExecutionTraitOffer =
@@ -109,8 +169,18 @@ export interface ExecutionLevelResolution {
   readonly levelCount: number;
 }
 
+/** Exact already-settled pickup conversion; runtime must not reassess it. */
+export type ExecutionAcquisitionDisposition = 'normal' | 'timePiece' | 'artificer';
+
 export interface ExecutionAcquisitionRole {
   readonly role: string;
+  readonly disposition: ExecutionAcquisitionDisposition;
+  /** Closed producer identity for a generated nested pickup. */
+  readonly producer?: {
+    readonly kind: 'seaStarDuplicate' | 'artificerReplacement' | 'echoLastReward';
+    readonly sourceOwner: string;
+    readonly sourceRole: string;
+  };
   readonly lifecyclePoint: string;
   readonly kind: string;
   readonly gameName: string;
@@ -120,6 +190,13 @@ export interface ExecutionAcquisitionRole {
   };
   readonly traitOffer?: ExecutionTraitOffer;
   readonly levelResolution?: ExecutionLevelResolution;
+}
+
+export interface ExecutionKeepsakeEquipResults {
+  readonly jeweledPom?: { readonly traitKey: string; readonly rarity?: string };
+  readonly experimentalHammer?:
+    { readonly kind: 'selected'; readonly traitKey: string } | { readonly kind: 'exhausted' };
+  readonly transcendentEmbryo?: { readonly blessingKey: string };
 }
 
 export type ExecutionTraceStep =
@@ -180,6 +257,42 @@ export type ExecutionTraceStep =
       readonly source: string;
       readonly target: string;
       readonly rarity: string;
+    }
+  | {
+      readonly id: string;
+      readonly kind: 'purgingPoolSale';
+      readonly owner: string;
+      readonly slotKey: 'left' | 'middle' | 'right';
+      readonly traitKey: string;
+    }
+  | {
+      readonly id: string;
+      readonly kind: 'stygianWellPurchase';
+      readonly owner: string;
+      readonly generationKey:
+        'initial:healing' | 'initial:secondLeft' | 'initial:secondRight' | 'travelDealRefill';
+      readonly offerKey: string;
+      readonly twistResultKey?: string;
+    }
+  | {
+      readonly id: string;
+      readonly kind: 'worldShopPurchase';
+      readonly owner: string;
+      readonly offerKey: string;
+      readonly rewardType: string;
+    }
+  | {
+      readonly id: string;
+      readonly kind: 'keepsakeRackChange';
+      readonly owner: string;
+      readonly keepsakeKey: string;
+      readonly equipResults?: ExecutionKeepsakeEquipResults;
+    }
+  | {
+      readonly id: string;
+      readonly kind: 'fountainUse';
+      readonly owner: string;
+      readonly aromaticPhialTarget?: string;
     };
 
 export interface ExecutionOutgoingTarget {

@@ -19,6 +19,7 @@ import {
 import type { HistoryCounters, HistoryStateView } from '../history';
 import type { TraitHistoryState } from '../trait-history';
 import type { RewardBranchState } from './branch-primitives';
+import { artificerStatus } from '../arcana-fear';
 
 export type RunStateOwner =
   ExitDecisionAddress | HubDecisionAddress | RoomRunStateCheckpointAddress;
@@ -114,6 +115,20 @@ export interface RunStateSnapshot {
   readonly keepsakes: RewardBranchState['keepsakes'];
   readonly rewardPriorities: RewardBranchState['rewardPriorities'];
   readonly hexProgress: RewardBranchState['hexProgress'];
+  /** Game-facing Hex identity, resolved while the normalized catalog is available. */
+  readonly hexObserver: {
+    readonly spellTraitKey?: string;
+    readonly layoutKey?: string;
+    readonly talentKeys: readonly string[];
+    readonly closed: boolean;
+    readonly bankedPathPoints: number;
+    readonly investedPathPoints: number;
+  };
+  /** Normalized Artificer counters, derived where the catalog is available. */
+  readonly artificer?: {
+    readonly usedCount: number;
+    readonly remainingCount: number;
+  };
   readonly forfeitStatus: 'inactive' | 'available' | 'consumed';
   readonly bags: readonly DecisionRewardBagState[];
 }
@@ -710,6 +725,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
       derivationCache?.bagsByBranchState.set(bagCacheKey, bags);
     }
   }
+  const currentArtificerStatus = artificerStatus(context.catalog, first.arcanaFear);
   return Object.freeze({
     owner: context.owner,
     historySequence: context.historyView.sequence,
@@ -724,6 +740,37 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
     keepsakes: first.keepsakes,
     rewardPriorities: first.rewardPriorities,
     hexProgress: first.hexProgress,
+    hexObserver: Object.freeze({
+      ...(first.hexProgress.spellTraitKey === undefined
+        ? {}
+        : { spellTraitKey: first.hexProgress.spellTraitKey }),
+      ...(first.hexProgress.tree === undefined
+        ? {}
+        : { layoutKey: first.hexProgress.tree.layoutKey }),
+      talentKeys: Object.freeze([
+        ...(first.hexProgress.tree?.rareTalentKeys ?? []),
+        ...(first.hexProgress.tree?.epicTalentKeys ?? []),
+        ...(first.hexProgress.godSentAdded === true && first.hexProgress.spellTraitKey !== undefined
+          ? (() => {
+              const godSent = context.catalog.hexes.byKey[first.hexProgress.spellTraitKey]?.godSent;
+              return godSent === undefined
+                ? []
+                : [godSent.olympianTalentKey, godSent.lineageTalentKey];
+            })()
+          : []),
+      ]),
+      closed: first.hexProgress.talentDropsClosed === true,
+      bankedPathPoints: first.hexProgress.bankedPathPoints,
+      investedPathPoints: first.hexProgress.investedPathPoints,
+    }),
+    ...(currentArtificerStatus === undefined
+      ? {}
+      : {
+          artificer: Object.freeze({
+            usedCount: currentArtificerStatus.spent,
+            remainingCount: currentArtificerStatus.remaining,
+          }),
+        }),
     forfeitStatus: first.forfeitStatus,
     bags,
   });
