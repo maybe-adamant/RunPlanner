@@ -302,6 +302,27 @@ function diagnostic(
       disabledKeys: Object.freeze([...snapshot.arcanaFear.fear.disabledVowKeys]),
     }),
     forfeit: snapshot.forfeitStatus,
+    chaos: Object.freeze({
+      active: Object.freeze(
+        snapshot.traits.chaos.active.map((entry) =>
+          Object.freeze({
+            curseKey: entry.curseKey,
+            blessingKey: entry.blessingKey,
+            rarity: entry.rarity,
+            clock: entry.clock,
+            remaining: entry.remaining,
+          }),
+        ),
+      ),
+      matured: Object.freeze(
+        snapshot.traits.chaos.matured.map((entry) =>
+          Object.freeze({
+            blessingKey: entry.blessingKey,
+            rarity: entry.rarity,
+          }),
+        ),
+      ),
+    }),
     keepsakes: Object.freeze({
       currentKey: snapshot.keepsakes.currentKey,
       usedKeys: Object.freeze(snapshot.keepsakes.history.map((entry) => entry.key)),
@@ -442,6 +463,21 @@ function executionTrace(
     if (selected === undefined) return undefined;
     if (selected.offer.kind === 'fallbackGold')
       return Object.freeze({ kind: 'fallbackGold' as const, giver: selected.offer.giverKey });
+    if (selected.offer.kind === 'chaos')
+      return Object.freeze({
+        kind: 'chaos' as const,
+        giver: 'Chaos' as const,
+        curseOptions: Object.freeze(
+          selected.offer.curseOptions.map((option) =>
+            Object.freeze({ curseKey: option.curseKey, requirementCount: option.requirementCount }),
+          ),
+        ),
+        selected: selected.offer.selectedOptionKey,
+        selectedCurseValues: Object.freeze({ ...selected.offer.selectedCurseValues }),
+        blessingKey: selected.offer.blessingKey,
+        rarity: selected.offer.rarity,
+        blessingValues: Object.freeze({ ...selected.offer.blessingValues }),
+      });
     if (selected.offer.kind !== 'traits')
       throw new CompilerError(
         'executionCoverageMissing',
@@ -947,7 +983,11 @@ function executionOutgoing(
   const owner = ownerKey(room);
   const batch = batches.get(owner);
   if (batch !== undefined) {
-    if (batch.selectedExitKey === null) {
+    const pickedAdditional = batch.additional.filter((additional) => additional.picked);
+    if (
+      (batch.selectedExitKey === null && pickedAdditional.length !== 1) ||
+      (batch.selectedExitKey !== null && pickedAdditional.length !== 0)
+    ) {
       throw new CompilerError('openingSelectionMissing', `${room.gameName} has no selected exit`);
     }
     return Object.freeze({
@@ -968,7 +1008,33 @@ function executionOutgoing(
           }),
         ),
       ),
-      selectedExitKey: batch.selectedExitKey,
+      additional: Object.freeze(
+        batch.additional.map((additional) =>
+          Object.freeze({
+            kind: additional.key,
+            key: additional.key,
+            owner: semanticAddressKey(additional.origin),
+            room: Object.freeze({
+              id: additional.room.occurrenceId,
+              biomeKey: additional.room.origin.biomeKey,
+              gameName: additional.room.gameName,
+            }),
+            picked: additional.picked,
+            ...(additional.chaosOrigin === undefined
+              ? {}
+              : {
+                  ixionOrigin: Object.freeze({
+                    sourceBiomeKey: additional.chaosOrigin.sourceBiomeKey,
+                    sourceOccurrenceId: additional.chaosOrigin.sourceOccurrenceId,
+                    generationKey: additional.chaosOrigin.generationKey,
+                  }),
+                }),
+          }),
+        ),
+      ),
+      ...(batch.selectedExitKey === null
+        ? { selectedAdditionalKey: pickedAdditional[0]!.key }
+        : { selectedExitKey: batch.selectedExitKey }),
       ...(batch.resolvedSharedRewardStoreKey === undefined
         ? {}
         : { resolvedSharedRewardStoreKey: batch.resolvedSharedRewardStoreKey }),

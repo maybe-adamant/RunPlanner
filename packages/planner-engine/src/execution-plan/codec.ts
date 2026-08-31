@@ -39,6 +39,11 @@ function integer(
     fail(`${label} must be an integer in range`);
   return value;
 }
+function finiteNumber(value: unknown, label: string): number {
+  if (typeof value !== 'number' || !Number.isFinite(value))
+    fail(`${label} must be a finite number`);
+  return value;
+}
 function booleanValue(value: unknown, label: string): boolean {
   if (value !== true && value !== false) fail(`${label} must be boolean`);
   return value;
@@ -169,6 +174,13 @@ function numbers(value: unknown, label: string): Readonly<Record<string, number>
     result[stringValue(key, `${label} key`)] = integer(entry, `${label}.${key}`);
   return Object.freeze(result);
 }
+function decimalNumbers(value: unknown, label: string): Readonly<Record<string, number>> {
+  const source = object(value, label);
+  const result: Record<string, number> = {};
+  for (const [key, entry] of Object.entries(source))
+    result[stringValue(key, `${label} key`)] = finiteNumber(entry, `${label}.${key}`);
+  return Object.freeze(result);
+}
 function count(value: unknown, label: string) {
   const record = object(value, label);
   if (record.kind === 'exact') {
@@ -222,6 +234,7 @@ function diagnostic(value: unknown, label: string) {
       'arcana',
       'vows',
       'forfeit',
+      'chaos',
       'keepsakes',
       'rewardPriorities',
       'hexProgress',
@@ -327,6 +340,38 @@ function diagnostic(value: unknown, label: string) {
     record.forfeit !== 'consumed'
   )
     fail(`${label}.forfeit unsupported`);
+  const chaos = object(record.chaos, `${label}.chaos`);
+  exact(chaos, ['active', 'matured'], `${label}.chaos`);
+  const activeChaos = array(chaos.active, `${label}.chaos.active`, 32).map((entry, index) => {
+    const item = object(entry, `${label}.chaos.active[${index}]`);
+    exact(
+      item,
+      ['curseKey', 'blessingKey', 'rarity', 'clock', 'remaining'],
+      `${label}.chaos.active[${index}]`,
+    );
+    if (
+      item.clock !== 'encounters' &&
+      item.clock !== 'locations' &&
+      item.clock !== 'godBoonScreens'
+    )
+      fail(`${label}.chaos.active[${index}].clock unsupported`);
+    const remaining = integer(item.remaining, `${label}.chaos.active[${index}].remaining`);
+    return Object.freeze({
+      curseKey: stringValue(item.curseKey, `${label}.chaos.active[${index}].curseKey`),
+      blessingKey: stringValue(item.blessingKey, `${label}.chaos.active[${index}].blessingKey`),
+      rarity: stringValue(item.rarity, `${label}.chaos.active[${index}].rarity`),
+      clock: item.clock,
+      remaining,
+    });
+  });
+  const maturedChaos = array(chaos.matured, `${label}.chaos.matured`, 32).map((entry, index) => {
+    const item = object(entry, `${label}.chaos.matured[${index}]`);
+    exact(item, ['blessingKey', 'rarity'], `${label}.chaos.matured[${index}]`);
+    return Object.freeze({
+      blessingKey: stringValue(item.blessingKey, `${label}.chaos.matured[${index}].blessingKey`),
+      rarity: stringValue(item.rarity, `${label}.chaos.matured[${index}].rarity`),
+    });
+  });
   const keepsakes = object(record.keepsakes, `${label}.keepsakes`);
   exact(keepsakes, ['currentKey', 'usedKeys', 'blockedKeys', 'fatedStatus'], `${label}.keepsakes`);
   const rewardPriorities = strings(record.rewardPriorities, `${label}.rewardPriorities`, 32, false);
@@ -423,6 +468,10 @@ function diagnostic(value: unknown, label: string) {
       disabledKeys: strings(vows.disabledKeys, `${label}.vows.disabledKeys`, 128),
     }),
     forfeit: record.forfeit,
+    chaos: Object.freeze({
+      active: Object.freeze(activeChaos),
+      matured: Object.freeze(maturedChaos),
+    }),
     ...gateD,
   }) as unknown as ExecutionRunStateDiagnostic;
 }
@@ -433,6 +482,54 @@ function traitOffer(value: unknown, label: string) {
     return Object.freeze({
       kind: 'fallbackGold' as const,
       giver: stringValue(record.giver, `${label}.giver`),
+    });
+  }
+  if (record.kind === 'chaos') {
+    exact(
+      record,
+      [
+        'kind',
+        'giver',
+        'curseOptions',
+        'selected',
+        'selectedCurseValues',
+        'blessingKey',
+        'rarity',
+        'blessingValues',
+      ],
+      label,
+    );
+    if (record.giver !== 'Chaos') fail(`${label}.giver must be Chaos`);
+    const curseOptions = array(record.curseOptions, `${label}.curseOptions`, 3).map(
+      (entry, index) => {
+        const option = object(entry, `${label}.curseOptions[${index}]`);
+        exact(option, ['curseKey', 'requirementCount'], `${label}.curseOptions[${index}]`);
+        return Object.freeze({
+          curseKey: stringValue(option.curseKey, `${label}.curseOptions[${index}].curseKey`),
+          requirementCount: integer(
+            option.requirementCount,
+            `${label}.curseOptions[${index}].requirementCount`,
+            1,
+          ),
+        });
+      },
+    );
+    if (curseOptions.length !== 3) fail(`${label}.curseOptions must contain three ordered curses`);
+    const selected = stringValue(record.selected, `${label}.selected`);
+    if (!['option1', 'option2', 'option3'].includes(selected))
+      fail(`${label}.selected must identify a Chaos option`);
+    return Object.freeze({
+      kind: 'chaos' as const,
+      giver: 'Chaos' as const,
+      curseOptions: Object.freeze(curseOptions),
+      selected: selected as 'option1' | 'option2' | 'option3',
+      selectedCurseValues: decimalNumbers(
+        record.selectedCurseValues,
+        `${label}.selectedCurseValues`,
+      ),
+      blessingKey: stringValue(record.blessingKey, `${label}.blessingKey`),
+      rarity: stringValue(record.rarity, `${label}.rarity`),
+      blessingValues: decimalNumbers(record.blessingValues, `${label}.blessingValues`),
     });
   }
   if (record.kind !== 'traits') fail(`${label}.kind unsupported`);
@@ -1206,7 +1303,9 @@ function outgoing(value: unknown, label: string) {
     });
   }
   if (record.kind !== 'batch') return fail(`${label}.kind unsupported`);
-  exact(record, ['owner', 'kind', 'targets', 'selectedExitKey'], label, [
+  exact(record, ['owner', 'kind', 'targets', 'additional'], label, [
+    'selectedExitKey',
+    'selectedAdditionalKey',
     'resolvedSharedRewardStoreKey',
   ]);
   const targets = array(record.targets, `${label}.targets`, 16).map((entry, index) => {
@@ -1226,21 +1325,93 @@ function outgoing(value: unknown, label: string) {
       picked: booleanValue(target.picked, `${label}.targets[${index}].picked`),
     });
   });
-  const selectedExitKey = stringValue(record.selectedExitKey, `${label}.selectedExitKey`);
+  const selectedExitKey =
+    record.selectedExitKey === undefined
+      ? undefined
+      : stringValue(record.selectedExitKey, `${label}.selectedExitKey`);
+  const additional = array(record.additional, `${label}.additional`, 2).map((entry, index) => {
+    const item = object(entry, `${label}.additional[${index}]`);
+    exact(item, ['kind', 'key', 'owner', 'room', 'picked'], `${label}.additional[${index}]`, [
+      'ixionOrigin',
+    ]);
+    if ((item.kind !== 'chaos' && item.kind !== 'zagreusContract') || item.key !== item.kind)
+      fail(`${label}.additional[${index}] has unsupported identity`);
+    const room = object(item.room, `${label}.additional[${index}].room`);
+    exact(room, ['id', 'biomeKey', 'gameName'], `${label}.additional[${index}].room`);
+    const ixion =
+      item.ixionOrigin === undefined
+        ? undefined
+        : object(item.ixionOrigin, `${label}.additional[${index}].ixionOrigin`);
+    if (ixion !== undefined) {
+      if (item.kind !== 'chaos')
+        fail(`${label}.additional[${index}].ixionOrigin belongs only to Chaos`);
+      exact(
+        ixion,
+        ['sourceBiomeKey', 'sourceOccurrenceId', 'generationKey'],
+        `${label}.additional[${index}].ixionOrigin`,
+      );
+    }
+    return Object.freeze({
+      kind: item.kind as 'chaos' | 'zagreusContract',
+      key: item.key as 'chaos' | 'zagreusContract',
+      owner: stringValue(item.owner, `${label}.additional[${index}].owner`),
+      room: Object.freeze({
+        id: stringValue(room.id, `${label}.additional[${index}].room.id`),
+        biomeKey: stringValue(room.biomeKey, `${label}.additional[${index}].room.biomeKey`),
+        gameName: stringValue(room.gameName, `${label}.additional[${index}].room.gameName`),
+      }),
+      picked: booleanValue(item.picked, `${label}.additional[${index}].picked`),
+      ...(ixion === undefined
+        ? {}
+        : {
+            ixionOrigin: Object.freeze({
+              sourceBiomeKey: stringValue(
+                ixion.sourceBiomeKey,
+                `${label}.additional[${index}].ixionOrigin.sourceBiomeKey`,
+              ),
+              sourceOccurrenceId: stringValue(
+                ixion.sourceOccurrenceId,
+                `${label}.additional[${index}].ixionOrigin.sourceOccurrenceId`,
+              ),
+              generationKey: stringValue(
+                ixion.generationKey,
+                `${label}.additional[${index}].ixionOrigin.generationKey`,
+              ),
+            }),
+          }),
+    });
+  });
+  const selectedAdditionalKey =
+    record.selectedAdditionalKey === undefined
+      ? undefined
+      : stringValue(record.selectedAdditionalKey, `${label}.selectedAdditionalKey`);
   if (
     targets.length === 0 ||
     new Set(targets.map((target) => target.exitKey)).size !== targets.length ||
     new Set(targets.map((target) => target.index)).size !== targets.length ||
     targets.some((target, index) => target.index !== index + 1) ||
-    targets.filter((target) => target.picked).length !== 1 ||
-    targets.find((target) => target.picked)?.exitKey !== selectedExitKey
+    targets.filter((target) => target.picked).length +
+      additional.filter((item) => item.picked).length !==
+      1 ||
+    new Set(additional.map((item) => item.key)).size !== additional.length ||
+    new Set(additional.map((item) => item.owner)).size !== additional.length ||
+    (selectedExitKey === undefined && selectedAdditionalKey === undefined) ||
+    (selectedExitKey !== undefined && selectedAdditionalKey !== undefined) ||
+    (selectedExitKey !== undefined &&
+      targets.find((target) => target.picked)?.exitKey !== selectedExitKey) ||
+    (selectedAdditionalKey !== undefined &&
+      additional.find((item) => item.picked)?.key !== selectedAdditionalKey)
   )
     fail(`${label} must select exactly one picked target and preserve physical order`);
   return Object.freeze({
     owner,
     kind: 'batch' as const,
     targets: Object.freeze(targets),
-    selectedExitKey,
+    additional: Object.freeze(additional),
+    ...(selectedExitKey === undefined ? {} : { selectedExitKey }),
+    ...(selectedAdditionalKey === undefined
+      ? {}
+      : { selectedAdditionalKey: selectedAdditionalKey as 'chaos' | 'zagreusContract' }),
     ...(record.resolvedSharedRewardStoreKey === undefined
       ? {}
       : {
@@ -1377,7 +1548,10 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
       fail(`rooms contains unsupported biome ${room.biomeKey}`);
     const targets =
       room.outgoing.kind === 'batch'
-        ? room.outgoing.targets.map((target) => target.room)
+        ? [
+            ...room.outgoing.targets.map((target) => target.room),
+            ...room.outgoing.additional.map((additional) => additional.room),
+          ]
         : room.outgoing.kind === 'fixed'
           ? [room.outgoing.target]
           : [];
@@ -1389,6 +1563,38 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
         referenced.gameName !== target.gameName
       ) {
         fail(`rooms.${room.id} target room identity mismatch`);
+      }
+    }
+    if (room.outgoing.kind === 'batch') {
+      for (const additional of room.outgoing.additional) {
+        const expectedOwner = JSON.stringify([
+          'additionalExit',
+          'Underworld',
+          room.biomeKey,
+          room.id,
+          additional.key,
+        ]);
+        if (additional.owner !== expectedOwner)
+          fail(`rooms.${room.id} additional exit owner mismatch`);
+        if (
+          (additional.kind === 'chaos' && !additional.room.gameName.startsWith('Chaos_')) ||
+          (additional.kind === 'zagreusContract' && additional.room.gameName !== 'C_Boss01')
+        )
+          fail(`rooms.${room.id} additional exit target mismatch`);
+        if (additional.ixionOrigin !== undefined) {
+          const source = roomsById.get(additional.ixionOrigin.sourceOccurrenceId);
+          if (
+            source === undefined ||
+            source.biomeKey !== additional.ixionOrigin.sourceBiomeKey ||
+            !source.trace.some(
+              (step) =>
+                step.kind === 'stygianWellPurchase' &&
+                step.generationKey === additional.ixionOrigin?.generationKey &&
+                step.offerKey === 'TemporaryForcedSecretDoorTrait',
+            )
+          )
+            fail(`rooms.${room.id} Ixion origin mismatch`);
+        }
       }
     }
   }

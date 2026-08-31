@@ -715,15 +715,20 @@ Included:
 - purchase removal/recompile cleanup represented solely by the newly published
   immutable plan;
 - Chaos room identity and return topology;
-- all three Chaos curse/blessing alternatives, shared rarity, durations and
-  authored values;
+- all three Chaos curse identities and requirement counts, plus the selected
+  pair's curse values, blessing, shared rarity, and blessing values;
 - active/matured Chaos Run State comparison at the next published checkpoint;
 - selected pair observation and trait acquisition; and
 - Zagreus contract as its own closed additional-exit command where authorable.
 
-Primary witnesses include F natural Chaos, F/G Ixion forcing, authored natural
-gate satisfying pending Ixion, consecutive Ixions producing gates in separate
-eligible rooms, and wrong Chaos-pair selection blocking later realization.
+Primary policy witnesses include F natural Chaos, F/G Ixion forcing, authored
+natural gate satisfying pending Ixion, consecutive Ixions producing gates in
+separate eligible rooms, and wrong Chaos-pair selection blocking later
+realization. Gate E retains focused compiler-codec and native-seam witnesses;
+Gate G's maximal-fixture closure must carry a complete-valid real Chaos/Ixion
+product across the compiler/runtime fixture boundary because inserting Chaos
+into the existing golden chronology changes every later room-eligibility
+frontier.
 
 ### Gate F — G special commands and supported NPC outcomes
 
@@ -757,6 +762,9 @@ Required closure work:
 
 - run an independent compiler-coverage audit over representative maximal F/G
   fixtures and fail on every unhandled semantic owner;
+- compile at least one complete-valid canonical Chaos/Ixion route through the
+  shared execution fixture and drive its additional-exit generation, selected
+  pair, and return through the runtime consumer;
 - compare every supported maximal-fixture Run State checkpoint with matching
   and deliberately mutated live-observer values, including one exact counter,
   one ranged bag count, one trait, and one retained-effect witness;
