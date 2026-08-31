@@ -284,6 +284,7 @@ function buildAnomalyProject(success: boolean) {
   const combat02Peer1 = createOccurrenceId(`detour-g-combat02-peer1-${success}`);
   const combat02Peer2 = createOccurrenceId(`detour-g-combat02-peer2-${success}`);
   const returned = createOccurrenceId(`detour-g-return-${success}`);
+  const returnedPeer = createOccurrenceId(`detour-g-return-peer-${success}`);
   let project = projectFor('Underworld', 2);
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
@@ -307,6 +308,11 @@ function buildAnomalyProject(success: boolean) {
   project = replaceIncomingReward(project, gBiome, combat02Peer1, 'MaxManaDrop');
   project = replaceApolloReward(project, gBiome, combat02Peer2);
   project = setNormalSelection(project, gBiome, combat02, 'exit1');
+  project = createBatch(project, gBiome, anomaly);
+  project = replaceBatchStore(project, gBiome, anomaly, 'RunProgress');
+  project = addTarget(project, gBiome, anomaly, 'exit1', returned, 'G_Combat07');
+  project = addTarget(project, gBiome, anomaly, 'exit2', returnedPeer, 'G_Combat08');
+  project = setNormalSelection(project, gBiome, anomaly, 'exit1');
   project = applyProjectCommand(project, catalog, {
     kind: 'SwitchTargetToAnomaly',
     target: createTargetAddress(gBiome, source(combat02), 'exit1'),
@@ -317,19 +323,12 @@ function buildAnomalyProject(success: boolean) {
     occurrence: createOccurrenceAddress(gBiome, anomaly),
     success,
   });
-  project = appendSingleTargetBatch(
-    project,
-    gBiome,
-    anomaly,
-    returned,
-    'G_Combat07',
-    'RunProgress',
-  );
   project = replaceApolloReward(project, gBiome, returned);
   return {
     project,
     anomaly,
     returned,
+    returnedPeer,
     earlyTarget: createTargetAddress(gBiome, source(combat01), 'exit1'),
   };
 }
@@ -896,7 +895,7 @@ describe('route-detour simulation', () => {
   it.each([true, false])(
     'consumes the same Anomaly offer while acquisition follows success=%s and returns before commit',
     (success) => {
-      const { project, anomaly, returned } = buildAnomalyProject(success);
+      const { project, anomaly, returned, returnedPeer } = buildAnomalyProject(success);
       const { snapshot, history } = prefix(project, gBiome);
       const rewards = evaluateBiomeRewards(
         catalog,
@@ -912,12 +911,22 @@ describe('route-detour simulation', () => {
         .flatMap((decision) => decision.targets)
         .find((target) => target.room.occurrenceId === anomaly)?.room;
       if (anomalyRoom === undefined) throw new Error('Anomaly room was not materialized');
+      const anomalyReturn = snapshot.decisions
+        .filter((decision) => decision.kind === 'batch')
+        .find(
+          (decision) =>
+            decision.source.kind === 'occurrence' && decision.source.occurrenceId === anomaly,
+        );
 
       expect(anomalyRoom).toMatchObject({
         gameName: 'B_Combat01',
         anomalyReplacement: { replacedRoomGameName: 'G_Combat04' },
         incomingReward: { offer: { rewardType: 'RoomMoneyDrop' }, acquisitionEnabled: success },
       });
+      expect(anomalyReturn?.targets.map((target) => target.room.occurrenceId)).toEqual([returned]);
+      expect(anomalyReturn?.targets.map((target) => target.room.occurrenceId)).not.toContain(
+        returnedPeer,
+      );
       expect(branchHasEvent(rewards.branches, 'rewardOffered', incoming)).toBe(true);
       expect(branchHasEvent(rewards.branches, 'concreteAcquisition', incoming)).toBe(success);
       const anomalyAcquisitions = rewards.branches.flatMap((branch) =>

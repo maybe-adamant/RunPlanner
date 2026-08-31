@@ -411,15 +411,17 @@ target is a real dead leaf but cannot own a downstream exit decision. Cycles,
 detached decisions, duplicate sources, multiply-owned occurrences, and orphan
 occurrences are contract errors.
 
-Changing the picked target between compatible ordinary normal continuations is
-one authored edit. If the previously picked target owns the next exit decision,
-that decision is re-anchored to the newly picked occurrence while its complete
-subtree remains intact. Occurrence identity and room-local authored state never
-move between the two targets. The old target becomes a dead leaf and the new
-target becomes the decision's sole semantic source. A continuation cannot be
-re-anchored onto an additional exit or a terminal source. Additional exits and
-their target packages remain with their original source occurrence, becoming
-dormant when that source is unpicked and available again if it is reselected.
+Changing the picked continuation is one authored edit. If the previously picked
+occurrence owns the next exit decision, that decision is re-anchored to the
+newly picked occurrence and reconciled against that occurrence's declared
+physical exits. This applies between ordinary targets and closed additional
+exits such as Chaos and the Zagreus contract. Matching exit targets and their
+descendants survive; excess targets and incompatible additional exits do not
+become dormant detour state. Occurrence identity and room-local authored state
+never move between the two continuations. The old occurrence becomes an
+unselected leaf and the new occurrence becomes the decision's sole source.
+Re-anchoring rejects an existing decision at the destination, Preboss or
+fixed-completion participants, and cycles.
 
 ## Starts, Batches, Preboss, and Completion
 
@@ -650,8 +652,14 @@ remembered displaced G game name. It resets incompatible room-local leaves,
 installs the declared Anomaly defaults, and never creates the remembered room.
 Map changes retain that offer, outcome, and provenance. Revert restores the
 remembered G identity, retains the offer, restores complete G defaults, and
-removes the Anomaly continuation. An incompatible retained reward remains
-authored and finding-backed rather than being silently rerolled or refunded.
+preserves the occurrence's compatible `exit1` host continuation. Takeover
+atomically reconciles the prior G decision to the Anomaly declaration's one
+automatic exit: excess normal targets, their descendants, and source-owned
+additional exits are removed, and the retained selection becomes derived.
+Revert keeps that width-one continuation; any additional exits exposed again by
+the restored G declaration are incomplete authoring rather than resurrected
+state. An incompatible retained reward remains authored and finding-backed
+rather than being silently rerolled or refunded.
 
 The Zagreus command creates or extends the selected Midshop's ordinary decision
 and appends a closed `zagreusContract` to that Midshop occurrence. Its active

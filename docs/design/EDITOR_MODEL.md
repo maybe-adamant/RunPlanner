@@ -470,10 +470,10 @@ resulting occurrence retains its reward editor, presents its Anomaly map as
 the door's Room control before Reward, and exposes its authored success and
 exact revert action from the same aligned footer. Fixed `GeneratedAnomalyB`
 remains a catalog and lifecycle fact rather than a redundant editor control.
-On the selected spine, the outgoing host continuation is an ordinary width-one
-decision: its concrete target and reward remain editable while its selection
-is declaration-derived, so React adds neither a player branch selector nor a
-special return control.
+On the selected spine, the Anomaly occurrence exposes its declaration-owned
+width-one outgoing decision through the ordinary door workbench. Its concrete
+target and reward remain editable while selection is declaration-derived, so
+React adds neither a player branch selector nor a special return control.
 
 A selected, details-active declared Midshop with materialized Shop state
 exposes the bound Zagreus Add action from its Room features. Once authored,

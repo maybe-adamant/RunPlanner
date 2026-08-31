@@ -2,16 +2,25 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  acquisitionSiteStorageKey,
   applyProjectCommand,
+  artificerAcquisitionSite,
+  artificerReplacementEntryKey,
+  createAcquisitionRoleAddress,
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
+  createFountainRarityOutcomeAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRouteAddress,
+  createRoomActionAddress,
   createTargetAddress,
   ProjectCommandContractError,
+  roomActionKey,
+  type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 
 import {
@@ -40,7 +49,161 @@ function sourceDecision(project: ReturnType<typeof surfaceProject>, biome = oBio
   );
 }
 
+function fRewardTarget(
+  gameName: 'F_Combat02' | 'F_Reprieve01',
+  suffix: string,
+): {
+  readonly project: ProjectDocument;
+  readonly occurrenceId: ReturnType<typeof createOccurrenceId>;
+} {
+  const openingId = createOccurrenceId(`replacement-${suffix}-opening`);
+  const occurrenceId = createOccurrenceId(`replacement-${suffix}-target`);
+  let project = applyProjectCommand(fProject(), catalog, {
+    kind: 'CreateStart',
+    biome: fBiome,
+    occurrenceId: openingId,
+    gameName: 'F_Opening01',
+  });
+  const decision = createExitDecisionAddress(fBiome, {
+    kind: 'occurrence',
+    occurrenceId: openingId,
+  });
+  project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(fBiome, decision.source),
+    storeKey: 'RunProgress',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(fBiome, decision.source, 'exit1'),
+    occurrenceId,
+    gameName,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(fBiome, occurrenceId),
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+  });
+  return Object.freeze({ project, occurrenceId });
+}
+
+function fOccurrence(document: ProjectDocument, occurrenceId: string) {
+  const occurrence = document.route.biomes[0]?.topology?.occurrences.find(
+    (candidate) => candidate.occurrenceId === occurrenceId,
+  );
+  if (occurrence === undefined) throw new Error(`missing F occurrence ${occurrenceId}`);
+  return occurrence;
+}
+
 describe('authored-project room replacement commands', () => {
+  it('preserves an Artificer site and action when the compatible incoming reward survives replacement', () => {
+    const target = fRewardTarget('F_Reprieve01', 'artificer');
+    const source = createIncomingRewardAddress(fBiome, target.occurrenceId);
+    const acquisition = createAcquisitionRoleAddress(source, 'source');
+    const siteKey = acquisitionSiteStorageKey(
+      artificerAcquisitionSite(createOccurrenceAddress(fBiome, target.occurrenceId), source),
+    );
+    const entryKey = artificerReplacementEntryKey(source, 'source');
+    const artificerAction = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey,
+      entryKey,
+    };
+    const converted = applyProjectCommand(target.project, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition,
+      value: { kind: 'artificer' },
+    });
+
+    const replaced = applyProjectCommand(converted, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(fBiome, target.occurrenceId),
+      gameName: 'F_Combat02',
+    });
+    const occurrence = fOccurrence(replaced, target.occurrenceId);
+    expect(occurrence.state).toMatchObject({
+      kind: 'counted',
+      reward: {
+        offer: { rewardType: 'Boon' },
+        dispositionByAcquisitionRole: { source: { kind: 'artificer' } },
+      },
+    });
+    expect(occurrence.acquisitionSites?.[siteKey]?.pickupEntries).toHaveProperty(entryKey, null);
+    expect(occurrence.roomActions.order).toContainEqual(artificerAction);
+    expect(occurrence.roomActions.order).not.toContainEqual({ kind: 'useFountain' });
+  });
+
+  it('removes an Artificer site and action when replacement removes its source reward', () => {
+    const target = fRewardTarget('F_Reprieve01', 'artificer-removal');
+    const source = createIncomingRewardAddress(fBiome, target.occurrenceId);
+    const acquisition = createAcquisitionRoleAddress(source, 'source');
+    const siteKey = acquisitionSiteStorageKey(
+      artificerAcquisitionSite(createOccurrenceAddress(fBiome, target.occurrenceId), source),
+    );
+    const entryKey = artificerReplacementEntryKey(source, 'source');
+    const converted = applyProjectCommand(target.project, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition,
+      value: { kind: 'artificer' },
+    });
+
+    const replaced = applyProjectCommand(converted, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(fBiome, target.occurrenceId),
+      gameName: 'F_Shop01',
+    });
+    const occurrence = fOccurrence(replaced, target.occurrenceId);
+    expect(occurrence.state.kind).toBe('shop');
+    expect(occurrence.acquisitionSites?.[siteKey]).toBeUndefined();
+    expect(occurrence.roomActions.order).not.toContainEqual({
+      kind: 'interactAcquisitionEntry',
+      siteKey,
+      entryKey,
+    });
+  });
+
+  it('removes Reprieve fountain state and its action when replacement has no fountain', () => {
+    const target = fRewardTarget('F_Reprieve01', 'fountain-removal');
+    const fountainAction = createRoomActionAddress(
+      fBiome,
+      target.occurrenceId,
+      roomActionKey({ kind: 'useFountain' }),
+    );
+    const withFountainResult = applyProjectCommand(target.project, catalog, {
+      kind: 'ReplaceFountainRarityTarget',
+      outcome: createFountainRarityOutcomeAddress(fountainAction),
+      targetTraitKey: 'ApolloWeaponBoon',
+    });
+
+    const replaced = applyProjectCommand(withFountainResult, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(fBiome, target.occurrenceId),
+      gameName: 'F_Combat02',
+    });
+    const occurrence = fOccurrence(replaced, target.occurrenceId);
+    expect(occurrence.fountainRarityResult).toBeUndefined();
+    expect(occurrence.roomActions.order).not.toContainEqual({ kind: 'useFountain' });
+  });
+
+  it('schedules the declaration-required fountain action when combat becomes a Reprieve', () => {
+    const target = fRewardTarget('F_Combat02', 'fountain-creation');
+    const replaced = applyProjectCommand(target.project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(fBiome, target.occurrenceId),
+      gameName: 'F_Reprieve01',
+    });
+
+    expect(fOccurrence(replaced, target.occurrenceId).roomActions.order).toEqual([
+      {
+        kind: 'interactIncomingReward',
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'source',
+      },
+      { kind: 'useFountain' },
+    ]);
+  });
+
   it('cannot replace an ordinary door target with a fixed completion room', () => {
     const openingId = createOccurrenceId('fixed-completion-replacement-opening');
     const targetId = createOccurrenceId('fixed-completion-replacement-target');

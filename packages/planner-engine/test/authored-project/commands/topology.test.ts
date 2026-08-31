@@ -1509,6 +1509,6 @@ describe('authored-project commands and topology', () => {
         selection: createExitSelectionAddress(iBiome, twoExitDecision.source),
         value: { kind: 'normal', exitKey: 'exit1' },
       }),
-    ).toThrow(/remove the prior selected target’s downstream decision first/);
+    ).toThrow(/cannot rebase the prior selected continuation onto this target/);
   });
 });
