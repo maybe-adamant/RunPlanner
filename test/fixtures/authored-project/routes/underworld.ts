@@ -227,6 +227,28 @@ export function createCompleteFGProject(options: GoldenGProjectOptions = {}): Pr
   return authorLegalTraitOffers(project);
 }
 
+/** Complete F/G route with a declaration-derived G Anomaly and hidden return. */
+export function createCompleteFGAnomalyProject(success = true): ProjectDocument {
+  const sourceOccurrenceId = goldenGOccurrenceId(2, 1);
+  const anomalyOccurrenceId = goldenGOccurrenceId(3, 2);
+  const source = { kind: 'occurrence' as const, occurrenceId: sourceOccurrenceId };
+  let project = createCompleteFGProject();
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenGBiome, source),
+    value: { kind: 'normal', exitKey: 'exit2' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SwitchTargetToAnomaly',
+    target: createTargetAddress(goldenGBiome, source, 'exit2'),
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceAnomalySuccess',
+    occurrence: createOccurrenceAddress(goldenGBiome, anomalyOccurrenceId),
+    success,
+  });
+}
+
 /**
  * Canonical F/G closure witness: the F Postboss Well buys Spark of Ixion, then
  * G takes the generated Chaos sibling and completes its newly-authored G spine.

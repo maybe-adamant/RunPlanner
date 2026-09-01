@@ -345,6 +345,7 @@ function ownerNormalExits(ownerDeclaration: RoomDeclaration): readonly Canonical
           index: exit.index,
           type: exit.type,
           compatibilityPolicyKey: exit.compatibilityPolicyKey,
+          behavior: exit.behavior,
         }),
       ),
   );
@@ -558,6 +559,7 @@ export function normalPhysicalExitsForSource(
               index: exit.index,
               type: exit.type,
               compatibilityPolicyKey: exit.compatibilityPolicyKey,
+              behavior: exit.behavior,
             }),
           ]
         : [],

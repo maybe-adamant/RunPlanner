@@ -113,6 +113,7 @@ export function canonicalPhysicalExits(
         index: exit.index,
         type: exit.type,
         compatibilityPolicyKey: exit.compatibilityPolicyKey,
+        behavior: exit.behavior,
       }),
     ]),
   );

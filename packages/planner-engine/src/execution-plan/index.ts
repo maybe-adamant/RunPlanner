@@ -1,21 +1,36 @@
-export { compileExecutionPlan, ExecutionCompilerError } from './compiler';
+export { assembleExecutionProduct } from './assembler';
+export { ExecutionCompilerError } from './assembler-errors';
+export { compileExecutionPlan } from './compiler';
 export { decodeExecutionPlan, encodeExecutionPlan, ExecutionPlanCodecError } from './codec';
 export {
   EXECUTION_PLAN_FORMAT,
   EXECUTION_CATALOG_VERSION,
   EXECUTION_PROTOCOL_VERSION,
+  type ExecutionAssemblerInput,
   type ExecutionCompilerInput,
-  type ExecutionOutgoing,
-  type ExecutionOutgoingTarget,
   type ExecutionPlan,
   type ExecutionReward,
-  type ExecutionRoom,
+  type ExecutionSemanticProduct,
   type ExecutionRunStateCount,
   type ExecutionRunStateDiagnostic,
   type ExecutionAcquisitionRole,
   type ExecutionLevelResolution,
   type ExecutionTraitOffer,
-  type ExecutionTraceStep,
   type ExecutionTraitOptionKey,
   type ExecutionTraitSlot,
+  type ExecutionWellGenerationKey,
+  type ExecutionWellEffect,
+  type ExecutionWellRetainedEffect,
+  type ExecutionWellRetainedEffectCorrelation,
+  type ExecutionDoors,
+  type ExecutionDoorTarget,
+  type ExecutionTimeline,
+  type ExecutionTimelineTransaction,
+  type ExecutionTimelineDependency,
+  type ExecutionTimelineObligation,
+  type ExecutionTimelineStream,
+  type ExecutionLifecycleWindow,
+  type ExecutionOccurrence,
+  type ExecutionAnomalyReplacement,
+  type ExecutionOverview,
 } from './model';
