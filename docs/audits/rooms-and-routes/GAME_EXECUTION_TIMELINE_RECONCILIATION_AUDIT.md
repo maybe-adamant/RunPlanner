@@ -7,6 +7,12 @@ the protocol-v9 execution boundary, the installed Hades II source evidence
 already preserved by the focused audits below, and the live F/G integration
 findings recorded during executor probing.
 
+The implementation disposition was refined after the first protocol-v10
+engine slice exposed unnecessary dual authority between semantic streams and
+explicit dependencies. The source findings and hard-edge matrix are unchanged;
+the preferred representation below normalizes every hard ordering relation to
+one planner-owned prerequisite DAG.
+
 This audit answers one feasibility question:
 
 > Can the game module reconcile the planner's room Timeline without requiring
@@ -15,10 +21,11 @@ This audit answers one feasibility question:
 
 The answer is **yes, with a bounded condition**: runtime reconciliation must be
 based on occurrence-local semantic action identity, lifecycle windows, and a
-sparse partial order. Several codependent, owner-bearing semantic streams are a
-valid compact representation of that partial order. It is not viable as either
-a single callback cursor, an anonymous set of expected action signatures, or an
-unowned sequence that silently reallocates authored outcomes.
+sparse partial order owned by complete-valid planner evaluation. That partial
+order is most directly represented as prerequisite edges between exact semantic
+owners. It is not viable as a single callback cursor, an anonymous set of
+expected action signatures, a second runtime rule engine, or an unowned sequence
+that silently reallocates authored outcomes.
 
 This audit covers every action family in the current authored
 `RoomActionReference` union, the automatic Timeline effects currently inserted
@@ -97,11 +104,11 @@ such as the next ShipCombat phase, outgoing generation, or room exit.
 or no planner-visible consequence. Its absence or different placement may be
 logged, but it does not justify freezing realization.
 
-**Semantic stream**
-: An ordered projection of only the transactions that participate in one
-modeled dependency, such as trait-history mutation, first-purchase consumption,
-or generated-pickup production. A transaction may participate in more than one
-stream, and every non-exchangeable entry retains its semantic owner.
+**Semantic prerequisite**
+: A directed hard edge between two exact semantic owners. The dependent owner
+cannot complete until the prerequisite owner has completed. An ordered family
+of such actions is only shorthand for the corresponding edge chain; it is not a
+second runtime primitive.
 
 ## Feasibility criteria
 
@@ -139,7 +146,7 @@ current execution trace suggests:
 | Explicit source dependency             | complete for generated children and structural barriers | proves source-before-child without scanning prior callbacks                      |
 | Authored total order                   | complete                                                | remains the planner's simulation chronology and user guidance                    |
 | Fixed outgoing checkpoint              | complete in simulation                                  | distinguishes optional effects that did or did not influence the generated batch |
-| Runtime blocking disposition           | not currently an engine product                         | must not be guessed from callback names or reward categories                     |
+| Runtime blocking disposition           | not complete in the engine execution product            | must not be guessed from callback names or reward categories                     |
 | Semantic transaction boundary          | not represented by the linear trace                     | protocol v9 may split one action into several cursor obligations                 |
 
 The missing facts are narrow execution dispositions, not another reward or
@@ -331,112 +338,131 @@ fallback is not fuzzy matching. That action family remains guidance-only until
 a source-backed discriminator exists, unless every possible match is proven
 equivalent.
 
-## Alternative representation: codependent semantic streams
+## Preferred representation: planner-owned prerequisite edges
 
-The proposed decomposition is materially different from both a global cursor
-and an unordered action set. Instead of asking whether every native contact
-matches the next room row, the runtime advances only the semantic streams to
-which the completed transaction belongs.
+The partial order is materially different from both a global cursor and an
+unordered action set. Each consequential transaction retains its exact owner,
+and the planner publishes only the prerequisite edges whose reversal changes a
+modeled result. Runtime completion asks whether that owner's declared
+prerequisites are complete; it does not advance a family cursor or rediscover
+why the dependency exists.
 
-For example, an unrelated simulation-neutral Well purchase does not advance a
-trait-mutation stream. A Mystery Boon acquisition can advance both its provider
-resolution and its trait-history mutation. An Artificer source interaction can
-advance a reward-transformation stream and make one separately owned child
-pickup eligible without constraining unrelated room actions between those two
-transactions.
+For example, if `X` must precede `Y` while `Z` is independent, the complete
+ordering product is the single edge `X -> Y`. The legal executions are
+`X, Y, Z`, `X, Z, Y`, and `Z, X, Y`. Adding `X -> Z` or `Z -> Y` merely because
+those actions were adjacent in the authored Timeline would make guidance order
+blocking without a game or simulation reason.
 
-### Two meanings of “the next item”
+An ordered owner-bearing stream is only a compressed way to spell a chain of
+prerequisite edges. Publishing both stream membership and explicit
+dependencies creates two representations of the same authority and invites
+them to disagree. The runtime contract therefore needs one ordering primitive:
+the sparse prerequisite edge.
 
-There are two superficially similar but semantically different stream models:
+### Planner-owned edge families
 
-1. **Owner-bearing validation stream.** The next entry identifies the exact
-   authored owner and expected result. Unrelated actions may interleave, but two
-   non-equivalent owners cannot swap results.
-2. **Unowned outcome-allocation stream.** The next qualifying native contact
-   receives the next result regardless of which authored owner produced it.
+| Modeled relation                  | Required prerequisite product                                                                                                                        |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Trait-history mutation            | exact prior mutation owner to each later offer or target owner whose authored result used that prefix                                                |
+| Provider resolution               | exact acquisition owner contains its provider and resulting offer; no anonymous provider ordinal                                                     |
+| Reward transformation             | exact source owner to each separately owned generated child                                                                                          |
+| First accepted purchase           | planner-selected source purchase to its one-use realization and to every competing qualifying purchase that could otherwise consume the effect first |
+| Next eligible retained effect     | exact producer owner to the exact next consumer already resolved by planner simulation                                                               |
+| Generated-pickup production       | exact producer owner to child acquisition owner; unrelated actions remain unconstrained                                                              |
+| Rack or removal to later consumer | exact state-mutation owner to the later fountain, offer, or target whose result used that state                                                      |
+| Automatic outcome                 | exact lifecycle-owned mutation node with prerequisites only when another modeled owner produced its condition or input                               |
+| Guidance-only contact             | no node unless it is needed as the prerequisite, competitor barrier, or consumer of a consequential relation                                         |
 
-The first model is a compact representation of the already-audited partial
-order. The second changes authored semantics. It is valid only when the planner
-engine has proven that every candidate source is exchangeable for every
-planner-visible consequence. Equal display names or equal final inventory are
-not enough evidence.
+Lifecycle windows and checkpoint obligations remain separate products. A
+window states when an owner may occur; an obligation states the deadline by
+which it must complete; a prerequisite states which exact owner must already
+be complete. None can be reconstructed safely from either of the other two.
 
-### Candidate stream decomposition
+### Travel Deal as the pressure-point witness
 
-| Semantic stream             | Participating transactions                                                                                  | Required identity and ordering                                                                                                                            |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Trait-history mutation      | Boon/Chaos/Spell selections, trait removals, level and rarity changes, automatic trait mutations            | owner-bearing order whenever one mutation formed the prefix used to author a later offer or target                                                        |
-| Provider resolution         | Mystery Boon and any other source whose giver is resolved at acquisition                                    | exact acquisition owner by default; provider outcome may be unowned only inside an engine-certified exchangeable group                                    |
-| Reward transformation       | Time Piece, Artificer source conversion, and other reward-bag-affecting transformations                     | exact source owner and disposition; a generated child remains a separately owned dependent transaction                                                    |
-| Purchase consumption        | World-Shop, Shrine, and consequential Well purchases                                                        | feature-local owner plus first/next-consumer ordering for Travel Deal, Gold Gold Gold, Extended, and similar retained effects                             |
-| Generated-pickup production | Artificer replacement, Sea Star duplicate, Echo recreation, Quick Buck/Buried Treasure, and Shrine delivery | producer-to-child dependency; the child joins its own acquisition and trait streams only after materialization                                            |
-| Lifecycle obligations       | required rewards, wheel actions, Fields cages, Gorgon, and required delivered pickups                       | exact checkpoint and owner; this is a set of obligations within a window, not an ordinal outcome allocator                                                |
-| Automatic outcomes          | Steady Growth, Transcendent Embryo, and successful resource collection                                      | fixed lifecycle checkpoint and outcome owner; they do not wait for or consume a player-action ordinal                                                     |
-| Guidance-only contacts      | simulation-neutral purchases and untouched optional objects                                                 | no blocking stream unless a concrete first-use, generated-child, or later modeled consumer promotes that exact transaction to consequential participation |
+Travel Deal demonstrates why edge choice belongs to the planner rather than an
+execution assembler or game adapter. Complete-valid simulation already knows
+which accepted qualifying purchase is first and which refill it creates.
+Therefore:
 
-These streams are codependent rather than isolated. One transaction can prove
-several facts at once, and cross-stream dependencies remain explicit. The
-decomposition removes irrelevant adjacency; it does not pretend that trait,
-reward, purchase, and object lifecycles never affect one another.
+- the chosen source purchase remains an execution node even when its purchased
+  item's direct effect is otherwise simulation-neutral;
+- that source precedes the refill realization;
+- that source precedes every competing qualifying purchase that could have
+  consumed Travel Deal first;
+- purchasing the refill, when authored, follows the refill realization; and
+- an unrelated action has no edge to any of those nodes.
+
+The refill realization is an owner-bearing automatic/deferred fact, not a
+player purchase and not anonymous Overview inventory. The native adapter may
+know how to materialize the declared refill payload. It must not choose the
+source purchase, derive the exclusion pool, or decide which later purchase is
+the consumer.
+
+The same boundary applies to Extended, Yarn, Hymn, generated acquisitions,
+trait-history prefixes, and keepsake-sensitive consumers: simulation or another
+planner-owned product identifies the exact relation, and the execution
+projection may copy, prune, and reference-check it. Execution assembly must not
+search forward for a "next" consumer, choose a first purchase, or infer that
+actions commute from their categories.
 
 ### Coverage of the current hard edges
 
-The existing hard-edge matrix does not require a general permutation table.
-Every current edge fits one of three durable primitives:
+The existing hard-edge matrix does not require a permutation table or runtime
+graph algorithm. Every current relation fits one of three durable primitives:
 
-| Existing hard edge                 | Stream representation                                                                                          |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Lifecycle window                   | fixed lifecycle checkpoint                                                                                     |
-| Barrier to produced interaction    | owner-to-owner dependency from barrier to interaction                                                          |
-| Source to child                    | owner-to-owner production dependency                                                                           |
-| Required action to checkpoint      | owner-bearing checkpoint obligation                                                                            |
-| Optional action to outgoing        | outgoing checkpoint obligation only when that action contributed to the authored outgoing prefix               |
-| Modeled mutation to later consumer | ordered entries in the relevant semantic stream, with explicit cross-stream dependency where categories differ |
-| Modal transaction                  | one atomic semantic transaction; native subcontacts do not become stream entries                               |
-| Rack to later consumer             | owner dependency or shared trait/keepsake-state stream                                                         |
-| First accepted purchase            | ordered purchase-consumption stream                                                                            |
-| Next eligible Well effect          | retained-effect producer to its exact next eligible consumer                                                   |
-| Exact phase blocker                | owner-bearing phase checkpoint and dependency                                                                  |
+| Existing hard edge                 | Runtime representation                                                                  |
+| ---------------------------------- | --------------------------------------------------------------------------------------- |
+| Lifecycle window                   | fixed lifecycle window                                                                  |
+| Barrier to produced interaction    | prerequisite edge from barrier owner to interaction owner                               |
+| Source to child                    | prerequisite edge from producer owner to child owner                                    |
+| Required action to checkpoint      | owner-bearing checkpoint obligation                                                     |
+| Optional action to outgoing        | outgoing checkpoint obligation only when that action contributed to the authored prefix |
+| Modeled mutation to later consumer | prerequisite edge from mutation owner to exact consumer owner                           |
+| Modal transaction                  | one atomic semantic transaction; native subcontacts are not separate nodes              |
+| First accepted purchase            | source-to-realization and source-to-competing-purchase prerequisite edges               |
+| Next eligible Well effect          | retained-effect producer to its exact planner-resolved consumer                         |
+| Exact phase blocker                | lifecycle obligation plus prerequisite edge where another semantic owner is involved    |
 
-The practical contract is therefore smaller than a general action graph:
-lifecycle checkpoints, owner dependencies, and a few owner-bearing chains. It
-still describes a partial order because one transaction may belong to several
-chains and one producer may unlock a child in another chain.
+Runtime bookkeeping is only a completed-owner set and the declared prerequisite
+sets. No topological sort, scheduler, search, family rule, or stream cursor is
+required.
 
 ### Concrete safety assessment
 
-| Proposed sparse sequence                               | Disposition                              | Reason                                                                                                                                                                                                                                           |
-| ------------------------------------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| “first trait pickup Zeus, second trait pickup Demeter” | safe as an owner-bearing trait stream    | unrelated purchases may interleave, but the runtime must still bind Zeus and Demeter to their authored acquisition owners; the first acquisition formed the second offer's prefix                                                                |
-| “first Mystery Boon provider Demeter, second Apollo”   | conditional                              | this mirrors native deferred provider resolution, but current authoring stores each provider and offer on an exact delivery/acquisition owner; ordinal reassignment would change that authored plan                                              |
-| “first Artificer result Onion, second Health”          | conditional                              | the random outcome identities can form a stream, but requiredness, duplication eligibility, acquisition role, and child address derive from the exact source; ownerless swapping is safe only when the engine certifies those sources equivalent |
-| “first accepted purchase consumes Travel Deal”         | safe as an owner-bearing purchase stream | only accepted eligible purchases participate; inventory views and unrelated object interactions do not advance it                                                                                                                                |
-| “next eligible offer consumes Yarn or Hymn”            | safe as a retained-effect stream         | the producer status waits across unrelated contacts and binds to the exact next eligible trait-offer owner                                                                                                                                       |
-| simulation-neutral Well purchases in any order         | no blocking stream needed                | after first/next-use and Extended effects are excluded, their order has no current planner-visible consequence                                                                                                                                   |
+| Proposed sparse relation                            | Disposition                               | Reason                                                                                                                        |
+| --------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| “Zeus trait pickup before later Demeter offer”      | exact prerequisite edge                   | the first acquisition formed the later offer's prefix; unrelated purchases may interleave                                     |
+| “Mystery provider Demeter, then its selected trait” | one exact owner or exact owned child      | current authoring stores provider, offer, and acquisition beneath an exact source; ordinal reassignment would change the plan |
+| “Artificer source before generated Onion”           | exact producer-to-child edge              | requiredness, duplication eligibility, acquisition role, and child address all derive from the exact source                   |
+| “first accepted purchase consumes Travel Deal”      | source, realization, and competitor edges | only the planner knows the already-simulated first accepted purchase; unrelated object interactions remain free               |
+| “Yarn or Hymn before next eligible offer”           | exact producer-to-consumer edge           | the retained status waits across unrelated contacts and binds to the exact consumer already reached by simulation             |
+| simulation-neutral Well purchases in any order      | no edge                                   | after first/next-use and Extended participation are excluded, their order has no current planner-visible consequence          |
 
-The Mystery Boon and Artificer examples expose the main boundary. Their
-outcomes may look fungible when written as short lists, but the current planner
-authors provider, disposition, trait screen, and generated child beneath exact
-semantic owners. Reallocating those outcomes at runtime would make the compiler
-or game adapter a second planner. If less deterministic authoring is desirable
-later, the authored model itself must expose an exchangeable group and the
-engine must validate it before compilation.
+Mystery Boon and Artificer also expose the ownership boundary. Their outcomes
+may look fungible as short lists, but the current planner authors provider,
+disposition, trait screen, and generated child beneath exact semantic owners.
+Reallocating those outcomes at runtime would make the compiler or game adapter
+a second planner. If less deterministic authoring is desirable later, the
+authored model itself must expose an exchangeable group and the engine must
+validate it before publication.
 
-### Stream-direction disposition
+### Dependency-direction disposition
 
-**Go** for codependent owner-bearing semantic streams as the preferred compact
-expression of Timeline ordering. They preserve the planner's exact run while
-allowing unrelated native actions to interleave without mismatch.
+**Go** for a planner-owned sparse dependency DAG as the sole expression of
+Timeline ordering. It preserves the planner's exact run while allowing every
+action without a path between it and another action to interleave freely.
 
 **Conditional go** for unowned outcome allocation only when complete-valid
 planner evaluation explicitly proves a bounded group exchangeable. The proof
 must cover source capabilities, requiredness, generated children, offer
 prefixes, retained effects, and every later modeled consumer.
 
-**No-go** for the compiler or game module deriving exchangeability from action
-kind, reward identity, matching payloads, or equal final Run State. That would
-move semantic authority out of the planner engine and recreate the very
-reconciliation ambiguity this audit is intended to remove.
+**No-go** for the execution assembler, compiler, or game module deriving
+ordering, next-consumer identity, first-purchase identity, or exchangeability
+from action kind, reward identity, authored adjacency, matching payloads, or
+equal final Run State. That would move semantic authority out of the planner
+engine and recreate the ambiguity this audit is intended to remove.
 
 ## Completion and mismatch policy
 
@@ -518,16 +544,16 @@ This contract scales by adding one audited action family and its bounded
 contacts. It does not scale by adding another global permutation or callback
 sequence.
 
-Codependent owner-bearing semantic streams are the preferred compact form of
-this contract. They retain only meaningful order within each dependency while
-preserving cross-stream owner edges and lifecycle checkpoints.
+The planner-owned sparse dependency DAG is the preferred form of this
+contract. It retains only meaningful owner-to-owner order while lifecycle
+windows and checkpoint obligations preserve their distinct timing roles.
 
-### Conditional go: engine-certified exchangeable outcome streams
+### Conditional go: engine-certified exchangeable outcome groups
 
-An ordinal outcome stream without exact owners is permissible only for a
-bounded group that complete-valid planner evaluation has declared
-exchangeable. No current Artificer or Mystery Boon authoring should be presumed
-exchangeable merely because the resulting list looks interchangeable.
+An unowned outcome group is permissible only when complete-valid planner
+evaluation has declared that bounded group exchangeable. No current Artificer
+or Mystery Boon authoring should be presumed exchangeable merely because the
+resulting list looks interchangeable.
 
 ### No-go: anonymous action-set reconciliation
 
