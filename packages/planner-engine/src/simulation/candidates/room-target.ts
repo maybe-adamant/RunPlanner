@@ -99,6 +99,7 @@ function physicalExitsForTarget(
               index: exit.index,
               type: exit.type,
               compatibilityPolicyKey: exit.compatibilityPolicyKey,
+              behavior: exit.behavior,
             }),
           ]
         : [],

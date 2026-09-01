@@ -27,7 +27,11 @@ import type {
 import type { AuthoredLevelResolution, AuthoredTraitOffer } from '../../authored-project/traits';
 import type { TraitOfferContext } from '../trait-offers';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
+import type { ShopOptionEntry } from '../../reward-kernel/model';
 import type { ResolvedEncounterPhase } from '../encounters';
+import type { StygianWellGenerationKey } from '../../authored-project/model';
+
+type StygianWellEffect = NonNullable<ShopOptionEntry['stygianWell']>['effect'];
 
 export interface CanonicalResolvedIncomingReward {
   readonly origin: IncomingRewardAddress | LocalRewardAddress;
@@ -170,6 +174,12 @@ export interface CanonicalAuthoredRoom {
   readonly stygianWell?: NonNullable<
     import('../../authored-project/model').RoomOccurrence['stygianWell']
   >;
+  /** Normalized catalog effects for the authored Well generations only. */
+  readonly stygianWellOfferEffects?: Readonly<
+    Partial<Record<StygianWellGenerationKey, StygianWellEffect>>
+  >;
+  /** Normalized catalog whitelist consumed by an Extended Well purchase. */
+  readonly stygianWellExtendedDirectPurchaseItemKeys?: readonly string[];
   readonly roomActionRoster: import('../room-actions').RoomActionRoster;
   readonly roomLifecycleTimeline: import('../room-actions').RoomLifecycleTimeline;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
@@ -268,6 +278,8 @@ export type CanonicalPhysicalExit =
       readonly index: number;
       readonly type: string;
       readonly compatibilityPolicyKey: string;
+      /** Declaration-owned visibility/automatic-continuation behavior. */
+      readonly behavior: import('../../catalog-schema').ExitBehavior;
     }
   | { readonly kind: 'unavailable'; readonly exitKey: string; readonly index: number };
 

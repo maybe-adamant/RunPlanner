@@ -200,6 +200,27 @@ describe('project profile operations', () => {
     expect(profile.saves.at(-1)?.fileName).toBe(DEFAULT_PROFILE_FILE_NAME);
   });
 
+  it('rejects an invalid publication before invoking the game writer', async () => {
+    const published: { targetId: string; json: string }[] = [];
+    const application = createApplication({
+      gamePlanPublisher: {
+        discoverProfiles: () =>
+          Promise.resolve({ status: 'available', targets: [], message: 'Choose a profile.' }),
+        publish: (targetId, json) => {
+          published.push({ targetId, json });
+          return Promise.resolve({ status: 'published', message: 'Published.' });
+        },
+      },
+    });
+    application.projectOperations.createNew('Underworld');
+
+    await expect(application.projectOperations.publishGame('profile-a')).resolves.toMatchObject({
+      operation: 'publishGame',
+      status: 'failure',
+    });
+    expect(published).toHaveLength(0);
+  });
+
   it('reuses one host file reference until New clears it', async () => {
     let saveAsCount = 0;
     let writeCount = 0;

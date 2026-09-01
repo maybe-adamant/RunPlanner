@@ -4,7 +4,11 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
-import { compileExecutionPlan, encodeExecutionPlan } from '@run-planner/engine/execution-plan';
+import {
+  assembleExecutionProduct,
+  compileExecutionPlan,
+  encodeExecutionPlan,
+} from '@run-planner/engine/execution-plan';
 
 import type { AutosaveRecoveryAdapter } from '../persistence/autosaveRecovery';
 import { createInitialProject } from '../composition/projectBootstrap';
@@ -161,7 +165,8 @@ export function createProjectOperations(
         }
         const workspace = options.store.getState().projectWorkspace;
         if (workspace.kind !== 'openProject') throw new Error('No project is open');
-        const plan = compileExecutionPlan({ assembly: workspace.assembly });
+        const product = assembleExecutionProduct({ assembly: workspace.assembly });
+        const plan = compileExecutionPlan({ product });
         const publication = await options.gamePlanPublisher.publish(
           targetId,
           encodeExecutionPlan(plan),

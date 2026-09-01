@@ -1,9 +1,8 @@
-import type { OccurrenceAddress } from '../authored-project/addresses';
 import type { ProjectEvaluationAssembly } from '../simulation/evaluation-products';
 
-/** The only execution artifact currently supported by the app compiler. */
+/** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 9 as const;
+export const EXECUTION_PROTOCOL_VERSION = 10 as const;
 export const EXECUTION_CATALOG_VERSION = '0.53.0-chaos-return-batches' as const;
 
 export type ExecutionRunStateCount =
@@ -12,7 +11,28 @@ export type ExecutionRunStateCount =
 
 export type ExecutionTraitSlot = 'Melee' | 'Secondary' | 'Ranged' | 'Rush' | 'Mana' | 'Spell';
 export type ExecutionTraitOptionKey = 'option1' | 'option2' | 'option3';
+export type ExecutionWellGenerationKey =
+  'initial:healing' | 'initial:secondLeft' | 'initial:secondRight' | 'travelDealRefill';
+/** Closed normalized effects that can be resolved from one Well offer. */
+export type ExecutionWellEffect =
+  | 'neutral'
+  | 'spark'
+  | 'yarn'
+  | 'hymn'
+  | 'discount'
+  | 'emptySlot'
+  | 'extended'
+  | 'twist'
+  | 'lastStand';
+/** Retained Well effects that must identify their exact later consumer. */
+export type ExecutionWellRetainedEffect = 'extended' | 'yarn' | 'hymn';
+/** Closed lifecycle windows copied from the engine's Room Action authority. */
+export type ExecutionLifecycleWindow =
+  | { readonly kind: 'standard'; readonly phase: 'beforeCombat' | 'afterCombat' }
+  | { readonly kind: 'encounterEnd'; readonly phaseKey: string }
+  | { readonly kind: 'postOutgoing' };
 
+/** Diagnostic evidence only. It is never a lifecycle or transaction cursor. */
 export interface ExecutionRunStateDiagnostic {
   readonly owner: string;
   readonly checkpoint: 'roomEntered' | 'beforeRoomExit';
@@ -38,10 +58,7 @@ export interface ExecutionRunStateDiagnostic {
       readonly level?: number;
       readonly hammerRank?: 'RankI' | 'RankII';
     }[];
-    readonly slots: readonly {
-      readonly slot: ExecutionTraitSlot;
-      readonly traitKey?: string;
-    }[];
+    readonly slots: readonly { readonly slot: ExecutionTraitSlot; readonly traitKey?: string }[];
     readonly elements: Readonly<Record<string, number>>;
     readonly godRarityCounts: Readonly<Record<string, number>>;
     readonly upgradableCount: number;
@@ -60,7 +77,6 @@ export interface ExecutionRunStateDiagnostic {
     readonly disabledKeys: readonly string[];
   };
   readonly forfeit: 'inactive' | 'available' | 'consumed';
-  /** Published Chaos state is diagnostic only; the runtime never advances its clocks. */
   readonly chaos: {
     readonly active: readonly {
       readonly curseKey: string;
@@ -69,12 +85,8 @@ export interface ExecutionRunStateDiagnostic {
       readonly clock: 'encounters' | 'locations' | 'godBoonScreens';
       readonly remaining: number;
     }[];
-    readonly matured: readonly {
-      readonly blessingKey: string;
-      readonly rarity: string;
-    }[];
+    readonly matured: readonly { readonly blessingKey: string; readonly rarity: string }[];
   };
-  /** Gate D's bounded observable keepsake facts; it is not a second keepsake model. */
   readonly keepsakes: {
     readonly currentKey: string;
     readonly usedKeys: readonly string[];
@@ -85,13 +97,11 @@ export interface ExecutionRunStateDiagnostic {
   readonly hexProgress: {
     readonly spellTraitKey?: string;
     readonly layoutKey?: string;
-    /** Exact installed Rare/Epic nodes, observable from the slotted spell talent list. */
     readonly talentKeys: readonly string[];
     readonly closed: boolean;
     readonly bankedPathPoints: number;
     readonly investedPathPoints: number;
   };
-  /** Null when Artificer is not active; no planner chronology is serialized. */
   readonly artificer: { readonly usedCount: number; readonly remainingCount: number } | null;
 }
 
@@ -101,65 +111,14 @@ export interface ExecutionReward {
   readonly resolvedStoreKey?: string;
   readonly source?: string;
   readonly spurnedSource?: string;
-  /** False when an encounter consumes the draw but owns the replacement reward. */
   readonly acquisitionEnabled?: boolean;
 }
 
-export interface ExecutionRoomContents {
-  readonly incomingReward?: ExecutionReward;
-  readonly encounterPhases: readonly {
-    readonly slotKey: string;
-    readonly encounterKey: string;
-    readonly kind: string;
-  }[];
-  readonly requiredObjects: readonly string[];
-  /** World-Shop identity only. CanonicalShopOffer has no producer lifecycle. */
-  readonly shop?: {
-    readonly profileKey: string;
-    readonly offers: readonly {
-      readonly offerKey: string;
-      readonly optionKey: string;
-      readonly rewardType: string;
-      readonly source?: string;
-      readonly spurnedSource?: string;
-    }[];
-    /** The first paid World-Shop slot may be replaced by Travel Deal. */
-    readonly travelDealRefill?: {
-      readonly sourceOfferKey: string;
-      readonly slotIndex: number;
-      readonly optionKey: string;
-      readonly reward: ExecutionReward;
-    };
-  };
-  /** Feature presence plus complete inventory only when the Well was entered. */
-  readonly stygianWell?: {
-    readonly interacted: boolean;
-    readonly offers?: readonly {
-      readonly generationKey:
-        'initial:healing' | 'initial:secondLeft' | 'initial:secondRight' | 'travelDealRefill';
-      readonly offerKey: string;
-      readonly twistResultKey?: string;
-    }[];
-  };
-  readonly purgingPool?: {
-    readonly interacted: boolean;
-    readonly traits?: readonly {
-      readonly slotKey: 'left' | 'middle' | 'right';
-      readonly traitKey: string | null;
-    }[];
-  };
-  readonly keepsakeRack?: { readonly keepsakeKey: string };
-  readonly fountain?: { readonly aromaticPhialTarget?: string };
-  /** Successful automatic resource collection settled at this room's exit. */
-  readonly resources?: readonly {
-    readonly acquisitionRole: string;
-    readonly grantedTraitKey: string;
-    readonly contributions: Readonly<Record<string, number>>;
-  }[];
-}
-
 export type ExecutionTraitOffer =
-  | { readonly kind: 'fallbackGold'; readonly giver: string }
+  | {
+      readonly kind: 'fallbackGold';
+      readonly giver: string;
+    }
   | {
       readonly kind: 'traits';
       readonly giver: string;
@@ -181,7 +140,6 @@ export type ExecutionTraitOffer =
       readonly runtimeFallback?: string;
     }
   | {
-      /** Three native pairs; only the selected pair's blessing and operands are modeled. */
       readonly kind: 'chaos';
       readonly giver: 'Chaos';
       readonly curseOptions: readonly {
@@ -201,13 +159,11 @@ export interface ExecutionLevelResolution {
   readonly levelCount: number;
 }
 
-/** Exact already-settled pickup conversion; runtime must not reassess it. */
 export type ExecutionAcquisitionDisposition = 'normal' | 'timePiece' | 'artificer';
 
 export interface ExecutionAcquisitionRole {
   readonly role: string;
   readonly disposition: ExecutionAcquisitionDisposition;
-  /** Closed producer identity for a generated nested pickup. */
   readonly producer?: {
     readonly kind: 'seaStarDuplicate' | 'artificerReplacement' | 'echoLastReward';
     readonly sourceOwner: string;
@@ -216,10 +172,7 @@ export interface ExecutionAcquisitionRole {
   readonly lifecyclePoint: string;
   readonly kind: string;
   readonly gameName: string;
-  readonly settlement?: {
-    readonly site: string;
-    readonly entry: string;
-  };
+  readonly settlement?: { readonly site: string; readonly entry: string };
   readonly traitOffer?: ExecutionTraitOffer;
   readonly levelResolution?: ExecutionLevelResolution;
 }
@@ -231,48 +184,91 @@ export interface ExecutionKeepsakeEquipResults {
   readonly transcendentEmbryo?: { readonly blessingKey: string };
 }
 
-/** Exact route-start equip and its already-authored immediate native result. */
 export interface ExecutionStartingKeepsake {
   readonly keepsakeKey: string;
   readonly equipResults?: ExecutionKeepsakeEquipResults;
 }
 
-export type ExecutionTraceStep =
+export interface ExecutionOverview {
+  readonly incomingReward?: ExecutionReward;
+  readonly encounterPhases: readonly {
+    readonly slotKey: string;
+    readonly encounterKey: string;
+    readonly kind: string;
+  }[];
+  readonly requiredObjects: readonly string[];
+  readonly shop?: {
+    readonly profileKey: string;
+    readonly offers: readonly {
+      readonly offerKey: string;
+      readonly optionKey: string;
+      readonly rewardType: string;
+      readonly source?: string;
+      readonly spurnedSource?: string;
+    }[];
+    readonly travelDealRefill?: {
+      readonly sourceOfferKey: string;
+      readonly slotIndex: number;
+      readonly optionKey: string;
+      readonly reward: ExecutionReward;
+    };
+  };
+  readonly stygianWell?: {
+    readonly interacted: boolean;
+    readonly offers?: readonly {
+      readonly generationKey:
+        'initial:healing' | 'initial:secondLeft' | 'initial:secondRight' | 'travelDealRefill';
+      readonly offerKey: string;
+      readonly twistResultKey?: string;
+    }[];
+  };
+  readonly purgingPool?: {
+    readonly interacted: boolean;
+    readonly traits?: readonly {
+      readonly slotKey: 'left' | 'middle' | 'right';
+      readonly traitKey: string | null;
+    }[];
+  };
+  readonly keepsakeRack?: { readonly keepsakeKey: string };
+  readonly fountain?: { readonly aromaticPhialTarget?: string };
+  readonly resources?: readonly {
+    readonly acquisitionRole: string;
+    readonly grantedTraitKey: string;
+    readonly contributions: Readonly<Record<string, number>>;
+  }[];
+  /** Chaos gates and Zagreus Contract exits are room features, not normal doors. */
+  readonly additional?: readonly {
+    readonly kind: 'chaos' | 'zagreusContract';
+    readonly owner: string;
+    readonly room: { readonly id: string; readonly biomeKey: string; readonly gameName: string };
+    readonly ixionOrigin?: {
+      readonly sourceBiomeKey: string;
+      readonly sourceOccurrenceId: string;
+      readonly generationKey: string;
+    };
+  }[];
+}
+
+/** The closed G Anomaly capture-point product, including authored provenance. */
+export interface ExecutionAnomalyReplacement {
+  readonly replacedRoomGameName: string;
+  readonly success: boolean;
+}
+
+export type ExecutionTimelineTransaction =
   | {
-      readonly kind: 'roomEntered' | 'beforeRoomExit';
-      readonly owner: string;
-      readonly runState: ExecutionRunStateDiagnostic;
-    }
-  | {
-      readonly kind: 'cleanup';
-      readonly owner: string;
-    }
-  | {
-      readonly kind: 'encounterStart';
-      readonly owner: string;
-      readonly phase: string;
-      readonly encounter: string;
-      readonly encounterKind: string;
-    }
-  | {
-      readonly kind: 'encounterEnd';
-      readonly owner: string;
-      readonly phase: string;
-      readonly endEffectsExpected: boolean;
-    }
-  | {
-      readonly kind: 'acquireReward';
+      readonly kind: 'acquisition';
       readonly owner: string;
       readonly sourceOwner: string;
       readonly reward: ExecutionReward;
       readonly producerLifecycleKey: string;
       readonly roles: readonly ExecutionAcquisitionRole[];
+      readonly window: ExecutionLifecycleWindow;
     }
   | {
       readonly kind: 'encounterInteraction';
       readonly owner: string;
       readonly phaseKey: string;
-      /** Closed player-triggered encounter result; later pickups remain separate trace rows. */
       readonly resolution?:
         | { readonly kind: 'traitOffer'; readonly offer: ExecutionTraitOffer }
         | {
@@ -290,118 +286,128 @@ export type ExecutionTraceStep =
                 }
               | { readonly kind: 'damageContest'; readonly result: 'success' | 'failure' };
           };
+      readonly window: ExecutionLifecycleWindow;
     }
   | {
-      readonly kind: 'steadyGrowth';
+      readonly kind: 'automatic';
       readonly owner: string;
-      readonly phase: string;
+      readonly effect: 'steadyGrowth' | 'transcendentEmbryo';
+      readonly phaseKey: string;
       readonly source: string;
       readonly target: string;
+      readonly rarity?: string;
+      readonly window: ExecutionLifecycleWindow;
     }
   | {
-      readonly kind: 'transcendentEmbryo';
+      readonly kind: 'shopPurchase';
       readonly owner: string;
-      readonly phase: string;
-      readonly source: string;
-      readonly target: string;
-      readonly rarity: string;
-    }
-  | {
-      readonly kind: 'purgingPoolSale';
-      readonly owner: string;
-      readonly slotKey: 'left' | 'middle' | 'right';
-      readonly traitKey: string;
-    }
-  | {
-      readonly kind: 'stygianWellPurchase';
-      readonly owner: string;
-      readonly generationKey:
-        'initial:healing' | 'initial:secondLeft' | 'initial:secondRight' | 'travelDealRefill';
+      readonly window: ExecutionLifecycleWindow;
       readonly offerKey: string;
+      readonly rewardType: string;
+      readonly sourceOwner: string;
+      readonly reward: ExecutionReward;
+      readonly producerLifecycleKey: string;
+      readonly roles: readonly ExecutionAcquisitionRole[];
+    }
+  | {
+      readonly kind: 'wellPurchase';
+      readonly owner: string;
+      readonly window: ExecutionLifecycleWindow;
+      readonly offerKey: string;
+      readonly generationKey: ExecutionWellGenerationKey;
+      readonly effect: ExecutionWellEffect;
+      readonly extendedDirectPurchase: boolean;
       readonly twistResultKey?: string;
     }
   | {
-      readonly kind: 'worldShopPurchase';
+      readonly kind: 'poolSale';
       readonly owner: string;
-      readonly offerKey: string;
-      readonly rewardType: string;
+      readonly window: ExecutionLifecycleWindow;
+      readonly slotKey: string;
+      readonly traitKey: string;
     }
   | {
-      readonly kind: 'keepsakeRackChange';
+      readonly kind: 'keepsakeChange';
       readonly owner: string;
+      readonly window: ExecutionLifecycleWindow;
       readonly keepsakeKey: string;
       readonly equipResults?: ExecutionKeepsakeEquipResults;
     }
   | {
       readonly kind: 'fountainUse';
       readonly owner: string;
+      readonly window: ExecutionLifecycleWindow;
       readonly aromaticPhialTarget?: string;
     };
 
-export interface ExecutionOutgoingTarget {
+export interface ExecutionTimelineDependency {
+  readonly owner: string;
+  readonly afterOwner: string;
+}
+
+export interface ExecutionTimelineObligation {
+  readonly owner: string;
+  readonly checkpoint: 'roomEntered' | 'outgoingGeneration' | 'exitUsable' | 'roomExit';
+}
+
+export interface ExecutionTimelineStream {
+  readonly key: string;
+  readonly owners: readonly string[];
+}
+
+export interface ExecutionWellRetainedEffectCorrelation {
+  readonly producerOwner: string;
+  readonly effect: ExecutionWellRetainedEffect;
+  readonly consumerOwner: string;
+}
+
+export interface ExecutionTimeline {
+  readonly transactions: readonly ExecutionTimelineTransaction[];
+  readonly dependencies: readonly ExecutionTimelineDependency[];
+  readonly obligations: readonly ExecutionTimelineObligation[];
+  readonly streams: readonly ExecutionTimelineStream[];
+}
+
+export interface ExecutionDoorTarget {
   readonly exitKey: string;
   readonly index: number;
-  readonly type: string;
-  readonly room: {
-    readonly id: string;
-    readonly biomeKey: string;
-    readonly gameName: string;
-  };
-  readonly picked: boolean;
-}
-
-export interface ExecutionAdditionalExit {
-  readonly kind: 'chaos' | 'zagreusContract';
-  readonly key: 'chaos' | 'zagreusContract';
-  /** Stable additional-exit address; it is not a normal physical target. */
-  readonly owner: string;
   readonly room: { readonly id: string; readonly biomeKey: string; readonly gameName: string };
-  readonly picked: boolean;
-  /** Present only for topology generated by an Ixion purchase. */
-  readonly ixionOrigin?: {
-    readonly sourceBiomeKey: string;
-    readonly sourceOccurrenceId: string;
-    readonly generationKey: string;
-  };
+  readonly reward?: ExecutionReward;
 }
 
-export type ExecutionOutgoing =
+export type ExecutionDoors =
   | {
-      readonly owner: string;
       readonly kind: 'batch';
-      readonly targets: readonly ExecutionOutgoingTarget[];
-      /** Entry-time sibling continuations, kept distinct from physical doors. */
-      readonly additional: readonly ExecutionAdditionalExit[];
-      /** Exactly one continuation is selected: this physical exit or `selectedAdditionalKey`. */
-      readonly selectedExitKey?: string;
-      /** Additional exits remain distinct from physical door targets. */
-      readonly selectedAdditionalKey?: 'chaos' | 'zagreusContract';
-      /** The reward store resolved for this completed door batch, when observed. */
+      readonly owner: string;
+      readonly targets: readonly ExecutionDoorTarget[];
       readonly resolvedSharedRewardStoreKey?: string;
     }
   | {
-      readonly owner: string;
       readonly kind: 'fixed';
+      readonly owner: string;
       readonly target: {
         readonly id: string;
         readonly biomeKey: string;
         readonly gameName: string;
       };
     }
-  | { readonly owner: string; readonly kind: 'terminal' };
+  | { readonly kind: 'terminal'; readonly owner: string };
 
-export interface ExecutionRoom {
+export interface ExecutionOccurrence {
   readonly id: string;
   readonly owner: string;
   readonly biomeKey: string;
   readonly gameName: string;
   readonly kind: string;
-  readonly entered: boolean;
-  readonly contents: ExecutionRoomContents;
-  /** G-only closed replacement command; it is never inferred from a room name at runtime. */
-  readonly anomaly?: { readonly replacedRoomGameName: string; readonly success: boolean };
-  readonly trace: readonly ExecutionTraceStep[];
-  readonly outgoing: ExecutionOutgoing;
+  /** Published only for the G Anomaly occurrence; ordinary target replacement stays in Doors/topology. */
+  readonly anomaly?: ExecutionAnomalyReplacement;
+  readonly overview: ExecutionOverview;
+  readonly timeline: ExecutionTimeline;
+  readonly doors: ExecutionDoors;
+  readonly diagnostics?: {
+    readonly roomEntered?: ExecutionRunStateDiagnostic;
+    readonly beforeRoomExit?: ExecutionRunStateDiagnostic;
+  };
 }
 
 export interface ExecutionPlan {
@@ -417,11 +423,30 @@ export interface ExecutionPlan {
     readonly biomeKeys: readonly ['F'] | readonly ['F', 'G'];
     readonly terminalBiomeKey: 'F' | 'G';
   };
-  readonly rooms: readonly ExecutionRoom[];
+  /** Complete occurrence records; selectedOccurrenceIds is the route cursor. */
+  readonly selectedOccurrenceIds: readonly string[];
+  readonly occurrences: readonly ExecutionOccurrence[];
+  readonly wellRetainedEffects: readonly ExecutionWellRetainedEffectCorrelation[];
+}
+
+/** Explicit engine-owned product assembled only at publication time. */
+export interface ExecutionSemanticProduct {
+  readonly catalogVersion: string;
+  readonly projectId: string;
+  readonly routeKey: 'Underworld';
+  readonly startingKeepsake: ExecutionStartingKeepsake;
+  readonly extent: ExecutionPlan['extent'];
+  readonly selectedOccurrenceIds: readonly string[];
+  readonly occurrences: readonly ExecutionOccurrence[];
+  readonly wellRetainedEffects: readonly ExecutionWellRetainedEffectCorrelation[];
+}
+
+export interface ExecutionAssemblerInput {
+  readonly assembly: ProjectEvaluationAssembly;
 }
 
 export interface ExecutionCompilerInput {
-  readonly assembly: ProjectEvaluationAssembly;
+  readonly product: ExecutionSemanticProduct;
 }
 
 export interface ExecutionCompilerError extends Error {
@@ -430,12 +455,6 @@ export interface ExecutionCompilerError extends Error {
     | 'unsupportedRoute'
     | 'unsupportedExtent'
     | 'openingMissing'
-    | 'openingRewardMissing'
-    | 'openingBatchMissing'
     | 'openingSelectionMissing'
-    | 'runStateMissing'
     | 'executionCoverageMissing';
 }
-
-/** Kept as a type-only witness for compiler consumers that need the source. */
-export type ExecutionOccurrenceOwner = OccurrenceAddress;

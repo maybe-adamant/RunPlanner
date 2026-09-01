@@ -13,6 +13,7 @@ import type {
   RoomOccurrence,
   RouteWeaponAspectLoadout,
   ShopState,
+  StygianWellGenerationKey,
 } from '../../authored-project/model';
 import type { Catalog, RoomDeclaration, RoomTemplateKey } from '../../catalog-schema';
 import { encounterEnvelopeSlots } from '../../authored-project/room-state/encounter-envelope';
@@ -27,7 +28,7 @@ import type {
   CanonicalShopEntryState,
 } from './model';
 import type { TraitOfferContext } from '../trait-offers';
-import type { ResolvedRewardOffer } from '../../reward-kernel/model';
+import type { ResolvedRewardOffer, ShopOptionEntry } from '../../reward-kernel/model';
 import {
   echoLastRewardPickupEntryKeys,
   activeSelectedPickupProducers,
@@ -38,6 +39,9 @@ import { roomActionKey } from '../../authored-project/room-actions';
 import { acquisitionSiteFromStorageKey } from '../../authored-project/artificer';
 import { seaStarDuplicateSourceIsActive } from '../../authored-project/sea-star';
 import { assembleRoomActionRoster, assembleRoomLifecycleTimeline } from '../room-actions';
+import { extendedWellItemKeys } from '../stygian-well';
+
+type StygianWellEffect = NonNullable<ShopOptionEntry['stygianWell']>['effect'];
 
 function fail(detail: string): never {
   throw new Error(detail);
@@ -864,6 +868,44 @@ export function materializeAuthoredRoom(
       : context.room.enteredRewardStoreHistory.kind === 'fixed'
         ? context.room.enteredRewardStoreHistory.storeKey
         : undefined;
+  const stygianWellOfferEffects =
+    context.occurrence.stygianWell === undefined
+      ? undefined
+      : (() => {
+          const effects: Partial<Record<StygianWellGenerationKey, StygianWellEffect>> = {};
+          const generations: readonly [StygianWellGenerationKey, string | null | undefined][] = [
+            ['initial:healing', context.occurrence.stygianWell!.offerKeyBySlot.healing],
+            ['initial:secondLeft', context.occurrence.stygianWell!.offerKeyBySlot.secondLeft],
+            ['initial:secondRight', context.occurrence.stygianWell!.offerKeyBySlot.secondRight],
+            ['travelDealRefill', context.occurrence.stygianWell!.travelDealRefillKey],
+          ];
+          for (const [generationKey, offerKey] of generations) {
+            if (offerKey === undefined || offerKey === null) continue;
+            const option = context.catalog.rewards.shops.byKey.RoomShop?.groups.values
+              .flatMap((group) => group.options.values)
+              .find((candidate) => candidate.key === offerKey);
+            const effect = option?.stygianWell?.effect;
+            const twistResultKey =
+              generationKey === 'travelDealRefill'
+                ? context.occurrence.stygianWell?.twistResultKeyBySlot?.travelDealRefill
+                : context.occurrence.stygianWell?.twistResultKeyBySlot?.[
+                    generationKey.slice('initial:'.length) as
+                      'healing' | 'secondLeft' | 'secondRight'
+                  ];
+            const twistResultEffect =
+              effect === 'twist' && twistResultKey !== undefined && twistResultKey !== null
+                ? context.catalog.rewards.shops.byKey.RoomShop?.groups.values
+                    .flatMap((group) => group.options.values)
+                    .find((candidate) => candidate.key === twistResultKey)?.stygianWell?.effect
+                : undefined;
+            if (effect !== undefined) effects[generationKey] = twistResultEffect ?? effect;
+          }
+          return Object.freeze(effects);
+        })();
+  const stygianWellExtendedDirectPurchaseItemKeys =
+    context.occurrence.stygianWell === undefined
+      ? undefined
+      : extendedWellItemKeys(context.catalog);
   const base = Object.freeze({
     kind: 'authored',
     origin: createOccurrenceAddress(context.biome, context.occurrence.occurrenceId),
@@ -893,6 +935,10 @@ export function materializeAuthoredRoom(
     ...(context.occurrence.stygianWell === undefined
       ? {}
       : { stygianWell: context.occurrence.stygianWell }),
+    ...(stygianWellOfferEffects === undefined ? {} : { stygianWellOfferEffects }),
+    ...(stygianWellExtendedDirectPurchaseItemKeys === undefined
+      ? {}
+      : { stygianWellExtendedDirectPurchaseItemKeys }),
     acquisitionSites: Object.freeze(
       Object.fromEntries(
         Object.entries(context.occurrence.acquisitionSites ?? {}).flatMap(([siteKey, site]) => {
