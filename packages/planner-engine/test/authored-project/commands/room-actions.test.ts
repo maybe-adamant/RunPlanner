@@ -44,6 +44,7 @@ import {
 import {
   createCompleteFGProject,
   createGoldenFGHProject,
+  createUnderworldFWellCheckpoint,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenHBiome,
@@ -1081,6 +1082,94 @@ describe('room-action commands', () => {
     expect(() =>
       applyProjectCommand(purchased, catalog, { kind: 'MoveRoomAction', action, toIndex: 0 }),
     ).not.toThrow();
+  });
+
+  it('places a Stygian Well Travel refill after the first initial purchase in either selection order', () => {
+    const well = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
+    let project = createUnderworldFWellCheckpoint(false);
+    for (const generationKey of [
+      'initial:secondLeft',
+      'initial:secondRight',
+      'travelDealRefill',
+    ] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'SetStygianWellPurchase',
+        occurrence: well,
+        generationKey,
+        purchased: false,
+      });
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: well,
+      generationKey: 'travelDealRefill',
+      purchased: true,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: well,
+      generationKey: 'initial:secondLeft',
+      purchased: true,
+    });
+    const order = project.route.biomes
+      .find((candidate) => candidate.biomeKey === 'F')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === well.occurrenceId)
+      ?.roomActions.order;
+    expect(order?.filter((reference) => reference.kind === 'purchaseStygianWellOffer')).toEqual([
+      { kind: 'purchaseStygianWellOffer', generationKey: 'initial:secondLeft' },
+      { kind: 'purchaseStygianWellOffer', generationKey: 'travelDealRefill' },
+    ]);
+
+    for (const generationKey of ['initial:secondLeft', 'travelDealRefill'] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'SetStygianWellPurchase',
+        occurrence: well,
+        generationKey,
+        purchased: false,
+      });
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: well,
+      generationKey: 'initial:secondLeft',
+      purchased: true,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: well,
+      generationKey: 'travelDealRefill',
+      purchased: true,
+    });
+    const finalOccurrence = project.route.biomes
+      .find((candidate) => candidate.biomeKey === 'F')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === well.occurrenceId);
+    if (finalOccurrence === undefined) throw new Error('missing Well occurrence');
+    const reverseOrder = finalOccurrence.roomActions.order;
+    expect(
+      reverseOrder.filter((reference) => reference.kind === 'purchaseStygianWellOffer'),
+    ).toEqual([
+      { kind: 'purchaseStygianWellOffer', generationKey: 'initial:secondLeft' },
+      { kind: 'purchaseStygianWellOffer', generationKey: 'travelDealRefill' },
+    ]);
+    expect(
+      assembleRoomActionDomain({ catalog, biome: goldenFBiome, occurrence: finalOccurrence })
+        .contributions,
+    ).toContainEqual(
+      expect.objectContaining({
+        kind: 'action',
+        reference: { kind: 'purchaseStygianWellOffer', generationKey: 'travelDealRefill' },
+        dependencies: [
+          {
+            kind: 'afterAction',
+            action: { kind: 'purchaseStygianWellOffer', generationKey: 'initial:secondLeft' },
+            authoringOnly: true,
+          },
+        ],
+      }),
+    );
   });
 
   it('rejects an invented initial Shop offer when marking Purchased', () => {
