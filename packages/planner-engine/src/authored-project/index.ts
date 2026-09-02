@@ -321,7 +321,11 @@ export {
   type ShopOfferState,
   type ShopState,
 } from './model';
-export { createEmptyRoomActionState, roomActionKey } from './room-actions';
+export {
+  createDefaultRoomActionState,
+  createEmptyRoomActionState,
+  roomActionKey,
+} from './room-actions';
 export {
   createInitialBatchRewardStore,
   createInitialBatchState,

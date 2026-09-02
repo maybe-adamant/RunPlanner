@@ -225,6 +225,14 @@ function baseContribution(
   reference: RoomActionReference,
 ): RoomActionContribution {
   switch (reference.kind) {
+    case 'collectRequiredReward':
+      return contribution(
+        biome,
+        occurrence,
+        reference,
+        'required',
+        frozen({ kind: 'standard', phase: 'afterCombat' }),
+      );
     case 'useFountain':
       return contribution(
         biome,

@@ -433,6 +433,7 @@ export function assembleExecutionOverview(
   const additional = executionAdditionalExits(batch);
   return Object.freeze({
     ...(incomingReward === undefined ? {} : { incomingReward }),
+    ...(room.effectNeutralRequiredReward ? { effectNeutralRequiredReward: true as const } : {}),
     encounterPhases: Object.freeze(
       room.encounterPhases.map((phase) =>
         Object.freeze({

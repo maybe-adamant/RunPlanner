@@ -318,6 +318,7 @@ export function executionTimelineTransactions(
       });
       continue;
     }
+    if (timeline.action.reference.kind === 'collectRequiredReward') continue;
     if (
       timeline.action.reference.kind !== 'interactIncomingReward' &&
       timeline.action.reference.kind !== 'interactLocalReward' &&

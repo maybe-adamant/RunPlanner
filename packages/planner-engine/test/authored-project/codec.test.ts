@@ -41,6 +41,7 @@ function completionOccurrence(
 }
 
 const roomActionReferences: readonly RoomActionReference[] = [
+  { kind: 'collectRequiredReward' },
   { kind: 'completeFieldsCage', phaseKey: 'wave1' },
   { kind: 'interactIncomingReward', producerPoint: 'beforeCombat', acquisitionRole: 'source' },
   { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage1' },

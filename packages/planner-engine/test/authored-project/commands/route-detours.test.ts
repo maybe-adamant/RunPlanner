@@ -418,6 +418,11 @@ describe('authored-project route detour commands', () => {
         (occurrence) => occurrence.occurrenceId === shop,
       )?.additionalExits,
     ).toEqual([{ kind: 'zagreusContract', key: 'zagreusContract', occurrenceId: contract }]);
+    expect(
+      biomeTopology(project, 'Underworld', 'F').occurrences.find(
+        (occurrence) => occurrence.occurrenceId === contract,
+      )?.roomActions.order,
+    ).toEqual([{ kind: 'collectRequiredReward' }]);
 
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceBatchRewardStore',

@@ -436,6 +436,8 @@ export interface RawRoomDeclaration {
   readonly exits: readonly RawRoomExitDeclaration[];
   readonly additionalExits?: readonly RawAdditionalExitDeclaration[];
   readonly incomingReward: RawRewardProducerBinding;
+  /** A real required pickup whose payload is intentionally outside simulated state. */
+  readonly effectNeutralRequiredReward?: boolean;
   /** Optional override for a bounded local reward group exposed by this room. */
   readonly offerRewardBinding?: RawRoomOfferRewardBinding;
   /** The game room flag that suppresses Gift trait offers in this room. */

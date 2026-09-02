@@ -1004,6 +1004,7 @@ export function normalizeRoom(
     exits: Object.freeze(exits),
     additionalExits,
     incomingReward,
+    effectNeutralRequiredReward: room.effectNeutralRequiredReward ?? false,
     offerRewardBinding,
     blockGiftBoons: room.blockGiftBoons ?? false,
     hasKeepsakeRack: room.hasKeepsakeRack ?? false,

@@ -361,7 +361,7 @@ runs pure package tests and focused UI-adapter tests. Type checking remains a
 separate required command because test transformation alone is not a type
 proof.
 
-Test-only authored-project checkpoints are strict, schema-73-encoded
+Test-only authored-project checkpoints are strict, schema-74-encoded
 `ProjectDocument` inputs under `test/fixtures/authored-project/checkpoints/`.
 Static route-scoped imports feed lazy loaders that decode and freeze each
 checkpoint through the production codec; tests never load serialized
@@ -642,7 +642,7 @@ The app persists an authored project document, not Redux state and not a
 simulation cache. The document contains only durable semantic choices and its
 schema version.
 
-The normalized schema-73 `ProjectDocument` is also the portable profile-file
+The normalized schema-74 `ProjectDocument` is also the portable profile-file
 format. It contains exactly one selected route and its authored state; a
 profile is one saved planning workspace, not a container for sibling runs. A
 filename belongs to the application profile session, not the authored

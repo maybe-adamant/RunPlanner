@@ -14,6 +14,7 @@ export const cRooms = [
     roomSetKey: 'C',
     advancesExperimentalHammerUses: true,
     kind: 'Boss',
+    effectNeutralRequiredReward: true,
     mode: { kind: 'authored', templateKey: 'ContractBoss' },
     blockGiftBoons: true,
     structuralTags: [],

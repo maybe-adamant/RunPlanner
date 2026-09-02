@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.53.0-chaos-return-batches',
+  version: '0.54.0-required-boss-rewards',
   biomes,
   routes,
   arcanaCards,

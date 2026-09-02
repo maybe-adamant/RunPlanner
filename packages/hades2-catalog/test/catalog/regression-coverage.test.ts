@@ -158,14 +158,14 @@ const roomFacts = [
 ] as const;
 
 const normalizedBiomeSnapshotHashes = [
-  ['F', 'ff60fd61e38f80c4'],
-  ['G', '81a019b54ac539d2'],
-  ['H', '961604e42f82742a'],
-  ['I', 'dd143ba30223d03d'],
-  ['N', '976fcf929f024fa3'],
-  ['O', '80a1bb53ad57c3af'],
-  ['P', '8424c2f97cfb7372'],
-  ['Q', 'b3be45b100208ead'],
+  ['F', 'dd0fbc8d5def21ee'],
+  ['G', '63b762e781b72122'],
+  ['H', '073e5e72f1e545bb'],
+  ['I', '99b5c45b5e93cc29'],
+  ['N', 'ec051deb1feb2fa3'],
+  ['O', '2d3883e456379370'],
+  ['P', 'a3f2d6a7482204c0'],
+  ['Q', '7bf1d4d694262927'],
 ] as const;
 
 function normalizedBiomeSnapshot(biomeKey: string) {
@@ -274,6 +274,52 @@ describe('catalog regression coverage retained through unified decisions', () =>
         slotKeys: ['left', 'middle', 'right'],
       });
     }
+  });
+
+  it('declares one effect-neutral required reward on every boss room', () => {
+    expect(
+      catalog.rooms.values
+        .filter((room) => room.effectNeutralRequiredReward)
+        .map((room) => room.gameName)
+        .sort(),
+    ).toEqual([
+      'C_Boss01',
+      'F_Boss01',
+      'F_Boss02',
+      'G_Boss01',
+      'G_Boss02',
+      'H_Boss01',
+      'H_Boss02',
+      'I_Boss01',
+      'N_Boss01',
+      'N_Boss02',
+      'O_Boss01',
+      'O_Boss02',
+      'P_Boss01',
+      'Q_Boss01',
+      'Q_Boss02',
+    ]);
+  });
+
+  it('declares every Reprieve and route Postboss fountain as a physical room feature', () => {
+    expect(
+      catalog.rooms.values
+        .filter((room) => room.hasRequiredFountain)
+        .map((room) => room.gameName)
+        .sort(),
+    ).toEqual([
+      'F_PostBoss01',
+      'F_Reprieve01',
+      'G_PostBoss01',
+      'G_Reprieve01',
+      'H_PostBoss01',
+      'I_Reprieve01',
+      'N_PostBoss01',
+      'O_PostBoss01',
+      'O_Reprieve01',
+      'P_PostBoss01',
+      'P_Reprieve01',
+    ]);
   });
 
   it('declares Experimental Hammer use advancement independently of encounter depth', () => {

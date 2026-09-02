@@ -20,6 +20,7 @@ export function overview(value: unknown, label: string) {
     ['encounterPhases', 'requiredObjects'],
     [
       'incomingReward',
+      'effectNeutralRequiredReward',
       'shop',
       'stygianWell',
       'purgingPool',
@@ -45,6 +46,12 @@ export function overview(value: unknown, label: string) {
     },
   );
   const shop = record.shop === undefined ? undefined : object(record.shop, `${label}.shop`);
+  if (
+    record.effectNeutralRequiredReward !== undefined &&
+    booleanValue(record.effectNeutralRequiredReward, `${label}.effectNeutralRequiredReward`) !==
+      true
+  )
+    fail(`${label}.effectNeutralRequiredReward must be true when present`);
   if (shop !== undefined)
     exact(shop, ['profileKey', 'offers'], ['travelDealRefill'], `${label}.shop`);
   const parsedShop =
@@ -326,6 +333,9 @@ export function overview(value: unknown, label: string) {
     ...(record.incomingReward === undefined
       ? {}
       : { incomingReward: reward(record.incomingReward, `${label}.incomingReward`) }),
+    ...(record.effectNeutralRequiredReward === undefined
+      ? {}
+      : { effectNeutralRequiredReward: true as const }),
     encounterPhases: Object.freeze(encounterPhases),
     requiredObjects: Object.freeze(stringArray(record.requiredObjects, `${label}.requiredObjects`)),
     ...(parsedShop === undefined ? {} : { shop: parsedShop }),

@@ -1019,9 +1019,7 @@ describe('single-room lifecycle execution', () => {
         phaseKey: 'Encounter',
       }),
     );
-    expect(fragment.events.map((event) => event.kind)).not.toContain(
-      'encounterEndEffectsApplied',
-    );
+    expect(fragment.events.map((event) => event.kind)).not.toContain('encounterEndEffectsApplied');
   });
 
   it('omits outgoing generation from terminal profiles and remains deterministic', () => {

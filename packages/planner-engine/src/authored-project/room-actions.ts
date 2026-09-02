@@ -1,5 +1,5 @@
 import type { RoomActionReference, RoomActionState } from './model';
-import type { Catalog } from '../catalog-schema';
+import type { Catalog, RoomDeclaration } from '../catalog-schema';
 import type { RoomOccurrence } from './model';
 import {
   encounterEnvelopeSlots,
@@ -18,6 +18,19 @@ export function createEmptyRoomActionState(): RoomActionState {
   return Object.freeze({ order: Object.freeze([]) });
 }
 
+/** Declaration-owned required actions for a newly materialized room occurrence. */
+export function createDefaultRoomActionState(room: RoomDeclaration): RoomActionState {
+  const hasFountain =
+    room.hasRequiredFountain ||
+    (room.mode.kind === 'authored' && room.mode.templateKey === 'Fountain');
+  return Object.freeze({
+    order: Object.freeze([
+      ...(room.effectNeutralRequiredReward ? [{ kind: 'collectRequiredReward' as const }] : []),
+      ...(hasFountain ? [{ kind: 'useFountain' as const }] : []),
+    ]),
+  });
+}
+
 /** Complete structural action domain for one authored occurrence. */
 export function activeRoomActionReferences(
   catalog: Catalog,
@@ -32,13 +45,7 @@ export function activeRoomActionReferences(
 ): readonly RoomActionReference[] {
   const room = catalog.rooms.byKey[occurrence.gameName];
   if (room === undefined) return Object.freeze([]);
-  const references: RoomActionReference[] = [];
-  // Reprieve rooms and fixed Postboss rooms both expose the same
-  // occurrence-owned Fountain interaction.  The declaration fact, rather than
-  // the old completion role, is the authoritative source.
-  const hasFountain =
-    room.hasRequiredFountain ||
-    (room.mode.kind === 'authored' && room.mode.templateKey === 'Fountain');
+  const references: RoomActionReference[] = [...createDefaultRoomActionState(room).order];
   const envelopeSlots = encounterEnvelopeSlots(catalog, room, occurrence.gameName);
   const activeEncounterSlots =
     scope?.activeEncounterSlotKeys !== undefined
@@ -110,7 +117,6 @@ export function activeRoomActionReferences(
     }
   }
   // A Reprieve's authored reward is its room-entry pickup; fountain use follows it by default.
-  if (hasFountain) references.push(Object.freeze({ kind: 'useFountain' }));
   if (occurrence.keepsakeRack !== undefined)
     references.push(Object.freeze({ kind: 'interactKeepsakeRack' }));
   if (occurrence.state.kind === 'shipCombat') {
