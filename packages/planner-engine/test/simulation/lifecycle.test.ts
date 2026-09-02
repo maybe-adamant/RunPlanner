@@ -999,6 +999,31 @@ describe('single-room lifecycle execution', () => {
     ).not.toContain('encounterDepthAdvanced');
   });
 
+  it('records story completion without applying encounter-end effects', () => {
+    const fragment = executeRoomLifecycle(
+      catalog,
+      input({
+        lifecycleProfileKey: 'StoryPickupRoom',
+        encounterEnvelopeKey: 'SingleEncounter',
+        encounterPhases: phases('SingleEncounter', ['Story_Arachne_01']),
+        producer: {
+          lifecycleProfileKey: 'RoomReward',
+          offer: { rewardType: 'Story' },
+        },
+      }),
+    );
+
+    expect(fragment.events).toContainEqual(
+      expect.objectContaining({
+        kind: 'encounterCompleted',
+        phaseKey: 'Encounter',
+      }),
+    );
+    expect(fragment.events.map((event) => event.kind)).not.toContain(
+      'encounterEndEffectsApplied',
+    );
+  });
+
   it('omits outgoing generation from terminal profiles and remains deterministic', () => {
     const executionInput = input({
       lifecycleProfileKey: 'PrebossShopRoom',
