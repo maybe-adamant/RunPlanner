@@ -210,7 +210,7 @@ const lifecycleEffectRegistry = Object.freeze({
             completion,
           )
         : appendEvent(state, context, completion);
-    return phase.kind === 'nonCombat' || phase.skipEndEncounterEffects
+    return phase.kind === 'nonCombat' || phase.kind === 'story' || phase.skipEndEncounterEffects
       ? completed
       : appendEvent(completed, context, {
           ...completion,

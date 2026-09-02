@@ -347,7 +347,7 @@ describe('Experimental Hammer', () => {
     expect(combat02Phases).toEqual(['Cage02', 'Cage01']);
   });
 
-  it('advances only for the resolved end-effects checkpoints across Story rooms', () => {
+  it('does not advance at Story completion because Story skips end effects', () => {
     const project = createCompleteFGProject();
     const evaluated = evaluatedBiome(project, 'G');
     const endEffects = lifecycleEndEffects(project, 'G');
@@ -356,7 +356,7 @@ describe('Experimental Hammer', () => {
         (event) =>
           event.origin.kind === 'occurrence' && event.origin.occurrenceId === 'golden-g-b3-e1',
       ),
-    ).toBe(true);
+    ).toBe(false);
     const result = evaluateBiomeRewardsAssemblyInternal(
       catalog,
       evaluated.snapshot,
