@@ -3,6 +3,7 @@ import { fieldsOptionalRewardCountSupport } from '../../fields-optional-count';
 import type { PurgingPoolAssessment } from '../../purging-pool';
 import type { HermesShrineCandidateContext } from '../../hermes-shrine';
 import {
+  createAcquisitionRoleAddress,
   createEncounterPhaseAddress,
   createNemesisRandomEventAddress,
   createBiomeAddress,
@@ -12,6 +13,7 @@ import {
   semanticAddressKey,
   type SemanticAddress,
   type SteadyGrowthOutcomeAddress,
+  type TraitOfferOwnerAddress,
   type TranscendentEmbryoOutcomeAddress,
   type TargetAddress,
 } from '../../../authored-project/addresses';
@@ -159,6 +161,69 @@ type PendingHubBoardGeneration = GenerationPendingHubBoardGeneration;
 
 function fail(detail: string): never {
   throw new BiomeRewardSimulationContractError(detail);
+}
+
+function traitMutationAcquisitionContact(
+  owner: SemanticAddress,
+): { readonly owner: TraitOfferOwnerAddress; readonly acquisitionRole: string } | undefined {
+  switch (owner.kind) {
+    case 'traitOffer':
+    case 'acquisitionRole':
+    case 'levelResolution':
+      return Object.freeze({ owner: owner.owner, acquisitionRole: owner.acquisitionRole });
+    case 'traitAcquisitionTarget':
+    case 'circeResolution':
+    case 'echoPomTarget':
+    case 'naturalSelectionResult':
+    case 'echoLastRunBoon':
+    case 'echoLastReward':
+    case 'allTogetherSet':
+      return Object.freeze({
+        owner: owner.trait.owner,
+        acquisitionRole: owner.trait.acquisitionRole,
+      });
+    default:
+      return undefined;
+  }
+}
+
+/** Map a nested trait-history mutation back to the atomic Room Action that
+ * execution publishes. The compiler receives only this already-resolved edge. */
+function traitMutationTimelineOwner(
+  owner: SemanticAddress,
+  acquisitionRole: string,
+  acquisitionFrontiers: ReadonlyMap<string, readonly AcquisitionRoleFrontier[]>,
+): SemanticAddress {
+  const contact = traitMutationAcquisitionContact(owner);
+  const acquisitionOwner =
+    contact?.owner ??
+    (owner.kind === 'incomingReward' ||
+    owner.kind === 'localReward' ||
+    owner.kind === 'rewardWheelOffer' ||
+    owner.kind === 'shopOffer' ||
+    owner.kind === 'encounterPhase' ||
+    owner.kind === 'gorgonPhase' ||
+    owner.kind === 'acquisitionEntry'
+      ? owner
+      : undefined);
+  if (acquisitionOwner !== undefined) {
+    const address = createAcquisitionRoleAddress(
+      acquisitionOwner,
+      contact?.acquisitionRole ?? acquisitionRole,
+    );
+    const timelineOwners = new Map<string, SemanticAddress>();
+    for (const frontier of acquisitionFrontiers.get(semanticAddressKey(address)) ?? []) {
+      if (frontier.timelineOwner !== undefined)
+        timelineOwners.set(semanticAddressKey(frontier.timelineOwner), frontier.timelineOwner);
+    }
+    if (timelineOwners.size > 1)
+      throw new BiomeRewardSimulationContractError(
+        `trait mutation ${semanticAddressKey(owner)} maps to multiple active Room Actions`,
+      );
+    const timelineOwner = timelineOwners.values().next().value as SemanticAddress | undefined;
+    if (timelineOwner !== undefined) return timelineOwner;
+  }
+  return owner.kind === 'fountainRarityOutcome' ? owner.action : owner;
 }
 
 const rewardFacts = createBiomeRewardFacts;
@@ -317,8 +382,15 @@ export function evaluateBiomeRewardChronology(
           true,
           timelineParticipationByOwner.get(semanticAddressKey(consumerOwner)) === 'required',
         );
-      for (const mutationOwner of frontier.priorTraitMutationOwners ?? [])
-        recordTimelineDependency(consumerOwner, mutationOwner);
+      for (const mutation of frontier.priorTraitMutations ?? [])
+        recordTimelineDependency(
+          consumerOwner,
+          traitMutationTimelineOwner(
+            mutation.owner,
+            mutation.acquisitionRole,
+            acquisitionConversionContexts,
+          ),
+        );
       const producer = frontier.source.producer;
       if (producer === undefined) continue;
       if (producer.sourceTimelineOwner !== undefined)

@@ -515,7 +515,7 @@ existence of an edge.
 
 | Modeled relation                      | Required prerequisite product                                                                                                                        |
 | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Same-room trait-history mutation      | exact prior mutation owner to each later local offer or target owner whose authored result used that prefix                                          |
+| Same-room trait-history mutation      | exact transaction owner containing the prior mutation to each later local offer or target owner whose authored result used that prefix               |
 | Provider resolution                   | exact acquisition owner contains its provider and resulting offer; no anonymous provider ordinal                                                     |
 | Same-room reward transformation       | exact source owner to each separately owned generated child                                                                                          |
 | First accepted same-room purchase     | planner-selected source purchase to its one-use realization and to every competing qualifying purchase that could otherwise consume the effect first |

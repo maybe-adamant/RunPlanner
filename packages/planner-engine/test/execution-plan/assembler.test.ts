@@ -24,6 +24,7 @@ import {
   createAcquisitionRoleAddress,
   createEncounterPhaseAddress,
   createKeepsakeEquipResultAddress,
+  createLevelResolutionAddress,
   createNemesisRandomEventAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
@@ -40,7 +41,11 @@ import {
 } from '../../src/authored-project';
 import { simulateProjectAssembly } from '../../src/simulation';
 import type { CompleteValidBiomeProjectEvaluation } from '../../src/simulation/evaluation-products';
-import { assembleExecutionProduct } from '../../src/execution-plan';
+import {
+  assembleExecutionProduct,
+  compileExecutionPlan,
+  encodeExecutionPlan,
+} from '../../src/execution-plan';
 import { assembleTimelineRelations } from '../../src/execution-plan/assembly/timeline-relations';
 import { assembleExecutionOverview } from '../../src/execution-plan/assembly/overview';
 import { executionTimelineTransactions } from '../../src/execution-plan/assembly/timeline-transactions';
@@ -386,6 +391,8 @@ describe('engine-owned F/G execution semantic product', () => {
         ),
       ),
     ).toBe(true);
+    expect(generated.owner.length).toBeGreaterThan(256);
+    expect(() => encodeExecutionPlan(compileExecutionPlan({ product: artificer }))).not.toThrow();
 
     const mystery = productFor(narcissusMysteryBoonProject());
     const mysteryTransaction = mystery.occurrences
@@ -576,6 +583,39 @@ describe('engine-owned F/G execution semantic product', () => {
         }),
       ]),
     );
+  });
+
+  it('binds a same-Shop Pom mutation dependency to its purchase transaction', () => {
+    const shop = createOccurrenceAddress(goldenGBiome, createOccurrenceId('golden-g-b5-e1'));
+    const minor = createShopOfferAddress(goldenGBiome, shop.occurrenceId, 'Minor');
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: minor,
+      value: { rewardType: 'StoreRewardRandomStack' },
+    });
+    project = replaceTestShopOfferActions(project, catalog, shop, ['Minor', 'Boon']);
+    project = authorLegalTraitOffers(project);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLevelResolution',
+      levelResolution: createLevelResolutionAddress(minor, 'self'),
+      value: { kind: 'random', targetTraitKey: 'ApolloWeaponBoon' },
+    });
+
+    const occurrence = productFor(project).occurrences.find(
+      (candidate) => candidate.id === shop.occurrenceId,
+    );
+    const minorPurchase = occurrence?.timeline.transactions.find(
+      (transaction) => transaction.kind === 'shopPurchase' && transaction.offerKey === 'Minor',
+    );
+    const boonPurchase = occurrence?.timeline.transactions.find(
+      (transaction) => transaction.kind === 'shopPurchase' && transaction.offerKey === 'Boon',
+    );
+    expect(minorPurchase).toBeDefined();
+    expect(boonPurchase).toBeDefined();
+    expect(occurrence?.timeline.dependencies).toContainEqual({
+      owner: boonPurchase?.owner,
+      afterOwner: minorPurchase?.owner,
+    });
   });
 
   it('publishes a generated Well fallback before purchase and reuses it when purchased', () => {

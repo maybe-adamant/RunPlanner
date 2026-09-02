@@ -1,5 +1,6 @@
 import type { ExecutionRunStateDiagnostic } from '../model';
 import {
+  MAX_OWNER_STRING,
   array,
   booleanValue,
   count,
@@ -467,7 +468,7 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
     },
   );
   return Object.freeze({
-    owner: stringValue(record.owner, `${label}.owner`, 256),
+    owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
     checkpoint: record.checkpoint as 'roomEntered' | 'beforeRoomExit',
     counters: Object.freeze({
       biomeDepthCache: integer(counters.biomeDepthCache, `${label}.counters.biomeDepthCache`),

@@ -3,7 +3,15 @@ import type {
   ExecutionOccurrence,
   ExecutionRoomExitConformanceFactKind,
 } from '../model';
-import { array, booleanValue, exact, fail, object, stringValue } from './primitives';
+import {
+  MAX_OWNER_STRING,
+  array,
+  booleanValue,
+  exact,
+  fail,
+  object,
+  stringValue,
+} from './primitives';
 import { runState } from './diagnostics';
 import { doors } from './doors';
 import { overview } from './overview';
@@ -70,7 +78,7 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
         });
   return Object.freeze({
     id: stringValue(record.id, `${label}.id`, 256),
-    owner: stringValue(record.owner, `${label}.owner`, 256),
+    owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
     biomeKey: stringValue(record.biomeKey, `${label}.biomeKey`),
     gameName: stringValue(record.gameName, `${label}.gameName`),
     kind: stringValue(record.kind, `${label}.kind`),

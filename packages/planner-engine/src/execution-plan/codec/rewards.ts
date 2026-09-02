@@ -6,6 +6,7 @@ import type {
   ExecutionTraitOffer,
 } from '../model';
 import {
+  MAX_OWNER_STRING,
   array,
   booleanValue,
   exact,
@@ -210,10 +211,10 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
           }),
     });
   });
-  if (options.length !== 3) fail(`${label}.options must contain three ordered options`);
+  if (options.length === 0) fail(`${label}.options must contain one to three ordered options`);
   const selected = stringValue(record.selected, `${label}.selected`);
-  if (!['option1', 'option2', 'option3'].includes(selected))
-    fail(`${label}.selected is not a valid option`);
+  const availableOptionKeys = ['option1', 'option2', 'option3'].slice(0, options.length);
+  if (!availableOptionKeys.includes(selected)) fail(`${label}.selected is not a valid option`);
   return Object.freeze({
     kind: 'traits',
     giver: stringValue(record.giver, `${label}.giver`),
@@ -224,7 +225,7 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
       : {
           rejected: (() => {
             const rejected = stringValue(record.rejected, `${label}.rejected`);
-            if (!['option1', 'option2', 'option3'].includes(rejected))
+            if (!availableOptionKeys.includes(rejected))
               fail(`${label}.rejected is not a valid option`);
             return rejected as 'option1' | 'option2' | 'option3';
           })(),
@@ -283,7 +284,11 @@ export function acquisitionRole(value: unknown, label: string): ExecutionAcquisi
           producer: Object.freeze({
             kind: stringValue(producer.kind, `${label}.producer.kind`) as
               'seaStarDuplicate' | 'artificerReplacement' | 'echoLastReward',
-            sourceOwner: stringValue(producer.sourceOwner, `${label}.producer.sourceOwner`, 256),
+            sourceOwner: stringValue(
+              producer.sourceOwner,
+              `${label}.producer.sourceOwner`,
+              MAX_OWNER_STRING,
+            ),
             sourceRole: stringValue(producer.sourceRole, `${label}.producer.sourceRole`),
           }),
         }),
@@ -294,8 +299,8 @@ export function acquisitionRole(value: unknown, label: string): ExecutionAcquisi
       ? {}
       : {
           settlement: Object.freeze({
-            site: stringValue(settlement.site, `${label}.settlement.site`),
-            entry: stringValue(settlement.entry, `${label}.settlement.entry`),
+            site: stringValue(settlement.site, `${label}.settlement.site`, MAX_OWNER_STRING),
+            entry: stringValue(settlement.entry, `${label}.settlement.entry`, MAX_OWNER_STRING),
           }),
         }),
     ...(record.traitOffer === undefined
