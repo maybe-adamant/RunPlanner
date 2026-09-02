@@ -178,6 +178,15 @@ describe('Run State presentation', () => {
         },
       },
       rewardPriorities: ['Boon', 'Boon'],
+      pendingHermesShrineDeliveries: {},
+      stygianWell: {
+        sparkUses: 0,
+        yarnUses: 0,
+        hymnUses: 0,
+        discountUses: [],
+        emptySlotUses: [],
+        extendedUses: 0,
+      },
       hexProgress: {
         spellTraitKey: 'SpellMoonBeamTrait',
         tree: createDefaultAuthoredHexTree(catalog, 'SpellMoonBeamTrait', 'Maze'),

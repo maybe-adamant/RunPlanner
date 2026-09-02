@@ -2,7 +2,6 @@ import type {
   ExecutionLifecycleWindow,
   ExecutionTimeline,
   ExecutionTimelineTransaction,
-  ExecutionWellRetainedEffectCorrelation,
 } from '../model';
 import {
   array,
@@ -14,7 +13,7 @@ import {
   stringValue,
   wellGenerationKey,
 } from './primitives';
-import { acquisitionRole, equipResults, reward, traitOffer } from './rewards';
+import { acquisitionRole, equipResults, reward, runtimeFallbacks, traitOffer } from './rewards';
 
 export function lifecycleWindow(value: unknown, label: string): ExecutionLifecycleWindow {
   const record = object(value, label);
@@ -31,6 +30,13 @@ export function lifecycleWindow(value: unknown, label: string): ExecutionLifecyc
       phaseKey: stringValue(record.phaseKey, `${label}.phaseKey`),
     });
   }
+  if (record.kind === 'bossDefeated') {
+    exact(record, ['kind', 'phaseKey'], [], label);
+    return Object.freeze({
+      kind: 'bossDefeated',
+      phaseKey: stringValue(record.phaseKey, `${label}.phaseKey`),
+    });
+  }
   if (record.kind === 'postOutgoing') {
     exact(record, ['kind'], [], label);
     return Object.freeze({ kind: 'postOutgoing' });
@@ -41,8 +47,18 @@ export function lifecycleWindow(value: unknown, label: string): ExecutionLifecyc
 export function nemesisOutcome(value: unknown, label: string) {
   const record = object(value, label);
   if (record.kind === 'freeItem') {
-    exact(record, ['kind'], [], label);
-    return Object.freeze({ kind: 'freeItem' as const });
+    exact(record, ['kind'], ['runtimeFallbacks'], label);
+    return Object.freeze({
+      kind: 'freeItem' as const,
+      ...(record.runtimeFallbacks === undefined
+        ? {}
+        : {
+            runtimeFallbacks: runtimeFallbacks(
+              record.runtimeFallbacks,
+              `${label}.runtimeFallbacks`,
+            ),
+          }),
+    });
   }
   if (record.kind === 'goldTrade' || record.kind === 'damageTrade') {
     exact(record, ['kind', 'response'], [], label);
@@ -76,7 +92,7 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
     exact(
       record,
       ['kind', 'owner', 'sourceOwner', 'reward', 'producerLifecycleKey', 'roles', 'window'],
-      [],
+      ['runtimeFallbacks'],
       label,
     );
     return Object.freeze({
@@ -93,6 +109,14 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
           acquisitionRole(entry, `${label}.roles[${index}]`),
         ),
       ),
+      ...(record.runtimeFallbacks === undefined
+        ? {}
+        : {
+            runtimeFallbacks: runtimeFallbacks(
+              record.runtimeFallbacks,
+              `${label}.runtimeFallbacks`,
+            ),
+          }),
       window: lifecycleWindow(record.window, `${label}.window`),
     });
   }
@@ -130,6 +154,23 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
     });
   }
   if (kind === 'automatic') {
+    if (record.effect === 'judgment' || record.effect === 'crystalFigurine') {
+      exact(
+        record,
+        ['kind', 'owner', 'effect', 'phaseKey', 'arcanaKeys', 'rarity', 'window'],
+        [],
+        label,
+      );
+      return Object.freeze({
+        kind,
+        owner: stringValue(record.owner, `${label}.owner`, 256),
+        effect: record.effect,
+        phaseKey: stringValue(record.phaseKey, `${label}.phaseKey`),
+        arcanaKeys: Object.freeze(stringArray(record.arcanaKeys, `${label}.arcanaKeys`)),
+        rarity: stringValue(record.rarity, `${label}.rarity`),
+        window: lifecycleWindow(record.window, `${label}.window`),
+      });
+    }
     exact(
       record,
       ['kind', 'owner', 'effect', 'phaseKey', 'source', 'target', 'window'],
@@ -165,7 +206,7 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
         'producerLifecycleKey',
         'roles',
       ],
-      [],
+      ['runtimeFallbacks'],
       label,
     );
     return Object.freeze({
@@ -185,13 +226,21 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
           acquisitionRole(entry, `${label}.roles[${index}]`),
         ),
       ),
+      ...(record.runtimeFallbacks === undefined
+        ? {}
+        : {
+            runtimeFallbacks: runtimeFallbacks(
+              record.runtimeFallbacks,
+              `${label}.runtimeFallbacks`,
+            ),
+          }),
     });
   }
   if (kind === 'wellPurchase') {
     exact(
       record,
       ['kind', 'owner', 'window', 'offerKey', 'generationKey', 'effect', 'extendedDirectPurchase'],
-      ['twistResultKey'],
+      ['twistResultKey', 'runtimeFallbacks'],
       label,
     );
     return Object.freeze({
@@ -222,6 +271,54 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
       ...(record.twistResultKey === undefined
         ? {}
         : { twistResultKey: stringValue(record.twistResultKey, `${label}.twistResultKey`) }),
+      ...(record.runtimeFallbacks === undefined
+        ? {}
+        : {
+            runtimeFallbacks: runtimeFallbacks(
+              record.runtimeFallbacks,
+              `${label}.runtimeFallbacks`,
+            ),
+          }),
+    });
+  }
+  if (kind === 'wellRefill') {
+    exact(
+      record,
+      ['kind', 'owner', 'window', 'generationKey', 'offerKey', 'effect'],
+      ['twistResultKey', 'runtimeFallbacks'],
+      label,
+    );
+    if (record.generationKey !== 'travelDealRefill') fail(`${label}.generationKey is unsupported`);
+    if (
+      record.effect !== 'neutral' &&
+      record.effect !== 'spark' &&
+      record.effect !== 'discount' &&
+      record.effect !== 'emptySlot' &&
+      record.effect !== 'extended' &&
+      record.effect !== 'yarn' &&
+      record.effect !== 'hymn' &&
+      record.effect !== 'twist' &&
+      record.effect !== 'lastStand'
+    )
+      fail(`${label}.effect is unsupported`);
+    return Object.freeze({
+      kind,
+      owner: stringValue(record.owner, `${label}.owner`, 256),
+      window: lifecycleWindow(record.window, `${label}.window`),
+      generationKey: 'travelDealRefill' as const,
+      offerKey: stringValue(record.offerKey, `${label}.offerKey`),
+      effect: record.effect,
+      ...(record.twistResultKey === undefined
+        ? {}
+        : { twistResultKey: stringValue(record.twistResultKey, `${label}.twistResultKey`) }),
+      ...(record.runtimeFallbacks === undefined
+        ? {}
+        : {
+            runtimeFallbacks: runtimeFallbacks(
+              record.runtimeFallbacks,
+              `${label}.runtimeFallbacks`,
+            ),
+          }),
     });
   }
   if (kind === 'poolSale') {
@@ -269,7 +366,7 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
 
 export function timeline(value: unknown, label: string): ExecutionTimeline {
   const record = object(value, label);
-  exact(record, ['transactions', 'dependencies', 'obligations', 'streams'], [], label);
+  exact(record, ['transactions', 'dependencies', 'obligations'], [], label);
   const transactions = array(record.transactions, `${label}.transactions`).map((entry, index) =>
     transaction(entry, `${label}.transactions[${index}]`),
   );
@@ -296,37 +393,9 @@ export function timeline(value: unknown, label: string): ExecutionTimeline {
         'roomEntered' | 'outgoingGeneration' | 'exitUsable' | 'roomExit',
     });
   });
-  const streams = array(record.streams, `${label}.streams`).map((entry, index) => {
-    const row = object(entry, `${label}.streams[${index}]`);
-    exact(row, ['key', 'owners'], [], `${label}.streams[${index}]`);
-    return Object.freeze({
-      key: stringValue(row.key, `${label}.streams[${index}].key`),
-      owners: Object.freeze(stringArray(row.owners, `${label}.streams[${index}].owners`)),
-    });
-  });
   return Object.freeze({
     transactions: Object.freeze(transactions),
     dependencies: Object.freeze(dependencies),
     obligations: Object.freeze(obligations),
-    streams: Object.freeze(streams),
   });
-}
-
-export function wellRetainedEffects(
-  value: unknown,
-  label: string,
-): readonly ExecutionWellRetainedEffectCorrelation[] {
-  return Object.freeze(
-    array(value, label).map((entry, index) => {
-      const row = object(entry, `${label}[${index}]`);
-      exact(row, ['producerOwner', 'effect', 'consumerOwner'], [], `${label}[${index}]`);
-      if (row.effect !== 'extended' && row.effect !== 'yarn' && row.effect !== 'hymn')
-        fail(`${label}[${index}].effect is unsupported`);
-      return Object.freeze({
-        producerOwner: stringValue(row.producerOwner, `${label}[${index}].producerOwner`, 256),
-        effect: row.effect,
-        consumerOwner: stringValue(row.consumerOwner, `${label}[${index}].consumerOwner`, 256),
-      });
-    }),
-  );
 }

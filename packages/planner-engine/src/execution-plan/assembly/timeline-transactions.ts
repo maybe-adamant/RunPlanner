@@ -1,7 +1,11 @@
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createNemesisRandomEventAddress,
   createLevelResolutionAddress,
+  createKeepsakeEquipResultAddress,
+  createOccurrenceAddress,
+  createPostbossKeepsakeSelectionAddress,
   createShopOfferAddress,
   createTraitOfferAddress,
   semanticAddressKey,
@@ -17,7 +21,11 @@ import {
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import { agreement, executionRoomOwnerKey } from './support';
 import { assembleLifecycleWindow } from './lifecycle';
-import { executionKeepsakeEquipResults, executionRewardFromOffer } from './overview';
+import {
+  executionKeepsakeEquipResults,
+  executionRewardFromOffer,
+  executionRuntimeFallbacks,
+} from './overview';
 import type {
   ExecutionAcquisitionRole,
   ExecutionLevelResolution,
@@ -76,15 +84,7 @@ export function executionTimelineTransactions(
       selected.branches.map((branch) => branch.effectiveLevels),
       `trait effective levels ${semanticAddressKey(selected.address)}`,
     );
-    const fallbackMatches = biome.rewards.runtimeOfferFallbacks.filter(
-      (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(selected.address),
-    );
-    if (fallbackMatches.length > 1)
-      throw new CompilerError(
-        'executionCoverageMissing',
-        `duplicate runtime fallback ${semanticAddressKey(selected.address)}`,
-      );
-    const fallback = fallbackMatches[0];
+    const runtimeFallbacks = executionRuntimeFallbacks(biome, selected.address, 'traitEligibility');
     const replacements = agreement(
       selected.branches.map((branch) =>
         branch.assessments.map((assessment) => assessment.replacementTransition),
@@ -122,7 +122,7 @@ export function executionTimelineTransactions(
       ...(selected.offer.rejectedOptionKey === undefined
         ? {}
         : { rejected: selected.offer.rejectedOptionKey }),
-      ...(fallback === undefined ? {} : { runtimeFallback: fallback.fallbackKey }),
+      ...(runtimeFallbacks === undefined ? {} : { runtimeFallbacks }),
     });
   };
   const levelResolution = (
@@ -283,6 +283,14 @@ export function executionTimelineTransactions(
           'executionCoverageMissing',
           `unresolved Nemesis event ${owner}:${phaseKey}`,
         );
+      const nemesisRuntimeFallbacks =
+        nemesis?.kind === 'freeItem'
+          ? executionRuntimeFallbacks(
+              biome,
+              createNemesisRandomEventAddress(phase),
+              'npcConsumableSelection',
+            )
+          : undefined;
       add({
         kind: 'encounterInteraction',
         owner: semanticAddressKey(timeline.action.owner),
@@ -295,7 +303,15 @@ export function executionTimelineTransactions(
           : {
               resolution: Object.freeze({
                 kind: 'nemesisRandomEvent' as const,
-                outcome: nemesis,
+                outcome:
+                  nemesis.kind === 'freeItem'
+                    ? Object.freeze({
+                        kind: 'freeItem' as const,
+                        ...(nemesisRuntimeFallbacks === undefined
+                          ? {}
+                          : { runtimeFallbacks: nemesisRuntimeFallbacks }),
+                      })
+                    : nemesis,
               }),
             }),
         window: windowFor(semanticAddressKey(timeline.action.owner)),
@@ -332,7 +348,20 @@ export function executionTimelineTransactions(
             `${room.gameName} lacks selected keepsake rack target`,
           );
         const rackOwner = semanticAddressKey(timeline.action.owner);
-        const equipResults = executionKeepsakeEquipResults(room.keepsakeRack?.equipResults);
+        const keepsakeSelection = createPostbossKeepsakeSelectionAddress(
+          createOccurrenceAddress(
+            createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+            room.occurrenceId,
+          ),
+        );
+        const equipResults = executionKeepsakeEquipResults(
+          room.keepsakeRack?.equipResults,
+          executionRuntimeFallbacks(
+            biome,
+            createKeepsakeEquipResultAddress(keepsakeSelection, 'jeweledPom'),
+            'traitEligibility',
+          ),
+        );
         add({
           kind: 'keepsakeChange',
           owner: rackOwner,
@@ -379,15 +408,18 @@ export function executionTimelineTransactions(
           'executionCoverageMissing',
           `${room.gameName} lacks normalized Well effect for ${generationKey}`,
         );
-      // Only the explicit catalog-owned neutral effect is guidance-only.
       const extendedDirectPurchase =
         room.stygianWellExtendedDirectPurchaseItemKeys?.includes(offerKey) === true;
-      if (effect === 'neutral' && !extendedDirectPurchase) continue;
       const twistResultKey =
         room.stygianWell?.twistResultKeyBySlot?.[
           generationKey === 'travelDealRefill' ? 'travelDealRefill' : slot!
         ];
       const wellOwner = semanticAddressKey(timeline.action.owner);
+      const runtimeFallbacks = executionRuntimeFallbacks(
+        biome,
+        timeline.action.owner,
+        'storePurchase',
+      );
       add({
         kind: 'wellPurchase',
         owner: wellOwner,
@@ -396,6 +428,7 @@ export function executionTimelineTransactions(
         effect,
         extendedDirectPurchase,
         ...(twistResultKey === undefined || twistResultKey === null ? {} : { twistResultKey }),
+        ...(runtimeFallbacks === undefined ? {} : { runtimeFallbacks }),
         window: windowFor(wellOwner),
       });
       continue;
@@ -512,23 +545,13 @@ export function executionTimelineTransactions(
       acquisitionSource.producerLifecycleKey,
       acquisitionSource.resolvedStoreKey,
     );
+    const runtimeFallbacks = executionRuntimeFallbacks(
+      biome,
+      source,
+      actionReference.kind === 'interactShopOffer' ? 'storePurchase' : undefined,
+    );
     const acquisitionOwner = semanticAddressKey(timeline.action.owner);
     if (shopOffer !== undefined) {
-      const hasPlannerVisibleEffect =
-        roles.some(
-          (role) =>
-            role.traitOffer !== undefined ||
-            role.levelResolution !== undefined ||
-            role.producer !== undefined ||
-            role.disposition !== 'normal' ||
-            role.settlement !== undefined,
-        ) ||
-        biome.rewards.derivedAcquisitionEntries.some(
-          (entry) =>
-            entry.sourceOfferKey === shopOffer.offerKey ||
-            entry.eligibleSourceOfferKeys?.includes(shopOffer.offerKey) === true,
-        );
-      if (!hasPlannerVisibleEffect) continue;
       add({
         kind: 'shopPurchase',
         owner: acquisitionOwner,
@@ -538,6 +561,7 @@ export function executionTimelineTransactions(
         roles,
         offerKey: shopOffer.offerKey,
         rewardType: shopOffer.offer.rewardType,
+        ...(runtimeFallbacks === undefined ? {} : { runtimeFallbacks }),
         window: windowFor(acquisitionOwner),
       });
     } else {
@@ -548,9 +572,52 @@ export function executionTimelineTransactions(
         reward,
         producerLifecycleKey: acquisitionSource.producerLifecycleKey,
         roles,
+        ...(runtimeFallbacks === undefined ? {} : { runtimeFallbacks }),
         window: windowFor(acquisitionOwner),
       });
     }
+  }
+  for (const refill of biome.rewards.wellRefillRealizations) {
+    if (
+      !('occurrenceId' in refill.owner) ||
+      refill.owner.occurrenceId !== room.occurrenceId ||
+      refill.owner.biomeKey !== room.origin.biomeKey ||
+      refill.owner.routeKey !== room.origin.routeKey
+    )
+      continue;
+    const runtimeFallbacks = executionRuntimeFallbacks(
+      biome,
+      refill.inventoryOwner,
+      'storePurchase',
+    );
+    add({
+      kind: 'wellRefill',
+      owner: semanticAddressKey(refill.owner),
+      generationKey: 'travelDealRefill',
+      offerKey: refill.offerKey,
+      effect: refill.effect,
+      ...(refill.twistResultKey === undefined ? {} : { twistResultKey: refill.twistResultKey }),
+      ...(runtimeFallbacks === undefined ? {} : { runtimeFallbacks }),
+      window: windowFor(semanticAddressKey(refill.sourceOwner)),
+    });
+  }
+  for (const outcome of biome.rewards.bossArcanaOutcomes) {
+    if (
+      !('occurrenceId' in outcome.owner) ||
+      outcome.owner.occurrenceId !== room.occurrenceId ||
+      outcome.owner.biomeKey !== room.origin.biomeKey ||
+      outcome.owner.routeKey !== room.origin.routeKey
+    )
+      continue;
+    add({
+      kind: 'automatic',
+      owner: semanticAddressKey(outcome.owner),
+      effect: outcome.effect,
+      phaseKey: outcome.phaseKey,
+      arcanaKeys: Object.freeze([...outcome.arcanaKeys]),
+      rarity: outcome.rarity,
+      window: Object.freeze({ kind: 'bossDefeated', phaseKey: outcome.phaseKey }),
+    });
   }
   return Object.freeze(transactions);
 }

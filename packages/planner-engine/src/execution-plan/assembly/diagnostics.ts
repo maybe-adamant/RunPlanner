@@ -9,6 +9,7 @@ import type {
   ExecutionRunStateCount,
   ExecutionRunStateDiagnostic,
 } from '../model';
+import { pendingKeepsakeEffects } from '../../simulation/rewards/run-state-conformance';
 
 function executionCount(value: ExecutionRunStateCount): ExecutionRunStateCount {
   return value.kind === 'exact'
@@ -119,6 +120,38 @@ function assembleRunStateDiagnostic(
       investedPathPoints: snapshot.hexObserver.investedPathPoints,
     }),
     artificer: snapshot.artificer === undefined ? null : Object.freeze({ ...snapshot.artificer }),
+    retainedEffects: Object.freeze({
+      echoShopDuplicateStatus: snapshot.traits.echoShopDuplicateStatus ?? null,
+      keepsakes: pendingKeepsakeEffects(snapshot.keepsakes),
+      steadyGrowth: Object.freeze(
+        Object.entries(snapshot.traits.steadyGrowth ?? {})
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([traitKey, state]) => Object.freeze({ traitKey, ...state })),
+      ),
+      hermesShrineDeliveries: Object.freeze(
+        Object.values(snapshot.pendingHermesShrineDeliveries)
+          .sort((left, right) => left.sourceKey.localeCompare(right.sourceKey))
+          .map((delivery) =>
+            Object.freeze({
+              sourceKey: delivery.sourceKey,
+              sourceOccurrenceId: delivery.sourceOrigin.occurrenceId,
+              generationKey: delivery.generationKey,
+              rewardType: delivery.rewardType,
+              remainingUses: delivery.remainingUses,
+              rushed: delivery.rushed === true,
+              ...(delivery.dueAt === undefined
+                ? {}
+                : { dueOccurrenceId: delivery.dueAt.occurrenceId }),
+              ...(delivery.dueSequence === undefined ? {} : { dueSequence: delivery.dueSequence }),
+            }),
+          ),
+      ),
+      stygianWell: Object.freeze({
+        ...snapshot.stygianWell,
+        discountUses: Object.freeze([...snapshot.stygianWell.discountUses]),
+        emptySlotUses: Object.freeze([...snapshot.stygianWell.emptySlotUses]),
+      }),
+    }),
   });
 }
 

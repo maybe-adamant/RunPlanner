@@ -114,6 +114,10 @@ export interface RunStateSnapshot {
   /** Branch-derived identity chronology; effects are introduced by later gates. */
   readonly keepsakes: RewardBranchState['keepsakes'];
   readonly rewardPriorities: RewardBranchState['rewardPriorities'];
+  /** Cross-room Shrine orders, including their exact maturity clocks and due hosts. */
+  readonly pendingHermesShrineDeliveries: RewardBranchState['pendingHermesShrineDeliveries'];
+  /** Consequential Well effects retained after the purchase room closes. */
+  readonly stygianWell: RewardBranchState['stygianWell'];
   readonly hexProgress: RewardBranchState['hexProgress'];
   /** Game-facing Hex identity, resolved while the normalized catalog is available. */
   readonly hexObserver: {
@@ -185,6 +189,8 @@ interface RunStateDerivationCache {
       readonly arcanaFear: RewardBranchState['arcanaFear'];
       readonly keepsakes: RewardBranchState['keepsakes'];
       readonly rewardPriorities: RewardBranchState['rewardPriorities'];
+      readonly pendingHermesShrineDeliveries: RewardBranchState['pendingHermesShrineDeliveries'];
+      readonly stygianWell: RewardBranchState['stygianWell'];
       readonly hexProgress: RewardBranchState['hexProgress'];
       readonly forfeitStatus: 'inactive' | 'available' | 'consumed';
     }
@@ -623,6 +629,8 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
             objectId(cache, branch.arcanaFear),
             objectId(cache, branch.keepsakes),
             objectId(cache, branch.rewardPriorities),
+            objectId(cache, branch.pendingHermesShrineDeliveries),
+            objectId(cache, branch.stygianWell),
             objectId(cache, branch.hexProgress),
           ].join(':');
     let derived =
@@ -651,6 +659,8 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
         arcanaFear: branch.arcanaFear,
         keepsakes: branch.keepsakes,
         rewardPriorities: branch.rewardPriorities,
+        pendingHermesShrineDeliveries: branch.pendingHermesShrineDeliveries,
+        stygianWell: branch.stygianWell,
         hexProgress: branch.hexProgress,
         forfeitStatus: forfeit,
       });
@@ -739,6 +749,8 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
     arcanaFear: first.arcanaFear,
     keepsakes: first.keepsakes,
     rewardPriorities: first.rewardPriorities,
+    pendingHermesShrineDeliveries: first.pendingHermesShrineDeliveries,
+    stygianWell: first.stygianWell,
     hexProgress: first.hexProgress,
     hexObserver: Object.freeze({
       ...(first.hexProgress.spellTraitKey === undefined

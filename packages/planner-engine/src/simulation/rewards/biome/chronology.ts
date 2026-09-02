@@ -18,6 +18,7 @@ import {
 import type { ResourcePlacements, RouteLoadout } from '../../../authored-project/model';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../../authored-project/defaults';
 import type { StygianWellCandidateContext } from '../../stygian-well';
+import type { RuntimeOfferAvailabilityContact } from '../../runtime-offer-fallback';
 import { parseSeaStarDuplicateSiteKey } from '../../../authored-project/sea-star';
 import { parseHermesShrineDeliveryEntryKey } from '../../../authored-project/hermes-shrine-delivery';
 import type { ResolvedRewardOffer } from '../../../reward-kernel';
@@ -120,6 +121,12 @@ import { addRewardFinding } from '../findings';
 import { mergeEquivalentRewardBranches, type RewardBranchState } from '../branch-primitives';
 import type { ReachedTraitChildCheckpoint } from '../trait-settlement';
 import { rewardFinding } from '../findings';
+import {
+  EMPTY_PLANNER_TIMELINE_FACTS,
+  type PlannerTimelineDependency,
+  type PlannerTimelineNode,
+} from '../../timeline-facts';
+import type { WellRefillRealization } from '../model';
 import {
   assessExperimentalHammerEquipResult,
   applyEchoFigLeafReplay,
@@ -240,8 +247,18 @@ export function evaluateBiomeRewardChronology(
       readonly address: SemanticAddress;
       readonly preferredKey: string;
       readonly fallbackKey: string;
+      readonly availabilityContact: RuntimeOfferAvailabilityContact;
     }
   >();
+  const timelineParticipationByOwner = new Map<string, 'required' | 'optional'>(
+    [...rooms.values()].flatMap((candidate) =>
+      candidate.kind !== 'authored'
+        ? []
+        : candidate.roomActionRoster.rows
+            .filter((row) => !row.stale && row.rank !== null)
+            .map((row) => [semanticAddressKey(row.owner), row.participation] as const),
+    ),
+  );
   const blockedGorgonPhases = new Set<string>();
   let gorgonEvaluationBlocked = false;
   const eligibleGorgonPhases = new Set<string>();
@@ -271,25 +288,62 @@ export function evaluateBiomeRewardChronology(
                 : fail('Artificer replacement frontier received a foreign owner'),
           }),
         );
+      const consumerOwner = frontier.timelineOwner;
+      // Optional acquisition actions are guidance until a planner-owned
+      // resolution makes them a consequential contact. Blind boxes must be
+      // retained for their provider resolution; authored trait/level screens,
+      // generated children, and consumed Well effects likewise publish their
+      // exact action owner here rather than asking execution to infer it.
+      const roleOffer =
+        frontier.source.traitOffersByAcquisitionRole?.[frontier.address.acquisitionRole];
+      const roleLevel =
+        frontier.source.levelResolutionsByAcquisitionRole?.[frontier.address.acquisitionRole];
+      const consequential =
+        frontier.source.offer.rewardType === 'BlindBoxLoot' ||
+        frontier.source.producer !== undefined;
+      if (consequential && consumerOwner === undefined)
+        throw new BiomeRewardSimulationContractError(
+          `reached acquisition ${semanticAddressKey(frontier.address)} has no active Room Action owner`,
+        );
+      if (consumerOwner === undefined) continue;
+      if (
+        frontier.source.offer.rewardType === 'BlindBoxLoot' ||
+        (roleOffer !== undefined && roleOffer !== null) ||
+        (roleLevel !== undefined && roleLevel !== null) ||
+        frontier.source.producer !== undefined
+      )
+        recordTimelineNode(
+          consumerOwner,
+          true,
+          timelineParticipationByOwner.get(semanticAddressKey(consumerOwner)) === 'required',
+        );
+      for (const mutationOwner of frontier.priorTraitMutationOwners ?? [])
+        recordTimelineDependency(consumerOwner, mutationOwner);
+      const producer = frontier.source.producer;
+      if (producer === undefined) continue;
+      if (producer.sourceTimelineOwner !== undefined)
+        recordTimelineDependency(consumerOwner, producer.sourceTimelineOwner);
     }
   }
   function recordRuntimeOfferFallbacks(
     fallbacks:
       | readonly {
           readonly address: SemanticAddress;
-          readonly preferredRewardType: string;
-          readonly fallbackRewardType: string;
+          readonly preferredKey: string;
+          readonly fallbackKey: string;
+          readonly availabilityContact: RuntimeOfferAvailabilityContact;
         }[]
       | undefined,
   ): void {
     for (const fallback of fallbacks ?? []) {
-      const key = semanticAddressKey(fallback.address);
+      const key = `${semanticAddressKey(fallback.address)}\u0000${fallback.availabilityContact}`;
       runtimeOfferFallbacks.set(
         key,
         Object.freeze({
           address: fallback.address,
-          preferredKey: fallback.preferredRewardType,
-          fallbackKey: fallback.fallbackRewardType,
+          preferredKey: fallback.preferredKey,
+          fallbackKey: fallback.fallbackKey,
+          availabilityContact: fallback.availabilityContact,
         }),
       );
     }
@@ -404,6 +458,51 @@ export function evaluateBiomeRewardChronology(
   const targetHistoryByOrigin = new Map<string, TargetRewardHistoryCheckpoint>();
   const targetGenerationByParent = new Map<string, TargetGenerationFrontier>();
   const findings = new Map<string, FindingRegionEntry>();
+  const timelineFactNodes = new Map<string, PlannerTimelineNode>();
+  const timelineFactDependencies = new Map<string, PlannerTimelineDependency>();
+  const wellRefillRealizations = new Map<string, WellRefillRealization>();
+  const bossArcanaOutcomes = new Map<string, import('../model').BossArcanaOutcome>();
+  const recordTimelineNode = (
+    owner: SemanticAddress,
+    included: boolean,
+    required: boolean,
+  ): void => {
+    const key = semanticAddressKey(owner);
+    const current = timelineFactNodes.get(key);
+    if (current === undefined)
+      timelineFactNodes.set(key, Object.freeze({ owner, included, required }));
+    else if ((included && !current.included) || (required && !current.required))
+      timelineFactNodes.set(
+        key,
+        Object.freeze({
+          owner: current.owner,
+          included: current.included || included,
+          required: current.required || required,
+        }),
+      );
+  };
+  const recordTimelineDependency = (owner: SemanticAddress, afterOwner: SemanticAddress): void => {
+    const ownerKey = semanticAddressKey(owner);
+    const afterKey = semanticAddressKey(afterOwner);
+    if (ownerKey === afterKey) return;
+    timelineFactDependencies.set(
+      `${ownerKey}\u0000${afterKey}`,
+      Object.freeze({ owner, afterOwner }),
+    );
+  };
+  const recordTimelineFacts = (
+    facts:
+      | {
+          readonly nodes?: readonly PlannerTimelineNode[];
+          readonly dependencies?: readonly PlannerTimelineDependency[];
+        }
+      | undefined,
+  ): void => {
+    for (const node of facts?.nodes ?? [])
+      recordTimelineNode(node.owner, node.included, node.required);
+    for (const dependency of facts?.dependencies ?? [])
+      recordTimelineDependency(dependency.owner, dependency.afterOwner);
+  };
   const purgingPoolAssessments = new Map<
     string,
     {
@@ -989,6 +1088,7 @@ export function evaluateBiomeRewardChronology(
     }
     recordAcquisitionRoleFrontiers(result.emissions.acquisitionRoleFrontiers);
     recordRuntimeOfferFallbacks(result.emissions.runtimeOfferFallbacks);
+    recordTimelineFacts(result.emissions.timelineFacts);
     recordDerivedAcquisitionEntryFrontiers(result.emissions.derivedEntryFrontiers);
     recordTraitChildSettlements(result.emissions.traitChildSettlements, occurrenceOwner);
     for (const frontier of result.producerFrontiers)
@@ -1106,6 +1206,16 @@ export function evaluateBiomeRewardChronology(
             semanticAddressKey(entered.stygianWellAssessment.origin),
             entered.stygianWellAssessment,
           );
+        for (const fallback of entered.stygianWellAssessment?.runtimeOfferFallbacks ?? [])
+          runtimeOfferFallbacks.set(
+            `${semanticAddressKey(fallback.address)}\u0000${fallback.availabilityContact}`,
+            Object.freeze({
+              address: fallback.address,
+              preferredKey: fallback.preferredKey,
+              fallbackKey: fallback.fallbackKey,
+              availabilityContact: fallback.availabilityContact,
+            }),
+          );
         if (entered.runStateCheckpoint !== undefined) {
           const { owner, room: checkpointRoom, view } = entered.runStateCheckpoint;
           if (view === undefined) {
@@ -1152,6 +1262,7 @@ export function evaluateBiomeRewardChronology(
           branches,
         );
         branches = transition.branches;
+        recordTimelineFacts(transition.timelineFacts);
         if (transition.candidate !== undefined)
           fountainRarityCandidateContexts.set(transition.candidate.key, transition.candidate.value);
         for (const finding of transition.findings)
@@ -1414,13 +1525,17 @@ export function evaluateBiomeRewardChronology(
           );
         if (transition.runtimeOfferFallback !== undefined)
           runtimeOfferFallbacks.set(
-            transition.runtimeOfferFallback.key,
+            `${semanticAddressKey(transition.runtimeOfferFallback.address)}\u0000${transition.runtimeOfferFallback.availabilityContact}`,
             Object.freeze({
               address: transition.runtimeOfferFallback.address,
               preferredKey: transition.runtimeOfferFallback.preferredKey,
               fallbackKey: transition.runtimeOfferFallback.fallbackKey,
+              availabilityContact: 'npcConsumableSelection',
             }),
           );
+        for (const outcome of transition.bossArcanaOutcomes ?? [])
+          bossArcanaOutcomes.set(semanticAddressKey(outcome.owner), outcome);
+        recordTimelineFacts(transition.timelineFacts);
         if (transition.blockGorgonPhaseKey !== undefined)
           blockedGorgonPhases.add(transition.blockGorgonPhaseKey);
         gorgonEvaluationBlocked = transition.gorgonEvaluationBlocked;
@@ -1437,6 +1552,7 @@ export function evaluateBiomeRewardChronology(
           branches,
         );
         branches = transition.branches;
+        recordTimelineFacts(transition.timelineFacts);
         recordDerivedAcquisitionEntryFrontiers(transition.derivedAcquisitionEntryFrontiers);
         for (const { address, threshold } of transition.steadyGrowthThresholds) {
           const key = semanticAddressKey(address);
@@ -1489,6 +1605,17 @@ export function evaluateBiomeRewardChronology(
       case 'acquisitionPointReached': {
         const sourceRoom = rooms.get(semanticAddressKey(event.origin));
         const room = sourceRoom?.kind === 'authored' ? sourceRoom : undefined;
+        if (room !== undefined && event.point.startsWith('purgingPool:')) {
+          const poolSlot = event.point.slice('purgingPool:'.length);
+          const poolRow = room.roomActionRoster.rows.find(
+            (row) =>
+              !row.stale &&
+              row.rank !== null &&
+              row.reference.kind === 'sellPurgingPoolTrait' &&
+              row.reference.slotKey === poolSlot,
+          );
+          if (poolRow !== undefined) recordTimelineNode(poolRow.owner, true, true);
+        }
         const deliverySource =
           event.siteKey === 'hermesShrineDelivery' && event.entryKey !== undefined
             ? parseHermesShrineDeliveryEntryKey(event.entryKey)
@@ -1535,11 +1662,12 @@ export function evaluateBiomeRewardChronology(
           recordTraitChildSettlements(transition.traitChildSettlements, room.origin);
         for (const fallback of transition.runtimeOfferFallbacks)
           runtimeOfferFallbacks.set(
-            semanticAddressKey(fallback.address),
+            `${semanticAddressKey(fallback.address)}\u0000storePurchase`,
             Object.freeze({
               address: fallback.address,
               preferredKey: fallback.preferredKey,
               fallbackKey: fallback.fallbackKey,
+              availabilityContact: fallback.availabilityContact,
             }),
           );
         if (transition.authoredSiteSettlement !== undefined && room !== undefined)
@@ -1567,16 +1695,18 @@ export function evaluateBiomeRewardChronology(
         });
         for (const finding of transition.findings)
           findings.set(findingIdentityKey(finding.finding), finding);
-        for (const fallback of transition.runtimeOfferFallbacks)
-          runtimeOfferFallbacks.set(
-            fallback.key,
-            Object.freeze({
-              address: fallback.address,
-              preferredKey: fallback.preferredKey,
-              fallbackKey: fallback.fallbackKey,
-            }),
-          );
         branches = transition.branches;
+        recordTimelineFacts(transition.timelineFacts);
+        if (transition.runtimeOfferFallback !== undefined)
+          runtimeOfferFallbacks.set(
+            `${semanticAddressKey(transition.runtimeOfferFallback.address)}\u0000${transition.runtimeOfferFallback.availabilityContact}`,
+            transition.runtimeOfferFallback,
+          );
+        if (transition.refillRealization !== undefined)
+          wellRefillRealizations.set(
+            semanticAddressKey(transition.refillRealization.owner),
+            transition.refillRealization,
+          );
         break;
       }
       case 'roomExited': {
@@ -1668,6 +1798,15 @@ export function evaluateBiomeRewardChronology(
   const simulation: BiomeRewardSimulation = Object.freeze({
     biomeKey: snapshot.biomeKey,
     validity: immutableFindings.length === 0 && branches.length > 0 ? 'valid' : 'invalid',
+    timelineFacts:
+      timelineFactNodes.size === 0 && timelineFactDependencies.size === 0
+        ? EMPTY_PLANNER_TIMELINE_FACTS
+        : Object.freeze({
+            nodes: Object.freeze([...timelineFactNodes.values()]),
+            dependencies: Object.freeze([...timelineFactDependencies.values()]),
+          }),
+    wellRefillRealizations: Object.freeze([...wellRefillRealizations.values()]),
+    bossArcanaOutcomes: Object.freeze([...bossArcanaOutcomes.values()]),
     storeSupport: Object.freeze(storeSupportEntries),
     targetHistory: Object.freeze([...targetHistoryByOrigin.values()]),
     branches: Object.freeze(branches.map(publicRewardBranch)),

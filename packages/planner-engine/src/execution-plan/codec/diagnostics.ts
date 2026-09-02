@@ -34,6 +34,7 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
       'rewardPriorities',
       'hexProgress',
       'artificer',
+      'retainedEffects',
     ],
     [],
     label,
@@ -168,6 +169,303 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
     record.artificer === null ? null : object(record.artificer, `${label}.artificer`);
   if (artificer !== null)
     exact(artificer, ['usedCount', 'remainingCount'], [], `${label}.artificer`);
+  const retained = object(record.retainedEffects, `${label}.retainedEffects`);
+  exact(
+    retained,
+    [
+      'echoShopDuplicateStatus',
+      'keepsakes',
+      'steadyGrowth',
+      'hermesShrineDeliveries',
+      'stygianWell',
+    ],
+    [],
+    `${label}.retainedEffects`,
+  );
+  if (
+    retained.echoShopDuplicateStatus !== null &&
+    retained.echoShopDuplicateStatus !== 'pending' &&
+    retained.echoShopDuplicateStatus !== 'consumed'
+  )
+    fail(`${label}.retainedEffects.echoShopDuplicateStatus is unsupported`);
+  const steadyGrowth = array(retained.steadyGrowth, `${label}.retainedEffects.steadyGrowth`).map(
+    (entry, index) => {
+      const row = object(entry, `${label}.retainedEffects.steadyGrowth[${index}]`);
+      exact(
+        row,
+        ['traitKey', 'progress', 'interval'],
+        [],
+        `${label}.retainedEffects.steadyGrowth[${index}]`,
+      );
+      return Object.freeze({
+        traitKey: stringValue(
+          row.traitKey,
+          `${label}.retainedEffects.steadyGrowth[${index}].traitKey`,
+        ),
+        progress: integer(row.progress, `${label}.retainedEffects.steadyGrowth[${index}].progress`),
+        interval: integer(
+          row.interval,
+          `${label}.retainedEffects.steadyGrowth[${index}].interval`,
+          1,
+        ),
+      });
+    },
+  );
+  const shrineDeliveries = array(
+    retained.hermesShrineDeliveries,
+    `${label}.retainedEffects.hermesShrineDeliveries`,
+  ).map((entry, index) => {
+    const row = object(entry, `${label}.retainedEffects.hermesShrineDeliveries[${index}]`);
+    exact(
+      row,
+      ['sourceKey', 'sourceOccurrenceId', 'generationKey', 'rewardType', 'remainingUses', 'rushed'],
+      ['dueOccurrenceId', 'dueSequence'],
+      `${label}.retainedEffects.hermesShrineDeliveries[${index}]`,
+    );
+    return Object.freeze({
+      sourceKey: stringValue(
+        row.sourceKey,
+        `${label}.retainedEffects.hermesShrineDeliveries[${index}].sourceKey`,
+      ),
+      sourceOccurrenceId: stringValue(
+        row.sourceOccurrenceId,
+        `${label}.retainedEffects.hermesShrineDeliveries[${index}].sourceOccurrenceId`,
+      ),
+      generationKey: stringValue(
+        row.generationKey,
+        `${label}.retainedEffects.hermesShrineDeliveries[${index}].generationKey`,
+      ),
+      rewardType: stringValue(
+        row.rewardType,
+        `${label}.retainedEffects.hermesShrineDeliveries[${index}].rewardType`,
+      ),
+      remainingUses: integer(
+        row.remainingUses,
+        `${label}.retainedEffects.hermesShrineDeliveries[${index}].remainingUses`,
+      ),
+      rushed: booleanValue(
+        row.rushed,
+        `${label}.retainedEffects.hermesShrineDeliveries[${index}].rushed`,
+      ),
+      ...(row.dueOccurrenceId === undefined
+        ? {}
+        : {
+            dueOccurrenceId: stringValue(
+              row.dueOccurrenceId,
+              `${label}.retainedEffects.hermesShrineDeliveries[${index}].dueOccurrenceId`,
+            ),
+          }),
+      ...(row.dueSequence === undefined
+        ? {}
+        : {
+            dueSequence: integer(
+              row.dueSequence,
+              `${label}.retainedEffects.hermesShrineDeliveries[${index}].dueSequence`,
+            ),
+          }),
+    });
+  });
+  const well = object(retained.stygianWell, `${label}.retainedEffects.stygianWell`);
+  exact(
+    well,
+    ['sparkUses', 'yarnUses', 'hymnUses', 'discountUses', 'emptySlotUses', 'extendedUses'],
+    [],
+    `${label}.retainedEffects.stygianWell`,
+  );
+  const integerArray = (value: unknown, field: string) =>
+    Object.freeze(
+      array(value, `${label}.retainedEffects.stygianWell.${field}`).map((entry, index) =>
+        integer(entry, `${label}.retainedEffects.stygianWell.${field}[${index}]`, -256),
+      ),
+    );
+  const keepsakeEffects = object(retained.keepsakes, `${label}.retainedEffects.keepsakes`);
+  exact(
+    keepsakeEffects,
+    [
+      'olympianSources',
+      'jeweledPom',
+      'experimentalHammers',
+      'callingCard',
+      'timePiece',
+      'figLeaf',
+      'gorgon',
+      'phial',
+      'figurine',
+      'stone',
+      'transcendentEmbryo',
+    ],
+    [],
+    `${label}.retainedEffects.keepsakes`,
+  );
+  const nullable = <T>(
+    value: unknown,
+    field: string,
+    parse: (record: Dict, nestedLabel: string) => T,
+  ): T | null => {
+    if (value === null) return null;
+    const nestedLabel = `${label}.retainedEffects.keepsakes.${field}`;
+    return parse(object(value, nestedLabel), nestedLabel);
+  };
+  const charge = (value: unknown, field: string) =>
+    nullable(value, field, (row, nestedLabel) => {
+      exact(row, ['remainingCharges'], [], nestedLabel);
+      return Object.freeze({
+        remainingCharges: integer(row.remainingCharges, `${nestedLabel}.remainingCharges`),
+      });
+    });
+  const traitRarity = (value: unknown, nestedLabel: string) => {
+    if (!['Common', 'Rare', 'Epic', 'Heroic'].includes(value as string))
+      fail(`${nestedLabel} is unsupported`);
+    return value as 'Common' | 'Rare' | 'Epic' | 'Heroic';
+  };
+  const olympianSources = array(
+    keepsakeEffects.olympianSources,
+    `${label}.retainedEffects.keepsakes.olympianSources`,
+  ).map((entry, index) => {
+    const nestedLabel = `${label}.retainedEffects.keepsakes.olympianSources[${index}]`;
+    const row = object(entry, nestedLabel);
+    exact(
+      row,
+      [
+        'keepsakeKey',
+        'providerKey',
+        'origin',
+        'acquisitionOrder',
+        'remainingForceUses',
+        'remainingRarificationUses',
+        'maximumSourceRarityLevel',
+      ],
+      [],
+      nestedLabel,
+    );
+    if (row.origin !== 'ordinary' && row.origin !== 'echo')
+      fail(`${nestedLabel}.origin is unsupported`);
+    const remainingForceUses = integer(row.remainingForceUses, `${nestedLabel}.remainingForceUses`);
+    const remainingRarificationUses = integer(
+      row.remainingRarificationUses,
+      `${nestedLabel}.remainingRarificationUses`,
+    );
+    const maximumSourceRarityLevel = integer(
+      row.maximumSourceRarityLevel,
+      `${nestedLabel}.maximumSourceRarityLevel`,
+      1,
+    );
+    if (remainingForceUses > 1 || remainingRarificationUses > 1)
+      fail(`${nestedLabel} remaining uses are unsupported`);
+    if (maximumSourceRarityLevel > 3)
+      fail(`${nestedLabel}.maximumSourceRarityLevel is unsupported`);
+    return Object.freeze({
+      keepsakeKey: stringValue(row.keepsakeKey, `${nestedLabel}.keepsakeKey`),
+      providerKey: stringValue(row.providerKey, `${nestedLabel}.providerKey`),
+      origin: row.origin,
+      acquisitionOrder: integer(row.acquisitionOrder, `${nestedLabel}.acquisitionOrder`),
+      remainingForceUses: remainingForceUses as 0 | 1,
+      remainingRarificationUses: remainingRarificationUses as 0 | 1,
+      maximumSourceRarityLevel: maximumSourceRarityLevel as 1 | 2 | 3,
+    });
+  });
+  const experimentalHammers = array(
+    keepsakeEffects.experimentalHammers,
+    `${label}.retainedEffects.keepsakes.experimentalHammers`,
+  ).map((entry, index) => {
+    const nestedLabel = `${label}.retainedEffects.keepsakes.experimentalHammers[${index}]`;
+    const row = object(entry, nestedLabel);
+    exact(row, ['traitKey', 'remainingUses', 'acquisitionIdentity', 'active'], [], nestedLabel);
+    return Object.freeze({
+      traitKey: stringValue(row.traitKey, `${nestedLabel}.traitKey`),
+      remainingUses: integer(row.remainingUses, `${nestedLabel}.remainingUses`),
+      acquisitionIdentity: stringValue(
+        row.acquisitionIdentity,
+        `${nestedLabel}.acquisitionIdentity`,
+      ),
+      active: booleanValue(row.active, `${nestedLabel}.active`),
+    });
+  });
+  const statusOnly = (value: unknown, field: 'phial') =>
+    nullable(value, field, (row, nestedLabel) => {
+      exact(row, ['status'], [], nestedLabel);
+      if (row.status !== 'pending' && row.status !== 'consumed')
+        fail(`${nestedLabel}.status is unsupported`);
+      return Object.freeze({ status: row.status });
+    });
+  const jeweledPom = nullable(keepsakeEffects.jeweledPom, 'jeweledPom', (row, nestedLabel) => {
+    exact(row, ['grantedTraitKey', 'active', 'levels', 'acquisitionIdentity'], [], nestedLabel);
+    return Object.freeze({
+      grantedTraitKey: stringValue(row.grantedTraitKey, `${nestedLabel}.grantedTraitKey`),
+      active: booleanValue(row.active, `${nestedLabel}.active`),
+      levels: integer(row.levels, `${nestedLabel}.levels`),
+      acquisitionIdentity: stringValue(
+        row.acquisitionIdentity,
+        `${nestedLabel}.acquisitionIdentity`,
+      ),
+    });
+  });
+  const figLeaf = nullable(keepsakeEffects.figLeaf, 'figLeaf', (row, nestedLabel) => {
+    exact(row, ['remainingUses', 'activatedThisBiome'], [], nestedLabel);
+    return Object.freeze({
+      remainingUses: integer(row.remainingUses, `${nestedLabel}.remainingUses`),
+      activatedThisBiome: booleanValue(row.activatedThisBiome, `${nestedLabel}.activatedThisBiome`),
+    });
+  });
+  const gorgon = nullable(keepsakeEffects.gorgon, 'gorgon', (row, nestedLabel) => {
+    exact(row, ['status'], ['rarity'], nestedLabel);
+    if (!['pending', 'consumed', 'expired'].includes(row.status as string))
+      fail(`${nestedLabel}.status is unsupported`);
+    if (row.status === 'pending')
+      return Object.freeze({
+        status: 'pending' as const,
+        rarity: traitRarity(row.rarity, `${nestedLabel}.rarity`),
+      });
+    if (row.rarity !== undefined) fail(`${nestedLabel}.rarity is only valid while pending`);
+    return Object.freeze({ status: row.status as 'consumed' | 'expired' });
+  });
+  const parseOrigin = (row: Dict, nestedLabel: string) => {
+    if (row.origin !== 'ordinary' && row.origin !== 'echo')
+      fail(`${nestedLabel}.origin is unsupported`);
+    if (row.status !== 'pending' && row.status !== 'consumed')
+      fail(`${nestedLabel}.status is unsupported`);
+    return { origin: row.origin, status: row.status } as const;
+  };
+  const figurine = nullable(keepsakeEffects.figurine, 'figurine', (row, nestedLabel) => {
+    exact(row, ['origin', 'status', 'rarity'], [], nestedLabel);
+    return Object.freeze({
+      ...parseOrigin(row, nestedLabel),
+      rarity: traitRarity(row.rarity, `${nestedLabel}.rarity`),
+    });
+  });
+  const stone = nullable(keepsakeEffects.stone, 'stone', (row, nestedLabel) => {
+    exact(row, ['origin', 'status', 'rank'], [], nestedLabel);
+    if (!['Common', 'Rare', 'Epic', 'Heroic'].includes(row.rank as string))
+      fail(`${nestedLabel}.rank is unsupported`);
+    return Object.freeze({
+      ...parseOrigin(row, nestedLabel),
+      rank: row.rank as 'Common' | 'Rare' | 'Epic' | 'Heroic',
+    });
+  });
+  const embryo = nullable(
+    keepsakeEffects.transcendentEmbryo,
+    'transcendentEmbryo',
+    (row, nestedLabel) => {
+      exact(
+        row,
+        ['origin', 'rarity', 'progress', 'markedBlessingKey', 'markedBlessingAcquisitionIdentity'],
+        [],
+        nestedLabel,
+      );
+      if (row.origin !== 'ordinary' && row.origin !== 'echo')
+        fail(`${nestedLabel}.origin is unsupported`);
+      return Object.freeze({
+        origin: row.origin,
+        rarity: traitRarity(row.rarity, `${nestedLabel}.rarity`),
+        progress: integer(row.progress, `${nestedLabel}.progress`),
+        markedBlessingKey: stringValue(row.markedBlessingKey, `${nestedLabel}.markedBlessingKey`),
+        markedBlessingAcquisitionIdentity: stringValue(
+          row.markedBlessingAcquisitionIdentity,
+          `${nestedLabel}.markedBlessingAcquisitionIdentity`,
+        ),
+      });
+    },
+  );
   return Object.freeze({
     owner: stringValue(record.owner, `${label}.owner`, 256),
     checkpoint: record.checkpoint as 'roomEntered' | 'beforeRoomExit',
@@ -251,6 +549,35 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
             usedCount: integer(artificer.usedCount, `${label}.artificer.usedCount`),
             remainingCount: integer(artificer.remainingCount, `${label}.artificer.remainingCount`),
           }),
+    retainedEffects: Object.freeze({
+      echoShopDuplicateStatus: retained.echoShopDuplicateStatus as 'pending' | 'consumed' | null,
+      keepsakes: Object.freeze({
+        olympianSources: Object.freeze(olympianSources),
+        jeweledPom,
+        experimentalHammers: Object.freeze(experimentalHammers),
+        callingCard: charge(keepsakeEffects.callingCard, 'callingCard'),
+        timePiece: charge(keepsakeEffects.timePiece, 'timePiece'),
+        figLeaf,
+        gorgon,
+        phial: statusOnly(keepsakeEffects.phial, 'phial'),
+        figurine,
+        stone,
+        transcendentEmbryo: embryo,
+      }),
+      steadyGrowth: Object.freeze(steadyGrowth),
+      hermesShrineDeliveries: Object.freeze(shrineDeliveries),
+      stygianWell: Object.freeze({
+        sparkUses: integer(well.sparkUses, `${label}.retainedEffects.stygianWell.sparkUses`),
+        yarnUses: integer(well.yarnUses, `${label}.retainedEffects.stygianWell.yarnUses`),
+        hymnUses: integer(well.hymnUses, `${label}.retainedEffects.stygianWell.hymnUses`),
+        discountUses: integerArray(well.discountUses, 'discountUses'),
+        emptySlotUses: integerArray(well.emptySlotUses, 'emptySlotUses'),
+        extendedUses: integer(
+          well.extendedUses,
+          `${label}.retainedEffects.stygianWell.extendedUses`,
+        ),
+      }),
+    }),
   });
 }
 
@@ -267,6 +594,7 @@ export const diagnosticSections = [
   'rewardPriorities',
   'hexProgress',
   'artificer',
+  'retainedEffects',
 ] as const;
 
 export function expandDiagnosticFrames(value: unknown): Dict {

@@ -462,6 +462,40 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     }
   });
 
+  it('publishes the resolved first-purchase barriers without ordering unrelated Contract work', () => {
+    for (const result of [
+      settle({ order: ['Minor', 'MajorNonBoon'], travel: true }),
+      settle({ order: ['Minor', 'MajorNonBoon'], echo: true }),
+    ]) {
+      const source = result.canonical.roomActionRoster.rows.find(
+        (row) => row.reference.kind === 'interactShopOffer' && row.reference.offerKey === 'Minor',
+      );
+      const competitor = result.canonical.roomActionRoster.rows.find(
+        (row) =>
+          row.reference.kind === 'interactShopOffer' && row.reference.offerKey === 'MajorNonBoon',
+      );
+      const contract = result.canonical.roomActionRoster.rows.find(
+        (row) =>
+          row.reference.kind === 'interactAcquisitionEntry' &&
+          row.reference.entryKey === 'infernalContractReward',
+      );
+      expect(source).toBeDefined();
+      expect(competitor).toBeDefined();
+      expect(result.settlement.timelineFacts?.nodes).toContainEqual({
+        owner: source?.owner,
+        included: true,
+        required: true,
+      });
+      expect(result.settlement.timelineFacts?.dependencies).toContainEqual({
+        owner: competitor?.owner,
+        afterOwner: source?.owner,
+      });
+      expect(result.settlement.timelineFacts?.dependencies).not.toContainEqual(
+        expect.objectContaining({ owner: contract?.owner }),
+      );
+    }
+  });
+
   it('publishes the exact branch-attested five-reward Contract domain', () => {
     const result = settle({ order: [], contract: true });
     const contract = result.settlement.derivedEntryFrontiers?.find(
@@ -1061,19 +1095,59 @@ describe('Infernal Contract and Travel Deal chronology', () => {
           ),
         },
       });
-      expect(result.settlement.runtimeOfferFallbacks).toEqual([
-        expect.objectContaining({
-          address: expect.objectContaining({ kind: 'shopOffer', offerKey }),
-          preferredRewardType: 'LastStandDrop',
-          fallbackRewardType,
-        }),
-      ]);
+      expect(result.settlement.runtimeOfferFallbacks).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            address: expect.objectContaining({ kind: 'shopOffer', offerKey }),
+            preferredKey: 'LastStandDrop',
+            fallbackKey: fallbackRewardType,
+            availabilityContact: 'storeInventoryGeneration',
+          }),
+          expect.objectContaining({
+            address: expect.objectContaining({ kind: 'shopOffer', offerKey }),
+            preferredKey: 'LastStandDrop',
+            fallbackKey: fallbackRewardType,
+            availabilityContact: 'storePurchase',
+          }),
+        ]),
+      );
       expect(result.settlement.branches[0]?.history.consumableRecord.LastStandDrop).toBe(1);
       expect(
         result.settlement.branches[0]?.history.consumableRecord[fallbackRewardType],
       ).toBeUndefined();
     },
   );
+
+  it('publishes a visible Q Shop fallback without requiring its purchase', () => {
+    const result = settle({
+      order: [],
+      roomGameName: 'Q_PreBoss01',
+      enteredBiomes: 4,
+      shopOfferOverrides: {
+        Survival: authoredShopReward(
+          Object.freeze({ rewardType: 'LastStandDrop' as const }),
+          'Q_WorldShop',
+        ),
+      },
+    });
+    expect(result.settlement.runtimeOfferFallbacks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          address: expect.objectContaining({ kind: 'shopOffer', offerKey: 'Survival' }),
+          preferredKey: 'LastStandDrop',
+          fallbackKey: 'ArmorBigBoost',
+          availabilityContact: 'storeInventoryGeneration',
+        }),
+        expect.objectContaining({
+          address: expect.objectContaining({ kind: 'shopOffer', offerKey: 'Survival' }),
+          preferredKey: 'LastStandDrop',
+          fallbackKey: 'ArmorBigBoost',
+          availabilityContact: 'storePurchase',
+        }),
+      ]),
+    );
+    expect(result.settlement.branches[0]?.history.consumableRecord.LastStandDrop).toBeUndefined();
+  });
 
   it('publishes Travel Deal fallback at the later derived action, not the purchased Shop action', () => {
     const preferred = authoredShopReward(
@@ -1102,20 +1176,39 @@ describe('Infernal Contract and Travel Deal chronology', () => {
       travelChild: refillPreferred,
       shopOfferOverrides: { Survival: preferred },
     });
-    expect(settled.settlement.runtimeOfferFallbacks).toEqual([
-      expect.objectContaining({
-        address: expect.objectContaining({ kind: 'shopOffer', offerKey: 'Survival' }),
-        preferredRewardType: 'LastStandDrop',
-        fallbackRewardType: 'ArmorBigBoost',
-      }),
-      expect.objectContaining({
-        address: expect.objectContaining({
-          kind: 'acquisitionEntry',
-          entryKey: 'travelDealRefill',
+    expect(settled.settlement.runtimeOfferFallbacks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          address: expect.objectContaining({ kind: 'shopOffer', offerKey: 'Survival' }),
+          preferredKey: 'LastStandDrop',
+          fallbackKey: 'ArmorBigBoost',
+          availabilityContact: 'storeInventoryGeneration',
         }),
-        preferredRewardType: 'ArmorBigBoost',
-        fallbackRewardType: 'HealBigDrop',
-      }),
-    ]);
+        expect.objectContaining({
+          address: expect.objectContaining({ kind: 'shopOffer', offerKey: 'Survival' }),
+          preferredKey: 'LastStandDrop',
+          fallbackKey: 'ArmorBigBoost',
+          availabilityContact: 'storePurchase',
+        }),
+        expect.objectContaining({
+          address: expect.objectContaining({
+            kind: 'acquisitionEntry',
+            entryKey: 'travelDealRefill',
+          }),
+          preferredKey: 'ArmorBigBoost',
+          fallbackKey: 'HealBigDrop',
+          availabilityContact: 'storeInventoryGeneration',
+        }),
+        expect.objectContaining({
+          address: expect.objectContaining({
+            kind: 'acquisitionEntry',
+            entryKey: 'travelDealRefill',
+          }),
+          preferredKey: 'ArmorBigBoost',
+          fallbackKey: 'HealBigDrop',
+          availabilityContact: 'storePurchase',
+        }),
+      ]),
+    );
   });
 });

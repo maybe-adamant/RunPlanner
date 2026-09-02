@@ -48,6 +48,7 @@ import { addRewardFinding, rewardFinding } from '../../findings';
 import type { AuthoredSiteSettlementResult } from '../generation/authored-site-settlement';
 import { settleAuthoredAcquisitionSite } from '../generation/authored-site-settlement';
 import type { ReachedTraitChildCheckpoint } from '../../trait-settlement';
+import type { RuntimeOfferFallback } from '../../../runtime-offer-fallback';
 import {
   createRewardProducerCandidateResult,
   type RewardProducerOwnerAddress,
@@ -58,12 +59,6 @@ export interface HermesShrineRefillState {
   readonly firstRushedInitialGeneration: boolean;
   readonly refillAssessments: readonly HermesShrineTravelDealRefillAssessment[] | undefined;
   readonly refillSupported: boolean | undefined;
-}
-
-export interface RuntimeOfferFallback {
-  readonly address: import('../../../../authored-project/addresses').SemanticAddress;
-  readonly preferredKey: string;
-  readonly fallbackKey: string;
 }
 
 export interface AcquisitionPointReachedTransition {
@@ -383,6 +378,13 @@ export function applyAcquisitionPointReachedTransition(
       throw new BiomeRewardSimulationContractError(
         `${room.gameName} has no Fields acquisition ${event.point}`,
       );
+    const localActionOwner = room.roomActionRoster.rows.find(
+      (candidate) =>
+        candidate.rank !== null &&
+        candidate.reference.kind === 'interactLocalReward' &&
+        candidate.reference.groupKey === groupKey &&
+        candidate.reference.slotKey === slotKey,
+    )?.owner;
     const settled = settleOwnedAcquisitionSite(
       catalog,
       inputs.sourceBranches,
@@ -394,6 +396,7 @@ export function applyAcquisitionPointReachedTransition(
           room,
           Object.freeze({ ...localReward, instanceProvenance: 'free' }),
         ),
+        ...(localActionOwner === undefined ? {} : { timelineOwner: localActionOwner }),
         historySequence: event.sequence,
         deferArtificerReplacement: true,
         authoredSeaStarDuplicateSiteKeys,
@@ -519,12 +522,20 @@ export function applyAcquisitionPointReachedTransition(
                 address: entry,
                 preferredKey: agreedDue.rewardType,
                 fallbackKey: fallbackRewardType,
+                availabilityContact: 'storePurchase',
               }),
             ];
       const acquisitionView =
         roomView.acquisitionPoints?.find((point) => point.point === event.point)?.before ??
         roomView.preOutgoing ??
         roomView.entry;
+      const deliveryActionOwner = room.roomActionRoster.rows.find(
+        (candidate) =>
+          candidate.rank !== null &&
+          candidate.reference.kind === 'interactAcquisitionEntry' &&
+          candidate.reference.siteKey === event.siteKey &&
+          candidate.reference.entryKey === event.entryKey,
+      )?.owner;
       const settled = settlePickupAcquisitionSite(
         catalog,
         inputs.sourceBranches,
@@ -533,6 +544,7 @@ export function applyAcquisitionPointReachedTransition(
           site: site.address,
           entries: Object.freeze({ [event.entryKey]: retained }),
           order: Object.freeze([event.entryKey]),
+          ...(deliveryActionOwner === undefined ? {} : { timelineOwner: deliveryActionOwner }),
           requiredEntryKeys: new Set([event.entryKey]),
           producerLifecycleKey: 'HermesShrineDelivery',
           historySequence: event.sequence,
@@ -628,6 +640,7 @@ export function applyAcquisitionPointReachedTransition(
           replacement,
           acquisitionRole: parsed.acquisitionRole,
           participation: row?.participation === 'required' ? 'mandatory' : 'optional',
+          ...(row?.owner === undefined ? {} : { timelineOwner: row.owner }),
           historySequence: event.sequence,
           facts: (history, _names, branch) => factsAt(acquisitionView, history, branch),
           findingChronology: chronology,

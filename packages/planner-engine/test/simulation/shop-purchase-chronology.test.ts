@@ -323,13 +323,22 @@ describe('Echo Gate D Gold Gold Gold', () => {
           ...extraOverrides,
         },
       });
-      expect(result.settlement.runtimeOfferFallbacks).toEqual([
-        expect.objectContaining({
-          address: expect.objectContaining({ kind: 'shopOffer', offerKey: 'Survival' }),
-          preferredRewardType: 'LastStandDrop',
-          fallbackRewardType: fallbackKey,
-        }),
-      ]);
+      expect(result.settlement.runtimeOfferFallbacks).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            address: expect.objectContaining({ kind: 'shopOffer', offerKey: 'Survival' }),
+            preferredKey: 'LastStandDrop',
+            fallbackKey,
+            availabilityContact: 'storeInventoryGeneration',
+          }),
+          expect.objectContaining({
+            address: expect.objectContaining({ kind: 'shopOffer', offerKey: 'Survival' }),
+            preferredKey: 'LastStandDrop',
+            fallbackKey,
+            availabilityContact: 'storePurchase',
+          }),
+        ]),
+      );
       expect(result.settlement.branches[0]?.history.consumableRecord.LastStandDrop).toBe(1);
       expect(result.settlement.branches[0]?.history.consumableRecord[fallbackKey]).toBeUndefined();
     },

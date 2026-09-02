@@ -737,6 +737,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
         createAcquisitionSiteAddress(refillHost, 'hermesShrineDelivery'),
         hermesShrineDeliveryEntryKey(host, 'travelDealRefill'),
       ),
+      availabilityContact: 'storePurchase',
       preferredKey: 'ArmorBoost',
       fallbackKey: 'ArmorBigBoost',
     });

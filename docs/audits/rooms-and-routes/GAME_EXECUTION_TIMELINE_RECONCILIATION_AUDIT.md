@@ -8,10 +8,11 @@ already preserved by the focused audits below, and the live F/G integration
 findings recorded during executor probing.
 
 The implementation disposition was refined after the first protocol-v10
-engine slice exposed unnecessary dual authority between semantic streams and
-explicit dependencies. The source findings and hard-edge matrix are unchanged;
-the preferred representation below normalizes every hard ordering relation to
-one planner-owned prerequisite DAG.
+engine slice exposed two different kinds of chronology that must not share one
+representation. Hard ordering between actions in one occurrence belongs to one
+planner-owned prerequisite DAG. State that survives a room boundary belongs to
+the planner's existing pending and persistent ledgers and is checked at room
+closure; it is not a cross-occurrence action dependency.
 
 This audit answers one feasibility question:
 
@@ -108,7 +109,13 @@ logged, but it does not justify freezing realization.
 : A directed hard edge between two exact semantic owners. The dependent owner
 cannot complete until the prerequisite owner has completed. An ordered family
 of such actions is only shorthand for the corresponding edge chain; it is not a
-second runtime primitive.
+second runtime primitive. Both owners belong to the same room occurrence.
+
+**Carry-state conformance**
+: A bounded room-closure assertion for modeled pending or clocked state that
+the current occurrence created, advanced, consumed, reset, or materialized. It
+states the resulting value the room leaves behind, not which earlier action
+owner a future action must remember.
 
 ## Feasibility criteria
 
@@ -118,9 +125,10 @@ Timeline reconciliation is viable only when all of the following hold:
    or at its first player-significant native contact.
 2. A semantic transaction has one completion proof even when native execution
    uses several callbacks or an asynchronous presentation thread.
-3. Every hard ordering relation is expressible as a lifecycle window, a source
-   dependency, a fixed checkpoint obligation, or a small source-backed
-   effect-consumption rule.
+3. Every hard ordering relation inside one occurrence is expressible as a
+   lifecycle window, a source dependency, or a fixed checkpoint obligation;
+   every modeled effect that survives the occurrence has an engine-owned
+   carry-state transition.
 4. If one native contact could match several actions, the candidates are
    either semantically equivalent or distinguishable by their bound owner.
 5. The game module can realize or observe each consequential result without
@@ -146,6 +154,7 @@ current execution trace suggests:
 | Explicit source dependency             | complete for generated children and structural barriers | proves source-before-child without scanning prior callbacks                      |
 | Authored total order                   | complete                                                | remains the planner's simulation chronology and user guidance                    |
 | Fixed outgoing checkpoint              | complete in simulation                                  | distinguishes optional effects that did or did not influence the generated batch |
+| Cross-room pending and clocked state   | complete in simulation for supported effects            | permits bounded room-exit conformance without retaining prior action completion  |
 | Runtime blocking disposition           | not complete in the engine execution product            | must not be guessed from callback names or reward categories                     |
 | Semantic transaction boundary          | not represented by the linear trace                     | protocol v9 may split one action into several cursor obligations                 |
 
@@ -261,25 +270,146 @@ room Timeline.
 The current action catalog requires the following edge families. No source
 evidence requires a general pairwise action matrix.
 
-| Edge family                        | Source-backed examples                                                                               | Why reversal is unsafe                                                       |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Lifecycle window                   | wheel choice before combat; Well purchase after outgoing; delivery after exact encounter end         | the object or action does not yet exist outside the window                   |
-| Barrier to produced interaction    | Fields cage before its reward; combat before NPC interaction                                         | the interaction is unusable or absent before the barrier                     |
-| Source to child                    | Artificer replacement, Sea Star second pickup, Echo duplicate, Quick Buck/Buried Treasure drop       | the child has no native identity before the source creates or retains it     |
-| Required action to checkpoint      | required reward before outgoing/next O phase/exit                                                    | the game itself blocks the checkpoint while the object remains required      |
-| Optional action to outgoing        | an optional acquisition authored before outgoing whose state affects door generation                 | moving it after outgoing changes the batch's input history                   |
-| Modeled mutation to later consumer | trait acquisition before a later trait offer; a removal or level change before a later target domain | the later authored payload was evaluated from the post-mutation prefix       |
-| Modal transaction                  | trait screen open to selection to applied acquisition                                                | another player room action cannot legally interleave inside the screen       |
-| Rack to later consumer             | rack before fountain with Phial; rack before an immediate-result-sensitive action                    | the later action observes a different equipped keepsake and retained effects |
-| First accepted purchase            | Travel Deal refill; Gold Gold Gold's first eligible World-Shop purchase                              | a different first purchase consumes or redirects the one-use effect          |
-| Next eligible Well effect          | Extended before a qualifying temporary item; Yarn/Hymn before the next eligible trait offer          | reversal changes which later contact consumes the status                     |
-| Exact phase blocker                | Gorgon Athena before another Fields cage                                                             | the game prevents the later cage from starting                               |
+| Edge family                        | Source-backed examples                                                                                       | Why reversal is unsafe                                                       |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| Lifecycle window                   | wheel choice before combat; Well purchase after outgoing; delivery after exact encounter end                 | the object or action does not yet exist outside the window                   |
+| Barrier to produced interaction    | Fields cage before its reward; combat before NPC interaction                                                 | the interaction is unusable or absent before the barrier                     |
+| Source to child                    | Artificer replacement, Sea Star second pickup, Echo duplicate, Quick Buck/Buried Treasure drop               | the child has no native identity before the source creates or retains it     |
+| Required action to checkpoint      | required reward before outgoing/next O phase/exit                                                            | the game itself blocks the checkpoint while the object remains required      |
+| Optional action to outgoing        | an optional acquisition authored before outgoing whose state affects door generation                         | moving it after outgoing changes the batch's input history                   |
+| Modeled mutation to local consumer | trait acquisition before a later same-room offer; a removal or level change before a same-room target domain | the later authored payload was evaluated from the post-mutation prefix       |
+| Modal transaction                  | trait screen open to selection to applied acquisition                                                        | another player room action cannot legally interleave inside the screen       |
+| Rack to local consumer             | rack before fountain with Phial; rack before an immediate-result-sensitive same-room action                  | the later action observes a different equipped keepsake and retained effects |
+| First accepted purchase            | Travel Deal refill; Gold Gold Gold's first eligible World-Shop purchase                                      | a different first purchase consumes or redirects the one-use effect          |
+| Exact phase blocker                | Gorgon Athena before another Fields cage                                                                     | the game prevents the later cage from starting                               |
 
-An edge can end at a later room. Yarn, Hymn, Ixion, pending Shrine delivery,
-keepsake reward pressure, and similar retained effects do not require the
-executor to watch every intervening callback. Their next modeled consumer is
-already a later semantic action, room-content realization, or door-generation
-checkpoint.
+Every edge in this matrix is occurrence-local. If the producer and consumer
+are in different occurrences, the producer's room closes over the resulting
+state and the later room observes or consumes that state through its own local
+transaction. The room session therefore never needs an earlier room's
+completed-owner set.
+
+## Cross-room state inventory
+
+The engine already distinguishes state that may survive a room boundary from
+room-local work. `RewardBranchState` carries the closed simulation frontier;
+its Shrine and Well subledgers own feature state, while `TraitHistoryState`,
+`KeepsakeState`, `ArcanaFearState`, `HexProgressState`, and reward priorities
+own their respective retained facts. `pendingShops` and Sea Star's exact-source
+eligibility are instead room-local evaluation state. This is the durable
+execution classification; expanding to a new biome must reuse it rather than
+creating cross-occurrence action edges.
+
+The publication gap is narrower than the state inventory:
+
+| Retained family                                                                                                    | Current first-class engine publication           | Disposition                                                                        |
+| ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| keepsake effects, including Embryo, Hammer, Fig Leaf, Phial, Figurine, Stone, Gorgon, Calling Card, and Time Piece | `RunStateSnapshot.keepsakes`                     | reuse directly as canonical state; do not create effect-specific execution ledgers |
+| Echo Gold Gold Gold, Steady Growth, and active/matured Chaos                                                       | `RunStateSnapshot.traits`                        | reuse the existing normalized status, progress, and clock values                   |
+| Path of Stars and installed Hex state                                                                              | `RunStateSnapshot.hexProgress` and `hexObserver` | reuse the existing point, capacity, and closure state                              |
+| Vow of Forfeit, Artificer, Arcana/Fear, and reward priorities                                                      | existing explicit Run State fields               | reuse the existing normalized state                                                |
+| Hermes Shrine deliveries                                                                                           | public simulation branches only                  | promote the agreed retained-delivery state into canonical Run State                |
+| consequential Stygian Well effects                                                                                 | public simulation branches only                  | promote the agreed use counts and duration counters into canonical Run State       |
+
+This promotion does not make full Run State blocking. It makes Run State the
+single canonical state product from which the engine derives the smaller
+room-exit conformance set. The conformance set owns execution disposition; Run
+State continues to own state meaning and its full diagnostic projection.
+
+### Pending and clocked state
+
+| State family                         | Engine-owned value                                                                     | Creation or mutation contact                                        | Consumption or advancement contact                                                                                      | Room-session disposition                                                                                           |
+| ------------------------------------ | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Spark of Ixion                       | stacked pending uses                                                                   | consequential Well purchase                                         | the first later entered room whose realized Chaos gate consumes one use                                                 | publish the remaining use count at room exit; the gate is checked as later Room Overview content                   |
+| Yarn of Ariadne                      | stacked pending uses                                                                   | consequential Well purchase                                         | the next eligible God offer consumes one use when its choice screen closes                                              | publish the remaining use count; the later offer is a local transaction with no source-owner edge                  |
+| Sacrificial Hymn                     | stacked pending uses                                                                   | consequential Well purchase                                         | the next eligible replacement-capable trait screen consumes one use when it closes                                      | publish the remaining use count; the later offer proves its own local result                                       |
+| Extended Well effect                 | stacked pending uses                                                                   | consequential Well purchase                                         | the next qualifying direct Well purchase consumes one use and changes that item's duration                              | publish the remaining use count; a future Well purchase is locally checked                                         |
+| Discount and Empty Slot Well effects | independent encounter- or boss-use counters                                            | consequential direct or Twist Well result                           | qualifying encounter-end or boss completion advances each counter                                                       | publish the active counters because they change later Well inventory eligibility                                   |
+| Hermes Shrine deliveries             | exact independent delivery entries with payload, remaining uses, and optional due host | Shrine purchase or rushed refill purchase                           | qualifying encounter-end effects decrement uses; rush or final-Preboss completion makes an entry due; pickup removes it | publish the retained delivery entries at room exit; only the materialized pickup is a later Timeline owner         |
+| Active Chaos curses                  | exact selected pair, clock kind, and remaining count                                   | selected Chaos pair acquisition                                     | the declaration-owned encounter, location, or God-screen clock matures the blessing                                     | publish active curse state after a room that advances or acquires it; maturation is a local automatic transaction  |
+| Steady Growth                        | progress stored on the exact equipped trait                                            | trait acquisition and qualifying encounter-end effects              | the rarity-dependent threshold resets progress and upgrades one local authored target                                   | publish changed progress; the threshold mutation belongs to the room whose end effects reached it                  |
+| Experimental Hammer                  | independent temporary traits with remaining encounter uses                             | keepsake equip or replay                                            | qualifying encounter-end effects decrement and eventually remove the exact temporary trait                              | publish changed uses and active identity, without linking the expiry room to the equip owner                       |
+| Transcendent Embryo                  | current direct Chaos blessing identity plus eight-use progress                         | keepsake equip or replay                                            | qualifying encounter-end effects advance the counter and replace the exact blessing at threshold                        | publish blessing identity and progress; replacement is a local automatic transaction                               |
+| Fig Leaf                             | remaining uses plus one-success-per-biome latch                                        | keepsake equip or replay                                            | one eligible encounter skip consumes a use and sets the biome latch; biome transition resets the latch                  | publish the resulting retained state after the local encounter or biome transition                                 |
+| Calling Card and Time Piece          | independent remaining-charge ledgers                                                   | keepsake equip, rank mutation, or replay                            | exact eligible offer/acquisition contacts consume charges                                                               | publish changed charges; each consumer remains a local transaction                                                 |
+| Gorgon Amulet                        | pending, consumed, or expired status with rarity while pending                         | keepsake equip or rank mutation                                     | one eligible non-skipped encounter consumes it; Athena history or replacement can expire it                             | publish status changes; the eventual Gorgon encounter is locally realized                                          |
+| Aromatic Phial                       | pending or consumed status                                                             | keepsake equip                                                      | the next declared fountain consumes the use and, when possible, applies its exact rarity target                         | publish status changes; rack-before-fountain ordering is an edge only when both actions share the room             |
+| Crystal Figurine                     | pending or consumed status, source, and rarity                                         | keepsake equip or replay                                            | the next boss completion consumes it and applies the authored Arcana result                                             | publish status changes; the boss-side automatic result is local                                                    |
+| Concave Stone                        | pending or consumed status, source, and rank                                           | keepsake equip or replay                                            | the next qualifying accepted God trait screen consumes or retains the use according to its authored proc                | publish status changes; its second frozen screen remains inside the local acquisition transaction                  |
+| Olympian keepsake pressure           | ordered generic reward priorities plus provider-force and rarification uses            | keepsake equip, rank mutation, Moon Beam, or replay                 | counted reward generation, matching loot materialization, and matching offer generation consume the independent parts   | publish the remaining queues/uses after the room; Doors and later trait offers prove their own outputs             |
+| Echo Gold Gold Gold                  | the equipped one-use Echo trait is itself pending state                                | Echo acquisition                                                    | the first later eligible non-Spell World-Shop purchase consumes it and creates a separate same-room free object         | publish pending/consumed status; source purchase to generated duplicate remains a local edge in the consuming Shop |
+| Vow of Forfeit                       | current-biome available/consumed latch                                                 | biome entry/reset and the first qualifying boon-to-Onion conversion | qualifying boon acquisition or Artificer conversion consumes the biome use                                              | publish the latch only when the room changes it; reset remains a biome lifecycle transition                        |
+| Banked Path of Stars points          | nonnegative bank plus installed-tree state                                             | Spell/Talent acquisition and keepsake effects                       | the next writable Path screen invests up to capacity and may close future Talent Drops                                  | publish changed bank/closure state; the later screen is a local acquisition transaction                            |
+
+These values already exist in `RewardBranchState`, `TraitHistoryState`,
+`KeepsakeState`, `ArcanaFearState`, or `HexProgressState`. The execution product
+does not need action-owner provenance inside these ledgers. An exact identity is
+retained only when it is part of the game state itself—for example independent
+Shrine deliveries, an active Chaos pair, or a temporary Hammer trait.
+
+### Room-local state that must not escape as a dependency
+
+| Room-local state                                                                              | Closure rule                                                                                                                                                                |
+| --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| pending Shop generation and settlement, including Travel Deal refill and Gold materialization | settle every authored purchase/refill transaction in that Shop or report the room-local obligation; never carry its action owners into another occurrence                   |
+| generated acquisition sites and entries                                                       | required entries settle before their checkpoint; untouched optional entries may be abandoned at room exit; either way no unresolved owner becomes a later-room prerequisite |
+| Sea Star duplicate eligibility retained for an exact source                                   | consume it through the separately authored local duplicate or discard it when the optional local opportunity closes                                                         |
+| local object inventory for Wells, Pools, Shrines, Shops, resources, and racks                 | Overview proves presence/inventory; an unopened or unselected optional object creates no Timeline completion debt                                                           |
+| modal trait, Pom, Hex, Chaos, NPC, or replacement screen state                                | complete as one semantic transaction before another player room action can interleave                                                                                       |
+
+Room-local data may be necessary while evaluating one occurrence, but it is not
+carry state. Required local work blocks the relevant lifecycle checkpoint;
+optional unchosen work simply closes with the room.
+
+### Durable run ledgers are not pending-action conformance
+
+The complete trait inventory and history, god pool, reward bags and use
+history, equipped Arcana and spent Artificer capacity, Fated status, selected
+keepsake history, invested Hex tree, and route counters also survive rooms.
+They are broad persistent ledgers, not unresolved action obligations. Their
+local mutations are proved by the transaction that caused them, while Room
+Overview and Doors prove the later outputs that depend on them. Complete Run
+State remains diagnostic evidence and must not be promoted back into a
+universal blocking room-exit comparison.
+
+### Room-exit conformance boundary
+
+A room may publish one first-class carry-state conformance set after its local
+checkpoint obligations settle. The engine derives it from the previous closed
+canonical Run State and the current `beforeRoomExit` state. It contains only
+the pending and clocked families the occurrence created, advanced, consumed,
+reset, or materialized, with the resulting post-room values. An unchanged
+family is not reasserted at every room. A conformance fact is valid only when
+every surviving complete-valid simulation branch agrees on that resulting
+value.
+
+The execution document need not duplicate those values. Each conformance fact
+names one changed family and selects its expected value from the same
+occurrence's canonical `beforeRoomExit` Run State frame. The unselected Run
+State sections remain diagnostic; only the explicitly named families become
+blocking for that room.
+
+The game adapter compares that bounded set to native retained state at room
+exit. A mismatch freezes later realization because the room did not leave the
+state assumed by the plan. A match closes the room session and discards its
+completed-owner set. The next occurrence starts independently; native game
+state and its own local plan determine whether a pending effect advances or is
+consumed.
+
+This boundary deliberately carries values rather than provenance:
+
+```text
+source-room local transaction
+  -> source-room carry-state conformance
+  -> room session closes
+
+later-room local transaction or automatic contact
+  -> later-room carry-state conformance
+```
+
+There is no edge across the blank line. A mismatch whose cause is not a player
+deviation remains planner/game-data under-modeling and is referred for
+adjudication through the existing diagnostic evidence.
 
 ## Proven commutative regions
 
@@ -359,19 +489,40 @@ dependencies creates two representations of the same authority and invites
 them to disagree. The runtime contract therefore needs one ordering primitive:
 the sparse prerequisite edge.
 
+### Inclusion and obligation are separate facts
+
+Publishing an owner in the room DAG means that the execution adapter may need
+to observe that action because it participates in a prerequisite relation. It
+does not, by itself, mean the player must perform the action. Required
+participation is a separate planner fact that becomes a checkpoint obligation.
+
+Dependency closure may therefore retain an optional competitor or other
+guidance action when a consequential owner names it as a prerequisite, while
+leaving that retained action optional. A dependency never promotes its endpoint
+to required participation merely because the endpoint is published. The
+obligation set is the union of explicit required action participation and
+planner-owned required automatic/deferred outcomes, not the transitive closure
+of the dependency graph.
+
+This distinction is especially important for Travel Deal: the planner may
+publish a normally neutral competing purchase so the adapter can observe the
+barrier, but only the selected source purchase, refill realization, or other
+explicitly required owner creates a blocking checkpoint. Execution copies the
+two facts and does not infer either one from action kind, adjacency, or the
+existence of an edge.
+
 ### Planner-owned edge families
 
-| Modeled relation                  | Required prerequisite product                                                                                                                        |
-| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Trait-history mutation            | exact prior mutation owner to each later offer or target owner whose authored result used that prefix                                                |
-| Provider resolution               | exact acquisition owner contains its provider and resulting offer; no anonymous provider ordinal                                                     |
-| Reward transformation             | exact source owner to each separately owned generated child                                                                                          |
-| First accepted purchase           | planner-selected source purchase to its one-use realization and to every competing qualifying purchase that could otherwise consume the effect first |
-| Next eligible retained effect     | exact producer owner to the exact next consumer already resolved by planner simulation                                                               |
-| Generated-pickup production       | exact producer owner to child acquisition owner; unrelated actions remain unconstrained                                                              |
-| Rack or removal to later consumer | exact state-mutation owner to the later fountain, offer, or target whose result used that state                                                      |
-| Automatic outcome                 | exact lifecycle-owned mutation node with prerequisites only when another modeled owner produced its condition or input                               |
-| Guidance-only contact             | no node unless it is needed as the prerequisite, competitor barrier, or consumer of a consequential relation                                         |
+| Modeled relation                      | Required prerequisite product                                                                                                                        |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Same-room trait-history mutation      | exact prior mutation owner to each later local offer or target owner whose authored result used that prefix                                          |
+| Provider resolution                   | exact acquisition owner contains its provider and resulting offer; no anonymous provider ordinal                                                     |
+| Same-room reward transformation       | exact source owner to each separately owned generated child                                                                                          |
+| First accepted same-room purchase     | planner-selected source purchase to its one-use realization and to every competing qualifying purchase that could otherwise consume the effect first |
+| Generated-pickup production           | exact producer owner to child acquisition owner; unrelated actions remain unconstrained                                                              |
+| Rack or removal to same-room consumer | exact state-mutation owner to the local fountain, offer, or target whose result used that state                                                      |
+| Same-room automatic outcome           | exact lifecycle-owned mutation node with prerequisites only when another local modeled owner produced its condition or input                         |
+| Guidance-only contact                 | no node unless it is needed as the prerequisite, competitor barrier, or consumer of a consequential local relation                                   |
 
 Lifecycle windows and checkpoint obligations remain separate products. A
 window states when an owner may occur; an obligation states the deadline by
@@ -399,12 +550,12 @@ know how to materialize the declared refill payload. It must not choose the
 source purchase, derive the exclusion pool, or decide which later purchase is
 the consumer.
 
-The same boundary applies to Extended, Yarn, Hymn, generated acquisitions,
-trait-history prefixes, and keepsake-sensitive consumers: simulation or another
-planner-owned product identifies the exact relation, and the execution
-projection may copy, prune, and reference-check it. Execution assembly must not
-search forward for a "next" consumer, choose a first purchase, or infer that
-actions commute from their categories.
+This exact-edge boundary applies to generated acquisitions, same-room
+trait-history prefixes, and same-room keepsake-sensitive consumers. Extended,
+Yarn, and Hymn use the carry-state boundary instead: execution assembly must
+not search forward for their next consumer or manufacture a producer-to-future-
+room edge. It must likewise not choose a first purchase or infer that actions
+commute from their categories.
 
 ### Coverage of the current hard edges
 
@@ -418,26 +569,33 @@ graph algorithm. Every current relation fits one of three durable primitives:
 | Source to child                    | prerequisite edge from producer owner to child owner                                    |
 | Required action to checkpoint      | owner-bearing checkpoint obligation                                                     |
 | Optional action to outgoing        | outgoing checkpoint obligation only when that action contributed to the authored prefix |
-| Modeled mutation to later consumer | prerequisite edge from mutation owner to exact consumer owner                           |
+| Modeled mutation to local consumer | prerequisite edge from mutation owner to exact same-occurrence consumer owner           |
 | Modal transaction                  | one atomic semantic transaction; native subcontacts are not separate nodes              |
 | First accepted purchase            | source-to-realization and source-to-competing-purchase prerequisite edges               |
-| Next eligible Well effect          | retained-effect producer to its exact planner-resolved consumer                         |
 | Exact phase blocker                | lifecycle obligation plus prerequisite edge where another semantic owner is involved    |
 
-Runtime bookkeeping is only a completed-owner set and the declared prerequisite
-sets. No topological sort, scheduler, search, family rule, or stream cursor is
-required.
+Runtime bookkeeping inside one room is only a completed-owner set and the
+declared prerequisite sets. No topological sort, scheduler, search, family
+rule, or stream cursor is required. The set is discarded when room-exit
+conformance succeeds.
+
+Assembly and decode must reject every cross-occurrence prerequisite, including
+an otherwise chronologically valid edge between selected rooms. Selected-route
+reachability does not turn a retained game status into an action dependency,
+and retaining completed owners for earlier rooms would reintroduce a global
+cursor indirectly.
 
 ### Concrete safety assessment
 
-| Proposed sparse relation                            | Disposition                               | Reason                                                                                                                        |
-| --------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| “Zeus trait pickup before later Demeter offer”      | exact prerequisite edge                   | the first acquisition formed the later offer's prefix; unrelated purchases may interleave                                     |
-| “Mystery provider Demeter, then its selected trait” | one exact owner or exact owned child      | current authoring stores provider, offer, and acquisition beneath an exact source; ordinal reassignment would change the plan |
-| “Artificer source before generated Onion”           | exact producer-to-child edge              | requiredness, duplication eligibility, acquisition role, and child address all derive from the exact source                   |
-| “first accepted purchase consumes Travel Deal”      | source, realization, and competitor edges | only the planner knows the already-simulated first accepted purchase; unrelated object interactions remain free               |
-| “Yarn or Hymn before next eligible offer”           | exact producer-to-consumer edge           | the retained status waits across unrelated contacts and binds to the exact consumer already reached by simulation             |
-| simulation-neutral Well purchases in any order      | no edge                                   | after first/next-use and Extended participation are excluded, their order has no current planner-visible consequence          |
+| Proposed sparse relation                             | Disposition                               | Reason                                                                                                                        |
+| ---------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| “Zeus pickup before a later same-room Demeter offer” | exact prerequisite edge                   | the first acquisition formed the later local offer's prefix; unrelated local purchases may interleave                         |
+| “Zeus pickup before a Demeter offer in a later room” | no edge; carry-state conformance          | the source room closes over trait state and the later room locally proves its offer                                           |
+| “Mystery provider Demeter, then its selected trait”  | one exact owner or exact owned child      | current authoring stores provider, offer, and acquisition beneath an exact source; ordinal reassignment would change the plan |
+| “Artificer source before generated Onion”            | exact producer-to-child edge              | requiredness, duplication eligibility, acquisition role, and child address all derive from the exact local source             |
+| “first accepted purchase consumes Travel Deal”       | source, realization, and competitor edges | only the planner knows the already-simulated first accepted purchase; unrelated object interactions remain free               |
+| “Yarn or Hymn remains for the next eligible offer”   | no edge; carry-state conformance          | the retained status is native game state; its later consumer proves a new local transaction                                   |
+| simulation-neutral Well purchases in any order       | no edge                                   | after same-room first-purchase participation is excluded, their order has no current planner-visible consequence              |
 
 Mystery Boon and Artificer also expose the ownership boundary. Their outcomes
 may look fungible as short lists, but the current planner authors provider,
@@ -449,20 +607,23 @@ validate it before publication.
 
 ### Dependency-direction disposition
 
-**Go** for a planner-owned sparse dependency DAG as the sole expression of
-Timeline ordering. It preserves the planner's exact run while allowing every
-action without a path between it and another action to interleave freely.
+**Go** for an occurrence-local planner-owned sparse dependency DAG as the sole
+expression of Timeline action ordering, paired with bounded room-exit
+carry-state conformance. The DAG preserves exact same-room relations while
+allowing every local action without a path to interleave freely; carry state
+preserves later-room semantics without action provenance.
 
 **Conditional go** for unowned outcome allocation only when complete-valid
 planner evaluation explicitly proves a bounded group exchangeable. The proof
 must cover source capabilities, requiredness, generated children, offer
-prefixes, retained effects, and every later modeled consumer.
+prefixes, retained effects, and every modeled consumer inside that occurrence.
 
 **No-go** for the execution assembler, compiler, or game module deriving
-ordering, next-consumer identity, first-purchase identity, or exchangeability
-from action kind, reward identity, authored adjacency, matching payloads, or
-equal final Run State. That would move semantic authority out of the planner
-engine and recreate the ambiguity this audit is intended to remove.
+ordering, next-consumer identity, first-purchase identity, carry-state values,
+or exchangeability from action kind, reward identity, authored adjacency,
+matching payloads, or equal final Run State. That would move semantic authority
+out of the planner engine and recreate the ambiguity this audit is intended to
+remove.
 
 ## Completion and mismatch policy
 
@@ -473,7 +634,8 @@ A semantic action should freeze further realization only for a bounded reason:
 - the game could not realize an exact planner-owned offer, item, encounter, or
   mutation;
 - a hard dependency was violated; or
-- the completed transaction produced a different planner-visible result.
+- the completed transaction produced a different planner-visible result; or
+- bounded room-exit carry state differs from the complete-valid engine result.
 
 The following do not independently justify a freeze:
 
@@ -492,9 +654,10 @@ serve as an independent Timeline cursor or universal blocking predicate.
 ## Authority consequence
 
 The planner's complete-valid evaluation must own whether a semantic action is
-required, consequential, commutative under a declared rule, or guidance-only.
-The execution compiler may copy those resolved facts but must not infer them
-from reward names, action-key syntax, or feature categories.
+required, consequential, commutative under a declared rule, or guidance-only,
+and must own the agreed carry-state value at room exit. The execution compiler
+may copy those resolved facts but must not infer them from reward names,
+action-key syntax, feature categories, or earlier completed owners.
 
 The game adapter owns the other half of the boundary: which native object,
 phase, slot, or screen binds to that semantic owner, and which native state
@@ -518,8 +681,9 @@ combines four different things:
 That shape makes a valid semantic action fail when an incidental callback does
 not advance the cursor, when one native transaction is represented by more
 than one row, or when two commutative actions occur in another legal order.
-Conversely, removing the cursor without retaining owners and hard edges would
-make source/child and first-use behavior unsafe.
+Conversely, removing the cursor without retaining local owners, local hard
+edges, and room-exit carry state would make source/child, first-purchase, and
+retained-effect behavior unsafe.
 
 The current live integration difficulty is therefore evidence against the
 linear trace contract, not evidence that the planner's Timeline is inherently
@@ -527,7 +691,7 @@ irreconcilable.
 
 ## Go/no-go disposition
 
-### Go: owner-bound partial-order reconciliation
+### Go: room-local partial-order reconciliation and carry-state closure
 
 The current action catalog is suitable for a runtime execution contract when:
 
@@ -536,17 +700,21 @@ The current action catalog is suitable for a runtime execution contract when:
 - every Timeline transaction retains its semantic owner;
 - native objects, slots, phases, or screens are bound to that owner rather than
   matched by display identity;
-- lifecycle windows, explicit dependencies, checkpoint obligations, and the
-  sparse hard-edge families above are authoritative; and
+- lifecycle windows, occurrence-local dependencies, checkpoint obligations,
+  and the sparse hard-edge families above are authoritative;
+- agreed pending and clocked state is checked at room exit without carrying
+  completed action owners into the next occurrence; and
 - unproven or simulation-neutral contacts remain diagnostic or guidance-only.
 
 This contract scales by adding one audited action family and its bounded
 contacts. It does not scale by adding another global permutation or callback
 sequence.
 
-The planner-owned sparse dependency DAG is the preferred form of this
-contract. It retains only meaningful owner-to-owner order while lifecycle
-windows and checkpoint obligations preserve their distinct timing roles.
+The planner-owned sparse dependency DAG is the preferred form of local action
+ordering. It retains only meaningful same-occurrence owner-to-owner order while
+lifecycle windows and checkpoint obligations preserve their distinct timing
+roles. The separate carry-state snapshot is the preferred form of cross-room
+continuity.
 
 ### Conditional go: engine-certified exchangeable outcome groups
 
@@ -559,8 +727,9 @@ resulting list looks interchangeable.
 
 Treating the room Timeline as an unordered set of `{kind, item}` observations
 is not valid. Same-name objects, generated children, staged trait screens,
-Travel Deal, Extended, Yarn/Hymn, Artificer, required-object checkpoints, and
-Shrine delivery all need ownership or ordering context.
+Travel Deal, Artificer, and required-object checkpoints need local ownership or
+ordering context. Extended, Yarn/Hymn, and Shrine delivery need explicit carry
+state instead of anonymous observations.
 
 ### No-go: exact callback replay
 

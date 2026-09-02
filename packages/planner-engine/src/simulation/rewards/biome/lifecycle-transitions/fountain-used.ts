@@ -16,6 +16,7 @@ import type { RewardBranchState } from '../../branch-primitives';
 import { rewardFinding } from '../../findings';
 import type { FountainRarityCandidateCapability } from '../../../candidate-artifacts';
 import type { LifecycleFinding } from './types';
+import type { PlannerTimelineFacts } from '../../../timeline-facts';
 
 export interface FountainUsedTransition {
   readonly branches: readonly RewardBranchState[];
@@ -24,6 +25,7 @@ export interface FountainUsedTransition {
     readonly value: FountainRarityCandidateCapability;
   };
   readonly findings: readonly LifecycleFinding[];
+  readonly timelineFacts: PlannerTimelineFacts;
 }
 
 /** Resolves the one occurrence-owned Phial use, immediately before later actions. */
@@ -34,6 +36,24 @@ export function applyFountainUsedTransition(
   branches: readonly RewardBranchState[],
 ): FountainUsedTransition {
   const outcome = createFountainRarityOutcomeAddress(event.owner);
+  const fountain = room?.roomActionRoster?.rows.find(
+    (row) => !row.stale && row.rank !== null && row.reference.kind === 'useFountain',
+  );
+  const rack = room?.roomActionRoster?.rows.find(
+    (row) =>
+      !row.stale &&
+      row.rank !== null &&
+      row.reference.kind === 'interactKeepsakeRack' &&
+      fountain !== undefined &&
+      row.rank < fountain.rank!,
+  );
+  const timelineFacts: PlannerTimelineFacts = Object.freeze({
+    nodes: Object.freeze([Object.freeze({ owner: event.owner, included: true, required: true })]),
+    dependencies:
+      rack === undefined
+        ? Object.freeze([])
+        : Object.freeze([Object.freeze({ owner: event.owner, afterOwner: rack.owner })]),
+  });
   const frontiers = branches.map((branch) => {
     const targets = assessPhialTraitTargets(
       catalog,
@@ -68,6 +88,7 @@ export function applyFountainUsedTransition(
         branches: advanceRewardBranches(branches, event.sequence),
         candidate,
         findings: Object.freeze([]),
+        timelineFacts,
       });
   }
   if (needsTarget && room?.fountainRarityResult === undefined) {
@@ -83,6 +104,7 @@ export function applyFountainUsedTransition(
           chronology: Object.freeze({ kind: 'history', sequence: event.sequence, boundary: 'at' }),
         }),
       ]),
+      timelineFacts,
     });
   }
   const targetTraitKey = room?.fountainRarityResult?.targetTraitKey;
@@ -108,6 +130,7 @@ export function applyFountainUsedTransition(
           chronology: Object.freeze({ kind: 'history', sequence: event.sequence, boundary: 'at' }),
         }),
       ]),
+      timelineFacts,
     });
   }
   const nextBranches = branches.map((branch) => {
@@ -139,5 +162,6 @@ export function applyFountainUsedTransition(
     branches: advanceRewardBranches(Object.freeze(nextBranches), event.sequence),
     candidate,
     findings: Object.freeze([]),
+    timelineFacts,
   });
 }

@@ -66,6 +66,7 @@ import type { RewardBranchState } from './branch-primitives';
 import type { TraitOfferOptionLevelResolution } from '../trait-offer-levels';
 import { bankPathPoints, installHexTree, maybeAddGodSent } from '../hex-progress';
 import { addRewardFinding } from './findings';
+import { isTraitOfferMutationEvent } from '../trait-history';
 
 export interface ReachedTraitChildCheckpoint {
   readonly address: SemanticAddress;
@@ -82,6 +83,11 @@ interface ApplyTraitOfferOptions {
   /** The original screen's frozen row result for a Concave Stone residual. */
   readonly frozenLevelResolution?: TraitOfferOptionLevelResolution;
 }
+
+type TraitOfferAcquisitionSettlement = ReturnType<typeof applyTraitOfferForAcquisitionInternal> & {
+  /** The immediately preceding same-occurrence trait mutation owners. */
+  readonly priorTraitMutationOwners?: readonly SemanticAddress[];
+};
 
 interface EchoLastRunBoonSettlement {
   readonly address: EchoLastRunBoonAddress;
@@ -879,7 +885,7 @@ export function applyTraitOfferForAcquisition(
   findings?: Map<string, FindingRegionEntry>,
   findingChronology?: FindingChronology,
   options: ApplyTraitOfferOptions = {},
-): ReturnType<typeof applyTraitOfferForAcquisitionInternal> {
+): TraitOfferAcquisitionSettlement {
   const traitContext = Object.freeze({
     ...(reward.traitContext ?? {}),
     ...(branch.stygianWell.yarnUses === 0
@@ -903,6 +909,15 @@ export function applyTraitOfferForAcquisition(
   // A missing authored screen is an incomplete reached frontier, not a closed
   // choice. Retain both one-use effects so the repaired screen receives them.
   if (authored === undefined || authored === null) return settlement;
+  const owner = traitOwnerAddress(reward.origin);
+  const priorMutationOwner =
+    owner === undefined
+      ? undefined
+      : [...(branch.traitHistory ?? createTraitHistoryState()).events]
+          .reverse()
+          .find(
+            (event) => isTraitOfferMutationEvent(event) && sameTraitOccurrence(event.owner, owner),
+          )?.owner;
   const closedContext = withBoonRarityFacts(
     catalog,
     branch,
@@ -925,9 +940,18 @@ export function applyTraitOfferForAcquisition(
       branch.traitHistory ?? createTraitHistoryState(),
       closedContext,
     ).replacements.length > 0;
-  if (!consumesYarn && !consumesHymn) return settlement;
+  if (!consumesYarn && !consumesHymn)
+    return Object.freeze({
+      ...settlement,
+      ...(priorMutationOwner === undefined
+        ? {}
+        : { priorTraitMutationOwners: Object.freeze([priorMutationOwner]) }),
+    });
   return Object.freeze({
     ...settlement,
+    ...(priorMutationOwner === undefined
+      ? {}
+      : { priorTraitMutationOwners: Object.freeze([priorMutationOwner]) }),
     branch: Object.freeze({
       ...settlement.branch,
       stygianWell: Object.freeze({
@@ -987,6 +1011,46 @@ function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | un
     default:
       return undefined;
   }
+}
+
+/** Resolve the concrete occurrence behind the small set of nested owners that
+ * can emit or consume a trait mutation. This remains local to trait
+ * settlement; execution only receives the resulting opaque edge. */
+function traitOccurrenceId(address: SemanticAddress): string | undefined {
+  if ('occurrenceId' in address) return address.occurrenceId;
+  switch (address.kind) {
+    case 'fountainRarityOutcome':
+      return traitOccurrenceId(address.action);
+    case 'keepsakeEquipResult':
+      return traitOccurrenceId(address.selection);
+    case 'traitOffer':
+    case 'acquisitionRole':
+    case 'levelResolution':
+      return traitOccurrenceId(address.owner);
+    case 'steadyGrowthOutcome':
+    case 'transcendentEmbryoOutcome':
+      return traitOccurrenceId(address.owner);
+    case 'traitAcquisitionTarget':
+    case 'circeResolution':
+    case 'echoPomTarget':
+    case 'naturalSelectionResult':
+    case 'echoLastRunBoon':
+    case 'echoLastReward':
+    case 'allTogetherSet':
+      return traitOccurrenceId(address.trait);
+    case 'encounterPhase':
+      return address.owner.occurrenceId;
+    case 'nemesisRandomEvent':
+      return traitOccurrenceId(address.encounter);
+    default:
+      return undefined;
+  }
+}
+
+function sameTraitOccurrence(left: SemanticAddress, right: SemanticAddress): boolean {
+  const leftOccurrence = traitOccurrenceId(left);
+  const rightOccurrence = traitOccurrenceId(right);
+  return leftOccurrence !== undefined && leftOccurrence === rightOccurrence;
 }
 
 export interface EncounterTraitOfferSettlement {

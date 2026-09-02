@@ -9,7 +9,7 @@ import {
   stringArray,
   stringValue,
 } from './primitives';
-import { reward } from './rewards';
+import { reward, runtimeFallbacks } from './rewards';
 import { roomReference } from './room';
 
 export function overview(value: unknown, label: string) {
@@ -57,7 +57,7 @@ export function overview(value: unknown, label: string) {
               exact(
                 row,
                 ['offerKey', 'optionKey', 'rewardType'],
-                ['source', 'spurnedSource'],
+                ['source', 'spurnedSource', 'runtimeFallbacks'],
                 `${label}.shop.offers[${index}]`,
               );
               return Object.freeze({
@@ -78,6 +78,14 @@ export function overview(value: unknown, label: string) {
                         `${label}.shop.offers[${index}].spurnedSource`,
                       ),
                     }),
+                ...(row.runtimeFallbacks === undefined
+                  ? {}
+                  : {
+                      runtimeFallbacks: runtimeFallbacks(
+                        row.runtimeFallbacks,
+                        `${label}.shop.offers[${index}].runtimeFallbacks`,
+                      ),
+                    }),
               });
             }),
           ),
@@ -89,7 +97,7 @@ export function overview(value: unknown, label: string) {
                   exact(
                     row,
                     ['sourceOfferKey', 'slotIndex', 'optionKey', 'reward'],
-                    [],
+                    ['runtimeFallbacks'],
                     `${label}.shop.travelDealRefill`,
                   );
                   return Object.freeze({
@@ -103,6 +111,14 @@ export function overview(value: unknown, label: string) {
                       `${label}.shop.travelDealRefill.optionKey`,
                     ),
                     reward: reward(row.reward, `${label}.shop.travelDealRefill.reward`),
+                    ...(row.runtimeFallbacks === undefined
+                      ? {}
+                      : {
+                          runtimeFallbacks: runtimeFallbacks(
+                            row.runtimeFallbacks,
+                            `${label}.shop.travelDealRefill.runtimeFallbacks`,
+                          ),
+                        }),
                   });
                 })(),
               }),
@@ -131,7 +147,7 @@ export function overview(value: unknown, label: string) {
                     exact(
                       row,
                       ['generationKey', 'offerKey'],
-                      ['twistResultKey'],
+                      ['twistResultKey', 'runtimeFallbacks'],
                       `${label}.stygianWell.offers[${index}]`,
                     );
                     if (
@@ -159,6 +175,14 @@ export function overview(value: unknown, label: string) {
                             twistResultKey: stringValue(
                               row.twistResultKey,
                               `${label}.stygianWell.offers[${index}].twistResultKey`,
+                            ),
+                          }),
+                      ...(row.runtimeFallbacks === undefined
+                        ? {}
+                        : {
+                            runtimeFallbacks: runtimeFallbacks(
+                              row.runtimeFallbacks,
+                              `${label}.stygianWell.offers[${index}].runtimeFallbacks`,
                             ),
                           }),
                     });
@@ -223,7 +247,7 @@ export function overview(value: unknown, label: string) {
     record.keepsakeRack === undefined
       ? undefined
       : object(record.keepsakeRack, `${label}.keepsakeRack`);
-  if (rack !== undefined) exact(rack, ['keepsakeKey'], [], `${label}.keepsakeRack`);
+  if (rack !== undefined) exact(rack, [], ['keepsakeKey'], `${label}.keepsakeRack`);
   const fountain =
     record.fountain === undefined ? undefined : object(record.fountain, `${label}.fountain`);
   if (fountain !== undefined) exact(fountain, [], ['aromaticPhialTarget'], `${label}.fountain`);
@@ -309,9 +333,13 @@ export function overview(value: unknown, label: string) {
     ...(rack === undefined
       ? {}
       : {
-          keepsakeRack: Object.freeze({
-            keepsakeKey: stringValue(rack.keepsakeKey, `${label}.keepsakeRack.keepsakeKey`),
-          }),
+          keepsakeRack: Object.freeze(
+            rack.keepsakeKey === undefined
+              ? {}
+              : {
+                  keepsakeKey: stringValue(rack.keepsakeKey, `${label}.keepsakeRack.keepsakeKey`),
+                },
+          ),
         }),
     ...(fountain === undefined
       ? {}

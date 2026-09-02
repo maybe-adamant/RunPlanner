@@ -6,6 +6,7 @@ import {
   type SemanticAddress,
 } from '../../../../authored-project/addresses';
 import type { RouteLoadout } from '../../../../authored-project/model';
+import { roomActionKey } from '../../../../authored-project/room-action-key';
 import {
   acquisitionSiteStorageKey,
   artificerAcquisitionSite,
@@ -97,6 +98,7 @@ export function settleAuthoredAcquisitionSite(
     [];
   const traitChildSettlements: import('../../trait-settlement').ReachedTraitChildCheckpoint[] = [];
   const runtimeOfferFallbacks: import('./emissions').RuntimeOfferFallbackEmission[] = [];
+  let timelineFacts: import('../../../timeline-facts').PlannerTimelineFacts | undefined;
   const producerFrontiers: RewardProducerFrontier[] = [];
 
   function settle(): readonly RewardBranchState[] {
@@ -108,6 +110,42 @@ export function settleAuthoredAcquisitionSite(
       selectedSiteKey === undefined ? undefined : room.acquisitionSites[selectedSiteKey];
     const producer = room.pickupProducers?.find(
       (candidate) => candidate.siteKey === selectedSiteKey,
+    );
+    // A generated pickup's provider action owns its unpicked or auto-activated
+    // roles; an explicit pickup action takes ownership when it is present.
+    const producerSourceOwner =
+      producer?.sourceAction === undefined
+        ? undefined
+        : room.roomActionRoster.rows.find(
+            (row) =>
+              !row.stale &&
+              row.rank !== null &&
+              roomActionKey(row.reference) === roomActionKey(producer.sourceAction),
+          )?.owner;
+    const timelineOwnerByEntryKey = Object.freeze(
+      Object.fromEntries(
+        producer === undefined
+          ? room.roomActionRoster.rows.flatMap((row) =>
+              !row.stale &&
+              row.rank !== null &&
+              row.reference.kind === 'interactAcquisitionEntry' &&
+              row.reference.siteKey === selectedSiteKey
+                ? [[row.reference.entryKey, row.owner] as const]
+                : [],
+            )
+          : producer.pickups.flatMap((pickup) => {
+              const pickupOwner = room.roomActionRoster.rows.find(
+                (row) =>
+                  !row.stale &&
+                  row.rank !== null &&
+                  row.reference.kind === 'interactAcquisitionEntry' &&
+                  row.reference.siteKey === selectedSiteKey &&
+                  row.reference.entryKey === pickup.key,
+              )?.owner;
+              const owner = pickupOwner ?? producerSourceOwner;
+              return owner === undefined ? [] : [[pickup.key, owner] as const];
+            }),
+      ),
     );
     const seaStarDuplicate =
       selectedSiteKey === undefined ? undefined : parseSeaStarDuplicateSiteKey(selectedSiteKey);
@@ -201,6 +239,7 @@ export function settleAuthoredAcquisitionSite(
         {
           siteOwner: room.origin,
           site: selectedSite.address,
+          timelineOwnerByEntryKey,
           entries: Object.freeze({ [SEA_STAR_DUPLICATE_ENTRY_KEY]: effectiveDuplicateEntry }),
           order: activationOnly ? Object.freeze([]) : Object.freeze([SEA_STAR_DUPLICATE_ENTRY_KEY]),
           producerLifecycleKey,
@@ -208,6 +247,11 @@ export function settleAuthoredAcquisitionSite(
             [SEA_STAR_DUPLICATE_ENTRY_KEY]: Object.freeze({
               kind: 'seaStarDuplicate' as const,
               sourceOwner: source.owner,
+              ...(timelineOwnerByEntryKey[seaStarDuplicate.sourceKey] === undefined
+                ? {}
+                : {
+                    sourceTimelineOwner: timelineOwnerByEntryKey[seaStarDuplicate.sourceKey],
+                  }),
               sourceRole: seaStarDuplicate.acquisitionRole,
             }),
           }),
@@ -331,6 +375,7 @@ export function settleAuthoredAcquisitionSite(
         {
           siteOwner: room.origin,
           site: selectedSite.address,
+          timelineOwnerByEntryKey,
           entries: pickupEntries,
           order: activationOnly
             ? Object.freeze([])
@@ -417,6 +462,7 @@ export function settleAuthoredAcquisitionSite(
                 {
                   siteOwner: room.origin,
                   site: selectedSite.address,
+                  timelineOwnerByEntryKey,
                   entries: Object.freeze({
                     [frontier.address.entryKey]: createUnresolvedPickupRewardState(
                       catalog,
@@ -578,6 +624,7 @@ export function settleAuthoredAcquisitionSite(
       );
     }
     acquisitionRoleFrontiers.push(...(settled.roleFrontiers ?? []));
+    timelineFacts = settled.timelineFacts;
     runtimeOfferFallbacks.push(...(settled.runtimeOfferFallbacks ?? []));
     derivedEntryFrontiers.push(...(settled.derivedEntryFrontiers ?? []));
     traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
@@ -593,6 +640,7 @@ export function settleAuthoredAcquisitionSite(
       derivedEntryFrontiers,
       traitChildSettlements,
       runtimeOfferFallbacks,
+      ...(timelineFacts === undefined ? {} : { timelineFacts }),
       findings: targetFindings,
     }),
   });

@@ -266,6 +266,7 @@ export function selectedTraitOfferProducts(
                 preferredKey:
                   entry.offer.options[optionIndex(entry.offer.selectedOptionKey)]!.traitKey,
                 fallbackKey,
+                availabilityContact: 'traitEligibility' as const,
               }),
             ];
       }),
@@ -276,6 +277,7 @@ export function selectedTraitOfferProducts(
                 address: entry.address,
                 preferredKey: entry.preferredKey,
                 fallbackKey: entry.fallbackKeys[0]!,
+                availabilityContact: 'traitEligibility' as const,
               }),
             ]
           : [],

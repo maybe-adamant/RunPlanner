@@ -53,6 +53,8 @@ import {
   type ReachedTraitChildCheckpoint,
 } from '../../trait-settlement';
 import { rewardFinding } from '../../findings';
+import type { BossArcanaOutcome } from '../../model';
+import type { PlannerTimelineFacts } from '../../../timeline-facts';
 
 type EncounterSettlementEvent = Extract<
   HistoryEvent,
@@ -67,6 +69,10 @@ export interface EncounterSettlementTransition {
     readonly checkpoint: ReachedTraitChildCheckpoint;
     readonly occurrenceOwner: SemanticAddress;
   }[];
+  /** Exact successful Boss mutations, separate from their candidate domains. */
+  readonly bossArcanaOutcomes?: readonly BossArcanaOutcome[];
+  /** Boss mutation owners and their planner-resolved same-seam order. */
+  readonly timelineFacts?: PlannerTimelineFacts;
   readonly judgmentCandidate?: {
     readonly key: string;
     readonly inactiveArcanaKeys: readonly string[];
@@ -83,10 +89,10 @@ export interface EncounterSettlementTransition {
     readonly value: NemesisRandomEventCandidateSupport;
   };
   readonly runtimeOfferFallback?: {
-    readonly key: string;
     readonly address: SemanticAddress;
     readonly preferredKey: string;
     readonly fallbackKey: string;
+    readonly availabilityContact: 'npcConsumableSelection';
   };
   readonly blockGorgonPhaseKey?: string;
   readonly gorgonEvaluationBlocked: boolean;
@@ -324,13 +330,14 @@ export function applyEncounterSettlementTransition(inputs: {
               ),
             ),
           });
+    const judgmentSelected = room.encounters.judgmentArcanaKeysByPhase?.[event.phaseKey] ?? [];
     branches = Object.freeze(
       branches.flatMap((branch) => {
         if (hasActiveChaosSemanticTag(branch.traitHistory ?? createTraitHistoryState(), 'Barren'))
           return [advanceRewardBranches([branch], event.sequence)[0]!];
         const required = judgmentRequiredCount(catalog, branch.arcanaFear);
         if (required === undefined) return [advanceRewardBranches([branch], event.sequence)[0]!];
-        const selected = room.encounters.judgmentArcanaKeysByPhase?.[event.phaseKey] ?? [];
+        const selected = judgmentSelected;
         if (selected.length !== required) {
           const finding = rewardFinding(
             selected.length === 0 ? 'judgmentOutcomeMissing' : 'judgmentOutcomeWrongCardinality',
@@ -422,12 +429,13 @@ export function applyEncounterSettlementTransition(inputs: {
             rarity: figurineSource.rarity,
           })
         : undefined;
+    const figurineSelected = room.encounters.figurineArcanaKeysByPhase?.[event.phaseKey] ?? [];
     branches = Object.freeze(
       figurineBranches.flatMap((branch) => {
         const source = branch.keepsakes.figurine;
         if (source?.status !== 'pending' || figurineEffect?.kind !== 'crystalFigurine')
           return [advanceRewardBranches([branch], event.sequence)[0]!];
-        const selected = room.encounters.figurineArcanaKeysByPhase?.[event.phaseKey] ?? [];
+        const selected = figurineSelected;
         if (selected.length !== figurineRequiredCount) {
           const finding = rewardFinding(
             selected.length === 0 ? 'figurineOutcomeMissing' : 'figurineOutcomeWrongCardinality',
@@ -494,6 +502,52 @@ export function applyEncounterSettlementTransition(inputs: {
         ];
       }),
     );
+    const judgmentOutcome: BossArcanaOutcome | undefined =
+      judgmentCandidate !== undefined &&
+      judgmentSelected.length === judgmentCandidate.requiredCount &&
+      judgmentSelected.length > 0 &&
+      branches.length > 0
+        ? Object.freeze({
+            owner,
+            effect: 'judgment' as const,
+            phaseKey: event.phaseKey,
+            arcanaKeys: Object.freeze([...judgmentSelected]),
+            rarity: 'Epic' as const,
+          })
+        : undefined;
+    const figurineOutcome: BossArcanaOutcome | undefined =
+      figurineCandidate !== undefined &&
+      figurineSelected.length === figurineCandidate.requiredCount &&
+      branches.length > 0
+        ? Object.freeze({
+            owner: figurineOwner,
+            effect: 'crystalFigurine' as const,
+            phaseKey: event.phaseKey,
+            arcanaKeys: Object.freeze([...figurineSelected]),
+            rarity: figurineCandidate.rarity,
+          })
+        : undefined;
+    const bossArcanaOutcomes = Object.freeze(
+      [judgmentOutcome, figurineOutcome].filter(
+        (outcome): outcome is BossArcanaOutcome => outcome !== undefined,
+      ),
+    );
+    const timelineFacts: PlannerTimelineFacts = Object.freeze({
+      nodes: Object.freeze(
+        bossArcanaOutcomes.map((outcome) =>
+          Object.freeze({ owner: outcome.owner, included: true, required: true }),
+        ),
+      ),
+      dependencies:
+        judgmentOutcome === undefined || figurineOutcome === undefined
+          ? Object.freeze([])
+          : Object.freeze([
+              Object.freeze({
+                owner: figurineOutcome.owner,
+                afterOwner: judgmentOutcome.owner,
+              }),
+            ]),
+    });
     return Object.freeze({
       branches,
       findings: Object.freeze([...findings.values()]),
@@ -501,6 +555,8 @@ export function applyEncounterSettlementTransition(inputs: {
       traitChildSettlements: Object.freeze(traitChildSettlements),
       ...(judgmentCandidate === undefined ? {} : { judgmentCandidate }),
       ...(figurineCandidate === undefined ? {} : { figurineCandidate }),
+      bossArcanaOutcomes,
+      timelineFacts,
       gorgonEvaluationBlocked,
       ...(blockGorgonPhaseKey === undefined ? {} : { blockGorgonPhaseKey }),
     });
@@ -537,6 +593,14 @@ export function applyEncounterSettlementTransition(inputs: {
       throw new BiomeRewardSimulationContractError(
         `${room.gameName}.${event.phaseKey} does not own exactly one local reward`,
       );
+    const timelineOwner = room.roomActionRoster.rows.find(
+      (candidate) =>
+        !candidate.stale &&
+        candidate.rank !== null &&
+        candidate.reference.kind === 'interactLocalReward' &&
+        candidate.reference.groupKey === 'cages' &&
+        candidate.reference.slotKey === rewards[0]!.slotKey,
+    )?.owner;
     const materialized = Object.freeze(
       branches.map((branch) =>
         consumeOlympianProviderForReachedOffer(catalog, branch, rewards[0]!.origin, 'free'),
@@ -553,6 +617,7 @@ export function applyEncounterSettlementTransition(inputs: {
           room,
           Object.freeze({ ...rewards[0], instanceProvenance: 'free' }),
         ),
+        ...(timelineOwner === undefined ? {} : { timelineOwner }),
         historySequence: event.sequence,
         authoredSeaStarDuplicateSiteKeys: inputs.authoredSeaStarDuplicateSiteKeys,
       },
@@ -790,10 +855,10 @@ export function applyEncounterSettlementTransition(inputs: {
             )
           )
             runtimeOfferFallback = Object.freeze({
-              key: semanticAddressKey(owner),
               address: owner,
               preferredKey: edge.preferredRewardType,
               fallbackKey: edge.fallbackRewardType,
+              availabilityContact: 'npcConsumableSelection',
             });
         }
       }

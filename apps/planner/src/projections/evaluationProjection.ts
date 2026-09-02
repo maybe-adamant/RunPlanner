@@ -861,6 +861,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · ${localRewardDestinationLabel(origin.groupKey, origin.slotKey)}`;
     case 'roomAction':
       return `${biomeLabel} · Room action`;
+    case 'wellRefillRealization':
+      return `${biomeLabel} · Well refill`;
     case 'roomRunStateCheckpoint':
       return `${biomeLabel} · Run State`;
     case 'localVisitDecision':

@@ -1,4 +1,9 @@
 import type { ProjectEvaluationAssembly } from '../simulation/evaluation-products';
+import type {
+  PendingKeepsakeEffects,
+  RoomExitConformanceFactKind,
+} from '../simulation/rewards/run-state-conformance';
+import type { RuntimeOfferAvailabilityContact } from '../simulation/runtime-offer-fallback';
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
@@ -24,13 +29,19 @@ export type ExecutionWellEffect =
   | 'extended'
   | 'twist'
   | 'lastStand';
-/** Retained Well effects that must identify their exact later consumer. */
-export type ExecutionWellRetainedEffect = 'extended' | 'yarn' | 'hymn';
 /** Closed lifecycle windows copied from the engine's Room Action authority. */
 export type ExecutionLifecycleWindow =
   | { readonly kind: 'standard'; readonly phase: 'beforeCombat' | 'afterCombat' }
+  | { readonly kind: 'bossDefeated'; readonly phaseKey: string }
   | { readonly kind: 'encounterEnd'; readonly phaseKey: string }
   | { readonly kind: 'postOutgoing' };
+
+/** One planner-selected one-step runtime contingency; execution never searches a pool. */
+export interface ExecutionRuntimeFallback {
+  readonly preferredKey: string;
+  readonly fallbackKey: string;
+  readonly availabilityContact: RuntimeOfferAvailabilityContact;
+}
 
 /** Diagnostic evidence only. It is never a lifecycle or transaction cursor. */
 export interface ExecutionRunStateDiagnostic {
@@ -103,6 +114,43 @@ export interface ExecutionRunStateDiagnostic {
     readonly investedPathPoints: number;
   };
   readonly artificer: { readonly usedCount: number; readonly remainingCount: number } | null;
+  readonly retainedEffects: {
+    readonly echoShopDuplicateStatus: 'pending' | 'consumed' | null;
+    readonly keepsakes: PendingKeepsakeEffects;
+    readonly steadyGrowth: readonly {
+      readonly traitKey: string;
+      readonly progress: number;
+      readonly interval: number;
+    }[];
+    readonly hermesShrineDeliveries: readonly {
+      readonly sourceKey: string;
+      readonly sourceOccurrenceId: string;
+      readonly generationKey: string;
+      readonly rewardType: string;
+      readonly remainingUses: number;
+      readonly rushed: boolean;
+      readonly dueOccurrenceId?: string;
+      readonly dueSequence?: number;
+    }[];
+    readonly stygianWell: {
+      readonly sparkUses: number;
+      readonly yarnUses: number;
+      readonly hymnUses: number;
+      readonly discountUses: readonly number[];
+      readonly emptySlotUses: readonly number[];
+      readonly extendedUses: number;
+    };
+  };
+}
+
+export type ExecutionRoomExitConformanceFactKind = RoomExitConformanceFactKind;
+
+export interface ExecutionRoomExitConformance {
+  /**
+   * Each kind selects the corresponding expected value from the occurrence's
+   * beforeRoomExit Run State frame. Values are not duplicated on the wire.
+   */
+  readonly facts: readonly { readonly kind: ExecutionRoomExitConformanceFactKind }[];
 }
 
 export interface ExecutionReward {
@@ -137,7 +185,7 @@ export type ExecutionTraitOffer =
       }[];
       readonly selected: ExecutionTraitOptionKey;
       readonly rejected?: ExecutionTraitOptionKey;
-      readonly runtimeFallback?: string;
+      readonly runtimeFallbacks?: readonly ExecutionRuntimeFallback[];
     }
   | {
       readonly kind: 'chaos';
@@ -178,7 +226,11 @@ export interface ExecutionAcquisitionRole {
 }
 
 export interface ExecutionKeepsakeEquipResults {
-  readonly jeweledPom?: { readonly traitKey: string; readonly rarity?: string };
+  readonly jeweledPom?: {
+    readonly traitKey: string;
+    readonly rarity?: string;
+    readonly runtimeFallbacks?: readonly ExecutionRuntimeFallback[];
+  };
   readonly experimentalHammer?:
     { readonly kind: 'selected'; readonly traitKey: string } | { readonly kind: 'exhausted' };
   readonly transcendentEmbryo?: { readonly blessingKey: string };
@@ -205,12 +257,14 @@ export interface ExecutionOverview {
       readonly rewardType: string;
       readonly source?: string;
       readonly spurnedSource?: string;
+      readonly runtimeFallbacks?: readonly ExecutionRuntimeFallback[];
     }[];
     readonly travelDealRefill?: {
       readonly sourceOfferKey: string;
       readonly slotIndex: number;
       readonly optionKey: string;
       readonly reward: ExecutionReward;
+      readonly runtimeFallbacks?: readonly ExecutionRuntimeFallback[];
     };
   };
   readonly stygianWell?: {
@@ -220,6 +274,7 @@ export interface ExecutionOverview {
         'initial:healing' | 'initial:secondLeft' | 'initial:secondRight' | 'travelDealRefill';
       readonly offerKey: string;
       readonly twistResultKey?: string;
+      readonly runtimeFallbacks?: readonly ExecutionRuntimeFallback[];
     }[];
   };
   readonly purgingPool?: {
@@ -229,7 +284,7 @@ export interface ExecutionOverview {
       readonly traitKey: string | null;
     }[];
   };
-  readonly keepsakeRack?: { readonly keepsakeKey: string };
+  readonly keepsakeRack?: { readonly keepsakeKey?: string };
   readonly fountain?: { readonly aromaticPhialTarget?: string };
   readonly resources?: readonly {
     readonly acquisitionRole: string;
@@ -264,6 +319,7 @@ export type ExecutionTimelineTransaction =
       readonly producerLifecycleKey: string;
       readonly roles: readonly ExecutionAcquisitionRole[];
       readonly window: ExecutionLifecycleWindow;
+      readonly runtimeFallbacks?: readonly ExecutionRuntimeFallback[];
     }
   | {
       readonly kind: 'encounterInteraction';
@@ -274,7 +330,10 @@ export type ExecutionTimelineTransaction =
         | {
             readonly kind: 'nemesisRandomEvent';
             readonly outcome:
-              | { readonly kind: 'freeItem' }
+              | {
+                  readonly kind: 'freeItem';
+                  readonly runtimeFallbacks?: readonly ExecutionRuntimeFallback[];
+                }
               | {
                   readonly kind: 'goldTrade' | 'damageTrade';
                   readonly response: 'accept' | 'decline';
@@ -299,6 +358,15 @@ export type ExecutionTimelineTransaction =
       readonly window: ExecutionLifecycleWindow;
     }
   | {
+      readonly kind: 'automatic';
+      readonly owner: string;
+      readonly effect: 'judgment' | 'crystalFigurine';
+      readonly phaseKey: string;
+      readonly arcanaKeys: readonly string[];
+      readonly rarity: string;
+      readonly window: ExecutionLifecycleWindow;
+    }
+  | {
       readonly kind: 'shopPurchase';
       readonly owner: string;
       readonly window: ExecutionLifecycleWindow;
@@ -308,6 +376,7 @@ export type ExecutionTimelineTransaction =
       readonly reward: ExecutionReward;
       readonly producerLifecycleKey: string;
       readonly roles: readonly ExecutionAcquisitionRole[];
+      readonly runtimeFallbacks?: readonly ExecutionRuntimeFallback[];
     }
   | {
       readonly kind: 'wellPurchase';
@@ -318,6 +387,18 @@ export type ExecutionTimelineTransaction =
       readonly effect: ExecutionWellEffect;
       readonly extendedDirectPurchase: boolean;
       readonly twistResultKey?: string;
+      readonly runtimeFallbacks?: readonly ExecutionRuntimeFallback[];
+    }
+  | {
+      /** Planner-owned automatic Travel Deal refill realization. */
+      readonly kind: 'wellRefill';
+      readonly owner: string;
+      readonly window: ExecutionLifecycleWindow;
+      readonly generationKey: 'travelDealRefill';
+      readonly offerKey: string;
+      readonly effect: ExecutionWellEffect;
+      readonly twistResultKey?: string;
+      readonly runtimeFallbacks?: readonly ExecutionRuntimeFallback[];
     }
   | {
       readonly kind: 'poolSale';
@@ -350,22 +431,10 @@ export interface ExecutionTimelineObligation {
   readonly checkpoint: 'roomEntered' | 'outgoingGeneration' | 'exitUsable' | 'roomExit';
 }
 
-export interface ExecutionTimelineStream {
-  readonly key: string;
-  readonly owners: readonly string[];
-}
-
-export interface ExecutionWellRetainedEffectCorrelation {
-  readonly producerOwner: string;
-  readonly effect: ExecutionWellRetainedEffect;
-  readonly consumerOwner: string;
-}
-
 export interface ExecutionTimeline {
   readonly transactions: readonly ExecutionTimelineTransaction[];
   readonly dependencies: readonly ExecutionTimelineDependency[];
   readonly obligations: readonly ExecutionTimelineObligation[];
-  readonly streams: readonly ExecutionTimelineStream[];
 }
 
 export interface ExecutionDoorTarget {
@@ -404,6 +473,7 @@ export interface ExecutionOccurrence {
   readonly overview: ExecutionOverview;
   readonly timeline: ExecutionTimeline;
   readonly doors: ExecutionDoors;
+  readonly roomExitConformance?: ExecutionRoomExitConformance;
   readonly diagnostics?: {
     readonly roomEntered?: ExecutionRunStateDiagnostic;
     readonly beforeRoomExit?: ExecutionRunStateDiagnostic;
@@ -426,7 +496,6 @@ export interface ExecutionPlan {
   /** Complete occurrence records; selectedOccurrenceIds is the route cursor. */
   readonly selectedOccurrenceIds: readonly string[];
   readonly occurrences: readonly ExecutionOccurrence[];
-  readonly wellRetainedEffects: readonly ExecutionWellRetainedEffectCorrelation[];
 }
 
 /** Explicit engine-owned product assembled only at publication time. */
@@ -438,7 +507,6 @@ export interface ExecutionSemanticProduct {
   readonly extent: ExecutionPlan['extent'];
   readonly selectedOccurrenceIds: readonly string[];
   readonly occurrences: readonly ExecutionOccurrence[];
-  readonly wellRetainedEffects: readonly ExecutionWellRetainedEffectCorrelation[];
 }
 
 export interface ExecutionAssemblerInput {

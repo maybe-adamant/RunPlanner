@@ -920,6 +920,8 @@ export function materializeAuthoredRoom(
     entered: context.entered,
     ...(enteredRewardStoreKey === undefined ? {} : { enteredRewardStoreKey }),
     roomActions: context.occurrence.roomActions,
+    hasKeepsakeRack: context.room.hasKeepsakeRack,
+    hasRequiredFountain: context.room.hasRequiredFountain,
     ...(context.occurrence.keepsakeRack === undefined
       ? {}
       : { keepsakeRack: context.occurrence.keepsakeRack }),

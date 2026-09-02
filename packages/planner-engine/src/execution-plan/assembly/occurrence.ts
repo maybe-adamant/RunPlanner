@@ -5,10 +5,12 @@ import { executionRoomOwnerKey } from './support';
 import { assembleExecutionOverview, executionReward } from './overview';
 import { executionTimelineTransactions } from './timeline-transactions';
 import { assembleTimelineRelations } from './timeline-relations';
+import type { PlannerTimelineFacts } from '../../simulation/timeline-facts';
 import { assembleOccurrenceDiagnostics } from './diagnostics';
 import { assembleExecutionDoors } from './doors';
 import { assembleGAnomalyReplacement } from './g-anomaly';
 import type { ExecutionOccurrence } from '../model';
+import type { RoomExitConformanceDelta } from '../../simulation/rewards/run-state-conformance';
 
 export function executionOccurrence(
   room: CanonicalAuthoredRoom,
@@ -18,9 +20,12 @@ export function executionOccurrence(
   crossBiomeTarget: CanonicalAuthoredRoom | undefined,
   crossBiomeSourceId: string | undefined,
   biome: CompleteValidBiomeProjectEvaluation,
+  transactions: ReturnType<typeof executionTimelineTransactions>,
+  timelineFacts: PlannerTimelineFacts,
+  includedOwners: ReadonlySet<string>,
+  roomExitConformance: RoomExitConformanceDelta | undefined,
 ): ExecutionOccurrence {
   const batch = batches.get(executionRoomOwnerKey(room));
-  const transactions = executionTimelineTransactions(room, biome);
   const diagnostics = assembleOccurrenceDiagnostics(room, snapshots);
   const anomaly = assembleGAnomalyReplacement(room);
   return Object.freeze({
@@ -31,7 +36,7 @@ export function executionOccurrence(
     kind: room.encounterEnvelopeKey,
     ...(anomaly === undefined ? {} : { anomaly }),
     overview: assembleExecutionOverview(room, biome, batch),
-    timeline: assembleTimelineRelations(transactions, room),
+    timeline: assembleTimelineRelations(transactions, room, timelineFacts, includedOwners),
     doors: assembleExecutionDoors({
       room,
       batches,
@@ -40,6 +45,13 @@ export function executionOccurrence(
       crossBiomeSourceId,
       rewardForRoom: executionReward,
     }),
+    ...(roomExitConformance === undefined
+      ? {}
+      : {
+          roomExitConformance: Object.freeze({
+            facts: Object.freeze([...roomExitConformance.facts]),
+          }),
+        }),
     ...(diagnostics === undefined ? {} : { diagnostics }),
   });
 }

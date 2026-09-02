@@ -42,6 +42,7 @@ import {
   createRunState,
   createRunStateDerivationCache,
 } from '../../src/simulation/rewards/run-state';
+import { deriveRoomExitConformanceDeltas } from '../../src/simulation/rewards/run-state-conformance';
 import {
   attachTraitHistory,
   foldTraitHistoryEvents,
@@ -84,6 +85,80 @@ function requirementFacts(ordinaryLootCount: number): RewardKernelFacts {
 }
 
 describe('decision run-state snapshots', () => {
+  it('promotes Shrine deliveries and Well effects and derives only their changed exit facts', () => {
+    const occurrence = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'F'),
+      createOccurrenceId('run-state-retained-effects'),
+    );
+    const base = initializeTestRewardBranches()[0]!;
+    const delivery = Object.freeze({
+      sourceKey: 'delivery-source',
+      sourceOrigin: occurrence,
+      generationKey: 'initial:first' as const,
+      rewardType: 'Boon',
+      remainingUses: 3,
+    });
+    const beforeBranch = Object.freeze({
+      ...base,
+      pendingHermesShrineDeliveries: Object.freeze({ 'delivery-source': delivery }),
+    });
+    const afterBranch = Object.freeze({
+      ...beforeBranch,
+      keepsakes: Object.freeze({
+        ...beforeBranch.keepsakes,
+        timePiece: Object.freeze({ remainingCharges: 1 }),
+      }),
+      stygianWell: Object.freeze({ ...beforeBranch.stygianWell, sparkUses: 1 }),
+    });
+    const historyView = {
+      sequence: 1,
+      ledgers: {
+        roomCreations: [],
+        roomAppearances: [],
+        encounterRecords: [],
+        encounterStarts: [],
+        encounterCompletions: [],
+        enteredRewardStores: [],
+        requiredObjectSpawns: [],
+        requiredObjectCompletions: [],
+        roomRestores: [],
+        counters: {
+          biomeDepthCache: 1,
+          biomeEncounterDepth: 0,
+          routeEncounterDepth: 0,
+          roomHistoryOrdinal: 1,
+        },
+      },
+    };
+    const snapshot = (
+      checkpoint: 'roomEntered' | 'beforeRoomExit',
+      branch: typeof beforeBranch | typeof afterBranch,
+    ) =>
+      createRunState({
+        catalog,
+        owner: createRoomRunStateCheckpointAddress(occurrence, { kind: checkpoint }),
+        historyView,
+        branches: [branch],
+        enteredBiomeCount: 1,
+        rewardFacts: () => requirementFacts(0),
+      })!;
+    const entered = snapshot('roomEntered', beforeBranch);
+    const exited = snapshot('beforeRoomExit', afterBranch);
+    expect(entered.pendingHermesShrineDeliveries).toEqual({ 'delivery-source': delivery });
+    expect(exited.stygianWell.sparkUses).toBe(1);
+    const deltas = deriveRoomExitConformanceDeltas(
+      [occurrence],
+      new Map([
+        [semanticAddressKey(entered.owner), entered],
+        [semanticAddressKey(exited.owner), exited],
+      ]),
+    );
+    expect(deltas.get(occurrence.occurrenceId)?.facts).toEqual([
+      { kind: 'keepsakeEffects' },
+      { kind: 'stygianWell' },
+    ]);
+  });
+
   it('keeps facts-derived caches local to one exact checkpoint context', () => {
     const history = createRewardHistoryState();
     const branch = Object.freeze({
