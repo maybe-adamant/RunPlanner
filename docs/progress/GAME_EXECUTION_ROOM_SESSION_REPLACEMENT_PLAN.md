@@ -5,11 +5,13 @@
 Locked on 2026-09-01 after the execution Timeline reconciliation audit and a
 live inventory of the current planner protocol and Plan Executor.
 
-Gate A completed at Run Planner commit `3ba4c13e`. Before Gate B, the locked
-contract was amended with Gate A.2 to replace the provisional stream-plus-edge
-ordering product with one planner-owned sparse prerequisite DAG. Protocol v10
-has no external consumer yet, so Gate A.2 corrects v10 in place without a
-compatibility path or version bump.
+Gate A completed at Run Planner commit `3ba4c13e`. Gate A.2 completed at Run
+Planner commit `d8868277`, replacing the provisional stream-plus-edge ordering
+product with one planner-owned sparse prerequisite DAG and closing runtime
+fallback, automatic-outcome, and room-exit conformance publication. Protocol
+v10 still has no external consumer, so Gate A.2 corrected v10 in place without
+a compatibility path or version bump. Its five checked-in execution fixtures
+are the exact Gate B input authority.
 
 Starting authorities and commits:
 
@@ -170,7 +172,19 @@ Wells and other cleanup interactions may still occur. Room exit closes it only
 after its exit obligations are satisfied. The next entered room must match the
 next selected occurrence.
 
+When the current occurrence has terminal Doors, satisfying its remaining
+obligations and room-exit conformance completes the configured execution
+prefix. The executor then stops realizing later rooms. Entering the next
+unsupported biome after that completed prefix is not a mismatch.
+
 ### Semantic transaction completion
+
+Native adapters identify a transaction from explicit published fields and
+bounded native bindings: for example `offerKey`, `generationKey`, `phaseKey`,
+`sourceOwner`, or the exact object bound when a pickup was materialized. The
+adapter passes the resulting opaque owner to the room session. Neither decoder
+nor session parses semantic-address grammar, scans for the next transaction, or
+uses authored order as a fallback matcher.
 
 When a native adapter reports one consequential transaction, the room session
 performs one atomic operation:
@@ -184,6 +198,21 @@ performs one atomic operation:
 Failure before step 5 changes no completion state. The runtime does not
 topologically sort, search for another match, choose a first purchase or next
 consumer, or infer exchangeability.
+
+One semantic transaction may span several synchronous or asynchronous native
+callbacks. The owning adapter retains that bounded intermediate contact state;
+the room session sees only the final completed proof. A canceled or incomplete
+interaction leaves the owner incomplete so its declared obligation, if any,
+remains authoritative.
+
+An unmatched native callback or interaction is not independently a mismatch.
+The planner has intentionally omitted guidance-only and simulation-neutral
+contacts from the blocking product. Once an adapter has bound a native object,
+screen, slot, or phase to a published owner, however, a different
+planner-visible result is a transaction mismatch. Missing required work is
+caught by obligations, and changed pending or clocked state is caught by the
+sparse room-exit conformance product. The runtime does not classify an omitted
+contact by reconstructing planner semantics.
 
 This requires only a completed-owner set, each node's declared prerequisite
 owners, and checkpoint obligation sets. It does not justify a scheduler,
@@ -211,6 +240,15 @@ Hooks do not advance the occurrence cursor, choose which transaction should
 come next globally, derive whether an action matters, or compare broad Run
 State.
 
+Runtime fallback relations remain part of the native adapter boundary. The
+closed contacts are `traitEligibility`, `storeInventoryGeneration`,
+`storePurchase`, and `npcConsumableSelection`. At the declared contact the
+adapter asks only whether the preferred result is natively available, realizes
+the one declared fallback when it is not, and reports failure when neither can
+be realized. Preferred and fallback outcomes both complete the same semantic
+owner and conform to the plan. The route and room sessions do not know why the
+fallback was required and never search another provider pool.
+
 ## Execution product
 
 The replacement execution document remains strict, bounded, data-only JSON.
@@ -226,7 +264,7 @@ It contains:
 7. its sparse engine-owned room-exit conformance delta for changed pending and
    clocked state; and
 8. optional diagnostic Run State snapshots or deltas keyed to room entry and
-   door readiness.
+   before-room-exit.
 
 Semantic owners are bounded opaque correlation IDs in the game module. The
 planner engine and compiler have already established their meaning. The Lua
@@ -338,10 +376,26 @@ match closes the room and discards its completed-owner set; a mismatch blocks
 later realization. The compiler and runtime do not derive why the value changed
 or which later contact may consume it.
 
+Gate B's start-of-run F/G extent requires native readers for the seven
+conformance families that can change before leaving G: `steadyGrowth`, `chaos`,
+`keepsakeEffects`, `rewardPriorities`, `pathOfStars`, `forfeit`, and
+`stygianWell`. `echoShopDuplicate` cannot exist before Echo in H, and
+`hermesShrineDeliveries` cannot exist before the later Shrine-owning route
+surface. Protocol v10 still decodes those two closed-union members
+structurally, but the F/G executor rejects an occurrence that declares either
+as an unsupported execution contact instead of silently skipping it or
+building unreachable native readers. A later-biome gate must deliberately add
+their native comparison contacts before accepting them.
+
 ### Diagnostics and mismatch policy
 
-Run State snapshots remain available for investigation. The executor may log a
-bounded expected/observed difference at room entry or door readiness, but that
+Run State snapshots remain available for investigation. The decoder expands
+their globally sequenced `replace` frames once at load time and attaches the
+complete `roomEntered` and `beforeRoomExit` values to their occurrences. It
+also resolves each named room-exit conformance fact to the corresponding value
+in that occurrence's expanded `beforeRoomExit` state. Frame numbers and delta
+accumulation never enter the live route or room session. The executor may log a
+bounded expected/observed diagnostic difference at either checkpoint, but that
 difference never changes session synchronization.
 
 The first blocking mismatch is limited to:
@@ -389,12 +443,29 @@ moved behind the new room-session contract where still correct:
 - Time Piece, Artificer, Sea Star, and generated-child native contacts;
 - Chaos curse/blessing reservation and processing;
 - keepsake equip and immediate result interception;
-- fountain, resource, Nemesis, Anomaly, and supported automatic-effect native
-  contacts; and
+- fountain, resource, Nemesis, Anomaly, Steady Growth, and Transcendent Embryo
+  native contacts; and
 - native object/slot tagging that provides stable semantic correlation.
 
 Harvesting preserves proven behavior, not current `session.lua` method names or
 trace-oriented call structure.
+
+### Construct as new native behavior
+
+The following Gate B contacts have no completed protocol-v9 realization path
+and must not be estimated as mechanical harvesting:
+
+- `bossDefeated` realization and proof for Judgment and Crystal Figurine;
+- preferred/fallback resolution at `traitEligibility`,
+  `storeInventoryGeneration`, `storePurchase`, and `npcConsumableSelection`;
+  and
+- the seven bounded F/G room-exit conformance readers named above. Existing
+  broad Run State observation may supply source-backed native access, but the
+  sparse blocking comparison is new behavior.
+
+Each new contact needs its own native adapter witness before the old trace
+coordinator is deleted. None may be implemented as a semantic rule in the
+route or room session.
 
 ### Rebuild
 
@@ -450,7 +521,7 @@ Every new runtime abstraction must be exercised by a present F/G instance:
 | selected occurrence cursor  | F opening through an ordinary continuation; Ixion Chaos detour and declaration-sized G return                           |
 | Overview checkpoint         | interacted and uninteracted Well/Pool presence, resources, encounter assembly, Chaos/Contract, and an incoming reward   |
 | Doors checkpoint            | ordinary F multi-door batch, Anomaly replacement, and one-, two-, and three-exit Chaos returns                          |
-| sparse prerequisite edge    | two trait-history mutations whose authored offers depend on their order                                                 |
+| sparse prerequisite edge    | Travel Deal source purchase before refill realization; Judgment before Crystal Figurine at `bossDefeated`               |
 | atomic multi-effect owner   | Mystery Boon provider resolution plus its exact resulting trait acquisition                                             |
 | producer dependency         | Artificer source conversion before its generated replacement pickup                                                     |
 | checkpoint obligation       | required incoming/Onion acquisition before later cleanup or room exit                                                   |
@@ -519,9 +590,10 @@ Narrow validation:
 
 Intended commit: `feat(engine): publish room-session execution protocol`.
 
-### Gate A.2 — Planner-owned sparse Timeline dependency DAG
+### Gate A.2 — Planner-owned sparse Timeline dependency DAG (completed)
 
-Owning repository: Run Planner. Production base: `3ba4c13e`.
+Owning repository: Run Planner. Production base: `3ba4c13e`. Completed at
+`d8868277`.
 
 Correct protocol v10 before any Plan Executor cutover. The planner's authored
 Timeline remains a total order for simulation and editing, but its execution
@@ -671,7 +743,7 @@ Narrow validation:
 - `npm run format:check`;
 - `git diff --check`.
 
-Intended commit: `refactor(engine): publish sparse execution dependencies`.
+Completed commit: `feat(engine): publish sparse execution dependencies`.
 
 ### Gate B — Plan Executor controlled replacement and cutover
 
@@ -690,31 +762,66 @@ Deliver:
   integrity rather than semantic-address parsing;
 - one load-time expansion of the globally sequenced diagnostic `replace`
   frames into complete per-checkpoint state before any room-exit conformance
-  lookup; this is decoder state only and never a runtime route cursor;
+  lookup, including a ready-to-compare expected value for every named
+  conformance fact; this is decoder state only and never a runtime route
+  cursor;
 - route and room sessions;
 - logical Overview and Doors checkpoints;
 - occurrence-local owner prerequisite edges and obligations;
+- exact adapter-owned transaction binding through published fields and native
+  object identity, with no authored-order fallback matching;
+- all four closed runtime-fallback contacts, with preferred and declared
+  fallback outcomes completing the same owner;
 - sparse room-exit pending/clocked-state conformance with no route-level
   completed-owner set;
 - diagnostic-only Run State logging;
+- clean configured-prefix completion after terminal Doors;
 - explicit native hook groups and harvested F/G realization adapters;
 - the existing inbox, bootstrap, status, and deployment contacts;
-- byte-identical copies of Gate A.2's execution fixtures; and
+- byte-identical copies of all five Gate A.2 execution fixtures; and
 - deletion of the cursor runtime and its cursor-specific tests.
+
+Implementation proceeds through four bounded internal passes while retaining
+one atomic committed cutover:
+
+1. replace the decoder and mirror all five protocol-v10 fixtures;
+2. build the pure route and room sessions against decoded data;
+3. harvest proven native realization algorithms behind explicit hook groups
+   and exact owner bindings; and
+4. switch `main.lua`, delete the trace coordinator and cursor-oriented tests,
+   then run the complete Gate B verification.
+
+No intermediate commit may expose two selectable coordinators or a
+protocol-v9 compatibility mode.
 
 Primary test ownership:
 
 - protocol tests own bounded decode, closed unions, uniqueness, and reference
   integrity, including sequential diagnostic-frame expansion and rejection of
-  a missing or out-of-order baseline;
+  a missing or out-of-order baseline; focused positive vectors cover every
+  Timeline transaction union member, including `shopPurchase`, `poolSale`,
+  `keepsakeChange`, `automatic:steadyGrowth`, and
+  `automatic:transcendentEmbryo`, without turning the five route fixtures into
+  an exhaustive schema matrix;
 - session tests own occurrence advancement, checkpoint closure, atomic
   completion, local prerequisite failure, obligation failure, room-exit state
-  conformance, room-owner disposal, and diagnostic nonblocking behavior;
+  conformance, room-owner disposal, terminal-prefix completion, unmatched
+  guidance nonblocking behavior, and diagnostic nonblocking behavior;
+- one session test must leave a published transaction that has no obligation
+  incomplete and still close the room successfully; a paired prerequisite
+  witness proves that the same optional owner blocks a dependent transaction
+  only when that dependent is attempted;
 - hook/adapter tests own native realization contacts without reproducing
   session policy;
+- fallback adapter tests own preferred success, one-step fallback success, and
+  neither-result failure at each of the four closed availability contacts;
+- conformance adapter tests own the seven reachable F/G readers and explicit
+  rejection of the two later-route-only conformance contacts;
 - Chaos tests retain gate/return behavior;
+- the mirrored automatic/boss fixture owns `bossDefeated` automatic contacts,
+  while the Ixion/Chaos fixture owns Travel Deal's source-to-refill edge;
 - one representative F/G session owns the complete room-entry → Timeline →
-  Doors → next-room loop; and
+  Doors → next-room loop and configured-prefix completion; and
 - deliberate mismatches cover wrong room, missing Overview fact, wrong
   consequential outcome, unresolved obligation, and wrong Doors product.
 
