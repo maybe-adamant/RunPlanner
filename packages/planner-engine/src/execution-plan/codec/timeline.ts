@@ -4,6 +4,7 @@ import type {
   ExecutionTimelineTransaction,
 } from '../model';
 import {
+  MAX_OWNER_STRING,
   array,
   booleanValue,
   exact,
@@ -97,8 +98,8 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
     );
     return Object.freeze({
       kind,
-      owner: stringValue(record.owner, `${label}.owner`, 256),
-      sourceOwner: stringValue(record.sourceOwner, `${label}.sourceOwner`, 256),
+      owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
+      sourceOwner: stringValue(record.sourceOwner, `${label}.sourceOwner`, MAX_OWNER_STRING),
       reward: reward(record.reward, `${label}.reward`),
       producerLifecycleKey: stringValue(
         record.producerLifecycleKey,
@@ -134,7 +135,7 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
       fail(`${label}.resolution.kind is unsupported`);
     return Object.freeze({
       kind,
-      owner: stringValue(record.owner, `${label}.owner`, 256),
+      owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
       phaseKey: stringValue(record.phaseKey, `${label}.phaseKey`),
       ...(resolution === undefined
         ? {}
@@ -163,7 +164,7 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
       );
       return Object.freeze({
         kind,
-        owner: stringValue(record.owner, `${label}.owner`, 256),
+        owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
         effect: record.effect,
         phaseKey: stringValue(record.phaseKey, `${label}.phaseKey`),
         arcanaKeys: Object.freeze(stringArray(record.arcanaKeys, `${label}.arcanaKeys`)),
@@ -181,7 +182,7 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
       fail(`${label}.effect is unsupported`);
     return Object.freeze({
       kind,
-      owner: stringValue(record.owner, `${label}.owner`, 256),
+      owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
       effect: record.effect,
       phaseKey: stringValue(record.phaseKey, `${label}.phaseKey`),
       source: stringValue(record.source, `${label}.source`),
@@ -211,11 +212,11 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
     );
     return Object.freeze({
       kind,
-      owner: stringValue(record.owner, `${label}.owner`, 256),
+      owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
       window: lifecycleWindow(record.window, `${label}.window`),
       offerKey: stringValue(record.offerKey, `${label}.offerKey`),
       rewardType: stringValue(record.rewardType, `${label}.rewardType`),
-      sourceOwner: stringValue(record.sourceOwner, `${label}.sourceOwner`, 256),
+      sourceOwner: stringValue(record.sourceOwner, `${label}.sourceOwner`, MAX_OWNER_STRING),
       reward: reward(record.reward, `${label}.reward`),
       producerLifecycleKey: stringValue(
         record.producerLifecycleKey,
@@ -245,7 +246,7 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
     );
     return Object.freeze({
       kind,
-      owner: stringValue(record.owner, `${label}.owner`, 256),
+      owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
       window: lifecycleWindow(record.window, `${label}.window`),
       offerKey: stringValue(record.offerKey, `${label}.offerKey`),
       generationKey: wellGenerationKey(record.generationKey, `${label}.generationKey`),
@@ -303,7 +304,7 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
       fail(`${label}.effect is unsupported`);
     return Object.freeze({
       kind,
-      owner: stringValue(record.owner, `${label}.owner`, 256),
+      owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
       window: lifecycleWindow(record.window, `${label}.window`),
       generationKey: 'travelDealRefill' as const,
       offerKey: stringValue(record.offerKey, `${label}.offerKey`),
@@ -327,7 +328,7 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
       fail(`${label}.slotKey is unsupported`);
     return Object.freeze({
       kind,
-      owner: stringValue(record.owner, `${label}.owner`, 256),
+      owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
       window: lifecycleWindow(record.window, `${label}.window`),
       slotKey: record.slotKey as 'left' | 'middle' | 'right',
       traitKey: stringValue(record.traitKey, `${label}.traitKey`),
@@ -337,7 +338,7 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
     exact(record, ['kind', 'owner', 'window', 'keepsakeKey'], ['equipResults'], label);
     return Object.freeze({
       kind,
-      owner: stringValue(record.owner, `${label}.owner`, 256),
+      owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
       window: lifecycleWindow(record.window, `${label}.window`),
       keepsakeKey: stringValue(record.keepsakeKey, `${label}.keepsakeKey`),
       ...(record.equipResults === undefined
@@ -349,7 +350,7 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
     exact(record, ['kind', 'owner', 'window'], ['aromaticPhialTarget'], label);
     return Object.freeze({
       kind,
-      owner: stringValue(record.owner, `${label}.owner`, 256),
+      owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
       window: lifecycleWindow(record.window, `${label}.window`),
       ...(record.aromaticPhialTarget === undefined
         ? {}
@@ -374,8 +375,12 @@ export function timeline(value: unknown, label: string): ExecutionTimeline {
     const row = object(entry, `${label}.dependencies[${index}]`);
     exact(row, ['owner', 'afterOwner'], [], `${label}.dependencies[${index}]`);
     return Object.freeze({
-      owner: stringValue(row.owner, `${label}.dependencies[${index}].owner`, 256),
-      afterOwner: stringValue(row.afterOwner, `${label}.dependencies[${index}].afterOwner`, 256),
+      owner: stringValue(row.owner, `${label}.dependencies[${index}].owner`, MAX_OWNER_STRING),
+      afterOwner: stringValue(
+        row.afterOwner,
+        `${label}.dependencies[${index}].afterOwner`,
+        MAX_OWNER_STRING,
+      ),
     });
   });
   const obligations = array(record.obligations, `${label}.obligations`).map((entry, index) => {
@@ -388,7 +393,7 @@ export function timeline(value: unknown, label: string): ExecutionTimeline {
     )
       fail(`${label}.obligations[${index}].checkpoint is unsupported`);
     return Object.freeze({
-      owner: stringValue(row.owner, `${label}.obligations[${index}].owner`, 256),
+      owner: stringValue(row.owner, `${label}.obligations[${index}].owner`, MAX_OWNER_STRING),
       checkpoint: row.checkpoint as
         'roomEntered' | 'outgoingGeneration' | 'exitUsable' | 'roomExit',
     });

@@ -1,4 +1,5 @@
 import {
+  MAX_OWNER_STRING,
   array,
   booleanValue,
   exact,
@@ -298,7 +299,7 @@ export function overview(value: unknown, label: string) {
             );
           return Object.freeze({
             kind: row.kind,
-            owner: stringValue(row.owner, `${label}.additional[${index}].owner`, 256),
+            owner: stringValue(row.owner, `${label}.additional[${index}].owner`, MAX_OWNER_STRING),
             room: roomReference(row.room, `${label}.additional[${index}].room`),
             ...(ixion === undefined
               ? {}

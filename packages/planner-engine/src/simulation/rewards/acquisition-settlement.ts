@@ -70,6 +70,7 @@ import {
 } from './branch-primitives';
 import {
   applyTraitOfferForAcquisition,
+  type PriorTraitMutation,
   type ReachedTraitChildCheckpoint,
 } from './trait-settlement';
 import { addRewardFinding, rewardFinding } from './findings';
@@ -201,7 +202,7 @@ export interface AcquisitionRoleFrontier {
   };
   readonly blocksArtificerConversion?: true;
   /** Immediate same-occurrence mutation prefix supplied by trait settlement. */
-  readonly priorTraitMutationOwners?: readonly SemanticAddress[];
+  readonly priorTraitMutations?: readonly PriorTraitMutation[];
 }
 
 export interface PickupAcquisitionEntryFrontier {
@@ -1171,7 +1172,7 @@ export function applyProducerRoleHistory(
   );
   const next: RewardBranchState[] = [];
   const realizedAcquisitionByBranch: (ConcreteAcquisitionEvent | undefined)[] = [];
-  const priorTraitMutationOwners = new Map<string, SemanticAddress>();
+  const priorTraitMutations = new Map<string, PriorTraitMutation>();
   let unresolvedArtificerReplacement = false;
   let unresolvedTraitOffer = false;
   const seaStarSourceKey = semanticAddressKey(
@@ -1607,8 +1608,11 @@ export function applyProducerRoleHistory(
         ),
       },
     );
-    for (const owner of traitSettlement.priorTraitMutationOwners ?? [])
-      priorTraitMutationOwners.set(semanticAddressKey(owner), owner);
+    for (const mutation of traitSettlement.priorTraitMutations ?? [])
+      priorTraitMutations.set(
+        `${semanticAddressKey(mutation.owner)}\u0000${mutation.acquisitionRole}`,
+        mutation,
+      );
     const installedSpellEvent =
       acquisition.acquisition.gameName === 'SpellDrop' && pathPointGrant === undefined
         ? traitSettlement.branch.traitHistory?.events
@@ -1670,9 +1674,9 @@ export function applyProducerRoleHistory(
       historySequence: resolution.historySequence,
       settlement,
       artificerReplacementAddress,
-      ...(priorTraitMutationOwners.size === 0
+      ...(priorTraitMutations.size === 0
         ? {}
-        : { priorTraitMutationOwners: Object.freeze([...priorTraitMutationOwners.values()]) }),
+        : { priorTraitMutations: Object.freeze([...priorTraitMutations.values()]) }),
       ...(artificerReplacementOptions === undefined ? {} : { artificerReplacementOptions }),
       ...(artificerReplacementRewardTypes.length === 0
         ? {}

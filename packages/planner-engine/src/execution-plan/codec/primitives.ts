@@ -2,6 +2,8 @@ import type { ExecutionRunStateCount, ExecutionWellGenerationKey } from '../mode
 
 export const MAX_ITEMS = 256;
 export const MAX_STRING = 512;
+/** Semantic addresses are serialized as nested opaque correlation IDs. */
+export const MAX_OWNER_STRING = 2048;
 export type Dict = Record<string, unknown>;
 
 export class ExecutionPlanCodecError extends Error {

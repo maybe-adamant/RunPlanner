@@ -1,5 +1,5 @@
 import type { ExecutionDoors } from '../model';
-import { array, exact, fail, integer, object, stringValue } from './primitives';
+import { MAX_OWNER_STRING, array, exact, fail, integer, object, stringValue } from './primitives';
 import { reward } from './rewards';
 import { roomReference } from './room';
 
@@ -21,7 +21,7 @@ export function doors(value: unknown, label: string): ExecutionDoors {
     });
     return Object.freeze({
       kind: 'batch',
-      owner: stringValue(record.owner, `${label}.owner`, 256),
+      owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
       targets: Object.freeze(targets),
       ...(record.resolvedSharedRewardStoreKey === undefined
         ? {}
@@ -37,7 +37,7 @@ export function doors(value: unknown, label: string): ExecutionDoors {
     exact(record, ['kind', 'owner', 'target'], [], label);
     return Object.freeze({
       kind: 'fixed',
-      owner: stringValue(record.owner, `${label}.owner`, 256),
+      owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
       target: roomReference(record.target, `${label}.target`),
     });
   }
@@ -45,7 +45,7 @@ export function doors(value: unknown, label: string): ExecutionDoors {
     exact(record, ['kind', 'owner'], [], label);
     return Object.freeze({
       kind: 'terminal',
-      owner: stringValue(record.owner, `${label}.owner`, 256),
+      owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
     });
   }
   fail(`${label}.kind is unsupported`);

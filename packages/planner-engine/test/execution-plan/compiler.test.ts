@@ -26,6 +26,7 @@ import {
   ExecutionPlanCodecError,
 } from '../../src/execution-plan';
 import { validateExecutionProduct } from '../../src/execution-plan/assembly/validation';
+import { traitOffer as decodeExecutionTraitOffer } from '../../src/execution-plan/codec/rewards';
 import type { ExecutionSemanticProduct } from '../../src/execution-plan/model';
 import fOpeningFixture from './fixtures/f-opening.execution.json';
 import fgFixture from './fixtures/fg.execution.json';
@@ -201,6 +202,22 @@ function selectedTransactionPair(product: ExecutionSemanticProduct): {
 }
 
 describe('protocol-v10 compiler and codec', () => {
+  it('accepts forced-shortage trait screens without permitting a missing selection', () => {
+    const offer = {
+      kind: 'traits',
+      giver: 'Hera',
+      options: [{ key: 'AllElementalBoon', rarity: 'Legendary' }],
+      selected: 'option1',
+    };
+    expect(decodeExecutionTraitOffer(offer, 'offer')).toMatchObject({
+      options: [{ key: 'AllElementalBoon' }],
+      selected: 'option1',
+    });
+    expect(() => decodeExecutionTraitOffer({ ...offer, selected: 'option2' }, 'offer')).toThrow(
+      ExecutionPlanCodecError,
+    );
+  });
+
   it.each([
     ['f-opening', fOnlyProject(), fOpeningFixture],
     ['fg', createCompleteFGProject(), fgFixture],

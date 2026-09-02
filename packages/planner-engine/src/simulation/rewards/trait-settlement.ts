@@ -85,9 +85,14 @@ interface ApplyTraitOfferOptions {
 }
 
 type TraitOfferAcquisitionSettlement = ReturnType<typeof applyTraitOfferForAcquisitionInternal> & {
-  /** The immediately preceding same-occurrence trait mutation owners. */
-  readonly priorTraitMutationOwners?: readonly SemanticAddress[];
+  /** The immediately preceding same-occurrence trait mutations. */
+  readonly priorTraitMutations?: readonly PriorTraitMutation[];
 };
+
+export interface PriorTraitMutation {
+  readonly owner: SemanticAddress;
+  readonly acquisitionRole: string;
+}
 
 interface EchoLastRunBoonSettlement {
   readonly address: EchoLastRunBoonAddress;
@@ -910,14 +915,23 @@ export function applyTraitOfferForAcquisition(
   // choice. Retain both one-use effects so the repaired screen receives them.
   if (authored === undefined || authored === null) return settlement;
   const owner = traitOwnerAddress(reward.origin);
-  const priorMutationOwner =
+  const priorMutation =
     owner === undefined
       ? undefined
       : [...(branch.traitHistory ?? createTraitHistoryState()).events]
           .reverse()
           .find(
             (event) => isTraitOfferMutationEvent(event) && sameTraitOccurrence(event.owner, owner),
-          )?.owner;
+          );
+  const priorTraitMutations =
+    priorMutation === undefined
+      ? undefined
+      : Object.freeze([
+          Object.freeze({
+            owner: priorMutation.owner,
+            acquisitionRole: priorMutation.acquisitionRole,
+          }),
+        ]);
   const closedContext = withBoonRarityFacts(
     catalog,
     branch,
@@ -943,15 +957,11 @@ export function applyTraitOfferForAcquisition(
   if (!consumesYarn && !consumesHymn)
     return Object.freeze({
       ...settlement,
-      ...(priorMutationOwner === undefined
-        ? {}
-        : { priorTraitMutationOwners: Object.freeze([priorMutationOwner]) }),
+      ...(priorTraitMutations === undefined ? {} : { priorTraitMutations }),
     });
   return Object.freeze({
     ...settlement,
-    ...(priorMutationOwner === undefined
-      ? {}
-      : { priorTraitMutationOwners: Object.freeze([priorMutationOwner]) }),
+    ...(priorTraitMutations === undefined ? {} : { priorTraitMutations }),
     branch: Object.freeze({
       ...settlement.branch,
       stygianWell: Object.freeze({
