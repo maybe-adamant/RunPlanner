@@ -36,6 +36,7 @@ import {
   type ConcreteAcquisitionEvent,
   type ProducerLifecyclePointKey,
 } from '../../reward-kernel';
+import type { RuntimeOfferFallback } from '../runtime-offer-fallback';
 
 import type { HistoryEvent } from '../history';
 import type {
@@ -132,9 +133,12 @@ export interface AcquisitionSettlementProduct {
   /** Exact runtime fallback resolved at a selected paid item action. */
   readonly runtimeOfferFallbacks?: readonly {
     readonly address: SemanticAddress;
-    readonly preferredRewardType: string;
-    readonly fallbackRewardType: string;
+    readonly preferredKey: string;
+    readonly fallbackKey: string;
+    readonly availabilityContact: RuntimeOfferFallback['availabilityContact'];
   }[];
+  /** Exact same-room owner barriers resolved by this acquisition settlement. */
+  readonly timelineFacts?: import('../timeline-facts').PlannerTimelineFacts;
 }
 
 export interface DerivedAcquisitionEntryFrontier {
@@ -170,6 +174,8 @@ export interface DerivedAcquisitionEntryFrontier {
 
 export interface AcquisitionRoleFrontier {
   readonly address: import('../../authored-project/addresses').AcquisitionRoleAddress;
+  /** Exact active Room Action that reached this role, when it is consequential. */
+  readonly timelineOwner?: SemanticAddress;
   readonly branchesBeforeRole: readonly RewardBranchState[];
   /**
    * Concrete materialization produced by this role when its outer RoomReward
@@ -194,6 +200,8 @@ export interface AcquisitionRoleFrontier {
     ) => import('./producer-frontiers').RewardProducerCandidateResult;
   };
   readonly blocksArtificerConversion?: true;
+  /** Immediate same-occurrence mutation prefix supplied by trait settlement. */
+  readonly priorTraitMutationOwners?: readonly SemanticAddress[];
 }
 
 export interface PickupAcquisitionEntryFrontier {
@@ -221,6 +229,8 @@ export interface OwnedAcquisitionSettlementRequest {
   readonly pointKey: string;
   readonly entryKey: string;
   readonly source: AcquisitionSource;
+  /** Exact active Room Action owner supplied by the reached transition. */
+  readonly timelineOwner?: SemanticAddress;
   readonly historySequence: number;
   readonly roleBindings?: readonly AcquisitionSettlementRole[];
   /** Exact authored Sea Star result sites whose source frontier must be retained. */
@@ -258,6 +268,8 @@ export interface AcquisitionSource {
   readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
   /** A Sea Star second interaction is never eligible to produce a third. */
   readonly blocksSeaStarDuplication?: true;
+  /** Owning Room Action supplied by the reached transition, never reconstructed later. */
+  readonly timelineOwner?: SemanticAddress;
 }
 
 function resolvedAcquisitionSource(source: AcquisitionSource): ResolvedAcquisitionSource {
@@ -443,6 +455,7 @@ export function settleProducerAcquisitionSite(
   findingChronology?: FindingChronology,
   siteOwner?: AcquisitionSiteOwnerAddress,
   authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string>,
+  timelineOwner?: SemanticAddress,
 ): AcquisitionSettlementProduct {
   const incoming = room.incomingReward;
   if (
@@ -454,6 +467,7 @@ export function settleProducerAcquisitionSite(
   }
   const incomingSource = Object.freeze({
     ...withStoredArtificerReplacements(room, incoming),
+    ...(timelineOwner === undefined ? {} : { timelineOwner }),
     ...(incoming.producerLifecycleKey === 'RoomReward'
       ? { roomRewardForfeitEligible: true as const }
       : {}),
@@ -527,12 +541,14 @@ export function settleOwnedAcquisitionSite(
   findingChronology?: FindingChronology,
 ): AcquisitionSettlementProduct {
   const site = createAcquisitionSiteAddress(request.siteOwner, request.pointKey);
-  const producer = catalog.rewards.producerLifecycles.byKey[request.source.producerLifecycleKey];
-  const lifecycle = producer?.rewardTypes.byKey[request.source.offer.rewardType];
+  const source = Object.freeze({
+    ...request.source,
+    ...(request.timelineOwner === undefined ? {} : { timelineOwner: request.timelineOwner }),
+  });
+  const producer = catalog.rewards.producerLifecycles.byKey[source.producerLifecycleKey];
+  const lifecycle = producer?.rewardTypes.byKey[source.offer.rewardType];
   if (lifecycle === undefined && request.roleBindings === undefined) {
-    throw new Error(
-      `${request.source.producerLifecycleKey} does not support ${request.source.offer.rewardType}`,
-    );
+    throw new Error(`${source.producerLifecycleKey} does not support ${source.offer.rewardType}`);
   }
   const roleBindings: readonly AcquisitionRoleResolution[] = Object.freeze(
     (request.roleBindings ?? lifecycle!.acquisitionLifecycle).map((binding) =>
@@ -543,7 +559,7 @@ export function settleOwnedAcquisitionSite(
     throw new Error('owned acquisition settlement has no lifecycle roles');
   const entry = Object.freeze({
     address: createAcquisitionEntryAddress(site, request.entryKey),
-    source: request.source.origin,
+    source: source.origin,
     acquisitionRoles: Object.freeze(
       roleBindings.map((binding) =>
         Object.freeze({ role: binding.role, lifecyclePoint: binding.lifecyclePoint }),
@@ -554,21 +570,21 @@ export function settleOwnedAcquisitionSite(
   const roleFrontiers: AcquisitionRoleFrontier[] = [];
   const traitChildSettlements: ReachedTraitChildCheckpoint[] = [];
   const sourceReward: AuthoredRewardState = Object.freeze({
-    offer: request.source.offer,
-    traitOffersByAcquisitionRole: request.source.traitOffersByAcquisitionRole ?? Object.freeze({}),
-    ...(request.source.levelResolutionsByAcquisitionRole === undefined
+    offer: source.offer,
+    traitOffersByAcquisitionRole: source.traitOffersByAcquisitionRole ?? Object.freeze({}),
+    ...(source.levelResolutionsByAcquisitionRole === undefined
       ? {}
       : {
-          levelResolutionsByAcquisitionRole: request.source.levelResolutionsByAcquisitionRole,
+          levelResolutionsByAcquisitionRole: source.levelResolutionsByAcquisitionRole,
         }),
-    dispositionByAcquisitionRole: request.source.dispositionByAcquisitionRole ?? Object.freeze({}),
+    dispositionByAcquisitionRole: source.dispositionByAcquisitionRole ?? Object.freeze({}),
   });
   let current = roleBindings.reduce(
     (next, binding) =>
       applyProducerRoleHistory(
         catalog,
         next,
-        request.source,
+        source,
         binding,
         facts,
         findings,
@@ -589,7 +605,7 @@ export function settleOwnedAcquisitionSite(
     for (const binding of roleBindings) {
       if (sourceReward.dispositionByAcquisitionRole[binding.role]?.kind !== 'artificer') continue;
       const untouched = current.filter(
-        (branch) => !hasArtificerUse(branch, request.source.origin, binding.role),
+        (branch) => !hasArtificerUse(branch, source.origin, binding.role),
       );
       const replacement = settleArtificerReplacementAcquisition(
         catalog,
@@ -598,16 +614,14 @@ export function settleOwnedAcquisitionSite(
           siteOwner: request.siteOwner,
           pointKey: request.pointKey,
           sourceEntryKey: request.entryKey,
-          sourceOrigin: request.source.origin,
+          sourceOrigin: source.origin,
           sourceReward,
-          replacement: request.source.artificerReplacementByAcquisitionRole?.[binding.role] ?? null,
+          replacement: source.artificerReplacementByAcquisitionRole?.[binding.role] ?? null,
           acquisitionRole: binding.role,
           participation: 'mandatory',
           historySequence: binding.historySequence,
           facts,
-          ...(request.source.traitContext === undefined
-            ? {}
-            : { traitContext: request.source.traitContext }),
+          ...(source.traitContext === undefined ? {} : { traitContext: source.traitContext }),
           ...(atomicRegion === undefined ? {} : { atomicRegion }),
           ...(findingChronology === undefined ? {} : { findingChronology }),
           ...(request.authoredSeaStarDuplicateSiteKeys === undefined
@@ -645,6 +659,7 @@ export function settleArtificerReplacementAcquisition(
     readonly sourceEntryKey: string;
     readonly sourceOrigin: SemanticAddress;
     readonly sourceReward: AuthoredRewardState;
+    readonly timelineOwner?: SemanticAddress;
     readonly replacement?: AuthoredRewardState | null;
     readonly acquisitionRole: string;
     readonly participation: 'mandatory' | 'optional';
@@ -723,6 +738,9 @@ export function settleArtificerReplacementAcquisition(
         producer: Object.freeze({
           kind: 'artificerReplacement' as const,
           sourceOwner: request.sourceOrigin,
+          ...(request.timelineOwner === undefined
+            ? {}
+            : { sourceTimelineOwner: request.timelineOwner }),
           sourceRole: request.acquisitionRole,
         }),
         instanceProvenance: 'free',
@@ -735,6 +753,7 @@ export function settleArtificerReplacementAcquisition(
             }),
         dispositionByAcquisitionRole: replacement.dispositionByAcquisitionRole,
         traitContext: request.traitContext ?? Object.freeze({}),
+        ...(request.timelineOwner === undefined ? {} : { timelineOwner: request.timelineOwner }),
         ...(!sourceCanDuplicate ? { blocksSeaStarDuplication: true as const } : {}),
       }),
       Object.freeze({ ...binding, historySequence: request.historySequence }),
@@ -776,6 +795,10 @@ export function settlePickupAcquisitionSite(
   request: {
     readonly siteOwner: AcquisitionSiteOwnerAddress;
     readonly site: AcquisitionSiteAddress;
+    /** Exact active action owner for a single-entry settlement. */
+    readonly timelineOwner?: SemanticAddress;
+    /** Exact active action owner for each reached entry in a composite site. */
+    readonly timelineOwnerByEntryKey?: Readonly<Record<string, SemanticAddress>>;
     readonly entries: Readonly<Record<string, AuthoredRewardState | null>>;
     readonly order: readonly string[];
     readonly producerLifecycleKey: string;
@@ -892,6 +915,8 @@ export function settlePickupAcquisitionSite(
         catalog.rewards.producerLifecycles.byKey[request.producerLifecycleKey]!.rewardTypes.byKey[
           reward.offer.rewardType
         ]!;
+      const candidateTimelineOwner =
+        request.timelineOwnerByEntryKey?.[key] ?? request.timelineOwner;
       let candidateOnly = current;
       for (const binding of lifecycle.acquisitionLifecycle) {
         candidateOnly = applyProducerRoleHistory(
@@ -910,6 +935,9 @@ export function settlePickupAcquisitionSite(
               ? {}
               : { levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole }),
             traitContext: request.traitContext ?? Object.freeze({}),
+            ...(candidateTimelineOwner === undefined
+              ? {}
+              : { timelineOwner: candidateTimelineOwner }),
             dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
             ...(request.seaStarDuplicateEntryKeys?.has(key) === true
               ? { blocksSeaStarDuplication: true as const }
@@ -987,6 +1015,16 @@ export function settlePickupAcquisitionSite(
           sourceEntryKey: parsed.sourceKey,
           sourceOrigin: source.address,
           sourceReward: source.reward,
+          ...((request.timelineOwnerByEntryKey?.[key] ??
+            request.timelineOwnerByEntryKey?.[parsed.sourceKey] ??
+            request.timelineOwner) === undefined
+            ? {}
+            : {
+                timelineOwner:
+                  request.timelineOwnerByEntryKey?.[key] ??
+                  request.timelineOwnerByEntryKey?.[parsed.sourceKey] ??
+                  request.timelineOwner,
+              }),
           acquisitionRole: parsed.acquisitionRole,
           participation: 'mandatory',
           historySequence: request.historySequence,
@@ -1017,6 +1055,7 @@ export function settlePickupAcquisitionSite(
       catalog.rewards.producerLifecycles.byKey[request.producerLifecycleKey]!.rewardTypes.byKey[
         reward.offer.rewardType
       ]!;
+    const entryTimelineOwner = request.timelineOwnerByEntryKey?.[key] ?? request.timelineOwner;
     for (const binding of lifecycle.acquisitionLifecycle) {
       current = applyProducerRoleHistory(
         catalog,
@@ -1034,6 +1073,7 @@ export function settlePickupAcquisitionSite(
             ? {}
             : { levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole }),
           traitContext: request.traitContext ?? Object.freeze({}),
+          ...(entryTimelineOwner === undefined ? {} : { timelineOwner: entryTimelineOwner }),
           dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
           ...(request.seaStarDuplicateEntryKeys?.has(key) === true
             ? { blocksSeaStarDuplication: true as const }
@@ -1131,6 +1171,7 @@ export function applyProducerRoleHistory(
   );
   const next: RewardBranchState[] = [];
   const realizedAcquisitionByBranch: (ConcreteAcquisitionEvent | undefined)[] = [];
+  const priorTraitMutationOwners = new Map<string, SemanticAddress>();
   let unresolvedArtificerReplacement = false;
   let unresolvedTraitOffer = false;
   const seaStarSourceKey = semanticAddressKey(
@@ -1446,6 +1487,9 @@ export function applyProducerRoleHistory(
                 producer: Object.freeze({
                   kind: 'artificerReplacement' as const,
                   sourceOwner: incoming.origin,
+                  ...(incoming.timelineOwner === undefined
+                    ? {}
+                    : { sourceTimelineOwner: incoming.timelineOwner }),
                   sourceRole: resolution.role,
                 }),
                 instanceProvenance: 'free',
@@ -1459,6 +1503,9 @@ export function applyProducerRoleHistory(
                     }),
                 dispositionByAcquisitionRole: artificerReplacement.dispositionByAcquisitionRole,
                 traitContext: incoming.traitContext,
+                ...(incoming.timelineOwner === undefined
+                  ? {}
+                  : { timelineOwner: incoming.timelineOwner }),
                 ...(incoming.blocksSeaStarDuplication === true || !sourceCanDuplicate
                   ? { blocksSeaStarDuplication: true as const }
                   : {}),
@@ -1560,6 +1607,8 @@ export function applyProducerRoleHistory(
         ),
       },
     );
+    for (const owner of traitSettlement.priorTraitMutationOwners ?? [])
+      priorTraitMutationOwners.set(semanticAddressKey(owner), owner);
     const installedSpellEvent =
       acquisition.acquisition.gameName === 'SpellDrop' && pathPointGrant === undefined
         ? traitSettlement.branch.traitHistory?.events
@@ -1611,6 +1660,7 @@ export function applyProducerRoleHistory(
   roleFrontiers?.push(
     Object.freeze({
       address: createAcquisitionRoleAddress(incoming.origin, resolution.role),
+      ...(incoming.timelineOwner === undefined ? {} : { timelineOwner: incoming.timelineOwner }),
       branchesBeforeRole: branches,
       ...(realizedAcquisitionByBranch.some((acquisition) => acquisition !== undefined)
         ? { realizedAcquisitionByBranch: Object.freeze(realizedAcquisitionByBranch) }
@@ -1620,6 +1670,9 @@ export function applyProducerRoleHistory(
       historySequence: resolution.historySequence,
       settlement,
       artificerReplacementAddress,
+      ...(priorTraitMutationOwners.size === 0
+        ? {}
+        : { priorTraitMutationOwners: Object.freeze([...priorTraitMutationOwners.values()]) }),
       ...(artificerReplacementOptions === undefined ? {} : { artificerReplacementOptions }),
       ...(artificerReplacementRewardTypes.length === 0
         ? {}

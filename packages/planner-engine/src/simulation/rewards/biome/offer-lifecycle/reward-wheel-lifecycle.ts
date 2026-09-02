@@ -256,6 +256,13 @@ export function prepareShipLifecycleCandidateContext(
         return createRewardProducerCandidateResult(candidateFindings, candidateBranches);
       }
       if (candidateBranches.length > 0) {
+        const timelineOwner = candidateRoom.roomActionRoster.rows.find(
+          (candidate) =>
+            !candidate.stale &&
+            candidate.rank !== null &&
+            candidate.reference.kind === 'interactWheelReward' &&
+            candidate.reference.wheelKey === wheel.wheelKey,
+        )?.owner;
         candidateBranches = settleOwnedAcquisitionSite(
           catalog,
           candidateBranches,
@@ -263,6 +270,7 @@ export function prepareShipLifecycleCandidateContext(
             siteOwner: wheel.origin,
             pointKey: wheel.wheelKey,
             entryKey: 'picked',
+            ...(timelineOwner === undefined ? {} : { timelineOwner }),
             source: Object.freeze({
               ...picked,
               producerLifecycleKey: wheel.producerLifecycleKey,

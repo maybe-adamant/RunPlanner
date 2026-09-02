@@ -209,6 +209,13 @@ export {
   type RoomActionWindow,
 } from './room-actions';
 export {
+  EMPTY_PLANNER_TIMELINE_FACTS,
+  mergePlannerTimelineFacts,
+  type PlannerTimelineDependency,
+  type PlannerTimelineFacts,
+  type PlannerTimelineNode,
+} from './timeline-facts';
+export {
   appendSteadyGrowthTimelineEffects,
   appendTranscendentEmbryoTimelineEffects,
   assembleRoomLifecycleTimeline,

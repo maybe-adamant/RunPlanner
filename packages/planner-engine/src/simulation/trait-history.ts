@@ -233,6 +233,31 @@ export type TraitHistoryEvent =
   | DirectChaosBlessingRemovalEvent
   | ChaosClockEvent;
 
+/**
+ * Closed history events that can change the state consulted by a later trait
+ * offer.  Progress-only and replay bookkeeping events intentionally do not
+ * participate: they cannot change offer eligibility on their own.
+ */
+export function isTraitOfferMutationEvent(event: TraitHistoryEvent): boolean {
+  switch (event.kind) {
+    case 'traitOffer':
+    case 'concaveStoneSecondary':
+    case 'levelMutation':
+    case 'rarityMutation':
+    case 'elementContribution':
+    case 'directTraitGrant':
+    case 'traitRemoval':
+    case 'chaosPair':
+    case 'directChaosBlessing':
+    case 'directChaosBlessingRemoval':
+    case 'chaosClock':
+      return true;
+    case 'steadyGrowthProgress':
+    case 'echoKeepsakeReplay':
+      return false;
+  }
+}
+
 export interface TraitReplacementTransition {
   readonly slot: string;
   readonly replacedTraitKey: string;

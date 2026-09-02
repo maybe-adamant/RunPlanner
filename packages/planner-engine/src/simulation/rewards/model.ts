@@ -21,6 +21,30 @@ import type { KeepsakeState } from '../keepsakes';
 import type { EncounterPhaseAddress } from '../../authored-project/addresses';
 import type { TraitRarity } from '../../catalog-schema';
 import type { NemesisRandomEventAddress } from '../../authored-project/addresses';
+import type { PlannerTimelineFacts } from '../timeline-facts';
+import type { StygianWellEffect } from '../stygian-well';
+import type { RuntimeOfferFallback } from '../runtime-offer-fallback';
+
+/** Exact planner-owned realization of a Travel Deal Well refill. */
+export interface WellRefillRealization {
+  readonly owner: SemanticAddress;
+  /** Stable inventory owner; it becomes the purchase owner only when bought. */
+  readonly inventoryOwner: SemanticAddress;
+  readonly sourceOwner: SemanticAddress;
+  readonly generationKey: 'travelDealRefill';
+  readonly offerKey: string;
+  readonly effect: StygianWellEffect;
+  readonly twistResultKey?: string;
+}
+
+/** Exact planner-owned Arcana/keepsake resolution at one reached Boss defeat seam. */
+export interface BossArcanaOutcome {
+  readonly owner: SemanticAddress;
+  readonly effect: 'judgment' | 'crystalFigurine';
+  readonly phaseKey: string;
+  readonly arcanaKeys: readonly string[];
+  readonly rarity: TraitRarity;
+}
 
 export interface FigLeafPhaseCandidateSupport {
   readonly origin: EncounterPhaseAddress;
@@ -82,6 +106,8 @@ export interface ResolvedAcquisitionSource {
   readonly producer?: {
     readonly kind: 'seaStarDuplicate' | 'artificerReplacement' | 'echoLastReward';
     readonly sourceOwner: SemanticAddress;
+    /** Exact action that reached the producer source, when one exists. */
+    readonly sourceTimelineOwner?: SemanticAddress;
     readonly sourceRole: string;
   };
 }
@@ -186,13 +212,15 @@ interface RewardSimulationBase {
 }
 
 /** One evaluated source-local runtime substitute for a selected result/action. */
-export interface ResolvedRuntimeOfferFallback {
-  readonly address: SemanticAddress;
-  readonly preferredKey: string;
-  readonly fallbackKey: string;
-}
+export type ResolvedRuntimeOfferFallback = RuntimeOfferFallback;
 
 export interface BiomeRewardSimulation extends RewardSimulationBase {
+  /** Reward transitions publish only exact owner relations; room actions publish structural facts. */
+  readonly timelineFacts: PlannerTimelineFacts;
+  /** Deferred Travel Deal refill payloads, separate from authored purchases. */
+  readonly wellRefillRealizations: readonly WellRefillRealization[];
+  /** Exact automatic Boss resolutions; empty Figurine keys mean consumption without activation. */
+  readonly bossArcanaOutcomes: readonly BossArcanaOutcome[];
   readonly storeSupport: readonly RewardStoreSupportEntry[];
   readonly targetHistory: readonly TargetRewardHistoryCheckpoint[];
   readonly rewardLookups: Readonly<Record<string, readonly string[]>>;

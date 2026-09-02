@@ -1,5 +1,9 @@
-import type { ExecutionAnomalyReplacement, ExecutionOccurrence } from '../model';
-import { booleanValue, exact, object, stringValue } from './primitives';
+import type {
+  ExecutionAnomalyReplacement,
+  ExecutionOccurrence,
+  ExecutionRoomExitConformanceFactKind,
+} from '../model';
+import { array, booleanValue, exact, fail, object, stringValue } from './primitives';
 import { runState } from './diagnostics';
 import { doors } from './doors';
 import { overview } from './overview';
@@ -11,7 +15,7 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
   exact(
     record,
     ['id', 'owner', 'biomeKey', 'gameName', 'kind', 'overview', 'timeline', 'doors'],
-    ['anomaly', 'diagnostics'],
+    ['anomaly', 'roomExitConformance', 'diagnostics'],
     label,
   );
   const anomaly =
@@ -34,6 +38,36 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
       : object(record.diagnostics, `${label}.diagnostics`);
   if (diagnostics !== undefined)
     exact(diagnostics, [], ['roomEntered', 'beforeRoomExit'], `${label}.diagnostics`);
+  const conformance =
+    record.roomExitConformance === undefined
+      ? undefined
+      : object(record.roomExitConformance, `${label}.roomExitConformance`);
+  if (conformance !== undefined) exact(conformance, ['facts'], [], `${label}.roomExitConformance`);
+  const allowedConformanceKinds = new Set<ExecutionRoomExitConformanceFactKind>([
+    'echoShopDuplicate',
+    'steadyGrowth',
+    'chaos',
+    'keepsakeEffects',
+    'rewardPriorities',
+    'pathOfStars',
+    'forfeit',
+    'hermesShrineDeliveries',
+    'stygianWell',
+  ]);
+  const conformanceFacts =
+    conformance === undefined
+      ? undefined
+      : array(conformance.facts, `${label}.roomExitConformance.facts`).map((value, factIndex) => {
+          const fact = object(value, `${label}.roomExitConformance.facts[${factIndex}]`);
+          exact(fact, ['kind'], [], `${label}.roomExitConformance.facts[${factIndex}]`);
+          const kind = stringValue(
+            fact.kind,
+            `${label}.roomExitConformance.facts[${factIndex}].kind`,
+          ) as ExecutionRoomExitConformanceFactKind;
+          if (!allowedConformanceKinds.has(kind))
+            fail(`${label}.roomExitConformance.facts[${factIndex}].kind is unsupported`);
+          return Object.freeze({ kind });
+        });
   return Object.freeze({
     id: stringValue(record.id, `${label}.id`, 256),
     owner: stringValue(record.owner, `${label}.owner`, 256),
@@ -44,6 +78,9 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
     overview: overview(record.overview, `${label}.overview`),
     timeline: timeline(record.timeline, `${label}.timeline`),
     doors: doors(record.doors, `${label}.doors`),
+    ...(conformanceFacts === undefined
+      ? {}
+      : { roomExitConformance: Object.freeze({ facts: Object.freeze(conformanceFacts) }) }),
     ...(diagnostics === undefined
       ? {}
       : {

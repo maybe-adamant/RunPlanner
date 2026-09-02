@@ -611,6 +611,22 @@ describe('Judgment fixed Boss lifecycle', () => {
       status: 'consumed',
       rarity: 'Epic',
     });
+    expect(result.simulation.bossArcanaOutcomes).toEqual([
+      expect.objectContaining({
+        effect: 'judgment',
+        arcanaKeys: judgmentKeys,
+        rarity: 'Epic',
+      }),
+      expect.objectContaining({
+        effect: 'crystalFigurine',
+        arcanaKeys: figurineKeys,
+        rarity: 'Epic',
+      }),
+    ]);
+    expect(result.simulation.timelineFacts.dependencies).toContainEqual({
+      owner: expect.objectContaining({ kind: 'figurineArcana' }),
+      afterOwner: expect.objectContaining({ kind: 'judgmentArcana' }),
+    });
   });
 
   it('uses the post-Judgment remainder for fewer-than-two and empty Figurine domains', () => {
@@ -645,6 +661,9 @@ describe('Judgment fixed Boss lifecycle', () => {
     const emptyBranch = empty.simulation.branches[0];
     expect(emptyBranch).toBeDefined();
     expect(emptyBranch?.keepsakes.figurine?.status).toBe('consumed');
+    expect(empty.simulation.bossArcanaOutcomes).toContainEqual(
+      expect.objectContaining({ effect: 'crystalFigurine', arcanaKeys: [] }),
+    );
     expect(
       emptyBranch?.arcanaFear.events.filter((event) => event.kind === 'temporaryArcanaActivated'),
     ).toHaveLength(2);

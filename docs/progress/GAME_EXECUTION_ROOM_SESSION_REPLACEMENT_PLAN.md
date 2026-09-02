@@ -120,11 +120,12 @@ authorities for the replacement.
   desynchronize the session.
 - Simulation-neutral or unproven Timeline contacts are omitted from blocking
   execution rather than serialized as empty obligations.
-- Most semantic prerequisites are occurrence-local. The selected occurrence
-  cursor already orders completed prior rooms before the current room.
-- Cross-room effects retain only their concrete native correlation state, such
-  as a pending Shrine delivery or Ixion-created gate origin. They do not create
-  a second global action cursor.
+- Every semantic prerequisite is occurrence-local. The selected occurrence
+  cursor orders rooms, but prior-room completed owners never enter a later room
+  session.
+- Cross-room effects use canonical engine Run State. The engine publishes a
+  sparse room-exit conformance delta only for pending or clocked values changed
+  by that occurrence; unchanged and broad diagnostic state is not repeated.
 
 ## Locked runtime model
 
@@ -135,9 +136,8 @@ The route session owns only:
 - the frozen decoded execution plan;
 - the selected occurrence sequence and current room index;
 - the current room session, if one is active;
-- the completed-owner set needed by exact cross-occurrence prerequisites;
-- bounded cross-room native correlations required by concrete supported
-  features;
+- bounded native bindings for exact retained game identities, such as
+  independent Shrine deliveries, without prior action-completion provenance;
 - starting-keepsake realization state;
 - diagnostic observations; and
 - the first blocking mismatch.
@@ -188,9 +188,8 @@ consumer, or infer exchangeability.
 This requires only a completed-owner set, each node's declared prerequisite
 owners, and checkpoint obligation sets. It does not justify a scheduler,
 topological executor, event bus, rule registry, or embedded simulator.
-Completing a room contributes its proved owners to the route-level set so a
-later occurrence can check an exact cross-room prerequisite without replaying
-prior actions.
+The completed-owner set is discarded when room-exit conformance succeeds. A
+later occurrence receives no action-completion state from an earlier one.
 
 ### Logical checkpoints and native hooks
 
@@ -224,7 +223,9 @@ It contains:
 5. its consequential owner-bearing nodes, sparse prerequisite edges, and
    checkpoint obligations;
 6. its complete supported Doors realization product; and
-7. optional diagnostic Run State snapshots or deltas keyed to room entry and
+7. its sparse engine-owned room-exit conformance delta for changed pending and
+   clocked state; and
+8. optional diagnostic Run State snapshots or deltas keyed to room entry and
    door readiness.
 
 Semantic owners are bounded opaque correlation IDs in the game module. The
@@ -310,6 +311,33 @@ callback sequences. Selecting a nonplanned offered door does not immediately
 desynchronize; the next room-entry checkpoint observes the resulting player
 divergence.
 
+### Canonical Run State and room-exit conformance
+
+Run State remains the sole canonical engine publication for retained planner
+state. Its existing keepsake, trait/Chaos, Echo Gold, Hex/Path, Forfeit,
+Artificer, Arcana/Fear, and reward-priority fields are reused. Gate A.2 promotes
+agreed pending Hermes Shrine deliveries and consequential Stygian Well uses and
+duration counters from public reward branches into that same product.
+
+Complete-valid evaluation also publishes one sparse room-exit conformance
+delta. The engine derives it from the previous closed Run State and the current
+`beforeRoomExit` state and includes only pending or clocked values created,
+advanced, consumed, reset, or materialized by the current occurrence. It does
+not include unchanged retained state, complete trait/bag/history state, or an
+earlier action owner.
+
+On the wire, each sparse fact names the changed family and selects the expected
+value already present in that occurrence's `beforeRoomExit` Run State frame.
+The value is not serialized a second time. This preserves one canonical state
+representation while still making the selected family a first-class blocking
+contract.
+
+The compiler copies the delta losslessly. The game adapter compares each
+declared state fact to the corresponding native retained state at room exit. A
+match closes the room and discards its completed-owner set; a mismatch blocks
+later realization. The compiler and runtime do not derive why the value changed
+or which later contact may consume it.
+
 ### Diagnostics and mismatch policy
 
 Run State snapshots remain available for investigation. The executor may log a
@@ -325,6 +353,8 @@ The first blocking mismatch is limited to:
 - a consequential transaction with a different non-equivalent result;
 - a consequential owner used before a declared prerequisite;
 - an unresolved required obligation at its lifecycle checkpoint; or
+- a changed pending/clocked state value that fails its room-exit conformance
+  fact; or
 - failure to realize or prove the expected Doors product.
 
 Duplicate/incidental callbacks, untracked simulation-neutral interactions,
@@ -373,6 +403,7 @@ trace-oriented call structure.
 - Overview and Doors proof accumulation;
 - semantic transaction completion;
 - lifecycle obligations and sparse prerequisites;
+- room-exit pending/clocked-state conformance;
 - mismatch classification and diagnostic logging;
 - explicit hook composition; and
 - primary session/protocol tests.
@@ -414,18 +445,19 @@ evidence and is not expanded with another retired active executor.
 
 Every new runtime abstraction must be exercised by a present F/G instance:
 
-| Product or primitive       | Required concrete witness                                                                                             |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| selected occurrence cursor | F opening through an ordinary continuation; Ixion Chaos detour and declaration-sized G return                         |
-| Overview checkpoint        | interacted and uninteracted Well/Pool presence, resources, encounter assembly, Chaos/Contract, and an incoming reward |
-| Doors checkpoint           | ordinary F multi-door batch, Anomaly replacement, and one-, two-, and three-exit Chaos returns                        |
-| sparse prerequisite edge   | two trait-history mutations whose authored offers depend on their order                                               |
-| atomic multi-effect owner  | Mystery Boon provider resolution plus its exact resulting trait acquisition                                           |
-| producer dependency        | Artificer source conversion before its generated replacement pickup                                                   |
-| checkpoint obligation      | required incoming/Onion acquisition before later cleanup or room exit                                                 |
-| guidance omission          | a simulation-neutral Well purchase that does not affect any later modeled result                                      |
-| automatic transaction      | Steady Growth or Transcendent Embryo at its exact reached end-effects checkpoint                                      |
-| diagnostic-only Run State  | an expected/observed difference that is logged while the session remains synchronized                                 |
+| Product or primitive        | Required concrete witness                                                                                               |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| selected occurrence cursor  | F opening through an ordinary continuation; Ixion Chaos detour and declaration-sized G return                           |
+| Overview checkpoint         | interacted and uninteracted Well/Pool presence, resources, encounter assembly, Chaos/Contract, and an incoming reward   |
+| Doors checkpoint            | ordinary F multi-door batch, Anomaly replacement, and one-, two-, and three-exit Chaos returns                          |
+| sparse prerequisite edge    | two trait-history mutations whose authored offers depend on their order                                                 |
+| atomic multi-effect owner   | Mystery Boon provider resolution plus its exact resulting trait acquisition                                             |
+| producer dependency         | Artificer source conversion before its generated replacement pickup                                                     |
+| checkpoint obligation       | required incoming/Onion acquisition before later cleanup or room exit                                                   |
+| guidance omission           | a simulation-neutral Well purchase that does not affect any later modeled result                                        |
+| automatic transaction       | Steady Growth or Transcendent Embryo at its exact reached end-effects checkpoint                                        |
+| room-exit conformance delta | an Ixion purchase adds one use, a later Chaos-gate room consumes it, and unchanged intervening state is not republished |
+| diagnostic-only Run State   | an expected/observed difference that is logged while the session remains synchronized                                   |
 
 No primitive is added only for a later biome or hypothetical action family.
 
@@ -451,7 +483,8 @@ Deliver one complete engine-to-publication vertical slice:
   reconciliation, Doors, and diagnostic-only Run State;
 - replace protocol v9 with strict protocol v10;
 - keep the compiler a lossless mapper from the complete-valid engine product;
-- regenerate the four representative execution fixtures;
+- regenerate the five representative execution fixtures, including one compact
+  reached-automatic/bossDefeated witness;
 - retain the desktop publisher and inbox location unchanged; and
 - delete the v9 trace model, codec, compiler path, and v9-specific tests in the
   same commit.
@@ -465,8 +498,10 @@ Primary test ownership:
 - an engine reconciliation-product suite owns the supported F/G action
   disposition and hard-edge matrix;
 - execution compiler/codec tests own strict wire mapping and rejection;
-- `f-opening`, `fg`, `fg-ixion-chaos`, and `fg-anomaly` fixtures own
-  representative complete byte products;
+- `f-opening`, `fg`, `fg-ixion-chaos`, `fg-anomaly`, and `automatic-boss`
+  fixtures own representative complete byte products; the last fixture keeps
+  the reached automatic/bossDefeated wire contact covered without adding that
+  concern to the route-contract fixtures;
 - focused tests own Mystery Boon's atomic provider/trait outcome, Artificer's
   dependency, required Onion obligation, and diagnostic-only Run State; and
 - the application publication test retains one representative valid publish
@@ -494,16 +529,33 @@ projection publishes only consequential owner-bearing nodes, the sparse
 prerequisite edges already decided by planner semantics, and lifecycle
 obligations.
 
+Gate A.2 also closes the runtime-offer boundary. Every fallback is one
+normalized relation of `preferredKey`, `fallbackKey`, and a closed
+`availabilityContact` (`traitEligibility`, `storeInventoryGeneration`,
+`storePurchase`, or `npcConsumableSelection`). Trait offers use this same
+shape; the retired singular `runtimeFallback` field is not a protocol or
+engine product. The engine chooses the contact and fallback from the complete
+valid evaluation, while assembly and the compiler only copy it. The native
+adapter performs the contact-specific availability question and one fallback
+attempt; it does not interpret named game predicates or search a pool.
+
+Timeline publication and required participation are independent products. A
+planner dependency may retain an otherwise optional competitor in the sparse
+DAG without making that action a checkpoint obligation. Obligations come from
+explicit required participation or a planner-owned required automatic/deferred
+outcome, never from dependency closure alone.
+
 Deliver one focused engine-to-publication correction:
 
 - remove `ExecutionTimelineStream`, `timeline.streams`, stream codec fields,
   stream construction, stream fixtures, and stream-specific tests;
 - remove the parallel top-level `wellRetainedEffects` correlation product and
-  express each exact Extended, Yarn, or Hymn producer/consumer relation through
-  the same prerequisite edges, including when the edge crosses occurrences;
+  remove action-owner provenance from retained Well state;
+- restrict every prerequisite edge to owners in the same Room Occurrence and
+  reject every cross-occurrence edge structurally;
 - make the complete-valid planner evaluation the sole authority that selects
-  first purchases, next consumers, producer/child relations, and any other
-  noncommutative owner relation;
+  first purchases, same-room consumers, producer/child relations, and any other
+  occurrence-local noncommutative owner relation;
 - expose those relations through the nearest existing simulation,
   materialization, Room Action, acquisition, and feature products instead of a
   parallel shadow model;
@@ -513,27 +565,37 @@ Deliver one focused engine-to-publication correction:
 - retain a normally neutral action through generic prerequisite closure when a
   planner-owned edge references it, while continuing to omit unrelated neutral
   guidance according to its planner-owned disposition;
+- promote agreed pending Hermes Shrine deliveries and consequential Stygian
+  Well use/duration state into canonical Run State without changing their
+  simulation transitions;
+- publish one first-class room-exit conformance delta derived from the previous
+  closed Run State and current `beforeRoomExit` state, containing only changed
+  pending or clocked values whose complete-valid branches agree;
 - restrict execution assembly to generic node retention, prerequisite closure,
-  opaque owner mapping, reference validation, and serialization;
+  opaque owner mapping, conformance-delta copying, reference validation, and
+  serialization;
 - delete assembly-side searches for a first purchase or next consumer and any
   inspection of action kind, effect, reward, feature, or payload to infer
   retention or ordering;
 - preserve lifecycle windows and obligations as distinct products; and
-- regenerate all four protocol-v10 fixtures without changing publication,
-  inbox, Overview, Doors, or diagnostic Run State semantics.
+- regenerate all five protocol-v10 fixtures without changing publication,
+  inbox, Overview, or Doors semantics. Full Run State remains diagnostic; only
+  its explicit sparse room-exit conformance derivative is blocking.
 
 The locked assembly boundary is:
 
 > Code under `execution-plan/assembly` may copy, prune, and
-> reference-validate planner-owned nodes and edges. It may not create a
-> semantic node or edge, inspect an action's meaning to decide retention,
-> choose a first purchase, search for a next consumer, or decide whether
-> actions commute.
+> reference-validate planner-owned nodes and edges and copy engine-owned
+> room-exit conformance facts. It may not create a semantic node, edge, or
+> conformance fact, inspect an action's meaning to decide retention, choose a
+> first purchase, search for a next consumer, diff broad Run State, or decide
+> whether actions commute.
 
 The same rule applies after assembly. The compiler maps the generic node and
 edge objects losslessly. The Plan Executor sees only that owner `Y` lists owner
-`X` as a prerequisite and checks completion accordingly; it does not know or
-branch on the semantic reason for that edge.
+`X` as a same-room prerequisite and checks completion accordingly. It separately
+sees that one room-exit state fact must equal one declared value. It does not
+know or branch on the semantic reason for either product.
 
 The Travel Deal Well path is the mandatory pressure-point witness:
 
@@ -547,28 +609,39 @@ The Travel Deal Well path is the mandatory pressure-point witness:
 5. an authored refill purchase follows refill realization; and
 6. an unrelated purchase or room action has no edge to this subgraph.
 
-Gold Gold Gold, Extended, Yarn, Hymn, Artificer, generated acquisitions,
-trait-history prefixes, and keepsake-sensitive consumers must use the same
-authority rule: copy the exact producer, consumer, or prefix relation already
-resolved by the planner. No execution-plan assembler predicate may decide what
-the next eligible transaction is.
+Refill realization and the source-to-competitor barriers exist when the refill
+is generated, whether or not the player authors its purchase. Purchasing the
+refill adds only the realization-to-purchase relation.
+
+Gold Gold Gold, Artificer, generated acquisitions, same-room trait-history
+prefixes, and same-room keepsake-sensitive consumers use exact local relations
+already resolved by the planner. Extended, Yarn, Hymn, Ixion, Shrine delivery,
+Chaos/Embryo clocks, and other retained effects use canonical Run State and the
+sparse room-exit conformance delta. No execution-plan assembler predicate may
+decide what the next eligible transaction is or connect its producer to a later
+room.
 
 Primary test ownership:
 
 - existing planner simulation, Room Action, acquisition, Well, Shop, trait,
   and keepsake suites remain the primary owners of their semantic rules; amend
   the nearest existing witness only when it does not already prove the exact
-  producer, consumer, first-use, or dependency fact required by publication;
+  producer, local consumer, first-use, state transition, or dependency fact
+  required by publication;
 - do not duplicate complete Travel Deal, Gold Gold Gold, Extended, Yarn, Hymn,
   Artificer, generated-acquisition, or trait-history matrices in execution-plan
   tests;
+- Run State tests own the canonical Shrine-delivery and Well-state promotion;
+- one focused engine test owns sparse room-exit delta derivation, branch
+  agreement, changed-family inclusion, and unchanged-family omission;
 - one generic execution-projection witness owns `X -> Y` with independent `Z`,
   prerequisite-closure retention of an otherwise omitted node, and the absence
   of adjacency-derived edges;
 - codec tests reject missing prerequisite owners, duplicate owners, duplicate
-  edges, self-edges, and cycles, and reject the removed `streams` field;
-- compiler tests prove lossless generic node/edge mapping without semantic
-  branching; and
+  edges, self-edges, cycles, and every cross-occurrence prerequisite, and reject
+  the removed `streams` field;
+- compiler tests prove lossless generic node/edge and room-exit-conformance
+  mapping without semantic branching; and
 - application publication tests retain one valid and one invalid project
   witness against the corrected v10 document.
 
@@ -578,6 +651,8 @@ Explicit exclusions:
   evaluator;
 - no action-family, reward-family, feature-family, or effect-specific dependency
   logic in execution assembly, compiler, decoder, or runtime;
+- no cross-occurrence prerequisite and no route-level completed-owner set;
+- no full Run State comparison promoted to blocking conformance;
 - no edge for authored adjacency unless reversing that exact pair changes a
   modeled result;
 - no Plan Executor or Lua changes in this gate;
@@ -613,10 +688,14 @@ Deliver:
 
 - the strict replacement decoder using opaque owner IDs and reference
   integrity rather than semantic-address parsing;
+- one load-time expansion of the globally sequenced diagnostic `replace`
+  frames into complete per-checkpoint state before any room-exit conformance
+  lookup; this is decoder state only and never a runtime route cursor;
 - route and room sessions;
 - logical Overview and Doors checkpoints;
-- owner prerequisite edges, including bounded cross-occurrence edges, and
-  obligations;
+- occurrence-local owner prerequisite edges and obligations;
+- sparse room-exit pending/clocked-state conformance with no route-level
+  completed-owner set;
 - diagnostic-only Run State logging;
 - explicit native hook groups and harvested F/G realization adapters;
 - the existing inbox, bootstrap, status, and deployment contacts;
@@ -626,10 +705,11 @@ Deliver:
 Primary test ownership:
 
 - protocol tests own bounded decode, closed unions, uniqueness, and reference
-  integrity;
+  integrity, including sequential diagnostic-frame expansion and rejection of
+  a missing or out-of-order baseline;
 - session tests own occurrence advancement, checkpoint closure, atomic
-  completion, prerequisite failure, obligation failure, and diagnostic
-  nonblocking behavior;
+  completion, local prerequisite failure, obligation failure, room-exit state
+  conformance, room-owner disposal, and diagnostic nonblocking behavior;
 - hook/adapter tests own native realization contacts without reproducing
   session policy;
 - Chaos tests retain gate/return behavior;
@@ -771,8 +851,9 @@ strictly consumes them.
 
 No. The document is a DAG because prerequisite edges may fan in and fan out,
 but runtime completion only checks whether the current owner's listed
-prerequisites are in the completed-owner set. No search, topological sort,
-scheduling, or semantic rule evaluation is required.
+same-room prerequisites are in the room session's completed-owner set. No
+search, topological sort, scheduling, route-level owner retention, or semantic
+rule evaluation is required.
 
 ### Is starting from scratch discarding proven work?
 
@@ -789,8 +870,17 @@ smaller, safer boundary at this pre-release stage.
 ### Does diagnostic Run State silently remain blocking?
 
 No. Tests must prove a diagnostic difference is emitted while the session
-stays synchronized. No mismatch path accepts Run State difference as its sole
-cause.
+stays synchronized. Only the separate engine-owned sparse room-exit conformance
+delta is blocking; the runtime cannot convert another Run State difference into
+a mismatch.
+
+### Does room-exit conformance duplicate Run State semantics?
+
+No. Run State remains the canonical value product and owns the normalized
+meaning of keepsakes, traits, clocks, deliveries, Well effects, and other
+retained state. The conformance delta only identifies which already-derived
+values changed in the current occurrence and are block-worthy at closure. It
+does not own or replay their transition rules.
 
 ### Does ignoring selected-exit callbacks permit silent divergence?
 
@@ -803,7 +893,8 @@ at the next room-entry checkpoint with a direct, stable discrepancy.
 This plan is complete only when the active F/G Plan Executor is organized
 around the selected occurrence cursor and one current Room Occurrence session;
 Overview, consequential Timeline nodes with planner-owned prerequisites,
-required obligations, and Doors are the complete blocking surface; Run State
-and incidental callbacks are diagnostic; protocol-v9 trace machinery is
-deleted; the representative live F/G route succeeds; durable authorities
-record the replacement; and this temporary plan is removed.
+required obligations, sparse room-exit pending/clocked-state conformance, and
+Doors are the complete blocking surface; full Run State and incidental callbacks
+are diagnostic; protocol-v9 trace machinery is deleted; the representative live
+F/G route succeeds; durable authorities record the replacement; and this
+temporary plan is removed.

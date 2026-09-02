@@ -41,6 +41,11 @@ import { advanceRewardBranches } from '../../processing';
 import { rewardFinding } from '../../findings';
 import type { ReachedTraitChildCheckpoint } from '../../trait-settlement';
 import type { LifecycleFinding } from './types';
+import {
+  EMPTY_PLANNER_TIMELINE_FACTS,
+  type PlannerTimelineFacts,
+  type PlannerTimelineNode,
+} from '../../../timeline-facts';
 
 export interface EncounterEndEffectsTransition {
   readonly branches: readonly RewardBranchState[];
@@ -56,6 +61,8 @@ export interface EncounterEndEffectsTransition {
     readonly threshold: ReachedTranscendentEmbryoThreshold;
   }[];
   readonly traitChildSettlements: readonly ReachedTraitChildCheckpoint[];
+  /** Automatic outcomes are retained only when this transition reached them. */
+  readonly timelineFacts: PlannerTimelineFacts;
   readonly findings: readonly LifecycleFinding[];
 }
 
@@ -473,6 +480,7 @@ export function applyEncounterEndEffectsTransition(
       steadyGrowthThresholds: Object.freeze([]),
       transcendentEmbryoThresholds: Object.freeze([]),
       traitChildSettlements: Object.freeze([]),
+      timelineFacts: EMPTY_PLANNER_TIMELINE_FACTS,
       findings: Object.freeze(deliveryPlacementFindings),
     });
   const embryoTarget =
@@ -489,6 +497,18 @@ export function applyEncounterEndEffectsTransition(
     event.origin.routeKey,
     '',
   );
+  const timelineNodes: PlannerTimelineNode[] = [
+    ...steadyAdvance.thresholds.map(({ address }) =>
+      Object.freeze({ owner: address, included: true, required: true }),
+    ),
+    ...embryoAdvance.thresholds.map(({ address }) =>
+      Object.freeze({ owner: address, included: true, required: true }),
+    ),
+  ];
+  const timelineFacts: PlannerTimelineFacts =
+    timelineNodes.length === 0
+      ? EMPTY_PLANNER_TIMELINE_FACTS
+      : Object.freeze({ nodes: Object.freeze(timelineNodes), dependencies: Object.freeze([]) });
   const findings: LifecycleFinding[] = [...deliveryPlacementFindings];
   const traitChildSettlements: ReachedTraitChildCheckpoint[] = [];
   for (const blocked of steadyAdvance.blocked) {
@@ -544,6 +564,7 @@ export function applyEncounterEndEffectsTransition(
     steadyGrowthThresholds: steadyAdvance.thresholds,
     transcendentEmbryoThresholds: embryoAdvance.thresholds,
     traitChildSettlements: Object.freeze(traitChildSettlements),
+    timelineFacts,
     findings: Object.freeze(findings),
   });
 }

@@ -2,56 +2,35 @@ import type { Catalog } from '../../../../catalog-schema';
 import {
   createBiomeAddress,
   createRoomActionAddress,
+  createWellRefillRealizationAddress,
   semanticAddressKey,
   type SemanticAddress,
 } from '../../../../authored-project/addresses';
+import { roomActionKey } from '../../../../authored-project/room-actions';
 import type { HistoryEvent } from '../../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../../materialization';
 import { findingRegion, type FindingRegionEntry } from '../../../finding-regions';
 import { applyConcreteAcquisition } from '../../../../reward-kernel';
-import { applyStygianWellPurchase } from '../../../stygian-well';
+import {
+  applyStygianWellPurchase,
+  extendedWellItemKeys,
+  stygianWellRuntimeFallbackItemKey,
+} from '../../../stygian-well';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import { rewardFindingChronologyForRoom } from '../finding-chronology';
 import { rewardFinding } from '../../findings';
 import type { RewardBranchState } from '../../branch-primitives';
-
-export interface RuntimeOfferFallback {
-  readonly key: string;
-  readonly address: SemanticAddress;
-  readonly preferredKey: string;
-  readonly fallbackKey: string;
-}
+import type { PlannerTimelineFacts } from '../../../timeline-facts';
+import type { WellRefillRealization } from '../../model';
+import type { RuntimeOfferFallback } from '../../../runtime-offer-fallback';
 
 export interface WellPurchaseTransition {
   readonly branches: readonly RewardBranchState[];
   readonly findings: readonly FindingRegionEntry[];
-  readonly runtimeOfferFallbacks: readonly RuntimeOfferFallback[];
-}
-
-function runtimeFallbackItemKey(
-  catalog: Catalog,
-  itemKey: string,
-  nested: boolean,
-): string | undefined {
-  const profile = catalog.rewards.shops.byKey.RoomShop;
-  const option = profile?.groups.values
-    .flatMap((group) => group.options.values)
-    .find((candidate) => candidate.key === itemKey);
-  if (nested) {
-    const twist = profile?.groups.values
-      .flatMap((group) => group.options.values)
-      .find((candidate) => candidate.key === 'RandomStoreItem');
-    return twist?.stygianWell?.nestedRuntimeOfferFallbacks?.find(
-      (edge) => edge.preferredItemKey === itemKey,
-    )?.fallbackItemKey;
-  }
-  const group = profile?.groups.values.find(
-    (candidate) => candidate.options.byKey[itemKey] !== undefined,
-  );
-  const fallbackRewardType = option?.runtimeOfferFallbackRewardTypes?.[0];
-  return fallbackRewardType === undefined
-    ? undefined
-    : group?.options.values.find((candidate) => candidate.rewardType === fallbackRewardType)?.key;
+  readonly timelineFacts: PlannerTimelineFacts;
+  readonly refillRealization?: WellRefillRealization;
+  /** The selected item's one-step fallback at the native purchase contact. */
+  readonly runtimeOfferFallback?: RuntimeOfferFallback;
 }
 
 /** Applies one reached Stygian Well purchase and publishes its exact fallback edges. */
@@ -63,7 +42,8 @@ export function applyWellPurchaseTransition(inputs: {
   readonly branches: readonly RewardBranchState[];
 }): WellPurchaseTransition {
   const { catalog, snapshot, event, room } = inputs;
-  const well = room?.kind === 'authored' ? room.stygianWell : undefined;
+  const authoredRoom = room?.kind === 'authored' ? room : undefined;
+  const well = authoredRoom?.stygianWell;
   const slot = event.generationKey.startsWith('initial:')
     ? (event.generationKey.slice(
         'initial:'.length,
@@ -75,6 +55,205 @@ export function applyWellPurchaseTransition(inputs: {
       : slot === undefined
         ? undefined
         : well?.offerKeyBySlot[slot];
+  const row =
+    room?.kind === 'authored'
+      ? room.roomActionRoster.rows.find(
+          (candidate) =>
+            !candidate.stale &&
+            candidate.rank !== null &&
+            candidate.reference.kind === 'purchaseStygianWellOffer' &&
+            candidate.reference.generationKey === event.generationKey,
+        )
+      : undefined;
+  const effect = authoredRoom?.stygianWellOfferEffects?.[event.generationKey];
+  const activeWellRows =
+    authoredRoom === undefined
+      ? []
+      : authoredRoom.roomActionRoster.rows
+          .filter(
+            (candidate) =>
+              !candidate.stale &&
+              candidate.rank !== null &&
+              candidate.reference.kind === 'purchaseStygianWellOffer',
+          )
+          .sort((left, right) => left.rank! - right.rank!);
+  const sourceRow = activeWellRows.find(
+    (candidate) =>
+      candidate.reference.kind === 'purchaseStygianWellOffer' &&
+      candidate.reference.generationKey.startsWith('initial:'),
+  );
+  const sourceGenerationKey =
+    sourceRow?.reference.kind === 'purchaseStygianWellOffer'
+      ? sourceRow.reference.generationKey
+      : undefined;
+  const refillItemKey = well?.travelDealRefillKey;
+  const sourcesTravelDealRefill =
+    sourceGenerationKey !== undefined && refillItemKey !== undefined && refillItemKey !== null;
+  const refillPurchaseRow = activeWellRows.find(
+    (candidate) =>
+      candidate.reference.kind === 'purchaseStygianWellOffer' &&
+      candidate.reference.generationKey === 'travelDealRefill',
+  );
+  const pendingExtendedOwners: SemanticAddress[] = [];
+  let extendedSourceOwner: SemanticAddress | undefined;
+  for (const candidate of activeWellRows) {
+    if (candidate.reference.kind !== 'purchaseStygianWellOffer') continue;
+    const candidateGeneration = candidate.reference.generationKey;
+    const candidateEffect = authoredRoom?.stygianWellOfferEffects?.[candidateGeneration];
+    if (candidateEffect === 'extended') {
+      pendingExtendedOwners.push(candidate.owner);
+    } else {
+      const candidateSlot = candidateGeneration.startsWith('initial:')
+        ? (candidateGeneration.slice('initial:'.length) as 'healing' | 'secondLeft' | 'secondRight')
+        : undefined;
+      const candidateItem =
+        candidateGeneration === 'travelDealRefill'
+          ? authoredRoom?.stygianWell?.travelDealRefillKey
+          : candidateSlot === undefined
+            ? undefined
+            : authoredRoom?.stygianWell?.offerKeyBySlot[candidateSlot];
+      if (
+        candidateItem !== undefined &&
+        candidateItem !== null &&
+        extendedWellItemKeys(catalog).includes(candidateItem) &&
+        pendingExtendedOwners.length > 0
+      ) {
+        const consumed = pendingExtendedOwners.shift();
+        if (candidate === row) extendedSourceOwner = consumed;
+      }
+    }
+    if (candidate === row) break;
+  }
+  const twistChildKey = event.generationKey === 'travelDealRefill' ? 'travelDealRefill' : slot;
+  const twistResultKey =
+    itemKey === 'RandomStoreItem' && twistChildKey !== undefined
+      ? well?.twistResultKeyBySlot?.[twistChildKey]
+      : undefined;
+  const runtimeOfferFallback = (() => {
+    if (row === undefined || itemKey === undefined || itemKey === null) return undefined;
+    const directFallback = stygianWellRuntimeFallbackItemKey(catalog, itemKey, false);
+    const preferredKey = directFallback === undefined ? twistResultKey : itemKey;
+    const fallbackKey =
+      directFallback ??
+      (twistResultKey === undefined || twistResultKey === null
+        ? undefined
+        : stygianWellRuntimeFallbackItemKey(catalog, twistResultKey, true));
+    if (preferredKey === undefined || preferredKey === null || fallbackKey === undefined)
+      return undefined;
+    return Object.freeze({
+      address: row.owner,
+      preferredKey,
+      fallbackKey,
+      availabilityContact: 'storePurchase' as const,
+    });
+  })();
+  const isSourcePurchase =
+    row !== undefined &&
+    sourcesTravelDealRefill &&
+    candidateOwnerEquals(row.owner, sourceRow?.owner);
+  const isTravelDealCompetitor =
+    sourcesTravelDealRefill &&
+    row?.reference.kind === 'purchaseStygianWellOffer' &&
+    row.reference.generationKey.startsWith('initial:') &&
+    sourceRow !== undefined &&
+    !candidateOwnerEquals(row.owner, sourceRow.owner);
+  const timelineFacts: PlannerTimelineFacts = Object.freeze({
+    nodes:
+      row === undefined
+        ? Object.freeze([])
+        : Object.freeze([
+            Object.freeze({
+              owner: row.owner,
+              included:
+                (effect !== undefined && effect !== 'neutral') ||
+                isSourcePurchase ||
+                isTravelDealCompetitor,
+              required: (effect !== undefined && effect !== 'neutral') || isSourcePurchase,
+            }),
+          ]),
+    dependencies:
+      row === undefined
+        ? Object.freeze([])
+        : Object.freeze(
+            [
+              extendedSourceOwner,
+              ...(sourcesTravelDealRefill &&
+              sourceRow !== undefined &&
+              row.reference.kind === 'purchaseStygianWellOffer' &&
+              row.reference.generationKey.startsWith('initial:') &&
+              !candidateOwnerEquals(row.owner, sourceRow.owner)
+                ? [sourceRow.owner]
+                : []),
+            ]
+              .filter((source): source is SemanticAddress => source !== undefined)
+              .filter((source) => semanticAddressKey(source) !== semanticAddressKey(row.owner))
+              .map((source) => Object.freeze({ owner: row.owner, afterOwner: source })),
+          ),
+  });
+  const sourceOwner = sourceRow?.owner;
+  const refillRealization = (() => {
+    if (
+      row === undefined ||
+      sourceOwner === undefined ||
+      !candidateOwnerEquals(row.owner, sourceOwner) ||
+      refillItemKey === undefined ||
+      refillItemKey === null ||
+      authoredRoom === undefined
+    )
+      return undefined;
+    const inventoryOwner = createRoomActionAddress(
+      createBiomeAddress(authoredRoom.origin.routeKey, authoredRoom.origin.biomeKey),
+      authoredRoom.occurrenceId,
+      roomActionKey(
+        Object.freeze({
+          kind: 'purchaseStygianWellOffer' as const,
+          generationKey: 'travelDealRefill' as const,
+        }),
+      ),
+    );
+    const refillTwistResultKey =
+      refillItemKey === 'RandomStoreItem'
+        ? authoredRoom.stygianWell?.twistResultKeyBySlot?.travelDealRefill
+        : undefined;
+    return Object.freeze({
+      owner: createWellRefillRealizationAddress(
+        createBiomeAddress(authoredRoom.origin.routeKey, authoredRoom.origin.biomeKey),
+        authoredRoom.origin.occurrenceId,
+      ),
+      inventoryOwner,
+      sourceOwner,
+      generationKey: 'travelDealRefill' as const,
+      offerKey: refillItemKey,
+      effect: authoredRoom.stygianWellOfferEffects?.travelDealRefill ?? 'neutral',
+      ...(refillTwistResultKey === undefined || refillTwistResultKey === null
+        ? {}
+        : { twistResultKey: refillTwistResultKey }),
+    });
+  })();
+  const factsWithRefill =
+    refillRealization === undefined
+      ? timelineFacts
+      : Object.freeze({
+          nodes: Object.freeze([
+            ...timelineFacts.nodes,
+            Object.freeze({ owner: refillRealization.owner, included: true, required: true }),
+          ]),
+          dependencies: Object.freeze([
+            ...timelineFacts.dependencies,
+            Object.freeze({
+              owner: refillRealization.owner,
+              afterOwner: refillRealization.sourceOwner,
+            }),
+            ...(refillPurchaseRow === undefined
+              ? []
+              : [
+                  Object.freeze({
+                    owner: refillPurchaseRow.owner,
+                    afterOwner: refillRealization.owner,
+                  }),
+                ]),
+          ]),
+        });
   if (
     room?.kind !== 'authored' ||
     well === undefined ||
@@ -99,53 +278,15 @@ export function applyWellPurchaseTransition(inputs: {
           'reward',
         ),
       ]),
-      runtimeOfferFallbacks: Object.freeze([]),
+      timelineFacts: factsWithRefill,
+      ...(runtimeOfferFallback === undefined ? {} : { runtimeOfferFallback }),
+      ...(refillRealization === undefined ? {} : { refillRealization }),
     });
-  }
-  const twistChildKey = event.generationKey === 'travelDealRefill' ? 'travelDealRefill' : slot;
-  const twistResultKey =
-    itemKey === 'RandomStoreItem' && twistChildKey !== undefined
-      ? well.twistResultKeyBySlot?.[twistChildKey]
-      : undefined;
-  const fallbacks: RuntimeOfferFallback[] = [];
-  const row = room.roomActionRoster.rows.find(
-    (candidate) =>
-      candidate.reference.kind === 'purchaseStygianWellOffer' &&
-      candidate.reference.generationKey === event.generationKey,
-  );
-  if (row !== undefined) {
-    const address = createRoomActionAddress(
-      createBiomeAddress(event.origin.routeKey, event.origin.biomeKey),
-      room.occurrenceId,
-      row.key,
-    );
-    const fallbackItemKey = runtimeFallbackItemKey(catalog, itemKey, false);
-    if (fallbackItemKey !== undefined)
-      fallbacks.push(
-        Object.freeze({
-          key: semanticAddressKey(address),
-          address,
-          preferredKey: itemKey,
-          fallbackKey: fallbackItemKey,
-        }),
-      );
-    if (twistResultKey !== undefined && twistResultKey !== null) {
-      const nestedFallback = runtimeFallbackItemKey(catalog, twistResultKey, true);
-      if (nestedFallback !== undefined)
-        fallbacks.push(
-          Object.freeze({
-            key: `${semanticAddressKey(address)}:twist`,
-            address,
-            preferredKey: twistResultKey,
-            fallbackKey: nestedFallback,
-          }),
-        );
-    }
   }
   return Object.freeze({
     branches: Object.freeze(
       inputs.branches.map((branch) => {
-        const direct = applyStygianWellPurchase(catalog, branch.stygianWell, itemKey);
+        const direct = applyStygianWellPurchase(catalog, branch.stygianWell, itemKey, true);
         const directOption = catalog.rewards.shops.byKey.RoomShop?.groups.values
           .flatMap((group) => group.options.values)
           .find((option) => option.key === itemKey);
@@ -177,6 +318,12 @@ export function applyWellPurchaseTransition(inputs: {
       }),
     ),
     findings: Object.freeze([]),
-    runtimeOfferFallbacks: Object.freeze(fallbacks),
+    timelineFacts: factsWithRefill,
+    ...(runtimeOfferFallback === undefined ? {} : { runtimeOfferFallback }),
+    ...(refillRealization === undefined ? {} : { refillRealization }),
   });
+}
+
+function candidateOwnerEquals(left: SemanticAddress, right: SemanticAddress | undefined): boolean {
+  return right !== undefined && semanticAddressKey(left) === semanticAddressKey(right);
 }

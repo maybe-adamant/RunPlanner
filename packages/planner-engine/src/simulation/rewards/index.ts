@@ -34,3 +34,7 @@ export type {
   RunStateSnapshot,
   DecisionTraitState,
 } from './run-state';
+export type {
+  RoomExitConformanceDelta,
+  RoomExitConformanceFactKind,
+} from './run-state-conformance';

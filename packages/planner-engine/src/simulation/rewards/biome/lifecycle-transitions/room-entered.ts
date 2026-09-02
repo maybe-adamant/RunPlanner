@@ -1,8 +1,12 @@
 import type { Catalog } from '../../../../catalog-schema';
 import {
+  createBiomeAddress,
+  createRoomActionAddress,
   createRoomRunStateCheckpointAddress,
   type OccurrenceAddress,
+  type SemanticAddress,
 } from '../../../../authored-project/addresses';
+import { roomActionKey } from '../../../../authored-project/room-actions';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { ownerRegion, type FindingChronology } from '../../../finding-regions';
@@ -41,6 +45,12 @@ export interface RoomEnteredTransition {
   readonly stygianWellAssessment?: {
     readonly origin: OccurrenceAddress;
     readonly assessments: readonly StygianWellCandidateContext[];
+    readonly runtimeOfferFallbacks: readonly {
+      readonly address: SemanticAddress;
+      readonly preferredKey: string;
+      readonly fallbackKey: string;
+      readonly availabilityContact: 'storeInventoryGeneration';
+    }[];
   };
   readonly runStateCheckpoint?: {
     readonly owner: ReturnType<typeof createRoomRunStateCheckpointAddress>;
@@ -273,7 +283,40 @@ export function applyRoomEnteredTransition(
               }),
         ),
       );
-      stygianWellAssessment = Object.freeze({ origin: room.origin, assessments });
+      const inventoryFallbacks = assessments[0]?.inventory?.runtimeOfferFallbacks ?? [];
+      if (
+        assessments.some(
+          (assessment) =>
+            JSON.stringify(assessment.inventory?.runtimeOfferFallbacks ?? []) !==
+            JSON.stringify(inventoryFallbacks),
+        )
+      )
+        throw new BiomeRewardSimulationContractError(
+          `${room.gameName} has divergent Well inventory runtime fallbacks`,
+        );
+      const runtimeOfferFallbacks = Object.freeze(
+        inventoryFallbacks.map((fallback) => {
+          const reference = Object.freeze({
+            kind: 'purchaseStygianWellOffer' as const,
+            generationKey: fallback.generationKey,
+          });
+          return Object.freeze({
+            address: createRoomActionAddress(
+              createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+              room.occurrenceId,
+              roomActionKey(reference),
+            ),
+            preferredKey: fallback.preferredKey,
+            fallbackKey: fallback.fallbackKey,
+            availabilityContact: fallback.availabilityContact,
+          });
+        }),
+      );
+      stygianWellAssessment = Object.freeze({
+        origin: room.origin,
+        assessments,
+        runtimeOfferFallbacks,
+      });
       for (const assessment of assessments) {
         if (assessment.inventory !== undefined && !assessment.placement.eligible)
           findings.push(

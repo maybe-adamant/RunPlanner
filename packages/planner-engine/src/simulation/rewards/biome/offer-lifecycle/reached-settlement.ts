@@ -1,5 +1,6 @@
 import type { Catalog } from '../../../../catalog-schema';
 import { semanticAddressKey } from '../../../../authored-project/addresses';
+import { createAcquisitionRoleAddress } from '../../../../authored-project/addresses';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../../materialization';
 import { findingIdentityKey, ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
@@ -82,6 +83,13 @@ export function applyReachedOfferSettlement(
       throw new BiomeRewardSimulationContractError(
         `${room.gameName} has no canonical ${event.offerPoint} acquisition`,
       );
+    const timelineOwner = room.roomActionRoster.rows.find(
+      (candidate) =>
+        !candidate.stale &&
+        candidate.rank !== null &&
+        candidate.reference.kind === 'interactWheelReward' &&
+        candidate.reference.wheelKey === event.offerPoint,
+    )?.owner;
     const settlement = settleOwnedAcquisitionSite(
       catalog,
       branches,
@@ -98,6 +106,7 @@ export function applyReachedOfferSettlement(
             instanceProvenance: 'free',
           }),
         ),
+        ...(timelineOwner === undefined ? {} : { timelineOwner }),
         historySequence: event.sequence,
         deferArtificerReplacement: true,
         authoredSeaStarDuplicateSiteKeys: inputs.authoredSeaStarDuplicateSiteKeys,
@@ -136,6 +145,10 @@ export function applyReachedOfferSettlement(
       branchHistory,
       enteredBiomeCount,
     );
+  const timelineOwner =
+    room.incomingReward === undefined
+      ? undefined
+      : createAcquisitionRoleAddress(room.incomingReward.origin, event.role);
   const settlement = settleProducerAcquisitionSite(
     catalog,
     branches,
@@ -150,6 +163,7 @@ export function applyReachedOfferSettlement(
     rewardFindingChronologyForRoom(snapshot, room.origin, event.sequence, 'localRoomLifecycle'),
     preparedAcquisitionSiteOwner(snapshot, room),
     inputs.authoredSeaStarDuplicateSiteKeys,
+    timelineOwner,
   );
   return Object.freeze({
     branches: settlement.branches,

@@ -19,7 +19,6 @@ import {
 import { diagnosticSections, expandDiagnosticFrames, wireDiagnostic } from './codec/diagnostics';
 import { equipResults } from './codec/rewards';
 import { occurrence } from './codec/occurrence';
-import { wellRetainedEffects } from './codec/timeline';
 import { validateExecutionReferences } from './codec/references';
 
 export { ExecutionPlanCodecError };
@@ -60,7 +59,6 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
       'extent',
       'selectedOccurrenceIds',
       'occurrences',
-      'wellRetainedEffects',
     ],
     [],
     'execution plan',
@@ -117,10 +115,6 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
       stringArray(record.selectedOccurrenceIds, 'execution plan.selectedOccurrenceIds'),
     ),
     occurrences,
-    wellRetainedEffects: wellRetainedEffects(
-      record.wellRetainedEffects,
-      'execution plan.wellRetainedEffects',
-    ),
   });
   validateExecutionReferences(plan);
   const body = Object.freeze({
@@ -133,7 +127,6 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     extent: plan.extent,
     selectedOccurrenceIds: plan.selectedOccurrenceIds,
     occurrences: plan.occurrences,
-    wellRetainedEffects: plan.wellRetainedEffects,
   });
   if (fingerprint(body) !== plan.planFingerprint)
     fail('execution plan.planFingerprint does not match its contents');

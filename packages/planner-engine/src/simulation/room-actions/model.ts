@@ -8,6 +8,7 @@ import type {
   RoomActionWindow,
   RoomLifecycleStructure,
 } from '../../authored-project/room-action-domain';
+import type { PlannerTimelineFacts } from '../timeline-facts';
 
 export type {
   RoomActionCheckpointContribution,
@@ -65,5 +66,7 @@ export interface RoomActionRoster {
   readonly checkpoints: readonly RoomActionCheckpoint[];
   readonly issues: readonly RoomActionRosterIssue[];
   readonly proposals: readonly RoomActionProposal[];
+  /** Structural planner facts; reward transitions add their exact relations. */
+  readonly timelineFacts?: PlannerTimelineFacts;
   readonly valid: boolean;
 }

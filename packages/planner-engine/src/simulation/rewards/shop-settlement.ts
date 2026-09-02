@@ -59,6 +59,7 @@ import {
 } from './branch-primitives';
 import { type ReachedTraitChildCheckpoint } from './trait-settlement';
 import { addRewardFinding, rewardFinding } from './findings';
+import type { PlannerTimelineDependency, PlannerTimelineNode } from '../timeline-facts';
 
 export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalVisitRoom;
 
@@ -231,15 +232,69 @@ export function settleShopAcquisitionSite(
     return fail(`${room.gameName} acquisition order contains a duplicate entry`);
   const findingKeysBeforeSettlement = new Set(findings.keys());
   const site = createAcquisitionSiteAddress(room.origin, 'roomExit');
+  const actionOwnerForOffer = (offerKey: string): SemanticAddress | undefined =>
+    room.roomActionRoster.rows.find(
+      (row) =>
+        !row.stale &&
+        row.rank !== null &&
+        row.reference.kind === 'interactShopOffer' &&
+        row.reference.offerKey === offerKey,
+    )?.owner;
+  const actionOwnerForPurchaseKey = (purchaseKey: string): SemanticAddress | undefined =>
+    room.roomActionRoster.rows.find(
+      (row) =>
+        !row.stale &&
+        row.rank !== null &&
+        ((row.reference.kind === 'interactShopOffer' && row.reference.offerKey === purchaseKey) ||
+          (row.reference.kind === 'interactAcquisitionEntry' &&
+            row.reference.siteKey === 'roomExit' &&
+            row.reference.entryKey === purchaseKey)),
+    )?.owner;
   const roleFrontiers: AcquisitionRoleFrontier[] = [];
   const derivedEntryFrontiers: DerivedAcquisitionEntryFrontier[] = [];
   let entryPurchaseFailureRecorded = false;
   const traitChildSettlements: ReachedTraitChildCheckpoint[] = [];
-  const runtimeOfferFallbacks: {
-    address: SemanticAddress;
-    preferredRewardType: string;
-    fallbackRewardType: string;
-  }[] = [];
+  const runtimeOfferFallbacks = new Map<
+    string,
+    {
+      address: SemanticAddress;
+      preferredKey: string;
+      fallbackKey: string;
+      availabilityContact: 'storeInventoryGeneration' | 'storePurchase';
+    }
+  >();
+  const runtimeFallbackMapKey = (
+    address: SemanticAddress,
+    availabilityContact: 'storeInventoryGeneration' | 'storePurchase',
+  ): string => `${semanticAddressKey(address)}\u0000${availabilityContact}`;
+  const runtimeFallbackForAddress = (address: SemanticAddress) =>
+    [...runtimeOfferFallbacks.values()].find(
+      (fallback) => semanticAddressKey(fallback.address) === semanticAddressKey(address),
+    );
+  const recordRuntimeOfferFallback = (
+    address: SemanticAddress,
+    preferredRewardType: string,
+    fallbackRewardType: string,
+    availabilityContact: 'storeInventoryGeneration' | 'storePurchase',
+  ): boolean => {
+    const key = runtimeFallbackMapKey(address, availabilityContact);
+    const current = runtimeOfferFallbacks.get(key);
+    if (
+      current !== undefined &&
+      (current.preferredKey !== preferredRewardType || current.fallbackKey !== fallbackRewardType)
+    )
+      return false;
+    runtimeOfferFallbacks.set(
+      key,
+      Object.freeze({
+        address,
+        preferredKey: preferredRewardType,
+        fallbackKey: fallbackRewardType,
+        availabilityContact,
+      }),
+    );
+    return true;
+  };
   const rolesByOfferKey = new Map<
     string,
     readonly { readonly role: string; readonly lifecyclePoint: ProducerLifecyclePointKey }[]
@@ -489,6 +544,42 @@ export function settleShopAcquisitionSite(
     }
     return undefined;
   };
+  for (const [slotIndex, offer] of entry.offers.entries()) {
+    const fallbacks = executions.map((execution) => {
+      const optionKey = execution.witness.optionKeys[slotIndex];
+      const slot = profile.slots.values[slotIndex];
+      const option =
+        optionKey === undefined || slot === undefined
+          ? undefined
+          : profile.groups.byKey[slot.groupKey]?.options.byKey[optionKey];
+      return resolveShopRuntimeFallback(
+        slotIndex,
+        option,
+        context.facts(execution.candidate.history, new Set(), execution.candidate),
+        new Set(),
+      );
+    });
+    if (new Set(fallbacks.map((fallback) => fallback ?? null)).size > 1)
+      return fail(`${room.gameName}.${offer.offerKey} has divergent runtime fallbacks`);
+    const fallback = fallbacks[0];
+    if (fallback !== undefined) {
+      if (
+        !recordRuntimeOfferFallback(
+          offer.offerOrigin,
+          offer.offer.rewardType,
+          fallback,
+          'storeInventoryGeneration',
+        ) ||
+        !recordRuntimeOfferFallback(
+          offer.offerOrigin,
+          offer.offer.rewardType,
+          fallback,
+          'storePurchase',
+        )
+      )
+        return fail(`${room.gameName}.${offer.offerKey} has conflicting runtime fallbacks`);
+    }
+  }
   const goldDisposition = Object.values(catalog.traits.byKey).find(
     (trait) =>
       trait.selectedDisposition?.kind === 'echo' &&
@@ -566,6 +657,7 @@ export function settleShopAcquisitionSite(
         : createUnresolvedShopAcquisitionRewardState(catalog, duplicateOffer, profile.key);
     const derivedRoleFrontiers: AcquisitionRoleFrontier[] = [];
     if (fixedReward !== undefined) {
+      const duplicateActionOwner = actionOwnerForOffer(offer.offerKey);
       const source = Object.freeze({
         origin: address,
         offer: fixedReward.offer,
@@ -578,6 +670,7 @@ export function settleShopAcquisitionSite(
           : { levelResolutionsByAcquisitionRole: fixedReward.levelResolutionsByAcquisitionRole }),
         dispositionByAcquisitionRole: fixedReward.dispositionByAcquisitionRole,
         ...(offer.traitContext === undefined ? {} : { traitContext: offer.traitContext }),
+        ...(duplicateActionOwner === undefined ? {} : { timelineOwner: duplicateActionOwner }),
       });
       const settlement = Object.freeze({ site, entry: address });
       let candidateBranches: readonly RewardBranchState[] = branchesBeforeEntry;
@@ -633,6 +726,7 @@ export function settleShopAcquisitionSite(
     agreementBranches: readonly RewardBranchState[],
   ): boolean => {
     let current = Object.freeze([execution.candidate]);
+    const purchaseActionOwner = actionOwnerForOffer(offer.offerKey);
     const source: AcquisitionSource = withStoredArtificerReplacements(
       room,
       Object.freeze({
@@ -651,6 +745,7 @@ export function settleShopAcquisitionSite(
           ? {}
           : { dispositionByAcquisitionRole: offer.dispositionByAcquisitionRole }),
         ...(offer.traitContext === undefined ? {} : { traitContext: offer.traitContext }),
+        ...(purchaseActionOwner === undefined ? {} : { timelineOwner: purchaseActionOwner }),
       }),
     );
     const settlement = Object.freeze({
@@ -824,18 +919,9 @@ export function settleShopAcquisitionSite(
           const optionKey = witness.optionKeys[refill.slotIndex];
           const option = optionKey === undefined ? undefined : group.options.byKey[optionKey];
           if (option === undefined) continue;
-          // A Travel Deal child is a fresh result at the same physical slot.
-          // Its runtime contingency belongs to that generated child, not to
-          // the option originally purchased to create the refill.
-          const refillOption = group.options.values.find(
-            (candidate) => candidate.rewardType === child.offer.rewardType,
-          );
-          const runtimeOfferFallbackRewardType = resolveShopRuntimeFallback(
-            refill.slotIndex,
-            refillOption,
-            refill.generationFacts,
-            refill.excludedNames,
-          );
+          const refillAddress = createAcquisitionEntryAddress(site, entryKey);
+          const runtimeOfferFallbackRewardType =
+            runtimeFallbackForAddress(refillAddress)?.fallbackKey;
           const refillExecution: ShopExecution = {
             ...execution,
             witness,
@@ -862,12 +948,6 @@ export function settleShopAcquisitionSite(
                   runtimeOfferFallbackRewardType,
                 }),
           });
-          if (runtimeOfferFallbackRewardType !== undefined)
-            runtimeOfferFallbacks.push({
-              address: refillOffer.offerOrigin,
-              preferredRewardType: refillOffer.offer.rewardType,
-              fallbackRewardType: runtimeOfferFallbackRewardType,
-            });
           const bindings = option.acquisitionLifecycle.map((binding) =>
             Object.freeze({ role: binding.role, lifecyclePoint: binding.lifecyclePoint }),
           );
@@ -930,6 +1010,7 @@ export function settleShopAcquisitionSite(
         const sourceTargetDisappeared = materialization.sourcePomEligibleTraitKeys.some(
           (traitKey) => currentTraits.equippedTraits[traitKey] === undefined,
         );
+        const duplicateActionOwner = actionOwnerForOffer(materialization.sourceOfferKey);
         const settled = settleOwnedAcquisitionSite(
           catalog,
           Object.freeze([execution.candidate]),
@@ -954,10 +1035,14 @@ export function settleShopAcquisitionSite(
                   : materialization.sourceTraitHistory,
                 dispositionByAcquisitionRole: child.dispositionByAcquisitionRole,
                 ...(source.traitContext === undefined ? {} : { traitContext: source.traitContext }),
+                ...(duplicateActionOwner === undefined
+                  ? {}
+                  : { timelineOwner: duplicateActionOwner }),
               }),
             ),
             historySequence,
             roleBindings: materialization.roleBindings,
+            ...(duplicateActionOwner === undefined ? {} : { timelineOwner: duplicateActionOwner }),
             deferArtificerReplacement: true,
             ...(context.authoredSeaStarDuplicateSiteKeys === undefined
               ? {}
@@ -1027,22 +1112,13 @@ export function settleShopAcquisitionSite(
                 boonRarityItemOverride: shopOption.boonRarityOverride,
               }),
             });
-      const runtimeOfferFallbackRewardType = resolveShopRuntimeFallback(
-        slotIndex,
-        shopOption,
-        context.facts(execution.candidate.history, new Set(), execution.candidate),
-        new Set(),
-      );
+      const runtimeOfferFallbackRewardType = runtimeFallbackForAddress(
+        offer.offerOrigin,
+      )?.fallbackKey;
       const evaluatedPaidOffer =
         runtimeOfferFallbackRewardType === undefined
           ? paidOffer
           : Object.freeze({ ...paidOffer, runtimeOfferFallbackRewardType });
-      if (runtimeOfferFallbackRewardType !== undefined)
-        runtimeOfferFallbacks.push({
-          address: offer.offerOrigin,
-          preferredRewardType: offer.offer.rewardType,
-          fallbackRewardType: runtimeOfferFallbackRewardType,
-        });
       const prePurchaseTraits = execution.candidate.traitHistory;
       materializeGold(execution, evaluatedPaidOffer, bindings);
       if (!settlePaid(execution, evaluatedPaidOffer, bindings, agreementBranches)) continue;
@@ -1067,6 +1143,37 @@ export function settleShopAcquisitionSite(
           if (travelRefill !== undefined) {
             execution.travelRefill = travelRefill;
             const address = createAcquisitionEntryAddress(site, TRAVEL_DEAL_REFILL_ENTRY_KEY);
+            const authoredChild =
+              room.acquisitionSites.roomExit?.entries[TRAVEL_DEAL_REFILL_ENTRY_KEY];
+            if (authoredChild !== undefined && authoredChild !== null) {
+              const refillOption = profile.groups.byKey[slot.groupKey]?.options.values.find(
+                (candidate) => candidate.rewardType === authoredChild.offer.rewardType,
+              );
+              const fallback = resolveShopRuntimeFallback(
+                slotIndex,
+                refillOption,
+                travelRefill.generationFacts,
+                travelRefill.excludedNames,
+              );
+              if (
+                fallback !== undefined &&
+                (!recordRuntimeOfferFallback(
+                  address,
+                  authoredChild.offer.rewardType,
+                  fallback,
+                  'storeInventoryGeneration',
+                ) ||
+                  !recordRuntimeOfferFallback(
+                    address,
+                    authoredChild.offer.rewardType,
+                    fallback,
+                    'storePurchase',
+                  ))
+              )
+                return fail(
+                  `${room.gameName} Travel Deal refill has conflicting runtime fallbacks`,
+                );
+            }
             const branchesBeforeEntry = Object.freeze([execution.candidate]);
             derivedEntryFrontiers.push(
               Object.freeze({
@@ -1164,6 +1271,43 @@ export function settleShopAcquisitionSite(
       context.findingChronology ?? historyChronology(historySequence),
     );
   }
+  const timelineNodes = new Map<string, PlannerTimelineNode>();
+  const timelineDependencies = new Map<string, PlannerTimelineDependency>();
+  const recordFirstPurchaseBarrier = (
+    sourcePurchaseKey: string | undefined,
+    qualifyingPurchaseKeys: readonly string[],
+  ): void => {
+    if (sourcePurchaseKey === undefined) return;
+    const sourceOwner = actionOwnerForPurchaseKey(sourcePurchaseKey);
+    if (sourceOwner === undefined) return;
+    const sourceOwnerKey = semanticAddressKey(sourceOwner);
+    timelineNodes.set(
+      sourceOwnerKey,
+      Object.freeze({ owner: sourceOwner, included: true, required: true }),
+    );
+    for (const purchaseKey of qualifyingPurchaseKeys) {
+      const competitorOwner = actionOwnerForPurchaseKey(purchaseKey);
+      if (competitorOwner === undefined) continue;
+      const competitorOwnerKey = semanticAddressKey(competitorOwner);
+      if (competitorOwnerKey === sourceOwnerKey) continue;
+      timelineDependencies.set(
+        `${competitorOwnerKey}\u0000${sourceOwnerKey}`,
+        Object.freeze({ owner: competitorOwner, afterOwner: sourceOwner }),
+      );
+    }
+  };
+  for (const frontier of derivedEntryFrontiers) {
+    if (frontier.kind === 'travelDealRefill')
+      recordFirstPurchaseBarrier(
+        frontier.sourceOfferKey,
+        entry.offers.map((offer) => offer.offerKey),
+      );
+    if (frontier.kind === 'echoDoubleShopReward')
+      recordFirstPurchaseBarrier(
+        frontier.sourceOfferKey,
+        frontier.eligibleSourceOfferKeys ?? Object.freeze([]),
+      );
+  }
   return Object.freeze({
     site,
     entries: Object.freeze(
@@ -1202,7 +1346,11 @@ export function settleShopAcquisitionSite(
     roleFrontiers: Object.freeze(roleFrontiers),
     derivedEntryFrontiers: Object.freeze(derivedEntryFrontiers),
     traitChildSettlements: Object.freeze(traitChildSettlements),
-    runtimeOfferFallbacks: Object.freeze(runtimeOfferFallbacks),
+    runtimeOfferFallbacks: Object.freeze([...runtimeOfferFallbacks.values()]),
+    timelineFacts: Object.freeze({
+      nodes: Object.freeze([...timelineNodes.values()]),
+      dependencies: Object.freeze([...timelineDependencies.values()]),
+    }),
   });
 }
 

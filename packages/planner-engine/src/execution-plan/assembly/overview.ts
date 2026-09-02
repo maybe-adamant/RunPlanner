@@ -1,4 +1,11 @@
-import { semanticAddressKey } from '../../authored-project/addresses';
+import {
+  createBiomeAddress,
+  createRoomActionAddress,
+  createShopOfferAddress,
+  semanticAddressKey,
+  type SemanticAddress,
+} from '../../authored-project/addresses';
+import { roomActionKey } from '../../authored-project/room-actions';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation-products';
 import type { CanonicalAuthoredRoom, CanonicalBatch } from '../../simulation/materialization';
@@ -7,16 +14,69 @@ import type { TraitHistoryEvent } from '../../simulation/trait-history';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import { agreement, executionRoomOwnerKey, stableJson } from './support';
-import type { ExecutionKeepsakeEquipResults, ExecutionOverview, ExecutionReward } from '../model';
+import type {
+  ExecutionKeepsakeEquipResults,
+  ExecutionOverview,
+  ExecutionReward,
+  ExecutionRuntimeFallback,
+} from '../model';
+import type { RuntimeOfferAvailabilityContact } from '../../simulation/runtime-offer-fallback';
+
+export function executionRuntimeFallbacks(
+  biome: CompleteValidBiomeProjectEvaluation,
+  address: SemanticAddress,
+  availabilityContact?: RuntimeOfferAvailabilityContact,
+): readonly ExecutionRuntimeFallback[] | undefined {
+  const matches = biome.rewards.runtimeOfferFallbacks.filter(
+    (candidate) =>
+      semanticAddressKey(candidate.address) === semanticAddressKey(address) &&
+      (availabilityContact === undefined || candidate.availabilityContact === availabilityContact),
+  );
+  if (matches.length === 0) return undefined;
+  const preferredKeys = matches.map((fallback) => fallback.preferredKey);
+  if (new Set(preferredKeys).size !== preferredKeys.length)
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `duplicate runtime fallback preference ${semanticAddressKey(address)}`,
+    );
+  if (
+    matches.some(
+      (fallback) =>
+        fallback.preferredKey === fallback.fallbackKey ||
+        preferredKeys.includes(fallback.fallbackKey),
+    )
+  )
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `runtime fallback must be one step ${semanticAddressKey(address)}`,
+    );
+  return Object.freeze(
+    matches.map((fallback) =>
+      Object.freeze({
+        preferredKey: fallback.preferredKey,
+        fallbackKey: fallback.fallbackKey,
+        availabilityContact: fallback.availabilityContact,
+      }),
+    ),
+  );
+}
 
 export function executionKeepsakeEquipResults(
   results: AuthoredKeepsakeEquipResults | undefined,
+  jeweledPomRuntimeFallbacks?: readonly ExecutionRuntimeFallback[],
 ): ExecutionKeepsakeEquipResults | undefined {
   if (results === undefined) return undefined;
   return Object.freeze({
     ...(results.jeweledPom === undefined
       ? {}
-      : { jeweledPom: Object.freeze({ ...results.jeweledPom }) }),
+      : {
+          jeweledPom: Object.freeze({
+            ...results.jeweledPom,
+            ...(jeweledPomRuntimeFallbacks === undefined
+              ? {}
+              : { runtimeFallbacks: jeweledPomRuntimeFallbacks }),
+          }),
+        }),
     ...(results.experimentalHammer === undefined
       ? {}
       : { experimentalHammer: Object.freeze({ ...results.experimentalHammer }) }),
@@ -188,6 +248,15 @@ export function travelDealRefill(
     slotIndex: row.slotIndex,
     optionKey,
     reward: executionRewardFromOffer(entry.offer, 'Shop'),
+    ...(executionRuntimeFallbacks(biome, row.address, 'storeInventoryGeneration') === undefined
+      ? {}
+      : {
+          runtimeFallbacks: executionRuntimeFallbacks(
+            biome,
+            row.address,
+            'storeInventoryGeneration',
+          ),
+        }),
   });
 }
 
@@ -226,8 +295,18 @@ function executionShop(
   if (room.entryState === undefined) return undefined;
   const optionKeys = shopOptionKeys(room, biome);
   const offers = Object.freeze(
-    room.entryState.offers.map((offer, index) =>
-      Object.freeze({
+    room.entryState.offers.map((offer, index) => {
+      const address = createShopOfferAddress(
+        createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+        room.occurrenceId,
+        offer.offerKey,
+      );
+      const runtimeFallbacks = executionRuntimeFallbacks(
+        biome,
+        address,
+        'storeInventoryGeneration',
+      );
+      return Object.freeze({
         offerKey: offer.offerKey,
         optionKey: optionKeys[index]!,
         rewardType: offer.offer.rewardType,
@@ -240,8 +319,9 @@ function executionShop(
               spurnedSource: offer.offer.payload.spurnedSource,
             }
           : {}),
-      }),
-    ),
+        ...(runtimeFallbacks === undefined ? {} : { runtimeFallbacks }),
+      });
+    }),
   );
   const refill = travelDealRefill(room, biome, offers);
   return Object.freeze({
@@ -253,6 +333,7 @@ function executionShop(
 
 function executionStygianWell(
   room: CanonicalAuthoredRoom,
+  biome: CompleteValidBiomeProjectEvaluation,
 ): ExecutionOverview['stygianWell'] | undefined {
   if (room.stygianWell === undefined) return undefined;
   return Object.freeze({
@@ -283,19 +364,34 @@ function executionStygianWell(
                   room.stygianWell.twistResultKeyBySlot?.travelDealRefill,
                 ],
               ] as const
-            ).flatMap(([generationKey, offerKey, twistResultKey]) =>
-              offerKey === null || offerKey === undefined
-                ? []
-                : [
-                    Object.freeze({
-                      generationKey,
-                      offerKey,
-                      ...(twistResultKey === undefined || twistResultKey === null
-                        ? {}
-                        : { twistResultKey }),
-                    }),
-                  ],
-            ),
+            ).flatMap(([generationKey, offerKey, twistResultKey]) => {
+              if (offerKey === null || offerKey === undefined) return [];
+              const actionOwner = createRoomActionAddress(
+                createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+                room.occurrenceId,
+                roomActionKey(
+                  Object.freeze({
+                    kind: 'purchaseStygianWellOffer' as const,
+                    generationKey,
+                  }),
+                ),
+              );
+              const runtimeFallbacks = executionRuntimeFallbacks(
+                biome,
+                actionOwner,
+                'storeInventoryGeneration',
+              );
+              return [
+                Object.freeze({
+                  generationKey,
+                  offerKey,
+                  ...(twistResultKey === undefined || twistResultKey === null
+                    ? {}
+                    : { twistResultKey }),
+                  ...(runtimeFallbacks === undefined ? {} : { runtimeFallbacks }),
+                }),
+              ];
+            }),
           ),
         }
       : {}),
@@ -331,7 +427,7 @@ export function assembleExecutionOverview(
 ): ExecutionOverview {
   const incomingReward = executionReward(room);
   const shop = executionShop(room, biome);
-  const stygianWell = executionStygianWell(room);
+  const stygianWell = executionStygianWell(room, biome);
   const purgingPool = executionPurgingPool(room);
   const resources = executionResources(room, biome);
   const additional = executionAdditionalExits(batch);
@@ -350,15 +446,21 @@ export function assembleExecutionOverview(
     ...(shop === undefined ? {} : { shop }),
     ...(stygianWell === undefined ? {} : { stygianWell }),
     ...(purgingPool === undefined ? {} : { purgingPool }),
-    ...(room.keepsakeRack === undefined
-      ? {}
-      : { keepsakeRack: Object.freeze({ keepsakeKey: room.keepsakeRack.keepsakeKey }) }),
-    ...(room.fountainRarityResult === undefined
+    ...(!room.hasKeepsakeRack
       ? {}
       : {
-          fountain: Object.freeze({
-            aromaticPhialTarget: room.fountainRarityResult.targetTraitKey,
-          }),
+          keepsakeRack: Object.freeze(
+            room.keepsakeRack === undefined ? {} : { keepsakeKey: room.keepsakeRack.keepsakeKey },
+          ),
+        }),
+    ...(!room.hasRequiredFountain
+      ? {}
+      : {
+          fountain: Object.freeze(
+            room.fountainRarityResult === undefined
+              ? {}
+              : { aromaticPhialTarget: room.fountainRarityResult.targetTraitKey },
+          ),
         }),
     ...(resources === undefined ? {} : { resources }),
     ...(additional === undefined ? {} : { additional }),

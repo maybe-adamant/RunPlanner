@@ -20,6 +20,7 @@ import type {
   RoomActionRosterIssue,
   RoomActionRow,
 } from './model';
+import type { PlannerTimelineDependency, PlannerTimelineNode } from '../timeline-facts';
 
 function frozen<T>(value: T): T {
   return Object.freeze(value);
@@ -363,12 +364,37 @@ export function assembleRoomActionRoster(options: {
                   ),
       }),
     );
+  const activeByKey = new Map(
+    rows.flatMap((row) => (row.stale || row.rank === null ? [] : [[row.key, row] as const])),
+  );
+  const timelineNodes: PlannerTimelineNode[] = [];
+  const timelineDependencies: PlannerTimelineDependency[] = [];
+  for (const row of rows) {
+    if (row.stale || row.rank === null) continue;
+    timelineNodes.push(
+      frozen({
+        owner: row.owner,
+        included: row.participation === 'required',
+        required: row.participation === 'required',
+      }),
+    );
+    for (const dependency of row.dependencies) {
+      if (dependency.kind !== 'afterAction') continue;
+      const after = activeByKey.get(roomActionKey(dependency.action));
+      if (after === undefined) continue;
+      timelineDependencies.push(frozen({ owner: row.owner, afterOwner: after.owner }));
+    }
+  }
   return frozen({
     lifecycleStructure: options.lifecycleStructure,
     rows: frozen(rows),
     checkpoints: frozen(checkpoints),
     issues,
     proposals: frozen(proposals),
+    timelineFacts: frozen({
+      nodes: frozen(timelineNodes),
+      dependencies: frozen(timelineDependencies),
+    }),
     valid: issues.length === 0,
   });
 }

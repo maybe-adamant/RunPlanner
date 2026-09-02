@@ -138,6 +138,37 @@ The actual granted identity should remain observable to the game-module audit,
 but it does not rewrite the authored project or retrospectively re-simulate the
 route.
 
+### Availability contacts are the only runtime policy boundary
+
+The published fallback relation has one wire shape everywhere: a preferred key,
+one fallback key, and one closed availability contact. The contact identifies
+where the native adapter asks the game whether the preferred result can be
+realized; it does not encode a named game predicate or a second semantic
+fallback policy. The supported contacts are:
+
+| Contact                    | Native question                                         |
+| -------------------------- | ------------------------------------------------------- |
+| `traitEligibility`         | Is this trait currently eligible for the trait offer?   |
+| `storeInventoryGeneration` | Can this item occupy the generated store position?      |
+| `storePurchase`            | Can this already-generated item be purchased now?       |
+| `npcConsumableSelection`   | Can this NPC consumable be selected at its interaction? |
+
+The Planner selects the contact and resolves the one-step relation from its
+complete-valid product. Execution copies that relation without interpreting its
+meaning. The game module performs the native availability question at the
+declared contact, tries the fallback only when the preferred key is unavailable,
+and reports a contact failure when neither key can be realized. Realizing either
+the preferred key or its declared fallback satisfies the execution contact; the
+fallback is a conforming contingency, not a route divergence. The game module
+does not search a provider pool, infer a missing Death Defiance or Hex condition,
+or recurse through another fallback.
+
+The same relation may intentionally be published twice for one source address
+when generation and purchase are distinct native contacts. Those are two
+observations of one planner-selected preferred/fallback pair, not two competing
+fallback representations. A singular `runtimeFallback` field is not part of the
+wire or engine product.
+
 ## Trait fallback declarations
 
 A trait offer can contain three visible traits. Each volatile preferred trait

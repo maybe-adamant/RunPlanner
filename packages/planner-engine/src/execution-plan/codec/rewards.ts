@@ -2,6 +2,7 @@ import type {
   ExecutionAcquisitionRole,
   ExecutionLevelResolution,
   ExecutionReward,
+  ExecutionRuntimeFallback,
   ExecutionTraitOffer,
 } from '../model';
 import {
@@ -15,6 +16,46 @@ import {
   stringArray,
   stringValue,
 } from './primitives';
+
+export function runtimeFallbacks(
+  value: unknown,
+  label: string,
+): readonly ExecutionRuntimeFallback[] {
+  const parsed = array(value, label).map((entry, index) => {
+    const row = object(entry, `${label}[${index}]`);
+    exact(row, ['preferredKey', 'fallbackKey', 'availabilityContact'], [], `${label}[${index}]`);
+    if (
+      row.availabilityContact !== 'traitEligibility' &&
+      row.availabilityContact !== 'storeInventoryGeneration' &&
+      row.availabilityContact !== 'storePurchase' &&
+      row.availabilityContact !== 'npcConsumableSelection'
+    )
+      fail(`${label}[${index}].availabilityContact is unsupported`);
+    return Object.freeze({
+      preferredKey: stringValue(row.preferredKey, `${label}[${index}].preferredKey`),
+      fallbackKey: stringValue(row.fallbackKey, `${label}[${index}].fallbackKey`),
+      availabilityContact: row.availabilityContact,
+    });
+  });
+  const fallbackKeys = parsed.map(
+    (fallback) => `${fallback.preferredKey}\u0000${fallback.availabilityContact}`,
+  );
+  if (new Set(fallbackKeys).size !== fallbackKeys.length)
+    fail(`${label} has duplicate preferred keys`);
+  if (
+    parsed.some(
+      (fallback) =>
+        fallback.preferredKey === fallback.fallbackKey ||
+        parsed.some(
+          (candidate) =>
+            candidate.preferredKey === fallback.fallbackKey &&
+            candidate.availabilityContact === fallback.availabilityContact,
+        ),
+    )
+  )
+    fail(`${label} must contain only one-step fallbacks`);
+  return Object.freeze(parsed);
+}
 
 export function reward(value: unknown, label: string): ExecutionReward {
   const record = object(value, label);
@@ -103,7 +144,7 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
     });
   }
   if (record.kind !== 'traits') fail(`${label}.kind is unsupported`);
-  exact(record, ['kind', 'giver', 'options', 'selected'], ['rejected', 'runtimeFallback'], label);
+  exact(record, ['kind', 'giver', 'options', 'selected'], ['rejected', 'runtimeFallbacks'], label);
   const options = array(record.options, `${label}.options`, 3).map((entry, index) => {
     const option = object(entry, `${label}.options[${index}]`);
     exact(
@@ -188,9 +229,11 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
             return rejected as 'option1' | 'option2' | 'option3';
           })(),
         }),
-    ...(record.runtimeFallback === undefined
+    ...(record.runtimeFallbacks === undefined
       ? {}
-      : { runtimeFallback: stringValue(record.runtimeFallback, `${label}.runtimeFallback`) }),
+      : {
+          runtimeFallbacks: runtimeFallbacks(record.runtimeFallbacks, `${label}.runtimeFallbacks`),
+        }),
   });
 }
 
@@ -269,7 +312,8 @@ export function equipResults(value: unknown, label: string) {
   exact(record, [], ['jeweledPom', 'experimentalHammer', 'transcendentEmbryo'], label);
   const jeweledPom =
     record.jeweledPom === undefined ? undefined : object(record.jeweledPom, `${label}.jeweledPom`);
-  if (jeweledPom !== undefined) exact(jeweledPom, ['traitKey'], ['rarity'], `${label}.jeweledPom`);
+  if (jeweledPom !== undefined)
+    exact(jeweledPom, ['traitKey'], ['rarity', 'runtimeFallbacks'], `${label}.jeweledPom`);
   const experimentalHammer =
     record.experimentalHammer === undefined
       ? undefined
@@ -296,6 +340,14 @@ export function equipResults(value: unknown, label: string) {
             ...(jeweledPom.rarity === undefined
               ? {}
               : { rarity: stringValue(jeweledPom.rarity, `${label}.jeweledPom.rarity`) }),
+            ...(jeweledPom.runtimeFallbacks === undefined
+              ? {}
+              : {
+                  runtimeFallbacks: runtimeFallbacks(
+                    jeweledPom.runtimeFallbacks,
+                    `${label}.jeweledPom.runtimeFallbacks`,
+                  ),
+                }),
           }),
         }),
     ...(experimentalHammer === undefined

@@ -158,6 +158,10 @@ export interface CanonicalAuthoredRoom {
   readonly enteredRewardStoreKey?: string;
   /** Persisted occurrence chronology and its sole derived roster product. */
   readonly roomActions: RoomActionState;
+  /** Declaration-owned physical rack presence, independent of an authored replacement. */
+  readonly hasKeepsakeRack: boolean;
+  /** Declaration-owned physical fountain presence, independent of Aromatic Phial. */
+  readonly hasRequiredFountain: boolean;
   /** Exact optional Postboss rack state remains owned by its fixed occurrence. */
   readonly keepsakeRack?: NonNullable<
     import('../../authored-project/model').RoomOccurrence['keepsakeRack']

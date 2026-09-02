@@ -6,9 +6,18 @@ import {
   createCompleteFGAnomalyProject,
   createCompleteFGProject,
   createUnderworldFPoolCheckpoint,
+  createUnderworldFWellCheckpoint,
+  goldenFBiome,
 } from '@run-planner/test-fixtures/underworld';
 import { simulateProjectAssembly } from '../../src/simulation';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  applyProjectCommand,
+  createOccurrenceAddress,
+  createOccurrenceId,
+  createKeepsakeEquipResultAddress,
+  createRouteStartKeepsakeSelectionAddress,
+} from '../../src/authored-project';
 import {
   assembleExecutionProduct,
   compileExecutionPlan,
@@ -16,10 +25,14 @@ import {
   encodeExecutionPlan,
   ExecutionPlanCodecError,
 } from '../../src/execution-plan';
+import { validateExecutionProduct } from '../../src/execution-plan/assembly/validation';
+import type { ExecutionSemanticProduct } from '../../src/execution-plan/model';
 import fOpeningFixture from './fixtures/f-opening.execution.json';
 import fgFixture from './fixtures/fg.execution.json';
 import fgAnomalyFixture from './fixtures/fg-anomaly.execution.json';
 import fgIxionChaosFixture from './fixtures/fg-ixion-chaos.execution.json';
+import automaticBossFixture from './fixtures/automatic-boss.execution.json';
+import { bossAutomaticOutcomeProject } from './support/automatic-fixture';
 
 function fOnlyProject(project = createCompleteFGProject()) {
   return Object.freeze({
@@ -37,12 +50,163 @@ function planFor(project: ReturnType<typeof createCompleteFGProject>) {
   return { product, plan: compileExecutionPlan({ product }) };
 }
 
+function planWithGenericDependency() {
+  const { product } = planFor(authorLegalTraitOffers(createUnderworldFWellCheckpoint()));
+  const occurrence = product.occurrences.find((entry) => entry.timeline.transactions.length >= 2);
+  if (occurrence === undefined) throw new Error('fixture lacks a multi-transaction occurrence');
+  const pair = occurrence.timeline.transactions
+    .flatMap((after, afterIndex) =>
+      occurrence.timeline.transactions
+        .slice(0, afterIndex)
+        .map((before) => ({ owner: after.owner, afterOwner: before.owner })),
+    )
+    .find(
+      (candidate) =>
+        !occurrence.timeline.dependencies.some(
+          (dependency) =>
+            dependency.owner === candidate.owner && dependency.afterOwner === candidate.afterOwner,
+        ),
+    );
+  if (pair === undefined) throw new Error('fixture lacks an independent transaction pair');
+  const updatedProduct = Object.freeze({
+    ...product,
+    occurrences: Object.freeze(
+      product.occurrences.map((entry) =>
+        entry.id !== occurrence.id
+          ? entry
+          : Object.freeze({
+              ...entry,
+              timeline: Object.freeze({
+                ...entry.timeline,
+                dependencies: Object.freeze([...entry.timeline.dependencies, pair]),
+              }),
+            }),
+      ),
+    ),
+  });
+  return compileExecutionPlan({ product: updatedProduct });
+}
+
+function planWithWellRuntimeFallback() {
+  const occurrence = createOccurrenceAddress(
+    goldenFBiome,
+    createOccurrenceId('golden-f-preboss-shop:postboss'),
+  );
+  let project = applyProjectCommand(createUnderworldFWellCheckpoint(), catalog, {
+    kind: 'ReplaceStygianWellOffer',
+    occurrence,
+    slotKey: 'healing',
+    itemKey: 'LastStandShopItem',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetStygianWellPurchase',
+    occurrence,
+    generationKey: 'initial:healing',
+    purchased: true,
+  });
+  return planFor(authorLegalTraitOffers(project)).plan;
+}
+
+function planWithDirectJeweledPomFallback() {
+  let project = createCompleteFGProject();
+  const selection = createRouteStartKeepsakeSelectionAddress('Underworld');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceStartingKeepsake',
+    selection,
+    keepsakeKey: 'HadesAndPersephoneKeepsake',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceJeweledPomEquipResult',
+    result: createKeepsakeEquipResultAddress(selection, 'jeweledPom'),
+    value: { traitKey: 'HadesDeathDefianceDamageBoon' },
+  });
+  return planFor(
+    Object.freeze({
+      ...project,
+      route: Object.freeze({
+        ...project.route,
+        biomes: Object.freeze(project.route.biomes.slice(0, 1)),
+      }),
+    }),
+  ).plan;
+}
+
+function productWithDependency(
+  product: ExecutionSemanticProduct,
+  dependentOccurrenceId: string,
+  owner: string,
+  afterOwner: string,
+): ExecutionSemanticProduct {
+  return Object.freeze({
+    ...product,
+    occurrences: Object.freeze(
+      product.occurrences.map((occurrence) =>
+        occurrence.id !== dependentOccurrenceId
+          ? occurrence
+          : Object.freeze({
+              ...occurrence,
+              timeline: Object.freeze({
+                ...occurrence.timeline,
+                dependencies: Object.freeze([
+                  ...occurrence.timeline.dependencies,
+                  Object.freeze({ owner, afterOwner }),
+                ]),
+              }),
+            }),
+      ),
+    ),
+  });
+}
+
+function selectedTransactionPair(product: ExecutionSemanticProduct): {
+  readonly dependentOccurrenceId: string;
+  readonly dependentIndex: number;
+  readonly dependentOwner: string;
+  readonly prerequisiteOwner: string;
+} {
+  const occurrences = new Map(product.occurrences.map((occurrence) => [occurrence.id, occurrence]));
+  for (
+    let dependentIndex = 1;
+    dependentIndex + 1 < product.selectedOccurrenceIds.length;
+    dependentIndex += 1
+  ) {
+    const dependent = occurrences.get(product.selectedOccurrenceIds[dependentIndex]!);
+    if (dependent?.timeline.transactions[0] === undefined) continue;
+    for (
+      let prerequisiteIndex = dependentIndex - 1;
+      prerequisiteIndex >= 0;
+      prerequisiteIndex -= 1
+    ) {
+      const prerequisite = occurrences.get(product.selectedOccurrenceIds[prerequisiteIndex]!);
+      if (prerequisite?.timeline.transactions[0] === undefined) continue;
+      const dependentOwner = dependent.timeline.transactions[0].owner;
+      const prerequisiteOwner = prerequisite.timeline.transactions[0].owner;
+      if (
+        !product.occurrences.some((occurrence) =>
+          occurrence.timeline.dependencies.some(
+            (dependency) =>
+              dependency.owner === dependentOwner && dependency.afterOwner === prerequisiteOwner,
+          ),
+        )
+      )
+        return {
+          dependentOccurrenceId: dependent.id,
+          dependentIndex,
+          dependentOwner,
+          prerequisiteOwner,
+        };
+    }
+  }
+  throw new Error('fixture lacks selected cross-occurrence transaction pair');
+}
+
 describe('protocol-v10 compiler and codec', () => {
   it.each([
     ['f-opening', fOnlyProject(), fOpeningFixture],
     ['fg', createCompleteFGProject(), fgFixture],
     ['fg-ixion-chaos', createCompleteFGIxionChaosProject(), fgIxionChaosFixture],
     ['fg-anomaly', createCompleteFGAnomalyProject(), fgAnomalyFixture],
+    ['automatic-boss', bossAutomaticOutcomeProject(), automaticBossFixture],
   ])('keeps the %s product byte-stable', (_name, project, fixture) => {
     const { plan } = planFor(project);
     if (fixture !== undefined) expect(decodeExecutionPlan(fixture)).toEqual(plan);
@@ -66,9 +230,9 @@ describe('protocol-v10 compiler and codec', () => {
       ),
     );
     expect(diagnosticFrames[0]).toMatchObject({ frame: 0 });
-    expect(Object.keys((diagnosticFrames[0]!.replace ?? {}) as object)).toHaveLength(12);
+    expect(Object.keys((diagnosticFrames[0]!.replace ?? {}) as object)).toHaveLength(13);
     expect(
-      diagnosticFrames.some((frame) => Object.keys((frame.replace ?? {}) as object).length < 12),
+      diagnosticFrames.some((frame) => Object.keys((frame.replace ?? {}) as object).length < 13),
     ).toBe(true);
     expect(encoded.length).toBeLessThan(JSON.stringify(plan).length * 0.75);
     expect(decodeExecutionPlan(wire)).toEqual(plan);
@@ -252,5 +416,241 @@ describe('protocol-v10 compiler and codec', () => {
     duplicatePoolOccurrence.overview.purgingPool.traits[1] =
       duplicatePoolOccurrence.overview.purgingPool.traits[0];
     expect(() => decodeExecutionPlan(duplicatePool)).toThrow(/duplicate slot keys/);
+  });
+
+  it('round-trips one-step runtime fallbacks and rejects duplicate or nested preferences', () => {
+    const plan = planWithWellRuntimeFallback();
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+
+    const malformed = JSON.parse(encodeExecutionPlan(plan)) as {
+      occurrences: Array<{
+        timeline: {
+          transactions: Array<{
+            runtimeFallbacks?: Array<{
+              preferredKey: string;
+              fallbackKey: string;
+              availabilityContact: string;
+            }>;
+          }>;
+        };
+      }>;
+    };
+    const fallbacks = malformed.occurrences
+      .flatMap((occurrence) => occurrence.timeline.transactions)
+      .find((transaction) => transaction.runtimeFallbacks !== undefined)?.runtimeFallbacks;
+    if (fallbacks?.[0] === undefined) throw new Error('fixture lacks a runtime fallback');
+    fallbacks.push({ ...fallbacks[0], fallbackKey: 'HealDropRange' });
+    expect(() => decodeExecutionPlan(malformed)).toThrow(/duplicate preferred keys/);
+
+    const nested = JSON.parse(encodeExecutionPlan(plan)) as typeof malformed;
+    const nestedFallbacks = nested.occurrences
+      .flatMap((occurrence) => occurrence.timeline.transactions)
+      .find((transaction) => transaction.runtimeFallbacks !== undefined)?.runtimeFallbacks;
+    if (nestedFallbacks?.[0] === undefined) throw new Error('fixture lacks a runtime fallback');
+    nestedFallbacks.push({
+      preferredKey: nestedFallbacks[0].fallbackKey,
+      fallbackKey: 'HealDropRange',
+      availabilityContact: nestedFallbacks[0].availabilityContact,
+    });
+    expect(() => decodeExecutionPlan(nested)).toThrow(/only one-step fallbacks/);
+  });
+
+  it('round-trips a direct Jeweled Pom runtime fallback', () => {
+    const plan = planWithDirectJeweledPomFallback();
+    expect(plan.startingKeepsake.equipResults?.jeweledPom).toMatchObject({
+      runtimeFallbacks: [
+        {
+          preferredKey: 'HadesDeathDefianceDamageBoon',
+          fallbackKey: 'HadesLifestealBoon',
+          availabilityContact: 'traitEligibility',
+        },
+      ],
+    });
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+  });
+
+  it('round-trips a Nemesis free-item runtime fallback at its encounter contact', () => {
+    const { product } = planFor(createCompleteFGProject());
+    const occurrence = product.occurrences.find((candidate) =>
+      candidate.timeline.transactions.some(
+        (transaction) => transaction.kind === 'encounterInteraction',
+      ),
+    );
+    if (occurrence === undefined) throw new Error('fixture lacks encounter interaction');
+    const transaction = occurrence.timeline.transactions.find(
+      (candidate) => candidate.kind === 'encounterInteraction',
+    );
+    if (transaction === undefined) throw new Error('fixture lacks encounter transaction');
+    const updatedProduct = Object.freeze({
+      ...product,
+      occurrences: Object.freeze(
+        product.occurrences.map((candidate) =>
+          candidate.id !== occurrence.id
+            ? candidate
+            : Object.freeze({
+                ...candidate,
+                timeline: Object.freeze({
+                  ...candidate.timeline,
+                  transactions: Object.freeze(
+                    candidate.timeline.transactions.map((entry) =>
+                      entry.owner !== transaction.owner
+                        ? entry
+                        : Object.freeze({
+                            ...entry,
+                            resolution: Object.freeze({
+                              kind: 'nemesisRandomEvent' as const,
+                              outcome: Object.freeze({
+                                kind: 'freeItem' as const,
+                                runtimeFallbacks: Object.freeze([
+                                  Object.freeze({
+                                    preferredKey: 'LastStandDrop',
+                                    fallbackKey: 'ArmorBoost',
+                                    availabilityContact: 'npcConsumableSelection' as const,
+                                  }),
+                                ]),
+                              }),
+                            }),
+                          }),
+                    ),
+                  ),
+                }),
+              }),
+        ),
+      ),
+    });
+    const plan = compileExecutionPlan({ product: updatedProduct });
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+  });
+
+  it('validates sparse dependency owner integrity without retaining the removed streams field', () => {
+    const plan = planWithGenericDependency();
+    const wire = () =>
+      JSON.parse(encodeExecutionPlan(plan)) as {
+        occurrences: Array<{
+          timeline: {
+            dependencies: Array<{ owner: string; afterOwner: string }>;
+          } & Record<string, unknown>;
+        }>;
+      };
+    const valid = wire();
+    expect(decodeExecutionPlan(valid)).toEqual(plan);
+    const occurrence = valid.occurrences.find((entry) => entry.timeline.dependencies.length > 0);
+    if (occurrence === undefined) throw new Error('fixture lacks a dependency');
+    const dependency = occurrence.timeline.dependencies[0]!;
+
+    const missingOwner = wire();
+    const missingOccurrence = missingOwner.occurrences.find(
+      (entry) => entry.timeline.dependencies.length > 0,
+    )!;
+    missingOccurrence.timeline.dependencies[0] = {
+      ...missingOccurrence.timeline.dependencies[0]!,
+      afterOwner: 'missing-owner',
+    };
+    expect(() => decodeExecutionPlan(missingOwner)).toThrow(/unresolved dependency owner/);
+
+    const duplicate = wire();
+    const duplicateOccurrence = duplicate.occurrences.find(
+      (entry) => entry.timeline.dependencies.length > 0,
+    )!;
+    duplicateOccurrence.timeline.dependencies.push({ ...dependency });
+    expect(() => decodeExecutionPlan(duplicate)).toThrow(/duplicate dependency/);
+
+    const self = wire();
+    const selfOccurrence = self.occurrences.find(
+      (entry) => entry.timeline.dependencies.length > 0,
+    )!;
+    selfOccurrence.timeline.dependencies[0] = {
+      owner: selfOccurrence.timeline.dependencies[0]!.owner,
+      afterOwner: selfOccurrence.timeline.dependencies[0]!.owner,
+    };
+    expect(() => decodeExecutionPlan(self)).toThrow(/self dependency/);
+
+    const cycle = wire();
+    const cycleOccurrence = cycle.occurrences.find(
+      (entry) => entry.timeline.dependencies.length > 0,
+    )!;
+    cycleOccurrence.timeline.dependencies.push({
+      owner: dependency.afterOwner,
+      afterOwner: dependency.owner,
+    });
+    expect(() => decodeExecutionPlan(cycle)).toThrow(/dependenc.*cycle/);
+
+    const removedStreams = wire();
+    removedStreams.occurrences[0]!.timeline.streams = [];
+    expect(() => decodeExecutionPlan(removedStreams)).toThrow(/unknown field streams/);
+  });
+
+  it('rejects every cross-occurrence prerequisite', () => {
+    const product = planFor(createCompleteFGProject()).product;
+    const pair = selectedTransactionPair(product);
+    const crossOccurrence = productWithDependency(
+      product,
+      pair.dependentOccurrenceId,
+      pair.dependentOwner,
+      pair.prerequisiteOwner,
+    );
+    expect(() => validateExecutionProduct(crossOccurrence)).toThrow(/cross-occurrence dependency/);
+    expect(() => decodeExecutionPlan(compileExecutionPlan({ product: crossOccurrence }))).toThrow(
+      /cross-occurrence dependency/,
+    );
+
+    const selected = new Set(product.selectedOccurrenceIds);
+    const sourceForUnselected = product.occurrences.find(
+      (occurrence) =>
+        selected.has(occurrence.id) && occurrence.timeline.transactions[0] !== undefined,
+    );
+    if (sourceForUnselected?.timeline.transactions[0] === undefined)
+      throw new Error('fixture lacks a transaction occurrence to clone');
+    const unselectedOwner = 'unselected-occurrence-owner';
+    const unselected = Object.freeze({
+      ...sourceForUnselected,
+      id: 'unselected-occurrence',
+      owner: unselectedOwner,
+      timeline: Object.freeze({
+        ...sourceForUnselected.timeline,
+        transactions: Object.freeze([
+          Object.freeze({
+            ...sourceForUnselected.timeline.transactions[0],
+            owner: unselectedOwner,
+          }),
+        ]),
+        dependencies: Object.freeze([]),
+        obligations: Object.freeze([]),
+      }),
+    });
+    const productWithUnselected = Object.freeze({
+      ...product,
+      occurrences: Object.freeze([...product.occurrences, unselected]),
+    });
+    const unselectedDependency = productWithDependency(
+      productWithUnselected,
+      pair.dependentOccurrenceId,
+      pair.dependentOwner,
+      unselectedOwner,
+    );
+    expect(() => validateExecutionProduct(unselectedDependency)).toThrow(
+      /cross-occurrence dependency/,
+    );
+    expect(() =>
+      decodeExecutionPlan(compileExecutionPlan({ product: unselectedDependency })),
+    ).toThrow(/cross-occurrence dependency/);
+
+    const futureOccurrence = product.occurrences.find(
+      (occurrence) =>
+        product.selectedOccurrenceIds.indexOf(occurrence.id) > pair.dependentIndex &&
+        occurrence.timeline.transactions[0] !== undefined,
+    );
+    if (futureOccurrence?.timeline.transactions[0] === undefined)
+      throw new Error('fixture lacks a later selected transaction occurrence');
+    const future = productWithDependency(
+      product,
+      pair.dependentOccurrenceId,
+      pair.dependentOwner,
+      futureOccurrence.timeline.transactions[0].owner,
+    );
+    expect(() => validateExecutionProduct(future)).toThrow(/cross-occurrence dependency/);
+    expect(() => decodeExecutionPlan(compileExecutionPlan({ product: future }))).toThrow(
+      /cross-occurrence dependency/,
+    );
   });
 });

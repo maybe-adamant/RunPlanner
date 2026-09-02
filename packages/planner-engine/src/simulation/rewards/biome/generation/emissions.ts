@@ -21,12 +21,10 @@ import type { HistoryStateView } from '../../../history';
 import type { CanonicalLifecycleRoom } from '../../../history/lifecycleInput';
 import type { RunStateOwner } from '../../run-state';
 import type { TargetAddress } from '../../../../authored-project/addresses';
+import type { PlannerTimelineFacts } from '../../../timeline-facts';
+import type { RuntimeOfferFallback } from '../../../runtime-offer-fallback';
 
-export interface RuntimeOfferFallbackEmission {
-  readonly address: import('../../../../authored-project/addresses').SemanticAddress;
-  readonly preferredRewardType: string;
-  readonly fallbackRewardType: string;
-}
+export type RuntimeOfferFallbackEmission = RuntimeOfferFallback;
 
 /** Complete non-branch emissions from one authored acquisition-site settlement. */
 export interface AuthoredSiteSettlementEmissions {
@@ -34,6 +32,7 @@ export interface AuthoredSiteSettlementEmissions {
   readonly derivedEntryFrontiers: readonly DerivedAcquisitionEntryFrontier[];
   readonly traitChildSettlements: readonly ReachedTraitChildCheckpoint[];
   readonly runtimeOfferFallbacks: readonly RuntimeOfferFallbackEmission[];
+  readonly timelineFacts: PlannerTimelineFacts;
   readonly findings: readonly FindingRegionEntry[];
 }
 
@@ -55,6 +54,7 @@ export function createAuthoredSiteSettlementEmissions(input: {
   readonly derivedEntryFrontiers?: readonly DerivedAcquisitionEntryFrontier[];
   readonly traitChildSettlements?: readonly ReachedTraitChildCheckpoint[];
   readonly runtimeOfferFallbacks?: readonly RuntimeOfferFallbackEmission[];
+  readonly timelineFacts?: PlannerTimelineFacts;
   readonly findings: ReadonlyMap<string, FindingRegionEntry>;
 }): AuthoredSiteSettlementEmissions {
   return Object.freeze({
@@ -64,6 +64,9 @@ export function createAuthoredSiteSettlementEmissions(input: {
     runtimeOfferFallbacks: Object.freeze(
       (input.runtimeOfferFallbacks ?? []).map((fallback) => Object.freeze({ ...fallback })),
     ),
+    timelineFacts:
+      input.timelineFacts ??
+      Object.freeze({ nodes: Object.freeze([]), dependencies: Object.freeze([]) }),
     findings: Object.freeze([...input.findings.values()]),
   });
 }
