@@ -693,4 +693,113 @@ describe('structured workspace actions assembly', () => {
         .map((row) => row.participationOwnedByOverview),
     ).toEqual([true, true, true]);
   });
+
+  it('proposes an unranked Travel refill immediately after its source purchase', () => {
+    const shopId = createOccurrenceId('golden-f-preboss-shop');
+    const base = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
+    const occurrenceAddress = createOccurrenceAddress(goldenFBiome, shopId);
+    const site = createAcquisitionSiteAddress(occurrenceAddress, 'roomExit');
+    const occurrence = base.route.biomes
+      .find((plan) => plan.biomeKey === 'F')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopId);
+    const source =
+      occurrence?.state.kind === 'shop' ? occurrence.state.shop?.offers.Boon?.reward : undefined;
+    if (source === undefined) throw new Error('F Preboss Boon default is missing');
+    const project: ProjectDocument = {
+      ...base,
+      route: {
+        ...base.route,
+        biomes: base.route.biomes.map((biome): typeof biome => {
+          const topology = biome.topology;
+          return biome.biomeKey !== 'F' || topology === null
+            ? biome
+            : {
+                ...biome,
+                topology: {
+                  ...topology,
+                  occurrences: topology.occurrences.map((candidate): typeof candidate =>
+                    candidate.occurrenceId !== shopId
+                      ? candidate
+                      : {
+                          ...candidate,
+                          roomActions: {
+                            order: [
+                              { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
+                              {
+                                kind: 'interactAcquisitionEntry',
+                                siteKey: 'roomExit',
+                                entryKey: 'echoDoubleShopReward',
+                              },
+                            ],
+                          },
+                          acquisitionSites: {
+                            ...(candidate.acquisitionSites ?? {}),
+                            roomExit: {
+                              pickupEntries: {
+                                travelDealRefill: source,
+                                echoDoubleShopReward: source,
+                              },
+                            },
+                          },
+                        },
+                  ),
+                },
+              };
+        }),
+      },
+    };
+    const result = assemble(project, 'Underworld', 'F', shopId, undefined, (candidateSite) =>
+      semanticAddressKey(candidateSite) !== semanticAddressKey(site)
+        ? []
+        : [
+            {
+              address: createAcquisitionEntryAddress(site, 'travelDealRefill'),
+              kind: 'travelDealRefill' as const,
+              sourceOfferKey: 'MajorNonBoon',
+              slotIndex: 1,
+              rewardTypes: ['RandomLoot'],
+            },
+            {
+              address: createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
+              kind: 'echoDoubleShopReward' as const,
+              sourceOfferKey: 'travelDealRefill',
+              rewardTypes: ['RandomLoot'],
+              eligibleSourceOfferKeys: ['travelDealRefill'],
+            },
+          ],
+    ).assembly.node.room;
+    const travelReference = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'roomExit' as const,
+      entryKey: 'travelDealRefill' as const,
+    };
+    const travelRow = result.roomActions?.rows.find(
+      (row) =>
+        row.reference.kind === 'interactAcquisitionEntry' &&
+        row.reference.entryKey === 'travelDealRefill',
+    );
+    const travelProposals = result.roomActions?.proposals.filter(
+      (proposal) =>
+        proposal.reference.kind === 'interactAcquisitionEntry' &&
+        proposal.reference.entryKey === 'travelDealRefill',
+    );
+    expect(travelRow?.rank).toBeNull();
+    expect(travelProposals).toHaveLength(3);
+    expect(
+      travelProposals?.map((proposal) => [
+        proposal.kind,
+        proposal.toIndex,
+        proposal.structurallyAuthorable,
+      ]),
+    ).toEqual([
+      ['insert', 0, false],
+      ['insert', 1, true],
+      ['insert', 2, true],
+    ]);
+    expect(travelProposals?.find((proposal) => proposal.structurallyAuthorable)).toMatchObject({
+      kind: 'insert',
+      reference: travelReference,
+      toIndex: 1,
+    });
+  });
 });

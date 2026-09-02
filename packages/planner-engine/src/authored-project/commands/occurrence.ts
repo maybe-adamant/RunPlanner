@@ -494,13 +494,25 @@ export function applyOccurrenceCommand(
             (r) => r.kind === 'purchaseStygianWellOffer' && r.generationKey === generation,
           )
           ? occurrence.roomActions.order
-          : [
-              ...occurrence.roomActions.order,
-              Object.freeze({
+          : (() => {
+              const reference = Object.freeze({
                 kind: 'purchaseStygianWellOffer' as const,
                 generationKey: generation,
-              }),
-            ]
+              });
+              const nextOrder = [...occurrence.roomActions.order];
+              const refillIndex = nextOrder.findIndex(
+                (r) =>
+                  r.kind === 'purchaseStygianWellOffer' && r.generationKey === 'travelDealRefill',
+              );
+              const hasInitialPurchase = nextOrder.some(
+                (r) =>
+                  r.kind === 'purchaseStygianWellOffer' && r.generationKey.startsWith('initial:'),
+              );
+              if (generation.startsWith('initial:') && !hasInitialPurchase && refillIndex >= 0)
+                nextOrder.splice(refillIndex, 0, reference);
+              else nextOrder.push(reference);
+              return nextOrder;
+            })()
         : occurrence.roomActions.order.filter(
             (r) => !(r.kind === 'purchaseStygianWellOffer' && r.generationKey === generation),
           );

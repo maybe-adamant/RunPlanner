@@ -27,6 +27,7 @@ import {
   parseSeaStarDuplicateSiteKey,
   seaStarDuplicateUsesFreshObject,
 } from './sea-star';
+import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from './shop';
 import type { RoomActionReference, RoomOccurrence } from './model';
 import {
   encounterEnvelopeSlots,
@@ -47,7 +48,12 @@ export type RoomActionWindow =
   | { readonly kind: 'shipPostCombat'; readonly wheelKey: string };
 
 export type RoomActionDependency =
-  | { readonly kind: 'afterAction'; readonly action: RoomActionReference }
+  | {
+      readonly kind: 'afterAction';
+      readonly action: RoomActionReference;
+      /** Constrains planner authoring without publishing an execution dependency. */
+      readonly authoringOnly?: true;
+    }
   | { readonly kind: 'afterCheckpoint'; readonly checkpointKey: string }
   | { readonly kind: 'beforeCheckpoint'; readonly checkpointKey: string };
 
@@ -176,6 +182,40 @@ function phaseRewardAttachment(
   )?.rewardAttachment;
 }
 
+function travelDealSourceAction(
+  occurrence: RoomOccurrence,
+  reference: RoomActionReference,
+): RoomActionReference | undefined {
+  if (
+    reference.kind === 'purchaseStygianWellOffer' &&
+    reference.generationKey === 'travelDealRefill'
+  ) {
+    return occurrence.roomActions.order.find(
+      (candidate) =>
+        candidate.kind === 'purchaseStygianWellOffer' &&
+        candidate.generationKey.startsWith('initial:'),
+    );
+  }
+  if (
+    reference.kind === 'interactAcquisitionEntry' &&
+    reference.siteKey === 'roomExit' &&
+    reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+  ) {
+    return occurrence.roomActions.order.find((candidate) => candidate.kind === 'interactShopOffer');
+  }
+  return undefined;
+}
+
+function travelDealDependencies(
+  occurrence: RoomOccurrence,
+  reference: RoomActionReference,
+): readonly RoomActionDependency[] {
+  const source = travelDealSourceAction(occurrence, reference);
+  return source === undefined
+    ? []
+    : [frozen({ kind: 'afterAction' as const, action: source, authoringOnly: true as const })];
+}
+
 function baseContribution(
   catalog: Catalog,
   biome: BiomeAddress,
@@ -208,6 +248,7 @@ function baseContribution(
         reference,
         'optional',
         frozen({ kind: 'postOutgoing' }),
+        travelDealDependencies(occurrence, reference),
       );
     case 'completeFieldsCage':
       return contribution(biome, occurrence, reference, 'required', frozen({ kind: 'fields' }));
@@ -420,9 +461,12 @@ function baseContribution(
               reference.siteKey === 'roomExit'
             ? frozen({ kind: 'postOutgoing' })
             : frozen({ kind: 'standard', phase: 'afterCombat' }),
-        producer === undefined
-          ? []
-          : [frozen({ kind: 'afterAction', action: producer.sourceAction })],
+        [
+          ...travelDealDependencies(occurrence, reference),
+          ...(producer === undefined
+            ? []
+            : [frozen({ kind: 'afterAction' as const, action: producer.sourceAction })]),
+        ],
         site === undefined
           ? actionOwner(biome, occurrence, reference)
           : createAcquisitionEntryAddress(site, reference.entryKey),

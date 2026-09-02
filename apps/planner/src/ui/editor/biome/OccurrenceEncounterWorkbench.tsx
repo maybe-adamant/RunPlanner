@@ -541,6 +541,7 @@ export function ShopWorkbench({
   ): void => {
     const proposal = actions?.proposals.find(
       (candidate) =>
+        candidate.structurallyAuthorable &&
         candidate.kind === (purchase.purchased ? 'remove' : 'insert') &&
         candidate.reference.kind === 'interactAcquisitionEntry' &&
         candidate.reference.siteKey === purchase.reference.siteKey &&

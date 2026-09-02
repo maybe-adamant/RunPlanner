@@ -379,7 +379,7 @@ export function assembleRoomActionRoster(options: {
       }),
     );
     for (const dependency of row.dependencies) {
-      if (dependency.kind !== 'afterAction') continue;
+      if (dependency.kind !== 'afterAction' || dependency.authoringOnly === true) continue;
       const after = activeByKey.get(roomActionKey(dependency.action));
       if (after === undefined) continue;
       timelineDependencies.push(frozen({ owner: row.owner, afterOwner: after.owner }));
