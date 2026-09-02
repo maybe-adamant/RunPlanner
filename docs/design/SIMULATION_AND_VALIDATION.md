@@ -1847,7 +1847,7 @@ Required categories include:
 - one golden project, canonical snapshot, history, and finding set per focused
   biome scenario;
 - complete-valid, complete-blocked, incomplete-prefix, selected-invalid,
-  retained, and upstream-blocked schema-73 fixtures across F through Q;
+  retained, and upstream-blocked schema-74 fixtures across F through Q;
 - declaration-order target creation and non-authoritative persisted decision
   order;
 - ordinary target exclusion and source-owned candidate support for every

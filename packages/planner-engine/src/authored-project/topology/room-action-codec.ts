@@ -12,7 +12,11 @@ import {
 function decodeRoomActionReference(value: unknown, path: string): RoomActionReference {
   const reference = expectRecord(value, path);
   const kind = expectString(reference.kind, `${path}.kind`);
-  if (kind === 'useFountain' || kind === 'interactKeepsakeRack') {
+  if (
+    kind === 'collectRequiredReward' ||
+    kind === 'useFountain' ||
+    kind === 'interactKeepsakeRack'
+  ) {
     expectExactKeys(reference, ['kind'], path);
     return Object.freeze({ kind });
   }

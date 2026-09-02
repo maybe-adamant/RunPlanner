@@ -284,6 +284,9 @@ the deferred payloads owned by that same Overview:
 
 - occurrence marker and game room identity;
 - incoming reward and its acquisition surface;
+- required effect-neutral boss reward presence and its end-encounter chronology
+  action, without a simulated acquisition, executor transaction, or native
+  reward-name contract;
 - encounter assembly and supported encounter-owned results;
 - required room objects;
 - resources and successful element placement;

@@ -90,7 +90,7 @@ function createGoldenEchoGiftKeepsakePendingProject(
       outcome: createTranscendentEmbryoOutcomeAddress(
         createOccurrenceAddress(
           createBiomeAddress('Underworld', 'G'),
-          createOccurrenceId('golden-g-b4-e1'),
+          createOccurrenceId('golden-g-b6-e1'),
         ),
         'Encounter',
       ),
@@ -99,8 +99,8 @@ function createGoldenEchoGiftKeepsakePendingProject(
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTranscendentEmbryoTransformation',
       outcome: createTranscendentEmbryoOutcomeAddress(
-        createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-bridge01')),
-        'Encounter',
+        createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-combat05')),
+        'Cage02',
       ),
       blessingKey: 'ChaosElementalBlessing',
     });
@@ -134,6 +134,16 @@ function createGoldenEchoGiftKeepsakePendingProject(
     occurrence: createOccurrenceAddress(goldenHBiome, forcedTargetId),
     gameName: 'H_MiniBoss02',
   });
+  if (keepsakeKey === 'RandomBlessingKeepsake') {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTranscendentEmbryoTransformation',
+      outcome: createTranscendentEmbryoOutcomeAddress(
+        createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-preboss-shop:boss')),
+        'Encounter',
+      ),
+      blessingKey: 'ChaosElementalBlessing',
+    });
+  }
   const forcedReward = createIncomingRewardAddress(goldenHBiome, forcedTargetId);
   const rewardSession = createPreparedProjectCandidateSession(
     catalog,

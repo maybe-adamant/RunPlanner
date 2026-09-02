@@ -74,6 +74,8 @@ export function occurrenceActionLabel(
       ? encounterPhases.find((candidate) => candidate.address.phaseKey === reference.phaseKey)
       : undefined;
   switch (reference.kind) {
+    case 'collectRequiredReward':
+      return 'Collect Boss Reward';
     case 'completeFieldsCage':
       return `Complete ${phase?.label ?? reference.phaseKey}`;
     case 'interactIncomingReward':

@@ -44,6 +44,7 @@ import {
 } from '../topology/query';
 import { fieldsDefaultActiveCageCount } from '../fields';
 import { createInfernalContractEntries } from '../shop';
+import { createDefaultRoomActionState } from '../room-actions';
 import {
   failCommand,
   locateBiome,
@@ -229,9 +230,7 @@ function defaultOccurrence(
         }
       : {}),
     encounters,
-    roomActions: Object.freeze({
-      order: Object.freeze(room.hasRequiredFountain ? [{ kind: 'useFountain' as const }] : []),
-    }),
+    roomActions: createDefaultRoomActionState(room),
     additionalExits: Object.freeze([]),
     ...(room.purgingPool === undefined
       ? {}

@@ -24,7 +24,7 @@ import {
   selectedOrdinaryBatchIndex,
 } from '../topology/query';
 import { applyTopologyRemovalImpact, describeTopologyRemovalImpact } from '../topologyImpact';
-import { createEmptyRoomActionState } from '../room-actions';
+import { createDefaultRoomActionState } from '../room-actions';
 import {
   failCommand,
   requireOccurrence,
@@ -546,7 +546,7 @@ function addZagreusContract(
       contractRoom,
       `occurrences.${command.occurrenceId}.encounters`,
     ),
-    roomActions: createEmptyRoomActionState(),
+    roomActions: createDefaultRoomActionState(contractRoom),
     additionalExits: Object.freeze([]),
   });
   const withContract = appendOccurrence(topology, contractOccurrence, command);
@@ -720,7 +720,7 @@ function addChaos(
       chaosRoom,
       `occurrences.${command.occurrenceId}.encounters`,
     ),
-    roomActions: createEmptyRoomActionState(),
+    roomActions: createDefaultRoomActionState(chaosRoom),
     additionalExits: Object.freeze([]),
   });
   const withChaos = appendOccurrence(topology, chaosOccurrence, command);

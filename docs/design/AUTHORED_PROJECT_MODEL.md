@@ -7,17 +7,19 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 73 Boundary
+## Schema 74 Boundary
 
-Schema 73 is the sole persisted authored-project contract. The codec rejects
+Schema 74 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
-state for a stale document. The only conversion retained at this boundary is
-the standalone schema-72-to-73 splitter: schema 72 contains two independent
-route plans, so it emits one schema-73 document for each route and applies the
+state for a stale document. The immediately preceding schema 73 has one focused
+linear migration. The older conversion retained at this boundary is the
+standalone schema-72-to-73 splitter: schema 72 contains two independent route
+plans, so it emits one schema-73 document for each route and applies the
 catalog-version boundary corrections named below.
 The accumulated 49-to-72 migration chain is retired; schema 71 and older are
-unsupported migration inputs. Future migrations begin as a new linear chain
-from schema 73. Catalog versions must match exactly at decode contact, and the
+unsupported migration inputs. The focused schema-73-to-74 migration begins the
+new linear chain by adding the required Boss Reward room action. Catalog
+versions must match exactly at decode contact, and the
 strict production decoder has no implicit stale-schema compatibility path.
 
 Schemas 46 and 47 completed the occurrence-owned topology and chronology
@@ -124,7 +126,8 @@ player actually selects a replacement. The 66-to-67 migration deletes retained
 no-op leaves and compacts replacement leaves without changing their selected
 key or immediate equip-result children.
 
-Schema 73 makes the project document single-route. Its `route` is the only
+Schema 73 made the project document single-route. Schema 74 retains that shape;
+its `route` is the only
 authored run in the file; the catalog's route collection remains the source of
 available route choices, not a persisted sibling-run collection. A schema-72
 source is split by copying each complete route subtree without choosing among
@@ -849,7 +852,7 @@ stable indented JSON with a trailing newline:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 73;
+  schemaVersion: 74;
   projectId: string;
   catalogVersion: string;
   route: AuthoredRoutePlan;

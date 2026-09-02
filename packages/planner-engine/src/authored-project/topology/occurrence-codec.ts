@@ -685,13 +685,13 @@ export function decodeRoomOccurrence(input: {
         );
     }
   }
-  const decodedRoomActions = decodeRoomActionState(
+  const roomActions = decodeRoomActionState(
     rawOccurrence.roomActions,
     `${rawOccurrence.path}.roomActions`,
   );
   assertHermesShrineDeliveryActionClosure(
     hermesShrine,
-    decodedRoomActions,
+    roomActions,
     {
       routeKey: biomeAddress.routeKey,
       biomeKey: biomeAddress.biomeKey,
@@ -707,7 +707,7 @@ export function decodeRoomOccurrence(input: {
       : { anomalyReplacement: owner.anomalyReplacement }),
     state,
     encounters,
-    roomActions: decodedRoomActions,
+    roomActions,
     ...(hermesShrine === undefined ? {} : { hermesShrine }),
     ...(stygianWell === undefined ? {} : { stygianWell }),
     ...(fountainRarityResult === undefined ? {} : { fountainRarityResult }),
@@ -783,7 +783,7 @@ export function decodeRoomOccurrence(input: {
       entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
     });
     if (
-      decodedRoomActions.order.filter(
+      roomActions.order.filter(
         (reference) => roomActionKey(reference) === roomActionKey(expectedAction),
       ).length !== 1
     )

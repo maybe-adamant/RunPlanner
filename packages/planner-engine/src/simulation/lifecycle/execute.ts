@@ -619,6 +619,10 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
   ): ExecutionState => {
     const operationContext = { ...context, operationIndex };
     switch (row.reference.kind) {
+      case 'collectRequiredReward':
+        // Native room completion owns this mandatory pickup. It participates
+        // in authored chronology but intentionally mutates no simulated state.
+        return state;
       case 'interactLocalReward':
         return appendEvent(state, operationContext, {
           kind: 'acquisitionPointReached',

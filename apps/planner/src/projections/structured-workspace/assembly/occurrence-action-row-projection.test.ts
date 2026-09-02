@@ -31,6 +31,31 @@ import {
 import { occurrenceActionLabel } from './occurrence-action-label';
 
 describe('structured workspace actions assembly', () => {
+  it('shows the simulation-neutral Boss pickup as a required end-encounter action', () => {
+    const project = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
+    const { assembly } = assemble(
+      project,
+      'Underworld',
+      'F',
+      createOccurrenceId('golden-f-preboss-shop:boss'),
+    );
+    const roomActions = assembly.node.room.roomActions;
+    const collect = roomActions?.rows.find((row) => row.reference.kind === 'collectRequiredReward');
+    const entries = roomActions?.timeline.entries ?? [];
+    const entryKeys = entries.map((entry) =>
+      entry.kind === 'boundary' ? entry.label : entry.kind === 'action' ? entry.actionKey : '',
+    );
+
+    expect(collect).toMatchObject({
+      label: 'Collect Boss Reward',
+      participation: 'required',
+      window: { kind: 'standard', phase: 'afterCombat' },
+    });
+    if (collect === undefined) throw new Error('expected the Boss reward action');
+    expect(entryKeys.indexOf('End encounter')).toBeLessThan(entryKeys.indexOf(collect.key));
+    expect(entryKeys.indexOf(collect.key)).toBeLessThan(entryKeys.indexOf('Cleanup · Doors open'));
+  });
+
   it('labels a stale Shrine delivery without exposing its persisted entry key', () => {
     const entryKey = hermesShrineDeliveryEntryKey(
       createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),

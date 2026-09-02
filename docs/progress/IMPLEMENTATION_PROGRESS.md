@@ -11,8 +11,8 @@ the active frontier needed to orient the next delivery.
 
 ## Current Snapshot
 
-The current persisted contract is strict authored schema 73 with catalog
-`0.53.0-chaos-return-batches`. Each project contains one selected route;
+The current persisted contract is strict authored schema 74 with catalog
+`0.54.0-required-boss-rewards`. Each project contains one selected route;
 the browser product supports the eight catalog biomes across the two current
 route choices:
 
@@ -44,8 +44,9 @@ runtime auditor; it is not a second planner or simulator.
 
 ## Active Frontier and Blockers
 
-The single-route project delivery is complete. Schema 73, its focused
-schema-72 splitter, no-project startup, catalog-driven route choice, singular
+The single-route project delivery is complete. Schema 74, its focused
+schema-73 migration, the retained schema-72 splitter, no-project startup,
+catalog-driven route choice, singular
 evaluation/workspace pipeline, and owning product witnesses are closed with no
 recorded blocker.
 
@@ -97,9 +98,10 @@ milestones without repeating the delivery chronology.
 | Schema 67          | Sparse Postboss Keepsake Rack changes: declaration-owned availability, explicit add/change/delete, and no authored retain no-op.                                                         |
 | Schema 68          | Boss and Postboss completion rooms became ordinary topology occurrences connected by fixed links; unreachable terminal I/Q Postboss drafts retired.                                      |
 | Schema 73          | Each project became a single selected-route document; the legacy schema-72 dual-route shape is converted by a lossless two-document splitter, and the older migration chain was retired. |
+| Schema 74          | Each project now persists the required Boss Reward chronology action; schema 73 migrates through one focused linear step.                                                                |
 
 Catalog versions advanced alongside these boundaries. The current catalog is
-`0.53.0-chaos-return-batches`; exact declaration facts and source contacts
+`0.54.0-required-boss-rewards`; exact declaration facts and source contacts
 remain in the catalog package and focused audits rather than this status
 ledger.
 

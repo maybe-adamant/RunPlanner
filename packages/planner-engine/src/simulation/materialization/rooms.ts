@@ -918,6 +918,7 @@ export function materializeAuthoredRoom(
     lifecycleProfileKey: leaf.lifecycleProfileKey,
     counterEffects: context.room.counters,
     entered: context.entered,
+    effectNeutralRequiredReward: context.room.effectNeutralRequiredReward,
     ...(enteredRewardStoreKey === undefined ? {} : { enteredRewardStoreKey }),
     roomActions: context.occurrence.roomActions,
     hasKeepsakeRack: context.room.hasKeepsakeRack,

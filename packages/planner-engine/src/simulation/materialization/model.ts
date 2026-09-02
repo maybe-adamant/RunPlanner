@@ -154,6 +154,8 @@ export interface CanonicalAuthoredRoom {
   readonly lifecycleProfileKey: string;
   readonly counterEffects: RoomCounterEffects;
   readonly entered: boolean;
+  /** Declaration-owned required pickup that does not mutate simulated state. */
+  readonly effectNeutralRequiredReward: boolean;
   /** Declaration-fixed completion rooms inherit selected Preboss reward-store provenance. */
   readonly enteredRewardStoreKey?: string;
   /** Persisted occurrence chronology and its sole derived roster product. */

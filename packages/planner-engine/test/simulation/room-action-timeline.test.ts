@@ -305,7 +305,12 @@ describe('room lifecycle timeline', () => {
     expect(keys.indexOf('encounterEnd')).toBeLessThan(keys.indexOf(after.key));
   });
 
-  it('keeps a matured Shrine delivery after Boss defeat and encounter end', () => {
+  it('keeps the required Boss pickup and matured Shrine delivery in authored action order', () => {
+    const collect = rankedRow(
+      { kind: 'collectRequiredReward' },
+      { kind: 'standard', phase: 'afterCombat' },
+      1,
+    );
     const delivery = rankedRow(
       {
         kind: 'interactAcquisitionEntry',
@@ -314,13 +319,29 @@ describe('room lifecycle timeline', () => {
         encounterPhaseKey: 'Encounter',
       },
       { kind: 'encounterEnd', phaseKey: 'Encounter' },
-      1,
+      2,
     );
     const timeline = assembleRoomLifecycleTimeline({
       owner,
       lifecycleProfileKey: 'BossRoom',
       encounterPhases: Object.freeze([encounter('Encounter')]),
-      roomActionRoster: roster({ rows: Object.freeze([delivery]) }),
+      roomActionRoster: roster({
+        rows: Object.freeze([collect, delivery]),
+        checkpoints: Object.freeze([
+          Object.freeze({
+            checkpointKey: 'outgoingGeneration',
+            label: 'Outgoing generation',
+            window: Object.freeze({ kind: 'standard' as const, phase: 'afterCombat' as const }),
+            afterRank: 2,
+          }),
+          Object.freeze({
+            checkpointKey: 'exitUsable',
+            label: 'Exit usable',
+            window: Object.freeze({ kind: 'standard' as const, phase: 'afterCombat' as const }),
+            afterRank: 2,
+          }),
+        ]),
+      }),
     });
     const keys = timeline.entries.map((entry) =>
       entry.kind === 'action' ? entry.action.key : entry.boundary.kind,
@@ -331,6 +352,7 @@ describe('room lifecycle timeline', () => {
       'encounterStart',
       'bossDefeated',
       'encounterEnd',
+      collect.key,
       delivery.key,
       'cleanup',
     ]);

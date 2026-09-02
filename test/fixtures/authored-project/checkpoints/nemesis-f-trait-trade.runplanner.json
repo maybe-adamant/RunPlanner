@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 73,
+  "schemaVersion": 74,
   "projectId": "golden-fg",
-  "catalogVersion": "0.53.0-chaos-return-batches",
+  "catalogVersion": "0.54.0-required-boss-rewards",
   "route": {
     "routeKey": "Underworld",
     "resourcePlacements": {
@@ -1107,7 +1107,11 @@
                 "gorgonResultByPhase": {}
               },
               "roomActions": {
-                "order": []
+                "order": [
+                  {
+                    "kind": "collectRequiredReward"
+                  }
+                ]
               },
               "additionalExits": []
             },
@@ -2298,7 +2302,11 @@
                 "gorgonResultByPhase": {}
               },
               "roomActions": {
-                "order": []
+                "order": [
+                  {
+                    "kind": "collectRequiredReward"
+                  }
+                ]
               },
               "additionalExits": []
             },
@@ -3550,7 +3558,11 @@
                 "gorgonResultByPhase": {}
               },
               "roomActions": {
-                "order": []
+                "order": [
+                  {
+                    "kind": "collectRequiredReward"
+                  }
+                ]
               },
               "additionalExits": []
             },
@@ -4132,7 +4144,11 @@
                 "gorgonResultByPhase": {}
               },
               "roomActions": {
-                "order": []
+                "order": [
+                  {
+                    "kind": "collectRequiredReward"
+                  }
+                ]
               },
               "additionalExits": []
             }

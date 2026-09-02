@@ -691,6 +691,8 @@ export interface RoomDeclaration {
   readonly exits: readonly RoomExit[];
   readonly additionalExits: readonly AdditionalExitDeclaration[];
   readonly incomingReward: RewardProducerBinding;
+  /** A real required pickup whose payload is intentionally outside simulated state. */
+  readonly effectNeutralRequiredReward: boolean;
   /** Declaration-owned binding for the reward surface exposed by this room. */
   readonly offerRewardBinding: RoomOfferRewardBinding;
   /** The normalized room declaration flag that suppresses Gift trait offers. */

@@ -202,6 +202,23 @@ function selectedTransactionPair(product: ExecutionSemanticProduct): {
 }
 
 describe('protocol-v10 compiler and codec', () => {
+  it('publishes boss rewards as required but simulation-neutral native outcomes', () => {
+    const { plan } = planFor(createCompleteFGProject());
+    const bosses = plan.occurrences.filter((occurrence) =>
+      occurrence.overview.encounterPhases.some((phase) => phase.kind === 'boss'),
+    );
+
+    expect(bosses.map((boss) => boss.gameName)).toEqual(['F_Boss01', 'G_Boss01']);
+    expect(bosses.every((boss) => boss.overview.effectNeutralRequiredReward === true)).toBe(true);
+    expect(
+      bosses.every((boss) =>
+        boss.timeline.transactions.every(
+          (transaction) => !transaction.owner.includes('collectRequiredReward'),
+        ),
+      ),
+    ).toBe(true);
+  });
+
   it('accepts forced-shortage trait screens without permitting a missing selection', () => {
     const offer = {
       kind: 'traits',

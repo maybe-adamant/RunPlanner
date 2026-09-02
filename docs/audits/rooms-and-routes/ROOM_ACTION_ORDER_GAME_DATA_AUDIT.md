@@ -450,6 +450,11 @@ required-object barrier clears, `UnlockRoomExits` calls
 ordinary boss resources and Dream Points are real required pickups, but they
 are effect-neutral to the current planner: they do not enter run state,
 reward bags, god pools, trait, keepsake, Arcana, or route eligibility.
+The planner therefore retains `Collect Boss Reward` as a required room action
+in the end-encounter window while leaving its native resource identity and
+quantity unmodeled. It is not a lifecycle boundary: it shares that action
+window with matured Hermes deliveries and follows the authored order among
+them.
 
 One source edge is worth retaining because it explains the boundary without
 adding a special rule. Hermes's `MoneyMultiplierBoon` (Quick Buck), when

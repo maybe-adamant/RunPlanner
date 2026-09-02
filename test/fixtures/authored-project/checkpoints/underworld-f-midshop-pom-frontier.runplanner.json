@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 73,
+  "schemaVersion": 74,
   "projectId": "midshop-pom-frontier",
-  "catalogVersion": "0.53.0-chaos-return-batches",
+  "catalogVersion": "0.54.0-required-boss-rewards",
   "route": {
     "routeKey": "Underworld",
     "resourcePlacements": {

@@ -22,6 +22,7 @@ export function roomActionKey(reference: RoomActionReference): string {
       return JSON.stringify([reference.kind, reference.slotKey]);
     case 'interactAcquisitionEntry':
       return JSON.stringify([reference.kind, reference.siteKey, reference.entryKey]);
+    case 'collectRequiredReward':
     case 'useFountain':
     case 'interactKeepsakeRack':
       return JSON.stringify([reference.kind]);

@@ -8,7 +8,7 @@ import type { RuntimeOfferAvailabilityContact } from '../simulation/runtime-offe
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
 export const EXECUTION_PROTOCOL_VERSION = 10 as const;
-export const EXECUTION_CATALOG_VERSION = '0.53.0-chaos-return-batches' as const;
+export const EXECUTION_CATALOG_VERSION = '0.54.0-required-boss-rewards' as const;
 
 export type ExecutionRunStateCount =
   | { readonly kind: 'exact'; readonly count: number }
@@ -243,6 +243,8 @@ export interface ExecutionStartingKeepsake {
 
 export interface ExecutionOverview {
   readonly incomingReward?: ExecutionReward;
+  /** Preserve the room's native required reward without treating it as a simulated acquisition. */
+  readonly effectNeutralRequiredReward?: true;
   readonly encounterPhases: readonly {
     readonly slotKey: string;
     readonly encounterKey: string;
