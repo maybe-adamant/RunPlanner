@@ -13,6 +13,13 @@ v10 still has no external consumer, so Gate A.2 corrected v10 in place without
 a compatibility path or version bump. Its five checked-in execution fixtures
 are the exact Gate B input authority.
 
+Gate B subsequently completed the room-session cutover. Live Gate C probing
+was suspended on 2026-09-02 after it exposed incomplete cross-carrier and
+special-effect coverage rather than another coordinator defect. The successor
+[Layered Game Execution Coverage Plan](GAME_EXECUTION_LAYERED_COVERAGE_PLAN.md)
+supersedes Gate C and owns the remaining execution closure. Gate D remains
+blocked until that successor closes.
+
 Starting authorities and commits:
 
 - Run Planner: `cd63aff8b3a052fd914a7f593ed990e2cddf9556`
