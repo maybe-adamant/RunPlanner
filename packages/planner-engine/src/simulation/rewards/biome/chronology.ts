@@ -1314,6 +1314,7 @@ export function evaluateBiomeRewardChronology(
           enteredBiomeCount + 1,
         );
         branches = transition.branches;
+        recordTimelineFacts(transition.timelineFacts);
         if (transition.keepsakeSelectionCandidate !== undefined)
           keepsakeSelectionContexts.set(
             transition.keepsakeSelectionCandidate.key,

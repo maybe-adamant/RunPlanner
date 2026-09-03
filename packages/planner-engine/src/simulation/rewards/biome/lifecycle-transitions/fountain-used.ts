@@ -36,23 +36,9 @@ export function applyFountainUsedTransition(
   branches: readonly RewardBranchState[],
 ): FountainUsedTransition {
   const outcome = createFountainRarityOutcomeAddress(event.owner);
-  const fountain = room?.roomActionRoster?.rows.find(
-    (row) => !row.stale && row.rank !== null && row.reference.kind === 'useFountain',
-  );
-  const rack = room?.roomActionRoster?.rows.find(
-    (row) =>
-      !row.stale &&
-      row.rank !== null &&
-      row.reference.kind === 'interactKeepsakeRack' &&
-      fountain !== undefined &&
-      row.rank < fountain.rank!,
-  );
   const timelineFacts: PlannerTimelineFacts = Object.freeze({
     nodes: Object.freeze([Object.freeze({ owner: event.owner, included: true, required: true })]),
-    dependencies:
-      rack === undefined
-        ? Object.freeze([])
-        : Object.freeze([Object.freeze({ owner: event.owner, afterOwner: rack.owner })]),
+    dependencies: Object.freeze([]),
   });
   const frontiers = branches.map((branch) => {
     const targets = assessPhialTraitTargets(

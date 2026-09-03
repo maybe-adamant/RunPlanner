@@ -23,6 +23,7 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createEncounterPhaseAddress,
+  createFountainRarityOutcomeAddress,
   createKeepsakeEquipResultAddress,
   createLevelResolutionAddress,
   createNemesisRandomEventAddress,
@@ -252,6 +253,37 @@ function rackBeforeFountainProject(jeweledPomTraitKey = 'HadesLifestealBoon') {
     value: { traitKey: jeweledPomTraitKey },
   });
   return authorLegalTraitOffers(project);
+}
+
+function postbossKeepsakeOrderProject(
+  keepsakeKey: 'FountainRarityKeepsake' | 'GoldifyKeepsake',
+  rackIndex: 0 | 1,
+) {
+  const occurrenceId = createOccurrenceId('golden-f-preboss-shop:postboss');
+  const occurrence = createOccurrenceAddress(goldenFBiome, occurrenceId);
+  let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+    kind: 'ReplacePostbossKeepsake',
+    selection: createPostbossKeepsakeSelectionAddress(occurrence),
+    keepsakeKey,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'MoveRoomAction',
+    action: createRoomActionAddress(
+      goldenFBiome,
+      occurrenceId,
+      roomActionKey({ kind: 'interactKeepsakeRack' }),
+    ),
+    toIndex: rackIndex,
+  });
+  if (keepsakeKey === 'FountainRarityKeepsake' && rackIndex === 0)
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFountainRarityTarget',
+      outcome: createFountainRarityOutcomeAddress(
+        createRoomActionAddress(goldenFBiome, occurrenceId, roomActionKey({ kind: 'useFountain' })),
+      ),
+      targetTraitKey: 'ApolloWeaponBoon',
+    });
+  return fOnlyProject(authorLegalTraitOffers(project));
 }
 
 function directJeweledPomFallbackProject() {
@@ -960,8 +992,25 @@ describe('engine-owned F/G execution semantic product', () => {
   });
 
   it('publishes the sparse F/G mutation edges and checkpoints', () => {
-    const rack = productFor(rackBeforeFountainProject());
-    const postboss = rack.occurrences.find((occurrence) => occurrence.gameName === 'F_PostBoss01');
+    const unrelated = productFor(postbossKeepsakeOrderProject('GoldifyKeepsake', 0));
+    const unrelatedPostboss = unrelated.occurrences.find(
+      (occurrence) => occurrence.gameName === 'F_PostBoss01',
+    );
+    const unrelatedRack = unrelatedPostboss?.timeline.transactions.find(
+      (transaction) => transaction.kind === 'keepsakeChange',
+    );
+    const unrelatedFountain = unrelatedPostboss?.timeline.transactions.find(
+      (transaction) => transaction.kind === 'fountainUse',
+    );
+    expect(unrelatedPostboss?.timeline.dependencies).not.toContainEqual({
+      owner: unrelatedFountain?.owner,
+      afterOwner: unrelatedRack?.owner,
+    });
+
+    const rackBefore = productFor(postbossKeepsakeOrderProject('FountainRarityKeepsake', 0));
+    const postboss = rackBefore.occurrences.find(
+      (occurrence) => occurrence.gameName === 'F_PostBoss01',
+    );
     expect(postboss).toBeDefined();
     const rackTransaction = postboss?.timeline.transactions.find(
       (transaction) => transaction.kind === 'keepsakeChange',
@@ -974,6 +1023,21 @@ describe('engine-owned F/G execution semantic product', () => {
     expect(postboss?.timeline.dependencies).toContainEqual({
       owner: fountainTransaction?.owner,
       afterOwner: rackTransaction?.owner,
+    });
+
+    const fountainBefore = productFor(postbossKeepsakeOrderProject('FountainRarityKeepsake', 1));
+    const reversePostboss = fountainBefore.occurrences.find(
+      (occurrence) => occurrence.gameName === 'F_PostBoss01',
+    );
+    const reverseRack = reversePostboss?.timeline.transactions.find(
+      (transaction) => transaction.kind === 'keepsakeChange',
+    );
+    const reverseFountain = reversePostboss?.timeline.transactions.find(
+      (transaction) => transaction.kind === 'fountainUse',
+    );
+    expect(reversePostboss?.timeline.dependencies).toContainEqual({
+      owner: reverseRack?.owner,
+      afterOwner: reverseFountain?.owner,
     });
 
     const pool = productFor(authorLegalTraitOffers(createUnderworldFPoolCheckpoint()));
