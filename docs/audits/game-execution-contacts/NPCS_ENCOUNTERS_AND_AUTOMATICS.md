@@ -1,0 +1,92 @@
+# NPCs, encounters, and automatic outcomes
+
+## Source index
+
+- NPC menus: `Scripts/EventLogic.lua:906-1230`
+- Encounter selection: `Scripts/RunLogic.lua:1022-1110`
+- Boss Arcana activation: `Scripts/MetaUpgradeLogic.lua:499-560`
+- Embryo and keepsake grants: `Scripts/PowersLogic.lua:4840-4910`
+- Catalog encounter declarations:
+  `packages/hades2-catalog/src/declarations/encounters/`
+- Current native contacts: `src/mods/hooks_timeline.lua` and
+  `src/mods/hooks_rooms.lua` in the Plan Executor
+
+## Trait-menu carriers
+
+NPC identity is not enough to identify a native trait-offer contact. Some NPCs
+use ordinary loot; others build bespoke menus before the generic selection
+function is reached.
+
+| Provider                         | Native offer contact                          | Current status                                                                                           |
+| -------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Arachne                          | `ArachneCostumeChoice`                        | Covered.                                                                                                 |
+| Narcissus                        | `NarcissusBenefitChoice`                      | Covered, including later generated pickups when published.                                               |
+| Medea                            | `MedeaCurseChoice`                            | Deferred route; adapter exists.                                                                          |
+| Circe                            | `CirceBlessingChoice`                         | Deferred route; adapter exists, exceptional result coverage remains separate.                            |
+| Icarus                           | `IcarusBenefitChoice`                         | Deferred route; adapter exists.                                                                          |
+| Echo                             | `EchoChoice`                                  | Deferred route; adapter exists, but each exceptional replay/result still needs its semantic transaction. |
+| Artemis, Athena, Hades, Dionysus | Ordinary loot or encounter-owned trait source | Covered only through the ordinary loot carrier reached by the encounter.                                 |
+
+The six bespoke contacts are defined in `Scripts/EventLogic.lua`. Their explicit
+adapters are intentional; a single `UseLoot` hook does not cover these menus.
+
+## Nemesis random events
+
+Nemesis uses a distinct event family rather than a trait provider menu.
+
+| Planner outcome                     | Game contact                                                              | Status                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Choose event family                 | `SpawnNemesisForRandomEvents` and `CheckAvailableTextLines`               | Covered.                                                  |
+| Free item                           | `NPCRewardDropPreProcess`, `NPCRewardDropPreProcessArgs`, `NPCRewardDrop` | Covered with NPC-consumable runtime fallback.             |
+| Gold/damage trade accept or decline | `NemesisTradeChoice`                                                      | Covered; price and damage amounts are simulation-neutral. |
+| Trait trade                         | `NemesisTradeChoice` followed by `RemoveTrait`                            | Covered for exact trait and response.                     |
+| Damage contest                      | `NemesisDamageContestTimer`                                               | Covered for success/failure only.                         |
+
+Door theft and shop theft retain their documented planner simplifications and
+are not Timeline obligations. See the Nemesis disposition in the room/route
+audits.
+
+## Encounter realization
+
+The planner publishes ordered encounter phases in each occurrence Overview.
+The game exposes single and multi-phase selection through `ChooseEncounter` and
+`SetupRoomMultipleEncountersData`. `EndEncounterEffects` identifies the
+encounter-end lifecycle window. Boss defeat is observed at `Kill` only to open
+the declared boss-defeated window.
+
+| Encounter family                                                                                               | Status                                                                                                           |
+| -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| F/G Combat, Miniboss, Story, Shop, Boss                                                                        | Covered through exact room and encounter declarations.                                                           |
+| Chaos                                                                                                          | Covered for room/encounter and its trait-pair acquisition.                                                       |
+| G Anomaly                                                                                                      | Covered as a real one-exit Anomaly occurrence, not a hidden return.                                              |
+| Zagreus Contract                                                                                               | Covered as an additional exit and encounter occurrence.                                                          |
+| Devotion                                                                                                       | Covered where its chosen/spurned acquisitions are published.                                                     |
+| P PreCombat plus room-ending encounter, H bonus encounter, N side rooms, O wheels, I goals, Q structured rooms | Deferred route; each needs biome-specific execution facts without changing the general room-session coordinator. |
+
+Enemy composition, wave counts, and Fear-modified enemy generation are not
+currently authored execution facts. They remain outside the blocking execution
+boundary even though a future first slice may expose wave count and dominant
+enemy type.
+
+## Closed automatic transaction union
+
+| Effect              | Planner trigger                     | Native contact                                                     | Status   |
+| ------------------- | ----------------------------------- | ------------------------------------------------------------------ | -------- |
+| Steady Growth       | reached encounter interval          | `AddRarityToTraits` during the published encounter-end window      | Covered. |
+| Transcendent Embryo | reached eight-encounter replacement | `AddRandomChaosBlessing` during the published encounter-end window | Covered. |
+| Judgment            | boss defeated                       | `AddRandomMetaUpgrades`                                            | Covered. |
+| Crystal Figurine    | boss defeated                       | `AddRandomMetaUpgrades` with the Figurine rarity contract          | Covered. |
+
+This is the entire protocol-v10 `automatic` union. Natural Selection, Ransoms,
+All Together, Echo results, and Circe results are not automatically covered by
+these four members. If they have authored random outcomes, they require a
+published transaction of their own or decomposition into existing acquisition,
+level, removal, or retained-state facts.
+
+## Live-witness gaps
+
+The executor has unit coverage for all four automatic shapes, but byte-product
+fixtures should not be mistaken for complete native contact evidence. Current
+fixture coverage is strongest for F/G room flow, ordinary offers, Chaos, Wells,
+and shops. Concave Stone's second offer and each future-biome NPC remain useful
+bounded live probes.
