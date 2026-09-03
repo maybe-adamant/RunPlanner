@@ -17,8 +17,9 @@ a global action cursor.
 - Reward generation: `Scripts/RewardLogic.lua:210-330`
 - Fountain: `Scripts/InteractLogic.lua:741-790`
 - Resources: `Scripts/HarvestLogic.lua:266-330`
-- Current native contacts: `src/mods/hooks_rooms.lua` and
-  `src/mods/hooks_features.lua` in the Plan Executor
+- Current native contacts: `src/mods/room/features/hooks.lua`,
+  `src/mods/room/features/inventory_hooks.lua`, and
+  `src/mods/room/timeline/feature_interactions.lua` in the Plan Executor
 
 ## Overview contacts
 
@@ -70,10 +71,17 @@ through `ChooseNextRoomData`, `IsRoomRewardEligible`, `ChooseRoomReward`, and
 their dedicated native spawning contacts. `UseExitDoor` selects the next room;
 it is not a reason to compare every native transition string.
 
+For those additional exits, Overview is the authoritative declaration that the
+feature must spawn, but Navigation owns the resulting Door. At Doors-open it
+proves the complete additional-door set and each Door's occurrence, kind, and
+destination alongside the normal Door product. Room-exit conformance checks
+only retained state caused by the feature, such as consumption of an Ixion
+charge; it does not re-prove topology.
+
 The blocking comparison boundary is:
 
 - room identity and authored Overview content after room entry;
-- normal door room/reward facts when doors open;
+- normal and additional door room/reward facts when doors open;
 - explicit required Timeline obligations at their published checkpoint.
 
 Run State frames remain diagnostics and sources for named room-exit conformance
