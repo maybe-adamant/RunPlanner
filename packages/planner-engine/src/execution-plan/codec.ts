@@ -20,6 +20,7 @@ import { diagnosticSections, expandDiagnosticFrames, wireDiagnostic } from './co
 import { equipResults } from './codec/rewards';
 import { occurrence } from './codec/occurrence';
 import { validateExecutionReferences } from './codec/references';
+import { startingLoadout } from './codec/loadout';
 
 export { ExecutionPlanCodecError };
 
@@ -55,6 +56,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
       'projectId',
       'planFingerprint',
       'routeKey',
+      'startingLoadout',
       'startingKeepsake',
       'extent',
       'selectedOccurrenceIds',
@@ -80,6 +82,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     fail('execution plan.extent.biomeKeys is unsupported');
   if (extent.terminalBiomeKey !== biomeKeys[biomeKeys.length - 1])
     fail('execution plan.extent.terminalBiomeKey disagrees with biomeKeys');
+  const decodedStartingLoadout = startingLoadout(record.startingLoadout);
   const starting = object(record.startingKeepsake, 'execution plan.startingKeepsake');
   exact(starting, ['keepsakeKey'], ['equipResults'], 'execution plan.startingKeepsake');
   const startingKeepsake: ExecutionStartingKeepsake = Object.freeze({
@@ -105,6 +108,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     projectId: stringValue(record.projectId, 'execution plan.projectId'),
     planFingerprint: stringValue(record.planFingerprint, 'execution plan.planFingerprint', 64),
     routeKey: 'Underworld' as const,
+    startingLoadout: decodedStartingLoadout,
     startingKeepsake,
     extent: Object.freeze({
       kind: 'configuredPrefix' as const,
@@ -123,6 +127,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     catalogVersion: plan.catalogVersion,
     projectId: plan.projectId,
     routeKey: plan.routeKey,
+    startingLoadout: plan.startingLoadout,
     startingKeepsake: plan.startingKeepsake,
     extent: plan.extent,
     selectedOccurrenceIds: plan.selectedOccurrenceIds,

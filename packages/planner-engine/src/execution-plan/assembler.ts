@@ -14,6 +14,7 @@ import { executionRoomOwnerKey } from './assembly/support';
 import { executionOccurrence } from './assembly/occurrence';
 import { validateExecutionProduct } from './assembly/validation';
 import { executionTimelineTransactions } from './assembly/timeline-transactions';
+import { executionStartingLoadout } from './assembly/loadout';
 import {
   createKeepsakeEquipResultAddress,
   createRouteStartKeepsakeSelectionAddress,
@@ -181,10 +182,15 @@ export function assembleExecutionProduct({
     assembly.project.route.loadout.keepsakeEquipResults,
     startingJeweledPomFallbacks,
   );
+  // Route-start state is the first captured snapshot, before any selected
+  // room's rewards can mutate the loadout-derived ledgers.
+  const openingSnapshot = biomes[0]!.rewards.runStateSnapshots[0];
+  const startingLoadout = executionStartingLoadout(assembly, openingSnapshot);
   const product = Object.freeze({
     catalogVersion: evaluation.catalogVersion,
     projectId: evaluation.projectId,
     routeKey: 'Underworld' as const,
+    startingLoadout,
     startingKeepsake: Object.freeze({
       keepsakeKey: assembly.project.route.loadout.startingKeepsakeKey,
       ...(startingEquipResults === undefined ? {} : { equipResults: startingEquipResults }),

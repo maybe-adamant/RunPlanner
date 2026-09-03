@@ -2,8 +2,8 @@
 
 ## Status
 
-Drafted on 2026-09-02 for adversarial review. Gate A has been decomposed and
-settled; the later gates remain scope outlines until they receive the same
+Drafted on 2026-09-02 for adversarial review. Gate A was completed on
+2026-09-03; the later gates remain scope outlines until they receive the same
 component-by-component review. Do not begin a gate until its components,
 ownership, native contacts, pass-through boundary, and concrete witnesses have
 been discussed, cleaned up here, and locked.
@@ -228,19 +228,20 @@ than a different native random tree.
 
 #### Component dispositions
 
-| Component         | Start-boundary disposition                                                                                                                                                  |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Weapon            | Read and compare the equipped weapon. A mismatch blocks before room realization; the executor does not equip or unlock it.                                                  |
-| Aspect            | Read and compare the equipped aspect. Except for Aspect of Selene's linked Hex initialization, aspect behavior remains native or is represented by later resolved products. |
-| Arcana            | Compare the exact active starting cards, including engine-derived automatic activation, origin, and rarity. Do not rewrite the Crossroads board.                            |
-| Fear              | Compare configured and effective ranks at their respective native start state. Downstream effects such as Forfeit, Denial, Void, and Rivals remain planner-resolved facts.  |
-| Starting keepsake | Compare the selected keepsake at `EquipKeepsake`, preserve deterministic native equip behavior, and realize any published exact immediate result.                           |
-| Aspect of Selene  | Realize and verify the linked Sky Fall spell plus its authored starting layout and modeled special-node identities at native aspect initialization.                         |
+| Component         | Start-boundary disposition                                                                                                                                                             |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Weapon            | Read and compare the equipped weapon. A mismatch stops planner realization before the opening room and delegates the run to the native game; the executor does not equip or unlock it. |
+| Aspect            | Read and compare the equipped aspect. Except for Aspect of Selene's linked Hex initialization, aspect behavior remains native or is represented by later resolved products.            |
+| Arcana            | Compare the exact active starting cards, including engine-derived automatic activation, origin, and rarity. Do not rewrite the Crossroads board.                                       |
+| Fear              | Compare configured and effective ranks at their respective native start state. Downstream effects such as Forfeit, Denial, Void, and Rivals remain planner-resolved facts.             |
+| Starting keepsake | Compare the selected keepsake at `EquipKeepsake`, preserve deterministic native equip behavior, and realize any published exact immediate result.                                      |
+| Aspect of Selene  | Realize and verify the linked Sky Fall spell plus its authored starting layout and modeled special-node identities at native aspect initialization.                                    |
 
 The route start has two bounded windows. Before native run initialization, the
 executor checks the player-selected weapon, aspect, manual Arcana
 configuration and rarities, configured Fear, and starting keepsake. A failure
-does not call the room realizer. During native initialization, the executor
+does not call the planner room realizer, but the native run still starts and
+selects its own opening room. During native initialization, the executor
 arms only the exact nested starting contacts for the selected keepsake and
 Aspect of Selene. Before the first Room Occurrence session can be armed, it
 verifies the derived active Arcana/effective Fear state and the required
@@ -292,7 +293,8 @@ Executor deliverables:
   native spell/cache setup intact;
 - verify the installed Sky Fall spell and those modeled tree dimensions after
   initialization rather than replacing the completed native spell state; and
-- stop cleanly with a loadout mismatch before partial room realization.
+- stop planner enforcement cleanly on a loadout mismatch, while allowing the
+  current native operation and the rest of the run to continue.
 
 The executor must not mutate permanent save progression, unlock weapons,
 rewrite the Crossroads Arcana board, or silently change Vows. The player may

@@ -7,7 +7,7 @@ import type { RuntimeOfferAvailabilityContact } from '../simulation/runtime-offe
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 10 as const;
+export const EXECUTION_PROTOCOL_VERSION = 11 as const;
 export const EXECUTION_CATALOG_VERSION = '0.54.0-required-boss-rewards' as const;
 
 export type ExecutionRunStateCount =
@@ -239,6 +239,32 @@ export interface ExecutionKeepsakeEquipResults {
 export interface ExecutionStartingKeepsake {
   readonly keepsakeKey: string;
   readonly equipResults?: ExecutionKeepsakeEquipResults;
+}
+
+/** Exact player-selected configuration checked before the first room session arms. */
+export interface ExecutionStartingLoadout {
+  readonly weaponKey: string;
+  readonly aspectKey: string;
+  readonly arcana: readonly {
+    readonly key: string;
+    readonly origin: 'manual' | 'automatic';
+    readonly rarity: 'Common' | 'Rare' | 'Epic' | 'Heroic';
+  }[];
+  readonly fear: {
+    readonly configuredRanks: Readonly<Record<string, number>>;
+    readonly effectiveRanks: Readonly<Record<string, number>>;
+  };
+  /** Present only for Aspect of Selene's native linked-spell initialization. */
+  readonly startingHex?: {
+    readonly spellTraitKey: 'SpellMoonBeamTrait';
+    readonly layoutKey: string;
+    readonly rareTalentKeys: readonly string[];
+    readonly epicTalentKeys: readonly string[];
+    readonly godSent?: {
+      readonly olympianTalentKey: string;
+      readonly lineageTalentKey: string;
+    };
+  };
 }
 
 export interface ExecutionOverview {
@@ -489,6 +515,7 @@ export interface ExecutionPlan {
   readonly projectId: string;
   readonly planFingerprint: string;
   readonly routeKey: 'Underworld';
+  readonly startingLoadout: ExecutionStartingLoadout;
   readonly startingKeepsake: ExecutionStartingKeepsake;
   readonly extent: {
     readonly kind: 'configuredPrefix';
@@ -505,6 +532,7 @@ export interface ExecutionSemanticProduct {
   readonly catalogVersion: string;
   readonly projectId: string;
   readonly routeKey: 'Underworld';
+  readonly startingLoadout: ExecutionStartingLoadout;
   readonly startingKeepsake: ExecutionStartingKeepsake;
   readonly extent: ExecutionPlan['extent'];
   readonly selectedOccurrenceIds: readonly string[];
