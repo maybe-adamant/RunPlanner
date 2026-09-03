@@ -3,10 +3,11 @@
 ## Status
 
 Drafted on 2026-09-02 for adversarial review. Gate A was completed on
-2026-09-03; the later gates remain scope outlines until they receive the same
-component-by-component review. Do not begin a gate until its components,
-ownership, native contacts, pass-through boundary, and concrete witnesses have
-been discussed, cleaned up here, and locked.
+2026-09-03. Gate A.2 was added and locked after the first live run exposed the
+native run-construction boundary. The later gates remain scope outlines until
+they receive the same component-by-component review. Do not begin a gate until
+its components, ownership, native contacts, pass-through boundary, and concrete
+witnesses have been discussed, cleaned up here, and locked.
 
 Starting commits:
 
@@ -338,6 +339,166 @@ Intended commits:
 - Run Planner: `feat(execution): publish starting loadout contract`
 - Plan Executor: `feat(executor): verify starting loadout contract`
 - Modpack shell: pin the completed executor commit.
+
+### Gate A.2 — Native-owned startup and post-start conformance
+
+Gate A's execution product remains authoritative and unchanged. This corrective
+gate replaces only the executor lifecycle used to consume it. A live run showed
+that the outer `StartNewRun` pre-hook cannot read a `currentRun`-domain cache:
+the game has not assigned `CurrentRun` yet, so the cache correctly returns
+`nil`. The correction must not introduce a second pre-run cache or make every
+Hex and keepsake adapter handle both cached and uncached execution.
+
+Gate A.2 starts from:
+
+- Run Planner: `1db91596`;
+- Plan Executor: `668a367`; and
+- Modpack shell: `3281dac`.
+
+#### Native lifecycle and chosen boundary
+
+The relevant native order is fixed:
+
+1. `StartNewRun` assigns a new `CurrentRun` and calls `RunStateInit`;
+2. `CreateNewHero` constructs and returns the hero;
+3. `EquipKeepsake` applies the starting keepsake and its nested result;
+4. `EquipWeaponUpgrade` applies the aspect and creates Aspect of Selene's
+   starting Hex tree;
+5. `EquipMetaUpgrades` installs the active Arcana state;
+6. `ChooseStartingRoom` creates the opening room; and
+7. `StartNewRun` returns the completed native run.
+
+`CreateNewHero` is called only by `StartNewRun`, and `CurrentRun` already exists
+when that call begins. It is therefore the stable session-attachment contact.
+`RunStateInit` is not suitable because it also runs during ordinary map load.
+
+The executor uses one run-owned session with the following lifecycle:
+
+```text
+inactive
+   | CreateNewHero
+   v
+starting
+   | StartNewRun returns
+   +-- completed loadout conforms --> synchronized
+   +-- mismatch -------------------> desynchronized
+```
+
+The `starting` phase exists only during the synchronous native `StartNewRun`
+call. It makes the decoded plan available to the exact startup contacts without
+claiming that the completed native loadout already conforms.
+
+The native realization primitives are not loadout-specific. A keepsake result
+adapter receives one exact resolved Experimental Hammer, Jeweled Pom, or
+Transcendent Embryo outcome and constrains that keepsake's ordinary native
+contact. A Hex-tree adapter receives one exact resolved spell/layout/node
+outcome and constrains the ordinary native tree contacts. Neither primitive
+knows whether its owner is the starting loadout, a later Keepsake Rack change,
+or a later Hex acquisition. Owner resolution remains outside the primitive:
+Gate A.2 supplies the starting-loadout owner, while the later owning gate may
+supply a room Timeline owner without creating another realization path.
+
+#### Realization and validation policy
+
+During `starting`, the executor may realize only outcomes it can constrain at
+an exact native contact:
+
+- Experimental Hammer's selected Hammer or exhausted result;
+- Jeweled Pom's selected Hades trait or declared runtime fallback;
+- Transcendent Embryo's selected Chaos blessing;
+- Aspect of Selene's linked spell, layout, modeled Rare/Epic identities, and
+  initial God Sent result; and
+- the published opening Room Occurrence.
+
+The opening room is intentionally optimistic. It may be realized before the
+completed loadout is known to conform. If post-start validation later fails,
+that already-created room is retained and all subsequent planner enforcement
+stops. This is the sole relaxation from Gate A's earlier requirement that a
+loadout mismatch be known before opening-room realization.
+
+After native `StartNewRun` returns, the executor performs one completed-state
+validation covering:
+
+- weapon and aspect identities;
+- exact active Arcana identities, manual/automatic origins, and rarities;
+- configured and effective Fear ranks;
+- starting keepsake identity and the exact immediate result when one was
+  published;
+- Aspect of Selene's installed spell and modeled tree dimensions; and
+- zero initial banked/invested Path points and no recorded Spell Drop use where
+  those facts are available in the Gate A contract.
+
+Success promotes the same session to `synchronized` before `StartRoom` can arm
+the opening Room Occurrence. Failure records the first mismatch and promotes it
+to `desynchronized`. A mismatch never cancels `StartNewRun`, blocks player
+input, suppresses a native callback, or causes an early return from a native
+operation. The native run remains playable and the game owns all subsequent
+behavior.
+
+#### Executor deliverables
+
+- keep the outer `StartNewRun` hook limited to opening the bounded start scope,
+  invoking native construction, performing the one final validation, reporting
+  its result, and cleaning up the scope on success or error;
+- initialize and freeze the single `CurrentRun`-owned execution session at the
+  `CreateNewHero` contact, before the native hero constructor runs;
+- represent provisional startup explicitly as `starting`; do not overload
+  `synchronized` or add an unrelated Boolean that can disagree with session
+  state;
+- let only starting-loadout contacts and starting-room realization consume a
+  `starting` session; ordinary room, Timeline, feature, and Doors adapters must
+  continue to require `synchronized`;
+- give the starting-room adapter a bounded starting-occurrence accessor rather
+  than broadening the ordinary route cursor API to provisional sessions;
+- consolidate split pre-start/post-start comparison into one completed-loadout
+  validator while retaining exact native readers and first-mismatch evidence;
+- make starting and later keepsake effects use the same run-session-backed
+  adapter and native hook. Keep Aspect of Selene on that same session contract
+  so later Hex work does not require a startup-only cache path, without
+  implementing the deferred later-Hex lifecycle here;
+- extract or retain one owner-agnostic realization function for each of the
+  keepsake-result and Hex-tree families. Starting-loadout code may select the
+  expected result but must not contain a second copy of native selection or
+  tree-construction policy;
+- retain the exact nested scopes needed to bind a random native result to its
+  owning keepsake or Hex call; and
+- remove the superseded pre-run session access, `EquipMetaUpgrades` closure
+  coordination, `startPrepared` handoff, and any nil-state branches added only
+  to tolerate the invalid outer pre-hook.
+
+Planner production, protocol v11, published fixtures, and the execution codec
+do not change in Gate A.2. The game module must not equip a weapon or aspect,
+rewrite the Arcana board, change Fear, add a general non-`CurrentRun` cache
+domain, introduce a detached execution session, or add mid-run attachment.
+
+#### Primary witnesses
+
+- the outer `StartNewRun` hook performs no cache access while `CurrentRun` is
+  absent;
+- `CreateNewHero` creates exactly one `starting` session against the newly
+  assigned `CurrentRun`;
+- Experimental Hammer, Jeweled Pom, Transcendent Embryo, and Aspect of Selene
+  realize their exact published results through their existing native contacts;
+- the keepsake-result and Hex-tree primitives accept an exact resolved outcome
+  without inspecting whether it came from a starting-loadout or Timeline owner;
+- the opening room is realized while the session is `starting`;
+- a conforming completed native loadout promotes the session before the first
+  `StartRoom` contact;
+- representative weapon/aspect, Arcana, Fear, keepsake-result, and Hex
+  mismatches return the native run, retain the opening room, and disable later
+  enforcement;
+- a missing or malformed published plan leaves every native startup contact
+  intact and does not crash;
+- an error raised by native `StartNewRun` clears the bounded start scope before
+  propagating the original error; and
+- a later rack equip uses the same session-backed keepsake adapter without a
+  startup-specific cache path.
+
+Gate A.2 is one corrective executor commit followed by one shell pin. Its
+intended commits are:
+
+- Plan Executor: `fix(executor): attach after native run creation`; and
+- Modpack shell: pin the corrected executor commit.
 
 ### Gate B — Room, reward, encounter, feature, and Doors structure
 
