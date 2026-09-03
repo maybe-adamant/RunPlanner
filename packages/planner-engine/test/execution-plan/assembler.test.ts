@@ -1024,7 +1024,10 @@ describe('engine-owned F/G execution semantic product', () => {
       (transaction) => transaction.kind === 'fountainUse',
     );
     expect(rackTransaction).toBeDefined();
-    expect(fountainTransaction).toBeDefined();
+    expect(fountainTransaction).toMatchObject({
+      kind: 'fountainUse',
+      interactionKey: 'fountain',
+    });
     expect(postboss?.timeline.dependencies).toContainEqual({
       owner: fountainTransaction?.owner,
       afterOwner: rackTransaction?.owner,
@@ -1218,6 +1221,7 @@ describe('engine-owned F/G execution semantic product', () => {
       Object.freeze({
         kind: 'fountainUse',
         owner: key(owner),
+        interactionKey: 'fountain',
         window: Object.freeze({ kind: 'standard', phase: 'afterCombat' }),
       });
     const facts: PlannerTimelineFacts = Object.freeze({

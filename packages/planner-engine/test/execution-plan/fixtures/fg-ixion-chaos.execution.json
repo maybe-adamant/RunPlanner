@@ -1,6 +1,6 @@
 {
   "format": "run-planner-execution",
-  "protocolVersion": 12,
+  "protocolVersion": 13,
   "catalogVersion": "0.54.0-required-boss-rewards",
   "projectId": "golden-fg",
   "routeKey": "Underworld",
@@ -2001,6 +2001,7 @@
           {
             "kind": "fountainUse",
             "owner": "[\"roomAction\",\"Underworld\",\"F\",\"golden-f-preboss-shop:postboss\",\"[\\\"useFountain\\\"]\"]",
+            "interactionKey": "fountain",
             "window": { "kind": "standard", "phase": "afterCombat" }
           },
           {
@@ -3498,6 +3499,7 @@
           {
             "kind": "fountainUse",
             "owner": "[\"roomAction\",\"Underworld\",\"G\",\"ixion-chaos-g-preboss-shop:postboss\",\"[\\\"useFountain\\\"]\"]",
+            "interactionKey": "fountain",
             "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
@@ -3536,5 +3538,5 @@
       }
     }
   ],
-  "planFingerprint": "78bfe427"
+  "planFingerprint": "51f8e2dc"
 }

@@ -376,10 +376,12 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
     });
   }
   if (kind === 'fountainUse') {
-    exact(record, ['kind', 'owner', 'window'], ['aromaticPhialTarget'], label);
+    exact(record, ['kind', 'owner', 'interactionKey', 'window'], ['aromaticPhialTarget'], label);
+    if (record.interactionKey !== 'fountain') fail(`${label}.interactionKey is unsupported`);
     return Object.freeze({
       kind,
       owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
+      interactionKey: 'fountain',
       window: lifecycleWindow(record.window, `${label}.window`),
       ...(record.aromaticPhialTarget === undefined
         ? {}

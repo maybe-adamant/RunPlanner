@@ -202,7 +202,7 @@ function selectedTransactionPair(product: ExecutionSemanticProduct): {
   throw new Error('fixture lacks selected cross-occurrence transaction pair');
 }
 
-describe('protocol-v12 compiler and codec', () => {
+describe('protocol-v13 compiler and codec', () => {
   it('publishes a non-default selected weapon and aspect as a verification-only start contract', () => {
     const project = authorLegalTraitOffers(
       applyProjectCommand(fOnlyProject(), catalog, {
@@ -306,6 +306,25 @@ describe('protocol-v12 compiler and codec', () => {
     const { plan } = planFor(project);
     if (fixture !== undefined) expect(decodeExecutionPlan(fixture)).toEqual(plan);
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+  });
+
+  it('requires the semantic Fountain contact on every fountain-use transaction', () => {
+    const { plan } = planFor(fOnlyProject());
+    const fountain = plan.occurrences
+      .flatMap((occurrence) => occurrence.timeline.transactions)
+      .find((transaction) => transaction.kind === 'fountainUse');
+    expect(fountain).toMatchObject({ interactionKey: 'fountain' });
+
+    const malformed = JSON.parse(encodeExecutionPlan(plan)) as {
+      occurrences: { timeline: { transactions: Record<string, unknown>[] } }[];
+    };
+    const malformedFountain = malformed.occurrences
+      .flatMap((occurrence) => occurrence.timeline.transactions)
+      .find((transaction) => transaction.kind === 'fountainUse');
+    expect(malformedFountain).toBeDefined();
+    if (malformedFountain === undefined) throw new Error('fixture lacks a Fountain interaction');
+    delete malformedFountain.interactionKey;
+    expect(() => decodeExecutionPlan(malformed)).toThrow(ExecutionPlanCodecError);
   });
 
   it('keeps diagnostic frames compact and nonblocking on the wire', () => {
