@@ -25,6 +25,9 @@ reader-facing taxonomy, not a package or runtime boundary.
   exist, where can they occur, and which effects matter to the simulation?
 - [Editor](editor/) — What source-backed terminology and cross-biome authoring
   findings should inform the editor without becoming editor architecture?
+- [Game execution contacts](game-execution-contacts/) — Through which native
+  Hades II functions are planner-modeled rewards, traits, abilities, room
+  features, and actions realized or observed?
 
 ## Audit map
 
@@ -73,6 +76,12 @@ reader-facing taxonomy, not a package or runtime boundary.
 ### Editor
 
 - [Editor UX](editor/EDITOR_UX_AUDIT.md) — Cross-biome terminology and editor-facing findings grounded in the current authoring model.
+
+### Game execution contacts
+
+- [Execution contact index](game-execution-contacts/) — Coverage vocabulary,
+  cross-family findings, and links to the focused reward, trait, loadout, NPC,
+  encounter, automatic, and room-action contact inventories.
 
 ## Cross-cutting policy
 
