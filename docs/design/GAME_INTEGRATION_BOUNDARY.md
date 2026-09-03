@@ -2,11 +2,12 @@
 
 ## Current contract
 
-Protocol v11 carries a complete-valid configured F or F/G prefix. The desktop
-publisher writes an execution-only JSON artifact to the Plan Executor's fixed
-inbox; the browser build has no publication capability. Publication is a
-start-of-run operation. The Executor cannot truthfully attach midway through a
-run, repair an edited plan, or resume enforcement after a mismatch.
+The active strict versioned protocol carries a complete-valid configured F or
+F/G prefix. The desktop publisher writes an execution-only JSON artifact to
+the Plan Executor's fixed inbox; the browser build has no publication
+capability. Publication is a start-of-run operation. The Executor cannot
+truthfully attach midway through a run, repair an edited plan, or resume
+enforcement after a mismatch.
 
 The compiler consumes the exact simulation assembly that the planner already
 validated. It does not rerun candidate policy or duplicate validation. The
@@ -156,7 +157,7 @@ fallback planning.
 
 ## Compatibility, transport, and security
 
-The transport is canonical data-only JSON with a strict protocol-v11 decoder,
+The transport is canonical data-only JSON with a strict versioned decoder,
 exact catalog compatibility, bounded collections, closed unions, and no silent
 coercion. It permits no dynamic evaluation, executable expressions, arbitrary
 paths or commands, or class reconstruction from untrusted names. Compression

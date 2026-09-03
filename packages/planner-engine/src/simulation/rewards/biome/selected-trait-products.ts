@@ -145,6 +145,7 @@ export function selectedTraitOfferProducts(
                 effectiveLevels: Object.freeze(
                   trace.levelResolutions.map((resolution) => resolution.effectiveLevel),
                 ),
+                baseRarities: trace.baseRarities,
               }),
             ),
           ),
