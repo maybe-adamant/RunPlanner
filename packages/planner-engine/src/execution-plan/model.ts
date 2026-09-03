@@ -7,7 +7,7 @@ import type { RuntimeOfferAvailabilityContact } from '../simulation/runtime-offe
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 12 as const;
+export const EXECUTION_PROTOCOL_VERSION = 13 as const;
 export const EXECUTION_CATALOG_VERSION = '0.54.0-required-boss-rewards' as const;
 
 export type ExecutionRunStateCount =
@@ -459,6 +459,7 @@ export type ExecutionTimelineTransaction =
   | {
       readonly kind: 'fountainUse';
       readonly owner: string;
+      readonly interactionKey: 'fountain';
       readonly window: ExecutionLifecycleWindow;
       readonly aromaticPhialTarget?: string;
     };

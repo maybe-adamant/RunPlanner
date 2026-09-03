@@ -183,33 +183,31 @@ boundary during their component review.
 
 ### Dormant later-route contacts still need real planner evidence
 
-A later-route semantic product may enter v11 before its route structure is
-publishable only when a planner test assembles it from a real complete-valid
-occurrence evaluation through the existing occurrence-level execution
-projection. The executor may then consume that exact payload in protocol and
-native-adapter tests. Do not fabricate an impossible F/G occurrence, add a
-test-only production builder, or enable the later route merely to manufacture
-coverage.
+A later-route semantic product may enter the active execution protocol before
+its route structure is publishable only when a planner test assembles it from a
+real complete-valid occurrence evaluation through the existing occurrence-level
+execution projection. The executor may then consume that exact payload in
+protocol and native-adapter tests. Do not fabricate an impossible F/G
+occurrence, add a test-only production builder, or enable the later route merely
+to manufacture coverage.
 
 This proves the planner-to-wire contact without claiming a live native probe.
 Live support remains deferred until the owning biome gate reaches that contact.
 
 ## Protocol policy
 
-The first schema-changing gate replaces protocol v10 with protocol v11. v11 is
-the single development protocol for this entire unclosed plan:
+Protocol v13 is the single active development protocol for this unclosed plan:
 
-- there is no v10 compatibility decoder or dual executor;
+- there is no compatibility decoder or dual executor for an earlier protocol;
 - each gate updates planner fixtures, strict Lua decode, and the modpack pin in
   lockstep before that gate is considered complete;
-- v11 may gain only the concrete closed fields and variants named by this plan;
+- a protocol change must be earned by a concrete closed field or variant named
+  by the refined gate rather than silently mutating an already-consumed shape;
 - unknown fields and union members remain rejected; and
-- v11 is not declared stable or release-ready until the final closure gate.
+- v13 is not declared stable or release-ready until the final closure gate.
 
-This avoids both silently mutating the already-consumed v10 contract and
-inventing a new protocol version for every layer. It does not authorize a
-generic `effectName`/`arguments` object or speculative placeholders for later
-features.
+This does not authorize a generic `effectName`/`arguments` object or speculative
+placeholders for later features.
 
 ## Delivery gates
 
@@ -725,10 +723,12 @@ room/
 
 `room/session.lua` becomes the real room envelope rather than a disguised
 Timeline implementation. `timeline/session.lua` owns graph readiness,
-completion, and obligations. `timeline/bindings.lua` owns exact correlation
-between native carriers and published owners. `timeline/lifecycle.lua` maps
-the decoded closed lifecycle-window union to internal capabilities and
-checkpoint behavior. It must not infer game semantics from transaction kinds.
+session-attested handles, exact native identity bindings, completion, and
+obligations. `timeline/bindings.lua` owns the private index that resolves
+published contact facts to their transaction rows; it does not own a second
+native-binding policy. `timeline/lifecycle.lua` maps the decoded closed
+lifecycle-window union to internal capabilities and checkpoint behavior. It
+must not infer game semantics from transaction kinds.
 
 Gate B.2 must remove the superseded generic Timeline state from
 `runtime_session.lua`, the generic binding half of
@@ -739,24 +739,49 @@ produce the target tree.
 
 #### Supported Timeline interface
 
-The room coordinator consumes one small semantic-free interface:
+The room coordinator owns one occurrence-scoped Timeline port. Graph storage,
+binding indexes, decoded transaction rows, and owner lookup remain private to
+that port; native hooks must not request an index namespace or inspect an
+indexed row. The port exposes one small semantic-free interface:
 
 - `prepare(occurrence)` builds exact native-binding context early enough for
   selected-room inventory such as a World Shop to be generated before formal
   room entry;
 - `enter(prepared)` promotes that exact prepared occurrence into the active
-  room session without reconstructing or broadening its bindings;
-- `bind(owner, nativeObject, detail?)` associates an exact native identity or
-  bounded subcontact with one published semantic owner;
-- `begin(owner)` succeeds only when the owner's lifecycle capability is open,
-  every declared prerequisite owner is complete, and the owner belongs to the
-  active occurrence;
-- `complete(owner, proof)` records completion only after the owning adapter has
-  verified its specific result;
+  room session without reconstructing or broadening its bindings or handles;
+- `resolve(contact)` resolves one published contact descriptor to a
+  session-attested opaque transaction handle;
+- `bind(handle, nativeObject)` associates an exact native identity with that
+  handle, while `bound(nativeObject)` recovers only that bound handle;
+- `begin(handle)` succeeds only when the handle belongs to this active
+  occurrence, its lifecycle capability is open, and every declared
+  prerequisite owner is complete; on success it returns the declared
+  transaction payload needed by the owning actuator; when that semantic owner
+  is already complete it returns a non-enforcing completed disposition rather
+  than exposing the payload or reporting a mismatch;
+- `complete(handle, proof)` records the handle's semantic owner complete only
+  after the owning adapter has verified its specific terminal result, then
+  retires every handle for that owner from further enforcement;
 - `checkpoint(name)` checks only obligations whose published deadline is that
   checkpoint; and
 - `close()` checks the final room-exit obligations and then discards all local
-  bindings, capabilities, and completed-owner state before the route advances.
+  handles, native bindings, capabilities, and completed-owner state before the
+  route advances.
+
+A contact descriptor identifies a published carrier fact such as an offer,
+generation, phase, automatic effect, role, produced child, or materialized
+role. The binding layer owns how those fields are indexed and correlated.
+Protocol v13 publishes the Fountain carrier explicitly as the required
+`interactionKey: "fountain"` field on `fountainUse`; Gate B.2 must not recover
+that contact by scanning transaction kinds. v13 strictly replaces v12 with no
+compatibility decoder.
+Hooks may construct the descriptor from their native contact, but they do not
+construct composite index keys, choose index namespaces, recover decoded rows,
+or read `.node` fields. Handles are valid only for the port that issued them;
+cross-room, stale, or fabricated handles fail through the first-mismatch
+policy. An unbound incidental native object remains native pass-through and
+does not acquire a transaction by item name, authored order, hook order, or
+"next action" fallback.
 
 The four current obligation checkpoints are `roomEntered`,
 `outgoingGeneration`, `exitUsable`, and `roomExit`. Gate B.2 must exercise all
@@ -767,12 +792,13 @@ obligation controls the deadline by which a required owner must complete.
 Every later Gate C-through-F adapter follows the same boundary:
 
 ```text
-resolve the published transaction
-→ bind its exact native carrier
-→ begin before planner-directed mutation
+resolve one published contact to a transaction handle
+→ bind that handle to its exact native carrier
+→ recover the handle from that carrier at the interaction seam
+→ begin the handle before planner-directed mutation and read its payload
 → realize or observe the adapter-specific result
 → verify that result locally
-→ complete the same semantic owner
+→ complete that same handle
 ```
 
 If binding, readiness, realization, or local proof fails, the existing
@@ -796,11 +822,29 @@ prematurely.
 - An obligation blocks only its declared checkpoint. It does not manufacture
   an ordering edge or make an earlier checkpoint fail.
 - One semantic transaction may use several native subcontacts, but those
-  subcontacts do not become independent owners. A preferred result and its
+  subcontacts do not become independent owners. Each subcontact may receive a
+  distinct handle carrying the same semantic owner, and the owning adapter may
+  retain a bounded modal/subcontact scope between native callbacks. The owner
+  completes only at its declared terminal proof. A preferred result and its
   declared runtime fallback likewise complete the same owner.
-- A native carrier may not silently rebind to a different semantic owner.
-  Repeated callbacks or bounded subcontacts for the same owner are handled by
-  that owner's adapter rather than by fuzzy matching or authored ordinals.
+- One exact handle may bind to one native carrier. Rebinding the same
+  handle/carrier pair is idempotent; binding that handle to another carrier or
+  binding one carrier to a different handle is a mismatch. Distinct declared
+  subcontacts receive distinct handles even when they share one semantic
+  owner, while resolving the same exact declared subcontact again returns the
+  same handle.
+- Repeated callbacks recover the already-bound handle. After its owner
+  completes, `begin` yields the completed disposition and the native callback
+  continues without planner enforcement. It is not treated as another action,
+  a mismatch, or an opportunity to apply the outcome twice.
+- Multi-hook carriers such as Mystery Boon purchase then acquisition, or
+  Concave Stone's primary and residual screens, reuse their published owner or
+  planner-declared dependent owners exactly as encoded. The Timeline port does
+  not infer where one semantic transaction should split or terminate, and it
+  does not model callback progression as another cursor. The owning adapter
+  identifies one authoritative binding point, begins at the native action
+  entry, retains its handle through a bounded native sequence, and requests
+  completion only after a stable terminal proof.
 - Dependencies are strictly occurrence-local. Decode continues to reject
   cross-occurrence edges, and completed owners never survive `close()`.
 - Pending effects, clocks, charges, Shrine deliveries, and other later-room
@@ -846,6 +890,15 @@ closed execution product. They must not replace or fork this Timeline runtime.
   unselected or different occurrence that cannot inherit that preparation;
 - exact native identity refusing silent rebinding to another owner while
   allowing the documented subcontacts of one owner;
+- a session-attested handle refusing use against another occurrence, and a
+  hook receiving its payload only through `begin(handle)` rather than through
+  a raw indexed transaction row;
+- one exact handle refusing a second native carrier while accepting an
+  idempotent repeat of the original binding;
+- an owner completing once, retiring all of its handles, and returning a
+  non-enforcing completed disposition on a later callback without mismatching;
+- one multi-hook transaction retaining the same semantic owner until its
+  terminal proof, without introducing callback-order matching;
 - overlapping `afterCombat` and `postOutgoing` capabilities;
 - one current phase-keyed transient contact using
   `encounterEnd:<phaseKey>` or `bossDefeated:<phaseKey>`;
@@ -868,8 +921,14 @@ outcome contact tests through this interface.
   fountain, or automatic-outcome closure assigned to Gates C through F;
 - no global action cursor, scheduler, permutation engine, event bus, semantic
   action registry, service locator, or cross-room dependency;
+- no public raw binding-index lookup, composite-key construction in hooks,
+  decoded transaction-row exposure, or direct `.node` access outside the
+  Timeline port and outcome adapters;
 - no transaction-kind inference, planner simulation, or runtime reconstruction
   of dependencies and obligations; and
+- no Timeline-owned table of native callback sequences, callback counter, or
+  per-action termination policy; those bounded native facts belong to the
+  owning action adapter;
 - no broad hook reorganization unless this gate's Timeline skeleton directly
   supersedes and deletes the old path in the same change.
 
@@ -891,6 +950,12 @@ Deliverables:
 - establish one exact carrier matrix for ordinary loot, Pom/level loot, direct
   consumables, direct random-level items, generated pickups, Mystery Boons,
   bespoke NPC menus, World Shop items, Well items, and resources;
+- for every multi-callback carrier in that matrix, record its authoritative
+  native binding point, action-entry contact, intermediate subcontacts,
+  terminal proof or finite terminal alternatives, cancel/retry behavior, and
+  whether each subcontact shares an owner or uses a planner-declared dependent
+  owner; single-callback carriers identify the same callback as entry and
+  terminal;
 - bind every materialized object/screen to its published semantic owner before
   attempting completion;
 - keep purchase/payment distinct from a later trait or level acquisition;
@@ -900,6 +965,12 @@ Deliverables:
   Mystery Boon unwrap, and later effect layers; and
 - replace carrier-specific duplicate code with a shared adapter only where the
   native inputs and completion proof are genuinely identical.
+
+Gate C must stop for adjudication if a carrier has no stable terminal proof or
+has an unbounded native callback protocol. It may move proof to a durable
+native-result checkpoint or demonstrate that the planner transaction boundary
+must change; it must not teach the Timeline runtime that carrier's callback
+sequence.
 
 Primary witnesses:
 
@@ -1204,7 +1275,7 @@ No. Exhaustive means every family has a disposition. Native pass-through,
 simulation-neutral, and deferred are valid dispositions when source-backed and
 tested at the appropriate boundary.
 
-### Does v11 become a generic future-proof schema?
+### Does v13 become a generic future-proof schema?
 
 No. It contains only concrete products required by the present catalog and
 named audits. The strict decoder continues to reject unknown fields. Later
@@ -1231,5 +1302,5 @@ has an explicit planner product or a source-backed pass-through/neutral
 disposition; every published consequential result has a native carrier and
 focused proof; F/G structural and live lanes complete without unresolved
 mismatch; dormant later-route carriers are honestly marked; the compiler and
-room session contain no semantic policy; protocol v11 is the sole active
+room session contain no semantic policy; protocol v13 is the sole active
 contract; and durable authorities have absorbed the resulting boundary.

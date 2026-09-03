@@ -376,6 +376,7 @@ export function executionTimelineTransactions(
         add({
           kind: 'fountainUse',
           owner: fountainOwner,
+          interactionKey: 'fountain',
           ...(room.fountainRarityResult === undefined
             ? {}
             : { aromaticPhialTarget: room.fountainRarityResult.targetTraitKey }),
