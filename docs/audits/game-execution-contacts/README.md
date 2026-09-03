@@ -43,6 +43,9 @@ A family is not covered when only its ordinary loot-screen carrier works.
 - [Ordinary trait-offer execution](ORDINARY_TRAIT_OFFER_EXECUTION.md) — exact
   Olympian, Hermes, and Hammer loot, screen, row-action, selection, and terminal
   contacts.
+- [Level-acquisition execution](LEVEL_ACQUISITION_EXECUTION.md) — visible Pom
+  menus and direct Pom Slice/Nectar target steering, accepted entry contacts,
+  threaded completion, and shared acquisition ownership.
 - [Keepsakes, loadout, and abilities](KEEPSAKES_LOADOUT_AND_ABILITIES.md) — all
   keepsakes, weapons, aspects, Arcana, Vows, Hexes, and tools.
 - [NPCs, encounters, and automatic outcomes](NPCS_ENCOUNTERS_AND_AUTOMATICS.md)

@@ -1039,21 +1039,50 @@ and direct-consumable carriers.
 
 #### C2 — Level outcomes
 
-- close the native Pom offer and selected-target sequence for ordinary Poms and
-  Pom Slices without manually changing trait stacks;
+- establish `room/timeline/acquisitions/` now that ordinary traits and level
+  outcomes are two concrete consumers. Move C1's complete ordinary-trait
+  vertical slice beneath that action family without changing its contract;
+  share exact producer/materialized-object correlation, not a native callback
+  or global pending action;
+- close the native Pom offer and selected-target sequence for ordinary Poms
+  without manually changing trait stacks;
+- close the separate direct random-level sequence through source-eligible
+  room-reward Nectar. Transport the exact bound handle through the native
+  consumable, begin only when `UseStoreRewardRandomStack` is reached after
+  `UseConsumableItem` guards, and complete at the non-threaded
+  `AddStackToTraits` terminal. This same carrier will accept Pom Slices after a
+  later NPC, Shop, or generated-consumable gate binds one, but C2 does not own
+  or test those producer and purchase paths;
+- keep the level adapter producer-neutral. Later NPC, Shop, Shrine, replay, and
+  transformation gates own materializing and binding their objects, then hand
+  a bound level-bearing object to this already-closed carrier;
 - steer the offered targets and authored selected target, then let native code
-  apply the level count;
+  apply the level count. Treat published `levelCount` as the final delta,
+  accounting for native `FatedPomLevelBonus` adjustment exactly once, and
+  normalize an unset native `StackNum` as level one in terminal proof. A legal
+  null Nectar target requires native confirmation that no eligible target
+  exists; otherwise it is a mismatch and native behavior continues;
 - leave ordinary-offer effective-level composition in C1. Aspect of Persephone
   and Premium Service have no separate executor adapter because the planner has
-  already folded them into that one published final value;
-- defer Nectar and other consumable-carried levels to C5 even though they reuse
-  the level terminal proof.
+  already folded them into that one published final value.
 
-Primary witnesses are an ordinary Pom and an optional Pom Slice. Planner-owned
-tests retain the Persephone/Premium Service composition matrix; the executor
-needs only a representative C1 non-default effective-level witness. Natural
-Selection follows as the separate D3 consequence slice after this carrier is
-committed.
+Primary witnesses are an ordinary Pom, a rejected `UseLoot` attempt that does
+not begin it, source-eligible room-reward Nectar with a target,
+source-eligible room-reward Nectar with no legal target, a rejected
+`UseConsumableItem` attempt that does not begin, and an unrelated native
+direct-level call with no bound role. No Pom Slice producer, purchase, or
+optional-participation witness belongs to C2. Planner-owned tests retain the
+Persephone/Premium Service composition matrix; the executor needs only a
+representative C1 non-default effective-level witness. Natural Selection
+follows as the separate D3 consequence slice after this carrier is committed.
+
+This slice uses the existing `ExecutionLevelResolution`; it adds no planner
+wire or project-schema field. Its executor commit removes `pendingLevel`, the
+visible/direct level branches, and their generic adapter helpers from the
+legacy root hook, and relocates the complete C1 ordinary-trait slice beneath
+`room/timeline/acquisitions/` without a forwarding layer. Unrelated NPC,
+transformation, Chaos, and simple-consumable branches remain for their own
+gates.
 
 #### C3 — NPC acquisitions and Mystery Boon resolution
 
@@ -1091,18 +1120,20 @@ transformation primitives are committed.
 
 - close ordinary and generated consumable binding, use, presentation, and
   stable native terminal proof;
-- reuse C2's level proof for Nectar and other direct random-level items without
-  moving their native application into a generic consumable adapter;
+- reuse C2's already-closed level adapter when a newly implemented producer
+  materializes a Pom Slice or source-eligible Nectar. Do not add level
+  application or a second level proof to the generic consumable adapter;
 - preserve producer/child identity for Quick Buck, Buried Treasure, NPC gifts,
   Echo, and other declared generated pickups while leaving each special
   producer's RNG steering to its owning later gate; and
 - apply runtime fallback only at the exact published availability contact,
   treating preferred and fallback results as the same owner.
 
-Primary witnesses are one direct consumable, one generated consumable, Nectar,
-and preferred/fallback/neither at the applicable consumable availability
-contact. Shop, Well, and Shrine inventory and purchase behavior remain Gate E;
-their later acquired objects reuse C1, C2, or C5 only after Gate E binds them.
+Primary witnesses are one simple direct consumable, one generated consumable,
+one generated direct-level consumable handed to C2, and
+preferred/fallback/neither at the applicable consumable availability contact.
+Shop, Well, and Shrine inventory and purchase behavior remain Gate E; their
+later acquired objects reuse C1, C2, or C5 only after Gate E binds them.
 
 Gate C stops if any carrier lacks a stable terminal proof or has an unbounded
 callback sequence. It may move proof to a durable native-result checkpoint or
