@@ -202,7 +202,7 @@ function selectedTransactionPair(product: ExecutionSemanticProduct): {
   throw new Error('fixture lacks selected cross-occurrence transaction pair');
 }
 
-describe('protocol-v11 compiler and codec', () => {
+describe('protocol-v12 compiler and codec', () => {
   it('publishes a non-default selected weapon and aspect as a verification-only start contract', () => {
     const project = authorLegalTraitOffers(
       applyProjectCommand(fOnlyProject(), catalog, {

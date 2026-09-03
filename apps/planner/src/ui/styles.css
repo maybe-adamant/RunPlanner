@@ -1951,6 +1951,33 @@ button:disabled {
   white-space: normal;
 }
 
+.transcendent-embryo-outcome-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+.transcendent-embryo-outcome-row > .contextual-picker {
+  min-width: 13rem;
+  grid-template-columns: auto minmax(8rem, 1fr);
+  column-gap: 6px;
+}
+
+.transcendent-embryo-rarity {
+  white-space: nowrap;
+}
+
+.transcendent-embryo-outcome-row > .field-control:not(.contextual-picker) {
+  display: grid;
+  min-width: 9rem;
+  align-items: center;
+  gap: 6px;
+  grid-template-columns: auto minmax(4.5rem, 1fr);
+  white-space: nowrap;
+}
+
 .room-timeline-effect-row > .field-control {
   grid-column: 1 / -1;
 }

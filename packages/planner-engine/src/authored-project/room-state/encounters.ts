@@ -1,6 +1,10 @@
 import type { Catalog, EncounterSlotBinding, RoomDeclaration } from '../../catalog-schema';
 import type { AuthoredNemesisRandomEventOutcome, RoomEncounterState } from '../model';
-import type { AuthoredTraitOffer } from '../traits';
+import {
+  normalizeAuthoredTranscendentEmbryoOutcome,
+  type AuthoredTraitOffer,
+  type AuthoredTranscendentEmbryoOutcome,
+} from '../traits';
 import {
   expectArray,
   expectBoolean,
@@ -156,7 +160,7 @@ export function decodeRoomEncounterState(
       );
     }
   }
-  const transcendentEmbryoBlessingByPhase: Record<string, string> = {};
+  const transcendentEmbryoBlessingByPhase: Record<string, AuthoredTranscendentEmbryoOutcome> = {};
   if (state.transcendentEmbryoBlessingByPhase !== undefined) {
     const values = expectRecord(
       state.transcendentEmbryoBlessingByPhase,
@@ -168,19 +172,43 @@ export function decodeRoomEncounterState(
           `${path}.transcendentEmbryoBlessingByPhase.${phaseKey}`,
           'unknown encounter phase',
         );
-      const blessingKey = expectNonBlankString(
-        value,
+      const outcome = expectRecord(value, `${path}.transcendentEmbryoBlessingByPhase.${phaseKey}`);
+      expectExactKeys(
+        outcome,
+        ['blessingKey', 'blessingValues'],
         `${path}.transcendentEmbryoBlessingByPhase.${phaseKey}`,
       );
-      if (
-        catalog.chaos.blessings.byKey[blessingKey] === undefined ||
-        catalog.chaos.blessings.byKey[blessingKey]?.fixedRarity !== undefined
-      )
-        failProjectDocument(
-          `${path}.transcendentEmbryoBlessingByPhase.${phaseKey}`,
-          'must be a declared in-run Chaos blessing',
+      const blessingKey = expectNonBlankString(
+        outcome.blessingKey,
+        `${path}.transcendentEmbryoBlessingByPhase.${phaseKey}.blessingKey`,
+      );
+      const rawValues = expectRecord(
+        outcome.blessingValues,
+        `${path}.transcendentEmbryoBlessingByPhase.${phaseKey}.blessingValues`,
+      );
+      const blessingValues: Record<string, number> = {};
+      for (const [key, rawValue] of Object.entries(rawValues)) {
+        if (typeof rawValue !== 'number' || !Number.isFinite(rawValue))
+          failProjectDocument(
+            `${path}.transcendentEmbryoBlessingByPhase.${phaseKey}.blessingValues.${key}`,
+            'must be a finite number',
+          );
+        blessingValues[key] = rawValue;
+      }
+      try {
+        transcendentEmbryoBlessingByPhase[phaseKey] = normalizeAuthoredTranscendentEmbryoOutcome(
+          catalog,
+          {
+            blessingKey,
+            blessingValues,
+          },
         );
-      transcendentEmbryoBlessingByPhase[phaseKey] = blessingKey;
+      } catch (error) {
+        failProjectDocument(
+          `${path}.transcendentEmbryoBlessingByPhase.${phaseKey}.blessingValues`,
+          error instanceof Error ? error.message : 'has invalid declared operand values',
+        );
+      }
     }
   }
   const gorgonResultByPhase = decodeGorgonPhaseResults(

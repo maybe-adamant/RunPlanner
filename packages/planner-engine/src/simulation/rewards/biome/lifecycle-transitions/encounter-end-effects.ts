@@ -32,9 +32,9 @@ import {
   advanceTranscendentEmbryoProgress,
   replaceTranscendentEmbryoBlessing,
   transcendentEmbryoBlessingKeys,
-  transcendentEmbryoBlessingValues,
   type ReachedTranscendentEmbryoThreshold,
 } from '../../../keepsakes';
+import type { AuthoredTranscendentEmbryoOutcome } from '../../../../authored-project/traits';
 import type { DerivedAcquisitionEntryFrontier } from '../../acquisition-settlement';
 import type { RewardBranchState } from '../../branch-primitives';
 import { advanceRewardBranches } from '../../processing';
@@ -212,7 +212,7 @@ function advanceTranscendentEmbryoAt(
   branches: readonly RewardBranchState[],
   owner: TranscendentEmbryoOutcomeAddress['owner'],
   phaseKey: string,
-  targetBlessingKey: string | null | undefined,
+  targetOutcome: AuthoredTranscendentEmbryoOutcome | null | undefined,
   sequence: number,
   routeKey: string,
   aspectKey: string,
@@ -222,7 +222,7 @@ function advanceTranscendentEmbryoAt(
     readonly address: TranscendentEmbryoOutcomeAddress;
     readonly branch: RewardBranchState;
     readonly threshold: ReachedTranscendentEmbryoThreshold;
-    readonly targetBlessingKey: string | null | undefined;
+    readonly targetOutcome: AuthoredTranscendentEmbryoOutcome | null | undefined;
   }[];
   readonly thresholds: readonly {
     readonly address: TranscendentEmbryoOutcomeAddress;
@@ -234,7 +234,7 @@ function advanceTranscendentEmbryoAt(
     readonly address: TranscendentEmbryoOutcomeAddress;
     readonly branch: RewardBranchState;
     readonly threshold: ReachedTranscendentEmbryoThreshold;
-    readonly targetBlessingKey: string | null | undefined;
+    readonly targetOutcome: AuthoredTranscendentEmbryoOutcome | null | undefined;
   }[] = [];
   const thresholds: {
     readonly address: TranscendentEmbryoOutcomeAddress;
@@ -268,18 +268,14 @@ function advanceTranscendentEmbryoAt(
       ),
     });
     thresholds.push(Object.freeze({ address, threshold }));
-    const assessment = assessTranscendentEmbryoTransformation(
-      catalog,
-      threshold,
-      targetBlessingKey,
-    );
+    const assessment = assessTranscendentEmbryoTransformation(catalog, threshold, targetOutcome);
     if (!assessment.legal) {
       blocked.push(
         Object.freeze({
           address,
           branch: Object.freeze({ ...branch, keepsakes: progressed.state }),
           threshold,
-          targetBlessingKey,
+          targetOutcome,
         }),
       );
       continue;
@@ -306,13 +302,9 @@ function advanceTranscendentEmbryoAt(
         sequence,
         acquisitionPoint: 'encounterEndEffectsApplied',
         acquisitionIdentity,
-        blessingKey: assessment.blessingKey,
+        blessingKey: assessment.value!.blessingKey,
         rarity: source.rarity,
-        blessingValues: transcendentEmbryoBlessingValues(
-          catalog,
-          assessment.blessingKey,
-          source.rarity,
-        ),
+        blessingValues: assessment.value!.blessingValues,
       }),
     ]);
     next.push(
@@ -320,7 +312,7 @@ function advanceTranscendentEmbryoAt(
         ...branch,
         keepsakes: replaceTranscendentEmbryoBlessing(
           progressed.state,
-          assessment.blessingKey,
+          assessment.value!,
           acquisitionIdentity,
         ),
         history: attachTraitHistory(branch.history, traitHistory),
@@ -539,7 +531,7 @@ export function applyEncounterEndEffectsTransition(
     findings.push(
       Object.freeze({
         finding: rewardFinding(
-          blocked.targetBlessingKey === undefined
+          blocked.targetOutcome === undefined
             ? 'transcendentEmbryoOutcomeMissing'
             : 'transcendentEmbryoOutcomeUnavailable',
           blocked.address,
@@ -547,9 +539,12 @@ export function applyEncounterEndEffectsTransition(
             sourceBlessingKey: blocked.threshold.source.markedBlessingKey,
             transformationRarity: blocked.threshold.source.rarity,
             eligibleBlessingKeys: blocked.threshold.eligibleBlessingKeys,
-            ...(blocked.targetBlessingKey === undefined
+            ...(blocked.targetOutcome === undefined
               ? {}
-              : { targetBlessingKey: blocked.targetBlessingKey }),
+              : {
+                  targetBlessingKey:
+                    blocked.targetOutcome === null ? null : blocked.targetOutcome.blessingKey,
+                }),
           }),
         ),
         region: ownerRegion(event.origin),

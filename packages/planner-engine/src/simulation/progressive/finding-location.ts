@@ -95,7 +95,7 @@ export function derivedAcquisitionEntryAncestor(
 export function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddress | undefined {
   if (address.kind === 'occurrence') return address;
   if (address.kind === 'fountainRarityOutcome') return occurrenceOwnerAddress(address.action);
-  if (address.kind === 'steadyGrowthOutcome') {
+  if (address.kind === 'steadyGrowthOutcome' || address.kind === 'transcendentEmbryoOutcome') {
     return address.owner.kind === 'occurrence' ? address.owner : undefined;
   }
   // A room-exit settlement finding is addressed to its atomic entry, whose
@@ -242,6 +242,7 @@ export function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
     origin.kind === 'allTogetherSet' ||
     origin.kind === 'nemesisRandomEvent' ||
     origin.kind === 'steadyGrowthOutcome' ||
+    origin.kind === 'transcendentEmbryoOutcome' ||
     origin.kind === 'acquisitionEntry' ||
     origin.kind === 'acquisitionSite'
   ) {
@@ -282,6 +283,7 @@ export function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): b
     origin.kind === 'allTogetherSet' ||
     origin.kind === 'nemesisRandomEvent' ||
     origin.kind === 'steadyGrowthOutcome' ||
+    origin.kind === 'transcendentEmbryoOutcome' ||
     origin.kind === 'acquisitionEntry' ||
     origin.kind === 'acquisitionSite'
   )

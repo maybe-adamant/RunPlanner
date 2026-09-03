@@ -53,6 +53,7 @@ import {
   type FountainRarityOutcomeAddress,
   type TraitOptionKey,
   type TargetAddress,
+  type AuthoredKeepsakeEquipResults,
 } from '@run-planner/engine/authored-project';
 import type {
   AuthoredLevelResolution,
@@ -126,9 +127,10 @@ export interface CandidateOptionProjection<
 
 /** Engine-derived immediate Embryo grant facts, retained beside its candidate option. */
 export interface KeepsakeEquipResultOptionProjection extends CandidateOptionProjection<string> {
+  readonly resultValue: AuthoredKeepsakeEquipResults[keyof AuthoredKeepsakeEquipResults];
   readonly transcendentEmbryoSummary?: {
     readonly rarity: import('@run-planner/engine/catalog-schema').InRunTraitRarity;
-    readonly operands: readonly { readonly label: string; readonly value: number }[];
+    readonly operands: readonly import('@run-planner/engine/catalog-schema').ChaosNumericOperand[];
   };
 }
 
@@ -292,7 +294,7 @@ export interface CandidateProjectionSession {
     | import('@run-planner/engine/simulation').CandidateContextUnavailable;
   readonly transcendentEmbryoOutcome: (
     owner: TranscendentEmbryoOutcomeAddress,
-    blessingKey: string | null | undefined,
+    outcome: AuthoredKeepsakeEquipResults['transcendentEmbryo'] | null | undefined,
   ) =>
     | EvaluatedTranscendentEmbryoOutcomeCandidate
     | import('@run-planner/engine/simulation').CandidateContextUnavailable;

@@ -252,8 +252,9 @@ export function executionTimelineTransactions(
           effect: 'transcendentEmbryo',
           phaseKey: timeline.phaseKey,
           source: outcome.sourceBlessingKey,
-          target: selected,
+          target: selected.blessingKey,
           rarity: rarities[0]!,
+          blessingValues: selected.blessingValues,
           window: Object.freeze({ kind: 'encounterEnd', phaseKey: timeline.phaseKey }),
         });
       }

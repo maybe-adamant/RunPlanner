@@ -8,6 +8,7 @@ import {
   semanticAddressKey,
   createDefaultAuthoredHexTree,
   transitionAuthoredHexTreeLayout,
+  chaosOperandAuthoringValues,
 } from '@run-planner/engine/authored-project';
 import type {
   AuthoredCirceResolution,
@@ -48,28 +49,6 @@ import type {
   WorkspaceChaosOfferInteraction,
   WorkspaceHexTreeInteraction,
 } from '../contract';
-
-function chaosOperandDefault(
-  operand: import('@run-planner/engine/catalog-schema').ChaosNumericOperand,
-  rarity?: TraitRarity,
-): number {
-  return rarity === undefined
-    ? operand.authoringDefault
-    : (operand.byRarity?.[
-        rarity as Extract<TraitRarity, 'Common' | 'Rare' | 'Epic' | 'Heroic' | 'Legendary'>
-      ]?.authoringDefault ?? operand.authoringDefault);
-}
-
-function chaosValuesFor(
-  operands: readonly import('@run-planner/engine/catalog-schema').ChaosNumericOperand[],
-  rarity?: TraitRarity,
-): Readonly<Record<string, number>> {
-  return Object.freeze(
-    Object.fromEntries(
-      operands.map((operand) => [operand.key, chaosOperandDefault(operand, rarity)]),
-    ),
-  );
-}
 
 function chaosDomainFromCandidate(
   candidate: import('@run-planner/engine/simulation').ChaosOfferDomain,
@@ -245,10 +224,13 @@ export function bindTraitOfferInteractions(input: {
         giverKey: 'Chaos' as const,
         curseOptions: Object.freeze(firstOptions) as AuthoredChaosTraitOffer['curseOptions'],
         selectedOptionKey: 'option1' as const,
-        selectedCurseValues: chaosValuesFor(candidate.selectedCurseOperands),
+        selectedCurseValues: chaosOperandAuthoringValues(candidate.selectedCurseOperands),
         blessingKey: firstBlessingKey,
         rarity,
-        blessingValues: chaosValuesFor(candidate.blessingOperands[firstBlessingKey] ?? [], rarity),
+        blessingValues: chaosOperandAuthoringValues(
+          candidate.blessingOperands[firstBlessingKey] ?? [],
+          rarity,
+        ),
       });
     };
     const chaosInteraction: WorkspaceChaosOfferInteraction | undefined =

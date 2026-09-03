@@ -198,11 +198,11 @@ export function createTraitCandidateAdapters(
         outcome,
         targetTraitKey,
       }) as EvaluatedSteadyGrowthOutcomeCandidate | CandidateContextUnavailable,
-    transcendentEmbryoOutcome: (outcome, blessingKey) =>
+    transcendentEmbryoOutcome: (outcome, value) =>
       aggregateEvaluation(core, {
         kind: 'transcendentEmbryoOutcome',
         outcome,
-        blessingKey,
+        value,
       }) as EvaluatedTranscendentEmbryoOutcomeCandidate | CandidateContextUnavailable,
     fountainRarityOutcome: (outcome, targetTraitKey) =>
       aggregateEvaluation(core, {
@@ -318,6 +318,7 @@ export function createTraitCandidateAdapters(
               : 'blessingKey' in option.value
                 ? option.value.blessingKey
                 : option.value.traitKey,
+          resultValue: option.value,
           evaluation: Object.freeze({
             ...evaluation,
             result: Object.freeze({
@@ -337,6 +338,7 @@ export function createTraitCandidateAdapters(
         ...projected,
         Object.freeze({
           value: selectedKey,
+          resultValue: value,
           evaluation: Object.freeze({
             ...evaluation,
             result: Object.freeze({ ...evaluation.result, selectedPossible: false }),

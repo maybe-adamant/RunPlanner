@@ -500,6 +500,82 @@ intended commits are:
 - Plan Executor: `fix(executor): attach after native run creation`; and
 - Modpack shell: pin the corrected executor commit.
 
+### Gate A.3 — Exact Transcendent Embryo blessing outcomes
+
+Live Gate A.2 proof established that route-start Experimental Hammer, Jeweled
+Pom, Transcendent Embryo, and Aspect of Selene realization all reach their
+native contacts. It also exposed one planner under-model: every Embryo path
+persists only the Chaos blessing identity. Simulation then substitutes the
+minimum value for each operand at the derived rarity, while the executor leaves
+the native magnitude roll unconstrained. That is not an exact resolved result.
+
+This gate makes one closed Embryo outcome consist of `blessingKey` plus the
+declaration-closed `blessingValues` record. The rarity is still derived from
+the owning chronology: ordinary rank, Cherished Heirloom, Gift Gift Gift, and
+the reached transformation decide rarity exactly as they do now. Authored data
+owns only the independent within-rarity rolls. Fixed or context-derived values
+remain declaration-derived and do not become fabricated authoring controls.
+
+The same result shape applies without exceptions to:
+
+- the route-start keepsake result;
+- a Postboss Keepsake Rack result;
+- the Gift Gift Gift replay result; and
+- every reached eight-encounter transformation.
+
+Planner deliverables:
+
+- replace the identity-only equip result and phase-key transformation value
+  with one exact authored Embryo result shape;
+- validate a complete command against the selected blessing's closed operands
+  and every captured derived-rarity frontier, while preserving structurally
+  representable incomplete migrated state for contextual repair;
+- reuse the ordinary Chaos blessing operand declarations, numeric bounds,
+  stepping, normalization, and authoring defaults rather than create an
+  Embryo-specific value table;
+- show the selected derived rarity and the applicable value controls directly
+  with the existing Embryo picker at route start, rack equip, Gift replay, and
+  automatic transformation points;
+- feed the exact authored values into trait history, Creation elements, Favor
+  rarity pressure, Run State, and later eligibility instead of calling
+  `transcendentEmbryoBlessingValues` to choose rarity minima;
+- advance the project schema and provide one focused migration from schema 74
+  that preserves each recorded blessing identity with an empty value record,
+  making the unresolved magnitude visible and repairable without inventing a
+  historical random roll; and
+- advance the strict execution protocol and carry exact values on both
+  keepsake equip results and automatic Embryo transactions.
+
+Executor deliverables:
+
+- decode the closed value record at both carriers;
+- pass the exact result to the owner-agnostic Embryo realization primitive;
+- reuse the existing Chaos blessing value applier so route-start, later rack,
+  Gift replay, and automatic transformation contacts enforce identical native
+  fields; and
+- compare the realized result by blessing identity and applicable processed
+  values without re-deriving rarity or operand policy in Lua.
+
+Primary witnesses belong with their authorities:
+
+- authored command and codec coverage for zero-, one-, and two-operand
+  blessings, including rejected missing, extra, off-step, and out-of-range
+  values;
+- candidate and UI coverage that changing blessing or derived rarity restores
+  declaration-owned defaults and that a migrated empty record remains
+  repairable;
+- simulation witnesses for Creation, Favor, and one effect-neutral numeric
+  blessing using authored rather than minimum values;
+- execution codec/compiler witnesses for starting/rack/Gift results and an
+  automatic transformation; and
+- Lua contact tests showing exact one- and two-operand application through the
+  shared Chaos adapter.
+
+This gate does not author Embryo rarity, change its eight-encounter clock,
+generalize all random effects, or move Hex/keepsake code to its final feature
+directories. It is one cross-lane correction followed by an executor pin; live
+proof repeats one route-start Embryo and one reached transformation only.
+
 ### Gate B — Room, reward, encounter, feature, and Doors structure
 
 User-visible outcome: the executor has one coherent structural contract for a

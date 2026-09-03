@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
+import {
+  createKeepsakeEquipResultAddress,
+  createRouteStartKeepsakeSelectionAddress,
+  semanticAddressKey,
+} from '@run-planner/engine/authored-project';
+
 import * as fixture from './support/progressive-biome-fixtures';
 
 const {
@@ -30,6 +36,46 @@ const {
 } = fixture;
 
 describe('progressive finding ancestry and chronology', () => {
+  it('retains a blocking automatic Embryo outcome as an occurrence-owned repair product', () => {
+    const selection = createRouteStartKeepsakeSelectionAddress('Underworld');
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection,
+      keepsakeKey: 'RandomBlessingKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTranscendentEmbryoEquipResult',
+      result: createKeepsakeEquipResultAddress(selection, 'transcendentEmbryo'),
+      value: { blessingKey: 'ChaosWeaponBlessing', blessingValues: { damageBonus: 0.7 } },
+    });
+
+    const evaluation = simulateProjectAssembly(catalog, project).evaluation.route.biomes.find(
+      (biome) => biome.biomeKey === 'F',
+    );
+    if (
+      evaluation === undefined ||
+      !('rewards' in evaluation) ||
+      evaluation.coverage.kind !== 'prefix' ||
+      evaluation.coverage.blockedAt === undefined
+    )
+      throw new Error('missing Embryo fixture did not produce a blocked F prefix');
+    const blockedAt = evaluation.coverage.blockedAt;
+    expect(blockedAt).toMatchObject({
+      kind: 'transcendentEmbryoOutcome',
+      biomeKey: 'F',
+    });
+    expect(evaluation.rewards.transcendentEmbryoOutcomes).toContainEqual(
+      expect.objectContaining({
+        address: expect.objectContaining({ kind: 'transcendentEmbryoOutcome' }),
+      }),
+    );
+    expect(
+      evaluation.rewards.transcendentEmbryoOutcomes.some(
+        (outcome) => semanticAddressKey(outcome.address) === semanticAddressKey(blockedAt),
+      ),
+    ).toBe(true);
+  });
+
   it('assesses a stale Hammer loadout in an incomplete prefix with the route context', () => {
     const initial = createGoldenFGHProject();
     const route = initial.route;

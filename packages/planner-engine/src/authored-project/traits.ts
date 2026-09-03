@@ -31,6 +31,13 @@ export interface AuthoredHexTreeConfiguration {
   readonly epicTalentKeys: readonly string[];
 }
 
+/** Exact processed result of one Transcendent Embryo blessing acquisition. */
+export interface AuthoredTranscendentEmbryoOutcome {
+  readonly blessingKey: string;
+  /** Declaration-closed within-rarity rolls; empty is complete only when the blessing has no operands. */
+  readonly blessingValues: Readonly<Record<string, number>>;
+}
+
 export type AuthoredAllTogetherResult = Readonly<
   Record<import('../catalog-schema').DirectTraitSetKey, string | null>
 >;
@@ -296,7 +303,7 @@ export function traitOfferOption(
   return offer.kind === 'traits' ? offer.options[optionIndex(key)] : undefined;
 }
 
-function normalizeChaosValues(
+export function normalizeChaosValues(
   expected: readonly import('../catalog-schema').ChaosNumericOperand[],
   value: Readonly<Record<string, number>>,
   label: string,
@@ -323,7 +330,7 @@ function normalizeChaosValues(
   );
 }
 
-function chaosOperandsAtRarity(
+export function chaosOperandsAtRarity(
   operands: readonly import('../catalog-schema').ChaosNumericOperand[],
   rarity: AuthoredChaosTraitOffer['rarity'],
 ): readonly import('../catalog-schema').ChaosNumericOperand[] {
@@ -340,6 +347,56 @@ function chaosOperandsAtRarity(
       ...(domain.integer === true ? { integer: true as const } : {}),
     });
   });
+}
+
+/** Complete declaration defaults for one Chaos operand set at its effective rarity. */
+export function chaosOperandAuthoringValues(
+  operands: readonly import('../catalog-schema').ChaosNumericOperand[],
+  rarity?: AuthoredChaosTraitOffer['rarity'],
+): Readonly<Record<string, number>> {
+  const effective = rarity === undefined ? operands : chaosOperandsAtRarity(operands, rarity);
+  return Object.freeze(
+    Object.fromEntries(effective.map((operand) => [operand.key, operand.authoringDefault])),
+  );
+}
+
+/**
+ * Normalize one direct Embryo result without inventing a rarity. Embryo's
+ * rarity is derived from the equipped rank, so authored values are accepted
+ * when they are a complete legal operand set for at least one in-run rarity;
+ * the captured simulation frontier performs the final rarity-specific check.
+ * An empty set is complete for operand-free blessings and otherwise retained
+ * only as a schema-migration repair state.
+ */
+export function normalizeAuthoredTranscendentEmbryoOutcome(
+  catalog: Catalog,
+  value: AuthoredTranscendentEmbryoOutcome,
+): AuthoredTranscendentEmbryoOutcome {
+  const blessing = catalog.chaos.blessings.byKey[value.blessingKey];
+  if (blessing === undefined || blessing.fixedRarity !== undefined)
+    throw new Error('Transcendent Embryo must select an in-run Chaos blessing');
+  if (Object.keys(value.blessingValues).length === 0)
+    return Object.freeze({ blessingKey: blessing.key, blessingValues: Object.freeze({}) });
+  let lastError: unknown;
+  for (const rarity of ['Common', 'Rare', 'Epic', 'Heroic'] as const) {
+    try {
+      return Object.freeze({
+        blessingKey: blessing.key,
+        blessingValues: normalizeChaosValues(
+          chaosOperandsAtRarity(blessing.operands, rarity),
+          value.blessingValues,
+          'blessingValues',
+        ),
+      });
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw new Error(
+    lastError instanceof Error
+      ? lastError.message
+      : 'blessingValues are outside every declared Embryo rarity domain',
+  );
 }
 
 export function normalizeAuthoredChaosTraitOffer(

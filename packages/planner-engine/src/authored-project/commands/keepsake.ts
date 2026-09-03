@@ -6,6 +6,7 @@ import { roomActionKey } from '../room-action-key';
 import { createBiomeAddress } from '../addresses';
 import { assembleRoomActionDomain } from '../room-action-domain';
 import { encounterBindingsBySlot } from '../room-state/encounter-envelope';
+import { normalizeAuthoredTranscendentEmbryoOutcome } from '../traits';
 import type {
   ExperimentalHammerEquipResultCommand,
   TranscendentEmbryoEquipResultCommand,
@@ -73,22 +74,33 @@ export function applyKeepsakeCommand(
     return updateOccurrence(document, located, nextOccurrence);
   }
   if (command.kind === 'ReplaceTranscendentEmbryoTransformation') {
-    if (
-      command.blessingKey !== null &&
-      (catalog.chaos.blessings.byKey[command.blessingKey] === undefined ||
-        catalog.chaos.blessings.byKey[command.blessingKey]?.fixedRarity !== undefined)
-    )
-      failCommand(command, 'transformation must select an in-run Chaos blessing or null');
+    let outcome = command.value;
+    if (outcome !== null) {
+      try {
+        outcome = normalizeAuthoredTranscendentEmbryoOutcome(catalog, outcome);
+      } catch (error) {
+        failCommand(
+          command,
+          error instanceof Error ? error.message : 'transformation has invalid blessing values',
+        );
+      }
+      if (
+        catalog.chaos.blessings.byKey[outcome.blessingKey]?.operands.length !== 0 &&
+        Object.keys(outcome.blessingValues).length === 0
+      )
+        failCommand(command, 'transformation must provide complete blessing values');
+    }
     const located = locateBiome(document, catalog, command);
     const occurrence = requireOccurrence(located.plan, command.outcome.owner.occurrenceId, command);
     const room = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
     if (!encounterBindingsBySlot(catalog, room, room.gameName).has(command.outcome.phaseKey))
       failCommand(command, `${room.gameName} has no encounter phase ${command.outcome.phaseKey}`);
     const current = occurrence.encounters.transcendentEmbryoBlessingByPhase ?? {};
-    if (current[command.outcome.phaseKey] === command.blessingKey) return document;
+    if (JSON.stringify(current[command.outcome.phaseKey]) === JSON.stringify(outcome))
+      return document;
     const next = { ...current };
-    if (command.blessingKey === null) delete next[command.outcome.phaseKey];
-    else next[command.outcome.phaseKey] = command.blessingKey;
+    if (outcome === null) delete next[command.outcome.phaseKey];
+    else next[command.outcome.phaseKey] = outcome;
     const encounters =
       Object.keys(next).length === 0
         ? (() => {
@@ -103,11 +115,20 @@ export function applyKeepsakeCommand(
     return updateOccurrence(document, located, { ...occurrence, encounters });
   }
   if (command.kind === 'ReplaceTranscendentEmbryoEquipResult') {
+    let value: NonNullable<AuthoredKeepsakeEquipResults['transcendentEmbryo']>;
+    try {
+      value = normalizeAuthoredTranscendentEmbryoOutcome(catalog, command.value);
+    } catch (error) {
+      failCommand(
+        command,
+        error instanceof Error ? error.message : 'result has invalid blessing values',
+      );
+    }
     if (
-      catalog.chaos.blessings.byKey[command.value.blessingKey] === undefined ||
-      catalog.chaos.blessings.byKey[command.value.blessingKey]?.fixedRarity !== undefined
+      catalog.chaos.blessings.byKey[value.blessingKey]?.operands.length !== 0 &&
+      Object.keys(value.blessingValues).length === 0
     )
-      failCommand(command, 'result must select an in-run Chaos blessing');
+      failCommand(command, 'result must provide complete blessing values');
     const { selection } = command.result;
     const embryoKeepsakeKey = catalog.keepsakes.values.find(
       (keepsake) => keepsake.effect?.kind === 'transcendentEmbryo',
@@ -115,7 +136,7 @@ export function applyKeepsakeCommand(
     if (embryoKeepsakeKey === undefined) failCommand(command, 'catalog has no Embryo keepsake');
     const update = (results: AuthoredKeepsakeEquipResults | undefined) => ({
       ...results,
-      transcendentEmbryo: Object.freeze({ blessingKey: command.value.blessingKey }),
+      transcendentEmbryo: Object.freeze(value),
     });
     if (selection.kind === 'echoKeepsakeReplay') {
       const route = document.route.routeKey === selection.routeKey ? document.route : undefined;

@@ -13,8 +13,12 @@ import {
 import type { RewardBranchState } from './rewards/branch-primitives';
 import { assessTraitOption } from './trait-authoring-policies';
 import {
+  chaosOperandAuthoringValues,
+  chaosOperandsAtRarity,
+  normalizeChaosValues,
   optionIndex,
   type AuthoredGorgonAthenaOffer,
+  type AuthoredTranscendentEmbryoOutcome,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
   type TraitOptionKey,
@@ -78,6 +82,7 @@ export interface KeepsakeState {
     readonly rarity: InRunTraitRarity;
     readonly progress: number;
     readonly markedBlessingKey: string;
+    readonly markedBlessingValues: Readonly<Record<string, number>>;
     readonly markedBlessingAcquisitionIdentity: string;
   };
 }
@@ -592,14 +597,7 @@ export function transcendentEmbryoBlessingValues(
 ): Readonly<Record<string, number>> {
   const blessing = catalog.chaos.blessings.byKey[blessingKey];
   if (blessing === undefined) return Object.freeze({});
-  return Object.freeze(
-    Object.fromEntries(
-      blessing.operands.map((operand) => [
-        operand.key,
-        (operand.byRarity?.[rarity] ?? operand).minimum,
-      ]),
-    ),
-  );
+  return chaosOperandAuthoringValues(blessing.operands, rarity);
 }
 
 export function assessTranscendentEmbryoBlessing(
@@ -610,13 +608,28 @@ export function assessTranscendentEmbryoBlessing(
   context: TranscendentEmbryoBlessingContext = {},
   excludedBlessingKeys: readonly string[] = [],
 ): { readonly legal: boolean; readonly findings: readonly string[] } {
-  const legal = transcendentEmbryoBlessingKeys(
+  const keyLegal = transcendentEmbryoBlessingKeys(
     catalog,
     history,
     rarity,
     context,
     excludedBlessingKeys,
   ).includes(result.blessingKey);
+  const operands = catalog.chaos.blessings.byKey[result.blessingKey]?.operands ?? [];
+  let valuesLegal = operands.length === 0 && Object.keys(result.blessingValues).length === 0;
+  if (Object.keys(result.blessingValues).length > 0) {
+    try {
+      valuesLegal =
+        normalizeChaosValues(
+          chaosOperandsAtRarity(operands, rarity),
+          result.blessingValues,
+          'blessingValues',
+        ) !== undefined;
+    } catch {
+      valuesLegal = false;
+    }
+  }
+  const legal = keyLegal && valuesLegal;
   return Object.freeze({
     legal,
     findings: Object.freeze(legal ? [] : ['keepsakeEquipResultUnavailable']),
@@ -627,7 +640,7 @@ export function equipTranscendentEmbryo(
   state: KeepsakeState,
   origin: 'ordinary' | 'echo',
   rarity: InRunTraitRarity,
-  blessingKey: string,
+  outcome: AuthoredTranscendentEmbryoOutcome,
   acquisitionIdentity: string,
 ): KeepsakeState {
   return Object.freeze({
@@ -636,7 +649,8 @@ export function equipTranscendentEmbryo(
       origin,
       rarity,
       progress: 0,
-      markedBlessingKey: blessingKey,
+      markedBlessingKey: outcome.blessingKey,
+      markedBlessingValues: outcome.blessingValues,
       markedBlessingAcquisitionIdentity: acquisitionIdentity,
     }),
   });
@@ -675,29 +689,48 @@ export interface ReachedTranscendentEmbryoThreshold {
 export interface TranscendentEmbryoBlessingAssessment {
   readonly legal: boolean;
   readonly blessingKey: string | null;
+  readonly value: AuthoredTranscendentEmbryoOutcome | null;
   readonly eligibleBlessingKeys: readonly string[];
 }
 
 export function assessTranscendentEmbryoTransformation(
-  _catalog: Catalog,
+  catalog: Catalog,
   threshold: ReachedTranscendentEmbryoThreshold,
-  blessingKey: string | null | undefined,
+  outcome: AuthoredTranscendentEmbryoOutcome | null | undefined,
 ): TranscendentEmbryoBlessingAssessment {
-  const selected = blessingKey ?? null;
-  const legal =
+  const selected = outcome ?? null;
+  const keyLegal =
     threshold.eligibleBlessingKeys.length === 0
       ? selected === null
-      : selected !== null && threshold.eligibleBlessingKeys.includes(selected);
+      : selected !== null && threshold.eligibleBlessingKeys.includes(selected.blessingKey);
+  const operands =
+    selected === null ? [] : (catalog.chaos.blessings.byKey[selected.blessingKey]?.operands ?? []);
+  let valuesLegal =
+    selected !== null && operands.length === 0 && Object.keys(selected.blessingValues).length === 0;
+  if (selected !== null && Object.keys(selected.blessingValues).length > 0) {
+    try {
+      valuesLegal =
+        normalizeChaosValues(
+          chaosOperandsAtRarity(operands, threshold.source.rarity),
+          selected.blessingValues,
+          'blessingValues',
+        ) !== undefined;
+    } catch {
+      valuesLegal = false;
+    }
+  }
+  const legal = selected === null ? keyLegal : keyLegal && valuesLegal;
   return Object.freeze({
     legal,
-    blessingKey: selected,
+    blessingKey: selected?.blessingKey ?? null,
+    value: selected,
     eligibleBlessingKeys: threshold.eligibleBlessingKeys,
   });
 }
 
 export function replaceTranscendentEmbryoBlessing(
   state: KeepsakeState,
-  blessingKey: string,
+  outcome: AuthoredTranscendentEmbryoOutcome,
   acquisitionIdentity: string,
 ): KeepsakeState {
   const source = state.transcendentEmbryo;
@@ -707,7 +740,8 @@ export function replaceTranscendentEmbryoBlessing(
     transcendentEmbryo: Object.freeze({
       ...source,
       progress: 0,
-      markedBlessingKey: blessingKey,
+      markedBlessingKey: outcome.blessingKey,
+      markedBlessingValues: outcome.blessingValues,
       markedBlessingAcquisitionIdentity: acquisitionIdentity,
     }),
   });
@@ -743,7 +777,7 @@ export function applyTranscendentEmbryoEquipResult(
       acquisitionIdentity,
       blessingKey: result.blessingKey,
       rarity,
-      blessingValues: transcendentEmbryoBlessingValues(catalog, result.blessingKey, rarity),
+      blessingValues: result.blessingValues,
     }),
   ]);
   return Object.freeze({
@@ -754,7 +788,7 @@ export function applyTranscendentEmbryoEquipResult(
       branch.keepsakes,
       origin,
       rarity,
-      result.blessingKey,
+      result,
       acquisitionIdentity,
     ),
   });

@@ -512,7 +512,7 @@ function roomActionsForOccurrence(
           undefined
             ? {}
             : {
-                blessingKey:
+                value:
                   input.occurrence.encounters.transcendentEmbryoBlessingByPhase[outcome.phaseKey],
               }),
         }),
@@ -550,6 +550,7 @@ function roomActionsForOccurrence(
     repairRows,
     rows: allProjectedRows,
     ...(steadyGrowth.length === 0 ? {} : { steadyGrowth }),
+    ...(transcendentEmbryo.length === 0 ? {} : { transcendentEmbryo }),
   });
 }
 

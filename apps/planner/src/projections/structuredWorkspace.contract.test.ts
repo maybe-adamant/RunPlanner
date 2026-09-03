@@ -813,7 +813,8 @@ describe('structured workspace overlay contract', () => {
           typeof startInteraction,
           { readonly owner: { readonly resultKind: 'transcendentEmbryo' } }
         >
-      ).load({ blessingKey: 'ChaosWeaponBlessing' }).transcendentEmbryoSummary,
+      ).load({ blessingKey: 'ChaosWeaponBlessing', blessingValues: { damageBonus: 0.7 } })
+        .transcendentEmbryoSummary,
     ).toMatchObject({ rarity: 'Epic' });
     expect(routeStart.focusByOwner.get(semanticAddressKey(startResult))).toMatchObject({
       ownerAddress: startResult,
@@ -851,7 +852,8 @@ describe('structured workspace overlay contract', () => {
           typeof postbossInteraction,
           { readonly owner: { readonly resultKind: 'transcendentEmbryo' } }
         >
-      ).load({ blessingKey: 'ChaosWeaponBlessing' }).transcendentEmbryoSummary,
+      ).load({ blessingKey: 'ChaosWeaponBlessing', blessingValues: { damageBonus: 0.7 } })
+        .transcendentEmbryoSummary,
     ).toMatchObject({ rarity: 'Epic' });
 
     const echoAssembly = simulateProjectAssembly(
@@ -877,10 +879,49 @@ describe('structured workspace overlay contract', () => {
           typeof echoInteraction,
           { readonly owner: { readonly resultKind: 'transcendentEmbryo' } }
         >
-      ).load({ blessingKey: 'ChaosWeaponBlessing' }).transcendentEmbryoSummary,
+      ).load({ blessingKey: 'ChaosWeaponBlessing', blessingValues: { damageBonus: 0.5 } })
+        .transcendentEmbryoSummary,
     ).toMatchObject({ rarity: 'Common' });
     expect(echo.focusByOwner.get(semanticAddressKey(echoGiftEmbryoReplayAddress))).toMatchObject({
       ownerAddress: echoGiftEmbryoReplayAddress,
+      region: 'structure',
+    });
+  });
+
+  it('routes a blocking automatic Embryo outcome to its rendered room timeline row', () => {
+    const base = createGoldenFGHIProject();
+    let project: ProjectDocument = {
+      ...base,
+      route: {
+        ...base.route,
+        biomes: base.route.biomes.filter((biome) => biome.biomeKey === 'F'),
+      },
+    };
+    const selection = createRouteStartKeepsakeSelectionAddress('Underworld');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection,
+      keepsakeKey: 'RandomBlessingKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTranscendentEmbryoEquipResult',
+      result: createKeepsakeEquipResultAddress(selection, 'transcendentEmbryo'),
+      value: { blessingKey: 'ChaosWeaponBlessing', blessingValues: { damageBonus: 0.7 } },
+    });
+
+    const assembly = simulateProjectAssembly(catalog, project);
+    const finding = assembly.evaluation.route.biomes
+      .flatMap((biome) => biome.findings)
+      .find((candidate) => candidate.code === 'transcendentEmbryoOutcomeMissing');
+    if (finding?.origin.kind !== 'transcendentEmbryoOutcome')
+      throw new Error('automatic Embryo finding is missing');
+    const workspace = projection().project(assembly);
+    const key = semanticAddressKey(finding.origin);
+
+    expect(workspace.interactions.transcendentEmbryo.get(key)?.owner).toEqual(finding.origin);
+    expect(workspace.focusByOwner.get(key)).toMatchObject({
+      ownerAddress: finding.origin,
+      inspectorSubject: { kind: 'node' },
       region: 'structure',
     });
   });

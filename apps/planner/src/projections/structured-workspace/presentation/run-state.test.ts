@@ -174,6 +174,7 @@ describe('Run State presentation', () => {
           rarity: 'Heroic' as const,
           progress: 7,
           markedBlessingKey: 'ChaosElementalBlessing',
+          markedBlessingValues: {},
           markedBlessingAcquisitionIdentity: 'embryo-run-state',
         },
       },

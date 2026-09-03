@@ -1,7 +1,8 @@
 # Project schema boundary
 
-Schema 74 is the current Run Planner document baseline. It adds the
-declaration-owned required Boss Reward action to each Boss room chronology.
+Schema 75 is the current Run Planner document baseline. It adds exact
+Transcendent Embryo blessing operands and the declaration-owned required Boss
+Reward action to each Boss room chronology.
 Migrate the immediately preceding single-route schema with:
 
 ```bash
@@ -26,8 +27,19 @@ output. It has no route-selection, in-place, or target-version mode.
 
 The schema-72 splitter's pure transformation is exported from
 `schema/split-project-72-to-73.js` for checkpoint conversion. The source value
-is never mutated. The production decoder accepts schema 74 only; stale
+is never mutated. The production decoder accepts schema 75 only; stale
 documents are not migrated implicitly in the application.
+
+Migrate a schema-74 document with:
+
+```bash
+npm run schema:migrate-74-to-75 -- path/to/schema-74-project.runplanner.json
+```
+
+The command preserves each authored Embryo blessing identity and adds an empty
+`blessingValues` object for repair. The planner requires those operands to be
+completed before the result can be used, and the command never overwrites the
+source.
 
 Run the focused boundary tests with:
 

@@ -128,7 +128,8 @@ function createEmptySteadyGrowthCandidateArtifacts(): SteadyGrowthCandidateArtif
 export interface TranscendentEmbryoCandidateCapability {
   readonly thresholds: readonly ReachedTranscendentEmbryoThreshold[];
   readonly evaluate: (
-    blessingKey: string | null | undefined,
+    outcome:
+      import('../authored-project/traits').AuthoredTranscendentEmbryoOutcome | null | undefined,
   ) => readonly TranscendentEmbryoBlessingAssessment[];
 }
 export interface TranscendentEmbryoCandidateArtifacts {
@@ -147,10 +148,15 @@ export function createTranscendentEmbryoCandidateArtifacts(
       if (thresholds === undefined) return undefined;
       return Object.freeze({
         thresholds,
-        evaluate: (blessingKey: string | null | undefined) =>
+        evaluate: (
+          outcome:
+            | import('../authored-project/traits').AuthoredTranscendentEmbryoOutcome
+            | null
+            | undefined,
+        ) =>
           Object.freeze(
             thresholds.map((threshold) =>
-              assessTranscendentEmbryoTransformation(catalog, threshold, blessingKey),
+              assessTranscendentEmbryoTransformation(catalog, threshold, outcome),
             ),
           ),
       });
