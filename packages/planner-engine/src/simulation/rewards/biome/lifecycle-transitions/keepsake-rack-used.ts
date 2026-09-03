@@ -37,6 +37,7 @@ import {
 } from '../../processing';
 import { rewardFinding } from '../../findings';
 import type { LifecycleFinding } from './types';
+import type { PlannerTimelineFacts } from '../../../timeline-facts';
 
 export interface KeepsakeRackUsedTransition {
   readonly branches: readonly RewardBranchState[];
@@ -49,6 +50,7 @@ export interface KeepsakeRackUsedTransition {
     readonly candidate: KeepsakeEquipResultCandidateCapability;
   }[];
   readonly findings: readonly LifecycleFinding[];
+  readonly timelineFacts: PlannerTimelineFacts;
 }
 
 function detachTranscendentEmbryoBlessing(
@@ -94,6 +96,10 @@ export function applyKeepsakeRackUsedTransition(
   effectiveBiomeNumber: number,
 ): KeepsakeRackUsedTransition {
   const findings: LifecycleFinding[] = [];
+  const noTimelineFacts: PlannerTimelineFacts = Object.freeze({
+    nodes: Object.freeze([]),
+    dependencies: Object.freeze([]),
+  });
   const keepsakeEquipResultCandidates: {
     readonly key: string;
     readonly candidate: KeepsakeEquipResultCandidateCapability;
@@ -103,6 +109,7 @@ export function applyKeepsakeRackUsedTransition(
       branches,
       keepsakeEquipResultCandidates: Object.freeze(keepsakeEquipResultCandidates),
       findings: Object.freeze(findings),
+      timelineFacts: noTimelineFacts,
     });
 
   const rack = room.keepsakeRack;
@@ -191,6 +198,36 @@ export function applyKeepsakeRackUsedTransition(
       replacementSucceeded,
       ...(equippedRank === undefined ? {} : { equippedRank }),
     });
+  });
+  const replacementEquipsPhial =
+    catalog.keepsakes.byKey[keepsakeKey]?.effect?.kind === 'fountainRarity';
+  const phialSensitiveReplacement = rackTransitions.some(
+    (transition, index) =>
+      transition.replacementSucceeded &&
+      (replacementEquipsPhial ||
+        branches[index]?.keepsakes.phial?.status === 'pending' ||
+        (room.fountainRarityResult !== undefined &&
+          catalog.keepsakes.byKey[branches[index]?.keepsakes.currentKey ?? '']?.effect?.kind ===
+            'fountainRarity')),
+  );
+  const rackRow = room.roomActionRoster?.rows.find(
+    (row) => !row.stale && row.rank !== null && row.reference.kind === 'interactKeepsakeRack',
+  );
+  const fountainRow = room.roomActionRoster?.rows.find(
+    (row) => !row.stale && row.rank !== null && row.reference.kind === 'useFountain',
+  );
+  const timelineFacts: PlannerTimelineFacts = Object.freeze({
+    nodes: Object.freeze([]),
+    dependencies:
+      !phialSensitiveReplacement || rackRow === undefined || fountainRow === undefined
+        ? Object.freeze([])
+        : Object.freeze([
+            Object.freeze(
+              rackRow.rank! < fountainRow.rank!
+                ? { owner: fountainRow.owner, afterOwner: rackRow.owner }
+                : { owner: rackRow.owner, afterOwner: fountainRow.owner },
+            ),
+          ]),
   });
   rackTransitions = rackTransitions.map((transition) => {
     const branch = transition.branch;
@@ -458,5 +495,6 @@ export function applyKeepsakeRackUsedTransition(
     keepsakeSelectionCandidate,
     keepsakeEquipResultCandidates: Object.freeze(keepsakeEquipResultCandidates),
     findings: Object.freeze(findings),
+    timelineFacts,
   });
 }
