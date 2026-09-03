@@ -586,20 +586,30 @@ Deliverables:
 
 - audit current F/G room realization against every field in execution Overview
   and Doors;
-- make `src/mods/navigation/` the executor-side owner of room occurrence
-  navigation and structural realization: the active room session, room identity,
-  Overview structure, Doors structure, native bindings, and genuinely
-  biome-specific topology adapters live together there;
+- keep the route session outside `src/mods/navigation/`. The route session owns
+  the configured occurrence cursor, current occurrence identity, route entry,
+  and room-to-room advancement. The route/room handshake opens and closes
+  exactly one inner room session around that current occurrence;
+- make `src/mods/navigation/` a narrow, stateless transition adapter. It owns
+  the complete normal/additional Door product, each Door's destination and
+  reward, native Door bindings, incoming-reward realization for the selected
+  transition, and reporting the selected destination back to the route session;
+- make the room session the inner occurrence envelope. It owns the active
+  occurrence, room-entry and room-exit checkpoints, local lifecycle windows,
+  the sparse Timeline dependency graph, obligations, and coordination of
+  separate room-identity, encounter, and feature components;
 - organize exceptional F/G topology beneath `navigation/biomes/` only when it
   has real biome-owned behavior. Do not add empty per-biome shells or move later
   acquisition/effect policy merely because it occurs in that biome;
-- retain one general room adapter for ordinary declaration-driven facts;
+- retain general declaration-driven adapters for ordinary room structure and
+  navigation rather than adding room-name branches;
 - isolate only genuine F- or G-specific structure, including Anomaly, Zagreus
   Contract, and Chaos return batches, in bounded biome-owned modules if the
   current code benefits from that boundary;
-- realize room identity, incoming reward, encounter phases, required objects,
-  resources, Shop-like object presence, additional exits, and normal Doors at
-  their stable logical checkpoints;
+- have the route/room handshake realize and prove current room identity; have
+  encounter and feature components realize their inner-room facts; and have
+  navigation realize incoming rewards plus additional and normal Doors at their
+  stable logical checkpoints;
 - keep required effect-neutral boss drops native without treating their exact
   meta-progression identity as a simulation result;
 - keep native game-literal translation in the existing bounded sidecar rather
@@ -609,14 +619,42 @@ Deliverables:
   transition, raw door-class, or duplicate callback checks that do not
   contribute to Overview or Doors proof.
 
-The `navigation/` name does not authorize a new transition-conformance cursor.
-It advances the room occurrence session and owns the two stable structural
-checkpoints: room entry compares the complete current room and Overview product;
-Doors open compares the complete exit product. It does not compare every native
-transition between those checkpoints. Protocol decoding remains in the protocol
-family, while Timeline actions, acquisitions, purchases, and trait/item effects
-remain with their later owning gates. Object presence belongs to navigation;
-interaction with that object does not.
+The route session is the sole outer cursor. Navigation does not own a second
+cursor, the current room, lifecycle windows, Timeline obligations, encounters,
+or room features. It reports the selected bound destination and lets the route
+session advance. The room session owns the volatile inner-room envelope and
+aggregates its component proofs: room entry compares the complete current room
+and Overview product; Doors open compares the complete navigation product; room
+exit closes local obligations and conformance. No component compares every
+native transition between those checkpoints.
+
+Feature presence and behavior remain deliberately separate. The room feature
+component owns whether a Well, Pool, fountain, resource point, or other object
+is present and reports that structural fact to the room-entry proof; its later
+inventory, purchase, use, or acquisition behavior remains with the owning
+Timeline/feature gate. A feature that creates an exit owns its spawn condition,
+while navigation owns the resulting Door binding and selected-destination
+report. Navigation proves the complete additional-door set at Doors-open;
+room-exit conformance owns only retained effects such as Ixion consumption and
+does not re-prove that topology. Protocol decoding remains in the protocol
+family.
+
+Room feature construction, native spawning contacts, and feature inventory
+realization live under one bounded `room/features/` family. This includes
+Timeline-triggered inventory mutations such as Travel Deal and, when H is in
+scope, Gold Gold Gold. The feature adapter does not decide when either effect
+is legal: it resolves the exact published mutation owner, asks the room
+coordinator whether that owner is ready, performs the native mutation only
+after approval, and reports completion afterward. The coordinator answers from
+the local Timeline graph without knowing the feature or trait that produced the
+dependency. Purchases, sales, choices, and acquired effects remain outside the
+feature family.
+
+Native room-exit readers and expected-versus-observed proofs live under a
+bounded `room/conformance/` family. The room session owns only the atomic exit
+boundary: it requests the complete conformance proof and closes only when both
+local obligations and that proof pass. It does not dispatch individual
+conformance kinds.
 
 Primary witnesses:
 

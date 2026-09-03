@@ -9,7 +9,7 @@
 - Catalog encounter declarations:
   `packages/hades2-catalog/src/declarations/encounters/`
 - Current native contacts: `src/mods/hooks_timeline.lua` and
-  `src/mods/hooks_rooms.lua` in the Plan Executor
+  `src/mods/room/encounter_hooks.lua` in the Plan Executor
 
 ## Trait-menu carriers
 
