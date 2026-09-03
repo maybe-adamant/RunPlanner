@@ -998,20 +998,44 @@ empty future directories.
 
 - create `room/timeline/traits/` around the native loot-to-offer-to-selection
   sequence used by ordinary Olympian/Hermes Boons and Hammers;
-- bind the materialized loot and resulting offer screen to the published owner;
-- preserve native option records while steering only authored option order,
-  rarity, replacement identity, rejected identity, and already-published final
-  effective level before the screen opens;
+- resolve the published transaction at its owning producer contact, bind the
+  exact returned native loot to its materialized role, and begin only when a
+  valid interaction reaches `HandleLootPickup`. Button and selection callbacks
+  recover the same handle through that loot; there is no second screen binding;
+- reuse native option tables as carriers while installing the exact authored
+  membership and base values; let native slot sorting run, then correlate
+  selected and rejected rows by identity rather than assuming authored row
+  index remains the physical button index;
+- extend the execution trait offer only with the missing base-rarity fact.
+  Install that initial rarity once, do not observe or replay Rarify button
+  presses, and let native Calling Card/provider-keepsake behavior consume its
+  own source. The existing effective rarity and `beforeRoomExit`
+  `keepsakeEffects` conformance verify the selected result and aggregate charge
+  ledger;
 - let the native selection callback equip or stack the chosen trait, then use
-  that stable result as the terminal proof; and
+  that stable result as the terminal proof. Replacement proof includes absence
+  of the replaced trait. C1 consumes the planner's indivisible final
+  `effectiveLevel`, including any already-folded Jeweled Pom, Aspect of
+  Persephone, or Premium Service contribution by supplying that final native
+  row input. It does not inspect or recompute those sources;
+- treat a failed `UseLoot` attempt as no begin, never reinstall the initial
+  authored offer after a native reroll, and treat Concave Stone's recursive
+  `DoubleBoonChance` selection as a deferred residual rather than the primary
+  terminal; and
 - leave every selected trait's later special effect unclaimed. Successful outer
   acquisition does not imply that Natural Selection, Sea Star, a Ransom, or
   another consequential trait has been implemented.
 
 Primary witnesses are one ordinary Olympian Boon, one Hermes Boon, one Hammer,
-one replacement offer, and one denied option. This slice excludes Chaos,
-Spell, NPC, Pom, Mystery Boon, generated-child, purchase, and consumable
-carriers.
+one replacement offer, one Rejected-curse disabled option, one Calling Card
+and one provider-keepsake rarification outcome, one non-default effective-level
+row, and the no-begin/reroll/Concave alternative paths. Rarification witnesses
+prove the initial base rarity, selected effective result, and room-exit charge
+ledger without observing individual button presses. The whole-offer
+`fallbackGold` branch reuses the screen but completes from its native
+hidden-trait selection; its optional currency is native pass-through. This
+slice excludes Chaos, Spell, NPC, Pom, Mystery Boon, generated-child, purchase,
+and direct-consumable carriers.
 
 #### C2 — Level outcomes
 
@@ -1019,15 +1043,17 @@ carriers.
   Pom Slices without manually changing trait stacks;
 - steer the offered targets and authored selected target, then let native code
   apply the level count;
-- steer Aspect of Persephone's authored random bonus at offer generation and
-  consume the planner's final effective level alongside Premium Service rather
-  than adding levels after acquisition;
+- leave ordinary-offer effective-level composition in C1. Aspect of Persephone
+  and Premium Service have no separate executor adapter because the planner has
+  already folded them into that one published final value;
 - defer Nectar and other consumable-carried levels to C5 even though they reuse
   the level terminal proof.
 
-Primary witnesses are an ordinary Pom, an optional Pom Slice, one Persephone
-bonus with and without Premium Service pressure. Natural Selection follows as
-the separate D3 consequence slice after this carrier is committed.
+Primary witnesses are an ordinary Pom and an optional Pom Slice. Planner-owned
+tests retain the Persephone/Premium Service composition matrix; the executor
+needs only a representative C1 non-default effective-level witness. Natural
+Selection follows as the separate D3 consequence slice after this carrier is
+committed.
 
 #### C3 — NPC acquisitions and Mystery Boon resolution
 
