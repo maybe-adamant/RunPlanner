@@ -84,6 +84,10 @@ export function executionTimelineTransactions(
       selected.branches.map((branch) => branch.effectiveLevels),
       `trait effective levels ${semanticAddressKey(selected.address)}`,
     );
+    const baseRarities = agreement(
+      selected.branches.map((branch) => branch.baseRarities),
+      `trait base rarities ${semanticAddressKey(selected.address)}`,
+    );
     const runtimeFallbacks = executionRuntimeFallbacks(biome, selected.address, 'traitEligibility');
     const replacements = agreement(
       selected.branches.map((branch) =>
@@ -99,6 +103,9 @@ export function executionTimelineTransactions(
           const replacement = replacements[index];
           return Object.freeze({
             key: option.traitKey,
+            ...(baseRarities[index] === undefined || baseRarities[index] === option.rarity
+              ? {}
+              : { baseRarity: baseRarities[index] }),
             ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
             ...(levels[index] === undefined ? {} : { effectiveLevel: levels[index] }),
             ...(replacement === undefined

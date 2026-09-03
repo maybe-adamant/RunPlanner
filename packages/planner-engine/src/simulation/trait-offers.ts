@@ -429,6 +429,8 @@ export interface ReachedTraitOfferEvaluation {
   readonly acquisitionRole: string;
   readonly before: TraitHistoryState;
   readonly offer: AuthoredTraitOffer;
+  /** Row rarities before Calling Card/provider-keepsake rarification. */
+  readonly baseRarities: readonly (TraitRarity | undefined)[];
   readonly context: TraitOfferContext;
   /** Exact pre-acquisition frontier retained only for Circe candidate capability. */
   readonly arcanaFear?: ArcanaFearState;
@@ -485,6 +487,11 @@ export interface TraitOfferBranchAssessment {
   readonly effectiveLevels: readonly (number | undefined)[];
 }
 
+/** Execution input retained only after one authored offer is selected. */
+export interface SelectedTraitOfferBranchAssessment extends TraitOfferBranchAssessment {
+  readonly baseRarities: readonly (TraitRarity | undefined)[];
+}
+
 /**
  * Data-only selected-offer evidence.  Pre-offer histories and resolved
  * contexts stay behind the exact candidate artifact instead of crossing the
@@ -494,7 +501,7 @@ export interface SelectedTraitOfferAssessment {
   readonly address: TraitOfferAddress;
   readonly acquisitionRole: string;
   readonly offer: AuthoredTraitOffer;
-  readonly branches: readonly TraitOfferBranchAssessment[];
+  readonly branches: readonly SelectedTraitOfferBranchAssessment[];
   readonly reached: true;
   readonly chronologicalIndex: number;
 }
@@ -532,6 +539,14 @@ function evaluateReachedTraitOfferWithAssessments(
   frozenAcquisition = false,
   frozenLevelResolutions?: readonly TraitOfferOptionLevelResolution[],
 ): ReachedTraitOfferEvaluation {
+  const baseRarities = Object.freeze(
+    (rarificationBaseOffer?.kind === 'traits'
+      ? rarificationBaseOffer
+      : offer.kind === 'traits'
+        ? offer
+        : undefined
+    )?.options.map((option) => option.rarity) ?? [],
+  );
   const effectiveContext = offerGenerationAdjustedTraitOfferContext(
     catalog,
     before,
@@ -686,6 +701,7 @@ function evaluateReachedTraitOfferWithAssessments(
     acquisitionRole,
     before,
     offer,
+    baseRarities,
     context: effectiveContext,
     ...(arcanaFear === undefined ? {} : { arcanaFear }),
     ...(keepsakes === undefined ? {} : { keepsakes }),

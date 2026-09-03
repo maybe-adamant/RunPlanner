@@ -196,7 +196,7 @@ Live support remains deferred until the owning biome gate reaches that contact.
 
 ## Protocol policy
 
-Protocol v13 is the single active development protocol for this unclosed plan:
+Protocol v14 is the single active development protocol for this unclosed plan:
 
 - there is no compatibility decoder or dual executor for an earlier protocol;
 - each gate updates planner fixtures, strict Lua decode, and the modpack pin in
@@ -204,7 +204,7 @@ Protocol v13 is the single active development protocol for this unclosed plan:
 - a protocol change must be earned by a concrete closed field or variant named
   by the refined gate rather than silently mutating an already-consumed shape;
 - unknown fields and union members remain rejected; and
-- v13 is not declared stable or release-ready until the final closure gate.
+- v14 is not declared stable or release-ready until the final closure gate.
 
 This does not authorize a generic `effectName`/`arguments` object or speculative
 placeholders for later features.
@@ -771,9 +771,9 @@ indexed row. The port exposes one small semantic-free interface:
 A contact descriptor identifies a published carrier fact such as an offer,
 generation, phase, automatic effect, role, produced child, or materialized
 role. The binding layer owns how those fields are indexed and correlated.
-Protocol v13 publishes the Fountain carrier explicitly as the required
+Protocol v14 publishes the Fountain carrier explicitly as the required
 `interactionKey: "fountain"` field on `fountainUse`; Gate B.2 must not recover
-that contact by scanning transaction kinds. v13 strictly replaces v12 with no
+that contact by scanning transaction kinds. v14 strictly replaces v13 with no
 compatibility decoder.
 Hooks may construct the descriptor from their native contact, but they do not
 construct composite index keys, choose index namespaces, recover decoded rows,
@@ -1465,7 +1465,7 @@ No. Exhaustive means every family has a disposition. Native pass-through,
 simulation-neutral, and deferred are valid dispositions when source-backed and
 tested at the appropriate boundary.
 
-### Does v13 become a generic future-proof schema?
+### Does v14 become a generic future-proof schema?
 
 No. It contains only concrete products required by the present catalog and
 named audits. The strict decoder continues to reject unknown fields. Later
@@ -1492,5 +1492,5 @@ has an explicit planner product or a source-backed pass-through/neutral
 disposition; every published consequential result has a native carrier and
 focused proof; F/G structural and live lanes complete without unresolved
 mismatch; dormant later-route carriers are honestly marked; the compiler and
-room session contain no semantic policy; protocol v13 is the sole active
+room session contain no semantic policy; protocol v14 is the sole active
 contract; and durable authorities have absorbed the resulting boundary.

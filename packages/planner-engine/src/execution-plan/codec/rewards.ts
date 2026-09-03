@@ -151,7 +151,7 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
     exact(
       option,
       ['key'],
-      ['rarity', 'effectiveLevel', 'replacement'],
+      ['baseRarity', 'rarity', 'effectiveLevel', 'replacement'],
       `${label}.options[${index}]`,
     );
     const replacement =
@@ -167,6 +167,9 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
       );
     return Object.freeze({
       key: stringValue(option.key, `${label}.options[${index}].key`),
+      ...(option.baseRarity === undefined
+        ? {}
+        : { baseRarity: stringValue(option.baseRarity, `${label}.options[${index}].baseRarity`) }),
       ...(option.rarity === undefined
         ? {}
         : { rarity: stringValue(option.rarity, `${label}.options[${index}].rarity`) }),
