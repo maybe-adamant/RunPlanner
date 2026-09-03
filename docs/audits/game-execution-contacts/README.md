@@ -40,6 +40,9 @@ A family is not covered when only its ordinary loot-screen carrier works.
 - [Traits and offers](TRAITS_AND_OFFERS.md) — provider families, ordinary
   equipment, exceptional trait dispositions, Chaos, replacement, and level
   outcomes.
+- [Ordinary trait-offer execution](ORDINARY_TRAIT_OFFER_EXECUTION.md) — exact
+  Olympian, Hermes, and Hammer loot, screen, row-action, selection, and terminal
+  contacts.
 - [Keepsakes, loadout, and abilities](KEEPSAKES_LOADOUT_AND_ABILITIES.md) — all
   keepsakes, weapons, aspects, Arcana, Vows, Hexes, and tools.
 - [NPCs, encounters, and automatic outcomes](NPCS_ENCOUNTERS_AND_AUTOMATICS.md)
@@ -52,7 +55,7 @@ A family is not covered when only its ordinary loot-screen carrier works.
 
 The normalized catalog is the exhaustive identity authority. The execution
 union in `packages/planner-engine/src/execution-plan/model.ts` is the exhaustive
-wire authority. The current consumer is protocol v10 in
+wire authority. The current consumer is protocol v13 in
 `adamantRunPlanner-Plan_Executor`; its supported route extent is Underworld F
 or F/G, not the full planner catalog.
 
