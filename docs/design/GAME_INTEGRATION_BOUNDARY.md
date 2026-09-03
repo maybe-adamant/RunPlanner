@@ -2,17 +2,18 @@
 
 ## Current contract
 
-Protocol v9 carries a complete-valid configured F or F/G prefix. The desktop
+Protocol v11 carries a complete-valid configured F or F/G prefix. The desktop
 publisher writes an execution-only JSON artifact to the Plan Executor's fixed
 inbox; the browser build has no publication capability. Publication is a
 start-of-run operation. The Executor cannot truthfully attach midway through a
-run, repair an edited plan, or continue after a mismatch.
+run, repair an edited plan, or resume enforcement after a mismatch.
 
 The compiler consumes the exact simulation assembly that the planner already
 validated. It does not rerun candidate policy or duplicate validation. The
 Executor strictly decodes this bounded artifact, translates its closed facts
 through fixed native adapters, observes the player-controlled trace, and stops
-at the first mismatch. Neither side searches, repairs, or replans.
+enforcement at the first mismatch. The native game continues from that point;
+neither side searches, repairs, or replans.
 
 The planner engine and its complete-valid evaluation document are the sole
 authority for concrete acquisition semantics. Each acquisition event carries
@@ -67,15 +68,17 @@ Some timeline steps combine these responsibilities: the runtime realizes an
 offer but observes whether and when the player accepts it. The plan remains
 conditional on player cooperation; enforcement does not erase player agency.
 
-Native hooks and blocking checkpoints are deliberately different concepts.
+Native hooks and conformance checkpoints are deliberately different concepts.
 Encounter start/end, cleanup, screen construction, and similar callbacks may
 schedule a realization or identify the lifecycle window in which a semantic
 transaction occurs. Their exact callback names, duplicate contacts, and
 representation-only ordering are not independent conformance requirements.
-They block only when the runtime cannot safely realize the next published
-semantic result.
+When the runtime cannot safely realize the next published semantic result, it
+records the mismatch and stops planner realization. It must still invoke the
+native operation and must not prevent player input, room creation, or
+traversal.
 
-The blocking conformance surface is bounded to:
+The conformance surface is bounded to:
 
 | Checkpoint                    | Compared product                                                                                                 |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------- |
@@ -127,15 +130,17 @@ regardless of how the gate originated.
 
 Run State is diagnostic at the published room-entered and before-room-exit
 checkpoints. The observable surface includes exact counters, ranged reward-bag
-counts, acquired traits, and retained effects. A match permits contact to
-continue; a mismatch blocks it but never causes the Executor to choose a
-different room, reward, or action.
+counts, acquired traits, and retained effects. A mismatch stops further
+planner enforcement but never blocks the native contact or causes the Executor
+to choose a different room, reward, or action.
 
 ## Mismatch classification
 
-The first mismatch freezes further realization and reports the plan/catalog
-fingerprints, semantic owner, checkpoint, expected value, observed value, and
-bounded event context.
+The first mismatch freezes further planner realization and reports the
+plan/catalog fingerprints, semantic owner, checkpoint, expected value,
+observed value, and bounded event context. The executor then becomes passive:
+the game continues natively, and no hooked game function returns early merely
+because the execution session desynchronized.
 
 - A `playerDivergence` means the player performed a different observable action
   from the published trace.
@@ -151,7 +156,7 @@ fallback planning.
 
 ## Compatibility, transport, and security
 
-The transport is canonical data-only JSON with a strict protocol-v9 decoder,
+The transport is canonical data-only JSON with a strict protocol-v11 decoder,
 exact catalog compatibility, bounded collections, closed unions, and no silent
 coercion. It permits no dynamic evaluation, executable expressions, arbitrary
 paths or commands, or class reconstruction from untrusted names. Compression

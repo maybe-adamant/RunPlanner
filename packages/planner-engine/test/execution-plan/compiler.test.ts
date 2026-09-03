@@ -16,6 +16,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createKeepsakeEquipResultAddress,
+  createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
 } from '../../src/authored-project';
 import {
@@ -201,7 +202,67 @@ function selectedTransactionPair(product: ExecutionSemanticProduct): {
   throw new Error('fixture lacks selected cross-occurrence transaction pair');
 }
 
-describe('protocol-v10 compiler and codec', () => {
+describe('protocol-v11 compiler and codec', () => {
+  it('publishes a non-default selected weapon and aspect as a verification-only start contract', () => {
+    const project = authorLegalTraitOffers(
+      applyProjectCommand(fOnlyProject(), catalog, {
+        kind: 'ReplaceRouteLoadout',
+        route: createRouteAddress('Underworld'),
+        weaponKey: 'WeaponDagger',
+        aspectKey: 'DaggerHomingThrowAspect',
+      }),
+    );
+    const { plan } = planFor(project);
+    expect(plan.startingLoadout).toMatchObject({
+      weaponKey: 'WeaponDagger',
+      aspectKey: 'DaggerHomingThrowAspect',
+    });
+    expect(plan.startingLoadout).not.toHaveProperty('startingHex');
+  });
+
+  it('does not manufacture a run-start Hex for Aspect of Persephone', () => {
+    const project = authorLegalTraitOffers(
+      applyProjectCommand(fOnlyProject(), catalog, {
+        kind: 'ReplaceRouteLoadout',
+        route: createRouteAddress('Underworld'),
+        weaponKey: 'WeaponLob',
+        aspectKey: 'LobImpulseAspect',
+      }),
+    );
+    expect(planFor(project).plan.startingLoadout).toMatchObject({
+      weaponKey: 'WeaponLob',
+      aspectKey: 'LobImpulseAspect',
+    });
+    expect(planFor(project).plan.startingLoadout).not.toHaveProperty('startingHex');
+  });
+
+  it('rejects ambiguous run-start Arcana and Hex identities before fingerprint validation', () => {
+    const duplicateArcana = {
+      ...fOpeningFixture,
+      startingLoadout: {
+        ...fOpeningFixture.startingLoadout,
+        arcana: [
+          { key: 'CardDraw', origin: 'manual', rarity: 'Common' },
+          { key: 'CardDraw', origin: 'manual', rarity: 'Common' },
+        ],
+      },
+    };
+    expect(() => decodeExecutionPlan(duplicateArcana)).toThrow(/duplicate key/);
+    const nonSeleneHex = {
+      ...fOpeningFixture,
+      startingLoadout: {
+        ...fOpeningFixture.startingLoadout,
+        startingHex: {
+          spellTraitKey: 'SpellMoonBeamTrait',
+          layoutKey: 'Lung',
+          rareTalentKeys: ['MoonBeamPrimaryTalent', 'MoonBeamPrimaryTalent'],
+          epicTalentKeys: [],
+        },
+      },
+    };
+    expect(() => decodeExecutionPlan(nonSeleneHex)).toThrow(/requires SuitHexAspect/);
+  });
+
   it('publishes boss rewards as required but simulation-neutral native outcomes', () => {
     const { plan } = planFor(createCompleteFGProject());
     const bosses = plan.occurrences.filter((occurrence) =>
