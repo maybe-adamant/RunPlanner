@@ -45,7 +45,10 @@ export function activeRoomActionReferences(
 ): readonly RoomActionReference[] {
   const room = catalog.rooms.byKey[occurrence.gameName];
   if (room === undefined) return Object.freeze([]);
-  const references: RoomActionReference[] = [...createDefaultRoomActionState(room).order];
+  const declarationActions = createDefaultRoomActionState(room).order;
+  const references: RoomActionReference[] = declarationActions.filter(
+    (reference) => reference.kind !== 'useFountain',
+  );
   const envelopeSlots = encounterEnvelopeSlots(catalog, room, occurrence.gameName);
   const activeEncounterSlots =
     scope?.activeEncounterSlotKeys !== undefined
@@ -117,6 +120,8 @@ export function activeRoomActionReferences(
     }
   }
   // A Reprieve's authored reward is its room-entry pickup; fountain use follows it by default.
+  const fountain = declarationActions.find((reference) => reference.kind === 'useFountain');
+  if (fountain !== undefined) references.push(fountain);
   if (occurrence.keepsakeRack !== undefined)
     references.push(Object.freeze({ kind: 'interactKeepsakeRack' }));
   if (occurrence.state.kind === 'shipCombat') {
