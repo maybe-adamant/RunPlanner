@@ -939,215 +939,379 @@ Intended commits:
 - Plan Executor: `refactor(executor): establish room timeline skeleton`
 - Modpack shell: pin the completed executor commit.
 
-### Gate C — Generic acquisition carriers
+### Native intervention policy for Gates C through F
 
-User-visible outcome: the same planner acquisition result works regardless of
-whether the game carries it through loot, a consumable, a generated object, an
-NPC menu, a Shop purchase, or a Well purchase.
+Simulation completeness does not imply executor ownership. The planner engine
+must model every consequence that changes later eligibility or Run State, but
+the executor remains a thin steering layer over the native game. Each later
+effect receives one implementation disposition during its owning gate:
 
-Deliverables:
+| Disposition          | Executor responsibility                                                                                                                                  |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Native-authoritative | Let the complete native callback chain run. Publish no extra actuator merely because the simulator models the result.                                    |
+| Verify-only          | Let native code run, then prove one stable terminal result only when a published Timeline owner needs completion evidence.                               |
+| Native-steered       | Replace the smallest authored RNG, eligibility, ordering, source, or target decision and let native code apply all resulting mutations and side effects. |
+| Executor-realized    | Directly create or replace state only when no bounded native steering seam exists and the gate explicitly justifies the exception.                       |
 
-- establish one exact carrier matrix for ordinary loot, Pom/level loot, direct
-  consumables, direct random-level items, generated pickups, Mystery Boons,
-  bespoke NPC menus, World Shop items, Well items, and resources;
-- for every multi-callback carrier in that matrix, record its authoritative
-  native binding point, action-entry contact, intermediate subcontacts,
-  terminal proof or finite terminal alternatives, cancel/retry behavior, and
-  whether each subcontact shares an owner or uses a planner-declared dependent
-  owner; single-callback carriers identify the same callback as entry and
-  terminal;
-- bind every materialized object/screen to its published semantic owner before
-  attempting completion;
-- keep purchase/payment distinct from a later trait or level acquisition;
-- apply the same one-step runtime fallback relation at its four published
-  availability contacts without searching another pool;
-- preserve producer/child relations for Artificer, generated trait pickups,
-  Mystery Boon unwrap, and later effect layers; and
-- replace carrier-specific duplicate code with a shared adapter only where the
-  native inputs and completion proof are genuinely identical.
+These are planning classifications, not a required production enum or runtime
+registry. The default is native-authoritative. Verification does not authorize
+mutation. Native-steered adapters must call the original callback chain and
+must not copy the surrounding game algorithm. A desync disables later planner
+enforcement but never blocks player input or prevents the native callback from
+continuing.
 
-Gate C must stop for adjudication if a carrier has no stable terminal proof or
-has an unbounded native callback protocol. It may move proof to a durable
-native-result checkpoint or demonstrate that the planner transaction boundary
-must change; it must not teach the Timeline runtime that carrier's callback
-sequence.
+For example, Proper Upbringing remains fully modeled by the simulator but its
+deterministic native activation is not reimplemented. Ransoms likewise leave
+trait removal and level application to `SacrificeAllBoon`; a stable post-state
+may be verified, but the executor does not perform the mutations. Steady Growth
+keeps its native encounter clock and rarity application; the executor steers
+only the authored target when that clock fires.
+
+Every Gate C-through-F carrier audit records:
+
+- the complete native callback chain and stable terminal point;
+- which part is deterministic native behavior and which part is volatile;
+- what the planner simulates so later planning remains correct;
+- the smallest value, target, or branch the executor must steer, if any;
+- whether a terminal proof is necessary for an existing Timeline owner; and
+- why any executor-realized exception cannot use a bounded native seam.
+
+If the native sequence has no bounded terminal, or exact realization would
+require copying a full block of game logic, the gate stops for adjudication.
+It must not push that complexity into the generic Timeline runtime.
+
+### Gate C — Cascading acquisition carriers
+
+User-visible outcome: ordinary loot, level outcomes, NPC rewards,
+transformations, and direct consumables reach the same occurrence-local
+Timeline through small independently reviewable adapters. Gate C is five
+ordered delivery gates, not one atomic acquisition rewrite.
+
+Each slice first records its carrier's binding point, entry callback,
+intermediate callbacks, stable terminal proof or finite alternatives,
+cancel/retry behavior, and owner split. Implementation then moves only that
+closed family beneath `room/timeline/`; it deletes the displaced branch from
+the broad legacy hook in the same commit and does not add forwarding layers or
+empty future directories.
+
+#### C1 — Ordinary Boon and Hammer acquisition
+
+- create `room/timeline/traits/` around the native loot-to-offer-to-selection
+  sequence used by ordinary Olympian/Hermes Boons and Hammers;
+- bind the materialized loot and resulting offer screen to the published owner;
+- preserve native option records while steering only authored option order,
+  rarity, replacement identity, rejected identity, and already-published final
+  effective level before the screen opens;
+- let the native selection callback equip or stack the chosen trait, then use
+  that stable result as the terminal proof; and
+- leave every selected trait's later special effect unclaimed. Successful outer
+  acquisition does not imply that Natural Selection, Sea Star, a Ransom, or
+  another consequential trait has been implemented.
+
+Primary witnesses are one ordinary Olympian Boon, one Hermes Boon, one Hammer,
+one replacement offer, and one denied option. This slice excludes Chaos,
+Spell, NPC, Pom, Mystery Boon, generated-child, purchase, and consumable
+carriers.
+
+#### C2 — Level outcomes
+
+- close the native Pom offer and selected-target sequence for ordinary Poms and
+  Pom Slices without manually changing trait stacks;
+- steer the offered targets and authored selected target, then let native code
+  apply the level count;
+- steer Aspect of Persephone's authored random bonus at offer generation and
+  consume the planner's final effective level alongside Premium Service rather
+  than adding levels after acquisition;
+- defer Nectar and other consumable-carried levels to C5 even though they reuse
+  the level terminal proof.
+
+Primary witnesses are an ordinary Pom, an optional Pom Slice, one Persephone
+bonus with and without Premium Service pressure. Natural Selection follows as
+the separate D3 consequence slice after this carrier is committed.
+
+#### C3 — NPC acquisitions and Mystery Boon resolution
+
+- create `room/timeline/encounters/` for the bespoke Arachne and Narcissus menu
+  entry, option preparation, selection, and stable native grant contacts;
+- steer only the authored native menu choice and let the NPC function grant its
+  result;
+- close Narcissus Mystery Boon's provider, unwrap, resolved god source, and
+  resulting trait acquisition by handing the final offer to C1's trait adapter;
+- keep provider, box, hidden source, and trait contacts on their published
+  owner/dependent owners without a callback cursor; and
+- add later NPC functions only in their biome gate or a separately reviewed
+  universal NPC extension, not speculatively in this F/G slice.
+
+Primary witnesses are Arachne's trait menu, Narcissus direct reward, and
+Narcissus Mystery Boon through final trait selection. Mystery purchase and
+Hermes Shrine delivery remain outside this slice.
+
+#### C4 — Reward transformations
+
+- create `room/timeline/transformations/` for Artificer and Time Piece;
+- steer Artificer's native replacement reward/source selection, bind the native
+  generated child, and let the game perform conversion and pickup behavior;
+- steer Time Piece's authored eligible replay target through its native path,
+  preserving the same producer/child identities without recreating the reward;
+- keep Forfeit Onion behavior with its owning reward gate unless this slice
+  demonstrates that it is inseparable from Artificer's native conversion seam.
+
+Primary witnesses are Artificer source → generated replacement → pickup, Time
+Piece on one eligible source, and isolation between their source and child
+owners. Sea Star follows as the separate D5 consequence slice after these
+transformation primitives are committed.
+
+#### C5 — Direct consumable carriers
+
+- close ordinary and generated consumable binding, use, presentation, and
+  stable native terminal proof;
+- reuse C2's level proof for Nectar and other direct random-level items without
+  moving their native application into a generic consumable adapter;
+- preserve producer/child identity for Quick Buck, Buried Treasure, NPC gifts,
+  Echo, and other declared generated pickups while leaving each special
+  producer's RNG steering to its owning later gate; and
+- apply runtime fallback only at the exact published availability contact,
+  treating preferred and fallback results as the same owner.
+
+Primary witnesses are one direct consumable, one generated consumable, Nectar,
+and preferred/fallback/neither at the applicable consumable availability
+contact. Shop, Well, and Shrine inventory and purchase behavior remain Gate E;
+their later acquired objects reuse C1, C2, or C5 only after Gate E binds them.
+
+Gate C stops if any carrier lacks a stable terminal proof or has an unbounded
+callback sequence. It may move proof to a durable native-result checkpoint or
+demonstrate that the planner transaction boundary must change; it must not add
+a callback cursor or carrier protocol to the generic Timeline runtime.
+
+Each C1-through-C5 slice has its own executor commit, independent review, and
+modpack pin. Run Planner changes are allowed only for a demonstrated missing
+carrier fact; no slice publishes executor convenience state.
+
+### Gate D — Consequential trait, keepsake, and Hex steering
+
+User-visible outcome: every modeled trait or keepsake consequence has an
+explicit minimal runtime disposition independent of biome. Each Gate D slice
+consumes the stable Gate C carrier immediately before it; it does not reopen
+that carrier's callback ownership.
+
+Gate D is delivered as bounded native-contact passes rather than one catalog
+wide actuator commit. The owning audit classifies each family before code is
+changed:
+
+Gate C and Gate D are intentionally interleaved. We do not finish every carrier
+and then accumulate every consequential effect into one late gate. The locked
+delivery order is:
+
+1. C1 closes ordinary Boon/Hammer selection.
+2. D1 closes the F/G Chaos offer variant using that trait-screen foundation.
+3. D2 classifies and closes direct selected-trait consequences that need no
+   later carrier: Proper Upbringing, Ransoms, All Together, Concave Stone, and
+   Cherished Heirloom.
+4. C2 closes single-target levels and effective-level offer input.
+5. D3 closes Natural Selection by reusing C2's native level steering.
+6. C3 closes Arachne, Narcissus, and Mystery Boon carrier chains.
+7. D4 closes only the NPC-specific consequential results reachable through
+   those carriers; Echo/Circe remain deferred until their route gate unless a
+   universal contact can be proved without speculative code.
+8. C4 closes Artificer and Time Piece transformation carriers.
+9. D5 closes Sea Star against those stable producer/child primitives.
+10. C5 closes direct and generated consumable carriers.
+11. D6 closes Quick Buck, Buried Treasure, and other universal produced-pickup
+    effects against C5 without reopening transformation identity.
+12. D7 closes Spell, Path, Moon Beam, and remaining Hex contacts by reusing the
+    Gate A Hex primitive.
+
+Each numbered item is an independent implementation/review/commit boundary.
+A consequence gate may document a native-authoritative disposition and produce
+no actuator code; it still closes the classification before the next carrier
+family broadens the surface.
+
+| Family                   | Runtime disposition                                                                                                                                                                                                   |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Proper Upbringing        | Native-authoritative. The simulator models activation and upgrades; native element/trait code remains the sole runtime implementation.                                                                                |
+| Ransoms                  | Native-authoritative or verify-only at the stable result of `SacrificeAllBoon`; never remove or level traits in executor code.                                                                                        |
+| Natural Selection        | Native-steered at `DistributeLevels`; native code applies the ordered eight-target level sequence after C2 closes the level carrier.                                                                                  |
+| All Together             | Native-steered at `GrantBoons`; substitute the four authored grant identities and let native code grant them.                                                                                                         |
+| Sea Star                 | Native-steered proc/no-proc with native duplicate binding, purchase exclusion, and non-recursion after C4 closes producer/child transformations.                                                                      |
+| Concave Stone            | Native-steered proc/no-proc and frozen residual choice inside the existing upgrade-selection sequence; native code owns the second screen and grant.                                                                  |
+| Cherished Heirloom       | Native-authoritative or verify-only at `AttemptAdvanceKeepsake`; do not reproduce rank transition logic.                                                                                                              |
+| Produced pickups         | Steer only declared random identities when required, then bind native children for Quick Buck, Buried Treasure, NPC gifts, Echo, and other producers.                                                                 |
+| Echo / Circe             | Classify each modeled non-neutral result separately; deterministic native effects pass through, while only their volatile choice is steered. Dormant later-route adapters remain outside F/G live closure.            |
+| Spell / Path / Moon Beam | Native-steered Spell/layout/node/point choices, reusing Gate A's Hex realization. Native code owns Hex mutation, Path investment, late God Sent insertion, and closed-tree behavior; combat effects remain unmodeled. |
+
+Chaos remains its own bounded trait-offer adapter because its paired
+curse/blessing screen, curse maturity, values, and rejected curse differ from
+the ordinary C1 carrier. The executor steers the authored pair and values at
+native offer construction; native code equips the curse and later matures the
+blessing. It does not recreate the curse clock or blessing transition.
+
+`equip`, `noOp`, numeric-only Echo results, simulation-neutral keepsakes, and
+Olympian keepsake pressure remain native-authoritative unless a concrete native
+random choice requires steering. Exact equip plus the later resolved reward is
+not a reason to add another effect transaction.
 
 Primary witnesses:
 
-- ordinary Olympian Boon and Hammer;
-- Pom choice, Nectar, and Pom Slice;
-- Mystery Boon provider then trait acquisition;
-- Arachne and Narcissus bespoke menus plus one dormant later-biome NPC menu;
-- direct consumable and generated consumable with the same semantic result;
-- purchased Boon whose purchase does not complete its trait owner;
-- Artificer source, generated replacement, and later pickup; and
-- preferred, fallback, and neither-available cases at all four fallback
-  contacts.
+- one native-authoritative family proving that simulator coverage creates no
+  executor mutation path;
+- one verify-only deterministic result whose failed proof disables enforcement
+  without blocking the native callback;
+- one native-steered family proving only its target/choice is substituted;
+- Concave Stone with and without Cherished Heirloom pressure;
+- Sea Star positive and negative paths through the already-closed carriers;
+- a Ransom followed by a same-room offer using the native post-removal state;
+  and
+- a test-owned exhaustive classification of every normalized
+  `TraitSelectedDisposition` and modeled keepsake-effect family.
 
-No special trait's internal random effect is closed merely because its outer
-trait selection passes this gate.
+That exhaustive classification belongs in tests or the durable audit.
+Production must not gain a generic effect registry, a copied trait simulator,
+or manual trait mutation utilities. Each bounded native-contact pass has its
+own executor commit and modpack pin; planner changes are allowed only for a
+demonstrated missing exact choice or terminal fact.
 
-Intended commits:
+### Gate E — Cascading F/G commerce closure
 
-- Run Planner only for a demonstrated missing carrier fact.
-- Plan Executor: `feat(executor): unify acquisition carriers`
-- Modpack shell: pin the completed executor commit.
+User-visible outcome: F/G Shops, Pools, and Wells use stable inventory and
+interaction primitives while native commerce, payment, and item application
+continue to manage themselves. Gate E is three ordered delivery gates, not one
+Shop-like rewrite.
 
-### Gate D — Trait, Chaos, keepsake, and Hex effect closure
+#### E1 — F/G Shops and purchase handoff
 
-User-visible outcome: every planner-modeled trait or keepsake consequence has
-an exact execution disposition independent of biome.
+- steer the complete authored Room Shop and World Shop inventory at native
+  inventory generation, including offers the player does not purchase;
+- keep feature presence, inventory generation, purchase intent, payment, and
+  later acquisition as separate facts;
+- bind the exact native slot/button, let native code pay costs and grant the
+  item, then hand acquired Boons, levels, and consumables to C1, C2, or C5;
+- apply the exact one-step Last Stand availability fallback without searching
+  another pool; and
+- leave price, Gold, and simulation-neutral purchase effects entirely native.
 
-Gate D has two separately reviewable delivery gates. D1 closes the generic
-offer carrier before D2 adds any trait-specific acquisition behavior.
+Primary witnesses are a purchased and unpurchased offer in each F/G Shop
+shape, a native payment/application, a trait acquisition handoff, a consumable
+handoff, and preferred/fallback/neither availability.
 
-#### D1 — Generic offers
+#### E2 — Pool of Purging
 
-- ordinary Olympian, Hermes, Hammer, Spell, NPC, Duo/Legendary, replacement,
-  effective-level, Calling Card, and Denial-rejected offers;
-- preserve native option records while imposing planner option order, rarity,
-  effective level, replacement, and rejected identity;
-- all three Chaos curse choices, requirements, selected curse/blessing pair,
-  rarity, values, and blessing maturity state; and
-- Concave Stone's frozen residual and any runtime fallback remain nested in the
-  source acquisition rather than becoming new Timeline owners.
+- allow an uninteracted Pool to remain wholly native-generated;
+- when interaction is authored, steer the three declared sale choices without
+  replacing the native menu;
+- bind the selected slot and exact trait, let native sale code remove it, and
+  use the resulting trait absence as the terminal proof; and
+- ignore Gold proceeds and reroll behavior.
 
-#### D2 — Closed consequential effect families
+Primary witnesses are uninteracted Pool pass-through, one sale, three sales in
+authored order, and a failed terminal proof that disables enforcement without
+blocking the native sale callback.
 
-The planner engine must publish, and the executor must realize or locally
-verify, the exact result for every applicable closed disposition:
+#### E3 — Stygian Well and Travel Deal
 
-| Family                   | Required exact product/contact                                                                                                                                                                                            |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Natural Selection        | Ordered eight-target level sequence consumed by `DistributeLevels`.                                                                                                                                                       |
-| Ransoms                  | Removed trait identities plus exact resulting level mutations at `SacrificeAllBoon`.                                                                                                                                      |
-| All Together             | One selected direct grant from each of the four declared sets at `GrantBoons`.                                                                                                                                            |
-| Sea Star                 | Explicit duplicate/no-duplicate result at every eligible source; positive child binding for loot and consumable carriers; negative suppression; no purchase proc and no recursion.                                        |
-| Concave Stone            | Proc/no-proc and selected frozen residual inside `HandleUpgradeChoiceSelection`, including Cherished Heirloom's same-offer ordering.                                                                                      |
-| Cherished Heirloom       | Exact current-keepsake rank transition at `AttemptAdvanceKeepsake`, or an explicitly proven deterministic native pass-through.                                                                                            |
-| Produced pickups         | Exact producer and child owners for Quick Buck, Buried Treasure, NPC gifts, Echo, and other declared producers.                                                                                                           |
-| Echo / Circe             | Exact result payloads for every modeled non-neutral effect; adapters may remain dormant until their route is enabled but must decode and unit-test against their native carrier.                                          |
-| Spell / Path / Moon Beam | Ordinary Spell choice; reuse of Gate A's Hex-tree realization for newly acquired spells; later Path-point contributions, late God Sent insertion, investment, and closed-tree ineligibility; no combat-effect simulation. |
-
-`equip`, `noOp`, numeric-only Echo results, and simulation-neutral keepsakes may
-be native pass-through only under the explicit pass-through rule above.
-Olympian keepsake pressure must be classified deliberately: if exact equip plus
-the later resolved reward/offer is sufficient, document that pass-through and
-do not invent another transaction.
-
-Primary witnesses:
-
-- one concrete trait for every row above, using the named game-native contact;
-- Sea Star positive and negative outcomes through full Pom/loot and direct
-  consumable carriers, plus generated-child non-recursion;
-- Concave Stone with and without Cherished Heirloom ordering pressure;
-- Ransom removal followed by a same-room offer using the post-removal state;
-- All Together's four exact grants; and
-- a test-owned exhaustive check that every normalized
-  `TraitSelectedDisposition` and modeled keepsake-effect family has one
-  execution classification.
-
-The exhaustive check belongs in tests. Production must not gain a generic
-effect registry or a second trait simulator.
-
-Intended D1 commits:
-
-- Run Planner only for a demonstrated missing generic offer product.
-- Plan Executor: `refactor(executor): close generic trait offers`
-- Modpack shell: pin the completed executor commit.
-
-Intended D2 commits:
-
-- Run Planner: `feat(execution): publish consequential trait outcomes`
-- Plan Executor: `feat(executor): realize consequential trait outcomes`
-- Modpack shell: pin the completed executor commit.
-
-### Gate E — Shop, Stygian Well, Pool, and Shrine closure
-
-User-visible outcome: all Shop-like objects share stable inventory and
-interaction primitives while preserving their different semantics.
-
-Deliverables:
-
-- cover Room Shop, World Shop, Surface Shop, I/Q World Shop, Stygian Well,
-  Pool of Purging, and Shrine of Hermes inventory shapes without making one
-  feature pretend to be another;
-- keep object presence, generated inventory, purchase/sale intent, and later
-  acquisition as separate facts;
-- retain full Shop and Shrine inventory even when offers are not purchased;
-- allow uninteracted Wells and Pools to generate natively without fabricated
-  authored inventory;
-- settle Pool sales by exact removed trait and ignore Gold amount;
-- close every declared Well effect: neutral, Spark, Yarn, Hymn, Discount,
-  Empty Slot, Extended, Twist, and Last Stand fallback;
+- allow an uninteracted Well to remain wholly native-generated and avoid false
+  Timeline obligations;
+- steer an authored three-slot inventory and bind each purchased native item,
+  while letting native code pay, grant, stack, and expire every effect;
+- classify neutral, Spark, Yarn, Hymn, Discount, Empty Slot, Extended, Twist,
+  and Last Stand before implementation; steer only Twist/fallback identity or
+  a later authored target that is genuinely volatile;
 - preserve Travel Deal's planner-owned purchase/refill prerequisites without
-  recomputing "first purchase" in Lua;
-- preserve Echo Gold Gold Gold as an exact purchase-to-child relation;
-- keep Shrine purchase/rush setup distinct from the later delivery acquisition;
-  rushed delivery is local while delayed delivery is retained state; and
-- treat price, damage, health, Gold, duration of neutral effects, and other
-  simulation-neutral amounts as native pass-through.
+  recomputing “first purchase” in Lua; once ready, steer the native refill item
+  and optional refill purchase; and
+- preserve Echo Gold Gold Gold as an exact purchase-to-native-child relation
+  only when its owning later-biome gate reaches that contact.
 
 Primary witnesses:
 
-- interacted and uninteracted Well and Pool;
-- ordinary World Shop with purchased and unpurchased trait/consumable offers;
-- Travel Deal source, refill realization, competing purchase barrier, and
+- interacted and uninteracted Well;
+- Travel Deal source, refill readiness, competing-purchase barrier, and
   optional refill purchase;
-- Twist preferred/fallback result;
-- Last Stand available and fallback inventory/purchase;
-- one neutral stacking Well item that creates no false obligation;
-- Shrine rushed and delayed Mystery Boon delivery, including delivery after the
-  source room has closed; and
-- a test-owned exhaustive check for every normalized Well effect and Shop-like
-  profile.
+- Twist preferred/fallback result and Last Stand availability fallback;
+- one neutral stacking item proving that native application creates no extra
+  actuator; and
+- a test-owned classification for every normalized Well effect.
 
-Intended commits:
+Shrine of Hermes does not block F/G closure. Its full inventory, purchase/rush,
+native clock, local or delayed delivery, and Mystery Boon handoff become a
+separate commerce gate when N/O/P/Q execution reaches Shrine structure.
+Surface and I/Q Shop variants likewise belong to their route/biome gates after
+E1 establishes the shared purchase contact; they are not speculative E1
+requirements.
 
-- Run Planner only for missing exact semantic products revealed by the audit.
-- Plan Executor: `feat(executor): close shop-like native contacts`
-- Modpack shell: pin the completed executor commit.
+Each E1-through-E3 slice has its own executor commit, independent review, and
+modpack pin. Run Planner changes are limited to demonstrated missing exact
+inventory, dependency, or fallback facts.
 
-### Gate F — Remaining room actions, retained effects, and automatic outcomes
+### Gate F — Cascading remaining actions and closure
 
-User-visible outcome: everything outside loadout, structure, traits, and
-commerce has an explicit execution disposition rather than falling through a
-generic callback.
+User-visible outcome: every remaining F/G room action has a minimal native
+disposition rather than falling through a generic callback or being manually
+reimplemented. Gate F is three ordered delivery gates.
 
-Deliverables:
+#### F1 — Remaining room actions
 
-- close resources and exact element contribution, fountain/Phial, keepsake
-  rack changes, Forfeit Onion, required pickups, generated optional pickups,
-  and effect-neutral boss drops;
-- retain the already-closed Time Piece and Artificer carrier paths without
-  moving their acquisition semantics into this layer;
-- close the full automatic union: Steady Growth, Transcendent Embryo, Judgment,
-  and Crystal Figurine;
-- verify the seven F/G room-exit conformance readers and retain explicit
-  dormant dispositions for Echo Shop duplicate and Shrine deliveries;
+- steer resource element success only at the native once-per-run outcome; let
+  native gathering and trait grant code run;
+- let native fountain use and Aromatic Phial application run, steering only the
+  authored Phial target when selection is volatile;
+- bind Keepsake Rack changes at the native equip contact and reuse the general
+  keepsake effect path; opening/closing a rack without changing keepsake remains
+  incidental;
+- steer Forfeit's Onion replacement at reward generation and let native pickup
+  behavior run; required pickups, generated optional pickups, and
+  effect-neutral boss drops remain native-authoritative;
+- retain the C4 Time Piece and Artificer paths without moving their acquisition
+  semantics into this layer.
+
+Primary witnesses:
+
+- resource element acquired through the native room-exit collection path;
+- Phial-sensitive and non-sensitive rack/fountain orders;
+- Forfeit ordinary and Artificer Onion paths; and
+- required and optional pickups proving native pickup behavior remains intact.
+
+#### F2 — Automatic outcomes
+
+- Steady Growth keeps its native encounter clock and rarity application; steer
+  only the authored target when the clock fires;
+- Transcendent Embryo keeps its native transformation schedule and trait
+  application; steer only the authored blessing identity, rarity-bound values,
+  and replacement target;
+- Judgment and Crystal Figurine keep their native boss/equip timing and Arcana
+  unlock logic; steer only the authored Arcana identities; and
+- let every deterministic intermediate callback run without adding a Timeline
+  callback sequence.
+
+Primary witnesses are:
+
+- all four automatic transaction kinds, each proving that native code performs
+  the consequence after the smallest authored choice is steered;
+- a repeated or incidental native callback that does not replay a completed
+  automatic owner; and
+- one automatic target mismatch that disables enforcement while native logic
+  continues.
+
+#### F3 — Universal F/G closure
+
+- verify the seven F/G room-exit conformance readers and keep later-route Echo
+  Shop duplicate and Shrine delivery readers explicitly dormant;
 - audit every `RoomActionReference`, automatic transaction, acquisition
   disposition, runtime-fallback contact, retained-effect family, and Overview /
   Doors variant against the contact library;
-- delete superseded positive-only hooks, duplicated native readers, and broad
-  claims that are no longer true; and
-- leave guidance-only and simulation-neutral actions nonblocking.
+- delete superseded positive-only hooks, duplicated native readers, copied game
+  algorithms, and broad claims that are no longer true; and
+- leave guidance-only and simulation-neutral actions nonblocking with no empty
+  actuator code.
 
-Primary witnesses:
+Primary witnesses are:
 
-- resource element acquired at room exit;
-- Phial-sensitive and non-sensitive rack/fountain orders;
-- Time Piece and Artificer on the same eligible source family;
-- Forfeit ordinary and Artificer Onion paths;
-- all four automatic transaction kinds at their lifecycle windows;
 - changed conformance fact blocks, unchanged fact is absent, and diagnostic
   differences remain nonblocking; and
-- one final test-owned coverage report has no unclassified universal family.
+- one final test-owned coverage report with no unclassified universal family.
 
-Intended commits:
-
-- Run Planner: only any final missing execution products and coverage tests.
-- Plan Executor: `feat(executor): close remaining execution contacts`
-- Modpack shell: pin the completed executor commit.
+Each F1-through-F3 slice has its own executor commit, independent review, and
+modpack pin. Planner changes are limited to demonstrated missing choice,
+carrier, or proof facts.
 
 ### Gate G — Focused live F/G proof
 
