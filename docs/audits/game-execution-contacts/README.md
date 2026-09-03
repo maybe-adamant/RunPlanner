@@ -85,3 +85,7 @@ Relevant durable authorities:
 5. Simulation-neutral native drops, including meta-progression rewards, must
    remain visible to the game without becoming execution obligations or
    mismatch candidates.
+6. Sea Star demonstrates why a positive producer relation is not complete
+   random-effect coverage. The execution product and native adapter must also
+   represent the authored negative result wherever vanilla could otherwise
+   proc, and must cover both loot and direct-consumable carriers.
