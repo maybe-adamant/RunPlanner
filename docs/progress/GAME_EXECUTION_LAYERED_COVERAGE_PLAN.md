@@ -586,6 +586,13 @@ Deliverables:
 
 - audit current F/G room realization against every field in execution Overview
   and Doors;
+- make `src/mods/navigation/` the executor-side owner of room occurrence
+  navigation and structural realization: the active room session, room identity,
+  Overview structure, Doors structure, native bindings, and genuinely
+  biome-specific topology adapters live together there;
+- organize exceptional F/G topology beneath `navigation/biomes/` only when it
+  has real biome-owned behavior. Do not add empty per-biome shells or move later
+  acquisition/effect policy merely because it occurs in that biome;
 - retain one general room adapter for ordinary declaration-driven facts;
 - isolate only genuine F- or G-specific structure, including Anomaly, Zagreus
   Contract, and Chaos return batches, in bounded biome-owned modules if the
@@ -597,8 +604,19 @@ Deliverables:
   meta-progression identity as a simulation result;
 - keep native game-literal translation in the existing bounded sidecar rather
   than leaking native strings into planner policy; and
-- delete redundant transition, raw door-class, or duplicate callback checks
-  that do not contribute to Overview or Doors proof.
+- delete the superseded top-level room/Overview/Doors realization paths and
+  structural fragments left in generic feature hooks, along with redundant
+  transition, raw door-class, or duplicate callback checks that do not
+  contribute to Overview or Doors proof.
+
+The `navigation/` name does not authorize a new transition-conformance cursor.
+It advances the room occurrence session and owns the two stable structural
+checkpoints: room entry compares the complete current room and Overview product;
+Doors open compares the complete exit product. It does not compare every native
+transition between those checkpoints. Protocol decoding remains in the protocol
+family, while Timeline actions, acquisitions, purchases, and trait/item effects
+remain with their later owning gates. Object presence belongs to navigation;
+interaction with that object does not.
 
 Primary witnesses:
 
