@@ -2,12 +2,13 @@
 
 ## Status
 
-Drafted on 2026-09-02 for adversarial review. Gate A was completed on
-2026-09-03. Gate A.2 was added and locked after the first live run exposed the
-native run-construction boundary. The later gates remain scope outlines until
-they receive the same component-by-component review. Do not begin a gate until
-its components, ownership, native contacts, pass-through boundary, and concrete
-witnesses have been discussed, cleaned up here, and locked.
+Drafted on 2026-09-02 for adversarial review. Gates A, A.2, and B were completed
+on 2026-09-03. Gate B.2 was added and locked after the structural split exposed
+the need for one explicit occurrence-local Timeline runtime. The later gates
+remain scope outlines until they receive the same component-by-component
+review. Do not begin a gate until its components, ownership, native contacts,
+pass-through boundary, and concrete witnesses have been discussed, cleaned up
+here, and locked.
 
 Starting commits:
 
@@ -673,6 +674,210 @@ Intended commits:
 
 - Run Planner only if a missing explicit structural fact is found.
 - Plan Executor: `refactor(executor): close declaration-driven room structure`
+- Modpack shell: pin the completed executor commit.
+
+### Gate B.2 — Occurrence-local Timeline runtime skeleton
+
+User-visible outcome: actions inside a room may occur in every order the
+validated plan permits, while exact dependencies and required lifecycle
+deadlines still protect modeled outcomes. Later gates add native action
+adapters to one stable room-local runtime rather than rebuilding ordering and
+completion policy for each carrier.
+
+This gate establishes the Timeline runtime only. It does not close the outcome
+families assigned to Gates C through F.
+
+#### Runtime ownership
+
+The active room session remains the inner occurrence envelope:
+
+```text
+room session
+├─ Overview and feature proofs
+├─ Timeline session
+│  ├─ published transaction owners
+│  ├─ exact native-object bindings
+│  ├─ open lifecycle capabilities
+│  ├─ completed owners
+│  ├─ planner-owned prerequisite DAG
+│  └─ checkpoint obligations
+└─ room-exit conformance
+```
+
+The room session owns the active occurrence, creates and closes exactly one
+Timeline session, and coordinates its exit with conformance. The Timeline
+session owns only occurrence-local readiness, binding, completion, and
+obligation bookkeeping. It does not own route advancement, current-room
+selection, Overview realization, Doors, feature construction, native effect
+semantics, or retained state after room exit.
+
+The implementation target is a bounded family beneath `src/mods/room/`:
+
+```text
+room/
+├─ session.lua
+├─ coordinator.lua
+└─ timeline/
+   ├─ session.lua
+   ├─ bindings.lua
+   └─ lifecycle.lua
+```
+
+`room/session.lua` becomes the real room envelope rather than a disguised
+Timeline implementation. `timeline/session.lua` owns graph readiness,
+completion, and obligations. `timeline/bindings.lua` owns exact correlation
+between native carriers and published owners. `timeline/lifecycle.lua` maps
+the decoded closed lifecycle-window union to internal capabilities and
+checkpoint behavior. It must not infer game semantics from transaction kinds.
+
+Gate B.2 must remove the superseded generic Timeline state from
+`runtime_session.lua`, the generic binding half of
+`native_timeline_adapters.lua`, and any duplicate room-local ordering logic.
+Outcome-specific contacts may remain temporarily in their current files until
+their owning later gate replaces them; this gate must not move code merely to
+produce the target tree.
+
+#### Supported Timeline interface
+
+The room coordinator consumes one small semantic-free interface:
+
+- `prepare(occurrence)` builds exact native-binding context early enough for
+  selected-room inventory such as a World Shop to be generated before formal
+  room entry;
+- `enter(prepared)` promotes that exact prepared occurrence into the active
+  room session without reconstructing or broadening its bindings;
+- `bind(owner, nativeObject, detail?)` associates an exact native identity or
+  bounded subcontact with one published semantic owner;
+- `begin(owner)` succeeds only when the owner's lifecycle capability is open,
+  every declared prerequisite owner is complete, and the owner belongs to the
+  active occurrence;
+- `complete(owner, proof)` records completion only after the owning adapter has
+  verified its specific result;
+- `checkpoint(name)` checks only obligations whose published deadline is that
+  checkpoint; and
+- `close()` checks the final room-exit obligations and then discards all local
+  bindings, capabilities, and completed-owner state before the route advances.
+
+The four current obligation checkpoints are `roomEntered`,
+`outgoingGeneration`, `exitUsable`, and `roomExit`. Gate B.2 must exercise all
+four, including the currently underused `roomEntered` checkpoint. A lifecycle
+window is not a checkpoint: it controls when an owner may begin, while an
+obligation controls the deadline by which a required owner must complete.
+
+Every later Gate C-through-F adapter follows the same boundary:
+
+```text
+resolve the published transaction
+→ bind its exact native carrier
+→ begin before planner-directed mutation
+→ realize or observe the adapter-specific result
+→ verify that result locally
+→ complete the same semantic owner
+```
+
+If binding, readiness, realization, or local proof fails, the existing
+first-mismatch policy disables further planner enforcement. The native game
+callback must still run and player input must not be blocked or returned from
+prematurely.
+
+#### Ordering, participation, and identity invariants
+
+- Transaction array order has no runtime meaning. Reversing it must not alter
+  readiness or completion.
+- The sparse prerequisite edge is the only action-order primitive. If the plan
+  publishes `X -> Y` and leaves `Z` independent, `X,Y,Z`, `X,Z,Y`, and `Z,X,Y`
+  are legal; beginning `Y` before `X` is not.
+- The runtime does not topologically sort, schedule, search, replay, or advance
+  an action cursor. `begin(owner)` only checks that owner's declared
+  prerequisites against the completed-owner set.
+- Inclusion, dependency, and obligation remain independent facts. A published
+  non-required transaction may remain incomplete. Neither endpoint of an edge
+  becomes required merely because the edge exists.
+- An obligation blocks only its declared checkpoint. It does not manufacture
+  an ordering edge or make an earlier checkpoint fail.
+- One semantic transaction may use several native subcontacts, but those
+  subcontacts do not become independent owners. A preferred result and its
+  declared runtime fallback likewise complete the same owner.
+- A native carrier may not silently rebind to a different semantic owner.
+  Repeated callbacks or bounded subcontacts for the same owner are handled by
+  that owner's adapter rather than by fuzzy matching or authored ordinals.
+- Dependencies are strictly occurrence-local. Decode continues to reject
+  cross-occurrence edges, and completed owners never survive `close()`.
+- Pending effects, clocks, charges, Shrine deliveries, and other later-room
+  consequences remain retained game state proved by room-exit conformance and
+  a future room's local transaction. They are not cross-room action edges.
+
+#### Lifecycle capabilities and later-biome pressure
+
+The runtime must represent open lifecycle capabilities rather than one scalar
+phase cursor. Capabilities may overlap when the game permits it: for example,
+an `afterCombat` action remains legal after `postOutgoing` becomes available.
+Phase-keyed contacts such as `encounterEnd:<phaseKey>` and
+`bossDefeated:<phaseKey>` are transient and close after their native seam.
+
+Gate B.2 uses only the lifecycle variants already present in the closed
+execution product. It does not publish speculative H or O values. Its internal
+capability model must nevertheless admit the following later extensions
+without changing graph, binding, completion, optionality, or close semantics:
+
+- one H room session spans all Fields cages; each cage is an exact phase-owned
+  barrier, phase-produced required work depends on that owner, optional
+  room-wide work may occur in legal gaps, and the executor never derives cage
+  order independently of the planner;
+- one O room session spans both wheels; each wheel owns its choice, encounter,
+  post-combat work, and next-phase deadline, while independent same-phase work
+  remains unordered; and
+- entering a later phase closes only capabilities that cannot legally survive
+  that transition rather than globally incrementing a room action cursor.
+
+When H and O are implemented, their owning gates may add concrete
+phase-qualified lifecycle windows and `nextPhaseUsable` obligations to the
+closed execution product. They must not replace or fork this Timeline runtime.
+
+#### Primary witnesses
+
+- one dependency `X -> Y` plus independent `Z`, covering every legal
+  permutation above and rejecting only `Y` before `X`;
+- transaction-array reversal with identical behavior;
+- a published optional owner left incomplete without blocking room exit;
+- one required owner that blocks only at each of the four declared checkpoint
+  kinds;
+- a prepared selected-room Shop binding promoted intact on room entry, plus an
+  unselected or different occurrence that cannot inherit that preparation;
+- exact native identity refusing silent rebinding to another owner while
+  allowing the documented subcontacts of one owner;
+- overlapping `afterCombat` and `postOutgoing` capabilities;
+- one current phase-keyed transient contact using
+  `encounterEnd:<phaseKey>` or `bossDefeated:<phaseKey>`;
+- room close clearing bindings, completed owners, and lifecycle capabilities;
+- a readiness or proof mismatch disabling enforcement while the wrapped native
+  callback still completes; and
+- one representative decode/graph witness retaining the existing rejection of
+  cross-occurrence prerequisites.
+
+Tests in this gate prove the skeleton and its boundaries, not every action
+family. Planner tests already own the complete dependency and obligation
+matrices; executor tests retain representative wire and runtime witnesses
+without reproducing planner policy. Gates C through F own exact carrier and
+outcome contact tests through this interface.
+
+#### Exclusions
+
+- no H or O native realization and no speculative H/O execution-schema member;
+- no acquisition, trait, Chaos, keepsake, Hex, Shop, Well, Pool, Shrine,
+  fountain, or automatic-outcome closure assigned to Gates C through F;
+- no global action cursor, scheduler, permutation engine, event bus, semantic
+  action registry, service locator, or cross-room dependency;
+- no transaction-kind inference, planner simulation, or runtime reconstruction
+  of dependencies and obligations; and
+- no broad hook reorganization unless this gate's Timeline skeleton directly
+  supersedes and deletes the old path in the same change.
+
+Intended commits:
+
+- Run Planner: this locked plan amendment only; no production change unless a
+  concrete missing execution product is demonstrated.
+- Plan Executor: `refactor(executor): establish room timeline skeleton`
 - Modpack shell: pin the completed executor commit.
 
 ### Gate C — Generic acquisition carriers
