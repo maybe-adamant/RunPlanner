@@ -114,6 +114,7 @@ export function workspaceOccurrenceOwnedMarkers(
       row.fountainRarity === undefined ? [] : [row.fountainRarity.marker],
     ) ?? []),
     ...(room.roomActions?.steadyGrowth?.map((effect) => effect.marker) ?? []),
+    ...(room.roomActions?.transcendentEmbryo?.map((effect) => effect.marker) ?? []),
     ...(room.judgment === undefined ? [] : [room.judgment.marker]),
     ...(room.keepsakeSelection === undefined
       ? []

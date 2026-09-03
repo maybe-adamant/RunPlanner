@@ -10,6 +10,7 @@ import {
   exact,
   fail,
   object,
+  numberRecord,
   stringArray,
   stringValue,
   wellGenerationKey,
@@ -172,14 +173,42 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
         window: lifecycleWindow(record.window, `${label}.window`),
       });
     }
+    if (record.effect === 'transcendentEmbryo') {
+      exact(
+        record,
+        [
+          'kind',
+          'owner',
+          'effect',
+          'phaseKey',
+          'source',
+          'target',
+          'rarity',
+          'blessingValues',
+          'window',
+        ],
+        [],
+        label,
+      );
+      return Object.freeze({
+        kind,
+        owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
+        effect: 'transcendentEmbryo' as const,
+        phaseKey: stringValue(record.phaseKey, `${label}.phaseKey`),
+        source: stringValue(record.source, `${label}.source`),
+        target: stringValue(record.target, `${label}.target`),
+        rarity: stringValue(record.rarity, `${label}.rarity`),
+        blessingValues: numberRecord(record.blessingValues, `${label}.blessingValues`),
+        window: lifecycleWindow(record.window, `${label}.window`),
+      });
+    }
     exact(
       record,
       ['kind', 'owner', 'effect', 'phaseKey', 'source', 'target', 'window'],
       ['rarity'],
       label,
     );
-    if (record.effect !== 'steadyGrowth' && record.effect !== 'transcendentEmbryo')
-      fail(`${label}.effect is unsupported`);
+    if (record.effect !== 'steadyGrowth') fail(`${label}.effect is unsupported`);
     return Object.freeze({
       kind,
       owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),

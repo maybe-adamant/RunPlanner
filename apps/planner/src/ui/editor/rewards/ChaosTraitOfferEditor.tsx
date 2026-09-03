@@ -3,49 +3,10 @@ import type { ChaosNumericOperand, TraitRarity } from '@run-planner/engine/catal
 import type { WorkspaceChaosOfferInteraction } from '@planner/projections/structured-workspace';
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { ChaosBlessingValueFields } from './ChaosBlessingValueFields';
+import { reconcileChaosOperandValues } from './chaos-blessing-values';
 
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
-
-function operandDomain(operand: ChaosNumericOperand, rarity: TraitRarity) {
-  const domain =
-    operand.byRarity?.[
-      rarity as Extract<TraitRarity, 'Common' | 'Rare' | 'Epic' | 'Heroic' | 'Legendary'>
-    ];
-  return domain === undefined
-    ? operand
-    : {
-        ...operand,
-        minimum: domain.minimum,
-        maximum: domain.maximum,
-        step: domain.step,
-        authoringDefault: domain.authoringDefault,
-        ...(domain.integer === true ? { integer: true as const } : {}),
-      };
-}
-
-function reconcileValues(
-  operands: readonly ChaosNumericOperand[],
-  values: Readonly<Record<string, number>>,
-  rarity?: TraitRarity,
-): Readonly<Record<string, number>> {
-  return Object.freeze(
-    Object.fromEntries(
-      operands.map((operand) => {
-        const effective = rarity === undefined ? operand : operandDomain(operand, rarity);
-        const value = values[operand.key];
-        const steps = value === undefined ? NaN : (value - effective.minimum) / effective.step;
-        const legal =
-          value !== undefined &&
-          Number.isFinite(value) &&
-          value >= effective.minimum &&
-          value <= effective.maximum &&
-          (effective.integer !== true || Number.isInteger(value)) &&
-          Math.abs(steps - Math.round(steps)) <= 1e-8;
-        return [operand.key, legal ? value : effective.authoringDefault];
-      }),
-    ),
-  );
-}
 
 function selectedCurseKey(value: AuthoredChaosTraitOffer): string {
   return value.curseOptions[OPTION_KEYS.indexOf(value.selectedOptionKey)]!.curseKey;
@@ -75,10 +36,13 @@ function resetSelectedDetails(
   const blessingOperands = domain.blessingOperands[blessingKey] ?? [];
   return Object.freeze({
     ...next,
-    selectedCurseValues: reconcileValues(domain.selectedCurseOperands, value.selectedCurseValues),
+    selectedCurseValues: reconcileChaosOperandValues(
+      domain.selectedCurseOperands,
+      value.selectedCurseValues,
+    ),
     blessingKey,
     rarity,
-    blessingValues: reconcileValues(blessingOperands, value.blessingValues, rarity),
+    blessingValues: reconcileChaosOperandValues(blessingOperands, value.blessingValues, rarity),
   });
 }
 
@@ -135,22 +99,10 @@ export function ChaosTraitOfferEditor({
     onUpdate(
       Object.freeze({
         ...value,
-        selectedCurseValues: reconcileValues(selectedOperands, {
+        selectedCurseValues: reconcileChaosOperandValues(selectedOperands, {
           ...value.selectedCurseValues,
           [operand.key]: Number(raw),
         }),
-      }),
-    );
-  };
-  const updateBlessingValue = (operand: ChaosNumericOperand, raw: string): void => {
-    onUpdate(
-      Object.freeze({
-        ...value,
-        blessingValues: reconcileValues(
-          blessingOperands,
-          { ...value.blessingValues, [operand.key]: Number(raw) },
-          value.rarity,
-        ),
       }),
     );
   };
@@ -166,7 +118,7 @@ export function ChaosTraitOfferEditor({
         ...candidate,
         blessingKey,
         rarity,
-        blessingValues: reconcileValues(operands, value.blessingValues, rarity),
+        blessingValues: reconcileChaosOperandValues(operands, value.blessingValues, rarity),
       }),
     );
   };
@@ -175,7 +127,7 @@ export function ChaosTraitOfferEditor({
       Object.freeze({
         ...value,
         rarity,
-        blessingValues: reconcileValues(blessingOperands, value.blessingValues, rarity),
+        blessingValues: reconcileChaosOperandValues(blessingOperands, value.blessingValues, rarity),
       }),
     );
   };
@@ -285,24 +237,12 @@ export function ChaosTraitOfferEditor({
                 ))}
               </select>
             </label>
-            {blessingOperands.map((operand) => {
-              const effective = operandDomain(operand, value.rarity);
-              const current = value.blessingValues[operand.key] ?? effective.authoringDefault;
-              return (
-                <label className="field-control" key={operand.key}>
-                  <span>{effective.label}</span>
-                  <input
-                    aria-label={effective.label}
-                    max={effective.maximum}
-                    min={effective.minimum}
-                    onChange={(event) => updateBlessingValue(operand, event.currentTarget.value)}
-                    step={effective.step}
-                    type="number"
-                    value={current}
-                  />
-                </label>
-              );
-            })}
+            <ChaosBlessingValueFields
+              onChange={(blessingValues) => onUpdate(Object.freeze({ ...value, blessingValues }))}
+              operands={blessingOperands}
+              rarity={value.rarity}
+              values={value.blessingValues}
+            />
           </div>
         </div>
       </section>

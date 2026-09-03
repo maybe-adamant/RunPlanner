@@ -71,7 +71,7 @@ function createGoldenEchoGiftKeepsakePendingProject(
             createRouteStartKeepsakeSelectionAddress('Underworld'),
             'transcendentEmbryo',
           ),
-          value: { blessingKey: 'ChaosElementalBlessing' },
+          value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
         });
   if (keepsakeKey === 'RandomBlessingKeepsake') {
     project = applyProjectCommand(project, catalog, {
@@ -83,7 +83,7 @@ function createGoldenEchoGiftKeepsakePendingProject(
         ),
         'Encounter',
       ),
-      blessingKey: 'ChaosElementalBlessing',
+      value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTranscendentEmbryoTransformation',
@@ -94,7 +94,7 @@ function createGoldenEchoGiftKeepsakePendingProject(
         ),
         'Encounter',
       ),
-      blessingKey: 'ChaosElementalBlessing',
+      value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTranscendentEmbryoTransformation',
@@ -102,7 +102,7 @@ function createGoldenEchoGiftKeepsakePendingProject(
         createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-combat05')),
         'Cage02',
       ),
-      blessingKey: 'ChaosElementalBlessing',
+      value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
     });
   }
   project = applyProjectCommand(project, catalog, {
@@ -141,7 +141,7 @@ function createGoldenEchoGiftKeepsakePendingProject(
         createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-preboss-shop:boss')),
         'Encounter',
       ),
-      blessingKey: 'ChaosElementalBlessing',
+      value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
     });
   }
   const forcedReward = createIncomingRewardAddress(goldenHBiome, forcedTargetId);

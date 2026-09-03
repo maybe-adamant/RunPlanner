@@ -429,6 +429,14 @@ export type {
 } from './evaluation-products';
 export type { BiomeGenerationValidation } from './progressive/products';
 export {
+  transcendentEmbryoBlessingValues,
+  type TranscendentEmbryoBlessingContext,
+  type TranscendentEmbryoBlessingAssessment,
+  type ReachedTranscendentEmbryoThreshold,
+  assessTranscendentEmbryoBlessing,
+  assessTranscendentEmbryoTransformation,
+} from './keepsakes';
+export {
   assessTraitOffer,
   assessTraitOfferComposition,
   assessTraitReplacementComposition,

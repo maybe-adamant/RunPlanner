@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface WorkspaceLoadableInteraction<Result> {
   readonly load: () => Result | Promise<Result>;
@@ -42,91 +42,63 @@ export function useWorkspaceInteractionController<Result>(): {
   const stateRef = useRef<InteractionState<Result> | undefined>(undefined);
   const [, setState] = useState<InteractionState<Result>>();
 
-  const registerInteraction = (
-    interaction: WorkspaceLoadableInteraction<Result> | undefined,
-  ): void => {
-    if (committedInteractionRef.current === interaction) return;
-    committedInteractionRef.current = interaction;
-    requestIdRef.current += 1;
-    if (stateRef.current?.interaction !== interaction) stateRef.current = undefined;
-  };
+  const registerInteraction = useCallback(
+    (interaction: WorkspaceLoadableInteraction<Result> | undefined): void => {
+      if (committedInteractionRef.current === interaction) return;
+      committedInteractionRef.current = interaction;
+      requestIdRef.current += 1;
+      if (stateRef.current?.interaction !== interaction) stateRef.current = undefined;
+    },
+    [],
+  );
 
   useEffect(() => {
     registerInteraction(renderedInteractionRef.current);
   });
 
-  const observe = (
-    interaction: WorkspaceLoadableInteraction<Result> | undefined,
-  ): WorkspaceInteractionSnapshot<Result> => {
-    renderedInteractionRef.current = interaction;
-    const current =
-      interaction !== undefined && stateRef.current?.interaction === interaction
-        ? stateRef.current
-        : undefined;
-    if (current?.error !== undefined) {
-      throw current.error;
-    }
-    return Object.freeze({
-      pending: current?.pending ?? false,
-      result: current?.result,
-    });
-  };
-
-  const activate = (interaction: WorkspaceLoadableInteraction<Result>): Result | undefined => {
-    // Register before loading so the state update caused by this activation
-    // cannot make the next committed render invalidate its own request.
-    renderedInteractionRef.current = interaction;
-    registerInteraction(interaction);
-    const existing = stateRef.current;
-    if (existing?.interaction === interaction && (existing.pending || 'result' in existing)) {
-      setState(existing);
-      return existing.result;
-    }
-    const cached = cacheRef.current.get(interaction);
-    if (cached !== undefined) {
-      const next = Object.freeze({ interaction, pending: false, result: cached.result });
-      stateRef.current = next;
-      setState(next);
-      return cached.result;
-    }
-    const requestId = ++requestIdRef.current;
-    let loaded: Result | Promise<Result>;
-    try {
-      loaded = interaction.load();
-    } catch (error: unknown) {
-      const next = Object.freeze({
-        error: error instanceof Error ? error : new Error(String(error)),
-        interaction,
-        pending: false,
+  const observe = useCallback(
+    (
+      interaction: WorkspaceLoadableInteraction<Result> | undefined,
+    ): WorkspaceInteractionSnapshot<Result> => {
+      renderedInteractionRef.current = interaction;
+      const current =
+        interaction !== undefined && stateRef.current?.interaction === interaction
+          ? stateRef.current
+          : undefined;
+      if (current?.error !== undefined) {
+        throw current.error;
+      }
+      return Object.freeze({
+        pending: current?.pending ?? false,
+        result: current?.result,
       });
-      stateRef.current = next;
-      setState(next);
-      return undefined;
-    }
-    if (!isPromise(loaded)) {
-      cacheRef.current.set(interaction, Object.freeze({ result: loaded }));
-      const next = Object.freeze({ interaction, pending: false, result: loaded });
-      stateRef.current = next;
-      setState(next);
-      return loaded;
-    }
-    const pending = Object.freeze({ interaction, pending: true });
-    stateRef.current = pending;
-    setState(pending);
-    void loaded.then(
-      (result) => {
-        if (requestIdRef.current !== requestId) {
-          return;
-        }
-        cacheRef.current.set(interaction, Object.freeze({ result }));
-        const next = Object.freeze({ interaction, pending: false, result });
+    },
+    [],
+  );
+
+  const activate = useCallback(
+    (interaction: WorkspaceLoadableInteraction<Result>): Result | undefined => {
+      // Register before loading so the state update caused by this activation
+      // cannot make the next committed render invalidate its own request.
+      renderedInteractionRef.current = interaction;
+      registerInteraction(interaction);
+      const existing = stateRef.current;
+      if (existing?.interaction === interaction && (existing.pending || 'result' in existing)) {
+        setState(existing);
+        return existing.result;
+      }
+      const cached = cacheRef.current.get(interaction);
+      if (cached !== undefined) {
+        const next = Object.freeze({ interaction, pending: false, result: cached.result });
         stateRef.current = next;
         setState(next);
-      },
-      (error: unknown) => {
-        if (requestIdRef.current !== requestId) {
-          return;
-        }
+        return cached.result;
+      }
+      const requestId = ++requestIdRef.current;
+      let loaded: Result | Promise<Result>;
+      try {
+        loaded = interaction.load();
+      } catch (error: unknown) {
         const next = Object.freeze({
           error: error instanceof Error ? error : new Error(String(error)),
           interaction,
@@ -134,12 +106,47 @@ export function useWorkspaceInteractionController<Result>(): {
         });
         stateRef.current = next;
         setState(next);
-      },
-    );
-    return undefined;
-  };
+        return undefined;
+      }
+      if (!isPromise(loaded)) {
+        cacheRef.current.set(interaction, Object.freeze({ result: loaded }));
+        const next = Object.freeze({ interaction, pending: false, result: loaded });
+        stateRef.current = next;
+        setState(next);
+        return loaded;
+      }
+      const pending = Object.freeze({ interaction, pending: true });
+      stateRef.current = pending;
+      setState(pending);
+      void loaded.then(
+        (result) => {
+          if (requestIdRef.current !== requestId) {
+            return;
+          }
+          cacheRef.current.set(interaction, Object.freeze({ result }));
+          const next = Object.freeze({ interaction, pending: false, result });
+          stateRef.current = next;
+          setState(next);
+        },
+        (error: unknown) => {
+          if (requestIdRef.current !== requestId) {
+            return;
+          }
+          const next = Object.freeze({
+            error: error instanceof Error ? error : new Error(String(error)),
+            interaction,
+            pending: false,
+          });
+          stateRef.current = next;
+          setState(next);
+        },
+      );
+      return undefined;
+    },
+    [registerInteraction],
+  );
 
-  return { activate, observe };
+  return useMemo(() => ({ activate, observe }), [activate, observe]);
 }
 
 export function useWorkspaceInteraction<Result>(
@@ -157,9 +164,10 @@ export function useWorkspaceInteraction<Result>(
 } {
   const controller = useWorkspaceInteractionController<Result>();
   const current = controller.observe(interaction);
+  const activate = useCallback(() => controller.activate(interaction), [controller, interaction]);
 
   return {
-    activate: () => controller.activate(interaction),
+    activate,
     pending: current.pending,
     result: current.result,
   };

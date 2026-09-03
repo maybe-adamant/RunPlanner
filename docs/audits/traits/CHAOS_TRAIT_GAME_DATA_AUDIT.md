@@ -464,3 +464,13 @@ chronology. Trial Upgrade does not recreate Echo's last eligible reward. An
 ordinary replacement of Transcendent Embryo removes its marked direct blessing
 before later history is observed; the separately audited Cherished Heirloom and
 Gift Gift Gift paths retain their distinct source behaviors.
+
+Transcendent Embryo calls the same processed Chaos-blessing machinery as an
+ordinary Trial Upgrade. Its route-start equip, later rack equip, Gift Gift Gift
+replay, and eight-encounter transformation therefore produce the blessing's
+complete processed numeric payload at the rarity owned by that equip or
+transformation. Blessing identity alone is not an exact outcome. The planner
+must retain every declaration-owned operand, including Revelation's two
+independent values, and must not substitute the rarity minimum as the realized
+result. Rarity remains a chronological fact; the authored result owns the
+within-rarity magnitude rolls.

@@ -149,6 +149,19 @@ export function retainBlockedRegionProducts(
       (resolution) => !retainedLevelKeys.has(semanticAddressKey(resolution.address)),
     ),
   ]);
+  const transcendentEmbryoOutcomes = Object.freeze([
+    ...retainedRewards.transcendentEmbryoOutcomes,
+    ...(blockedTranscendentEmbryoAt === undefined ||
+    retainedRewards.transcendentEmbryoOutcomes.some(
+      (outcome) =>
+        semanticAddressKey(outcome.address) === semanticAddressKey(blockedTranscendentEmbryoAt),
+    )
+      ? []
+      : selectedRewards.transcendentEmbryoOutcomes.filter(
+          (outcome) =>
+            semanticAddressKey(outcome.address) === semanticAddressKey(blockedTranscendentEmbryoAt),
+        )),
+  ]);
   const retainedFindingKeys = new Set(
     retainedRewards.findings.map((finding) => findingIdentityKey(finding)),
   );
@@ -530,6 +543,7 @@ export function retainBlockedRegionProducts(
     rewards:
       selectedTraitOffers.length === retainedRewards.selectedTraitOffers.length &&
       selectedLevelResolutions.length === retainedRewards.selectedLevelResolutions.length &&
+      transcendentEmbryoOutcomes.length === retainedRewards.transcendentEmbryoOutcomes.length &&
       rewardFindings.length === retainedRewards.findings.length &&
       blockedChildSettlement === undefined &&
       settledCurrentSiteBranches === undefined
@@ -546,6 +560,7 @@ export function retainBlockedRegionProducts(
             runStateSnapshots,
             selectedTraitOffers,
             selectedLevelResolutions,
+            transcendentEmbryoOutcomes,
           }),
     artifacts,
   });

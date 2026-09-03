@@ -145,7 +145,7 @@ export type TranscendentEmbryoEquipResultCommand = {
 export type TranscendentEmbryoTransformationCommand = {
   readonly kind: 'ReplaceTranscendentEmbryoTransformation';
   readonly outcome: TranscendentEmbryoOutcomeAddress;
-  readonly blessingKey: string | null;
+  readonly value: import('../traits').AuthoredTranscendentEmbryoOutcome | null;
 };
 
 export type TopologyCommand =

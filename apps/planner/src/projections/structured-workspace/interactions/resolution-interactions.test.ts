@@ -160,7 +160,7 @@ describe('resolution-interactions', () => {
     const outcome = createTranscendentEmbryoOutcomeAddress(owner, 'Encounter');
     const control: WorkspaceTranscendentEmbryoControl = Object.freeze({
       address: outcome,
-      blessingKey: 'ChaosElementalBlessing',
+      value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
       marker: Object.freeze({
         address: outcome,
         assessment: 'assessed' as const,
@@ -182,6 +182,7 @@ describe('resolution-interactions', () => {
             branchSupport: Object.freeze([true]),
             emptyNoOp: false,
             selectedPossible: true,
+            rarity: 'Epic' as const,
           }),
         }),
     }) as CandidateProjectionSession;
@@ -204,10 +205,12 @@ describe('resolution-interactions', () => {
         ?.picker.sections.flatMap((section) => section.items)
         .map((item) => item.value),
     ).toEqual(['ChaosElementalBlessing']);
-    expect(interaction.intentFor('ChaosElementalBlessing').command).toEqual({
+    expect(
+      interaction.intentFor({ blessingKey: 'ChaosElementalBlessing', blessingValues: {} }).command,
+    ).toEqual({
       kind: 'ReplaceTranscendentEmbryoTransformation',
       outcome,
-      blessingKey: 'ChaosElementalBlessing',
+      value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
     });
   });
 

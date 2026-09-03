@@ -7,7 +7,7 @@ import type { RuntimeOfferAvailabilityContact } from '../simulation/runtime-offe
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 11 as const;
+export const EXECUTION_PROTOCOL_VERSION = 12 as const;
 export const EXECUTION_CATALOG_VERSION = '0.54.0-required-boss-rewards' as const;
 
 export type ExecutionRunStateCount =
@@ -233,7 +233,10 @@ export interface ExecutionKeepsakeEquipResults {
   };
   readonly experimentalHammer?:
     { readonly kind: 'selected'; readonly traitKey: string } | { readonly kind: 'exhausted' };
-  readonly transcendentEmbryo?: { readonly blessingKey: string };
+  readonly transcendentEmbryo?: {
+    readonly blessingKey: string;
+    readonly blessingValues: Readonly<Record<string, number>>;
+  };
 }
 
 export interface ExecutionStartingKeepsake {
@@ -378,11 +381,22 @@ export type ExecutionTimelineTransaction =
   | {
       readonly kind: 'automatic';
       readonly owner: string;
-      readonly effect: 'steadyGrowth' | 'transcendentEmbryo';
+      readonly effect: 'steadyGrowth';
       readonly phaseKey: string;
       readonly source: string;
       readonly target: string;
       readonly rarity?: string;
+      readonly window: ExecutionLifecycleWindow;
+    }
+  | {
+      readonly kind: 'automatic';
+      readonly owner: string;
+      readonly effect: 'transcendentEmbryo';
+      readonly phaseKey: string;
+      readonly source: string;
+      readonly target: string;
+      readonly rarity: string;
+      readonly blessingValues: Readonly<Record<string, number>>;
       readonly window: ExecutionLifecycleWindow;
     }
   | {

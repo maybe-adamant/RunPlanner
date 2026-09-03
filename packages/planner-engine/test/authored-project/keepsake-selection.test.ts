@@ -104,12 +104,12 @@ describe('keepsake authored selections', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTranscendentEmbryoEquipResult',
       result: equipResult,
-      value: { blessingKey: 'ChaosWeaponBlessing' },
+      value: { blessingKey: 'ChaosWeaponBlessing', blessingValues: { damageBonus: 0.7 } },
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTranscendentEmbryoTransformation',
       outcome: transformation,
-      blessingKey: 'ChaosElementalBlessing',
+      value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
     });
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
       project,
@@ -118,19 +118,76 @@ describe('keepsake authored selections', () => {
       applyProjectCommand(project, catalog, {
         kind: 'ReplaceTranscendentEmbryoTransformation',
         outcome: transformation,
-        blessingKey: 'ChaosLastStandBlessing',
+        value: {
+          blessingKey: 'ChaosLastStandBlessing',
+          blessingValues: {},
+        },
       }),
     ).toThrow(/in-run Chaos blessing/);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTranscendentEmbryoTransformation',
       outcome: transformation,
-      blessingKey: null,
+      value: null,
     });
     expect(
       project.route?.biomes[0]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === fBoss.occurrenceId,
       )?.encounters.transcendentEmbryoBlessingByPhase,
     ).toBeUndefined();
+  });
+
+  it('accepts declaration-closed Embryo values for zero, one, and two operands', () => {
+    const start = createRouteStartKeepsakeSelectionAddress('Underworld');
+    const equipResult = createKeepsakeEquipResultAddress(start, 'transcendentEmbryo');
+    const exactValues = [
+      { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
+      { blessingKey: 'ChaosWeaponBlessing', blessingValues: { damageBonus: 0.7 } },
+      {
+        blessingKey: 'ChaosExSpeedBlessing',
+        blessingValues: { weaponSpeed: 0.8, propertySpeed: 0.8 },
+      },
+    ] as const;
+    for (const value of exactValues) {
+      let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+        kind: 'ReplaceStartingKeepsake',
+        selection: start,
+        keepsakeKey: 'RandomBlessingKeepsake',
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceTranscendentEmbryoEquipResult',
+        result: equipResult,
+        value,
+      });
+      expect(
+        decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog).route.loadout
+          .keepsakeEquipResults?.transcendentEmbryo,
+      ).toEqual(value);
+    }
+  });
+
+  it('rejects incomplete, extra, off-step, and out-of-range Embryo operands', () => {
+    const project = createCompleteFGProject();
+    const start = createRouteStartKeepsakeSelectionAddress('Underworld');
+    const equipResult = createKeepsakeEquipResultAddress(start, 'transcendentEmbryo');
+    const withKeepsake = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: start,
+      keepsakeKey: 'RandomBlessingKeepsake',
+    });
+    for (const blessingValues of [
+      {},
+      { damageBonus: 0.7, invented: 1 },
+      { damageBonus: 0.701 },
+      { damageBonus: 2 },
+    ]) {
+      expect(() =>
+        applyProjectCommand(withKeepsake, catalog, {
+          kind: 'ReplaceTranscendentEmbryoEquipResult',
+          result: equipResult,
+          value: { blessingKey: 'ChaosWeaponBlessing', blessingValues },
+        }),
+      ).toThrow(/blessingValues|complete/);
+    }
   });
 
   it('leaves Jeweled Pom unresolved and restores dormant authored results', () => {

@@ -3,10 +3,11 @@ import type {
   AuthoredGorgonAthenaOffer,
   AuthoredLevelResolution,
   AuthoredHexTreeConfiguration,
+  AuthoredTranscendentEmbryoOutcome,
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 74 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 75 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -65,7 +66,7 @@ export interface AuthoredKeepsakeEquipResults {
   };
   readonly experimentalHammer?: AuthoredExperimentalHammerEquipResult;
   /** Exact Chaos blessing granted by Transcendent Embryo at this frontier. */
-  readonly transcendentEmbryo?: { readonly blessingKey: string };
+  readonly transcendentEmbryo?: AuthoredTranscendentEmbryoOutcome;
 }
 
 /** Sparse choice for the exact next fountain use owned by one occurrence. */
@@ -249,7 +250,9 @@ export interface RoomEncounterState {
   /** Sparse Boss-defeated Crystal Figurine selections keyed by their exact Boss phase. */
   readonly figurineArcanaKeysByPhase?: Readonly<Record<string, readonly string[]>>;
   /** Sparse reached eight-room Transcendent Embryo transformations. */
-  readonly transcendentEmbryoBlessingByPhase?: Readonly<Record<string, string>>;
+  readonly transcendentEmbryoBlessingByPhase?: Readonly<
+    Record<string, AuthoredTranscendentEmbryoOutcome>
+  >;
   /** Complete declaration-owned Gorgon condition/result for each phase. */
   /** Schema-29 documents always encode this map; optional keeps hand-built legacy fixtures decodable. */
   readonly gorgonResultByPhase?: Readonly<Record<string, AuthoredGorgonPhaseResult>>;

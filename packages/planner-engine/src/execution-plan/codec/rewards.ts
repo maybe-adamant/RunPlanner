@@ -335,7 +335,7 @@ export function equipResults(value: unknown, label: string) {
       ? undefined
       : object(record.transcendentEmbryo, `${label}.transcendentEmbryo`);
   if (transcendentEmbryo !== undefined)
-    exact(transcendentEmbryo, ['blessingKey'], [], `${label}.transcendentEmbryo`);
+    exact(transcendentEmbryo, ['blessingKey', 'blessingValues'], [], `${label}.transcendentEmbryo`);
   return Object.freeze({
     ...(jeweledPom === undefined
       ? {}
@@ -377,6 +377,10 @@ export function equipResults(value: unknown, label: string) {
             blessingKey: stringValue(
               transcendentEmbryo.blessingKey,
               `${label}.transcendentEmbryo.blessingKey`,
+            ),
+            blessingValues: numberRecord(
+              transcendentEmbryo.blessingValues,
+              `${label}.transcendentEmbryo.blessingValues`,
             ),
           }),
         }),

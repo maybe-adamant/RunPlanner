@@ -449,7 +449,14 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
     (row, nestedLabel) => {
       exact(
         row,
-        ['origin', 'rarity', 'progress', 'markedBlessingKey', 'markedBlessingAcquisitionIdentity'],
+        [
+          'origin',
+          'rarity',
+          'progress',
+          'markedBlessingKey',
+          'markedBlessingValues',
+          'markedBlessingAcquisitionIdentity',
+        ],
         [],
         nestedLabel,
       );
@@ -460,6 +467,10 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
         rarity: traitRarity(row.rarity, `${nestedLabel}.rarity`),
         progress: integer(row.progress, `${nestedLabel}.progress`),
         markedBlessingKey: stringValue(row.markedBlessingKey, `${nestedLabel}.markedBlessingKey`),
+        markedBlessingValues: numberRecord(
+          row.markedBlessingValues,
+          `${nestedLabel}.markedBlessingValues`,
+        ),
         markedBlessingAcquisitionIdentity: stringValue(
           row.markedBlessingAcquisitionIdentity,
           `${nestedLabel}.markedBlessingAcquisitionIdentity`,

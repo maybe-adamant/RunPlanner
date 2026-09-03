@@ -7,6 +7,10 @@ import {
   expectString,
   failProjectDocument as fail,
 } from './validation';
+import {
+  normalizeAuthoredTranscendentEmbryoOutcome,
+  type AuthoredTranscendentEmbryoOutcome,
+} from './traits';
 
 /** Decode the sparse immediate result of an authored keepsake selection. */
 export function decodeKeepsakeEquipResults(
@@ -27,8 +31,9 @@ export function decodeKeepsakeEquipResults(
     results.transcendentEmbryo === undefined
       ? undefined
       : expectRecord(results.transcendentEmbryo, `${path}.transcendentEmbryo`);
+  let embryoValue: AuthoredTranscendentEmbryoOutcome | undefined;
   if (embryo !== undefined) {
-    expectExactKeys(embryo, ['blessingKey'], `${path}.transcendentEmbryo`);
+    expectExactKeys(embryo, ['blessingKey', 'blessingValues'], `${path}.transcendentEmbryo`);
     const blessingKey = expectNonBlankString(
       embryo.blessingKey,
       `${path}.transcendentEmbryo.blessingKey`,
@@ -38,6 +43,27 @@ export function decodeKeepsakeEquipResults(
       fail(`${path}.transcendentEmbryo.blessingKey`, 'must be a declared Chaos blessing');
     if (blessing.fixedRarity !== undefined)
       fail(`${path}.transcendentEmbryo.blessingKey`, 'must be a declared in-run Chaos blessing');
+    const rawValues = expectRecord(
+      embryo.blessingValues,
+      `${path}.transcendentEmbryo.blessingValues`,
+    );
+    const blessingValues: Record<string, number> = {};
+    for (const [key, rawValue] of Object.entries(rawValues)) {
+      if (typeof rawValue !== 'number' || !Number.isFinite(rawValue))
+        fail(`${path}.transcendentEmbryo.blessingValues.${key}`, 'must be a finite number');
+      blessingValues[key] = rawValue;
+    }
+    try {
+      embryoValue = normalizeAuthoredTranscendentEmbryoOutcome(catalog, {
+        blessingKey,
+        blessingValues,
+      });
+    } catch (error) {
+      fail(
+        `${path}.transcendentEmbryo.blessingValues`,
+        error instanceof Error ? error.message : 'has an invalid declared operand value',
+      );
+    }
   }
 
   const hammer =
@@ -59,14 +85,10 @@ export function decodeKeepsakeEquipResults(
   if (results.jeweledPom === undefined) {
     if (hammer === undefined)
       return Object.freeze(
-        embryo === undefined
-          ? {}
-          : { transcendentEmbryo: Object.freeze({ blessingKey: embryo.blessingKey as string }) },
+        embryoValue === undefined ? {} : { transcendentEmbryo: Object.freeze(embryoValue) },
       );
     return Object.freeze({
-      ...(embryo === undefined
-        ? {}
-        : { transcendentEmbryo: Object.freeze({ blessingKey: embryo.blessingKey as string }) }),
+      ...(embryoValue === undefined ? {} : { transcendentEmbryo: Object.freeze(embryoValue) }),
       experimentalHammer: Object.freeze({
         ...(hammer.kind === 'selected'
           ? { kind: 'selected' as const, traitKey: hammer.traitKey as string }
@@ -105,9 +127,7 @@ export function decodeKeepsakeEquipResults(
     rarity = authoredRarity as TraitRarity;
   }
   return Object.freeze({
-    ...(embryo === undefined
-      ? {}
-      : { transcendentEmbryo: Object.freeze({ blessingKey: embryo.blessingKey as string }) }),
+    ...(embryoValue === undefined ? {} : { transcendentEmbryo: Object.freeze(embryoValue) }),
     jeweledPom: Object.freeze({
       traitKey,
       ...(rarity === undefined ? {} : { rarity }),

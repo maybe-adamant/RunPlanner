@@ -4,6 +4,7 @@ import {
   type AcquisitionRoleAddress,
   type AuthoredTraitOffer,
   type AuthoredChaosTraitOffer,
+  type AuthoredTranscendentEmbryoOutcome,
   type AuthoredTraitOfferTraits,
   type AuthoredHexTreeConfiguration,
   type AuthoredConcaveStoneResult,
@@ -869,7 +870,7 @@ export interface WorkspaceKeepsakeEquipResultDomain {
   readonly picker: ContextualPickerModel<string>;
   readonly transcendentEmbryoSummary?: {
     readonly rarity: import('@run-planner/engine/catalog-schema').InRunTraitRarity;
-    readonly operands: readonly { readonly label: string; readonly value: number }[];
+    readonly operands: readonly ChaosNumericOperand[];
   };
 }
 
@@ -915,6 +916,11 @@ export interface WorkspaceTranscendentEmbryoEquipResultInteraction {
     value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo'],
   ) => WorkspaceKeepsakeEquipResultDomain;
   readonly selectedLabel: string;
+  readonly outcomeFor: (
+    blessingKey: string,
+  ) => NonNullable<
+    import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo']
+  >;
   readonly intentFor: (
     value: NonNullable<
       import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo']
@@ -1662,26 +1668,29 @@ export interface WorkspaceTranscendentEmbryoControl {
   readonly address: TranscendentEmbryoOutcomeAddress;
   readonly marker: WorkspaceMarker;
   readonly phaseKey: string;
-  readonly blessingKey?: string | undefined;
+  readonly value?: AuthoredTranscendentEmbryoOutcome | undefined;
 }
 
 export interface WorkspaceTranscendentEmbryoDomain {
   readonly emptyNoOp: boolean;
   readonly picker: ContextualPickerModel<string>;
   readonly selectedPossible: boolean;
+  readonly rarity?: import('@run-planner/engine/catalog-schema').InRunTraitRarity;
+  readonly operands?: readonly ChaosNumericOperand[];
 }
 
 export interface WorkspaceTranscendentEmbryoInteraction {
   readonly key: string;
   readonly owner: TranscendentEmbryoOutcomeAddress;
   readonly intentFor: (
-    blessingKey: string | null,
+    value: AuthoredTranscendentEmbryoOutcome | null,
   ) => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'ReplaceTranscendentEmbryoTransformation' }>
   >;
-  readonly forBlessing: (blessingKey?: string | null) => {
+  readonly forBlessing: (value?: AuthoredTranscendentEmbryoOutcome | null) => {
     readonly load: () => WorkspaceTranscendentEmbryoDomain | undefined;
   };
+  readonly outcomeFor: (blessingKey: string) => AuthoredTranscendentEmbryoOutcome;
   readonly blessingLabel: (blessingKey: string) => string;
 }
 

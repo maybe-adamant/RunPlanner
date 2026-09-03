@@ -186,7 +186,7 @@ function automaticOutcomeProject() {
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceTranscendentEmbryoEquipResult',
     result: createKeepsakeEquipResultAddress(selection, 'transcendentEmbryo'),
-    value: { blessingKey: 'ChaosWeaponBlessing' },
+    value: { blessingKey: 'ChaosWeaponBlessing', blessingValues: { damageBonus: 0.7 } },
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceTranscendentEmbryoTransformation',
@@ -194,7 +194,7 @@ function automaticOutcomeProject() {
       createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(7, 1)),
       'Encounter',
     ),
-    blessingKey: 'ChaosElementalBlessing',
+    value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
   });
   const growthReward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(6, 1));
   project = applyProjectCommand(project, catalog, {
@@ -938,6 +938,10 @@ describe('engine-owned F/G execution semantic product', () => {
 
   it('publishes reached automatic outcomes while keeping Run State diagnostic-only', () => {
     const product = productFor(automaticOutcomeProject());
+    expect(product.startingKeepsake.equipResults?.transcendentEmbryo).toEqual({
+      blessingKey: 'ChaosWeaponBlessing',
+      blessingValues: { damageBonus: 0.7 },
+    });
     expect(product.occurrences.flatMap((occurrence) => occurrence.timeline.transactions)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -951,6 +955,7 @@ describe('engine-owned F/G execution semantic product', () => {
           effect: 'transcendentEmbryo',
           source: 'ChaosWeaponBlessing',
           target: 'ChaosElementalBlessing',
+          blessingValues: {},
         }),
       ]),
     );

@@ -7,6 +7,8 @@ import { useAppDispatch } from '@planner/state/store';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import { useLayoutEffect } from 'react';
+import { TranscendentEmbryoOutcomeFields } from './rewards/TranscendentEmbryoOutcomeFields';
 
 type JeweledPomInteraction = Extract<
   WorkspaceKeepsakeEquipResultInteraction,
@@ -48,7 +50,7 @@ function commitEquipResult(
     );
   } else {
     const typed = interaction as TranscendentEmbryoInteraction;
-    dispatch(authoredProjectCommandDispatched(typed.intentFor({ blessingKey: value }).command));
+    dispatch(authoredProjectCommandDispatched(typed.intentFor(typed.outcomeFor(value)).command));
   }
 }
 
@@ -94,16 +96,22 @@ export function KeepsakeEquipResultPicker({
   readonly label?: string;
 }) {
   const dispatch = useAppDispatch();
-  const projection = useWorkspaceInteraction(interaction);
-  const domain = projection.result;
+  const { activate, pending, result: domain } = useWorkspaceInteraction(interaction);
   const resultKind = interaction.owner.resultKind;
+  const embryoValue =
+    resultKind === 'transcendentEmbryo'
+      ? (interaction as TranscendentEmbryoInteraction).value
+      : undefined;
+  useLayoutEffect(() => {
+    if (embryoValue !== undefined) activate();
+  }, [activate, embryoValue]);
   const label =
-    labelOverride ??
-    (resultKind === 'experimentalHammer'
-      ? 'Experimental Hammer result'
-      : resultKind === 'jeweledPom'
-        ? 'Jeweled Pom result'
-        : 'Transcendent Embryo result');
+    resultKind === 'transcendentEmbryo'
+      ? 'Target'
+      : (labelOverride ??
+        (resultKind === 'experimentalHammer'
+          ? 'Experimental Hammer result'
+          : 'Jeweled Pom result'));
   const placeholder =
     resultKind === 'experimentalHammer'
       ? 'Choose compatible Hammer'
@@ -112,15 +120,19 @@ export function KeepsakeEquipResultPicker({
         : 'Choose Chaos blessing';
 
   return (
-    <div className="keepsake-equip-result-control">
+    <div
+      className={`keepsake-equip-result-control${
+        resultKind === 'transcendentEmbryo' ? ' transcendent-embryo-outcome-row' : ''
+      }`}
+    >
       <ContextualPicker
         id={id}
         label={label}
         layout="inline"
-        loading={projection.pending}
+        loading={pending}
         model={domain?.picker ?? emptyModel}
         onOpenChange={(open) => {
-          if (open) projection.activate();
+          if (open) activate();
         }}
         onSelect={(value) => commitEquipResult(dispatch, interaction, value)}
         placeholder={placeholder}
@@ -128,13 +140,21 @@ export function KeepsakeEquipResultPicker({
           ? {}
           : { triggerLabel: interaction.selectedLabel })}
       />
-      {domain?.transcendentEmbryoSummary === undefined ? null : (
-        <p className="field-description">
-          {domain.transcendentEmbryoSummary.rarity} ·{' '}
-          {domain.transcendentEmbryoSummary.operands
-            .map((operand) => `${operand.label}: ${operand.value}`)
-            .join(', ') || 'No numeric operands'}
-        </p>
+      {domain?.transcendentEmbryoSummary === undefined || embryoValue === undefined ? null : (
+        <TranscendentEmbryoOutcomeFields
+          onChange={(blessingValues) => {
+            const typed = interaction as TranscendentEmbryoInteraction;
+            if (typed.value === undefined) return;
+            dispatch(
+              authoredProjectCommandDispatched(
+                typed.intentFor({ ...typed.value, blessingValues }).command,
+              ),
+            );
+          }}
+          operands={domain.transcendentEmbryoSummary.operands}
+          rarity={domain.transcendentEmbryoSummary.rarity}
+          values={embryoValue.blessingValues}
+        />
       )}
     </div>
   );

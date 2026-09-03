@@ -35,7 +35,7 @@ export interface EvaluatedKeepsakeEquipResultCandidate {
       /** Declaration-derived presentation facts for Embryo's immediate grant. */
       readonly transcendentEmbryoSummary?: {
         readonly rarity: import('../../catalog-schema').InRunTraitRarity;
-        readonly operands: readonly { readonly label: string; readonly value: number }[];
+        readonly operands: readonly import('../../catalog-schema').ChaosNumericOperand[];
       };
     }[];
     readonly selectedPossible: boolean;
@@ -96,9 +96,12 @@ export function evaluateKeepsakeEquipResultCandidate(
       catalog.chaos.blessings.values
         .filter((blessing) => blessing.fixedRarity === undefined)
         .map((blessing) => {
-          const candidateValue = Object.freeze({ blessingKey: blessing.key });
           const rarity = capability.frontiers[0]?.transcendentEmbryoRarity ?? 'Epic';
           const values = transcendentEmbryoBlessingValues(catalog, blessing.key, rarity);
+          const candidateValue = Object.freeze({
+            blessingKey: blessing.key,
+            blessingValues: values,
+          });
           const assessments = capability.frontiers.map((frontier) =>
             assessTranscendentEmbryoBlessing(
               catalog,
@@ -117,11 +120,7 @@ export function evaluateKeepsakeEquipResultCandidate(
             ]),
             transcendentEmbryoSummary: Object.freeze({
               rarity,
-              operands: Object.freeze(
-                blessing.operands.map((operand) =>
-                  Object.freeze({ label: operand.label, value: values[operand.key] ?? 0 }),
-                ),
-              ),
+              operands: blessing.operands,
             }),
           });
         }),
@@ -130,11 +129,28 @@ export function evaluateKeepsakeEquipResultCandidate(
       value === undefined
         ? undefined
         : options.find((option) => JSON.stringify(option.value) === JSON.stringify(value));
+    // The option list intentionally exposes declaration defaults as a compact
+    // authoring surface. A persisted Embryo result may contain a different,
+    // still legal roll, so selectedPossible must assess the authored value
+    // itself rather than require byte equality with the default option.
+    const authoredSelectedPossible =
+      value !== undefined && 'blessingKey' in value
+        ? capability.frontiers.every(
+            (frontier) =>
+              assessTranscendentEmbryoBlessing(
+                catalog,
+                value as NonNullable<AuthoredKeepsakeEquipResults['transcendentEmbryo']>,
+                frontier.before,
+                frontier.transcendentEmbryoRarity ?? 'Epic',
+                frontier.loadout,
+              ).legal,
+          )
+        : undefined;
     return Object.freeze({
       kind: 'keepsakeEquipResult',
       result: Object.freeze({
         options,
-        selectedPossible: selected?.selectedPossible ?? false,
+        selectedPossible: authoredSelectedPossible ?? selected?.selectedPossible ?? false,
       }),
     });
   }

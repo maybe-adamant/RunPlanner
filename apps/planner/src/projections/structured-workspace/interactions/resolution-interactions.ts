@@ -6,6 +6,7 @@ import type {
   KeepsakeSelectionAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
+import { transcendentEmbryoBlessingValues } from '@run-planner/engine/simulation';
 import type { CandidateProjectionSession } from '@planner/projections/candidateProjection';
 import { projectDirectTraitOutcomePicker } from '@planner/projections/directTraitOutcomeProjection';
 import type {
@@ -233,19 +234,31 @@ export function bindResolutionInteractions(input: {
       Object.freeze({
         key,
         owner: control.address,
-        intentFor: (blessingKey: string | null) =>
+        intentFor: (
+          value:
+            import('@run-planner/engine/authored-project').AuthoredTranscendentEmbryoOutcome | null,
+        ) =>
           Object.freeze({
             command: Object.freeze({
               kind: 'ReplaceTranscendentEmbryoTransformation' as const,
               outcome: control.address,
-              blessingKey,
+              value,
             }),
           }),
-        forBlessing: (blessingKey: string | null | undefined = control.blessingKey) =>
+        forBlessing: (
+          value:
+            | import('@run-planner/engine/authored-project').AuthoredTranscendentEmbryoOutcome
+            | null
+            | undefined = control.value,
+        ) =>
           Object.freeze({
             load: () => {
-              const evaluated = candidates.transcendentEmbryoOutcome(control.address, blessingKey);
+              const evaluated = candidates.transcendentEmbryoOutcome(control.address, value);
               if (evaluated.kind !== 'transcendentEmbryoOutcome') return undefined;
+              const blessingKey = value?.blessingKey;
+              const rarity = evaluated.result.rarity;
+              const blessing =
+                blessingKey === undefined ? undefined : catalog.chaos.blessings.byKey[blessingKey];
               return Object.freeze({
                 emptyNoOp: evaluated.result.emptyNoOp,
                 picker: projectDirectTraitOutcomePicker(
@@ -271,9 +284,24 @@ export function bindResolutionInteractions(input: {
                   (candidate) => candidate,
                 ),
                 selectedPossible: evaluated.result.selectedPossible,
+                rarity,
+                ...(blessing === undefined ? {} : { operands: blessing.operands }),
               });
             },
           }),
+        outcomeFor: (blessingKey: string) => {
+          const evaluated = candidates.transcendentEmbryoOutcome(control.address, control.value);
+          if (evaluated.kind !== 'transcendentEmbryoOutcome')
+            throw new Error(`No Embryo outcome candidate for ${blessingKey}`);
+          return Object.freeze({
+            blessingKey,
+            blessingValues: transcendentEmbryoBlessingValues(
+              catalog,
+              blessingKey,
+              evaluated.result.rarity,
+            ),
+          });
+        },
         blessingLabel: (blessingKey: string) =>
           catalog.chaos.blessings.byKey[blessingKey]?.label ?? blessingKey,
       }),
@@ -539,6 +567,16 @@ export function bindResolutionInteractions(input: {
             value?.blessingKey === undefined
               ? 'Choose Chaos blessing'
               : equipResultLabel(catalog, 'transcendentEmbryo', value.blessingKey),
+          outcomeFor: (blessingKey: string) => {
+            const option = candidates
+              .keepsakeEquipResult(control.address)
+              .find((candidate) => candidate.value === blessingKey);
+            if (option?.resultValue !== undefined && 'blessingKey' in option.resultValue)
+              return option.resultValue as NonNullable<
+                import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo']
+              >;
+            throw new Error(`No Embryo outcome candidate for ${blessingKey}`);
+          },
           intentFor: (
             value: NonNullable<
               import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo']
