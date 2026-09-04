@@ -34,7 +34,12 @@ export function overview(value: unknown, label: string) {
   const encounterPhases = array(record.encounterPhases, `${label}.encounterPhases`).map(
     (entry, index) => {
       const row = object(entry, `${label}.encounterPhases[${index}]`);
-      exact(row, ['slotKey', 'encounterKey', 'kind'], [], `${label}.encounterPhases[${index}]`);
+      exact(
+        row,
+        ['slotKey', 'encounterKey', 'kind'],
+        ['figLeafSkip'],
+        `${label}.encounterPhases[${index}]`,
+      );
       return Object.freeze({
         slotKey: stringValue(row.slotKey, `${label}.encounterPhases[${index}].slotKey`),
         encounterKey: stringValue(
@@ -42,6 +47,14 @@ export function overview(value: unknown, label: string) {
           `${label}.encounterPhases[${index}].encounterKey`,
         ),
         kind: stringValue(row.kind, `${label}.encounterPhases[${index}].kind`),
+        ...(row.figLeafSkip === undefined
+          ? {}
+          : {
+              figLeafSkip: booleanValue(
+                row.figLeafSkip,
+                `${label}.encounterPhases[${index}].figLeafSkip`,
+              ),
+            }),
       });
     },
   );

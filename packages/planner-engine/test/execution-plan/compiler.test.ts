@@ -225,7 +225,7 @@ function selectedTransactionPair(product: ExecutionSemanticProduct): {
   throw new Error('fixture lacks selected cross-occurrence transaction pair');
 }
 
-describe('protocol-v15 compiler and codec', () => {
+describe('protocol-v16 compiler and codec', () => {
   it('accepts source-owned replacement materialization only for Artificer roles', () => {
     const role = {
       role: 'self',

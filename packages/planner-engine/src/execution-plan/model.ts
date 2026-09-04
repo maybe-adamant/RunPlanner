@@ -7,7 +7,7 @@ import type { RuntimeOfferAvailabilityContact } from '../simulation/runtime-offe
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 15 as const;
+export const EXECUTION_PROTOCOL_VERSION = 16 as const;
 export const EXECUTION_CATALOG_VERSION = '0.54.0-required-boss-rewards' as const;
 
 export type ExecutionRunStateCount =
@@ -297,6 +297,8 @@ export interface ExecutionOverview {
     readonly slotKey: string;
     readonly encounterKey: string;
     readonly kind: string;
+    /** Native Fig Leaf decision for this exact eligible phase, when supported. */
+    readonly figLeafSkip?: boolean;
   }[];
   readonly requiredObjects: readonly string[];
   readonly shop?: {

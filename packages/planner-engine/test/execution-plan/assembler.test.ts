@@ -11,6 +11,7 @@ import {
   goldenFBiome,
   goldenFStartId,
   goldenGBiome,
+  goldenGOccurrenceId,
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
 import {
@@ -63,6 +64,14 @@ function fOnlyProject(project = createCompleteFGProject()) {
       ...project.route,
       biomes: Object.freeze(project.route.biomes.slice(0, 1)),
     }),
+  });
+}
+
+function withFigLeaf(project: ReturnType<typeof createCompleteFGProject>) {
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceStartingKeepsake',
+    selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+    keepsakeKey: 'SkipEncounterKeepsake',
   });
 }
 
@@ -452,6 +461,48 @@ describe('engine-owned F/G execution semantic product', () => {
       true,
     );
     expect(opening.timeline.dependencies).toEqual(expect.any(Array));
+  });
+
+  it('publishes exact Fig Leaf results only for supported encounter phases', () => {
+    const positivePhase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(1, 1) },
+      'Encounter',
+    );
+    const positiveProject = applyProjectCommand(withFigLeaf(createCompleteFGProject()), catalog, {
+      kind: 'ReplaceFigLeafSkip',
+      phase: positivePhase,
+      value: true,
+    });
+    const positive = productFor(positiveProject).occurrences.find(
+      (occurrence) => occurrence.id === goldenFOccurrenceId(1, 1),
+    );
+    expect(positive?.overview.encounterPhases).toContainEqual(
+      expect.objectContaining({
+        encounterKey: 'GeneratedF',
+        kind: 'combat',
+        figLeafSkip: true,
+      }),
+    );
+
+    const negativeProject = withFigLeaf(createCompleteFGProject());
+    const negative = productFor(negativeProject).occurrences.find(
+      (occurrence) => occurrence.id === goldenFOccurrenceId(2, 1),
+    );
+    expect(negative?.overview.encounterPhases).toContainEqual(
+      expect.objectContaining({ slotKey: 'Encounter', figLeafSkip: false }),
+    );
+
+    const absent = productFor(createCompleteFGProject()).occurrences.find(
+      (occurrence) => occurrence.id === goldenFOccurrenceId(2, 1),
+    );
+    expect(absent?.overview.encounterPhases[0]).not.toHaveProperty('figLeafSkip');
+
+    const blockedProject = withFigLeaf(createCompleteFGProject({ pickedMiniboss: 'G_MiniBoss02' }));
+    const blocked = productFor(blockedProject).occurrences.find(
+      (occurrence) => occurrence.id === goldenGOccurrenceId(6, 1),
+    );
+    expect(blocked?.overview.encounterPhases[0]).not.toHaveProperty('figLeafSkip');
   });
 
   it('publishes Artificer production and Mystery Boon owner relations', () => {

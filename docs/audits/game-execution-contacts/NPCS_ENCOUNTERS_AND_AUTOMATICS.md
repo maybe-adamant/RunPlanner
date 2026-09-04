@@ -118,7 +118,7 @@ different phase-binding scheme.
 | Judgment            | boss defeated                       | `AddRandomMetaUpgrades`                                            | Covered. |
 | Crystal Figurine    | boss defeated                       | `AddRandomMetaUpgrades` with the Figurine rarity contract          | Covered. |
 
-This is the entire protocol-v15 `automatic` union. Natural Selection, Ransoms,
+This is the entire current execution protocol's `automatic` union. Natural Selection, Ransoms,
 All Together, Echo results, and Circe results are not automatically covered by
 these four members. If they have authored random outcomes, they require a
 published transaction of their own or decomposition into existing acquisition,
