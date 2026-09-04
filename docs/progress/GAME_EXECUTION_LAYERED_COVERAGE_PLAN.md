@@ -1081,8 +1081,45 @@ wire or project-schema field. Its executor commit removes `pendingLevel`, the
 visible/direct level branches, and their generic adapter helpers from the
 legacy root hook, and relocates the complete C1 ordinary-trait slice beneath
 `room/timeline/acquisitions/` without a forwarding layer. Unrelated NPC,
-transformation, Chaos, and simple-consumable branches remain for their own
-gates.
+transformation, Chaos, and direct-pickup branches remain for their own gates.
+
+#### C2.5 — Direct pickup acquisitions
+
+- close the producer-neutral consumer for a bound acquisition whose native
+  result is one directly used pickup rather than a choice screen or generated
+  child. The immediate room-reward scope includes Max Health, Max Magick,
+  Gold, healing, Armor, ordinary Nectar without a level resolution, elemental
+  pickups, Red Onion, and meta-resource pickups;
+- bind the exact materialized object from its published acquisition role, wait
+  until native interaction has passed its guards, let native code consume the
+  object and apply its effect, and complete from the accepted native item
+  identity. Do not reproduce health, Magick, Gold, element, Forfeit, resource,
+  or history mutation in executor code;
+- make the consumer independent of its producer. C3 may hand Narcissus direct
+  rewards to it, while later Echo, Quick Buck, Buried Treasure, Sea Star,
+  Shop, Well, Shrine, and transformation gates may reuse it only after their
+  owning producer has materialized and bound the exact object;
+- classify by the published acquisition shape rather than a duplicated catalog
+  inventory in Lua. Trait offers, level resolutions, Chaos, Spell/Hex,
+  Talent Drop/Path of Stars screens, Mystery Boon, Chaos Anvil,
+  generated-child production, purchases, and transformations remain with
+  their specialized owners; and
+- retire the legacy `pendingSimple`, `completeSimpleAcquisition`, and
+  `verifySimple` path in the same executor commit, with no forwarding layer.
+
+Primary witnesses are one ordinary run-progress consumable such as Max Health,
+one resource pickup, one deterministic modeled element pickup, one rejected
+`UseConsumableItem` attempt that does not begin, and one unbound native
+consumable that passes through. A Talent Drop pass-through witness protects
+the specialized `OpenTalentScreen` boundary owned by D7. The witnesses prove
+the generic carrier boundary; they do not repeat the catalog's full reward
+matrix. No generated producer, purchase, NPC choice, transformation,
+duplication, or delayed-delivery behavior belongs to C2.5.
+
+This slice uses the existing acquisition role and native `gameName`; it adds no
+planner wire or project-schema field. Deterministic effects remain
+native-authoritative even when the planner models their result for subsequent
+simulation.
 
 #### C3 — NPC acquisitions and Mystery Boon resolution
 
@@ -1090,6 +1127,8 @@ gates.
   entry, option preparation, selection, and stable native grant contacts;
 - steer only the authored native menu choice and let the NPC function grant its
   result;
+- hand Narcissus direct pickup results to C2.5 after the NPC producer binds the
+  exact materialized object;
 - close Narcissus Mystery Boon's provider, unwrap, resolved god source, and
   resulting trait acquisition by handing the final offer to C1's trait adapter;
 - keep provider, box, hidden source, and trait contacts on their published
@@ -1116,33 +1155,35 @@ Piece on one eligible source, and isolation between their source and child
 owners. Sea Star follows as the separate D5 consequence slice after these
 transformation primitives are committed.
 
-#### C5 — Direct consumable carriers
+#### C5 — Generated pickup producers and handoff
 
-- close ordinary and generated consumable binding, use, presentation, and
-  stable native terminal proof;
+- close generated-pickup producer identity and exact child binding, then hand
+  the resulting direct pickup to C2.5 rather than adding another use or
+  terminal-proof adapter;
 - reuse C2's already-closed level adapter when a newly implemented producer
   materializes a Pom Slice or source-eligible Nectar. Do not add level
-  application or a second level proof to the generic consumable adapter;
+  application or a second level proof to the generated-pickup adapter;
 - preserve producer/child identity for Quick Buck, Buried Treasure, NPC gifts,
   Echo, and other declared generated pickups while leaving each special
   producer's RNG steering to its owning later gate; and
 - apply runtime fallback only at the exact published availability contact,
   treating preferred and fallback results as the same owner.
 
-Primary witnesses are one simple direct consumable, one generated consumable,
-one generated direct-level consumable handed to C2, and
+Primary witnesses are one generated pickup handed to C2.5, one generated
+direct-level consumable handed to C2, and
 preferred/fallback/neither at the applicable consumable availability contact.
 Shop, Well, and Shrine inventory and purchase behavior remain Gate E; their
-later acquired objects reuse C1, C2, or C5 only after Gate E binds them.
+later acquired objects reuse C1, C2, or C2.5 only after Gate E binds them.
 
 Gate C stops if any carrier lacks a stable terminal proof or has an unbounded
 callback sequence. It may move proof to a durable native-result checkpoint or
 demonstrate that the planner transaction boundary must change; it must not add
 a callback cursor or carrier protocol to the generic Timeline runtime.
 
-Each C1-through-C5 slice has its own executor commit, independent review, and
-modpack pin. Run Planner changes are allowed only for a demonstrated missing
-carrier fact; no slice publishes executor convenience state.
+Each C1-through-C5 slice, including C2.5, has its own executor commit,
+independent review, and modpack pin. Run Planner changes are allowed only for a
+demonstrated missing carrier fact; no slice publishes executor convenience
+state.
 
 ### Gate D — Consequential trait, keepsake, and Hex steering
 
@@ -1166,16 +1207,18 @@ delivery order is:
    Cherished Heirloom.
 4. C2 closes single-target levels and effective-level offer input.
 5. D3 closes Natural Selection by reusing C2's native level steering.
-6. C3 closes Arachne, Narcissus, and Mystery Boon carrier chains.
-7. D4 closes only the NPC-specific consequential results reachable through
+6. C2.5 closes direct pickup acquisition before bespoke producers reuse it.
+7. C3 closes Arachne, Narcissus, and Mystery Boon carrier chains.
+8. D4 closes only the NPC-specific consequential results reachable through
    those carriers; Echo/Circe remain deferred until their route gate unless a
    universal contact can be proved without speculative code.
-8. C4 closes Artificer and Time Piece transformation carriers.
-9. D5 closes Sea Star against those stable producer/child primitives.
-10. C5 closes direct and generated consumable carriers.
-11. D6 closes Quick Buck, Buried Treasure, and other universal produced-pickup
+9. C4 closes Artificer and Time Piece transformation carriers.
+10. D5 closes Sea Star against those stable producer/child primitives.
+11. C5 closes generated pickup producers and hands their children to C2 or
+    C2.5.
+12. D6 closes Quick Buck, Buried Treasure, and other universal produced-pickup
     effects against C5 without reopening transformation identity.
-12. D7 closes Spell, Path, Moon Beam, and remaining Hex contacts by reusing the
+13. D7 closes Spell, Path, Moon Beam, and remaining Hex contacts by reusing the
     Gate A Hex primitive.
 
 Each numbered item is an independent implementation/review/commit boundary.
@@ -1241,7 +1284,8 @@ Shop-like rewrite.
 - keep feature presence, inventory generation, purchase intent, payment, and
   later acquisition as separate facts;
 - bind the exact native slot/button, let native code pay costs and grant the
-  item, then hand acquired Boons, levels, and consumables to C1, C2, or C5;
+  item, then hand acquired Boons, levels, and direct pickups to C1, C2, or
+  C2.5;
 - apply the exact one-step Last Stand availability fallback without searching
   another pool; and
 - leave price, Gold, and simulation-neutral purchase effects entirely native.
