@@ -69,7 +69,7 @@ A family is not covered when only its ordinary loot-screen carrier works.
 
 The normalized catalog is the exhaustive identity authority. The execution
 union in `packages/planner-engine/src/execution-plan/model.ts` is the exhaustive
-wire authority. The current consumer is protocol v15 in
+wire authority. The current consumer is protocol v16 in
 `adamantRunPlanner-Plan_Executor`; its supported route extent is Underworld F
 or F/G, not the full planner catalog.
 

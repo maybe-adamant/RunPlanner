@@ -87,7 +87,7 @@ callback is already known.
 
 ### Proven base retained
 
-- Protocol v15 publishes one selected Underworld F or F/G occurrence sequence
+- Protocol v16 publishes one selected Underworld F or F/G occurrence sequence
   with Overview, consequential Timeline transactions, local prerequisites,
   obligations, Doors, sparse room-exit conformance, and diagnostic Run State.
 - The active executor uses a route cursor and one Room Occurrence session. The
@@ -197,7 +197,7 @@ Live support remains deferred until the owning biome gate reaches that contact.
 
 ## Protocol policy
 
-Protocol v15 is the single active development protocol for this unclosed plan:
+Protocol v16 is the single active development protocol for this unclosed plan:
 
 - there is no compatibility decoder or dual executor for an earlier protocol;
 - each gate updates planner fixtures, strict Lua decode, and the modpack pin in
@@ -205,7 +205,7 @@ Protocol v15 is the single active development protocol for this unclosed plan:
 - a protocol change must be earned by a concrete closed field or variant named
   by the refined gate rather than silently mutating an already-consumed shape;
 - unknown fields and union members remain rejected; and
-- v15 is not declared stable or release-ready until the final closure gate.
+- v16 is not declared stable or release-ready until the final closure gate.
 
 This does not authorize a generic `effectName`/`arguments` object or speculative
 placeholders for later features.
@@ -772,9 +772,9 @@ indexed row. The port exposes one small semantic-free interface:
 A contact descriptor identifies a published carrier fact such as an offer,
 generation, phase, automatic effect, role, produced child, or materialized
 role. The binding layer owns how those fields are indexed and correlated.
-Protocol v15 publishes the Fountain carrier explicitly as the required
+Protocol v16 publishes the Fountain carrier explicitly as the required
 `interactionKey: "fountain"` field on `fountainUse`; Gate B.2 must not recover
-that contact by scanning transaction kinds. v15 strictly replaces v14 with no
+that contact by scanning transaction kinds. v16 strictly replaces v15 with no
 compatibility decoder.
 Hooks may construct the descriptor from their native contact, but they do not
 construct composite index keys, choose index namespaces, recover decoded rows,
@@ -1916,7 +1916,7 @@ No. Exhaustive means every family has a disposition. Native pass-through,
 simulation-neutral, and deferred are valid dispositions when source-backed and
 tested at the appropriate boundary.
 
-### Does v15 become a generic future-proof schema?
+### Does v16 become a generic future-proof schema?
 
 No. It contains only concrete products required by the present catalog and
 named audits. The strict decoder continues to reject unknown fields. Later

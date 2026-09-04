@@ -1,5 +1,6 @@
 import {
   createBiomeAddress,
+  createEncounterPhaseAddress,
   createRoomActionAddress,
   createShopOfferAddress,
   semanticAddressKey,
@@ -431,16 +432,30 @@ export function assembleExecutionOverview(
   const purgingPool = executionPurgingPool(room);
   const resources = executionResources(room, biome);
   const additional = executionAdditionalExits(batch);
+  const biomeAddress = createBiomeAddress(room.origin.routeKey, room.origin.biomeKey);
   return Object.freeze({
     ...(incomingReward === undefined ? {} : { incomingReward }),
     ...(room.effectNeutralRequiredReward ? { effectNeutralRequiredReward: true as const } : {}),
     encounterPhases: Object.freeze(
       room.encounterPhases.map((phase) =>
-        Object.freeze({
-          slotKey: phase.slotKey,
-          encounterKey: phase.encounterKey,
-          kind: phase.kind,
-        }),
+        (() => {
+          const phaseAddress = createEncounterPhaseAddress(
+            biomeAddress,
+            { kind: 'occurrence', occurrenceId: room.occurrenceId },
+            phase.slotKey,
+          );
+          const figLeaf = biome.rewards.figLeafPhaseCandidates.find(
+            (candidate) =>
+              candidate.supported &&
+              semanticAddressKey(candidate.origin) === semanticAddressKey(phaseAddress),
+          );
+          return Object.freeze({
+            slotKey: phase.slotKey,
+            encounterKey: phase.encounterKey,
+            kind: phase.kind,
+            ...(figLeaf === undefined ? {} : { figLeafSkip: figLeaf.selected }),
+          });
+        })(),
       ),
     ),
     requiredObjects: Object.freeze((room.requiredObjects ?? []).map((object) => object.key)),
