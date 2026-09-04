@@ -1154,11 +1154,13 @@ simulation.
   accepted use; already-bound carriers, C1 ordinary loot, and C2 visible Poms
   remain unchanged. Native companion drops and unselected optional pickups
   remain pass-through;
-- close Narcissus Mystery Boon as one child acquisition with a box and hidden
-  provider subcontact: begin only after accepted box use, force only
-  `GiveLoot`'s published provider input, bind the exact returned provider loot,
-  and hand its final offer and terminal proof to C1. Preserve the native
-  `GiveLoot`-before-`BoughtFromShop` ordering; and
+- close each already-bound Mystery Box as one child acquisition with a box and
+  hidden provider subcontact, regardless of its producer: begin only after
+  accepted box use, force only `GiveLoot`'s published provider input, bind the
+  exact returned provider loot, and hand its final offer and terminal proof to
+  C1. Commerce owns purchase creation and binding; this slice does not claim an
+  unbound shop purchase. Preserve the native `GiveLoot`-before-`BoughtFromShop`
+  ordering; and
 - delete the superseded Arachne, Narcissus, generated-child, and Mystery Boon
   branches and their global `pendingTrait` / unwrap state from the broad legacy
   hook in the same executor commit. Other NPCs and unrelated legacy families

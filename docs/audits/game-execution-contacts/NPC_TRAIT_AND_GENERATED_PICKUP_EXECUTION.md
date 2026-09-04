@@ -214,6 +214,12 @@ to the resulting selected trait after the hidden provider has been created and
 the ordinary trait screen has closed successfully. `UnwrapRandomLoot` is a
 bounded native scope, not a callback cursor or a second Timeline owner.
 
+Once a Mystery Box exists, this effect chain is producer-agnostic: an already-
+bound transaction carrying the exact `box` role and its `afterUnwrap`
+`hiddenSource` role may use the same unwrap/provider/trait path. Commerce owns
+purchase creation and binding; this slice does not claim an unbound shop
+purchase.
+
 The executor changes only `GiveLoot`'s native `ForceLootName` input. It must
 preserve the native ordering in which `GiveLoot` runs before the created loot
 is marked `BoughtFromShop`; the Olympian keepsake-pressure audit owns the
@@ -230,17 +236,17 @@ special case.
 
 ## Planner and executor disposition
 
-| Concern                                             | Authority and disposition                                                           |
-| --------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Which three NPC traits appear and which is selected | Planner offer; native-steered at the bespoke menu-open seam.                        |
-| Native row requirements and one declared fallback   | Native availability question at the published contact; no executor pool search.     |
-| Equipping the selected NPC trait                    | Native-authoritative; verified after selection.                                     |
-| Trait-owned drop production                         | Native-authoritative; never recreated by the executor.                              |
-| Which generated pickups are planner-visible         | Planner selected-pickup producer and authored participation.                        |
-| Choosing a generated pickup action                  | Claim a compatible ready transaction only when native use is accepted.              |
-| Direct pickup effect                                | Existing direct-pickup or direct-level adapter.                                     |
-| Mystery Boon provider and final trait               | Force the published provider, bind its loot, then reuse the ordinary trait adapter. |
-| Simulation-neutral companion drops                  | Native pass-through and never a mismatch merely for existing.                       |
+| Concern                                             | Authority and disposition                                                                                                                                           |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Which three NPC traits appear and which is selected | Planner offer; native-steered at the bespoke menu-open seam.                                                                                                        |
+| Native row requirements and one declared fallback   | Native availability question at the published contact; no executor pool search.                                                                                     |
+| Equipping the selected NPC trait                    | Native-authoritative; verified after selection.                                                                                                                     |
+| Trait-owned drop production                         | Native-authoritative; never recreated by the executor.                                                                                                              |
+| Which generated pickups are planner-visible         | Planner selected-pickup producer and authored participation.                                                                                                        |
+| Choosing a generated pickup action                  | Claim a compatible ready transaction only when native use is accepted.                                                                                              |
+| Direct pickup effect                                | Existing direct-pickup or direct-level adapter.                                                                                                                     |
+| Mystery Boon provider and final trait               | For any already-bound Mystery Box, force the published provider, bind its loot, then reuse the ordinary trait adapter. Commerce owns purchase creation and binding. |
+| Simulation-neutral companion drops                  | Native pass-through and never a mismatch merely for existing.                                                                                                       |
 
 ## Representative witnesses
 

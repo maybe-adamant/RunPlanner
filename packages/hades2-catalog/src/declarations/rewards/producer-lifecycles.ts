@@ -224,6 +224,15 @@ export const producerLifecycles = [
       'MetaCurrencyDrop',
     ],
     defaultLifecyclePoint: 'roomExit',
+    overrides: [
+      {
+        rewardType: 'BlindBoxLoot',
+        acquisitionLifecycle: [
+          { role: 'box', lifecyclePoint: 'roomRewardPickup' },
+          { role: 'hiddenSource', lifecyclePoint: 'afterUnwrap' },
+        ],
+      },
+    ],
   },
   {
     key: 'GeneratedTraitPickup',
