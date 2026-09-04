@@ -28,7 +28,8 @@ catalog disposition rather than by copying every trait key into this audit.
 | Spell            | Spell Drop                                                                            | Same generic choice flow, followed by Hex state                                                                 | Covered for the spell offer; Hex progression is deferred route. |
 | Chaos            | Chaos curse/blessing pairs                                                            | Generic loot shell plus `CreateUpgradeChoiceButton`, `GetProcessedTraitData`, and `SetTransformingTraitsOnLoot` | Covered for a published three-curse/selected-blessing result.   |
 | Generic NPC loot | Artemis, Athena, Hades, Dionysus and other menus that ultimately create ordinary loot | Generic loot flow                                                                                               | Covered only where the native menu actually reaches `UseLoot`.  |
-| Bespoke NPC menu | Arachne, Narcissus, Medea, Circe, Icarus, Echo                                        | Each NPC's named choice function in `Scripts/EventLogic.lua`                                                    | Covered by explicit provider adapters.                          |
+| Bespoke NPC menu | Arachne, Narcissus                                                                    | `ArachneCostumeChoice` and `NarcissusBenefitChoice` in `Scripts/EventLogic.lua`                                 | Adapter gap; the exact C3 boundary is audited.                  |
+| Bespoke NPC menu | Medea, Circe, Icarus, Echo                                                            | Each NPC's named choice function in `Scripts/EventLogic.lua`                                                    | Deferred route; legacy adapters are not closure evidence.       |
 
 ## Exhaustive ordinary trait rule
 
