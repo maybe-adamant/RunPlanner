@@ -12,8 +12,14 @@ other loadout fields presently appear only in diagnostic state.
 - Keepsake equip and rack: `Scripts/KeepsakeLogic.lua:106-180` and
   `Scripts/KeepsakeLogic.lua:546-1210`
 - Random keepsake results: `Scripts/PowersLogic.lua:4840-4910`
+- Fig Leaf decisions: `Scripts/EncounterLogic.lua` functions
+  `HandleEncounterPreSpawns`, `CanDionysusSkip`, and `HandleEnemySpawns`
+- Gorgon dispatch and interaction: `Scripts/RoomLogic.lua` functions
+  `StartEncounter` and `StartEncounterEffects`, plus
+  `Scripts/EncounterLogic.lua` functions `HandleAthenaSpawn` and `AthenaUse`
 - Run start: `Scripts/RunLogic.lua:439-620`
-- Current start/equip adapter: `src/mods/logic.lua` in the Plan Executor
+- Current start/equip adapter: the focused adapters beneath
+  `src/mods/loadout/` in the Plan Executor
 
 ## Keepsake native lifecycle
 
@@ -32,8 +38,8 @@ at the effect's own native contact.
 | Simulation-neutral  | Silver Wheel, Knuckle Bones, Luckier Tooth, Ghost Onion, Evil Eye, Gold Purse, Engraved Pin, Discordant Bell, Metallic Droplet, White Antler, Silken Sash, Lion Fang, Blackened Fleece | Native pass-through after exact equip identity. Combat, health, gold, and damage effects are outside the current simulation.                                                                                                                                                   |
 | Olympian pressure   | Cloud Bangle, Iridescent Fan, Vivid Sea, Barley Sheaf, Harmonic Photon, Beautiful Mirror, Adamant Shard, Everlasting Ember, Sword Hilt                                                 | Adapter gap for full execution: the resulting offer source/rarity is published on each later trait offer, but the executor does not yet establish or settle the native keepsake pressure itself as a first-class result.                                                       |
 | Moon Beam           | Moon Beam                                                                                                                                                                              | Deferred route; later Talent drops must receive the published additional Path points.                                                                                                                                                                                          |
-| Gorgon Amulet       | Gorgon Amulet                                                                                                                                                                          | Deferred route; encounter selection carries the resolved Athena encounter rather than asking the executor to re-evaluate the keepsake.                                                                                                                                         |
-| Fig Leaf            | Fig Leaf                                                                                                                                                                               | Deferred route; skipped encounter state is planner-owned and needs a room/encounter contact.                                                                                                                                                                                   |
+| Gorgon Amulet       | Gorgon Amulet                                                                                                                                                                          | F/G adapter gap only for binding the native Athena interaction and forcing its published trait offer. Native code owns eligibility, spawning, and use consumption.                                                                                                             |
+| Fig Leaf            | Fig Leaf                                                                                                                                                                               | F/G adapter gap; the planner resolves phase-local skip/no-skip, while native code must remain responsible for the skipped-spawn lifecycle, use consumption, and biome latch.                                                                                                   |
 | Aromatic Phial      | Aromatic Phial                                                                                                                                                                         | Covered by the `fountainUse` transaction and `UseHealthFountain`; only the published target matters.                                                                                                                                                                           |
 | Concave Stone       | Concave Stone                                                                                                                                                                          | Protocol gap in current F/G execution: the planner resolves proc/no-proc and the frozen residual inside the source acquisition, but v10 does not publish that nested result. It must remain local to that acquisition rather than become a separate transaction or dependency. |
 | Crystal Figurine    | Crystal Figurine                                                                                                                                                                       | Covered by `automatic:crystalFigurine` at boss defeat and `AddRandomMetaUpgrades`.                                                                                                                                                                                             |
@@ -47,6 +53,80 @@ The exact keys, rank-III values, and Echo availability are owned by
 [Keepsakes](../loadout-and-progression/KEEPSAKE_GAME_DATA_AUDIT.md),
 [Cherished Heirloom](../loadout-and-progression/CHERISHED_HEIRLOOM_KEEPSAKE_AUDIT.md),
 and [Echo Gift Gift Gift](../loadout-and-progression/ECHO_GIFT_GIFT_GIFT_KEEPSAKE_AUDIT.md).
+
+## Encounter-altering keepsake contacts
+
+The broad keepsake audit owns the eligibility matrices and planner rules. The
+additional execution question is where the native game decides and completes
+each published phase-local result.
+
+### Fig Leaf
+
+The native skip decision has two paths in `Scripts/EncounterLogic.lua`:
+
+- `HandleEncounterPreSpawns` rolls before pre-spawned enemies are assembled.
+  A failed roll clears `encounter.CanEncounterSkip` so the later path does not
+  roll again.
+- `HandleEnemySpawns` rolls for encounters that reach ordinary spawning. It
+  also receives a skip already selected by the pre-spawn path.
+
+Both paths call the trait-owned validation function, `CanDionysusSkip`, before
+a positive result. That function rejects biome-start rooms, encounters that
+block the keepsake, and a second activation in the same biome. Native code then
+owns `SpawnsSkipped`, multi-encounter propagation, the presentation, use
+consumption, and `ActivatedThisBiome`.
+
+The stable positive terminal is the skipped branch of `HandleEnemySpawns`,
+after the use and latch are applied. Steering only a generic `RandomChance`
+call would be too broad, while steering only the pre-spawn path would miss
+ordinary encounters. The execution contact must be scoped to this exact
+keepsake decision across both paths and leave the surrounding native lifecycle
+intact.
+
+### Gorgon Amulet
+
+The keepsake's `UniqueEncounterArgs` eligibility and dispatch occur on two
+native start paths:
+
+- `StartEncounterEffects` handles the ordinary encounter-start path.
+- `StartEncounter` handles declarations marked
+  `CheckAthenaEncounterKeepsakeOnSkipEncounterStart` when ordinary start
+  effects are skipped.
+
+Both paths evaluate the same trait-owned requirements and, on success, thread
+`HandleAthenaSpawn`. This is deterministic keepsake behavior once the native
+Death Defiance and encounter conditions are met. Execution must not steer the
+eligibility check, schedule `HandleAthenaSpawn` itself, or suppress its native
+dispatch. Native `HandleAthenaSpawn` remains responsible for waiting on the
+encounter, refusing a skipped or blocked encounter, consuming the use only on
+a successful spawn, and invoking the Athena presentation.
+
+The spawned Athena uses `AthenaUse` and then the ordinary `UseLoot` carrier.
+The physical Athena can therefore bind to the published Gorgon interaction at
+`AthenaUse`; its trait menu then hands off to the ordinary trait-offer adapter.
+The executor does not need a separate provenance relation from the spawn
+presentation to the trait screen.
+
+### Execution disposition
+
+The planner publishes an exact Fig Leaf skip/no-skip result only at a
+structurally relevant phase. Absence is not inferred by the executor. A
+negative result suppresses only the Fig Leaf roll so native RNG cannot
+contradict the authored outcome. A positive result steers that roll and lets
+native game code execute its deterministic consequences.
+
+Gorgon adds no comparable trigger/defer steering result. When its modeled
+Death Defiance condition is met, the planner already publishes the required
+Gorgon interaction and Athena offer. Execution observes the native Athena,
+binds `AthenaUse` to that transaction, and forces only the offer. If native
+eligibility disagrees with the modeled condition, the missing or unexpected
+interaction and room-exit `keepsakeEffects` conformance expose the mismatch;
+the executor does not correct it by reimplementing the keepsake.
+
+Fig Leaf has no player interaction and does not become a generic effect
+transaction. Room-exit `keepsakeEffects` conformance proves its retained use
+and latch state. If Fig Leaf skips the phase, native `HandleAthenaSpawn` returns
+before consuming Gorgon, which preserves the planner's documented ordering.
 
 ## Weapons and aspects
 

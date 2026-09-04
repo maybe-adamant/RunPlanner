@@ -4,12 +4,16 @@
 
 - NPC menus: `Scripts/EventLogic.lua:906-1230`
 - Encounter selection: `Scripts/RunLogic.lua:1022-1110`
+- Multi-encounter assembly and lifecycle: `Scripts/RoomLogic.lua` functions
+  `SetupRoomMultipleEncountersData`, `StartEncounter`, and
+  `EndEncounterEffects`
 - Boss Arcana activation: `Scripts/MetaUpgradeLogic.lua:499-560`
 - Embryo and keepsake grants: `Scripts/PowersLogic.lua:4840-4910`
 - Catalog encounter declarations:
   `packages/hades2-catalog/src/declarations/encounters/`
-- Current native contacts: `src/mods/hooks_timeline.lua` and
-  `src/mods/room/encounter_hooks.lua` in the Plan Executor
+- Current native contacts: `src/mods/room/encounter_hooks.lua`,
+  `src/mods/hooks_timeline.lua`, and the focused acquisition adapters beneath
+  `src/mods/room/timeline/acquisitions/` in the Plan Executor
 
 ## Trait-menu carriers
 
@@ -19,8 +23,8 @@ function is reached.
 
 | Provider                         | Native offer contact                          | Current status                                                                                           |
 | -------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Arachne                          | `ArachneCostumeChoice`                        | Adapter gap; the exact C3 contact is audited.                                                            |
-| Narcissus                        | `NarcissusBenefitChoice`                      | Adapter gap; C3 covers the menu, native generated children, and Mystery Boon handoff.                    |
+| Arachne                          | `ArachneCostumeChoice`                        | Covered by the focused NPC acquisition adapter.                                                          |
+| Narcissus                        | `NarcissusBenefitChoice`                      | Covered for the menu, native generated children, and Mystery Boon handoff.                               |
 | Medea                            | `MedeaCurseChoice`                            | Deferred route; adapter exists.                                                                          |
 | Circe                            | `CirceBlessingChoice`                         | Deferred route; adapter exists, exceptional result coverage remains separate.                            |
 | Icarus                           | `IcarusBenefitChoice`                         | Deferred route; adapter exists.                                                                          |
@@ -72,6 +76,39 @@ currently authored execution facts. They remain outside the blocking execution
 boundary even though a future first slice may expose wave count and dominant
 enemy type.
 
+### Native encounter and phase identity
+
+`ChooseEncounter` passes the selected declaration to `SetupEncounter`, which
+returns a deep-copied native encounter table. For a multiple-encounter room,
+`SetupRoomMultipleEncountersData` repeats that operation for every reached
+position and stores the returned tables in order in `room.Encounters`.
+`StartEncounter` and `EndEncounterEffects` later receive those same native
+tables.
+
+The selected encounter declaration remains an enforceable planner outcome. It
+is steered at `ChooseEncounter` before `SetupEncounter` constructs the native
+table; the returned table is then bound to the corresponding published phase.
+Selection steering and phase binding are separate contacts.
+
+Consequently, an encounter name is a declaration identity, not a selected
+phase identity. Two phases may legitimately contain separate native tables
+with the same `Name`. The execution boundary can bind each returned table to
+its published phase when the encounter is chosen or assembled and recover that
+phase from table identity at later lifecycle contacts. Searching for the first
+phase with a matching encounter name is not sound and is a current adapter gap.
+
+Phase identity also does not identify a Timeline transaction. One phase may
+own an encounter interaction and one or more effect-qualified automatic
+outcomes at the same time. Encounter start and encounter end open and close
+the phase's native lifecycle; transactions within that phase remain distinct
+by their complete semantic contact. A bare phase key therefore cannot be a
+unique transaction index.
+
+This identity model is sufficient for the current F/G encounters and for later
+H and O multi-phase rooms. Those later routes may add cage, wheel, or other
+phase-local contacts, but they do not require a second encounter cursor or a
+different phase-binding scheme.
+
 ## Closed automatic transaction union
 
 | Effect              | Planner trigger                     | Native contact                                                     | Status   |
@@ -81,7 +118,7 @@ enemy type.
 | Judgment            | boss defeated                       | `AddRandomMetaUpgrades`                                            | Covered. |
 | Crystal Figurine    | boss defeated                       | `AddRandomMetaUpgrades` with the Figurine rarity contract          | Covered. |
 
-This is the entire protocol-v10 `automatic` union. Natural Selection, Ransoms,
+This is the entire protocol-v15 `automatic` union. Natural Selection, Ransoms,
 All Together, Echo results, and Circe results are not automatically covered by
 these four members. If they have authored random outcomes, they require a
 published transaction of their own or decomposition into existing acquisition,
@@ -93,4 +130,6 @@ The executor has unit coverage for all four automatic shapes, but byte-product
 fixtures should not be mistaken for complete native contact evidence. Current
 fixture coverage is strongest for F/G room flow, ordinary offers, Chaos, Wells,
 and shops. Concave Stone's second offer and each future-biome NPC remain useful
-bounded live probes.
+bounded live probes. Encounter closure additionally needs focused witnesses for
+two native encounter tables sharing one declaration name and for two different
+transaction contacts sharing one phase.
