@@ -1181,30 +1181,63 @@ outside this slice.
 
 #### C4 — Reward transformations
 
-- create `room/timeline/transformations/` for Artificer and Time Piece;
-- steer Artificer's native replacement reward/source selection, bind the native
-  generated child, and let the game perform conversion and pickup behavior;
-- steer Time Piece's authored eligible replay target through its native path,
-  preserving the same producer/child identities without recreating the reward;
-- keep Forfeit Onion behavior with its owning reward gate unless this slice
-  demonstrates that it is inseparable from Artificer's native conversion seam.
+- create `room/timeline/transformations/` for the two mutually exclusive source
+  dispositions, Artificer and Time Piece. The published acquisition-role
+  disposition is the sole routing authority; ordinary acquisition adapters
+  must accept only `normal` roles;
+- bind or claim Time Piece at the accepted native `GoldifyPresentation`
+  contact, carry its bounded source-destruction/charge-update sequence to its
+  terminal, and let native code own Gold, charge mutation, trait removal,
+  notifications, and exit readiness. Time Piece creates no child;
+- bind or claim Artificer at the accepted native
+  `ConvertMetaRewardPresentation` contact. Resolve its already-published child
+  only to supply the scoped expected `ChooseRoomReward` result, then let native
+  code consume the bag/use, spawn the replacement, transfer requiredness and
+  duplication capability, and destroy the source. Complete only the source
+  after the expected child exists and the source has been destroyed;
+- exclude native Artificer's unique `IgnoreRoomSpawnOnLootPoint` spawn from
+  ordinary incoming-reward binding. Do not publish that native flag or turn it
+  into planner semantics;
+- do not bind the generated physical object to its source-derived child owner.
+  The planner dependency makes the child ready after source completion; the
+  applicable ordinary trait, level, direct-pickup, or Time Piece adapter claims
+  the child at accepted interaction according to its own published
+  disposition. Extend C1 and C2 only as needed to support the same bound-or-ready
+  normal-acquisition contract already established for C2.5 and C3; and
+- force the underlying Artificer Boon/Hermes reward and let the native Forfeit
+  path produce the published Onion. The executor neither spawns the Onion nor
+  mutates the Vow latch. An Artificer child cannot recursively use Artificer,
+  but a supported realized child, including an Onion, may carry its own Time
+  Piece disposition.
 
-Primary witnesses are Artificer source → generated replacement → pickup, Time
-Piece on one eligible source, and isolation between their source and child
-owners. Sea Star follows as the separate D5 consequence slice after these
-transformation primitives are committed.
+Primary witnesses are bound and unbound sources for both dispositions; normal
+adapter refusal of transformation roles; Time Piece completion with no child;
+Artificer reward steering, child-spawn proof, source destruction, and separate
+child incompletion; later child claims through representative ordinary
+trait/Hammer, visible-Pom, direct-level, direct-pickup, and Time Piece contacts;
+native Forfeit production of an Onion; two replacements collected in either
+physical-object order without source-object provenance; and pass-through after
+rejection, mismatch, or interruption. Planner tests continue to own the
+eligibility, bag, requiredness, charge, and producer matrices. The executor
+tests own only native contact admission, bounded closure, disposition
+isolation, and carrier handoff. No new planner production field is expected;
+one product witness must prove that the lossless compiler preserves Time Piece
+and Artificer source dispositions plus Artificer's separate child. Sea Star
+follows as the separate D5 consequence slice.
 
 #### C5 — Generated pickup producers and handoff
 
-- close generated-pickup producer identity and exact child binding, then hand
-  the resulting direct pickup to C2.5 rather than adding another use or
-  terminal-proof adapter;
+- close each remaining generated-pickup producer's randomized or conditional
+  native production contact. Do not add executor-side source-to-object
+  provenance: each resulting pickup claims a compatible ready child at its
+  existing C1, C2, or C2.5 accepted interaction;
 - reuse C2's already-closed level adapter when a newly implemented producer
   materializes a Pom Slice or source-eligible Nectar. Do not add level
   application or a second level proof to the generated-pickup adapter;
-- preserve producer/child identity for Quick Buck, Buried Treasure, NPC gifts,
-  Echo, and other declared generated pickups while leaving each special
-  producer's RNG steering to its owning later gate; and
+- preserve planner-owned producer dependencies for Quick Buck, Buried
+  Treasure, NPC gifts, Echo, and other declared generated pickups while leaving
+  each special producer's RNG steering to its owning later gate. Those
+  dependencies control readiness but do not assign physical-object identity;
 - apply runtime fallback only at the exact published availability contact,
   treating preferred and fallback results as the same owner.
 

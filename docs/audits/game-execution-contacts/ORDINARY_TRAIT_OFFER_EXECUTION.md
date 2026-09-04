@@ -45,10 +45,10 @@ which exact trait rows belong to the current transaction. Native loot flags
 remain authoritative for game behavior such as menu eligibility and rarity
 processing; they are not a second source of planner membership.
 
-Spell, Chaos, Pom, NPC, Mystery Boon, purchase, transformed-reward, generated
-child, and direct-consumable carriers are outside this contact. A provider
-that eventually grants an ordinary trait does not inherit this contact unless
-it reaches this exact native loot-screen chain.
+Spell, Chaos, Pom, NPC-menu, Mystery Boon box, purchase, and direct-consumable
+carriers are outside this contact. A transformed or generated child may reuse
+this contact only after it becomes an ordinary Olympian, Hermes, or Hammer
+loot carrier and its published normal acquisition is ready.
 
 ## Native carrier chain
 
@@ -71,11 +71,11 @@ GiveLoot / CreateHermesLoot / CreateWeaponLoot
 
 `CreateLoot` attaches one exact native loot table to the spawned object after
 `SetTraitsOnLoot` has populated `UpgradeOptions`. That table and its object
-identity are the stable materialization carrier. The owning reward-spawn
-contact must already have resolved the published producer before it binds the
-returned loot; `CreateLoot` alone also serves excluded carrier families and
-cannot identify the owner from a loot name. The executor does not infer an
-owner later from giver name, reward name, screen contents, or authored order.
+identity are the stable carrier once an owner has been selected. An ordinary
+room reward or purchase can bind it during materialization. A natively
+generated unbound child instead claims one compatible ready normal acquisition
+at accepted pickup. `CreateLoot` alone also serves excluded carrier families
+and cannot identify an owner from a loot name.
 
 `UseLoot` is not the action entry. It can reject an interaction because enemies
 remain, the price cannot be paid, or another screen is active. Beginning the
@@ -84,8 +84,9 @@ would mix purchase settlement into the ordinary trait adapter.
 
 `HandleLootPickup` is the first contact after a valid interaction has committed
 to the loot flow. It synchronously opens the offer menu and does not return
-until that menu closes. The bound acquisition begins there. Every later C1
-callback carries that same bound loot directly or transitively:
+until that menu closes. An already-bound normal acquisition begins there; an
+unbound native child may claim one compatible ready normal acquisition there.
+Every later callback carries that same bound loot directly or transitively:
 `CreateBoonLootButtons` receives `lootData`, a rarification callback receives
 `screen.Source`, and selection receives `button.LootData`. A second screen
 binding is unnecessary.
@@ -279,12 +280,13 @@ table, reconstructs rows by matching generated identities, applies the offer
 more than once, lacks the base-rarity fact, and can confuse Concave Stone's
 recursive selection with the primary terminal.
 
-The existing occurrence-local Timeline binding product is sufficient. The
-ordinary adapter needs no global action cursor and no semantic inference from
-authored order:
+The existing occurrence-local Timeline product is sufficient. The ordinary
+adapter needs no global action cursor and no producer inference:
 
-- the owning producer contact resolves the transaction before native
-  materialization and binds the exact returned loot to its acquisition role;
+- ordinary room rewards and purchases may bind the exact returned loot during
+  native materialization;
+- an unbound generated or transformed loot claims one compatible ready normal
+  acquisition only after native pickup acceptance;
 - screen callbacks recover their transaction through that bound loot;
 - owner completion remains shared across those handles.
 

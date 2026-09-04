@@ -3,9 +3,9 @@
 This audit closes the native execution boundary for planner acquisitions whose
 materialized result is one directly used world pickup. These acquisitions do
 not open a choice screen and do not require the executor to reproduce their
-native effect. The shared contract is deliberately about consuming one exact
-published object, not about treating every `UseConsumableItem` carrier as the
-same semantic action.
+native effect. The shared contract is deliberately about consuming one bound
+or compatible ready normal acquisition, not about treating every
+`UseConsumableItem` carrier as the same semantic action.
 
 Visible Poms, direct level items, trait loot, Mystery Boons, generated-child
 producers, purchases, and transformations retain their specialized owners.
@@ -64,18 +64,20 @@ The initial execution slice claims only normal `acquisition` transactions;
 commerce transactions and Time Piece or Artificer dispositions remain with
 their owning adapters even when their native object is also consumable.
 
-## Exact-object correlation
+## Bound-or-ready correlation
 
 `CreateConsumableItem` returns the concrete native item and
-`CreateConsumableItemFromData` attaches that object to the world. The producer
-that creates or exposes a planner acquisition therefore binds its execution
-owner to that exact object.
+`CreateConsumableItemFromData` attaches that object to the world. An ordinary
+room reward or purchase may bind its execution owner to that exact object when
+it is materialized.
 
-The later use contact consumes that binding. A different native object with
-the same game name is unrelated and must run unchanged. This preserves native
-drops outside the plan and lets later NPC, Shop, Shrine, generated-pickup, and
-transformation producers reuse the direct-pickup consumer without teaching it
-their source semantics.
+Native-produced pickups need not receive source provenance when they are
+created. After native use guards accept the interaction, an unbound object may
+claim one compatible ready normal acquisition in published transaction order.
+The object then carries that handle through the remainder of its bounded use
+sequence. A native object with no compatible ready action runs unchanged. This
+preserves unmodeled drops while allowing generated and transformed pickups to
+reuse the consumer without teaching it their source semantics.
 
 ## Accepted interaction and terminal
 
@@ -96,11 +98,12 @@ terminal. Native code still has to:
 The truthful execution boundary is therefore:
 
 ```text
-exact bound object enters UseConsumableItem
+bound or unbound candidate enters UseConsumableItem
   -> native guards pass
   -> ConsumableUsedPresentation confirms acceptance
+  -> retain its bound owner or claim one compatible ready normal action
   -> native UseConsumableItem returns
-  -> complete the bound acquisition
+  -> complete the resolved acquisition
 ```
 
 A rejected attempt never begins the transaction. An error after acceptance
@@ -119,30 +122,32 @@ without a specialized acquisition result:
 
 | Family                            | Execution disposition                                                                                                                                |
 | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Max Health and Max Magick pickups | Consume the exact bound item; native stat mutation is simulation-neutral.                                                                            |
-| Gold, healing, and Armor pickups  | Consume the exact bound item; native effect remains authoritative.                                                                                   |
+| Max Health and Max Magick pickups | Consume the resolved item; native stat mutation is simulation-neutral.                                                                               |
+| Gold, healing, and Armor pickups  | Consume the resolved item; native effect remains authoritative.                                                                                      |
 | Ordinary Nectar                   | Consume as a resource pickup only when the published role has no `levelResolution`. Source-eligible level Nectar remains owned by the level adapter. |
-| Elemental essences                | Consume the exact bound item and let native `AddTraitToHero` apply the fixed element trait before completion.                                        |
-| Red Onion                         | Consume the exact bound item. Vow of Forfeit replacement and retained-state policy remain navigation and conformance facts.                          |
+| Elemental essences                | Consume the resolved item and let native `AddTraitToHero` apply the fixed element trait before completion.                                           |
+| Red Onion                         | Consume the resolved item. Vow of Forfeit replacement and retained-state policy remain navigation and conformance facts.                             |
 | Meta-progression resources        | Consume as native pass-through; their amounts do not enter simulation.                                                                               |
-| Last Stand pickup                 | May reuse this consumer after its producer resolves availability and binds the actual preferred or fallback object.                                  |
+| Last Stand pickup                 | May reuse this consumer after its producer resolves availability and exposes the actual preferred or fallback object.                                |
 
 This is a carrier classification rather than a second catalog inventory. A
-later producer may hand any result with this same published shape to the
-consumer after binding its exact native object.
+later producer may expose any result with this same published shape; the
+consumer uses an existing binding or claims its ready normal action at accepted
+use.
 
 ## Specialized exclusions
 
 Sharing `UseConsumableItem` is not sufficient to join this family:
 
-| Acquisition                                                        | Owning boundary                                                                                           |
-| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| `StoreRewardRandomStack` and source-eligible Nectar                | Direct level acquisition; native target steering and level proof are required.                            |
-| `TalentDrop`, `TalentBigDrop`, and `MinorTalentDrop`               | Spell/Path/Hex execution. Their `OpenTalentScreen` use function starts an interactive talent-tree action. |
-| Trait, Pom, Chaos, and Spell loot                                  | Their native choice-screen adapters.                                                                      |
-| `BlindBoxLoot` and other wrapped rewards                           | The producer and generated-child chain, followed by the child's applicable consumer.                      |
-| `ChaosWeaponUpgrade`                                               | Randomized Hammer transformation.                                                                         |
-| NPC choices, purchases, Shrine delivery, Artificer, and Time Piece | Their producer or transformation contact must first bind the concrete acquired object.                    |
+| Acquisition                                          | Owning boundary                                                                                                                                 |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `StoreRewardRandomStack` and source-eligible Nectar  | Direct level acquisition; native target steering and level proof are required.                                                                  |
+| `TalentDrop`, `TalentBigDrop`, and `MinorTalentDrop` | Spell/Path/Hex execution. Their `OpenTalentScreen` use function starts an interactive talent-tree action.                                       |
+| Trait, Pom, Chaos, and Spell loot                    | Their native choice-screen adapters.                                                                                                            |
+| `BlindBoxLoot` and other wrapped rewards             | The producer and generated-child chain, followed by the child's applicable consumer.                                                            |
+| `ChaosWeaponUpgrade`                                 | Randomized Hammer transformation.                                                                                                               |
+| NPC choices, purchases, and Shrine delivery          | Their creation or commerce owner remains separate; the resulting normal pickup may reuse this consumer.                                         |
+| Artificer and Time Piece                             | Their source dispositions belong to the transformation boundary. An Artificer child may later reuse this consumer; Time Piece creates no child. |
 
 The direct-pickup consumer must not absorb these lifecycles merely because one
 callback happens to pass through the same native function.
@@ -158,9 +163,10 @@ executor.
 
 The direct-pickup consumer does not decide whether an intended item is
 available. Shop inventory, NPC rewards, or another producer evaluates the
-carrier-specific availability question and binds the actual preferred or
-declared fallback object to the same execution owner. Consuming that already
-resolved fallback completes the owner and is not a divergence.
+carrier-specific availability question and exposes the actual preferred or
+declared fallback object for the same execution owner. Consuming that resolved
+fallback through an existing binding or ready-action claim completes the owner
+and is not a divergence.
 
 This keeps Death Defiance eligibility and other volatile offer policy with the
 native contact that can answer it. The pickup consumer only verifies the exact
@@ -194,7 +200,8 @@ Representative execution witnesses are sufficient:
 - a rejected interaction does not begin;
 - a fixed element pickup has applied its native element trait before
   completion;
-- an unbound same-name native consumable passes through unchanged; and
+- an unbound native consumable with no compatible ready action passes through
+  unchanged; and
 - a Talent Drop is not claimed by this consumer.
 
 These witnesses own the carrier boundary. Catalog tests remain the exhaustive
