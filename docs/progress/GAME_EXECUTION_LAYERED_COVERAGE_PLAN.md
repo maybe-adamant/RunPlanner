@@ -1289,8 +1289,10 @@ that investigation without becoming a blocking full-state comparator.
 #### D1 — F/G encounter-altering keepsakes
 
 Fig Leaf and Gorgon Amulet are already reachable in F/G and therefore cannot
-be deferred with later-biome encounter work. They remain two phase-local
-results rather than a generic keepsake-effect interpreter:
+be deferred with later-biome encounter work. Fig Leaf is a phase-local RNG
+result that requires steering. Gorgon is deterministic native behavior whose
+resulting Athena interaction requires binding and trait-offer steering, not
+keepsake-effect steering.
 
 This gate first completes the encounter ownership move that Gates B and B.2
 deliberately left unfinished. The supported encounter stack moves beneath
@@ -1303,7 +1305,7 @@ deliberately left unfinished. The supported encounter stack moves beneath
   carriers;
 - currently supported encounter-owned automatic outcomes;
 - Nemesis random-event realization; and
-- the new Fig Leaf and Gorgon phase-result adapters.
+- the new Fig Leaf phase-result and Gorgon interaction adapters.
 
 The move deletes `room/encounters.lua`, `room/encounter_hooks.lua`, and the
 displaced encounter, Nemesis, boss, and automatic branches from
@@ -1312,6 +1314,28 @@ lookup. The room coordinator consumes one narrow encounter interface; native
 hooks outside this directory ask it for the active published phase or hand off
 an already-bound encounter transaction rather than scanning
 `overview.encounterPhases` themselves.
+
+Phase identity and transaction identity remain separate:
+
+- when native encounter selection or multi-encounter assembly creates an
+  encounter object, bind that exact native object to its published phase. A
+  later start, end, or interaction contact recovers the phase from native
+  identity; it must not search for the first matching encounter name;
+- do not index a transaction by bare `phaseKey` or require one transaction per
+  phase. One phase may simultaneously own an encounter interaction, one or
+  more effect-qualified automatic outcomes, and later H/O-specific actions;
+- resolve each transaction through its complete published contact, such as an
+  encounter interaction plus phase, an automatic effect plus phase, or a
+  future cage/wheel identity. Several opaque handles may therefore share one
+  phase without becoming interchangeable; and
+- treat encounter start and end as lifecycle contacts that open or close the
+  matching phase capability. They do not consume a generic phase handle or
+  manufacture a transaction when the planner published no meaningful action.
+
+This foundation must support repeated native encounter identities without
+implementing H or O early. Their later gates may add concrete
+`completeFieldsCage`, `chooseRewardWheel`, and `interactWheelReward` contacts,
+but must not replace phase binding, Timeline readiness, or completion rules.
 
 Acquisition semantics do not move merely because an encounter produced them.
 Arachne and Narcissus menu-result steering remains in the acquisition family;
@@ -1323,22 +1347,23 @@ features, navigation, and conformance remain outside the encounter directory.
 After that ownership move, the F/G encounter-keepsake behavior is added:
 
 - extend each published encounter phase with an optional exact Fig Leaf
-  skip/no-skip result and an optional exact Gorgon trigger/defer result. Absence
-  means the effect is not pending at a structurally relevant phase; it must not
-  be inferred from the room or encounter name in Lua;
-- publish the negative result while a pending effect reaches an eligible phase.
-  Otherwise native RNG could realize a different positive outcome even though
-  the plan contains no resulting transaction;
-- for Fig Leaf, scope only the native encounter-skip decision and select the
-  authored branch. Native code remains responsible for suppressing enemy
-  spawns, preserving the room and reward, consuming a use, and setting the
-  once-per-biome latch;
-- for Gorgon, scope `HandleAthenaSpawn` at the exact hosted phase and select the
-  authored trigger/defer branch. Native code remains responsible for spawning
-  Athena, consuming the pending use on success, and leaving it pending on a
-  defer result;
-- on a positive Gorgon result, bind the existing `interactGorgon` transaction
-  to the spawned Athena interaction and hand its published trait offer to the
+  skip/no-skip result. Absence means the effect is not pending at a
+  structurally relevant phase; it must not be inferred from the room or
+  encounter name in Lua;
+- publish the negative Fig Leaf result while a pending effect reaches an
+  eligible phase. Otherwise native RNG could realize a different positive
+  outcome even though the plan contains no resulting skip;
+- for Fig Leaf, scope the exact keepsake decision across both native paths:
+  `HandleEncounterPreSpawns` and `HandleEnemySpawns`. Select the authored
+  branch, but let the ordinary spawn handler remain the positive terminal after
+  native use consumption and biome-latch mutation. Native code remains
+  responsible for suppressing enemy spawns and preserving the room and reward;
+- for Gorgon, do not steer the `AthenaEncounterKeepsake`
+  `UniqueEncounterArgs` eligibility/dispatch, schedule `HandleAthenaSpawn`, or
+  suppress either native start path. The game owns this deterministic keepsake
+  effect when its Death Defiance and encounter conditions are met;
+- when native Athena reaches `AthenaUse`, bind the existing `interactGorgon`
+  transaction for that exact phase and hand its published trait offer to the
   already-closed ordinary trait screen. Do not create a second Gorgon,
   encounter, or trait transaction; and
 - keep room-exit `keepsakeEffects` conformance as the retained-state proof for
@@ -1347,25 +1372,31 @@ After that ownership move, the F/G encounter-keepsake behavior is added:
 
 The planner engine retains the complete declaration-owned eligibility matrix.
 F/G execution witnesses are one ordinary positive and negative Fig Leaf phase,
-one source-supported skippable miniboss, one blocked phase, one positive and
-deferred Gorgon phase, exact Athena rarity/selection handoff, and the rule that
-a Fig Leaf-skipped encounter cannot consume Gorgon. Opening, Devotion, boss,
-and miniboss behavior is taken from the published phase result rather than
-reclassified by encounter kind in executor tests.
+one source-supported skippable miniboss, one blocked phase, a natively produced
+Gorgon Athena interaction, exact Athena rarity/selection handoff, no executor
+intervention in an ineligible Gorgon phase, and the rule that a Fig Leaf-skipped
+encounter cannot consume Gorgon. Opening, Devotion, boss, and miniboss behavior
+is taken from the published phase result rather than reclassified by encounter
+kind in executor tests. Encounter-foundation witnesses additionally bind two
+native objects with the same encounter name to different phases, allow an
+automatic and encounter interaction to hold distinct handles on one phase, and
+prove that ending either native encounter opens only its bound phase
+capability.
 
 This is one delivery gate with two intentional commit boundaries so
 behavior-preserving movement remains reviewable separately from the new wire
 and runtime behavior:
 
 1. Plan Executor: `refactor(executor): consolidate encounter timeline`
-2. Run Planner: `feat(execution): publish encounter keepsake outcomes`; Plan
-   Executor: `feat(executor): steer F/G encounter keepsakes`; then pin the
+2. Run Planner: `feat(execution): publish Fig Leaf encounter outcomes`; Plan
+   Executor: `feat(executor): realize F/G encounter keepsakes`; then pin the
    reviewed executor revision in the modpack shell.
 
 The first commit must retain the existing encounter tests byte-for-byte in
-meaning and delete every superseded path. The second owns only the new
-phase-result codec, steering, binding, and focused witnesses above. D1 receives
-one independent review across both commits before D2 begins.
+meaning and delete every superseded path. The second owns only the new Fig Leaf
+phase-result codec and steering, Gorgon interaction binding, and focused
+witnesses above. D1 receives one independent review across both commits before
+D2 begins.
 
 #### D2 — Chaos offer extraction and closure
 
