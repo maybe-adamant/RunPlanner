@@ -195,7 +195,7 @@ Live support remains deferred until the owning biome gate reaches that contact.
 
 ## Protocol policy
 
-Protocol v14 is the single active development protocol for this unclosed plan:
+Protocol v15 is the single active development protocol for this unclosed plan:
 
 - there is no compatibility decoder or dual executor for an earlier protocol;
 - each gate updates planner fixtures, strict Lua decode, and the modpack pin in
@@ -203,7 +203,7 @@ Protocol v14 is the single active development protocol for this unclosed plan:
 - a protocol change must be earned by a concrete closed field or variant named
   by the refined gate rather than silently mutating an already-consumed shape;
 - unknown fields and union members remain rejected; and
-- v14 is not declared stable or release-ready until the final closure gate.
+- v15 is not declared stable or release-ready until the final closure gate.
 
 This does not authorize a generic `effectName`/`arguments` object or speculative
 placeholders for later features.
@@ -770,9 +770,9 @@ indexed row. The port exposes one small semantic-free interface:
 A contact descriptor identifies a published carrier fact such as an offer,
 generation, phase, automatic effect, role, produced child, or materialized
 role. The binding layer owns how those fields are indexed and correlated.
-Protocol v14 publishes the Fountain carrier explicitly as the required
+Protocol v15 publishes the Fountain carrier explicitly as the required
 `interactionKey: "fountain"` field on `fountainUse`; Gate B.2 must not recover
-that contact by scanning transaction kinds. v14 strictly replaces v13 with no
+that contact by scanning transaction kinds. v15 strictly replaces v14 with no
 compatibility decoder.
 Hooks may construct the descriptor from their native contact, but they do not
 construct composite index keys, choose index namespaces, recover decoded rows,
@@ -815,9 +815,12 @@ prematurely.
 - The runtime does not topologically sort, schedule, search, replay, or advance
   an action cursor. `begin(owner)` only checks that owner's declared
   prerequisites against the completed-owner set.
-- Inclusion, dependency, and obligation remain independent facts. A published
-  non-required transaction may remain incomplete. Neither endpoint of an edge
-  becomes required merely because the edge exists.
+- Publication intent and dependency remain explicit Planner Timeline facts,
+  and the publication boundary emits only intended transactions. Every
+  emitted transaction receives exactly one obligation from its declared
+  lifecycle window; an optional untaken action is omitted before this wire
+  product exists. A dependency never promotes an unchosen competitor or
+  invents a transaction.
 - An obligation blocks only its declared checkpoint. It does not manufacture
   an ordering edge or make an earlier checkpoint fail.
 - One semantic transaction may use several native subcontacts, but those
@@ -882,7 +885,8 @@ closed execution product. They must not replace or fork this Timeline runtime.
 - one dependency `X -> Y` plus independent `Z`, covering every legal
   permutation above and rejecting only `Y` before `X`;
 - transaction-array reversal with identical behavior;
-- a published optional owner left incomplete without blocking room exit;
+- an untouched optional owner omitted before publication, paired with an
+  authored optional owner that publishes one obligated transaction;
 - one required owner that blocks only at each of the four declared checkpoint
   kinds;
 - a prepared selected-room Shop binding promoted intact on room entry, plus an
@@ -1179,16 +1183,11 @@ the exhaustive Narcissus output matrix; executor tests retain only these
 representative contacts. Mystery purchase and Hermes Shrine delivery remain
 outside this slice.
 
-#### C4 — Reward transformations
+#### C4 — Artificer reward transformation
 
-- create `room/timeline/transformations/` for the two mutually exclusive source
-  dispositions, Artificer and Time Piece. The published acquisition-role
-  disposition is the sole routing authority; ordinary acquisition adapters
-  must accept only `normal` roles;
-- bind or claim Time Piece at the accepted native `GoldifyPresentation`
-  contact, carry its bounded source-destruction/charge-update sequence to its
-  terminal, and let native code own Gold, charge mutation, trait removal,
-  notifications, and exit readiness. Time Piece creates no child;
+- create `room/timeline/transformations/` for the published Artificer source
+  disposition. Ordinary acquisition adapters accept only `normal` roles;
+  Time Piece has no published disposition or executor adapter;
 - bind or claim Artificer at the accepted native
   `ConvertMetaRewardPresentation` contact. Resolve its already-published child
   only to supply the scoped expected `ChooseRoomReward` result, then let native
@@ -1200,30 +1199,32 @@ outside this slice.
   into planner semantics;
 - do not bind the generated physical object to its source-derived child owner.
   The planner dependency makes the child ready after source completion; the
-  applicable ordinary trait, level, direct-pickup, or Time Piece adapter claims
-  the child at accepted interaction according to its own published
-  disposition. Extend C1 and C2 only as needed to support the same bound-or-ready
+  applicable ordinary trait, level, or direct-pickup adapter claims the child
+  at accepted interaction according to its own published disposition. Extend
+  C1 and C2 only as needed to support the same bound-or-ready
   normal-acquisition contract already established for C2.5 and C3; and
 - force the underlying Artificer Boon/Hermes reward and let the native Forfeit
   path produce the published Onion. The executor neither spawns the Onion nor
-  mutates the Vow latch. An Artificer child cannot recursively use Artificer,
-  but a supported realized child, including an Onion, may carry its own Time
-  Piece disposition.
+  mutates the Vow latch. An Artificer child cannot recursively use Artificer.
 
-Primary witnesses are bound and unbound sources for both dispositions; normal
-adapter refusal of transformation roles; Time Piece completion with no child;
-Artificer reward steering, child-spawn proof, source destruction, and separate
-child incompletion; later child claims through representative ordinary
-trait/Hammer, visible-Pom, direct-level, direct-pickup, and Time Piece contacts;
-native Forfeit production of an Onion; two replacements collected in either
-physical-object order without source-object provenance; and pass-through after
-rejection, mismatch, or interruption. Planner tests continue to own the
-eligibility, bag, requiredness, charge, and producer matrices. The executor
-tests own only native contact admission, bounded closure, disposition
-isolation, and carrier handoff. No new planner production field is expected;
-one product witness must prove that the lossless compiler preserves Time Piece
-and Artificer source dispositions plus Artificer's separate child. Sea Star
-follows as the separate D5 consequence slice.
+At the planner-owned execution-publication boundary, omit every optional
+untaken action and every Time Piece `conversionToGold` acquisition. Every
+published transaction is intended and receives exactly one checkpoint
+obligation; dependencies are filtered to published endpoints only. The
+aggregate of remaining intended acquisitions and sparse room-exit
+keepsake/Time Piece charge conformance proves the authored room outcome. It
+does not claim exact destroyed-object identity. This keeps Time Piece out of
+the execution union and avoids recreating native Goldify behavior.
+
+If an Artificer-produced child was itself consumed by Time Piece, do not publish
+a non-obligatory child transaction. Instead, the Artificer source role carries
+the planner-resolved replacement game identity and reward steering payload
+needed at the native materialization contact. An ordinary Artificer child
+remains a separate intended transaction with its producer dependency. Planner
+tests continue to own eligibility, bag, requiredness, charge, and producer
+matrices. Executor tests own only Artificer contact admission, bounded closure,
+disposition isolation, source-owned replacement steering, and carrier handoff.
+Sea Star follows as the separate D5 consequence slice.
 
 #### C5 — Generated pickup producers and handoff
 
@@ -1284,7 +1285,8 @@ delivery order is:
 8. D4 closes only the NPC-specific consequential results reachable through
    those carriers; Echo/Circe remain deferred until their route gate unless a
    universal contact can be proved without speculative code.
-9. C4 closes Artificer and Time Piece transformation carriers.
+9. C4 closes the Artificer transformation carrier and the planner-side
+   publication omission for Time Piece.
 10. D5 closes Sea Star against those stable producer/child primitives.
 11. C5 closes generated pickup producers and hands their children to C2 or
     C2.5.
@@ -1407,6 +1409,11 @@ Primary witnesses:
 Shrine of Hermes does not block F/G closure. Its full inventory, purchase/rush,
 native clock, local or delayed delivery, and Mystery Boon handoff become a
 separate commerce gate when N/O/P/Q execution reaches Shrine structure.
+That gate must include one same-room witness where a delivered Mystery Boon
+acquires a trait and the existing prior-trait-mutation relation publishes an
+exact dependency to a later ordinary offer whose validated prefix used that
+trait. It must not introduce blanket trait ordering or executor-side trait
+semantics.
 Surface and I/Q Shop variants likewise belong to their route/biome gates after
 E1 establishes the shared purchase contact; they are not speculative E1
 requirements.
@@ -1433,8 +1440,9 @@ reimplemented. Gate F is three ordered delivery gates.
 - steer Forfeit's Onion replacement at reward generation and let native pickup
   behavior run; required pickups, generated optional pickups, and
   effect-neutral boss drops remain native-authoritative;
-- retain the C4 Time Piece and Artificer paths without moving their acquisition
-  semantics into this layer.
+- retain the C4 Artificer path without moving native acquisition semantics into
+  this layer; Time Piece remains a planner publication omission proved by
+  room-exit conformance.
 
 Primary witnesses:
 
@@ -1496,7 +1504,8 @@ Required live lanes:
 1. start-loadout, opening reward, ordinary Boon/Hammer/Pom, and normal Doors;
 2. Chaos plus positive/negative Sea Star and a generated pickup;
 3. World Shop, Well effects, Travel Deal, Pool, fountain, and rack;
-4. Artificer, Time Piece, Forfeit, Mystery Boon, and NPC menus; and
+4. Artificer, Time Piece charge conformance, Forfeit, Mystery Boon, and NPC
+   menus; and
 5. Preboss, Boss automatic effects, required boss reward, Postboss, and clean
    configured-prefix completion.
 
@@ -1612,7 +1621,7 @@ No. Exhaustive means every family has a disposition. Native pass-through,
 simulation-neutral, and deferred are valid dispositions when source-backed and
 tested at the appropriate boundary.
 
-### Does v14 become a generic future-proof schema?
+### Does v15 become a generic future-proof schema?
 
 No. It contains only concrete products required by the present catalog and
 named audits. The strict decoder continues to reject unknown fields. Later
@@ -1639,5 +1648,5 @@ has an explicit planner product or a source-backed pass-through/neutral
 disposition; every published consequential result has a native carrier and
 focused proof; F/G structural and live lanes complete without unresolved
 mismatch; dormant later-route carriers are honestly marked; the compiler and
-room session contain no semantic policy; protocol v14 is the sole active
+room session contain no semantic policy; protocol v15 is the sole active
 contract; and durable authorities have absorbed the resulting boundary.

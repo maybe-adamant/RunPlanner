@@ -314,7 +314,8 @@ order.
 The engine publishes only transactions whose outcome, ordering, production,
 or completion affects the supported plan. Current concrete witnesses include:
 
-- normal, Time Piece, and Artificer reward dispositions;
+- normal and Artificer reward dispositions, with Time Piece acquisitions
+  consumed before execution publication;
 - Artificer source-to-child production;
 - trait, Chaos, Pom, level, and rarity outcomes;
 - Mystery Boon provider resolution and its resulting trait transaction;
@@ -621,11 +622,11 @@ valid evaluation, while assembly and the compiler only copy it. The native
 adapter performs the contact-specific availability question and one fallback
 attempt; it does not interpret named game predicates or search a pool.
 
-Timeline publication and required participation are independent products. A
-planner dependency may retain an otherwise optional competitor in the sparse
-DAG without making that action a checkpoint obligation. Obligations come from
-explicit required participation or a planner-owned required automatic/deferred
-outcome, never from dependency closure alone.
+Timeline publication resolves authored participation before the wire product
+exists. Untouched optional actions are omitted; every active required or
+optional action that is published becomes an intended transaction with exactly
+one checkpoint obligation. Dependencies are filtered to published endpoints
+and never retain an unchosen competitor through closure.
 
 Deliver one focused engine-to-publication correction:
 
@@ -644,9 +645,9 @@ Deliver one focused engine-to-publication correction:
 - have those planner-owned products explicitly publish every owner-bearing
   automatic or deferred node needed for a concrete realization and every
   action disposition needed for generic retention;
-- retain a normally neutral action through generic prerequisite closure when a
-  planner-owned edge references it, while continuing to omit unrelated neutral
-  guidance according to its planner-owned disposition;
+- publish a normally neutral action when the player authored it, omit untouched
+  optional guidance, and filter planner-owned dependencies to the intended
+  published endpoints without generic prerequisite closure;
 - promote agreed pending Hermes Shrine deliveries and consequential Stygian
   Well use/duration state into canonical Run State without changing their
   simulation transitions;
@@ -686,14 +687,15 @@ The Travel Deal Well path is the mandatory pressure-point witness:
 2. the refill is an exact owner-bearing automatic/deferred realization with
    its planner-resolved inventory payload;
 3. source purchase precedes refill realization;
-4. source purchase precedes every competing qualifying purchase that could
-   otherwise consume Travel Deal first;
+4. source purchase precedes every other authored qualifying purchase that
+   could otherwise consume Travel Deal first;
 5. an authored refill purchase follows refill realization; and
 6. an unrelated purchase or room action has no edge to this subgraph.
 
-Refill realization and the source-to-competitor barriers exist when the refill
-is generated, whether or not the player authors its purchase. Purchasing the
-refill adds only the realization-to-purchase relation.
+Refill realization exists when the refill is generated, whether or not the
+player authors its purchase. Source-to-competitor barriers exist only for
+other authored purchases that survive execution publication. Purchasing the
+refill adds the realization-to-purchase relation.
 
 Gold Gold Gold, Artificer, generated acquisitions, same-room trait-history
 prefixes, and same-room keepsake-sensitive consumers use exact local relations
@@ -817,10 +819,8 @@ Primary test ownership:
   completion, local prerequisite failure, obligation failure, room-exit state
   conformance, room-owner disposal, terminal-prefix completion, unmatched
   guidance nonblocking behavior, and diagnostic nonblocking behavior;
-- one session test must leave a published transaction that has no obligation
-  incomplete and still close the room successfully; a paired prerequisite
-  witness proves that the same optional owner blocks a dependent transaction
-  only when that dependent is attempted;
+- one publication witness omits an untouched optional action, while a paired
+  authored-optional witness publishes it with exactly one obligation;
 - hook/adapter tests own native realization contacts without reproducing
   session policy;
 - fallback adapter tests own preferred success, one-step fallback success, and
@@ -960,9 +960,9 @@ projects only the hard subset needed to protect that exact result at runtime.
 
 ### Does the executor decide which actions matter?
 
-No. Omitted guidance, node retention, prerequisite edges, and obligations are
-complete-valid engine products. The compiler copies them and the executor
-strictly consumes them.
+No. Omitted optional guidance, intended transactions, prerequisite edges, and
+obligations are complete-valid engine products. The compiler copies them and
+the executor strictly consumes them.
 
 ### Does the sparse DAG require a graph engine?
 

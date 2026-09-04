@@ -20,6 +20,8 @@ import {
 import {
   applyProjectCommand,
   acquisitionSiteFromStorageKey,
+  artificerAcquisitionSite,
+  artificerReplacementEntryKey,
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createEncounterPhaseAddress,
@@ -90,6 +92,64 @@ function artificerCreatedBoonProject() {
       }),
     }),
   );
+  return fOnlyProject(authorLegalTraitOffers(project));
+}
+
+function timePieceArtificerChildProject() {
+  const source = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+  const occurrence = createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+  let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+    kind: 'ReplaceStartingKeepsake',
+    selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+    keepsakeKey: 'GoldifyKeepsake',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceManualArcanaSelection',
+    route: { kind: 'route', routeKey: 'Underworld' },
+    arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],
+  });
+  project = authorTestArtificerReplacement(
+    project,
+    catalog,
+    createAcquisitionRoleAddress(source, 'self'),
+    Object.freeze({
+      offer: Object.freeze({
+        rewardType: 'Boon',
+        payload: Object.freeze({ kind: 'BoonSource' as const, source: 'ZeusUpgrade' }),
+      }),
+      traitOffersByAcquisitionRole: Object.freeze({ source: null }),
+      dispositionByAcquisitionRole: Object.freeze({
+        source: Object.freeze({ kind: 'normal' as const }),
+      }),
+    }),
+  );
+  const site = artificerAcquisitionSite(occurrence, source);
+  const entry = createAcquisitionEntryAddress(site, artificerReplacementEntryKey(source, 'self'));
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceAcquisitionDisposition',
+    acquisition: createAcquisitionRoleAddress(entry, 'source'),
+    value: { kind: 'timePiece' },
+  });
+  return fOnlyProject(authorLegalTraitOffers(project));
+}
+
+function timePieceCreatedBoonProject() {
+  const source = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
+  let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+    kind: 'ReplaceStartingKeepsake',
+    selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+    keepsakeKey: 'GoldifyKeepsake',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: source,
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceAcquisitionDisposition',
+    acquisition: createAcquisitionRoleAddress(source, 'source'),
+    value: { kind: 'timePiece' },
+  });
   return fOnlyProject(authorLegalTraitOffers(project));
 }
 
@@ -415,6 +475,20 @@ describe('engine-owned F/G execution semantic product', () => {
           transaction.kind === 'acquisition' && transaction.sourceOwner === producer?.sourceOwner,
       )?.owner;
     expect(sourceOwner).toBeDefined();
+    const sourceTransaction = artificer.occurrences
+      .flatMap((occurrence) => occurrence.timeline.transactions)
+      .find(
+        (transaction) => transaction.kind === 'acquisition' && transaction.owner === sourceOwner,
+      );
+    expect(sourceTransaction).toBeDefined();
+    expect(sourceTransaction?.kind === 'acquisition' && sourceTransaction.roles).toEqual(
+      expect.arrayContaining([expect.objectContaining({ role: 'self', disposition: 'artificer' })]),
+    );
+    if (sourceTransaction?.kind !== 'acquisition')
+      throw new Error('Artificer source transaction is missing');
+    expect(
+      sourceTransaction.roles.find((role) => role.disposition === 'artificer'),
+    ).not.toHaveProperty('replacement');
     expect(
       artificer.occurrences.some((occurrence) =>
         occurrence.timeline.dependencies.some(
@@ -425,6 +499,59 @@ describe('engine-owned F/G execution semantic product', () => {
     ).toBe(true);
     expect(generated.owner.length).toBeGreaterThan(256);
     expect(() => encodeExecutionPlan(compileExecutionPlan({ product: artificer }))).not.toThrow();
+
+    const timePiece = productFor(timePieceCreatedBoonProject());
+    expect(
+      timePiece.occurrences
+        .flatMap((occurrence) => occurrence.timeline.transactions)
+        .some(
+          (transaction) =>
+            transaction.kind === 'acquisition' &&
+            transaction.roles.some((role) => role.gameName === 'ApolloUpgrade'),
+        ),
+    ).toBe(false);
+    expect(
+      timePiece.occurrences.some((occurrence) =>
+        occurrence.roomExitConformance?.facts.some((fact) => fact.kind === 'keepsakeEffects'),
+      ),
+    ).toBe(true);
+    expect(() => encodeExecutionPlan(compileExecutionPlan({ product: timePiece }))).not.toThrow();
+
+    const timePieceChild = productFor(timePieceArtificerChildProject());
+    const timePieceChildTransactions = timePieceChild.occurrences.flatMap(
+      (occurrence) => occurrence.timeline.transactions,
+    );
+    const timePieceChildSource = timePieceChildTransactions.find(
+      (transaction) =>
+        transaction.kind === 'acquisition' &&
+        transaction.roles.some(
+          (role) => role.disposition === 'artificer' && role.replacement !== undefined,
+        ),
+    );
+    expect(timePieceChildSource).toBeDefined();
+    expect(
+      timePieceChildSource?.kind === 'acquisition'
+        ? timePieceChildSource.roles.find((role) => role.disposition === 'artificer')?.replacement
+        : undefined,
+    ).toEqual({
+      reward: expect.objectContaining({ rewardType: 'Boon', source: 'ZeusUpgrade' }),
+      gameName: 'ZeusUpgrade',
+    });
+    expect(
+      timePieceChildTransactions.some(
+        (transaction) =>
+          transaction.kind === 'acquisition' &&
+          transaction.roles.some((role) => role.producer?.kind === 'artificerReplacement'),
+      ),
+    ).toBe(false);
+    expect(
+      timePieceChild.occurrences.some((occurrence) =>
+        occurrence.roomExitConformance?.facts.some((fact) => fact.kind === 'keepsakeEffects'),
+      ),
+    ).toBe(true);
+    expect(() =>
+      encodeExecutionPlan(compileExecutionPlan({ product: timePieceChild })),
+    ).not.toThrow();
 
     const mystery = productFor(narcissusMysteryBoonProject());
     const mysteryTransaction = mystery.occurrences
@@ -445,7 +572,7 @@ describe('engine-owned F/G execution semantic product', () => {
     expect(mysteryOccurrence?.timeline.transactions).toContain(mysteryTransaction);
   });
 
-  it('publishes an authored optional acquisition without making it an obligation', () => {
+  it('publishes an authored optional acquisition as one obligated transaction', () => {
     const project = narcissusMysteryBoonProject();
     const assembly = simulateProjectAssembly(catalog, project);
     const product = assembleExecutionProduct({ assembly });
@@ -489,9 +616,15 @@ describe('engine-owned F/G execution semantic product', () => {
     expect(occurrence.timeline.transactions).toContainEqual(
       expect.objectContaining({ owner: mystery.transaction.owner }),
     );
-    expect(occurrence.timeline.obligations).not.toContainEqual(
+    expect(occurrence.timeline.obligations).toContainEqual(
       expect.objectContaining({ owner: mystery.transaction.owner }),
     );
+    expect(
+      occurrence.timeline.obligations.filter(
+        (obligation) => obligation.owner === mystery.transaction.owner,
+      ),
+    ).toHaveLength(1);
+    expect(occurrence.timeline.obligations).toHaveLength(occurrence.timeline.transactions.length);
   });
 
   it('keeps an unpicked Mystery Boon atomic to its active Narcissus provider action', () => {
@@ -508,7 +641,7 @@ describe('engine-owned F/G execution semantic product', () => {
     );
   });
 
-  it('publishes required Onion, omits neutral Well guidance, and keeps consequential contacts', () => {
+  it('publishes required Onion and an authored neutral Well purchase', () => {
     const onion = productFor(onionObligationProject());
     const opening = onion.occurrences[0]!;
     const consolation = opening.timeline.transactions.find(
@@ -556,14 +689,18 @@ describe('engine-owned F/G execution semantic product', () => {
       purchased: true,
     });
     const neutral = productFor(authorLegalTraitOffers(neutralProject));
+    const neutralPurchase = neutral.occurrences
+      .flatMap((occurrence) => occurrence.timeline.transactions)
+      .find(
+        (transaction) =>
+          transaction.kind === 'wellPurchase' && transaction.generationKey === 'initial:healing',
+      );
+    expect(neutralPurchase).toMatchObject({ kind: 'wellPurchase', effect: 'neutral' });
     expect(
       neutral.occurrences
-        .flatMap((occurrence) => occurrence.timeline.transactions)
-        .filter(
-          (transaction) =>
-            transaction.kind === 'wellPurchase' && transaction.generationKey === 'initial:healing',
-        ),
-    ).toHaveLength(0);
+        .flatMap((occurrence) => occurrence.timeline.obligations)
+        .filter((obligation) => obligation.owner === neutralPurchase?.owner),
+    ).toHaveLength(1);
     expect(
       neutral.occurrences.some(
         (occurrence) => occurrence.overview.stygianWell?.interacted === true,
@@ -767,7 +904,11 @@ describe('engine-owned F/G execution semantic product', () => {
       }),
     });
     const overview = assembleExecutionOverview(canonical, patchedEvaluation, undefined);
-    const transactions = executionTimelineTransactions(canonical, patchedEvaluation);
+    const transactions = executionTimelineTransactions(
+      canonical,
+      patchedEvaluation,
+      patchedEvaluation.rewards.timelineFacts,
+    );
     const fallback = overview.shop?.offers.find(
       (offer) => offer.offerKey === 'Boon',
     )?.runtimeFallbacks;
@@ -1166,6 +1307,12 @@ describe('engine-owned F/G execution semantic product', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'SetStygianWellPurchase',
       occurrence: well,
+      generationKey: 'initial:secondRight',
+      purchased: false,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: well,
       generationKey: 'travelDealRefill',
       purchased: false,
     });
@@ -1194,18 +1341,17 @@ describe('engine-owned F/G execution semantic product', () => {
     });
     expect(refillPurchase).toBeUndefined();
     expect(source).toMatchObject({ kind: 'wellPurchase', effect: 'neutral' });
-    expect(competitor).toBeDefined();
+    expect(competitor).toBeUndefined();
     expect(occurrence?.timeline.dependencies).toContainEqual({
       owner: refill?.owner,
       afterOwner: source?.owner,
     });
-    expect(occurrence?.timeline.dependencies).toContainEqual({
-      owner: competitor?.owner,
-      afterOwner: source?.owner,
-    });
+    expect(occurrence?.timeline.dependencies).toEqual([
+      { owner: refill?.owner, afterOwner: source?.owner },
+    ]);
   });
 
-  it('projects an opaque occurrence-local prerequisite while omitting independent guidance', () => {
+  it('projects only supplied occurrence-local dependencies without semantic inference', () => {
     const assembly = simulateProjectAssembly(catalog, fOnlyProject());
     const biome = assembly.evaluation.route.biomes[0];
     const room =
@@ -1226,24 +1372,45 @@ describe('engine-owned F/G execution semantic product', () => {
       });
     const facts: PlannerTimelineFacts = Object.freeze({
       nodes: Object.freeze([
-        Object.freeze({ owner: x, included: false, required: false }),
-        Object.freeze({ owner: y, included: true, required: true }),
-        Object.freeze({ owner: z, included: false, required: false }),
+        Object.freeze({ owner: x, included: false }),
+        Object.freeze({ owner: y, included: true }),
+        Object.freeze({ owner: z, included: false }),
       ]),
       dependencies: Object.freeze([Object.freeze({ owner: y, afterOwner: x })]),
     });
-    // `includedOwners` is the generic prerequisite-closure result produced by
-    // the execution assembler. The projection itself only copies owners and
+    // Publication supplies only intended transactions and their planner-owned
+    // dependency endpoints. The projection itself only copies owners and
     // edges; it does not infer anything from the transaction kind.
     const projected = assembleTimelineRelations(
       [transaction(x), transaction(y), transaction(z)],
       room,
       facts,
-      new Set([key(x), key(y)]),
     );
-    expect(projected.transactions.map((entry) => entry.owner)).toEqual([key(x), key(y)]);
+    expect(projected.transactions.map((entry) => entry.owner)).toEqual([key(x), key(y), key(z)]);
     expect(projected.dependencies).toEqual([{ owner: key(y), afterOwner: key(x) }]);
     expect(projected.dependencies).not.toContainEqual({ owner: key(y), afterOwner: key(z) });
+  });
+
+  it('publishes exactly one obligation for every intended transaction', () => {
+    for (const project of [
+      fOnlyProject(),
+      artificerCreatedBoonProject(),
+      timePieceArtificerChildProject(),
+      narcissusMysteryBoonProject(),
+    ]) {
+      const product = productFor(project);
+      for (const occurrence of product.occurrences) {
+        expect(occurrence.timeline.obligations).toHaveLength(
+          occurrence.timeline.transactions.length,
+        );
+        for (const transaction of occurrence.timeline.transactions)
+          expect(
+            occurrence.timeline.obligations.filter(
+              (obligation) => obligation.owner === transaction.owner,
+            ),
+          ).toHaveLength(1);
+      }
+    }
   });
 
   it('retains Chaos continuations in Overview, not normal Doors', () => {

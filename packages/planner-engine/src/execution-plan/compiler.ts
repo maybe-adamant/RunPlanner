@@ -23,7 +23,7 @@ function fingerprint(value: unknown): string {
   return hash.toString(16).padStart(8, '0');
 }
 
-/** Lossless data-only mapping from the explicit engine product to protocol v14. */
+/** Lossless data-only mapping from the explicit engine product to protocol v15. */
 export function compileExecutionPlan({ product }: ExecutionCompilerInput): ExecutionPlan {
   const body = Object.freeze({
     format: EXECUTION_PLAN_FORMAT,

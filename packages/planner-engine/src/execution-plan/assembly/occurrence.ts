@@ -22,7 +22,6 @@ export function executionOccurrence(
   biome: CompleteValidBiomeProjectEvaluation,
   transactions: ReturnType<typeof executionTimelineTransactions>,
   timelineFacts: PlannerTimelineFacts,
-  includedOwners: ReadonlySet<string>,
   roomExitConformance: RoomExitConformanceDelta | undefined,
 ): ExecutionOccurrence {
   const batch = batches.get(executionRoomOwnerKey(room));
@@ -36,7 +35,7 @@ export function executionOccurrence(
     kind: room.encounterEnvelopeKey,
     ...(anomaly === undefined ? {} : { anomaly }),
     overview: assembleExecutionOverview(room, biome, batch),
-    timeline: assembleTimelineRelations(transactions, room, timelineFacts, includedOwners),
+    timeline: assembleTimelineRelations(transactions, room, timelineFacts),
     doors: assembleExecutionDoors({
       room,
       batches,

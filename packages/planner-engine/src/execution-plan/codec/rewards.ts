@@ -259,10 +259,10 @@ export function acquisitionRole(value: unknown, label: string): ExecutionAcquisi
   exact(
     record,
     ['role', 'disposition', 'lifecyclePoint', 'kind', 'gameName'],
-    ['producer', 'settlement', 'traitOffer', 'levelResolution'],
+    ['producer', 'settlement', 'traitOffer', 'levelResolution', 'replacement'],
     label,
   );
-  if (!['normal', 'timePiece', 'artificer'].includes(record.disposition as string))
+  if (!['normal', 'artificer'].includes(record.disposition as string))
     fail(`${label}.disposition is unsupported`);
   const producer =
     record.producer === undefined ? undefined : object(record.producer, `${label}.producer`);
@@ -278,9 +278,17 @@ export function acquisitionRole(value: unknown, label: string): ExecutionAcquisi
   const settlement =
     record.settlement === undefined ? undefined : object(record.settlement, `${label}.settlement`);
   if (settlement !== undefined) exact(settlement, ['site', 'entry'], [], `${label}.settlement`);
+  const replacement =
+    record.replacement === undefined
+      ? undefined
+      : object(record.replacement, `${label}.replacement`);
+  if (replacement !== undefined)
+    exact(replacement, ['reward', 'gameName'], [], `${label}.replacement`);
+  if (replacement !== undefined && record.disposition !== 'artificer')
+    fail(`${label}.replacement is only valid for artificer roles`);
   return Object.freeze({
     role: stringValue(record.role, `${label}.role`),
-    disposition: record.disposition as 'normal' | 'timePiece' | 'artificer',
+    disposition: record.disposition as 'normal' | 'artificer',
     ...(producer === undefined
       ? {}
       : {
@@ -298,6 +306,14 @@ export function acquisitionRole(value: unknown, label: string): ExecutionAcquisi
     lifecyclePoint: stringValue(record.lifecyclePoint, `${label}.lifecyclePoint`),
     kind: stringValue(record.kind, `${label}.kind`),
     gameName: stringValue(record.gameName, `${label}.gameName`),
+    ...(replacement === undefined
+      ? {}
+      : {
+          replacement: Object.freeze({
+            reward: reward(replacement.reward, `${label}.replacement.reward`),
+            gameName: stringValue(replacement.gameName, `${label}.replacement.gameName`),
+          }),
+        }),
     ...(settlement === undefined
       ? {}
       : {

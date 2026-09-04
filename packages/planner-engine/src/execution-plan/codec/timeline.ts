@@ -429,6 +429,13 @@ export function timeline(value: unknown, label: string): ExecutionTimeline {
         'roomEntered' | 'outgoingGeneration' | 'exitUsable' | 'roomExit',
     });
   });
+  const obligationCounts = new Map<string, number>();
+  for (const obligation of obligations)
+    obligationCounts.set(obligation.owner, (obligationCounts.get(obligation.owner) ?? 0) + 1);
+  for (const transaction of transactions) {
+    if (obligationCounts.get(transaction.owner) !== 1)
+      fail(`${label} must publish exactly one obligation for ${transaction.owner}`);
+  }
   return Object.freeze({
     transactions: Object.freeze(transactions),
     dependencies: Object.freeze(dependencies),

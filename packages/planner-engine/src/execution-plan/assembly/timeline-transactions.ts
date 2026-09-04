@@ -14,6 +14,7 @@ import type { TraitOfferOwnerAddress } from '../../authored-project/addresses';
 import type { CanonicalAuthoredRoom } from '../../simulation/materialization';
 import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation-products';
 import type { RewardEvent } from '../../simulation/rewards/model';
+import type { PlannerTimelineFacts } from '../../simulation/timeline-facts';
 import {
   appendSteadyGrowthTimelineEffects,
   appendTranscendentEmbryoTimelineEffects,
@@ -37,6 +38,7 @@ import type {
 export function executionTimelineTransactions(
   room: CanonicalAuthoredRoom,
   biome: CompleteValidBiomeProjectEvaluation,
+  timelineFacts: PlannerTimelineFacts,
 ): readonly ExecutionTimelineTransaction[] {
   if (!room.entered) return Object.freeze([]);
   const owner = executionRoomOwnerKey(room);
@@ -267,6 +269,13 @@ export function executionTimelineTransactions(
       }
       continue;
     }
+    const actionNode = timelineFacts.nodes.find(
+      (node) => semanticAddressKey(node.owner) === semanticAddressKey(timeline.action.owner),
+    );
+    // The planner's Timeline fact is the publication authority. Optional rows
+    // that were never authored have no active included node and never become
+    // executor transactions.
+    if (actionNode?.included !== true) continue;
     if (
       timeline.action.reference.kind === 'interactEncounter' ||
       timeline.action.reference.kind === 'interactGorgon'
@@ -502,29 +511,74 @@ export function executionTimelineTransactions(
           'executionCoverageMissing',
           `${room.gameName} is missing acquisition ${semanticAddressKey(source)}`,
         );
-      return Object.freeze(events);
+      return Object.freeze({ branch, events: Object.freeze(events) });
     });
     const row = agreement(
-      branchRows.map((candidate) => candidate),
+      branchRows.map((candidate) => candidate.events),
       `acquisition ${semanticAddressKey(source)}`,
     );
+    // A Time Piece conversion is a planner-side destruction event, not an
+    // execution acquisition.  Artificer still needs the expected native
+    // replacement to steer its source contact when that replacement child
+    // was itself Time-Pieced, so retain that narrow proof on the source role.
+    const publishedEvents = row.filter((event) => event.kind !== 'conversionToGold');
+    if (publishedEvents.length === 0) continue;
     const acquisitionSource = agreement(
-      row.map((event) => event.source),
+      publishedEvents.map((event) => event.source),
       `acquisition source ${semanticAddressKey(source)}`,
     );
     const roles: readonly ExecutionAcquisitionRole[] = Object.freeze(
-      row.map((event) => {
+      publishedEvents.map((event) => {
         const role = event.acquisition.role;
         const offer = traitOffer(source, role);
         const level = levelResolution(source, role);
+        const replacement =
+          event.kind === 'artificerConversion'
+            ? (() => {
+                const materializations = branchRows.map(({ branch }) => {
+                  const consumedChildren = branch.events.filter(
+                    (
+                      candidate,
+                    ): candidate is Extract<RewardEvent, { readonly kind: 'conversionToGold' }> =>
+                      candidate.kind === 'conversionToGold' &&
+                      candidate.source.producer?.kind === 'artificerReplacement' &&
+                      semanticAddressKey(candidate.source.producer.sourceOwner) ===
+                        semanticAddressKey(event.origin) &&
+                      candidate.source.producer.sourceRole === role,
+                  );
+                  if (consumedChildren.length > 1)
+                    throw new CompilerError(
+                      'executionCoverageMissing',
+                      `ambiguous Time Piece Artificer materialization ${semanticAddressKey(event.origin)} ${role}`,
+                    );
+                  const child = consumedChildren[0];
+                  if (child === undefined) return undefined;
+                  return Object.freeze({
+                    reward: executionRewardFromOffer(
+                      event.replacement,
+                      'RoomReward',
+                      'RunProgress',
+                    ),
+                    gameName: child.acquisition.acquisition.gameName,
+                  });
+                });
+                if (materializations.every((candidate) => candidate === undefined))
+                  return undefined;
+                if (materializations.some((candidate) => candidate === undefined))
+                  throw new CompilerError(
+                    'executionCoverageMissing',
+                    `divergent Time Piece Artificer materialization ${semanticAddressKey(event.origin)} ${role}`,
+                  );
+                return agreement(
+                  materializations as readonly NonNullable<(typeof materializations)[number]>[],
+                  `Artificer materialization ${semanticAddressKey(event.origin)} ${role}`,
+                );
+              })()
+            : undefined;
         return Object.freeze({
           role,
           disposition:
-            event.kind === 'conversionToGold'
-              ? ('timePiece' as const)
-              : event.kind === 'artificerConversion'
-                ? ('artificer' as const)
-                : ('normal' as const),
+            event.kind === 'artificerConversion' ? ('artificer' as const) : ('normal' as const),
           ...(event.source.producer === undefined
             ? {}
             : {
@@ -537,6 +591,7 @@ export function executionTimelineTransactions(
           lifecyclePoint: event.acquisition.lifecyclePoint,
           kind: event.acquisition.acquisition.kind,
           gameName: event.acquisition.acquisition.gameName,
+          ...(replacement === undefined ? {} : { replacement }),
           ...(event.settlement === undefined
             ? {}
             : {

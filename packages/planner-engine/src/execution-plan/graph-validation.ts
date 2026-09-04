@@ -103,8 +103,15 @@ export function validateExecutionGraph(
       afterOwners.push(dependency.afterOwner);
       dependencyGraph.set(dependency.owner, afterOwners);
     }
-    for (const obligation of entry.timeline.obligations)
+    const obligationCounts = new Map<string, number>();
+    for (const obligation of entry.timeline.obligations) {
       if (!owners.has(obligation.owner)) invalid(`${entry.id} has an unresolved obligation owner`);
+      obligationCounts.set(obligation.owner, (obligationCounts.get(obligation.owner) ?? 0) + 1);
+    }
+    for (const owner of owners) {
+      if (obligationCounts.get(owner) !== 1)
+        invalid(`${entry.id} must publish exactly one obligation for ${owner}`);
+    }
     if (entry.roomExitConformance !== undefined) {
       if (entry.diagnostics?.beforeRoomExit === undefined)
         invalid(`${entry.id} room-exit conformance has no beforeRoomExit Run State`);

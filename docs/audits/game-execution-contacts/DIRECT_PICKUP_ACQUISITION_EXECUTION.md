@@ -51,7 +51,7 @@ owner and role       exact planner acquisition
 producer             source that materialized the acquisition, when explicit
 gameName             expected native pickup identity
 lifecyclePoint       authored acquisition phase
-disposition          normal, Time Piece, or Artificer result
+disposition          normal or Artificer result; Time Piece is omitted at publication
 settlement           optional acquisition site and entry
 specialized result   optional trait offer or level resolution, when present
 ```
@@ -61,8 +61,9 @@ producer-owned child sequence supersedes it. It does not infer behavior from a
 Lua inventory of item names and does not search authored order for the next
 matching acquisition. No new execution or authored-project field is required.
 The initial execution slice claims only normal `acquisition` transactions;
-commerce transactions and Time Piece or Artificer dispositions remain with
-their owning adapters even when their native object is also consumable.
+commerce transactions and the Artificer disposition remain with their owning
+adapters even when their native object is also consumable. Time Piece removes
+the acquisition before execution publication.
 
 ## Bound-or-ready correlation
 
@@ -139,15 +140,15 @@ use.
 
 Sharing `UseConsumableItem` is not sufficient to join this family:
 
-| Acquisition                                          | Owning boundary                                                                                                                                 |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `StoreRewardRandomStack` and source-eligible Nectar  | Direct level acquisition; native target steering and level proof are required.                                                                  |
-| `TalentDrop`, `TalentBigDrop`, and `MinorTalentDrop` | Spell/Path/Hex execution. Their `OpenTalentScreen` use function starts an interactive talent-tree action.                                       |
-| Trait, Pom, Chaos, and Spell loot                    | Their native choice-screen adapters.                                                                                                            |
-| `BlindBoxLoot` and other wrapped rewards             | The producer and generated-child chain, followed by the child's applicable consumer.                                                            |
-| `ChaosWeaponUpgrade`                                 | Randomized Hammer transformation.                                                                                                               |
-| NPC choices, purchases, and Shrine delivery          | Their creation or commerce owner remains separate; the resulting normal pickup may reuse this consumer.                                         |
-| Artificer and Time Piece                             | Their source dispositions belong to the transformation boundary. An Artificer child may later reuse this consumer; Time Piece creates no child. |
+| Acquisition                                          | Owning boundary                                                                                                                                                               |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `StoreRewardRandomStack` and source-eligible Nectar  | Direct level acquisition; native target steering and level proof are required.                                                                                                |
+| `TalentDrop`, `TalentBigDrop`, and `MinorTalentDrop` | Spell/Path/Hex execution. Their `OpenTalentScreen` use function starts an interactive talent-tree action.                                                                     |
+| Trait, Pom, Chaos, and Spell loot                    | Their native choice-screen adapters.                                                                                                                                          |
+| `BlindBoxLoot` and other wrapped rewards             | The producer and generated-child chain, followed by the child's applicable consumer.                                                                                          |
+| `ChaosWeaponUpgrade`                                 | Randomized Hammer transformation.                                                                                                                                             |
+| NPC choices, purchases, and Shrine delivery          | Their creation or commerce owner remains separate; the resulting normal pickup may reuse this consumer.                                                                       |
+| Artificer and Time Piece                             | Artificer's source disposition belongs to the transformation boundary and its child may later reuse this consumer. Time Piece is omitted at publication and creates no child. |
 
 The direct-pickup consumer must not absorb these lifecycles merely because one
 callback happens to pass through the same native function.

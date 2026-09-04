@@ -37,7 +37,7 @@ export function applyFountainUsedTransition(
 ): FountainUsedTransition {
   const outcome = createFountainRarityOutcomeAddress(event.owner);
   const timelineFacts: PlannerTimelineFacts = Object.freeze({
-    nodes: Object.freeze([Object.freeze({ owner: event.owner, included: true, required: true })]),
+    nodes: Object.freeze([Object.freeze({ owner: event.owner, included: true })]),
     dependencies: Object.freeze([]),
   });
   const frontiers = branches.map((branch) => {
