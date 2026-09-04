@@ -47,8 +47,13 @@ A family is not covered when only its ordinary loot-screen carrier works.
   menus and direct Pom Slice/Nectar target steering, accepted entry contacts,
   threaded completion, and shared acquisition ownership.
 - [Direct-pickup acquisition execution](DIRECT_PICKUP_ACQUISITION_EXECUTION.md)
-  — exact-object binding, accepted consumable use, native terminal settlement,
-  specialized exclusions, fallback handoff, and the Sea Star reuse boundary.
+  — bound-or-ready action correlation, accepted consumable use, native
+  terminal settlement, specialized exclusions, fallback handoff, and the Sea
+  Star reuse boundary.
+- [Reward transformation execution](REWARD_TRANSFORMATION_EXECUTION.md) —
+  Time Piece and Artificer source dispositions, bounded native contacts,
+  Artificer reward steering, Forfeit handoff, and producer-independent
+  replacement acquisition.
 - [NPC trait and generated-pickup execution](NPC_TRAIT_AND_GENERATED_PICKUP_EXECUTION.md)
   — bespoke Arachne/Narcissus menus, native trait-owned drop production,
   generated-child handoff, and Narcissus Mystery Boon resolution.

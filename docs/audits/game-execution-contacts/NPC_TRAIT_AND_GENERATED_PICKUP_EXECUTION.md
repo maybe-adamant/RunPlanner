@@ -13,8 +13,9 @@ an executor-owned producer. The durable rule is narrower:
 
 > The executor steers the authored trait screen, then lets native trait
 > acquisition run. If that native behavior creates a separately authored
-> pickup, the executor binds the native object to the published child and
-> hands it to the pickup's own adapter. It never recreates the drop itself.
+> pickup, the pickup's own adapter claims a compatible ready child when the
+> player accepts its interaction. The executor never recreates the drop or
+> assigns it source-trait provenance.
 
 ## Source index
 

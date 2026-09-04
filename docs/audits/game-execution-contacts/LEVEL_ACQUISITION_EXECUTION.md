@@ -71,8 +71,9 @@ semantic stages:
 
 ```text
 published producer or concrete acquisition owner
-  -> one exact materialized native object
+  -> one materialized native object
   -> accepted interaction
+  -> bind its existing owner or claim one compatible ready normal action
   -> native effect sequence
   -> stable acquired-state proof
 ```
@@ -83,17 +84,17 @@ accepted-interaction contacts. Sharing a global pending action or guessing the
 next acquisition from authored order would erase the distinction and recreate
 the callback-cursor problem the room Timeline was designed to remove.
 
-The exact materialized object remains the correlation carrier. A later hook
-recovers the transaction through that object or through arguments copied from
-that exact object. An unrelated native call with the same game name has no
-planner handle and runs unchanged.
+The exact materialized object remains the correlation carrier after its owner
+has been selected. Ordinary room rewards and purchases may bind that owner at
+materialization. An unbound native-produced Pom or direct-level item may claim
+one compatible ready normal action only after its carrier-specific acceptance
+contact. An unrelated call with no compatible ready action runs unchanged.
 
-The level adapter is producer-neutral once that binding exists. Room rewards,
-NPC drops, Shop purchases, Shrine deliveries, and transformed children retain
-their own production or purchase contacts; after one of them binds a concrete
-level-bearing object, that object uses the same applicable visible or direct
-level sequence. The level adapter must not rediscover which producer created
-it.
+The level adapter is producer-neutral once that binding or claim exists. Room
+rewards and purchases may arrive pre-bound. NPC drops and transformed children
+may remain unbound until accepted use. Either way, the object then uses the
+same applicable visible or direct level sequence. The level adapter must not
+rediscover which producer created it.
 
 ## Visible Pom carrier
 
@@ -172,8 +173,8 @@ not. The executor follows the published role rather than assigning level
 behavior from the item name alone.
 
 Other native systems can call `UseStoreRewardRandomStack` without representing
-a planner acquisition. A call without an exact bound execution role is native
-pass-through.
+a planner acquisition. A call without an existing binding or compatible ready
+normal action is native pass-through.
 
 ### Native sequence
 
@@ -230,9 +231,9 @@ trait mutation is needed.
 The two carriers justify an acquisition-oriented executor boundary now that
 ordinary traits and level outcomes are both concrete consumers. Ordinary
 Olympian/Hermes/Hammer acquisition remains the trait specialization of that
-family; visible and direct level effects are level specializations. Producer
-binding and exact native-object correlation are shared, while each
-specialization owns its accepted entry, callback sequence, and terminal proof.
+family; visible and direct level effects are level specializations.
+Bound-or-ready acquisition correlation is shared, while each specialization
+owns its accepted entry, callback sequence, and terminal proof.
 
 This boundary does not create generic future directories or a registry of
 game callbacks. Dispatch remains explicit over the closed implemented
@@ -240,7 +241,6 @@ acquisition families.
 
 Direct level realization belongs with level outcomes, not with a later generic
 consumable pass. Source-eligible room-reward Nectar is the immediate concrete
-consumer. Pom Slice uses the same contact only after a later NPC, Shop, or
-generated-consumable slice binds its concrete object; that later slice owns the
-producer, purchase, and optional-participation behavior, not another
-random-level adapter.
+consumer. A pre-bound purchase or an unbound native-produced Pom Slice uses the
+same contact once its normal action is ready; the producer or purchase slice
+owns creation and participation, not another random-level adapter.
