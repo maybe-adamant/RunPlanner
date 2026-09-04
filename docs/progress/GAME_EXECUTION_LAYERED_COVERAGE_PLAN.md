@@ -2,11 +2,13 @@
 
 ## Status
 
-Drafted on 2026-09-02 for adversarial review. Gates A, A.2, B, B.2, C1, C2, and
-C2.5 were completed on 2026-09-03. The later gates remain scope outlines until
-they receive the same component-by-component review. Do not begin a gate until
-its components, ownership, native contacts, pass-through boundary, and concrete
-witnesses have been discussed, cleaned up here, and locked.
+Drafted on 2026-09-02 for adversarial review. Gates A, A.2, B, B.2, C1, C2,
+C2.5, C3, and C4 were completed by 2026-09-04. Gate D was rewritten and locked
+against that completed carrier baseline on 2026-09-04. Gates E onward remain
+scope outlines until they receive the same component-by-component review. Do
+not begin a gate until its components, ownership, native contacts, pass-through
+boundary, and concrete witnesses have been discussed, cleaned up here, and
+locked.
 
 Starting commits:
 
@@ -85,7 +87,7 @@ callback is already known.
 
 ### Proven base retained
 
-- Protocol v10 publishes one selected Underworld F or F/G occurrence sequence
+- Protocol v15 publishes one selected Underworld F or F/G occurrence sequence
   with Overview, consequential Timeline transactions, local prerequisites,
   obligations, Doors, sparse room-exit conformance, and diagnostic Run State.
 - The active executor uses a route cursor and one Room Occurrence session. The
@@ -93,25 +95,25 @@ callback is already known.
 - Runtime fallbacks, Artificer producer relations, Mystery Boon staging,
   required boss rewards, Chaos pairs and returns, World Shops, Wells, Pools,
   resources, fountains, racks, and F/G topology have working bounded paths.
-- Ordinary trait offers, visible and direct level outcomes, and direct pickup
-  consumption now have focused native adapters. Bespoke NPC menus remain in
-  the broad legacy hook until C3 replaces that path.
+- Ordinary and NPC trait offers, Mystery Boons, visible and direct level
+  outcomes, direct pickup consumption, and Artificer transformations now have
+  focused native adapters. Optional untaken actions and Time Piece destruction
+  are omitted at the planner-to-executor boundary.
 
 These are implementation evidence. Each layer below may retain them only after
 its coverage matrix proves the contact; working code is not exempt from audit.
 
 ### Known gaps that motivate the plan
 
-| Layer                 | Current gap                                                                                                                                         |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Run start             | Weapon, aspect, Arcana, and Fear are diagnostic data rather than a blocking start contract; Aspect of Selene's native starting tree remains random. |
-| Structure             | F/G is broadly functional, but coverage was established incrementally and still needs one coherent room/reward/encounter/feature/door proof.        |
-| Acquisition carriers  | A generic result may work through loot while failing through a consumable, generated object, NPC menu, or purchase.                                 |
-| Trait effects         | Natural Selection, Ransoms, and All Together lack exact execution payloads; Concave Stone's nested result is dropped.                               |
-| Sea Star              | A positive `UseLoot` duplicate is forced, but direct consumables and the authored negative outcome are not.                                         |
-| Keepsake effects      | Immediate and retained effects need explicit pass-through or exact-result dispositions rather than assuming equip identity closes the family.       |
-| Commerce              | Existing Shop/Well/Pool support needs an exhaustive item/contact audit; Shrine delivery remains dormant and unproven.                               |
-| Later-route abilities | Hex/Path, Moon Beam, Echo, Circe, and later NPC carriers are modeled but not all have complete execution products and native proofs.                |
+| Layer                 | Current gap                                                                                                                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Structure             | F/G is broadly functional, but coverage was established incrementally and still needs one coherent room/reward/encounter/feature/door proof.                                                     |
+| Acquisition carriers  | Commerce, Spell, Path, and later-route carriers remain open; completed ordinary, level, pickup, NPC, Mystery, and Artificer carriers must not be reopened.                                       |
+| Trait effects         | Natural Selection and All Together lack exact execution payloads; Concave Stone's nested result is dropped. Ransoms need a locked native-authoritative disposition, not a second implementation. |
+| Sea Star              | A positive `UseLoot` duplicate is forced, but direct consumables and the authored negative outcome are not.                                                                                      |
+| Keepsake effects      | Immediate and retained effects need explicit pass-through or exact-result dispositions rather than assuming equip identity closes the family.                                                    |
+| Commerce              | Existing Shop/Well/Pool support needs an exhaustive item/contact audit; Shrine delivery remains dormant and unproven.                                                                            |
+| Later-route abilities | Hex/Path, Moon Beam, Echo, Circe, and later NPC carriers are modeled but not all have complete execution products and native proofs.                                                             |
 
 ## Locked architectural rules
 
@@ -308,7 +310,7 @@ those offers. The executor must not recompute or apply it during loadout.
 Aspect of Selene starts with zero banked and invested Path points and does not
 record a Spell Drop use at initialization. Later Spell Drops, Talent Drops,
 Moon Beam points, late God Sent insertion, investment, and closed-tree
-behavior remain Gate D2 work, but must reuse the starting-Hex tree realization
+behavior remain Gate D7 work, but must reuse the starting-Hex tree realization
 primitive rather than introduce a second layout representation or native
 tree-forcing path.
 
@@ -1077,7 +1079,7 @@ direct-level call with no bound role. No Pom Slice producer, purchase, or
 optional-participation witness belongs to C2. Planner-owned tests retain the
 Persephone/Premium Service composition matrix; the executor needs only a
 representative C1 non-default effective-level witness. Natural Selection
-follows as the separate D3 consequence slice after this carrier is committed.
+follows as the separate D4 consequence slice after this carrier is committed.
 
 This slice uses the existing `ExecutionLevelResolution`; it adds no planner
 wire or project-schema field. Its executor commit removes `pendingLevel`, the
@@ -1100,8 +1102,10 @@ transformation, Chaos, and direct-pickup branches remain for their own gates.
   or history mutation in executor code;
 - make the consumer independent of its producer. C3 may hand Narcissus direct
   rewards to it, while later Echo, Quick Buck, Buried Treasure, Sea Star,
-  Shop, Well, Shrine, and transformation gates may reuse it only after their
-  owning producer has materialized and bound the exact object;
+  Shop, Well, Shrine, and transformation gates may reuse it once the
+  planner-owned child action is ready. The consumer claims the compatible
+  native object at accepted use; a producer does not assign physical-object
+  identity to that child;
 - classify by the published acquisition shape rather than a duplicated catalog
   inventory in Lua. Trait offers, level resolutions, Chaos, Spell/Hex,
   Talent Drop/Path of Stars screens, Mystery Boon, Chaos Anvil,
@@ -1224,125 +1228,385 @@ remains a separate intended transaction with its producer dependency. Planner
 tests continue to own eligibility, bag, requiredness, charge, and producer
 matrices. Executor tests own only Artificer contact admission, bounded closure,
 disposition isolation, source-owned replacement steering, and carrier handoff.
-Sea Star follows as the separate D5 consequence slice.
-
-#### C5 — Generated pickup producers and handoff
-
-- close each remaining generated-pickup producer's randomized or conditional
-  native production contact. Do not add executor-side source-to-object
-  provenance: each resulting pickup claims a compatible ready child at its
-  existing C1, C2, or C2.5 accepted interaction;
-- reuse C2's already-closed level adapter when a newly implemented producer
-  materializes a Pom Slice or source-eligible Nectar. Do not add level
-  application or a second level proof to the generated-pickup adapter;
-- preserve planner-owned producer dependencies for Quick Buck, Buried
-  Treasure, NPC gifts, Echo, and other declared generated pickups while leaving
-  each special producer's RNG steering to its owning later gate. Those
-  dependencies control readiness but do not assign physical-object identity;
-- apply runtime fallback only at the exact published availability contact,
-  treating preferred and fallback results as the same owner.
-
-Primary witnesses are one generated pickup handed to C2.5, one generated
-direct-level consumable handed to C2, and
-preferred/fallback/neither at the applicable consumable availability contact.
-Shop, Well, and Shrine inventory and purchase behavior remain Gate E; their
-later acquired objects reuse C1, C2, or C2.5 only after Gate E binds them.
+Sea Star follows as the final D8 consequence slice after every eligible pickup
+carrier is closed.
 
 Gate C stops if any carrier lacks a stable terminal proof or has an unbounded
 callback sequence. It may move proof to a durable native-result checkpoint or
 demonstrate that the planner transaction boundary must change; it must not add
 a callback cursor or carrier protocol to the generic Timeline runtime.
 
-Each C1-through-C5 slice, including C2.5, has its own executor commit,
+Each C1-through-C4 slice, including C2.5, has its own executor commit,
 independent review, and modpack pin. Run Planner changes are allowed only for a
 demonstrated missing carrier fact; no slice publishes executor convenience
 state.
 
-### Gate D — Consequential trait, keepsake, and Hex steering
+### Gate D — Universal consequential outcomes
 
-User-visible outcome: every modeled trait or keepsake consequence has an
-explicit minimal runtime disposition independent of biome. Each Gate D slice
-consumes the stable Gate C carrier immediately before it; it does not reopen
-that carrier's callback ownership.
+User-visible outcome: every universal consequential outcome reachable in the
+F/G execution extent either follows an explicitly native-authoritative path or
+has the smallest exact planner result needed to steer its native contact. Gate
+D does not implement later-route NPCs, commerce, or combat effects merely to
+claim catalog-wide coverage.
 
-Gate D is delivered as bounded native-contact passes rather than one catalog
-wide actuator commit. The owning audit classifies each family before code is
-changed:
+Gate C is complete. Its transaction carriers remain the sole owners of native
+admission, begin, and terminal completion. A consequence that occurs while one
+trait is being acquired extends that already-bound transaction; it does not
+create a second transaction, dependency, callback cursor, or source-to-object
+identity. The C1 adapter may expose one bounded selected-acquisition scope to
+its consequence modules while its native selection call is in flight. Those
+modules may steer only their named nested callback and return their terminal
+proof to C1.
 
-Gate C and Gate D are intentionally interleaved. We do not finish every carrier
-and then accumulate every consequential effect into one late gate. The locked
-delivery order is:
+All exact consequence data is published on the offer option or acquisition role
+that owns it. Option-local data is published for every authored option, not only
+the primary selected option, because Concave Stone can acquire one of the
+residual options. Production does not gain a generic selected-disposition
+language, effect registry, or copied trait simulator.
 
-1. C1 closes ordinary Boon/Hammer selection.
-2. D1 closes the F/G Chaos offer variant using that trait-screen foundation.
-3. D2 classifies and closes direct selected-trait consequences that need no
-   later carrier: Proper Upbringing, Ransoms, All Together, Concave Stone, and
-   Cherished Heirloom.
-4. C2 closes single-target levels and effective-level offer input.
-5. D3 closes Natural Selection by reusing C2's native level steering.
-6. C2.5 closes direct pickup acquisition before bespoke producers reuse it.
-7. C3 closes Arachne, Narcissus, and Mystery Boon carrier chains.
-8. D4 closes only the NPC-specific consequential results reachable through
-   those carriers; Echo/Circe remain deferred until their route gate unless a
-   universal contact can be proved without speculative code.
-9. C4 closes the Artificer transformation carrier and the planner-side
-   publication omission for Time Piece.
-10. D5 closes Sea Star against those stable producer/child primitives.
-11. C5 closes generated pickup producers and hands their children to C2 or
-    C2.5.
-12. D6 closes Quick Buck, Buried Treasure, and other universal produced-pickup
-    effects against C5 without reopening transformation identity.
-13. D7 closes Spell, Path, Moon Beam, and remaining Hex contacts by reusing the
-    Gate A Hex primitive.
+The automatic outcomes and loadout effects already closed by Gates A and B
+remain closed. Gate D neither republishes them nor creates parallel contacts
+merely because their underlying traits or keepsakes belong to this catalog
+family.
 
-Each numbered item is an independent implementation/review/commit boundary.
-A consequence gate may document a native-authoritative disposition and produce
-no actuator code; it still closes the classification before the next carrier
-family broadens the surface.
+The following native-authoritative classifications are locked before actuator
+work begins:
 
-| Family                   | Runtime disposition                                                                                                                                                                                                   |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Proper Upbringing        | Native-authoritative. The simulator models activation and upgrades; native element/trait code remains the sole runtime implementation.                                                                                |
-| Ransoms                  | Native-authoritative or verify-only at the stable result of `SacrificeAllBoon`; never remove or level traits in executor code.                                                                                        |
-| Natural Selection        | Native-steered at `DistributeLevels`; native code applies the ordered eight-target level sequence after C2 closes the level carrier.                                                                                  |
-| All Together             | Native-steered at `GrantBoons`; substitute the four authored grant identities and let native code grant them.                                                                                                         |
-| Sea Star                 | Native-steered proc/no-proc with native duplicate binding, purchase exclusion, and non-recursion after C4 closes producer/child transformations.                                                                      |
-| Concave Stone            | Native-steered proc/no-proc and frozen residual choice inside the existing upgrade-selection sequence; native code owns the second screen and grant.                                                                  |
-| Cherished Heirloom       | Native-authoritative or verify-only at `AttemptAdvanceKeepsake`; do not reproduce rank transition logic.                                                                                                              |
-| Produced pickups         | Steer only declared random identities when required, then bind native children for Quick Buck, Buried Treasure, NPC gifts, Echo, and other producers.                                                                 |
-| Echo / Circe             | Classify each modeled non-neutral result separately; deterministic native effects pass through, while only their volatile choice is steered. Dormant later-route adapters remain outside F/G live closure.            |
-| Spell / Path / Moon Beam | Native-steered Spell/layout/node/point choices, reusing Gate A's Hex realization. Native code owns Hex mutation, Path investment, late God Sent insertion, and closed-tree behavior; combat effects remain unmodeled. |
+| Family                     | Locked disposition                                                                                                                                                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Proper Upbringing          | Native `CheckActivatedTraits` remains the sole implementation. The planner's rarity and trait histories model its deterministic activation; execution publishes no effect payload and installs no effect hook.      |
+| Ransoms                    | Native `SacrificeAllBoon` removes and levels the exact traits present after the selected outer trait is added. Execution neither publishes a removal/level replay nor verifies a second owner.                      |
+| Cherished Heirloom         | Native `AttemptAdvanceKeepsake` and `AdvanceKeepsake` remain authoritative. Existing `keepsakeEffects` conformance proves modeled retained-state changes where they occur; no separate Heirloom transaction exists. |
+| Olympian keepsake pressure | Native equip owns pressure and charge setup. Each later authored offer already publishes its exact giver/base rarity, while room-exit keepsake conformance owns charge consumption.                                 |
+| Simulation-neutral effects | Native pass-through after the selected trait or keepsake is proved. Health, Magick, Gold, damage, and combat arithmetic remain outside execution.                                                                   |
+| Echo and Circe             | Deferred to their reachable biome gates. Existing dormant legacy contacts are not F/G closure evidence and are not broadened here.                                                                                  |
 
-Chaos remains its own bounded trait-offer adapter because its paired
-curse/blessing screen, curse maturity, values, and rejected curse differ from
-the ordinary C1 carrier. The executor steers the authored pair and values at
-native offer construction; native code equips the curse and later matures the
-blessing. It does not recreate the curse clock or blessing transition.
+A deterministic native callback that later proves to disagree with the planner
+is an under-modeling finding for adjudication. It is not permission to add a
+second executor implementation. The diagnostic Run State remains available for
+that investigation without becoming a blocking full-state comparator.
 
-`equip`, `noOp`, numeric-only Echo results, simulation-neutral keepsakes, and
-Olympian keepsake pressure remain native-authoritative unless a concrete native
-random choice requires steering. Exact equip plus the later resolved reward is
-not a reason to add another effect transaction.
+#### D1 — F/G encounter-altering keepsakes
 
-Primary witnesses:
+Fig Leaf and Gorgon Amulet are already reachable in F/G and therefore cannot
+be deferred with later-biome encounter work. They remain two phase-local
+results rather than a generic keepsake-effect interpreter:
 
-- one native-authoritative family proving that simulator coverage creates no
-  executor mutation path;
-- one verify-only deterministic result whose failed proof disables enforcement
-  without blocking the native callback;
-- one native-steered family proving only its target/choice is substituted;
-- Concave Stone with and without Cherished Heirloom pressure;
-- Sea Star positive and negative paths through the already-closed carriers;
-- a Ransom followed by a same-room offer using the native post-removal state;
+This gate first completes the encounter ownership move that Gates B and B.2
+deliberately left unfinished. The supported encounter stack moves beneath
+`src/mods/room/timeline/encounters/` as one complete vertical slice:
+
+- declaration-driven phase selection and native encounter binding;
+- active-phase identity plus `encounterEnd` and `bossDefeated` lifecycle
+  publication;
+- encounter-interaction binding and handoff to the already-closed acquisition
+  carriers;
+- currently supported encounter-owned automatic outcomes;
+- Nemesis random-event realization; and
+- the new Fig Leaf and Gorgon phase-result adapters.
+
+The move deletes `room/encounters.lua`, `room/encounter_hooks.lua`, and the
+displaced encounter, Nemesis, boss, and automatic branches from
+`hooks_timeline.lua`. It must not leave forwarding modules or a second phase
+lookup. The room coordinator consumes one narrow encounter interface; native
+hooks outside this directory ask it for the active published phase or hand off
+an already-bound encounter transaction rather than scanning
+`overview.encounterPhases` themselves.
+
+Acquisition semantics do not move merely because an encounter produced them.
+Arachne and Narcissus menu-result steering remains in the acquisition family;
+the encounter layer supplies their phase-owned transaction handle. Likewise,
+the ordinary Athena trait screen remains owned by the trait acquisition
+adapter after Gorgon has produced and bound the Athena interaction. Room
+features, navigation, and conformance remain outside the encounter directory.
+
+After that ownership move, the F/G encounter-keepsake behavior is added:
+
+- extend each published encounter phase with an optional exact Fig Leaf
+  skip/no-skip result and an optional exact Gorgon trigger/defer result. Absence
+  means the effect is not pending at a structurally relevant phase; it must not
+  be inferred from the room or encounter name in Lua;
+- publish the negative result while a pending effect reaches an eligible phase.
+  Otherwise native RNG could realize a different positive outcome even though
+  the plan contains no resulting transaction;
+- for Fig Leaf, scope only the native encounter-skip decision and select the
+  authored branch. Native code remains responsible for suppressing enemy
+  spawns, preserving the room and reward, consuming a use, and setting the
+  once-per-biome latch;
+- for Gorgon, scope `HandleAthenaSpawn` at the exact hosted phase and select the
+  authored trigger/defer branch. Native code remains responsible for spawning
+  Athena, consuming the pending use on success, and leaving it pending on a
+  defer result;
+- on a positive Gorgon result, bind the existing `interactGorgon` transaction
+  to the spawned Athena interaction and hand its published trait offer to the
+  already-closed ordinary trait screen. Do not create a second Gorgon,
+  encounter, or trait transaction; and
+- keep room-exit `keepsakeEffects` conformance as the retained-state proof for
+  both effects. It verifies the Fig Leaf use/latch and Gorgon pending/consumed
+  state without making either effect a generic Timeline obligation.
+
+The planner engine retains the complete declaration-owned eligibility matrix.
+F/G execution witnesses are one ordinary positive and negative Fig Leaf phase,
+one source-supported skippable miniboss, one blocked phase, one positive and
+deferred Gorgon phase, exact Athena rarity/selection handoff, and the rule that
+a Fig Leaf-skipped encounter cannot consume Gorgon. Opening, Devotion, boss,
+and miniboss behavior is taken from the published phase result rather than
+reclassified by encounter kind in executor tests.
+
+This is one delivery gate with two intentional commit boundaries so
+behavior-preserving movement remains reviewable separately from the new wire
+and runtime behavior:
+
+1. Plan Executor: `refactor(executor): consolidate encounter timeline`
+2. Run Planner: `feat(execution): publish encounter keepsake outcomes`; Plan
+   Executor: `feat(executor): steer F/G encounter keepsakes`; then pin the
+   reviewed executor revision in the modpack shell.
+
+The first commit must retain the existing encounter tests byte-for-byte in
+meaning and delete every superseded path. The second owns only the new
+phase-result codec, steering, binding, and focused witnesses above. D1 receives
+one independent review across both commits before D2 begins.
+
+#### D2 — Chaos offer extraction and closure
+
+- retain the existing exact `ExecutionTraitOffer` Chaos payload; no planner wire
+  or project schema changes are allowed;
+- move the complete Chaos acquisition path from the broad legacy hook into the
+  focused trait-acquisition neighborhood, including option construction,
+  selected blessing placement, processed curse/blessing values, rejected curse,
+  and terminal pair proof;
+- use the same bound acquisition handle throughout the loot screen while
+  preserving Chaos as a specialized carrier: the selected native trait is the
+  curse and its pending blessing remains nested under `OnExpire.TraitData`;
+- let native code equip the curse, run its clock, and mature the blessing; and
+- delete the displaced Chaos branches and state from the broad hook in the same
+  executor commit.
+
+Primary witnesses are three visible curse alternatives, a repeated curse
+identity, a selected blessing at each physical option position, a Denial-
+rejected curse, representative operand-bearing curse/blessing values, and exact
+terminal proof of the equipped curse plus pending blessing. Existing exhaustive
+operand tests remain the sole owner of the numeric declaration matrix.
+
+Intended commit: Plan Executor `refactor(executor): isolate Chaos acquisitions`.
+Run Planner changes are excluded.
+
+#### D3 — All Together exact direct grants
+
+- extend each ordinary trait-offer option with an optional exact All Together
+  result containing the four declaration-owned Earth, Fire, Air, and Water
+  outcomes, including an explicit null for an exhausted pair;
+- assemble that result directly from the reached selected-offer product and
+  round-trip it through the strict TypeScript and Lua codecs without adding a
+  new transaction kind;
+- while C1's selected acquisition is in flight, scope only native `GrantBoons`
+  and substitute each planner-authored random identity at its matching native
+  eligible pair;
+- let native `AddTraitToHero`, presentation, activation, element contribution,
+  and God Sent reevaluation run normally; and
+- prove the exact relevant set-membership delta after native `GrantBoons`
+  returns, then return that proof to C1's existing terminal.
+
+Primary witnesses are four selected grants, one forced remaining member, and
+one exhausted/null set. Planner tests own eligibility and complete set
+construction; executor tests own only scoped native substitution and result
+proof. D5 owns the later Concave-residual composition witness.
+
+Intended commits:
+
+- Run Planner: `feat(execution): publish All Together grants`
+- Plan Executor: `feat(executor): steer All Together grants`
+- Modpack shell: pin the reviewed executor revision.
+
+#### D4 — Natural Selection ordered distribution
+
+- extend each ordinary trait-offer option with its exact ordered successful
+  Natural Selection target sequence;
+- do not encode that sequence as eight level transactions or reuse C2's Pom and
+  direct-level adapter. `DistributeLevels` is one nested native consequence of
+  the selected outer trait;
+- derive the scoped native shuffle order from first target appearances, retain
+  otherwise eligible native entries so native cap detection can condemn them,
+  and let the original loop apply every level and remove capped targets;
+- stop for adjudication before implementation if a focused source/contact audit
+  finds an authored legal sequence that cannot be represented by one initial
+  native order plus native condemnation; and
+- compare per-trait stack deltas with the authored target multiplicities before
+  returning the nested proof to C1.
+
+Primary witnesses are fewer than eight successful levels due to exhausted
+targets, a complete eight-level distribution over several slots, and a target
+that becomes capped and is removed between rounds. C2 utilities may be reused
+for reading native levels, but C2 callback ownership and payload types remain
+unchanged. D5 owns the later Concave-residual composition witness.
+
+Intended commits:
+
+- Run Planner: `feat(execution): publish Natural Selection targets`
+- Plan Executor: `feat(executor): steer Natural Selection distribution`
+- Modpack shell: pin the reviewed executor revision.
+
+#### D5 — Concave Stone residual selection
+
+- extend an ordinary trait offer with the exact `noProc` or selected residual
+  option already frozen by the planner;
+- keep the outer selection and native `DoubleBoonChance` recursive selection
+  inside one C1 transaction. No residual transaction or DAG edge is published;
+- force only the scoped proc/no-proc roll and, on success, the authored residual
+  button identity. Native code consumes the keepsake use and recursively applies
+  the second trait;
+- retain the outer C1 selected-acquisition scope through that recursive call so
+  the D3 or D4 nested consequence for the residual option can run when needed;
   and
-- a test-owned exhaustive classification of every normalized
-  `TraitSelectedDisposition` and modeled keepsake-effect family.
+- prove the outer and residual identities before C1 completes. Existing
+  `keepsakeEffects` room-exit conformance remains the authority for the Stone
+  charge/status ledger.
 
-That exhaustive classification belongs in tests or the durable audit.
-Production must not gain a generic effect registry, a copied trait simulator,
-or manual trait mutation utilities. Each bounded native-contact pass has its
-own executor commit and modpack pin; planner changes are allowed only for a
-demonstrated missing exact choice or terminal fact.
+Primary witnesses are Epic Stone no-proc, Epic Stone proc, Cherished Heirloom's
+forced rank-IV proc, a residual ordinary trait, and one residual option carrying
+an already-supported D3 or D4 consequence. Planner tests retain the complete
+proc legality matrix.
+
+Intended commits:
+
+- Run Planner: `feat(execution): publish Concave Stone outcomes`
+- Plan Executor: `feat(executor): steer Concave Stone residuals`
+- Modpack shell: pin the reviewed executor revision.
+
+#### D6 — Fixed native pickup producers
+
+Quick Buck and Buried Treasure use native `GiveRandomConsumables` with fixed
+declared output identities. Their production has no planner-selected RNG result.
+Execution therefore does not hook production, bind objects at creation, or
+publish trait-to-object provenance. The selected outer trait completes through
+C1 independently of its delayed native drops.
+
+The planner-owned dependency makes each authored pickup action ready after the
+source trait. At accepted use, C2.5 claims a compatible ready action by native
+identity and lets the game apply the pickup. Identical generated objects are
+interchangeable; their physical creation order does not assign planner
+ownership. Optional pickups not authored as taken remain unpublished and native
+pass-through.
+
+Primary witnesses are Quick Buck followed by its authored `RoomMoneyDrop`,
+Buried Treasure with two same-identity objects satisfying ready actions in
+either order, and an unselected generated pickup that creates no obligation.
+If existing C1/C2.5 tests already prove a row, this gate cites that owner rather
+than duplicating it. This slice adds no generic producer adapter and no empty
+production module.
+
+Intended disposition: audit/test closure only unless a concrete failure in the
+existing action-time claim is demonstrated. Do not create an empty executor
+commit or modpack pin merely to record a no-code result.
+
+#### D7 — Spell, Hex tree, Path, and Moon Beam
+
+This gate is two independently reviewed implementation passes because Spell
+selection and Path investment have different native carriers.
+
+##### D7.1 — Spell selection and Hex tree
+
+- publish the selected Spell offer's complete layout, Rare identities, Epic
+  identities, and currently reached God Sent extension with the existing offer;
+- keep Spell as its own acquisition adapter rather than pretending its native
+  screen is an ordinary C1 Boon screen;
+- move the native Hex tree realization primitive out of the loadout-only
+  neighborhood into one Hex-owned module used by both Aspect of Selene at run
+  start and an ordinary Spell acquisition;
+- steer the ordered three-spell offer and selected position, then let native
+  spell installation, positional point bonus, and tree mutation run; and
+- complete from the exact installed spell and tree. Aspect of Selene's routed
+  `SpellDrop` continues directly to the Path carrier and does not construct a
+  spell offer.
+
+Primary witnesses are all three positional bonuses, a non-default layout and
+Rare/Epic set, initial God Sent present/absent, and reuse of the same tree
+primitive by the already-covered Aspect of Selene start path.
+
+##### D7.2 — Path acquisition and retained Hex state
+
+- add one specialized accepted-use carrier for `MinorTalentDrop`, `TalentDrop`,
+  `TalentBigDrop`, and Aspect of Selene's routed `SpellDrop`;
+- let native `OpenTalentScreen` own point addition, implicit first investment,
+  player node choices, bank spending, and full-tree closure. The planner does
+  not author graph position or individual acquired nodes;
+- complete the acquisition only after the bounded native Talent screen returns;
+  room-exit `pathOfStars` conformance proves the resulting spell, layout, talent
+  identities, banked points, invested points, and closure state;
+- change conformance activation to compare that complete projected Hex state,
+  not only banked points and the closure flag. This is required for zero-bonus
+  Spell selection, invested-only changes, and late God Sent insertion; and
+- leave Moon Beam's equip, Cherished increment, exact reward priority, and point
+  addition native-authoritative. Existing keepsake, reward-priority, and full
+  Hex conformance prove the modeled deltas; no Moon Beam actuator is added.
+
+Primary witnesses are one-, three-, and five-point Path pickups, an Aspect of
+Selene routed Spell pickup, capacity-limited investment with a retained bank,
+tree closure, late God Sent insertion, and Moon Beam ordinary/Cherished point
+changes. Combat effects of individual talents remain unmodeled.
+
+Intended commits:
+
+- Run Planner: one D7.1 execution-product commit and one D7.2 conformance commit;
+- Plan Executor: one D7.1 Spell/Hex commit and one D7.2 Path commit;
+- Modpack shell: pin each reviewed executor revision.
+
+#### D8 — Sea Star across closed pickup carriers
+
+Sea Star closes last because Talent pickups and Quick Buck/Buried Treasure
+children are eligible sources. Closing only the earlier C1/C2/C2.5 carriers
+would leave the trait partially implemented again.
+
+- publish an explicit `proc` or `noProc` result on each eligible source
+  acquisition role. The existing positive duplicate child remains a separate
+  intended transaction whose planner dependency makes it ready after the source;
+- omit the field for ineligible sources and purchases. Shops cannot proc Sea
+  Star, including purchased Poms;
+- let each closed acquisition carrier expose only its bounded accepted native
+  interaction to a Sea Star collaborator. Force the native chance branch while
+  that source role is active and let native code retain the consumable or create
+  the fresh loot object;
+- do not bind the physical duplicate to its planner child at creation. After the
+  source completes, its ordinary C1, C2, C2.5, or D7 carrier claims a compatible
+  ready action when the duplicate is actually used;
+- support the consumable branch reusing the same native object by allowing a
+  completed source binding to yield to a newly ready compatible action; and
+- never arm a result for the produced duplicate. Native `CanDuplicate = false`
+  and the absence of another authored Sea Star result jointly prevent recursion.
+
+Primary witnesses are positive and negative direct-consumable outcomes, a fresh
+Pom duplicate, a Talent duplicate, a Quick Buck or Buried Treasure generated
+source, an Artificer-produced duplicable source, purchased-Pom exclusion, same-
+object rebinding after source completion, and non-recursion. The two native
+duplicate shapes own the complete executor matrix; tests do not repeat every
+reward declaration.
+
+Intended commits:
+
+- Run Planner: `feat(execution): publish Sea Star outcomes`
+- Plan Executor: `feat(executor): steer Sea Star duplication`
+- Modpack shell: pin the reviewed executor revision.
+
+#### Gate D closure
+
+After D8:
+
+- update the durable execution-contact audits to mark C1-C4 and D1-D8 truthfully
+  covered, native-authoritative, or deferred;
+- keep one test-owned exhaustive classification of every normalized
+  `TraitSelectedDisposition` and modeled keepsake-effect family without adding a
+  production registry;
+- remove superseded Chaos, Sea Star, and generic trait consequence branches from
+  the broad legacy hook while leaving explicitly deferred later-route contacts
+  labeled as such; and
+- run one bounded Gate D verification pass. The complete repository gate remains
+  reserved for the final phase closure.
+
+Each code-producing D slice uses a fresh executor, an independent reviewer, and
+one bounded remediation pass. A slice stops for adjudication if its native
+callback cannot be scoped to the selected C1/acquisition handle, if its result
+requires a new cross-room dependency, or if faithful steering would copy the
+surrounding game algorithm.
 
 ### Gate E — Cascading F/G commerce closure
 
@@ -1648,5 +1912,6 @@ has an explicit planner product or a source-backed pass-through/neutral
 disposition; every published consequential result has a native carrier and
 focused proof; F/G structural and live lanes complete without unresolved
 mismatch; dormant later-route carriers are honestly marked; the compiler and
-room session contain no semantic policy; protocol v15 is the sole active
-contract; and durable authorities have absorbed the resulting boundary.
+room session contain no semantic policy; the final protocol produced by these
+gates is the sole active contract; and durable authorities have absorbed the
+resulting boundary.
