@@ -1403,20 +1403,35 @@ D2 begins.
 - retain the existing exact `ExecutionTraitOffer` Chaos payload; no planner wire
   or project schema changes are allowed;
 - move the complete Chaos acquisition path from the broad legacy hook into the
-  focused trait-acquisition neighborhood, including option construction,
-  selected blessing placement, processed curse/blessing values, rejected curse,
-  and terminal pair proof;
-- use the same bound acquisition handle throughout the loot screen while
-  preserving Chaos as a specialized carrier: the selected native trait is the
-  curse and its pending blessing remains nested under `OnExpire.TraitData`;
+  focused trait-acquisition neighborhood. Extend shared materialization to bind
+  exact `TrialUpgrade` loot, begin only at accepted `HandleLootPickup`, and
+  recover the same handle from that native loot throughout the screen;
+- leave `SetTransformingTraitsOnLoot` entirely native and delete the executor
+  hook on it. During only the initial `CreateBoonLootButtons` call, prepare all
+  three rows on the first post-sort `CreateUpgradeChoiceButton` contact. Install
+  the ordered authored curses and requirements, swap the authored selected
+  blessing into its physical position when a generated peer already owns it,
+  preserve the other native blessings, and apply the selected rarity;
+- scope exact curse/blessing operand overrides only around the matching native
+  row construction. The selected native trait is the processed curse and its
+  pending blessing remains nested under `OnExpire.TraitData`;
+- leave native rerolls native, leave Vow of Denial to ban the authored
+  unselected curse identities from the constructed buttons, and do not treat
+  Rejected as a blocked Chaos-screen option;
 - let native code equip the curse, run its clock, and mature the blessing; and
-- delete the displaced Chaos branches and state from the broad hook in the same
+- complete only after the selected curse and nested pending blessing match the
+  exact published requirement, rarity, and operands. Delete every displaced
+  Chaos branch and mutable pending state from the broad hook in the same
   executor commit.
 
-Primary witnesses are three visible curse alternatives, a repeated curse
-identity, a selected blessing at each physical option position, a Denial-
-rejected curse, representative operand-bearing curse/blessing values, and exact
-terminal proof of the equipped curse plus pending blessing. Existing exhaustive
+Primary witnesses are exact materialization and accepted admission, rejected
+`UseLoot` without admission, three visible curse alternatives, a repeated curse
+identity, a selected blessing at each physical position, peer-blessing swap
+without duplication, native Denial receiving curse identities, native reroll
+pass-through, representative operand-bearing curse/blessing values including
+both Revelation values, and exact terminal proof of the equipped curse plus
+pending blessing. A native carrier with fewer than three rows is a mismatch,
+not permission to fabricate unmodeled peer blessings. Existing exhaustive
 operand tests remain the sole owner of the numeric declaration matrix.
 
 Intended commit: Plan Executor `refactor(executor): isolate Chaos acquisitions`.

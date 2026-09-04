@@ -43,6 +43,9 @@ A family is not covered when only its ordinary loot-screen carrier works.
 - [Ordinary trait-offer execution](ORDINARY_TRAIT_OFFER_EXECUTION.md) — exact
   Olympian, Hermes, and Hammer loot, screen, row-action, selection, and terminal
   contacts.
+- [Chaos trait-offer execution](CHAOS_TRAIT_OFFER_EXECUTION.md) — exact
+  Trial Upgrade admission, post-sort paired-row steering, native Denial and
+  reroll boundaries, processed values, and selected-pair proof.
 - [Level-acquisition execution](LEVEL_ACQUISITION_EXECUTION.md) — visible Pom
   menus and direct Pom Slice/Nectar target steering, accepted entry contacts,
   threaded completion, and shared acquisition ownership.
