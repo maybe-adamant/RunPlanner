@@ -7,7 +7,7 @@ import type { RuntimeOfferAvailabilityContact } from '../simulation/runtime-offe
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 14 as const;
+export const EXECUTION_PROTOCOL_VERSION = 15 as const;
 export const EXECUTION_CATALOG_VERSION = '0.54.0-required-boss-rewards' as const;
 
 export type ExecutionRunStateCount =
@@ -209,7 +209,14 @@ export interface ExecutionLevelResolution {
   readonly levelCount: number;
 }
 
-export type ExecutionAcquisitionDisposition = 'normal' | 'timePiece' | 'artificer';
+/** Published acquisition roles are all intended materializations.
+ *
+ * Time Piece is intentionally absent: the planner consumes that acquisition
+ * during simulation and publication omits it.  The aggregate of intended
+ * acquisitions plus room-exit keepsake conformance proves the authored room
+ * outcome without a second runtime adapter or exact source-identity claim.
+ */
+export type ExecutionAcquisitionDisposition = 'normal' | 'artificer';
 
 export interface ExecutionAcquisitionRole {
   readonly role: string;
@@ -222,6 +229,16 @@ export interface ExecutionAcquisitionRole {
   readonly lifecyclePoint: string;
   readonly kind: string;
   readonly gameName: string;
+  /**
+   * Source-owned Artificer materialization proof used when its generated
+   * child was consumed by Time Piece and therefore has no transaction of its
+   * own.  This is intentionally only the native replacement identity and
+   * reward steering payload; it is not a second acquisition node.
+   */
+  readonly replacement?: {
+    readonly reward: ExecutionReward;
+    readonly gameName: string;
+  };
   readonly settlement?: { readonly site: string; readonly entry: string };
   readonly traitOffer?: ExecutionTraitOffer;
   readonly levelResolution?: ExecutionLevelResolution;

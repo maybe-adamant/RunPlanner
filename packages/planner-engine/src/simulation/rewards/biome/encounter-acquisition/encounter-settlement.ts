@@ -535,7 +535,7 @@ export function applyEncounterSettlementTransition(inputs: {
     const timelineFacts: PlannerTimelineFacts = Object.freeze({
       nodes: Object.freeze(
         bossArcanaOutcomes.map((outcome) =>
-          Object.freeze({ owner: outcome.owner, included: true, required: true }),
+          Object.freeze({ owner: outcome.owner, included: true }),
         ),
       ),
       dependencies:

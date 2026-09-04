@@ -1281,10 +1281,7 @@ export function settleShopAcquisitionSite(
     const sourceOwner = actionOwnerForPurchaseKey(sourcePurchaseKey);
     if (sourceOwner === undefined) return;
     const sourceOwnerKey = semanticAddressKey(sourceOwner);
-    timelineNodes.set(
-      sourceOwnerKey,
-      Object.freeze({ owner: sourceOwner, included: true, required: true }),
-    );
+    timelineNodes.set(sourceOwnerKey, Object.freeze({ owner: sourceOwner, included: true }));
     for (const purchaseKey of qualifyingPurchaseKeys) {
       const competitorOwner = actionOwnerForPurchaseKey(purchaseKey);
       if (competitorOwner === undefined) continue;

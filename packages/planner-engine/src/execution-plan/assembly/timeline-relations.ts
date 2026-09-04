@@ -19,7 +19,6 @@ export function assembleTimelineRelations(
   transactions: readonly ExecutionTimelineTransaction[],
   room: CanonicalAuthoredRoom,
   facts: PlannerTimelineFacts,
-  includedOwners: ReadonlySet<string>,
 ): ExecutionTimeline {
   const nodeByOwner = new Map(
     facts.nodes.map((node) => [semanticAddressKey(node.owner), node] as const),
@@ -37,31 +36,26 @@ export function assembleTimelineRelations(
     .filter(
       (dependency) =>
         localTransactionOwners.has(dependency.owner) &&
-        includedOwners.has(dependency.owner) &&
-        includedOwners.has(dependency.afterOwner) &&
         localTransactionOwners.has(dependency.afterOwner),
     );
-  const included = transactions.filter((transaction) => includedOwners.has(transaction.owner));
-  const obligations = included
-    .filter((transaction) => nodeByOwner.get(transaction.owner)?.required === true)
-    .map((transaction) => {
-      const checkpoint =
-        transaction.window.kind === 'postOutgoing'
+  const obligations = transactions.map((transaction) => {
+    const checkpoint =
+      transaction.window.kind === 'postOutgoing'
+        ? 'roomExit'
+        : transaction.window.kind === 'encounterEnd'
           ? 'roomExit'
-          : transaction.window.kind === 'encounterEnd'
-            ? 'roomExit'
-            : transaction.window.kind === 'standard' && transaction.window.phase === 'beforeCombat'
-              ? 'outgoingGeneration'
-              : 'exitUsable';
-      return Object.freeze({ owner: transaction.owner, checkpoint }) as ExecutionTimelineObligation;
-    });
+          : transaction.window.kind === 'standard' && transaction.window.phase === 'beforeCombat'
+            ? 'outgoingGeneration'
+            : 'exitUsable';
+    return Object.freeze({ owner: transaction.owner, checkpoint }) as ExecutionTimelineObligation;
+  });
   // Keep lifecycle window validation close to its existing room authority;
   // no action meaning is inferred by this projection.
   for (const row of room.roomActionRoster.rows) {
     if (!row.stale && row.rank !== null) assembleLifecycleWindow(row.window);
   }
   return Object.freeze({
-    transactions: Object.freeze(included),
+    transactions: Object.freeze([...transactions]),
     dependencies: Object.freeze(dependencies),
     obligations: Object.freeze(obligations),
   });

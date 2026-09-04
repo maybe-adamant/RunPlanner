@@ -5,8 +5,6 @@ export interface PlannerTimelineNode {
   readonly owner: SemanticAddress;
   /** Whether the owner is emitted into the execution DAG. */
   readonly included: boolean;
-  /** Whether completion is required at its lifecycle checkpoint. */
-  readonly required: boolean;
 }
 
 /** Exact owner-to-owner prerequisite published by planner evaluation. */
@@ -42,7 +40,6 @@ export function mergePlannerTimelineFacts(
           Object.freeze({
             owner: current.owner,
             included: current.included || node.included,
-            required: current.required || node.required,
           }),
         );
     }

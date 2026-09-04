@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-This audit closes the execution design for the two authored ways a player can
+This audit closes the planner-to-executor boundary for the two authored ways a player can
 resolve one eligible reward without acquiring its ordinary result:
 
 - Time Piece converts the source to Gold; and
@@ -12,15 +12,19 @@ resolve one eligible reward without acquiring its ordinary result:
 These are source interactions, not alternate implementations of ordinary
 pickup. The planner has already resolved eligibility, remaining uses, reward
 bag state, acquisition participation, and the Artificer replacement. The
-executor observes the player choosing the published transformation, steers
-only Artificer's randomized replacement, and lets native game logic perform
-the mutation.
+executor steers only Artificer's randomized replacement and lets native game
+logic perform the mutation. Time Piece is intentionally consumed at the
+planner's execution-publication boundary: it does not produce an execution
+transaction or a runtime adapter. The remaining intended acquisitions and the
+room-exit keepsake charge conformance fact provide aggregate proof that the
+authored room outcome was realized; they do not assert exact Time Piece source
+identity at the native contact.
 
 This audit does not cover Sea Star, Echo recreation, trait-owned pickup
 production, Shops, Stygian Wells, Hermes Shrine delivery, or the later
 acquisition details of an Artificer replacement. Once a replacement exists,
 its published disposition routes it to the applicable ordinary trait, level,
-direct-pickup, or Time Piece adapter.
+or direct-pickup adapter. A Time Piece-destroyed source has no published child.
 
 ## Source index
 
@@ -57,20 +61,26 @@ One execution acquisition role already carries:
 ```text
 owner and role       exact planner acquisition action
 gameName             expected native source identity
-disposition          normal, timePiece, or artificer
+disposition          normal or artificer
 lifecyclePoint       room-local action window
 trait/level detail   ordinary acquisition result, when applicable
 producer             separately produced acquisition relation, when present
+replacement          Artificer source-owned native materialization proof when
+                     its child was consumed by Time Piece
 ```
 
-The Artificer replacement is a second acquisition transaction. Its producer
-fact points to the source owner and role, and the room Timeline carries the
-source-before-child dependency. Its reward identity, concrete acquisition
-roles, and any trait or level resolution belong to that child transaction.
+The Artificer replacement is normally a second acquisition transaction. Its
+producer fact points to the source owner and role, and the room Timeline
+carries the source-before-child dependency. Its reward identity, concrete
+acquisition roles, and any trait or level resolution belong to that child
+transaction. If the authored child is consumed by Time Piece, the planner
+omits that child transaction and puts only its expected native replacement
+identity and reward steering payload on the Artificer source role. This keeps
+the native Artificer contact steerable without publishing a non-obligatory
+child or teaching the executor what Time Piece means.
 
-Time Piece has no child transaction. Its published result is exhausted when
-the source has been destroyed, one native charge has been consumed, and the
-ordinary acquisition has been suppressed. Gold amount is simulation-neutral.
+Time Piece has no published child transaction. Gold amount is
+simulation-neutral.
 
 No additional compiler inference is required. In particular, the compiler and
 executor must not reconstruct conversion eligibility, charge counts,
@@ -78,20 +88,22 @@ Artificer bag policy, requiredness, or replacement contents from native names.
 
 ## One source, one disposition
 
-Normal acquisition, Time Piece, and Artificer are mutually exclusive results
-of the same concrete source interaction. The published `disposition` is the
-runtime routing authority:
+Normal acquisition and Artificer are the only published dispositions for the
+same concrete source interaction. Time Piece is a planner-side destruction
+event and is absent from the execution union. The published `disposition` is
+the runtime routing authority:
 
 | Disposition | Accepted player action                        | Resulting owner state                                       |
 | ----------- | --------------------------------------------- | ----------------------------------------------------------- |
 | `normal`    | the carrier's ordinary use or pickup          | the source acquisition completes through its normal adapter |
-| `timePiece` | the accepted native Goldify interaction       | the source completes with no child                          |
 | `artificer` | the accepted native metareward transformation | the source completes after its replacement is materialized  |
 
-An adapter for one disposition must not claim or complete either of the other
-two. This is more than a validation convenience: without the routing check, a
-normal loot or level adapter could complete a source that the planner says was
-destroyed by Time Piece or Artificer.
+An adapter for one disposition must not claim or complete the other. This is
+more than a validation convenience: without the routing check, a normal loot
+or level adapter could complete a source that the planner says was destroyed
+by Artificer. A Time Piece-destroyed source is absent, so the aggregate of
+remaining intended acquisition obligations and the room-exit charge fact
+provides the conformance boundary.
 
 The object can already be bound to a room reward or purchase owner. A free
 object generated by native behavior can instead remain unbound until its
@@ -124,9 +136,9 @@ This distinction also preserves player agency. The executor does not invoke
 the Gift or Special Interact control automatically. It waits for the player to
 choose the authored source disposition.
 
-## Time Piece contact
+## Time Piece source fact and publication boundary
 
-The bounded native sequence is:
+The native sequence remains game-owned:
 
 ```text
 Special Interact control
@@ -140,22 +152,21 @@ Special Interact control
   -> refresh notifications and exit readiness
 ```
 
-`GoldifyPresentation` is the accepted-action contact. It occurs only after the
-native interaction and conversion guards have passed, and it receives the
-exact source object. The adapter may bind or claim the published `timePiece`
-role there.
+`GoldifyPresentation` is the accepted native contact, but it is not an
+execution hook. The simulation records the source's `conversionToGold` event;
+the planner-owned execution-publication stage then omits that destroyed
+acquisition and its Time Piece transformation action. Consequently the wire
+union has no `timePiece` disposition, no Time Piece transaction, and no Lua
+Time Piece adapter.
 
-Presentation return alone is not the terminal: native code still destroys the
-source and consumes the charge. The bounded action remains active through the
-matching source destruction and finishes after the native Time Piece trait
-number update. If that sequence does not reach its terminal, the transaction
-does not complete.
-
-The adapter does not calculate or emit Gold, decrement the charge, remove the
-keepsake trait, update notifications, or unlock exits. The existing
-before-room-exit keepsake conformance fact verifies the aggregate remaining
-Time Piece charge state. That state proof supplements the local action
-terminal without creating a second conversion ledger.
+Native code still destroys the source, emits simulation-neutral Gold, consumes
+the charge, and updates the keepsake. The remaining intended acquisition
+transactions are each obligated at their published checkpoint, while the
+existing before-room-exit keepsake conformance fact verifies the aggregate
+remaining Time Piece charge. Together these facts reject a room whose intended
+acquisitions or aggregate Time Piece charge outcome differs without recreating
+native Goldify behavior or claiming exact destroyed-object identity in the
+executor.
 
 ## Artificer contact
 
@@ -177,7 +188,10 @@ Gift control
 `ConvertMetaRewardPresentation` is the accepted-action contact. It receives
 the exact source only after native Artificer eligibility has passed. The
 adapter binds or claims the published `artificer` role there and resolves its
-already-published replacement transaction.
+already-published replacement transaction. If that child was consumed by Time
+Piece, no child transaction exists; the source role instead carries the
+planner-resolved replacement game identity and reward steering payload needed
+for this same native contact.
 
 The only randomized result the executor steers is the `ChooseRoomReward`
 result. Navigation owns that native reward-selection contact, but it consumes
@@ -250,9 +264,10 @@ that the player selected the "wrong" physically identical child.
 
 The Run Progress store contains no Artificer-eligible metaprogression source,
 so an Artificer child cannot recursively use Artificer. A resulting ordinary
-loot or pickup may still expose Time Piece when its concrete declaration and
-authored disposition permit it. Forfeit makes this visible explicitly: Time
-Piece sees the realized Onion, not the underlying Boon selected by Artificer.
+loot or pickup may still be consumed by Time Piece in the planner simulation;
+when that happens its child transaction is omitted and only the source-owned
+replacement proof remains. Forfeit makes this visible explicitly: Time Piece
+sees the realized Onion, not the underlying Boon selected by Artificer.
 
 Already-bound ordinary room rewards retain exact-object correlation. This
 action-time claim is for unbound native-produced carriers whose existence and
@@ -287,48 +302,49 @@ room conformance owns the resulting Forfeit latch.
 | Accepted action matches another disposition          | Do not claim that owner; allow native behavior and report through ordinary mismatch/obligation flow. |
 | Artificer reward selection cannot be represented     | Stop further enforcement, call the native path, and do not fabricate a replacement.                  |
 | Artificer spawn returns the wrong or no object       | Do not complete the source; native behavior remains in control.                                      |
-| Time Piece reaches no charge-update terminal         | Do not complete the source.                                                                          |
+| Time Piece destroys a source                         | No acquisition transaction is published; room-exit charge conformance remains the proof boundary.    |
 | Native companion or simulation-neutral effect occurs | Pass through; it is not a separate execution owner.                                                  |
 
 ## Planner and executor disposition
 
-| Concern                                         | Authority and disposition                                                                                                 |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Source eligibility and remaining modeled uses   | Planner engine; native guards must still admit the live action.                                                           |
-| Normal versus Time Piece versus Artificer       | Published acquisition-role disposition.                                                                                   |
-| Player choosing the transformation              | Native player control; observed, never automatically invoked.                                                             |
-| Artificer replacement reward and source         | Planner child transaction; native reward selection is steered from its published reward.                                  |
-| Reward-bag mutation and use consumption         | Native-authoritative, with existing room conformance proving the modeled retained state.                                  |
-| Replacement construction and source destruction | Native-authoritative bounded transformation sequence.                                                                     |
-| Later replacement acquisition                   | Existing producer-independent trait, level, direct-pickup, or Time Piece adapter after the published dependency is ready. |
-| Gold amount and presentation                    | Native pass-through and simulation-neutral.                                                                               |
+| Concern                                         | Authority and disposition                                                                                                                                                      |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Source eligibility and remaining modeled uses   | Planner engine; native guards must still admit the live action.                                                                                                                |
+| Normal versus Artificer                         | Published acquisition-role disposition; Time Piece is omitted at publication.                                                                                                  |
+| Player choosing the transformation              | Native player control; observed, never automatically invoked.                                                                                                                  |
+| Artificer replacement reward and source         | Planner child transaction for an ordinary child, or source-owned replacement payload when that child is omitted; native reward selection is steered from the published reward. |
+| Reward-bag mutation and use consumption         | Native-authoritative, with existing room conformance proving the modeled retained state.                                                                                       |
+| Replacement construction and source destruction | Native-authoritative bounded transformation sequence.                                                                                                                          |
+| Later replacement acquisition                   | Existing producer-independent trait, level, or direct-pickup adapter after the published dependency is ready.                                                                  |
+| Gold amount and presentation                    | Native pass-through and simulation-neutral.                                                                                                                                    |
 
-No new planner production field is required. A product-loop witness should
-still prove that the compiler preserves a `timePiece` source and an
-`artificer` source plus its separate child; that is translation coverage, not
-new semantic policy.
+The planner-owned publication product adds only a source-owned Artificer
+replacement payload for the edge case where its child was consumed by Time
+Piece. A product-loop witness proves that Time Piece sources are absent,
+ordinary Artificer children remain separate transactions, and a consumed
+Artificer child still leaves enough native replacement steering data on its
+source. This is a publication boundary, not a second runtime policy.
 
 ## Representative witnesses
 
 The execution boundary needs representative contact tests rather than another
 copy of the catalog's eligibility and reward matrices:
 
-- a bound and an unbound eligible source can enter each transformation only
-  through its matching published disposition;
-- ordinary acquisition adapters do not claim `timePiece` or `artificer`
-  sources;
-- Time Piece reaches its native charge-update terminal, completes the source,
-  and creates no child;
+- a bound and an unbound eligible source can enter Artificer only through its
+  matching published disposition;
+- ordinary acquisition adapters do not claim `artificer` sources;
+- a Time Piece-destroyed source is absent from the execution transactions,
+  while the room's aggregate intended acquisitions and room-exit charge fact
+  remain present;
 - Artificer forces the published underlying reward, observes the expected
   replacement spawn, destroys the source, and completes only the source;
 - the Artificer child remains incomplete until a later compatible adapter for
-  its own published disposition claims it;
+  its own published disposition claims it, unless the planner consumed it by
+  Time Piece and published only the source-owned replacement proof;
 - visible trait/Hammer, visible Pom, direct-level, and direct-pickup children
   reuse their existing terminal proofs without exact producer-object binding;
 - an Artificer Boon intercepted by Forfeit produces the published Onion role
   without executor-side Vow mutation;
-- a Time Piece disposition on that realized Onion resolves the child through
-  Time Piece rather than normal direct pickup;
 - two replacements created before either pickup may be consumed in either
   physical-object order while following the published ready-action order; and
 - a rejected, mismatched, or interrupted native path never blocks player input

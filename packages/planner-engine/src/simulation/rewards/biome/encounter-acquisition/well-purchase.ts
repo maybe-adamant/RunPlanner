@@ -168,7 +168,6 @@ export function applyWellPurchaseTransition(inputs: {
                 (effect !== undefined && effect !== 'neutral') ||
                 isSourcePurchase ||
                 isTravelDealCompetitor,
-              required: (effect !== undefined && effect !== 'neutral') || isSourcePurchase,
             }),
           ]),
     dependencies:
@@ -236,7 +235,7 @@ export function applyWellPurchaseTransition(inputs: {
       : Object.freeze({
           nodes: Object.freeze([
             ...timelineFacts.nodes,
-            Object.freeze({ owner: refillRealization.owner, included: true, required: true }),
+            Object.freeze({ owner: refillRealization.owner, included: true }),
           ]),
           dependencies: Object.freeze([
             ...timelineFacts.dependencies,

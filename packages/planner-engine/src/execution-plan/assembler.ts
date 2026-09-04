@@ -87,19 +87,24 @@ export function assembleExecutionProduct({
         `${room.gameName} has no complete-valid biome evaluation`,
       );
     }
-    const transactions = executionTimelineTransactions(room, biome);
     const allFacts = mergePlannerTimelineFacts(
       room.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
       biome.rewards.timelineFacts,
     );
+    // Publication is the planner-owned semantic boundary: only nodes marked
+    // included by the reward fold become execution transactions.  Generic
+    // relation assembly receives the already-filtered product below.
+    const transactions = executionTimelineTransactions(room, biome, allFacts);
     const transactionOwners = new Set(transactions.map((transaction) => transaction.owner));
     const facts = Object.freeze({
       nodes: Object.freeze(
         allFacts.nodes.filter((node) => transactionOwners.has(semanticAddressKey(node.owner))),
       ),
       dependencies: Object.freeze(
-        allFacts.dependencies.filter((dependency) =>
-          transactionOwners.has(semanticAddressKey(dependency.owner)),
+        allFacts.dependencies.filter(
+          (dependency) =>
+            transactionOwners.has(semanticAddressKey(dependency.owner)) &&
+            transactionOwners.has(semanticAddressKey(dependency.afterOwner)),
         ),
       ),
     });
@@ -113,38 +118,14 @@ export function assembleExecutionProduct({
           `missing planner timeline node ${owner}`,
         );
     }
-    for (const dependency of facts.dependencies) {
-      const owner = semanticAddressKey(dependency.owner);
-      const afterOwner = semanticAddressKey(dependency.afterOwner);
-      if (owner === afterOwner || !transactionOwners.has(afterOwner))
-        throw new CompilerError(
-          'executionCoverageMissing',
-          `planner timeline dependency leaves ${room.gameName}: ${owner} after ${afterOwner}`,
-        );
-    }
-    const includedOwners = new Set(
-      [...transactionOwners].filter((owner) => nodes.get(owner)?.included === true),
-    );
-    let includedChanged = true;
-    while (includedChanged) {
-      includedChanged = false;
-      for (const dependency of facts.dependencies) {
-        const owner = semanticAddressKey(dependency.owner);
-        const afterOwner = semanticAddressKey(dependency.afterOwner);
-        if (!includedOwners.has(owner) || includedOwners.has(afterOwner)) continue;
-        includedOwners.add(afterOwner);
-        includedChanged = true;
-      }
-    }
     return Object.freeze({
       room,
       biome,
       transactions,
       facts,
-      includedOwners,
     });
   });
-  const occurrences = timelineInputs.map(({ room, biome, transactions, facts, includedOwners }) => {
+  const occurrences = timelineInputs.map(({ room, biome, transactions, facts }) => {
     const index = keys.indexOf(room.origin.biomeKey);
     const nextBiomeKey = index >= 0 ? keys[index + 1] : undefined;
     const crossBiomeTarget =
@@ -163,7 +144,6 @@ export function assembleExecutionProduct({
       biome,
       transactions,
       facts,
-      includedOwners,
       roomExitConformance.get(room.occurrenceId),
     );
   });

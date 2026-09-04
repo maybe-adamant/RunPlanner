@@ -51,9 +51,9 @@ A family is not covered when only its ordinary loot-screen carrier works.
   terminal settlement, specialized exclusions, fallback handoff, and the Sea
   Star reuse boundary.
 - [Reward transformation execution](REWARD_TRANSFORMATION_EXECUTION.md) —
-  Time Piece and Artificer source dispositions, bounded native contacts,
-  Artificer reward steering, Forfeit handoff, and producer-independent
-  replacement acquisition.
+  Time Piece publication omission and Artificer source disposition, bounded
+  native contacts, Artificer reward steering, Forfeit handoff, and
+  producer-independent replacement acquisition.
 - [NPC trait and generated-pickup execution](NPC_TRAIT_AND_GENERATED_PICKUP_EXECUTION.md)
   — bespoke Arachne/Narcissus menus, native trait-owned drop production,
   generated-child handoff, and Narcissus Mystery Boon resolution.
@@ -69,7 +69,7 @@ A family is not covered when only its ordinary loot-screen carrier works.
 
 The normalized catalog is the exhaustive identity authority. The execution
 union in `packages/planner-engine/src/execution-plan/model.ts` is the exhaustive
-wire authority. The current consumer is protocol v14 in
+wire authority. The current consumer is protocol v15 in
 `adamantRunPlanner-Plan_Executor`; its supported route extent is Underworld F
 or F/G, not the full planner catalog.
 

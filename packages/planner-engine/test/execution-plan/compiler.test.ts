@@ -29,7 +29,12 @@ import {
   ExecutionPlanCodecError,
 } from '../../src/execution-plan';
 import { validateExecutionProduct } from '../../src/execution-plan/assembly/validation';
-import { traitOffer as decodeExecutionTraitOffer } from '../../src/execution-plan/codec/rewards';
+import {
+  acquisitionRole as decodeExecutionAcquisitionRole,
+  traitOffer as decodeExecutionTraitOffer,
+} from '../../src/execution-plan/codec/rewards';
+import { expandDiagnosticFrames } from '../../src/execution-plan/codec/diagnostics';
+import { fingerprint } from '../../src/execution-plan/codec/primitives';
 import type { ExecutionSemanticProduct } from '../../src/execution-plan/model';
 import fOpeningFixture from './fixtures/f-opening.execution.json';
 import fgFixture from './fixtures/fg.execution.json';
@@ -135,6 +140,22 @@ function planWithDirectJeweledPomFallback() {
   ).plan;
 }
 
+function refreshWireFingerprint(wire: Record<string, unknown>): void {
+  const expanded = expandDiagnosticFrames(wire);
+  wire.planFingerprint = fingerprint({
+    format: expanded.format,
+    protocolVersion: expanded.protocolVersion,
+    catalogVersion: expanded.catalogVersion,
+    projectId: expanded.projectId,
+    routeKey: expanded.routeKey,
+    startingLoadout: expanded.startingLoadout,
+    startingKeepsake: expanded.startingKeepsake,
+    extent: expanded.extent,
+    selectedOccurrenceIds: expanded.selectedOccurrenceIds,
+    occurrences: expanded.occurrences,
+  });
+}
+
 function productWithDependency(
   product: ExecutionSemanticProduct,
   dependentOccurrenceId: string,
@@ -204,7 +225,30 @@ function selectedTransactionPair(product: ExecutionSemanticProduct): {
   throw new Error('fixture lacks selected cross-occurrence transaction pair');
 }
 
-describe('protocol-v14 compiler and codec', () => {
+describe('protocol-v15 compiler and codec', () => {
+  it('accepts source-owned replacement materialization only for Artificer roles', () => {
+    const role = {
+      role: 'self',
+      disposition: 'artificer',
+      lifecyclePoint: 'roomRewardPickup',
+      kind: 'loot',
+      gameName: 'MetaCurrencyDrop',
+      replacement: {
+        reward: {
+          rewardType: 'Boon',
+          producerLifecycleKey: 'RoomReward',
+          resolvedStoreKey: 'RunProgress',
+          source: 'ApolloUpgrade',
+        },
+        gameName: 'RoomRewardConsolationPrize',
+      },
+    };
+    expect(decodeExecutionAcquisitionRole(role, 'role')).toEqual(role);
+    expect(() =>
+      decodeExecutionAcquisitionRole({ ...role, disposition: 'normal' }, 'role'),
+    ).toThrow(/only valid for artificer roles/);
+  });
+
   it('publishes a non-default selected weapon and aspect as a verification-only start contract', () => {
     const project = authorLegalTraitOffers(
       applyProjectCommand(fOnlyProject(), catalog, {
@@ -593,6 +637,7 @@ describe('protocol-v14 compiler and codec', () => {
     const pool = poolOccurrence.overview.purgingPool;
     pool.interacted = false;
     delete pool.traits;
+    refreshWireFingerprint(poolMalformed as unknown as Record<string, unknown>);
     expect(() => decodeExecutionPlan(poolMalformed)).not.toThrow();
     pool.interacted = true;
     delete pool.traits;
@@ -814,7 +859,12 @@ describe('protocol-v14 compiler and codec', () => {
           }),
         ]),
         dependencies: Object.freeze([]),
-        obligations: Object.freeze([]),
+        obligations: Object.freeze([
+          Object.freeze({
+            ...sourceForUnselected.timeline.obligations[0]!,
+            owner: unselectedOwner,
+          }),
+        ]),
       }),
     });
     const productWithUnselected = Object.freeze({

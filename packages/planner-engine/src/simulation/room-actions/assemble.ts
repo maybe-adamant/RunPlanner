@@ -374,8 +374,10 @@ export function assembleRoomActionRoster(options: {
     timelineNodes.push(
       frozen({
         owner: row.owner,
-        included: row.participation === 'required',
-        required: row.participation === 'required',
+        // An active row is authored participation regardless of whether the
+        // room originally offered it as optional. Execution publication drops
+        // inactive optional rows and publishes every active row as intent.
+        included: true,
       }),
     );
     for (const dependency of row.dependencies) {

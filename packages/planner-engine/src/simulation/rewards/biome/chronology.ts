@@ -315,15 +315,6 @@ export function evaluateBiomeRewardChronology(
       readonly availabilityContact: RuntimeOfferAvailabilityContact;
     }
   >();
-  const timelineParticipationByOwner = new Map<string, 'required' | 'optional'>(
-    [...rooms.values()].flatMap((candidate) =>
-      candidate.kind !== 'authored'
-        ? []
-        : candidate.roomActionRoster.rows
-            .filter((row) => !row.stale && row.rank !== null)
-            .map((row) => [semanticAddressKey(row.owner), row.participation] as const),
-    ),
-  );
   const blockedGorgonPhases = new Set<string>();
   let gorgonEvaluationBlocked = false;
   const eligibleGorgonPhases = new Set<string>();
@@ -377,11 +368,7 @@ export function evaluateBiomeRewardChronology(
         (roleLevel !== undefined && roleLevel !== null) ||
         frontier.source.producer !== undefined
       )
-        recordTimelineNode(
-          consumerOwner,
-          true,
-          timelineParticipationByOwner.get(semanticAddressKey(consumerOwner)) === 'required',
-        );
+        recordTimelineNode(consumerOwner, true);
       for (const mutation of frontier.priorTraitMutations ?? [])
         recordTimelineDependency(
           consumerOwner,
@@ -534,22 +521,16 @@ export function evaluateBiomeRewardChronology(
   const timelineFactDependencies = new Map<string, PlannerTimelineDependency>();
   const wellRefillRealizations = new Map<string, WellRefillRealization>();
   const bossArcanaOutcomes = new Map<string, import('../model').BossArcanaOutcome>();
-  const recordTimelineNode = (
-    owner: SemanticAddress,
-    included: boolean,
-    required: boolean,
-  ): void => {
+  const recordTimelineNode = (owner: SemanticAddress, included: boolean): void => {
     const key = semanticAddressKey(owner);
     const current = timelineFactNodes.get(key);
-    if (current === undefined)
-      timelineFactNodes.set(key, Object.freeze({ owner, included, required }));
-    else if ((included && !current.included) || (required && !current.required))
+    if (current === undefined) timelineFactNodes.set(key, Object.freeze({ owner, included }));
+    else if (included && !current.included)
       timelineFactNodes.set(
         key,
         Object.freeze({
           owner: current.owner,
           included: current.included || included,
-          required: current.required || required,
         }),
       );
   };
@@ -570,8 +551,7 @@ export function evaluateBiomeRewardChronology(
         }
       | undefined,
   ): void => {
-    for (const node of facts?.nodes ?? [])
-      recordTimelineNode(node.owner, node.included, node.required);
+    for (const node of facts?.nodes ?? []) recordTimelineNode(node.owner, node.included);
     for (const dependency of facts?.dependencies ?? [])
       recordTimelineDependency(dependency.owner, dependency.afterOwner);
   };
@@ -1687,7 +1667,7 @@ export function evaluateBiomeRewardChronology(
               row.reference.kind === 'sellPurgingPoolTrait' &&
               row.reference.slotKey === poolSlot,
           );
-          if (poolRow !== undefined) recordTimelineNode(poolRow.owner, true, true);
+          if (poolRow !== undefined) recordTimelineNode(poolRow.owner, true);
         }
         const deliverySource =
           event.siteKey === 'hermesShrineDelivery' && event.entryKey !== undefined

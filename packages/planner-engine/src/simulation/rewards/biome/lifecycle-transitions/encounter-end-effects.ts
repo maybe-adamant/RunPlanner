@@ -491,10 +491,10 @@ export function applyEncounterEndEffectsTransition(
   );
   const timelineNodes: PlannerTimelineNode[] = [
     ...steadyAdvance.thresholds.map(({ address }) =>
-      Object.freeze({ owner: address, included: true, required: true }),
+      Object.freeze({ owner: address, included: true }),
     ),
     ...embryoAdvance.thresholds.map(({ address }) =>
-      Object.freeze({ owner: address, included: true, required: true }),
+      Object.freeze({ owner: address, included: true }),
     ),
   ];
   const timelineFacts: PlannerTimelineFacts =

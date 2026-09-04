@@ -484,7 +484,6 @@ describe('Infernal Contract and Travel Deal chronology', () => {
       expect(result.settlement.timelineFacts?.nodes).toContainEqual({
         owner: source?.owner,
         included: true,
-        required: true,
       });
       expect(result.settlement.timelineFacts?.dependencies).toContainEqual({
         owner: competitor?.owner,
