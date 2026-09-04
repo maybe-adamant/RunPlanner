@@ -3,12 +3,12 @@
 ## Status
 
 Drafted on 2026-09-02 for adversarial review. Gates A, A.2, B, B.2, C1, C2,
-C2.5, C3, and C4 were completed by 2026-09-04. Gate D was rewritten and locked
-against that completed carrier baseline on 2026-09-04. Gates E onward remain
-scope outlines until they receive the same component-by-component review. Do
-not begin a gate until its components, ownership, native contacts, pass-through
-boundary, and concrete witnesses have been discussed, cleaned up here, and
-locked.
+C2.5, C3, C4, D1, and D2 were completed by 2026-09-04. Gate D2.5 is the locked
+room-exit outcome-conformance correction that must complete before D3 begins.
+Gates E onward remain scope outlines until they receive the same
+component-by-component review. Do not begin a gate until its components,
+ownership, native contacts, pass-through boundary, and concrete witnesses have
+been discussed, cleaned up here, and locked.
 
 Starting commits:
 
@@ -197,7 +197,9 @@ Live support remains deferred until the owning biome gate reaches that contact.
 
 ## Protocol policy
 
-Protocol v16 is the single active development protocol for this unclosed plan:
+Protocol v16 is the completed carrier baseline through D2. Gate D2.5 advances
+the single active development protocol to v17 for explicit modeled-state
+publication; D3 and every later gate target v17:
 
 - there is no compatibility decoder or dual executor for an earlier protocol;
 - each gate updates planner fixtures, strict Lua decode, and the modpack pin in
@@ -760,8 +762,8 @@ indexed row. The port exposes one small semantic-free interface:
   transaction payload needed by the owning actuator; when that semantic owner
   is already complete it returns a non-enforcing completed disposition rather
   than exposing the payload or reporting a mismatch;
-- `complete(handle, proof)` records the handle's semantic owner complete only
-  after the owning adapter has verified its specific terminal result, then
+- `complete(handle)` records the handle's semantic owner complete only after
+  the owning adapter reaches its exact accepted native terminal contact, then
   retires every handle for that owner from further enforcement;
 - `checkpoint(name)` checks only obligations whose published deadline is that
   checkpoint; and
@@ -797,15 +799,15 @@ resolve one published contact to a transaction handle
 → bind that handle to its exact native carrier
 → recover the handle from that carrier at the interaction seam
 → begin the handle before planner-directed mutation and read its payload
-→ realize or observe the adapter-specific result
-→ verify that result locally
+→ let the exact accepted native terminal return
 → complete that same handle
 ```
 
-If binding, readiness, realization, or local proof fails, the existing
-first-mismatch policy disables further planner enforcement. The native game
-callback must still run and player input must not be blocked or returned from
-prematurely.
+If binding, readiness, realization, or structural terminal admission fails,
+the existing first-mismatch policy disables further planner enforcement. The
+native game callback must still run and player input must not be blocked or
+returned from prematurely. Modeled semantic state is checked separately at
+room exit under D2.5.
 
 #### Ordering, participation, and identity invariants
 
@@ -829,8 +831,8 @@ prematurely.
   subcontacts do not become independent owners. Each subcontact may receive a
   distinct handle carrying the same semantic owner, and the owning adapter may
   retain a bounded modal/subcontact scope between native callbacks. The owner
-  completes only at its declared terminal proof. A preferred result and its
-  declared runtime fallback likewise complete the same owner.
+  completes only at its declared native terminal contact. A preferred result
+  and its declared runtime fallback likewise complete the same owner.
 - One exact handle may bind to one native carrier. Rebinding the same
   handle/carrier pair is idempotent; binding that handle to another carrier or
   binding one carrier to a different handle is a mismatch. Distinct declared
@@ -848,7 +850,7 @@ prematurely.
   does not model callback progression as another cursor. The owning adapter
   identifies one authoritative binding point, begins at the native action
   entry, retains its handle through a bounded native sequence, and requests
-  completion only after a stable terminal proof.
+  completion only after its exact terminal contact returns.
 - Dependencies are strictly occurrence-local. Decode continues to reject
   cross-occurrence edges, and completed owners never survive `close()`.
 - Pending effects, clocks, charges, Shrine deliveries, and other later-room
@@ -903,13 +905,13 @@ closed execution product. They must not replace or fork this Timeline runtime.
 - an owner completing once, retiring all of its handles, and returning a
   non-enforcing completed disposition on a later callback without mismatching;
 - one multi-hook transaction retaining the same semantic owner until its
-  terminal proof, without introducing callback-order matching;
+  terminal contact, without introducing callback-order matching;
 - overlapping `afterCombat` and `postOutgoing` capabilities;
 - one current phase-keyed transient contact using
   `encounterEnd:<phaseKey>` or `bossDefeated:<phaseKey>`;
 - room close clearing bindings, completed owners, and lifecycle capabilities;
-- a readiness or proof mismatch disabling enforcement while the wrapped native
-  callback still completes; and
+- a readiness or structural-contact mismatch disabling enforcement while the
+  wrapped native callback still completes; and
 - one representative decode/graph witness retaining the existing rejection of
   cross-occurrence prerequisites.
 
@@ -954,12 +956,12 @@ effect receives one implementation disposition during its owning gate:
 | Disposition          | Executor responsibility                                                                                                                                  |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Native-authoritative | Let the complete native callback chain run. Publish no extra actuator merely because the simulator models the result.                                    |
-| Verify-only          | Let native code run, then prove one stable terminal result only when a published Timeline owner needs completion evidence.                               |
+| Observe at exit      | Let native code run and compare only the planner-owned sparse modeled-state projection at the room-exit checkpoint.                                      |
 | Native-steered       | Replace the smallest authored RNG, eligibility, ordering, source, or target decision and let native code apply all resulting mutations and side effects. |
 | Executor-realized    | Directly create or replace state only when no bounded native steering seam exists and the gate explicitly justifies the exception.                       |
 
 These are planning classifications, not a required production enum or runtime
-registry. The default is native-authoritative. Verification does not authorize
+registry. The default is native-authoritative. Observation does not authorize
 mutation. Native-steered adapters must call the original callback chain and
 must not copy the surrounding game algorithm. A desync disables later planner
 enforcement but never blocks player input or prevents the native callback from
@@ -967,10 +969,11 @@ continuing.
 
 For example, Proper Upbringing remains fully modeled by the simulator but its
 deterministic native activation is not reimplemented. Ransoms likewise leave
-trait removal and level application to `SacrificeAllBoon`; a stable post-state
-may be verified, but the executor does not perform the mutations. Steady Growth
-keeps its native encounter clock and rarity application; the executor steers
-only the authored target when that clock fires.
+trait removal and level application to `SacrificeAllBoon`; the resulting
+planner-tracked trait projection is checked at room exit, but the executor does
+not perform the mutations. Steady Growth keeps its native encounter clock and
+rarity application; the executor steers only the authored target when that
+clock fires.
 
 Every Gate C-through-F carrier audit records:
 
@@ -978,12 +981,14 @@ Every Gate C-through-F carrier audit records:
 - which part is deterministic native behavior and which part is volatile;
 - what the planner simulates so later planning remains correct;
 - the smallest value, target, or branch the executor must steer, if any;
-- whether a terminal proof is necessary for an existing Timeline owner; and
+- the exact native terminal contact that records the intended action as done;
+- which sparse room-exit modeled-state delta, if any, observes its result; and
 - why any executor-realized exception cannot use a bounded native seam.
 
-If the native sequence has no bounded terminal, or exact realization would
-require copying a full block of game logic, the gate stops for adjudication.
-It must not push that complexity into the generic Timeline runtime.
+If the native sequence has no bounded terminal contact, or exact realization
+would require copying a full block of game logic, the gate stops for
+adjudication. It must not push that complexity into the generic Timeline
+runtime.
 
 ### Gate C — Cascading acquisition carriers
 
@@ -993,7 +998,7 @@ Timeline through small independently reviewable adapters. Gate C is five
 ordered delivery gates, not one atomic acquisition rewrite.
 
 Each slice first records its carrier's binding point, entry callback,
-intermediate callbacks, stable terminal proof or finite alternatives,
+intermediate callbacks, exact terminal contact or finite alternatives,
 cancel/retry behavior, and owner split. Implementation then moves only that
 closed family beneath `room/timeline/`; it deletes the displaced branch from
 the broad legacy hook in the same commit and does not add forwarding layers or
@@ -1015,11 +1020,11 @@ empty future directories.
   Install that initial rarity once, do not observe or replay Rarify button
   presses, and let native Calling Card/provider-keepsake behavior consume its
   own source. The existing effective rarity and `beforeRoomExit`
-  `keepsakeEffects` conformance verify the selected result and aggregate charge
-  ledger;
-- let the native selection callback equip or stack the chosen trait, then use
-  that stable result as the terminal proof. Replacement proof includes absence
-  of the replaced trait. C1 consumes the planner's indivisible final
+  `keepsakeEffects` conformance verifies the aggregate charge ledger;
+- let the native selection callback equip or stack the published selected
+  trait and complete when that exact selected-row callback returns. D2.5's
+  tracked-trait projection verifies the resulting trait and the absence of a
+  replaced trait at room exit. C1 consumes the planner's indivisible final
   `effectiveLevel`, including any already-folded Jeweled Pom, Aspect of
   Persephone, or Premium Service contribution by supplying that final native
   row input. It does not inspect or recompute those sources;
@@ -1035,8 +1040,8 @@ Primary witnesses are one ordinary Olympian Boon, one Hermes Boon, one Hammer,
 one replacement offer, one Rejected-curse disabled option, one Calling Card
 and one provider-keepsake rarification outcome, one non-default effective-level
 row, and the no-begin/reroll/Concave alternative paths. Rarification witnesses
-prove the initial base rarity, selected effective result, and room-exit charge
-ledger without observing individual button presses. The whole-offer
+prove the initial base rarity and room-exit charge ledger without observing
+individual button presses; D2.5 owns the selected effective result. The whole-offer
 `fallbackGold` branch reuses the screen but completes from its native
 hidden-trait selection; its optional currency is native pass-through. This
 slice excludes Chaos, Spell, NPC, Pom, Mystery Boon, generated-child, purchase,
@@ -1064,9 +1069,10 @@ and direct-consumable carriers.
 - steer the offered targets and authored selected target, then let native code
   apply the level count. Treat published `levelCount` as the final delta,
   accounting for native `FatedPomLevelBonus` adjustment exactly once, and
-  normalize an unset native `StackNum` as level one in terminal proof. A legal
-  null Nectar target requires native confirmation that no eligible target
-  exists; otherwise it is a mismatch and native behavior continues;
+  complete when the exact target/count terminal returns. D2.5 normalizes and
+  verifies the resulting level at room exit. A legal null Nectar target
+  requires native confirmation that no eligible target exists; otherwise it
+  is a mismatch and native behavior continues;
 - leave ordinary-offer effective-level composition in C1. Aspect of Persephone
   and Premium Service have no separate executor adapter because the planner has
   already folded them into that one published final value.
@@ -1135,7 +1141,7 @@ simulation.
   as the locked native-contact authority for this slice;
 - create a focused NPC acquisition adapter beneath
   `room/timeline/acquisitions/` for Arachne and Narcissus menu entry, native
-  option preparation, selection, and terminal trait proof. Bind through the
+  option preparation, selection, and exact terminal contact. Bind through the
   exact NPC source, install only the published three-row result at the
   menu-open seam, and let native button construction and trait equipment run;
 - resolve Narcissus Life Savings through the published `traitEligibility`
@@ -1143,8 +1149,9 @@ simulation.
   available. Do not infer Death Defiance or search the provider pool;
 - let every selected trait run its native `AcquireFunctionName`. In particular,
   never call `GiveRandomConsumables`, copy its output loop, or synthesize a
-  Narcissus/Arachne drop. Complete the NPC interaction from the equipped trait,
-  independently of any later pickup;
+  Narcissus/Arachne drop. Complete the NPC interaction when its exact selected
+  native callback returns, independently of any later pickup; D2.5 observes the
+  resulting trait at room exit;
 - keep trait-to-generated-pickup provenance out of the execution wire. The
   room Timeline instead exposes one semantic-agnostic `claimReady` operation.
   At accepted interaction it filters compatible unfinished actions by the open
@@ -1165,8 +1172,8 @@ simulation.
 - close each already-bound Mystery Box as one child acquisition with a box and
   hidden provider subcontact, regardless of its producer: begin only after
   accepted box use, force only `GiveLoot`'s published provider input, bind the
-  exact returned provider loot, and hand its final offer and terminal proof to
-  C1. Commerce owns purchase creation and binding; this slice does not claim an
+  exact returned provider loot, and hand its final offer and terminal contact
+  to C1. Commerce owns purchase creation and binding; this slice does not claim an
   unbound shop purchase. Preserve the native `GiveLoot`-before-`BoughtFromShop`
   ordering; and
 - delete the superseded Arachne, Narcissus, generated-child, and Mystery Boon
@@ -1231,10 +1238,10 @@ disposition isolation, source-owned replacement steering, and carrier handoff.
 Sea Star follows as the final D8 consequence slice after every eligible pickup
 carrier is closed.
 
-Gate C stops if any carrier lacks a stable terminal proof or has an unbounded
-callback sequence. It may move proof to a durable native-result checkpoint or
-demonstrate that the planner transaction boundary must change; it must not add
-a callback cursor or carrier protocol to the generic Timeline runtime.
+Gate C stops if any carrier lacks an exact bounded terminal contact or has an
+unbounded callback sequence. Semantic post-state observation belongs at the
+D2.5 room-exit checkpoint; the gate must not add a callback cursor, proof
+thread, or carrier protocol to the generic Timeline runtime.
 
 Each C1-through-C4 slice, including C2.5, has its own executor commit,
 independent review, and modpack pin. Run Planner changes are allowed only for a
@@ -1255,8 +1262,9 @@ trait is being acquired extends that already-bound transaction; it does not
 create a second transaction, dependency, callback cursor, or source-to-object
 identity. The C1 adapter may expose one bounded selected-acquisition scope to
 its consequence modules while its native selection call is in flight. Those
-modules may steer only their named nested callback and return their terminal
-proof to C1.
+modules may steer only their named nested callback. The outer adapter completes
+at its native terminal contact; modeled inventory consequences are observed at
+room exit rather than returned through the callback stack.
 
 All exact consequence data is published on the offer option or acquisition role
 that owns it. Option-local data is published for every authored option, not only
@@ -1419,23 +1427,193 @@ D2 begins.
   unselected curse identities from the constructed buttons, and do not treat
   Rejected as a blocked Chaos-screen option;
 - let native code equip the curse, run its clock, and mature the blessing; and
-- complete only after the selected curse and nested pending blessing match the
-  exact published requirement, rarity, and operands. Delete every displaced
-  Chaos branch and mutable pending state from the broad hook in the same
-  executor commit.
+- complete after the exact authored curse row's native selection callback
+  returns. D2.5's room-exit `chaos` conformance verifies the selected curse,
+  nested pending blessing, requirement, rarity, and operands. Delete every
+  displaced Chaos branch and mutable pending state from the broad hook in the
+  same executor commit.
 
 Primary witnesses are exact materialization and accepted admission, rejected
 `UseLoot` without admission, three visible curse alternatives, a repeated curse
 identity, a selected blessing at each physical position, peer-blessing swap
 without duplication, native Denial receiving curse identities, native reroll
 pass-through, representative operand-bearing curse/blessing values including
-both Revelation values, and exact terminal proof of the equipped curse plus
-pending blessing. A native carrier with fewer than three rows is a mismatch,
-not permission to fabricate unmodeled peer blessings. Existing exhaustive
-operand tests remain the sole owner of the numeric declaration matrix.
+both Revelation values, exact terminal contact, and room-exit conformance of
+the equipped curse plus pending blessing. A native carrier with fewer than
+three rows is a mismatch, not permission to fabricate unmodeled peer blessings.
+Existing exhaustive operand tests remain the sole owner of the numeric
+declaration matrix.
 
 Intended commit: Plan Executor `refactor(executor): isolate Chaos acquisitions`.
 Run Planner changes are excluded.
+
+#### D2.5 — Room-exit modeled-state conformance
+
+D2.5 was locked against Run Planner `6d56ebc2`, Plan Executor `e90d5aa`, and
+modpack shell `6f40ceb4`. The shell already has the completed D2 executor
+revision checked out but not yet pinned.
+
+User-visible outcome: planner-directed actions remain permissive inside the
+room while skipped actions and incorrect modeled results are still detected at
+one stable room-exit checkpoint. A player may carry traits the planner does not
+model without producing a false mismatch.
+
+This is a foundational correction to the completed Timeline and acquisition
+gates, not another trait effect. It must complete before D3. Transaction
+completion and semantic state conformity become separate concerns:
+
+```text
+exact native contact is accepted
+  -> transaction owner completes
+  -> same-room DAG dependents may become ready
+
+room exit
+  -> every intended transaction obligation is complete
+  -> planner-owned modeled-state projection matches native state
+  -> room session closes
+```
+
+The terminal contact remains exact. An ordinary offer completes only from the
+published selected row, a level action only from its published target and
+count, a purchase only from its bound slot, and an Artificer source only after
+its expected child carrier exists. Wrong contacts, failed native admission,
+missing structural children, invalid bindings, and unmet DAG prerequisites do
+not complete an owner. These are structural action facts needed by the current
+room; they are not post-callback inventory proofs.
+
+After the original native terminal callback returns successfully, adapters do
+not scan Hero traits, Arcana, retained effects, or another native state table
+and do not thread a boolean semantic proof back through the callback stack.
+The occurrence-local Timeline records only that the intended native action
+finished. Unresolved intended transactions remain independently visible to the
+existing room-exit obligation checkpoint.
+
+##### Planner-owned tracked projection
+
+The Planner Engine publishes an explicit sparse modeled-state product from
+canonical Run State. Diagnostics remain diagnostics and are not reclassified
+as blocking state.
+
+- The execution plan carries one initial tracked-trait projection from the
+  first reached `roomEntered` Run State. Each row contains the exact trait key
+  and only the final fields modeled for that identity: rarity, level, and
+  Hammer rank when applicable.
+- Each occurrence carries a sparse trait delta from the prior reached room's
+  `beforeRoomExit` snapshot to its own `beforeRoomExit` snapshot. After an
+  unobserved gap, the occurrence's `roomEntered` snapshot is the baseline,
+  matching the existing carry-state derivation. A `set` row means that identity
+  must exist with the published modeled fields; a `remove` key means that
+  identity must be absent. `set` covers both acquisition and mutation. The two
+  collections are disjoint, key-sorted, and omitted when unchanged.
+- The executor accumulates those deltas into one expected tracked projection.
+  Once a key enters that projection it remains tracked: a later removal means
+  expected absence rather than returning the key to an unknown state. A later
+  `set` may add it again.
+- At room exit the executor reads the native Hero trait collection once and
+  compares only tracked keys and their published fields. Native traits whose
+  keys never entered the projection are ignored, even when the game or catalog
+  knows those identities. Full native-inventory equality is forbidden.
+- The general trait projection follows the Planner Engine's
+  `equippedTraits` product. Chaos clocks, pending blessing operands, keepsake
+  charges, Shrine deliveries, Well durations, Path progress, and other
+  retained families remain in their existing specialized conformance facts;
+  this gate does not flatten them into generic trait fields.
+- The existing starting-loadout Arcana result supplies the initial tracked
+  Arcana projection. Each occurrence publishes sparse `set` and `remove`
+  Arcana deltas for automatic in-run changes such as Judgment and Crystal
+  Figurine. Native cards outside that tracked projection are ignored at room
+  exit; exact starting-loadout validation remains unchanged.
+
+The new tracked projections carry their values directly; they do not reuse the
+existing fact-kind reference to a diagnostic frame for inventory comparison.
+Existing specialized conformance facts may retain their decoded expected-value
+expansion. The assembler derives the initial projection and room deltas from
+canonical snapshots; it does not inspect action kinds, trait effects, or
+authored callback order.
+
+Runtime fallback remains one declared alternative for the same semantic owner,
+not a divergence. When an existing availability contact resolves a published
+preferred/fallback pair, the modeled-state product supplies the bounded
+preferred and fallback final rows needed at the checkpoint, including each
+identity's own modeled fields. The room session records which declared
+alternative was realized and tracks that identity thereafter. Lua never
+searches a pool, copies the preferred trait's rarity or level onto a different
+declaration, or accepts a third identity.
+
+##### Executor correction
+
+- change the Timeline port from `complete(handle, proof)` to
+  `complete(handle)`. Completion still retires every handle for that semantic
+  owner and preserves all prerequisite and obligation behavior;
+- keep exact contact admission and structural terminal checks in each owning
+  adapter, but remove post-callback Hero/Arcana/effect-state verification and
+  all `expected`/`observed` arguments used only by `transaction-outcome`;
+- add focused tracked-trait and tracked-Arcana readers beneath
+  `room/conformance/`. They project native state into the explicit expected
+  keys instead of returning the complete inventory;
+- make room close check unresolved obligations first, then apply and compare
+  the occurrence delta atomically. Commit the accumulated expected projection
+  only after it conforms. The existing first-mismatch policy still disables
+  later steering without blocking native player input;
+- retain specialized conformance readers and immediate structural mismatches.
+  Remove only duplicated semantic outcome verification that the new checkpoint
+  owns; and
+- delete obsolete adapter `verify` helpers and the generic
+  `transaction-outcome` path when no remaining caller requires them. Do not
+  preserve a compatibility proof parameter or a parallel full-inventory
+  comparator.
+
+##### Required witnesses
+
+Planner Engine and codec tests own:
+
+- an initial tracked set containing a rarity/level trait and a ranked Hammer;
+- one acquisition, one rarity or level mutation, one slotted replacement, one
+  Ransom or Pool removal, and one unchanged room with no delta;
+- one Judgment or Crystal Figurine Arcana delta;
+- deterministic ordering, duplicate/conflicting `set`/`remove` rejection, and
+  strict protocol round-trip;
+- one preferred/fallback alternative with no third outcome; and
+- a real execution fixture carrying both a trait mutation and a removal or
+  Arcana change. No fabricated execution-only state builder is added.
+
+Plan Executor tests own:
+
+- accumulating the initial projection through at least two room deltas;
+- accepting extra untracked native traits while rejecting a missing tracked
+  trait, a wrong published rarity/level/Rank, and a still-present removed trait;
+- accepting either declared runtime-fallback outcome and rejecting any other
+  identity;
+- consuming an exact transaction at its native terminal without a state-proof
+  argument, while a wrong contact or skipped transaction remains unresolved;
+- detecting unresolved obligations separately from modeled-state mismatch;
+- one automatic Arcana result observed only at room exit; and
+- proving that no acquisition, level, NPC, Chaos, encounter, feature,
+  transformation, or automatic adapter still threads semantic outcome proof
+  through `complete`.
+
+The protocol advances from v16 to v17 with no compatibility decoder. Focused
+audits for ordinary traits, levels, NPC acquisitions, transformations, Chaos,
+and automatic outcomes must be corrected in the same gate wherever they still
+assign semantic post-state proof to a callback. Source facts and native
+steering contacts remain unchanged.
+
+Exclusions:
+
+- no full native trait or Arcana equality;
+- no adoption of incidental native traits into the tracked projection;
+- no callback/action cursor, event log replay, untyped cross-domain state-diff
+  language, or executor reconstruction of planner trait effects;
+- no new steering behavior for All Together, Natural Selection, Concave Stone,
+  automatic outcomes, commerce, or later biomes; and
+- no removal of structural contact checks needed to bind a carrier, complete a
+  producer before its child, or protect same-room DAG readiness.
+
+Intended commits:
+
+- Run Planner: `feat(execution): publish modeled room state deltas`
+- Plan Executor: `refactor(executor): verify modeled state at room exit`
+- Modpack shell: pin the completed executor commit.
 
 #### D3 — All Together exact direct grants
 
@@ -1450,13 +1628,15 @@ Run Planner changes are excluded.
   eligible pair;
 - let native `AddTraitToHero`, presentation, activation, element contribution,
   and God Sent reevaluation run normally; and
-- prove the exact relevant set-membership delta after native `GrantBoons`
-  returns, then return that proof to C1's existing terminal.
+- let the outer C1 transaction complete at its existing native terminal while
+  D2.5's room-exit tracked-trait projection verifies the four resulting
+  identities.
 
 Primary witnesses are four selected grants, one forced remaining member, and
 one exhausted/null set. Planner tests own eligibility and complete set
 construction; executor tests own only scoped native substitution and result
-proof. D5 owns the later Concave-residual composition witness.
+handoff to room-exit conformance. D5 owns the later Concave-residual composition
+witness.
 
 Intended commits:
 
@@ -1477,8 +1657,8 @@ Intended commits:
 - stop for adjudication before implementation if a focused source/contact audit
   finds an authored legal sequence that cannot be represented by one initial
   native order plus native condemnation; and
-- compare per-trait stack deltas with the authored target multiplicities before
-  returning the nested proof to C1.
+- let native level application return to C1 without a nested proof; D2.5's
+  room-exit tracked-trait projection verifies the final per-trait levels.
 
 Primary witnesses are fewer than eight successful levels due to exhausted
 targets, a complete eight-level distribution over several slots, and a target
@@ -1504,9 +1684,10 @@ Intended commits:
 - retain the outer C1 selected-acquisition scope through that recursive call so
   the D3 or D4 nested consequence for the residual option can run when needed;
   and
-- prove the outer and residual identities before C1 completes. Existing
-  `keepsakeEffects` room-exit conformance remains the authority for the Stone
-  charge/status ledger.
+- let C1 complete after the bounded recursive native selection returns. D2.5's
+  tracked-trait projection verifies the outer and residual identities, while
+  existing `keepsakeEffects` room-exit conformance remains the authority for
+  the Stone charge/status ledger.
 
 Primary witnesses are Epic Stone no-proc, Epic Stone proc, Cherished Heirloom's
 forced rank-IV proc, a residual ordinary trait, and one residual option carrying
@@ -1684,12 +1865,13 @@ handoff, and preferred/fallback/neither availability.
 - when interaction is authored, steer the three declared sale choices without
   replacing the native menu;
 - bind the selected slot and exact trait, let native sale code remove it, and
-  use the resulting trait absence as the terminal proof; and
+  complete when the exact sale callback returns; D2.5's tracked-trait
+  projection verifies the resulting absence at room exit; and
 - ignore Gold proceeds and reroll behavior.
 
 Primary witnesses are uninteracted Pool pass-through, one sale, three sales in
-authored order, and a failed terminal proof that disables enforcement without
-blocking the native sale callback.
+authored order, and a room-exit absence mismatch that disables enforcement
+without blocking the native sale callback.
 
 #### E3 — Stygian Well and Travel Deal
 
