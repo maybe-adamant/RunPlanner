@@ -2,13 +2,11 @@
 
 ## Status
 
-Drafted on 2026-09-02 for adversarial review. Gates A, A.2, and B were completed
-on 2026-09-03. Gate B.2 was added and locked after the structural split exposed
-the need for one explicit occurrence-local Timeline runtime. The later gates
-remain scope outlines until they receive the same component-by-component
-review. Do not begin a gate until its components, ownership, native contacts,
-pass-through boundary, and concrete witnesses have been discussed, cleaned up
-here, and locked.
+Drafted on 2026-09-02 for adversarial review. Gates A, A.2, B, B.2, C1, C2, and
+C2.5 were completed on 2026-09-03. The later gates remain scope outlines until
+they receive the same component-by-component review. Do not begin a gate until
+its components, ownership, native contacts, pass-through boundary, and concrete
+witnesses have been discussed, cleaned up here, and locked.
 
 Starting commits:
 
@@ -95,8 +93,9 @@ callback is already known.
 - Runtime fallbacks, Artificer producer relations, Mystery Boon staging,
   required boss rewards, Chaos pairs and returns, World Shops, Wells, Pools,
   resources, fountains, racks, and F/G topology have working bounded paths.
-- Direct Nectar and Pom Slice levels and bespoke NPC menu carriers now have
-  native adapters.
+- Ordinary trait offers, visible and direct level outcomes, and direct pickup
+  consumption now have focused native adapters. Bespoke NPC menus remain in
+  the broad legacy hook until C3 replaces that path.
 
 These are implementation evidence. Each layer below may retain them only after
 its coverage matrix proves the contact; working code is not exempt from audit.
@@ -1123,22 +1122,60 @@ simulation.
 
 #### C3 — NPC acquisitions and Mystery Boon resolution
 
-- create `room/timeline/encounters/` for the bespoke Arachne and Narcissus menu
-  entry, option preparation, selection, and stable native grant contacts;
-- steer only the authored native menu choice and let the NPC function grant its
-  result;
-- hand Narcissus direct pickup results to C2.5 after the NPC producer binds the
-  exact materialized object;
-- close Narcissus Mystery Boon's provider, unwrap, resolved god source, and
-  resulting trait acquisition by handing the final offer to C1's trait adapter;
-- keep provider, box, hidden source, and trait contacts on their published
-  owner/dependent owners without a callback cursor; and
+- use
+  [NPC trait and generated-pickup execution](../audits/game-execution-contacts/NPC_TRAIT_AND_GENERATED_PICKUP_EXECUTION.md)
+  as the locked native-contact authority for this slice;
+- create a focused NPC acquisition adapter beneath
+  `room/timeline/acquisitions/` for Arachne and Narcissus menu entry, native
+  option preparation, selection, and terminal trait proof. Bind through the
+  exact NPC source, install only the published three-row result at the
+  menu-open seam, and let native button construction and trait equipment run;
+- resolve Narcissus Life Savings through the published `traitEligibility`
+  fallback by asking the matching native NPC option row whether it is
+  available. Do not infer Death Defiance or search the provider pool;
+- let every selected trait run its native `AcquireFunctionName`. In particular,
+  never call `GiveRandomConsumables`, copy its output loop, or synthesize a
+  Narcissus/Arachne drop. Complete the NPC interaction from the equipped trait,
+  independently of any later pickup;
+- keep trait-to-generated-pickup provenance out of the execution wire. The
+  room Timeline instead exposes one semantic-agnostic `claimReady` operation.
+  At accepted interaction it filters compatible unfinished actions by the open
+  lifecycle window, satisfied DAG prerequisites, action contact, and native
+  game identity. If multiple independent actions are ready, it chooses
+  deterministically from the published transaction order; it never treats the
+  physical object as having a preassigned planner owner;
+- correct `NarcissusPickup` so a Mystery Boon's box role occurs at its pickup
+  point and its hidden-source role occurs at `afterUnwrap`, matching the
+  already-declared Shrine and Contract carriers;
+- add no synthetic source-to-child dependency: native object availability is
+  the pickup boundary, while the NPC interaction independently proves the
+  selected trait. Correct C2's direct-level and C2.5's direct-pickup entry
+  seams so an unbound native object claims a compatible action only after
+  accepted use; already-bound carriers, C1 ordinary loot, and C2 visible Poms
+  remain unchanged. Native companion drops and unselected optional pickups
+  remain pass-through;
+- close Narcissus Mystery Boon as one child acquisition with a box and hidden
+  provider subcontact: begin only after accepted box use, force only
+  `GiveLoot`'s published provider input, bind the exact returned provider loot,
+  and hand its final offer and terminal proof to C1. Preserve the native
+  `GiveLoot`-before-`BoughtFromShop` ordering; and
+- delete the superseded Arachne, Narcissus, generated-child, and Mystery Boon
+  branches and their global `pendingTrait` / unwrap state from the broad legacy
+  hook in the same executor commit. Other NPCs and unrelated legacy families
+  remain untouched for their owning gates;
 - add later NPC functions only in their biome gate or a separately reviewed
   universal NPC extension, not speculatively in this F/G slice.
 
-Primary witnesses are Arachne's trait menu, Narcissus direct reward, and
-Narcissus Mystery Boon through final trait selection. Mystery purchase and
-Hermes Shrine delivery remain outside this slice.
+Primary witnesses are Arachne's trait menu; Narcissus menu fallback; separation
+of selected-trait completion from asynchronous native drop creation; one Pom
+Slice handoff to C2; one direct-pickup handoff to C2.5; native pass-through for
+an unmodeled companion drop; two independent Mystery Boons that may be claimed
+through either physical box without a wrong-object mismatch; and Narcissus
+Mystery Boon through accepted box use, hidden-provider creation, and C1 final
+trait selection. Planner tests own
+the exhaustive Narcissus output matrix; executor tests retain only these
+representative contacts. Mystery purchase and Hermes Shrine delivery remain
+outside this slice.
 
 #### C4 — Reward transformations
 

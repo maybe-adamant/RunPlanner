@@ -49,6 +49,9 @@ A family is not covered when only its ordinary loot-screen carrier works.
 - [Direct-pickup acquisition execution](DIRECT_PICKUP_ACQUISITION_EXECUTION.md)
   — exact-object binding, accepted consumable use, native terminal settlement,
   specialized exclusions, fallback handoff, and the Sea Star reuse boundary.
+- [NPC trait and generated-pickup execution](NPC_TRAIT_AND_GENERATED_PICKUP_EXECUTION.md)
+  — bespoke Arachne/Narcissus menus, native trait-owned drop production,
+  generated-child handoff, and Narcissus Mystery Boon resolution.
 - [Keepsakes, loadout, and abilities](KEEPSAKES_LOADOUT_AND_ABILITIES.md) — all
   keepsakes, weapons, aspects, Arcana, Vows, Hexes, and tools.
 - [NPCs, encounters, and automatic outcomes](NPCS_ENCOUNTERS_AND_AUTOMATICS.md)

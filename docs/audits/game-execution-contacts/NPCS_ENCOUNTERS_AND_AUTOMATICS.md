@@ -19,8 +19,8 @@ function is reached.
 
 | Provider                         | Native offer contact                          | Current status                                                                                           |
 | -------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Arachne                          | `ArachneCostumeChoice`                        | Covered.                                                                                                 |
-| Narcissus                        | `NarcissusBenefitChoice`                      | Covered, including later generated pickups when published.                                               |
+| Arachne                          | `ArachneCostumeChoice`                        | Adapter gap; the exact C3 contact is audited.                                                            |
+| Narcissus                        | `NarcissusBenefitChoice`                      | Adapter gap; C3 covers the menu, native generated children, and Mystery Boon handoff.                    |
 | Medea                            | `MedeaCurseChoice`                            | Deferred route; adapter exists.                                                                          |
 | Circe                            | `CirceBlessingChoice`                         | Deferred route; adapter exists, exceptional result coverage remains separate.                            |
 | Icarus                           | `IcarusBenefitChoice`                         | Deferred route; adapter exists.                                                                          |
@@ -29,6 +29,10 @@ function is reached.
 
 The six bespoke contacts are defined in `Scripts/EventLogic.lua`. Their explicit
 adapters are intentional; a single `UseLoot` hook does not cover these menus.
+The current broad legacy hook is implementation evidence, not closed coverage.
+Arachne and Narcissus are specified in
+[NPC trait and generated-pickup execution](NPC_TRAIT_AND_GENERATED_PICKUP_EXECUTION.md);
+the later providers remain deferred.
 
 ## Nemesis random events
 
