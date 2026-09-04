@@ -240,7 +240,7 @@ describe('reward compiler acquisition and producer lifecycle normalizers', () =>
     expect(roomReward?.rewardTypes.byKey.Story?.acquisitionLifecycle).toEqual([]);
   });
 
-  it('normalizes the exact Narcissus pickup lifecycle at room exit', () => {
+  it('normalizes the exact Narcissus pickup and Mystery unwrap lifecycle', () => {
     expect(
       rewardKernelCatalog.producerLifecycles.byKey.NarcissusPickup?.rewardTypes.values.map(
         (reward) => [reward.rewardType, reward.acquisitionLifecycle] as const,
@@ -261,8 +261,8 @@ describe('reward compiler acquisition and producer lifecycle normalizers', () =>
         rewardType,
         rewardType === 'BlindBoxLoot'
           ? [
-              { role: 'box', lifecyclePoint: 'roomExit' },
-              { role: 'hiddenSource', lifecyclePoint: 'roomExit' },
+              { role: 'box', lifecyclePoint: 'roomRewardPickup' },
+              { role: 'hiddenSource', lifecyclePoint: 'afterUnwrap' },
             ]
           : [{ role: 'self', lifecyclePoint: 'roomExit' }],
       ]),
