@@ -76,6 +76,7 @@ export function executionTimelineTransactions(
         'executionCoverageMissing',
         `unsupported trait offer ${semanticAddressKey(selected.address)}`,
       );
+    const selectedTraitOffer = selected.offer;
     const levels = agreement(
       selected.branches.map((branch) => branch.effectiveLevels),
       `trait effective levels ${semanticAddressKey(selected.address)}`,
@@ -116,6 +117,18 @@ export function executionTimelineTransactions(
             ...(option.naturalSelectionTargets === undefined
               ? {}
               : { naturalSelectionTargets: Object.freeze([...option.naturalSelectionTargets]) }),
+            ...(selectedTraitOffer.concaveStoneResult === undefined ||
+            selectedTraitOffer.selectedOptionKey !== `option${index + 1}`
+              ? {}
+              : {
+                  concaveStoneResult:
+                    selectedTraitOffer.concaveStoneResult.kind === 'noProc'
+                      ? Object.freeze({ kind: 'noProc' as const })
+                      : Object.freeze({
+                          kind: 'proc' as const,
+                          optionKey: selectedTraitOffer.concaveStoneResult.optionKey,
+                        }),
+                }),
             ...(replacement === undefined
               ? {}
               : {

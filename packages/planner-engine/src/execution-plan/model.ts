@@ -162,6 +162,11 @@ export interface ExecutionAllTogetherResult {
   readonly water: string | null;
 }
 
+/** Concave Stone's one native post-selection roll and optional residual row. */
+export type ExecutionConcaveStoneResult =
+  | { readonly kind: 'noProc' }
+  | { readonly kind: 'proc'; readonly optionKey: ExecutionTraitOptionKey };
+
 export type ExecutionTraitOffer =
   | {
       readonly kind: 'fallbackGold';
@@ -180,6 +185,8 @@ export type ExecutionTraitOffer =
         readonly allTogetherResult?: ExecutionAllTogetherResult;
         /** Ordered successful increments produced inside Natural Selection's native distribution. */
         readonly naturalSelectionTargets?: readonly string[];
+        /** Frozen Concave Stone disposition owned by this selected source option. */
+        readonly concaveStoneResult?: ExecutionConcaveStoneResult;
         readonly replacement?: {
           readonly slot: string;
           readonly replacedTraitKey: string;
