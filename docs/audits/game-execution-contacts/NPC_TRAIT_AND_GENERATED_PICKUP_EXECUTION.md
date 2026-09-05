@@ -247,17 +247,17 @@ special case.
 ## Circe stateful consequence boundary
 
 The selected Circe option carries its already-resolved `circeResolution` on
-the occurrence-level execution offer. The compiler copies complete-valid
-selected-branch agreement and does not infer an effect from the trait key.
+the occurrence-level execution offer. The compiler copies that validated
+selected-option value directly and does not infer an effect from the trait key.
 Only `RandomArcanaTrait`, `ArcanaRarityTrait`, and `RemoveShrineTrait` carry a
 result; Circe's other six options remain ordinary native trait acquisitions.
 
 The executor keeps the exact result inside the shared Circe selection scope.
 For an exact `CastCount` activation it first constrains CastCount's source-declared
-`RandomChance = 0.1` check to its native positive branch. For an exact
-`TradeOff` with neither source-named companion equipped, it constrains that same
-check to the native negative branch so a sole CastCount competitor enters the
-fallback pool. It constrains
+`RandomChance = 0.1` check to its native positive branch. A complete-valid
+planner result cannot request `TradeOff` without The Champions or The
+Enchantress already active; multi-card Judgment and Figurine results instead
+derive a companion-first native execution order from their authored sets. It constrains
 `RemoveRandomValue` only while native
 `CirceRandomMetaUpgrade`/`AddRandomMetaUpgrades` or
 `CirceMetaUpgradeRarity` is choosing Arcana, and constrains `GetRandomKey`
@@ -297,9 +297,8 @@ complete Narcissus matrix:
 - a Narcissus menu does the same and a failed native requirement reports an
   exact-contact mismatch without changing the owner;
 - Circe activation (including CastCount's admission roll), promotion, and Fear
-  suppression each select the exact published target through native mutation;
-  a TradeOff prerequisite failure remains visible as native substitution and a
-  mismatch, while an ordinary Circe option runs without an additional actuator;
+  suppression each select the exact published target through native mutation,
+  while an ordinary Circe option runs without an additional actuator;
 - selecting a drop-producing trait completes the encounter owner while the
   native drop is still independently pending;
 - one unbound native Narcissus Pom Slice claims a compatible ready action at

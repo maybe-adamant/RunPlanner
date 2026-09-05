@@ -99,9 +99,7 @@ export interface ArcanaCardDeclaration {
   readonly permanentRank: 3;
   /** Source-declared Fated incompatibility, consumed by Arcana candidate authority. */
   readonly fatedIncompatible: boolean;
-  /** Native Circe activation admission probability; absent means deterministic primary-pool admission. */
-  readonly randomDrawChance?: number;
-  /** Native Circe activation companions whose active presence prevents post-selection substitution. */
+  /** Native companions consulted against the progressively equipped random-draw state. */
   readonly randomDrawRequiredCardKeys: readonly string[];
   /** Judgment's rank-scaled post-Boss activation counts. */
   readonly postBossActivationCounts?: Readonly<{

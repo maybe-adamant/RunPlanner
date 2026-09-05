@@ -4,6 +4,7 @@ import type { Catalog } from '../../catalog-schema';
 import type { FigurineArcanaCandidateArtifacts } from '../candidate-artifacts';
 import type { ProjectEvaluation } from '../evaluation-products';
 import type { SemanticFinding } from '../model';
+import { unsatisfiedRandomArcanaRequirementKeys } from '../arcana-fear';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 
 export interface FigurineArcanaCandidateQuery {
@@ -57,6 +58,17 @@ export function evaluateFigurineArcanaCandidate(
       findings.push(finding('figurineOutcomeTargetUnavailable', { key, reason: 'unavailable' }));
     seen.add(key);
   }
+  for (const key of unsatisfiedRandomArcanaRequirementKeys(
+    catalog,
+    capability.activeArcanaKeys,
+    query.arcanaKeys,
+  ))
+    findings.push(
+      finding('figurineOutcomeTargetUnavailable', {
+        key,
+        reason: 'randomDrawRequirementsUnsatisfied',
+      }),
+    );
   if (query.arcanaKeys.length !== capability.requiredCount)
     findings.push(
       finding('figurineOutcomeWrongCardinality', {

@@ -70,7 +70,6 @@ describe('Arcana and Fear catalog', () => {
       Heroic: 6,
     });
     expect(catalog.arcanaCards.byKey.CastCount).toMatchObject({
-      randomDrawChance: 0.1,
       randomDrawRequiredCardKeys: [],
     });
     expect(catalog.arcanaCards.byKey.TradeOff?.randomDrawRequiredCardKeys).toEqual([
@@ -179,14 +178,6 @@ describe('Arcana and Fear catalog', () => {
     expect(() =>
       createCatalog({ ...declarations, arcanaCards: declarations.arcanaCards.slice(1) }),
     ).toThrow(/must declare all 25 cards/);
-    expect(() =>
-      createCatalog({
-        ...declarations,
-        arcanaCards: declarations.arcanaCards.map((card) =>
-          card.key === 'CastCount' ? { ...card, randomDrawChance: 0 } : card,
-        ),
-      }),
-    ).toThrow(/randomDrawChance.*greater than zero and at most one/);
     expect(() =>
       createCatalog({
         ...declarations,

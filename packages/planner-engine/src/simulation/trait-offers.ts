@@ -465,8 +465,6 @@ export interface TraitOfferBranchAssessment {
   readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
   readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
   readonly effectiveLevels: readonly (number | undefined)[];
-  /** Exact selected Circe mutation retained for execution publication. */
-  readonly circeResolution?: AuthoredCirceResolution;
   readonly settledHexTree?: ReachedTraitOfferEvaluation['settledHexTree'];
 }
 
@@ -1224,7 +1222,6 @@ import type { Catalog, TraitRarity } from '../catalog-schema';
 import type { EchoLastRunBoonAddress } from '../authored-project/addresses';
 import type { SemanticAddress, TraitOfferAddress } from '../authored-project/addresses';
 import type {
-  AuthoredCirceResolution,
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
   TraitOptionKey,

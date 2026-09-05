@@ -206,7 +206,11 @@ describe('progressive Arcana and Fear state', () => {
       { key: 'BonusRarity', origin: 'automatic', rarity: 'Epic' },
       { key: 'CardDraw', origin: 'automatic', rarity: 'Epic' },
     ]);
-    const activated = activateTemporaryArcana(catalog, state, ['TradeOff'], evidence);
+    expect(activateTemporaryArcana(catalog, state, ['TradeOff'], evidence)).toMatchObject({
+      legal: false,
+      reason: 'randomDrawRequirementsUnsatisfied',
+    });
+    const activated = activateTemporaryArcana(catalog, state, ['DoorReroll', 'TradeOff'], evidence);
     expect(activated.legal).toBe(true);
     if (!activated.legal) throw new Error('activation should be legal');
     const promoted = promoteArcana(catalog, activated.state, ['TradeOff'], {
@@ -230,7 +234,11 @@ describe('progressive Arcana and Fear state', () => {
       effectiveRanks: { EnemyDamageShrineUpgrade: 0 },
     });
     expect(suppressed.state.events).toEqual([
-      { kind: 'temporaryArcanaActivated', arcanaKeys: ['TradeOff'], ...evidence },
+      {
+        kind: 'temporaryArcanaActivated',
+        arcanaKeys: ['DoorReroll', 'TradeOff'],
+        ...evidence,
+      },
       { kind: 'arcanaPromoted', arcanaKeys: ['TradeOff'], ...evidence, sequence: 2 },
       { kind: 'fearVowSuppressed', vowKey: 'EnemyDamageShrineUpgrade', ...evidence, sequence: 3 },
     ]);

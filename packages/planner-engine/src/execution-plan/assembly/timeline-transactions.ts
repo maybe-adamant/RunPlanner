@@ -2,7 +2,6 @@ import {
   createBiomeAddress,
   createEncounterPhaseAddress,
   createLevelResolutionAddress,
-  createOccurrenceAddress,
   createShopOfferAddress,
   createTraitOfferAddress,
   semanticAddressKey,
@@ -93,13 +92,7 @@ export function executionTimelineTransactions(
     );
     const selectedOptionIndex = Number(selected.offer.selectedOptionKey.slice(-1)) - 1;
     const selectedOption = selected.offer.options[selectedOptionIndex];
-    const authoredCirceResolution =
-      selectedOption?.circeResolution === undefined
-        ? undefined
-        : agreement(
-            selected.branches.map((branch) => branch.circeResolution),
-            `Circe resolution ${semanticAddressKey(selected.address)}`,
-          );
+    const authoredCirceResolution = selectedOption?.circeResolution;
     const circeResolution =
       authoredCirceResolution === undefined
         ? undefined

@@ -34,10 +34,7 @@ export const arcanaCards = [
   card('ChanneledCast', 'The Sorceress', 'ChannelSlowMetaUpgrade', 1, 1, 1),
   card('HealthRegen', 'The Wayward Son', 'DoorHealMetaUpgrade', 1, 2, 1),
   card('LowManaDamageBonus', 'The Huntress', 'LowManaDamageMetaupgrade', 1, 3, 2),
-  {
-    ...card('CastCount', 'Eternity', 'CastDamageMetaUpgrade', 1, 4, 3),
-    randomDrawChance: 0.1,
-  },
+  card('CastCount', 'Eternity', 'CastDamageMetaUpgrade', 1, 4, 3),
   card(
     'SorceryRegenUpgrade',
     'The Moon',

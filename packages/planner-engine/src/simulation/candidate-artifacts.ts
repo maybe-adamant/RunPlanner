@@ -74,6 +74,7 @@ export interface RoomTargetCandidateArtifacts {
 
 /** Atomic exact-set support captured immediately before one fixed Boss effect. */
 export interface JudgmentArcanaCandidateCapability {
+  readonly activeArcanaKeys: readonly string[];
   readonly inactiveArcanaKeys: readonly string[];
   readonly requiredCount: number;
 }
@@ -82,6 +83,7 @@ export interface JudgmentArcanaCandidateArtifacts {
 }
 /** Atomic exact-set support captured immediately after Judgment at one Boss effect. */
 export interface FigurineArcanaCandidateCapability {
+  readonly activeArcanaKeys: readonly string[];
   readonly inactiveArcanaKeys: readonly string[];
   readonly requiredCount: number;
   readonly rarity: import('../catalog-schema').TraitRarity;
