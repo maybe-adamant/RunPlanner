@@ -116,17 +116,11 @@ export function deriveRoomExitConformanceDeltas(
       pendingKeepsakeEffects(currentExit.keepsakes),
     );
     add('rewardPriorities', baseline.rewardPriorities, currentExit.rewardPriorities);
-    add(
-      'pathOfStars',
-      {
-        bankedPathPoints: baseline.hexProgress.bankedPathPoints,
-        talentDropsClosed: baseline.hexProgress.talentDropsClosed === true,
-      },
-      {
-        bankedPathPoints: currentExit.hexProgress.bankedPathPoints,
-        talentDropsClosed: currentExit.hexProgress.talentDropsClosed === true,
-      },
-    );
+    // This is the complete graph-free Hex projection, not just the mutable
+    // point bank. A zero-bonus Spell selection, native-only investment, or a
+    // late God Sent insertion can change the actual tree without changing the
+    // previously compared bank/closure pair.
+    add('pathOfStars', baseline.hexObserver, currentExit.hexObserver);
     add('forfeit', baseline.forfeitStatus, currentExit.forfeitStatus);
     add(
       'hermesShrineDeliveries',

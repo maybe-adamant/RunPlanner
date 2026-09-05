@@ -85,6 +85,108 @@ function requirementFacts(ordinaryLootCount: number): RewardKernelFacts {
 }
 
 describe('decision run-state snapshots', () => {
+  it.each([
+    {
+      label: 'a zero-bonus Spell selection installs the selected Hex identity',
+      before: {
+        talentKeys: [],
+        closed: false,
+        bankedPathPoints: 0,
+        investedPathPoints: 0,
+      },
+      after: {
+        spellTraitKey: 'SpellPolymorphTrait',
+        layoutKey: 'Lung',
+        talentKeys: ['PolymorphBossDamageTalent', 'PolymorphSandwichTalent'],
+        closed: false,
+        bankedPathPoints: 0,
+        investedPathPoints: 0,
+      },
+    },
+    {
+      label: 'native investment changes only the invested count',
+      before: {
+        spellTraitKey: 'SpellPolymorphTrait',
+        layoutKey: 'Lung',
+        talentKeys: ['PolymorphBossDamageTalent', 'PolymorphSandwichTalent'],
+        closed: false,
+        bankedPathPoints: 0,
+        investedPathPoints: 3,
+      },
+      after: {
+        spellTraitKey: 'SpellPolymorphTrait',
+        layoutKey: 'Lung',
+        talentKeys: ['PolymorphBossDamageTalent', 'PolymorphSandwichTalent'],
+        closed: false,
+        bankedPathPoints: 0,
+        investedPathPoints: 4,
+      },
+    },
+    {
+      label: 'late God Sent insertion changes the modeled talent identities',
+      before: {
+        spellTraitKey: 'SpellPolymorphTrait',
+        layoutKey: 'Lung',
+        talentKeys: ['PolymorphBossDamageTalent', 'PolymorphSandwichTalent'],
+        closed: true,
+        bankedPathPoints: 0,
+        investedPathPoints: 16,
+      },
+      after: {
+        spellTraitKey: 'SpellPolymorphTrait',
+        layoutKey: 'Lung',
+        talentKeys: [
+          'PolymorphBossDamageTalent',
+          'PolymorphSandwichTalent',
+          'PolymorphZeusTalent',
+          'OlympianSpellCountTalent',
+        ],
+        closed: true,
+        bankedPathPoints: 0,
+        investedPathPoints: 16,
+      },
+    },
+  ])('derives Path conformance when $label', ({ before, after }) => {
+    const occurrence = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'F'),
+      createOccurrenceId(`run-state-path-conformance-${after.investedPathPoints}`),
+    );
+    const snapshot = (checkpoint: 'roomEntered' | 'beforeRoomExit', hexObserver: typeof before) =>
+      ({
+        owner: createRoomRunStateCheckpointAddress(occurrence, { kind: checkpoint }),
+        checkpoint,
+        traits: { echoShopDuplicateStatus: undefined, steadyGrowth: {}, chaos: {} },
+        keepsakes: {
+          olympianSources: [],
+          jeweledPom: undefined,
+          experimentalHammers: [],
+          callingCard: undefined,
+          timePiece: undefined,
+          figLeaf: undefined,
+          gorgon: undefined,
+          phial: undefined,
+          figurine: undefined,
+          stone: undefined,
+          transcendentEmbryo: undefined,
+        },
+        rewardPriorities: [],
+        forfeitStatus: 'inactive',
+        pendingHermesShrineDeliveries: {},
+        stygianWell: {},
+        hexObserver,
+      }) as unknown as RunStateSnapshot;
+    const entered = snapshot('roomEntered', before);
+    const exited = snapshot('beforeRoomExit', after);
+    const deltas = deriveRoomExitConformanceDeltas(
+      [occurrence],
+      new Map([
+        [semanticAddressKey(entered.owner), entered],
+        [semanticAddressKey(exited.owner), exited],
+      ]),
+    );
+    expect(deltas.get(occurrence.occurrenceId)?.facts).toEqual([{ kind: 'pathOfStars' }]);
+  });
+
   it('promotes Shrine deliveries and Well effects and derives only their changed exit facts', () => {
     const occurrence = createOccurrenceAddress(
       createBiomeAddress('Underworld', 'F'),
