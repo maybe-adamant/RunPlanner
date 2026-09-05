@@ -249,6 +249,57 @@ planner still folds it at encounter completion; the correction is owned by
 Heracles and the Ephyra side-room definitions do not declare a trait provider;
 this does not create a Hub-wide trait surface.
 
+### Side-room advancement audit
+
+All fifteen `N_Sub01` through `N_Sub15` declarations inherit the same four
+counter controls from `BaseN_SubRooms` in `RoomDataN.lua`:
+
+```text
+MaintainSpellCharge = true
+IgnoreEncounterUses = true
+SkipRoomsPerUpgrade = true
+SkipGamePhaseTick = true
+```
+
+The flags suppress distinct native contacts. They do not make a side room an
+unrecorded or non-occurring room.
+
+| State or lifecycle                                                   | Side room advances it? | Source consequence                                                                                                                                                                                                    |
+| -------------------------------------------------------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RoomsEntered`, `RoomHistory`, `RoomCountCache`, raw Run/Biome depth | Yes                    | `StartRoom` records the room name; `LeaveRoom` appends the occurrence and `UpdateRunHistoryCache` recomputes the depth caches. This does not make the side room one of the six Hub visits.                            |
+| Encounter completion history                                         | Yes                    | `RunEncounter` completes and records `GeneratedNSubRoom` or `GeneratedNSubRoom_Bigger` normally.                                                                                                                      |
+| Encounter-depth counters                                             | No                     | Both generated side-room encounters inherit `CountsForRoomEncounterDepth = false`.                                                                                                                                    |
+| `UsesAsEncounters` traits                                            | No                     | `EndEncounterEffects` checks `IgnoreEncounterUses` before reducing them. This includes Chaos encounter curses, Experimental Hammer, pending Shrine deliveries, and encounter-duration Well traits.                    |
+| `RoomsPerUpgrade` traits                                             | No                     | `EndEncounterEffects` skips `CheckChamberTraits` when `SkipRoomsPerUpgrade` is set. This includes Steady Growth, Transcendent Embryo, Supply Chain, and other room-upgrade effects.                                   |
+| Keepsake rank experience                                             | Yes                    | `AdvanceKeepsake` is called outside both suppressor guards after the side-room encounter ends. This persistent rank progress is not part of the planner simulation.                                                   |
+| Keepsake decay/escalation fields guarded with room upgrades          | No                     | The damage decay and escalation loop is inside the `SkipRoomsPerUpgrade` guard.                                                                                                                                       |
+| `UsesAsRooms` traits                                                 | Yes                    | `LeaveRoom` reduces these independently of `IgnoreEncounterUses`; the hidden-room-reward Chaos curse and the room-use Well effect follow this path.                                                                   |
+| World `GamePhaseTick`                                                | No                     | First entry is suppressed by `SkipGamePhaseTick`; returning to the already-entered persistent parent is also not a first entry. Garden, cooking, and mailbox progression are outside the planner simulation.          |
+| Grouped Hex precharge/reset at the room boundary                     | No                     | `MaintainSpellCharge` prevents the grouped-room charge adjustment.                                                                                                                                                    |
+| Hub visit/pylon completion                                           | No                     | Side rooms are child occurrences. They neither consume one of the six authored main visits nor create another Soul Pylon. `HandlePylonObjective` only refreshes the existing objective display.                       |
+| Side-room reward and room-end acquisition surface                    | Yes                    | The room keeps its own `SubRoomRewards` or `SubRoomRewardsHard` store and room-end settlement surface. `IgnoreForRewardStoreCount` excludes it from the global Run/Meta ratio; it does not suppress the local reward. |
+
+The resulting planner rule is not a general `sideRoomDoesNotAdvance` switch.
+Room/history recording, encounter completion, and local acquisition remain
+active, while each clock follows the declaration-backed contact that owns it.
+In particular, an immediate Shrine rush can be acquired inside the side room,
+but an older pending Shrine delivery does not lose a use there.
+
+The source review exposed two current normalization/simulation discrepancies
+that must be corrected before N execution is considered complete:
+
+- `N_Sub10` through `N_Sub15` currently normalize
+  `advancesExperimentalHammerUses: true`; every N side room inherits
+  `IgnoreEncounterUses`, so all fifteen must be false.
+- Chaos and Stygian Well encounter-use advancement is currently applied at the
+  engine's general encounter-end transition without consulting the room's
+  encounter-use suppressor. N side rooms must not advance either clock.
+
+Existing engine handling already preserves the other modeled high-impact
+cases: pending Shrine deliveries and `RoomsPerUpgrade` effects do not advance
+in N side rooms. The audit deliberately does not turn persistent keepsake XP,
+world phases, or Hex charge into new planner state.
+
 The Hub visit list and each parent-local side-room entry list remain topology
 between distinct room occurrences. Every entered main or side occurrence owns
 its own local room chronology; restoration does not combine them into one
