@@ -7,9 +7,13 @@ F/G route extent. It covers their bespoke trait menus, the boundary between a
 selected trait and its native acquire behavior, Narcissus's optional generated
 pickups, and the complete Narcissus Mystery Boon chain.
 
-It does not extend execution support to Medea, Circe, Icarus, Echo, or later
-biomes. It also does not make every trait that happens to call a pickup helper
-an executor-owned producer. The durable rule is narrower:
+The six named exact-trait menu contacts share this focused NPC acquisition
+adapter so the obsolete broad Timeline hook has no remaining owner. The shared
+carrier is also installed for Medea, Circe, Icarus, and Echo, but this audit
+does not claim their routes or provider-specific consequences; those remain
+deferred to their owning biome gates. It also does not make every trait that
+happens to call a pickup helper an executor-owned producer. The durable rule is
+narrower:
 
 > The executor steers the authored trait screen, then lets native trait
 > acquisition run. If that native behavior creates a separately authored
