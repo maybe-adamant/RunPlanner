@@ -45,8 +45,8 @@ scripts:
 - execution transaction and relation assembly:
   `packages/planner-engine/src/execution-plan/assembly/timeline-transactions.ts`
   and `timeline-relations.ts`; and
-- the superseded broad runtime path:
-  `adamantRunPlanner-Plan_Executor/src/mods/hooks_timeline.lua`.
+- the focused runtime transformation adapters beneath
+  `adamantRunPlanner-Plan_Executor/src/mods/room/timeline/transformations/`.
 
 The complete source eligibility and reward-bag matrices remain owned by
 [Fields optional rewards and Artificer](../rewards-and-acquisition/FIELDS_OPTIONAL_REWARDS_AND_ARTIFICER_GAME_DATA_AUDIT.md),

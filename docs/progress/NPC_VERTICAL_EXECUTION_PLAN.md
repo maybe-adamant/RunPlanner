@@ -3,7 +3,15 @@
 ## Status
 
 Locked on 2026-09-05 after a current-code inventory and source review. No
-implementation gate in this plan has been committed or declared complete.
+implementation gate after Gate A has been committed or declared complete.
+
+Gate A completed on 2026-09-05:
+
+- Plan Executor: `90c0d62`
+- Modpack shell: `0c47a78`
+
+The Run Planner audit disposition and this status record land together as the
+Gate A planner commit.
 
 This focused plan runs before Gate E of
 [Game Execution Layered Coverage Plan](GAME_EXECUTION_LAYERED_COVERAGE_PLAN.md).
