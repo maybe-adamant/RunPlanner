@@ -11,10 +11,7 @@ import type { HistoryEvent } from '../../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../../materialization';
 import { findingRegion, type FindingRegionEntry } from '../../../finding-regions';
 import { applyConcreteAcquisition } from '../../../../reward-kernel';
-import {
-  applyStygianWellPurchase,
-  extendedWellItemKeys,
-} from '../../../stygian-well';
+import { applyStygianWellPurchase, extendedWellItemKeys } from '../../../stygian-well';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import { rewardFindingChronologyForRoom } from '../finding-chronology';
 import { rewardFinding } from '../../findings';

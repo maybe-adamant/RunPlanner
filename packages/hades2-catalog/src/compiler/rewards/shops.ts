@@ -12,7 +12,6 @@ import {
   freezeUniqueStrings,
   requireArray,
   requireNonEmpty,
-  requireObject,
   requirePositiveInteger,
 } from '../common';
 import { fail } from '../errors';
@@ -263,10 +262,7 @@ export function normalizeShops(
         const extended = options.find((option) => option.key === 'ExtendedShopTrait');
         for (const option of options) {
           const metadata = option.stygianWell!;
-          if (
-            option.key !== 'RandomStoreItem' &&
-            metadata.nestedResultItemKeys !== undefined
-          )
+          if (option.key !== 'RandomStoreItem' && metadata.nestedResultItemKeys !== undefined)
             fail(path, 'nested Well metadata is owned only by RandomStoreItem');
           if (
             option.key !== 'ExtendedShopTrait' &&

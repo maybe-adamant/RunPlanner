@@ -16,7 +16,6 @@ import {
   assessTraitOffer,
   assessTraitOfferComposition,
   assessTraitOfferDomainComposition,
-  attachTraitHistory,
   createTraitHistoryState,
   evaluateReachedTraitOffer,
   foldTraitHistoryEvents,
@@ -43,11 +42,7 @@ import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition-settlement';
-import {
-  processEncounterTraitOffer,
-  settleEncounterTraitOffer,
-} from '../../src/simulation/rewards/trait-settlement';
-import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import {
   evaluateTraitOfferCandidate,
   type TraitOfferCandidateQuery,
@@ -1099,7 +1094,6 @@ describe('reached trait offer chronology', () => {
     expect(assessTraitOption(catalog, 'OlympianSpellCountBoon', aspectSpellHistory).legal).toBe(
       false,
     );
-
   });
   const offer = (giverKey: string, traitKeys: readonly [string, string, string]) =>
     Object.freeze({
