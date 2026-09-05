@@ -90,7 +90,6 @@ export function executionTimelineTransactions(
       ),
       `trait replacements ${semanticAddressKey(selected.address)}`,
     );
-    const selectedOptionIndex = Number(selected.offer.selectedOptionKey.replace('option', '')) - 1;
     return Object.freeze({
       kind: 'traits' as const,
       giver: selected.offer.giverKey,
@@ -104,7 +103,7 @@ export function executionTimelineTransactions(
               : { baseRarity: baseRarities[index] }),
             ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
             ...(levels[index] === undefined ? {} : { effectiveLevel: levels[index] }),
-            ...(index !== selectedOptionIndex || option.allTogetherResult === undefined
+            ...(option.allTogetherResult === undefined
               ? {}
               : {
                   allTogetherResult: Object.freeze({
@@ -114,6 +113,9 @@ export function executionTimelineTransactions(
                     water: option.allTogetherResult.water,
                   }),
                 }),
+            ...(option.naturalSelectionTargets === undefined
+              ? {}
+              : { naturalSelectionTargets: Object.freeze([...option.naturalSelectionTargets]) }),
             ...(replacement === undefined
               ? {}
               : {

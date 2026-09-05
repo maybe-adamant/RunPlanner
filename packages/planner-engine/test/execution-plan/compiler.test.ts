@@ -45,7 +45,10 @@ import automaticBossFixture from './fixtures/automatic-boss.execution.json';
 import { bossAutomaticOutcomeProject } from './support/automatic-fixture';
 import { executionTimelineTransactions } from '../../src/execution-plan/assembly/timeline-transactions';
 import { orderedExecutionRooms } from '../../src/execution-plan/assembly/route';
-import { EMPTY_PLANNER_TIMELINE_FACTS, mergePlannerTimelineFacts } from '../../src/simulation/timeline-facts';
+import {
+  EMPTY_PLANNER_TIMELINE_FACTS,
+  mergePlannerTimelineFacts,
+} from '../../src/simulation/timeline-facts';
 
 function fOnlyProject(project = createCompleteFGProject()) {
   return Object.freeze({
@@ -64,7 +67,10 @@ function planFor(project: ReturnType<typeof createCompleteFGProject>) {
 }
 
 function allTogetherProjection(selected: boolean) {
-  const assembly = simulateProjectAssembly(catalog, authorLegalTraitOffers(createCompleteFGProject()));
+  const assembly = simulateProjectAssembly(
+    catalog,
+    authorLegalTraitOffers(createCompleteFGProject()),
+  );
   const biome = assembly.evaluation.route.biomes[0];
   if (biome?.authoring !== 'complete' || biome.validity !== 'valid')
     throw new Error('fixture lacks a complete-valid execution biome');
@@ -84,6 +90,57 @@ function allTogetherProjection(selected: boolean) {
         ]) as AuthoredTraitOfferTraits['options'],
         selectedOptionKey: 'option1' as const,
       });
+  return Object.freeze({
+    ...biome,
+    rewards: Object.freeze({
+      ...biome.rewards,
+      selectedTraitOffers: Object.freeze(
+        biome.rewards.selectedTraitOffers.map((candidate) =>
+          candidate === source ? Object.freeze({ ...candidate, offer }) : candidate,
+        ),
+      ),
+    }),
+  });
+}
+
+function naturalSelectionProjection(selected: boolean) {
+  const assembly = simulateProjectAssembly(
+    catalog,
+    authorLegalTraitOffers(createCompleteFGProject()),
+  );
+  const biome = assembly.evaluation.route.biomes[0];
+  if (biome?.authoring !== 'complete' || biome.validity !== 'valid')
+    throw new Error('fixture lacks a complete-valid execution biome');
+  const source = biome.rewards.selectedTraitOffers.find(
+    (candidate) => candidate.offer.kind === 'traits',
+  );
+  if (source === undefined) throw new Error('fixture lacks an ordinary selected trait offer');
+  const naturalOption = Object.freeze({
+    traitKey: 'GoodStuffBoon',
+    rarity: 'Duo' as const,
+    naturalSelectionTargets: Object.freeze([
+      'ApolloWeaponBoon',
+      'ApolloSpecialBoon',
+      'ApolloWeaponBoon',
+    ]),
+  });
+  const offer = Object.freeze({
+    kind: 'traits' as const,
+    giverKey: source.offer.giverKey,
+    options: Object.freeze([
+      ...(selected
+        ? [
+            naturalOption,
+            Object.freeze({ traitKey: 'ApolloWeaponBoon', rarity: 'Common' as const }),
+          ]
+        : [
+            Object.freeze({ traitKey: 'ApolloWeaponBoon', rarity: 'Common' as const }),
+            naturalOption,
+          ]),
+      Object.freeze({ traitKey: 'ApolloSpecialBoon', rarity: 'Common' as const }),
+    ]) as AuthoredTraitOfferTraits['options'],
+    selectedOptionKey: 'option1' as const,
+  });
   return Object.freeze({
     ...biome,
     rewards: Object.freeze({
@@ -359,7 +416,7 @@ describe('protocol-v17 compiler and codec', () => {
     expect(occurrence?.roomExitConformance?.facts).toContainEqual({ kind: 'keepsakeEffects' });
   });
 
-  it('projects only the selected All Together map from a complete-valid occurrence', () => {
+  it('retains All Together maps on every carrying option from a complete-valid occurrence', () => {
     const selectedBiome = allTogetherProjection(true);
     const selected = orderedExecutionRooms([selectedBiome]).flatMap((room) =>
       executionTimelineTransactions(
@@ -394,7 +451,51 @@ describe('protocol-v17 compiler and codec', () => {
       .flatMap((role) => (role.traitOffer?.kind === 'traits' ? [role.traitOffer] : []))
       .find((offer) => offer.options.some((option) => option.key === 'AllElementalBoon'));
     if (dormantOffer === undefined) throw new Error('dormant All Together offer is missing');
-    expect(dormantOffer.options[1]?.allTogetherResult).toBeUndefined();
+    expect(dormantOffer.options[1]?.allTogetherResult).toEqual(allTogetherResult);
+  });
+
+  it('retains Natural Selection sequences on every carrying option from a complete-valid occurrence', () => {
+    const selectedBiome = naturalSelectionProjection(true);
+    const selectedOffer = orderedExecutionRooms([selectedBiome])
+      .flatMap((room) =>
+        executionTimelineTransactions(
+          room,
+          selectedBiome,
+          mergePlannerTimelineFacts(
+            room.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
+            selectedBiome.rewards.timelineFacts,
+          ),
+        ),
+      )
+      .flatMap((transaction) => (transaction.kind === 'acquisition' ? transaction.roles : []))
+      .flatMap((role) => (role.traitOffer?.kind === 'traits' ? [role.traitOffer] : []))
+      .find((offer) => offer.options.some((option) => option.key === 'GoodStuffBoon'));
+    expect(selectedOffer?.options[0]?.naturalSelectionTargets).toEqual([
+      'ApolloWeaponBoon',
+      'ApolloSpecialBoon',
+      'ApolloWeaponBoon',
+    ]);
+
+    const dormantBiome = naturalSelectionProjection(false);
+    const dormantOffer = orderedExecutionRooms([dormantBiome])
+      .flatMap((room) =>
+        executionTimelineTransactions(
+          room,
+          dormantBiome,
+          mergePlannerTimelineFacts(
+            room.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
+            dormantBiome.rewards.timelineFacts,
+          ),
+        ),
+      )
+      .flatMap((transaction) => (transaction.kind === 'acquisition' ? transaction.roles : []))
+      .flatMap((role) => (role.traitOffer?.kind === 'traits' ? [role.traitOffer] : []))
+      .find((offer) => offer.options.some((option) => option.key === 'GoodStuffBoon'));
+    expect(dormantOffer?.options[1]?.naturalSelectionTargets).toEqual([
+      'ApolloWeaponBoon',
+      'ApolloSpecialBoon',
+      'ApolloWeaponBoon',
+    ]);
   });
 
   it('rejects ambiguous run-start Arcana and Hex identities before fingerprint validation', () => {
@@ -485,6 +586,46 @@ describe('protocol-v17 compiler and codec', () => {
               ...offer.options[0],
               allTogetherResult: { earth: 'ElementalDamageBoon', fire: null, air: null },
             },
+          ],
+        },
+        'offer',
+      ),
+    ).toThrow(ExecutionPlanCodecError);
+  });
+
+  it('strictly decodes bounded Natural Selection target sequences', () => {
+    const offer = {
+      kind: 'traits',
+      giver: 'Demeter',
+      options: [
+        {
+          key: 'GoodStuffBoon',
+          rarity: 'Duo',
+          naturalSelectionTargets: ['ApolloWeaponBoon', 'ApolloSpecialBoon', 'ApolloWeaponBoon'],
+        },
+      ],
+      selected: 'option1',
+    };
+    const decoded = decodeExecutionTraitOffer(offer, 'offer');
+    if (decoded.kind !== 'traits')
+      throw new Error('Natural Selection must decode as an ordinary trait offer');
+    expect(decoded.options[0]?.naturalSelectionTargets).toEqual([
+      'ApolloWeaponBoon',
+      'ApolloSpecialBoon',
+      'ApolloWeaponBoon',
+    ]);
+    expect(() =>
+      decodeExecutionTraitOffer(
+        { ...offer, options: [{ ...offer.options[0], naturalSelectionTargets: [] }] },
+        'offer',
+      ),
+    ).toThrow(ExecutionPlanCodecError);
+    expect(() =>
+      decodeExecutionTraitOffer(
+        {
+          ...offer,
+          options: [
+            { ...offer.options[0], naturalSelectionTargets: Array(9).fill('ApolloWeaponBoon') },
           ],
         },
         'offer',
