@@ -22,16 +22,12 @@ import type { CanonicalLifecycleRoom } from '../../../history/lifecycleInput';
 import type { RunStateOwner } from '../../run-state';
 import type { TargetAddress } from '../../../../authored-project/addresses';
 import type { PlannerTimelineFacts } from '../../../timeline-facts';
-import type { RuntimeOfferFallback } from '../../../runtime-offer-fallback';
-
-export type RuntimeOfferFallbackEmission = RuntimeOfferFallback;
 
 /** Complete non-branch emissions from one authored acquisition-site settlement. */
 export interface AuthoredSiteSettlementEmissions {
   readonly acquisitionRoleFrontiers: readonly AcquisitionRoleFrontier[];
   readonly derivedEntryFrontiers: readonly DerivedAcquisitionEntryFrontier[];
   readonly traitChildSettlements: readonly ReachedTraitChildCheckpoint[];
-  readonly runtimeOfferFallbacks: readonly RuntimeOfferFallbackEmission[];
   readonly timelineFacts: PlannerTimelineFacts;
   readonly findings: readonly FindingRegionEntry[];
 }
@@ -53,7 +49,6 @@ export function createAuthoredSiteSettlementEmissions(input: {
   readonly acquisitionRoleFrontiers?: readonly AcquisitionRoleFrontier[];
   readonly derivedEntryFrontiers?: readonly DerivedAcquisitionEntryFrontier[];
   readonly traitChildSettlements?: readonly ReachedTraitChildCheckpoint[];
-  readonly runtimeOfferFallbacks?: readonly RuntimeOfferFallbackEmission[];
   readonly timelineFacts?: PlannerTimelineFacts;
   readonly findings: ReadonlyMap<string, FindingRegionEntry>;
 }): AuthoredSiteSettlementEmissions {
@@ -61,9 +56,6 @@ export function createAuthoredSiteSettlementEmissions(input: {
     acquisitionRoleFrontiers: Object.freeze(input.acquisitionRoleFrontiers ?? []),
     derivedEntryFrontiers: Object.freeze(input.derivedEntryFrontiers ?? []),
     traitChildSettlements: Object.freeze(input.traitChildSettlements ?? []),
-    runtimeOfferFallbacks: Object.freeze(
-      (input.runtimeOfferFallbacks ?? []).map((fallback) => Object.freeze({ ...fallback })),
-    ),
     timelineFacts:
       input.timelineFacts ??
       Object.freeze({ nodes: Object.freeze([]), dependencies: Object.freeze([]) }),

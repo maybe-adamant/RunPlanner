@@ -52,12 +52,6 @@ export const medeaTraits = [
     label: 'Malice in Kind',
     ...raritylessNpcTrait,
     offerRequirements: [],
-    runtimeOfferRequirement: 'heldLastStand',
-    runtimeOfferFallbackTraitKeys: [
-      'HealingOnDeathCurse',
-      'MoneyOnDeathCurse',
-      'ManaOverTimeCurse',
-    ],
   },
   {
     key: 'NewStatusDamage',

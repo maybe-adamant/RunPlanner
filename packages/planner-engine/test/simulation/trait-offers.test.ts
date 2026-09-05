@@ -22,7 +22,6 @@ import {
   foldTraitHistoryEvents,
   recordAspectStartingTrait,
   recordReachedTraitOffer,
-  resolveRuntimeOfferFallbackTraitKey,
   traitCandidates,
   boonRarityFactsForOffer,
   traitOfferCompositionDomains,
@@ -1072,7 +1071,7 @@ describe('trait legality and derived facts', () => {
 });
 
 describe('reached trait offer chronology', () => {
-  it('requires a settled Spell Drop, not Aspect-start Sky Fall, before exporting Task Force fallback', () => {
+  it('requires a settled Spell Drop, not Aspect-start Sky Fall, before enabling Task Force', () => {
     const emptyHistory = createTraitHistoryState();
     expect(assessTraitOption(catalog, 'OlympianSpellCountBoon', emptyHistory).legal).toBe(false);
 
@@ -1101,63 +1100,6 @@ describe('reached trait offer chronology', () => {
       false,
     );
 
-    const offer = Object.freeze({
-      kind: 'traits' as const,
-      giverKey: 'Athena',
-      options: Object.freeze([
-        { traitKey: 'OlympianSpellCountBoon', rarity: 'Common' as const },
-        { traitKey: 'InvulnerabilityDashBoon', rarity: 'Common' as const },
-        { traitKey: 'RetaliateInvulnerabilityBoon', rarity: 'Common' as const },
-      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
-      selectedOptionKey: 'option1' as const,
-      rarificationActions: Object.freeze([]),
-    });
-
-    expect(resolveRuntimeOfferFallbackTraitKey(catalog, offer, ordinarySpellHistory)).toBe(
-      'FocusLastStandBoon',
-    );
-    const evaluation = evaluateReachedTraitOffer(
-      catalog,
-      owner,
-      'source',
-      offer,
-      ordinarySpellHistory,
-      { settledSpellDrop: true },
-      0,
-    );
-    expect(evaluation.runtimeOfferFallbackTraitKey).toBe('FocusLastStandBoon');
-
-    const branch = initializeTestRewardBranches()[0];
-    if (branch === undefined) throw new Error('Task Force product fixture is missing its branch');
-    const branchWithSpell = Object.freeze({
-      ...branch,
-      history: attachTraitHistory(branch.history, ordinarySpellHistory),
-      traitHistory: ordinarySpellHistory,
-    });
-    const settled = processEncounterTraitOffer(catalog, branchWithSpell, owner, offer, 1, 'test');
-    expect(selectedTraitOfferProducts([settled]).runtimeOfferFallbacks).toEqual([
-      expect.objectContaining({
-        preferredKey: 'OlympianSpellCountBoon',
-        fallbackKey: 'FocusLastStandBoon',
-      }),
-    ]);
-  });
-
-  it('resolves Athena’s declaration-owned fallback after excluding companion screen rows', () => {
-    const offer = Object.freeze({
-      kind: 'traits' as const,
-      giverKey: 'Athena',
-      options: Object.freeze([
-        { traitKey: 'DeathDefianceRefillBoon', rarity: 'Common' as const },
-        { traitKey: 'InvulnerabilityDashBoon', rarity: 'Common' as const },
-        { traitKey: 'RetaliateInvulnerabilityBoon', rarity: 'Common' as const },
-      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
-      selectedOptionKey: 'option1' as const,
-      rarificationActions: Object.freeze([]),
-    });
-    expect(resolveRuntimeOfferFallbackTraitKey(catalog, offer, createTraitHistoryState())).toBe(
-      'FocusLastStandBoon',
-    );
   });
   const offer = (giverKey: string, traitKeys: readonly [string, string, string]) =>
     Object.freeze({

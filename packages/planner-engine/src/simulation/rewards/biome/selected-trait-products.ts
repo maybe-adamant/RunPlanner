@@ -6,8 +6,6 @@ import {
   type TraitOfferAddress,
   type TraitOfferOwnerAddress,
 } from '../../../authored-project/addresses';
-import { optionIndex } from '../../../authored-project/traits';
-import type { ResolvedRuntimeOfferFallback } from '../model';
 import type { RewardBranchState } from '../branch-primitives';
 import type {
   ReachedLevelResolutionEvaluation,
@@ -21,7 +19,6 @@ import type {
 export interface SelectedTraitOfferProducts {
   readonly selectedTraitOffers: readonly SelectedTraitOfferAssessment[];
   readonly selectedLevelResolutions: readonly SelectedLevelResolutionAssessment[];
-  readonly runtimeOfferFallbacks: readonly ResolvedRuntimeOfferFallback[];
   readonly candidateContexts: ReadonlyMap<string, readonly TraitOfferCandidateContext[]>;
   readonly levelCandidateContexts: ReadonlyMap<
     string,
@@ -65,31 +62,10 @@ export function selectedTraitOfferProducts(
       chronologicalIndex: number;
     }
   >();
-  const directRuntimeFallbacks = new Map<
-    string,
-    {
-      readonly address: SemanticAddress;
-      readonly preferredKey: string;
-      readonly fallbackKeys: (string | undefined)[];
-    }
-  >();
   for (const branch of branches) {
     for (const trace of branch.traitEvaluations ?? []) {
       const owner = traitOwnerAddress(trace.address);
       if (owner === undefined) {
-        if (trace.offer.kind === 'traits') {
-          const key = semanticAddressKey(trace.address);
-          const current = directRuntimeFallbacks.get(key);
-          if (current === undefined)
-            directRuntimeFallbacks.set(key, {
-              address: trace.address,
-              preferredKey:
-                trace.offer.options[optionIndex(trace.offer.selectedOptionKey)]!.traitKey,
-              fallbackKeys: [trace.runtimeOfferFallbackTraitKey],
-            });
-          else if (!current.fallbackKeys.includes(trace.runtimeOfferFallbackTraitKey))
-            current.fallbackKeys.push(trace.runtimeOfferFallbackTraitKey);
-        }
         continue;
       }
       const address = createTraitOfferAddress(owner, trace.acquisitionRole);
@@ -255,35 +231,6 @@ export function selectedTraitOfferProducts(
   return Object.freeze({
     selectedTraitOffers,
     selectedLevelResolutions,
-    runtimeOfferFallbacks: Object.freeze([
-      ...[...grouped.values()].flatMap((entry) => {
-        const keys = new Set(entry.branches.map((trace) => trace.runtimeOfferFallbackTraitKey));
-        const fallbackKey = keys.size === 1 ? [...keys][0] : undefined;
-        return fallbackKey === undefined || entry.offer.kind !== 'traits'
-          ? []
-          : [
-              Object.freeze({
-                address: entry.address,
-                preferredKey:
-                  entry.offer.options[optionIndex(entry.offer.selectedOptionKey)]!.traitKey,
-                fallbackKey,
-                availabilityContact: 'traitEligibility' as const,
-              }),
-            ];
-      }),
-      ...[...directRuntimeFallbacks.values()].flatMap((entry) =>
-        entry.fallbackKeys.length === 1 && entry.fallbackKeys[0] !== undefined
-          ? [
-              Object.freeze({
-                address: entry.address,
-                preferredKey: entry.preferredKey,
-                fallbackKey: entry.fallbackKeys[0]!,
-                availabilityContact: 'traitEligibility' as const,
-              }),
-            ]
-          : [],
-      ),
-    ]),
     candidateContexts,
     levelCandidateContexts,
   });

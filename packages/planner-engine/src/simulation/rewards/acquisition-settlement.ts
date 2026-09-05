@@ -36,7 +36,6 @@ import {
   type ConcreteAcquisitionEvent,
   type ProducerLifecyclePointKey,
 } from '../../reward-kernel';
-import type { RuntimeOfferFallback } from '../runtime-offer-fallback';
 
 import type { HistoryEvent } from '../history';
 import type {
@@ -131,13 +130,6 @@ export interface AcquisitionSettlementProduct {
   readonly derivedEntryFrontiers?: readonly DerivedAcquisitionEntryFrontier[];
   /** Exact post-outer checkpoints for reached trait children that block chronology. */
   readonly traitChildSettlements?: readonly ReachedTraitChildCheckpoint[];
-  /** Exact runtime fallback resolved at a selected paid item action. */
-  readonly runtimeOfferFallbacks?: readonly {
-    readonly address: SemanticAddress;
-    readonly preferredKey: string;
-    readonly fallbackKey: string;
-    readonly availabilityContact: RuntimeOfferFallback['availabilityContact'];
-  }[];
   /** Exact same-room owner barriers resolved by this acquisition settlement. */
   readonly timelineFacts?: import('../timeline-facts').PlannerTimelineFacts;
 }

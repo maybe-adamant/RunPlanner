@@ -97,8 +97,6 @@ export const narcissusTraits = [
     key: 'NarcissusH',
     label: 'Life Savings',
     offerRequirements: [],
-    runtimeOfferRequirement: 'missingLastStand',
-    runtimeOfferFallbackTraitKeys: ['NarcissusB', 'NarcissusC', 'NarcissusD'],
     selectedDisposition: {
       kind: 'producePickups',
       producerLifecycleKey: 'NarcissusPickup',

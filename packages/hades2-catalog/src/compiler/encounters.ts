@@ -323,8 +323,6 @@ export function normalizeEncounterDefinitions(
                 [
                   'resultRewardTypes',
                   'conditionalResultRewardType',
-                  'runtimeOfferRequirement',
-                  'runtimeOfferFallbacks',
                   'response',
                   'pickupRequired',
                 ],
@@ -418,13 +416,7 @@ export function normalizeEncounterDefinitions(
               if (
                 free.response !== 'none' ||
                 free.pickupRequired !== false ||
-                free.conditionalResultRewardType !== 'LastStandDrop' ||
-                free.runtimeOfferRequirement !== 'missingLastStand' ||
-                free.runtimeOfferFallbacks.length !== 2 ||
-                free.runtimeOfferFallbacks[0]?.preferredRewardType !== 'LastStandDrop' ||
-                free.runtimeOfferFallbacks[0]?.fallbackRewardType !== 'ArmorBoost' ||
-                free.runtimeOfferFallbacks[1]?.preferredRewardType !== 'ArmorBoost' ||
-                free.runtimeOfferFallbacks[1]?.fallbackRewardType !== 'EmptyMaxHealthDrop'
+                free.conditionalResultRewardType !== 'LastStandDrop'
               )
                 fail(
                   `${path}.nemesisRandomEvent.freeItem`,
@@ -508,26 +500,6 @@ export function normalizeEncounterDefinitions(
                     'ArmorBoost',
                   ],
                   conditionalResultRewardType: 'LastStandDrop' as const,
-                  runtimeOfferRequirement: 'missingLastStand' as const,
-                  runtimeOfferFallbacks: Object.freeze([
-                    Object.freeze({
-                      preferredRewardType: 'LastStandDrop' as const,
-                      fallbackRewardType: 'ArmorBoost' as const,
-                    }),
-                    Object.freeze({
-                      preferredRewardType: 'ArmorBoost' as const,
-                      fallbackRewardType: 'EmptyMaxHealthDrop' as const,
-                    }),
-                  ]) as unknown as readonly [
-                    {
-                      readonly preferredRewardType: 'LastStandDrop';
-                      readonly fallbackRewardType: 'ArmorBoost';
-                    },
-                    {
-                      readonly preferredRewardType: 'ArmorBoost';
-                      readonly fallbackRewardType: 'EmptyMaxHealthDrop';
-                    },
-                  ],
                   response: 'none' as const,
                   pickupRequired: false as const,
                 }),

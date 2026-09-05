@@ -88,12 +88,6 @@ export interface EncounterSettlementTransition {
     readonly key: string;
     readonly value: NemesisRandomEventCandidateSupport;
   };
-  readonly runtimeOfferFallback?: {
-    readonly address: SemanticAddress;
-    readonly preferredKey: string;
-    readonly fallbackKey: string;
-    readonly availabilityContact: 'npcConsumableSelection';
-  };
   readonly blockGorgonPhaseKey?: string;
   readonly gorgonEvaluationBlocked: boolean;
 }
@@ -664,7 +658,6 @@ export function applyEncounterSettlementTransition(inputs: {
     semanticAddressKey(event.origin),
   );
   let nemesisCandidate: EncounterSettlementTransition['nemesisCandidate'];
-  let runtimeOfferFallback: EncounterSettlementTransition['runtimeOfferFallback'];
   if (
     event.kind === 'encounterInteractionReached' &&
     event.interaction === 'encounter' &&
@@ -844,23 +837,6 @@ export function applyEncounterSettlementTransition(inputs: {
               });
             }),
           );
-        if (outcome.kind === 'freeItem') {
-          const edge = policy.freeItem.runtimeOfferFallbacks.find(
-            (candidate) => candidate.preferredRewardType === rewardType,
-          );
-          if (
-            edge !== undefined &&
-            assessments.every((assessment) =>
-              assessment.freeItemRewardTypes.includes(edge.fallbackRewardType as never),
-            )
-          )
-            runtimeOfferFallback = Object.freeze({
-              address: owner,
-              preferredKey: edge.preferredRewardType,
-              fallbackKey: edge.fallbackRewardType,
-              availabilityContact: 'npcConsumableSelection',
-            });
-        }
       }
     }
   }
@@ -910,7 +886,6 @@ export function applyEncounterSettlementTransition(inputs: {
     roleFrontiers: Object.freeze(roleFrontiers),
     traitChildSettlements: Object.freeze(traitChildSettlements),
     ...(nemesisCandidate === undefined ? {} : { nemesisCandidate }),
-    ...(runtimeOfferFallback === undefined ? {} : { runtimeOfferFallback }),
     gorgonEvaluationBlocked,
     ...(blockGorgonPhaseKey === undefined ? {} : { blockGorgonPhaseKey }),
   });

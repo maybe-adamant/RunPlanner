@@ -97,32 +97,6 @@ export function validateProperUpbringingAndDeferred(input: {
   }
 }
 
-export function validateRuntimeOfferFallbacks(input: {
-  readonly traits: CatalogCollection<TraitDeclaration>;
-  readonly givers: CatalogCollection<TraitGiverDeclaration>;
-}): void {
-  for (const trait of input.traits.values) {
-    const fallbacks = trait.runtimeOfferFallbackTraitKeys;
-    if (fallbacks === undefined) continue;
-    const giver = input.givers.values.find((candidate) => candidate.traitKeys.includes(trait.key));
-    if (giver === undefined)
-      fail(`traits.${trait.key}.runtimeOfferFallbackTraitKeys`, 'preferred trait has no giver');
-    for (const fallbackKey of fallbacks) {
-      const fallback = input.traits.byKey[fallbackKey];
-      if (fallback === undefined || !giver.traitKeys.includes(fallbackKey))
-        fail(
-          `traits.${trait.key}.runtimeOfferFallbackTraitKeys`,
-          'must remain within the same giver',
-        );
-      if (fallback.offerRequirements.length !== 0)
-        fail(
-          `traits.${trait.key}.runtimeOfferFallbackTraitKeys`,
-          'fallback traits must be requirement-free',
-        );
-    }
-  }
-}
-
 export function validateAspectStartingTraits(input: {
   readonly aspects: CatalogCollection<AspectDeclaration>;
   readonly traits: CatalogCollection<TraitDeclaration>;

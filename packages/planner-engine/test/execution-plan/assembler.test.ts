@@ -18,6 +18,7 @@ import {
   authorLegalTraitOffers,
   replaceTestShopOfferActions,
 } from '@run-planner/test-fixtures/shared';
+import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   applyProjectCommand,
   acquisitionSiteFromStorageKey,
@@ -299,6 +300,27 @@ function automaticOutcomeProject() {
   return fOnlyProject(project);
 }
 
+function nemesisFreeItemProject() {
+  const occurrenceId = goldenFOccurrenceId(5, 1);
+  const phase = createEncounterPhaseAddress(
+    goldenFBiome,
+    { kind: 'occurrence', occurrenceId },
+    'Encounter',
+  );
+  let project = applyProjectCommand(loadUnderworldFGHICheckpoint(), catalog, {
+    kind: 'SelectEncounter',
+    phase,
+    encounterKey: 'NemesisRandomEvent',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceNemesisRandomEventOutcome',
+    event: createNemesisRandomEventAddress(phase),
+    value: { kind: 'freeItem' },
+    reward: { rewardType: 'EmptyMaxHealthDrop' },
+  });
+  return fOnlyProject(authorLegalTraitOffers(project));
+}
+
 function rackBeforeFountainProject(jeweledPomTraitKey = 'HadesLifestealBoon') {
   const occurrenceId = createOccurrenceId('golden-f-preboss-shop:postboss');
   const occurrence = createOccurrenceAddress(goldenFBiome, occurrenceId);
@@ -352,62 +374,6 @@ function postbossKeepsakeOrderProject(
       ),
       targetTraitKey: 'ApolloWeaponBoon',
     });
-  return fOnlyProject(authorLegalTraitOffers(project));
-}
-
-function directJeweledPomFallbackProject() {
-  let project = createCompleteFGProject();
-  const selection = createRouteStartKeepsakeSelectionAddress('Underworld');
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceStartingKeepsake',
-    selection,
-    keepsakeKey: 'HadesAndPersephoneKeepsake',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceJeweledPomEquipResult',
-    result: createKeepsakeEquipResultAddress(selection, 'jeweledPom'),
-    value: { traitKey: 'HadesDeathDefianceDamageBoon' },
-  });
-  return fOnlyProject(authorLegalTraitOffers(project));
-}
-
-function nemesisFreeItemFallbackProject() {
-  const occurrenceId = goldenFOccurrenceId(5, 1);
-  const phase = createEncounterPhaseAddress(
-    goldenFBiome,
-    { kind: 'occurrence', occurrenceId },
-    'Encounter',
-  );
-  let project = applyProjectCommand(createCompleteFGProject(), catalog, {
-    kind: 'SelectEncounter',
-    phase,
-    encounterKey: 'NemesisRandomEvent',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceNemesisRandomEventOutcome',
-    event: createNemesisRandomEventAddress(phase),
-    value: { kind: 'freeItem' },
-    reward: { rewardType: 'LastStandDrop' },
-  });
-  const selected = project.route.biomes[0]?.topology?.occurrences.find(
-    (candidate) => candidate.occurrenceId === occurrenceId,
-  );
-  if (selected === undefined) throw new Error('missing Nemesis occurrence');
-  const reference = {
-    kind: 'interactAcquisitionEntry' as const,
-    siteKey: 'nemesisGenerated:Encounter',
-    entryKey: 'result',
-  };
-  const sourceIndex = selected.roomActions.order.findIndex(
-    (candidate) => candidate.kind === 'interactEncounter' && candidate.phaseKey === 'Encounter',
-  );
-  if (sourceIndex < 0) throw new Error('missing Nemesis interaction action');
-  project = applyProjectCommand(project, catalog, {
-    kind: 'InsertRoomAction',
-    action: createRoomActionAddress(goldenFBiome, occurrenceId, roomActionKey(reference)),
-    reference,
-    index: sourceIndex + 1,
-  });
   return fOnlyProject(authorLegalTraitOffers(project));
 }
 
@@ -503,6 +469,24 @@ describe('engine-owned F/G execution semantic product', () => {
       (occurrence) => occurrence.id === goldenGOccurrenceId(6, 1),
     );
     expect(blocked?.overview.encounterPhases[0]).not.toHaveProperty('figLeafSkip');
+  });
+
+  it('publishes the exact native item created by a Nemesis free-item event', () => {
+    const occurrence = productFor(nemesisFreeItemProject()).occurrences.find(
+      (candidate) => candidate.id === goldenFOccurrenceId(5, 1),
+    );
+    const interaction = occurrence?.timeline.transactions.find(
+      (transaction) =>
+        transaction.kind === 'encounterInteraction' &&
+        transaction.resolution?.kind === 'nemesisRandomEvent',
+    );
+    expect(interaction).toMatchObject({
+      kind: 'encounterInteraction',
+      resolution: {
+        kind: 'nemesisRandomEvent',
+        outcome: { kind: 'freeItem', itemGameName: 'EmptyMaxHealthDrop' },
+      },
+    });
   });
 
   it('publishes Artificer production and Mystery Boon owner relations', () => {
@@ -838,153 +822,6 @@ describe('engine-owned F/G execution semantic product', () => {
     });
   });
 
-  it('publishes a generated Well fallback before purchase and reuses it when purchased', () => {
-    const wellId = createOccurrenceId('golden-f-preboss-shop:postboss');
-    const well = createOccurrenceAddress(goldenFBiome, wellId);
-    const project = applyProjectCommand(createUnderworldFWellCheckpoint(), catalog, {
-      kind: 'ReplaceStygianWellOffer',
-      occurrence: well,
-      slotKey: 'healing',
-      itemKey: 'LastStandShopItem',
-    });
-    const unpurchased = productFor(authorLegalTraitOffers(project)).occurrences.find(
-      (candidate) => candidate.id === wellId,
-    );
-    const fallback = Object.freeze({
-      preferredKey: 'LastStandShopItem',
-      fallbackKey: 'ArmorBoostStore',
-      availabilityContact: 'storeInventoryGeneration' as const,
-    });
-    expect(
-      unpurchased?.overview.stygianWell?.offers?.find(
-        (offer) => offer.generationKey === 'initial:healing',
-      )?.runtimeFallbacks,
-    ).toEqual([fallback]);
-    expect(
-      unpurchased?.timeline.transactions.find(
-        (transaction) =>
-          transaction.kind === 'wellPurchase' && transaction.generationKey === 'initial:healing',
-      ),
-    ).toBeUndefined();
-
-    const purchasedProject = applyProjectCommand(project, catalog, {
-      kind: 'SetStygianWellPurchase',
-      occurrence: well,
-      generationKey: 'initial:healing',
-      purchased: true,
-    });
-    const purchased = productFor(authorLegalTraitOffers(purchasedProject)).occurrences.find(
-      (candidate) => candidate.id === wellId,
-    );
-    expect(
-      purchased?.timeline.transactions.find(
-        (transaction) =>
-          transaction.kind === 'wellPurchase' && transaction.generationKey === 'initial:healing',
-      ),
-    ).toMatchObject({
-      runtimeFallbacks: [
-        {
-          ...fallback,
-          availabilityContact: 'storePurchase',
-        },
-      ],
-    });
-  });
-
-  it('copies a planner-selected Shop fallback into Overview and its retained purchase', () => {
-    const shop = createOccurrenceAddress(goldenFBiome, createOccurrenceId('golden-f-preboss-shop'));
-    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
-      kind: 'ReplaceShopOffer',
-      offer: createShopOfferAddress(goldenFBiome, shop.occurrenceId, 'Boon'),
-      value: {
-        rewardType: 'RandomLoot',
-        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
-      },
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceTraitOffer',
-      trait: createTraitOfferAddress(
-        createShopOfferAddress(goldenFBiome, shop.occurrenceId, 'Boon'),
-        'source',
-      ),
-      value: {
-        kind: 'traits',
-        giverKey: 'Apollo',
-        options: [
-          { traitKey: 'ApolloManaBoon', rarity: 'Common' },
-          { traitKey: 'ApolloRetaliateBoon', rarity: 'Common' },
-          { traitKey: 'PerfectDamageBonusBoon', rarity: 'Common' },
-        ],
-        selectedOptionKey: 'option1',
-      },
-    });
-    project = replaceTestShopOfferActions(project, catalog, shop, ['Boon']);
-    const assembly = simulateProjectAssembly(catalog, authorLegalTraitOffers(project));
-    const fallbackAddress = createShopOfferAddress(goldenFBiome, shop.occurrenceId, 'Boon');
-    const evaluated = assembly.evaluation.route.biomes.find(
-      (biome): biome is CompleteValidBiomeProjectEvaluation =>
-        biome.biomeKey === 'F' && biome.authoring === 'complete' && biome.validity === 'valid',
-    );
-    if (evaluated === undefined) throw new Error('Shop fallback fixture lacks complete F');
-    const canonical = [
-      evaluated.snapshot.entryRoom,
-      ...evaluated.snapshot.decisions.flatMap((decision) =>
-        decision.kind === 'batch' ? decision.targets.map((target) => target.room) : [],
-      ),
-    ].find((room) => room.occurrenceId === shop.occurrenceId);
-    if (canonical === undefined) throw new Error('Shop fallback fixture lacks canonical Shop');
-    const patchedEvaluation = Object.freeze({
-      ...evaluated,
-      rewards: Object.freeze({
-        ...evaluated.rewards,
-        runtimeOfferFallbacks: Object.freeze([
-          ...evaluated.rewards.runtimeOfferFallbacks,
-          Object.freeze({
-            address: fallbackAddress,
-            preferredKey: 'RandomLoot',
-            fallbackKey: 'ArmorBoost',
-            availabilityContact: 'storeInventoryGeneration' as const,
-          }),
-          Object.freeze({
-            address: fallbackAddress,
-            preferredKey: 'RandomLoot',
-            fallbackKey: 'ArmorBoost',
-            availabilityContact: 'storePurchase' as const,
-          }),
-        ]),
-      }),
-    });
-    const overview = assembleExecutionOverview(canonical, patchedEvaluation, undefined);
-    const transactions = executionTimelineTransactions(
-      canonical,
-      patchedEvaluation,
-      patchedEvaluation.rewards.timelineFacts,
-    );
-    const fallback = overview.shop?.offers.find(
-      (offer) => offer.offerKey === 'Boon',
-    )?.runtimeFallbacks;
-    expect(fallback).toEqual([
-      {
-        preferredKey: 'RandomLoot',
-        fallbackKey: 'ArmorBoost',
-        availabilityContact: 'storeInventoryGeneration',
-      },
-    ]);
-    expect(
-      transactions.find(
-        (transaction) => transaction.kind === 'shopPurchase' && transaction.offerKey === 'Boon',
-      ),
-    ).toMatchObject({
-      runtimeFallbacks: [
-        {
-          preferredKey: 'RandomLoot',
-          fallbackKey: 'ArmorBoost',
-          availabilityContact: 'storePurchase',
-        },
-      ],
-    });
-  });
-
   it('publishes declaration-owned Postboss rack and fountain presence without interactions', () => {
     const product = productFor(createCompleteFGProject());
     const postboss = product.occurrences.find(
@@ -992,64 +829,6 @@ describe('engine-owned F/G execution semantic product', () => {
     );
     expect(postboss?.overview.keepsakeRack).toEqual({});
     expect(postboss?.overview.fountain).toEqual({});
-  });
-
-  it('publishes direct Jeweled Pom runtime fallback at route start and rack contacts', () => {
-    const start = productFor(directJeweledPomFallbackProject());
-    expect(start.startingKeepsake.equipResults?.jeweledPom).toMatchObject({
-      traitKey: 'HadesDeathDefianceDamageBoon',
-      runtimeFallbacks: [
-        {
-          preferredKey: 'HadesDeathDefianceDamageBoon',
-          fallbackKey: 'HadesLifestealBoon',
-          availabilityContact: 'traitEligibility',
-        },
-      ],
-    });
-
-    const rack = productFor(rackBeforeFountainProject('HadesDeathDefianceDamageBoon'));
-    const postboss = rack.occurrences.find((occurrence) => occurrence.gameName === 'F_PostBoss01');
-    expect(
-      postboss?.timeline.transactions.find((transaction) => transaction.kind === 'keepsakeChange'),
-    ).toMatchObject({
-      equipResults: {
-        jeweledPom: {
-          runtimeFallbacks: [
-            {
-              preferredKey: 'HadesDeathDefianceDamageBoon',
-              fallbackKey: 'HadesLifestealBoon',
-              availabilityContact: 'traitEligibility',
-            },
-          ],
-        },
-      },
-    });
-  });
-
-  it('publishes Nemesis free-item fallback on the encounter resolution contact', () => {
-    const product = productFor(nemesisFreeItemFallbackProject());
-    const interaction = product.occurrences
-      .flatMap((occurrence) => occurrence.timeline.transactions)
-      .find(
-        (transaction) =>
-          transaction.kind === 'encounterInteraction' &&
-          transaction.resolution?.kind === 'nemesisRandomEvent',
-      );
-    expect(interaction).toMatchObject({
-      resolution: {
-        kind: 'nemesisRandomEvent',
-        outcome: {
-          kind: 'freeItem',
-          runtimeFallbacks: [
-            {
-              preferredKey: 'LastStandDrop',
-              fallbackKey: 'ArmorBoost',
-              availabilityContact: 'npcConsumableSelection',
-            },
-          ],
-        },
-      },
-    });
   });
 
   it('closes a Postboss Yarn purchase through Well state without a cross-room edge', () => {

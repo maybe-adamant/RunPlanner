@@ -19,14 +19,6 @@ describe('reward compiler Shop normalizer', () => {
       const option = survival?.options.byKey.LastStandDrop;
       expect(option?.requirement).toBeUndefined();
       expect(option?.purchaseRequirement).toBeUndefined();
-      expect(option?.runtimeOfferRequirement).toBe('missingLastStand');
-      expect(option?.runtimeOfferFallbackRewardTypes).toEqual(['ArmorBoost', 'ArmorBigBoost']);
-      expect(survival?.options.byKey.ArmorBoost?.runtimeOfferFallbackRewardTypes).toEqual([
-        'RoomRewardHealDrop',
-      ]);
-      expect(survival?.options.byKey.ArmorBigBoost?.runtimeOfferFallbackRewardTypes).toEqual([
-        'HealBigDrop',
-      ]);
     }
     expect(rewardKernelCatalog.shops.byKey.WorldShop?.groups.byKey.Boon?.rewardTypes).toEqual([
       'RandomLoot',
@@ -74,12 +66,6 @@ describe('reward compiler Shop normalizer', () => {
       ],
     });
     const surfaceFirst = rewardKernelCatalog.shops.byKey.SurfaceShop?.groups.byKey.First;
-    expect(surfaceFirst?.options.byKey.LastStandDrop?.runtimeOfferFallbackRewardTypes).toEqual([
-      'ArmorBoost',
-    ]);
-    expect(surfaceFirst?.options.byKey.ArmorBoost?.runtimeOfferFallbackRewardTypes).toEqual([
-      'ArmorBigBoost',
-    ]);
     expect(
       Object.fromEntries(
         rewardKernelCatalog.shops.values.map((profile) => [
@@ -513,56 +499,15 @@ describe('reward compiler Shop normalizer', () => {
         ...option,
         stygianWell: { effect: 'twist' },
       })),
-      replaceShopOption('RoomShop', 'RandomStoreItem', (option) => ({
-        ...option,
-        stygianWell: { effect: 'twist', nestedResultItemKeys: ['HealDropRange'] },
-      })),
       replaceShopOption('RoomShop', 'ExtendedShopTrait', (option) => ({
         ...option,
         stygianWell: { effect: 'extended' },
-      })),
-      replaceShopOption('RoomShop', 'RandomStoreItem', (option) => ({
-        ...option,
-        stygianWell: {
-          effect: 'twist',
-          nestedResultItemKeys: ['UnknownWellItem'],
-          nestedRuntimeOfferFallbacks: [
-            { preferredItemKey: 'UnknownWellItem', fallbackItemKey: 'UnknownWellItem' },
-          ],
-        },
       })),
       replaceShopOption('RoomShop', 'ExtendedShopTrait', (option) => ({
         ...option,
         stygianWell: {
           effect: 'extended',
           extendedDirectPurchaseItemKeys: ['UnknownWellItem'],
-        },
-      })),
-      replaceShopOption('RoomShop', 'RandomStoreItem', (option) => ({
-        ...option,
-        stygianWell: {
-          effect: 'twist',
-          nestedResultItemKeys: ['HealDropRange'],
-          nestedRuntimeOfferFallbacks: [
-            { preferredItemKey: 'HealDropRange', fallbackItemKey: 'ArmorBoostStore' },
-          ],
-        },
-      })),
-      replaceShopOption('RoomShop', 'RandomStoreItem', (option) => ({
-        ...option,
-        stygianWell: {
-          effect: 'twist',
-          nestedResultItemKeys: ['LastStandShopItem', 'EmptyMaxHealthShopItem'],
-          nestedRuntimeOfferFallbacks: [
-            {
-              preferredItemKey: 'LastStandShopItem',
-              fallbackItemKey: 'EmptyMaxHealthShopItem',
-            },
-            {
-              preferredItemKey: 'LastStandShopItem',
-              fallbackItemKey: 'EmptyMaxHealthShopItem',
-            },
-          ],
         },
       })),
       replaceShopOption('RoomShop', 'ArmorBoostStore', (option) => ({

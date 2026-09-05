@@ -38,49 +38,6 @@ describe('trait declarations and giver compiler owners', () => {
       'Zeus',
     ]);
   });
-  it('owns the exact runtime offer requirements and ordered fallback domains', () => {
-    const expected = {
-      NarcissusH: {
-        requirement: 'missingLastStand',
-        fallbacks: ['NarcissusB', 'NarcissusC', 'NarcissusD'],
-      },
-      EchoDeathDefianceRefill: {
-        requirement: 'missingLastStand',
-        fallbacks: ['DiminishingDodgeBoon', 'DiminishingHealthAndManaBoon', 'EchoDoubleLevelBoon'],
-      },
-      DeathDefianceRetaliateCurse: {
-        requirement: 'heldLastStand',
-        fallbacks: ['HealingOnDeathCurse', 'MoneyOnDeathCurse', 'ManaOverTimeCurse'],
-      },
-      DeathDefianceRefillBoon: {
-        requirement: 'missingLastStandAndAthenaFirstMeeting',
-        fallbacks: [
-          'InvulnerabilityDashBoon',
-          'RetaliateInvulnerabilityBoon',
-          'FocusLastStandBoon',
-        ],
-      },
-      HadesDeathDefianceDamageBoon: {
-        requirement: 'deathDefianceDamageBoonEligible',
-        fallbacks: ['HadesLifestealBoon', 'HadesPreDamageBoon', 'HadesChronosDebuffBoon'],
-      },
-      OlympianSpellCountBoon: {
-        requirement: 'equippedOlympianSpellTalent',
-        fallbacks: [
-          'InvulnerabilityDashBoon',
-          'RetaliateInvulnerabilityBoon',
-          'FocusLastStandBoon',
-        ],
-      },
-    } as const;
-
-    for (const [traitKey, policy] of Object.entries(expected)) {
-      const trait = traits.traits.byKey[traitKey];
-      expect(trait?.runtimeOfferRequirement, traitKey).toBe(policy.requirement);
-      expect(trait?.runtimeOfferFallbackTraitKeys, traitKey).toEqual(policy.fallbacks);
-    }
-  });
-
   it('declares the exact three traits blocked after any prior pickup', () => {
     expect(
       catalog.traits.values

@@ -19,8 +19,6 @@ export interface RawTraitDeclaration {
   readonly freshOfferRarities?: readonly TraitRarity[];
   readonly equippedRarities?: readonly TraitRarity[];
   readonly offerRequirements: readonly TraitRequirementExpression[];
-  readonly runtimeOfferFallbackTraitKeys?: readonly [string, string, string];
-  readonly runtimeOfferRequirement?: import('@run-planner/engine/catalog-schema').TraitDeclaration['runtimeOfferRequirement'];
   readonly equipmentSlot?: TraitDeclaration['equipmentSlot'];
   readonly elementContributions: TraitDeclaration['elementContributions'];
   readonly usesBoonRarity: boolean;

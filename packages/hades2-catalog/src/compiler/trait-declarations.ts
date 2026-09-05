@@ -312,42 +312,6 @@ export function normalizeTraits(
         ),
       ),
     );
-    const runtimeOfferFallbackTraitKeys =
-      trait.runtimeOfferFallbackTraitKeys === undefined
-        ? undefined
-        : (() => {
-            const keys = freezeUniqueStrings(
-              requireArray(
-                trait.runtimeOfferFallbackTraitKeys,
-                `${path}.runtimeOfferFallbackTraitKeys`,
-              ) as readonly string[],
-              `${path}.runtimeOfferFallbackTraitKeys`,
-            );
-            if (keys.length !== 3)
-              fail(
-                `${path}.runtimeOfferFallbackTraitKeys`,
-                'must contain exactly three distinct keys',
-              );
-            if (keys.includes(trait.key))
-              fail(`${path}.runtimeOfferFallbackTraitKeys`, 'must not include the preferred trait');
-            if (keys.some((key) => !declaredKeys.has(key)))
-              fail(`${path}.runtimeOfferFallbackTraitKeys`, 'references an unknown trait');
-            return Object.freeze(keys) as readonly [string, string, string];
-          })();
-    const runtimeOfferRequirement =
-      trait.runtimeOfferRequirement === undefined
-        ? undefined
-        : closedValue(
-            trait.runtimeOfferRequirement,
-            [
-              'missingLastStand',
-              'heldLastStand',
-              'deathDefianceDamageBoonEligible',
-              'missingLastStandAndAthenaFirstMeeting',
-              'equippedOlympianSpellTalent',
-            ] as const,
-            `${path}.runtimeOfferRequirement`,
-          );
     let rarityFloorEffect: ProperUpbringingEffect | undefined;
     if (trait.rarityFloorEffect !== undefined) {
       const effectPath = `${path}.rarityFloorEffect`;
@@ -545,8 +509,6 @@ export function normalizeTraits(
       label: requireNonEmpty(trait.label, `${path}.label`),
       rarityDomain,
       offerRequirements,
-      ...(runtimeOfferFallbackTraitKeys === undefined ? {} : { runtimeOfferFallbackTraitKeys }),
-      ...(runtimeOfferRequirement === undefined ? {} : { runtimeOfferRequirement }),
       ...(trait.equipmentSlot === undefined
         ? {}
         : {

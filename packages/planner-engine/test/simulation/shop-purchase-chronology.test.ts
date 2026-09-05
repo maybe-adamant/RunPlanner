@@ -313,8 +313,8 @@ describe('Echo Gate D Gold Gold Gold', () => {
     ],
     ['second half', 3, 'ArmorBigBoost', Object.freeze({})],
   ] as const)(
-    'publishes I World Shop %s Last Stand fallback while preserving the preferred purchase',
-    (_phase, enteredBiomes, fallbackKey, extraOverrides) => {
+    'preserves I World Shop %s Last Stand purchase',
+    (_phase, enteredBiomes, _fallbackKey, extraOverrides) => {
       const result = echoGoldShop(['Survival'], {
         roomGameName: 'I_PreBoss02',
         enteredBiomes,
@@ -323,24 +323,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
           ...extraOverrides,
         },
       });
-      expect(result.settlement.runtimeOfferFallbacks).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            address: expect.objectContaining({ kind: 'shopOffer', offerKey: 'Survival' }),
-            preferredKey: 'LastStandDrop',
-            fallbackKey,
-            availabilityContact: 'storeInventoryGeneration',
-          }),
-          expect.objectContaining({
-            address: expect.objectContaining({ kind: 'shopOffer', offerKey: 'Survival' }),
-            preferredKey: 'LastStandDrop',
-            fallbackKey,
-            availabilityContact: 'storePurchase',
-          }),
-        ]),
-      );
       expect(result.settlement.branches[0]?.history.consumableRecord.LastStandDrop).toBe(1);
-      expect(result.settlement.branches[0]?.history.consumableRecord[fallbackKey]).toBeUndefined();
     },
   );
 

@@ -362,15 +362,6 @@ export interface TraitDeclaration {
   readonly label: string;
   readonly rarityDomain: TraitRarityDomain;
   readonly offerRequirements: readonly TraitRequirementExpression[];
-  /** Ordered same-giver runtime alternatives for a preferred volatile result. */
-  readonly runtimeOfferFallbackTraitKeys?: readonly [string, string, string];
-  /** Source-only volatile predicate, intentionally outside Planner eligibility. */
-  readonly runtimeOfferRequirement?:
-    | 'missingLastStand'
-    | 'heldLastStand'
-    | 'deathDefianceDamageBoonEligible'
-    | 'missingLastStandAndAthenaFirstMeeting'
-    | 'equippedOlympianSpellTalent';
   readonly equipmentSlot?: TraitEquipmentSlot;
   readonly elementContributions: Readonly<Partial<Record<TraitElement, number>>>;
   readonly usesBoonRarity: boolean;

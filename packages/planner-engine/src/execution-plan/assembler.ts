@@ -2,7 +2,7 @@ import { assertExactProjectEvaluationAssembly } from '../simulation/project-eval
 import type { RunStateSnapshot } from '../simulation/rewards/run-state';
 import { EXECUTION_CATALOG_VERSION, type ExecutionSemanticProduct } from './model';
 import { ExecutionCompilerError as CompilerError } from './assembler-errors';
-import { executionKeepsakeEquipResults, executionRuntimeFallbacks } from './assembly/overview';
+import { executionKeepsakeEquipResults } from './assembly/overview';
 import {
   completeExecutionBiomes,
   executionBatchesByRoom,
@@ -15,11 +15,7 @@ import { executionOccurrence } from './assembly/occurrence';
 import { validateExecutionProduct } from './assembly/validation';
 import { executionTimelineTransactions } from './assembly/timeline-transactions';
 import { executionStartingLoadout } from './assembly/loadout';
-import {
-  createKeepsakeEquipResultAddress,
-  createRouteStartKeepsakeSelectionAddress,
-  semanticAddressKey,
-} from '../authored-project/addresses';
+import { createRouteStartKeepsakeSelectionAddress, semanticAddressKey } from '../authored-project/addresses';
 import {
   EMPTY_PLANNER_TIMELINE_FACTS,
   mergePlannerTimelineFacts,
@@ -153,14 +149,8 @@ export function assembleExecutionProduct({
     terminalBiomeKey: keys[keys.length - 1] as 'F' | 'G',
   });
   const startingSelection = createRouteStartKeepsakeSelectionAddress('Underworld');
-  const startingJeweledPomFallbacks = executionRuntimeFallbacks(
-    biomes[0]!,
-    createKeepsakeEquipResultAddress(startingSelection, 'jeweledPom'),
-    'traitEligibility',
-  );
   const startingEquipResults = executionKeepsakeEquipResults(
     assembly.project.route.loadout.keepsakeEquipResults,
-    startingJeweledPomFallbacks,
   );
   // Route-start state is the first captured snapshot, before any selected
   // room's rewards can mutate the loadout-derived ledgers.

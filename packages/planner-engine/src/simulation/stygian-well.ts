@@ -48,13 +48,6 @@ export interface StygianWellAssessment {
   readonly twistCandidateItemKeysByGeneration: Readonly<
     Partial<Record<import('../authored-project/model').StygianWellGenerationKey, readonly string[]>>
   >;
-  /** Exact runtime contingencies for each visible authored inventory generation. */
-  readonly runtimeOfferFallbacks: readonly {
-    readonly generationKey: import('../authored-project/model').StygianWellGenerationKey;
-    readonly preferredKey: string;
-    readonly fallbackKey: string;
-    readonly availabilityContact: 'storeInventoryGeneration';
-  }[];
   readonly issues: readonly (
     | 'missing'
     | 'wrongGroup'
@@ -67,32 +60,6 @@ export interface StygianWellAssessment {
     | 'twistInvalid'
     | 'twistOrphan'
   )[];
-}
-
-export function stygianWellRuntimeFallbackItemKey(
-  catalog: Catalog,
-  itemKey: string,
-  nested: boolean,
-): string | undefined {
-  const profile = catalog.rewards.shops.byKey.RoomShop;
-  const option = profile?.groups.values
-    .flatMap((group) => group.options.values)
-    .find((candidate) => candidate.key === itemKey);
-  if (nested) {
-    const twist = profile?.groups.values
-      .flatMap((group) => group.options.values)
-      .find((candidate) => candidate.key === 'RandomStoreItem');
-    return twist?.stygianWell?.nestedRuntimeOfferFallbacks?.find(
-      (edge) => edge.preferredItemKey === itemKey,
-    )?.fallbackItemKey;
-  }
-  const group = profile?.groups.values.find(
-    (candidate) => candidate.options.byKey[itemKey] !== undefined,
-  );
-  const fallbackRewardType = option?.runtimeOfferFallbackRewardTypes?.[0];
-  return fallbackRewardType === undefined
-    ? undefined
-    : group?.options.values.find((candidate) => candidate.rewardType === fallbackRewardType)?.key;
 }
 
 export interface StygianWellPlacementAssessment {
@@ -226,55 +193,6 @@ export function assessStygianWell(
         .map((generation) => [generation, Object.freeze([...twistResults])]),
     ),
   );
-  const runtimeOfferFallbacks = Object.freeze(
-    !well.interacted
-      ? []
-      : (
-          [
-            'initial:healing',
-            'initial:secondLeft',
-            'initial:secondRight',
-            'travelDealRefill',
-          ] as const
-        ).flatMap((generationKey) => {
-          const itemKey = itemForGeneration(generationKey);
-          if (itemKey === undefined || itemKey === null) return [];
-          const directFallback = stygianWellRuntimeFallbackItemKey(catalog, itemKey, false);
-          if (directFallback !== undefined)
-            return [
-              Object.freeze({
-                generationKey,
-                preferredKey: itemKey,
-                fallbackKey: directFallback,
-                availabilityContact: 'storeInventoryGeneration' as const,
-              }),
-            ];
-          const twistResultKey =
-            well.twistResultKeyBySlot?.[
-              generationKey === 'travelDealRefill'
-                ? 'travelDealRefill'
-                : (generationKey.slice(
-                    'initial:'.length,
-                  ) as import('../authored-project/model').StygianWellSlotKey)
-            ];
-          const nestedFallback =
-            itemKey === 'RandomStoreItem' && twistResultKey !== undefined && twistResultKey !== null
-              ? stygianWellRuntimeFallbackItemKey(catalog, twistResultKey, true)
-              : undefined;
-          return nestedFallback === undefined ||
-            twistResultKey === undefined ||
-            twistResultKey === null
-            ? []
-            : [
-                Object.freeze({
-                  generationKey,
-                  preferredKey: twistResultKey,
-                  fallbackKey: nestedFallback,
-                  availabilityContact: 'storeInventoryGeneration' as const,
-                }),
-              ];
-        }),
-  );
   if (!well.interacted)
     return Object.freeze({
       placement,
@@ -285,7 +203,6 @@ export function assessStygianWell(
       candidateItemKeysBySlot: domains,
       ...(travelDealRefill === undefined ? {} : { travelDealRefill }),
       twistCandidateItemKeysByGeneration,
-      runtimeOfferFallbacks,
       issues: Object.freeze([]),
     });
   const values = STYGIAN_WELL_SLOT_KEYS.map((key) => well.offerKeyBySlot[key]);
@@ -340,7 +257,6 @@ export function assessStygianWell(
     candidateItemKeysBySlot: domains,
     ...(travelDealRefill === undefined ? {} : { travelDealRefill }),
     twistCandidateItemKeysByGeneration,
-    runtimeOfferFallbacks,
     issues: Object.freeze(issues),
   });
 }

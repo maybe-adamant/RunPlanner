@@ -32,8 +32,6 @@ export interface PendingShopTravelRefill {
 
 export type PendingShopPaidOffer = Omit<CanonicalShopOffer, 'offerOrigin'> & {
   readonly offerOrigin: TraitOfferOwnerAddress;
-  /** Ephemeral evaluated result; it never enters canonical materialization. */
-  readonly runtimeOfferFallbackRewardType?: string;
 };
 
 export interface PendingShopGoldMaterialization {

@@ -79,40 +79,40 @@ presentation, player selection, trait processing, and equipment remain native.
 
 The published selected option is not an automatic click. The player must pick
 that row. After `HandleUpgradeChoiceSelection` returns, the NPC interaction
-completes only when the selected identity is the published preferred or
-declared fallback result and the selected trait exists in native hero state.
-A different player choice is a result mismatch, but the native callback still
-runs under the global stop-enforcement policy.
+completes when the exact authored identity was the selected native row. A
+different player choice is a result mismatch, but the native callback still
+runs under the global stop-enforcement policy; the adapter does not prove the
+result by scanning native hero state.
 
 Arachne and Narcissus traits use a hidden/internal native `Common` appearance
 while the planner intentionally exposes no mutable rarity. The executor must
 not invent a player-facing rarity or level proof for them.
 
-## Runtime eligibility and fallback
+## Runtime eligibility and exact contact
 
 The native NPC option row, not merely `TraitData`, owns its
 `GameStateRequirements`. Narcissus Life Savings (`NarcissusH`) is the current
 volatile example: the native menu row checks `MissingLastStand` before it can
 enter the three-option menu.
 
-The execution offer already carries one planner-selected `traitEligibility`
-fallback. At the NPC contact, that availability question means evaluating the
-matching native NPC option row and its requirements. If the preferred selected
-row is unavailable, its declared fallback replaces that row and completes the
-same encounter owner if chosen. The executor does not search the Narcissus
-pool or interpret Death Defiance.
+The execution offer carries one exact authored identity. At the NPC contact,
+the availability question means evaluating the matching native NPC option row
+and its requirements. If that exact row is unavailable, the adapter reports a
+mismatch and leaves the native menu and callback operational. The executor
+does not substitute another row, search the Narcissus pool, or interpret Death
+Defiance.
 
 Other modeled current-run requirements, such as Verdure Sampler needing a
-Pom-eligible trait, do not acquire an implicit fallback. If a required
-published row cannot be represented at the native menu contact, execution
-reports the mismatch and leaves the game to continue with its native menu.
+Pom-eligible trait, remain native availability facts. If a required published
+row cannot be represented at the native menu contact, execution reports the
+mismatch and leaves the game to continue with its native menu.
 
 ## Trait acquisition does not imply effect realization
 
 `HandleUpgradeChoiceSelection` calls `AddTraitToHero`, and `AddTraitData`
 inserts the selected trait before launching its `AcquireFunctionName` on a
-thread. The selection call can therefore prove that the outer NPC trait was
-acquired, but it cannot prove that a trait-owned drop or later mutation has
+thread. The selection callback is the terminal for the outer NPC interaction,
+but it does not claim or prove that a trait-owned drop or later mutation has
 finished.
 
 This yields two distinct semantic owners when a selected trait creates a
@@ -153,7 +153,7 @@ ends at correlation and handoff:
 | `NarcissusE` | Bones and Max Health                                    | Native production; each authored pickup is independently handed to the direct-pickup adapter.                                                              |
 | `NarcissusF` | Fabric and rerolls                                      | Native pass-through; no current planner-visible child result.                                                                                              |
 | `NarcissusG` | two Elemental Essences plus simulation-neutral Stardust | Native production; each accepted essence interaction claims one ready direct-pickup action. Neither native object has a planner-owned identity before use. |
-| `NarcissusH` | Last Stand plus simulation-neutral Lotus                | Resolve the NPC trait fallback first. If Life Savings is selected, native production hands the published Last Stand to the direct-pickup adapter.          |
+| `NarcissusH` | Last Stand plus simulation-neutral Lotus                | If Life Savings is selected, native production hands the exact authored Last Stand to the direct-pickup adapter; an unavailable authored row is a mismatch.          |
 | `NarcissusI` | Mystery Boon plus simulation-neutral seed               | Native production; an authored Mystery Boon enters the specialized unwrap chain below.                                                                     |
 
 Narcissus sets `NotRequiredPickup = true`. A generated pickup transaction is
@@ -185,12 +185,12 @@ objects keep their existing handles; an unbound Pom Slice, Nectar, or direct
 pickup claims its action only after native acceptance. C1's ordinary loot and
 the visible-Pom path remain unchanged.
 
-The encounter interaction independently proves that the authored NPC trait was
-equipped. Physical availability already prevents a pickup from being used
-before native creation, so C3 adds no synthetic source-to-child DAG edge. A
-single-contact action completes from that accepted use. A multi-contact action
-such as Mystery Boon retains its claimed handle through the generated provider
-and final trait screen.
+The encounter interaction independently completes at the accepted native
+selection callback for the authored NPC trait. Physical availability already
+prevents a pickup from being used before native creation, so C3 adds no
+synthetic source-to-child DAG edge. A single-contact action completes from
+that accepted use. A multi-contact action such as Mystery Boon retains its
+claimed handle through the generated provider and final trait screen.
 
 ## Mystery Boon chain
 
@@ -207,13 +207,13 @@ any BlindBoxLoot enters UseConsumableItem
        -> CreateLoot returns the exact provider loot object
        -> the hidden-source role binds to that object
   -> player interacts with the provider loot
-       -> ordinary C1 trait-offer steering and terminal proof
+       -> ordinary C1 trait-offer steering and native terminal
 ```
 
 The box use begins the acquisition but does not complete it. Completion belongs
-to the resulting selected trait after the hidden provider has been created and
-the ordinary trait screen has closed successfully. `UnwrapRandomLoot` is a
-bounded native scope, not a callback cursor or a second Timeline owner.
+to the ordinary trait interaction after the hidden provider has been created
+and its native screen has closed. `UnwrapRandomLoot` is a bounded native scope,
+not a callback cursor or a second Timeline owner.
 
 Once a Mystery Box exists, this effect chain is producer-agnostic: an already-
 bound transaction carrying the exact `box` role and its `afterUnwrap`
@@ -240,8 +240,8 @@ special case.
 | Concern                                             | Authority and disposition                                                                                                                                           |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Which three NPC traits appear and which is selected | Planner offer; native-steered at the bespoke menu-open seam.                                                                                                        |
-| Native row requirements and one declared fallback   | Native availability question at the published contact; no executor pool search.                                                                                     |
-| Equipping the selected NPC trait                    | Native-authoritative; verified after selection.                                                                                                                     |
+| Native row requirements and exact authored identity | Native availability question at the published contact; unavailable identity reports a mismatch and no executor pool search occurs.                                   |
+| Equipping the selected NPC trait                    | Native-authoritative; the bounded selection callback is the terminal.                                                                                                |
 | Trait-owned drop production                         | Native-authoritative; never recreated by the executor.                                                                                                              |
 | Which generated pickups are planner-visible         | Planner selected-pickup producer and authored participation.                                                                                                        |
 | Choosing a generated pickup action                  | Claim a compatible ready transaction only when native use is accepted.                                                                                              |
@@ -254,10 +254,10 @@ special case.
 C3 needs bounded carrier witnesses, not a duplicate of the catalog's complete
 Narcissus matrix:
 
-- an Arachne menu installs the published three rows and completes only after
-  the authored selected costume is natively equipped;
-- a Narcissus menu does the same and a failed native requirement uses the
-  one declared fallback without changing the owner;
+- an Arachne menu installs the published three rows and completes at the
+  native selection callback for the authored costume;
+- a Narcissus menu does the same and a failed native requirement reports an
+  exact-contact mismatch without changing the owner;
 - selecting a drop-producing trait completes the encounter owner while the
   native drop is still independently pending;
 - one unbound native Narcissus Pom Slice claims a compatible ready action at
@@ -268,12 +268,12 @@ Narcissus matrix:
   pass-through;
 - Mystery Boon begins only after accepted box use, forces the published hidden
   provider, binds the created provider loot, and completes through C1's final
-  trait proof; and
+  trait terminal; and
 - two independent Mystery Boon actions may be claimed by either physical box
   without a wrong-object mismatch; and
 - native error or absence of a compatible ready action never fabricates an
   object or prematurely completes either owner.
 
 These execution witnesses are representative. Catalog and planner tests remain
-the primary owners of the complete option, pickup, fallback, history, and
-eligibility matrices.
+the primary owners of the complete option, pickup, history, and eligibility
+matrices.

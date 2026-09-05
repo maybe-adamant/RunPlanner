@@ -50,7 +50,6 @@ import {
   evaluateTraitOfferFocusedOptionCandidate,
 } from '../../src/simulation/candidates/trait-offer';
 import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
-import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
 import {
   assessTraitOption,
   attachTraitHistory,
@@ -949,70 +948,6 @@ describe('Echo Gate B Boon Boon Boon', () => {
       giverKey: 'Athena',
       rarity: 'Common',
     });
-  });
-
-  it('keeps a nested selected fallback at its exact Echo child address and excludes every sibling row', () => {
-    const child = echoBoonChild(
-      Object.freeze([
-        { giverKey: 'Athena', traitKey: 'DeathDefianceRefillBoon', rarity: 'Common' },
-        { giverKey: 'Athena', traitKey: 'InvulnerabilityDashBoon', rarity: 'Common' },
-        { giverKey: 'Athena', traitKey: 'RetaliateInvulnerabilityBoon', rarity: 'Common' },
-      ] as const),
-    );
-    const result = processEncounterTraitOffer(
-      catalog,
-      baseBranch(),
-      echoOwner.owner,
-      echoBoonOffer(child),
-      10,
-      'encounterCompleted',
-    );
-    const nested = result.traitEvaluations?.find(
-      (evaluation) => evaluation.address.kind === 'echoLastRunBoon',
-    );
-    expect(nested).toMatchObject({
-      address: { kind: 'echoLastRunBoon', optionKey: 'option1' },
-      runtimeOfferFallbackTraitKey: 'FocusLastStandBoon',
-    });
-    expect(selectedTraitOfferProducts([result]).runtimeOfferFallbacks).toEqual([
-      expect.objectContaining({
-        address: expect.objectContaining({ kind: 'echoLastRunBoon', optionKey: 'option1' }),
-        preferredKey: 'DeathDefianceRefillBoon',
-        fallbackKey: 'FocusLastStandBoon',
-      }),
-    ]);
-    expect(result.traitHistory?.equippedTraits.DeathDefianceRefillBoon).toBeDefined();
-    expect(result.traitHistory?.equippedTraits.FocusLastStandBoon).toBeUndefined();
-  });
-
-  it('suppresses a nested runtime fallback when reached branches disagree', () => {
-    const child = echoBoonChild(
-      Object.freeze([
-        { giverKey: 'Athena', traitKey: 'DeathDefianceRefillBoon', rarity: 'Common' },
-        { giverKey: 'Athena', traitKey: 'InvulnerabilityDashBoon', rarity: 'Common' },
-        { giverKey: 'Athena', traitKey: 'RetaliateInvulnerabilityBoon', rarity: 'Common' },
-      ] as const),
-    );
-    const resolved = processEncounterTraitOffer(
-      catalog,
-      baseBranch(),
-      echoOwner.owner,
-      echoBoonOffer(child),
-      10,
-      'encounterCompleted',
-    );
-    const unresolved = Object.freeze({
-      ...resolved,
-      traitEvaluations: Object.freeze(
-        (resolved.traitEvaluations ?? []).map((evaluation) => {
-          if (evaluation.address.kind !== 'echoLastRunBoon') return evaluation;
-          const withoutFallback = { ...evaluation };
-          delete withoutFallback.runtimeOfferFallbackTraitKey;
-          return Object.freeze(withoutFallback);
-        }),
-      ),
-    });
-    expect(selectedTraitOfferProducts([resolved, unresolved]).runtimeOfferFallbacks).toEqual([]);
   });
 
   it('publishes row-distinct transient domains without choosing an append default', () => {

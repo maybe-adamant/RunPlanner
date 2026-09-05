@@ -19,7 +19,6 @@ import {
   validateAspectStartingTraits,
   validateAspectTraitOfferLevelBonuses,
   validateProperUpbringingAndDeferred,
-  validateRuntimeOfferFallbacks,
   validateTraitCatalogClosure,
 } from './trait-catalog-assembly';
 import type { RawTraitCatalogInput } from '../declarations/traits';
@@ -41,7 +40,6 @@ export function createTraitCatalog(input: RawTraitCatalogInput): TraitCatalog {
   validateProperUpbringingAndDeferred({ declaredDeferred, traits });
   const givers = normalizeGivers(input.givers, traits);
   const hexes = normalizeHexes(input.hexes);
-  validateRuntimeOfferFallbacks({ traits, givers });
   const boonRarityBases = normalizeBoonRarityBases(input.boonRarityBases);
   const boonReplacementChance = normalizeBoonReplacementChance(input.boonReplacementChance);
   validateAspectStartingTraits({ aspects, traits, givers });
