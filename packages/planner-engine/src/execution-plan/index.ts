@@ -10,6 +10,7 @@ export {
   type ExecutionCompilerInput,
   type ExecutionPlan,
   type ExecutionReward,
+  type ExecutionAllTogetherResult,
   type ExecutionSemanticProduct,
   type ExecutionRunStateCount,
   type ExecutionRunStateDiagnostic,

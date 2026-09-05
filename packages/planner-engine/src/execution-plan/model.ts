@@ -154,6 +154,14 @@ export interface ExecutionReward {
   readonly acquisitionEnabled?: boolean;
 }
 
+/** The exact direct grants produced inside All Together's native acquisition. */
+export interface ExecutionAllTogetherResult {
+  readonly earth: string | null;
+  readonly fire: string | null;
+  readonly air: string | null;
+  readonly water: string | null;
+}
+
 export type ExecutionTraitOffer =
   | {
       readonly kind: 'fallbackGold';
@@ -168,6 +176,8 @@ export type ExecutionTraitOffer =
         readonly baseRarity?: string;
         readonly rarity?: string;
         readonly effectiveLevel?: number;
+        /** Complete declaration-owned direct grant result for a selected All Together option. */
+        readonly allTogetherResult?: ExecutionAllTogetherResult;
         readonly replacement?: {
           readonly slot: string;
           readonly replacedTraitKey: string;

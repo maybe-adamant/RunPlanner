@@ -11,15 +11,16 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import { simulateProjectAssembly } from '../../src/simulation';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { allTogetherOffer, allTogetherResult } from '../simulation/shop-trait-purchase-support';
 import {
   applyProjectCommand,
-  createOccurrenceAddress,
   createIncomingRewardAddress,
   createOccurrenceId,
   createKeepsakeEquipResultAddress,
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
+  type AuthoredTraitOfferTraits,
 } from '../../src/authored-project';
 import {
   assembleExecutionProduct,
@@ -42,6 +43,9 @@ import fgAnomalyFixture from './fixtures/fg-anomaly.execution.json';
 import fgIxionChaosFixture from './fixtures/fg-ixion-chaos.execution.json';
 import automaticBossFixture from './fixtures/automatic-boss.execution.json';
 import { bossAutomaticOutcomeProject } from './support/automatic-fixture';
+import { executionTimelineTransactions } from '../../src/execution-plan/assembly/timeline-transactions';
+import { orderedExecutionRooms } from '../../src/execution-plan/assembly/route';
+import { EMPTY_PLANNER_TIMELINE_FACTS, mergePlannerTimelineFacts } from '../../src/simulation/timeline-facts';
 
 function fOnlyProject(project = createCompleteFGProject()) {
   return Object.freeze({
@@ -57,6 +61,40 @@ function planFor(project: ReturnType<typeof createCompleteFGProject>) {
   const assembly = simulateProjectAssembly(catalog, project);
   const product = assembleExecutionProduct({ assembly });
   return { product, plan: compileExecutionPlan({ product }) };
+}
+
+function allTogetherProjection(selected: boolean) {
+  const assembly = simulateProjectAssembly(catalog, authorLegalTraitOffers(createCompleteFGProject()));
+  const biome = assembly.evaluation.route.biomes[0];
+  if (biome?.authoring !== 'complete' || biome.validity !== 'valid')
+    throw new Error('fixture lacks a complete-valid execution biome');
+  const source = biome.rewards.selectedTraitOffers.find(
+    (candidate) => candidate.offer.kind === 'traits',
+  );
+  if (source === undefined) throw new Error('fixture lacks an ordinary selected trait offer');
+  const selectedOffer = allTogetherOffer() as AuthoredTraitOfferTraits;
+  const offer: AuthoredTraitOfferTraits = selected
+    ? selectedOffer
+    : Object.freeze({
+        ...selectedOffer,
+        options: Object.freeze([
+          selectedOffer.options[1]!,
+          selectedOffer.options[0]!,
+          selectedOffer.options[2]!,
+        ]) as AuthoredTraitOfferTraits['options'],
+        selectedOptionKey: 'option1' as const,
+      });
+  return Object.freeze({
+    ...biome,
+    rewards: Object.freeze({
+      ...biome.rewards,
+      selectedTraitOffers: Object.freeze(
+        biome.rewards.selectedTraitOffers.map((candidate) =>
+          candidate === source ? Object.freeze({ ...candidate, offer }) : candidate,
+        ),
+      ),
+    }),
+  });
 }
 
 function planWithGenericDependency() {
@@ -321,6 +359,44 @@ describe('protocol-v17 compiler and codec', () => {
     expect(occurrence?.roomExitConformance?.facts).toContainEqual({ kind: 'keepsakeEffects' });
   });
 
+  it('projects only the selected All Together map from a complete-valid occurrence', () => {
+    const selectedBiome = allTogetherProjection(true);
+    const selected = orderedExecutionRooms([selectedBiome]).flatMap((room) =>
+      executionTimelineTransactions(
+        room,
+        selectedBiome,
+        mergePlannerTimelineFacts(
+          room.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
+          selectedBiome.rewards.timelineFacts,
+        ),
+      ),
+    );
+    const selectedOffer = selected
+      .flatMap((transaction) => (transaction.kind === 'acquisition' ? transaction.roles : []))
+      .flatMap((role) => (role.traitOffer?.kind === 'traits' ? [role.traitOffer] : []))
+      .find((offer) => offer.options.some((option) => option.key === 'AllElementalBoon'));
+    if (selectedOffer === undefined) throw new Error('selected All Together offer is missing');
+    expect(selectedOffer.options[0]?.allTogetherResult).toEqual(allTogetherResult);
+
+    const dormantBiome = allTogetherProjection(false);
+    const dormantOffer = orderedExecutionRooms([dormantBiome])
+      .flatMap((room) =>
+        executionTimelineTransactions(
+          room,
+          dormantBiome,
+          mergePlannerTimelineFacts(
+            room.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
+            dormantBiome.rewards.timelineFacts,
+          ),
+        ),
+      )
+      .flatMap((transaction) => (transaction.kind === 'acquisition' ? transaction.roles : []))
+      .flatMap((role) => (role.traitOffer?.kind === 'traits' ? [role.traitOffer] : []))
+      .find((offer) => offer.options.some((option) => option.key === 'AllElementalBoon'));
+    if (dormantOffer === undefined) throw new Error('dormant All Together offer is missing');
+    expect(dormantOffer.options[1]?.allTogetherResult).toBeUndefined();
+  });
+
   it('rejects ambiguous run-start Arcana and Hex identities before fingerprint validation', () => {
     const duplicateArcana = {
       ...fOpeningFixture,
@@ -369,16 +445,51 @@ describe('protocol-v17 compiler and codec', () => {
     const offer = {
       kind: 'traits',
       giver: 'Hera',
-      options: [{ key: 'AllElementalBoon', rarity: 'Legendary' }],
+      options: [
+        {
+          key: 'AllElementalBoon',
+          rarity: 'Legendary',
+          allTogetherResult: {
+            earth: 'ElementalDamageBoon',
+            fire: 'ElementalBaseDamageBoon',
+            air: 'ElementalDamageFloorBoon',
+            water: null,
+          },
+        },
+      ],
       selected: 'option1',
     };
     expect(decodeExecutionTraitOffer(offer, 'offer')).toMatchObject({
-      options: [{ key: 'AllElementalBoon' }],
+      options: [
+        {
+          key: 'AllElementalBoon',
+          allTogetherResult: {
+            earth: 'ElementalDamageBoon',
+            fire: 'ElementalBaseDamageBoon',
+            air: 'ElementalDamageFloorBoon',
+            water: null,
+          },
+        },
+      ],
       selected: 'option1',
     });
     expect(() => decodeExecutionTraitOffer({ ...offer, selected: 'option2' }, 'offer')).toThrow(
       ExecutionPlanCodecError,
     );
+    expect(() =>
+      decodeExecutionTraitOffer(
+        {
+          ...offer,
+          options: [
+            {
+              ...offer.options[0],
+              allTogetherResult: { earth: 'ElementalDamageBoon', fire: null, air: null },
+            },
+          ],
+        },
+        'offer',
+      ),
+    ).toThrow(ExecutionPlanCodecError);
   });
 
   it.each([
