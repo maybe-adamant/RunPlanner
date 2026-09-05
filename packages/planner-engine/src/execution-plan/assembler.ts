@@ -15,7 +15,7 @@ import { executionOccurrence } from './assembly/occurrence';
 import { validateExecutionProduct } from './assembly/validation';
 import { executionTimelineTransactions } from './assembly/timeline-transactions';
 import { executionStartingLoadout } from './assembly/loadout';
-import { createRouteStartKeepsakeSelectionAddress, semanticAddressKey } from '../authored-project/addresses';
+import { semanticAddressKey } from '../authored-project/addresses';
 import {
   EMPTY_PLANNER_TIMELINE_FACTS,
   mergePlannerTimelineFacts,
@@ -148,7 +148,6 @@ export function assembleExecutionProduct({
     biomeKeys: Object.freeze([...keys]) as readonly ['F'] | readonly ['F', 'G'],
     terminalBiomeKey: keys[keys.length - 1] as 'F' | 'G',
   });
-  const startingSelection = createRouteStartKeepsakeSelectionAddress('Underworld');
   const startingEquipResults = executionKeepsakeEquipResults(
     assembly.project.route.loadout.keepsakeEquipResults,
   );

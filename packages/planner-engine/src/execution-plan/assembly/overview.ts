@@ -1,7 +1,6 @@
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
-  createShopOfferAddress,
   semanticAddressKey,
 } from '../../authored-project/addresses';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
@@ -12,11 +11,7 @@ import type { TraitHistoryEvent } from '../../simulation/trait-history';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import { agreement, executionRoomOwnerKey, stableJson } from './support';
-import type {
-  ExecutionKeepsakeEquipResults,
-  ExecutionOverview,
-  ExecutionReward,
-} from '../model';
+import type { ExecutionKeepsakeEquipResults, ExecutionOverview, ExecutionReward } from '../model';
 
 export function executionKeepsakeEquipResults(
   results: AuthoredKeepsakeEquipResults | undefined,
@@ -240,11 +235,6 @@ function executionShop(
   const optionKeys = shopOptionKeys(room, biome);
   const offers = Object.freeze(
     room.entryState.offers.map((offer, index) => {
-      const address = createShopOfferAddress(
-        createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
-        room.occurrenceId,
-        offer.offerKey,
-      );
       return Object.freeze({
         offerKey: offer.offerKey,
         optionKey: optionKeys[index]!,
@@ -269,7 +259,9 @@ function executionShop(
   });
 }
 
-function executionStygianWell(room: CanonicalAuthoredRoom): ExecutionOverview['stygianWell'] | undefined {
+function executionStygianWell(
+  room: CanonicalAuthoredRoom,
+): ExecutionOverview['stygianWell'] | undefined {
   if (room.stygianWell === undefined) return undefined;
   return Object.freeze({
     interacted: room.stygianWell.interacted,

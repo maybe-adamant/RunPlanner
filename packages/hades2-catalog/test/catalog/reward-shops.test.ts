@@ -65,7 +65,6 @@ describe('reward compiler Shop normalizer', () => {
         'MetaProgress',
       ],
     });
-    const surfaceFirst = rewardKernelCatalog.shops.byKey.SurfaceShop?.groups.byKey.First;
     expect(
       Object.fromEntries(
         rewardKernelCatalog.shops.values.map((profile) => [

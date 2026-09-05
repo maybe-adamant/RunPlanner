@@ -320,12 +320,7 @@ export function normalizeEncounterDefinitions(
               );
               exactKeys(
                 policy.freeItem,
-                [
-                  'resultRewardTypes',
-                  'conditionalResultRewardType',
-                  'response',
-                  'pickupRequired',
-                ],
+                ['resultRewardTypes', 'conditionalResultRewardType', 'response', 'pickupRequired'],
                 `${path}.nemesisRandomEvent.freeItem`,
               );
               exactKeys(
