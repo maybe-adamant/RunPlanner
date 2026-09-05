@@ -253,6 +253,11 @@ export interface ExecutionAcquisitionRole {
   readonly kind: string;
   readonly gameName: string;
   /**
+   * The exact Sea Star result at this free, normal, duplicate-capable source.
+   * A produced duplicate deliberately omits this field, preventing recursion.
+   */
+  readonly seaStarResult?: { readonly kind: 'proc' | 'noProc' };
+  /**
    * Source-owned Artificer materialization proof used when its generated
    * child was consumed by Time Piece and therefore has no transaction of its
    * own.  This is intentionally only the native replacement identity and
