@@ -6,7 +6,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 20 as const;
+export const EXECUTION_PROTOCOL_VERSION = 21 as const;
 export const EXECUTION_CATALOG_VERSION = '0.54.0-required-boss-rewards' as const;
 
 export type ExecutionRunStateCount =
@@ -300,18 +300,33 @@ export interface ExecutionAcquisitionRole {
   readonly levelResolution?: ExecutionLevelResolution;
 }
 
+export type ExecutionExperimentalHammerEquipResult =
+  { readonly kind: 'selected'; readonly traitKey: string } | { readonly kind: 'exhausted' };
+
+export interface ExecutionTranscendentEmbryoEquipResult {
+  readonly blessingKey: string;
+  readonly blessingValues: Readonly<Record<string, number>>;
+}
+
 export interface ExecutionKeepsakeEquipResults {
   readonly jeweledPom?: {
     readonly traitKey: string;
     readonly rarity?: string;
   };
-  readonly experimentalHammer?:
-    { readonly kind: 'selected'; readonly traitKey: string } | { readonly kind: 'exhausted' };
-  readonly transcendentEmbryo?: {
-    readonly blessingKey: string;
-    readonly blessingValues: Readonly<Record<string, number>>;
-  };
+  readonly experimentalHammer?: ExecutionExperimentalHammerEquipResult;
+  readonly transcendentEmbryo?: ExecutionTranscendentEmbryoEquipResult;
 }
+
+/** Closed wire product for Gift Gift Gift's immediate volatile replay. */
+export type ExecutionVolatileKeepsakeEquipResults =
+  | {
+      readonly experimentalHammer: ExecutionExperimentalHammerEquipResult;
+      readonly transcendentEmbryo?: never;
+    }
+  | {
+      readonly experimentalHammer?: never;
+      readonly transcendentEmbryo: ExecutionTranscendentEmbryoEquipResult;
+    };
 
 export interface ExecutionStartingKeepsake {
   readonly keepsakeKey: string;
@@ -525,6 +540,14 @@ export type ExecutionTimelineTransaction =
       readonly window: ExecutionLifecycleWindow;
       readonly keepsakeKey: string;
       readonly equipResults?: ExecutionKeepsakeEquipResults;
+    }
+  | {
+      /** Gift Gift Gift's one-shot volatile replay at the succeeding biome start. */
+      readonly kind: 'keepsakeReplay';
+      readonly owner: string;
+      readonly window: ExecutionLifecycleWindow;
+      readonly keepsakeKey: string;
+      readonly equipResults: ExecutionVolatileKeepsakeEquipResults;
     }
   | {
       readonly kind: 'fountainUse';
