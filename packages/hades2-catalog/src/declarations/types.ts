@@ -465,6 +465,8 @@ export interface RawRoomDeclaration {
   readonly advancesHermesShrineDeliveryUses?: boolean;
   /** Source `SkipRoomsPerUpgrade`, used by Steady Growth at end effects. */
   readonly skipRoomsPerUpgrade?: boolean;
+  /** Source `SkipTimedDropResources`, used by declaration-clocked timed pickups. */
+  readonly skipTimedDropResources?: boolean;
   readonly encounterSlotBindings: readonly RawEncounterSlotBinding[];
   readonly counters: RoomCounterEffects;
   readonly caps: RoomCaps;

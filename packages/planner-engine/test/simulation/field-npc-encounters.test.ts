@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAcquisitionSiteAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
@@ -8,6 +9,7 @@ import {
   createIncomingRewardAddress,
   createLocalVisitOrderAddress,
   createLocalVisitSlotAddress,
+  createLevelResolutionAddress,
   createNemesisRandomEventAddress,
   createTraitOfferAddress,
   createOccurrenceId,
@@ -34,6 +36,10 @@ import type {
 } from '@run-planner/engine/catalog-schema';
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
+  attestClockedTraitPickupPlacementForProjectEvaluationAssembly,
+  clockedTraitPickupPlacementForProjectEvaluationAssembly,
+  derivedAcquisitionEntriesForProjectEvaluationAssembly,
+  levelResolutionCandidateForProjectEvaluationAssembly,
   nemesisRandomEventCandidateSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   createPreparedProjectCandidateSession,
@@ -46,6 +52,7 @@ import {
   type EncounterHistoryEntry,
   type HistoryStateView,
   type RoomAppearanceHistoryEntry,
+  type TraitHistoryEvent,
 } from '@run-planner/engine/simulation';
 import { beforeAll, describe, expect, it } from 'vitest';
 
@@ -1388,6 +1395,18 @@ describe('field NPC encounter requirements', () => {
     expect(
       selectedEvaluation.rewards.branches[0]?.traitHistory?.equippedTraits.FocusAttackDamageTrait,
     ).toMatchObject({ giverKey: 'Icarus', providerKind: 'npc' });
+    const ingeniousMutation = selectedEvaluation.rewards.branches[0]?.traitHistory?.events.find(
+      (event) =>
+        event.kind === 'levelMutation' && event.sourceTraitKey === 'FocusAttackDamageTrait',
+    );
+    expect(ingeniousMutation).toMatchObject({
+      kind: 'levelMutation',
+      sourceTraitKey: 'FocusAttackDamageTrait',
+    });
+    if (ingeniousMutation?.kind !== 'levelMutation')
+      throw new Error('O Icarus fixture did not apply Ingenious Strike');
+    expect(ingeniousMutation.newLevel - ingeniousMutation.oldLevel).toBe(3);
+    expect(catalog.traits.byKey[ingeniousMutation.targetTraitKey]?.equipmentSlot).toBe('Melee');
   });
 
   it('uses declaration-owned P Indoor and Outdoor tags for Heracles, Icarus, and Athena', () => {
@@ -1546,6 +1565,139 @@ describe('field NPC encounter requirements', () => {
         .map(({ traitKey, hammerRank }) => [traitKey, hammerRank]),
     ).toEqual([['StaffDoubleAttackTrait', 'RankII']]);
     expect(targetedAcquisitionTargetKeys(catalog, 'UpgradeHammerBoon', history)).toEqual([]);
+  });
+
+  it('exposes each matured Supply Chain pair and settles only an accepted Slice through Pom leveling', () => {
+    const icarusPhase = phase(oBiome, oOccurrenceIds.combat01, 'Combat1');
+    const traitAddress = createTraitOfferAddress(icarusPhase, 'selection');
+    let project = surfaceProjectWithEnteredRankIHammer();
+    project = select(project, icarusPhase, 'IcarusCombatO');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: traitAddress,
+      value: {
+        kind: 'traits',
+        giverKey: 'Icarus',
+        options: [
+          { traitKey: 'SupplyDropBoon' },
+          { traitKey: 'OmegaExplodeBoon' },
+          { traitKey: 'CastHazardBoon' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+
+    const assembly = simulateProjectAssembly(catalog, project);
+    const maturedSites = project.route.biomes.flatMap((biome) =>
+      (biome.topology?.occurrences ?? []).flatMap((occurrence) => {
+        const site = createAcquisitionSiteAddress(
+          createOccurrenceAddress(
+            { kind: 'biome', routeKey: project.route.routeKey, biomeKey: biome.biomeKey },
+            occurrence.occurrenceId,
+          ),
+          'roomExit',
+        );
+        const entries = derivedAcquisitionEntriesForProjectEvaluationAssembly(
+          assembly,
+          site,
+        ).filter((entry) => entry.kind === 'clockedTraitPickup');
+        return entries.length === 0 ? [] : [{ site, entries }];
+      }),
+    );
+    expect(maturedSites.length).toBeGreaterThan(0);
+    expect(maturedSites.every(({ entries }) => entries.length === 2)).toBe(true);
+    const matured = maturedSites[0]!;
+    const accepted = matured.entries[0]!;
+    const ignored = matured.entries[1]!;
+    const placement = clockedTraitPickupPlacementForProjectEvaluationAssembly(
+      assembly,
+      accepted.address,
+    );
+    if (placement === undefined) throw new Error('Supply Chain pickup has no attested placement');
+    expect(attestClockedTraitPickupPlacementForProjectEvaluationAssembly(assembly, placement)).toBe(
+      true,
+    );
+    expect(
+      attestClockedTraitPickupPlacementForProjectEvaluationAssembly(assembly, {
+        ...placement,
+        rewardType: 'RoomMoneyDrop',
+      }),
+    ).toBe(false);
+    const staleProject = select(project, icarusPhase, 'GeneratedO');
+    expect(
+      attestClockedTraitPickupPlacementForProjectEvaluationAssembly(
+        simulateProjectAssembly(catalog, staleProject),
+        placement,
+      ),
+    ).toBe(false);
+    project = applyProjectCommand(project, catalog, placement);
+    if (matured.site.owner.kind !== 'occurrence')
+      throw new Error('Supply Chain maturity is not occurrence-owned');
+    const host = authoredOccurrence(
+      project,
+      matured.site.biomeKey,
+      matured.site.owner.occurrenceId,
+    );
+    expect(
+      host.acquisitionSites?.roomExit?.pickupEntries?.[accepted.address.entryKey],
+    ).toBeDefined();
+    expect(
+      host.acquisitionSites?.roomExit?.pickupEntries?.[ignored.address.entryKey],
+    ).toBeUndefined();
+    expect(host.roomActions.order).toContainEqual(
+      expect.objectContaining({
+        kind: 'interactAcquisitionEntry',
+        entryKey: accepted.address.entryKey,
+      }),
+    );
+
+    const levelResolution = createLevelResolutionAddress(accepted.address, 'self');
+    const placedAssembly = simulateProjectAssembly(catalog, project);
+    const targetTraitKey = levelResolutionCandidateForProjectEvaluationAssembly(
+      placedAssembly,
+      levelResolution,
+    )?.branches[0]?.eligibleTargetTraitKeys[0];
+    if (targetTraitKey === undefined) throw new Error('Supply Chain Pom has no eligible target');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLevelResolution',
+      levelResolution,
+      value: { kind: 'random', targetTraitKey },
+    });
+    const simulation = simulateProject(catalog, project);
+    const mutations = simulation.route.biomes.flatMap((biome) =>
+      'rewards' in biome
+        ? (biome.rewards.branches[0]?.traitHistory?.events ?? []).filter(
+            (event): event is Extract<TraitHistoryEvent, { readonly kind: 'levelMutation' }> =>
+              event.kind === 'levelMutation' &&
+              event.owner.kind === 'levelResolution' &&
+              event.owner.owner.kind === 'acquisitionEntry' &&
+              event.owner.owner.entryKey === accepted.address.entryKey,
+          )
+        : [],
+    );
+    expect(mutations).toContainEqual(
+      expect.objectContaining({
+        targetTraitKey,
+        oldLevel: expect.any(Number),
+        newLevel: expect.any(Number),
+      }),
+    );
+    expect(mutations[0]!.newLevel - mutations[0]!.oldLevel).toBe(1);
+    expect(
+      simulation.route.biomes.some(
+        (biome) =>
+          'rewards' in biome &&
+          biome.rewards.branches.some((branch) =>
+            branch.traitHistory?.events.some(
+              (event) =>
+                event.kind === 'levelMutation' &&
+                event.owner.kind === 'levelResolution' &&
+                event.owner.owner.kind === 'acquisitionEntry' &&
+                event.owner.owner.entryKey === ignored.address.entryKey,
+            ),
+          ),
+      ),
+    ).toBe(false);
   });
 
   it('uses the shared encounter-owned trait path for Athena across P phase dormancy and completion', () => {

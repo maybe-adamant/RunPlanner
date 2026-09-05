@@ -228,10 +228,6 @@ export function checkRequirement(
       return history.upgradableTraitCount > 0
         ? undefined
         : { code: 'missingPrerequisite', detail: 'upgradableTrait' };
-    case 'ordinaryBoonSlotOccupied':
-      return history.equippedSlots[requirement.slot] !== undefined
-        ? undefined
-        : { code: 'missingPrerequisite', detail: requirement.slot };
     case 'offerContext':
       // Context requirements are exact predicates, not one-way blockers: a
       // declaration may require the context to be active or explicitly absent.

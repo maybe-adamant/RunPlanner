@@ -291,6 +291,7 @@ describe('reward compiler acquisition and producer lifecycle normalizers', () =>
           },
         ],
       ],
+      ['StoreRewardRandomStack', [{ role: 'self', lifecyclePoint: 'roomRewardPickup' }]],
     ]);
     expect(rewardKernelCatalog.acquisitions.byKey.RoomMoneyDrop?.lastRewardRecreation).toEqual({
       offer: { rewardType: 'RoomMoneyDrop' },

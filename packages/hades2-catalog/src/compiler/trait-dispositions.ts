@@ -16,10 +16,10 @@ import { fail } from './errors';
 
 const RARITIES = ['Common', 'Rare', 'Epic', 'Heroic', 'Legendary', 'Duo'] as const;
 const ELEMENTS = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
-const ORDINARY_SLOTS = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana'] as const;
 const CONTEXTS = ['devotionNoDuo', 'blockGiftBoons', 'circeRemovableFearVow'] as const;
 const SELECTED_DISPOSITIONS = [
   'equip',
+  'upgradeOccupiedBoonSlot',
   'directTraitSets',
   'advanceCurrentKeepsake',
   'producePickups',
@@ -37,7 +37,6 @@ type RawTraitRequirement = {
   readonly kind: string;
   readonly requirements: readonly TraitRequirementExpression[];
   readonly traitKeys: readonly string[];
-  readonly slot: unknown;
   readonly element: unknown;
   readonly minimum: number;
   readonly maximum?: number;
@@ -66,6 +65,7 @@ export function normalizeSelectedDisposition(
     readonly kind?: unknown;
     readonly producerLifecycleKey?: unknown;
     readonly pickups?: unknown;
+    readonly clock?: unknown;
     readonly effect?: unknown;
     readonly excludedRewardTypes?: unknown;
     readonly excludedKeepsakeKeys?: unknown;
@@ -73,6 +73,7 @@ export function normalizeSelectedDisposition(
     readonly sets?: unknown;
     readonly refillCount?: unknown;
     readonly discountByRarity?: unknown;
+    readonly slot?: unknown;
     readonly slots?: unknown;
     readonly levelCount?: unknown;
     readonly removeGiverKey?: unknown;
@@ -81,6 +82,18 @@ export function normalizeSelectedDisposition(
     readonly intervalsByRarity?: unknown;
   };
   const kind = closedValue(value.kind, SELECTED_DISPOSITIONS, `${path}.kind`);
+  if (kind === 'upgradeOccupiedBoonSlot') {
+    if (Object.keys(value).length !== 3 || value.levelCount !== 3)
+      fail(
+        path,
+        'upgradeOccupiedBoonSlot requires only kind, an Attack/Special slot, and levelCount 3',
+      );
+    return Object.freeze({
+      kind,
+      slot: closedValue(value.slot, ['Melee', 'Secondary'] as const, `${path}.slot`),
+      levelCount: 3,
+    });
+  }
   if (kind === 'naturalSelection') {
     const slots = requireArray(value.slots, `${path}.slots`);
     const expected = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana'] as const;
@@ -285,10 +298,29 @@ export function normalizeSelectedDisposition(
       ...(entry.excludeStorySource === true ? { excludeStorySource: true as const } : {}),
     });
   });
+  const clock =
+    value.clock === undefined
+      ? undefined
+      : (() => {
+          const rawClock = requireObject(value.clock, `${path}.clock`) as {
+            readonly kind?: unknown;
+            readonly interval?: unknown;
+          };
+          if (Object.keys(rawClock).length !== 2)
+            fail(`${path}.clock`, 'must contain only kind and interval');
+          return Object.freeze({
+            kind: closedValue(
+              rawClock.kind,
+              ['qualifyingEncounterEndEffects'] as const,
+              `${path}.clock.kind`,
+            ),
+            interval: requirePositiveInteger(rawClock.interval as number, `${path}.clock.interval`),
+          });
+        })();
   if (
     pickups.length === 0 ||
     new Set(pickups.map((pickup) => pickup.key)).size !== pickups.length ||
-    Object.keys(value).length !== 3
+    Object.keys(value).length !== (clock === undefined ? 3 : 4)
   )
     fail(path, 'producePickups requires a lifecycle and unique non-empty pickups');
   if (typeof value.producerLifecycleKey !== 'string')
@@ -300,6 +332,7 @@ export function normalizeSelectedDisposition(
       `${path}.producerLifecycleKey`,
     ),
     pickups: Object.freeze(pickups),
+    ...(clock === undefined ? {} : { clock }),
   });
 }
 
@@ -371,11 +404,6 @@ export function normalizeRequirement(
     case 'rarifiableTrait':
     case 'upgradableTrait':
       return Object.freeze({ kind: requirement.kind });
-    case 'ordinaryBoonSlotOccupied':
-      return Object.freeze({
-        kind: 'ordinaryBoonSlotOccupied',
-        slot: closedValue(requirement.slot, ORDINARY_SLOTS, `${path}.slot`),
-      });
     case 'offerContext':
       return Object.freeze({
         kind: 'offerContext',

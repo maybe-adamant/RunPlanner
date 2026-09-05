@@ -20,6 +20,7 @@ import {
 } from '../sea-star';
 import {
   echoLastRewardPickupEntryKeys,
+  parseClockedTraitGeneratedPickupEntryKey,
   parseEchoLastRewardPickupEntryKey,
   parseTraitGeneratedPickupSiteKey,
   parseNemesisGeneratedPickupSiteKey,
@@ -623,10 +624,14 @@ export function decodeRoomOccurrence(input: {
     const retainedEchoEntryKeys = Object.keys(
       acquisitionSites?.roomExit?.pickupEntries ?? {},
     ).filter((key) => parseEchoLastRewardPickupEntryKey(key) !== undefined);
+    const clockedTraitPickupEntryKeys = Object.keys(
+      acquisitionSites?.roomExit?.pickupEntries ?? {},
+    ).filter((key) => parseClockedTraitGeneratedPickupEntryKey(key) !== undefined);
     const structurallyOwnedKeys = new Set([
       ...expected.map((pickup) => pickup.key),
       ...echoEntryKeys,
       ...retainedEchoEntryKeys,
+      ...clockedTraitPickupEntryKeys,
     ]);
     if (structurallyOwnedKeys.size === 0 && acquisitionSites?.roomExit !== undefined) {
       failProjectDocument(
@@ -643,6 +648,14 @@ export function decodeRoomOccurrence(input: {
       const entries = acquisitionSites?.roomExit?.pickupEntries ?? {};
       if (
         Object.keys(entries).some((key) => !structurallyOwnedKeys.has(key)) ||
+        clockedTraitPickupEntryKeys.some((key) => {
+          const entry = entries[key];
+          return (
+            entry === undefined ||
+            entry === null ||
+            entry.offer.rewardType !== 'StoreRewardRandomStack'
+          );
+        }) ||
         expected.some((pickup) => {
           const entry = entries[pickup.key];
           return (

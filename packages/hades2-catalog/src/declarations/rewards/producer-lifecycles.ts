@@ -242,6 +242,7 @@ export const producerLifecycles = [
       'RoomMoneyTinyDrop',
       'HealDropMinor',
       'MetaCurrencyDrop',
+      'StoreRewardRandomStack',
     ],
     defaultLifecyclePoint: 'roomRewardPickup',
     overrides: [

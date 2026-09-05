@@ -211,6 +211,8 @@ export {
   parseEchoLastRewardPickupEntryKey,
   echoLastRewardPickupEntryKeys,
   traitGeneratedPickupSiteKey,
+  clockedTraitGeneratedPickupEntryKey,
+  parseClockedTraitGeneratedPickupEntryKey,
   nemesisGeneratedPickupSiteKey,
   selectedPickupProducers,
   activeSelectedPickupProducers,

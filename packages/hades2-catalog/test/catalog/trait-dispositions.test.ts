@@ -16,6 +16,7 @@ type ExecutionDisposition =
 
 const traitDispositionExecution = {
   equip: 'covered actuator',
+  upgradeOccupiedBoonSlot: 'native-authoritative/pass-through',
   naturalSelection: 'covered actuator',
   ransom: 'native-authoritative/pass-through',
   steadyGrowth: 'covered actuator',
@@ -84,6 +85,31 @@ describe('trait dispositions and requirements compiler owner', () => {
       kind: 'worldShopRestock',
       refillCount: 1,
       discountByRarity: { Common: 0.05, Rare: 0.1, Epic: 0.15, Heroic: 0.2 },
+    });
+  });
+
+  it('compiler-closes Ingenious Strike and Flourish to their fixed slot upgrades', () => {
+    expect(catalog.traits.byKey.FocusAttackDamageTrait?.selectedDisposition).toEqual({
+      kind: 'upgradeOccupiedBoonSlot',
+      slot: 'Melee',
+      levelCount: 3,
+    });
+    expect(catalog.traits.byKey.FocusSpecialDamageTrait?.selectedDisposition).toEqual({
+      kind: 'upgradeOccupiedBoonSlot',
+      slot: 'Secondary',
+      levelCount: 3,
+    });
+  });
+
+  it('declares Supply Chain as a repeating seven-encounter two-Pom producer', () => {
+    expect(catalog.traits.byKey.SupplyDropBoon?.selectedDisposition).toEqual({
+      kind: 'producePickups',
+      producerLifecycleKey: 'GeneratedTraitPickup',
+      pickups: [
+        { key: 'pom1', rewardType: 'StoreRewardRandomStack' },
+        { key: 'pom2', rewardType: 'StoreRewardRandomStack' },
+      ],
+      clock: { kind: 'qualifyingEncounterEndEffects', interval: 7 },
     });
   });
 

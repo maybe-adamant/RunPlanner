@@ -19,6 +19,7 @@ import { ownerRegion } from '../../../finding-regions';
 import {
   attachTraitHistory,
   advanceChaosClock,
+  advancePickupProducerProgress,
   advanceSteadyGrowthProgress,
   createTraitHistoryState,
   foldTraitHistoryEvents,
@@ -34,7 +35,11 @@ import {
   transcendentEmbryoBlessingKeys,
   type ReachedTranscendentEmbryoThreshold,
 } from '../../../keepsakes';
-import type { AuthoredTranscendentEmbryoOutcome } from '../../../../authored-project/traits';
+import {
+  createUnresolvedAcquisitionRewardState,
+  type AuthoredTranscendentEmbryoOutcome,
+} from '../../../../authored-project/traits';
+import { clockedTraitGeneratedPickupEntryKey } from '../../../../authored-project/pickup-producers';
 import type { DerivedAcquisitionEntryFrontier } from '../../acquisition-settlement';
 import type { RewardBranchState } from '../../branch-primitives';
 import { advanceRewardBranches } from '../../processing';
@@ -122,6 +127,42 @@ function advanceChaosClockAt(
           });
     }),
   );
+}
+
+function advancePickupProducersAt(
+  catalog: Catalog,
+  branches: readonly RewardBranchState[],
+  owner: Extract<SemanticAddress, { readonly kind: 'occurrence' }>,
+  sequence: number,
+  deferMaturity: boolean,
+): {
+  readonly branches: readonly RewardBranchState[];
+  readonly maturities: readonly {
+    readonly branch: RewardBranchState;
+    readonly maturity: import('../../../trait-history').ReachedPickupProducerMaturity;
+  }[];
+} {
+  const next: RewardBranchState[] = [];
+  const maturities: {
+    readonly branch: RewardBranchState;
+    readonly maturity: import('../../../trait-history').ReachedPickupProducerMaturity;
+  }[] = [];
+  for (const branch of branches) {
+    const before = branch.traitHistory ?? createTraitHistoryState();
+    const advanced = advancePickupProducerProgress(catalog, before, owner, sequence, deferMaturity);
+    const updated =
+      advanced.history === before
+        ? branch
+        : Object.freeze({
+            ...branch,
+            traitHistory: advanced.history,
+            history: attachTraitHistory(branch.history, advanced.history),
+          });
+    next.push(updated);
+    for (const maturity of advanced.maturities)
+      maturities.push(Object.freeze({ branch: updated, maturity }));
+  }
+  return Object.freeze({ branches: Object.freeze(next), maturities: Object.freeze(maturities) });
 }
 
 function advanceSteadyGrowthAt(
@@ -353,6 +394,47 @@ export function applyEncounterEndEffectsTransition(
     ),
   );
   const derivedAcquisitionEntryFrontiers: DerivedAcquisitionEntryFrontier[] = [];
+  const pickupOwner = event.origin.kind === 'occurrence' ? event.origin : undefined;
+  const pickupAdvance =
+    pickupOwner === undefined || declaration?.skipRoomsPerUpgrade === true
+      ? undefined
+      : advancePickupProducersAt(
+          catalog,
+          next,
+          pickupOwner,
+          event.sequence,
+          declaration?.skipTimedDropResources === true,
+        );
+  if (pickupAdvance !== undefined) {
+    next = pickupAdvance.branches;
+    const cohortSize = next.length;
+    for (const { branch, maturity } of pickupAdvance.maturities) {
+      const site = createAcquisitionSiteAddress(pickupOwner!, 'roomExit');
+      for (const pickup of maturity.pickups) {
+        const fixedReward = createUnresolvedAcquisitionRewardState(
+          catalog,
+          { rewardType: pickup.rewardType },
+          { kind: 'producerLifecycle', key: maturity.producerLifecycleKey },
+        );
+        derivedAcquisitionEntryFrontiers.push(
+          Object.freeze({
+            address: createAcquisitionEntryAddress(
+              site,
+              clockedTraitGeneratedPickupEntryKey(maturity.acquisitionIdentity, pickup.key),
+            ),
+            kind: 'clockedTraitPickup',
+            branchCohortSize: cohortSize,
+            rewardTypes: Object.freeze([pickup.rewardType]),
+            fixedReward,
+            producerLifecycleKey: maturity.producerLifecycleKey,
+            encounterPhaseKey: event.phaseKey,
+            participation: 'optional',
+            branchesBeforeEntry: Object.freeze([branch]),
+          }),
+        );
+      }
+    }
+  }
   const deliveryPlacementFindings: LifecycleFinding[] = [];
   const encounterPhase = room?.encounterPhases?.find((phase) => phase.slotKey === event.phaseKey);
   if (

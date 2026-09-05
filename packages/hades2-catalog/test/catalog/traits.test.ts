@@ -83,6 +83,8 @@ const expectedPositiveRequirementOwners = [
   'FireballRendBoon',
   'BloodManaBurstBoon',
   'SorceryCritBoon',
+  'FocusAttackDamageTrait',
+  'FocusSpecialDamageTrait',
 ] as const;
 
 const expectedSettledSpellDropRequirementOwners = ['OlympianSpellCountBoon'] as const;
@@ -914,8 +916,10 @@ const expectedOfferRequirements: Readonly<Record<string, string>> = {
     '[{"kind":"anyEquippedTrait","traitKeys":["HermesWeaponBoon","HermesSpecialBoon","HermesCastDiscountBoon","SprintShieldBoon","SorcerySpeedBoon","DodgeChanceBoon","SlowProjectileBoon","MoneyMultiplierBoon","TimedKillBuffBoon","RestockBoon","LuckyBoon"]}]',
   LobAmmoMagnetismTrait: '[{"kind":"notEquippedTrait","traitKeys":["LobPulseAmmoTrait"]}]',
   LobPulseAmmoTrait: '[{"kind":"notEquippedTrait","traitKeys":["LobAmmoMagnetismTrait"]}]',
-  FocusAttackDamageTrait: '[{"kind":"ordinaryBoonSlotOccupied","slot":"Melee"}]',
-  FocusSpecialDamageTrait: '[{"kind":"ordinaryBoonSlotOccupied","slot":"Secondary"}]',
+  FocusAttackDamageTrait:
+    '[{"kind":"anyEquippedTrait","traitKeys":["AphroditeWeaponBoon","ApolloWeaponBoon","AresWeaponBoon","DemeterWeaponBoon","HephaestusWeaponBoon","HeraWeaponBoon","HestiaWeaponBoon","PoseidonWeaponBoon","ZeusWeaponBoon"]}]',
+  FocusSpecialDamageTrait:
+    '[{"kind":"anyEquippedTrait","traitKeys":["AphroditeSpecialBoon","ApolloSpecialBoon","AresSpecialBoon","DemeterSpecialBoon","HephaestusSpecialBoon","HeraSpecialBoon","HestiaSpecialBoon","PoseidonSpecialBoon","ZeusSpecialBoon"]}]',
 };
 
 describe('trait offer catalog closure', () => {
@@ -1213,11 +1217,47 @@ describe('trait offer catalog closure', () => {
       expect(traits.traits.byKey[traitKey]?.equipmentSlot).toBeUndefined();
     }
     expect(traits?.traits.byKey.FocusAttackDamageTrait?.offerRequirements).toEqual([
-      { kind: 'ordinaryBoonSlotOccupied', slot: 'Melee' },
+      {
+        kind: 'anyEquippedTrait',
+        traitKeys: [
+          'AphroditeWeaponBoon',
+          'ApolloWeaponBoon',
+          'AresWeaponBoon',
+          'DemeterWeaponBoon',
+          'HephaestusWeaponBoon',
+          'HeraWeaponBoon',
+          'HestiaWeaponBoon',
+          'PoseidonWeaponBoon',
+          'ZeusWeaponBoon',
+        ],
+      },
     ]);
     expect(traits?.traits.byKey.FocusSpecialDamageTrait?.offerRequirements).toEqual([
-      { kind: 'ordinaryBoonSlotOccupied', slot: 'Secondary' },
+      {
+        kind: 'anyEquippedTrait',
+        traitKeys: [
+          'AphroditeSpecialBoon',
+          'ApolloSpecialBoon',
+          'AresSpecialBoon',
+          'DemeterSpecialBoon',
+          'HephaestusSpecialBoon',
+          'HeraSpecialBoon',
+          'HestiaSpecialBoon',
+          'PoseidonSpecialBoon',
+          'ZeusSpecialBoon',
+        ],
+      },
     ]);
+    expect(traits?.traits.byKey.FocusAttackDamageTrait?.selectedDisposition).toEqual({
+      kind: 'upgradeOccupiedBoonSlot',
+      slot: 'Melee',
+      levelCount: 3,
+    });
+    expect(traits?.traits.byKey.FocusSpecialDamageTrait?.selectedDisposition).toEqual({
+      kind: 'upgradeOccupiedBoonSlot',
+      slot: 'Secondary',
+      levelCount: 3,
+    });
     expect(traits?.traits.byKey.UpgradeHammerBoon?.targetedAcquisition).toEqual({
       kind: 'upgradeHammerToRank2',
       target: 'upgradableHammer',
@@ -1869,7 +1909,6 @@ describe('trait offer catalog closure', () => {
       },
     };
     expect(() => createCatalog(unknownRequirement)).toThrow(/unknown requirement kind/);
-
   });
 
   it('rejects malformed raw array and object contacts with declaration paths', () => {

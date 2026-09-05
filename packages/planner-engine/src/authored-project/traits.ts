@@ -199,6 +199,8 @@ export interface EquippedTrait {
   readonly echoKeepsakeReplayCount?: number;
   /** Derived retained credit for this exact Steady Growth acquisition. */
   readonly steadyGrowthProgress?: number;
+  /** Derived retained credit for a declaration-clocked generated-pickup producer. */
+  readonly pickupProducerProgress?: number;
 }
 
 /** Exact authored outcome for one declaration-owned Pom acquisition role. */

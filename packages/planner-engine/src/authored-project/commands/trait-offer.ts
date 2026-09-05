@@ -14,6 +14,7 @@ import {
 } from '../traits';
 import { createDefaultAuthoredHexTree, normalizeAuthoredHexTree } from '../hex-tree';
 import {
+  parseClockedTraitGeneratedPickupEntryKey,
   reconcileSelectedPickupProducerState,
   selectedPickupProducerForEntry,
 } from '../pickup-producers';
@@ -169,6 +170,14 @@ function pickupEntrySource(
     return Object.freeze({
       reward: entry,
       levelEffectSource: { kind: 'producerLifecycle' as const, key: 'HermesShrineDelivery' },
+    });
+  if (
+    owner.site.pointKey === 'roomExit' &&
+    parseClockedTraitGeneratedPickupEntryKey(owner.entryKey) !== undefined
+  )
+    return Object.freeze({
+      reward: entry,
+      levelEffectSource: { kind: 'producerLifecycle' as const, key: 'GeneratedTraitPickup' },
     });
   const producer = selectedPickupProducerForEntry(
     catalog,

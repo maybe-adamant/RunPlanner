@@ -16,6 +16,7 @@ import {
   hermesShrineDeliveryEntryKey,
   parseHermesShrineDeliveryEntryKey,
 } from '../../../../authored-project/hermes-shrine-delivery';
+import { parseClockedTraitGeneratedPickupEntryKey } from '../../../../authored-project/pickup-producers';
 import { createUnresolvedPickupRewardState } from '../../../../authored-project/traits';
 import type { ResolvedRewardOffer } from '../../../../reward-kernel';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
@@ -89,6 +90,7 @@ export interface AcquisitionPointReachedInputs {
   readonly purgingPoolAssessment:
     { readonly assessments: readonly PurgingPoolAssessment[] } | undefined;
   readonly hermesShrineRefillState: HermesShrineRefillState | undefined;
+  readonly derivedAcquisitionEntryCapability?: import('../../../candidate-artifacts').DerivedAcquisitionEntryCandidateCapability;
 }
 
 function transitionResult(input: {
@@ -389,6 +391,64 @@ export function applyAcquisitionPointReachedTransition(
 
   if (event.siteKey !== undefined && event.entryKey !== undefined) {
     const site = room.acquisitionSites[event.siteKey];
+    const clockedTraitPickup = parseClockedTraitGeneratedPickupEntryKey(event.entryKey);
+    if (site !== undefined && clockedTraitPickup !== undefined) {
+      const capability = inputs.derivedAcquisitionEntryCapability;
+      const retained = site.entries[event.entryKey];
+      const entry = createAcquisitionEntryAddress(site.address, event.entryKey);
+      if (
+        capability?.kind !== 'clockedTraitPickup' ||
+        capability.producerLifecycleKey === undefined ||
+        capability.fixedReward === undefined ||
+        retained === undefined ||
+        retained === null ||
+        JSON.stringify(retained.offer) !== JSON.stringify(capability.fixedReward.offer)
+      ) {
+        addFinding('rewardSourceUnavailable', entry, {
+          reason:
+            capability?.kind !== 'clockedTraitPickup'
+              ? 'staleClockedTraitPickup'
+              : 'retainedSourceMismatch',
+        });
+        return transitionResult({ branches: inputs.sourceBranches, findings });
+      }
+      const acquisitionView =
+        roomView.acquisitionPoints?.find((point) => point.point === event.point)?.before ??
+        roomView.preOutgoing ??
+        roomView.entry;
+      const actionOwner = room.roomActionRoster.rows.find(
+        (candidate) =>
+          candidate.rank !== null &&
+          candidate.reference.kind === 'interactAcquisitionEntry' &&
+          candidate.reference.siteKey === event.siteKey &&
+          candidate.reference.entryKey === event.entryKey,
+      )?.owner;
+      const settled = settlePickupAcquisitionSite(
+        catalog,
+        inputs.sourceBranches,
+        {
+          siteOwner: room.origin,
+          site: site.address,
+          entries: Object.freeze({ [event.entryKey]: retained }),
+          order: Object.freeze([event.entryKey]),
+          ...(actionOwner === undefined ? {} : { timelineOwner: actionOwner }),
+          requiredEntryKeys: new Set(),
+          producerLifecycleKey: capability.producerLifecycleKey,
+          historySequence: event.sequence,
+          facts: (history, _names, branch) => factsAt(acquisitionView, history, branch),
+          findingChronology: chronology,
+          authoredSeaStarDuplicateSiteKeys,
+          traitContext: inputs.routeLoadout,
+        },
+        findings,
+      );
+      return transitionResult({
+        branches: settled.branches,
+        findings,
+        roleFrontiers: settled.roleFrontiers,
+        traitChildSettlements: settled.traitChildSettlements,
+      });
+    }
     const shrineDelivery =
       event.siteKey === 'hermesShrineDelivery'
         ? parseHermesShrineDeliveryEntryKey(event.entryKey)

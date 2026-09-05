@@ -80,6 +80,19 @@ export interface SteadyGrowthProgressEvent {
   readonly newProgress: number;
   readonly requiredInterval: number;
 }
+export interface PickupProducerProgressEvent {
+  readonly kind: 'pickupProducerProgress';
+  readonly owner: SemanticAddress;
+  readonly acquisitionRole: 'pickupProducer';
+  readonly sequence: number;
+  readonly acquisitionPoint: 'encounterEndEffectsApplied';
+  readonly traitKey: string;
+  readonly acquisitionIdentity: string;
+  readonly oldProgress: number;
+  readonly newProgress: number;
+  readonly requiredInterval: number;
+  readonly matured: boolean;
+}
 /** One automatic Steady Growth promotion at its owning end-effects checkpoint. */
 interface TraitRarityMutationEventBase {
   readonly kind: 'rarityMutation';
@@ -223,6 +236,7 @@ export type TraitHistoryEvent =
   | ConcaveStoneSecondaryEvent
   | TraitLevelMutationEvent
   | SteadyGrowthProgressEvent
+  | PickupProducerProgressEvent
   | TraitRarityMutationEvent
   | TraitElementContributionEvent
   | DirectTraitGrantEvent
@@ -253,6 +267,7 @@ export function isTraitOfferMutationEvent(event: TraitHistoryEvent): boolean {
     case 'chaosClock':
       return true;
     case 'steadyGrowthProgress':
+    case 'pickupProducerProgress':
     case 'echoKeepsakeReplay':
       return false;
   }
@@ -762,6 +777,20 @@ export function foldTraitHistoryEvents(
           });
         continue;
       }
+      if (event.kind === 'pickupProducerProgress') {
+        const target = equipped[event.traitKey];
+        if (
+          target?.acquisitionIdentity === event.acquisitionIdentity &&
+          (target.pickupProducerProgress ?? 0) === event.oldProgress &&
+          event.newProgress >= 0 &&
+          event.newProgress < event.requiredInterval
+        )
+          equipped[event.traitKey] = Object.freeze({
+            ...target,
+            pickupProducerProgress: event.newProgress,
+          });
+        continue;
+      }
       if (event.kind === 'rarityMutation') {
         const target = equipped[event.targetTraitKey];
         const directFountainPromotion =
@@ -1147,6 +1176,68 @@ export function advanceSteadyGrowthProgress(
     history:
       events.length === 0 ? before : foldTraitHistoryEvents(catalog, [...before.events, ...events]),
     thresholds: Object.freeze(thresholds),
+  });
+}
+
+export interface ReachedPickupProducerMaturity {
+  readonly acquisitionIdentity: string;
+  readonly producerLifecycleKey: string;
+  readonly pickups: readonly import('../catalog-schema').TraitPickupDeclaration[];
+}
+
+/** Advances every declaration-clocked pickup producer at one qualifying end-effects checkpoint. */
+export function advancePickupProducerProgress(
+  catalog: Catalog,
+  before: TraitHistoryState,
+  owner: SemanticAddress,
+  sequence: number,
+  deferMaturity = false,
+): {
+  readonly history: TraitHistoryState;
+  readonly maturities: readonly ReachedPickupProducerMaturity[];
+} {
+  const events: PickupProducerProgressEvent[] = [];
+  const maturities: ReachedPickupProducerMaturity[] = [];
+  for (const trait of Object.values(before.equippedTraits)) {
+    const disposition = catalog.traits.byKey[trait.traitKey]?.selectedDisposition;
+    if (
+      disposition?.kind !== 'producePickups' ||
+      disposition.clock?.kind !== 'qualifyingEncounterEndEffects' ||
+      trait.acquisitionIdentity === undefined
+    )
+      continue;
+    const requiredInterval = disposition.clock.interval;
+    const oldProgress = trait.pickupProducerProgress ?? 0;
+    const reachedThreshold = oldProgress + 1 >= requiredInterval;
+    const matured = reachedThreshold && !deferMaturity;
+    events.push(
+      Object.freeze({
+        kind: 'pickupProducerProgress',
+        owner,
+        acquisitionRole: 'pickupProducer',
+        sequence,
+        acquisitionPoint: 'encounterEndEffectsApplied',
+        traitKey: trait.traitKey,
+        acquisitionIdentity: trait.acquisitionIdentity,
+        oldProgress,
+        newProgress: matured ? 0 : reachedThreshold ? requiredInterval - 1 : oldProgress + 1,
+        requiredInterval,
+        matured,
+      }),
+    );
+    if (matured)
+      maturities.push(
+        Object.freeze({
+          acquisitionIdentity: trait.acquisitionIdentity,
+          producerLifecycleKey: disposition.producerLifecycleKey,
+          pickups: disposition.pickups,
+        }),
+      );
+  }
+  return Object.freeze({
+    history:
+      events.length === 0 ? before : foldTraitHistoryEvents(catalog, [...before.events, ...events]),
+    maturities: Object.freeze(maturities),
   });
 }
 

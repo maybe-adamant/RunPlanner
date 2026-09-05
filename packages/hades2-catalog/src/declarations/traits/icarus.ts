@@ -15,13 +15,53 @@ export const icarusTraits = [
     key: 'FocusAttackDamageTrait',
     label: 'Ingenious Strike',
     ...raritylessNpcTrait,
-    offerRequirements: [{ kind: 'ordinaryBoonSlotOccupied', slot: 'Melee' }],
+    offerRequirements: [
+      {
+        kind: 'anyEquippedTrait',
+        traitKeys: [
+          'AphroditeWeaponBoon',
+          'ApolloWeaponBoon',
+          'AresWeaponBoon',
+          'DemeterWeaponBoon',
+          'HephaestusWeaponBoon',
+          'HeraWeaponBoon',
+          'HestiaWeaponBoon',
+          'PoseidonWeaponBoon',
+          'ZeusWeaponBoon',
+        ],
+      },
+    ],
+    selectedDisposition: {
+      kind: 'upgradeOccupiedBoonSlot',
+      slot: 'Melee',
+      levelCount: 3,
+    },
   },
   {
     key: 'FocusSpecialDamageTrait',
     label: 'Ingenious Flourish',
     ...raritylessNpcTrait,
-    offerRequirements: [{ kind: 'ordinaryBoonSlotOccupied', slot: 'Secondary' }],
+    offerRequirements: [
+      {
+        kind: 'anyEquippedTrait',
+        traitKeys: [
+          'AphroditeSpecialBoon',
+          'ApolloSpecialBoon',
+          'AresSpecialBoon',
+          'DemeterSpecialBoon',
+          'HephaestusSpecialBoon',
+          'HeraSpecialBoon',
+          'HestiaSpecialBoon',
+          'PoseidonSpecialBoon',
+          'ZeusSpecialBoon',
+        ],
+      },
+    ],
+    selectedDisposition: {
+      kind: 'upgradeOccupiedBoonSlot',
+      slot: 'Secondary',
+      levelCount: 3,
+    },
   },
   {
     key: 'OmegaExplodeBoon',
@@ -52,6 +92,15 @@ export const icarusTraits = [
     label: 'Supply Chain',
     ...raritylessNpcTrait,
     offerRequirements: [],
+    selectedDisposition: {
+      kind: 'producePickups',
+      producerLifecycleKey: 'GeneratedTraitPickup',
+      pickups: [
+        { key: 'pom1', rewardType: 'StoreRewardRandomStack' },
+        { key: 'pom2', rewardType: 'StoreRewardRandomStack' },
+      ],
+      clock: { kind: 'qualifyingEncounterEndEffects', interval: 7 },
+    },
   },
   {
     key: 'UpgradeHammerBoon',

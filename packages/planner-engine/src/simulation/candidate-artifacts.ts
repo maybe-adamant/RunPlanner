@@ -521,7 +521,9 @@ export interface DerivedAcquisitionEntryCandidateCapability {
   readonly slotIndex?: number;
   readonly rewardTypes?: readonly string[];
   readonly fixedReward?: import('../authored-project/model').AuthoredRewardState;
+  readonly producerLifecycleKey?: string;
   readonly encounterPhaseKey?: string;
+  readonly participation?: 'optional';
   readonly retainedSourceMismatch?: boolean;
   readonly eligibleSourceOfferKeys?: readonly string[];
 }
@@ -551,7 +553,9 @@ export function attestDerivedAcquisitionEntryCandidateCapability(
         frontier.slotIndex !== first.slotIndex ||
         JSON.stringify(frontier.rewardTypes) !== JSON.stringify(first.rewardTypes) ||
         JSON.stringify(frontier.fixedReward) !== JSON.stringify(first.fixedReward) ||
+        frontier.producerLifecycleKey !== first.producerLifecycleKey ||
         frontier.encounterPhaseKey !== first.encounterPhaseKey ||
+        frontier.participation !== first.participation ||
         frontier.retainedSourceMismatch !== first.retainedSourceMismatch ||
         JSON.stringify(frontier.eligibleSourceOfferKeys) !==
           JSON.stringify(first.eligibleSourceOfferKeys),
@@ -564,9 +568,13 @@ export function attestDerivedAcquisitionEntryCandidateCapability(
     ...(first.slotIndex === undefined ? {} : { slotIndex: first.slotIndex }),
     ...(first.rewardTypes === undefined ? {} : { rewardTypes: first.rewardTypes }),
     ...(first.fixedReward === undefined ? {} : { fixedReward: first.fixedReward }),
+    ...(first.producerLifecycleKey === undefined
+      ? {}
+      : { producerLifecycleKey: first.producerLifecycleKey }),
     ...(first.encounterPhaseKey === undefined
       ? {}
       : { encounterPhaseKey: first.encounterPhaseKey }),
+    ...(first.participation === undefined ? {} : { participation: first.participation }),
     ...(first.retainedSourceMismatch === undefined
       ? {}
       : { retainedSourceMismatch: first.retainedSourceMismatch }),

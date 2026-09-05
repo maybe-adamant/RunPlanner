@@ -1,6 +1,9 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  clockedTraitGeneratedPickupEntryKey,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createBiomeAddress,
   createDefaultRouteLoadout,
   createEmptyProjectDocument,
@@ -85,6 +88,29 @@ function projectHistory(source: WorkspaceSource) {
 }
 
 describe('project workspace application state', () => {
+  it('rejects a clocked-pickup placement without a current exact capability', () => {
+    const { assembleProjectEvaluation, store } = createStore();
+    const before = store.getState().projectWorkspace;
+    const occurrence = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('fabricated-clocked-pickup'),
+    );
+    store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'PlaceClockedTraitPickup',
+        entry: createAcquisitionEntryAddress(
+          createAcquisitionSiteAddress(occurrence, 'roomExit'),
+          clockedTraitGeneratedPickupEntryKey('fabricated', 'pom1'),
+        ),
+        encounterPhaseKey: 'Encounter',
+        producerLifecycleKey: 'GeneratedTraitPickup',
+        rewardType: 'StoreRewardRandomStack',
+      }),
+    );
+    expect(store.getState().projectWorkspace).toBe(before);
+    expect(assembleProjectEvaluation).toHaveBeenCalledTimes(1);
+  });
+
   it('publishes an exact 30-Grasp loadout and rejects an impossible Redux command atomically', () => {
     const { store } = createStore();
     const route = createRouteAddress('Underworld');

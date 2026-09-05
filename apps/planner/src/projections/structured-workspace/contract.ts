@@ -1535,9 +1535,12 @@ export interface WorkspaceRoomActionRow {
   readonly participation: 'required' | 'optional';
   /** Participation is authored by a room Overview control; Timeline owns ordering only. */
   readonly participationOwnedByOverview: boolean;
-  /** Engine-published exact materialization command for an unplaced required delivery. */
+  /** Engine-published exact materialization command for one derived acquisition entry. */
   readonly placement?: WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'PlaceHermesShrineDelivery' }>
+    Extract<
+      ProjectCommand,
+      { readonly kind: 'PlaceHermesShrineDelivery' | 'PlaceClockedTraitPickup' }
+    >
   >;
   readonly rank: number | null;
   /** Artificer output identity authored at this source transformation checkpoint. */

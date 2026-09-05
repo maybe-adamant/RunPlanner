@@ -411,6 +411,8 @@ function applyTraitOfferForAcquisitionInternal(
   const acquisitionIdentity =
     (effectiveAuthored.kind === 'chaos' ||
       selectedForIdentityDisposition?.kind === 'steadyGrowth' ||
+      (selectedForIdentityDisposition?.kind === 'producePickups' &&
+        selectedForIdentityDisposition.clock !== undefined) ||
       (selectedForIdentityDisposition?.kind === 'echo' &&
         (selectedForIdentityDisposition.effect === 'doubleShop' ||
           selectedForIdentityDisposition.effect === 'repeatKeepsake'))) &&

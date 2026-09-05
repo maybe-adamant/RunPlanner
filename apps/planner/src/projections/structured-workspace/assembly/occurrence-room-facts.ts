@@ -210,6 +210,31 @@ export function assembleOccurrenceRewardLocal(
           );
         })(),
   );
+  const dueClockedTraitPickupRewardControls = Object.freeze(
+    !input.facts.detailsActive
+      ? []
+      : (() => {
+          const site = createAcquisitionSiteAddress(address, 'roomExit');
+          const stored = input.occurrence.acquisitionSites?.roomExit?.pickupEntries;
+          return (input.derivedAcquisitionEntries?.(site) ?? Object.freeze([])).flatMap(
+            (capability) => {
+              if (capability.kind !== 'clockedTraitPickup') return [];
+              if (stored?.[capability.address.entryKey] !== undefined) return [];
+              const reward = capability.fixedReward ?? null;
+              return [
+                rewardControl(
+                  input,
+                  { kind: 'acquisitionEntry' as const, address: capability.address },
+                  undefined,
+                  reward?.offer ?? null,
+                  reward,
+                  capability.rewardTypes ?? Object.freeze([]),
+                ) as WorkspaceExplicitRewardControl,
+              ];
+            },
+          );
+        })(),
+  );
   // Same-room rushed deliveries are active before the lifecycle has published
   // a derived host capability. Their source-owned entry remains the one
   // acquisition control; delayed host entries above consume the exact derived
@@ -255,6 +280,7 @@ export function assembleOccurrenceRewardLocal(
       ...pickupRewardControls,
       ...supplementalRewardControls,
       ...dueShrineDeliveryRewardControls,
+      ...dueClockedTraitPickupRewardControls,
       ...rushedShrineRewardControls,
     ]),
   });

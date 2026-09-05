@@ -460,6 +460,14 @@ export type AcquisitionSiteCommand =
       readonly encounterPhaseKey: string;
     }
   | {
+      /** Accepts one simulator-attested optional pickup at its maturity checkpoint. */
+      readonly kind: 'PlaceClockedTraitPickup';
+      readonly entry: AcquisitionEntryAddress;
+      readonly encounterPhaseKey: string;
+      readonly producerLifecycleKey: string;
+      readonly rewardType: string;
+    }
+  | {
       /** Replaces payload detail for one declaration-fixed site pickup. */
       readonly kind: 'ReplaceAcquisitionEntryOffer';
       readonly entry: AcquisitionEntryAddress;

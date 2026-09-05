@@ -70,6 +70,39 @@ export function traitGeneratedPickupSiteKey(
   return `traitGenerated:${encodeURIComponent(semanticAddressKey(source))}:${optionKey}`;
 }
 
+/** Collision-safe later-room entry key for one clocked trait producer maturity. */
+export function clockedTraitGeneratedPickupEntryKey(
+  acquisitionIdentity: string,
+  pickupKey: string,
+): string {
+  return `clockedTraitGenerated:${encodeURIComponent(acquisitionIdentity)}:${encodeURIComponent(pickupKey)}`;
+}
+
+export function parseClockedTraitGeneratedPickupEntryKey(
+  key: string,
+): { readonly acquisitionIdentity: string; readonly pickupKey: string } | undefined {
+  if (!key.startsWith('clockedTraitGenerated:')) return undefined;
+  const [encodedIdentity, encodedPickupKey, ...extra] = key
+    .slice('clockedTraitGenerated:'.length)
+    .split(':');
+  if (
+    encodedIdentity === undefined ||
+    encodedIdentity.length === 0 ||
+    encodedPickupKey === undefined ||
+    encodedPickupKey.length === 0 ||
+    extra.length > 0
+  )
+    return undefined;
+  try {
+    return Object.freeze({
+      acquisitionIdentity: decodeURIComponent(encodedIdentity),
+      pickupKey: decodeURIComponent(encodedPickupKey),
+    });
+  } catch {
+    return undefined;
+  }
+}
+
 export function parseTraitGeneratedPickupSiteKey(
   key: string,
 ): { readonly sourceKey: string; readonly optionKey: TraitOptionKey } | undefined {
@@ -166,7 +199,7 @@ function producerForTraitOffer(
   if (selected === undefined) return Object.freeze([]);
   const traitKey = selected.traitKey;
   const disposition = catalog.traits.byKey[traitKey]?.selectedDisposition;
-  if (disposition?.kind === 'producePickups') {
+  if (disposition?.kind === 'producePickups' && disposition.clock === undefined) {
     const lifecycle = catalog.rewards.producerLifecycles.byKey[disposition.producerLifecycleKey];
     const placement = disposition.pickups.every((pickup) =>
       lifecycle?.rewardTypes.byKey[pickup.rewardType]?.acquisitionLifecycle.some(

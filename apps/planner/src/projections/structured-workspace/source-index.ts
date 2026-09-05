@@ -144,6 +144,7 @@ export interface WorkspaceBiomeSource {
       | 'echoDoubleShopReward'
       | 'echoLastReward'
       | 'hermesShrineDelivery'
+      | 'clockedTraitPickup'
       | 'infernalContractReward'
       | 'travelDealPlaceholder'
       | 'travelDealRefill';
@@ -151,7 +152,9 @@ export interface WorkspaceBiomeSource {
     readonly slotIndex?: number;
     readonly rewardTypes?: readonly string[];
     readonly fixedReward?: import('@run-planner/engine/authored-project').AuthoredRewardState;
+    readonly producerLifecycleKey?: string;
     readonly encounterPhaseKey?: string;
+    readonly participation?: 'optional';
     readonly retainedSourceMismatch?: boolean;
     readonly eligibleSourceOfferKeys?: readonly string[];
   }[];

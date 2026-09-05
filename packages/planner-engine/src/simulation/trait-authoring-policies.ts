@@ -177,6 +177,15 @@ export function assessTraitOption(
     const failure = checkRequirement(catalog, requirement, trait, history, context);
     if (failure !== undefined) findings.push({ ...failure, traitKey });
   }
+  if (trait.selectedDisposition.kind === 'upgradeOccupiedBoonSlot') {
+    const target = history.equippedSlots[trait.selectedDisposition.slot];
+    if (!isPomUpgradeTarget(catalog, target))
+      findings.push({
+        code: 'missingPrerequisite',
+        traitKey,
+        detail: trait.selectedDisposition.slot,
+      });
+  }
   if (
     trait.targetedAcquisition !== undefined &&
     targetedAcquisitionTargetKeys(catalog, traitKey, history).length === 0

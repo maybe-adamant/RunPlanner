@@ -95,6 +95,7 @@ export type WorkspaceDerivedAcquisitionEntry = {
     | 'echoDoubleShopReward'
     | 'echoLastReward'
     | 'hermesShrineDelivery'
+    | 'clockedTraitPickup'
     | 'infernalContractReward'
     | 'travelDealPlaceholder'
     | 'travelDealRefill';
@@ -102,7 +103,9 @@ export type WorkspaceDerivedAcquisitionEntry = {
   readonly slotIndex?: number;
   readonly rewardTypes?: readonly string[];
   readonly fixedReward?: AuthoredRewardState;
+  readonly producerLifecycleKey?: string;
   readonly encounterPhaseKey?: string;
+  readonly participation?: 'optional';
   readonly retainedSourceMismatch?: boolean;
   readonly eligibleSourceOfferKeys?: readonly string[];
 };
