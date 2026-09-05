@@ -11,9 +11,9 @@
 - Embryo and keepsake grants: `Scripts/PowersLogic.lua:4840-4910`
 - Catalog encounter declarations:
   `packages/hades2-catalog/src/declarations/encounters/`
-- Current native contacts: `src/mods/room/encounter_hooks.lua`,
-  `src/mods/hooks_timeline.lua`, and the focused acquisition adapters beneath
-  `src/mods/room/timeline/acquisitions/` in the Plan Executor
+- Current native contacts: `src/mods/room/timeline/encounters/hooks.lua`,
+  focused acquisition adapters beneath `src/mods/room/timeline/acquisitions/`,
+  and named deferred later-route NPC menu bridges in the Plan Executor
 
 ## Trait-menu carriers
 
@@ -33,7 +33,6 @@ function is reached.
 
 The six bespoke contacts are defined in `Scripts/EventLogic.lua`. Their explicit
 adapters are intentional; a single `UseLoot` hook does not cover these menus.
-The current broad legacy hook is implementation evidence, not closed coverage.
 Arachne and Narcissus are specified in
 [NPC trait and generated-pickup execution](NPC_TRAIT_AND_GENERATED_PICKUP_EXECUTION.md);
 the later providers remain deferred.
@@ -95,7 +94,8 @@ phase identity. Two phases may legitimately contain separate native tables
 with the same `Name`. The execution boundary can bind each returned table to
 its published phase when the encounter is chosen or assembled and recover that
 phase from table identity at later lifecycle contacts. Searching for the first
-phase with a matching encounter name is not sound and is a current adapter gap.
+phase with a matching encounter name is not sound and is not used by the
+executor.
 
 Phase identity also does not identify a Timeline transaction. One phase may
 own an encounter interaction and one or more effect-qualified automatic
@@ -118,11 +118,9 @@ different phase-binding scheme.
 | Judgment            | boss defeated                       | `AddRandomMetaUpgrades`                                            | Covered. |
 | Crystal Figurine    | boss defeated                       | `AddRandomMetaUpgrades` with the Figurine rarity contract          | Covered. |
 
-This is the entire current execution protocol's `automatic` union. Natural Selection, Ransoms,
-All Together, Echo results, and Circe results are not automatically covered by
-these four members. If they have authored random outcomes, they require a
-published transaction of their own or decomposition into existing acquisition,
-level, removal, or retained-state facts.
+This is the entire `automatic` union. Natural Selection and All Together are
+nested selected-trait consequences, Ransoms are native-authoritative, and Echo
+and Circe remain deferred later-route contacts; none is an automatic member.
 
 ## Live-witness gaps
 

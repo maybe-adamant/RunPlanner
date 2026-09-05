@@ -761,17 +761,22 @@ configuration/schema change; it is not rerun merely to create review evidence.
 
 ## F/G Execution Boundary
 
-The F/G execution boundary is protocol v9. It exports only the exact
+The current F/G execution boundary is protocol v17. It exports only the exact
 complete-valid simulation assembly; the Plan Executor remains a strict decoder
-and native-seam translator rather than a second planner. The shared F/G
-closure fixture includes an F Postboss Spark of Ixion, the generated G Intro
-Chaos sibling, three distinct displayed curse options, the selected
-curse/blessing acquisition, and its declaration-sized visible G return batch.
-The Lua session fixture
-also covers matching and deliberately divergent exact counter, bounded bag,
-trait, and retained-state Run State observations. Native game probes are not
-recorded as passed without a Hades II host; fixture success is compiler/decoder
-and session-contract evidence only.
+and native-seam translator rather than a second planner. Gates C1–C4 and D1–D8
+closed focused acquisition carriers, nested selected-trait consequences,
+checked starting loadout, Fig Leaf/Gorgon contacts, Spell/Path state, and
+explicit Sea Star proc/no-proc steering. Ransoms, keepsake pressure, Moon Beam,
+and other named deterministic effects remain explicitly native-authoritative;
+commerce and later-route contacts remain outside this closure.
+
+The shared F/G closure fixture includes an F Postboss Spark of Ixion, the
+generated G Intro Chaos sibling, three distinct displayed curse options, the
+selected curse/blessing acquisition, and its declaration-sized visible G return
+batch. The Lua session fixture also covers matching and deliberately divergent
+exact counter, bounded bag, trait, and retained-state Run State observations.
+Native game probes are not recorded as passed without a Hades II host; fixture
+success is compiler/decoder and session-contract evidence only.
 
 Live Chaos probing corrected the six return maps to physical exit counts
 `2/2/1/2/3/1`. The executor retains native lifecycle hooks for realization and

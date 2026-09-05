@@ -3,9 +3,10 @@
 ## Status
 
 Drafted on 2026-09-02 for adversarial review. Gates A, A.2, B, B.2, C1, C2,
-C2.5, C3, C4, D1, and D2 were completed by 2026-09-04. Gate D2.5 is the locked
-room-exit outcome-conformance correction that must complete before D3 begins.
-Gates E onward remain scope outlines until they receive the same
+C2.5, C3, C4, and D1 through D8 are complete as of 2026-09-05. Gate D closure
+has recorded the universal disposition matrix, retired the superseded broad
+trait paths, and completed its bounded verification. Gates E onward remain
+scope outlines until they receive the same
 component-by-component review. Do not begin a gate until its components,
 ownership, native contacts, pass-through boundary, and concrete witnesses have
 been discussed, cleaned up here, and locked.
@@ -104,17 +105,16 @@ callback is already known.
 These are implementation evidence. Each layer below may retain them only after
 its coverage matrix proves the contact; working code is not exempt from audit.
 
-### Known gaps that motivate the plan
+### Remaining boundary after Gate D
 
-| Layer                 | Current gap                                                                                                                                                                                      |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Structure             | F/G is broadly functional, but coverage was established incrementally and still needs one coherent room/reward/encounter/feature/door proof.                                                     |
-| Acquisition carriers  | Commerce, Spell, Path, and later-route carriers remain open; completed ordinary, level, pickup, NPC, Mystery, and Artificer carriers must not be reopened.                                       |
-| Trait effects         | Natural Selection and All Together lack exact execution payloads; Concave Stone's nested result is dropped. Ransoms need a locked native-authoritative disposition, not a second implementation. |
-| Sea Star              | A positive `UseLoot` duplicate is forced, but direct consumables and the authored negative outcome are not.                                                                                      |
-| Keepsake effects      | Immediate and retained effects need explicit pass-through or exact-result dispositions rather than assuming equip identity closes the family.                                                    |
-| Commerce              | Existing Shop/Well/Pool support needs an exhaustive item/contact audit; Shrine delivery remains dormant and unproven.                                                                            |
-| Later-route abilities | Hex/Path, Moon Beam, Echo, Circe, and later NPC carriers are modeled but not all have complete execution products and native proofs.                                                             |
+| Layer                 | Disposition after closure                                                                                                                                                       |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Structure             | The F/G room/reward/encounter/feature/Door proof is closed. Live host probes remain evidence work, not a missing execution product.                                             |
+| Acquisition carriers  | Ordinary, level, direct-pickup, NPC, Mystery Boon, Artificer, Spell, and Path carriers are closed. Commerce remains Gate E; later-route carrier activation remains route-owned. |
+| Trait effects         | Natural Selection, All Together, Concave Stone, and Sea Star have exact scoped products. Ransoms are native-authoritative, not a second executor implementation.                |
+| Keepsake effects      | F/G actuators and explicit native-authoritative pass-throughs are classified. Echo replay and other later-route contacts remain deferred to their reachable biome gates.        |
+| Commerce              | Shop, Well, Pool, and Shrine delivery closure remains Gate E; this plan does not claim its exhaustive item/contact coverage.                                                    |
+| Later-route abilities | Spell/Hex and Path adapters/products are covered but await route activation and live native probes. Echo, Circe, later NPCs, and biome-specific contacts remain deferred.       |
 
 ## Locked architectural rules
 

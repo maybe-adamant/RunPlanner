@@ -3,6 +3,48 @@ import { describe, expect, it } from 'vitest';
 import { catalog, createCatalog } from '../../src';
 import { declarations } from '../../src/declarations';
 import type { RawTraitDeclaration } from '../../src/declarations/traits';
+import type {
+  KeepsakeDeclaration,
+  TraitSelectedDisposition,
+} from '@run-planner/engine/catalog-schema';
+
+type ExecutionDisposition =
+  | 'covered actuator'
+  | 'native-authoritative/pass-through'
+  | 'deferred route'
+  | 'intentionally out of execution scope';
+
+const traitDispositionExecution = {
+  equip: 'covered actuator',
+  naturalSelection: 'covered actuator',
+  ransom: 'native-authoritative/pass-through',
+  steadyGrowth: 'covered actuator',
+  directTraitSets: 'covered actuator',
+  echo: 'deferred route',
+  worldShopRestock: 'intentionally out of execution scope',
+  advanceCurrentKeepsake: 'native-authoritative/pass-through',
+  circe: 'deferred route',
+  producePickups: 'native-authoritative/pass-through',
+  seaStar: 'covered actuator',
+  noOp: 'covered actuator',
+} as const satisfies Readonly<Record<TraitSelectedDisposition['kind'], ExecutionDisposition>>;
+
+const keepsakeEffectExecution = {
+  jeweledPom: 'covered actuator',
+  experimentalHammer: 'covered actuator',
+  callingCard: 'native-authoritative/pass-through',
+  timePiece: 'intentionally out of execution scope',
+  figLeaf: 'covered actuator',
+  gorgonAmulet: 'covered actuator',
+  fountainRarity: 'covered actuator',
+  crystalFigurine: 'covered actuator',
+  concaveStone: 'covered actuator',
+  transcendentEmbryo: 'covered actuator',
+  olympianRewardPressure: 'native-authoritative/pass-through',
+  moonBeam: 'native-authoritative/pass-through',
+} as const satisfies Readonly<
+  Record<NonNullable<KeepsakeDeclaration['effect']>['kind'], ExecutionDisposition>
+>;
 
 const traits = {
   weapons: catalog.weapons,
@@ -16,6 +58,21 @@ const traits = {
 };
 
 describe('trait dispositions and requirements compiler owner', () => {
+  it('classifies every normalized trait disposition and keepsake effect at the execution boundary', () => {
+    expect(Object.keys(traitDispositionExecution).sort()).toEqual(
+      [...new Set(catalog.traits.values.map((trait) => trait.selectedDisposition.kind))].sort(),
+    );
+    expect(Object.keys(keepsakeEffectExecution).sort()).toEqual(
+      [
+        ...new Set(
+          catalog.keepsakes.values.flatMap((keepsake) =>
+            keepsake.effect === undefined ? [] : [keepsake.effect.kind],
+          ),
+        ),
+      ].sort(),
+    );
+  });
+
   it('declares Infernal Contract as rarityless and Travel Deal as one exact ranked restock', () => {
     expect(traits.traits.byKey.InfernalContractBoon).toMatchObject({
       rarityDomain: { kind: 'none' },
