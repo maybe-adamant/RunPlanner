@@ -16,6 +16,7 @@ export {
   type ExecutionRunStateDiagnostic,
   type ExecutionAcquisitionRole,
   type ExecutionLevelResolution,
+  type ExecutionHexTree,
   type ExecutionTraitOffer,
   type ExecutionTraitOptionKey,
   type ExecutionTraitSlot,

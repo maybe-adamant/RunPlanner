@@ -442,6 +442,17 @@ export interface ReachedTraitOfferEvaluation {
   readonly composition: TraitOfferCompositionAssessment;
   readonly replacementComposition: TraitReplacementCompositionAssessment;
   readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
+  /** Spell tree as settled at this offer, before later biome mutations. */
+  readonly settledHexTree?: {
+    readonly spellTraitKey: string;
+    readonly layoutKey: string;
+    readonly rareTalentKeys: readonly string[];
+    readonly epicTalentKeys: readonly string[];
+    readonly godSent?: {
+      readonly olympianTalentKey: string;
+      readonly lineageTalentKey: string;
+    };
+  };
   readonly reached: true;
   readonly chronologicalIndex: number;
 }
@@ -454,6 +465,7 @@ export interface TraitOfferBranchAssessment {
   readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
   readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
   readonly effectiveLevels: readonly (number | undefined)[];
+  readonly settledHexTree?: ReachedTraitOfferEvaluation['settledHexTree'];
 }
 
 /** Execution input retained only after one authored offer is selected. */

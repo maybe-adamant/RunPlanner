@@ -122,6 +122,9 @@ export function selectedTraitOfferProducts(
                   trace.levelResolutions.map((resolution) => resolution.effectiveLevel),
                 ),
                 baseRarities: trace.baseRarities,
+                ...(trace.settledHexTree === undefined
+                  ? {}
+                  : { settledHexTree: trace.settledHexTree }),
               }),
             ),
           ),

@@ -91,6 +91,40 @@ export function executionTimelineTransactions(
       ),
       `trait replacements ${semanticAddressKey(selected.address)}`,
     );
+    const selectedOption =
+      selected.offer.options[Number(selected.offer.selectedOptionKey.slice(-1)) - 1];
+    const publishedHexTree =
+      selected.offer.giverKey !== 'SpellDrop' || selected.offer.hexTree === undefined
+        ? undefined
+        : (() => {
+            const progress = agreement(
+              selected.branches.map((branch) => branch.settledHexTree),
+              `Spell Hex settlement ${semanticAddressKey(selected.address)}`,
+            );
+            if (
+              progress === undefined ||
+              selectedOption === undefined ||
+              progress.spellTraitKey !== selectedOption.traitKey ||
+              progress.layoutKey !== selected.offer.hexTree.layoutKey
+            )
+              throw new CompilerError(
+                'executionCoverageMissing',
+                `Spell Hex evidence is incomplete for ${semanticAddressKey(selected.address)}`,
+              );
+            return Object.freeze({
+              layoutKey: selected.offer.hexTree.layoutKey,
+              rareTalentKeys: Object.freeze([...selected.offer.hexTree.rareTalentKeys]),
+              epicTalentKeys: Object.freeze([...selected.offer.hexTree.epicTalentKeys]),
+              ...(progress.godSent === undefined
+                ? {}
+                : {
+                    godSent: Object.freeze({
+                      olympianTalentKey: progress.godSent.olympianTalentKey,
+                      lineageTalentKey: progress.godSent.lineageTalentKey,
+                    }),
+                  }),
+            });
+          })();
     return Object.freeze({
       kind: 'traits' as const,
       giver: selected.offer.giverKey,
@@ -150,6 +184,7 @@ export function executionTimelineTransactions(
       ...(selected.offer.rejectedOptionKey === undefined
         ? {}
         : { rejected: selected.offer.rejectedOptionKey }),
+      ...(publishedHexTree === undefined ? {} : { hexTree: publishedHexTree }),
     });
   };
   const levelResolution = (

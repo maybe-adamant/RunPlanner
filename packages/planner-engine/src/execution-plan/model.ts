@@ -167,6 +167,17 @@ export type ExecutionConcaveStoneResult =
   | { readonly kind: 'noProc' }
   | { readonly kind: 'proc'; readonly optionKey: ExecutionTraitOptionKey };
 
+/** Frozen generated composition of the selected Spell's native talent tree. */
+export interface ExecutionHexTree {
+  readonly layoutKey: string;
+  readonly rareTalentKeys: readonly string[];
+  readonly epicTalentKeys: readonly string[];
+  readonly godSent?: {
+    readonly olympianTalentKey: string;
+    readonly lineageTalentKey: string;
+  };
+}
+
 export type ExecutionTraitOffer =
   | {
       readonly kind: 'fallbackGold';
@@ -198,6 +209,8 @@ export type ExecutionTraitOffer =
       }[];
       readonly selected: ExecutionTraitOptionKey;
       readonly rejected?: ExecutionTraitOptionKey;
+      /** Present only for a selected ordinary SpellDrop offer. */
+      readonly hexTree?: ExecutionHexTree;
     }
   | {
       readonly kind: 'chaos';

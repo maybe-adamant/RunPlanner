@@ -749,6 +749,44 @@ function applyTraitOfferForAcquisitionInternal(
     );
   }
   settledBeforeChaos = maybeAddGodSent(catalog, settledBeforeChaos);
+  if (
+    options.frozenAcquisition !== true &&
+    effectiveAuthored.kind === 'traits' &&
+    effectiveAuthored.giverKey === 'SpellDrop' &&
+    selectedForIdentity !== undefined &&
+    effectiveAuthored.hexTree !== undefined
+  ) {
+    const progress = settledBeforeChaos.hexProgress;
+    const godSent =
+      progress.godSentAdded === true
+        ? catalog.hexes.byKey[selectedForIdentity.traitKey]?.godSent
+        : undefined;
+    if (
+      progress.spellTraitKey !== selectedForIdentity.traitKey ||
+      progress.tree?.layoutKey !== effectiveAuthored.hexTree.layoutKey ||
+      (progress.godSentAdded === true && godSent === undefined)
+    )
+      throw new Error('settled SpellDrop Hex evidence is incomplete');
+    const settledHexTree = Object.freeze({
+      spellTraitKey: selectedForIdentity.traitKey,
+      layoutKey: effectiveAuthored.hexTree.layoutKey,
+      rareTalentKeys: Object.freeze([...effectiveAuthored.hexTree.rareTalentKeys]),
+      epicTalentKeys: Object.freeze([...effectiveAuthored.hexTree.epicTalentKeys]),
+      ...(godSent === undefined
+        ? {}
+        : {
+            godSent: Object.freeze({
+              olympianTalentKey: godSent.olympianTalentKey,
+              lineageTalentKey: godSent.lineageTalentKey,
+            }),
+          }),
+    });
+    const settledEvaluation = Object.freeze({ ...evaluation, settledHexTree });
+    settledBeforeChaos = Object.freeze({
+      ...settledBeforeChaos,
+      traitEvaluations: Object.freeze([...traitEvaluations.slice(0, -1), settledEvaluation]),
+    });
+  }
   const moonBeamAdvanced =
     selectedDisposition?.kind === 'advanceCurrentKeepsake' &&
     catalog.keepsakes.byKey[effectiveBranch.keepsakes.currentKey]?.effect?.kind === 'moonBeam';
