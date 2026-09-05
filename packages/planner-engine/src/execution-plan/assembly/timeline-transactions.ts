@@ -627,6 +627,9 @@ export function executionTimelineTransactions(
           lifecyclePoint: event.acquisition.lifecyclePoint,
           kind: event.acquisition.acquisition.kind,
           gameName: event.acquisition.acquisition.gameName,
+          ...(event.kind !== 'concreteAcquisition' || event.seaStarResult === undefined
+            ? {}
+            : { seaStarResult: event.seaStarResult }),
           ...(replacement === undefined ? {} : { replacement }),
           ...(event.settlement === undefined
             ? {}

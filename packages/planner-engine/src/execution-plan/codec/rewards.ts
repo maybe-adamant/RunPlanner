@@ -358,7 +358,7 @@ export function acquisitionRole(value: unknown, label: string): ExecutionAcquisi
   exact(
     record,
     ['role', 'disposition', 'lifecyclePoint', 'kind', 'gameName'],
-    ['producer', 'settlement', 'traitOffer', 'levelResolution', 'replacement'],
+    ['producer', 'settlement', 'traitOffer', 'levelResolution', 'replacement', 'seaStarResult'],
     label,
   );
   if (!['normal', 'artificer'].includes(record.disposition as string))
@@ -385,6 +385,19 @@ export function acquisitionRole(value: unknown, label: string): ExecutionAcquisi
     exact(replacement, ['reward', 'gameName'], [], `${label}.replacement`);
   if (replacement !== undefined && record.disposition !== 'artificer')
     fail(`${label}.replacement is only valid for artificer roles`);
+  const seaStarResult =
+    record.seaStarResult === undefined
+      ? undefined
+      : object(record.seaStarResult, `${label}.seaStarResult`);
+  if (seaStarResult !== undefined) {
+    exact(seaStarResult, ['kind'], [], `${label}.seaStarResult`);
+    if (record.disposition !== 'normal')
+      fail(`${label}.seaStarResult is only valid for normal roles`);
+    if (producer?.kind === 'seaStarDuplicate')
+      fail(`${label}.seaStarResult is invalid on a Sea Star duplicate`);
+    if (!['proc', 'noProc'].includes(seaStarResult.kind as string))
+      fail(`${label}.seaStarResult.kind is unsupported`);
+  }
   return Object.freeze({
     role: stringValue(record.role, `${label}.role`),
     disposition: record.disposition as 'normal' | 'artificer',
@@ -405,6 +418,13 @@ export function acquisitionRole(value: unknown, label: string): ExecutionAcquisi
     lifecyclePoint: stringValue(record.lifecyclePoint, `${label}.lifecyclePoint`),
     kind: stringValue(record.kind, `${label}.kind`),
     gameName: stringValue(record.gameName, `${label}.gameName`),
+    ...(seaStarResult === undefined
+      ? {}
+      : {
+          seaStarResult: Object.freeze({
+            kind: seaStarResult.kind as 'proc' | 'noProc',
+          }),
+        }),
     ...(replacement === undefined
       ? {}
       : {

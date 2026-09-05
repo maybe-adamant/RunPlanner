@@ -4,12 +4,14 @@ import {
   artificerReplacementEntryKey,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
+  createAcquisitionRoleAddress,
   createBiomeAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createDefaultAuthoredHexTree,
   semanticAddressKey,
+  seaStarDuplicateSiteKey,
 } from '@run-planner/engine/authored-project';
 import {
   applyConcreteAcquisition,
@@ -281,6 +283,52 @@ function convert(
 }
 
 describe('The Artificer', () => {
+  it('records the exact Sea Star proc or no-proc result on its normal source event', () => {
+    const occurrenceId = createOccurrenceId('sea-star-execution-result');
+    const origin = createIncomingRewardAddress(biome, occurrenceId);
+    const siteOwner = createOccurrenceAddress(biome, occurrenceId);
+    const source = {
+      origin,
+      offer: Object.freeze({ rewardType: 'GiftDrop' }),
+      producerLifecycleKey: 'RoomReward',
+      instanceProvenance: 'free' as const,
+      dispositionByAcquisitionRole: Object.freeze({
+        self: Object.freeze({ kind: 'normal' as const }),
+      }),
+    };
+    const settle = (procced: boolean) =>
+      settleOwnedAcquisitionSite(
+        catalog,
+        withSeaStarAndTimePiece(initialBranches()),
+        {
+          siteOwner,
+          pointKey: 'roomRewardPickup',
+          entryKey: 'self',
+          historySequence: 1,
+          source,
+          ...(procced
+            ? {
+                authoredSeaStarDuplicateSiteKeys: new Set([
+                  seaStarDuplicateSiteKey(createAcquisitionRoleAddress(origin, 'self')),
+                ]),
+              }
+            : {}),
+        },
+        (history) => factsWithHistory(facts(), history, new Set()),
+        new Map(),
+      );
+    expect(
+      settle(false).branches[0]?.events.find((event) => event.kind === 'concreteAcquisition'),
+    ).toMatchObject({
+      seaStarResult: { kind: 'noProc' },
+    });
+    expect(
+      settle(true).branches[0]?.events.find((event) => event.kind === 'concreteAcquisition'),
+    ).toMatchObject({
+      seaStarResult: { kind: 'proc' },
+    });
+  });
+
   it('keeps Sea Star eligibility at the exact normal duplicate-capable source frontier', () => {
     const [base] = initialBranches();
     const branch = Object.freeze({

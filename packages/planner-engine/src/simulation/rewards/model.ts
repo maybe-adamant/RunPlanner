@@ -126,6 +126,8 @@ export type RewardEvent =
         readonly site: AcquisitionSiteAddress;
         readonly entry: AcquisitionEntryAddress;
       };
+      /** Exact Sea Star branch at this source, when the native chance is live. */
+      readonly seaStarResult?: { readonly kind: 'proc' | 'noProc' };
     })
   | (RewardEventBase & {
       /** Source was destroyed and a separate RunProgress replacement was generated. */
@@ -209,7 +211,6 @@ interface RewardSimulationBase {
   readonly branches: readonly RewardBranch[];
   readonly findings: readonly SemanticFinding[];
 }
-
 
 export interface BiomeRewardSimulation extends RewardSimulationBase {
   /** Reward transitions publish only exact owner relations; room actions publish structural facts. */

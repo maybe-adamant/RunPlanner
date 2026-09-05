@@ -224,6 +224,13 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
       [],
       label,
     );
+    const roles = Object.freeze(
+      array(record.roles, `${label}.roles`).map((entry, index) =>
+        acquisitionRole(entry, `${label}.roles[${index}]`),
+      ),
+    );
+    if (roles.some((role) => role.seaStarResult !== undefined))
+      fail(`${label}.roles may not publish Sea Star results for purchases`);
     return Object.freeze({
       kind,
       owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
@@ -236,11 +243,7 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
         record.producerLifecycleKey,
         `${label}.producerLifecycleKey`,
       ),
-      roles: Object.freeze(
-        array(record.roles, `${label}.roles`).map((entry, index) =>
-          acquisitionRole(entry, `${label}.roles[${index}]`),
-        ),
-      ),
+      roles,
     });
   }
   if (kind === 'wellPurchase') {

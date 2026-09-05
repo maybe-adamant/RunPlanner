@@ -19,6 +19,7 @@ import {
   createKeepsakeEquipResultAddress,
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
+  semanticAddressKey,
   createTraitOfferAddress,
   type AuthoredTraitOfferTraits,
 } from '../../src/authored-project';
@@ -34,6 +35,7 @@ import {
   acquisitionRole as decodeExecutionAcquisitionRole,
   traitOffer as decodeExecutionTraitOffer,
 } from '../../src/execution-plan/codec/rewards';
+import { transaction as decodeExecutionTransaction } from '../../src/execution-plan/codec/timeline';
 import { expandDiagnosticFrames } from '../../src/execution-plan/codec/diagnostics';
 import { fingerprint } from '../../src/execution-plan/codec/primitives';
 import type { ExecutionSemanticProduct } from '../../src/execution-plan/model';
@@ -344,6 +346,47 @@ describe('protocol-v17 compiler and codec', () => {
     ).toThrow(/only valid for artificer roles/);
   });
 
+  it('rejects Sea Star results outside a normal free acquisition source role', () => {
+    const result = { kind: 'proc' as const };
+    const role = {
+      role: 'self',
+      disposition: 'normal' as const,
+      lifecyclePoint: 'roomRewardPickup',
+      kind: 'loot',
+      gameName: 'MetaCurrencyDrop',
+      seaStarResult: result,
+    };
+    expect(decodeExecutionAcquisitionRole(role, 'role')).toEqual(role);
+    expect(() =>
+      decodeExecutionAcquisitionRole(
+        {
+          ...role,
+          producer: { kind: 'seaStarDuplicate', sourceOwner: 'source', sourceRole: 'self' },
+        },
+        'role',
+      ),
+    ).toThrow(/invalid on a Sea Star duplicate/);
+    expect(() =>
+      decodeExecutionAcquisitionRole({ ...role, disposition: 'artificer' }, 'role'),
+    ).toThrow(/only valid for normal roles/);
+    expect(() =>
+      decodeExecutionTransaction(
+        {
+          kind: 'shopPurchase',
+          owner: 'purchase',
+          window: { kind: 'standard', phase: 'beforeCombat' },
+          offerKey: 'offer',
+          rewardType: 'MetaCurrencyDrop',
+          sourceOwner: 'source',
+          reward: { rewardType: 'MetaCurrencyDrop', producerLifecycleKey: 'Shop' },
+          producerLifecycleKey: 'Shop',
+          roles: [role],
+        },
+        'transaction',
+      ),
+    ).toThrow(/may not publish Sea Star results for purchases/);
+  });
+
   it('publishes a non-default selected weapon and aspect as a verification-only start contract', () => {
     const project = authorLegalTraitOffers(
       applyProjectCommand(fOnlyProject(), catalog, {
@@ -496,6 +539,62 @@ describe('protocol-v17 compiler and codec', () => {
       .find((offer) => offer.options.some((option) => option.key === 'AllElementalBoon'));
     if (dormantOffer === undefined) throw new Error('dormant All Together offer is missing');
     expect(dormantOffer.options[1]?.allTogetherResult).toEqual(allTogetherResult);
+  });
+
+  it('publishes proc/noProc only on the source role while an authored Sea Star child remains unpicked', () => {
+    const biome = allTogetherProjection(true);
+    const room = orderedExecutionRooms([biome]).find((candidate) => {
+      const transactions = executionTimelineTransactions(
+        candidate,
+        biome,
+        mergePlannerTimelineFacts(
+          candidate.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
+          biome.rewards.timelineFacts,
+        ),
+      );
+      return transactions.some((transaction) => transaction.kind === 'acquisition');
+    });
+    if (room === undefined) throw new Error('fixture lacks a source acquisition room');
+    const facts = mergePlannerTimelineFacts(
+      room.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
+      biome.rewards.timelineFacts,
+    );
+    const source = executionTimelineTransactions(room, biome, facts).find(
+      (transaction) => transaction.kind === 'acquisition',
+    );
+    if (source === undefined) throw new Error('fixture lacks a source acquisition transaction');
+    for (const kind of ['proc', 'noProc'] as const) {
+      const withResult = {
+        ...biome,
+        rewards: {
+          ...biome.rewards,
+          branches: biome.rewards.branches.map((branch) => ({
+            ...branch,
+            events: branch.events.map((event) =>
+              event.kind === 'concreteAcquisition' &&
+              semanticAddressKey(event.origin) === source.sourceOwner
+                ? { ...event, seaStarResult: { kind } }
+                : event,
+            ),
+          })),
+        },
+      };
+      const published = executionTimelineTransactions(room, withResult, facts);
+      const sourceRole = published.find(
+        (transaction) => transaction.kind === 'acquisition' && transaction.owner === source.owner,
+      );
+      if (sourceRole?.kind !== 'acquisition')
+        throw new Error('Sea Star source was not republished');
+      expect(sourceRole.roles).toContainEqual(expect.objectContaining({ seaStarResult: { kind } }));
+      if (kind === 'proc')
+        expect(
+          published.some(
+            (transaction) =>
+              transaction.kind === 'acquisition' &&
+              transaction.roles.some((role) => role.producer?.kind === 'seaStarDuplicate'),
+          ),
+        ).toBe(false);
+    }
   });
 
   it('retains Natural Selection sequences on every carrying option from a complete-valid occurrence', () => {

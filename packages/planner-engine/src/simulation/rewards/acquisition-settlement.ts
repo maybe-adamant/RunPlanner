@@ -1225,18 +1225,22 @@ export function applyProducerRoleHistory(
             }),
           )
         : branch;
+    const seaStarAssessment = assessSeaStarDuplication(
+      catalog,
+      branch,
+      incoming,
+      resolution,
+      realizedAcquisition,
+    );
+    const seaStarResult = seaStarAssessment.supported
+      ? Object.freeze({ kind: retainSeaStarEligibility ? ('proc' as const) : ('noProc' as const) })
+      : undefined;
     const attestedBranch = retainSeaStarEligibility
       ? Object.freeze({
           ...forfeitBranch,
           seaStarDuplicateEligibilityBySource: freezeRecord({
             ...(forfeitBranch.seaStarDuplicateEligibilityBySource ?? {}),
-            [seaStarSourceKey]: assessSeaStarDuplication(
-              catalog,
-              branch,
-              incoming,
-              resolution,
-              realizedAcquisition,
-            ),
+            [seaStarSourceKey]: seaStarAssessment,
           }),
         })
       : forfeitBranch;
@@ -1633,6 +1637,7 @@ export function applyProducerRoleHistory(
       source: resolvedAcquisitionSource(incoming),
       acquisition,
       settlement,
+      ...(seaStarResult === undefined ? {} : { seaStarResult }),
     });
     if (traitSettlement.blockedChild !== undefined) {
       unresolvedTraitOffer = true;
