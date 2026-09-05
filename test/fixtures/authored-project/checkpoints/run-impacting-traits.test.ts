@@ -82,6 +82,37 @@ describe('run-impacting trait checkpoint recipes', () => {
     };
     expect(producerPlacement(createSurfaceNQuickBuckCheckpoint())).toBe('afterSource');
     expect(producerPlacement(createSurfaceNBuriedTreasureCheckpoint())).toBe('afterSource');
+
+    for (const [project, entryKey] of [
+      [createSurfaceNQuickBuckCheckpoint(), 'quickBuckGold'],
+      [createSurfaceNBuriedTreasureCheckpoint(), 'tinyGold1'],
+    ] as const) {
+      const occurrence = project.route.biomes
+        .find((biome) => biome.biomeKey === 'N')
+        ?.topology?.occurrences.find((candidate) => candidate.acquisitionSites !== undefined);
+      if (occurrence === undefined) throw new Error('Generated-pickup occurrence is missing');
+      const domain = assembleRoomActionDomain({ catalog, biome: nBiome, occurrence });
+      const producer = selectedPickupProducers(catalog, nBiome, occurrence).find((candidate) =>
+        candidate.pickups.some((pickup) => pickup.key === entryKey),
+      );
+      if (producer === undefined) throw new Error('Generated-pickup producer is missing');
+      const child = domain.contributions.find(
+        (contribution) =>
+          contribution.kind === 'action' &&
+          contribution.reference.kind === 'interactAcquisitionEntry' &&
+          contribution.reference.entryKey === entryKey,
+      );
+      expect(child).toMatchObject({ kind: 'action', participation: 'optional' });
+      const dependency =
+        child?.kind === 'action'
+          ? child.dependencies.find(
+              (candidate) =>
+                candidate.kind === 'afterAction' &&
+                roomActionKey(candidate.action) === roomActionKey(producer.sourceAction),
+            )
+          : undefined;
+      expect(dependency).toEqual({ kind: 'afterAction', action: producer.sourceAction });
+    }
   });
 
   it("keeps Sea Star's retained Buried Treasure resource in the source action window", () => {
