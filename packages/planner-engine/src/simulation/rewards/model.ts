@@ -23,6 +23,7 @@ import type { TraitRarity } from '../../catalog-schema';
 import type { NemesisRandomEventAddress } from '../../authored-project/addresses';
 import type { PlannerTimelineFacts } from '../timeline-facts';
 import type { StygianWellEffect } from '../stygian-well';
+import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 
 /** Exact planner-owned realization of a Travel Deal Well refill. */
 export interface WellRefillRealization {
@@ -215,6 +216,19 @@ interface RewardSimulationBase {
 export interface BiomeRewardSimulation extends RewardSimulationBase {
   /** Reward transitions publish only exact owner relations; room actions publish structural facts. */
   readonly timelineFacts: PlannerTimelineFacts;
+  /** Exact one-shot Gift Gift Gift volatile result reached at this biome start. */
+  readonly volatileEchoKeepsakeReplay?: {
+    readonly capturedKeepsakeKey: string;
+    readonly result:
+      | {
+          readonly kind: 'experimentalHammer';
+          readonly value: NonNullable<AuthoredKeepsakeEquipResults['experimentalHammer']>;
+        }
+      | {
+          readonly kind: 'transcendentEmbryo';
+          readonly value: NonNullable<AuthoredKeepsakeEquipResults['transcendentEmbryo']>;
+        };
+  };
   /** Deferred Travel Deal refill payloads, separate from authored purchases. */
   readonly wellRefillRealizations: readonly WellRefillRealization[];
   /** Exact automatic Boss resolutions; empty Figurine keys mean consumption without activation. */

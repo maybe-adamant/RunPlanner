@@ -657,6 +657,7 @@ export function evaluateBiomeRewardChronology(
     echoKeepsakeReplay,
     'transcendentEmbryo',
   );
+  let echoKeepsakeReplayOutcome: BiomeRewardSimulation['volatileEchoKeepsakeReplay'];
   const biomeStartSequence = history.events[0]?.sequence ?? 0;
   const giftStates = branches.map((branch) => {
     const gift = branch.traitHistory?.equippedTraits.EchoRepeatKeepsakeBoon;
@@ -860,6 +861,17 @@ export function evaluateBiomeRewardChronology(
             ),
           ),
         );
+        echoKeepsakeReplayOutcome = Object.freeze({
+          capturedKeepsakeKey: giftState.capturedKeepsakeKey,
+          result: Object.freeze({
+            kind: 'transcendentEmbryo' as const,
+            value: Object.freeze({
+              blessingKey: authored.blessingKey,
+              blessingValues: Object.freeze({ ...authored.blessingValues }),
+            }),
+          }),
+        });
+        recordTimelineNode(echoKeepsakeReplay, true);
       }
     } else if (
       replayEffect.kind === 'experimentalHammer' &&
@@ -927,6 +939,14 @@ export function evaluateBiomeRewardChronology(
             ),
           ),
         );
+        echoKeepsakeReplayOutcome = Object.freeze({
+          capturedKeepsakeKey: giftState.capturedKeepsakeKey,
+          result: Object.freeze({
+            kind: 'experimentalHammer' as const,
+            value: Object.freeze({ ...authored }),
+          }),
+        });
+        recordTimelineNode(echoKeepsakeReplay, true);
       }
     } else if (replayEffect.kind === 'callingCard') {
       const charges = catalog.keepsakes.byKey[giftState.capturedKeepsakeKey]?.effect;
@@ -1801,6 +1821,9 @@ export function evaluateBiomeRewardChronology(
   const simulation: BiomeRewardSimulation = Object.freeze({
     biomeKey: snapshot.biomeKey,
     validity: immutableFindings.length === 0 && branches.length > 0 ? 'valid' : 'invalid',
+    ...(echoKeepsakeReplayOutcome === undefined
+      ? {}
+      : { volatileEchoKeepsakeReplay: echoKeepsakeReplayOutcome }),
     timelineFacts:
       timelineFactNodes.size === 0 && timelineFactDependencies.size === 0
         ? EMPTY_PLANNER_TIMELINE_FACTS

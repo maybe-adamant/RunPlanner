@@ -164,15 +164,29 @@ function replayBiome(
   branches: NonNullable<Parameters<typeof evaluateBiomeRewardsAssemblyInternal>[5]>,
   experimentalHammer?:
     { readonly kind: 'selected'; readonly traitKey: string } | { readonly kind: 'exhausted' },
+  staleEmbryo?: {
+    readonly blessingKey: string;
+    readonly blessingValues: Readonly<Record<string, number>>;
+  },
+  transcendentEmbryo?: {
+    readonly blessingKey: string;
+    readonly blessingValues: Readonly<Record<string, number>>;
+  },
 ) {
   const evaluated = evaluatedG();
   return evaluateBiomeRewardsAssemblyInternal(
     catalog,
     {
       ...evaluated.snapshot,
-      ...(experimentalHammer === undefined
+      ...(experimentalHammer === undefined && transcendentEmbryo === undefined
         ? {}
-        : { echoKeepsakeReplayResults: { experimentalHammer } }),
+        : {
+            echoKeepsakeReplayResults: {
+              ...(experimentalHammer === undefined ? {} : { experimentalHammer }),
+              ...(staleEmbryo === undefined ? {} : { transcendentEmbryo: staleEmbryo }),
+              ...(transcendentEmbryo === undefined ? {} : { transcendentEmbryo }),
+            },
+          }),
     },
     {
       ...evaluated.history,
@@ -436,6 +450,10 @@ describe('Echo Gift Gift Gift', () => {
 
   it('waits for Experimental Hammer to be unequipped, then settles one selected rank-I replay', () => {
     const waiting = replayBiome([branchWithGift('TempHammerKeepsake')]);
+    expect(waiting.simulation.volatileEchoKeepsakeReplay).toBeUndefined();
+    expect(waiting.simulation.timelineFacts.nodes).not.toContainEqual(
+      expect.objectContaining({ owner: replayOwner }),
+    );
     expect(waiting.simulation.findings).not.toContainEqual(
       expect.objectContaining({ origin: expect.objectContaining({ kind: 'keepsakeEquipResult' }) }),
     );
@@ -465,6 +483,22 @@ describe('Echo Gift Gift Gift', () => {
     expect(settled.traitHistory?.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount).toBe(1);
   });
 
+  it('publishes only the reached volatile result when authored replay fields retain a stale other kind', () => {
+    const branch = branchWithGift('TempHammerKeepsake', 'ManaOverTimeRefundKeepsake');
+    const result = replayBiome(
+      [branch],
+      { kind: 'selected', traitKey: 'StaffLongAttackTrait' },
+      { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
+    ).simulation.volatileEchoKeepsakeReplay;
+    expect(result).toEqual({
+      capturedKeepsakeKey: 'TempHammerKeepsake',
+      result: {
+        kind: 'experimentalHammer',
+        value: { kind: 'selected', traitKey: 'StaffLongAttackTrait' },
+      },
+    });
+  });
+
   it('accepts the exhausted Hammer result only at an exact empty domain and consumes the one-shot', () => {
     const { value } = route();
     const history = saturatedGiftHammerHistory();
@@ -480,10 +514,35 @@ describe('Echo Gift Gift Gift', () => {
     });
     const replay = replayBiome([branch], { kind: 'exhausted' });
     expect(replay.simulation.findings).toEqual([]);
+    expect(replay.simulation.volatileEchoKeepsakeReplay).toEqual({
+      capturedKeepsakeKey: 'TempHammerKeepsake',
+      result: {
+        kind: 'experimentalHammer',
+        value: { kind: 'exhausted' },
+      },
+    });
     const result = replay.simulation.branches[0]!;
     expect(result.keepsakes.experimentalHammers).toEqual([]);
     expect(result.traitHistory?.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount).toBe(1);
     expect(replayBiome([result], { kind: 'exhausted' }).simulation.findings).toHaveLength(0);
+  });
+
+  it('publishes the exact Common Transcendent Embryo result reached at biome start', () => {
+    const blessing = { blessingKey: 'ChaosWeaponBlessing', blessingValues: { damageBonus: 0.2 } };
+    const replay = replayBiome(
+      [branchWithGift('RandomBlessingKeepsake', 'ManaOverTimeRefundKeepsake')],
+      undefined,
+      undefined,
+      blessing,
+    );
+    expect(replay.simulation.findings).toEqual([]);
+    expect(replay.simulation.volatileEchoKeepsakeReplay).toEqual({
+      capturedKeepsakeKey: 'RandomBlessingKeepsake',
+      result: { kind: 'transcendentEmbryo', value: blessing },
+    });
+    expect(replay.simulation.timelineFacts.nodes).toContainEqual(
+      expect.objectContaining({ owner: replayOwner, included: true }),
+    );
   });
 
   it('keeps overlapping Hammer instances distinct and expires only the exhausted identity', () => {

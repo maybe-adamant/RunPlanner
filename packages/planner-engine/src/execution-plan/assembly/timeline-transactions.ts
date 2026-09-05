@@ -1,5 +1,6 @@
 import {
   createBiomeAddress,
+  createEchoKeepsakeReplayAddress,
   createEncounterPhaseAddress,
   createLevelResolutionAddress,
   createShopOfferAddress,
@@ -325,6 +326,40 @@ export function executionTimelineTransactions(
       );
     transactions.push(Object.freeze(transaction));
   };
+  const replayOwnerAddress = createEchoKeepsakeReplayAddress(
+    createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+  );
+  const replayOwner = semanticAddressKey(replayOwnerAddress);
+  const replayNode = timelineFacts.nodes.find(
+    (node) => semanticAddressKey(node.owner) === replayOwner,
+  );
+  if (
+    room.occurrenceId === biome.snapshot.entryRoom.occurrenceId &&
+    replayNode?.included === true
+  ) {
+    const replay = biome.rewards.volatileEchoKeepsakeReplay;
+    if (replay === undefined)
+      throw new CompilerError(
+        'executionCoverageMissing',
+        `missing exact Echo keepsake replay result ${replayOwner}`,
+      );
+    const equipResults =
+      replay.result.kind === 'experimentalHammer'
+        ? Object.freeze({ experimentalHammer: Object.freeze({ ...replay.result.value }) })
+        : Object.freeze({
+            transcendentEmbryo: Object.freeze({
+              blessingKey: replay.result.value.blessingKey,
+              blessingValues: Object.freeze({ ...replay.result.value.blessingValues }),
+            }),
+          });
+    add({
+      kind: 'keepsakeReplay',
+      owner: replayOwner,
+      window: Object.freeze({ kind: 'standard', phase: 'beforeCombat' }),
+      keepsakeKey: replay.capturedKeepsakeKey,
+      equipResults,
+    });
+  }
   const timeline = appendTranscendentEmbryoTimelineEffects(
     appendSteadyGrowthTimelineEffects(
       room.roomLifecycleTimeline,

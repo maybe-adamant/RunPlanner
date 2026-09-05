@@ -2,6 +2,7 @@ import type {
   ExecutionLifecycleWindow,
   ExecutionTimeline,
   ExecutionTimelineTransaction,
+  ExecutionVolatileKeepsakeEquipResults,
 } from '../model';
 import {
   MAX_OWNER_STRING,
@@ -337,6 +338,29 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
       ...(record.equipResults === undefined
         ? {}
         : { equipResults: equipResults(record.equipResults, `${label}.equipResults`) }),
+    });
+  }
+  if (kind === 'keepsakeReplay') {
+    exact(record, ['kind', 'owner', 'window', 'keepsakeKey', 'equipResults'], [], label);
+    const window = lifecycleWindow(record.window, `${label}.window`);
+    if (window.kind !== 'standard' || window.phase !== 'beforeCombat')
+      fail(`${label}.window must be standard beforeCombat`);
+    const decodedEquipResults = equipResults(record.equipResults, `${label}.equipResults`);
+    const volatileKeys = ['experimentalHammer', 'transcendentEmbryo'].filter(
+      (key) => decodedEquipResults[key as keyof typeof decodedEquipResults] !== undefined,
+    );
+    if (volatileKeys.length !== 1 || decodedEquipResults.jeweledPom !== undefined)
+      fail(`${label}.equipResults must contain exactly one volatile replay result`);
+    const replayResults: ExecutionVolatileKeepsakeEquipResults =
+      decodedEquipResults.experimentalHammer === undefined
+        ? { transcendentEmbryo: decodedEquipResults.transcendentEmbryo! }
+        : { experimentalHammer: decodedEquipResults.experimentalHammer };
+    return Object.freeze({
+      kind,
+      owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
+      window,
+      keepsakeKey: stringValue(record.keepsakeKey, `${label}.keepsakeKey`),
+      equipResults: replayResults,
     });
   }
   if (kind === 'fountainUse') {

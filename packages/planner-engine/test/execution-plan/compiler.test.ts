@@ -985,6 +985,32 @@ describe('execution-plan compiler and codec', () => {
     );
   });
 
+  it('strictly decodes one closed volatile keepsake replay result', () => {
+    const replay = {
+      kind: 'keepsakeReplay',
+      owner: 'echo-replay',
+      window: { kind: 'standard', phase: 'beforeCombat' },
+      keepsakeKey: 'TempHammerKeepsake',
+      equipResults: { experimentalHammer: { kind: 'exhausted' } },
+    };
+    expect(decodeExecutionTransaction(replay, 'replay')).toMatchObject({
+      kind: 'keepsakeReplay',
+      equipResults: { experimentalHammer: { kind: 'exhausted' } },
+    });
+    for (const equipResults of [
+      {},
+      { jeweledPom: { traitKey: 'PomTrait' } },
+      {
+        experimentalHammer: { kind: 'exhausted' },
+        transcendentEmbryo: { blessingKey: 'Blessing', blessingValues: {} },
+      },
+    ]) {
+      expect(() => decodeExecutionTransaction({ ...replay, equipResults }, 'replay')).toThrow(
+        ExecutionPlanCodecError,
+      );
+    }
+  });
+
   it.each([
     ['f-opening', fOnlyProject(), fOpeningFixture],
     ['fg', createCompleteFGProject(), fgFixture],
