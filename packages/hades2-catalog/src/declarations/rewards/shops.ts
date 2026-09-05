@@ -215,19 +215,14 @@ export const shops = [
         key: 'Healing',
         offerCount: 1,
         options: [
-          wellOption('ArmorBoostStore', 'Splintered Shield', 'ArmorBoost', 'neutral', {
-            runtimeOfferFallbackRewardTypes: ['MaxHealthDrop'],
-          }),
+          wellOption('ArmorBoostStore', 'Splintered Shield', 'ArmorBoost', 'neutral'),
           wellOption('DamageSelfDrop', 'Price of Midas', 'RoomMoneyDrop'),
           wellOption('HealDropRange', 'Life Essence', 'RoomRewardHealDrop'),
           wellOption('EmptyMaxHealthShopItem', 'Centaur Soul', 'MaxHealthDrop'),
           wellOption('FirstHitHealTrait', 'Breath of Eros', 'RoomRewardHealDrop'),
           wellOption('TemporaryDoorHealTrait', 'HydraLite', 'RoomRewardHealDrop'),
           wellOption('TemporaryHealExpirationTrait', 'Charity Bottle', 'RoomRewardHealDrop'),
-          wellOption('LastStandShopItem', 'Kiss of Styx', 'LastStandDrop', 'lastStand', {
-            runtimeOfferRequirement: 'missingLastStand',
-            runtimeOfferFallbackRewardTypes: ['ArmorBoost'],
-          }),
+          wellOption('LastStandShopItem', 'Kiss of Styx', 'LastStandDrop', 'lastStand'),
         ],
       },
       {
@@ -263,12 +258,6 @@ export const shops = [
           wellOption('RandomStoreItem', 'Fateful Twist', 'RoomMoneyDrop', 'twist', {
             stygianWell: {
               nestedResultItemKeys: twistWellItemKeys,
-              nestedRuntimeOfferFallbacks: [
-                {
-                  preferredItemKey: 'LastStandShopItem',
-                  fallbackItemKey: 'EmptyMaxHealthShopItem',
-                },
-              ],
             },
           }),
           wellOption('LimitedManaRegenDrop', 'Mist Veil', 'MaxManaDrop'),
@@ -295,20 +284,8 @@ export const shops = [
           option({ key: 'HealBigDrop', rewardType: 'HealBigDrop' }),
           option({ key: 'RoomRewardHealDrop', rewardType: 'RoomRewardHealDrop' }),
           option({ key: 'ArmorBigBoost', rewardType: 'ArmorBigBoost' }),
-          option({
-            key: 'ArmorBoost',
-            rewardType: 'ArmorBoost',
-            runtimeOfferFallbackRewardTypes: ['ArmorBigBoost'],
-          }),
-          option({
-            key: 'LastStandDrop',
-            rewardType: 'LastStandDrop',
-            runtimeOfferRequirement: 'missingLastStand',
-            // One generated action takes one fallback edge.  The next
-            // SurfaceShop generation can independently fall from Armor to
-            // Big Armor when Travel Deal cannot repeat the acquired Armor.
-            runtimeOfferFallbackRewardTypes: ['ArmorBoost'],
-          }),
+          option({ key: 'ArmorBoost', rewardType: 'ArmorBoost' }),
+          option({ key: 'LastStandDrop', rewardType: 'LastStandDrop' }),
           option({ key: 'GiftDrop', rewardType: 'GiftDrop' }),
         ],
       },
@@ -428,26 +405,13 @@ export const shops = [
             key: 'RoomRewardHealDrop',
             rewardType: 'RoomRewardHealDrop',
           }),
-          phaseOption(inRunFirstHalf, {
-            key: 'ArmorBoost',
-            rewardType: 'ArmorBoost',
-            runtimeOfferFallbackRewardTypes: ['RoomRewardHealDrop'],
-          }),
+          phaseOption(inRunFirstHalf, { key: 'ArmorBoost', rewardType: 'ArmorBoost' }),
           phaseOption(inRunSecondHalf, {
             key: 'HealBigDrop',
             rewardType: 'HealBigDrop',
           }),
-          phaseOption(inRunSecondHalf, {
-            key: 'ArmorBigBoost',
-            rewardType: 'ArmorBigBoost',
-            runtimeOfferFallbackRewardTypes: ['HealBigDrop'],
-          }),
-          option({
-            key: 'LastStandDrop',
-            rewardType: 'LastStandDrop',
-            runtimeOfferRequirement: 'missingLastStand',
-            runtimeOfferFallbackRewardTypes: ['ArmorBoost', 'ArmorBigBoost'],
-          }),
+          phaseOption(inRunSecondHalf, { key: 'ArmorBigBoost', rewardType: 'ArmorBigBoost' }),
+          option({ key: 'LastStandDrop', rewardType: 'LastStandDrop' }),
         ],
       },
       {
@@ -614,26 +578,13 @@ export const shops = [
             key: 'RoomRewardHealDrop',
             rewardType: 'RoomRewardHealDrop',
           }),
-          phaseOption(inRunFirstHalf, {
-            key: 'ArmorBoost',
-            rewardType: 'ArmorBoost',
-            runtimeOfferFallbackRewardTypes: ['RoomRewardHealDrop'],
-          }),
+          phaseOption(inRunFirstHalf, { key: 'ArmorBoost', rewardType: 'ArmorBoost' }),
           phaseOption(inRunSecondHalf, {
             key: 'HealBigDrop',
             rewardType: 'HealBigDrop',
           }),
-          phaseOption(inRunSecondHalf, {
-            key: 'ArmorBigBoost',
-            rewardType: 'ArmorBigBoost',
-            runtimeOfferFallbackRewardTypes: ['HealBigDrop'],
-          }),
-          option({
-            key: 'LastStandDrop',
-            rewardType: 'LastStandDrop',
-            runtimeOfferRequirement: 'missingLastStand',
-            runtimeOfferFallbackRewardTypes: ['ArmorBoost', 'ArmorBigBoost'],
-          }),
+          phaseOption(inRunSecondHalf, { key: 'ArmorBigBoost', rewardType: 'ArmorBigBoost' }),
+          option({ key: 'LastStandDrop', rewardType: 'LastStandDrop' }),
         ],
       },
       {

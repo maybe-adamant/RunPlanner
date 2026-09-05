@@ -10,8 +10,8 @@ same planner result:
 
 Both are acquisitions with one published target and level count. They do not,
 however, share an interaction callback or termination sequence. The executor
-may share acquisition ownership, target validation, and terminal level proof;
-it must retain the native lifecycle of each carrier.
+may share acquisition ownership and exact target admission; it must retain the
+native lifecycle of each carrier.
 
 Natural Selection, Steady Growth, and other trait-owned level effects are not
 acquisitions merely because they eventually call level-mutation code. Their
@@ -75,7 +75,7 @@ published producer or concrete acquisition owner
   -> accepted interaction
   -> bind its existing owner or claim one compatible ready normal action
   -> native effect sequence
-  -> stable acquired-state proof
+  -> bounded native terminal
 ```
 
 That common boundary is owner correlation, not a claim that every native item
@@ -141,22 +141,18 @@ The adapter must correlate the selected button by trait identity. Physical
 button index is presentation state and can change after native sorting.
 
 A native reroll deliberately abandons the frozen first offer. The executor
-does not reinstall the authored rows on a reroll. The final selected-target and
-level proof determines whether the resulting state is still equivalent; the
-runtime does not introduce a reroll cursor.
+does not reinstall the authored rows on a reroll. The exact authored result is
+owned by the native terminal and any resulting state mismatch is reported by
+the room-exit conformance boundary; the runtime does not introduce a reroll
+cursor.
 
-### Terminal proof
+### Native terminal
 
-Immediately before native selection, the adapter records the selected trait's
-current level as `StackNum or 1`, matching `IncreaseTraitLevel`'s treatment of
-an unset stack. After `HandleUpgradeChoiceSelection` returns, completion
-requires:
-
-- the selected trait identity equals `selectedTarget`; and
-- its stack number increased by exactly `levelCount`.
-
-The native callback applies the mutation. The executor never calls
-`IncreaseTraitLevel` directly.
+The adapter steers the exact selected trait and level count before native
+selection. After `HandleUpgradeChoiceSelection` returns, the transaction
+completes at that bounded callback terminal. Room-exit conformance, rather
+than a second Hero-state proof in the callback, owns any modeled level-state
+diagnostic. The executor never calls `IncreaseTraitLevel` directly.
 
 ## Direct random-level carrier
 
@@ -216,15 +212,9 @@ no upgradeable target. It then supplies zero targets so the native effect is a
 no-op. If native state has an eligible target, null is not treated as a license
 to suppress that mutation; it is a mismatch, and native behavior continues.
 
-The terminal proof uses the non-threaded `AddStackToTraits` return and the same
-`StackNum or 1` normalization as native `IncreaseTraitLevel`:
-
-- a non-null target must have gained exactly `levelCount`; or
-- a legal null outcome must retain the no-eligible-target state without a
-  level mutation.
-
-The asynchronous presentation is not part of the proof. No executor-side
-trait mutation is needed.
+The non-threaded `AddStackToTraits` return is the stable terminal. A native
+unavailable target reports an exact-contact mismatch and leaves the base call
+operational; the asynchronous presentation is not part of the transaction.
 
 ## Ownership disposition
 
@@ -233,7 +223,7 @@ ordinary traits and level outcomes are both concrete consumers. Ordinary
 Olympian/Hermes/Hammer acquisition remains the trait specialization of that
 family; visible and direct level effects are level specializations.
 Bound-or-ready acquisition correlation is shared, while each specialization
-owns its accepted entry, callback sequence, and terminal proof.
+owns its accepted entry, callback sequence, and native terminal.
 
 This boundary does not create generic future directories or a registry of
 game callbacks. Dispatch remains explicit over the closed implemented

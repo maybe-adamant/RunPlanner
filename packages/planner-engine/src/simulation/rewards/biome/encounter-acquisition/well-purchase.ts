@@ -14,7 +14,6 @@ import { applyConcreteAcquisition } from '../../../../reward-kernel';
 import {
   applyStygianWellPurchase,
   extendedWellItemKeys,
-  stygianWellRuntimeFallbackItemKey,
 } from '../../../stygian-well';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import { rewardFindingChronologyForRoom } from '../finding-chronology';
@@ -22,18 +21,15 @@ import { rewardFinding } from '../../findings';
 import type { RewardBranchState } from '../../branch-primitives';
 import type { PlannerTimelineFacts } from '../../../timeline-facts';
 import type { WellRefillRealization } from '../../model';
-import type { RuntimeOfferFallback } from '../../../runtime-offer-fallback';
 
 export interface WellPurchaseTransition {
   readonly branches: readonly RewardBranchState[];
   readonly findings: readonly FindingRegionEntry[];
   readonly timelineFacts: PlannerTimelineFacts;
   readonly refillRealization?: WellRefillRealization;
-  /** The selected item's one-step fallback at the native purchase contact. */
-  readonly runtimeOfferFallback?: RuntimeOfferFallback;
 }
 
-/** Applies one reached Stygian Well purchase and publishes its exact fallback edges. */
+/** Applies one reached Stygian Well purchase. */
 export function applyWellPurchaseTransition(inputs: {
   readonly catalog: Catalog;
   readonly snapshot: BiomeRewardSnapshot;
@@ -129,24 +125,6 @@ export function applyWellPurchaseTransition(inputs: {
     itemKey === 'RandomStoreItem' && twistChildKey !== undefined
       ? well?.twistResultKeyBySlot?.[twistChildKey]
       : undefined;
-  const runtimeOfferFallback = (() => {
-    if (row === undefined || itemKey === undefined || itemKey === null) return undefined;
-    const directFallback = stygianWellRuntimeFallbackItemKey(catalog, itemKey, false);
-    const preferredKey = directFallback === undefined ? twistResultKey : itemKey;
-    const fallbackKey =
-      directFallback ??
-      (twistResultKey === undefined || twistResultKey === null
-        ? undefined
-        : stygianWellRuntimeFallbackItemKey(catalog, twistResultKey, true));
-    if (preferredKey === undefined || preferredKey === null || fallbackKey === undefined)
-      return undefined;
-    return Object.freeze({
-      address: row.owner,
-      preferredKey,
-      fallbackKey,
-      availabilityContact: 'storePurchase' as const,
-    });
-  })();
   const isSourcePurchase =
     row !== undefined &&
     sourcesTravelDealRefill &&
@@ -278,7 +256,6 @@ export function applyWellPurchaseTransition(inputs: {
         ),
       ]),
       timelineFacts: factsWithRefill,
-      ...(runtimeOfferFallback === undefined ? {} : { runtimeOfferFallback }),
       ...(refillRealization === undefined ? {} : { refillRealization }),
     });
   }
@@ -318,7 +295,6 @@ export function applyWellPurchaseTransition(inputs: {
     ),
     findings: Object.freeze([]),
     timelineFacts: factsWithRefill,
-    ...(runtimeOfferFallback === undefined ? {} : { runtimeOfferFallback }),
     ...(refillRealization === undefined ? {} : { refillRealization }),
   });
 }

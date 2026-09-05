@@ -97,7 +97,6 @@ export function settleAuthoredAcquisitionSite(
   const derivedEntryFrontiers: import('../../acquisition-settlement').DerivedAcquisitionEntryFrontier[] =
     [];
   const traitChildSettlements: import('../../trait-settlement').ReachedTraitChildCheckpoint[] = [];
-  const runtimeOfferFallbacks: import('./emissions').RuntimeOfferFallbackEmission[] = [];
   let timelineFacts: import('../../../timeline-facts').PlannerTimelineFacts | undefined;
   const producerFrontiers: RewardProducerFrontier[] = [];
 
@@ -625,7 +624,6 @@ export function settleAuthoredAcquisitionSite(
     }
     acquisitionRoleFrontiers.push(...(settled.roleFrontiers ?? []));
     timelineFacts = settled.timelineFacts;
-    runtimeOfferFallbacks.push(...(settled.runtimeOfferFallbacks ?? []));
     derivedEntryFrontiers.push(...(settled.derivedEntryFrontiers ?? []));
     traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
     return settled.branches;
@@ -639,7 +637,6 @@ export function settleAuthoredAcquisitionSite(
       acquisitionRoleFrontiers,
       derivedEntryFrontiers,
       traitChildSettlements,
-      runtimeOfferFallbacks,
       ...(timelineFacts === undefined ? {} : { timelineFacts }),
       findings: targetFindings,
     }),

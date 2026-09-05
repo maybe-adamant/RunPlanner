@@ -1,22 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import {
-  createLevelResolutionAddress,
-  createKeepsakeEquipResultAddress,
-  createOccurrenceId,
-  createRouteStartKeepsakeSelectionAddress,
-  semanticAddressKey,
-} from '@run-planner/engine/authored-project';
+import { createLevelResolutionAddress, createOccurrenceId, semanticAddressKey } from '@run-planner/engine/authored-project';
 
-import { createKeepsakeState } from '../../src/simulation/keepsakes';
-import { applyJeweledPomEquipResult } from '../../src/simulation/rewards/processing';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
 import {
   createTraitHistoryState,
   type ReachedLevelResolutionEvaluation,
 } from '../../src/simulation/traits';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
 
 describe('selected trait products', () => {
   it('retains divergent reached level-resolution publication and candidate contexts', () => {
@@ -81,32 +72,4 @@ describe('selected trait products', () => {
     ]);
   });
 
-  it('publishes Hades Last Gasp’s direct runtime fallback without changing the simulated acquisition', () => {
-    const seeded = initializeTestRewardBranches()[0]!;
-    const branch = Object.freeze({
-      ...seeded,
-      keepsakes: createKeepsakeState(catalog, 'HadesAndPersephoneKeepsake', seeded.arcanaFear),
-    });
-    const result = createKeepsakeEquipResultAddress(
-      createRouteStartKeepsakeSelectionAddress('Underworld'),
-      'jeweledPom',
-    );
-    const equipped = applyJeweledPomEquipResult(
-      catalog,
-      branch,
-      'HadesAndPersephoneKeepsake',
-      { jeweledPom: { traitKey: 'HadesDeathDefianceDamageBoon' } },
-      result,
-      1,
-    );
-    expect(equipped.traitHistory?.equippedTraits.HadesDeathDefianceDamageBoon).toBeDefined();
-    expect(equipped.traitHistory?.equippedTraits.HadesLifestealBoon).toBeUndefined();
-    expect(selectedTraitOfferProducts([equipped]).runtimeOfferFallbacks).toEqual([
-      expect.objectContaining({
-        address: result,
-        preferredKey: 'HadesDeathDefianceDamageBoon',
-        fallbackKey: 'HadesLifestealBoon',
-      }),
-    ]);
-  });
 });

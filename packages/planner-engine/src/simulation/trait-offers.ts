@@ -444,37 +444,6 @@ export interface ReachedTraitOfferEvaluation {
   readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
   readonly reached: true;
   readonly chronologicalIndex: number;
-  /** Derived only: execution receives one candidate, never the declaration list. */
-  readonly runtimeOfferFallbackTraitKey?: string;
-}
-
-/** Resolve the bounded runtime safety result without changing authored intent.
- * Companion screen rows are excluded; ordinary simulated-prefix legality is
- * reused so this is neither persisted nor a second eligibility model. */
-export function resolveRuntimeOfferFallbackTraitKey(
-  catalog: Catalog,
-  offer: AuthoredTraitOffer,
-  history: TraitHistoryState,
-  context: TraitOfferContext = {},
-  excludedTraitKeys: readonly string[] = [],
-): string | undefined {
-  if (offer.kind !== 'traits') return undefined;
-  const selected = offer.options[optionIndex(offer.selectedOptionKey)];
-  const candidates =
-    selected === undefined
-      ? undefined
-      : catalog.traits.byKey[selected.traitKey]?.runtimeOfferFallbackTraitKeys;
-  if (candidates === undefined) return undefined;
-  const companions = new Set([
-    ...offer.options
-      .filter((_, index) => index !== optionIndex(offer.selectedOptionKey))
-      .map((option) => option.traitKey),
-    ...excludedTraitKeys,
-  ]);
-  return candidates.find(
-    (traitKey) =>
-      !companions.has(traitKey) && assessTraitOption(catalog, traitKey, history, context).legal,
-  );
 }
 
 /** The branch-local evidence published for one reached selected offer. */
@@ -535,7 +504,6 @@ function evaluateReachedTraitOfferWithAssessments(
   /** Calling Card changes a rolled row after base-offer legality is established. */
   rarificationBaseOffer?: AuthoredTraitOffer,
   assessments?: readonly TraitAssessment[],
-  runtimeOfferFallbackExcludedTraitKeys?: readonly string[],
   frozenAcquisition = false,
   frozenLevelResolutions?: readonly TraitOfferOptionLevelResolution[],
 ): ReachedTraitOfferEvaluation {
@@ -654,15 +622,6 @@ function evaluateReachedTraitOfferWithAssessments(
   const targetedAcquisition = frozenAcquisition
     ? Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) })
     : assessSelectedTargetedAcquisition(catalog, legalityOffer, before);
-  const runtimeOfferFallbackTraitKey = frozenAcquisition
-    ? undefined
-    : resolveRuntimeOfferFallbackTraitKey(
-        catalog,
-        offer,
-        before,
-        effectiveContext,
-        runtimeOfferFallbackExcludedTraitKeys,
-      );
   const rawAssessments = frozenAcquisition
     ? Object.freeze([])
     : (assessments ?? assessTraitOffer(catalog, legalityOffer, before, effectiveContext));
@@ -712,7 +671,6 @@ function evaluateReachedTraitOfferWithAssessments(
     targetedAcquisition,
     reached: true,
     chronologicalIndex,
-    ...(runtimeOfferFallbackTraitKey === undefined ? {} : { runtimeOfferFallbackTraitKey }),
   });
 }
 
@@ -729,7 +687,6 @@ export function evaluateReachedTraitOffer(
   keepsakes?: KeepsakeState,
   /** Calling Card changes a rolled row after base-offer legality is established. */
   rarificationBaseOffer?: AuthoredTraitOffer,
-  runtimeOfferFallbackExcludedTraitKeys?: readonly string[],
   frozenAcquisition = false,
   frozenLevelResolutions?: readonly TraitOfferOptionLevelResolution[],
 ): ReachedTraitOfferEvaluation {
@@ -746,7 +703,6 @@ export function evaluateReachedTraitOffer(
     keepsakes,
     rarificationBaseOffer,
     undefined,
-    runtimeOfferFallbackExcludedTraitKeys,
     frozenAcquisition,
     frozenLevelResolutions,
   );
@@ -763,7 +719,6 @@ export function evaluateReachedEchoLastRunBoonOffer(
   chronologicalIndex: number,
   arcanaFear?: ArcanaFearState,
   keepsakes?: KeepsakeState,
-  runtimeOfferFallbackExcludedTraitKeys: readonly string[] = [],
 ): ReachedTraitOfferEvaluation {
   const option = offer.options[0];
   if (
@@ -788,7 +743,6 @@ export function evaluateReachedEchoLastRunBoonOffer(
     keepsakes,
     undefined,
     Object.freeze([outcome.assessment]),
-    runtimeOfferFallbackExcludedTraitKeys,
   );
 }
 

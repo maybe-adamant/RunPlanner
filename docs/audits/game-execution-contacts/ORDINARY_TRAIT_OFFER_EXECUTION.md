@@ -202,12 +202,12 @@ records it for save/history purposes, but game source does not consume that
 history elsewhere during the run.
 
 Several offers may occur in one room without a per-offer charge cursor. Each
-selected trait is verified at its own terminal, while room-exit conformance
-verifies the aggregate retained charge state. If an incorrect spend makes a
-later native rarification unavailable, either that offer's selected result or
-the final ledger fails its existing checkpoint.
+selected trait completes at its exact native terminal, while room-exit
+conformance remains the authority for the aggregate retained charge state. If
+an incorrect spend makes a later native rarification unavailable, the owning
+contact reports the exact mismatch and native behavior remains operational.
 
-## Selection and terminal proof
+## Selection and native terminal
 
 `HandleUpgradeChoiceSelection` is the native authority for all of the
 following:
@@ -222,11 +222,11 @@ following:
 
 The executor observes the selected button but calls the native function first.
 After the exact selected-row callback returns, the acquisition completes from
-that bounded structural terminal. It does not reconstruct the Hero's trait
-inventory, rarity, levels, or replacement state as a second semantic proof.
+that bounded structural terminal. The adapter does not reconstruct the Hero's
+trait inventory, rarity, levels, or replacement state as a semantic proof.
 
-This proof settles only the primary acquisition. `AddTraitData` launches a
-trait's `AcquireFunctionName` on a thread, so the outer return does not prove a
+This terminal settles only the primary acquisition. `AddTraitData` launches a
+trait's `AcquireFunctionName` on a thread, so the outer return does not claim a
 consequential selected-trait effect has finished.
 
 ### Native eligibility mismatch
@@ -255,18 +255,17 @@ consumable carrier.
 | Path                                                                | Disposition                                                                                                                        |
 | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `UseLoot` rejects before pickup                                     | No acquisition begins. Native behavior continues.                                                                                  |
-| Screen opens and authored selection occurs                          | Complete after native post-state proof.                                                                                            |
+| Screen opens and authored selection occurs                          | Complete after the exact native selection callback returns.                                                                        |
 | Wrong option is selected                                            | Let native selection finish, record player divergence, and stop steering.                                                          |
-| Bound screen is rerolled                                            | Let native reroll finish and do not reinstall the initial authored offer; final trait and room-exit state determine conformity.    |
-| Calling Card or provider rarification                               | Let native behavior run without observing individual button presses; verify selected trait and aggregate charge state.             |
+| Bound screen is rerolled                                            | Let native reroll finish and do not reinstall the initial authored offer; the exact authored terminal or room-exit conformance reports divergence. |
+| Calling Card or provider rarification                               | Let native behavior run without observing individual button presses; room-exit conformance owns the retained charge state.           |
 | Concave Stone recursively invokes selection with `DoubleBoonChance` | Preserve the primary handle; the nested residual is not a second primary terminal and remains deferred to its consequence contact. |
 | Selection callback is observed again after completion               | Treat it as incidental native activity; never reuse the completed owner.                                                           |
 
 The reroll disposition is deliberate. The planner does not model reroll
 resources. Reapplying the initial authored rows would conceal the native reroll
-and create a second offer-initialization path. A reroll that nevertheless ends
-with the same selected trait and retained state is execution-equivalent; a
-different result fails the ordinary terminal or room-exit conformance.
+and create a second offer-initialization path. A reroll that changes the
+authored result reports a mismatch; the native reroll remains playable.
 
 ## Execution disposition
 

@@ -3,11 +3,10 @@ import type {
   PendingKeepsakeEffects,
   RoomExitConformanceFactKind,
 } from '../simulation/rewards/run-state-conformance';
-import type { RuntimeOfferAvailabilityContact } from '../simulation/runtime-offer-fallback';
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 16 as const;
+export const EXECUTION_PROTOCOL_VERSION = 17 as const;
 export const EXECUTION_CATALOG_VERSION = '0.54.0-required-boss-rewards' as const;
 
 export type ExecutionRunStateCount =
@@ -35,13 +34,6 @@ export type ExecutionLifecycleWindow =
   | { readonly kind: 'bossDefeated'; readonly phaseKey: string }
   | { readonly kind: 'encounterEnd'; readonly phaseKey: string }
   | { readonly kind: 'postOutgoing' };
-
-/** One planner-selected one-step runtime contingency; execution never searches a pool. */
-export interface ExecutionRuntimeFallback {
-  readonly preferredKey: string;
-  readonly fallbackKey: string;
-  readonly availabilityContact: RuntimeOfferAvailabilityContact;
-}
 
 /** Diagnostic evidence only. It is never a lifecycle or transaction cursor. */
 export interface ExecutionRunStateDiagnostic {
@@ -187,7 +179,6 @@ export type ExecutionTraitOffer =
       }[];
       readonly selected: ExecutionTraitOptionKey;
       readonly rejected?: ExecutionTraitOptionKey;
-      readonly runtimeFallbacks?: readonly ExecutionRuntimeFallback[];
     }
   | {
       readonly kind: 'chaos';
@@ -248,7 +239,6 @@ export interface ExecutionKeepsakeEquipResults {
   readonly jeweledPom?: {
     readonly traitKey: string;
     readonly rarity?: string;
-    readonly runtimeFallbacks?: readonly ExecutionRuntimeFallback[];
   };
   readonly experimentalHammer?:
     { readonly kind: 'selected'; readonly traitKey: string } | { readonly kind: 'exhausted' };
@@ -309,14 +299,12 @@ export interface ExecutionOverview {
       readonly rewardType: string;
       readonly source?: string;
       readonly spurnedSource?: string;
-      readonly runtimeFallbacks?: readonly ExecutionRuntimeFallback[];
     }[];
     readonly travelDealRefill?: {
       readonly sourceOfferKey: string;
       readonly slotIndex: number;
       readonly optionKey: string;
       readonly reward: ExecutionReward;
-      readonly runtimeFallbacks?: readonly ExecutionRuntimeFallback[];
     };
   };
   readonly stygianWell?: {
@@ -326,7 +314,6 @@ export interface ExecutionOverview {
         'initial:healing' | 'initial:secondLeft' | 'initial:secondRight' | 'travelDealRefill';
       readonly offerKey: string;
       readonly twistResultKey?: string;
-      readonly runtimeFallbacks?: readonly ExecutionRuntimeFallback[];
     }[];
   };
   readonly purgingPool?: {
@@ -371,7 +358,6 @@ export type ExecutionTimelineTransaction =
       readonly producerLifecycleKey: string;
       readonly roles: readonly ExecutionAcquisitionRole[];
       readonly window: ExecutionLifecycleWindow;
-      readonly runtimeFallbacks?: readonly ExecutionRuntimeFallback[];
     }
   | {
       readonly kind: 'encounterInteraction';
@@ -384,7 +370,8 @@ export type ExecutionTimelineTransaction =
             readonly outcome:
               | {
                   readonly kind: 'freeItem';
-                  readonly runtimeFallbacks?: readonly ExecutionRuntimeFallback[];
+                  /** Exact native consumable constrained when Nemesis creates the world pickup. */
+                  readonly itemGameName: string;
                 }
               | {
                   readonly kind: 'goldTrade' | 'damageTrade';
@@ -439,7 +426,6 @@ export type ExecutionTimelineTransaction =
       readonly reward: ExecutionReward;
       readonly producerLifecycleKey: string;
       readonly roles: readonly ExecutionAcquisitionRole[];
-      readonly runtimeFallbacks?: readonly ExecutionRuntimeFallback[];
     }
   | {
       readonly kind: 'wellPurchase';
@@ -450,7 +436,6 @@ export type ExecutionTimelineTransaction =
       readonly effect: ExecutionWellEffect;
       readonly extendedDirectPurchase: boolean;
       readonly twistResultKey?: string;
-      readonly runtimeFallbacks?: readonly ExecutionRuntimeFallback[];
     }
   | {
       /** Planner-owned automatic Travel Deal refill realization. */
@@ -461,7 +446,6 @@ export type ExecutionTimelineTransaction =
       readonly offerKey: string;
       readonly effect: ExecutionWellEffect;
       readonly twistResultKey?: string;
-      readonly runtimeFallbacks?: readonly ExecutionRuntimeFallback[];
     }
   | {
       readonly kind: 'poolSale';

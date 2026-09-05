@@ -961,24 +961,6 @@ describe('trait offer catalog closure', () => {
 
     expect(() =>
       mutate({
-        traits: declarations.traitCatalog.traits.map((trait) =>
-          trait.key === 'NarcissusH'
-            ? {
-                ...trait,
-                runtimeOfferFallbackTraitKeys: [
-                  'AphroditeWeaponBoon',
-                  'AphroditeSpecialBoon',
-                  'AphroditeCastBoon',
-                ],
-              }
-            : trait,
-        ),
-        boonRarityBases: {},
-      }),
-    ).toThrow(/runtimeOfferFallbackTraitKeys/);
-
-    expect(() =>
-      mutate({
         boonRarityBases: {},
         aspects: declarations.traitCatalog.aspects.map((aspect) =>
           aspect.key === 'SuitHexAspect'
@@ -1888,20 +1870,6 @@ describe('trait offer catalog closure', () => {
     };
     expect(() => createCatalog(unknownRequirement)).toThrow(/unknown requirement kind/);
 
-    const unknownRuntimeRequirement = {
-      ...declarations,
-      traitCatalog: {
-        ...declarations.traitCatalog,
-        traits: declarations.traitCatalog.traits.map((trait) =>
-          trait.key === 'OlympianSpellCountBoon'
-            ? { ...trait, runtimeOfferRequirement: 'futurePredicate' as never }
-            : trait,
-        ),
-      },
-    };
-    expect(() => createCatalog(unknownRuntimeRequirement)).toThrow(
-      /runtimeOfferRequirement: must be one of/,
-    );
   });
 
   it('rejects malformed raw array and object contacts with declaration paths', () => {

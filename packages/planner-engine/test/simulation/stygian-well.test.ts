@@ -548,7 +548,7 @@ describe('Stygian Well consequential purchase state', () => {
     ]);
   });
 
-  it('records paid Last Stand and publishes its one-step runtime fallback', () => {
+  it('records paid Last Stand as the selected well result', () => {
     const well = createOccurrenceAddress(
       goldenFBiome,
       createOccurrenceId('golden-f-preboss-shop:postboss'),
@@ -569,18 +569,12 @@ describe('Stygian Well consequential purchase state', () => {
     const assembly = simulateProjectAssembly(catalog, project);
     const f = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
     if (f?.authoring !== 'complete') throw new Error('expected complete F Last Stand evaluation');
-    expect(f.rewards.runtimeOfferFallbacks).toContainEqual(
-      expect.objectContaining({
-        preferredKey: 'LastStandShopItem',
-        fallbackKey: 'ArmorBoostStore',
-      }),
-    );
     expect(
       f.rewards.branches.every((branch) => branch.history.consumableRecord.LastStandDrop === 1),
     ).toBe(true);
   });
 
-  it('uses Twist nested fallback without treating its result as a direct Extended purchase', () => {
+  it('uses Twist nested result without treating it as a direct Extended purchase', () => {
     const well = createOccurrenceAddress(
       goldenFBiome,
       createOccurrenceId('golden-f-preboss-shop:postboss'),
@@ -601,12 +595,6 @@ describe('Stygian Well consequential purchase state', () => {
     const assembly = simulateProjectAssembly(catalog, project);
     const f = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
     if (f?.authoring !== 'complete') throw new Error('expected complete F Twist evaluation');
-    expect(f.rewards.runtimeOfferFallbacks).toContainEqual(
-      expect.objectContaining({
-        preferredKey: 'LastStandShopItem',
-        fallbackKey: 'EmptyMaxHealthShopItem',
-      }),
-    );
     expect(f.rewards.branches.every((branch) => branch.stygianWell?.extendedUses === 1)).toBe(true);
     expect(
       f.rewards.branches.every((branch) => branch.history.consumableRecord.LastStandDrop === 1),

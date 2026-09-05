@@ -96,50 +96,6 @@ function planWithGenericDependency() {
   return compileExecutionPlan({ product: updatedProduct });
 }
 
-function planWithWellRuntimeFallback() {
-  const occurrence = createOccurrenceAddress(
-    goldenFBiome,
-    createOccurrenceId('golden-f-preboss-shop:postboss'),
-  );
-  let project = applyProjectCommand(createUnderworldFWellCheckpoint(), catalog, {
-    kind: 'ReplaceStygianWellOffer',
-    occurrence,
-    slotKey: 'healing',
-    itemKey: 'LastStandShopItem',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SetStygianWellPurchase',
-    occurrence,
-    generationKey: 'initial:healing',
-    purchased: true,
-  });
-  return planFor(authorLegalTraitOffers(project)).plan;
-}
-
-function planWithDirectJeweledPomFallback() {
-  let project = createCompleteFGProject();
-  const selection = createRouteStartKeepsakeSelectionAddress('Underworld');
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceStartingKeepsake',
-    selection,
-    keepsakeKey: 'HadesAndPersephoneKeepsake',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceJeweledPomEquipResult',
-    result: createKeepsakeEquipResultAddress(selection, 'jeweledPom'),
-    value: { traitKey: 'HadesDeathDefianceDamageBoon' },
-  });
-  return planFor(
-    Object.freeze({
-      ...project,
-      route: Object.freeze({
-        ...project.route,
-        biomes: Object.freeze(project.route.biomes.slice(0, 1)),
-      }),
-    }),
-  ).plan;
-}
-
 function refreshWireFingerprint(wire: Record<string, unknown>): void {
   const expanded = expandDiagnosticFrames(wire);
   wire.planFingerprint = fingerprint({
@@ -225,7 +181,7 @@ function selectedTransactionPair(product: ExecutionSemanticProduct): {
   throw new Error('fixture lacks selected cross-occurrence transaction pair');
 }
 
-describe('protocol-v16 compiler and codec', () => {
+describe('protocol-v17 compiler and codec', () => {
   it('accepts source-owned replacement materialization only for Artificer roles', () => {
     const role = {
       role: 'self',
@@ -660,110 +616,6 @@ describe('protocol-v16 compiler and codec', () => {
     duplicatePoolOccurrence.overview.purgingPool.traits[1] =
       duplicatePoolOccurrence.overview.purgingPool.traits[0];
     expect(() => decodeExecutionPlan(duplicatePool)).toThrow(/duplicate slot keys/);
-  });
-
-  it('round-trips one-step runtime fallbacks and rejects duplicate or nested preferences', () => {
-    const plan = planWithWellRuntimeFallback();
-    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
-
-    const malformed = JSON.parse(encodeExecutionPlan(plan)) as {
-      occurrences: Array<{
-        timeline: {
-          transactions: Array<{
-            runtimeFallbacks?: Array<{
-              preferredKey: string;
-              fallbackKey: string;
-              availabilityContact: string;
-            }>;
-          }>;
-        };
-      }>;
-    };
-    const fallbacks = malformed.occurrences
-      .flatMap((occurrence) => occurrence.timeline.transactions)
-      .find((transaction) => transaction.runtimeFallbacks !== undefined)?.runtimeFallbacks;
-    if (fallbacks?.[0] === undefined) throw new Error('fixture lacks a runtime fallback');
-    fallbacks.push({ ...fallbacks[0], fallbackKey: 'HealDropRange' });
-    expect(() => decodeExecutionPlan(malformed)).toThrow(/duplicate preferred keys/);
-
-    const nested = JSON.parse(encodeExecutionPlan(plan)) as typeof malformed;
-    const nestedFallbacks = nested.occurrences
-      .flatMap((occurrence) => occurrence.timeline.transactions)
-      .find((transaction) => transaction.runtimeFallbacks !== undefined)?.runtimeFallbacks;
-    if (nestedFallbacks?.[0] === undefined) throw new Error('fixture lacks a runtime fallback');
-    nestedFallbacks.push({
-      preferredKey: nestedFallbacks[0].fallbackKey,
-      fallbackKey: 'HealDropRange',
-      availabilityContact: nestedFallbacks[0].availabilityContact,
-    });
-    expect(() => decodeExecutionPlan(nested)).toThrow(/only one-step fallbacks/);
-  });
-
-  it('round-trips a direct Jeweled Pom runtime fallback', () => {
-    const plan = planWithDirectJeweledPomFallback();
-    expect(plan.startingKeepsake.equipResults?.jeweledPom).toMatchObject({
-      runtimeFallbacks: [
-        {
-          preferredKey: 'HadesDeathDefianceDamageBoon',
-          fallbackKey: 'HadesLifestealBoon',
-          availabilityContact: 'traitEligibility',
-        },
-      ],
-    });
-    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
-  });
-
-  it('round-trips a Nemesis free-item runtime fallback at its encounter contact', () => {
-    const { product } = planFor(createCompleteFGProject());
-    const occurrence = product.occurrences.find((candidate) =>
-      candidate.timeline.transactions.some(
-        (transaction) => transaction.kind === 'encounterInteraction',
-      ),
-    );
-    if (occurrence === undefined) throw new Error('fixture lacks encounter interaction');
-    const transaction = occurrence.timeline.transactions.find(
-      (candidate) => candidate.kind === 'encounterInteraction',
-    );
-    if (transaction === undefined) throw new Error('fixture lacks encounter transaction');
-    const updatedProduct = Object.freeze({
-      ...product,
-      occurrences: Object.freeze(
-        product.occurrences.map((candidate) =>
-          candidate.id !== occurrence.id
-            ? candidate
-            : Object.freeze({
-                ...candidate,
-                timeline: Object.freeze({
-                  ...candidate.timeline,
-                  transactions: Object.freeze(
-                    candidate.timeline.transactions.map((entry) =>
-                      entry.owner !== transaction.owner
-                        ? entry
-                        : Object.freeze({
-                            ...entry,
-                            resolution: Object.freeze({
-                              kind: 'nemesisRandomEvent' as const,
-                              outcome: Object.freeze({
-                                kind: 'freeItem' as const,
-                                runtimeFallbacks: Object.freeze([
-                                  Object.freeze({
-                                    preferredKey: 'LastStandDrop',
-                                    fallbackKey: 'ArmorBoost',
-                                    availabilityContact: 'npcConsumableSelection' as const,
-                                  }),
-                                ]),
-                              }),
-                            }),
-                          }),
-                    ),
-                  ),
-                }),
-              }),
-        ),
-      ),
-    });
-    const plan = compileExecutionPlan({ product: updatedProduct });
-    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
   });
 
   it('validates sparse dependency owner integrity without retaining the removed streams field', () => {

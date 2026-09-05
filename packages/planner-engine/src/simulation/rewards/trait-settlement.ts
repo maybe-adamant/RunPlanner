@@ -97,7 +97,6 @@ export interface PriorTraitMutation {
 interface EchoLastRunBoonSettlement {
   readonly address: EchoLastRunBoonAddress;
   readonly outcome: EchoLastRunBoonOutcome;
-  readonly runtimeOfferFallbackExcludedTraitKeys: readonly string[];
 }
 
 function isEligibleChaosGodScreen(
@@ -380,7 +379,6 @@ function applyTraitOfferForAcquisitionInternal(
           options.directAcquisition === true,
           branch.keepsakes,
           callingCard === undefined ? undefined : authored,
-          undefined,
           options.frozenAcquisition === true,
           options.frozenLevelResolution === undefined
             ? undefined
@@ -400,7 +398,6 @@ function applyTraitOfferForAcquisitionInternal(
             branch.traitEvaluations?.length ?? 0,
             branch.arcanaFear,
             branch.keepsakes,
-            echoLastRunBoon.runtimeOfferFallbackExcludedTraitKeys,
           );
   const selectedForIdentity =
     effectiveAuthored.kind === 'traits'
@@ -986,7 +983,6 @@ function applyEchoLastRunBoonForAcquisition(
   context: TraitOfferContext,
   lifecyclePoint: string,
   sequence: number,
-  runtimeOfferFallbackExcludedTraitKeys: readonly string[],
 ): ReturnType<typeof applyTraitOfferForAcquisitionInternal> {
   return applyTraitOfferForAcquisitionInternal(
     catalog,
@@ -1002,7 +998,7 @@ function applyEchoLastRunBoonForAcquisition(
     undefined,
     undefined,
     Object.freeze({ directAcquisition: true, skipCallingCard: true }),
-    Object.freeze({ address, outcome, runtimeOfferFallbackExcludedTraitKeys }),
+    Object.freeze({ address, outcome }),
   );
 }
 
@@ -1360,9 +1356,6 @@ export function settleEncounterTraitOffer(
         }),
         lifecyclePoint,
         sequence,
-        child.options
-          .filter((_, index) => index !== selectedChildIndex)
-          .map((option) => option.traitKey),
       );
       const nested = nestedSettlement.branch;
       blockedChild ??= nestedSettlement.blockedChild;

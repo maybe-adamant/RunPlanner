@@ -109,11 +109,6 @@ describe('Stygian Well room facts', () => {
       'MemPointsCommonRange',
       'SeedMysteryRange',
     ]);
-    expect(option('RandomStoreItem').stygianWell?.nestedRuntimeOfferFallbacks).toEqual([
-      { preferredItemKey: 'LastStandShopItem', fallbackItemKey: 'EmptyMaxHealthShopItem' },
-    ]);
-    expect(option('LastStandShopItem').runtimeOfferFallbackRewardTypes).toEqual(['ArmorBoost']);
-    expect(option('ArmorBoostStore').runtimeOfferFallbackRewardTypes).toEqual(['MaxHealthDrop']);
   });
 
   it('normalizes the exact installed ordinary host matrix and forced Postboss anchors', () => {

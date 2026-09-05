@@ -732,15 +732,6 @@ describe('Hermes Shrine Travel Deal generation', () => {
     expect(result.hermesShrineDeliveries.map((delivery) => delivery.sourceKey)).not.toContain(
       hermesShrineDeliveryEntryKey(host, 'travelDealRefill'),
     );
-    expect(result.runtimeOfferFallbacks).toContainEqual({
-      address: createAcquisitionEntryAddress(
-        createAcquisitionSiteAddress(refillHost, 'hermesShrineDelivery'),
-        hermesShrineDeliveryEntryKey(host, 'travelDealRefill'),
-      ),
-      availabilityContact: 'storePurchase',
-      preferredKey: 'ArmorBoost',
-      fallbackKey: 'ArmorBigBoost',
-    });
     expect(refillEntry.entryKey).toBe(hermesShrineDeliveryEntryKey(host, 'travelDealRefill'));
     expect(refillEntry.entryKey).not.toBe(hermesShrineDeliveryEntryKey(host, 'initial:first'));
 
@@ -1074,9 +1065,6 @@ describe('Hermes Shrine pickup settlement', () => {
         ),
       ),
     ).toBe(true);
-    expect(o?.rewards.runtimeOfferFallbacks).toContainEqual(
-      expect.objectContaining({ preferredKey: 'LastStandDrop', fallbackKey: 'ArmorBoost' }),
-    );
 
     // A later host owns its own retained child.  It must not be mistaken for
     // the virtual same-room rush source merely because both use the closed

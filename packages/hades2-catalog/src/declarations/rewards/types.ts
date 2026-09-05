@@ -71,8 +71,6 @@ export interface RawShopOptionEntryDeclaration {
   readonly rewardType: string;
   readonly requirement?: RequirementExpression;
   readonly purchaseRequirement?: RequirementExpression;
-  readonly runtimeOfferFallbackRewardTypes?: readonly string[];
-  readonly runtimeOfferRequirement?: 'missingLastStand';
   readonly acquisitionLifecycle?: readonly AcquisitionLifecycleBinding[];
   readonly purchaseInteraction?:
     | { readonly kind: 'fixed'; readonly gameName: string }
@@ -92,10 +90,6 @@ export interface RawShopOptionEntryDeclaration {
       | 'lastStand';
     readonly offerRequirements?: readonly ('inactive' | 'emptyAttackOrSpecial')[];
     readonly nestedResultItemKeys?: readonly string[];
-    readonly nestedRuntimeOfferFallbacks?: readonly {
-      readonly preferredItemKey: string;
-      readonly fallbackItemKey: string;
-    }[];
     readonly extendedDirectPurchaseItemKeys?: readonly string[];
   };
 }

@@ -15,7 +15,7 @@ import {
   stringValue,
   wellGenerationKey,
 } from './primitives';
-import { acquisitionRole, equipResults, reward, runtimeFallbacks, traitOffer } from './rewards';
+import { acquisitionRole, equipResults, reward, traitOffer } from './rewards';
 
 export function lifecycleWindow(value: unknown, label: string): ExecutionLifecycleWindow {
   const record = object(value, label);
@@ -49,17 +49,10 @@ export function lifecycleWindow(value: unknown, label: string): ExecutionLifecyc
 export function nemesisOutcome(value: unknown, label: string) {
   const record = object(value, label);
   if (record.kind === 'freeItem') {
-    exact(record, ['kind'], ['runtimeFallbacks'], label);
+    exact(record, ['kind', 'itemGameName'], [], label);
     return Object.freeze({
       kind: 'freeItem' as const,
-      ...(record.runtimeFallbacks === undefined
-        ? {}
-        : {
-            runtimeFallbacks: runtimeFallbacks(
-              record.runtimeFallbacks,
-              `${label}.runtimeFallbacks`,
-            ),
-          }),
+      itemGameName: stringValue(record.itemGameName, `${label}.itemGameName`),
     });
   }
   if (record.kind === 'goldTrade' || record.kind === 'damageTrade') {
@@ -94,7 +87,7 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
     exact(
       record,
       ['kind', 'owner', 'sourceOwner', 'reward', 'producerLifecycleKey', 'roles', 'window'],
-      ['runtimeFallbacks'],
+      [],
       label,
     );
     return Object.freeze({
@@ -111,14 +104,6 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
           acquisitionRole(entry, `${label}.roles[${index}]`),
         ),
       ),
-      ...(record.runtimeFallbacks === undefined
-        ? {}
-        : {
-            runtimeFallbacks: runtimeFallbacks(
-              record.runtimeFallbacks,
-              `${label}.runtimeFallbacks`,
-            ),
-          }),
       window: lifecycleWindow(record.window, `${label}.window`),
     });
   }
@@ -236,7 +221,7 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
         'producerLifecycleKey',
         'roles',
       ],
-      ['runtimeFallbacks'],
+      [],
       label,
     );
     return Object.freeze({
@@ -256,21 +241,13 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
           acquisitionRole(entry, `${label}.roles[${index}]`),
         ),
       ),
-      ...(record.runtimeFallbacks === undefined
-        ? {}
-        : {
-            runtimeFallbacks: runtimeFallbacks(
-              record.runtimeFallbacks,
-              `${label}.runtimeFallbacks`,
-            ),
-          }),
     });
   }
   if (kind === 'wellPurchase') {
     exact(
       record,
       ['kind', 'owner', 'window', 'offerKey', 'generationKey', 'effect', 'extendedDirectPurchase'],
-      ['twistResultKey', 'runtimeFallbacks'],
+      ['twistResultKey'],
       label,
     );
     return Object.freeze({
@@ -301,21 +278,13 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
       ...(record.twistResultKey === undefined
         ? {}
         : { twistResultKey: stringValue(record.twistResultKey, `${label}.twistResultKey`) }),
-      ...(record.runtimeFallbacks === undefined
-        ? {}
-        : {
-            runtimeFallbacks: runtimeFallbacks(
-              record.runtimeFallbacks,
-              `${label}.runtimeFallbacks`,
-            ),
-          }),
     });
   }
   if (kind === 'wellRefill') {
     exact(
       record,
       ['kind', 'owner', 'window', 'generationKey', 'offerKey', 'effect'],
-      ['twistResultKey', 'runtimeFallbacks'],
+      ['twistResultKey'],
       label,
     );
     if (record.generationKey !== 'travelDealRefill') fail(`${label}.generationKey is unsupported`);
@@ -341,14 +310,6 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
       ...(record.twistResultKey === undefined
         ? {}
         : { twistResultKey: stringValue(record.twistResultKey, `${label}.twistResultKey`) }),
-      ...(record.runtimeFallbacks === undefined
-        ? {}
-        : {
-            runtimeFallbacks: runtimeFallbacks(
-              record.runtimeFallbacks,
-              `${label}.runtimeFallbacks`,
-            ),
-          }),
     });
   }
   if (kind === 'poolSale') {

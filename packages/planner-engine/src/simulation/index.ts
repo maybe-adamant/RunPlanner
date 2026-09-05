@@ -461,7 +461,6 @@ export {
   createTraitHistoryState,
   foldTraitHistoryEvents,
   evaluateReachedTraitOffer,
-  resolveRuntimeOfferFallbackTraitKey,
   recordReachedTraitOffer,
   recordDirectTraitGrants,
   recordAspectStartingTrait,

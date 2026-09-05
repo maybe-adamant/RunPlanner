@@ -1,12 +1,9 @@
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
-  createRoomActionAddress,
   createShopOfferAddress,
   semanticAddressKey,
-  type SemanticAddress,
 } from '../../authored-project/addresses';
-import { roomActionKey } from '../../authored-project/room-actions';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation-products';
 import type { CanonicalAuthoredRoom, CanonicalBatch } from '../../simulation/materialization';
@@ -19,52 +16,10 @@ import type {
   ExecutionKeepsakeEquipResults,
   ExecutionOverview,
   ExecutionReward,
-  ExecutionRuntimeFallback,
 } from '../model';
-import type { RuntimeOfferAvailabilityContact } from '../../simulation/runtime-offer-fallback';
-
-export function executionRuntimeFallbacks(
-  biome: CompleteValidBiomeProjectEvaluation,
-  address: SemanticAddress,
-  availabilityContact?: RuntimeOfferAvailabilityContact,
-): readonly ExecutionRuntimeFallback[] | undefined {
-  const matches = biome.rewards.runtimeOfferFallbacks.filter(
-    (candidate) =>
-      semanticAddressKey(candidate.address) === semanticAddressKey(address) &&
-      (availabilityContact === undefined || candidate.availabilityContact === availabilityContact),
-  );
-  if (matches.length === 0) return undefined;
-  const preferredKeys = matches.map((fallback) => fallback.preferredKey);
-  if (new Set(preferredKeys).size !== preferredKeys.length)
-    throw new CompilerError(
-      'executionCoverageMissing',
-      `duplicate runtime fallback preference ${semanticAddressKey(address)}`,
-    );
-  if (
-    matches.some(
-      (fallback) =>
-        fallback.preferredKey === fallback.fallbackKey ||
-        preferredKeys.includes(fallback.fallbackKey),
-    )
-  )
-    throw new CompilerError(
-      'executionCoverageMissing',
-      `runtime fallback must be one step ${semanticAddressKey(address)}`,
-    );
-  return Object.freeze(
-    matches.map((fallback) =>
-      Object.freeze({
-        preferredKey: fallback.preferredKey,
-        fallbackKey: fallback.fallbackKey,
-        availabilityContact: fallback.availabilityContact,
-      }),
-    ),
-  );
-}
 
 export function executionKeepsakeEquipResults(
   results: AuthoredKeepsakeEquipResults | undefined,
-  jeweledPomRuntimeFallbacks?: readonly ExecutionRuntimeFallback[],
 ): ExecutionKeepsakeEquipResults | undefined {
   if (results === undefined) return undefined;
   return Object.freeze({
@@ -73,9 +28,6 @@ export function executionKeepsakeEquipResults(
       : {
           jeweledPom: Object.freeze({
             ...results.jeweledPom,
-            ...(jeweledPomRuntimeFallbacks === undefined
-              ? {}
-              : { runtimeFallbacks: jeweledPomRuntimeFallbacks }),
           }),
         }),
     ...(results.experimentalHammer === undefined
@@ -249,15 +201,6 @@ export function travelDealRefill(
     slotIndex: row.slotIndex,
     optionKey,
     reward: executionRewardFromOffer(entry.offer, 'Shop'),
-    ...(executionRuntimeFallbacks(biome, row.address, 'storeInventoryGeneration') === undefined
-      ? {}
-      : {
-          runtimeFallbacks: executionRuntimeFallbacks(
-            biome,
-            row.address,
-            'storeInventoryGeneration',
-          ),
-        }),
   });
 }
 
@@ -302,11 +245,6 @@ function executionShop(
         room.occurrenceId,
         offer.offerKey,
       );
-      const runtimeFallbacks = executionRuntimeFallbacks(
-        biome,
-        address,
-        'storeInventoryGeneration',
-      );
       return Object.freeze({
         offerKey: offer.offerKey,
         optionKey: optionKeys[index]!,
@@ -320,7 +258,6 @@ function executionShop(
               spurnedSource: offer.offer.payload.spurnedSource,
             }
           : {}),
-        ...(runtimeFallbacks === undefined ? {} : { runtimeFallbacks }),
       });
     }),
   );
@@ -332,10 +269,7 @@ function executionShop(
   });
 }
 
-function executionStygianWell(
-  room: CanonicalAuthoredRoom,
-  biome: CompleteValidBiomeProjectEvaluation,
-): ExecutionOverview['stygianWell'] | undefined {
+function executionStygianWell(room: CanonicalAuthoredRoom): ExecutionOverview['stygianWell'] | undefined {
   if (room.stygianWell === undefined) return undefined;
   return Object.freeze({
     interacted: room.stygianWell.interacted,
@@ -367,21 +301,6 @@ function executionStygianWell(
               ] as const
             ).flatMap(([generationKey, offerKey, twistResultKey]) => {
               if (offerKey === null || offerKey === undefined) return [];
-              const actionOwner = createRoomActionAddress(
-                createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
-                room.occurrenceId,
-                roomActionKey(
-                  Object.freeze({
-                    kind: 'purchaseStygianWellOffer' as const,
-                    generationKey,
-                  }),
-                ),
-              );
-              const runtimeFallbacks = executionRuntimeFallbacks(
-                biome,
-                actionOwner,
-                'storeInventoryGeneration',
-              );
               return [
                 Object.freeze({
                   generationKey,
@@ -389,7 +308,6 @@ function executionStygianWell(
                   ...(twistResultKey === undefined || twistResultKey === null
                     ? {}
                     : { twistResultKey }),
-                  ...(runtimeFallbacks === undefined ? {} : { runtimeFallbacks }),
                 }),
               ];
             }),
@@ -428,7 +346,7 @@ export function assembleExecutionOverview(
 ): ExecutionOverview {
   const incomingReward = executionReward(room);
   const shop = executionShop(room, biome);
-  const stygianWell = executionStygianWell(room, biome);
+  const stygianWell = executionStygianWell(room);
   const purgingPool = executionPurgingPool(room);
   const resources = executionResources(room, biome);
   const additional = executionAdditionalExits(batch);

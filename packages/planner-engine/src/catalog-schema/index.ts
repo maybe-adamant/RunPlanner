@@ -359,17 +359,6 @@ export interface EncounterDefinition {
         'ArmorBoost',
       ];
       readonly conditionalResultRewardType: 'LastStandDrop';
-      readonly runtimeOfferRequirement: 'missingLastStand';
-      readonly runtimeOfferFallbacks: readonly [
-        {
-          readonly preferredRewardType: 'LastStandDrop';
-          readonly fallbackRewardType: 'ArmorBoost';
-        },
-        {
-          readonly preferredRewardType: 'ArmorBoost';
-          readonly fallbackRewardType: 'EmptyMaxHealthDrop';
-        },
-      ];
       readonly response: 'none';
       readonly pickupRequired: false;
     };

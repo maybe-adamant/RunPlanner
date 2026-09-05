@@ -136,31 +136,6 @@ function normalizeShopOption(
                   `${path}.stygianWell.nestedResultItemKeys`,
                 ),
               }),
-          ...(raw.stygianWell.nestedRuntimeOfferFallbacks === undefined
-            ? {}
-            : {
-                nestedRuntimeOfferFallbacks: Object.freeze(
-                  requireArray(
-                    raw.stygianWell.nestedRuntimeOfferFallbacks,
-                    `${path}.stygianWell.nestedRuntimeOfferFallbacks`,
-                  ).map((rawEdge, index) => {
-                    const edge = requireObject(
-                      rawEdge,
-                      `${path}.stygianWell.nestedRuntimeOfferFallbacks[${index}]`,
-                    );
-                    return Object.freeze({
-                      preferredItemKey: requireNonEmpty(
-                        edge.preferredItemKey as string,
-                        `${path}.stygianWell.nestedRuntimeOfferFallbacks[${index}].preferredItemKey`,
-                      ),
-                      fallbackItemKey: requireNonEmpty(
-                        edge.fallbackItemKey as string,
-                        `${path}.stygianWell.nestedRuntimeOfferFallbacks[${index}].fallbackItemKey`,
-                      ),
-                    });
-                  }),
-                ),
-              }),
           ...(raw.stygianWell.extendedDirectPurchaseItemKeys === undefined
             ? {}
             : {
@@ -195,27 +170,6 @@ function normalizeShopOption(
             `${path}.purchaseRequirement`,
           ),
         }),
-    ...(raw.runtimeOfferFallbackRewardTypes === undefined
-      ? {}
-      : (() => {
-          const values = freezeUniqueStrings(
-            requireArray(
-              raw.runtimeOfferFallbackRewardTypes,
-              `${path}.runtimeOfferFallbackRewardTypes`,
-            ) as readonly string[],
-            `${path}.runtimeOfferFallbackRewardTypes`,
-          );
-          if (values.length === 0)
-            fail(`${path}.runtimeOfferFallbackRewardTypes`, 'must not be empty');
-          if (values.some((rewardType) => rewardTypes.byKey[rewardType] === undefined))
-            fail(`${path}.runtimeOfferFallbackRewardTypes`, 'contains an unknown reward type');
-          return { runtimeOfferFallbackRewardTypes: values };
-        })()),
-    ...(raw.runtimeOfferRequirement === undefined
-      ? {}
-      : raw.runtimeOfferRequirement === 'missingLastStand'
-        ? { runtimeOfferRequirement: 'missingLastStand' as const }
-        : fail(`${path}.runtimeOfferRequirement`, 'has an unknown runtime offer requirement')),
     acquisitionLifecycle,
     purchaseInteraction,
     ...(boonRarityOverride === undefined
@@ -256,15 +210,6 @@ export function normalizeShops(
           const groupRewardTypes = Object.freeze([
             ...new Set(options.values.map((option) => option.rewardType)),
           ]);
-          for (const option of options.values) {
-            const fallbacks = option.runtimeOfferFallbackRewardTypes;
-            if (fallbacks === undefined) continue;
-            if (fallbacks.some((rewardType) => !groupRewardTypes.includes(rewardType)))
-              fail(
-                `${groupPath}.options.${option.key}.runtimeOfferFallbackRewardTypes`,
-                'must remain in the exact Shop group',
-              );
-          }
           return Object.freeze({
             key: requireNonEmpty(group.key, `${groupPath}.key`),
             offerCount,
@@ -320,8 +265,7 @@ export function normalizeShops(
           const metadata = option.stygianWell!;
           if (
             option.key !== 'RandomStoreItem' &&
-            (metadata.nestedResultItemKeys !== undefined ||
-              metadata.nestedRuntimeOfferFallbacks !== undefined)
+            metadata.nestedResultItemKeys !== undefined
           )
             fail(path, 'nested Well metadata is owned only by RandomStoreItem');
           if (
@@ -335,26 +279,15 @@ export function normalizeShops(
         if (extended?.stygianWell?.effect !== 'extended')
           fail(path, 'ExtendedShopTrait must own the Extended effect');
         const nestedResultItemKeys = twist.stygianWell.nestedResultItemKeys ?? [];
-        const nestedFallbacks = twist.stygianWell.nestedRuntimeOfferFallbacks ?? [];
         const extendedDirectPurchaseItemKeys =
           extended.stygianWell.extendedDirectPurchaseItemKeys ?? [];
         if (nestedResultItemKeys.length === 0)
           fail(path, 'RandomStoreItem must declare a nonempty Twist result pool');
-        if (nestedFallbacks.length === 0)
-          fail(path, 'RandomStoreItem must declare its nonempty nested fallback policy');
         if (extendedDirectPurchaseItemKeys.length === 0)
           fail(path, 'ExtendedShopTrait must declare a nonempty direct-purchase whitelist');
         const twistPool = new Set(nestedResultItemKeys);
         for (const itemKey of twistPool)
           if (!known.has(itemKey)) fail(path, `Twist references unknown RoomShop item ${itemKey}`);
-        if (
-          new Set(nestedFallbacks.map((edge) => edge.preferredItemKey)).size !==
-          nestedFallbacks.length
-        )
-          fail(path, 'Twist fallback preferred item keys must be unique');
-        for (const edge of nestedFallbacks)
-          if (!twistPool.has(edge.preferredItemKey) || !twistPool.has(edge.fallbackItemKey))
-            fail(path, 'Twist fallback endpoints must both belong to the Twist result pool');
         for (const itemKey of extendedDirectPurchaseItemKeys)
           if (!known.has(itemKey))
             fail(path, `Extended references unknown RoomShop item ${itemKey}`);

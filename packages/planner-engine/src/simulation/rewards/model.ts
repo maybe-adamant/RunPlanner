@@ -23,7 +23,6 @@ import type { TraitRarity } from '../../catalog-schema';
 import type { NemesisRandomEventAddress } from '../../authored-project/addresses';
 import type { PlannerTimelineFacts } from '../timeline-facts';
 import type { StygianWellEffect } from '../stygian-well';
-import type { RuntimeOfferFallback } from '../runtime-offer-fallback';
 
 /** Exact planner-owned realization of a Travel Deal Well refill. */
 export interface WellRefillRealization {
@@ -211,8 +210,6 @@ interface RewardSimulationBase {
   readonly findings: readonly SemanticFinding[];
 }
 
-/** One evaluated source-local runtime substitute for a selected result/action. */
-export type ResolvedRuntimeOfferFallback = RuntimeOfferFallback;
 
 export interface BiomeRewardSimulation extends RewardSimulationBase {
   /** Reward transitions publish only exact owner relations; room actions publish structural facts. */
@@ -245,8 +242,6 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly hermesShrineDeliveries: readonly import('../hermes-shrine').DerivedHermesShrineDelivery[];
   readonly selectedTraitOffers: readonly SelectedTraitOfferAssessment[];
   readonly selectedLevelResolutions: readonly SelectedLevelResolutionAssessment[];
-  /** One resolved runtime substitute per reached selected result/action. */
-  readonly runtimeOfferFallbacks: readonly ResolvedRuntimeOfferFallback[];
   readonly figLeafPhaseCandidates: readonly FigLeafPhaseCandidateSupport[];
   readonly gorgonPhaseCandidates: readonly GorgonPhaseCandidateSupport[];
   readonly nemesisRandomEventCandidates: readonly NemesisRandomEventCandidateSupport[];

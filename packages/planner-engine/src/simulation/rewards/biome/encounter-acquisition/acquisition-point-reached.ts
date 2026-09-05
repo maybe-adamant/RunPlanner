@@ -48,7 +48,6 @@ import { addRewardFinding, rewardFinding } from '../../findings';
 import type { AuthoredSiteSettlementResult } from '../generation/authored-site-settlement';
 import { settleAuthoredAcquisitionSite } from '../generation/authored-site-settlement';
 import type { ReachedTraitChildCheckpoint } from '../../trait-settlement';
-import type { RuntimeOfferFallback } from '../../../runtime-offer-fallback';
 import {
   createRewardProducerCandidateResult,
   type RewardProducerOwnerAddress,
@@ -68,7 +67,6 @@ export interface AcquisitionPointReachedTransition {
   readonly roleFrontiers: readonly AcquisitionRoleFrontier[];
   readonly traitChildSettlements: readonly ReachedTraitChildCheckpoint[];
   readonly authoredSiteSettlement: AuthoredSiteSettlementResult | undefined;
-  readonly runtimeOfferFallbacks: readonly RuntimeOfferFallback[];
   /** Present only for Shrine purchase events; replaces the coordinator's room state. */
   readonly hermesShrineRefillState: HermesShrineRefillState | undefined;
 }
@@ -93,29 +91,6 @@ export interface AcquisitionPointReachedInputs {
   readonly hermesShrineRefillState: HermesShrineRefillState | undefined;
 }
 
-function shrineFallbackRewardType(
-  catalog: Catalog,
-  generationKey: import('../../../../authored-project/model').HermesShrineGenerationKey,
-  rewardType: string,
-  refill: HermesShrineTravelDealRefillAssessment | undefined,
-): string | undefined {
-  const sourceGenerationKey =
-    generationKey === 'travelDealRefill' ? refill?.sourceGenerationKey : generationKey;
-  const slotKey = sourceGenerationKey?.startsWith('initial:')
-    ? sourceGenerationKey.slice('initial:'.length)
-    : undefined;
-  if (slotKey !== 'first' && slotKey !== 'secondLeft' && slotKey !== 'secondRight')
-    return undefined;
-  const profile = catalog.rewards.shops.byKey.SurfaceShop;
-  const group = profile?.groups.byKey[profile.slots.byKey[slotKey]?.groupKey ?? ''];
-  const option = group?.options.values.find((candidate) => candidate.rewardType === rewardType);
-  const supported =
-    generationKey === 'travelDealRefill' ? refill?.candidateRewardTypes : group?.rewardTypes;
-  return option?.runtimeOfferFallbackRewardTypes?.find(
-    (candidate) => supported?.includes(candidate) === true,
-  );
-}
-
 function transitionResult(input: {
   readonly branches: readonly RewardBranchState[];
   readonly findings: ReadonlyMap<string, FindingRegionEntry>;
@@ -123,7 +98,6 @@ function transitionResult(input: {
   readonly roleFrontiers?: readonly AcquisitionRoleFrontier[] | undefined;
   readonly traitChildSettlements?: readonly ReachedTraitChildCheckpoint[] | undefined;
   readonly authoredSiteSettlement?: AuthoredSiteSettlementResult | undefined;
-  readonly runtimeOfferFallbacks?: readonly RuntimeOfferFallback[] | undefined;
   readonly hermesShrineRefillState?: HermesShrineRefillState | undefined;
 }): AcquisitionPointReachedTransition {
   return Object.freeze({
@@ -133,7 +107,6 @@ function transitionResult(input: {
     roleFrontiers: Object.freeze(input.roleFrontiers ?? []),
     traitChildSettlements: Object.freeze(input.traitChildSettlements ?? []),
     authoredSiteSettlement: input.authoredSiteSettlement,
-    runtimeOfferFallbacks: Object.freeze(input.runtimeOfferFallbacks ?? []),
     hermesShrineRefillState: input.hermesShrineRefillState,
   });
 }
@@ -507,24 +480,6 @@ export function applyAcquisitionPointReachedTransition(
             });
         }
       }
-      const fallbackRewardType = shrineFallbackRewardType(
-        catalog,
-        shrineDelivery.generationKey,
-        agreedDue.rewardType,
-        prior?.refillAssessments?.[0],
-      );
-      const runtimeOfferFallbacks =
-        fallbackRewardType === undefined ||
-        (shrineDelivery.generationKey === 'travelDealRefill' && prior?.refillSupported !== true)
-          ? []
-          : [
-              Object.freeze({
-                address: entry,
-                preferredKey: agreedDue.rewardType,
-                fallbackKey: fallbackRewardType,
-                availabilityContact: 'storePurchase',
-              }),
-            ];
       const acquisitionView =
         roomView.acquisitionPoints?.find((point) => point.point === event.point)?.before ??
         roomView.preOutgoing ??
@@ -606,7 +561,6 @@ export function applyAcquisitionPointReachedTransition(
         ]),
         roleFrontiers: settled.roleFrontiers,
         traitChildSettlements: settled.traitChildSettlements,
-        runtimeOfferFallbacks,
         hermesShrineRefillState: refillState,
       });
     }

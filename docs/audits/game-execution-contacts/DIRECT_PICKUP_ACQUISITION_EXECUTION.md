@@ -108,9 +108,9 @@ bound or unbound candidate enters UseConsumableItem
 ```
 
 A rejected attempt never begins the transaction. An error after acceptance
-does not complete it. Completion after the native call returns proves that the
-synchronous native sequence has settled; simulation-neutral presentation or
-health/Gold threads are not execution obligations.
+does not complete it. Completion after the native call returns is the
+structural terminal for the synchronous native sequence; simulation-neutral
+presentation or health/Gold threads are not execution obligations.
 
 The executor does not call the item's use functions itself. In particular, it
 does not reproduce health, Magick, Gold, Armor, element, Forfeit, resource,
@@ -129,7 +129,7 @@ without a specialized acquisition result:
 | Elemental essences                | Consume the resolved item and let native `AddTraitToHero` apply the fixed element trait before completion.                                           |
 | Red Onion                         | Consume the resolved item. Vow of Forfeit replacement and retained-state policy remain navigation and conformance facts.                             |
 | Meta-progression resources        | Consume as native pass-through; their amounts do not enter simulation.                                                                               |
-| Last Stand pickup                 | May reuse this consumer after its producer resolves availability and exposes the actual preferred or fallback object.                                |
+| Last Stand pickup                 | May reuse this consumer after its producer exposes the exact authored object and native availability has accepted it.                                |
 
 This is a carrier classification rather than a second catalog inventory. A
 later producer may expose any result with this same published shape; the
@@ -142,7 +142,7 @@ Sharing `UseConsumableItem` is not sufficient to join this family:
 
 | Acquisition                                          | Owning boundary                                                                                                                                                               |
 | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `StoreRewardRandomStack` and source-eligible Nectar  | Direct level acquisition; native target steering and level proof are required.                                                                                                |
+| `StoreRewardRandomStack` and source-eligible Nectar  | Direct level acquisition; native target steering and a bounded native terminal are required.                                                                                  |
 | `TalentDrop`, `TalentBigDrop`, and `MinorTalentDrop` | Spell/Path/Hex execution. Their `OpenTalentScreen` use function starts an interactive talent-tree action.                                                                     |
 | Trait, Pom, Chaos, and Spell loot                    | Their native choice-screen adapters.                                                                                                                                          |
 | `BlindBoxLoot` and other wrapped rewards             | The producer and generated-child chain, followed by the child's applicable consumer.                                                                                          |
@@ -160,14 +160,14 @@ inside the direct native sequence. This behavior-shaped contact distinguishes
 the supported carrier without duplicating the catalog's item inventory in the
 executor.
 
-## Runtime fallback boundary
+## Exact native contact boundary
 
 The direct-pickup consumer does not decide whether an intended item is
 available. Shop inventory, NPC rewards, or another producer evaluates the
-carrier-specific availability question and exposes the actual preferred or
-declared fallback object for the same execution owner. Consuming that resolved
-fallback through an existing binding or ready-action claim completes the owner
-and is not a divergence.
+carrier-specific availability question for the exact authored object. If the
+native contact rejects that object, the owning adapter reports a mismatch and
+keeps the native base path operational; no substitute is exposed to the
+consumer.
 
 This keeps Death Defiance eligibility and other volatile offer policy with the
 native contact that can answer it. The pickup consumer only verifies the exact
@@ -190,9 +190,9 @@ fact.
 ## Planner and executor disposition
 
 The planner remains the sole authority for which acquisition exists and which
-specialized result, producer relation, fallback, and lifecycle apply. The
-executor contributes only native correlation and the accepted-use/terminal
-boundary described above.
+specialized result, producer relation, and lifecycle apply. The executor
+contributes only native correlation and the accepted-use/terminal boundary
+described above.
 
 Representative execution witnesses are sufficient:
 

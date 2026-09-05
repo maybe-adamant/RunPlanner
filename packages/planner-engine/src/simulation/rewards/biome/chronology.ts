@@ -20,7 +20,6 @@ import {
 import type { ResourcePlacements, RouteLoadout } from '../../../authored-project/model';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../../authored-project/defaults';
 import type { StygianWellCandidateContext } from '../../stygian-well';
-import type { RuntimeOfferAvailabilityContact } from '../../runtime-offer-fallback';
 import { parseSeaStarDuplicateSiteKey } from '../../../authored-project/sea-star';
 import { parseHermesShrineDeliveryEntryKey } from '../../../authored-project/hermes-shrine-delivery';
 import type { ResolvedRewardOffer } from '../../../reward-kernel';
@@ -306,15 +305,6 @@ export function evaluateBiomeRewardChronology(
     string,
     import('../model').NemesisRandomEventCandidateSupport
   >();
-  const runtimeOfferFallbacks = new Map<
-    string,
-    {
-      readonly address: SemanticAddress;
-      readonly preferredKey: string;
-      readonly fallbackKey: string;
-      readonly availabilityContact: RuntimeOfferAvailabilityContact;
-    }
-  >();
   const blockedGorgonPhases = new Set<string>();
   let gorgonEvaluationBlocked = false;
   const eligibleGorgonPhases = new Set<string>();
@@ -382,29 +372,6 @@ export function evaluateBiomeRewardChronology(
       if (producer === undefined) continue;
       if (producer.sourceTimelineOwner !== undefined)
         recordTimelineDependency(consumerOwner, producer.sourceTimelineOwner);
-    }
-  }
-  function recordRuntimeOfferFallbacks(
-    fallbacks:
-      | readonly {
-          readonly address: SemanticAddress;
-          readonly preferredKey: string;
-          readonly fallbackKey: string;
-          readonly availabilityContact: RuntimeOfferAvailabilityContact;
-        }[]
-      | undefined,
-  ): void {
-    for (const fallback of fallbacks ?? []) {
-      const key = `${semanticAddressKey(fallback.address)}\u0000${fallback.availabilityContact}`;
-      runtimeOfferFallbacks.set(
-        key,
-        Object.freeze({
-          address: fallback.address,
-          preferredKey: fallback.preferredKey,
-          fallbackKey: fallback.fallbackKey,
-          availabilityContact: fallback.availabilityContact,
-        }),
-      );
     }
   }
   function recordDerivedAcquisitionEntryFrontiers(
@@ -1139,7 +1106,6 @@ export function evaluateBiomeRewardChronology(
         addRewardFinding(findings, entry.finding, entry.atomicRegion, entry.chronology, evaluation);
     }
     recordAcquisitionRoleFrontiers(result.emissions.acquisitionRoleFrontiers);
-    recordRuntimeOfferFallbacks(result.emissions.runtimeOfferFallbacks);
     recordTimelineFacts(result.emissions.timelineFacts);
     recordDerivedAcquisitionEntryFrontiers(result.emissions.derivedEntryFrontiers);
     recordTraitChildSettlements(result.emissions.traitChildSettlements, occurrenceOwner);
@@ -1257,16 +1223,6 @@ export function evaluateBiomeRewardChronology(
           stygianWellAssessments.set(
             semanticAddressKey(entered.stygianWellAssessment.origin),
             entered.stygianWellAssessment,
-          );
-        for (const fallback of entered.stygianWellAssessment?.runtimeOfferFallbacks ?? [])
-          runtimeOfferFallbacks.set(
-            `${semanticAddressKey(fallback.address)}\u0000${fallback.availabilityContact}`,
-            Object.freeze({
-              address: fallback.address,
-              preferredKey: fallback.preferredKey,
-              fallbackKey: fallback.fallbackKey,
-              availabilityContact: fallback.availabilityContact,
-            }),
           );
         if (entered.runStateCheckpoint !== undefined) {
           const { owner, room: checkpointRoom, view } = entered.runStateCheckpoint;
@@ -1576,16 +1532,6 @@ export function evaluateBiomeRewardChronology(
             transition.nemesisCandidate.key,
             transition.nemesisCandidate.value,
           );
-        if (transition.runtimeOfferFallback !== undefined)
-          runtimeOfferFallbacks.set(
-            `${semanticAddressKey(transition.runtimeOfferFallback.address)}\u0000${transition.runtimeOfferFallback.availabilityContact}`,
-            Object.freeze({
-              address: transition.runtimeOfferFallback.address,
-              preferredKey: transition.runtimeOfferFallback.preferredKey,
-              fallbackKey: transition.runtimeOfferFallback.fallbackKey,
-              availabilityContact: 'npcConsumableSelection',
-            }),
-          );
         for (const outcome of transition.bossArcanaOutcomes ?? [])
           bossArcanaOutcomes.set(semanticAddressKey(outcome.owner), outcome);
         recordTimelineFacts(transition.timelineFacts);
@@ -1713,16 +1659,6 @@ export function evaluateBiomeRewardChronology(
         recordAcquisitionRoleFrontiers(transition.roleFrontiers);
         if (room !== undefined)
           recordTraitChildSettlements(transition.traitChildSettlements, room.origin);
-        for (const fallback of transition.runtimeOfferFallbacks)
-          runtimeOfferFallbacks.set(
-            `${semanticAddressKey(fallback.address)}\u0000storePurchase`,
-            Object.freeze({
-              address: fallback.address,
-              preferredKey: fallback.preferredKey,
-              fallbackKey: fallback.fallbackKey,
-              availabilityContact: fallback.availabilityContact,
-            }),
-          );
         if (transition.authoredSiteSettlement !== undefined && room !== undefined)
           applyAuthoredSiteSettlementResult(transition.authoredSiteSettlement, room.origin);
         if (transition.hermesShrineRefillState !== undefined) {
@@ -1750,11 +1686,6 @@ export function evaluateBiomeRewardChronology(
           findings.set(findingIdentityKey(finding.finding), finding);
         branches = transition.branches;
         recordTimelineFacts(transition.timelineFacts);
-        if (transition.runtimeOfferFallback !== undefined)
-          runtimeOfferFallbacks.set(
-            `${semanticAddressKey(transition.runtimeOfferFallback.address)}\u0000${transition.runtimeOfferFallback.availabilityContact}`,
-            transition.runtimeOfferFallback,
-          );
         if (transition.refillRealization !== undefined)
           wellRefillRealizations.set(
             semanticAddressKey(transition.refillRealization.owner),
@@ -1896,10 +1827,6 @@ export function evaluateBiomeRewardChronology(
     ]),
     selectedTraitOffers: traitProducts.selectedTraitOffers,
     selectedLevelResolutions: traitProducts.selectedLevelResolutions,
-    runtimeOfferFallbacks: Object.freeze([
-      ...traitProducts.runtimeOfferFallbacks,
-      ...runtimeOfferFallbacks.values(),
-    ]),
     figLeafPhaseCandidates: Object.freeze([...figLeafPhaseCandidates.values()]),
     gorgonPhaseCandidates: Object.freeze([...gorgonPhaseCandidates.values()]),
     nemesisRandomEventCandidates: Object.freeze([...nemesisRandomEventCandidates.values()]),
