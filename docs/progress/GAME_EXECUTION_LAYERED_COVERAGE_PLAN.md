@@ -7,10 +7,11 @@ C2.5, C3, C4, and D1 through D8 are complete as of 2026-09-05. Gate D closure
 has recorded the universal disposition matrix, retired the superseded broad
 trait paths, and completed its bounded verification. The follow-up NPC vertical
 closure now also covers Medea, Arachne, Narcissus, Circe, Icarus, and Echo
-without enabling their deferred route structure. The focused
-[Keepsake Execution Closure Plan](KEEPSAKE_EXECUTION_CLOSURE_PLAN.md) must close
-the remaining universal keepsake contacts before Gate E begins. Gates E onward
-remain scope outlines until they receive the same
+without enabling their deferred route structure. The focused keepsake closure
+now covers all 33 selectable keepsakes, including Aromatic Phial target
+steering, complete retained-state reading, and Gift Gift Gift's volatile
+Hammer/Embryo replay. Gate E is therefore the next implementation boundary.
+Gates E onward remain scope outlines until they receive the same
 component-by-component review. Do not begin a gate until its components,
 ownership, native contacts, pass-through boundary, and concrete witnesses have
 been discussed, cleaned up here, and locked.
@@ -92,7 +93,7 @@ callback is already known.
 
 ### Proven base retained
 
-- Protocol v16 publishes one selected Underworld F or F/G occurrence sequence
+- Protocol v21 publishes one selected Underworld F or F/G occurrence sequence
   with Overview, consequential Timeline transactions, local prerequisites,
   obligations, Doors, sparse room-exit conformance, and diagnostic Run State.
 - The active executor uses a route cursor and one Room Occurrence session. The
@@ -111,14 +112,14 @@ its coverage matrix proves the contact; working code is not exempt from audit.
 
 ### Remaining boundary after Gate D
 
-| Layer                 | Disposition after closure                                                                                                                                                             |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Structure             | The F/G room/reward/encounter/feature/Door proof is closed. Live host probes remain evidence work, not a missing execution product.                                                   |
-| Acquisition carriers  | Ordinary, level, direct-pickup, NPC, Mystery Boon, Artificer, Spell, and Path carriers are closed. Commerce remains Gate E; later-route carrier activation remains route-owned.       |
-| Trait effects         | Natural Selection, All Together, Concave Stone, and Sea Star have exact scoped products. Ransoms are native-authoritative, not a second executor implementation.                      |
-| Keepsake effects      | The complete disposition is classified. The focused keepsake closure must complete Phial steering, retained-state reading, and publication of Gift's volatile replay before commerce. |
-| Commerce              | Shop, Well, Pool, and Shrine delivery closure remains Gate E; this plan does not claim its exhaustive item/contact coverage.                                                          |
-| Later-route abilities | Spell/Hex, Path, and all six bespoke NPC menu/consequence adapters are covered but await route activation and bounded live native probes. Biome-specific structure remains deferred.  |
+| Layer                 | Disposition after closure                                                                                                                                                                |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Structure             | The F/G room/reward/encounter/feature/Door proof is closed. Live host probes remain evidence work, not a missing execution product.                                                      |
+| Acquisition carriers  | Ordinary, level, direct-pickup, NPC, Mystery Boon, Artificer, Spell, and Path carriers are closed. Commerce remains Gate E; later-route carrier activation remains route-owned.          |
+| Trait effects         | Natural Selection, All Together, Concave Stone, and Sea Star have exact scoped products. Ransoms are native-authoritative, not a second executor implementation.                         |
+| Keepsake effects      | Closed for all 33 keepsakes. Phial steering, complete retained-state reading, and Gift's exact volatile Hammer/Embryo replay use bounded native contacts; passive effects remain native. |
+| Commerce              | Shop, Well, Pool, and Shrine delivery closure remains Gate E; this plan does not claim its exhaustive item/contact coverage.                                                             |
+| Later-route abilities | Spell/Hex, Path, and all six bespoke NPC menu/consequence adapters are covered but await route activation and bounded live native probes. Biome-specific structure remains deferred.     |
 
 ## Locked architectural rules
 

@@ -761,7 +761,7 @@ configuration/schema change; it is not rerun merely to create review evidence.
 
 ## F/G Execution Boundary
 
-The current F/G execution boundary is protocol v17. It exports only the exact
+The current F/G execution boundary is protocol v21. It exports only the exact
 complete-valid simulation assembly; the Plan Executor remains a strict decoder
 and native-seam translator rather than a second planner. Gates C1–C4 and D1–D8
 closed focused acquisition carriers, nested selected-trait consequences,
@@ -801,6 +801,17 @@ equip result. The Executor freezes the plan at the nested run-start
 Embryo selects its native result; Postboss rack changes reuse the same scoped
 acquire adapters. The opening room remains the first room trace contact, while
 the delayed run-start presentation remains presentation-only.
+
+Protocol v21 closes the universal execution disposition for all 33 selectable
+keepsakes. Aromatic Phial now steers the exact native rarity target, the
+room-exit reader compares every planner-visible retained keepsake field, and a
+reached Gift Gift Gift Experimental Hammer or Transcendent Embryo replay
+publishes one exact biome-start transaction. The replay remains pending across
+the native equip carrier and completes at its result-producing selector;
+passive Gift replays and deterministic native keepsake effects add no executor
+transaction or second effect implementation. The planner's complete gate
+passed 2,767 correctness tests, performance checks, lint, formatting, and the
+production build; the executor passed 284 Lua tests and focused Luacheck.
 
 The protocol-v7 closure ran its one authorized `npm run check` on 2026-08-30.
 Workspace and fixture typechecking, fixture integrity at 3 files/22 tests,
