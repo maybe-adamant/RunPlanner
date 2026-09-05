@@ -15,7 +15,6 @@ import type {
   TraitHistoryState,
   TraitOfferCandidateContext,
 } from '../../traits';
-import { optionIndex } from '../../../authored-project/traits';
 
 export interface SelectedTraitOfferProducts {
   readonly selectedTraitOffers: readonly SelectedTraitOfferAssessment[];
@@ -123,15 +122,6 @@ export function selectedTraitOfferProducts(
                   trace.levelResolutions.map((resolution) => resolution.effectiveLevel),
                 ),
                 baseRarities: trace.baseRarities,
-                ...(trace.offer.kind !== 'traits' ||
-                trace.offer.options[optionIndex(trace.offer.selectedOptionKey)]?.circeResolution ===
-                  undefined
-                  ? {}
-                  : {
-                      circeResolution:
-                        trace.offer.options[optionIndex(trace.offer.selectedOptionKey)]!
-                          .circeResolution,
-                    }),
                 ...(trace.settledHexTree === undefined
                   ? {}
                   : { settledHexTree: trace.settledHexTree }),

@@ -1515,6 +1515,7 @@ export function evaluateBiomeRewardChronology(
           judgmentArcanaContexts.set(
             transition.judgmentCandidate.key,
             Object.freeze({
+              activeArcanaKeys: transition.judgmentCandidate.activeArcanaKeys,
               inactiveArcanaKeys: transition.judgmentCandidate.inactiveArcanaKeys,
               requiredCount: transition.judgmentCandidate.requiredCount,
             }),
@@ -1523,6 +1524,7 @@ export function evaluateBiomeRewardChronology(
           figurineArcanaContexts.set(
             transition.figurineCandidate.key,
             Object.freeze({
+              activeArcanaKeys: transition.figurineCandidate.activeArcanaKeys,
               inactiveArcanaKeys: transition.figurineCandidate.inactiveArcanaKeys,
               requiredCount: transition.figurineCandidate.requiredCount,
               rarity: transition.figurineCandidate.rarity,

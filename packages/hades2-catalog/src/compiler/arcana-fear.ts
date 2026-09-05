@@ -30,15 +30,6 @@ export function normalizeArcanaCards(
     const postBossActivationCounts = card.postBossActivationCounts;
     const artificerCapacityByRarity = card.artificerCapacityByRarity;
     const boonRarityContributions = card.boonRarityContributions;
-    if (
-      card.randomDrawChance !== undefined &&
-      (typeof card.randomDrawChance !== 'number' ||
-        !Number.isFinite(card.randomDrawChance) ||
-        card.randomDrawChance <= 0 ||
-        card.randomDrawChance > 1)
-    ) {
-      fail(`${path}.randomDrawChance`, 'must be greater than zero and at most one');
-    }
     const randomDrawRequiredCardKeys = card.randomDrawRequiredCardKeys ?? [];
     const seenRequiredCardKeys = new Set<string>();
     randomDrawRequiredCardKeys.forEach((requiredKey, requiredIndex) => {

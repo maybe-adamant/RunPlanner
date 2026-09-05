@@ -136,19 +136,21 @@ The operation does not re-check a card's ordinary manual/automatic activation
 rule. An inactive automatic card is therefore a valid temporary draw and can
 remain active even while its awakening condition is false.
 
-Three selection details affect the native positive-probability support:
+Three selection details affect the native draw:
 
 - `CastCount`/Eternity has `RandomDrawChance = 0.1`; a failed roll moves it to
-  a fallback pool, so it remains a possible result.
+  a fallback pool, so it remains a possible result. The planner models possible
+  outcomes rather than this numeric probability; an executor realizing an exact
+  Eternity result admits the native positive branch.
 - `TradeOff`/The Fates names `ScreenReroll` and `DoorReroll` in
-  `RequiredCardNames`. When neither is active and another primary candidate
-  remains after The Fates is selected, native code moves The Fates to the
-  fallback pool and immediately substitutes another primary candidate. The
-  Fates can remain final without a companion only when that primary pool is
-  already empty (the sole-primary or fallback case). Under the fully progressed
-  planner baseline, the two inactive required cards are themselves
-  deterministic primary candidates, so an ordinary non-Fated activation domain
-  offers The Fates only while at least one required card is active.
+  `RequiredCardNames`. When The Fates is selected without either companion and
+  another primary candidate remains, it is deferred and another primary is
+  substituted. The draw loop updates its equipped-card set after every selected
+  card, so either companion may already be active or may be selected earlier in
+  the same multi-card result. Under the planner's fully unlocked baseline, an
+  inactive companion is itself in the draw pool; a valid authored result
+  therefore requires The Champions or The Enchantress rather than modeling the
+  native fallback-pool accident as a companionless outcome.
 - the game's Fated mode removes `DoorReroll`, `ScreenReroll`, and `TradeOff`
   from this random-draw domain. That is a distinct run mode, not an ordinary
   Arcana-loadout rule.
@@ -360,13 +362,15 @@ generic Arcana callback system.
 
 Execution protocol v18 publishes the complete-valid selected Circe option's
 existing activation, promotion, or suppression result without re-deriving it
-from the trait identity. The activation domain uses the declaration-owned
-`RandomDrawChance` and `RequiredCardNames` facts above. The Plan Executor
-constrains only the corresponding native random selector inside Circe's
-acquire-function scope, including the native positive `RandomChance` admission
-branch only when the exact published activation target is `CastCount`, and the
-native negative branch when the exact target is `TradeOff` and neither required
-card is equipped; native code owns the Arcana/Fear mutation and existing
+from the trait identity. The activation domain consumes only the
+declaration-owned `RequiredCardNames` eligibility fact. The numeric Eternity
+chance remains source evidence, not planner state. Judgment and Figurine accept
+The Fates when a named companion is already active or is in the same selected
+set; their execution projection orders a same-set companion first because the
+native operation resolves cards sequentially. The Plan Executor constrains only
+the corresponding native random selector inside Circe's acquire-function scope,
+including Eternity's native positive `RandomChance` branch when it is the exact
+published target. Native code owns the Arcana/Fear mutation and existing
 room-exit conformance owns its proof.
 This closes the dormant Circe consequence contact without enabling O route
 navigation.

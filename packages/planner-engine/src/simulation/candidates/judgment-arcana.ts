@@ -4,6 +4,7 @@ import type { ProjectDocument } from '../../authored-project/model';
 import type { JudgmentArcanaCandidateArtifacts } from '../candidate-artifacts';
 import type { ProjectEvaluation } from '../evaluation-products';
 import type { SemanticFinding } from '../model';
+import { unsatisfiedRandomArcanaRequirementKeys } from '../arcana-fear';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 
 export interface JudgmentArcanaCandidateQuery {
@@ -55,6 +56,17 @@ export function evaluateJudgmentArcanaCandidate(
       findings.push(finding('judgmentOutcomeTargetUnavailable', { key, reason: 'unavailable' }));
     seen.add(key);
   }
+  for (const key of unsatisfiedRandomArcanaRequirementKeys(
+    catalog,
+    capability.activeArcanaKeys,
+    query.arcanaKeys,
+  ))
+    findings.push(
+      finding('judgmentOutcomeTargetUnavailable', {
+        key,
+        reason: 'randomDrawRequirementsUnsatisfied',
+      }),
+    );
   if (query.arcanaKeys.length !== capability.requiredCount)
     findings.push(
       finding('judgmentOutcomeWrongCardinality', {

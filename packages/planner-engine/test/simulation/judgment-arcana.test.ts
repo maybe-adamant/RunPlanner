@@ -219,6 +219,65 @@ describe('Judgment fixed Boss ownership', () => {
 });
 
 describe('Judgment fixed Boss lifecycle', () => {
+  it('requires a Fates companion across Circe, Judgment, and Figurine random draws', () => {
+    const judgmentState = createArcanaFearState(catalog, {
+      ...createDefaultRouteLoadout(catalog),
+      manualArcanaKeys: ['CastCount'],
+    });
+    const safeJudgmentKeys = ['ChanneledCast', 'HealthRegen', 'LowManaDamageBonus', 'CastBuff'];
+    const invalidJudgment = evaluateNBossLifecycle(judgmentState, [
+      'TradeOff',
+      ...safeJudgmentKeys,
+    ]);
+    expect(invalidJudgment.simulation.branches).toHaveLength(0);
+    expect(invalidJudgment.simulation.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'judgmentOutcomeTargetUnavailable',
+        evidence: expect.objectContaining({ reason: 'randomDrawRequirementsUnsatisfied' }),
+      }),
+    );
+    const validJudgment = evaluateNBossLifecycle(judgmentState, [
+      'TradeOff',
+      'ScreenReroll',
+      ...safeJudgmentKeys.slice(0, 3),
+    ]);
+    expect(validJudgment.simulation.validity).toBe('valid');
+    expect(validJudgment.simulation.bossArcanaOutcomes[0]?.arcanaKeys).toEqual([
+      'ScreenReroll',
+      'TradeOff',
+      ...safeJudgmentKeys.slice(0, 3),
+    ]);
+
+    const figurineState = createArcanaFearState(catalog, createDefaultRouteLoadout(catalog));
+    const figurineKeepsake = createKeepsakeState(catalog, 'BossMetaUpgradeKeepsake', figurineState);
+    const invalidFigurine = evaluateNBossLifecycle(
+      figurineState,
+      [],
+      undefined,
+      ['TradeOff', 'ChanneledCast'],
+      figurineKeepsake,
+    );
+    expect(invalidFigurine.simulation.branches).toHaveLength(0);
+    expect(invalidFigurine.simulation.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'figurineOutcomeTargetUnavailable',
+        evidence: expect.objectContaining({ reason: 'randomDrawRequirementsUnsatisfied' }),
+      }),
+    );
+    const validFigurine = evaluateNBossLifecycle(
+      figurineState,
+      [],
+      undefined,
+      ['TradeOff', 'ScreenReroll'],
+      figurineKeepsake,
+    );
+    expect(validFigurine.simulation.validity).toBe('valid');
+    expect(validFigurine.simulation.bossArcanaOutcomes[0]?.arcanaKeys).toEqual([
+      'ScreenReroll',
+      'TradeOff',
+    ]);
+  });
+
   it('applies Judgment at Boss defeated before generic encounter completion', () => {
     const evaluated = evaluatedBiome(simulateProject(catalog, loadSurfaceNOProject()), 'N');
     const bossEvents = evaluated.history.events.filter(

@@ -21,6 +21,7 @@ import {
   activateTemporaryArcana,
   inactiveArcanaKeys,
   judgmentRequiredCount,
+  orderRandomArcanaSelection,
 } from '../../../arcana-fear';
 import {
   assessGorgonChildSettlement,
@@ -75,11 +76,13 @@ export interface EncounterSettlementTransition {
   readonly timelineFacts?: PlannerTimelineFacts;
   readonly judgmentCandidate?: {
     readonly key: string;
+    readonly activeArcanaKeys: readonly string[];
     readonly inactiveArcanaKeys: readonly string[];
     readonly requiredCount: number;
   };
   readonly figurineCandidate?: {
     readonly key: string;
+    readonly activeArcanaKeys: readonly string[];
     readonly inactiveArcanaKeys: readonly string[];
     readonly requiredCount: number;
     readonly rarity: import('../../../../catalog-schema').InRunTraitRarity;
@@ -316,6 +319,7 @@ export function applyEncounterSettlementTransition(inputs: {
         : Object.freeze({
             key: semanticAddressKey(owner),
             requiredCount,
+            activeArcanaKeys: Object.freeze(first.arcana.active.map((card) => card.key)),
             inactiveArcanaKeys: Object.freeze(
               inactiveArcanaKeys(catalog, first).filter(
                 (key) =>
@@ -418,6 +422,7 @@ export function applyEncounterSettlementTransition(inputs: {
       figurineEligible && figurineFrontier !== undefined
         ? Object.freeze({
             key: semanticAddressKey(figurineOwner),
+            activeArcanaKeys: Object.freeze(figurineFrontier.arcana.active.map((card) => card.key)),
             inactiveArcanaKeys: figurineInactive,
             requiredCount: figurineRequiredCount,
             rarity: figurineSource.rarity,
@@ -505,7 +510,11 @@ export function applyEncounterSettlementTransition(inputs: {
             owner,
             effect: 'judgment' as const,
             phaseKey: event.phaseKey,
-            arcanaKeys: Object.freeze([...judgmentSelected]),
+            arcanaKeys: orderRandomArcanaSelection(
+              catalog,
+              judgmentCandidate.activeArcanaKeys,
+              judgmentSelected,
+            ),
             rarity: 'Epic' as const,
           })
         : undefined;
@@ -517,7 +526,11 @@ export function applyEncounterSettlementTransition(inputs: {
             owner: figurineOwner,
             effect: 'crystalFigurine' as const,
             phaseKey: event.phaseKey,
-            arcanaKeys: Object.freeze([...figurineSelected]),
+            arcanaKeys: orderRandomArcanaSelection(
+              catalog,
+              figurineCandidate.activeArcanaKeys,
+              figurineSelected,
+            ),
             rarity: figurineCandidate.rarity,
           })
         : undefined;

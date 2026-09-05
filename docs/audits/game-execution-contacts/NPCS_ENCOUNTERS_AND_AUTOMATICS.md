@@ -118,6 +118,13 @@ different phase-binding scheme.
 | Judgment            | boss defeated                       | `AddRandomMetaUpgrades`                                            | Covered. |
 | Crystal Figurine    | boss defeated                       | `AddRandomMetaUpgrades` with the Figurine rarity contract          | Covered. |
 
+Judgment and Crystal Figurine are authored as result sets. The planner's
+execution projection orders a selected companion before The Fates when both
+belong to the set, matching the native loop's per-card equipped-state update.
+The boss adapter also admits Eternity's positive `RandomDrawChance` branch only
+when Eternity belongs to the exact published result. Native code still owns the
+activation loop and all state mutation.
+
 This is the entire `automatic` union. Natural Selection and All Together are
 nested selected-trait consequences, Ransoms are native-authoritative, and Echo
 and Circe remain deferred later-route contacts; none is an automatic member.

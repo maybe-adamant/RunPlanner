@@ -126,6 +126,51 @@ export function inactiveArcanaKeys(catalog: Catalog, state: ArcanaFearState): re
   );
 }
 
+/**
+ * Native random Arcana draws accept a dependent card when one of its named
+ * companions is already active or is activated earlier in the same draw set.
+ */
+export function unsatisfiedRandomArcanaRequirementKeys(
+  catalog: Catalog,
+  activeArcanaKeys: readonly string[],
+  selectedArcanaKeys: readonly string[],
+): readonly string[] {
+  const active = new Set(activeArcanaKeys);
+  const selected = new Set(selectedArcanaKeys);
+  return Object.freeze(
+    selectedArcanaKeys.filter((key) => {
+      const required = catalog.arcanaCards.byKey[key]?.randomDrawRequiredCardKeys ?? [];
+      return (
+        required.length > 0 &&
+        !required.some((requiredKey) => active.has(requiredKey) || selected.has(requiredKey))
+      );
+    }),
+  );
+}
+
+/** Orders a valid random draw so a same-set companion is activated first. */
+export function orderRandomArcanaSelection(
+  catalog: Catalog,
+  activeArcanaKeys: readonly string[],
+  selectedArcanaKeys: readonly string[],
+): readonly string[] {
+  const active = new Set(activeArcanaKeys);
+  const remaining = [...selectedArcanaKeys];
+  const ordered: string[] = [];
+  while (remaining.length > 0) {
+    const readyIndex = remaining.findIndex((key) => {
+      const required = catalog.arcanaCards.byKey[key]?.randomDrawRequiredCardKeys ?? [];
+      return (
+        required.length === 0 ||
+        required.some((requiredKey) => active.has(requiredKey) || ordered.includes(requiredKey))
+      );
+    });
+    if (readyIndex < 0) return Object.freeze([...ordered, ...remaining]);
+    ordered.push(remaining.splice(readyIndex, 1)[0]!);
+  }
+  return Object.freeze(ordered);
+}
+
 export function promotableArcanaKeys(state: ArcanaFearState): readonly string[] {
   return Object.freeze(
     state.arcana.active.filter((card) => card.rarity === 'Epic').map((card) => card.key),
@@ -156,30 +201,12 @@ export function circeResolutionDomain(
   fatedStatus?: 'Unknown' | 'Fated' | 'Unfated',
 ): CirceResolutionDomain {
   if (effect === 'activateArcana') {
-    const activeArcanaKeys = new Set(state.arcana.active.map((card) => card.key));
-    const eligibleArcanaKeys = inactiveArcanaKeys(catalog, state).filter(
+    const activeArcanaKeys = state.arcana.active.map((card) => card.key);
+    const arcanaKeys = inactiveArcanaKeys(catalog, state).filter(
       (key) =>
-        fatedStatus !== 'Fated' || catalog.arcanaCards.byKey[key]?.fatedIncompatible !== true,
+        (fatedStatus !== 'Fated' || catalog.arcanaCards.byKey[key]?.fatedIncompatible !== true) &&
+        unsatisfiedRandomArcanaRequirementKeys(catalog, activeArcanaKeys, [key]).length === 0,
     );
-    const deterministicPrimaryKeys = new Set(
-      eligibleArcanaKeys.filter((key) => {
-        const chance = catalog.arcanaCards.byKey[key]?.randomDrawChance;
-        return chance === undefined || chance === 1;
-      }),
-    );
-    const arcanaKeys = eligibleArcanaKeys.filter((key) => {
-      const requiredCardKeys = catalog.arcanaCards.byKey[key]?.randomDrawRequiredCardKeys ?? [];
-      if (
-        requiredCardKeys.length === 0 ||
-        requiredCardKeys.some((requiredKey) => activeArcanaKeys.has(requiredKey))
-      ) {
-        return true;
-      }
-      // Native selection keeps a companion-less card only when no other
-      // deterministic primary candidate remains; chance-admitted peers have a
-      // positive-probability branch in which they fall into the fallback pool.
-      return [...deterministicPrimaryKeys].every((primaryKey) => primaryKey === key);
-    });
     return Object.freeze({
       effect,
       requiredCount: arcanaKeys.length === 0 ? 0 : 1,
@@ -227,6 +254,7 @@ export type ArcanaTransitionReason =
   | 'duplicateTarget'
   | 'unknownArcana'
   | 'arcanaAlreadyActive'
+  | 'randomDrawRequirementsUnsatisfied'
   | 'arcanaNotActive'
   | 'arcanaNotEpic';
 export type FearTransitionReason =
@@ -360,6 +388,14 @@ export function activateTemporaryArcana(
     return rejected(state, 'unknownArcana');
   if (arcanaKeys.some((key) => state.arcana.active.some((card) => card.key === key)))
     return rejected(state, 'arcanaAlreadyActive');
+  if (
+    unsatisfiedRandomArcanaRequirementKeys(
+      catalog,
+      state.arcana.active.map((card) => card.key),
+      arcanaKeys,
+    ).length > 0
+  )
+    return rejected(state, 'randomDrawRequirementsUnsatisfied');
   const canonicalKeys = canonicalArcanaSet(catalog, arcanaKeys);
   const active = [
     ...state.arcana.active,
