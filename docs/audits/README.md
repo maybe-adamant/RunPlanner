@@ -46,7 +46,7 @@ reader-facing taxonomy, not a package or runtime boundary.
 - [Authored reward and trait defaults](rewards-and-acquisition/AUTHORED_REWARD_AND_TRAIT_DEFAULTS_AUDIT.md) — Unresolved and retained-invalid authored reward and trait defaults against source declarations.
 - [Fields optional rewards and Artificer](rewards-and-acquisition/FIELDS_OPTIONAL_REWARDS_AND_ARTIFICER_GAME_DATA_AUDIT.md) — Fields optional inventory and Artificer conversion facts.
 - [Reward game data](rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md) — Reward declarations, bags, stores, and acquisition identity evidence.
-- [Runtime offer fallback](rewards-and-acquisition/RUNTIME_OFFER_FALLBACK_AUDIT.md) — Safe fallback behavior when authored offers are unavailable at runtime.
+- [Runtime offer eligibility](rewards-and-acquisition/RUNTIME_OFFER_FALLBACK_AUDIT.md) — Volatile native predicates and the exact-authored-result mismatch policy.
 
 ### Traits
 

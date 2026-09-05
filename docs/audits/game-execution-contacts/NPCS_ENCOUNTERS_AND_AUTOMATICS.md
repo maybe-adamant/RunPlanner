@@ -45,7 +45,7 @@ Nemesis uses a distinct event family rather than a trait provider menu.
 | Planner outcome                     | Game contact                                                              | Status                                                    |
 | ----------------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------- |
 | Choose event family                 | `SpawnNemesisForRandomEvents` and `CheckAvailableTextLines`               | Covered.                                                  |
-| Free item                           | `NPCRewardDropPreProcess`, `NPCRewardDropPreProcessArgs`, `NPCRewardDrop` | Covered with NPC-consumable runtime fallback.             |
+| Free item                           | `NPCRewardDropPreProcess`, `NPCRewardDropPreProcessArgs`, `NPCRewardDrop` | Covered for the exact authored consumable identity.       |
 | Gold/damage trade accept or decline | `NemesisTradeChoice`                                                      | Covered; price and damage amounts are simulation-neutral. |
 | Trait trade                         | `NemesisTradeChoice` followed by `RemoveTrait`                            | Covered for exact trait and response.                     |
 | Damage contest                      | `NemesisDamageContestTimer`                                               | Covered for success/failure only.                         |

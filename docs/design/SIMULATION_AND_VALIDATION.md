@@ -1640,7 +1640,7 @@ The complete result is replaced atomically after an authored edit.
 
 The simulator aims to model supported major game rules faithfully. A missing
 one to five percent is handled through disciplined evidence, not permissive
-runtime fallbacks.
+runtime substitution.
 
 Use:
 

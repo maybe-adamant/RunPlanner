@@ -162,8 +162,8 @@ on a base Hex. Base-spell implementation must not synthesize those talents.
 Their generation and finite-capacity closure are now source-audited
 separately. Exact Olympian-node acquisition remains graph-local and is not
 simulated. Task Force requires at least one concrete Spell Drop to have settled,
-then trusts the authored result and uses the durable runtime fallback contract
-for the deeper node condition. Aspect of Selene's starting Sky Fall alone does
+then trusts the exact authored result for the deeper node condition. If native
+eligibility rejects it, execution reports a mismatch. Aspect of Selene's starting Sky Fall alone does
 not qualify; the Aspect's later Spell Drop does. The aggregate layout model now
 derives the finite capacity and latched Talent Drop closure from the installed
 tree rather than retaining an always-false support baseline.

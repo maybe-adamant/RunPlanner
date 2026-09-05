@@ -335,7 +335,7 @@ purchase. Inventory owns only each visible reward type. Hidden payload and
 pickup-owned detail—including Mystery Boon's eventual God and trait offer—are
 authored only on the concrete rushed or delayed delivery pickup. Purchase state
 is sparse per stable generation; delay, rush, pending delivery, delivery host,
-Spell reservation, and runtime fallback are derived products. Purchase itself
+and Spell reservation are derived products. Purchase itself
 is not a room action. A rushed purchase creates one required source-room pickup;
 a delayed purchase is scheduled at source cleanup, counts qualifying later
 encounter-end effects, and materializes at its reached host. Side-room Shrines
@@ -405,33 +405,33 @@ Shield**, `RandomStoreItem` / **Fateful Twist**, `TemporaryBoonRarityTrait` /
 `LimitedSwapTraitDrop` / **Sacrificial Hymn**; the catalog regression owns the
 complete 25-name matrix.
 
-| Identity                                  | Exact game effect                                                        | Current planner disposition                                                      |
-| ----------------------------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| `ArmorBoostStore`                         | Grants 20 armor                                                          | Defer armor/combat state                                                         |
-| `DamageSelfDrop`                          | Pays gold for 10-30 health damage                                        | Defer health/economy                                                             |
-| `HealDropRange`                           | Heals 21-39% maximum health                                              | Defer health                                                                     |
-| `EmptyMaxHealthShopItem`                  | Adds 25 maximum health without healing                                   | Defer health                                                                     |
-| `FirstHitHealTrait`                       | Next hit heals 100% of damage; stacks add uses                           | Defer health/combat                                                              |
-| `TemporaryDoorHealTrait`                  | Heals 10% maximum health after next three transitions                    | Defer health                                                                     |
-| `TemporaryHealExpirationTrait`            | Heals 50% maximum health after four encounters                           | Defer health                                                                     |
-| `LastStandShopItem`                       | Adds a Last Stand restoring 40% health and Magick                        | Concrete paid consumable with runtime fallback; no planner Death Defiance ledger |
-| `TemporaryImprovedSecondaryTrait`         | 1.40 secondary damage for five encounters                                | Defer combat                                                                     |
-| `TemporaryImprovedCastTrait`              | 1.35 Cast damage for five encounters                                     | Defer combat                                                                     |
-| `TemporaryMoveSpeedTrait`                 | 1.20 movement speed for eight encounters                                 | Defer movement                                                                   |
-| `TemporaryBoonRarityTrait` (Yarn)         | Next eligible God offer: +1 Rare, +0.25 Epic, +0.10 Duo, +0.10 Legendary | Consequential rarity ledger                                                      |
-| `TemporaryImprovedExTrait`                | 1.50 Omega damage for six encounters                                     | Defer combat                                                                     |
-| `TemporaryImprovedDefenseTrait`           | 0.90 incoming health damage for five encounters                          | Defer combat/health                                                              |
-| `TemporaryDiscountTrait`                  | 0.70 Store costs for six encounters                                      | Consequential only for later Well eligibility; defer economy                     |
-| `TemporaryForcedSecretDoorTrait` (Spark)  | Adds one forced secret-door use                                          | Consequential Chaos topology                                                     |
-| `TemporaryEmptySlotDamageTrait`           | Triple damage for six encounters while a core slot is empty              | Consequential only for later Well eligibility; defer combat                      |
-| `ExtendedShopTrait`                       | Next whitelisted temporary Well trait lasts for two boss uses            | Consequential for eligible lifetime; otherwise defer                             |
-| `MetaCurrencyRange`                       | Grants 20-40 Bones                                                       | Defer meta resource                                                              |
-| `MetaCardPointsCommonRange`               | Grants 6-12 Ashes                                                        | Defer meta resource                                                              |
-| `MemPointsCommonRange`                    | Grants 20-30 Psyche                                                      | Defer meta resource                                                              |
-| `SeedMysteryRange`                        | Grants two Mystery Seeds                                                 | Defer meta resource                                                              |
-| `RandomStoreItem`                         | Awards one eligible item from a closed nested pool                       | Consequential if it produces Yarn, Discount, or Last Stand                       |
-| `LimitedManaRegenDrop`                    | Regenerates 500 Magick over three seconds                                | Defer Magick                                                                     |
-| `LimitedSwapTraitDrop` (Sacrificial Hymn) | One forced replacement; replacement gains +2 levels and next rarity tier | Consequential next eligible trait offer                                          |
+| Identity                                  | Exact game effect                                                        | Current planner disposition                                                 |
+| ----------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| `ArmorBoostStore`                         | Grants 20 armor                                                          | Defer armor/combat state                                                    |
+| `DamageSelfDrop`                          | Pays gold for 10-30 health damage                                        | Defer health/economy                                                        |
+| `HealDropRange`                           | Heals 21-39% maximum health                                              | Defer health                                                                |
+| `EmptyMaxHealthShopItem`                  | Adds 25 maximum health without healing                                   | Defer health                                                                |
+| `FirstHitHealTrait`                       | Next hit heals 100% of damage; stacks add uses                           | Defer health/combat                                                         |
+| `TemporaryDoorHealTrait`                  | Heals 10% maximum health after next three transitions                    | Defer health                                                                |
+| `TemporaryHealExpirationTrait`            | Heals 50% maximum health after four encounters                           | Defer health                                                                |
+| `LastStandShopItem`                       | Adds a Last Stand restoring 40% health and Magick                        | Exact concrete paid consumable; live ineligibility is an execution mismatch |
+| `TemporaryImprovedSecondaryTrait`         | 1.40 secondary damage for five encounters                                | Defer combat                                                                |
+| `TemporaryImprovedCastTrait`              | 1.35 Cast damage for five encounters                                     | Defer combat                                                                |
+| `TemporaryMoveSpeedTrait`                 | 1.20 movement speed for eight encounters                                 | Defer movement                                                              |
+| `TemporaryBoonRarityTrait` (Yarn)         | Next eligible God offer: +1 Rare, +0.25 Epic, +0.10 Duo, +0.10 Legendary | Consequential rarity ledger                                                 |
+| `TemporaryImprovedExTrait`                | 1.50 Omega damage for six encounters                                     | Defer combat                                                                |
+| `TemporaryImprovedDefenseTrait`           | 0.90 incoming health damage for five encounters                          | Defer combat/health                                                         |
+| `TemporaryDiscountTrait`                  | 0.70 Store costs for six encounters                                      | Consequential only for later Well eligibility; defer economy                |
+| `TemporaryForcedSecretDoorTrait` (Spark)  | Adds one forced secret-door use                                          | Consequential Chaos topology                                                |
+| `TemporaryEmptySlotDamageTrait`           | Triple damage for six encounters while a core slot is empty              | Consequential only for later Well eligibility; defer combat                 |
+| `ExtendedShopTrait`                       | Next whitelisted temporary Well trait lasts for two boss uses            | Consequential for eligible lifetime; otherwise defer                        |
+| `MetaCurrencyRange`                       | Grants 20-40 Bones                                                       | Defer meta resource                                                         |
+| `MetaCardPointsCommonRange`               | Grants 6-12 Ashes                                                        | Defer meta resource                                                         |
+| `MemPointsCommonRange`                    | Grants 20-30 Psyche                                                      | Defer meta resource                                                         |
+| `SeedMysteryRange`                        | Grants two Mystery Seeds                                                 | Defer meta resource                                                         |
+| `RandomStoreItem`                         | Awards one eligible item from a closed nested pool                       | Consequential if it produces Yarn, Discount, or Last Stand                  |
+| `LimitedManaRegenDrop`                    | Regenerates 500 Magick over three seconds                                | Defer Magick                                                                |
+| `LimitedSwapTraitDrop` (Sacrificial Hymn) | One forced replacement; replacement gains +2 levels and next rarity tier | Consequential next eligible trait offer                                     |
 
 `RandomStoreItem`'s nested pool includes Yarn, Discount, and Last Stand but
 not Spark, Sacrificial Hymn, Empty Slot, or Extended. It is a separate
@@ -489,9 +489,9 @@ atomic Cleanup action and never enters the free-pickup alternative-interaction
 lifecycle. Travel Deal owns one same-group refill from the first ranked
 purchase. The modeled state is limited to Ixion uses and their automatically
 derived next host-capable Chaos gate, Yarn rarity uses, Sacrificial Hymn replacement uses, active
-Discount and Empty Slot lifetimes, and Extended charges. Last Stand remains a
-concrete paid consumable isolated by declaration-owned runtime fallback; the
-planner owns no Death Defiance capacity ledger. Health, damage, Magick, gold,
+Discount and Empty Slot lifetimes, and Extended charges. Last Stand remains an
+exact concrete paid consumable; a failed live predicate is an execution
+mismatch, and the planner owns no Death Defiance capacity ledger. Health, damage, Magick, gold,
 price, and meta-resource amounts remain sim-neutral. Wells and Pools are the
 only current room-feature interactions with a runtime-random Interact boundary;
 Shrines and Shops remain fully authored because their visible inventory can
