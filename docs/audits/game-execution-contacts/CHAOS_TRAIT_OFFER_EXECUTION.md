@@ -8,12 +8,10 @@ three ordered visible curses, each curse's requirement, the selected option,
 and the selected curse/blessing pair's exact processed values. No planner wire
 or authored-project change is required.
 
-The existing executor behavior is functional but not closed. It lives in the
-broad legacy Timeline hook, begins before native pickup acceptance, shares a
-mutable pending trait across unrelated carriers, and reserves the selected
-blessing before the game sorts the rows. The focused disposition replaces that
-path with one exact-object Chaos acquisition adapter beside the ordinary trait
-adapter.
+The focused Chaos acquisition adapter owns this path beside the ordinary trait
+adapter. It binds the exact object after native pickup acceptance, scopes its
+state to that object, and prepares the selected blessing only after native row
+sorting. No broad Timeline path participates.
 
 This audit does not cover Chaos-gate topology, Transcendent Embryo, curse-clock
 advancement, or the gameplay effects of a matured blessing. Those already have
@@ -186,24 +184,19 @@ Other bounded paths are:
 
 ## Terminal proof and later conformance
 
-After native `HandleUpgradeChoiceSelection` returns, the acquisition completes
-only when the Hero owns the selected curse with:
-
-- the authored requirement count and selected curse operands; and
-- an `OnExpire.TraitData` blessing with the authored identity, rarity, and
-  selected blessing operands.
-
-That terminal proves the selected pair was equipped. The existing room-exit
-`chaos` conformance fact separately verifies active versus matured Chaos state
-and its remaining clock. Diagnostic Run State retains the native banned-trait
-set for investigation without turning Denial into a second blocking action.
+After native `HandleUpgradeChoiceSelection` returns, the exact selected-row
+callback completes the acquisition. The executor does not reconstruct the
+equipped curse/blessing as a second terminal proof. The room-exit `chaos`
+conformance fact owns active versus matured state and the remaining clock.
+Diagnostic Run State retains the native banned-trait set for investigation
+without turning Denial into a second blocking action.
 
 ## Execution disposition
 
 Direct Chaos acquisition is one focused adapter contract. It binds the exact
 `TrialUpgrade` object at materialization, admits the transaction at
 `HandleLootPickup`, scopes initial post-sort row preparation and processed-value
-overrides to that object, and completes after the exact selected-pair proof.
+overrides to that object, and completes at the exact selected-row callback.
 
 Native code remains authoritative for transforming-row generation, rerolls,
 Denial, trait equipment, curse clocks, and blessing maturation. The closed
@@ -225,6 +218,6 @@ Closure evidence requires:
    operands, including Revelation's two blessing values;
 6. native Denial sees authored curse names while blessings remain nested;
 7. reroll leaves the regenerated offer native;
-8. exact selected-pair terminal proof and wrong-selection divergence; and
+8. exact selected-row terminal and wrong-selection divergence; and
 9. no Chaos acquisition state or transforming-generation hook remains in the
    broad legacy Timeline module.

@@ -252,15 +252,15 @@ consumable carrier.
 
 ## Bounded alternative paths
 
-| Path                                                                | Disposition                                                                                                                        |
-| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `UseLoot` rejects before pickup                                     | No acquisition begins. Native behavior continues.                                                                                  |
-| Screen opens and authored selection occurs                          | Complete after the exact native selection callback returns.                                                                        |
-| Wrong option is selected                                            | Let native selection finish, record player divergence, and stop steering.                                                          |
+| Path                                                                | Disposition                                                                                                                                        |
+| ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `UseLoot` rejects before pickup                                     | No acquisition begins. Native behavior continues.                                                                                                  |
+| Screen opens and authored selection occurs                          | Complete after the exact native selection callback returns.                                                                                        |
+| Wrong option is selected                                            | Let native selection finish, record player divergence, and stop steering.                                                                          |
 | Bound screen is rerolled                                            | Let native reroll finish and do not reinstall the initial authored offer; the exact authored terminal or room-exit conformance reports divergence. |
-| Calling Card or provider rarification                               | Let native behavior run without observing individual button presses; room-exit conformance owns the retained charge state.           |
-| Concave Stone recursively invokes selection with `DoubleBoonChance` | Preserve the primary handle; the nested residual is not a second primary terminal and remains deferred to its consequence contact. |
-| Selection callback is observed again after completion               | Treat it as incidental native activity; never reuse the completed owner.                                                           |
+| Calling Card or provider rarification                               | Let native behavior run without observing individual button presses; room-exit conformance owns the retained charge state.                         |
+| Concave Stone recursively invokes selection with `DoubleBoonChance` | Preserve the primary handle while the focused nested residual contact resolves; it is not a second primary terminal.                               |
+| Selection callback is observed again after completion               | Treat it as incidental native activity; never reuse the completed owner.                                                                           |
 
 The reroll disposition is deliberate. The planner does not model reroll
 resources. Reapplying the initial authored rows would conceal the native reroll
@@ -269,14 +269,13 @@ authored result reports a mismatch; the native reroll remains playable.
 
 ## Execution disposition
 
-The current broad executor hook does not satisfy this contract. It starts at
-`UseLoot`, carries one mutable pending trait, stores a handle on the native loot
-table, reconstructs rows by matching generated identities, applies the offer
-more than once, lacks the base-rarity fact, and can confuse Concave Stone's
-recursive selection with the primary terminal.
+The focused ordinary adapter satisfies this contract. It begins at
+`HandleLootPickup`, keeps its state on the bound native loot, installs the
+published base rarity once, and retains the outer scope through Concave Stone's
+bounded recursive selection.
 
-The existing occurrence-local Timeline product is sufficient. The ordinary
-adapter needs no global action cursor and no producer inference:
+The occurrence-local Timeline product is sufficient and uses no global action
+cursor or producer inference:
 
 - ordinary room rewards and purchases may bind the exact returned loot during
   native materialization;
@@ -285,7 +284,7 @@ adapter needs no global action cursor and no producer inference:
 - screen callbacks recover their transaction through that bound loot;
 - owner completion remains shared across those handles.
 
-The planner/execution product must add only the missing base-rarity fact. The
-existing effective rarity, effective level, selected-trait terminal, and
-room-exit keepsake conformance carry every other result. No rarification-action
-wire shape or other planner semantic addition is justified by this audit.
+The v17 product carries base rarity alongside effective rarity, effective
+level, the selected-trait terminal, and room-exit keepsake conformance. No
+rarification-action wire shape or other planner semantic addition is justified
+by this audit.

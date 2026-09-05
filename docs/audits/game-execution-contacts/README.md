@@ -51,7 +51,7 @@ A family is not covered when only its ordinary loot-screen carrier works.
   threaded completion, and shared acquisition ownership.
 - [Direct-pickup acquisition execution](DIRECT_PICKUP_ACQUISITION_EXECUTION.md)
   — bound-or-ready action correlation, accepted consumable use, native
-  terminal settlement, specialized exclusions, fallback handoff, and the Sea
+  terminal settlement, specialized exclusions, focused handoff, and the Sea
   Star reuse boundary.
 - [Reward transformation execution](REWARD_TRANSFORMATION_EXECUTION.md) —
   Time Piece publication omission and Artificer source disposition, bounded
@@ -72,7 +72,7 @@ A family is not covered when only its ordinary loot-screen carrier works.
 
 The normalized catalog is the exhaustive identity authority. The execution
 union in `packages/planner-engine/src/execution-plan/model.ts` is the exhaustive
-wire authority. The current consumer is protocol v16 in
+wire authority. The current consumer is protocol v17 in
 `adamantRunPlanner-Plan_Executor`; its supported route extent is Underworld F
 or F/G, not the full planner catalog.
 
@@ -88,16 +88,15 @@ Relevant durable authorities:
 
 ## Current cross-family findings
 
-1. Native carrier coverage is the present weak point. The recently exposed
-   Nectar/Pom Slice defect is the representative case: `levelResolution` was
-   carried correctly, but direct items use `UseStoreRewardRandomStack` and
-   `AddStackToTraits`, not the ordinary Pom choice screen.
-2. The v10 wire is strongest for room structure, trait offers, acquisition
-   roles, shops/Wells/Pools, keepsake changes, fountains, and its four declared
-   automatic outcomes.
-3. Starting loadout beyond the keepsake is diagnostic data rather than a
-   realization contract. Weapon, aspect, Arcana, and Fear therefore require an
-   explicit product disposition before they can be called enforceable.
+1. Nectar/Pom Slice was the representative carrier lesson: `levelResolution`
+   was carried correctly, but direct items use `UseStoreRewardRandomStack` and
+   `AddStackToTraits`, not the ordinary Pom choice screen. The focused
+   direct-level adapter now owns that contact.
+2. The v17 wire carries the bounded F/G structure, acquisition, selected-trait,
+   nested-consequence, loadout, Hex/Path, and Sea Star results named by the
+   focused audits. Commerce and later-route contacts retain their own gates.
+3. Starting weapon, aspect, Arcana, Fear, and keepsake are an explicit
+   checked loadout contract; the executor observes rather than repairs them.
 4. Selecting a trait lets the game run that trait's ordinary acquire behavior.
    That is sufficient only when the planner does not author a random or
    multi-target result. Exceptional dispositions must be checked individually

@@ -1,8 +1,9 @@
 # Keepsakes, loadout, and abilities
 
 This file inventories all planner-modeled run-start and equip-time abilities.
-The current execution plan realizes a starting keepsake and later rack changes;
-other loadout fields presently appear only in diagnostic state.
+The current execution plan checks starting weapon, aspect, Arcana, Fear, and
+keepsake, realizes the named start/equip results, and handles later rack
+changes. It never repairs the player's selected loadout.
 
 ## Source index
 
@@ -33,21 +34,21 @@ at the effect's own native contact.
 
 ## Complete keepsake inventory
 
-| Family              | Keepsakes                                                                                                                                                                              | Execution disposition                                                                                                                                                                                                                                                          |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Simulation-neutral  | Silver Wheel, Knuckle Bones, Luckier Tooth, Ghost Onion, Evil Eye, Gold Purse, Engraved Pin, Discordant Bell, Metallic Droplet, White Antler, Silken Sash, Lion Fang, Blackened Fleece | Native pass-through after exact equip identity. Combat, health, gold, and damage effects are outside the current simulation.                                                                                                                                                   |
-| Olympian pressure   | Cloud Bangle, Iridescent Fan, Vivid Sea, Barley Sheaf, Harmonic Photon, Beautiful Mirror, Adamant Shard, Everlasting Ember, Sword Hilt                                                 | Adapter gap for full execution: the resulting offer source/rarity is published on each later trait offer, but the executor does not yet establish or settle the native keepsake pressure itself as a first-class result.                                                       |
-| Moon Beam           | Moon Beam                                                                                                                                                                              | Deferred route; later Talent drops must receive the published additional Path points.                                                                                                                                                                                          |
-| Gorgon Amulet       | Gorgon Amulet                                                                                                                                                                          | F/G adapter gap only for binding the native Athena interaction and forcing its published trait offer. Native code owns eligibility, spawning, and use consumption.                                                                                                             |
-| Fig Leaf            | Fig Leaf                                                                                                                                                                               | F/G adapter gap; the planner resolves phase-local skip/no-skip, while native code must remain responsible for the skipped-spawn lifecycle, use consumption, and biome latch.                                                                                                   |
-| Aromatic Phial      | Aromatic Phial                                                                                                                                                                         | Covered by the `fountainUse` transaction and `UseHealthFountain`; only the published target matters.                                                                                                                                                                           |
-| Concave Stone       | Concave Stone                                                                                                                                                                          | Protocol gap in current F/G execution: the planner resolves proc/no-proc and the frozen residual inside the source acquisition, but v10 does not publish that nested result. It must remain local to that acquisition rather than become a separate transaction or dependency. |
-| Crystal Figurine    | Crystal Figurine                                                                                                                                                                       | Covered by `automatic:crystalFigurine` at boss defeat and `AddRandomMetaUpgrades`.                                                                                                                                                                                             |
-| Experimental Hammer | Experimental Hammer                                                                                                                                                                    | Covered at equip through the published selected Hammer and `AddRandomHammer`; later expiration remains a conformance concern.                                                                                                                                                  |
-| Jeweled Pom         | Jeweled Pom                                                                                                                                                                            | Covered at equip through the published Hades trait and `GiveRandomHadesBoonAndBoostBoons`; later level contribution is already folded into effective levels.                                                                                                                   |
-| Calling Card        | Calling Card                                                                                                                                                                           | Protocol gap only for the offer's base rarity. Native rarification consumes charges; selected-trait proof plus existing room-exit keepsake conformance verifies the resulting rarity and retained charge state.                                                                |
-| Time Piece          | Time Piece                                                                                                                                                                             | Authored conversion remains planner-simulated, but its acquisition is omitted from execution publication; aggregate intended acquisitions and retained-charge conformance prove the room outcome.                                                                              |
-| Transcendent Embryo | Transcendent Embryo                                                                                                                                                                    | Covered both at equip and at its eight-encounter automatic replacement through `AddRandomChaosBlessing`.                                                                                                                                                                       |
+| Family              | Keepsakes                                                                                                                                                                              | Execution disposition                                                                                                                                                                                             |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Simulation-neutral  | Silver Wheel, Knuckle Bones, Luckier Tooth, Ghost Onion, Evil Eye, Gold Purse, Engraved Pin, Discordant Bell, Metallic Droplet, White Antler, Silken Sash, Lion Fang, Blackened Fleece | Native pass-through after exact equip identity. Combat, health, gold, and damage effects are outside the current simulation.                                                                                      |
+| Olympian pressure   | Cloud Bangle, Iridescent Fan, Vivid Sea, Barley Sheaf, Harmonic Photon, Beautiful Mirror, Adamant Shard, Everlasting Ember, Sword Hilt                                                 | Native-authoritative pass-through: native equip owns pressure and charges; each later offer carries its exact giver and base rarity, and room-exit conformance owns the charge ledger.                            |
+| Moon Beam           | Moon Beam                                                                                                                                                                              | Native-authoritative pass-through: native equip, reward priority, and point addition remain native while the Path carrier and room-exit conformance observe modeled state.                                        |
+| Gorgon Amulet       | Gorgon Amulet                                                                                                                                                                          | Covered: native eligibility, spawn, and use consumption remain authoritative; the published Athena interaction binds at `AthenaUse` and hands off to the focused trait offer.                                     |
+| Fig Leaf            | Fig Leaf                                                                                                                                                                               | Covered: the planner's phase-local skip/no-skip result steers the bounded native decision while native code owns skipped-spawn lifecycle, use consumption, and biome latch.                                       |
+| Aromatic Phial      | Aromatic Phial                                                                                                                                                                         | Covered by the `fountainUse` transaction and `UseHealthFountain`; only the published target matters.                                                                                                              |
+| Concave Stone       | Concave Stone                                                                                                                                                                          | Covered: v17 publishes exact proc/no-proc and the frozen residual inside the outer acquisition; the focused adapter scopes the native roll and recursive selected row without a second transaction or dependency. |
+| Crystal Figurine    | Crystal Figurine                                                                                                                                                                       | Covered by `automatic:crystalFigurine` at boss defeat and `AddRandomMetaUpgrades`.                                                                                                                                |
+| Experimental Hammer | Experimental Hammer                                                                                                                                                                    | Covered at equip through the published selected Hammer and `AddRandomHammer`; later expiration remains a conformance concern.                                                                                     |
+| Jeweled Pom         | Jeweled Pom                                                                                                                                                                            | Covered at equip through the published Hades trait and `GiveRandomHadesBoonAndBoostBoons`; later level contribution is already folded into effective levels.                                                      |
+| Calling Card        | Calling Card                                                                                                                                                                           | Native-authoritative pass-through: the offer carries its exact base rarity, native rarification consumes charges, and room-exit keepsake conformance owns the retained ledger.                                    |
+| Time Piece          | Time Piece                                                                                                                                                                             | Authored conversion remains planner-simulated, but its acquisition is omitted from execution publication; aggregate intended acquisitions and retained-charge conformance prove the room outcome.                 |
+| Transcendent Embryo | Transcendent Embryo                                                                                                                                                                    | Covered both at equip and at its eight-encounter automatic replacement through `AddRandomChaosBlessing`.                                                                                                          |
 
 The exact keys, rank-III values, and Echo availability are owned by
 [Keepsakes](../loadout-and-progression/KEEPSAKE_GAME_DATA_AUDIT.md),
@@ -139,12 +140,9 @@ The catalog contains six weapons and 24 aspects:
 - Argent Skull: Melinoë, Medea, Persephone, Hel
 - Black Coat: Melinoë, Nyx, Selene, Shiva
 
-Current status is **protocol gap for realization**. The execution plan does not
-publish weapon or aspect as a start contract; they are not recoverable from the
-starting keepsake. If the product continues to require the player to prepare
-the loadout manually, that prerequisite must be explicit. If execution is
-expected to force it, it needs a first-class starting-loadout product rather
-than reading diagnostic state.
+Weapon and aspect are covered by the explicit checked starting-loadout product.
+The executor observes the player's equipped identities at run start and never
+equips, unlocks, or repairs them.
 
 Two aspect consequences are already modeled by the planner:
 
@@ -163,14 +161,14 @@ Runner, Death, The Centaur, Origination, The Lovers, The Enchantress, The
 Boatman, The Artificer, Excellence, The Queen, The Fates, The Champions,
 Strength, Divinity, and Judgment.
 
-| Arcana concern                                        | Execution disposition                                                                                                 |
-| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Starting active board and rarity                      | Protocol gap for realization; currently diagnostic only.                                                              |
-| Rarity contributions from Excellence, Queen, Divinity | Covered indirectly because each trait offer publishes its final rarity table outcome.                                 |
-| Artificer capacity and conversions                    | Conversion disposition, producer relation, and uses are published; the executor must not recalculate Arcana capacity. |
-| Judgment                                              | Covered by `automatic:judgment` and `AddRandomMetaUpgrades`.                                                          |
-| Crystal Figurine temporary cards                      | Covered by its separate automatic transaction.                                                                        |
-| Proper Upbringing element threshold                   | The selected trait offer already carries the final rarity floor; element collection remains a room-feature contact.   |
+| Arcana concern                                        | Execution disposition                                                                                                             |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Starting active board and rarity                      | Covered by the checked starting-loadout product; the executor compares the native active board and rarities without rewriting it. |
+| Rarity contributions from Excellence, Queen, Divinity | Covered indirectly because each trait offer publishes its final rarity table outcome.                                             |
+| Artificer capacity and conversions                    | Conversion disposition, producer relation, and uses are published; the executor must not recalculate Arcana capacity.             |
+| Judgment                                              | Covered by `automatic:judgment` and `AddRandomMetaUpgrades`.                                                                      |
+| Crystal Figurine temporary cards                      | Covered by its separate automatic transaction.                                                                                    |
+| Proper Upbringing element threshold                   | The selected trait offer already carries the final rarity floor; element collection remains a room-feature contact.               |
 
 ## Fear Vows
 
@@ -179,9 +177,9 @@ of Rivals change modeled reward, offer, loadout, or boss identity. The other 13
 are currently simulation-neutral combat/economy modifiers, including Hordes,
 Return, Menace, and Fangs.
 
-Current status is **protocol gap for start realization**: configured and
-effective ranks are diagnostic state, not a start contract. Downstream planner
-results remain usable:
+Configured and effective ranks are covered by the checked starting-loadout
+product. The executor compares them and never rewrites Vows. Downstream
+planner results remain usable:
 
 - Forfeit publishes the onion substitution and retained consumption.
 - Denial publishes the rejected trait option.
@@ -199,8 +197,11 @@ Night Bloom, Phase Shift, Twilight Curse, and Moon Water. The planner owns the
 selected layout, Rare/Epic node identities, God Sent node, banked points,
 invested points, and closed-tree state.
 
-This family is deferred route in the F/G execution extent. Future execution
-needs two contacts rather than per-node combat behavior:
+Spell/Hex selection and Path acquisition are covered by focused v17 contacts;
+Moon Beam remains native-authoritative. Their ordinary route activation and
+live native probes remain deferred because F/G cannot reach those pickups. The
+product does not model individual Hex combat effects or player-selected node
+positions. The two bounded contacts are:
 
 1. force the selected Spell at the Spell offer;
 2. force/observe the published node investment when Path points are spent.

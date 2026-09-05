@@ -48,8 +48,8 @@ scripts:
 - execution transaction assembly:
   `packages/planner-engine/src/execution-plan/assembly/timeline-transactions.ts`;
   and
-- the current broad native adapter:
-  `adamantRunPlanner-Plan_Executor/src/mods/hooks_timeline.lua`.
+- focused NPC and acquisition adapters beneath
+  `adamantRunPlanner-Plan_Executor/src/mods/room/timeline/acquisitions/`.
 
 The exact Narcissus outputs and planner support remain owned by
 [Acquisition delivery and room settlement](../rewards-and-acquisition/ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md)
@@ -144,17 +144,17 @@ Every selected Narcissus descriptor is equipped first. Native
 `GiveRandomConsumables` then creates its declared outputs. The executor's work
 ends at correlation and handoff:
 
-| Choice       | Native outputs relevant to the current planner          | Execution disposition                                                                                                                                      |
-| ------------ | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `NarcissusA` | Pom Slice plus simulation-neutral plants                | Native production; a published Pom Slice is handed to the direct-level adapter.                                                                            |
-| `NarcissusB` | Ashes plus simulation-neutral healing                   | Native production; a published Ashes pickup is handed to the direct-pickup adapter.                                                                        |
-| `NarcissusC` | Gold plus simulation-neutral Silver                     | Native production; a published Gold pickup is handed to the direct-pickup adapter.                                                                         |
-| `NarcissusD` | Psyche and Max Magick                                   | Native production; each authored pickup is independently handed to the direct-pickup adapter.                                                              |
-| `NarcissusE` | Bones and Max Health                                    | Native production; each authored pickup is independently handed to the direct-pickup adapter.                                                              |
-| `NarcissusF` | Fabric and rerolls                                      | Native pass-through; no current planner-visible child result.                                                                                              |
-| `NarcissusG` | two Elemental Essences plus simulation-neutral Stardust | Native production; each accepted essence interaction claims one ready direct-pickup action. Neither native object has a planner-owned identity before use. |
-| `NarcissusH` | Last Stand plus simulation-neutral Lotus                | If Life Savings is selected, native production hands the exact authored Last Stand to the direct-pickup adapter; an unavailable authored row is a mismatch.          |
-| `NarcissusI` | Mystery Boon plus simulation-neutral seed               | Native production; an authored Mystery Boon enters the specialized unwrap chain below.                                                                     |
+| Choice       | Native outputs relevant to the current planner          | Execution disposition                                                                                                                                       |
+| ------------ | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NarcissusA` | Pom Slice plus simulation-neutral plants                | Native production; a published Pom Slice is handed to the direct-level adapter.                                                                             |
+| `NarcissusB` | Ashes plus simulation-neutral healing                   | Native production; a published Ashes pickup is handed to the direct-pickup adapter.                                                                         |
+| `NarcissusC` | Gold plus simulation-neutral Silver                     | Native production; a published Gold pickup is handed to the direct-pickup adapter.                                                                          |
+| `NarcissusD` | Psyche and Max Magick                                   | Native production; each authored pickup is independently handed to the direct-pickup adapter.                                                               |
+| `NarcissusE` | Bones and Max Health                                    | Native production; each authored pickup is independently handed to the direct-pickup adapter.                                                               |
+| `NarcissusF` | Fabric and rerolls                                      | Native pass-through; no current planner-visible child result.                                                                                               |
+| `NarcissusG` | two Elemental Essences plus simulation-neutral Stardust | Native production; each accepted essence interaction claims one ready direct-pickup action. Neither native object has a planner-owned identity before use.  |
+| `NarcissusH` | Last Stand plus simulation-neutral Lotus                | If Life Savings is selected, native production hands the exact authored Last Stand to the direct-pickup adapter; an unavailable authored row is a mismatch. |
+| `NarcissusI` | Mystery Boon plus simulation-neutral seed               | Native production; an authored Mystery Boon enters the specialized unwrap chain below.                                                                      |
 
 Narcissus sets `NotRequiredPickup = true`. A generated pickup transaction is
 therefore optional unless another modeled rule says otherwise. If the planner
@@ -179,16 +179,15 @@ Timeline chooses deterministically from its published transaction order and
 the claimed handle owns that action from then onward. It never reports that
 the player used the "wrong" interchangeable object.
 
-This shared claim is a small correction to the direct-level and direct-pickup
-entry seams established in C2 and C2.5. Already-bound room rewards and store
-objects keep their existing handles; an unbound Pom Slice, Nectar, or direct
-pickup claims its action only after native acceptance. C1's ordinary loot and
-the visible-Pom path remain unchanged.
+Already-bound room rewards and store objects keep their existing handles; an
+unbound Pom Slice, Nectar, or direct pickup claims its action only after native
+acceptance. Ordinary loot and the visible-Pom path retain their focused
+adapters.
 
 The encounter interaction independently completes at the accepted native
 selection callback for the authored NPC trait. Physical availability already
-prevents a pickup from being used before native creation, so C3 adds no
-synthetic source-to-child DAG edge. A single-contact action completes from
+prevents a pickup from being used before native creation, so this path adds no
+synthetic producer-to-object DAG edge. A single-contact action completes from
 that accepted use. A multi-contact action such as Mystery Boon retains its
 claimed handle through the generated provider and final trait screen.
 
@@ -207,7 +206,7 @@ any BlindBoxLoot enters UseConsumableItem
        -> CreateLoot returns the exact provider loot object
        -> the hidden-source role binds to that object
   -> player interacts with the provider loot
-       -> ordinary C1 trait-offer steering and native terminal
+       -> ordinary trait-offer steering and native terminal
 ```
 
 The box use begins the acquisition but does not complete it. Completion belongs
@@ -240,8 +239,8 @@ special case.
 | Concern                                             | Authority and disposition                                                                                                                                           |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Which three NPC traits appear and which is selected | Planner offer; native-steered at the bespoke menu-open seam.                                                                                                        |
-| Native row requirements and exact authored identity | Native availability question at the published contact; unavailable identity reports a mismatch and no executor pool search occurs.                                   |
-| Equipping the selected NPC trait                    | Native-authoritative; the bounded selection callback is the terminal.                                                                                                |
+| Native row requirements and exact authored identity | Native availability question at the published contact; unavailable identity reports a mismatch and no executor pool search occurs.                                  |
+| Equipping the selected NPC trait                    | Native-authoritative; the bounded selection callback is the terminal.                                                                                               |
 | Trait-owned drop production                         | Native-authoritative; never recreated by the executor.                                                                                                              |
 | Which generated pickups are planner-visible         | Planner selected-pickup producer and authored participation.                                                                                                        |
 | Choosing a generated pickup action                  | Claim a compatible ready transaction only when native use is accepted.                                                                                              |
@@ -251,8 +250,8 @@ special case.
 
 ## Representative witnesses
 
-C3 needs bounded carrier witnesses, not a duplicate of the catalog's complete
-Narcissus matrix:
+This contact needs bounded carrier witnesses, not a duplicate of the catalog's
+complete Narcissus matrix:
 
 - an Arachne menu installs the published three rows and completes at the
   native selection callback for the authored costume;
@@ -267,7 +266,7 @@ Narcissus matrix:
 - an unmodeled companion drop and an unselected optional pickup remain native
   pass-through;
 - Mystery Boon begins only after accepted box use, forces the published hidden
-  provider, binds the created provider loot, and completes through C1's final
+  provider, binds the created provider loot, and completes through the focused
   trait terminal; and
 - two independent Mystery Boon actions may be claimed by either physical box
   without a wrong-object mismatch; and

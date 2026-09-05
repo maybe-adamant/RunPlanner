@@ -180,12 +180,12 @@ concrete world object and clears its ability to duplicate again. The original
 pickup owner still completes once. The duplicate is a new planner acquisition
 even though native code reuses the object's identity.
 
-Consequently, positive duplication requires the Sea Star producer adapter to
-correlate that reused object with the published duplicate child before its
-second interaction. The generic direct-pickup boundary must not guess that
-transition or add a speculative rebind protocol. A negative Sea Star result
-also remains Sea Star's responsibility rather than an implied direct-pickup
-fact.
+The Sea Star adapter consumes the published `proc` or `noProc` chance result
+while the source interaction is active. After a proc, the completed source
+binding yields to the ordinary compatible-ready claim for the newly ready
+duplicate action on its next accepted use; no separate object-correlation
+mechanism exists. The direct-pickup adapter remains responsible only for that
+accepted-use claim and terminal.
 
 ## Planner and executor disposition
 
