@@ -16,7 +16,6 @@ import {
   applyProjectCommand,
   createIncomingRewardAddress,
   createOccurrenceId,
-  createKeepsakeEquipResultAddress,
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   semanticAddressKey,
@@ -807,7 +806,12 @@ describe('execution-plan compiler and codec', () => {
       hexTree: { layoutKey: 'Lung', rareTalentKeys: ['rare'], epicTalentKeys: ['epic'] },
     };
     expect(decodeExecutionTraitOffer(spell, 'spell')).toMatchObject({ giver: 'SpellDrop' });
-    const { hexTree: _tree, ...missingTree } = spell;
+    const missingTree = {
+      kind: spell.kind,
+      giver: spell.giver,
+      options: spell.options,
+      selected: spell.selected,
+    };
     expect(() => decodeExecutionTraitOffer(missingTree, 'spell')).toThrow(ExecutionPlanCodecError);
     expect(() =>
       decodeExecutionTraitOffer({ ...spell, options: [{ key: 'one' }] }, 'spell'),
@@ -934,6 +938,49 @@ describe('execution-plan compiler and codec', () => {
       ExecutionPlanCodecError,
     );
     expect(() => decodeExecutionTraitOffer({ ...offer, selected: 'option2' }, 'offer')).toThrow(
+      ExecutionPlanCodecError,
+    );
+  });
+
+  it('strictly decodes Echo volatile results only on their selected outer rows', () => {
+    const boon = {
+      kind: 'traits',
+      giver: 'Echo',
+      options: [
+        {
+          key: 'EchoLastRunBoon',
+          echoLastRunBoon: {
+            options: [
+              { giver: 'Hera', key: 'HeraWeaponBoon', rarity: 'Rare' },
+              { giver: 'Zeus', key: 'ZeusSpecialBoon', rarity: 'Epic' },
+            ],
+            selected: 'option2',
+          },
+        },
+        { key: 'DiminishingDodgeBoon' },
+      ],
+      selected: 'option1',
+    };
+    const decodedBoon = decodeExecutionTraitOffer(boon, 'Echo offer');
+    if (decodedBoon.kind !== 'traits') throw new Error('Echo must decode as a trait offer');
+    expect(decodedBoon.options[0]?.echoLastRunBoon?.options).toHaveLength(2);
+    expect(() => decodeExecutionTraitOffer({ ...boon, selected: 'option2' }, 'Echo offer')).toThrow(
+      ExecutionPlanCodecError,
+    );
+
+    const pom = {
+      kind: 'traits',
+      giver: 'Echo',
+      options: [
+        { key: 'DiminishingDodgeBoon' },
+        { key: 'EchoDoubleLevelBoon', echoPomTarget: 'ZeusWeaponBoon' },
+      ],
+      selected: 'option2',
+    };
+    const decodedPom = decodeExecutionTraitOffer(pom, 'Echo offer');
+    if (decodedPom.kind !== 'traits') throw new Error('Echo must decode as a trait offer');
+    expect(decodedPom.options[1]?.echoPomTarget).toBe('ZeusWeaponBoon');
+    expect(() => decodeExecutionTraitOffer({ ...pom, giver: 'Icarus' }, 'Echo offer')).toThrow(
       ExecutionPlanCodecError,
     );
   });

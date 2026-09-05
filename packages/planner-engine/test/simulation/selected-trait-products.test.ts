@@ -11,6 +11,7 @@ import {
 
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
 import {
+  attachTraitHistory,
   createTraitHistoryState,
   type ReachedLevelResolutionEvaluation,
 } from '../../src/simulation/traits';
@@ -20,6 +21,56 @@ import { initializeRewardBranches } from '../../src/simulation/rewards/processin
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 
 describe('selected trait products', () => {
+  it('publishes Echo nested rarities after Proper Upbringing applies its floor', () => {
+    const origin = createIncomingRewardAddress(
+      { kind: 'biome', routeKey: 'Underworld', biomeKey: 'H' },
+      createOccurrenceId('echo'),
+    );
+    const initial = initializeRewardBranches(
+      undefined,
+      createTestArcanaFearState(),
+      catalog,
+      'ManaOverTimeRefundKeepsake',
+    )[0]!;
+    const history = Object.freeze({
+      ...createTraitHistoryState(),
+      properUpbringingActive: true as const,
+    });
+    const branch = Object.freeze({
+      ...initial,
+      history: attachTraitHistory(initial.history, history),
+      traitHistory: history,
+    });
+    const offer = {
+      kind: 'traits' as const,
+      giverKey: 'Echo',
+      options: [
+        {
+          traitKey: 'EchoLastRunBoon',
+          echoLastRunBoon: {
+            options: [
+              {
+                giverKey: 'Aphrodite',
+                traitKey: 'HighHealthOffenseBoon',
+                rarity: 'Common' as const,
+              },
+            ] as const,
+            selectedOptionKey: 'option1' as const,
+          },
+        },
+        { traitKey: 'DiminishingDodgeBoon' },
+      ] as const,
+      selectedOptionKey: 'option1' as const,
+      rarificationActions: [] as const,
+    };
+    const settled = settleEncounterTraitOffer(catalog, branch, origin, offer, 1, 'pickup').branch;
+
+    expect(
+      selectedTraitOfferProducts([settled], Object.freeze([]), catalog).selectedTraitOffers[0]
+        ?.branches[0]?.effectiveEchoLastRunBoon?.options[0]?.rarity,
+    ).toBe('Rare');
+  });
+
   it('retains absent Spell God Sent evidence when a later same-biome keepsake adds it', () => {
     const origin = createIncomingRewardAddress(
       { kind: 'biome', routeKey: 'Underworld', biomeKey: 'F' },

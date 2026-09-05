@@ -129,6 +129,17 @@ export function executionTimelineTransactions(
       targetedAcquisition?.kind === 'upgradeHammerToRank2'
         ? targetedAcquisition.targetTraitKey
         : undefined;
+    const echoPomTarget =
+      selected.offer.giverKey === 'Echo' && selectedOption?.traitKey === 'EchoDoubleLevelBoon'
+        ? selectedOption.echoPomTarget
+        : undefined;
+    const echoLastRunBoon =
+      selected.offer.giverKey === 'Echo' && selectedOption?.traitKey === 'EchoLastRunBoon'
+        ? agreement(
+            selected.branches.map((branch) => branch.effectiveEchoLastRunBoon),
+            `Echo last-run boon ${semanticAddressKey(selected.address)}`,
+          )
+        : undefined;
     const publishedHexTree =
       selected.offer.giverKey !== 'SpellDrop' || selected.offer.hexTree === undefined
         ? undefined
@@ -219,6 +230,38 @@ export function executionTimelineTransactions(
             ...(icarusHammerTarget === undefined || index !== selectedOptionIndex
               ? {}
               : { icarusHammerTarget }),
+            ...(echoPomTarget === undefined || index !== selectedOptionIndex
+              ? {}
+              : { echoPomTarget }),
+            ...(echoLastRunBoon === undefined || index !== selectedOptionIndex
+              ? {}
+              : {
+                  echoLastRunBoon: Object.freeze({
+                    options: Object.freeze(
+                      echoLastRunBoon.options.map((nested) =>
+                        Object.freeze({
+                          giver: nested.giverKey,
+                          key: nested.traitKey,
+                          rarity: nested.rarity,
+                          ...(nested.lootHistorySource === undefined
+                            ? {}
+                            : { lootHistorySource: nested.lootHistorySource }),
+                          ...(nested.targetTraitKey === undefined
+                            ? {}
+                            : { targetTraitKey: nested.targetTraitKey }),
+                          ...(nested.naturalSelectionTargets === undefined
+                            ? {}
+                            : {
+                                naturalSelectionTargets: Object.freeze([
+                                  ...nested.naturalSelectionTargets,
+                                ]),
+                              }),
+                        }),
+                      ),
+                    ),
+                    selected: echoLastRunBoon.selectedOptionKey,
+                  }),
+                }),
           });
         }),
       ),

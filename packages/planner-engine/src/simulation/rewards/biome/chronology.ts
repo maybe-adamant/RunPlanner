@@ -1756,6 +1756,7 @@ export function evaluateBiomeRewardChronology(
     immutableFindingRegions.flatMap((entry) =>
       entry.levelResolutionEvaluations === undefined ? [] : entry.levelResolutionEvaluations,
     ),
+    catalog,
   );
   const traitCandidateContexts = new Map(traitProducts.candidateContexts);
   for (const [childKey, checkpoint] of traitChildSettlementBuilders) {

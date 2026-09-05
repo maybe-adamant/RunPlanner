@@ -471,6 +471,14 @@ export interface TraitOfferBranchAssessment {
 /** Execution input retained only after one authored offer is selected. */
 export interface SelectedTraitOfferBranchAssessment extends TraitOfferBranchAssessment {
   readonly baseRarities: readonly (TraitRarity | undefined)[];
+  /** Echo's exact nested menu after chronology-owned rarity floors are applied. */
+  readonly effectiveEchoLastRunBoon?: {
+    readonly options: readonly (import('../authored-project/traits').AuthoredEchoLastRunBoonOption & {
+      /** Declaration-owned source used by native Echo loot-history attribution. */
+      readonly lootHistorySource?: string;
+    })[];
+    readonly selectedOptionKey: import('../authored-project/traits').TraitOptionKey;
+  };
 }
 
 /**

@@ -224,6 +224,8 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
         'concaveStoneResult',
         'circeResolution',
         'icarusHammerTarget',
+        'echoPomTarget',
+        'echoLastRunBoon',
         'replacement',
       ],
       `${label}.options[${index}]`,
@@ -308,6 +310,80 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
               `${label}.options[${index}].icarusHammerTarget`,
             ),
           }),
+      ...(option.echoPomTarget === undefined
+        ? {}
+        : {
+            echoPomTarget:
+              option.echoPomTarget === null
+                ? null
+                : stringValue(option.echoPomTarget, `${label}.options[${index}].echoPomTarget`),
+          }),
+      ...(option.echoLastRunBoon === undefined
+        ? {}
+        : {
+            echoLastRunBoon: (() => {
+              const nestedLabel = `${label}.options[${index}].echoLastRunBoon`;
+              const nested = object(option.echoLastRunBoon, nestedLabel);
+              exact(nested, ['options', 'selected'], [], nestedLabel);
+              const nestedOptions = array(nested.options, `${nestedLabel}.options`, 3).map(
+                (entry, nestedIndex) => {
+                  const rowLabel = `${nestedLabel}.options[${nestedIndex}]`;
+                  const row = object(entry, rowLabel);
+                  exact(
+                    row,
+                    ['giver', 'key', 'rarity'],
+                    ['lootHistorySource', 'targetTraitKey', 'naturalSelectionTargets'],
+                    rowLabel,
+                  );
+                  return Object.freeze({
+                    giver: stringValue(row.giver, `${rowLabel}.giver`),
+                    key: stringValue(row.key, `${rowLabel}.key`),
+                    rarity: stringValue(row.rarity, `${rowLabel}.rarity`),
+                    ...(row.lootHistorySource === undefined
+                      ? {}
+                      : {
+                          lootHistorySource: stringValue(
+                            row.lootHistorySource,
+                            `${rowLabel}.lootHistorySource`,
+                          ),
+                        }),
+                    ...(row.targetTraitKey === undefined
+                      ? {}
+                      : {
+                          targetTraitKey: stringValue(
+                            row.targetTraitKey,
+                            `${rowLabel}.targetTraitKey`,
+                          ),
+                        }),
+                    ...(row.naturalSelectionTargets === undefined
+                      ? {}
+                      : {
+                          naturalSelectionTargets: Object.freeze(
+                            stringArray(
+                              row.naturalSelectionTargets,
+                              `${rowLabel}.naturalSelectionTargets`,
+                              8,
+                            ),
+                          ),
+                        }),
+                  });
+                },
+              );
+              if (nestedOptions.length === 0)
+                fail(`${nestedLabel}.options must contain one to three ordered options`);
+              const nestedSelected = stringValue(nested.selected, `${nestedLabel}.selected`);
+              if (
+                !['option1', 'option2', 'option3']
+                  .slice(0, nestedOptions.length)
+                  .includes(nestedSelected)
+              )
+                fail(`${nestedLabel}.selected is not a valid option`);
+              return Object.freeze({
+                options: Object.freeze(nestedOptions),
+                selected: nestedSelected as 'option1' | 'option2' | 'option3',
+              });
+            })(),
+          }),
       ...(replacement === undefined
         ? {}
         : {
@@ -358,6 +434,20 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
       (!availableOptionKeys.includes(concave.optionKey) || concave.optionKey === selected)
     )
       fail(`${label}.options[${index}].concaveStoneResult.optionKey is not a residual option`);
+  }
+  for (const [index, option] of options.entries()) {
+    if (option.echoPomTarget !== undefined) {
+      if (record.giver !== 'Echo' || option.key !== 'EchoDoubleLevelBoon')
+        fail(`${label}.options[${index}].echoPomTarget requires Echo Pom Pom Pom`);
+      if (availableOptionKeys[index] !== selected)
+        fail(`${label}.options[${index}].echoPomTarget must belong to the selected option`);
+    }
+    if (option.echoLastRunBoon !== undefined) {
+      if (record.giver !== 'Echo' || option.key !== 'EchoLastRunBoon')
+        fail(`${label}.options[${index}].echoLastRunBoon requires Echo Boon Boon Boon`);
+      if (availableOptionKeys[index] !== selected)
+        fail(`${label}.options[${index}].echoLastRunBoon must belong to the selected option`);
+    }
   }
   for (const [index, option] of options.entries()) {
     if (option.icarusHammerTarget !== undefined) {
