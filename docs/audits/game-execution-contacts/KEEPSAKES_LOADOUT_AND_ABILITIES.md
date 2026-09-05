@@ -32,28 +32,111 @@ equipment during `StartNewRun` and a later rack change. Echo Gift Gift Gift is
 not a separate effect implementation; it replays the declared keepsake effect
 at the effect's own native contact.
 
-## Complete keepsake inventory
+## Planner modeling is not an execution instruction
 
-| Family              | Keepsakes                                                                                                                                                                              | Execution disposition                                                                                                                                                                                           |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Simulation-neutral  | Silver Wheel, Knuckle Bones, Luckier Tooth, Ghost Onion, Evil Eye, Gold Purse, Engraved Pin, Discordant Bell, Metallic Droplet, White Antler, Silken Sash, Lion Fang, Blackened Fleece | Native pass-through after exact equip identity. Combat, health, gold, and damage effects are outside the current simulation.                                                                                    |
-| Olympian pressure   | Cloud Bangle, Iridescent Fan, Vivid Sea, Barley Sheaf, Harmonic Photon, Beautiful Mirror, Adamant Shard, Everlasting Ember, Sword Hilt                                                 | Native-authoritative pass-through: native equip owns pressure and charges; each later offer carries its exact giver and base rarity, and room-exit conformance owns the charge ledger.                          |
-| Moon Beam           | Moon Beam                                                                                                                                                                              | Native-authoritative pass-through: native equip, reward priority, and point addition remain native while the Path carrier and room-exit conformance observe modeled state.                                      |
-| Gorgon Amulet       | Gorgon Amulet                                                                                                                                                                          | Covered: native eligibility, spawn, and use consumption remain authoritative; the published Athena interaction binds at `AthenaUse` and hands off to the focused trait offer.                                   |
-| Fig Leaf            | Fig Leaf                                                                                                                                                                               | Covered: the planner's phase-local skip/no-skip result steers the bounded native decision while native code owns skipped-spawn lifecycle, use consumption, and biome latch.                                     |
-| Aromatic Phial      | Aromatic Phial                                                                                                                                                                         | Covered by the `fountainUse` transaction and `UseHealthFountain`; only the published target matters.                                                                                                            |
-| Concave Stone       | Concave Stone                                                                                                                                                                          | Covered: v18 retains exact proc/no-proc and the frozen residual inside the outer acquisition; the focused adapter scopes the native roll and recursive selected row without a second transaction or dependency. |
-| Crystal Figurine    | Crystal Figurine                                                                                                                                                                       | Covered by `automatic:crystalFigurine` at boss defeat and `AddRandomMetaUpgrades`.                                                                                                                              |
-| Experimental Hammer | Experimental Hammer                                                                                                                                                                    | Covered at equip through the published selected Hammer and `AddRandomHammer`; later expiration remains a conformance concern.                                                                                   |
-| Jeweled Pom         | Jeweled Pom                                                                                                                                                                            | Covered at equip through the published Hades trait and `GiveRandomHadesBoonAndBoostBoons`; later level contribution is already folded into effective levels.                                                    |
-| Calling Card        | Calling Card                                                                                                                                                                           | Native-authoritative pass-through: the offer carries its exact base rarity, native rarification consumes charges, and room-exit keepsake conformance owns the retained ledger.                                  |
-| Time Piece          | Time Piece                                                                                                                                                                             | Authored conversion remains planner-simulated, but its acquisition is omitted from execution publication; aggregate intended acquisitions and retained-charge conformance prove the room outcome.               |
-| Transcendent Embryo | Transcendent Embryo                                                                                                                                                                    | Covered both at equip and at its eight-encounter automatic replacement through `AddRandomChaosBlessing`.                                                                                                        |
+The planner models a keepsake effect whenever that effect changes later
+eligibility, chronology, or derived state. That does not imply that the
+executor should reproduce the effect. The execution boundary has three distinct
+responses:
+
+1. **Native pass-through.** Deterministic game behavior runs unchanged. The
+   planner models its consequence so later simulation remains correct.
+2. **Generic downstream realization.** The keepsake changes a later door,
+   trait offer, Path acquisition, fountain use, or pickup. The normal owner of
+   that later object realizes the already-resolved result; there is no
+   keepsake-specific actuator.
+3. **Bounded volatile steering.** Native code asks for a random decision whose
+   exact outcome was authored. Only that selector is constrained, while the
+   native acquire/equip/encounter function retains mutation and presentation.
+
+Room-exit conformance observes planner-visible retained state and charges. It
+is not a reason to trace or reimplement every native callback. Likewise, an
+effect that is simulation-neutral must not become a mismatch merely because
+the game still applies its health, damage, armor, gold, or real-time behavior.
+
+## Common identity contract
+
+All 33 selectable keepsakes share one identity boundary regardless of effect:
+
+- the starting loadout declares one exact keepsake, which is checked after
+  native run initialization;
+- an authored postboss change binds the exact `EquipKeepsake` call to one
+  `keepsakeChange` transaction;
+- opening and closing a rack without changing keepsake creates no transaction;
+  and
+- once the identity is accepted, native `EquipKeepsake` remains responsible for
+  installing the declaration and running its equip behavior.
+
+Only Experimental Hammer, Jeweled Pom, and Transcendent Embryo add an authored
+immediate random result beneath that common equip contact. Other keepsakes do
+not need an empty effect transaction merely to prove that they were equipped.
+
+## Complete keepsake execution inventory
+
+| Family                       | Keepsakes                                                                                                                                                                              | Planner-owned meaning                                                                                                                                                                                     | Executor boundary                                                                                                                                                                                                                                                                                               |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Simulation-neutral identity  | Silver Wheel, Knuckle Bones, Luckier Tooth, Ghost Onion, Evil Eye, Gold Purse, Engraved Pin, Discordant Bell, Metallic Droplet, White Antler, Silken Sash, Lion Fang, Blackened Fleece | Selection history, active interval, removal/blocking, and rank-III identity. Their Magick, health, Death Defiance, gold, armor, damage, speed, and real-time effects do not alter the current simulation. | Common identity contact only. Native effects pass through and are excluded from conformance.                                                                                                                                                                                                                    |
+| Olympian reward pressure     | Cloud Bangle, Iridescent Fan, Vivid Sea, Barley Sheaf, Harmonic Photon, Beautiful Mirror, Adamant Shard, Everlasting Ember, Sword Hilt                                                 | Provider pressure, one reward-force use, one provider rarification use, and retained source state. Later doors and offers are already resolved with the correct provider and rarity.                      | Native equip owns pressure and charge consumption. Navigation realizes the resolved door; the ordinary trait adapter realizes the resolved offer. No god-keepsake actuator exists. Retained charge/source state is checked at room exit.                                                                        |
+| Path reward pressure         | Moon Beam                                                                                                                                                                              | Talent-drop pressure and the exact added Path points on the next Talent acquisition.                                                                                                                      | Native equip owns pressure and point addition. Navigation and the generic Path acquisition contact consume the resolved products. There is no Moon Beam actuator; current F/G execution cannot yet exercise its later-route reward contact.                                                                     |
+| Conditional encounter        | Gorgon Amulet                                                                                                                                                                          | Pending/consumed keepsake state, the qualifying Athena encounter, and its exact offer when the modeled Death Defiance condition is met.                                                                   | Native eligibility, spawn, and use consumption remain authoritative. `AthenaUse` only binds the physical interaction to the published encounter; the ordinary trait adapter realizes the offer. No trigger steering or Athena spawning is reimplemented.                                                        |
+| Encounter skip               | Fig Leaf                                                                                                                                                                               | One exact phase-local skip/no-skip result plus retained uses and the biome activation latch.                                                                                                              | The executor steers only the bounded Fig Leaf `RandomChance`; native encounter code owns skipped spawning, use consumption, propagation, and presentation. Room-exit keepsake conformance proves the retained state.                                                                                            |
+| Fountain rarity              | Aromatic Phial                                                                                                                                                                         | Pending/consumed use and the exact eligible trait upgraded at the next fountain.                                                                                                                          | **Adapter gap:** `fountainUse.aromaticPhialTarget` is published, but the current `UseHealthFountain` contact only claims and completes the fountain transaction. It does not yet constrain the native rarity target. Native fountain and rarity mutation must remain authoritative once that selector is added. |
+| Residual boon choice         | Concave Stone                                                                                                                                                                          | Exact proc/no-proc and, on proc, the frozen residual option selected from the original god offer.                                                                                                         | The ordinary trait adapter scopes the Stone roll and recursive residual selection inside the outer acquisition. Native code equips the second trait and consumes the use; no second physical acquisition or Stone-owned transaction is invented.                                                                |
+| Boss Arcana grant            | Crystal Figurine                                                                                                                                                                       | Pending/consumed use and the exact ordered Arcana set activated after the boss.                                                                                                                           | `automatic:crystalFigurine` constrains `AddRandomMetaUpgrades`; native code activates the cards and consumes the use. Arcana conformance observes the result.                                                                                                                                                   |
+| Temporary Hammer             | Experimental Hammer                                                                                                                                                                    | Exact compatible Hammer granted on equip, its remaining encounter duration, and eventual removal.                                                                                                         | The equip scope constrains `AddRandomHammer`; native code equips and expires the Hammer. The ordinary trait ledger observes the resulting add/remove state.                                                                                                                                                     |
+| Hades boon and future levels | Jeweled Pom                                                                                                                                                                            | Exact Hades trait granted on equip, retained level-provider state, and its contribution to later effective trait levels.                                                                                  | The equip scope constrains `GiveRandomHadesBoonAndBoostBoons`. Later offers already publish final effective levels and are realized by the ordinary trait adapter; no Jeweled Pom level loop exists in the executor.                                                                                            |
+| Offer rarification           | Calling Card                                                                                                                                                                           | Exact row-local base/effective rarity decisions and retained charges.                                                                                                                                     | Native offer interaction owns the player's rarification click and charge consumption. The ordinary trait adapter installs the final authored rows; trait and keepsake conformance observe the selected result and remaining charge. No rarify-button cursor is maintained.                                      |
+| Reward destruction           | Time Piece                                                                                                                                                                             | Exact acquisition suppressed by conversion and retained charges; gold amount is simulation-neutral.                                                                                                       | Publication omits the destroyed acquisition and does not publish a Time Piece transaction. Native interaction owns the conversion. Remaining required transactions plus room-exit Time Piece charges expose the wrong object or missing conversion without a dedicated actuator.                                |
+| Chaos blessing lifecycle     | Transcendent Embryo                                                                                                                                                                    | Exact blessing, rarity, magnitude values, eight-encounter replacement result, and removal of the prior blessing.                                                                                          | The equip scope and `automatic:transcendentEmbryo` each constrain `AddRandomChaosBlessing` and processed values. Native code owns the clock, replacement, trait mutation, and presentation.                                                                                                                     |
 
 The exact keys, rank-III values, and Echo availability are owned by
 [Keepsakes](../loadout-and-progression/KEEPSAKE_GAME_DATA_AUDIT.md),
 [Cherished Heirloom](../loadout-and-progression/CHERISHED_HEIRLOOM_KEEPSAKE_AUDIT.md),
 and [Echo Gift Gift Gift](../loadout-and-progression/ECHO_GIFT_GIFT_GIFT_KEEPSAKE_AUDIT.md).
+
+## Cross-keepsake modifiers
+
+Cherished Heirloom is a native deterministic reconstruction of the current
+keepsake at an increased effective rank. The planner models the changed
+charges, values, or future result so chronology stays correct; the executor
+does not reconstruct the keepsake itself. Any later volatile result still uses
+the ordinary contact named above—for example, a later Embryo transformation or
+Fig Leaf decision.
+
+Gift Gift Gift records the captured keepsake and lets Echo install its native
+replay. It is not a second keepsake implementation. A replayed effect should
+reach the same downstream owner as its ordinary counterpart: reward pressure
+remains navigation/offer work and later generated objects remain independently
+owned acquisitions. The current execution product does not yet publish Gift's
+later biome-start Experimental Hammer or Transcendent Embryo result, however,
+so those volatile replays remain a protocol gap rather than silently borrowing
+the ordinary equip scope.
+
+## Remaining keepsake execution gaps
+
+The inventory leaves three bounded gaps. None requires a general keepsake
+effect interpreter.
+
+1. **Aromatic Phial target steering.** The wire already carries
+   `fountainUse.aromaticPhialTarget`. The fountain adapter must scope the native
+   rarity selector to that target while leaving `UseHealthFountain` and the
+   rarity mutation native.
+2. **Retained-state reading.** The execution wire publishes the complete
+   `PendingKeepsakeEffects` shape. The current native `keepsakeEffects` reader
+   reconstructs Olympian pressure, Calling Card, Time Piece, Fig Leaf, Gorgon,
+   and Crystal Figurine, but leaves Jeweled Pom, Experimental Hammer, Aromatic
+   Phial, Concave Stone, and Transcendent Embryo at empty/null defaults. Because
+   `keepsakeEffects` is one sparse conformance fact, any room that changes it
+   needs a complete comparable value, not a partly populated projection.
+3. **Gift Gift Gift volatile replay publication.** The planner owns captured
+   identity, schedule, and authored replay results, but the current execution
+   union does not carry the later biome-start Hammer/Embryo result. That result
+   must be published before the corresponding later-route replay can reuse the
+   ordinary bounded selector.
+
+Moon Beam is a separate deferred-route contact, not a missing keepsake
+actuator: the existing generic navigation and Path contacts are the correct
+consumers once later route structure reaches Talent rewards.
 
 ## Encounter-altering keepsake contacts
 

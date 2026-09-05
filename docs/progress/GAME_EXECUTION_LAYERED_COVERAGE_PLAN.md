@@ -7,8 +7,10 @@ C2.5, C3, C4, and D1 through D8 are complete as of 2026-09-05. Gate D closure
 has recorded the universal disposition matrix, retired the superseded broad
 trait paths, and completed its bounded verification. The follow-up NPC vertical
 closure now also covers Medea, Arachne, Narcissus, Circe, Icarus, and Echo
-without enabling their deferred route structure. Gates E onward remain
-scope outlines until they receive the same
+without enabling their deferred route structure. The focused
+[Keepsake Execution Closure Plan](KEEPSAKE_EXECUTION_CLOSURE_PLAN.md) must close
+the remaining universal keepsake contacts before Gate E begins. Gates E onward
+remain scope outlines until they receive the same
 component-by-component review. Do not begin a gate until its components,
 ownership, native contacts, pass-through boundary, and concrete witnesses have
 been discussed, cleaned up here, and locked.
@@ -109,14 +111,14 @@ its coverage matrix proves the contact; working code is not exempt from audit.
 
 ### Remaining boundary after Gate D
 
-| Layer                 | Disposition after closure                                                                                                                                                              |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Structure             | The F/G room/reward/encounter/feature/Door proof is closed. Live host probes remain evidence work, not a missing execution product.                                                    |
-| Acquisition carriers  | Ordinary, level, direct-pickup, NPC, Mystery Boon, Artificer, Spell, and Path carriers are closed. Commerce remains Gate E; later-route carrier activation remains route-owned.        |
-| Trait effects         | Natural Selection, All Together, Concave Stone, and Sea Star have exact scoped products. Ransoms are native-authoritative, not a second executor implementation.                       |
-| Keepsake effects      | F/G actuators and explicit native-authoritative pass-throughs are classified. Echo Gift delegates future activation to the ordinary keepsake path rather than owning another actuator. |
-| Commerce              | Shop, Well, Pool, and Shrine delivery closure remains Gate E; this plan does not claim its exhaustive item/contact coverage.                                                           |
-| Later-route abilities | Spell/Hex, Path, and all six bespoke NPC menu/consequence adapters are covered but await route activation and bounded live native probes. Biome-specific structure remains deferred.   |
+| Layer                 | Disposition after closure                                                                                                                                                             |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Structure             | The F/G room/reward/encounter/feature/Door proof is closed. Live host probes remain evidence work, not a missing execution product.                                                   |
+| Acquisition carriers  | Ordinary, level, direct-pickup, NPC, Mystery Boon, Artificer, Spell, and Path carriers are closed. Commerce remains Gate E; later-route carrier activation remains route-owned.       |
+| Trait effects         | Natural Selection, All Together, Concave Stone, and Sea Star have exact scoped products. Ransoms are native-authoritative, not a second executor implementation.                      |
+| Keepsake effects      | The complete disposition is classified. The focused keepsake closure must complete Phial steering, retained-state reading, and publication of Gift's volatile replay before commerce. |
+| Commerce              | Shop, Well, Pool, and Shrine delivery closure remains Gate E; this plan does not claim its exhaustive item/contact coverage.                                                          |
+| Later-route abilities | Spell/Hex, Path, and all six bespoke NPC menu/consequence adapters are covered but await route activation and bounded live native probes. Biome-specific structure remains deferred.  |
 
 ## Locked architectural rules
 

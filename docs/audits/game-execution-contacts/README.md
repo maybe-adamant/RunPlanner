@@ -60,8 +60,9 @@ A family is not covered when only its ordinary loot-screen carrier works.
 - [NPC trait and generated-pickup execution](NPC_TRAIT_AND_GENERATED_PICKUP_EXECUTION.md)
   — bespoke Arachne/Narcissus menus, native trait-owned drop production,
   generated-child handoff, and Narcissus Mystery Boon resolution.
-- [Keepsakes, loadout, and abilities](KEEPSAKES_LOADOUT_AND_ABILITIES.md) — all
-  keepsakes, weapons, aspects, Arcana, Vows, Hexes, and tools.
+- [Keepsakes, loadout, and abilities](KEEPSAKES_LOADOUT_AND_ABILITIES.md) — the
+  exhaustive 33-keepsake planner/native/executor boundary plus weapons,
+  aspects, Arcana, Vows, Hexes, and tools.
 - [NPCs, encounters, and automatic outcomes](NPCS_ENCOUNTERS_AND_AUTOMATICS.md)
   — generic and bespoke trait menus, Nemesis, encounter selection, and forced
   automatic results.
