@@ -1593,6 +1593,35 @@ Intended commits:
 - Plan Executor: `refactor(executor): enforce exact authored outcomes`
 - Modpack shell: pin the completed executor commit.
 
+#### D3-D8 shared nested-consequence contract
+
+D3-D8 extend already-bounded acquisition transactions with consequences that
+native game code performs inside the outer accepted action. They do not create
+another transaction merely because the planner simulates their result.
+
+- When an outer acquisition begins, its adapter may create an
+  occurrence-local, ephemeral expectation for the exact nested native contacts
+  published on that selected result. Each matching callback consumes only its
+  own expectation. This is callback-sequence bookkeeping, not a semantic
+  post-state proof or another Timeline cursor.
+- The outer transaction may complete at its existing native terminal only
+  after every required nested expectation has been consumed. A missing,
+  rejected, or unavailable exact contact reports a mismatch and leaves the
+  outer transaction incomplete. Native behavior and player input continue.
+- If a native callback already receives an eligibility-filtered candidate
+  collection, the adapter checks only for the exact published identity. If the
+  hook necessarily sees a raw declaration pool before native filtering, it
+  delegates availability to that row's native eligibility predicate before
+  narrowing the pool. The executor does not own a parallel conditional-item or
+  conditional-trait list.
+- Room-exit obligations remain the terminal backstop for an incomplete outer
+  action. Existing specialized conformance checks validate only the durable
+  state they already own; they do not repeat contact availability or reconstruct
+  the nested game algorithm.
+- A separately materialized pickup remains its own acquisition transaction.
+  Consuming a nested production contact neither completes that child nor binds
+  a physical object to it at creation.
+
 #### D3 — All Together exact direct grants
 
 - extend each ordinary trait-offer option with an optional exact All Together
@@ -1601,13 +1630,15 @@ Intended commits:
 - assemble that result directly from the reached selected-offer product and
   round-trip it through the strict TypeScript and Lua codecs without adding a
   new transaction kind;
-- while C1's selected acquisition is in flight, scope only native `GrantBoons`
-  and substitute each planner-authored random identity at its matching native
-  eligible pair;
+- while C1's selected acquisition is in flight, scope only native `GrantBoons`,
+  require each non-null authored identity to exist in its matching
+  native-filtered pair, and steer that exact identity;
 - let native `AddTraitToHero`, presentation, activation, element contribution,
   and God Sent reevaluation run normally; and
-- let the outer C1 transaction complete at its existing native terminal. The
-  executor does not reconstruct the resulting inventory as a second proof.
+- consume all four nested set expectations, including explicit exhausted/null
+  sets, before allowing the outer C1 transaction to complete at its existing
+  native terminal. The executor does not reconstruct the resulting inventory
+  as a second proof.
 
 Primary witnesses are four selected grants, one forced remaining member, and
 one exhausted/null set. Planner tests own eligibility and complete set
@@ -1631,6 +1662,10 @@ Intended commits:
 - derive the scoped native shuffle order from first target appearances, retain
   otherwise eligible native entries so native cap detection can condemn them,
   and let the original loop apply every level and remove capped targets;
+- consume the exact authored successful-target sequence through the bounded
+  native distribution callbacks before allowing the outer C1 transaction to
+  complete. A missing target or an unexpected early end is a structural contact
+  mismatch, not a later final-level comparison;
 - stop for adjudication before implementation if a focused source/contact audit
   finds an authored legal sequence that cannot be represented by one initial
   native order plus native condemnation; and
@@ -1661,9 +1696,11 @@ Intended commits:
 - retain the outer C1 selected-acquisition scope through that recursive call so
   the D3 or D4 nested consequence for the residual option can run when needed;
   and
-- let C1 complete after the bounded recursive native selection returns. Existing
-  `keepsakeEffects` room-exit conformance remains the authority for the Stone
-  charge/status ledger; no fallback or aggregate trait-state proof is added.
+- consume the expected roll and, for a proc, exact residual-selection contacts
+  before C1 can complete after the bounded recursive native selection returns.
+  Existing `keepsakeEffects` room-exit conformance remains the authority for the
+  Stone charge/status ledger; no fallback or aggregate trait-state proof is
+  added.
 
 Primary witnesses are Epic Stone no-proc, Epic Stone proc, Cherished Heirloom's
 forced rank-IV proc, a residual ordinary trait, and one residual option carrying
@@ -1718,7 +1755,10 @@ selection and Path investment have different native carriers.
   start and an ordinary Spell acquisition;
 - steer the ordered three-spell offer and selected position, then let native
   spell installation, positional point bonus, and tree mutation run; and
-- complete from the exact installed spell and tree. Aspect of Selene's routed
+- consume the expected Spell-selection and Hex-construction contacts, then
+  complete at the Spell acquisition's existing native terminal without reading
+  the installed Spell or tree as a callback proof. Room-exit `pathOfStars`
+  conformance owns the durable projected Hex state. Aspect of Selene's routed
   `SpellDrop` continues directly to the Path carrier and does not construct a
   spell offer.
 
@@ -1767,8 +1807,9 @@ would leave the trait partially implemented again.
   Star, including purchased Poms;
 - let each closed acquisition carrier expose only its bounded accepted native
   interaction to a Sea Star collaborator. Force the native chance branch while
-  that source role is active and let native code retain the consumable or create
-  the fresh loot object;
+  that source role is active, require that exact chance contact to be consumed
+  before the source transaction completes, and let native code retain the
+  consumable or create the fresh loot object;
 - do not bind the physical duplicate to its planner child at creation. After the
   source completes, its ordinary C1, C2, C2.5, or D7 carrier claims a compatible
   ready action when the duplicate is actually used;
@@ -1776,6 +1817,11 @@ would leave the trait partially implemented again.
   completed source binding to yield to a newly ready compatible action; and
 - never arm a result for the produced duplicate. Native `CanDuplicate = false`
   and the absence of another authored Sea Star result jointly prevent recursion.
+
+The source's proc/no-proc expectation remains required even when a positive
+duplicate is intentionally left unpicked and therefore has no published child
+transaction. The consumed chance contact proves only that native production was
+steered; it does not prove or complete a later acquisition.
 
 Primary witnesses are positive and negative direct-consumable outcomes, a fresh
 Pom duplicate, a Talent duplicate, a Quick Buck or Buried Treasure generated
