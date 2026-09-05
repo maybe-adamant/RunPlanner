@@ -2,8 +2,8 @@
 
 ## Status
 
-Locked on 2026-09-05 after a current-code inventory and source review. No
-implementation gate after Gate A has been committed or declared complete.
+Locked on 2026-09-05 after a current-code inventory and source review. Gates A
+and B are complete; Gate C1 is next.
 
 Gate A completed on 2026-09-05:
 
@@ -12,6 +12,14 @@ Gate A completed on 2026-09-05:
 
 The Run Planner audit disposition and this status record land together as the
 Gate A planner commit.
+
+Gate B completed on 2026-09-05:
+
+- Plan Executor: `54a7c69`
+- Modpack shell: `cd3a0e1`
+
+The Gate B planner commit publishes Circe's exact stateful results through
+protocol v18 and records the source-backed Arcana activation-domain correction.
 
 This focused plan runs before Gate E of
 [Game Execution Layered Coverage Plan](GAME_EXECUTION_LAYERED_COVERAGE_PLAN.md).

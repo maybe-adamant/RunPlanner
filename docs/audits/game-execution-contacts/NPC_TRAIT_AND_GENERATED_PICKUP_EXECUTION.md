@@ -3,15 +3,18 @@
 ## Status and scope
 
 This audit closes the execution design for Arachne and Narcissus in the current
-F/G route extent. It covers their bespoke trait menus, the boundary between a
-selected trait and its native acquire behavior, Narcissus's optional generated
-pickups, and the complete Narcissus Mystery Boon chain.
+F/G route extent and Circe's exact stateful consequences at the dormant O
+contact. It covers their bespoke trait menus, the boundary between a selected
+trait and its native acquire behavior, Narcissus's optional generated pickups,
+the complete Narcissus Mystery Boon chain, and Circe's Arcana/Fear selector
+boundary.
 
 The six named exact-trait menu contacts share this focused NPC acquisition
 adapter so the obsolete broad Timeline hook has no remaining owner. The shared
-carrier is also installed for Medea, Circe, Icarus, and Echo, but this audit
-does not claim their routes or provider-specific consequences; those remain
-deferred to their owning biome gates. It also does not make every trait that
+carrier is also installed for Medea, Circe, Icarus, and Echo. Circe's three
+stateful consequences are closed here without claiming O route navigation;
+Medea, Icarus, and Echo retain their separately recorded route or consequence
+status. It also does not make every trait that
 happens to call a pickup helper an executor-owned producer. The durable rule is
 narrower:
 
@@ -40,6 +43,9 @@ scripts:
   `Scripts/TraitData_Narcissus.lua:1-781`;
 - Arachne's Onyx Dress resource drop:
   `Scripts/TraitData_Arachne.lua:267-319`;
+- Circe's stateful acquire functions and selectors:
+  `Scripts/EventLogic.lua:1359-1431` and
+  `Scripts/MetaUpgradeLogic.lua:499-560`;
 - consumable use and Mystery Boon dispatch:
   `Scripts/InteractLogic.lua:979-1152`;
 - Mystery Boon unwrap and hidden-source creation:
@@ -238,6 +244,33 @@ Mystery Boons, it must declare the box at its pickup point and the provider at
 `afterUnwrap`. This is a catalog normalization correction, not an executor
 special case.
 
+## Circe stateful consequence boundary
+
+The selected Circe option carries its already-resolved `circeResolution` on
+the occurrence-level execution offer. The compiler copies complete-valid
+selected-branch agreement and does not infer an effect from the trait key.
+Only `RandomArcanaTrait`, `ArcanaRarityTrait`, and `RemoveShrineTrait` carry a
+result; Circe's other six options remain ordinary native trait acquisitions.
+
+The executor keeps the exact result inside the shared Circe selection scope.
+For an exact `CastCount` activation it first constrains CastCount's source-declared
+`RandomChance = 0.1` check to its native positive branch. For an exact
+`TradeOff` with neither source-named companion equipped, it constrains that same
+check to the native negative branch so a sole CastCount competitor enters the
+fallback pool. It constrains
+`RemoveRandomValue` only while native
+`CirceRandomMetaUpgrade`/`AddRandomMetaUpgrades` or
+`CirceMetaUpgradeRarity` is choosing Arcana, and constrains `GetRandomKey`
+only while native `CirceRemoveShrineUpgrades` is choosing a Vow. The native
+functions still perform activation, trait replacement and promotion,
+suppression, cleanup callbacks, and presentation. A missing expected native
+candidate is a mismatch; the executor does not mutate Arcana/Fear state or
+choose a substitute.
+
+The normal room-exit Arcana/Fear conformance remains the effect proof. The
+acquire-function scope neither completes a second transaction nor threads a
+state callback into the NPC terminal.
+
 ## Planner and executor disposition
 
 | Concern                                             | Authority and disposition                                                                                                                                           |
@@ -245,6 +278,8 @@ special case.
 | Which three NPC traits appear and which is selected | Planner offer; native-steered at the bespoke menu-open seam.                                                                                                        |
 | Native row requirements and exact authored identity | Native availability question at the published contact; unavailable identity reports a mismatch and no executor pool search occurs.                                  |
 | Equipping the selected NPC trait                    | Native-authoritative; the bounded selection callback is the terminal.                                                                                               |
+| Circe Arcana/Fear target identity                   | Planner-selected option result; scoped native selector steering while native acquire functions mutate state.                                                        |
+| Circe Arcana/Fear mutation proof                    | Existing room-exit Arcana/Fear conformance; no callback-local mutation reimplementation.                                                                            |
 | Trait-owned drop production                         | Native-authoritative; never recreated by the executor.                                                                                                              |
 | Which generated pickups are planner-visible         | Planner selected-pickup producer and authored participation.                                                                                                        |
 | Choosing a generated pickup action                  | Claim a compatible ready transaction only when native use is accepted.                                                                                              |
@@ -261,6 +296,10 @@ complete Narcissus matrix:
   native selection callback for the authored costume;
 - a Narcissus menu does the same and a failed native requirement reports an
   exact-contact mismatch without changing the owner;
+- Circe activation (including CastCount's admission roll), promotion, and Fear
+  suppression each select the exact published target through native mutation;
+  a TradeOff prerequisite failure remains visible as native substitution and a
+  mismatch, while an ordinary Circe option runs without an additional actuator;
 - selecting a drop-producing trait completes the encounter owner while the
   native drop is still independently pending;
 - one unbound native Narcissus Pom Slice claims a compatible ready action at

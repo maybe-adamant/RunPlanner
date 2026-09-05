@@ -34,7 +34,10 @@ export const arcanaCards = [
   card('ChanneledCast', 'The Sorceress', 'ChannelSlowMetaUpgrade', 1, 1, 1),
   card('HealthRegen', 'The Wayward Son', 'DoorHealMetaUpgrade', 1, 2, 1),
   card('LowManaDamageBonus', 'The Huntress', 'LowManaDamageMetaupgrade', 1, 3, 2),
-  card('CastCount', 'Eternity', 'CastDamageMetaUpgrade', 1, 4, 3),
+  {
+    ...card('CastCount', 'Eternity', 'CastDamageMetaUpgrade', 1, 4, 3),
+    randomDrawChance: 0.1,
+  },
   card(
     'SorceryRegenUpgrade',
     'The Moon',
@@ -122,17 +125,20 @@ export const arcanaCards = [
       Heroic: { additive: { Duo: 0.12 } },
     },
   ),
-  card(
-    'TradeOff',
-    'The Fates',
-    'RerollTradeOffMetaUpgrade',
-    5,
-    1,
-    0,
-    automatic({ kind: 'surroundingCellsActive' }),
-    undefined,
-    true,
-  ),
+  {
+    ...card(
+      'TradeOff',
+      'The Fates',
+      'RerollTradeOffMetaUpgrade',
+      5,
+      1,
+      0,
+      automatic({ kind: 'surroundingCellsActive' }),
+      undefined,
+      true,
+    ),
+    randomDrawRequiredCardKeys: ['ScreenReroll', 'DoorReroll'],
+  },
   card(
     'ScreenReroll',
     'The Champions',

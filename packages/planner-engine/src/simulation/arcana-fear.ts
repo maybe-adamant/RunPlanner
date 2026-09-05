@@ -156,10 +156,30 @@ export function circeResolutionDomain(
   fatedStatus?: 'Unknown' | 'Fated' | 'Unfated',
 ): CirceResolutionDomain {
   if (effect === 'activateArcana') {
-    const arcanaKeys = inactiveArcanaKeys(catalog, state).filter(
+    const activeArcanaKeys = new Set(state.arcana.active.map((card) => card.key));
+    const eligibleArcanaKeys = inactiveArcanaKeys(catalog, state).filter(
       (key) =>
         fatedStatus !== 'Fated' || catalog.arcanaCards.byKey[key]?.fatedIncompatible !== true,
     );
+    const deterministicPrimaryKeys = new Set(
+      eligibleArcanaKeys.filter((key) => {
+        const chance = catalog.arcanaCards.byKey[key]?.randomDrawChance;
+        return chance === undefined || chance === 1;
+      }),
+    );
+    const arcanaKeys = eligibleArcanaKeys.filter((key) => {
+      const requiredCardKeys = catalog.arcanaCards.byKey[key]?.randomDrawRequiredCardKeys ?? [];
+      if (
+        requiredCardKeys.length === 0 ||
+        requiredCardKeys.some((requiredKey) => activeArcanaKeys.has(requiredKey))
+      ) {
+        return true;
+      }
+      // Native selection keeps a companion-less card only when no other
+      // deterministic primary candidate remains; chance-admitted peers have a
+      // positive-probability branch in which they fall into the fallback pool.
+      return [...deterministicPrimaryKeys].every((primaryKey) => primaryKey === key);
+    });
     return Object.freeze({
       effect,
       requiredCount: arcanaKeys.length === 0 ? 0 : 1,

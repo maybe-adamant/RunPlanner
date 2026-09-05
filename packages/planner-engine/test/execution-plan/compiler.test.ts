@@ -322,7 +322,7 @@ function selectedTransactionPair(product: ExecutionSemanticProduct): {
   throw new Error('fixture lacks selected cross-occurrence transaction pair');
 }
 
-describe('protocol-v17 compiler and codec', () => {
+describe('protocol-v18 compiler and codec', () => {
   it('accepts source-owned replacement materialization only for Artificer roles', () => {
     const role = {
       role: 'self',
@@ -852,6 +852,65 @@ describe('protocol-v17 compiler and codec', () => {
             offer.options[0],
             { ...offer.options[1], concaveStoneResult: { kind: 'noProc' } },
           ],
+        },
+        'offer',
+      ),
+    ).toThrow(ExecutionPlanCodecError);
+  });
+
+  it('strictly decodes only bounded selected-option Circe resolutions', () => {
+    const offer = {
+      kind: 'traits',
+      giver: 'Circe',
+      options: [
+        {
+          key: 'ArcanaRarityTrait',
+          circeResolution: {
+            kind: 'promoteArcana',
+            arcanaKeys: ['CastCount', 'CardDraw'],
+          },
+        },
+        { key: 'CirceShrinkTrait' },
+      ],
+      selected: 'option1',
+    };
+    const decoded = decodeExecutionTraitOffer(offer, 'offer');
+    if (decoded.kind !== 'traits') throw new Error('Circe must decode as a trait offer');
+    expect(decoded.options[0]?.circeResolution).toEqual({
+      kind: 'promoteArcana',
+      arcanaKeys: ['CastCount', 'CardDraw'],
+    });
+    expect(() =>
+      decodeExecutionTraitOffer(
+        {
+          ...offer,
+          options: [
+            {
+              ...offer.options[0],
+              circeResolution: {
+                kind: 'promoteArcana',
+                arcanaKeys: ['CastCount', 'CardDraw', 'ChanneledCast'],
+              },
+            },
+          ],
+        },
+        'offer',
+      ),
+    ).toThrow(ExecutionPlanCodecError);
+    expect(() =>
+      decodeExecutionTraitOffer(
+        {
+          ...offer,
+          giver: 'Zeus',
+        },
+        'offer',
+      ),
+    ).toThrow(ExecutionPlanCodecError);
+    expect(() =>
+      decodeExecutionTraitOffer(
+        {
+          ...offer,
+          options: [offer.options[1], offer.options[0]],
         },
         'offer',
       ),

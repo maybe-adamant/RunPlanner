@@ -19,6 +19,7 @@ import {
   replaceTestShopOfferActions,
 } from '@run-planner/test-fixtures/shared';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import {
   applyProjectCommand,
   acquisitionSiteFromStorageKey,
@@ -27,6 +28,7 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createEncounterPhaseAddress,
+  createRouteAddress,
   createFountainRarityOutcomeAddress,
   createKeepsakeEquipResultAddress,
   createLevelResolutionAddress,
@@ -35,7 +37,6 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
-  createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
   createTraitOfferAddress,
@@ -53,9 +54,15 @@ import {
 } from '../../src/execution-plan';
 import { assembleTimelineRelations } from '../../src/execution-plan/assembly/timeline-relations';
 import { assembleExecutionOverview } from '../../src/execution-plan/assembly/overview';
+import { orderedExecutionRooms } from '../../src/execution-plan/assembly/route';
 import { executionTimelineTransactions } from '../../src/execution-plan/assembly/timeline-transactions';
+import { traitOffer as decodeExecutionTraitOffer } from '../../src/execution-plan/codec/rewards';
 import type { ExecutionTimelineTransaction } from '../../src/execution-plan/model';
-import type { PlannerTimelineFacts } from '../../src/simulation/timeline-facts';
+import {
+  EMPTY_PLANNER_TIMELINE_FACTS,
+  mergePlannerTimelineFacts,
+  type PlannerTimelineFacts,
+} from '../../src/simulation/timeline-facts';
 import { bossAutomaticOutcomeProject } from './support/automatic-fixture';
 
 function fOnlyProject(project = createCompleteFGProject()) {
@@ -660,6 +667,84 @@ describe('engine-owned F/G execution semantic product', () => {
       ),
     ).toHaveLength(1);
     expect(occurrence.timeline.obligations).toHaveLength(occurrence.timeline.transactions.length);
+  });
+
+  it('publishes the selected Circe resolution from a real complete-valid O occurrence', () => {
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route: createRouteAddress('Surface'),
+      arcanaKeys: [],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createEncounterPhaseAddress(
+          oBiome,
+          { kind: 'occurrence', occurrenceId: oOccurrenceIds.story },
+          'Encounter',
+        ),
+        'selection',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'Circe',
+        options: [
+          {
+            traitKey: 'RandomArcanaTrait',
+            circeResolution: { kind: 'activateArcana', arcanaKeys: ['ChanneledCast'] },
+          },
+          { traitKey: 'CirceShrinkTrait' },
+          { traitKey: 'CirceEnlargeTrait' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    const biome = assembly.evaluation.route.biomes.find(
+      (candidate): candidate is CompleteValidBiomeProjectEvaluation =>
+        candidate.biomeKey === 'O' &&
+        candidate.authoring === 'complete' &&
+        candidate.validity === 'valid',
+    );
+    if (biome === undefined)
+      throw new Error(
+        `Circe execution fixture lacks complete-valid O: ${JSON.stringify(assembly.evaluation.findings)}`,
+      );
+    const room = orderedExecutionRooms([biome]).find(
+      (candidate) => candidate.occurrenceId === oOccurrenceIds.story,
+    );
+    if (room === undefined) throw new Error('Circe story occurrence is missing');
+    const transactions = executionTimelineTransactions(
+      room,
+      biome,
+      mergePlannerTimelineFacts(
+        room.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
+        biome.rewards.timelineFacts,
+      ),
+    );
+    const transaction = transactions.find(
+      (candidate) =>
+        candidate.kind === 'encounterInteraction' && candidate.phaseKey === 'Encounter',
+    );
+    if (
+      transaction?.kind !== 'encounterInteraction' ||
+      transaction.resolution?.kind !== 'traitOffer'
+    )
+      throw new Error('Circe encounter offer is missing');
+    const executionOffer = transaction.resolution.offer;
+    expect(executionOffer).toMatchObject({
+      giver: 'Circe',
+      selected: 'option1',
+    });
+    if (executionOffer.kind !== 'traits')
+      throw new Error('Circe encounter did not publish a trait offer');
+    expect(executionOffer.options[0]).toEqual({
+      key: 'RandomArcanaTrait',
+      circeResolution: { kind: 'activateArcana', arcanaKeys: ['ChanneledCast'] },
+    });
+    expect(executionOffer.options[1]).not.toHaveProperty('circeResolution');
+    expect(executionOffer.options[2]).not.toHaveProperty('circeResolution');
+    expect(() => decodeExecutionTraitOffer(executionOffer, 'Circe offer')).not.toThrow();
   });
 
   it('keeps an unpicked Mystery Boon atomic to its active Narcissus provider action', () => {
