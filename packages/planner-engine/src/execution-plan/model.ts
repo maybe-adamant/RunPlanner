@@ -178,6 +178,8 @@ export type ExecutionTraitOffer =
         readonly effectiveLevel?: number;
         /** Complete declaration-owned direct grant result for a selected All Together option. */
         readonly allTogetherResult?: ExecutionAllTogetherResult;
+        /** Ordered successful increments produced inside Natural Selection's native distribution. */
+        readonly naturalSelectionTargets?: readonly string[];
         readonly replacement?: {
           readonly slot: string;
           readonly replacedTraitKey: string;

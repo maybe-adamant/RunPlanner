@@ -124,7 +124,14 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
     exact(
       option,
       ['key'],
-      ['baseRarity', 'rarity', 'effectiveLevel', 'allTogetherResult', 'replacement'],
+      [
+        'baseRarity',
+        'rarity',
+        'effectiveLevel',
+        'allTogetherResult',
+        'naturalSelectionTargets',
+        'replacement',
+      ],
       `${label}.options[${index}]`,
     );
     const replacement =
@@ -161,6 +168,27 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
               option.allTogetherResult,
               `${label}.options[${index}].allTogetherResult`,
             ),
+          }),
+      ...(option.naturalSelectionTargets === undefined
+        ? {}
+        : {
+            naturalSelectionTargets: (() => {
+              const targets = array(
+                option.naturalSelectionTargets,
+                `${label}.options[${index}].naturalSelectionTargets`,
+                8,
+              );
+              if (targets.length === 0)
+                fail(`${label}.options[${index}].naturalSelectionTargets must not be empty`);
+              return Object.freeze(
+                targets.map((target, targetIndex) =>
+                  stringValue(
+                    target,
+                    `${label}.options[${index}].naturalSelectionTargets[${targetIndex}]`,
+                  ),
+                ),
+              );
+            })(),
           }),
       ...(replacement === undefined
         ? {}
@@ -312,8 +340,7 @@ export function equipResults(value: unknown, label: string) {
   exact(record, [], ['jeweledPom', 'experimentalHammer', 'transcendentEmbryo'], label);
   const jeweledPom =
     record.jeweledPom === undefined ? undefined : object(record.jeweledPom, `${label}.jeweledPom`);
-  if (jeweledPom !== undefined)
-    exact(jeweledPom, ['traitKey'], ['rarity'], `${label}.jeweledPom`);
+  if (jeweledPom !== undefined) exact(jeweledPom, ['traitKey'], ['rarity'], `${label}.jeweledPom`);
   const experimentalHammer =
     record.experimentalHammer === undefined
       ? undefined
