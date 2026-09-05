@@ -1,6 +1,7 @@
 import type {
   ExecutionAcquisitionRole,
   ExecutionConcaveStoneResult,
+  ExecutionHexTree,
   ExecutionLevelResolution,
   ExecutionReward,
   ExecutionTraitOffer,
@@ -105,11 +106,53 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
     });
   }
   if (record.kind !== 'traits') fail(`${label}.kind is unsupported`);
-  exact(record, ['kind', 'giver', 'options', 'selected'], ['rejected'], label);
-  const concaveStoneResult = (
-    value: unknown,
-    resultLabel: string,
-  ): ExecutionConcaveStoneResult => {
+  exact(record, ['kind', 'giver', 'options', 'selected'], ['rejected', 'hexTree'], label);
+  const hexTree = (value: unknown, treeLabel: string): ExecutionHexTree => {
+    const tree = object(value, treeLabel);
+    exact(tree, ['layoutKey', 'rareTalentKeys', 'epicTalentKeys'], ['godSent'], treeLabel);
+    const seen = new Set<string>();
+    const entries = (field: 'rareTalentKeys' | 'epicTalentKeys') =>
+      Object.freeze(
+        stringArray(tree[field], `${treeLabel}.${field}`).map((key) => {
+          if (seen.has(key)) fail(`${treeLabel}.${field} contains a duplicate talent`);
+          seen.add(key);
+          return key;
+        }),
+      );
+    const rareTalentKeys = entries('rareTalentKeys');
+    const epicTalentKeys = entries('epicTalentKeys');
+    const godSent =
+      tree.godSent === undefined ? undefined : object(tree.godSent, `${treeLabel}.godSent`);
+    if (godSent !== undefined) {
+      exact(godSent, ['olympianTalentKey', 'lineageTalentKey'], [], `${treeLabel}.godSent`);
+      const olympianTalentKey = stringValue(
+        godSent.olympianTalentKey,
+        `${treeLabel}.godSent.olympianTalentKey`,
+      );
+      const lineageTalentKey = stringValue(
+        godSent.lineageTalentKey,
+        `${treeLabel}.godSent.lineageTalentKey`,
+      );
+      if (
+        olympianTalentKey === lineageTalentKey ||
+        seen.has(olympianTalentKey) ||
+        seen.has(lineageTalentKey)
+      )
+        fail(`${treeLabel}.godSent has invalid talent identities`);
+      return Object.freeze({
+        layoutKey: stringValue(tree.layoutKey, `${treeLabel}.layoutKey`),
+        rareTalentKeys,
+        epicTalentKeys,
+        godSent: Object.freeze({ olympianTalentKey, lineageTalentKey }),
+      });
+    }
+    return Object.freeze({
+      layoutKey: stringValue(tree.layoutKey, `${treeLabel}.layoutKey`),
+      rareTalentKeys,
+      epicTalentKeys,
+    });
+  };
+  const concaveStoneResult = (value: unknown, resultLabel: string): ExecutionConcaveStoneResult => {
     const result = object(value, resultLabel);
     if (result.kind === 'noProc') {
       exact(result, ['kind'], [], resultLabel);
@@ -119,10 +162,10 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
       exact(result, ['kind', 'optionKey'], [], resultLabel);
       return Object.freeze({
         kind: 'proc' as const,
-        optionKey: stringValue(
-          result.optionKey,
-          `${resultLabel}.optionKey`,
-        ) as Extract<ExecutionConcaveStoneResult, { readonly kind: 'proc' }>['optionKey'],
+        optionKey: stringValue(result.optionKey, `${resultLabel}.optionKey`) as Extract<
+          ExecutionConcaveStoneResult,
+          { readonly kind: 'proc' }
+        >['optionKey'],
       });
     }
     fail(`${resultLabel}.kind is unsupported`);
@@ -211,8 +254,8 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
                   ),
                 ),
               );
-          })(),
-        }),
+            })(),
+          }),
       ...(option.concaveStoneResult === undefined
         ? {}
         : {
@@ -255,6 +298,8 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
     });
   });
   if (options.length === 0) fail(`${label}.options must contain one to three ordered options`);
+  if (record.giver === 'SpellDrop' && options.length !== 3)
+    fail(`${label}.options must contain three ordered options for SpellDrop`);
   const selected = stringValue(record.selected, `${label}.selected`);
   const availableOptionKeys = ['option1', 'option2', 'option3'].slice(0, options.length);
   if (!availableOptionKeys.includes(selected)) fail(`${label}.selected is not a valid option`);
@@ -264,15 +309,24 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
     const optionKey = availableOptionKeys[index];
     if (optionKey !== selected)
       fail(`${label}.options[${index}].concaveStoneResult must belong to the selected option`);
-    if (concave.kind === 'proc' &&
-      (!availableOptionKeys.includes(concave.optionKey) || concave.optionKey === selected))
+    if (
+      concave.kind === 'proc' &&
+      (!availableOptionKeys.includes(concave.optionKey) || concave.optionKey === selected)
+    )
       fail(`${label}.options[${index}].concaveStoneResult.optionKey is not a residual option`);
   }
+  if (record.giver === 'SpellDrop' && record.hexTree === undefined)
+    fail(`${label}.hexTree is required for SpellDrop`);
+  if (record.hexTree !== undefined && record.giver !== 'SpellDrop')
+    fail(`${label}.hexTree requires SpellDrop`);
   return Object.freeze({
     kind: 'traits',
     giver: stringValue(record.giver, `${label}.giver`),
     options: Object.freeze(options),
     selected: selected as 'option1' | 'option2' | 'option3',
+    ...(record.hexTree === undefined
+      ? {}
+      : { hexTree: hexTree(record.hexTree, `${label}.hexTree`) }),
     ...(record.rejected === undefined
       ? {}
       : {

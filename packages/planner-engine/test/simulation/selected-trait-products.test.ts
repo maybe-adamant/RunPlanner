@@ -1,15 +1,66 @@
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import { createLevelResolutionAddress, createOccurrenceId, semanticAddressKey } from '@run-planner/engine/authored-project';
+import {
+  createDefaultAuthoredHexTree,
+  createIncomingRewardAddress,
+  createLevelResolutionAddress,
+  createOccurrenceId,
+  semanticAddressKey,
+} from '@run-planner/engine/authored-project';
 
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
 import {
   createTraitHistoryState,
   type ReachedLevelResolutionEvaluation,
 } from '../../src/simulation/traits';
+import { createTestArcanaFearState } from '../support/arcana-fear';
+import { maybeAddGodSent } from '../../src/simulation/hex-progress';
+import { initializeRewardBranches } from '../../src/simulation/rewards/processing';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 
 describe('selected trait products', () => {
+  it('retains absent Spell God Sent evidence when a later same-biome keepsake adds it', () => {
+    const origin = createIncomingRewardAddress(
+      { kind: 'biome', routeKey: 'Underworld', biomeKey: 'F' },
+      createOccurrenceId('spell'),
+    );
+    const initial = initializeRewardBranches(
+      undefined,
+      createTestArcanaFearState(),
+      catalog,
+      'ManaOverTimeRefundKeepsake',
+    )[0]!;
+    const offer = {
+      kind: 'traits' as const,
+      giverKey: 'SpellDrop',
+      options: [
+        { traitKey: 'SpellPolymorphTrait' },
+        { traitKey: 'SpellMeteorTrait' },
+        { traitKey: 'SpellTransformTrait' },
+      ] as const,
+      selectedOptionKey: 'option1' as const,
+      hexTree: createDefaultAuthoredHexTree(catalog, 'SpellPolymorphTrait', 'Lung'),
+      rarificationActions: [] as const,
+    };
+    const spell = settleEncounterTraitOffer(catalog, initial, origin, offer, 1, 'pickup').branch;
+    expect(spell.hexProgress.godSentAdded).toBe(false);
+    const laterKeepsake = initializeRewardBranches(
+      undefined,
+      createTestArcanaFearState(),
+      catalog,
+      'ForceZeusBoonKeepsake',
+    )[0]!;
+    const late = maybeAddGodSent(catalog, {
+      ...spell,
+      keepsakes: { ...spell.keepsakes, olympianSources: laterKeepsake.keepsakes.olympianSources },
+    });
+    expect(late.hexProgress.godSentAdded).toBe(true);
+    expect(
+      selectedTraitOfferProducts([late]).selectedTraitOffers[0]?.branches[0]?.settledHexTree,
+    ).not.toHaveProperty('godSent');
+  });
+
   it('retains divergent reached level-resolution publication and candidate contexts', () => {
     const address = createLevelResolutionAddress(
       {
@@ -71,5 +122,4 @@ describe('selected trait products', () => {
       expect.objectContaining({ address, levelCount: 2, effectKind: 'choice' }),
     ]);
   });
-
 });

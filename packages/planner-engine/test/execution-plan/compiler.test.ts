@@ -699,6 +699,25 @@ describe('protocol-v17 compiler and codec', () => {
     ).toThrow(ExecutionPlanCodecError);
   });
 
+  it('requires the complete three-row Hex contract only for SpellDrop offers', () => {
+    const spell = {
+      kind: 'traits',
+      giver: 'SpellDrop',
+      options: [{ key: 'one' }, { key: 'two' }, { key: 'three' }],
+      selected: 'option1',
+      hexTree: { layoutKey: 'Lung', rareTalentKeys: ['rare'], epicTalentKeys: ['epic'] },
+    };
+    expect(decodeExecutionTraitOffer(spell, 'spell')).toMatchObject({ giver: 'SpellDrop' });
+    const { hexTree: _tree, ...missingTree } = spell;
+    expect(() => decodeExecutionTraitOffer(missingTree, 'spell')).toThrow(ExecutionPlanCodecError);
+    expect(() =>
+      decodeExecutionTraitOffer({ ...spell, options: [{ key: 'one' }] }, 'spell'),
+    ).toThrow(ExecutionPlanCodecError);
+    expect(() => decodeExecutionTraitOffer({ ...spell, giver: 'Zeus' }, 'spell')).toThrow(
+      ExecutionPlanCodecError,
+    );
+  });
+
   it('strictly decodes a selected-option Concave Stone disposition', () => {
     const offer = {
       kind: 'traits',
@@ -716,13 +735,25 @@ describe('protocol-v17 compiler and codec', () => {
     });
     expect(() =>
       decodeExecutionTraitOffer(
-        { ...offer, options: [{ ...offer.options[0], concaveStoneResult: { kind: 'proc', optionKey: 'option1' } }, offer.options[1]] },
+        {
+          ...offer,
+          options: [
+            { ...offer.options[0], concaveStoneResult: { kind: 'proc', optionKey: 'option1' } },
+            offer.options[1],
+          ],
+        },
         'offer',
       ),
     ).toThrow(ExecutionPlanCodecError);
     expect(() =>
       decodeExecutionTraitOffer(
-        { ...offer, options: [offer.options[0], { ...offer.options[1], concaveStoneResult: { kind: 'noProc' } }] },
+        {
+          ...offer,
+          options: [
+            offer.options[0],
+            { ...offer.options[1], concaveStoneResult: { kind: 'noProc' } },
+          ],
+        },
         'offer',
       ),
     ).toThrow(ExecutionPlanCodecError);
