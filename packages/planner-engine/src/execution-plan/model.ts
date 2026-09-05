@@ -6,7 +6,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 18 as const;
+export const EXECUTION_PROTOCOL_VERSION = 19 as const;
 export const EXECUTION_CATALOG_VERSION = '0.54.0-required-boss-rewards' as const;
 
 export type ExecutionRunStateCount =
@@ -206,6 +206,8 @@ export type ExecutionTraitOffer =
         readonly concaveStoneResult?: ExecutionConcaveStoneResult;
         /** Exact Arcana/Fear mutation selected by a Circe trait. */
         readonly circeResolution?: ExecutionCirceResolution;
+        /** Exact Rank-I Hammer selected by Icarus's native Latest Model mutation. */
+        readonly icarusHammerTarget?: string;
         readonly replacement?: {
           readonly slot: string;
           readonly replacedTraitKey: string;

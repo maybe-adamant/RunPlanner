@@ -223,6 +223,7 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
         'naturalSelectionTargets',
         'concaveStoneResult',
         'circeResolution',
+        'icarusHammerTarget',
         'replacement',
       ],
       `${label}.options[${index}]`,
@@ -299,6 +300,14 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
               `${label}.options[${index}].circeResolution`,
             ),
           }),
+      ...(option.icarusHammerTarget === undefined
+        ? {}
+        : {
+            icarusHammerTarget: stringValue(
+              option.icarusHammerTarget,
+              `${label}.options[${index}].icarusHammerTarget`,
+            ),
+          }),
       ...(replacement === undefined
         ? {}
         : {
@@ -349,6 +358,14 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
       (!availableOptionKeys.includes(concave.optionKey) || concave.optionKey === selected)
     )
       fail(`${label}.options[${index}].concaveStoneResult.optionKey is not a residual option`);
+  }
+  for (const [index, option] of options.entries()) {
+    if (option.icarusHammerTarget !== undefined) {
+      if (record.giver !== 'Icarus' || option.key !== 'UpgradeHammerBoon')
+        fail(`${label}.options[${index}].icarusHammerTarget requires Icarus Latest Model`);
+      if (availableOptionKeys[index] !== selected)
+        fail(`${label}.options[${index}].icarusHammerTarget must belong to the selected option`);
+    }
   }
   for (const [index, option] of options.entries()) {
     if (option.circeResolution !== undefined) {

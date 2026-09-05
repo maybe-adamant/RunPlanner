@@ -19,7 +19,13 @@ import {
   replaceTestShopOfferActions,
 } from '@run-planner/test-fixtures/shared';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNOProject,
+  loadSurfaceNOPQProject,
+  nBiome,
+  oBiome,
+  oOccurrenceIds,
+} from '@run-planner/test-fixtures/surface';
 import {
   applyProjectCommand,
   acquisitionSiteFromStorageKey,
@@ -28,6 +34,7 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createEncounterPhaseAddress,
+  createHubDecisionAddress,
   createRouteAddress,
   createFountainRarityOutcomeAddress,
   createKeepsakeEquipResultAddress,
@@ -745,6 +752,107 @@ describe('engine-owned F/G execution semantic product', () => {
     expect(executionOffer.options[1]).not.toHaveProperty('circeResolution');
     expect(executionOffer.options[2]).not.toHaveProperty('circeResolution');
     expect(() => decodeExecutionTraitOffer(executionOffer, 'Circe offer')).not.toThrow();
+  });
+
+  it('publishes Latest Model exact Hammer target from a complete-valid Icarus occurrence', () => {
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceHubVisitOrder',
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      hubSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'combat03'],
+    });
+    project = authorLegalTraitOffers(project);
+    const phase = createEncounterPhaseAddress(
+      oBiome,
+      { kind: 'occurrence', occurrenceId: oOccurrenceIds.combat01 },
+      'Combat1',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'IcarusCombatO',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(phase, 'selection'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Icarus',
+        options: [
+          { traitKey: 'UpgradeHammerBoon', targetTraitKey: 'StaffDoubleAttackTrait' },
+          { traitKey: 'OmegaExplodeBoon' },
+          { traitKey: 'CastHazardBoon' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    const biome = assembly.evaluation.route.biomes.find(
+      (candidate): candidate is CompleteValidBiomeProjectEvaluation =>
+        candidate.biomeKey === 'O' &&
+        candidate.authoring === 'complete' &&
+        candidate.validity === 'valid',
+    );
+    if (biome === undefined)
+      throw new Error(
+        `Icarus execution fixture lacks complete-valid O: ${JSON.stringify(assembly.evaluation.findings)}`,
+      );
+    const room = orderedExecutionRooms([biome]).find(
+      (candidate) => candidate.occurrenceId === oOccurrenceIds.combat01,
+    );
+    if (room === undefined) throw new Error('Icarus occurrence is missing');
+    const encounterRoom = Object.freeze({
+      ...room,
+      roomLifecycleTimeline: Object.freeze({
+        ...room.roomLifecycleTimeline,
+        entries: Object.freeze(
+          room.roomLifecycleTimeline.entries.filter(
+            (entry) =>
+              entry.kind !== 'action' ||
+              (entry.action.reference.kind === 'interactEncounter' &&
+                entry.action.reference.phaseKey === 'Combat1'),
+          ),
+        ),
+      }),
+      roomActionRoster: Object.freeze({
+        ...room.roomActionRoster,
+        rows: Object.freeze(
+          room.roomActionRoster.rows
+            .filter(
+              (row) =>
+                row.reference.kind === 'interactEncounter' && row.reference.phaseKey === 'Combat1',
+            )
+            .map((row) =>
+              Object.freeze({
+                ...row,
+                window: Object.freeze({ kind: 'standard' as const, phase: 'afterCombat' as const }),
+              }),
+            ),
+        ),
+      }),
+    });
+    const transaction = executionTimelineTransactions(
+      encounterRoom,
+      biome,
+      mergePlannerTimelineFacts(
+        room.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
+        biome.rewards.timelineFacts,
+      ),
+    ).find(
+      (candidate) => candidate.kind === 'encounterInteraction' && candidate.phaseKey === 'Combat1',
+    );
+    if (
+      transaction?.kind !== 'encounterInteraction' ||
+      transaction.resolution?.kind !== 'traitOffer' ||
+      transaction.resolution.offer.kind !== 'traits'
+    )
+      throw new Error('Icarus encounter offer is missing');
+    const executionOffer = transaction.resolution.offer;
+    expect(executionOffer.options[0]).toMatchObject({
+      key: 'UpgradeHammerBoon',
+      icarusHammerTarget: 'StaffDoubleAttackTrait',
+    });
+    expect(executionOffer.options[1]).not.toHaveProperty('icarusHammerTarget');
+    expect(() => decodeExecutionTraitOffer(executionOffer, 'Icarus offer')).not.toThrow();
   });
 
   it('keeps an unpicked Mystery Boon atomic to its active Narcissus provider action', () => {

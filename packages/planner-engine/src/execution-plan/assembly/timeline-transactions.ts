@@ -112,6 +112,23 @@ export function executionTimelineTransactions(
               kind: authoredCirceResolution.kind,
               arcanaKeys: Object.freeze([...authoredCirceResolution.arcanaKeys]),
             });
+    const targetedAcquisitionTransitions = selected.branches.map(
+      (branch) => branch.targetedAcquisition.transition,
+    );
+    const targetedAcquisition = targetedAcquisitionTransitions.every(
+      (transition) => transition === undefined,
+    )
+      ? undefined
+      : agreement(
+          targetedAcquisitionTransitions,
+          `trait targeted acquisition ${semanticAddressKey(selected.address)}`,
+        );
+    const icarusHammerTarget =
+      selected.offer.giverKey === 'Icarus' &&
+      selectedOption?.traitKey === 'UpgradeHammerBoon' &&
+      targetedAcquisition?.kind === 'upgradeHammerToRank2'
+        ? targetedAcquisition.targetTraitKey
+        : undefined;
     const publishedHexTree =
       selected.offer.giverKey !== 'SpellDrop' || selected.offer.hexTree === undefined
         ? undefined
@@ -199,6 +216,9 @@ export function executionTimelineTransactions(
             ...(circeResolution === undefined || index !== selectedOptionIndex
               ? {}
               : { circeResolution }),
+            ...(icarusHammerTarget === undefined || index !== selectedOptionIndex
+              ? {}
+              : { icarusHammerTarget }),
           });
         }),
       ),
