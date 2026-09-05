@@ -579,6 +579,12 @@ export function normalizeRoom(
   if (room.skipRoomsPerUpgrade !== undefined && typeof room.skipRoomsPerUpgrade !== 'boolean') {
     fail(`${path}.skipRoomsPerUpgrade`, 'must be a boolean when declared');
   }
+  if (
+    room.skipTimedDropResources !== undefined &&
+    typeof room.skipTimedDropResources !== 'boolean'
+  ) {
+    fail(`${path}.skipTimedDropResources`, 'must be a boolean when declared');
+  }
   const mode = validateMode(room, path);
   const encounterEnvelopeKey = requireNonEmpty(
     room.encounterEnvelopeKey,
@@ -1021,6 +1027,7 @@ export function normalizeRoom(
     advancesExperimentalHammerUses: room.advancesExperimentalHammerUses,
     advancesHermesShrineDeliveryUses: room.advancesHermesShrineDeliveryUses ?? true,
     skipRoomsPerUpgrade: room.skipRoomsPerUpgrade ?? false,
+    skipTimedDropResources: room.skipTimedDropResources ?? false,
     encounterSlotBindings,
     ...(forcedRewardStoreKey === undefined ? {} : { forcedRewardStoreKey }),
     ...(individualRewardStoreKey === undefined ? {} : { individualRewardStoreKey }),

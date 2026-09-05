@@ -331,6 +331,41 @@ export function derivedAcquisitionEntriesForProjectEvaluationAssembly(
   ).map(({ address, capability }) => Object.freeze({ address, ...capability }));
 }
 
+/** Exact placement intent for one optional clocked pickup exposed at this assembly. */
+export function clockedTraitPickupPlacementForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  entry: import('../authored-project/addresses').AcquisitionEntryAddress,
+): Extract<ProjectCommand, { readonly kind: 'PlaceClockedTraitPickup' }> | undefined {
+  requireExactProjectEvaluationAssembly(assembly);
+  const capability = candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(entry.routeKey, entry.biomeKey))
+    ?.derivedAcquisitionEntries.at(entry);
+  const rewardType = capability?.rewardTypes?.[0];
+  if (
+    capability?.kind !== 'clockedTraitPickup' ||
+    capability.rewardTypes?.length !== 1 ||
+    rewardType === undefined ||
+    capability.producerLifecycleKey === undefined ||
+    capability.encounterPhaseKey === undefined
+  )
+    return undefined;
+  return Object.freeze({
+    kind: 'PlaceClockedTraitPickup',
+    entry,
+    encounterPhaseKey: capability.encounterPhaseKey,
+    producerLifecycleKey: capability.producerLifecycleKey,
+    rewardType,
+  });
+}
+
+export function attestClockedTraitPickupPlacementForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  command: Extract<ProjectCommand, { readonly kind: 'PlaceClockedTraitPickup' }>,
+): boolean {
+  const attested = clockedTraitPickupPlacementForProjectEvaluationAssembly(assembly, command.entry);
+  return attested !== undefined && JSON.stringify(attested) === JSON.stringify(command);
+}
+
 /**
  * Resolve the exact simulator-owned host activated by one proposed delayed
  * Shrine purchase edit. The application may then commit the source edit and

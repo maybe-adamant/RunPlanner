@@ -504,6 +504,48 @@ export function normalizeTraits(
     ) {
       fail(`${path}.selectedDisposition`, 'is reserved for KeepsakeLevelBoon');
     }
+    const icarusSlot =
+      trait.key === 'FocusAttackDamageTrait'
+        ? 'Melee'
+        : trait.key === 'FocusSpecialDamageTrait'
+          ? 'Secondary'
+          : undefined;
+    if (
+      icarusSlot !== undefined &&
+      (selectedDisposition.kind !== 'upgradeOccupiedBoonSlot' ||
+        selectedDisposition.slot !== icarusSlot)
+    )
+      fail(
+        `${path}.selectedDisposition`,
+        `must declare the ${icarusSlot} occupied-slot level upgrade`,
+      );
+    if (icarusSlot === undefined && selectedDisposition.kind === 'upgradeOccupiedBoonSlot')
+      fail(
+        `${path}.selectedDisposition`,
+        'occupied-slot level upgrades are reserved for Ingenious Strike and Ingenious Flourish',
+      );
+    if (trait.key === 'SupplyDropBoon') {
+      if (
+        selectedDisposition.kind !== 'producePickups' ||
+        selectedDisposition.producerLifecycleKey !== 'GeneratedTraitPickup' ||
+        selectedDisposition.clock?.kind !== 'qualifyingEncounterEndEffects' ||
+        selectedDisposition.clock.interval !== 7 ||
+        selectedDisposition.pickups.length !== 2 ||
+        selectedDisposition.pickups.some(
+          (pickup, index) =>
+            pickup.key !== `pom${index + 1}` || pickup.rewardType !== 'StoreRewardRandomStack',
+        )
+      )
+        fail(
+          `${path}.selectedDisposition`,
+          'must declare the repeating seven-encounter two-Pom Supply Chain producer',
+        );
+    } else if (
+      selectedDisposition.kind === 'producePickups' &&
+      selectedDisposition.clock !== undefined
+    ) {
+      fail(`${path}.selectedDisposition.clock`, 'is reserved for Supply Chain');
+    }
     return Object.freeze({
       key: requireNonEmpty(trait.key, `${path}.key`),
       label: requireNonEmpty(trait.label, `${path}.label`),

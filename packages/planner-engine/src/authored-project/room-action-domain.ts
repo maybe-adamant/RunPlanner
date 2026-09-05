@@ -34,7 +34,10 @@ import {
   selectedEncounterAuthoringProfileKey,
 } from './room-state/encounter-envelope';
 import { activeRoomActionReferences, roomActionKey } from './room-actions';
-import { selectedPickupProducerForEntry } from './pickup-producers';
+import {
+  parseClockedTraitGeneratedPickupEntryKey,
+  selectedPickupProducerForEntry,
+} from './pickup-producers';
 
 export type RoomActionParticipation = 'required' | 'optional';
 
@@ -430,6 +433,7 @@ function baseContribution(
       );
     }
     case 'interactAcquisitionEntry': {
+      const clockedTraitPickup = parseClockedTraitGeneratedPickupEntryKey(reference.entryKey);
       const hermesDelivery =
         reference.siteKey === 'hermesShrineDelivery'
           ? parseHermesShrineDeliveryEntryKey(reference.entryKey)
@@ -459,16 +463,18 @@ function baseContribution(
         occurrence,
         reference,
         required ? 'required' : 'optional',
-        hermesDelivery !== undefined
-          ? sameRoomShrineDelivery
-            ? frozen({ kind: 'postOutgoing' })
-            : frozen({ kind: 'encounterEnd', phaseKey: reference.encounterPhaseKey! })
-          : producer?.placement === 'roomExit' ||
-              (producer?.source.kind === 'traitOffer' &&
-                producer.source.owner.kind === 'shopOffer') ||
-              reference.siteKey === 'roomExit'
-            ? frozen({ kind: 'postOutgoing' })
-            : frozen({ kind: 'standard', phase: 'afterCombat' }),
+        clockedTraitPickup !== undefined && reference.encounterPhaseKey !== undefined
+          ? frozen({ kind: 'encounterEnd', phaseKey: reference.encounterPhaseKey })
+          : hermesDelivery !== undefined
+            ? sameRoomShrineDelivery
+              ? frozen({ kind: 'postOutgoing' })
+              : frozen({ kind: 'encounterEnd', phaseKey: reference.encounterPhaseKey! })
+            : producer?.placement === 'roomExit' ||
+                (producer?.source.kind === 'traitOffer' &&
+                  producer.source.owner.kind === 'shopOffer') ||
+                reference.siteKey === 'roomExit'
+              ? frozen({ kind: 'postOutgoing' })
+              : frozen({ kind: 'standard', phase: 'afterCombat' }),
         [
           ...travelDealDependencies(occurrence, reference),
           ...(producer === undefined

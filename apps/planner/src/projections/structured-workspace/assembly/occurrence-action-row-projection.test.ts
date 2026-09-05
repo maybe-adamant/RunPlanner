@@ -17,6 +17,7 @@ import {
   createTraitOfferAddress,
   echoLastRewardPickupEntryKey,
   goldenFBiome,
+  goldenFStartId,
   goldenHBiome,
   hermesShrineDeliveryEntryKey,
   loadSurfaceNOPQProject,
@@ -28,9 +29,58 @@ import {
   withFPrebossSelection,
   type ProjectDocument,
 } from '@planner-test/support/structured-workspace/occurrence-assembly.test-support';
+import { clockedTraitGeneratedPickupEntryKey } from '@run-planner/engine/authored-project';
 import { occurrenceActionLabel } from './occurrence-action-label';
 
 describe('structured workspace actions assembly', () => {
+  it('projects two matured clocked trait pickups through the existing optional-action surface', () => {
+    const owner = createOccurrenceAddress(goldenFBiome, goldenFStartId);
+    const site = createAcquisitionSiteAddress(owner, 'roomExit');
+    const entries = ['pom1', 'pom2'].map((pickupKey) => ({
+      address: createAcquisitionEntryAddress(
+        site,
+        clockedTraitGeneratedPickupEntryKey('icarus-supply', pickupKey),
+      ),
+      kind: 'clockedTraitPickup' as const,
+      rewardTypes: ['StoreRewardRandomStack'],
+      producerLifecycleKey: 'GeneratedTraitPickup',
+      encounterPhaseKey: 'Encounter',
+      participation: 'optional' as const,
+    }));
+    const { assembly } = assemble(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'F',
+      goldenFStartId,
+      undefined,
+      (candidateSite) =>
+        semanticAddressKey(candidateSite) === semanticAddressKey(site) ? entries : [],
+    );
+    const rows = assembly.node.room.roomActions?.optionalRows.filter(
+      (row) =>
+        row.reference.kind === 'interactAcquisitionEntry' &&
+        row.reference.entryKey.startsWith('clockedTraitGenerated:'),
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          participation: 'optional',
+          rank: null,
+          window: { kind: 'encounterEnd', phaseKey: 'Encounter' },
+          placement: {
+            command: expect.objectContaining({
+              kind: 'PlaceClockedTraitPickup',
+              producerLifecycleKey: 'GeneratedTraitPickup',
+              rewardType: 'StoreRewardRandomStack',
+            }),
+            focus: expect.any(Object),
+          },
+        }),
+      ]),
+    );
+  });
+
   it('shows the simulation-neutral Boss pickup as a required end-encounter action', () => {
     const project = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
     const { assembly } = assemble(

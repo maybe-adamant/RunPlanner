@@ -306,13 +306,38 @@ outside the supported route baseline.
 | `SupplyDropBoon`           | Supply Chain        | none                                | no element; retained non-god trait |
 | `UpgradeHammerBoon`        | Latest Model        | one eligible equipped Rank-I Hammer | no element; retained non-god trait |
 
-The source additionally excludes Ingenious Strike or Flourish when the matching
-Hephaestus trait's extracted `UnmodifiedCooldown` is not greater than 2.
-Cooldowns and levels are not a modeled input, so the supported predicate keeps
-only the exact occupied-slot fact. Both Coating traits can later be consumed by
-combat, Supply Chain has a delivery effect, and other Icarus combat effects
-remain outside the planner's trait-acquisition scope; selecting each source
-still leaves that source in the equipped trait ledger.
+Ingenious Strike's source requirement names the nine concrete core-god Attack
+traits; Ingenious Flourish analogously names the nine Special traits. Native
+`IcarusUpgradeBoon` derives the occupied slot target and adds the declaration's
+normal-run `Count = 3`. The same target must remain upgradeable under the
+ordinary Pom predicate. This retains the exact Hephaestus exception: the
+matching Attack or Special trait is no longer eligible once its extracted
+`UnmodifiedCooldown` is not greater than 2, represented by the declaration-owned
+maximum eligible levels. The planner therefore derives the slot target and
+adds three levels without authoring a second random target.
+
+Supply Chain declares `CurrentRoom = 0` and `RoomsPerUpgrade.Amount = 7` in a
+normal run. Each seventh qualifying `CheckChamberTraits` checkpoint resets the
+clock and calls `GiveRandomConsumables` for one simulation-neutral minor heal
+and exactly two optional `StoreRewardRandomStack` Pom Slice objects. The clock
+repeats while the trait remains equipped. `EndEncounterEffects` calls
+`CheckChamberTraits` for each current room encounter. In a multi-phase O ship
+room, `StartRoom` assigns each `Encounters[i]` entry as the current encounter;
+the inherited combat Intro and both combat phases therefore each qualify even
+though the Intro does not count for room encounter depth. Chaos rooms declare
+`SkipTimedDropResources = true`; when a threshold lands there, native behavior
+retains progress at `Amount - 1`, emits nothing, and matures on the next
+qualifying encounter-end checkpoint. The planner retains those source-owned
+facts at the shared encounter-end-effects seam and exposes the two Pom Slices
+through the ordinary generated-pickup and direct-level acquisition machinery;
+it does not add a modeled healing mutation or an Icarus-specific Pom path.
+Dream Dive can rewrite Icarus scaling, including the Heroic `3/7`
+multiplier on these declaration values, but Dream Dive rarity/scaling remains
+explicitly deferred.
+
+Both Coating traits can later be consumed by combat, and other Icarus combat
+effects remain outside the planner's trait-acquisition scope; selecting each
+source still leaves that source in the equipped trait ledger.
 
 `UpgradeHammerBoon` first equips its own source trait and then uses
 `UpgradeHammers` to select exactly one equipped Hammer with a source Legendary

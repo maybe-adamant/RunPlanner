@@ -170,6 +170,12 @@ export interface DirectTraitSetDeclaration {
 export type TraitSelectedDisposition =
   | { readonly kind: 'equip' }
   | {
+      /** Icarus equips the source, then increases the eligible trait occupying this slot. */
+      readonly kind: 'upgradeOccupiedBoonSlot';
+      readonly slot: 'Melee' | 'Secondary';
+      readonly levelCount: 3;
+    }
+  | {
       readonly kind: 'naturalSelection';
       readonly slots: readonly [
         TraitOrdinaryBoonSlot,
@@ -229,6 +235,11 @@ export type TraitSelectedDisposition =
       readonly kind: 'producePickups';
       readonly producerLifecycleKey: string;
       readonly pickups: readonly TraitPickupDeclaration[];
+      /** Repeating producers defer these pickups to each qualifying encounter-end threshold. */
+      readonly clock?: {
+        readonly kind: 'qualifyingEncounterEndEffects';
+        readonly interval: number;
+      };
     }
   | { readonly kind: 'seaStar' }
   | { readonly kind: 'noOp' };
@@ -314,11 +325,6 @@ export type TraitRequirementExpression =
     }
   | {
       readonly kind: 'upgradableTrait';
-    }
-  | {
-      /** Requires an occupied ordinary boon slot without naming its possible traits. */
-      readonly kind: 'ordinaryBoonSlotOccupied';
-      readonly slot: TraitOrdinaryBoonSlot;
     }
   | {
       readonly kind: 'offerContext';

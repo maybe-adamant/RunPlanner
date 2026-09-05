@@ -4,6 +4,7 @@ import type { PurgingPoolAssessment } from '../../purging-pool';
 import type { HermesShrineCandidateContext } from '../../hermes-shrine';
 import {
   createAcquisitionRoleAddress,
+  createAcquisitionEntryAddress,
   createEncounterPhaseAddress,
   createNemesisRandomEventAddress,
   createBiomeAddress,
@@ -1636,6 +1637,18 @@ export function evaluateBiomeRewardChronology(
                 refillAssessments: hermesShrineTravelDealRefills.get(shrineKey),
                 refillSupported: hermesShrineTravelDealRefillValid.get(shrineKey),
               });
+        const derivedSite =
+          event.siteKey === undefined || room === undefined
+            ? undefined
+            : room.acquisitionSites[event.siteKey]?.address;
+        const derivedCapability =
+          derivedSite === undefined || event.entryKey === undefined
+            ? undefined
+            : attestDerivedAcquisitionEntryCandidateCapability(
+                derivedAcquisitionEntryContexts.get(
+                  semanticAddressKey(createAcquisitionEntryAddress(derivedSite, event.entryKey)),
+                ) ?? [],
+              );
         const transition = applyAcquisitionPointReachedTransition({
           catalog,
           snapshot,
@@ -1650,6 +1663,9 @@ export function evaluateBiomeRewardChronology(
           authoredSeaStarDuplicateSiteKeys: Object.freeze([...authoredSeaStarDuplicateSiteKeys]),
           purgingPoolAssessment: purgingPoolAssessments.get(shrineKey),
           hermesShrineRefillState: refillState,
+          ...(derivedCapability === undefined
+            ? {}
+            : { derivedAcquisitionEntryCapability: derivedCapability }),
         });
         branches = transition.branches;
         for (const entry of transition.findings)

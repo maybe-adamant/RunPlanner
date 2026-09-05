@@ -2,8 +2,8 @@
 
 ## Status
 
-Locked on 2026-09-05 after a current-code inventory and source review. Gates A
-and B are complete; Gate C1 is next.
+Locked on 2026-09-05 after a current-code inventory and source review. Gates A,
+B, and C1 are complete; Gate C2 is next.
 
 Gate A completed on 2026-09-05:
 
@@ -20,6 +20,13 @@ Gate B completed on 2026-09-05:
 
 The Gate B planner commit publishes Circe's exact stateful results through
 protocol v18 and records the source-backed Arcana activation-domain correction.
+
+Gate C1 completed on 2026-09-05. The planner now models Ingenious
+Strike/Flourish through their concrete core-slot trait sets and native `+3`
+result, and models Supply Chain as two independently optional Pom Slices every
+seven qualifying encounter-end phases. Native `SkipRoomsPerUpgrade` and
+`SkipTimedDropResources` behavior is preserved without introducing an Icarus-
+specific pickup path.
 
 This focused plan runs before Gate E of
 [Game Execution Layered Coverage Plan](GAME_EXECUTION_LAYERED_COVERAGE_PLAN.md).

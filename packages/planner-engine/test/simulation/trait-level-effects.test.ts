@@ -1,6 +1,8 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   createIncomingRewardAddress,
+  createEncounterPhaseAddress,
+  createOccurrenceAddress,
   createTraitAcquisitionTargetAddress,
   createTraitOfferAddress,
   type AuthoredTraitOffer,
@@ -8,6 +10,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   assessTraitOption,
+  attachTraitHistory,
   assessSelectedTargetedAcquisition,
   evaluateReachedTraitOffer,
   foldTraitHistoryEvents,
@@ -21,6 +24,9 @@ import { goldenFBiome, goldenFStartId } from '@run-planner/test-fixtures/underwo
 
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import { applyEncounterEndEffectsTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/encounter-end-effects';
+import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
+import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 
 const owner = { kind: 'project' } as SemanticAddress;
 
@@ -138,6 +144,336 @@ describe('Latest Model Hammer Rank II target predicate', () => {
       code: 'targetedAcquisitionNoEligibleTarget',
       traitKey: 'UpgradeHammerBoon',
     });
+  });
+});
+
+describe('Icarus occupied-slot level upgrades', () => {
+  function atLevel(
+    giverKey: string,
+    traitKey: string,
+    rarity: TraitOfferEvent['options'][number]['rarity'],
+    level: number,
+  ) {
+    const initial = historyWith(giverKey, traitKey, rarity);
+    if (level === 1) return initial;
+    return foldTraitHistoryEvents(catalog, [
+      ...initial.events,
+      {
+        kind: 'levelMutation',
+        owner,
+        acquisitionRole: 'testLevel',
+        sequence: initial.events.length + 1,
+        acquisitionPoint: 'test',
+        targetTraitKey: traitKey,
+        oldLevel: 1,
+        newLevel: level,
+      },
+    ]);
+  }
+
+  it.each([
+    ['FocusAttackDamageTrait', 'ApolloWeaponBoon', 'Melee'],
+    ['FocusSpecialDamageTrait', 'ApolloSpecialBoon', 'Secondary'],
+  ] as const)('adds three levels to the eligible trait occupying %s', (source, target, slot) => {
+    const before = atLevel('Apollo', target, 'Common', 2);
+    expect(before.equippedSlots[slot]?.traitKey).toBe(target);
+    const offer: AuthoredTraitOffer = Object.freeze({
+      kind: 'traits',
+      giverKey: 'Icarus',
+      options: Object.freeze([
+        { traitKey: source },
+        { traitKey: 'OmegaExplodeBoon' },
+        { traitKey: 'CastHazardBoon' },
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
+      selectedOptionKey: 'option1',
+    });
+    const reached = evaluateReachedTraitOffer(
+      catalog,
+      owner,
+      'icarus-slot-upgrade',
+      offer,
+      before,
+      Object.freeze({}),
+      before.events.length,
+    );
+    expect(reached.assessments[0]).toMatchObject({ legal: true, findings: [] });
+    const recorded = recordReachedTraitOffer(catalog, reached, before.events.length + 1, 'test');
+    expect(recorded.history.equippedTraits[target]).toMatchObject({ level: 5 });
+    expect(recorded.history.equippedTraits[source]).toMatchObject({ giverKey: 'Icarus' });
+    expect(recorded.history.events.at(-1)).toMatchObject({
+      kind: 'levelMutation',
+      sourceTraitKey: source,
+      targetTraitKey: target,
+      oldLevel: 2,
+      newLevel: 5,
+    });
+  });
+
+  it('withholds Ingenious Strike when the occupied Hephaestus Attack is cooldown-capped', () => {
+    const capped = atLevel('Hephaestus', 'HephaestusWeaponBoon', 'Common', 10);
+    expect(capped.equippedSlots.Melee?.traitKey).toBe('HephaestusWeaponBoon');
+    expect(assessTraitOption(catalog, 'FocusAttackDamageTrait', capped)).toMatchObject({
+      legal: false,
+      findings: expect.arrayContaining([
+        { code: 'missingPrerequisite', traitKey: 'FocusAttackDamageTrait', detail: 'Melee' },
+      ]),
+    });
+  });
+
+  it('does not treat a non-core trait occupying the Attack slot as an Ingenious target', () => {
+    const nonCore = historyWith('Artemis', 'SupportingFireBoon', 'Common');
+    const occupant = nonCore.equippedTraits.SupportingFireBoon;
+    if (occupant === undefined) throw new Error('missing non-core fixture trait');
+    const malformedSlotState = Object.freeze({
+      ...nonCore,
+      equippedSlots: Object.freeze({ Melee: occupant }),
+    });
+    expect(assessTraitOption(catalog, 'FocusAttackDamageTrait', malformedSlotState)).toMatchObject({
+      legal: false,
+      findings: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'missingPrerequisite',
+          traitKey: 'FocusAttackDamageTrait',
+        }),
+      ]),
+    });
+  });
+});
+
+describe('Supply Chain lifecycle', () => {
+  it('counts every qualifying O encounter phase and defers a Chaos threshold', () => {
+    const occurrence = createOccurrenceAddress(goldenFBiome, goldenFStartId);
+    const base = initializeTestRewardBranches()[0]!;
+    const supplySettlement = settleEncounterTraitOffer(
+      catalog,
+      base,
+      createEncounterPhaseAddress(
+        goldenFBiome,
+        { kind: 'occurrence', occurrenceId: goldenFStartId },
+        'Encounter',
+      ),
+      Object.freeze({
+        kind: 'traits',
+        giverKey: 'Icarus',
+        options: Object.freeze([
+          { traitKey: 'SupplyDropBoon' },
+          { traitKey: 'OmegaExplodeBoon' },
+          { traitKey: 'CastHazardBoon' },
+        ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
+        selectedOptionKey: 'option1',
+      }),
+      0,
+      'encounterCompleted',
+      new Map(),
+      undefined,
+      'selection',
+    );
+    const supplyHistory = supplySettlement.branch.traitHistory!;
+    expect(supplyHistory.equippedTraits.SupplyDropBoon?.acquisitionIdentity).toBeDefined();
+    let branches: readonly RewardBranchState[] = [
+      Object.freeze({
+        ...base,
+        traitHistory: supplyHistory,
+        history: attachTraitHistory(base.history, supplyHistory),
+      }),
+    ];
+    const oRoom = {
+      kind: 'authored',
+      origin: occurrence,
+      occurrenceId: occurrence.occurrenceId,
+      gameName: 'O_Combat01',
+      encounters: {},
+      encounterPhases: [{ slotKey: 'Intro' }, { slotKey: 'Combat1' }, { slotKey: 'Combat2' }],
+    } as unknown as CanonicalAuthoredRoom;
+    let oBranches = branches;
+    const oProgress: number[] = [];
+    for (const [index, phaseKey] of ['Intro', 'Combat1', 'Combat2'].entries()) {
+      const transition = applyEncounterEndEffectsTransition(
+        catalog,
+        Object.freeze({
+          kind: 'encounterEndEffectsApplied',
+          origin: occurrence,
+          phaseKey,
+          execution: 'normal',
+          figLeafSkipOwner: false,
+          operationIndex: index + 1,
+          sequence: index + 1,
+        }),
+        oRoom,
+        1,
+        4,
+        oBranches,
+      );
+      oBranches = transition.branches;
+      expect(transition.derivedAcquisitionEntryFrontiers).toEqual([]);
+      oProgress.push(
+        oBranches[0]?.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress ?? 0,
+      );
+    }
+    expect(oProgress).toEqual([1, 2, 3]);
+
+    const skippedRoom = {
+      ...oRoom,
+      gameName: 'N_Sub01',
+      encounterPhases: [{ slotKey: 'Encounter' }],
+    } as unknown as CanonicalAuthoredRoom;
+    const skipped = applyEncounterEndEffectsTransition(
+      catalog,
+      Object.freeze({
+        kind: 'encounterEndEffectsApplied',
+        origin: occurrence,
+        phaseKey: 'Encounter',
+        execution: 'normal',
+        figLeafSkipOwner: false,
+        operationIndex: 4,
+        sequence: 4,
+      }),
+      skippedRoom,
+      1,
+      4,
+      branches,
+    );
+    expect(catalog.rooms.byKey.N_Sub01?.skipRoomsPerUpgrade).toBe(true);
+    expect(skipped.derivedAcquisitionEntryFrontiers).toEqual([]);
+    expect(
+      skipped.branches[0]?.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress,
+    ).toBeUndefined();
+
+    const room = {
+      kind: 'authored',
+      origin: occurrence,
+      occurrenceId: occurrence.occurrenceId,
+      gameName: 'RoomOpening01',
+      encounters: {},
+      encounterPhases: [{ slotKey: 'Encounter' }],
+    } as unknown as CanonicalAuthoredRoom;
+    const maturedAt: number[] = [];
+    for (let sequence = 1; sequence <= 14; sequence += 1) {
+      const transition = applyEncounterEndEffectsTransition(
+        catalog,
+        Object.freeze({
+          kind: 'encounterEndEffectsApplied',
+          origin: occurrence,
+          phaseKey: 'Encounter',
+          execution: 'normal',
+          figLeafSkipOwner: false,
+          operationIndex: sequence,
+          sequence,
+        }),
+        room,
+        1,
+        4,
+        branches,
+      );
+      branches = transition.branches;
+      if (transition.derivedAcquisitionEntryFrontiers.length > 0) {
+        maturedAt.push(sequence);
+        expect(transition.derivedAcquisitionEntryFrontiers).toHaveLength(2);
+        expect(
+          new Set(
+            transition.derivedAcquisitionEntryFrontiers.map(
+              (frontier) => frontier.address.entryKey,
+            ),
+          ),
+        ).toHaveLength(2);
+        expect(transition.derivedAcquisitionEntryFrontiers).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              kind: 'clockedTraitPickup',
+              participation: 'optional',
+              rewardTypes: ['StoreRewardRandomStack'],
+              fixedReward: expect.objectContaining({
+                offer: { rewardType: 'StoreRewardRandomStack' },
+                levelResolutionsByAcquisitionRole: expect.any(Object),
+              }),
+            }),
+            expect.objectContaining({
+              kind: 'clockedTraitPickup',
+              participation: 'optional',
+              rewardTypes: ['StoreRewardRandomStack'],
+              fixedReward: expect.objectContaining({
+                offer: { rewardType: 'StoreRewardRandomStack' },
+                levelResolutionsByAcquisitionRole: expect.any(Object),
+              }),
+            }),
+          ]),
+        );
+      }
+      expect(branches[0]?.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress).toBe(
+        sequence % 7,
+      );
+    }
+    expect(maturedAt).toEqual([7, 14]);
+
+    for (let sequence = 15; sequence <= 20; sequence += 1) {
+      branches = applyEncounterEndEffectsTransition(
+        catalog,
+        Object.freeze({
+          kind: 'encounterEndEffectsApplied',
+          origin: occurrence,
+          phaseKey: 'Encounter',
+          execution: 'normal',
+          figLeafSkipOwner: false,
+          operationIndex: sequence,
+          sequence,
+        }),
+        room,
+        1,
+        4,
+        branches,
+      ).branches;
+    }
+    expect(branches[0]?.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress).toBe(
+      6,
+    );
+
+    const chaosRoom = {
+      ...room,
+      gameName: 'Chaos_01',
+    } as unknown as CanonicalAuthoredRoom;
+    const deferred = applyEncounterEndEffectsTransition(
+      catalog,
+      Object.freeze({
+        kind: 'encounterEndEffectsApplied',
+        origin: occurrence,
+        phaseKey: 'Encounter',
+        execution: 'normal',
+        figLeafSkipOwner: false,
+        operationIndex: 21,
+        sequence: 21,
+      }),
+      chaosRoom,
+      1,
+      4,
+      branches,
+    );
+    expect(catalog.rooms.byKey.Chaos_01?.skipTimedDropResources).toBe(true);
+    expect(deferred.derivedAcquisitionEntryFrontiers).toEqual([]);
+    expect(
+      deferred.branches[0]?.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress,
+    ).toBe(6);
+
+    const maturedAfterChaos = applyEncounterEndEffectsTransition(
+      catalog,
+      Object.freeze({
+        kind: 'encounterEndEffectsApplied',
+        origin: occurrence,
+        phaseKey: 'Encounter',
+        execution: 'normal',
+        figLeafSkipOwner: false,
+        operationIndex: 22,
+        sequence: 22,
+      }),
+      room,
+      1,
+      4,
+      deferred.branches,
+    );
+    expect(maturedAfterChaos.derivedAcquisitionEntryFrontiers).toHaveLength(2);
+    expect(
+      maturedAfterChaos.branches[0]?.traitHistory?.equippedTraits.SupplyDropBoon
+        ?.pickupProducerProgress,
+    ).toBe(0);
   });
 });
 

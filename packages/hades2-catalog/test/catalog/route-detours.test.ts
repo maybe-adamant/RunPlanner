@@ -434,6 +434,7 @@ describe('route detour catalog declarations', () => {
     for (const [gameName, exitCount] of Object.entries(returnExitCountByMap)) {
       expect(catalog.rooms.byKey[gameName]).toMatchObject({
         roomSetKey: 'Chaos',
+        skipTimedDropResources: true,
         mode: { kind: 'authored', templateKey: 'Chaos' },
         exits: Array.from({ length: exitCount }, (_, index) => ({
           index: index + 1,

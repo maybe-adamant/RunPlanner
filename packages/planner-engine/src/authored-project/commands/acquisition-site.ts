@@ -8,7 +8,10 @@ import {
   createUnresolvedAcquisitionRewardState,
   createUnresolvedPickupRewardState,
 } from '../traits';
-import { selectedPickupProducers } from '../pickup-producers';
+import {
+  parseClockedTraitGeneratedPickupEntryKey,
+  selectedPickupProducers,
+} from '../pickup-producers';
 import {
   authoredAcquisitionEntry,
   authoredAcquisitionEntryAtSite,
@@ -31,6 +34,7 @@ import {
   scheduleRequiredRoomActions,
 } from '../room-action-defaults';
 import { roomActionKey } from '../room-actions';
+import { roomLifecycleWindowOrdinal } from '../room-action-domain';
 
 function shrineDeliverySource(
   document: ProjectDocument,
@@ -87,6 +91,113 @@ export function applyAcquisitionSiteCommand(
   located: LocatedBiome,
   command: AcquisitionSiteCommand,
 ): ProjectDocument {
+  if (command.kind === 'PlaceClockedTraitPickup') {
+    const site = command.entry.site;
+    if (site.owner.kind !== 'occurrence' || site.pointKey !== 'roomExit')
+      failCommand(command, 'is not a room-local clocked pickup site');
+    if (parseClockedTraitGeneratedPickupEntryKey(command.entry.entryKey) === undefined)
+      failCommand(command, 'does not name a clocked trait pickup');
+    if (command.encounterPhaseKey.trim().length === 0)
+      failCommand(command, 'has no maturity encounter phase');
+    const lifecycle = catalog.rewards.producerLifecycles.byKey[command.producerLifecycleKey];
+    if (lifecycle?.rewardTypes.byKey[command.rewardType] === undefined)
+      failCommand(command, 'has no declared producer lifecycle reward binding');
+    const topology = requireTopology(located.plan, command);
+    const host = requireOccurrence(located.plan, site.owner.occurrenceId, command);
+    const reference = Object.freeze({
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'roomExit',
+      entryKey: command.entry.entryKey,
+      encounterPhaseKey: command.encounterPhaseKey,
+    });
+    const actionKey = roomActionKey(reference);
+    const existingIndex = host.roomActions.order.findIndex(
+      (candidate) => roomActionKey(candidate) === actionKey,
+    );
+    const fixedReward = createUnresolvedAcquisitionRewardState(
+      catalog,
+      { rewardType: command.rewardType },
+      { kind: 'producerLifecycle', key: command.producerLifecycleKey },
+    );
+    const nextHostWithoutActions = Object.freeze({
+      ...host,
+      acquisitionSites: Object.freeze({
+        ...(host.acquisitionSites ?? {}),
+        roomExit: Object.freeze({
+          ...(host.acquisitionSites?.roomExit ?? {}),
+          pickupEntries: Object.freeze({
+            ...(host.acquisitionSites?.roomExit?.pickupEntries ?? {}),
+            [command.entry.entryKey]: fixedReward,
+          }),
+        }),
+      }),
+    });
+    if (existingIndex >= 0) {
+      return updateOccurrenceTopology(
+        document,
+        located,
+        replaceOccurrence(
+          topology,
+          Object.freeze({
+            ...nextHostWithoutActions,
+            roomActions: Object.freeze({
+              order: Object.freeze(
+                host.roomActions.order.map((candidate, index) =>
+                  index === existingIndex ? reference : candidate,
+                ),
+              ),
+            }),
+          }),
+        ),
+      );
+    }
+    const provisionalHost = Object.freeze({
+      ...nextHostWithoutActions,
+      roomActions: Object.freeze({ order: Object.freeze([...host.roomActions.order, reference]) }),
+    });
+    const provisionalDocument = updateOccurrenceTopology(
+      document,
+      located,
+      replaceOccurrence(topology, provisionalHost),
+    );
+    const domain = roomActionDomainForOccurrence(
+      provisionalDocument,
+      catalog,
+      createBiomeAddress(site.routeKey, site.biomeKey),
+      site.owner.occurrenceId,
+    )?.domain;
+    const target = domain?.contributions.find(
+      (entry) => entry.kind === 'action' && roomActionKey(entry.reference) === actionKey,
+    );
+    if (domain === undefined || target?.kind !== 'action')
+      failCommand(command, 'has no active room-action placement');
+    const targetOrdinal = roomLifecycleWindowOrdinal(domain.lifecycleStructure, target.window);
+    const actionsByKey = new Map(
+      domain.contributions.flatMap((entry) =>
+        entry.kind === 'action' ? [[roomActionKey(entry.reference), entry] as const] : [],
+      ),
+    );
+    const insertionIndex = host.roomActions.order.findIndex((candidate) => {
+      const contribution = actionsByKey.get(roomActionKey(candidate));
+      return (
+        contribution !== undefined &&
+        roomLifecycleWindowOrdinal(domain.lifecycleStructure, contribution.window) > targetOrdinal
+      );
+    });
+    const nextOrder = [...host.roomActions.order];
+    nextOrder.splice(insertionIndex < 0 ? nextOrder.length : insertionIndex, 0, reference);
+    return updateOccurrenceTopology(
+      document,
+      located,
+      replaceOccurrence(
+        topology,
+        Object.freeze({
+          ...nextHostWithoutActions,
+          roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
+        }),
+      ),
+    );
+  }
   if (command.kind === 'PlaceHermesShrineDelivery') {
     const site = command.entry.site;
     if (site.owner.kind !== 'occurrence' || site.pointKey !== 'hermesShrineDelivery')

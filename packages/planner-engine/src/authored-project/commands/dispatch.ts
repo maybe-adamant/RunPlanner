@@ -236,6 +236,7 @@ function applyUnchecked(
         command,
       );
     case 'PlaceHermesShrineDelivery':
+    case 'PlaceClockedTraitPickup':
     case 'SelectDerivedShopEntry':
     case 'ReplaceAcquisitionEntryOffer':
       return applyAcquisitionSiteCommand(

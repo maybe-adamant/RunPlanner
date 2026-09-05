@@ -412,7 +412,83 @@ function roomActionsForOccurrence(
       ];
     }),
   );
-  const allProjectedRows = Object.freeze([...projectedRows, ...dueShrineRows]);
+  const clockedTraitPickupRows = Object.freeze(
+    (
+      input.derivedAcquisitionEntries?.(createAcquisitionSiteAddress(owner, 'roomExit')) ??
+      Object.freeze([])
+    ).flatMap((capability) => {
+      const rewardType = capability.rewardTypes?.[0];
+      if (
+        capability.kind !== 'clockedTraitPickup' ||
+        capability.encounterPhaseKey === undefined ||
+        capability.producerLifecycleKey === undefined ||
+        capability.rewardTypes?.length !== 1 ||
+        rewardType === undefined ||
+        projectedRows.some(
+          (row) =>
+            row.reference.kind === 'interactAcquisitionEntry' &&
+            row.reference.siteKey === 'roomExit' &&
+            row.reference.entryKey === capability.address.entryKey,
+        )
+      )
+        return [];
+      const reference = Object.freeze({
+        kind: 'interactAcquisitionEntry' as const,
+        siteKey: 'roomExit',
+        entryKey: capability.address.entryKey,
+        encounterPhaseKey: capability.encounterPhaseKey,
+      });
+      const control = controlAt(capability.address);
+      const actionAddress = createRoomActionAddress(
+        input.biome,
+        input.occurrence.occurrenceId,
+        roomActionKey(reference),
+      );
+      return [
+        Object.freeze({
+          address: actionAddress,
+          issues: Object.freeze([]),
+          key: roomActionKey(reference),
+          label: occurrenceActionLabel(
+            input.catalog,
+            reference,
+            roomLocal,
+            encounterPhases,
+            control,
+            input.occurrence,
+            input.occurrence.purgingPool?.traitKeyBySlot,
+          ),
+          marker: input.markerDestinations.marker(actionAddress),
+          proposalKeys: Object.freeze([]),
+          reference,
+          participation: 'optional' as const,
+          participationOwnedByOverview: false,
+          placement: Object.freeze({
+            command: Object.freeze({
+              kind: 'PlaceClockedTraitPickup' as const,
+              entry: capability.address,
+              encounterPhaseKey: capability.encounterPhaseKey,
+              producerLifecycleKey: capability.producerLifecycleKey,
+              rewardType,
+            }),
+            focus: Object.freeze({ owner: actionAddress, timing: 'after' as const }),
+          }),
+          rank: null,
+          stale: false,
+          window: Object.freeze({
+            kind: 'encounterEnd' as const,
+            phaseKey: capability.encounterPhaseKey,
+          }),
+          executable: false,
+        }),
+      ];
+    }),
+  );
+  const allProjectedRows = Object.freeze([
+    ...projectedRows,
+    ...dueShrineRows,
+    ...clockedTraitPickupRows,
+  ]);
   const unrankedOrStaleRows = Object.freeze(
     lifecycleTimeline.repairRows.flatMap(({ key }) => {
       const projected = allProjectedRows.find((row) => row.key === key);
@@ -422,15 +498,16 @@ function roomActionsForOccurrence(
       return projected === undefined ? [] : [projected];
     }),
   );
-  const optionalRows = Object.freeze(
-    unrankedOrStaleRows.filter(
+  const optionalRows = Object.freeze([
+    ...unrankedOrStaleRows.filter(
       (row) =>
         row.rank === null &&
         !row.stale &&
         row.participation === 'optional' &&
         !row.participationOwnedByOverview,
     ),
-  );
+    ...clockedTraitPickupRows,
+  ]);
   const optionalKeys = new Set(optionalRows.map((row) => row.key));
   const repairRows = Object.freeze([
     ...unrankedOrStaleRows.filter(

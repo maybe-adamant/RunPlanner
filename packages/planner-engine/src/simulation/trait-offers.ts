@@ -1000,6 +1000,7 @@ export function recordReachedTraitOffer(
   const selectedDisposition = catalog.traits.byKey[selectedTraitKey]?.selectedDisposition;
   if (
     selectedDisposition?.kind !== 'equip' &&
+    selectedDisposition?.kind !== 'upgradeOccupiedBoonSlot' &&
     selectedDisposition?.kind !== 'directTraitSets' &&
     selectedDisposition?.kind !== 'circe' &&
     selectedDisposition?.kind !== 'echo' &&
@@ -1061,6 +1062,24 @@ export function recordReachedTraitOffer(
         })
       : undefined;
   const immediate: TraitHistoryEvent[] = [event, ...(mutation === undefined ? [] : [mutation])];
+  if (selectedDisposition?.kind === 'upgradeOccupiedBoonSlot') {
+    const target = evaluation.before.equippedSlots[selectedDisposition.slot];
+    if (!isPomUpgradeTarget(catalog, target))
+      return Object.freeze({ history: evaluation.before, event });
+    immediate.push(
+      Object.freeze({
+        kind: 'levelMutation',
+        owner: evaluation.address,
+        acquisitionRole: evaluation.acquisitionRole,
+        sequence,
+        acquisitionPoint,
+        sourceTraitKey: selectedTraitKey,
+        targetTraitKey: target.traitKey,
+        oldLevel: target.level,
+        newLevel: target.level + selectedDisposition.levelCount,
+      }),
+    );
+  }
   if (selectedDisposition?.kind === 'naturalSelection') {
     const targets = selectedOption.naturalSelectionTargets;
     const assessment = assessNaturalSelectionTargets(
@@ -1218,7 +1237,12 @@ import { type BoonRarityFacts } from './boon-rarity';
 export type { TraitFindingCode } from './model';
 import { optionIndex } from '../authored-project/traits';
 import { targetedAcquisitionTargetKeys } from './trait-level-effects';
-import { assessRansom, ordinaryEquippedSlots, foldTraitHistoryEvents } from './trait-history';
+import {
+  assessRansom,
+  ordinaryEquippedSlots,
+  foldTraitHistoryEvents,
+  isPomUpgradeTarget,
+} from './trait-history';
 import {
   resolveTraitOfferOptionLevel,
   type TraitOfferOptionLevelResolution,

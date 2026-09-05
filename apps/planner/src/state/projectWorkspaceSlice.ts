@@ -13,6 +13,7 @@ import {
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import {
   assertProjectEvaluationAssembly,
+  attestClockedTraitPickupPlacementForProjectEvaluationAssembly,
   hermesShrineDeliveryPlacementForPurchaseReschedule,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -93,6 +94,16 @@ export function createProjectWorkspaceReducer(
     if (authoredProjectCommandDispatched.match(action)) {
       if (state.kind === 'noProject') return state;
       const history = (() => {
+        if (action.payload.kind === 'PlaceClockedTraitPickup') {
+          if (
+            !attestClockedTraitPickupPlacementForProjectEvaluationAssembly(
+              state.assembly,
+              action.payload,
+            )
+          )
+            return state.history;
+          return applyProjectHistoryCommand(state.history, catalog, action.payload);
+        }
         if (action.payload.kind !== 'SetHermesShrinePurchase') {
           return applyProjectHistoryCommand(state.history, catalog, action.payload);
         }

@@ -150,6 +150,7 @@ function commandContractAddress(
     case 'EditDerivedShopEntry':
       return command.site;
     case 'PlaceHermesShrineDelivery':
+    case 'PlaceClockedTraitPickup':
       return command.entry;
     case 'ReplaceAcquisitionEntryOffer':
       return command.entry;

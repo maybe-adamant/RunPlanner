@@ -19,6 +19,7 @@ export const chaosRooms = chaosMaps.map(
       }),
       label: `Chaos ${String(index + 1).padStart(2, '0')}`,
       roomSetKey: 'Chaos',
+      skipTimedDropResources: true,
       advancesExperimentalHammerUses: true,
       kind: 'Combat',
       mode: { kind: 'authored', templateKey: 'Chaos' },

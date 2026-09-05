@@ -4,6 +4,7 @@ import { parseArtificerReplacementEntryKey } from '../artificer';
 import { parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
 import { parseSeaStarDuplicateSiteKey } from '../sea-star';
 import {
+  parseClockedTraitGeneratedPickupEntryKey,
   parseTraitGeneratedPickupSiteKey,
   parseNemesisGeneratedPickupSiteKey,
   type SelectedPickupProducer,
@@ -86,12 +87,17 @@ export function decodeAcquisitionSites(
         ),
       ).some((key) => echoLastRewardEntryKeys.has(key));
     const expectedEntries = Object.keys(site.pickupEntries ?? {});
+    const hasClockedTraitPickup = expectedEntries.some(
+      (entryKey) =>
+        pointKey === 'roomExit' && parseClockedTraitGeneratedPickupEntryKey(entryKey) !== undefined,
+    );
     const hasProducer = expectedEntries.some((entryKey) =>
       producerByEntry.has(`${pointKey}\u0000${entryKey}`),
     );
     if (
       hasPickups &&
       !hasProducer &&
+      !hasClockedTraitPickup &&
       echoLastRewardEntryKeys.size === 0 &&
       !retainedEchoEntry &&
       shopProfileKey === undefined &&
@@ -123,22 +129,25 @@ export function decodeAcquisitionSites(
                   ? { kind: 'producerLifecycle', key: 'RoomReward' }
                   : hermesDeliveryEntry(key)
                     ? { kind: 'producerLifecycle', key: 'HermesShrineDelivery' }
-                    : shopProfileKey === undefined
-                      ? {
-                          kind: 'producerLifecycle',
-                          key: echoLastRewardEntryKeys.has(key)
-                            ? 'EchoLastReward'
-                            : (producerByEntry.get(`${pointKey}\u0000${key}`)
-                                ?.producerLifecycleKey ?? ''),
-                        }
-                      : key === INFERNAL_CONTRACT_ENTRY_KEY
+                    : pointKey === 'roomExit' &&
+                        parseClockedTraitGeneratedPickupEntryKey(key) !== undefined
+                      ? { kind: 'producerLifecycle', key: 'GeneratedTraitPickup' }
+                      : shopProfileKey === undefined
                         ? {
                             kind: 'producerLifecycle',
-                            key:
-                              catalog.rooms.byKey[occurrence.gameName]?.infernalContractReward
-                                ?.producerLifecycleKey ?? '',
+                            key: echoLastRewardEntryKeys.has(key)
+                              ? 'EchoLastReward'
+                              : (producerByEntry.get(`${pointKey}\u0000${key}`)
+                                  ?.producerLifecycleKey ?? ''),
                           }
-                        : { kind: 'shopProfile', key: shopProfileKey },
+                        : key === INFERNAL_CONTRACT_ENTRY_KEY
+                          ? {
+                              kind: 'producerLifecycle',
+                              key:
+                                catalog.rooms.byKey[occurrence.gameName]?.infernalContractReward
+                                  ?.producerLifecycleKey ?? '',
+                            }
+                          : { kind: 'shopProfile', key: shopProfileKey },
                 artificerSite ||
                   seaStarDuplicateSite ||
                   hermesDeliveryEntry(key) ||

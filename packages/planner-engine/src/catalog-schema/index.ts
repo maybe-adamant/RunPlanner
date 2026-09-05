@@ -725,6 +725,8 @@ export interface RoomDeclaration {
   readonly advancesHermesShrineDeliveryUses: boolean;
   /** Source `SkipRoomsPerUpgrade`; suppresses Steady Growth's end-effects clock. */
   readonly skipRoomsPerUpgrade: boolean;
+  /** Source `SkipTimedDropResources`; defers a due timed pickup until the next valid room. */
+  readonly skipTimedDropResources: boolean;
   readonly encounterSlotBindings: readonly EncounterSlotBinding[];
   readonly counters: RoomCounterEffects;
   readonly caps: RoomCaps;
