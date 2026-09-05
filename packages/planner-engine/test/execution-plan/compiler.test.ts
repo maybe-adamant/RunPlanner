@@ -154,6 +154,50 @@ function naturalSelectionProjection(selected: boolean) {
   });
 }
 
+function concaveStoneProjection() {
+  const assembly = simulateProjectAssembly(
+    catalog,
+    authorLegalTraitOffers(createCompleteFGProject()),
+  );
+  const biome = assembly.evaluation.route.biomes[0];
+  if (biome?.authoring !== 'complete' || biome.validity !== 'valid')
+    throw new Error('fixture lacks a complete-valid execution biome');
+  const source = biome.rewards.selectedTraitOffers.find(
+    (candidate) => candidate.offer.kind === 'traits',
+  );
+  if (source === undefined) throw new Error('fixture lacks an ordinary selected trait offer');
+  const offer: AuthoredTraitOfferTraits = Object.freeze({
+    kind: 'traits' as const,
+    giverKey: source.offer.giverKey,
+    options: Object.freeze([
+      Object.freeze({ traitKey: 'ApolloWeaponBoon', rarity: 'Common' as const }),
+      Object.freeze({
+        traitKey: 'AllElementalBoon',
+        rarity: 'Legendary' as const,
+        allTogetherResult,
+      }),
+      Object.freeze({
+        traitKey: 'GoodStuffBoon',
+        rarity: 'Duo' as const,
+        naturalSelectionTargets: Object.freeze(['ApolloWeaponBoon']),
+      }),
+    ]) as AuthoredTraitOfferTraits['options'],
+    selectedOptionKey: 'option1' as const,
+    concaveStoneResult: Object.freeze({ kind: 'proc' as const, optionKey: 'option2' as const }),
+  });
+  return Object.freeze({
+    ...biome,
+    rewards: Object.freeze({
+      ...biome.rewards,
+      selectedTraitOffers: Object.freeze(
+        biome.rewards.selectedTraitOffers.map((candidate) =>
+          candidate === source ? Object.freeze({ ...candidate, offer }) : candidate,
+        ),
+      ),
+    }),
+  });
+}
+
 function planWithGenericDependency() {
   const { product } = planFor(authorLegalTraitOffers(createUnderworldFWellCheckpoint()));
   const occurrence = product.occurrences.find((entry) => entry.timeline.transactions.length >= 2);
@@ -498,6 +542,28 @@ describe('protocol-v17 compiler and codec', () => {
     ]);
   });
 
+  it('publishes the frozen Stone result beside its source option without dropping residual consequences', () => {
+    const biome = concaveStoneProjection();
+    const offer = orderedExecutionRooms([biome])
+      .flatMap((room) =>
+        executionTimelineTransactions(
+          room,
+          biome,
+          mergePlannerTimelineFacts(
+            room.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
+            biome.rewards.timelineFacts,
+          ),
+        ),
+      )
+      .flatMap((transaction) => (transaction.kind === 'acquisition' ? transaction.roles : []))
+      .flatMap((role) => (role.traitOffer?.kind === 'traits' ? [role.traitOffer] : []))
+      .find((candidate) => candidate.options.some((option) => option.concaveStoneResult));
+    if (offer === undefined) throw new Error('Concave Stone offer is missing');
+    expect(offer.options[0]?.concaveStoneResult).toEqual({ kind: 'proc', optionKey: 'option2' });
+    expect(offer.options[1]?.allTogetherResult).toEqual(allTogetherResult);
+    expect(offer.options[2]?.naturalSelectionTargets).toEqual(['ApolloWeaponBoon']);
+  });
+
   it('rejects ambiguous run-start Arcana and Hex identities before fingerprint validation', () => {
     const duplicateArcana = {
       ...fOpeningFixture,
@@ -628,6 +694,35 @@ describe('protocol-v17 compiler and codec', () => {
             { ...offer.options[0], naturalSelectionTargets: Array(9).fill('ApolloWeaponBoon') },
           ],
         },
+        'offer',
+      ),
+    ).toThrow(ExecutionPlanCodecError);
+  });
+
+  it('strictly decodes a selected-option Concave Stone disposition', () => {
+    const offer = {
+      kind: 'traits',
+      giver: 'Apollo',
+      options: [
+        { key: 'ApolloWeaponBoon', concaveStoneResult: { kind: 'proc', optionKey: 'option2' } },
+        { key: 'ApolloSpecialBoon' },
+      ],
+      selected: 'option1',
+    };
+    expect(decodeExecutionTraitOffer(offer, 'offer')).toMatchObject({
+      options: expect.arrayContaining([
+        expect.objectContaining({ concaveStoneResult: { kind: 'proc', optionKey: 'option2' } }),
+      ]),
+    });
+    expect(() =>
+      decodeExecutionTraitOffer(
+        { ...offer, options: [{ ...offer.options[0], concaveStoneResult: { kind: 'proc', optionKey: 'option1' } }, offer.options[1]] },
+        'offer',
+      ),
+    ).toThrow(ExecutionPlanCodecError);
+    expect(() =>
+      decodeExecutionTraitOffer(
+        { ...offer, options: [offer.options[0], { ...offer.options[1], concaveStoneResult: { kind: 'noProc' } }] },
         'offer',
       ),
     ).toThrow(ExecutionPlanCodecError);

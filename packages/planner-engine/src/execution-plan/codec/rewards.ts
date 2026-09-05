@@ -1,5 +1,6 @@
 import type {
   ExecutionAcquisitionRole,
+  ExecutionConcaveStoneResult,
   ExecutionLevelResolution,
   ExecutionReward,
   ExecutionTraitOffer,
@@ -105,6 +106,27 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
   }
   if (record.kind !== 'traits') fail(`${label}.kind is unsupported`);
   exact(record, ['kind', 'giver', 'options', 'selected'], ['rejected'], label);
+  const concaveStoneResult = (
+    value: unknown,
+    resultLabel: string,
+  ): ExecutionConcaveStoneResult => {
+    const result = object(value, resultLabel);
+    if (result.kind === 'noProc') {
+      exact(result, ['kind'], [], resultLabel);
+      return Object.freeze({ kind: 'noProc' as const });
+    }
+    if (result.kind === 'proc') {
+      exact(result, ['kind', 'optionKey'], [], resultLabel);
+      return Object.freeze({
+        kind: 'proc' as const,
+        optionKey: stringValue(
+          result.optionKey,
+          `${resultLabel}.optionKey`,
+        ) as Extract<ExecutionConcaveStoneResult, { readonly kind: 'proc' }>['optionKey'],
+      });
+    }
+    fail(`${resultLabel}.kind is unsupported`);
+  };
   const allTogetherResult = (value: unknown, resultLabel: string) => {
     const result = object(value, resultLabel);
     exact(result, ['earth', 'fire', 'air', 'water'], [], resultLabel);
@@ -130,6 +152,7 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
         'effectiveLevel',
         'allTogetherResult',
         'naturalSelectionTargets',
+        'concaveStoneResult',
         'replacement',
       ],
       `${label}.options[${index}]`,
@@ -188,7 +211,15 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
                   ),
                 ),
               );
-            })(),
+          })(),
+        }),
+      ...(option.concaveStoneResult === undefined
+        ? {}
+        : {
+            concaveStoneResult: concaveStoneResult(
+              option.concaveStoneResult,
+              `${label}.options[${index}].concaveStoneResult`,
+            ),
           }),
       ...(replacement === undefined
         ? {}
@@ -227,6 +258,16 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
   const selected = stringValue(record.selected, `${label}.selected`);
   const availableOptionKeys = ['option1', 'option2', 'option3'].slice(0, options.length);
   if (!availableOptionKeys.includes(selected)) fail(`${label}.selected is not a valid option`);
+  for (const [index, option] of options.entries()) {
+    const concave = option.concaveStoneResult;
+    if (concave === undefined) continue;
+    const optionKey = availableOptionKeys[index];
+    if (optionKey !== selected)
+      fail(`${label}.options[${index}].concaveStoneResult must belong to the selected option`);
+    if (concave.kind === 'proc' &&
+      (!availableOptionKeys.includes(concave.optionKey) || concave.optionKey === selected))
+      fail(`${label}.options[${index}].concaveStoneResult.optionKey is not a residual option`);
+  }
   return Object.freeze({
     kind: 'traits',
     giver: stringValue(record.giver, `${label}.giver`),
