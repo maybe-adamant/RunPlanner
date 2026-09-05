@@ -6,11 +6,13 @@ import {
   createCompleteFGAnomalyProject,
   createCompleteFGIxionChaosProject,
   createCompleteFGProject,
+  createGoldenFGHProject,
   createUnderworldFPoolCheckpoint,
   createUnderworldFWellCheckpoint,
   goldenFBiome,
   goldenFStartId,
   goldenGBiome,
+  goldenHBiome,
   goldenGOccurrenceId,
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
@@ -34,6 +36,7 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createEncounterPhaseAddress,
+  createExitSelectionAddress,
   createHubDecisionAddress,
   createRouteAddress,
   createFountainRarityOutcomeAddress,
@@ -60,7 +63,6 @@ import {
   encodeExecutionPlan,
 } from '../../src/execution-plan';
 import { assembleTimelineRelations } from '../../src/execution-plan/assembly/timeline-relations';
-import { assembleExecutionOverview } from '../../src/execution-plan/assembly/overview';
 import { orderedExecutionRooms } from '../../src/execution-plan/assembly/route';
 import { executionTimelineTransactions } from '../../src/execution-plan/assembly/timeline-transactions';
 import { traitOffer as decodeExecutionTraitOffer } from '../../src/execution-plan/codec/rewards';
@@ -333,31 +335,6 @@ function nemesisFreeItemProject() {
     reward: { rewardType: 'EmptyMaxHealthDrop' },
   });
   return fOnlyProject(authorLegalTraitOffers(project));
-}
-
-function rackBeforeFountainProject(jeweledPomTraitKey = 'HadesLifestealBoon') {
-  const occurrenceId = createOccurrenceId('golden-f-preboss-shop:postboss');
-  const occurrence = createOccurrenceAddress(goldenFBiome, occurrenceId);
-  let project = applyProjectCommand(createCompleteFGProject(), catalog, {
-    kind: 'ReplacePostbossKeepsake',
-    selection: createPostbossKeepsakeSelectionAddress(occurrence),
-    keepsakeKey: 'HadesAndPersephoneKeepsake',
-  });
-  const reference = { kind: 'interactKeepsakeRack' as const };
-  project = applyProjectCommand(project, catalog, {
-    kind: 'MoveRoomAction',
-    action: createRoomActionAddress(goldenFBiome, occurrenceId, roomActionKey(reference)),
-    toIndex: 0,
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceJeweledPomEquipResult',
-    result: createKeepsakeEquipResultAddress(
-      createPostbossKeepsakeSelectionAddress(occurrence),
-      'jeweledPom',
-    ),
-    value: { traitKey: jeweledPomTraitKey },
-  });
-  return authorLegalTraitOffers(project);
 }
 
 function postbossKeepsakeOrderProject(
@@ -853,6 +830,120 @@ describe('engine-owned F/G execution semantic product', () => {
     });
     expect(executionOffer.options[1]).not.toHaveProperty('icarusHammerTarget');
     expect(() => decodeExecutionTraitOffer(executionOffer, 'Icarus offer')).not.toThrow();
+  });
+
+  it('publishes Echo Boon Boon Boon as one exact mixed-provider nested menu', () => {
+    const bridgeId = createOccurrenceId('golden-h-bridge01');
+    let project = authorLegalTraitOffers(createGoldenFGHProject());
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenHBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('golden-h-combat09'),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createEncounterPhaseAddress(
+          goldenHBiome,
+          { kind: 'occurrence', occurrenceId: bridgeId },
+          'Encounter',
+        ),
+        'selection',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'Echo',
+        options: [
+          {
+            traitKey: 'EchoLastRunBoon',
+            echoLastRunBoon: {
+              options: [
+                {
+                  giverKey: 'Aphrodite',
+                  traitKey: 'HighHealthOffenseBoon',
+                  rarity: 'Common',
+                },
+                { giverKey: 'Artemis', traitKey: 'SupportingFireBoon', rarity: 'Rare' },
+                { giverKey: 'Hermes', traitKey: 'DodgeChanceBoon', rarity: 'Epic' },
+              ],
+              selectedOptionKey: 'option2',
+            },
+          },
+          { traitKey: 'DiminishingDodgeBoon' },
+          { traitKey: 'DiminishingHealthAndManaBoon' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    const forcedTargetId = createOccurrenceId('golden-h-combat05');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(goldenHBiome, forcedTargetId),
+      gameName: 'H_MiniBoss02',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenHBiome, forcedTargetId),
+      value: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      },
+    });
+    project = authorLegalTraitOffers(project);
+    const biome = simulateProjectAssembly(catalog, project).evaluation.route.biomes.find(
+      (candidate) => candidate.biomeKey === 'H',
+    );
+    if (biome?.authoring !== 'complete' || biome.validity !== 'valid')
+      throw new Error(
+        `Echo projection requires a complete-valid H biome: ${JSON.stringify(biome?.findings)}`,
+      );
+    const bridge = orderedExecutionRooms([biome]).find((room) => room.gameName === 'H_Bridge01');
+    if (bridge === undefined) throw new Error('Echo projection requires H_Bridge01');
+    const transactions = executionTimelineTransactions(
+      bridge,
+      biome,
+      mergePlannerTimelineFacts(
+        bridge.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
+        biome.rewards.timelineFacts,
+      ),
+    );
+    const transaction = transactions.find((candidate) => {
+      if (candidate.kind !== 'encounterInteraction') return false;
+      const resolution = candidate.resolution;
+      return (
+        resolution?.kind === 'traitOffer' &&
+        resolution.offer.kind === 'traits' &&
+        resolution.offer.giver === 'Echo'
+      );
+    });
+    if (
+      transaction?.kind !== 'encounterInteraction' ||
+      transaction.resolution?.kind !== 'traitOffer' ||
+      transaction.resolution.offer.kind !== 'traits'
+    )
+      throw new Error('Echo encounter offer is missing');
+    const executionOffer = transaction.resolution.offer;
+    expect(executionOffer.options[0]?.echoLastRunBoon).toEqual({
+      options: [
+        {
+          giver: 'Aphrodite',
+          key: 'HighHealthOffenseBoon',
+          rarity: 'Common',
+          lootHistorySource: 'AphroditeUpgrade',
+        },
+        { giver: 'Artemis', key: 'SupportingFireBoon', rarity: 'Rare' },
+        {
+          giver: 'Hermes',
+          key: 'DodgeChanceBoon',
+          rarity: 'Epic',
+          lootHistorySource: 'HermesUpgrade',
+        },
+      ],
+      selected: 'option2',
+    });
   });
 
   it('keeps an unpicked Mystery Boon atomic to its active Narcissus provider action', () => {

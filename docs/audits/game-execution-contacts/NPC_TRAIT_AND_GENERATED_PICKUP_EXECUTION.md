@@ -2,19 +2,17 @@
 
 ## Status and scope
 
-This audit closes the execution design for Arachne and Narcissus in the current
-F/G route extent and Circe's exact stateful consequences at the dormant O
-contact. It covers their bespoke trait menus, the boundary between a selected
-trait and its native acquire behavior, Narcissus's optional generated pickups,
-the complete Narcissus Mystery Boon chain, and Circe's Arcana/Fear selector
-boundary.
+This audit closes the shared execution design for Medea, Arachne, Narcissus,
+Circe, Icarus, and Echo. It covers their bespoke trait menus, the boundary
+between a selected trait and its native acquire behavior, Narcissus's optional
+generated pickups, the complete Narcissus Mystery Boon chain, Circe's
+Arcana/Fear selectors, Icarus's exact Hammer target, and Echo's nested Boon and
+Pom selectors.
 
 The six named exact-trait menu contacts share this focused NPC acquisition
-adapter so the obsolete broad Timeline hook has no remaining owner. The shared
-carrier is also installed for Medea, Circe, Icarus, and Echo. Circe's three
-stateful consequences are closed here without claiming O route navigation;
-Medea, Icarus, and Echo retain their separately recorded route or consequence
-status. It also does not make every trait that
+adapter so the obsolete broad Timeline hook has no remaining owner. Covering a
+dormant native contact does not claim O, P, or H route navigation. This audit
+also does not make every trait that
 happens to call a pickup helper an executor-owned producer. The durable rule is
 narrower:
 
@@ -46,6 +44,12 @@ scripts:
 - Circe's stateful acquire functions and selectors:
   `Scripts/EventLogic.lua:1359-1431` and
   `Scripts/MetaUpgradeLogic.lua:499-560`;
+- Icarus's selected effects and Supply Chain clock:
+  `Scripts/EventLogic.lua` (`IcarusUpgradeBoon`, `UpgradeHammers`) and
+  `Scripts/TraitData_Icarus.lua`;
+- Echo's selected effects and nested Boon contact:
+  `Scripts/EventLogic.lua` (`EchoLastRunBoon`, `EchoDoubleLevelBoon`) and
+  `Scripts/UpgradeChoiceLogic.lua` (`SelectEchoBoon`);
 - consumable use and Mystery Boon dispatch:
   `Scripts/InteractLogic.lua:979-1152`;
 - Mystery Boon unwrap and hidden-source creation:
@@ -271,6 +275,67 @@ The normal room-exit Arcana/Fear conformance remains the effect proof. The
 acquire-function scope neither completes a second transaction nor threads a
 state callback into the NPC terminal.
 
+## Icarus consequence boundary
+
+Ingenious Strike and Ingenious Flourish are deterministic native effects. The
+planner requires the corresponding core slot to contain an eligible trait and
+models the native `+3` level mutation, but the executor does not apply those
+levels a second time. Explosive Intent, Hazard Boom, Protective Coating, and
+Volatile Coating are native combat effects outside the simulator.
+
+Latest Model is the sole volatile selected Icarus result. The execution offer
+carries the exact eligible Rank-I Hammer trait already resolved by the planner.
+The Icarus adapter constrains the native Hammer selector to that identity and
+lets `UpgradeHammers` perform the replacement. The normal room-exit trait
+ledger observes removal of the old trait and addition of its Rank-II result.
+
+Supply Chain remains a native `RoomsPerUpgrade` clock and native pickup
+producer. When it matures, its Pom Slices are ordinary optional objects; each
+authored accepted Slice uses the direct-level adapter. The executor neither
+advances the clock nor binds a Slice back to Icarus. Room declarations such as
+N side rooms may suppress `RoomsPerUpgrade` advancement independently of the
+Icarus contact.
+
+## Echo consequence boundary
+
+`EchoChoice` is the outer eight-option menu only. Completion at that selection
+is sufficient for Reward Reward Reward, Survive Survive Survive, Evade Evade
+Evade, Fight Fight Fight, Gold Gold Gold, and Gift Gift Gift because their
+effects remain native-authoritative or become work for a later independent
+object. The executor does not claim a recreated reward, duplicated Shop item,
+or future keepsake effect as Echo-owned.
+
+Boon Boon Boon and Pom Pom Pom defer the outer transaction terminal until their
+native nested effect reaches its own terminal:
+
+- Boon Boon Boon carries one to three ordered prior-run identities, each
+  provider, the declaration-owned native loot-history source when one exists,
+  the chronology-resolved effective rarity, the selected row, and any selected
+  acquisition consequence already authored by the planner. The adapter installs
+  those rows at `OpenUpgradeChoiceMenu`, validates the choice at
+  `SelectEchoBoon`, and hands the selected result to the ordinary trait
+  consequence path. A mixed-provider menu remains one Echo transaction; giver
+  identity belongs to each nested row, and the selected row's exact source is
+  retained while native `SelectEchoBoon` records `LootTypeHistory`.
+- Pom Pom Pom carries the exact greatest-level eligible trait or an explicit
+  no-target result. The adapter constrains only native `GetRandomKey` while
+  `EchoDoubleLevelBoon` is active and lets native `IncreaseTraitLevel` mutate
+  the trait.
+
+The planner owns the complete Echo availability matrix. The executor does not
+repeat `HeroHasTrait`, slot occupancy, last-run-pool membership, or other offer
+eligibility policy. It verifies only that the published identity can be bound
+at the native contact; a missing declaration or target records a mismatch and
+native execution continues without an executor-chosen substitute.
+
+`AddTraitToHero` dispatches selected trait acquire functions on a native thread.
+Natural Selection and Bridal Glow therefore retain the exact transaction,
+selected outer trait, and room scope until `DistributeLevels` or
+`HeraSuperchargeBoon` reaches its terminal. Echo does not own copied versions of
+those effects, and the outer Echo transaction cannot complete before both the
+nested selection and its selected consequence have settled. The room-exit trait
+ledger remains the retained-state proof.
+
 ## Planner and executor disposition
 
 | Concern                                             | Authority and disposition                                                                                                                                           |
@@ -280,6 +345,8 @@ state callback into the NPC terminal.
 | Equipping the selected NPC trait                    | Native-authoritative; the bounded selection callback is the terminal.                                                                                               |
 | Circe Arcana/Fear target identity                   | Planner-selected option result; scoped native selector steering while native acquire functions mutate state.                                                        |
 | Circe Arcana/Fear mutation proof                    | Existing room-exit Arcana/Fear conformance; no callback-local mutation reimplementation.                                                                            |
+| Icarus Latest Model target                          | Planner-selected Rank-I Hammer identity; scoped native selector steering while `UpgradeHammers` owns mutation.                                                      |
+| Echo nested Boon and Pom target                     | Exact planner result; scoped nested-menu or target steering with native mutation and ordinary downstream consequence handling.                                      |
 | Trait-owned drop production                         | Native-authoritative; never recreated by the executor.                                                                                                              |
 | Which generated pickups are planner-visible         | Planner selected-pickup producer and authored participation.                                                                                                        |
 | Choosing a generated pickup action                  | Claim a compatible ready transaction only when native use is accepted.                                                                                              |
@@ -299,6 +366,14 @@ complete Narcissus matrix:
 - Circe activation (including CastCount's admission roll), promotion, and Fear
   suppression each select the exact published target through native mutation,
   while an ordinary Circe option runs without an additional actuator;
+- Icarus Latest Model constrains the native Hammer selector, while deterministic
+  level effects and native-produced Supply Chain Slices receive no duplicate
+  executor mutation or producer binding;
+- Echo Boon Boon Boon installs an exact mixed-provider nested menu and completes
+  through the ordinary selected-trait consequence path;
+- Echo Pom Pom Pom constrains one exact greatest-level target or accepts the
+  explicit no-target outcome, while the other six choices remain native or
+  delegate later objects to their ordinary consumers;
 - selecting a drop-producing trait completes the encounter owner while the
   native drop is still independently pending;
 - one unbound native Narcissus Pom Slice claims a compatible ready action at

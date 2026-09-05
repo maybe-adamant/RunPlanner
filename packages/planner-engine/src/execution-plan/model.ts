@@ -6,7 +6,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 19 as const;
+export const EXECUTION_PROTOCOL_VERSION = 20 as const;
 export const EXECUTION_CATALOG_VERSION = '0.54.0-required-boss-rewards' as const;
 
 export type ExecutionRunStateCount =
@@ -184,6 +184,20 @@ export interface ExecutionHexTree {
   };
 }
 
+/** Echo's exact native Boon Boon Boon menu beneath one selected outer row. */
+export interface ExecutionEchoLastRunBoonOffer {
+  readonly options: readonly {
+    readonly giver: string;
+    readonly key: string;
+    readonly rarity: string;
+    /** Exact native provider recorded by SelectEchoBoon, when declaration-owned. */
+    readonly lootHistorySource?: string;
+    readonly targetTraitKey?: string;
+    readonly naturalSelectionTargets?: readonly string[];
+  }[];
+  readonly selected: ExecutionTraitOptionKey;
+}
+
 export type ExecutionTraitOffer =
   | {
       readonly kind: 'fallbackGold';
@@ -208,6 +222,10 @@ export type ExecutionTraitOffer =
         readonly circeResolution?: ExecutionCirceResolution;
         /** Exact Rank-I Hammer selected by Icarus's native Latest Model mutation. */
         readonly icarusHammerTarget?: string;
+        /** Exact greatest-level target selected by Echo's native Pom effect. */
+        readonly echoPomTarget?: string | null;
+        /** Exact mixed-provider rows opened by Echo's native Boon replay. */
+        readonly echoLastRunBoon?: ExecutionEchoLastRunBoonOffer;
         readonly replacement?: {
           readonly slot: string;
           readonly replacedTraitKey: string;

@@ -12,8 +12,8 @@
 - Catalog encounter declarations:
   `packages/hades2-catalog/src/declarations/encounters/`
 - Current native contacts: `src/mods/room/timeline/encounters/hooks.lua`,
-  focused acquisition adapters beneath `src/mods/room/timeline/acquisitions/`,
-  and named deferred later-route NPC menu bridges in the Plan Executor
+  and focused acquisition adapters beneath
+  `src/mods/room/timeline/acquisitions/` in the Plan Executor
 
 ## Trait-menu carriers
 
@@ -21,21 +21,22 @@ NPC identity is not enough to identify a native trait-offer contact. Some NPCs
 use ordinary loot; others build bespoke menus before the generic selection
 function is reached.
 
-| Provider                         | Native offer contact                          | Current status                                                                                           |
-| -------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Arachne                          | `ArachneCostumeChoice`                        | Covered by the focused NPC acquisition adapter.                                                          |
-| Narcissus                        | `NarcissusBenefitChoice`                      | Covered for the menu, native generated children, and Mystery Boon handoff.                               |
-| Medea                            | `MedeaCurseChoice`                            | Deferred route; adapter exists.                                                                          |
-| Circe                            | `CirceBlessingChoice`                         | Menu and all selected consequences are covered; O route navigation remains deferred.                     |
-| Icarus                           | `IcarusBenefitChoice`                         | Deferred route; adapter exists.                                                                          |
-| Echo                             | `EchoChoice`                                  | Deferred route; adapter exists, but each exceptional replay/result still needs its semantic transaction. |
-| Artemis, Athena, Hades, Dionysus | Ordinary loot or encounter-owned trait source | Covered only through the ordinary loot carrier reached by the encounter.                                 |
+| Provider                         | Native offer contact                          | Current status                                                                                                                         |
+| -------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Arachne                          | `ArachneCostumeChoice`                        | Covered by the focused NPC acquisition adapter.                                                                                        |
+| Narcissus                        | `NarcissusBenefitChoice`                      | Covered for the menu, native generated children, and Mystery Boon handoff.                                                             |
+| Medea                            | `MedeaCurseChoice`                            | Menu and native selected effects are covered; P route navigation remains deferred.                                                     |
+| Circe                            | `CirceBlessingChoice`                         | Menu and exact Arcana/Fear consequences are covered; O route navigation remains deferred.                                              |
+| Icarus                           | `IcarusBenefitChoice`                         | Menu and Latest Model target are covered; deterministic levels and Supply Chain production remain native; P route navigation deferred. |
+| Echo                             | `EchoChoice`                                  | Menu, nested Boon replay, and Pom target are covered; other consequences remain native or hand off to their ordinary consumer.         |
+| Artemis, Athena, Hades, Dionysus | Ordinary loot or encounter-owned trait source | Covered only through the ordinary loot carrier reached by the encounter.                                                               |
 
 The six bespoke contacts are defined in `Scripts/EventLogic.lua`. Their explicit
 adapters are intentional; a single `UseLoot` hook does not cover these menus.
-Arachne, Narcissus, and Circe are specified in
-[NPC trait and generated-pickup execution](NPC_TRAIT_AND_GENERATED_PICKUP_EXECUTION.md);
-the remaining later providers retain their recorded deferrals.
+The six bespoke contacts and their consequence boundaries are specified in
+[NPC trait and generated-pickup execution](NPC_TRAIT_AND_GENERATED_PICKUP_EXECUTION.md).
+Coverage of a dormant contact does not claim that its route navigation is
+enabled.
 
 ## Nemesis random events
 
@@ -126,15 +127,17 @@ when Eternity belongs to the exact published result. Native code still owns the
 activation loop and all state mutation.
 
 This is the entire `automatic` union. Natural Selection and All Together are
-nested selected-trait consequences, Ransoms are native-authoritative, and Echo
-and Circe remain deferred later-route contacts; none is an automatic member.
+nested selected-trait consequences, Ransoms are native-authoritative, and
+Circe, Icarus, and Echo resolve through their NPC acquisition contacts; none is
+an automatic member.
 
 ## Live-witness gaps
 
 The executor has unit coverage for all four automatic shapes, but byte-product
 fixtures should not be mistaken for complete native contact evidence. Current
 fixture coverage is strongest for F/G room flow, ordinary offers, Chaos, Wells,
-and shops. Concave Stone's second offer and each future-biome NPC remain useful
-bounded live probes. Encounter closure additionally needs focused witnesses for
+and shops. Concave Stone's second offer and each dormant-route NPC remain useful
+bounded live probes even though their adapters have focused unit coverage.
+Encounter closure additionally needs focused witnesses for
 two native encounter tables sharing one declaration name and for two different
 transaction contacts sharing one phase.

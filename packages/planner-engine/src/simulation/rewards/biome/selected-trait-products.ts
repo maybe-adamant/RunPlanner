@@ -6,6 +6,8 @@ import {
   type TraitOfferAddress,
   type TraitOfferOwnerAddress,
 } from '../../../authored-project/addresses';
+import type { AuthoredEchoLastRunBoonOffer } from '../../../authored-project/traits';
+import type { Catalog } from '../../../catalog-schema';
 import type { RewardBranchState } from '../branch-primitives';
 import type {
   ReachedLevelResolutionEvaluation,
@@ -15,6 +17,7 @@ import type {
   TraitHistoryState,
   TraitOfferCandidateContext,
 } from '../../traits';
+import { echoLastRunBoonOutcomes } from '../../traits';
 
 export interface SelectedTraitOfferProducts {
   readonly selectedTraitOffers: readonly SelectedTraitOfferAssessment[];
@@ -51,6 +54,7 @@ function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | un
 export function selectedTraitOfferProducts(
   branches: readonly RewardBranchState[],
   retainedLevelEvaluations: readonly ReachedLevelResolutionEvaluation[] = Object.freeze([]),
+  catalog?: Catalog,
 ): SelectedTraitOfferProducts {
   const grouped = new Map<
     string,
@@ -122,6 +126,55 @@ export function selectedTraitOfferProducts(
                   trace.levelResolutions.map((resolution) => resolution.effectiveLevel),
                 ),
                 baseRarities: trace.baseRarities,
+                ...(() => {
+                  if (trace.offer.kind !== 'traits') return {};
+                  const selected =
+                    trace.offer.options[Number(trace.offer.selectedOptionKey.slice(-1)) - 1];
+                  const child = selected?.echoLastRunBoon;
+                  if (
+                    selected?.traitKey !== 'EchoLastRunBoon' ||
+                    child === undefined ||
+                    catalog === undefined
+                  )
+                    return {};
+                  const outcomes = echoLastRunBoonOutcomes(catalog, trace.before);
+                  const resolveOption = (
+                    option: AuthoredEchoLastRunBoonOffer['options'][number],
+                  ) => {
+                    const outcome = outcomes.find(
+                      (candidate) =>
+                        candidate.option.giverKey === option.giverKey &&
+                        candidate.option.traitKey === option.traitKey &&
+                        candidate.option.rarity === option.rarity,
+                    );
+                    const variant =
+                      catalog.echoLastRunBoon.variants.byKey[
+                        `${option.giverKey}:${option.traitKey}`
+                      ];
+                    return Object.freeze({
+                      ...option,
+                      rarity: outcome?.effectiveRarity ?? option.rarity,
+                      ...(variant?.lootHistorySource === undefined
+                        ? {}
+                        : { lootHistorySource: variant.lootHistorySource }),
+                    });
+                  };
+                  const first = resolveOption(child.options[0]);
+                  const second = child.options[1];
+                  const third = child.options[2];
+                  const options =
+                    second === undefined
+                      ? Object.freeze([first])
+                      : third === undefined
+                        ? Object.freeze([first, resolveOption(second)])
+                        : Object.freeze([first, resolveOption(second), resolveOption(third)]);
+                  return {
+                    effectiveEchoLastRunBoon: Object.freeze({
+                      options,
+                      selectedOptionKey: child.selectedOptionKey,
+                    }),
+                  };
+                })(),
                 ...(trace.settledHexTree === undefined
                   ? {}
                   : { settledHexTree: trace.settledHexTree }),
