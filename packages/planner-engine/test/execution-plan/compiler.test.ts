@@ -322,7 +322,7 @@ function selectedTransactionPair(product: ExecutionSemanticProduct): {
   throw new Error('fixture lacks selected cross-occurrence transaction pair');
 }
 
-describe('protocol-v18 compiler and codec', () => {
+describe('execution-plan compiler and codec', () => {
   it('accepts source-owned replacement materialization only for Artificer roles', () => {
     const role = {
       role: 'self',
@@ -915,6 +915,27 @@ describe('protocol-v18 compiler and codec', () => {
         'offer',
       ),
     ).toThrow(ExecutionPlanCodecError);
+  });
+
+  it('strictly decodes only a selected Icarus Latest Model Hammer target', () => {
+    const offer = {
+      kind: 'traits',
+      giver: 'Icarus',
+      options: [
+        { key: 'UpgradeHammerBoon', icarusHammerTarget: 'StaffDoubleAttackTrait' },
+        { key: 'OmegaExplodeBoon' },
+      ],
+      selected: 'option1',
+    };
+    const decoded = decodeExecutionTraitOffer(offer, 'offer');
+    if (decoded.kind !== 'traits') throw new Error('Icarus must decode as a trait offer');
+    expect(decoded.options[0]?.icarusHammerTarget).toBe('StaffDoubleAttackTrait');
+    expect(() => decodeExecutionTraitOffer({ ...offer, giver: 'Circe' }, 'offer')).toThrow(
+      ExecutionPlanCodecError,
+    );
+    expect(() => decodeExecutionTraitOffer({ ...offer, selected: 'option2' }, 'offer')).toThrow(
+      ExecutionPlanCodecError,
+    );
   });
 
   it.each([

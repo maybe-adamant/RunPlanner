@@ -3,7 +3,7 @@
 ## Status
 
 Locked on 2026-09-05 after a current-code inventory and source review. Gates A,
-B, and C1 are complete; Gate C2 is next.
+B, C1, and C2 are complete; Gate D is next.
 
 Gate A completed on 2026-09-05:
 
@@ -27,6 +27,16 @@ result, and models Supply Chain as two independently optional Pom Slices every
 seven qualifying encounter-end phases. Native `SkipRoomsPerUpgrade` and
 `SkipTimedDropResources` behavior is preserved without introducing an Icarus-
 specific pickup path.
+
+Gate C2 completed on 2026-09-05:
+
+- Plan Executor: `1103815`
+- Modpack shell: `ec1fc06`
+
+The planner publishes Latest Model's exact Rank-I Hammer target through
+protocol v19. The executor scopes the native `UpgradeHammers` selector to that
+target; all other Icarus effects remain native, and generated Supply Chain Pom
+Slices continue through the generic pickup/level path.
 
 This focused plan runs before Gate E of
 [Game Execution Layered Coverage Plan](GAME_EXECUTION_LAYERED_COVERAGE_PLAN.md).
@@ -285,8 +295,9 @@ Deliverables:
 - let the game own Supply Chain's clock and native object creation; when an
   authored generated Pom Slice is accepted, hand it to the existing direct-
   level adapter;
-- route Latest Model's exact target through the existing Hammer Rank-II
-  realization rather than adding a second Icarus Hammer implementation;
+- route Latest Model's exact target through its native `UpgradeHammers`
+  mutation and steer only that function's target selector rather than
+  implementing the Hammer upgrade a second time;
 - classify Explosive Intent, Hazard Boom, Protective Coating, and Volatile
   Coating as native-authoritative combat effects outside the current simulator;
   and
