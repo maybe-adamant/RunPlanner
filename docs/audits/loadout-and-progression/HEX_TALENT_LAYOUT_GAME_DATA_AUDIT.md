@@ -315,9 +315,9 @@ settled in the current run. An ordinary Spell Drop both installs the base Hex
 and satisfies this prefix. Aspect of Selene's built-in Sky Fall does not
 qualify by itself; the Aspect's later concrete Spell Drop does. This still does
 not prove acquisition of the required Olympian node. The authored Task Force
-selection expresses that deeper intent, while the declaration supplies
-requirement-free Athena fallbacks for execution. The exact mapping is owned by the
-[Runtime Offer Fallback audit](../rewards-and-acquisition/RUNTIME_OFFER_FALLBACK_AUDIT.md).
+selection expresses that deeper intent and remains the exact result sent to
+execution. Live native ineligibility follows the
+[Runtime Offer Eligibility audit](../rewards-and-acquisition/RUNTIME_OFFER_FALLBACK_AUDIT.md).
 No generated Path talent needs to enter the simulated equipped-trait ledger
 merely to support Task Force.
 
@@ -366,10 +366,10 @@ capacity; the persistent Olympian-pair fact adds exactly two capacity.
 Generated Hex talents remain execution-facing frozen identities. The Planner
 does not simulate their individual acquisition, equip them into trait history,
 or derive its Olympian-node eligibility from them. Task Force requires an
-earlier concrete Spell Drop to have settled, keeps its deeper source requirement
-as a runtime-offer fact, and uses the ordinary one-step fallback contract when
-the preferred result is unavailable in game. Aspect of Selene's starting Sky
-Fall alone does not satisfy that prefix.
+earlier concrete Spell Drop to have settled and treats the authored deeper
+node requirement as player intent. If native eligibility rejects that exact
+result, execution reports a mismatch rather than substituting another trait.
+Aspect of Selene's starting Sky Fall alone does not satisfy that prefix.
 
 Talent Drop eligibility uses a latched closed state:
 

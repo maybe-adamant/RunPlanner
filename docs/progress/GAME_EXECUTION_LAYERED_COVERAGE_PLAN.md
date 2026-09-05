@@ -42,7 +42,7 @@ For every planner-modeled effect, the delivery path must answer six questions:
 
 The compiler remains a lossless translator. The Plan Executor remains a thin
 native realizer and observer. Neither may infer trait policy, reward
-eligibility, random outcomes, action dependencies, or fallback choices from
+eligibility, random outcomes, action dependencies, or substitute outcomes from
 game-name strings, encoded addresses, callback order, or current inventory.
 
 ## Outcome boundary for later biomes
@@ -56,7 +56,7 @@ After closure, enabling H, I, N, O, P, Q, or Dream Dives may add:
 - live evidence for already-implemented dormant native carriers.
 
 It must not silently add a new generic reward, acquisition, trait-effect,
-keepsake, Shop, Well, Pool, Shrine, fallback, or retained-state policy. If a
+keepsake, Shop, Well, Pool, Shrine, substitution, or retained-state policy. If a
 later biome exposes a genuinely new native carrier, that is not "just biome
 structure": its contact audit and universal disposition must be amended before
 the route is enabled.
@@ -92,9 +92,10 @@ callback is already known.
   obligations, Doors, sparse room-exit conformance, and diagnostic Run State.
 - The active executor uses a route cursor and one Room Occurrence session. The
   global callback/action cursor has been removed.
-- Runtime fallbacks, Artificer producer relations, Mystery Boon staging,
-  required boss rewards, Chaos pairs and returns, World Shops, Wells, Pools,
-  resources, fountains, racks, and F/G topology have working bounded paths.
+- Artificer producer relations, Mystery Boon staging, required boss rewards,
+  Chaos pairs and returns, World Shops, Wells, Pools, resources, fountains,
+  racks, and F/G topology have working bounded paths. Runtime fallback support
+  is a superseded path removed by Gate D2.5.
 - Ordinary and NPC trait offers, Mystery Boons, visible and direct level
   outcomes, direct pickup consumption, and Artificer transformations now have
   focused native adapters. Optional untaken actions and Time Piece destruction
@@ -406,7 +407,7 @@ During `starting`, the executor may realize only outcomes it can constrain at
 an exact native contact:
 
 - Experimental Hammer's selected Hammer or exhausted result;
-- Jeweled Pom's selected Hades trait or declared runtime fallback;
+- Jeweled Pom's exact selected Hades trait;
 - Transcendent Embryo's selected Chaos blessing;
 - Aspect of Selene's linked spell, layout, modeled Rare/Epic identities, and
   initial God Sent result; and
@@ -832,7 +833,7 @@ room exit under D2.5.
   distinct handle carrying the same semantic owner, and the owning adapter may
   retain a bounded modal/subcontact scope between native callbacks. The owner
   completes only at its declared native terminal contact. A preferred result
-  and its declared runtime fallback likewise complete the same owner.
+  completes that owner only through its exact declared result.
 - One exact handle may bind to one native carrier. Rebinding the same
   handle/carrier pair is idempotent; binding that handle to another carrier or
   binding one carrier to a different handle is a mismatch. Distinct declared
@@ -969,11 +970,10 @@ continuing.
 
 For example, Proper Upbringing remains fully modeled by the simulator but its
 deterministic native activation is not reimplemented. Ransoms likewise leave
-trait removal and level application to `SacrificeAllBoon`; the resulting
-planner-tracked trait projection is checked at room exit, but the executor does
-not perform the mutations. Steady Growth keeps its native encounter clock and
-rarity application; the executor steers only the authored target when that
-clock fires.
+trait removal and level application to `SacrificeAllBoon`; the executor does
+not perform or reconstruct those mutations. Steady Growth keeps its native
+encounter clock and rarity application; the executor steers only the authored
+target when that clock fires.
 
 Every Gate C-through-F carrier audit records:
 
@@ -982,7 +982,7 @@ Every Gate C-through-F carrier audit records:
 - what the planner simulates so later planning remains correct;
 - the smallest value, target, or branch the executor must steer, if any;
 - the exact native terminal contact that records the intended action as done;
-- which sparse room-exit modeled-state delta, if any, observes its result; and
+- which existing bounded conformance fact, if any, observes its result; and
 - why any executor-realized exception cannot use a bounded native seam.
 
 If the native sequence has no bounded terminal contact, or exact realization
@@ -1022,9 +1022,8 @@ empty future directories.
   own source. The existing effective rarity and `beforeRoomExit`
   `keepsakeEffects` conformance verifies the aggregate charge ledger;
 - let the native selection callback equip or stack the published selected
-  trait and complete when that exact selected-row callback returns. D2.5's
-  tracked-trait projection verifies the resulting trait and the absence of a
-  replaced trait at room exit. C1 consumes the planner's indivisible final
+  trait and complete when that exact selected-row callback returns. C1 consumes
+  the planner's indivisible final
   `effectiveLevel`, including any already-folded Jeweled Pom, Aspect of
   Persephone, or Premium Service contribution by supplying that final native
   row input. It does not inspect or recompute those sources;
@@ -1041,7 +1040,7 @@ one replacement offer, one Rejected-curse disabled option, one Calling Card
 and one provider-keepsake rarification outcome, one non-default effective-level
 row, and the no-begin/reroll/Concave alternative paths. Rarification witnesses
 prove the initial base rarity and room-exit charge ledger without observing
-individual button presses; D2.5 owns the selected effective result. The whole-offer
+individual button presses; the exact selected-row terminal owns the result. The whole-offer
 `fallbackGold` branch reuses the screen but completes from its native
 hidden-trait selection; its optional currency is native pass-through. This
 slice excludes Chaos, Spell, NPC, Pom, Mystery Boon, generated-child, purchase,
@@ -1144,14 +1143,13 @@ simulation.
   option preparation, selection, and exact terminal contact. Bind through the
   exact NPC source, install only the published three-row result at the
   menu-open seam, and let native button construction and trait equipment run;
-- resolve Narcissus Life Savings through the published `traitEligibility`
-  fallback by asking the matching native NPC option row whether it is
-  available. Do not infer Death Defiance or search the provider pool;
+- require Narcissus Life Savings to remain the exact published result. If its
+  native predicate rejects it, report a mismatch without substituting another
+  NPC choice or preventing the native interaction from continuing;
 - let every selected trait run its native `AcquireFunctionName`. In particular,
   never call `GiveRandomConsumables`, copy its output loop, or synthesize a
   Narcissus/Arachne drop. Complete the NPC interaction when its exact selected
-  native callback returns, independently of any later pickup; D2.5 observes the
-  resulting trait at room exit;
+  native callback returns, independently of any later pickup;
 - keep trait-to-generated-pickup provenance out of the execution wire. The
   room Timeline instead exposes one semantic-agnostic `claimReady` operation.
   At accepted interaction it filters compatible unfinished actions by the open
@@ -1183,7 +1181,8 @@ simulation.
 - add later NPC functions only in their biome gate or a separately reviewed
   universal NPC extension, not speculatively in this F/G slice.
 
-Primary witnesses are Arachne's trait menu; Narcissus menu fallback; separation
+Primary witnesses are Arachne's trait menu; exact Narcissus Life Savings and
+native-unavailable mismatch; separation
 of selected-trait completion from asynchronous native drop creation; one Pom
 Slice handoff to C2; one direct-pickup handoff to C2.5; native pass-through for
 an unmodeled companion drop; two independent Mystery Boons that may be claimed
@@ -1447,20 +1446,19 @@ declaration matrix.
 Intended commit: Plan Executor `refactor(executor): isolate Chaos acquisitions`.
 Run Planner changes are excluded.
 
-#### D2.5 — Room-exit modeled-state conformance
+#### D2.5 — Exact authored intent and runtime-fallback retirement
 
-D2.5 was locked against Run Planner `6d56ebc2`, Plan Executor `e90d5aa`, and
+D2.5 is locked against Run Planner `562463e9`, Plan Executor `e90d5aa`, and
 modpack shell `6f40ceb4`. The shell already has the completed D2 executor
 revision checked out but not yet pinned.
 
-User-visible outcome: planner-directed actions remain permissive inside the
-room while skipped actions and incorrect modeled results are still detected at
-one stable room-exit checkpoint. A player may carry traits the planner does not
-model without producing a false mismatch.
+User-visible outcome: one authored result remains the only result throughout
+simulation and execution. The game module steers that exact result and never
+silently substitutes another trait or item that would create an unauthored
+alternate chronology.
 
 This is a foundational correction to the completed Timeline and acquisition
-gates, not another trait effect. It must complete before D3. Transaction
-completion and semantic state conformity become separate concerns:
+gates, not another trait effect. It must complete before D3:
 
 ```text
 exact native contact is accepted
@@ -1469,7 +1467,7 @@ exact native contact is accepted
 
 room exit
   -> every intended transaction obligation is complete
-  -> planner-owned modeled-state projection matches native state
+  -> existing specialized conformance facts are checked
   -> room session closes
 ```
 
@@ -1483,127 +1481,107 @@ room; they are not post-callback inventory proofs.
 
 After the original native terminal callback returns successfully, adapters do
 not scan Hero traits, Arcana, retained effects, or another native state table
-and do not thread a boolean semantic proof back through the callback stack.
-The occurrence-local Timeline records only that the intended native action
+and do not thread a semantic proof back through the callback stack. The
+occurrence-local Timeline records only that the intended native action
 finished. Unresolved intended transactions remain independently visible to the
 existing room-exit obligation checkpoint.
 
-##### Planner-owned tracked projection
+##### Exact-intent policy
 
-The Planner Engine publishes an explicit sparse modeled-state product from
-canonical Run State. Diagnostics remain diagnostics and are not reclassified
-as blocking state.
+- The authored trait or item identity is the only simulated and executable
+  result. There is no preferred/fallback pair, substitute item, hidden Hades
+  reserve, realized alias, or alternate tracked state.
+- Volatile native predicates remain documented source facts but are not
+  authored Planner inputs. The author is responsible for choosing a result
+  compatible with the live run state that the Planner deliberately does not
+  model.
+- At the native contact, the adapter may ask whether the exact published result
+  is currently available. If it is unavailable, missing from the native source
+  pool, or rejected by the native function, the adapter reports one execution
+  mismatch, leaves native player input operational, and does not complete the
+  transaction.
+- Later levels, rarity changes, removals, and other target-bearing actions keep
+  the same single authored trait identity. No adapter searches for a substitute
+  identity or receives an alternative target.
+- Planner Run State remains diagnostic evidence. This gate does not publish or
+  block on a generic trait/Arcana inventory projection. Existing specialized
+  retained conformance required by concrete execution gates remains unchanged.
+- Starting Experimental Hammer, Jeweled Pom, and Transcendent Embryo results are
+  steered at their existing native contacts. Static weapon, aspect, Arcana,
+  Fear, keepsake, and Hex checks remain owned by Gate A.2. Generated-result
+  callbacks do not publish a second semantic proof channel.
 
-- The execution plan carries one initial tracked-trait projection from the
-  first reached `roomEntered` Run State. Each row contains the exact trait key
-  and only the final fields modeled for that identity: rarity, level, and
-  Hammer rank when applicable.
-- Each occurrence carries a sparse trait delta from the prior reached room's
-  `beforeRoomExit` snapshot to its own `beforeRoomExit` snapshot. After an
-  unobserved gap, the occurrence's `roomEntered` snapshot is the baseline,
-  matching the existing carry-state derivation. A `set` row means that identity
-  must exist with the published modeled fields; a `remove` key means that
-  identity must be absent. `set` covers both acquisition and mutation. The two
-  collections are disjoint, key-sorted, and omitted when unchanged.
-- The executor accumulates those deltas into one expected tracked projection.
-  Once a key enters that projection it remains tracked: a later removal means
-  expected absence rather than returning the key to an unknown state. A later
-  `set` may add it again.
-- At room exit the executor reads the native Hero trait collection once and
-  compares only tracked keys and their published fields. Native traits whose
-  keys never entered the projection are ignored, even when the game or catalog
-  knows those identities. Full native-inventory equality is forbidden.
-- The general trait projection follows the Planner Engine's
-  `equippedTraits` product. Chaos clocks, pending blessing operands, keepsake
-  charges, Shrine deliveries, Well durations, Path progress, and other
-  retained families remain in their existing specialized conformance facts;
-  this gate does not flatten them into generic trait fields.
-- The existing starting-loadout Arcana result supplies the initial tracked
-  Arcana projection. Each occurrence publishes sparse `set` and `remove`
-  Arcana deltas for automatic in-run changes such as Judgment and Crystal
-  Figurine. Native cards outside that tracked projection are ignored at room
-  exit; exact starting-loadout validation remains unchanged.
+This policy applies uniformly to ordinary and NPC trait offers, Jeweled Pom,
+Task Force, Last Gasp, Death Defiance-adjacent results, Nemesis items, Shops,
+Shrines, Wells, Twist, and Travel Deal refills. A source family may not retain
+fallback substitution merely because its current downstream effects happen to
+be sim-neutral.
 
-The new tracked projections carry their values directly; they do not reuse the
-existing fact-kind reference to a diagnostic frame for inventory comparison.
-Existing specialized conformance facts may retain their decoded expected-value
-expansion. The assembler derives the initial projection and room deltas from
-canonical snapshots; it does not inspect action kinds, trait effects, or
-authored callback order.
+##### Deliverables
 
-Runtime fallback remains one declared alternative for the same semantic owner,
-not a divergence. When an existing availability contact resolves a published
-preferred/fallback pair, the modeled-state product supplies the bounded
-preferred and fallback final rows needed at the checkpoint, including each
-identity's own modeled fields. The room session records which declared
-alternative was realized and tracks that identity thereafter. Lua never
-searches a pool, copies the preferred trait's rarity or level onto a different
-declaration, or accepts a third identity.
-
-##### Executor correction
-
-- change the Timeline port from `complete(handle, proof)` to
+- Change the Timeline port from `complete(handle, proof)` to
   `complete(handle)`. Completion still retires every handle for that semantic
-  owner and preserves all prerequisite and obligation behavior;
-- keep exact contact admission and structural terminal checks in each owning
+  owner and preserves all prerequisite and obligation behavior.
+- Keep exact contact admission and structural terminal checks in each owning
   adapter, but remove post-callback Hero/Arcana/effect-state verification and
-  all `expected`/`observed` arguments used only by `transaction-outcome`;
-- add focused tracked-trait and tracked-Arcana readers beneath
-  `room/conformance/`. They project native state into the explicit expected
-  keys instead of returning the complete inventory;
-- make room close check unresolved obligations first, then apply and compare
-  the occurrence delta atomically. Commit the accumulated expected projection
-  only after it conforms. The existing first-mismatch policy still disables
-  later steering without blocking native player input;
-- retain specialized conformance readers and immediate structural mismatches.
-  Remove only duplicated semantic outcome verification that the new checkpoint
-  owns; and
-- delete obsolete adapter `verify` helpers and the generic
-  `transaction-outcome` path when no remaining caller requires them. Do not
-  preserve a compatibility proof parameter or a parallel full-inventory
-  comparator.
+  all `expected`/`observed` arguments used only by `transaction-outcome`.
+- Remove every runtime-fallback declaration, normalized catalog field,
+  simulator emission/product, execution-plan carrier, codec branch, compiler
+  join, Lua decoder, availability-substitution helper, and fallback-specific
+  fixture expectation.
+- Remove every callback-to-checkpoint realization stamp and do not replace it
+  with a tracked trait/Arcana state projection.
+- Make exact native unavailability a mismatch at the owning contact without
+  preventing the native base function from running.
+- Retain specialized conformance readers and immediate structural mismatches.
+  Delete obsolete adapter `verify` helpers and the generic
+  `transaction-outcome` path when no remaining caller requires them.
 
 ##### Required witnesses
 
-Planner Engine and codec tests own:
+Catalog, Planner Engine, and codec tests own:
 
-- an initial tracked set containing a rarity/level trait and a ranked Hammer;
-- one acquisition, one rarity or level mutation, one slotted replacement, one
-  Ransom or Pool removal, and one unchanged room with no delta;
-- one Judgment or Crystal Figurine Arcana delta;
-- deterministic ordering, duplicate/conflicting `set`/`remove` rejection, and
-  strict protocol round-trip;
-- one preferred/fallback alternative with no third outcome; and
-- a real execution fixture carrying both a trait mutation and a removal or
-  Arcana change. No fabricated execution-only state builder is added.
+- volatile traits/items remain authorable as exact deterministic results where
+  their existing Planner prerequisites permit them;
+- selected offers, direct keepsake results, Shop/Well/Shrine/Nemesis outcomes,
+  and Travel Deal refills contain only their exact authored identity;
+- protocol v17 retains its existing generic strict unknown-field rejection; and
+- real execution fixtures witness the current exact-result product without
+  carrying a historical absence assertion.
+
+Fallback-specific codec mutations, catalog-absence assertions, and repository
+searches may be used once while implementing the removal, but they are deleted
+before commit. Durable tests describe the current product and generic strict
+codec policy rather than preserving retired fallback vocabulary indefinitely.
 
 Plan Executor tests own:
 
-- accumulating the initial projection through at least two room deltas;
-- accepting extra untracked native traits while rejecting a missing tracked
-  trait, a wrong published rarity/level/Rank, and a still-present removed trait;
-- accepting either declared runtime-fallback outcome and rejecting any other
-  identity;
-- consuming an exact transaction at its native terminal without a state-proof
-  argument, while a wrong contact or skipped transaction remains unresolved;
-- detecting unresolved obligations separately from modeled-state mismatch;
-- one automatic Arcana result observed only at room exit; and
-- proving that no acquisition, level, NPC, Chaos, encounter, feature,
-  transformation, or automatic adapter still threads semantic outcome proof
-  through `complete`.
+- exact unavailable trait, NPC, item-generation, and purchase contacts report a
+  mismatch, do not complete the owner, and still call the native base path;
+- later level and removal adapters target only the exact published identity;
+- consuming an exact transaction at its native terminal requires no semantic
+  state-proof argument, while a wrong contact or skipped transaction remains
+  unresolved;
+- unresolved obligations remain distinct from specialized conformance
+  mismatch; and
+- no acquisition, level, NPC, Chaos, encounter, feature, transformation, or
+  automatic adapter threads semantic outcome proof through `complete`.
 
 The protocol advances from v16 to v17 with no compatibility decoder. Focused
 audits for ordinary traits, levels, NPC acquisitions, transformations, Chaos,
-and automatic outcomes must be corrected in the same gate wherever they still
-assign semantic post-state proof to a callback. Source facts and native
-steering contacts remain unchanged.
+automatic outcomes, and commerce must be corrected wherever they still assign
+semantic post-state proof or runtime substitution to an adapter. Source facts
+and native steering contacts remain unchanged. The runtime-offer fallback audit
+must preserve its source facts while recording fallback substitution as a
+retired Planner policy.
 
 Exclusions:
 
 - no full native trait or Arcana equality;
-- no adoption of incidental native traits into the tracked projection;
 - no callback/action cursor, event log replay, untyped cross-domain state-diff
   language, or executor reconstruction of planner trait effects;
+- no realized-trait alias map, callback realization stamp, fallback carrier,
+  substitution search, or hidden reserve;
 - no new steering behavior for All Together, Natural Selection, Concave Stone,
   automatic outcomes, commerce, or later biomes; and
 - no removal of structural contact checks needed to bind a carrier, complete a
@@ -1611,8 +1589,8 @@ Exclusions:
 
 Intended commits:
 
-- Run Planner: `feat(execution): publish modeled room state deltas`
-- Plan Executor: `refactor(executor): verify modeled state at room exit`
+- Run Planner: `refactor(execution): retire runtime offer fallbacks`
+- Plan Executor: `refactor(executor): enforce exact authored outcomes`
 - Modpack shell: pin the completed executor commit.
 
 #### D3 — All Together exact direct grants
@@ -1628,9 +1606,8 @@ Intended commits:
   eligible pair;
 - let native `AddTraitToHero`, presentation, activation, element contribution,
   and God Sent reevaluation run normally; and
-- let the outer C1 transaction complete at its existing native terminal while
-  D2.5's room-exit tracked-trait projection verifies the four resulting
-  identities.
+- let the outer C1 transaction complete at its existing native terminal. The
+  executor does not reconstruct the resulting inventory as a second proof.
 
 Primary witnesses are four selected grants, one forced remaining member, and
 one exhausted/null set. Planner tests own eligibility and complete set
@@ -1657,8 +1634,8 @@ Intended commits:
 - stop for adjudication before implementation if a focused source/contact audit
   finds an authored legal sequence that cannot be represented by one initial
   native order plus native condemnation; and
-- let native level application return to C1 without a nested proof; D2.5's
-  room-exit tracked-trait projection verifies the final per-trait levels.
+- let native level application return to C1 without a nested proof or a second
+  executor-owned trait-state reconstruction.
 
 Primary witnesses are fewer than eight successful levels due to exhausted
 targets, a complete eight-level distribution over several slots, and a target
@@ -1684,10 +1661,9 @@ Intended commits:
 - retain the outer C1 selected-acquisition scope through that recursive call so
   the D3 or D4 nested consequence for the residual option can run when needed;
   and
-- let C1 complete after the bounded recursive native selection returns. D2.5's
-  tracked-trait projection verifies the outer and residual identities, while
-  existing `keepsakeEffects` room-exit conformance remains the authority for
-  the Stone charge/status ledger.
+- let C1 complete after the bounded recursive native selection returns. Existing
+  `keepsakeEffects` room-exit conformance remains the authority for the Stone
+  charge/status ledger; no fallback or aggregate trait-state proof is added.
 
 Primary witnesses are Epic Stone no-proc, Epic Stone proc, Cherished Heirloom's
 forced rank-IV proc, a residual ordinary trait, and one residual option carrying
@@ -1851,13 +1827,14 @@ Shop-like rewrite.
 - bind the exact native slot/button, let native code pay costs and grant the
   item, then hand acquired Boons, levels, and direct pickups to C1, C2, or
   C2.5;
-- apply the exact one-step Last Stand availability fallback without searching
-  another pool; and
+- require each purchased item to remain the exact authored inventory result;
+  native unavailability is a mismatch and never triggers a substitute search;
+  and
 - leave price, Gold, and simulation-neutral purchase effects entirely native.
 
 Primary witnesses are a purchased and unpurchased offer in each F/G Shop
 shape, a native payment/application, a trait acquisition handoff, a consumable
-handoff, and preferred/fallback/neither availability.
+handoff, and exact-result/native-unavailable behavior.
 
 #### E2 — Pool of Purging
 
@@ -1865,8 +1842,8 @@ handoff, and preferred/fallback/neither availability.
 - when interaction is authored, steer the three declared sale choices without
   replacing the native menu;
 - bind the selected slot and exact trait, let native sale code remove it, and
-  complete when the exact sale callback returns; D2.5's tracked-trait
-  projection verifies the resulting absence at room exit; and
+  complete when the exact sale callback returns without reconstructing the
+  complete trait inventory at room exit; and
 - ignore Gold proceeds and reroll behavior.
 
 Primary witnesses are uninteracted Pool pass-through, one sale, three sales in
@@ -1880,8 +1857,8 @@ without blocking the native sale callback.
 - steer an authored three-slot inventory and bind each purchased native item,
   while letting native code pay, grant, stack, and expire every effect;
 - classify neutral, Spark, Yarn, Hymn, Discount, Empty Slot, Extended, Twist,
-  and Last Stand before implementation; steer only Twist/fallback identity or
-  a later authored target that is genuinely volatile;
+  and Last Stand before implementation; steer only an exact authored Twist
+  identity or a later authored target that is genuinely volatile;
 - preserve Travel Deal's planner-owned purchase/refill prerequisites without
   recomputing “first purchase” in Lua; once ready, steer the native refill item
   and optional refill purchase; and
@@ -1893,7 +1870,7 @@ Primary witnesses:
 - interacted and uninteracted Well;
 - Travel Deal source, refill readiness, competing-purchase barrier, and
   optional refill purchase;
-- Twist preferred/fallback result and Last Stand availability fallback;
+- exact Twist and Last Stand results plus native-unavailable mismatch;
 - one neutral stacking item proving that native application creates no extra
   actuator; and
 - a test-owned classification for every normalized Well effect.
@@ -1912,7 +1889,7 @@ requirements.
 
 Each E1-through-E3 slice has its own executor commit, independent review, and
 modpack pin. Run Planner changes are limited to demonstrated missing exact
-inventory, dependency, or fallback facts.
+inventory or dependency facts.
 
 ### Gate F — Cascading remaining actions and closure
 
@@ -1969,7 +1946,7 @@ Primary witnesses are:
 - verify the seven F/G room-exit conformance readers and keep later-route Echo
   Shop duplicate and Shrine delivery readers explicitly dormant;
 - audit every `RoomActionReference`, automatic transaction, acquisition
-  disposition, runtime-fallback contact, retained-effect family, and Overview /
+  disposition, retained-effect family, and Overview /
   Doors variant against the contact library;
 - delete superseded positive-only hooks, duplicated native readers, copied game
   algorithms, and broad claims that are no longer true; and
@@ -2079,7 +2056,7 @@ contact adjustment.
 - a new global action cursor, callback replay trace, scheduler, event bus, or
   runtime semantic rule engine;
 - compiler-side interpretation of trait, reward, item, or keepsake meaning;
-- fuzzy native matching or authored-order fallback matching;
+- runtime substitution, fuzzy native matching, or authored-order matching;
 - mid-run attach, repair, replay, or replanning;
 - mutating permanent save unlocks or Crossroads configuration;
 - health, Gold, damage, Magick, price, or meta-resource simulation;

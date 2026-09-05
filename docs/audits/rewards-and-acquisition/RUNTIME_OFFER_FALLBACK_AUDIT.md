@@ -1,22 +1,19 @@
-# Runtime Offer Fallback Audit
+# Runtime Offer Eligibility Audit
 
 ## Purpose
 
-This is the durable source-and-disposition authority for offer results whose
-live eligibility can differ from the deterministic state authored and
-simulated by the Run Planner. It records:
+This is the durable source-and-disposition authority for authored offer results
+whose live eligibility can differ from the deterministic state simulated by the
+Run Planner. It records:
 
-- why Death Defiance-adjacent and graph-local Task Force offer requirements are
-  runtime facts rather than useful authored inputs;
+- the volatile native predicates that the Planner deliberately does not model;
 - the one phase-local exception owned by Gorgon Amulet;
-- the declaration-owned trait and item fallback mappings; and
-- the boundary between deterministic Planner intent and safe game-module
-  execution.
+- why runtime fallback substitution was rejected; and
+- the boundary between exact Planner intent and safe game-module execution.
 
 This document does not prescribe a schema number, command name, React control,
 module boundary, delivery gate, or migration sequence. Those belong to the
-active implementation plan. The fallback mappings and semantic invariants here
-remain authoritative after that temporary plan is removed.
+active implementation plan.
 
 ## Source basis
 
@@ -60,7 +57,7 @@ The relevant installed game-data contacts are:
 
 The focused trait, keepsake, Nemesis, World Shop, Well, and Shrine audits retain
 the complete surrounding source facts. This audit owns only their shared
-runtime-fallback disposition.
+runtime-eligibility disposition.
 
 ## Volatile predicates are not authored inputs
 
@@ -80,18 +77,14 @@ that the Planner deliberately does not simulate:
 A shared Death Defiance boolean collapses opposite and unrelated combat
 predicates. A separate Task Force boolean would ask the author to reproduce the
 unmodeled Path of Stars graph and exact node-investment order. The Planner can
-still enforce the necessary prefix from canonical reward history: a concrete
-Spell Drop must have settled. Selecting Task Force expresses the deeper
-node-acquisition intent. Persisting another boolean adds no useful intent.
+still enforce Task Force's necessary modeled prefix: a concrete Spell Drop
+must have settled. Selecting Task Force expresses the deeper node-acquisition
+intent. Aspect of Selene's starting Sky Fall does not satisfy that prefix
+before the Aspect's first concrete Spell Drop.
 
-The Planner therefore authors and simulates the preferred result without a
-general Death Defiance condition or an authored Olympian-node acquisition
-fact. Task Force alone retains the earlier-concrete-Spell-Drop prefix because
-that fact is already modeled in reward history. Aspect of Selene's starting Sky
-Fall does not satisfy it before the Aspect's first concrete Spell Drop. The
-catalog retains each real source requirement as evidence and as runtime
-eligibility information. A declared fallback absorbs a failed live predicate
-at the execution boundary.
+These predicates remain source evidence only. They are not normalized catalog
+capabilities, authored controls, simulator inputs, execution-plan availability
+contacts, or game-module substitution instructions.
 
 ## Gorgon Amulet is the phase-local exception
 
@@ -103,174 +96,66 @@ eligibility.
 
 The exact Gorgon phase therefore retains one narrowly scoped authored trigger
 fact. It must not be reused as a general trait-offer, Shop, NPC, or route-level
-Death Defiance flag. If Athena appears, her resulting trait choice uses the
-ordinary fallback policy below rather than persisting a second copy of the
-phase predicate.
+Death Defiance flag. If Athena appears, her resulting trait choice follows the
+same exact-authored-result policy as every other trait choice.
 
-## Planner fallback contract
+## Exact-authored-result contract
 
-The fallback contract has three layers:
+The authored trait or item identity is the only result simulated and exported.
+The Planner does not declare an alternative, resolve a pool-local replacement,
+or model multiple downstream futures for an unobserved runtime predicate.
 
-1. A declaration records the small ordered fallback domain appropriate to its
-   source.
-2. The Planner already knows the complete authored offer and simulated history,
-   so plan materialization resolves one exact fallback for the selected result.
-3. The game module tries the preferred result and, only when it is not currently
-   available to offer, tries that one exported fallback.
+At execution:
 
-The game module does not own a fallback search, reproduce a provider pool, or
-interpret why an edge exists. It applies the same operation to every supported
-result:
+1. the adapter reaches the exact native carrier for the authored result;
+2. if native code accepts that identity, the ordinary native callback chain
+   realizes it and completes the transaction;
+3. if the identity is unavailable, the adapter reports the first mismatch;
+4. no substitute is selected and the intended transaction remains incomplete;
+   and
+5. the native base function and player input remain operational after planner
+   enforcement is disabled.
 
-```text
-try preferred X
-  -> if X is unavailable, try exported fallback Y
-```
+The game module must not search another provider member, walk a fallback graph,
+infer why native eligibility failed, rewrite the authored route, or reconstruct
+the simulator's later state. A native-unavailable result is a divergence from
+the authored plan, not a conforming alternate outcome.
 
-Each acquisition performs at most one fallback step. A fallback identity may
-itself declare a fallback for a separate later acquisition, but execution does
-not recursively walk a graph for the current acquisition. If both the preferred
-and exported fallback are unavailable because the live run escaped the
-supported envelope, the module must not force an illegal result; it reports the
-failed execution contact.
+This contract applies uniformly to ordinary and NPC trait offers, direct
+keepsake results such as Jeweled Pom, Task Force, Hades Last Gasp, Nemesis
+items, World Shops, Shrines, Wells, Twist results, and Travel Deal refills.
 
-The actual granted identity should remain observable to the game-module audit,
-but it does not rewrite the authored project or retrospectively re-simulate the
-route.
+## Why runtime fallback substitution is retired
 
-### Availability contacts are the only runtime policy boundary
+The former policy exported a preferred identity plus one declaration-owned
+alternative. That looked bounded at the acquisition contact but was not a
+bounded execution contingency. The alternative can differ from the simulated
+identity, then acquire levels, change rarity, enable or disable later offers,
+participate in removal effects, or otherwise change chronology. Treating both
+states as valid would require either:
 
-The published fallback relation has one wire shape everywhere: a preferred key,
-one fallback key, and one closed availability contact. The contact identifies
-where the native adapter asks the game whether the preferred result can be
-realized; it does not encode a named game predicate or a second semantic
-fallback policy. The supported contacts are:
+- multiple simulated futures throughout the remaining route;
+- executor-side semantic state repair; or
+- a false claim that the fallback and authored result are equivalent.
 
-| Contact                    | Native question                                         |
-| -------------------------- | ------------------------------------------------------- |
-| `traitEligibility`         | Is this trait currently eligible for the trait offer?   |
-| `storeInventoryGeneration` | Can this item occupy the generated store position?      |
-| `storePurchase`            | Can this already-generated item be purchased now?       |
-| `npcConsumableSelection`   | Can this NPC consumable be selected at its interaction? |
+All three conflict with the Planner's single validated chronology and the thin
+compiler/executor boundary. The fallback declarations, availability contacts,
+resolved fallback products, wire payloads, Lua substitution helpers, and
+realized-alias verification are therefore retired together. The source
+predicates above remain documented because they explain the possible live
+mismatch.
 
-The Planner selects the contact and resolves the one-step relation from its
-complete-valid product. Execution copies that relation without interpreting its
-meaning. The game module performs the native availability question at the
-declared contact, tries the fallback only when the preferred key is unavailable,
-and reports a contact failure when neither key can be realized. Realizing either
-the preferred key or its declared fallback satisfies the execution contact; the
-fallback is a conforming contingency, not a route divergence. The game module
-does not search a provider pool, infer a missing Death Defiance or Hex condition,
-or recurse through another fallback.
+## Scope
 
-The same relation may intentionally be published twice for one source address
-when generation and purchase are distinct native contacts. Those are two
-observations of one planner-selected preferred/fallback pair, not two competing
-fallback representations. A singular `runtimeFallback` field is not part of the
-wire or engine product.
-
-## Trait fallback declarations
-
-A trait offer can contain three visible traits. Each volatile preferred trait
-therefore declares three ordered, distinct, requirement-free alternatives from
-the same giver. During plan materialization, the other two authored screen
-members and any trait unavailable in the simulated history are removed. The
-first remaining declaration member becomes the one fallback exported in the
-Planner JSON.
-
-For a direct result such as Jeweled Pom, there are no companion screen members
-to remove, but the same Hades declaration and one-result JSON contract apply.
-The selected trait, its other two screen members, and its fallback never become
-additional authoring controls.
-
-The durable mappings are:
-
-| Preferred trait                                     | Ordered declaration fallbacks                                                   |
-| --------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `NarcissusH` — Life Savings                         | `NarcissusB`, `NarcissusC`, `NarcissusD`                                        |
-| `EchoDeathDefianceRefill` — Survive Survive Survive | `DiminishingDodgeBoon`, `DiminishingHealthAndManaBoon`, `EchoDoubleLevelBoon`   |
-| `DeathDefianceRetaliateCurse` — Malice in Kind      | `HealingOnDeathCurse`, `MoneyOnDeathCurse`, `ManaOverTimeCurse`                 |
-| `DeathDefianceRefillBoon` — Renewed Faith           | `InvulnerabilityDashBoon`, `RetaliateInvulnerabilityBoon`, `FocusLastStandBoon` |
-| `OlympianSpellCountBoon` — Task Force               | `InvulnerabilityDashBoon`, `RetaliateInvulnerabilityBoon`, `FocusLastStandBoon` |
-| `HadesDeathDefianceDamageBoon` — Last Gasp          | `HadesLifestealBoon`, `HadesPreDamageBoon`, `HadesChronosDebuffBoon`            |
-
-The alternatives deliberately skip requirement-bearing neighbors such as
-Narcissus Verdure Sampler and Hades Howling Soul. Echo uses the same
-three-choice trait rule as Narcissus, Medea, Athena, and Hades; it does not own
-a special fallback mechanism. A condition-bearing trait selected through a
-nested or direct source still uses its own giver's declaration.
-
-Task Force deliberately reuses Renewed Faith's three requirement-free Athena
-alternatives. Its real prerequisite remains source evidence, but the Planner
-does not infer an equipped Olympian talent from a generated Hex layout or from
-aggregate invested points. Candidate generation requires one earlier concrete
-Spell Drop to have settled; Aspect of Selene's starting Sky Fall alone is
-therefore insufficient, while the Aspect's later Spell Drop satisfies the
-prefix. The authored Task Force selection expresses the remaining node-level
-intent; the selected trait-offer product exports one legal same-giver fallback
-when the hidden graph path has not actually acquired its required Olympian
-node.
-
-Jeweled Pom illustrates the intended simulation boundary. If its authored
-result is Last Gasp, simulation records Last Gasp as acquired, so a later Hades
-menu cannot offer Last Gasp. If Last Gasp is unavailable in the live run, the
-Pom action grants its exported Hades fallback instead. The later plan is not
-rebuilt around that runtime contingency.
-
-## Item fallback declarations
-
-Item fallbacks belong to an item's membership in an exact source pool, not to
-the global reward identity. `LastStandDrop` appears in World Shop, Shrine, and
-Nemesis pools with different legal peers. `LastStandShopItem` appears in the
-Well healing group and the narrower Twist nested pool. A single global fallback
-would invent cross-pool outcomes.
-
-One-choice item results need one fallback. Armor is preferred over healing, and
-armor falls back to Max Health when that identity belongs to the same physical
-pool. I/Q World Shop and Shrine Max Health entries occupy another slot group,
-so they are not legal same-position fallbacks.
-
-The durable pool-local edges are:
-
-| Exact offer pool                     | General fallback edges                                                              |
-| ------------------------------------ | ----------------------------------------------------------------------------------- |
-| I/Q World Shop Survival, first half  | `LastStandDrop -> ArmorBoost`; `ArmorBoost -> RoomRewardHealDrop`                   |
-| I/Q World Shop Survival, second half | `LastStandDrop -> ArmorBigBoost`; `ArmorBigBoost -> HealBigDrop`                    |
-| Shrine of Hermes first group         | `LastStandDrop -> ArmorBoost`; `ArmorBoost -> ArmorBigBoost`                        |
-| Well healing group                   | `LastStandShopItem -> ArmorBoostStore`; `ArmorBoostStore -> EmptyMaxHealthShopItem` |
-| Well Twist nested pool               | `LastStandShopItem -> EmptyMaxHealthShopItem`                                       |
-| Nemesis ordinary free-item pool      | `LastStandDrop -> ArmorBoost`; `ArmorBoost -> EmptyMaxHealthDrop`                   |
-
-The second edge in a Travel Deal-capable pool protects a specific legal
-sequence without encoding that sequence in production policy. For example, an
-authored Last Stand purchase may have Armor as its Travel Deal refill. If the
-live Last Stand predicate fails, the purchase produces Armor; Armor is then
-unavailable as the refill because Travel Deal does not regenerate the purchased
-identity, so that separate refill acquisition uses Armor's declared fallback.
-Both actions still execute the same one-step generic rule.
-
-Nemesis has no Travel Deal interaction, but its Armor-to-Max-Health edge keeps
-the free-item result safe if Armor itself is unavailable. Twist has no Armor
-member, so its Last Stand result falls directly to the Max Health member of its
-nested pool.
-
-## Determinism and scope
-
-This policy deliberately does not reproduce the game's weighted replacement
-selection. The authored result is the intended deterministic lane; the ordered
-fallback is a deterministic safety result. Probability is irrelevant.
-
-The policy also does not add:
+This disposition does not add:
 
 - a Death Defiance count, capacity ledger, health model, or damage model;
 - authored runtime-condition checkboxes outside Gorgon's encounter phase;
-- fallback selection controls in the editor;
-- a global fallback item independent of its source pool;
-- recursive fallback traversal;
-- price, affordability, or weighted-choice simulation; or
+- alternate-result controls in the editor;
+- recursive or one-step fallback traversal;
+- price, affordability, or weighted-choice simulation;
+- full Hero trait or Arcana equality checks; or
 - a second planner inside the game module.
 
-The stable outcome is that volatile live eligibility no longer shapes authored
-state. Catalog declarations own the bounded contingency domain, Planner JSON
-exports one resolved alternative, and the game module performs one safe,
-generic availability substitution.
+The stable outcome is one authored result, one execution result, and one honest
+mismatch if the unmodeled native predicate prevents that result.

@@ -221,25 +221,21 @@ following:
 - unlocking exits when appropriate.
 
 The executor observes the selected button but calls the native function first.
-After the outer call returns, the acquisition completes only when:
-
-- the selected identity is the authored preferred or declared runtime-fallback
-  identity;
-- the resulting trait exists with the published effective rarity and level,
-  when those fields apply;
-- the replaced trait is absent when this is a replacement.
+After the exact selected-row callback returns, the acquisition completes from
+that bounded structural terminal. It does not reconstruct the Hero's trait
+inventory, rarity, levels, or replacement state as a second semantic proof.
 
 This proof settles only the primary acquisition. `AddTraitData` launches a
 trait's `AcquireFunctionName` on a thread, so the outer return does not prove a
 consequential selected-trait effect has finished.
 
-### Runtime fallback
+### Native eligibility mismatch
 
-A declared one-step runtime fallback changes the selected identity, not the
-transaction owner. The adapter resolves it through the published
-`traitEligibility` contact before installing the offer. Acquiring the declared
-fallback completes the same owner and is not a divergence. Companion rows are
-not silently replaced by fallback policy.
+The selected identity remains the exact authored identity. If the native offer
+contact rejects it, the adapter reports a mismatch and does not complete the
+transaction. It does not substitute another provider member or infer the
+source predicate. Native input and the base callback remain operational after
+planner enforcement is disabled.
 
 ### Whole-offer Fallback Gold
 

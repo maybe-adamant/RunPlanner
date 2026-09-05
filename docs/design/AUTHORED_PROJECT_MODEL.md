@@ -43,10 +43,10 @@ Nemesis random-event outcomes and their exact generated acquisition ownership;
 switching away from the event retains its detail dormant for restoration.
 Schema 54 removes general Death Defiance offer-condition state from traits,
 Shops, and Keepsake results while preserving Gorgon Amulet's narrowly owned
-`athenaTriggerConditionMet` phase fact. Runtime offer fallbacks are derived
-simulation output, never persisted intent. Derived history, progress, Ransom
-removals, automatic rarity mutations, Nemesis settlement, and runtime fallback
-resolution remain outside the persisted document. Schema 55 introduced the
+`athenaTriggerConditionMet` phase fact. Runtime offer fallbacks are not authored,
+simulated, or exported; an unavailable exact result is an execution mismatch.
+Derived history, progress, Ransom removals, automatic rarity mutations, and
+Nemesis settlement remain outside the persisted document. Schema 55 introduced the
 fixed Boss/Postboss occurrences; schema 68 replaces that parallel completion
 container with ordinary topology occurrences and `fixedRoomLinks`. Selecting a
 Preboss creates its declaration-fixed Boss and route-position Postboss chain,
