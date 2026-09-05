@@ -105,12 +105,26 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
   }
   if (record.kind !== 'traits') fail(`${label}.kind is unsupported`);
   exact(record, ['kind', 'giver', 'options', 'selected'], ['rejected'], label);
+  const allTogetherResult = (value: unknown, resultLabel: string) => {
+    const result = object(value, resultLabel);
+    exact(result, ['earth', 'fire', 'air', 'water'], [], resultLabel);
+    const outcome = (setKey: 'earth' | 'fire' | 'air' | 'water') => {
+      const selected = result[setKey];
+      return selected === null ? null : stringValue(selected, `${resultLabel}.${setKey}`);
+    };
+    return Object.freeze({
+      earth: outcome('earth'),
+      fire: outcome('fire'),
+      air: outcome('air'),
+      water: outcome('water'),
+    });
+  };
   const options = array(record.options, `${label}.options`, 3).map((entry, index) => {
     const option = object(entry, `${label}.options[${index}]`);
     exact(
       option,
       ['key'],
-      ['baseRarity', 'rarity', 'effectiveLevel', 'replacement'],
+      ['baseRarity', 'rarity', 'effectiveLevel', 'allTogetherResult', 'replacement'],
       `${label}.options[${index}]`,
     );
     const replacement =
@@ -138,6 +152,14 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
             effectiveLevel: integer(
               option.effectiveLevel,
               `${label}.options[${index}].effectiveLevel`,
+            ),
+          }),
+      ...(option.allTogetherResult === undefined
+        ? {}
+        : {
+            allTogetherResult: allTogetherResult(
+              option.allTogetherResult,
+              `${label}.options[${index}].allTogetherResult`,
             ),
           }),
       ...(replacement === undefined
