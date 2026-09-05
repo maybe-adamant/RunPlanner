@@ -152,6 +152,8 @@ export interface RawArcanaCardDeclaration {
     | { readonly kind: 'automatic'; readonly rule: ArcanaActivationRule };
   readonly permanentRank: 3;
   readonly fatedIncompatible?: boolean;
+  readonly randomDrawChance?: number;
+  readonly randomDrawRequiredCardKeys?: readonly string[];
   readonly postBossActivationCounts?: Readonly<{
     readonly Common: number;
     readonly Rare: number;

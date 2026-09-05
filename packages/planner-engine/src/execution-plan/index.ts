@@ -11,6 +11,7 @@ export {
   type ExecutionPlan,
   type ExecutionReward,
   type ExecutionAllTogetherResult,
+  type ExecutionCirceResolution,
   type ExecutionSemanticProduct,
   type ExecutionRunStateCount,
   type ExecutionRunStateDiagnostic,

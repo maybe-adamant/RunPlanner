@@ -26,16 +26,16 @@ function is reached.
 | Arachne                          | `ArachneCostumeChoice`                        | Covered by the focused NPC acquisition adapter.                                                          |
 | Narcissus                        | `NarcissusBenefitChoice`                      | Covered for the menu, native generated children, and Mystery Boon handoff.                               |
 | Medea                            | `MedeaCurseChoice`                            | Deferred route; adapter exists.                                                                          |
-| Circe                            | `CirceBlessingChoice`                         | Deferred route; adapter exists, exceptional result coverage remains separate.                            |
+| Circe                            | `CirceBlessingChoice`                         | Menu and all selected consequences are covered; O route navigation remains deferred.                     |
 | Icarus                           | `IcarusBenefitChoice`                         | Deferred route; adapter exists.                                                                          |
 | Echo                             | `EchoChoice`                                  | Deferred route; adapter exists, but each exceptional replay/result still needs its semantic transaction. |
 | Artemis, Athena, Hades, Dionysus | Ordinary loot or encounter-owned trait source | Covered only through the ordinary loot carrier reached by the encounter.                                 |
 
 The six bespoke contacts are defined in `Scripts/EventLogic.lua`. Their explicit
 adapters are intentional; a single `UseLoot` hook does not cover these menus.
-Arachne and Narcissus are specified in
+Arachne, Narcissus, and Circe are specified in
 [NPC trait and generated-pickup execution](NPC_TRAIT_AND_GENERATED_PICKUP_EXECUTION.md);
-the later providers remain deferred.
+the remaining later providers retain their recorded deferrals.
 
 ## Nemesis random events
 

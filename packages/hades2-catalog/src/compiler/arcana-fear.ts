@@ -30,6 +30,25 @@ export function normalizeArcanaCards(
     const postBossActivationCounts = card.postBossActivationCounts;
     const artificerCapacityByRarity = card.artificerCapacityByRarity;
     const boonRarityContributions = card.boonRarityContributions;
+    if (
+      card.randomDrawChance !== undefined &&
+      (typeof card.randomDrawChance !== 'number' ||
+        !Number.isFinite(card.randomDrawChance) ||
+        card.randomDrawChance <= 0 ||
+        card.randomDrawChance > 1)
+    ) {
+      fail(`${path}.randomDrawChance`, 'must be greater than zero and at most one');
+    }
+    const randomDrawRequiredCardKeys = card.randomDrawRequiredCardKeys ?? [];
+    const seenRequiredCardKeys = new Set<string>();
+    randomDrawRequiredCardKeys.forEach((requiredKey, requiredIndex) => {
+      requireNonEmpty(requiredKey, `${path}.randomDrawRequiredCardKeys[${requiredIndex}]`);
+      if (requiredKey === card.key)
+        fail(`${path}.randomDrawRequiredCardKeys[${requiredIndex}]`, 'must not reference itself');
+      if (seenRequiredCardKeys.has(requiredKey))
+        fail(`${path}.randomDrawRequiredCardKeys[${requiredIndex}]`, 'must be distinct');
+      seenRequiredCardKeys.add(requiredKey);
+    });
     if (boonRarityContributions !== undefined) {
       if (!['RarityBoost', 'BonusRarity', 'EpicRarityBoost'].includes(card.key))
         fail(`${path}.boonRarityContributions`, 'is not supported for this Arcana card');
@@ -163,6 +182,7 @@ export function normalizeArcanaCards(
     return Object.freeze({
       ...normalizedCard,
       fatedIncompatible: card.fatedIncompatible === true,
+      randomDrawRequiredCardKeys: Object.freeze([...randomDrawRequiredCardKeys]),
       activation,
       ...(postBossActivationCounts === undefined
         ? {}
@@ -196,6 +216,16 @@ export function normalizeArcanaCards(
     });
   });
   if (values.length !== 25) fail('arcanaCards', 'must declare all 25 cards');
+  const cardKeys = new Set(values.map((card) => card.key));
+  values.forEach((card, index) => {
+    card.randomDrawRequiredCardKeys.forEach((requiredKey, requiredIndex) => {
+      if (!cardKeys.has(requiredKey))
+        fail(
+          `arcanaCards[${index}].randomDrawRequiredCardKeys[${requiredIndex}]`,
+          `unknown Arcana card ${requiredKey}`,
+        );
+    });
+  });
   return createCollection(values, 'arcanaCards', (card) => card.key);
 }
 export function normalizeFearVows(

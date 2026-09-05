@@ -136,14 +136,19 @@ The operation does not re-check a card's ordinary manual/automatic activation
 rule. An inactive automatic card is therefore a valid temporary draw and can
 remain active even while its awakening condition is false.
 
-Three selection details affect weighting or external modes but not the normal
-positive-probability support:
+Three selection details affect the native positive-probability support:
 
 - `CastCount`/Eternity has `RandomDrawChance = 0.1`; a failed roll moves it to
   a fallback pool, so it remains a possible result.
-- `TradeOff`/The Fates names `ScreenReroll` and `DoorReroll` as preferred
-  companion cards; when neither is active, it is deprioritized while
-  alternatives remain but does not become impossible.
+- `TradeOff`/The Fates names `ScreenReroll` and `DoorReroll` in
+  `RequiredCardNames`. When neither is active and another primary candidate
+  remains after The Fates is selected, native code moves The Fates to the
+  fallback pool and immediately substitutes another primary candidate. The
+  Fates can remain final without a companion only when that primary pool is
+  already empty (the sole-primary or fallback case). Under the fully progressed
+  planner baseline, the two inactive required cards are themselves
+  deterministic primary candidates, so an ordinary non-Fated activation domain
+  offers The Fates only while at least one required card is active.
 - the game's Fated mode removes `DoorReroll`, `ScreenReroll`, and `TradeOff`
   from this random-draw domain. That is a distinct run mode, not an ordinary
   Arcana-loadout rule.
@@ -352,3 +357,16 @@ preserves every spent use and adds exactly one remaining use. Concrete source
 eligibility, `RunProgress` bag consumption, source destruction, and later
 replacement acquisition remain reward/lifecycle authorities rather than a
 generic Arcana callback system.
+
+Execution protocol v18 publishes the complete-valid selected Circe option's
+existing activation, promotion, or suppression result without re-deriving it
+from the trait identity. The activation domain uses the declaration-owned
+`RandomDrawChance` and `RequiredCardNames` facts above. The Plan Executor
+constrains only the corresponding native random selector inside Circe's
+acquire-function scope, including the native positive `RandomChance` admission
+branch only when the exact published activation target is `CastCount`, and the
+native negative branch when the exact target is `TradeOff` and neither required
+card is equipped; native code owns the Arcana/Fear mutation and existing
+room-exit conformance owns its proof.
+This closes the dormant Circe consequence contact without enabling O route
+navigation.

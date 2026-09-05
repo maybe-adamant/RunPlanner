@@ -1,5 +1,6 @@
 import type {
   ExecutionAcquisitionRole,
+  ExecutionCirceResolution,
   ExecutionConcaveStoneResult,
   ExecutionHexTree,
   ExecutionLevelResolution,
@@ -170,6 +171,31 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
     }
     fail(`${resultLabel}.kind is unsupported`);
   };
+  const circeResolution = (value: unknown, resultLabel: string): ExecutionCirceResolution => {
+    const result = object(value, resultLabel);
+    if (result.kind === 'activateArcana' || result.kind === 'promoteArcana') {
+      exact(result, ['kind', 'arcanaKeys'], [], resultLabel);
+      const arcanaKeys = stringArray(
+        result.arcanaKeys,
+        `${resultLabel}.arcanaKeys`,
+        result.kind === 'activateArcana' ? 1 : 2,
+      );
+      if (new Set(arcanaKeys).size !== arcanaKeys.length)
+        fail(`${resultLabel}.arcanaKeys must be distinct`);
+      return Object.freeze({
+        kind: result.kind,
+        arcanaKeys: Object.freeze(arcanaKeys),
+      });
+    }
+    if (result.kind === 'disableFear') {
+      exact(result, ['kind', 'vowKey'], [], resultLabel);
+      return Object.freeze({
+        kind: 'disableFear' as const,
+        vowKey: stringValue(result.vowKey, `${resultLabel}.vowKey`),
+      });
+    }
+    fail(`${resultLabel}.kind is unsupported`);
+  };
   const allTogetherResult = (value: unknown, resultLabel: string) => {
     const result = object(value, resultLabel);
     exact(result, ['earth', 'fire', 'air', 'water'], [], resultLabel);
@@ -196,6 +222,7 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
         'allTogetherResult',
         'naturalSelectionTargets',
         'concaveStoneResult',
+        'circeResolution',
         'replacement',
       ],
       `${label}.options[${index}]`,
@@ -264,6 +291,14 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
               `${label}.options[${index}].concaveStoneResult`,
             ),
           }),
+      ...(option.circeResolution === undefined
+        ? {}
+        : {
+            circeResolution: circeResolution(
+              option.circeResolution,
+              `${label}.options[${index}].circeResolution`,
+            ),
+          }),
       ...(replacement === undefined
         ? {}
         : {
@@ -314,6 +349,14 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
       (!availableOptionKeys.includes(concave.optionKey) || concave.optionKey === selected)
     )
       fail(`${label}.options[${index}].concaveStoneResult.optionKey is not a residual option`);
+  }
+  for (const [index, option] of options.entries()) {
+    if (option.circeResolution !== undefined) {
+      if (record.giver !== 'Circe')
+        fail(`${label}.options[${index}].circeResolution requires Circe`);
+      if (availableOptionKeys[index] !== selected)
+        fail(`${label}.options[${index}].circeResolution must belong to the selected option`);
+    }
   }
   if (record.giver === 'SpellDrop' && record.hexTree === undefined)
     fail(`${label}.hexTree is required for SpellDrop`);

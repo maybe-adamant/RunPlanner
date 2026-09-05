@@ -292,10 +292,27 @@ describe('progressive Arcana and Fear state', () => {
       manualArcanaKeys: ['CastCount'],
       fearRanks: { ...loadout.fearRanks, EnemyDamageShrineUpgrade: 1 },
     });
-    expect(circeResolutionDomain(catalog, state, 'activateArcana')).toMatchObject({
+    const activationState = createArcanaFearState(catalog, {
+      ...loadout,
+      manualArcanaKeys: ['ChanneledCast'],
+    });
+    expect(circeResolutionDomain(catalog, activationState, 'activateArcana')).toMatchObject({
       requiredCount: 1,
       outerAvailable: true,
     });
+    expect(circeResolutionDomain(catalog, activationState, 'activateArcana').arcanaKeys).toContain(
+      'CastCount',
+    );
+    expect(
+      circeResolutionDomain(catalog, activationState, 'activateArcana').arcanaKeys,
+    ).not.toContain('TradeOff');
+    const companionActive = createArcanaFearState(catalog, {
+      ...loadout,
+      manualArcanaKeys: ['DoorReroll'],
+    });
+    expect(circeResolutionDomain(catalog, companionActive, 'activateArcana').arcanaKeys).toContain(
+      'TradeOff',
+    );
     expect(circeResolutionDomain(catalog, state, 'promoteArcana')).toMatchObject({
       requiredCount: 2,
       outerAvailable: true,

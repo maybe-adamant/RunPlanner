@@ -91,8 +91,34 @@ export function executionTimelineTransactions(
       ),
       `trait replacements ${semanticAddressKey(selected.address)}`,
     );
-    const selectedOption =
-      selected.offer.options[Number(selected.offer.selectedOptionKey.slice(-1)) - 1];
+    const selectedOptionIndex = Number(selected.offer.selectedOptionKey.slice(-1)) - 1;
+    const selectedOption = selected.offer.options[selectedOptionIndex];
+    const authoredCirceResolution =
+      selectedOption?.circeResolution === undefined
+        ? undefined
+        : agreement(
+            selected.branches.map((branch) => branch.circeResolution),
+            `Circe resolution ${semanticAddressKey(selected.address)}`,
+          );
+    const circeResolution =
+      authoredCirceResolution === undefined
+        ? undefined
+        : authoredCirceResolution.kind === 'disableFear'
+          ? authoredCirceResolution.vowKey === null
+            ? (() => {
+                throw new CompilerError(
+                  'executionCoverageMissing',
+                  `Circe Fear resolution is incomplete for ${semanticAddressKey(selected.address)}`,
+                );
+              })()
+            : Object.freeze({
+                kind: 'disableFear' as const,
+                vowKey: authoredCirceResolution.vowKey,
+              })
+          : Object.freeze({
+              kind: authoredCirceResolution.kind,
+              arcanaKeys: Object.freeze([...authoredCirceResolution.arcanaKeys]),
+            });
     const publishedHexTree =
       selected.offer.giverKey !== 'SpellDrop' || selected.offer.hexTree === undefined
         ? undefined
@@ -177,6 +203,9 @@ export function executionTimelineTransactions(
                       : { levelBonus: replacement.levelBonus }),
                   }),
                 }),
+            ...(circeResolution === undefined || index !== selectedOptionIndex
+              ? {}
+              : { circeResolution }),
           });
         }),
       ),
