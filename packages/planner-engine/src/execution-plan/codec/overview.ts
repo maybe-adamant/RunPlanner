@@ -66,7 +66,18 @@ export function overview(value: unknown, label: string) {
   )
     fail(`${label}.effectNeutralRequiredReward must be true when present`);
   if (shop !== undefined)
-    exact(shop, ['profileKey', 'offers'], ['travelDealRefill'], `${label}.shop`);
+    exact(
+      shop,
+      ['profileKey', 'offers'],
+      ['travelDealRefill', 'infernalContract'],
+      `${label}.shop`,
+    );
+  const contract =
+    shop?.infernalContract === undefined
+      ? undefined
+      : object(shop.infernalContract, `${label}.shop.infernalContract`);
+  if (contract !== undefined)
+    exact(contract, ['sourceOwner', 'rewardType'], [], `${label}.shop.infernalContract`);
   const parsedShop =
     shop === undefined
       ? undefined
@@ -109,7 +120,14 @@ export function overview(value: unknown, label: string) {
                   const row = object(shop.travelDealRefill, `${label}.shop.travelDealRefill`);
                   exact(
                     row,
-                    ['sourceOfferKey', 'slotIndex', 'optionKey', 'reward'],
+                    [
+                      'sourceOfferKey',
+                      'sourceOwner',
+                      'slotIndex',
+                      'groupIndex',
+                      'optionKey',
+                      'reward',
+                    ],
                     [],
                     `${label}.shop.travelDealRefill`,
                   );
@@ -118,7 +136,15 @@ export function overview(value: unknown, label: string) {
                       row.sourceOfferKey,
                       `${label}.shop.travelDealRefill.sourceOfferKey`,
                     ),
+                    sourceOwner: stringValue(
+                      row.sourceOwner,
+                      `${label}.shop.travelDealRefill.sourceOwner`,
+                    ),
                     slotIndex: integer(row.slotIndex, `${label}.shop.travelDealRefill.slotIndex`),
+                    groupIndex: integer(
+                      row.groupIndex,
+                      `${label}.shop.travelDealRefill.groupIndex`,
+                    ),
                     optionKey: stringValue(
                       row.optionKey,
                       `${label}.shop.travelDealRefill.optionKey`,
@@ -126,6 +152,20 @@ export function overview(value: unknown, label: string) {
                     reward: reward(row.reward, `${label}.shop.travelDealRefill.reward`),
                   });
                 })(),
+              }),
+          ...(contract === undefined
+            ? {}
+            : {
+                infernalContract: Object.freeze({
+                  sourceOwner: stringValue(
+                    contract.sourceOwner,
+                    `${label}.shop.infernalContract.sourceOwner`,
+                  ),
+                  rewardType: stringValue(
+                    contract.rewardType,
+                    `${label}.shop.infernalContract.rewardType`,
+                  ),
+                }),
               }),
         });
   const well =

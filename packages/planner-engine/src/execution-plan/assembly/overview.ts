@@ -1,8 +1,10 @@
 import {
+  createAcquisitionEntryAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
   semanticAddressKey,
 } from '../../authored-project/addresses';
+import { INFERNAL_CONTRACT_ENTRY_KEY } from '../../authored-project/shop';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation-products';
 import type { CanonicalAuthoredRoom, CanonicalBatch } from '../../simulation/materialization';
@@ -135,18 +137,39 @@ export function travelDealRefill(
 ):
   | {
       readonly sourceOfferKey: string;
+      readonly sourceOwner: string;
       readonly slotIndex: number;
+      readonly groupIndex: number;
       readonly optionKey: string;
       readonly reward: ExecutionReward;
     }
   | undefined {
-  const rows = biome.rewards.derivedAcquisitionEntries.filter(
-    (entry) =>
-      entry.kind === 'travelDealRefill' &&
-      entry.sourceOfferKey !== undefined &&
-      offers.some((offer) => offer.offerKey === entry.sourceOfferKey),
+  const entryLocation = Object.values(room.acquisitionSites)
+    .map((site) => Object.freeze({ site, entry: site.entries.travelDealRefill }))
+    .find((candidate) => candidate.entry !== undefined);
+  const entry = entryLocation?.entry;
+  if (entryLocation === undefined || entry === undefined) return undefined;
+  if (entry === null)
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} lacks Travel Deal result`,
+    );
+  const entryAddress = createAcquisitionEntryAddress(
+    entryLocation.site.address,
+    'travelDealRefill',
   );
-  if (rows.length === 0) return undefined;
+  const rows = biome.rewards.derivedAcquisitionEntries.filter(
+    (candidate) =>
+      candidate.kind === 'travelDealRefill' &&
+      semanticAddressKey(candidate.address) === semanticAddressKey(entryAddress) &&
+      candidate.sourceOfferKey !== undefined &&
+      offers.some((offer) => offer.offerKey === candidate.sourceOfferKey),
+  );
+  if (rows.length === 0)
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} lacks Travel Deal source`,
+    );
   const row = rows[0]!;
   agreement(
     rows.map((candidate) =>
@@ -163,22 +186,35 @@ export function travelDealRefill(
       'executionCoverageMissing',
       `${room.gameName} lacks Travel Deal source`,
     );
-  const entry = Object.values(room.acquisitionSites)
-    .map((site) => site.entries.travelDealRefill)
-    .find((candidate) => candidate !== undefined);
-  if (entry === undefined || entry === null)
-    throw new CompilerError(
-      'executionCoverageMissing',
-      `${room.gameName} lacks Travel Deal result`,
-    );
   const optionRows = biome.rewards.branches.map((branch) =>
     branch.events
       .filter(
         (event): event is Extract<RewardEvent, { readonly kind: 'shopInventorySupported' }> =>
           event.kind === 'shopInventorySupported' &&
-          semanticAddressKey(event.origin) === semanticAddressKey(row.address),
+          semanticAddressKey(event.origin) === semanticAddressKey(room.origin),
       )
       .map((event) => event.optionKeys[row.slotIndex!]),
+  );
+  const groupRows = biome.rewards.branches.map((branch) =>
+    branch.events
+      .filter(
+        (event): event is Extract<RewardEvent, { readonly kind: 'shopInventorySupported' }> =>
+          event.kind === 'shopInventorySupported' &&
+          semanticAddressKey(event.origin) === semanticAddressKey(room.origin),
+      )
+      .map((event) => event.slotGroupIndexes[row.slotIndex!]),
+  );
+  const groupIndex = agreement(
+    groupRows.map((groups) => {
+      const value = groups[0];
+      if (groups.length !== 1 || value === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} lacks Travel Deal native group`,
+        );
+      return value;
+    }),
+    `${room.gameName} Travel Deal native group`,
   );
   const optionKey = agreement(
     optionRows.map((options) => {
@@ -193,7 +229,9 @@ export function travelDealRefill(
   );
   return Object.freeze({
     sourceOfferKey: row.sourceOfferKey,
+    sourceOwner: semanticAddressKey(entryAddress),
     slotIndex: row.slotIndex,
+    groupIndex,
     optionKey,
     reward: executionRewardFromOffer(entry.offer, 'Shop'),
   });
@@ -234,8 +272,8 @@ function executionShop(
   if (room.entryState === undefined) return undefined;
   const optionKeys = shopOptionKeys(room, biome);
   const offers = Object.freeze(
-    room.entryState.offers.map((offer, index) => {
-      return Object.freeze({
+    room.entryState.offers.map((offer, index) =>
+      Object.freeze({
         offerKey: offer.offerKey,
         optionKey: optionKeys[index]!,
         rewardType: offer.offer.rewardType,
@@ -248,14 +286,28 @@ function executionShop(
               spurnedSource: offer.offer.payload.spurnedSource,
             }
           : {}),
-      });
-    }),
+      }),
+    ),
   );
   const refill = travelDealRefill(room, biome, offers);
+  const contractEntry = room.acquisitionSites.roomExit?.entries[INFERNAL_CONTRACT_ENTRY_KEY];
+  const contract =
+    contractEntry === undefined || contractEntry === null
+      ? undefined
+      : Object.freeze({
+          sourceOwner: semanticAddressKey(
+            createAcquisitionEntryAddress(
+              room.acquisitionSites.roomExit!.address,
+              INFERNAL_CONTRACT_ENTRY_KEY,
+            ),
+          ),
+          rewardType: contractEntry.offer.rewardType,
+        });
   return Object.freeze({
     profileKey: room.entryState.profileKey,
     offers,
     ...(refill === undefined ? {} : { travelDealRefill: refill }),
+    ...(contract === undefined ? {} : { infernalContract: contract }),
   });
 }
 

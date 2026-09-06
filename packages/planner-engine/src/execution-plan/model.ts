@@ -6,7 +6,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 21 as const;
+export const EXECUTION_PROTOCOL_VERSION = 22 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
 
 export type ExecutionRunStateCount =
@@ -152,6 +152,19 @@ export interface ExecutionReward {
   readonly source?: string;
   readonly spurnedSource?: string;
   readonly acquisitionEnabled?: boolean;
+}
+
+/** Exact native result of the authored Anvil of Fates purchase. */
+export interface ExecutionAnvilResult {
+  readonly kind: 'anvilOfFates';
+  readonly removedTraitKey: string | null;
+  readonly addedTraitKeys: readonly [string, string];
+}
+
+/** The one free pedestal item spawned by an Infernal Contract. */
+export interface ExecutionInfernalContract {
+  readonly sourceOwner: string;
+  readonly rewardType: string;
 }
 
 /** The exact direct grants produced inside All Together's native acquisition. */
@@ -380,9 +393,14 @@ export interface ExecutionOverview {
       readonly source?: string;
       readonly spurnedSource?: string;
     }[];
+    readonly infernalContract?: ExecutionInfernalContract;
     readonly travelDealRefill?: {
       readonly sourceOfferKey: string;
+      /** Exact acquisition-entry owner of the generated replacement pickup. */
+      readonly sourceOwner: string;
       readonly slotIndex: number;
+      /** Native StoreData group containing the replaced slot. */
+      readonly groupIndex: number;
       readonly optionKey: string;
       readonly reward: ExecutionReward;
     };
@@ -506,6 +524,7 @@ export type ExecutionTimelineTransaction =
       readonly reward: ExecutionReward;
       readonly producerLifecycleKey: string;
       readonly roles: readonly ExecutionAcquisitionRole[];
+      readonly anvilResult?: ExecutionAnvilResult;
     }
   | {
       readonly kind: 'wellPurchase';

@@ -1,5 +1,6 @@
 import type {
   ExecutionAcquisitionRole,
+  ExecutionAnvilResult,
   ExecutionCirceResolution,
   ExecutionConcaveStoneResult,
   ExecutionHexTree,
@@ -19,6 +20,24 @@ import {
   stringArray,
   stringValue,
 } from './primitives';
+
+export function anvilResult(value: unknown, label: string): ExecutionAnvilResult {
+  const record = object(value, label);
+  exact(record, ['kind', 'removedTraitKey', 'addedTraitKeys'], [], label);
+  if (record.kind !== 'anvilOfFates') fail(`${label}.kind is unsupported`);
+  const removedTraitKey =
+    record.removedTraitKey === null
+      ? null
+      : stringValue(record.removedTraitKey, `${label}.removedTraitKey`);
+  const addedTraitKeys = stringArray(record.addedTraitKeys, `${label}.addedTraitKeys`, 2);
+  if (addedTraitKeys.length !== 2 || addedTraitKeys[0] === addedTraitKeys[1])
+    fail(`${label}.addedTraitKeys must contain two distinct traits`);
+  return Object.freeze({
+    kind: 'anvilOfFates' as const,
+    removedTraitKey,
+    addedTraitKeys: Object.freeze([addedTraitKeys[0]!, addedTraitKeys[1]!] as const),
+  });
+}
 
 export function reward(value: unknown, label: string): ExecutionReward {
   const record = object(value, label);

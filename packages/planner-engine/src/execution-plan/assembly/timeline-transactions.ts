@@ -771,6 +771,16 @@ export function executionTimelineTransactions(
     );
     const acquisitionOwner = semanticAddressKey(timeline.action.owner);
     if (shopOffer !== undefined) {
+      if (shopOffer.offer.rewardType === 'ChaosWeaponUpgrade' && shopOffer.anvilResult == null)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} lacks the authored Anvil result for ${shopOffer.offerKey}`,
+        );
+      if (shopOffer.offer.rewardType !== 'ChaosWeaponUpgrade' && shopOffer.anvilResult != null)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} has an Anvil result on non-Anvil offer ${shopOffer.offerKey}`,
+        );
       add({
         kind: 'shopPurchase',
         owner: acquisitionOwner,
@@ -780,6 +790,9 @@ export function executionTimelineTransactions(
         roles,
         offerKey: shopOffer.offerKey,
         rewardType: shopOffer.offer.rewardType,
+        ...(shopOffer.anvilResult == null
+          ? {}
+          : { anvilResult: Object.freeze({ ...shopOffer.anvilResult }) }),
         window: windowFor(acquisitionOwner),
       });
     } else {

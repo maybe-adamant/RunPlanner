@@ -16,7 +16,7 @@ import {
   stringValue,
   wellGenerationKey,
 } from './primitives';
-import { acquisitionRole, equipResults, reward, traitOffer } from './rewards';
+import { acquisitionRole, anvilResult, equipResults, reward, traitOffer } from './rewards';
 
 export function lifecycleWindow(value: unknown, label: string): ExecutionLifecycleWindow {
   const record = object(value, label);
@@ -222,7 +222,7 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
         'producerLifecycleKey',
         'roles',
       ],
-      [],
+      ['anvilResult'],
       label,
     );
     const roles = Object.freeze(
@@ -232,12 +232,17 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
     );
     if (roles.some((role) => role.seaStarResult !== undefined))
       fail(`${label}.roles may not publish Sea Star results for purchases`);
+    const rewardType = stringValue(record.rewardType, `${label}.rewardType`);
+    if (rewardType === 'ChaosWeaponUpgrade' && record.anvilResult === undefined)
+      fail(`${label}.anvilResult is required for an Anvil purchase`);
+    if (rewardType !== 'ChaosWeaponUpgrade' && record.anvilResult !== undefined)
+      fail(`${label}.anvilResult is only valid for an Anvil purchase`);
     return Object.freeze({
       kind,
       owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
       window: lifecycleWindow(record.window, `${label}.window`),
       offerKey: stringValue(record.offerKey, `${label}.offerKey`),
-      rewardType: stringValue(record.rewardType, `${label}.rewardType`),
+      rewardType,
       sourceOwner: stringValue(record.sourceOwner, `${label}.sourceOwner`, MAX_OWNER_STRING),
       reward: reward(record.reward, `${label}.reward`),
       producerLifecycleKey: stringValue(
@@ -245,6 +250,9 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
         `${label}.producerLifecycleKey`,
       ),
       roles,
+      ...(record.anvilResult === undefined
+        ? {}
+        : { anvilResult: anvilResult(record.anvilResult, `${label}.anvilResult`) }),
     });
   }
   if (kind === 'wellPurchase') {

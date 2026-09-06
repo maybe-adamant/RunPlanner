@@ -35,6 +35,7 @@ import {
   traitOffer as decodeExecutionTraitOffer,
 } from '../../src/execution-plan/codec/rewards';
 import { transaction as decodeExecutionTransaction } from '../../src/execution-plan/codec/timeline';
+import { overview as decodeExecutionOverview } from '../../src/execution-plan/codec/overview';
 import { expandDiagnosticFrames } from '../../src/execution-plan/codec/diagnostics';
 import { fingerprint } from '../../src/execution-plan/codec/primitives';
 import type { ExecutionSemanticProduct } from '../../src/execution-plan/model';
@@ -384,6 +385,83 @@ describe('execution-plan compiler and codec', () => {
         'transaction',
       ),
     ).toThrow(/may not publish Sea Star results for purchases/);
+  });
+
+  it('decodes the published Anvil result only on a Shop purchase', () => {
+    const transaction = {
+      kind: 'shopPurchase' as const,
+      owner: 'purchase',
+      window: { kind: 'standard' as const, phase: 'beforeCombat' as const },
+      offerKey: 'Anvil',
+      rewardType: 'ChaosWeaponUpgrade',
+      sourceOwner: 'shop-source',
+      reward: { rewardType: 'ChaosWeaponUpgrade', producerLifecycleKey: 'Q_WorldShop' },
+      producerLifecycleKey: 'Q_WorldShop',
+      roles: [],
+      anvilResult: {
+        kind: 'anvilOfFates' as const,
+        removedTraitKey: null,
+        addedTraitKeys: ['StaffLongAttackTrait', 'StaffJumpSpecialTrait'] as const,
+      },
+    };
+    const decoded = decodeExecutionTransaction(transaction, 'transaction');
+    if (decoded.kind !== 'shopPurchase') throw new Error('expected a Shop purchase');
+    expect(decoded.anvilResult).toEqual(transaction.anvilResult);
+    expect(() =>
+      decodeExecutionTransaction(
+        {
+          ...transaction,
+          anvilResult: { ...transaction.anvilResult, addedTraitKeys: ['OnlyOne'] },
+        },
+        'transaction',
+      ),
+    ).toThrow(/addedTraitKeys/);
+    expect(() =>
+      decodeExecutionTransaction({ ...transaction, anvilResult: undefined }, 'transaction'),
+    ).toThrow(/required for an Anvil purchase/);
+    expect(() =>
+      decodeExecutionTransaction({ ...transaction, rewardType: 'MaxHealthDrop' }, 'transaction'),
+    ).toThrow(/only valid for an Anvil purchase/);
+  });
+
+  it('decodes an unpurchased Anvil inventory without a purchase result', () => {
+    const overview = decodeExecutionOverview(
+      {
+        encounterPhases: [],
+        requiredObjects: [],
+        shop: {
+          profileKey: 'Q_WorldShop',
+          offers: [
+            {
+              offerKey: 'Anvil',
+              optionKey: 'ChaosWeaponUpgrade',
+              rewardType: 'ChaosWeaponUpgrade',
+            },
+          ],
+          travelDealRefill: {
+            sourceOfferKey: 'Anvil',
+            sourceOwner: 'refill-acquisition',
+            slotIndex: 0,
+            groupIndex: 0,
+            optionKey: 'MaxHealthDropBig',
+            reward: {
+              rewardType: 'MaxHealthDropBig',
+              producerLifecycleKey: 'Q_WorldShop',
+            },
+          },
+        },
+      },
+      'overview',
+    );
+    expect(overview.shop?.offers[0]).toEqual({
+      offerKey: 'Anvil',
+      optionKey: 'ChaosWeaponUpgrade',
+      rewardType: 'ChaosWeaponUpgrade',
+    });
+    expect(overview.shop?.travelDealRefill).toMatchObject({
+      sourceOwner: 'refill-acquisition',
+      groupIndex: 0,
+    });
   });
 
   it('publishes a non-default selected weapon and aspect as a verification-only start contract', () => {

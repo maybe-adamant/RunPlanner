@@ -161,6 +161,8 @@ export type RewardEvent =
       readonly kind: 'shopInventorySupported';
       readonly profileKey: string;
       readonly optionKeys: readonly string[];
+      /** Native StoreData group for each flattened emitted slot. */
+      readonly slotGroupIndexes: readonly number[];
     });
 
 export interface RewardStoreCandidateSupport {
