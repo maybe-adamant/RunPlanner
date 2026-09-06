@@ -5,7 +5,6 @@ import {
   exact,
   fail,
   integer,
-  numberRecord,
   object,
   stringArray,
   stringValue,
@@ -27,7 +26,6 @@ export function overview(value: unknown, label: string) {
       'purgingPool',
       'keepsakeRack',
       'fountain',
-      'resources',
       'additional',
     ],
     label,
@@ -438,32 +436,6 @@ export function overview(value: unknown, label: string) {
   const fountain =
     record.fountain === undefined ? undefined : object(record.fountain, `${label}.fountain`);
   if (fountain !== undefined) exact(fountain, [], ['aromaticPhialTarget'], `${label}.fountain`);
-  const resources =
-    record.resources === undefined
-      ? undefined
-      : array(record.resources, `${label}.resources`).map((entry, index) => {
-          const row = object(entry, `${label}.resources[${index}]`);
-          exact(
-            row,
-            ['acquisitionRole', 'grantedTraitKey', 'contributions'],
-            [],
-            `${label}.resources[${index}]`,
-          );
-          return Object.freeze({
-            acquisitionRole: stringValue(
-              row.acquisitionRole,
-              `${label}.resources[${index}].acquisitionRole`,
-            ),
-            grantedTraitKey: stringValue(
-              row.grantedTraitKey,
-              `${label}.resources[${index}].grantedTraitKey`,
-            ),
-            contributions: numberRecord(
-              row.contributions,
-              `${label}.resources[${index}].contributions`,
-            ),
-          });
-        });
   const additional =
     record.additional === undefined
       ? undefined
@@ -546,7 +518,6 @@ export function overview(value: unknown, label: string) {
                 },
           ),
         }),
-    ...(resources === undefined ? {} : { resources: Object.freeze(resources) }),
     ...(additional === undefined ? {} : { additional: Object.freeze(additional) }),
   });
 }

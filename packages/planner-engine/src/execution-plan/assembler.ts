@@ -155,6 +155,7 @@ export function assembleExecutionProduct({
   // room's rewards can mutate the loadout-derived ledgers.
   const openingSnapshot = biomes[0]!.rewards.runStateSnapshots[0];
   const startingLoadout = executionStartingLoadout(assembly, openingSnapshot);
+  const resources = evaluation.route.resources;
   const product = Object.freeze({
     catalogVersion: evaluation.catalogVersion,
     projectId: evaluation.projectId,
@@ -166,6 +167,7 @@ export function assembleExecutionProduct({
     }),
     extent,
     selectedOccurrenceIds,
+    resources,
     occurrences: Object.freeze(occurrences),
   });
   validateExecutionProduct(product);

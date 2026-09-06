@@ -10,10 +10,9 @@ import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model'
 import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation-products';
 import type { CanonicalAuthoredRoom, CanonicalBatch } from '../../simulation/materialization';
 import type { RewardEvent } from '../../simulation/rewards/model';
-import type { TraitHistoryEvent } from '../../simulation/trait-history';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
-import { agreement, executionRoomOwnerKey, stableJson } from './support';
+import { agreement, executionRoomOwnerKey } from './support';
 import type { ExecutionKeepsakeEquipResults, ExecutionOverview, ExecutionReward } from '../model';
 import type { HermesShrineGenerationKey, HermesShrineSlotKey } from '../../authored-project/model';
 
@@ -68,38 +67,6 @@ export function executionRewardFromOffer(
       ? { source: payload.chosenSource, spurnedSource: payload.spurnedSource }
       : {}),
   });
-}
-
-export function executionResources(
-  room: CanonicalAuthoredRoom,
-  biome: CompleteValidBiomeProjectEvaluation,
-): ExecutionOverview['resources'] | undefined {
-  const owner = executionRoomOwnerKey(room);
-  const rows = biome.rewards.branches.map((branch) =>
-    (branch.traitHistory?.events ?? [])
-      .filter(
-        (event): event is Extract<TraitHistoryEvent, { readonly kind: 'elementContribution' }> =>
-          event.kind === 'elementContribution' &&
-          semanticAddressKey(event.owner) === owner &&
-          event.acquisitionPoint === 'roomExited' &&
-          event.acquisitionRole.startsWith('resource:'),
-      )
-      .map((event) =>
-        Object.freeze({
-          acquisitionRole: event.acquisitionRole,
-          grantedTraitKey: event.acquisitionRole.slice('resource:'.length),
-          contributions: Object.freeze({ ...event.contributions }),
-        }),
-      ),
-  );
-  const first = rows[0];
-  if (first === undefined || first.length === 0) return undefined;
-  if (rows.some((row) => stableJson(row) !== stableJson(first)))
-    throw new CompilerError(
-      'executionCoverageMissing',
-      `${room.gameName} has divergent successful resource outcomes`,
-    );
-  return Object.freeze(first);
 }
 
 export function shopOptionKeys(
@@ -519,7 +486,6 @@ export function assembleExecutionOverview(
   const hermesShrine = executionHermesShrine(room, biome);
   const stygianWell = executionStygianWell(room);
   const purgingPool = executionPurgingPool(room);
-  const resources = executionResources(room, biome);
   const additional = executionAdditionalExits(batch);
   const biomeAddress = createBiomeAddress(room.origin.routeKey, room.origin.biomeKey);
   return Object.freeze({
@@ -568,7 +534,6 @@ export function assembleExecutionOverview(
               : { aromaticPhialTarget: room.fountainRarityResult.targetTraitKey },
           ),
         }),
-    ...(resources === undefined ? {} : { resources }),
     ...(additional === undefined ? {} : { additional }),
   });
 }

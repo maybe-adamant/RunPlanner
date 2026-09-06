@@ -5,6 +5,7 @@ import type { BiomeHistoryPrefix, CanonicalBiomeHistory } from './history';
 import type { BiomeGenerationValidation } from './progressive/products';
 import type { BiomeRewardSimulation } from './rewards/model';
 import type { SemanticFinding } from './model';
+import type { ResourceExecutionPolicy } from './resources';
 
 export interface BiomeEvaluationBase {
   readonly biomeKey: string;
@@ -131,6 +132,8 @@ export interface ProjectRouteEvaluation {
   readonly processing: RouteProcessingRegions;
   readonly findings: readonly SemanticFinding[];
   readonly summary: RouteEvaluationSummary;
+  /** Complete route-owned resource point envelope and post-exit counters. */
+  readonly resources: ResourceExecutionPolicy;
 }
 
 export interface ProjectEvaluation {

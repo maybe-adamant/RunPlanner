@@ -21,6 +21,7 @@ import { equipResults } from './codec/rewards';
 import { occurrence } from './codec/occurrence';
 import { validateExecutionReferences } from './codec/references';
 import { startingLoadout } from './codec/loadout';
+import { resources } from './codec/resources';
 
 export { ExecutionPlanCodecError };
 
@@ -60,6 +61,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
       'startingKeepsake',
       'extent',
       'selectedOccurrenceIds',
+      'resources',
       'occurrences',
     ],
     [],
@@ -118,6 +120,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     selectedOccurrenceIds: Object.freeze(
       stringArray(record.selectedOccurrenceIds, 'execution plan.selectedOccurrenceIds'),
     ),
+    resources: resources(record.resources, 'execution plan.resources'),
     occurrences,
   });
   validateExecutionReferences(plan);
@@ -131,6 +134,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     startingKeepsake: plan.startingKeepsake,
     extent: plan.extent,
     selectedOccurrenceIds: plan.selectedOccurrenceIds,
+    resources: plan.resources,
     occurrences: plan.occurrences,
   });
   if (fingerprint(body) !== plan.planFingerprint)

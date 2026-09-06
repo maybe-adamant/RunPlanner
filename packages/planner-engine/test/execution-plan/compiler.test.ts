@@ -293,6 +293,7 @@ function refreshWireFingerprint(wire: Record<string, unknown>): void {
     startingKeepsake: expanded.startingKeepsake,
     extent: expanded.extent,
     selectedOccurrenceIds: expanded.selectedOccurrenceIds,
+    resources: expanded.resources,
     occurrences: expanded.occurrences,
   });
 }
@@ -1203,6 +1204,56 @@ describe('execution-plan compiler and codec', () => {
     ).toBe(true);
     expect(encoded.length).toBeLessThan(JSON.stringify(plan).length * 0.75);
     expect(decodeExecutionPlan(wire)).toEqual(plan);
+  });
+
+  it('strictly validates the resource policy references and terminal count boundary', () => {
+    const { plan } = planFor(fOnlyProject());
+    const wire = (): Record<string, unknown> =>
+      JSON.parse(encodeExecutionPlan(plan)) as Record<string, unknown>;
+    const valid = wire();
+    expect(decodeExecutionPlan(valid)).toEqual(plan);
+
+    const missing = wire();
+    delete missing.resources;
+    expect(() => decodeExecutionPlan(missing)).toThrow(/resources is required/);
+
+    const malformedDisposition = wire();
+    const malformedRows = (
+      malformedDisposition.resources as { occurrences: Record<string, unknown>[] }
+    ).occurrences;
+    malformedRows[0] = {
+      ...malformedRows[0],
+      pointDispositions: {
+        ...(malformedRows[0]!.pointDispositions as Record<string, unknown>),
+        Pickaxe: 'roll',
+      },
+    };
+    refreshWireFingerprint(malformedDisposition);
+    expect(() => decodeExecutionPlan(malformedDisposition)).toThrow(/is unsupported/);
+
+    const duplicate = wire();
+    const duplicateRows = (duplicate.resources as { occurrences: Record<string, unknown>[] })
+      .occurrences;
+    duplicateRows.push({ ...duplicateRows[0] });
+    refreshWireFingerprint(duplicate);
+    expect(() => decodeExecutionPlan(duplicate)).toThrow(
+      /resource occurrences must have unique IDs/,
+    );
+
+    const missingCounts = wire();
+    const missingCountRows = (missingCounts.resources as { occurrences: Record<string, unknown>[] })
+      .occurrences;
+    delete missingCountRows[0]!.postExitElementCounts;
+    refreshWireFingerprint(missingCounts);
+    expect(() => decodeExecutionPlan(missingCounts)).toThrow(/invalid post-exit count boundary/);
+
+    const terminalCounts = wire();
+    const terminalRows = (terminalCounts.resources as { occurrences: Record<string, unknown>[] })
+      .occurrences;
+    const firstCounts = terminalRows[0]!.postExitElementCounts;
+    terminalRows.at(-1)!.postExitElementCounts = firstCounts;
+    refreshWireFingerprint(terminalCounts);
+    expect(() => decodeExecutionPlan(terminalCounts)).toThrow(/invalid post-exit count boundary/);
   });
 
   it('rejects disconnected cursors and contradictory target identities on the codec boundary', () => {

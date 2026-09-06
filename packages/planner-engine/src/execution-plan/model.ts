@@ -1,4 +1,5 @@
 import type { ProjectEvaluationAssembly } from '../simulation/evaluation-products';
+import type { ResourceExecutionPolicy, ResourcePointDisposition } from '../simulation/resources';
 import type {
   PendingKeepsakeEffects,
   RoomExitConformanceFactKind,
@@ -6,7 +7,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 24 as const;
+export const EXECUTION_PROTOCOL_VERSION = 25 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
 
 export type ExecutionRunStateCount =
@@ -455,11 +456,6 @@ export interface ExecutionOverview {
   };
   readonly keepsakeRack?: { readonly keepsakeKey?: string };
   readonly fountain?: { readonly aromaticPhialTarget?: string };
-  readonly resources?: readonly {
-    readonly acquisitionRole: string;
-    readonly grantedTraitKey: string;
-    readonly contributions: Readonly<Record<string, number>>;
-  }[];
   /** Chaos gates and Zagreus Contract exits are room features, not normal doors. */
   readonly additional?: readonly {
     readonly kind: 'chaos' | 'zagreusContract';
@@ -472,6 +468,9 @@ export interface ExecutionOverview {
     };
   }[];
 }
+
+export type ExecutionResourcePolicy = ResourceExecutionPolicy;
+export type ExecutionResourcePointDisposition = ResourcePointDisposition;
 
 /** The closed G Anomaly capture-point product, including authored provenance. */
 export interface ExecutionAnomalyReplacement {
@@ -678,6 +677,8 @@ export interface ExecutionPlan {
   };
   /** Complete occurrence records; selectedOccurrenceIds is the route cursor. */
   readonly selectedOccurrenceIds: readonly string[];
+  /** Engine-owned point and post-exit element policy for each selected occurrence. */
+  readonly resources: ExecutionResourcePolicy;
   readonly occurrences: readonly ExecutionOccurrence[];
 }
 
@@ -690,6 +691,7 @@ export interface ExecutionSemanticProduct {
   readonly startingKeepsake: ExecutionStartingKeepsake;
   readonly extent: ExecutionPlan['extent'];
   readonly selectedOccurrenceIds: readonly string[];
+  readonly resources: ExecutionResourcePolicy;
   readonly occurrences: readonly ExecutionOccurrence[];
 }
 

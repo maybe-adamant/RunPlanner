@@ -289,7 +289,11 @@ Individual Hex combat effects remain outside the run-planning simulation.
 ## Gathering tools
 
 Pickaxe, Exorcism Book, Shovel, and Fishing Rod reach the modeled element roll
-through `GrantElementFromTool`. The Overview publishes the successful resource
-and its exact element contribution. Which tool is equipped is not independently
-modeled as a loadout requirement; automatic gathering is the planner
-simplification.
+through `GrantElementFromTool`. The route execution product publishes one
+physical-point disposition for every entered occurrence and family: `native`
+preserves the point while forcing that roll to fail, `suppress` prevents the
+point, and `force` preserves the point while forcing success. It also publishes
+the absolute five-element vector after each non-terminal room exit; the
+following `StartRoom` is the conformance boundary. Which tool is equipped is
+not independently modeled as a loadout requirement; automatic gathering is
+the planner simplification.

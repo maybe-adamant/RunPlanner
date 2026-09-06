@@ -1,8 +1,9 @@
-import type { ExecutionOccurrence } from './model';
+import type { ExecutionOccurrence, ExecutionResourcePolicy } from './model';
 
 export interface ExecutionGraphDocument {
   readonly selectedOccurrenceIds: readonly string[];
   readonly occurrences: readonly ExecutionOccurrence[];
+  readonly resources: ExecutionResourcePolicy;
 }
 
 /**
@@ -60,6 +61,40 @@ export function validateExecutionGraph(
     const successor = graph.selectedOccurrenceIds[index + 1]!;
     if (predecessor === undefined || !continuations(predecessor).has(successor))
       invalid(`selectedOccurrenceIds is disconnected at ${graph.selectedOccurrenceIds[index]}`);
+  }
+
+  {
+    const resourceOccurrenceIds = graph.resources.occurrences.map((entry) => entry.occurrenceId);
+    if (new Set(resourceOccurrenceIds).size !== resourceOccurrenceIds.length)
+      invalid('resource occurrences must have unique IDs');
+    if (
+      resourceOccurrenceIds.length !== graph.selectedOccurrenceIds.length ||
+      resourceOccurrenceIds.some((id, index) => id !== graph.selectedOccurrenceIds[index])
+    )
+      invalid('resource occurrences must follow selectedOccurrenceIds exactly');
+    const resourceFamilies = ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const;
+    for (const entry of graph.resources.occurrences) {
+      if (!occurrences.has(entry.occurrenceId))
+        invalid(`resource occurrence ${entry.occurrenceId} is unresolved`);
+      for (const [family, disposition] of Object.entries(entry.pointDispositions)) {
+        if (!(resourceFamilies as readonly string[]).includes(family))
+          invalid(`resource family ${family} is unsupported`);
+        if (disposition !== 'native' && disposition !== 'suppress' && disposition !== 'force')
+          invalid(`resource ${family} has unsupported point disposition`);
+      }
+    }
+    for (const family of resourceFamilies) {
+      const forced = graph.resources.occurrences.filter(
+        (entry) => entry.pointDispositions[family] === 'force',
+      );
+      if (forced.length > 1) invalid(`resource ${family} has multiple forced points`);
+    }
+    const terminalId = graph.selectedOccurrenceIds.at(-1);
+    for (const entry of graph.resources.occurrences) {
+      const hasCounts = entry.postExitElementCounts !== undefined;
+      if (entry.occurrenceId === terminalId ? hasCounts : !hasCounts)
+        invalid(`resource ${entry.occurrenceId} has an invalid post-exit count boundary`);
+    }
   }
 
   const transactions = new Map(
