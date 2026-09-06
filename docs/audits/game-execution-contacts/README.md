@@ -119,8 +119,10 @@ Relevant durable authorities:
    represent the authored negative result wherever vanilla could otherwise
    proc, and must cover both loot and direct-consumable carriers.
 7. The active F/G room-exit conformance set is `traitInventory`,
-   `steadyGrowth`, `chaos`, `keepsakeEffects`, `rewardPriorities`,
-   `pathOfStars`, `forfeit`, and `stygianWell`. `echoShopDuplicate` and
-   `hermesShrineDeliveries` remain decoded diagnostic facts but are dormant
-   until their owning routes are enabled. Only changed named facts are
-   published; complete Run State diagnostics never block execution.
+   `elementCounts`, `steadyGrowth`, `chaos`, `keepsakeEffects`,
+   `rewardPriorities`, `pathOfStars`, `forfeit`, and `stygianWell`.
+   `echoShopDuplicate` and `hermesShrineDeliveries` remain decoded diagnostic
+   facts but are dormant until their owning routes are enabled. Changed named
+   facts are sparse; `elementCounts` is deliberately present at every complete
+   room-exit snapshot so unchanged vectors catch unintended gains. Complete Run
+   State diagnostics never block execution.

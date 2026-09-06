@@ -24,8 +24,8 @@ Complete the selected-success Resource model at its two missing boundaries:
 1. the planner must protect the physical point-generation envelope required to
    make the selected point legal while leaving unrelated physical points native;
 2. the Plan Executor must force the once-per-run element roll only at the
-   selected occurrence and verify the exact post-room element ledger at the
-   next stable route checkpoint.
+   selected occurrence and verify exact element counts through the ordinary
+   room-exit conformance boundary.
 
 The user-visible authored model remains one optional successful placement for
 each of Pickaxe, Exorcism, Shovel, and Fishing. There is no new editor control,

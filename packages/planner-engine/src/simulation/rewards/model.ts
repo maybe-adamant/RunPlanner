@@ -216,11 +216,6 @@ interface RewardSimulationBase {
 }
 
 export interface BiomeRewardSimulation extends RewardSimulationBase {
-  /** Absolute five-element counters after each reached room exit. */
-  readonly roomExitElementCounts: readonly {
-    readonly origin: import('../../authored-project/addresses').OccurrenceAddress;
-    readonly elementCounts: Readonly<Record<TraitElement, number>>;
-  }[];
   /** Reward transitions publish only exact owner relations; room actions publish structural facts. */
   readonly timelineFacts: PlannerTimelineFacts;
   /** Exact one-shot Gift Gift Gift volatile result reached at this biome start. */

@@ -1,5 +1,6 @@
 import type { ProjectEvaluationAssembly } from '../simulation/evaluation-products';
 import type { ResourceExecutionPolicy, ResourcePointDisposition } from '../simulation/resources';
+import type { TraitElement } from '../catalog-schema';
 import type {
   PendingKeepsakeEffects,
   RoomExitConformanceFactKind,
@@ -7,7 +8,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 25 as const;
+export const EXECUTION_PROTOCOL_VERSION = 26 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
 
 export type ExecutionRunStateCount =
@@ -65,7 +66,7 @@ export interface ExecutionRunStateDiagnostic {
       readonly hammerRank?: 'RankI' | 'RankII';
     }[];
     readonly slots: readonly { readonly slot: ExecutionTraitSlot; readonly traitKey?: string }[];
-    readonly elements: Readonly<Record<string, number>>;
+    readonly elements: Readonly<Record<TraitElement, number>>;
     readonly godRarityCounts: Readonly<Record<string, number>>;
     readonly upgradableCount: number;
     readonly bannedTraitKeys: readonly string[];
@@ -677,7 +678,7 @@ export interface ExecutionPlan {
   };
   /** Complete occurrence records; selectedOccurrenceIds is the route cursor. */
   readonly selectedOccurrenceIds: readonly string[];
-  /** Engine-owned point and post-exit element policy for each selected occurrence. */
+  /** Engine-owned physical resource-point policy for each selected occurrence. */
   readonly resources: ExecutionResourcePolicy;
   readonly occurrences: readonly ExecutionOccurrence[];
 }

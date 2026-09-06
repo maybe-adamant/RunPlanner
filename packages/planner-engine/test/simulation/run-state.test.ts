@@ -189,7 +189,10 @@ describe('decision run-state snapshots', () => {
         [semanticAddressKey(exited.owner), exited],
       ]),
     );
-    expect(deltas.get(occurrence.occurrenceId)?.facts).toEqual([{ kind: 'pathOfStars' }]);
+    expect(deltas.get(occurrence.occurrenceId)?.facts).toEqual([
+      { kind: 'elementCounts' },
+      { kind: 'pathOfStars' },
+    ]);
   });
 
   it('promotes Shrine deliveries and Well effects and derives only their changed exit facts', () => {
@@ -261,6 +264,7 @@ describe('decision run-state snapshots', () => {
       ]),
     );
     expect(deltas.get(occurrence.occurrenceId)?.facts).toEqual([
+      { kind: 'elementCounts' },
       { kind: 'keepsakeEffects' },
       { kind: 'stygianWell' },
     ]);

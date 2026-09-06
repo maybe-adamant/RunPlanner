@@ -56,7 +56,6 @@ const enteredAt = (biomeKey: string, occurrenceId: string, gameName: string) => 
 });
 
 const resourceFamilies = ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const;
-const emptyElementCounts = Object.freeze({ Aether: 0, Earth: 0, Air: 0, Fire: 0, Water: 0 });
 
 function directResourcePolicy(
   entered: readonly ResourceEnteredRoom[],
@@ -84,12 +83,6 @@ function directResourcePolicy(
   };
   const evaluation = {
     history: { rooms: occurrences.map(({ origin }) => ({ origin })) },
-    rewards: {
-      roomExitElementCounts: occurrences.map(({ origin }) => ({
-        origin,
-        elementCounts: emptyElementCounts,
-      })),
-    },
   };
   return deriveResourceExecutionPolicy(catalog, [evaluation], authoring);
 }

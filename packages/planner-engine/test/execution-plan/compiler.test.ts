@@ -1206,12 +1206,23 @@ describe('execution-plan compiler and codec', () => {
     expect(decodeExecutionPlan(wire)).toEqual(plan);
   });
 
-  it('strictly validates the resource policy references and terminal count boundary', () => {
+  it('strictly validates the resource policy references and room-exit element fact', () => {
     const { plan } = planFor(fOnlyProject());
     const wire = (): Record<string, unknown> =>
       JSON.parse(encodeExecutionPlan(plan)) as Record<string, unknown>;
     const valid = wire();
     expect(decodeExecutionPlan(valid)).toEqual(plan);
+    for (const occurrence of plan.occurrences) {
+      if (occurrence.diagnostics?.beforeRoomExit === undefined) continue;
+      expect(occurrence.roomExitConformance?.facts).toContainEqual({ kind: 'elementCounts' });
+      expect(occurrence.diagnostics.beforeRoomExit.traits.elements).toEqual({
+        Aether: expect.any(Number),
+        Earth: expect.any(Number),
+        Air: expect.any(Number),
+        Fire: expect.any(Number),
+        Water: expect.any(Number),
+      });
+    }
 
     const missing = wire();
     delete missing.resources;
@@ -1240,20 +1251,25 @@ describe('execution-plan compiler and codec', () => {
       /resource occurrences must have unique IDs/,
     );
 
-    const missingCounts = wire();
-    const missingCountRows = (missingCounts.resources as { occurrences: Record<string, unknown>[] })
-      .occurrences;
-    delete missingCountRows[0]!.postExitElementCounts;
-    refreshWireFingerprint(missingCounts);
-    expect(() => decodeExecutionPlan(missingCounts)).toThrow(/invalid post-exit count boundary/);
+    const malformedConformance = wire();
+    const firstOccurrence = (malformedConformance.occurrences as Record<string, unknown>[])[0]!;
+    const conformance = firstOccurrence.roomExitConformance as { facts: Record<string, unknown>[] };
+    conformance.facts = conformance.facts.filter((fact) => fact.kind !== 'elementCounts');
+    refreshWireFingerprint(malformedConformance);
+    expect(() => decodeExecutionPlan(malformedConformance)).toThrow(
+      /room-exit conformance is missing elementCounts/,
+    );
 
-    const terminalCounts = wire();
-    const terminalRows = (terminalCounts.resources as { occurrences: Record<string, unknown>[] })
-      .occurrences;
-    const firstCounts = terminalRows[0]!.postExitElementCounts;
-    terminalRows.at(-1)!.postExitElementCounts = firstCounts;
-    refreshWireFingerprint(terminalCounts);
-    expect(() => decodeExecutionPlan(terminalCounts)).toThrow(/invalid post-exit count boundary/);
+    const incompleteElementVector = wire();
+    const firstDiagnostic = (
+      incompleteElementVector.occurrences as {
+        diagnostics: { roomEntered: { replace: { traits: { elements: Record<string, number> } } } };
+      }[]
+    )[0]!.diagnostics.roomEntered.replace.traits.elements;
+    delete firstDiagnostic.Water;
+    expect(() => decodeExecutionPlan(incompleteElementVector)).toThrow(
+      /traits\.elements\.Water is required/,
+    );
   });
 
   it('rejects disconnected cursors and contradictory target identities on the codec boundary', () => {
