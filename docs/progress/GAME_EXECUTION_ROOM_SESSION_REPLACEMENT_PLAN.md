@@ -15,10 +15,10 @@ are the exact Gate B input authority.
 
 Gate B subsequently completed the room-session cutover. Live Gate C probing
 was suspended on 2026-09-02 after it exposed incomplete cross-carrier and
-special-effect coverage rather than another coordinator defect. The successor
-[Layered Game Execution Coverage Plan](GAME_EXECUTION_LAYERED_COVERAGE_PLAN.md)
-supersedes Gate C and owns the remaining execution closure. Gate D remains
-blocked until that successor closes.
+special-effect coverage rather than another coordinator defect. Its successor,
+the [Layered Game Execution Coverage Plan](GAME_EXECUTION_LAYERED_COVERAGE_PLAN.md),
+has closed universal implementation through Gate F. Its Gate G live F/G proof
+and Gate H durable/Windows closure remain active.
 
 Starting authorities and commits:
 

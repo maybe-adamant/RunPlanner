@@ -360,7 +360,7 @@ eligibility, `RunProgress` bag consumption, source destruction, and later
 replacement acquisition remain reward/lifecycle authorities rather than a
 generic Arcana callback system.
 
-Execution protocol v18 publishes the complete-valid selected Circe option's
+The current execution protocol publishes the complete-valid selected Circe option's
 existing activation, promotion, or suppression result without re-deriving it
 from the trait identity. The activation domain consumes only the
 declaration-owned `RequiredCardNames` eligibility fact. The numeric Eternity

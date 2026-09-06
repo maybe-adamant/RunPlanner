@@ -73,9 +73,13 @@ A family is not covered when only its ordinary loot-screen carrier works.
 
 The normalized catalog is the exhaustive identity authority. The execution
 union in `packages/planner-engine/src/execution-plan/model.ts` is the exhaustive
-wire authority. The current consumer is protocol v18 in
+wire authority. The current consumer is protocol v24 in
 `adamantRunPlanner-Plan_Executor`; its supported route extent is Underworld F
-or F/G, not the full planner catalog.
+or F/G, not the full planner catalog. A compile-time census beside the execution
+tests classifies every authored room action and every published Overview,
+Timeline, Doors, acquisition-disposition, automatic-effect, and conformance
+union member. That census is test authority only: runtime adapters remain
+organized by native carrier and do not duplicate it as a callback registry.
 
 Relevant durable authorities:
 
@@ -93,9 +97,11 @@ Relevant durable authorities:
    was carried correctly, but direct items use `UseStoreRewardRandomStack` and
    `AddStackToTraits`, not the ordinary Pom choice screen. The focused
    direct-level adapter now owns that contact.
-2. The v17 wire carries the bounded F/G structure, acquisition, selected-trait,
-   nested-consequence, loadout, Hex/Path, and Sea Star results named by the
-   focused audits. Commerce and later-route contacts retain their own gates.
+2. The v24 wire carries the bounded F/G structure, acquisition, selected-trait,
+   nested-consequence, loadout, Hex/Path, Sea Star, commerce, automatic, and
+   named room-exit conformance results described by the focused audits.
+   Later-route navigation remains deferred even where its reusable carrier is
+   already implemented.
 3. Starting weapon, aspect, Arcana, Fear, and keepsake are an explicit
    checked loadout contract; the executor observes rather than repairs them.
 4. Selecting a trait lets the game run that trait's ordinary acquire behavior.
@@ -109,3 +115,9 @@ Relevant durable authorities:
    random-effect coverage. The execution product and native adapter must also
    represent the authored negative result wherever vanilla could otherwise
    proc, and must cover both loot and direct-consumable carriers.
+7. The active F/G room-exit conformance set is `traitInventory`,
+   `steadyGrowth`, `chaos`, `keepsakeEffects`, `rewardPriorities`,
+   `pathOfStars`, `forfeit`, and `stygianWell`. `echoShopDuplicate` and
+   `hermesShrineDeliveries` remain decoded diagnostic facts but are dormant
+   until their owning routes are enabled. Only changed named facts are
+   published; complete Run State diagnostics never block execution.

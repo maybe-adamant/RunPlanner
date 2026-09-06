@@ -13,15 +13,17 @@ steering, complete retained-state reading, and Gift Gift Gift's volatile
 Hammer/Embryo replay. Gate E's five commerce slices are complete as of
 2026-09-06: Anvil of Fates, all three World Shops, Pools of Purging, Stygian
 Wells, Shrines of Hermes, and their shared Travel Deal contacts now have bounded
-execution dispositions. Gate F is therefore the next implementation boundary.
-Gate F was reassessed against the live protocol-v24 product, semantic executor
-layout, durable contact audits, and primary tests on 2026-09-06. Its former
-room-action and automatic-effect implementation lists were already closed by
-earlier acquisition, encounter, keepsake, transformation, and commerce slices.
-Gate F is now locked as two bounded proof-and-closure passes. Gate G onward
-remains a scope outline. Do not begin a later gate until its components,
-ownership, native contacts, pass-through boundary, and concrete witnesses have
-been discussed, cleaned up here, and locked.
+execution dispositions. Gate F was reassessed against the live protocol-v24
+product, semantic executor layout, durable contact audits, and primary tests on
+2026-09-06. Its former room-action and automatic-effect implementation lists
+were already closed by earlier acquisition, encounter, keepsake,
+transformation, and commerce slices. Gates F1 and F2 are now complete: residual
+native contacts are proved, the universal F/G disposition inventory is
+exhaustive, and durable execution authorities describe the current boundary.
+Gate G's focused live F/G proof is next; Gate H remains the final durable and
+Windows closure. Do not begin a later gate until its components, ownership,
+native contacts, pass-through boundary, and concrete witnesses have been
+discussed, cleaned up here, and locked.
 
 Starting commits:
 
@@ -2148,8 +2150,9 @@ phase gate. It does not create a production capability registry.
   `IMPLEMENTATION_PROGRESS.md` to the live protocol, closed commerce boundary,
   current semantic executor directories, and truthful covered/deferred
   dispositions; and
-- remove this temporary plan after its lasting decisions and validation record
-  have been absorbed into durable authorities.
+- retain this tracker through the unfinished Gate G live F/G proof and Gate H
+  durable/Windows closure; Gate H removes it only after every remaining result
+  has been absorbed into durable authorities.
 
 The exhaustive map is a test authority, not an implementation manifest. It
 must not be imported by production, enumerate native callback names, or require
@@ -2252,10 +2255,11 @@ Every executor gate runs `lua tests/all.lua`, parses active Lua with `luac -p`,
 and runs Luacheck where available. Hook/bootstrap changes additionally run the
 modpack smoke test and fixture mirrors where their payload changed.
 
-Only one Vitest lane runs at a time. The complete Run Planner `npm run check`,
-final executor suite, fixture mirror, smoke, and desktop build belong to Gate H
-after all narrow remediation is stable; they are not repeated after every Lua
-contact adjustment.
+Only one Vitest lane runs at a time. Gate F2 owns the complete universal-layer
+repository checks recorded above. Gate H repeats the complete Run Planner
+`npm run check`, final executor suite, fixture mirror, smoke, and desktop build
+only after the live Gate G remediation is stable; they are not repeated after
+every Lua contact adjustment.
 
 ## Explicit exclusions
 

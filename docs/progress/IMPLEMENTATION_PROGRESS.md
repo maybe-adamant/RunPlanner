@@ -761,14 +761,53 @@ configuration/schema change; it is not rerun merely to create review evidence.
 
 ## F/G Execution Boundary
 
-The current F/G execution boundary is protocol v21. It exports only the exact
+The current F/G execution boundary is protocol v24. It exports only the exact
 complete-valid simulation assembly; the Plan Executor remains a strict decoder
-and native-seam translator rather than a second planner. Gates C1–C4 and D1–D8
-closed focused acquisition carriers, nested selected-trait consequences,
-checked starting loadout, Fig Leaf/Gorgon contacts, Spell/Path state, and
-explicit Sea Star proc/no-proc steering. Ransoms, keepsake pressure, Moon Beam,
-and other named deterministic effects remain explicitly native-authoritative;
-commerce and later-route contacts remain outside this closure.
+and native-seam translator rather than a second planner. The closed boundary
+now covers navigation and incoming rewards; fixed room features; ordinary,
+Chaos, NPC, direct, level, Spell/Path, and transformed acquisitions; selected
+trait consequences; checked starting loadout; Fig Leaf/Gorgon contacts; exact
+Sea Star dispositions; World Shops, Stygian Wells, Purging Pools, Hermes Shrine
+inventory and delivery carriers; Keepsake Rack and fountain interactions; and
+the four automatic outcomes. Ransoms, keepsake pressure, Moon Beam, and other
+named deterministic effects remain explicitly native-authoritative. Later-route
+navigation remains deferred even where its reusable carrier is already
+implemented.
+
+The execution authority has one test-owned compile-time census of every
+authored room action and every published Overview, Timeline, Doors,
+acquisition-disposition, automatic-effect, and room-exit conformance union
+member. The executor does not mirror that census as a native callback registry.
+Its active F/G conformance readers are exactly `traitInventory`, `steadyGrowth`,
+`chaos`, `keepsakeEffects`, `rewardPriorities`, `pathOfStars`, `forfeit`, and
+`stygianWell`; `echoShopDuplicate` and `hermesShrineDeliveries` remain decoded
+but dormant until their owning routes are enabled. Diagnostics remain
+nonblocking, and only planner-published changed facts enter conformance.
+
+The Plan Executor is organized by responsibility: route session and
+`navigation/` own the outer occurrence cursor and doors; `room/features/` owns
+fixed room content and inventories; `room/conformance/` owns native projections
+of named exit facts; and `room/timeline/` owns semantic action families for
+acquisition, commerce, encounter, interaction, and transformation contacts.
+`native_bindings.lua` remains the single declarative planner-to-native literal
+sidecar. The final F/G inventory found no second production owner or superseded
+hook to delete.
+
+This is universal implementation and local adapter closure, not live host
+proof. The focused in-game F/G lanes and final Windows checks remain Gates G
+and H of the
+[Layered Game Execution Coverage Plan](GAME_EXECUTION_LAYERED_COVERAGE_PLAN.md).
+
+The F/G layered execution closure ran its one complete repository gate on
+2026-09-06. Workspace and fixture typechecking, fixture integrity at 3 files/22
+tests, correctness at 270 files/2,781 tests, the 18-test performance policy
+suite, the same-host eight-metric comparison, ESLint, repository-wide Prettier,
+and the production build passed. The Plan Executor passed 319 Lua tests;
+Luacheck found no errors and retained 12 pre-existing warnings in unchanged
+loadout/protocol files; and the modpack smoke passed its module entrypoint and
+coordinator pipeline. The final native-contact witness also fixed Steady
+Growth's temporary `ForceUpgrade` steering so a reused native argument table
+cannot replay a completed target.
 
 The shared F/G closure fixture includes an F Postboss Spark of Ixion, the
 generated G Intro Chaos sibling, three distinct displayed curse options, the
