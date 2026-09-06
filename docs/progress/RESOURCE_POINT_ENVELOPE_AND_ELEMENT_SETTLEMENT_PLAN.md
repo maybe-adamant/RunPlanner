@@ -120,9 +120,10 @@ that abstract family to `ToolPickaxe2`, `ToolExorcismBook2`, `ToolShovel2`, or
 `ToolFishingRod2`. Native tool names do not enter the planner catalog merely to
 serve the adapter.
 
-For every occurrence with a configured successor, it also exposes the exact
-five-element counts after that occurrence has fully exited: Aether, Earth, Air,
-Fire, and Water.
+The existing room-exit conformance product separately exposes the exact
+five-element counts at each complete `beforeRoomExit` snapshot: Aether, Earth,
+Air, Fire, and Water. Element observation therefore uses the ordinary
+conformance boundary rather than extending the resource-policy table.
 
 The precise wire layout may optimize repetition, but these facts must have one
 authority. The execution product must not retain the existing positive-only
@@ -135,7 +136,7 @@ disposition from the route policy; it may not reconstruct lookbacks.
 ### Derived state, not authored negative records
 
 The editable project continues to persist only the four positive singleton
-placements. Suppression IDs and post-exit element counts are replaceable engine
+placements. Suppression IDs and exact element counts are replaceable engine
 products. Moving or removing a selected success automatically recomputes the
 complete envelope without migration, cleanup commands, or Undo noise.
 
@@ -145,9 +146,10 @@ the three dispositions and occupies its real position in resource lookback.
 Repeated Hub restoration does not create a selectable placement, but Hub
 entries remain part of the distance calculation where room history records
 them. The resource derivation must not substitute N's six main visits or its
-encounter-depth counter for that chronology. A side room's post-exit element
-vector is acknowledged when the game next starts the restored Hub; that check
-does not promote Hub into an authored occurrence or resource-policy row.
+encounter-depth counter for that chronology. A side room's successful element
+is present in the next authored main or side occurrence's ordinary room-exit
+element conformance. Restoring the Hub neither performs conformance nor promotes
+Hub into an authored occurrence or resource-policy row.
 
 Candidate legality and execution materialization consume the same derived
 envelope authority. They must not maintain separate implementations of point
@@ -155,34 +157,34 @@ spacing or capacity.
 
 ### The compiler remains a translator
 
-The planner engine derives point suppressions and post-exit element counts from
-the complete-valid simulation. The execution assembler copies the completed
-product and requires branch agreement. It does not add contributions to a
-diagnostic frame, infer prior rooms from IDs, or reproduce resource rules.
+The planner engine derives point suppressions and the ordinary room-exit element
+fact from the complete-valid simulation. The execution assembler copies the
+completed products and requires branch agreement. It does not add contributions
+to a diagnostic frame, infer prior rooms from IDs, or reproduce resource rules.
 
 This changes the execution protocol but not the authored project schema.
 
-### Room sessions end normally; the route cursor spans native leaving
+### Room sessions end normally; the route cursor spans only native leaving
 
 The Room Occurrence session still closes after its Timeline obligations,
 specialized room-exit conformance, and Doors proof complete. It is not retained
 through auto-harvest and gains no `departing` state.
 
-The outer route cursor changes from an exit-advanced cursor to a small
-transition state:
+The outer route cursor retains the departing occurrence only across the native
+`LeaveRoom` call:
 
 ```text
 active occurrence X
   -> room session closes
   -> route cursor remains on X while native LeaveRoom runs
-  -> next StartRoom validates X's post-exit element counts
-  -> cursor advances to occurrence Y
+  -> native LeaveRoom returns and the cursor advances to occurrence Y
   -> Y's room session begins
 ```
 
-During the native transition, next-room construction may consult the already
-known next occurrence, but `current()` continues to identify X. This is route
-navigation state, not a retained Room session or a cross-room Timeline edge.
+During native leaving, next-room construction may consult the already known
+next occurrence, but `current()` continues to identify X for automatic resource
+gathering. This is a bounded route-navigation state, not a retained Room session,
+cross-room Timeline edge, or deferred-conformance queue.
 
 ### Resource roll steering consults only the route cursor
 
@@ -200,30 +202,27 @@ exception-safe, and unable to affect unrelated random calls. Native
 trait, and presentation. Manual use and `AutoHarvestOnExit` therefore share the
 same path.
 
-### Exact element conformance is acknowledged at the next room start
+### Exact element conformance uses the ordinary room-exit boundary
 
-The engine publishes the absolute post-exit five-counter vector for every
-reached occurrence that has a configured successor, including rooms where it
-is unchanged. Checking unchanged rooms is necessary to catch an unintended
-early element roll before it can affect the next planned room.
+The engine publishes a separate absolute five-counter conformance fact for every
+reached occurrence with a complete `beforeRoomExit` snapshot, including rooms
+where the vector is unchanged. It is not folded into `traitInventory`.
 
-At the earliest `StartRoom` contact, before advancing the route cursor or
-starting the new Room session, the executor compares `CurrentRun.Hero.Elements`
-with the prior occurrence's published vector. A mismatch records the first
-conformance discrepancy and stops future realization, while native
-`StartRoom` still proceeds.
+The executor compares this fact with `CurrentRun.Hero.Elements` alongside the
+room's other exit-conformance facts. The current room's vector already includes
+any element gathered while leaving the prior authored occurrence plus any
+modeled element changes inside the current room. A resource gathered during the
+current native `LeaveRoom` is therefore observed at the next authored
+occurrence's room-exit check.
 
 Missing native element-table keys normalize to zero; the adapter compares the
 five named counters, not table identity or one summed total.
 
-This is delayed cleanup conformance for the prior occurrence, not a dependency
-on the new occurrence. It does not join `traitInventory`, which intentionally
-compares only named equipped-trait changes.
-
-The final configured occurrence publishes no post-exit element obligation.
-Whether its resource roll succeeds cannot affect another planned outcome, so a
-later unconfigured room or true run termination marks the executor inactive
-without a trailing element comparison.
+This deliberately accepts detection up to one authored occurrence later in
+exchange for keeping all mismatch detection on the ordinary room-exit boundary.
+Planner simulation and later authoring eligibility are unchanged. An element
+gathered while leaving the final configured occurrence still has no trailing
+obligation because it cannot affect another planned outcome.
 
 ## Gate A — Planner envelope and execution product
 
@@ -239,11 +238,12 @@ Intended commit: `fix(resources): publish protected resource outcomes`
 - Reject conflicting selected successes through the same authority, including
   one selected point suppressing another selected point.
 - Preserve native point behavior outside every selected envelope.
-- Record exact post-`roomExited` element counts from the resulting simulation
-  branch for occurrences with configured successors and require complete-valid
-  branch agreement.
+- Publish exact element counts as an ordinary room-exit conformance fact from
+  each complete `beforeRoomExit` snapshot and require complete-valid branch
+  agreement.
 - Replace the positive-only execution resource shape with the complete
-  route-owned resource policy and post-exit count product.
+  route-owned point policy, and publish element counts through ordinary
+  room-exit conformance.
 - Bump the strict execution protocol and update its TypeScript codec and
   fixtures. Do not bump the authored project schema.
 - Update the durable Resource and game-integration dispositions to distinguish
@@ -261,7 +261,8 @@ Intended commit: `fix(resources): publish protected resource outcomes`
   suppressions and selected-placement conflicts.
 - An entered N side-room occurrence can be selected and participates in
   lookback at its actual RoomHistory position without being flattened into its
-  parent Hub visit; its post-exit vector is checked at the following Hub start.
+  parent Hub visit; its successful element is checked by the next authored
+  occurrence's ordinary room-exit conformance rather than at Hub restoration.
 - Moving and removing a selected success recompute the envelope without
   persisted negative state.
 - The selected room has a forced point and successful roll; earlier attempts
@@ -290,19 +291,18 @@ Intended commits:
   positive-only resource decoder path.
 - Change resource room setup from blanket false assignment to the exact current
   occurrence point disposition: force, suppress, or preserve native.
-- Close the Room session before native leaving as today, but make route exit
-  begin a transition without clearing or advancing the current occurrence.
+- Close the Room session before native leaving as today, retain the current
+  route occurrence only while native `LeaveRoom` executes, and advance it when
+  that call returns.
 - Expose the known next occurrence separately for native next-room preparation.
 - Make `GrantElementFromTool` consult the route cursor's current occurrence and
   derive its one-shot roll result directly from the published point
   disposition; do not decode a second roll-policy table.
-- At the next `StartRoom`, compare the prior occurrence's exact five native
-  `CurrentRun.Hero.Elements` counters before advancing the route cursor and
-  opening the new Room session.
-- Declare the prefix complete without inventing a trailing element obligation
-  for its final occurrence.
-- Remove resource access through `room.current`, global point suppression, and
-  any obsolete resource mismatch path replaced by the exact count boundary.
+- Decode and read the separate element-count conformance fact through the
+  existing room-exit conformance path.
+- Remove resource access through `room.current`, global point suppression, the
+  resource-specific `StartRoom` comparison, and the superseded route
+  acknowledgement state.
 
 ### Primary tests
 
@@ -317,13 +317,11 @@ Intended commits:
   policy.
 - `LeaveRoom` closes the Room session but the route cursor continues to expose
   the source occurrence throughout the native call.
-- The next `StartRoom` compares the prior exact element vector before cursor
-  advancement; matching state advances, mismatching state records the first
-  discrepancy while native entry continues.
-- An unexpected early element is detected even when the expected vector was
-  unchanged.
-- The first unconfigured room makes the executor inactive without requiring a
-  final configured-room element comparison.
+- Every complete room carries an exact element-count conformance fact, including
+  unchanged vectors, and its ordinary room-exit proof detects mismatch.
+- An element gathered while leaving one occurrence is visible to the next
+  authored occurrence's room-exit proof; an element gathered while leaving the
+  final configured occurrence has no trailing obligation.
 - Existing next-room preparation can resolve the next occurrence without
   changing `current()` during native leaving.
 
@@ -343,9 +341,9 @@ contract defect.
 - Run one representative published route containing an allowed native point
   before the selected envelope, one suppressed point inside it, the selected
   successful point, and a later room that observes the resulting element.
-- Confirm the selected element appears exactly once, the unchanged and changed
-  five-counter checks settle at the following room entries, and no Room session
-  survives native `LeaveRoom`.
+- Confirm the selected element appears exactly once, unchanged and changed
+  five-counter facts settle through ordinary room-exit conformance, and no Room
+  session survives native `LeaveRoom`.
 - Run the complete Run Planner gate once after Gate A/B corrections and focused
   review fixes are stable. Run the Plan Executor/module and shell gates once
   before pinning closure. Do not repeat full gates solely to reproduce already
@@ -363,7 +361,7 @@ contract defect.
   envelope.
 - No executor lookback, biome-cap, room-capacity, or candidate policy.
 - No full Run State comparison and no element data folded into ordinary trait
-  inventory conformance.
+  inventory conformance; element counts are their own bounded fact.
 - No retained/departing Room session, cross-room Timeline edge, generic
   deferred-conformance queue, or generalized route transition framework.
 - No manual element-trait insertion by the executor; native
@@ -383,9 +381,9 @@ This plan is complete only when:
    semantic reconstruction or a parallel positive-only path;
 4. the Plan Executor forces the native roll through the route cursor without
    retaining a Room session;
-5. every reached configured occurrence with a configured successor has its five
-   element counters checked at that successor's stable entry, including
-   unchanged vectors;
+5. every reached occurrence with a complete exit snapshot has its five element
+   counters checked through ordinary room-exit conformance, including unchanged
+   vectors;
 6. native errors and player input continue normally after the first mismatch;
 7. focused tests, one bounded live probe, and the final repository gates pass;
    and
