@@ -14,10 +14,14 @@ Hammer/Embryo replay. Gate E's five commerce slices are complete as of
 2026-09-06: Anvil of Fates, all three World Shops, Pools of Purging, Stygian
 Wells, Shrines of Hermes, and their shared Travel Deal contacts now have bounded
 execution dispositions. Gate F is therefore the next implementation boundary.
-Gates F onward remain scope outlines until they receive the same component-by-component
-review. Do not begin a gate until its components, ownership, native contacts,
-pass-through boundary, and concrete witnesses have been discussed, cleaned up
-here, and locked.
+Gate F was reassessed against the live protocol-v24 product, semantic executor
+layout, durable contact audits, and primary tests on 2026-09-06. Its former
+room-action and automatic-effect implementation lists were already closed by
+earlier acquisition, encounter, keepsake, transformation, and commerce slices.
+Gate F is now locked as two bounded proof-and-closure passes. Gate G onward
+remains a scope outline. Do not begin a later gate until its components,
+ownership, native contacts, pass-through boundary, and concrete witnesses have
+been discussed, cleaned up here, and locked.
 
 Starting commits:
 
@@ -2051,77 +2055,120 @@ authored project schema; migration preserves an existing Anvil offer and
 purchase but leaves its formerly unknowable random transformation unresolved
 for the user to author.
 
-### Gate F — Cascading remaining actions and closure
+### Gate F — Residual proof and universal F/G closure
 
-User-visible outcome: every remaining F/G room action has a minimal native
-disposition rather than falling through a generic callback or being manually
-reimplemented. Gate F is three ordered delivery gates.
+User-visible outcome: the already-implemented F/G execution surface is proved
+at its weakest native contacts and closed as one exhaustive, maintainable
+boundary. Gate F does not add another generic callback layer or reimplement
+room actions that already have bounded adapters. It is two ordered delivery
+gates.
 
-#### F1 — Remaining room actions
+The following work is already closed and is not Gate F implementation scope:
 
-- steer resource element success only at the native once-per-run outcome; let
-  native gathering and trait grant code run;
-- let native fountain use and Aromatic Phial application run, steering only the
-  authored Phial target when selection is volatile;
-- bind Keepsake Rack changes at the native equip contact and reuse the general
-  keepsake effect path; opening/closing a rack without changing keepsake remains
-  incidental;
-- steer Forfeit's Onion replacement at reward generation and let native pickup
-  behavior run; required pickups, generated optional pickups, and
-  effect-neutral boss drops remain native-authoritative;
-- retain the C4 Artificer path without moving native acquisition semantics into
-  this layer; Time Piece remains a planner publication omission proved by
-  room-exit conformance.
+- fountain use and Aromatic Phial target steering;
+- Keepsake Rack changes at `EquipKeepsake`, with empty open/close cycles
+  remaining incidental;
+- ordinary and Artificer Forfeit Onion acquisition;
+- required and participating optional pickup settlement;
+- Artificer source transformation and Time Piece publication omission; and
+- the production adapters for Steady Growth, Transcendent Embryo, Judgment, and
+  Crystal Figurine.
 
-Primary witnesses:
+Existing primary witnesses for those paths remain authoritative. Gate F must
+not duplicate them merely to make a coverage table look symmetrical.
 
-- resource element acquired through the native room-exit collection path;
-- Phial-sensitive and non-sensitive rack/fountain orders;
-- Forfeit ordinary and Artificer Onion paths; and
-- required and optional pickups proving native pickup behavior remains intact.
+#### F1 — Residual native-contact proof
 
-#### F2 — Automatic outcomes
+F1 is an executor-owned proof pass. It adds no planner model, execution field,
+protocol revision, or new runtime abstraction unless a focused witness exposes
+a concrete missing fact.
 
-- Steady Growth keeps its native encounter clock and rarity application; steer
-  only the authored target when the clock fires;
-- Transcendent Embryo keeps its native transformation schedule and trait
-  application; steer only the authored blessing identity, rarity-bound values,
-  and replacement target;
-- Judgment and Crystal Figurine keep their native boss/equip timing and Arcana
-  unlock logic; steer only the authored Arcana identities; and
-- let every deterministic intermediate callback run without adding a Timeline
-  callback sequence.
-
-Primary witnesses are:
-
-- all four automatic transaction kinds, each proving that native code performs
-  the consequence after the smallest authored choice is steered;
-- a repeated or incidental native callback that does not replay a completed
+- prove that an authored successful resource point reaches the native element
+  grant while native gathering and trait application remain authoritative;
+- prove exact Steady Growth target steering at its reached encounter-end
+  contact;
+- prove exact Transcendent Embryo blessing identity, rarity, and processed
+  values at its reached maturity contact;
+- prove exact ordered Judgment and Crystal Figurine Arcana outcomes at their
+  native Boss contact;
+- prove that a repeated or incidental callback cannot replay a completed
   automatic owner; and
-- one automatic target mismatch that disables enforcement while native logic
-  continues.
+- prove that an unavailable or mismatching automatic target records the first
+  mismatch while returning through native behavior rather than blocking player
+  input or fabricating completion.
 
-#### F3 — Universal F/G closure
+The executor tests own callback scoping, exact target injection, transaction
+completion, replay prevention, and native pass-through. Planner tests continue
+to own the automatic trigger, target eligibility, ordering, rarity, and final
+Run State. F1 may correct a demonstrated adapter defect, but it must not add a
+second encounter clock, Embryo schedule, Arcana selection policy, resource
+roll, or room-exit mutation algorithm.
 
-- verify the seven F/G room-exit conformance readers and keep later-route Echo
-  Shop duplicate and Shrine delivery readers explicitly dormant;
-- audit every `RoomActionReference`, automatic transaction, acquisition
-  disposition, retained-effect family, and Overview /
-  Doors variant against the contact library;
-- delete superseded positive-only hooks, duplicated native readers, copied game
-  algorithms, and broad claims that are no longer true; and
-- leave guidance-only and simulation-neutral actions nonblocking with no empty
-  actuator code.
+Primary witnesses are one successful resource grant; one reached result for
+each of the four automatic effects; one shared repeated-contact witness; and
+one unavailable-target witness that preserves the native return. Reuse a
+single focused harness where that reduces duplication without hiding the four
+distinct automatic effects across their three native carrier families.
 
-Primary witnesses are:
+Intended commits:
 
-- changed conformance fact blocks, unchanged fact is absent, and diagnostic
-  differences remain nonblocking; and
-- one final test-owned coverage report with no unclassified universal family.
+- Plan Executor: `test(executor): prove residual automatic contacts`, including
+  only bounded production corrections exposed by those witnesses; and
+- modpack shell: pin the reviewed executor revision only when executor source
+  or tests change.
 
-Each F1-through-F3 slice has its own executor commit, independent review, and
-modpack pin. Planner changes are limited to demonstrated missing choice,
-carrier, or proof facts.
+#### F2 — Exhaustive F/G classification and closure
+
+F2 owns the final cross-repository inventory, deletion, durable absorption, and
+phase gate. It does not create a production capability registry.
+
+- add one test-owned exhaustive disposition map for every authored
+  `RoomActionReference`, published Timeline transaction kind, automatic effect,
+  acquisition disposition, Overview field, Doors variant, and room-exit
+  conformance fact;
+- classify each entry as covered, native-authoritative, intentionally omitted,
+  or deferred-route, and fail compilation when the owning TypeScript union
+  gains an unclassified member;
+- keep the exhaustive semantic map beside the planner execution authority.
+  Executor tests retain representative strict-decoder and native-contact
+  witnesses rather than copying the TypeScript matrix into a Lua registry;
+- verify the eight active F/G conformance readers: `traitInventory`,
+  `steadyGrowth`, `chaos`, `keepsakeEffects`, `rewardPriorities`, `pathOfStars`,
+  `forfeit`, and `stygianWell`;
+- keep `echoShopDuplicate` and `hermesShrineDeliveries` explicitly dormant until
+  their owning routes are enabled, while retaining their decoded diagnostic
+  state;
+- verify that changed conformance facts block, unchanged facts are absent, and
+  diagnostic-only Run State differences remain nonblocking;
+- audit the executor composition and native binding sidecar for one owner per
+  supported contact, then delete only proven superseded hooks, duplicated
+  readers, copied game algorithms, or broad claims that no longer match the
+  implementation;
+- update the durable execution-contact audits and
+  `IMPLEMENTATION_PROGRESS.md` to the live protocol, closed commerce boundary,
+  current semantic executor directories, and truthful covered/deferred
+  dispositions; and
+- remove this temporary plan after its lasting decisions and validation record
+  have been absorbed into durable authorities.
+
+The exhaustive map is a test authority, not an implementation manifest. It
+must not be imported by production, enumerate native callback names, or require
+one adapter per semantic entry. A covered family may remain native-authoritative
+or share an existing adapter when the durable audit names that disposition.
+
+Primary witnesses are the compile-time exhaustive map, exact active/dormant
+conformance-reader classification, representative protocol decoding for every
+published transaction shape, and the existing F/G structural fixture family.
+No new large omnibus fixture is required unless the inventory discovers an
+unrepresented wire shape.
+
+F2 closes with one complete Run Planner repository gate, the complete executor
+Lua suite, executor Luacheck, modpack smoke, and clean diffs. Completed lanes
+are not rerun after documentation-only remediation. Each code-producing pass
+uses a fresh executor, independent review, one bounded remediation pass, and a
+coherent commit in each repository it changes. Planner production changes are
+limited to a demonstrated missing choice, carrier, or proof fact; otherwise its
+F2 changes are test and durable-document closure only.
 
 ### Gate G — Focused live F/G proof
 
