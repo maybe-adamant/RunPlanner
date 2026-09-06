@@ -1403,16 +1403,16 @@ describe('engine-owned F/G execution semantic product', () => {
     });
 
     const pool = productFor(authorLegalTraitOffers(createUnderworldFPoolCheckpoint()));
-    const saleOccurrence = pool.occurrences.find((occurrence) =>
-      occurrence.timeline.transactions.some((transaction) => transaction.kind === 'poolSale'),
+    expect(
+      pool.occurrences.flatMap((occurrence) =>
+        occurrence.timeline.transactions.map((transaction) => transaction.kind),
+      ),
+    ).not.toContain('poolSale');
+    const poolOccurrence = pool.occurrences.find(
+      (occurrence) => occurrence.overview.purgingPool?.interacted === true,
     );
-    const sale = saleOccurrence?.timeline.transactions.find(
-      (transaction) => transaction.kind === 'poolSale',
-    );
-    expect(sale).toBeDefined();
-    expect(saleOccurrence?.timeline.obligations).toContainEqual({
-      owner: sale?.owner,
-      checkpoint: 'roomExit',
+    expect(poolOccurrence?.roomExitConformance?.facts).toContainEqual({
+      kind: 'traitInventory',
     });
 
     let wellProject = createUnderworldFWellCheckpoint();

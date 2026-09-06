@@ -6,7 +6,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 22 as const;
+export const EXECUTION_PROTOCOL_VERSION = 23 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
 
 export type ExecutionRunStateCount =
@@ -545,13 +545,6 @@ export type ExecutionTimelineTransaction =
       readonly offerKey: string;
       readonly effect: ExecutionWellEffect;
       readonly twistResultKey?: string;
-    }
-  | {
-      readonly kind: 'poolSale';
-      readonly owner: string;
-      readonly window: ExecutionLifecycleWindow;
-      readonly slotKey: string;
-      readonly traitKey: string;
     }
   | {
       readonly kind: 'keepsakeChange';

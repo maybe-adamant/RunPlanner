@@ -510,7 +510,14 @@ export function executionTimelineTransactions(
       });
       continue;
     }
-    if (timeline.action.reference.kind === 'collectRequiredReward') continue;
+    // Pool sales remain planner-owned room actions.  Native Pool sale code
+    // removes the selected traits, and the sparse room-exit delta verifies the
+    // result; no executor transaction is published for the sale itself.
+    if (
+      timeline.action.reference.kind === 'collectRequiredReward' ||
+      timeline.action.reference.kind === 'sellPurgingPoolTrait'
+    )
+      continue;
     if (
       timeline.action.reference.kind !== 'interactIncomingReward' &&
       timeline.action.reference.kind !== 'interactLocalReward' &&
@@ -519,21 +526,7 @@ export function executionTimelineTransactions(
       timeline.action.reference.kind !== 'purchaseStygianWellOffer'
     ) {
       const reference = timeline.action.reference;
-      if (reference.kind === 'sellPurgingPoolTrait') {
-        const traitKey = room.purgingPool?.traitKeyBySlot[reference.slotKey];
-        if (traitKey === null || traitKey === undefined)
-          throw new CompilerError(
-            'executionCoverageMissing',
-            `${room.gameName} lacks selected Pool sale ${reference.slotKey}`,
-          );
-        add({
-          kind: 'poolSale',
-          owner: semanticAddressKey(timeline.action.owner),
-          slotKey: reference.slotKey,
-          traitKey,
-          window: windowFor(semanticAddressKey(timeline.action.owner)),
-        });
-      } else if (reference.kind === 'interactKeepsakeRack') {
+      if (reference.kind === 'interactKeepsakeRack') {
         const keepsakeKey = room.keepsakeRack?.keepsakeKey;
         if (keepsakeKey === undefined)
           throw new CompilerError(
