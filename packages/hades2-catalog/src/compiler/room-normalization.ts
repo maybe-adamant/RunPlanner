@@ -601,6 +601,29 @@ export function normalizeRoom(
     encounterSets,
     `${path}.encounterSlotBindings`,
   );
+  const unmodeledEncounterKeys = (room.unmodeledEncounterKeys ?? []).map((key, index) => {
+    const normalized = requireNonEmpty(key, `${path}.unmodeledEncounterKeys[${index}]`);
+    const definition = encounterDefinitions.byKey[normalized];
+    if (definition === undefined) {
+      fail(`${path}.unmodeledEncounterKeys[${index}]`, `unknown encounter ${normalized}`);
+    }
+    if (definition.kind !== 'nonCombat' || definition.countsEncounterDepth) {
+      fail(
+        `${path}.unmodeledEncounterKeys[${index}]`,
+        'must name a non-counting noncombat carrier',
+      );
+    }
+    return normalized;
+  });
+  if (unmodeledEncounterKeys.length > 0 && encounterEnvelope.slots.length > 0) {
+    fail(
+      `${path}.unmodeledEncounterKeys`,
+      'may only supplement an encounter envelope with no modeled slots',
+    );
+  }
+  if (new Set(unmodeledEncounterKeys).size !== unmodeledEncounterKeys.length) {
+    fail(`${path}.unmodeledEncounterKeys`, 'must not contain duplicate encounter keys');
+  }
   if (room.exits.length === 0 && !(mode.kind === 'derived' && mode.classification === 'hub')) {
     fail(`${path}.exits`, 'must not be empty');
   }
@@ -1024,6 +1047,9 @@ export function normalizeRoom(
     ...(boonRarityOverride === undefined ? {} : { boonRarityOverride }),
     ...(prebossBatchPolicy === undefined ? {} : { prebossBatchPolicy }),
     encounterEnvelopeKey,
+    ...(unmodeledEncounterKeys.length === 0
+      ? {}
+      : { unmodeledEncounterKeys: Object.freeze(unmodeledEncounterKeys) }),
     advancesExperimentalHammerUses: room.advancesExperimentalHammerUses,
     advancesHermesShrineDeliveryUses: room.advancesHermesShrineDeliveryUses ?? true,
     skipRoomsPerUpgrade: room.skipRoomsPerUpgrade ?? false,

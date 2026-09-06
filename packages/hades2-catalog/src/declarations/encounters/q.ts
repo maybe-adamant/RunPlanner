@@ -26,6 +26,12 @@ export const qEncounterDefinitions = [
     canEncounterSkip: true,
   },
   {
+    key: 'TyphonShop',
+    label: 'Typhon shop',
+    kind: 'nonCombat',
+    countsEncounterDepth: false,
+  },
+  {
     key: 'MiniBossBrute',
     label: 'Brute',
     kind: 'miniboss',

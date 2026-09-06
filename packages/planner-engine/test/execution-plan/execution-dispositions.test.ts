@@ -68,6 +68,7 @@ const executionDispositions = {
   overviewFields: {
     incomingReward: 'covered',
     effectNeutralRequiredReward: 'native-authoritative',
+    unmodeledEncounterKeys: 'covered',
     encounterPhases: 'covered',
     requiredObjects: 'covered',
     shop: 'covered',

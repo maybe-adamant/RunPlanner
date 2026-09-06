@@ -20,6 +20,7 @@ export function overview(value: unknown, label: string) {
     [
       'incomingReward',
       'effectNeutralRequiredReward',
+      'unmodeledEncounterKeys',
       'shop',
       'hermesShrine',
       'stygianWell',
@@ -57,6 +58,16 @@ export function overview(value: unknown, label: string) {
       });
     },
   );
+  const unmodeledEncounterKeys =
+    record.unmodeledEncounterKeys === undefined
+      ? undefined
+      : stringArray(record.unmodeledEncounterKeys, `${label}.unmodeledEncounterKeys`);
+  if (unmodeledEncounterKeys !== undefined && unmodeledEncounterKeys.length === 0) {
+    fail(`${label}.unmodeledEncounterKeys must be non-empty when present`);
+  }
+  if (unmodeledEncounterKeys !== undefined && encounterPhases.length > 0) {
+    fail(`${label}.unmodeledEncounterKeys cannot coexist with modeled encounter phases`);
+  }
   const shop = record.shop === undefined ? undefined : object(record.shop, `${label}.shop`);
   if (
     record.effectNeutralRequiredReward !== undefined &&
@@ -487,6 +498,9 @@ export function overview(value: unknown, label: string) {
     ...(record.effectNeutralRequiredReward === undefined
       ? {}
       : { effectNeutralRequiredReward: true as const }),
+    ...(unmodeledEncounterKeys === undefined
+      ? {}
+      : { unmodeledEncounterKeys: Object.freeze(unmodeledEncounterKeys) }),
     encounterPhases: Object.freeze(encounterPhases),
     requiredObjects: Object.freeze(stringArray(record.requiredObjects, `${label}.requiredObjects`)),
     ...(parsedShop === undefined ? {} : { shop: parsedShop }),

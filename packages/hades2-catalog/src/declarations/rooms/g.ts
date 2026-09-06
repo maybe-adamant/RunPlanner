@@ -30,6 +30,7 @@ export const gRooms = [
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'EmptyEncounter',
+    unmodeledEncounterKeys: ['Empty'],
     encounterSlotBindings: [],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },

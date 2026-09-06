@@ -8,7 +8,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 26 as const;
+export const EXECUTION_PROTOCOL_VERSION = 27 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
 
 export type ExecutionRunStateCount =
@@ -380,6 +380,8 @@ export interface ExecutionOverview {
   readonly incomingReward?: ExecutionReward;
   /** Preserve the room's native required reward without treating it as a simulated acquisition. */
   readonly effectNeutralRequiredReward?: true;
+  /** Native Encounter carriers intentionally omitted from simulated phases. */
+  readonly unmodeledEncounterKeys?: readonly string[];
   readonly encounterPhases: readonly {
     readonly slotKey: string;
     readonly encounterKey: string;

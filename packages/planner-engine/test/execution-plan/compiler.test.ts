@@ -1162,6 +1162,15 @@ describe('execution-plan compiler and codec', () => {
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
   });
 
+  it('publishes native-only Empty carriers without manufacturing timeline phases', () => {
+    const { plan } = planFor(createCompleteFGProject());
+    const intro = plan.occurrences.find((occurrence) => occurrence.gameName === 'G_Intro');
+    expect(intro?.overview).toMatchObject({
+      unmodeledEncounterKeys: ['Empty'],
+      encounterPhases: [],
+    });
+  });
+
   it('requires the semantic Fountain contact on every fountain-use transaction', () => {
     const { plan } = planFor(fOnlyProject());
     const fountain = plan.occurrences

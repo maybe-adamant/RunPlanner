@@ -491,6 +491,9 @@ export function assembleExecutionOverview(
   return Object.freeze({
     ...(incomingReward === undefined ? {} : { incomingReward }),
     ...(room.effectNeutralRequiredReward ? { effectNeutralRequiredReward: true as const } : {}),
+    ...(room.unmodeledEncounterKeys === undefined
+      ? {}
+      : { unmodeledEncounterKeys: room.unmodeledEncounterKeys }),
     encounterPhases: Object.freeze(
       room.encounterPhases.map((phase) =>
         (() => {
