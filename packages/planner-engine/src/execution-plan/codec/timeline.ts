@@ -88,7 +88,7 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
     exact(
       record,
       ['kind', 'owner', 'sourceOwner', 'reward', 'producerLifecycleKey', 'roles', 'window'],
-      [],
+      ['hermesShrineSourceKey'],
       label,
     );
     return Object.freeze({
@@ -105,6 +105,15 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
           acquisitionRole(entry, `${label}.roles[${index}]`),
         ),
       ),
+      ...(record.hermesShrineSourceKey === undefined
+        ? {}
+        : {
+            hermesShrineSourceKey: stringValue(
+              record.hermesShrineSourceKey,
+              `${label}.hermesShrineSourceKey`,
+              MAX_OWNER_STRING,
+            ),
+          }),
       window: lifecycleWindow(record.window, `${label}.window`),
     });
   }

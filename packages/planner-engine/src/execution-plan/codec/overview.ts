@@ -22,6 +22,7 @@ export function overview(value: unknown, label: string) {
       'incomingReward',
       'effectNeutralRequiredReward',
       'shop',
+      'hermesShrine',
       'stygianWell',
       'purgingPool',
       'keepsakeRack',
@@ -168,6 +169,155 @@ export function overview(value: unknown, label: string) {
                 }),
               }),
         });
+  const shrine =
+    record.hermesShrine === undefined
+      ? undefined
+      : object(record.hermesShrine, `${label}.hermesShrine`);
+  const shrineGenerationKeys = [
+    'initial:first',
+    'initial:secondLeft',
+    'initial:secondRight',
+  ] as const;
+  const shrinePurchase = (value: unknown, purchaseLabel: string) => {
+    const row = object(value, purchaseLabel);
+    exact(row, ['roomDelay', 'rushed'], [], purchaseLabel);
+    const roomDelay = integer(row.roomDelay, `${purchaseLabel}.roomDelay`);
+    if (roomDelay < 2 || roomDelay > 8) fail(`${purchaseLabel}.roomDelay must be 2-8`);
+    return Object.freeze({
+      roomDelay: roomDelay as 2 | 3 | 4 | 5 | 6 | 7 | 8,
+      rushed: booleanValue(row.rushed, `${purchaseLabel}.rushed`),
+    });
+  };
+  const parsedShrine =
+    shrine === undefined
+      ? undefined
+      : (() => {
+          exact(shrine, ['offers'], ['travelDealRefill'], `${label}.hermesShrine`);
+          const offers = Object.freeze(
+            array(shrine.offers, `${label}.hermesShrine.offers`, 3).map((entry, index) => {
+              const row = object(entry, `${label}.hermesShrine.offers[${index}]`);
+              exact(
+                row,
+                ['generationKey', 'optionKey', 'rewardType', 'slotIndex'],
+                ['purchase', 'deliverySourceKey'],
+                `${label}.hermesShrine.offers[${index}]`,
+              );
+              if (
+                !shrineGenerationKeys.includes(
+                  row.generationKey as (typeof shrineGenerationKeys)[number],
+                )
+              )
+                fail(`${label}.hermesShrine.offers[${index}].generationKey is unsupported`);
+              if (row.generationKey !== shrineGenerationKeys[index])
+                fail(`${label}.hermesShrine.offers[${index}].generationKey is not native order`);
+              if (row.slotIndex !== index + 1)
+                fail(`${label}.hermesShrine.offers[${index}].slotIndex is not native order`);
+              if ((row.purchase === undefined) !== (row.deliverySourceKey === undefined))
+                fail(
+                  `${label}.hermesShrine.offers[${index}].purchase and deliverySourceKey must be paired`,
+                );
+              return Object.freeze({
+                generationKey: row.generationKey as (typeof shrineGenerationKeys)[number],
+                optionKey: stringValue(
+                  row.optionKey,
+                  `${label}.hermesShrine.offers[${index}].optionKey`,
+                ),
+                rewardType: stringValue(
+                  row.rewardType,
+                  `${label}.hermesShrine.offers[${index}].rewardType`,
+                ),
+                slotIndex: row.slotIndex as 1 | 2 | 3,
+                ...(row.deliverySourceKey === undefined
+                  ? {}
+                  : {
+                      deliverySourceKey: stringValue(
+                        row.deliverySourceKey,
+                        'deliverySourceKey',
+                        MAX_OWNER_STRING,
+                      ),
+                    }),
+                ...(row.purchase === undefined
+                  ? {}
+                  : {
+                      purchase: shrinePurchase(
+                        row.purchase,
+                        `${label}.hermesShrine.offers[${index}].purchase`,
+                      ),
+                    }),
+              });
+            }),
+          );
+          if (offers.length !== 3) fail(`${label}.hermesShrine.offers must contain three offers`);
+          const refill =
+            shrine.travelDealRefill === undefined
+              ? undefined
+              : (() => {
+                  const row = object(
+                    shrine.travelDealRefill,
+                    `${label}.hermesShrine.travelDealRefill`,
+                  );
+                  exact(
+                    row,
+                    ['sourceGenerationKey', 'slotIndex', 'optionKey', 'rewardType'],
+                    ['purchase', 'deliverySourceKey'],
+                    `${label}.hermesShrine.travelDealRefill`,
+                  );
+                  if (
+                    !shrineGenerationKeys.includes(
+                      row.sourceGenerationKey as (typeof shrineGenerationKeys)[number],
+                    )
+                  )
+                    fail(
+                      `${label}.hermesShrine.travelDealRefill.sourceGenerationKey is unsupported`,
+                    );
+                  if (
+                    row.slotIndex !==
+                    shrineGenerationKeys.indexOf(
+                      row.sourceGenerationKey as (typeof shrineGenerationKeys)[number],
+                    ) +
+                      1
+                  )
+                    fail(`${label}.hermesShrine.travelDealRefill.slotIndex is not source order`);
+                  if ((row.purchase === undefined) !== (row.deliverySourceKey === undefined))
+                    fail(
+                      `${label}.hermesShrine.travelDealRefill.purchase and deliverySourceKey must be paired`,
+                    );
+                  return Object.freeze({
+                    sourceGenerationKey:
+                      row.sourceGenerationKey as (typeof shrineGenerationKeys)[number],
+                    slotIndex: row.slotIndex as 1 | 2 | 3,
+                    optionKey: stringValue(
+                      row.optionKey,
+                      `${label}.hermesShrine.travelDealRefill.optionKey`,
+                    ),
+                    rewardType: stringValue(
+                      row.rewardType,
+                      `${label}.hermesShrine.travelDealRefill.rewardType`,
+                    ),
+                    ...(row.deliverySourceKey === undefined
+                      ? {}
+                      : {
+                          deliverySourceKey: stringValue(
+                            row.deliverySourceKey,
+                            'deliverySourceKey',
+                            MAX_OWNER_STRING,
+                          ),
+                        }),
+                    ...(row.purchase === undefined
+                      ? {}
+                      : {
+                          purchase: shrinePurchase(
+                            row.purchase,
+                            `${label}.hermesShrine.travelDealRefill.purchase`,
+                          ),
+                        }),
+                  });
+                })();
+          return Object.freeze({
+            offers,
+            ...(refill === undefined ? {} : { travelDealRefill: refill }),
+          });
+        })();
   const well =
     record.stygianWell === undefined
       ? undefined
@@ -368,6 +518,7 @@ export function overview(value: unknown, label: string) {
     encounterPhases: Object.freeze(encounterPhases),
     requiredObjects: Object.freeze(stringArray(record.requiredObjects, `${label}.requiredObjects`)),
     ...(parsedShop === undefined ? {} : { shop: parsedShop }),
+    ...(parsedShrine === undefined ? {} : { hermesShrine: parsedShrine }),
     ...(parsedWell === undefined ? {} : { stygianWell: parsedWell }),
     ...(parsedPool === undefined ? {} : { purgingPool: parsedPool }),
     ...(rack === undefined

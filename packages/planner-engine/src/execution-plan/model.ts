@@ -6,7 +6,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 23 as const;
+export const EXECUTION_PROTOCOL_VERSION = 24 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
 
 export type ExecutionRunStateCount =
@@ -17,6 +17,8 @@ export type ExecutionTraitSlot = 'Melee' | 'Secondary' | 'Ranged' | 'Rush' | 'Ma
 export type ExecutionTraitOptionKey = 'option1' | 'option2' | 'option3';
 export type ExecutionWellGenerationKey =
   'initial:healing' | 'initial:secondLeft' | 'initial:secondRight' | 'travelDealRefill';
+export type ExecutionHermesShrineGenerationKey =
+  'initial:first' | 'initial:secondLeft' | 'initial:secondRight' | 'travelDealRefill';
 /** Closed normalized effects that can be resolved from one Well offer. */
 export type ExecutionWellEffect =
   | 'neutral'
@@ -405,6 +407,36 @@ export interface ExecutionOverview {
       readonly reward: ExecutionReward;
     };
   };
+  /** Complete native SurfaceShop inventory and authored delivery dispositions. */
+  readonly hermesShrine?: {
+    readonly offers: readonly {
+      readonly generationKey: ExecutionHermesShrineGenerationKey;
+      /** Native StoreData option identity. */
+      readonly optionKey: string;
+      readonly rewardType: string;
+      /** One-based native SurfaceShop button/StoreOptions index. */
+      readonly slotIndex: 1 | 2 | 3;
+      /** Exact delivery entry key carried through native pending-item copies. */
+      readonly deliverySourceKey?: string;
+      readonly purchase?: {
+        readonly roomDelay: 2 | 3 | 4 | 5 | 6 | 7 | 8;
+        readonly rushed: boolean;
+      };
+    }[];
+    /** Planner-proven first-rush readiness for the native Travel Deal refill contact. */
+    readonly travelDealRefill?: {
+      readonly sourceGenerationKey: Exclude<ExecutionHermesShrineGenerationKey, 'travelDealRefill'>;
+      readonly slotIndex: 1 | 2 | 3;
+      readonly optionKey: string;
+      readonly rewardType: string;
+      /** Exact delivery entry key carried through native pending-item copies. */
+      readonly deliverySourceKey?: string;
+      readonly purchase?: {
+        readonly roomDelay: 2 | 3 | 4 | 5 | 6 | 7 | 8;
+        readonly rushed: boolean;
+      };
+    };
+  };
   readonly stygianWell?: {
     readonly interacted: boolean;
     readonly offers?: readonly {
@@ -455,6 +487,8 @@ export type ExecutionTimelineTransaction =
       readonly reward: ExecutionReward;
       readonly producerLifecycleKey: string;
       readonly roles: readonly ExecutionAcquisitionRole[];
+      /** Exact source occurrence/generation identity, unique across same-host deliveries. */
+      readonly hermesShrineSourceKey?: string;
       readonly window: ExecutionLifecycleWindow;
     }
   | {

@@ -4,6 +4,7 @@ import {
   createEncounterPhaseAddress,
   semanticAddressKey,
 } from '../../authored-project/addresses';
+import { hermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shrine-delivery';
 import { INFERNAL_CONTRACT_ENTRY_KEY } from '../../authored-project/shop';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation-products';
@@ -14,6 +15,7 @@ import type { ResolvedRewardOffer } from '../../reward-kernel';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import { agreement, executionRoomOwnerKey, stableJson } from './support';
 import type { ExecutionKeepsakeEquipResults, ExecutionOverview, ExecutionReward } from '../model';
+import type { HermesShrineGenerationKey, HermesShrineSlotKey } from '../../authored-project/model';
 
 export function executionKeepsakeEquipResults(
   results: AuthoredKeepsakeEquipResults | undefined,
@@ -311,6 +313,130 @@ function executionShop(
   });
 }
 
+function executionHermesShrine(
+  room: CanonicalAuthoredRoom,
+  biome: CompleteValidBiomeProjectEvaluation,
+): ExecutionOverview['hermesShrine'] | undefined {
+  const shrine = room.hermesShrine;
+  if (shrine === undefined) return undefined;
+  const owner = executionRoomOwnerKey(room);
+  const assessments = biome.rewards.hermesShrineAssessments.find(
+    (candidate) => semanticAddressKey(candidate.origin) === owner,
+  )?.assessments;
+  if (assessments === undefined || assessments.length === 0)
+    throw new CompilerError('executionCoverageMissing', `${room.gameName} lacks Shrine assessment`);
+  const slotRows = [
+    ['first', 1],
+    ['secondLeft', 2],
+    ['secondRight', 3],
+  ] as const satisfies readonly [HermesShrineSlotKey, 1 | 2 | 3][];
+  const optionKeys = agreement(
+    assessments.map((assessment) =>
+      slotRows.map(([slotKey]) => {
+        const optionKey = assessment.inventory?.optionKeysBySlot[slotKey];
+        if (optionKey === undefined)
+          throw new CompilerError(
+            'executionCoverageMissing',
+            `${room.gameName} lacks Shrine option ${slotKey}`,
+          );
+        return optionKey;
+      }),
+    ),
+    `${room.gameName} Shrine option order`,
+  );
+  const offers = Object.freeze(
+    slotRows.map(([slotKey, slotIndex], index) => {
+      const offer = shrine.offerBySlot[slotKey];
+      if (offer === null)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} lacks Shrine offer ${slotKey}`,
+        );
+      const purchase = shrine.purchaseBySlot?.[slotKey];
+      return Object.freeze({
+        generationKey: `initial:${slotKey}` as Exclude<
+          HermesShrineGenerationKey,
+          'travelDealRefill'
+        >,
+        optionKey: optionKeys[index]!,
+        rewardType: offer.rewardType,
+        slotIndex,
+        ...(purchase === undefined
+          ? {}
+          : {
+              deliverySourceKey: hermesShrineDeliveryEntryKey(
+                room.origin,
+                `initial:${slotKey}` as Exclude<HermesShrineGenerationKey, 'travelDealRefill'>,
+              ),
+            }),
+        ...(purchase === undefined
+          ? {}
+          : { purchase: Object.freeze({ roomDelay: purchase.delay, rushed: purchase.rushed }) }),
+      });
+    }),
+  );
+  const refillOffer = shrine.travelDealRefill?.offer;
+  const refillEvidence =
+    refillOffer === undefined || refillOffer === null
+      ? undefined
+      : agreement(
+          assessments.map((assessment) => {
+            const refill = assessment.travelDealRefill;
+            const optionKey = refill?.candidateOptionKeysByRewardType[refillOffer.rewardType];
+            if (refill === undefined || optionKey === undefined)
+              throw new CompilerError(
+                'executionCoverageMissing',
+                `${room.gameName} lacks native SurfaceShop option ${refillOffer.rewardType}`,
+              );
+            return Object.freeze({
+              sourceGenerationKey: refill.sourceGenerationKey,
+              optionKey,
+            });
+          }),
+          `${room.gameName} Shrine Travel Deal refill`,
+        );
+  const refill =
+    refillEvidence === undefined || refillOffer === undefined || refillOffer === null
+      ? undefined
+      : Object.freeze({
+          sourceGenerationKey: refillEvidence.sourceGenerationKey as Exclude<
+            HermesShrineGenerationKey,
+            'travelDealRefill'
+          >,
+          slotIndex: (
+            {
+              'initial:first': 1,
+              'initial:secondLeft': 2,
+              'initial:secondRight': 3,
+            } as const
+          )[
+            refillEvidence.sourceGenerationKey as Exclude<
+              HermesShrineGenerationKey,
+              'travelDealRefill'
+            >
+          ],
+          optionKey: refillEvidence.optionKey,
+          rewardType: refillOffer.rewardType,
+          ...(shrine.travelDealRefill?.purchase === undefined
+            ? {}
+            : {
+                deliverySourceKey: hermesShrineDeliveryEntryKey(room.origin, 'travelDealRefill'),
+              }),
+          ...(shrine.travelDealRefill?.purchase === undefined
+            ? {}
+            : {
+                purchase: Object.freeze({
+                  roomDelay: shrine.travelDealRefill.purchase.delay,
+                  rushed: shrine.travelDealRefill.purchase.rushed,
+                }),
+              }),
+        });
+  return Object.freeze({
+    offers,
+    ...(refill === undefined ? {} : { travelDealRefill: refill }),
+  });
+}
+
 function executionStygianWell(
   room: CanonicalAuthoredRoom,
 ): ExecutionOverview['stygianWell'] | undefined {
@@ -390,6 +516,7 @@ export function assembleExecutionOverview(
 ): ExecutionOverview {
   const incomingReward = executionReward(room);
   const shop = executionShop(room, biome);
+  const hermesShrine = executionHermesShrine(room, biome);
   const stygianWell = executionStygianWell(room);
   const purgingPool = executionPurgingPool(room);
   const resources = executionResources(room, biome);
@@ -422,6 +549,7 @@ export function assembleExecutionOverview(
     ),
     requiredObjects: Object.freeze((room.requiredObjects ?? []).map((object) => object.key)),
     ...(shop === undefined ? {} : { shop }),
+    ...(hermesShrine === undefined ? {} : { hermesShrine }),
     ...(stygianWell === undefined ? {} : { stygianWell }),
     ...(purgingPool === undefined ? {} : { purgingPool }),
     ...(!room.hasKeepsakeRack

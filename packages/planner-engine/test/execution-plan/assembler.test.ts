@@ -68,6 +68,8 @@ import { assembleExecutionOverview } from '../../src/execution-plan/assembly/ove
 import { orderedExecutionRooms } from '../../src/execution-plan/assembly/route';
 import { executionTimelineTransactions } from '../../src/execution-plan/assembly/timeline-transactions';
 import { traitOffer as decodeExecutionTraitOffer } from '../../src/execution-plan/codec/rewards';
+import { overview as decodeExecutionOverview } from '../../src/execution-plan/codec/overview';
+import { transaction as decodeExecutionTransaction } from '../../src/execution-plan/codec/timeline';
 import type { ExecutionTimelineTransaction } from '../../src/execution-plan/model';
 import {
   EMPTY_PLANNER_TIMELINE_FACTS,
@@ -1113,6 +1115,117 @@ describe('engine-owned F/G execution semantic product', () => {
         ),
       ),
     ).not.toContainEqual(expect.objectContaining({ kind: 'shopPurchase' }));
+  });
+
+  it('publishes complete Shrine inventory, Travel Deal, and exact delivery identities', () => {
+    const shrineAddress = createOccurrenceAddress(
+      nBiome,
+      createOccurrenceId('surface-n-preboss:postboss'),
+    );
+    let project = loadSurfaceNOProject();
+    const travelDealSource = createIncomingRewardAddress(
+      nBiome,
+      createOccurrenceId('surface-n-combat09'),
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, createOccurrenceId('surface-n-combat05')),
+      value: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'AresUpgrade' },
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: travelDealSource,
+      value: { rewardType: 'HermesUpgrade' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(travelDealSource, 'self'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Hermes',
+        options: [
+          { traitKey: 'RestockBoon', rarity: 'Epic' },
+          { traitKey: 'HermesWeaponBoon', rarity: 'Rare' },
+          { traitKey: 'SprintShieldBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineTravelDealRefill',
+      occurrence: shrineAddress,
+      value: { rewardType: 'ArmorBoost' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: shrineAddress,
+      generationKey: 'initial:first',
+      purchase: { delay: 2, rushed: true },
+    });
+    project = authorLegalTraitOffers(project);
+
+    const assembly = simulateProjectAssembly(catalog, project);
+    const nEvaluation = assembly.evaluation.route.biomes.find(
+      (candidate): candidate is CompleteValidBiomeProjectEvaluation =>
+        candidate.biomeKey === 'N' &&
+        candidate.authoring === 'complete' &&
+        candidate.validity === 'valid',
+    );
+    if (nEvaluation === undefined)
+      throw new Error(
+        `Shrine execution fixture is incomplete: ${JSON.stringify(assembly.evaluation.findings)}`,
+      );
+    const shrineRoom = orderedExecutionRooms([nEvaluation]).find(
+      (room) => room.occurrenceId === shrineAddress.occurrenceId,
+    );
+    if (shrineRoom === undefined) throw new Error('Shrine execution fixture lacks N Postboss');
+    const overview = assembleExecutionOverview(shrineRoom, nEvaluation, undefined);
+    expect(overview.hermesShrine?.offers).toEqual([
+      expect.objectContaining({
+        generationKey: 'initial:first',
+        slotIndex: 1,
+        purchase: { roomDelay: 2, rushed: true },
+        deliverySourceKey: expect.stringContaining('initial%3Afirst'),
+      }),
+      expect.objectContaining({
+        generationKey: 'initial:secondLeft',
+        slotIndex: 2,
+      }),
+      expect.objectContaining({ generationKey: 'initial:secondRight', slotIndex: 3 }),
+    ]);
+    expect(overview.hermesShrine?.offers[2]).not.toHaveProperty('purchase');
+    expect(overview.hermesShrine?.travelDealRefill).toMatchObject({
+      sourceGenerationKey: 'initial:first',
+      slotIndex: 1,
+      optionKey: 'ArmorBoost',
+      rewardType: 'ArmorBoost',
+    });
+    expect(overview.hermesShrine?.travelDealRefill).not.toHaveProperty('purchase');
+
+    const timeline = executionTimelineTransactions(
+      shrineRoom,
+      nEvaluation,
+      mergePlannerTimelineFacts(
+        shrineRoom.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
+        nEvaluation.rewards.timelineFacts,
+      ),
+    );
+    const rushedDelivery = timeline.find(
+      (transaction) =>
+        transaction.kind === 'acquisition' &&
+        transaction.hermesShrineSourceKey?.includes('initial%3Afirst'),
+    );
+    expect(rushedDelivery).toBeDefined();
+    expect(decodeExecutionOverview(JSON.parse(JSON.stringify(overview)), 'overview')).toEqual(
+      overview,
+    );
+    if (rushedDelivery === undefined) throw new Error('Shrine delivery transaction is missing');
+    expect(
+      decodeExecutionTransaction(JSON.parse(JSON.stringify(rushedDelivery)), 'transaction'),
+    ).toEqual(rushedDelivery);
   });
 
   it('requires and publishes the exact result for a purchased Anvil', () => {
