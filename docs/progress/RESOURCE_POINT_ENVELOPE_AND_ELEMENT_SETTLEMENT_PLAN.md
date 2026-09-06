@@ -60,10 +60,11 @@ guarantee it:
   room-local capacity;
 - leave every point outside that protected envelope `native`.
 
-The roll policy is independent of the point policy. For a family with a
-selected success, native attempts outside the selected occurrence must fail and
-the selected occurrence must succeed. For a family without a selected success,
-all reached attempts must fail. Native code still owns tool availability,
+Physical point generation and the element roll are distinct native operations,
+but the selected-success planner model permits only the three combinations
+below. The execution product therefore publishes one disposition rather than a
+parallel roll table. For a family without a selected success, every reached
+`native` point receives a failed roll. Native code still owns tool availability,
 point consumption, `ToolElementsSpawned`, trait addition, and presentation.
 
 The resulting room/family product has this exact meaning:
@@ -107,12 +108,12 @@ contribution, so it cannot serve as the final element proof.
 ### One route-owned resource execution product
 
 The engine exposes one complete immutable resource execution policy derived
-from the selected route chronology. It contains, for each family:
-
-- the selected successful occurrence ID, or an explicit no-success value;
-- the occurrence IDs whose physical point must be suppressed;
-- the declaration-owned family, granted trait, and element identity already
-  normalized by the catalog.
+from the selected route chronology. For every entered occurrence it publishes
+exactly one `native`, `suppress`, or `force` disposition for each of the four
+families. This occurrence table is the sole point authority; the wire product
+must not repeat the same selected and suppressed identities in a second family
+index. Any declaration-owned family, granted-trait, or element identity needed
+by the adapter is normalized once alongside that table.
 
 The Plan Executor's fixed native binding remains the sole translation from
 that abstract family to `ToolPickaxe2`, `ToolExorcismBook2`, `ToolShovel2`, or
@@ -125,9 +126,11 @@ Fire, and Water.
 
 The precise wire layout may optimize repetition, but these facts must have one
 authority. The execution product must not retain the existing positive-only
-`Overview.resources` representation as a parallel semantic path. A room
-feature adapter may receive the current occurrence's resolved point disposition
-from the route policy; it may not reconstruct lookbacks.
+`Overview.resources` representation as a parallel semantic path. Family names,
+tool names, granted-trait identities, and element identities remain owned by
+the catalog/native binding and are not repeated in this execution product. A
+room feature adapter may receive the current occurrence's resolved point
+disposition from the route policy; it may not reconstruct lookbacks.
 
 ### Derived state, not authored negative records
 
@@ -135,6 +138,16 @@ The editable project continues to persist only the four positive singleton
 placements. Suppression IDs and post-exit element counts are replaceable engine
 products. Moving or removing a selected success automatically recomputes the
 complete envelope without migration, cleanup commands, or Undo noise.
+
+The chronology is the game's entered-room history, not only the main-route
+spine. An entered N side room is a distinct occurrence that can receive any of
+the three dispositions and occupies its real position in resource lookback.
+Repeated Hub restoration does not create a selectable placement, but Hub
+entries remain part of the distance calculation where room history records
+them. The resource derivation must not substitute N's six main visits or its
+encounter-depth counter for that chronology. A side room's post-exit element
+vector is acknowledged when the game next starts the restored Hub; that check
+does not promote Hub into an authored occurrence or resource-policy row.
 
 Candidate legality and execution materialization consume the same derived
 envelope authority. They must not maintain separate implementations of point
@@ -178,8 +191,10 @@ binding and asks the route session for the current occurrence's published roll
 result. It never consults the Room Timeline, scans the plan, or understands
 lookback rules.
 
-The adapter constrains only the one native `RandomChance` reached by that
-`GrantElementFromTool` invocation. The forcing scope must be one-shot,
+The adapter derives the roll mechanically from the current occurrence's point
+disposition: `force` succeeds and `native` fails; `suppress` has no point to
+invoke the adapter. It constrains only the one native `RandomChance` reached by
+that `GrantElementFromTool` invocation. The forcing scope must be one-shot,
 exception-safe, and unable to affect unrelated random calls. Native
 `GrantElementFromTool` must still execute so it owns the success flag, element
 trait, and presentation. Manual use and `AutoHarvestOnExit` therefore share the
@@ -244,6 +259,9 @@ Intended commit: `fix(resources): publish protected resource outcomes`
   an authored selected success there is rejected rather than silently removed.
 - Same-room simple/complex and Chaos all-tool capacity produce exact
   suppressions and selected-placement conflicts.
+- An entered N side-room occurrence can be selected and participates in
+  lookback at its actual RoomHistory position without being flattened into its
+  parent Hub visit; its post-exit vector is checked at the following Hub start.
 - Moving and removing a selected success recompute the envelope without
   persisted negative state.
 - The selected room has a forced point and successful roll; earlier attempts
@@ -276,7 +294,8 @@ Intended commits:
   begin a transition without clearing or advancing the current occurrence.
 - Expose the known next occurrence separately for native next-room preparation.
 - Make `GrantElementFromTool` consult the route cursor's current occurrence and
-  apply only its published one-shot roll result.
+  derive its one-shot roll result directly from the published point
+  disposition; do not decode a second roll-policy table.
 - At the next `StartRoom`, compare the prior occurrence's exact five native
   `CurrentRun.Hero.Elements` counters before advancing the route cursor and
   opening the new Room session.

@@ -1,11 +1,11 @@
-import type { Catalog, ResourceFamily } from '../catalog-schema';
+import type { Catalog, ResourceFamily, TraitElement } from '../catalog-schema';
 import { createBiomeAddress, semanticAddressKey } from '../authored-project/addresses';
 import type { AuthoredRoutePlan, ResourcePlacement } from '../authored-project/model';
 import { composeBiomeHistoryPrefix } from './history/compose';
 import type { RoomHistoryOrigin } from './lifecycle/model';
 import { materializeBiomePrefix } from './materialization';
 
-const resourceKind = Object.freeze({
+const resourceKindByFamily = Object.freeze({
   Pickaxe: 'simple',
   Exorcism: 'complex',
   Shovel: 'simple',
@@ -21,6 +21,17 @@ export interface ResourceEnteredRoom {
   readonly biomeKey: string;
   readonly origin: RoomHistoryOrigin;
   readonly gameName: string;
+}
+
+export type ResourcePointDisposition = 'native' | 'suppress' | 'force';
+
+/** Engine-owned route product for native resource points and element rolls. */
+export interface ResourceExecutionPolicy {
+  readonly occurrences: readonly {
+    readonly occurrenceId: string;
+    readonly pointDispositions: Readonly<Record<ResourceFamily, ResourcePointDisposition>>;
+    readonly postExitElementCounts?: Readonly<Record<TraitElement, number>>;
+  }[];
 }
 
 export interface RouteResourceAuthoring {
@@ -145,11 +156,17 @@ export function assessResourcePlacement(
   if (room === undefined || !room.resourcePointSupport.families.includes(family))
     reasons.push('host does not declare the resource family');
   const rule = room?.resourcePointSupport.rules[family];
-  if (rule === undefined)
+  if (room === undefined || rule === undefined)
     return Object.freeze({
       legal: false,
       reasons: Object.freeze(['host resource rules unavailable']),
     });
+  const targetCandidate: ResourceCandidate = {
+    biomeKey: placement.biomeKey,
+    occurrenceId: placement.occurrenceId,
+    index,
+    room,
+  };
   for (const [otherFamily, other] of Object.entries(selected) as [
     ResourceFamily,
     ResourcePlacement | null,
@@ -168,30 +185,204 @@ export function assessResourcePlacement(
         entry.origin.occurrenceId === other.occurrenceId,
     );
     if (otherIndex < 0 || index < 0) continue;
-    if (
-      otherFamily === family &&
-      otherIndex < index &&
-      index - otherIndex <= rule.sameFamilyLookback
-    )
-      reasons.push('same-family lookback');
-    if (
-      otherFamily !== family &&
-      otherIndex < index &&
-      index - otherIndex <= rule.crossFamilyLookback[otherFamily]
-    )
-      reasons.push('cross-family lookback');
-    if (
-      other.biomeKey === placement.biomeKey &&
-      room?.resourcePointSupport.ignoresBiomeLimit !== true &&
-      otherFamily === family
-    )
-      reasons.push('biome family cap');
-    if (other.biomeKey === placement.biomeKey && other.occurrenceId === placement.occurrenceId) {
-      if (room?.resourcePointSupport.capacity === 'allTools')
-        reasons.push('all-tool room capacity');
-      else if (resourceKind[otherFamily] === resourceKind[family])
-        reasons.push('room simple/complex capacity');
+    const otherEntry = entered[otherIndex];
+    const otherRoom =
+      otherEntry === undefined ? undefined : catalog.rooms.byKey[otherEntry.gameName];
+    if (otherEntry === undefined || otherRoom === undefined) continue;
+    const otherCandidate: ResourceCandidate = {
+      biomeKey: other.biomeKey,
+      occurrenceId: other.occurrenceId,
+      index: otherIndex,
+      room: otherRoom,
+    };
+    for (const reason of [
+      ...resourcePointConflictReasons(
+        { family, candidate: targetCandidate },
+        { family: otherFamily, candidate: otherCandidate },
+      ),
+      ...resourcePointConflictReasons(
+        { family: otherFamily, candidate: otherCandidate },
+        { family, candidate: targetCandidate },
+      ),
+    ]) {
+      if (!reasons.includes(reason)) reasons.push(reason);
     }
   }
   return Object.freeze({ legal: reasons.length === 0, reasons: Object.freeze(reasons) });
+}
+
+const resourceFamilies = ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const;
+const traitElements = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
+
+type ResourceCandidate = {
+  readonly biomeKey: string;
+  readonly occurrenceId: string;
+  readonly index: number;
+  readonly room: NonNullable<Catalog['rooms']['byKey'][string]>;
+};
+
+interface ResourcePointReference {
+  readonly family: ResourceFamily;
+  readonly candidate: ResourceCandidate;
+}
+
+/** The narrow evaluation surface needed to publish the route resource product. */
+interface ResourcePolicyEvaluation {
+  readonly history: {
+    readonly rooms: readonly { readonly origin: RoomHistoryOrigin }[];
+  };
+  readonly rewards: {
+    readonly roomExitElementCounts: readonly {
+      readonly origin: { readonly occurrenceId: string };
+      readonly elementCounts: Readonly<Record<TraitElement, number>>;
+    }[];
+  };
+}
+
+function resourcePointConflictReasons(
+  target: ResourcePointReference,
+  candidate: ResourcePointReference,
+): readonly string[] {
+  const reasons: string[] = [];
+  if (candidate.candidate.index < target.candidate.index) {
+    const targetRule = target.candidate.room.resourcePointSupport.rules[target.family];
+    if (targetRule !== undefined) {
+      const distance = target.candidate.index - candidate.candidate.index;
+      if (target.family === candidate.family && distance <= targetRule.sameFamilyLookback)
+        reasons.push('same-family lookback');
+      if (
+        target.family !== candidate.family &&
+        distance <= targetRule.crossFamilyLookback[candidate.family]
+      )
+        reasons.push('cross-family lookback');
+      if (
+        target.family === candidate.family &&
+        candidate.candidate.biomeKey === target.candidate.biomeKey &&
+        target.candidate.room.resourcePointSupport.ignoresBiomeLimit !== true
+      )
+        reasons.push('biome family cap');
+    }
+  }
+  if (candidate.candidate.index === target.candidate.index && candidate.family !== target.family) {
+    if (target.candidate.room.resourcePointSupport.capacity === 'allTools')
+      reasons.push('all-tool room capacity');
+    else if (resourceKindByFamily[candidate.family] === resourceKindByFamily[target.family])
+      reasons.push('room simple/complex capacity');
+  }
+  return reasons;
+}
+
+function resourceCounts(
+  counts: Readonly<Record<TraitElement, number>>,
+): Readonly<Record<TraitElement, number>> {
+  return Object.freeze(
+    Object.fromEntries(traitElements.map((element) => [element, counts[element] ?? 0])) as Record<
+      TraitElement,
+      number
+    >,
+  );
+}
+
+/**
+ * Derive the complete point/roll envelope after route chronology and reward
+ * branches have been evaluated. This is the sole producer consumed by the
+ * execution-plan assembler.
+ */
+export function deriveResourceExecutionPolicy(
+  catalog: Catalog,
+  evaluations: readonly ResourcePolicyEvaluation[],
+  authoring: RouteResourceAuthoring,
+): ResourceExecutionPolicy {
+  const enteredOccurrenceIds = new Set(
+    evaluations.flatMap((evaluation) =>
+      evaluation.history.rooms.flatMap((view) =>
+        view.origin.kind === 'occurrence' ? [view.origin.occurrenceId] : [],
+      ),
+    ),
+  );
+  const candidates: ResourceCandidate[] = authoring.entered.flatMap((entry, index) => {
+    if (entry.origin.kind !== 'occurrence' || !enteredOccurrenceIds.has(entry.origin.occurrenceId))
+      return [];
+    const room = catalog.rooms.byKey[entry.gameName];
+    return room === undefined
+      ? []
+      : [{ biomeKey: entry.biomeKey, occurrenceId: entry.origin.occurrenceId, index, room }];
+  });
+  const placements = Object.fromEntries(
+    resourceFamilies.map((family) => [
+      family,
+      authoring.assessmentByFamily[family]?.legal === true ? authoring.placements[family] : null,
+    ]),
+  ) as Record<ResourceFamily, ResourcePlacement | null>;
+  const targets = new Map<ResourceFamily, ResourceCandidate>();
+  for (const family of resourceFamilies) {
+    const placement = placements[family];
+    if (placement === null) continue;
+    const target = candidates.find(
+      (candidate) =>
+        candidate.biomeKey === placement.biomeKey &&
+        candidate.occurrenceId === placement.occurrenceId,
+    );
+    if (target === undefined) continue;
+    targets.set(family, target);
+  }
+
+  const pointDispositions = new Map<string, Record<ResourceFamily, ResourcePointDisposition>>();
+  for (const candidate of candidates) {
+    pointDispositions.set(
+      candidate.occurrenceId,
+      Object.fromEntries(resourceFamilies.map((family) => [family, 'native'])) as Record<
+        ResourceFamily,
+        ResourcePointDisposition
+      >,
+    );
+  }
+  const suppress = (
+    family: ResourceFamily,
+    candidate: ResourceCandidate,
+    target: ResourceCandidate,
+  ): void => {
+    const points = pointDispositions.get(candidate.occurrenceId);
+    if (points === undefined || !candidate.room.resourcePointSupport.families.includes(family))
+      return;
+    if (points[family] === 'force')
+      throw new Error(`resource ${family} selected point conflicts with ${target.occurrenceId}`);
+    points[family] = 'suppress';
+  };
+  for (const [targetFamily, target] of targets) {
+    pointDispositions.get(target.occurrenceId)![targetFamily] = 'force';
+    for (const candidate of candidates) {
+      for (const family of resourceFamilies) {
+        if (
+          resourcePointConflictReasons(
+            { family: targetFamily, candidate: target },
+            { family, candidate },
+          ).length > 0
+        )
+          suppress(family, candidate, target);
+      }
+    }
+  }
+
+  const postExitCounts = new Map<string, Readonly<Record<TraitElement, number>>>();
+  for (const evaluation of evaluations)
+    for (const checkpoint of evaluation.rewards.roomExitElementCounts)
+      postExitCounts.set(checkpoint.origin.occurrenceId, resourceCounts(checkpoint.elementCounts));
+  const terminalOccurrenceId = candidates.at(-1)?.occurrenceId;
+  const occurrences = candidates.map((candidate) => {
+    const postExitElementCounts =
+      candidate.occurrenceId === terminalOccurrenceId
+        ? undefined
+        : postExitCounts.get(candidate.occurrenceId);
+    if (candidate.occurrenceId !== terminalOccurrenceId && postExitElementCounts === undefined)
+      throw new Error(`${candidate.room.gameName} lacks post-exit element counts`);
+    return Object.freeze({
+      occurrenceId: candidate.occurrenceId,
+      pointDispositions: Object.freeze({ ...pointDispositions.get(candidate.occurrenceId)! }),
+      ...(postExitElementCounts === undefined ? {} : { postExitElementCounts }),
+    });
+  });
+  return Object.freeze({
+    occurrences: Object.freeze(occurrences),
+  });
 }

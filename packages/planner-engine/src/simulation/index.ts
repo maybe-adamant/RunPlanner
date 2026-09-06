@@ -22,8 +22,11 @@ export {
 } from './stygian-well';
 export {
   assessResourcePlacement,
+  deriveResourceExecutionPolicy,
   routeResourceAuthoring,
   type ResourceEnteredRoom,
+  type ResourceExecutionPolicy,
+  type ResourcePointDisposition,
   type ResourcePlacementLegality,
   type RouteResourceAuthoring,
 } from './resources';

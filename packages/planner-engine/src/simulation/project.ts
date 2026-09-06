@@ -24,7 +24,11 @@ import { createTraitHistoryState } from './trait-history';
 import type { BiomeHistoryPrefix } from './history';
 import type { MaterializedBiomePrefix } from './materialization';
 import type { SemanticFinding } from './model';
-import { effectiveRouteResourcePlacements, routeResourceAuthoring } from './resources';
+import {
+  deriveResourceExecutionPolicy,
+  effectiveRouteResourcePlacements,
+  routeResourceAuthoring,
+} from './resources';
 import {
   createExactProjectEvaluationAssembly,
   ProjectSimulationContractError,
@@ -289,6 +293,15 @@ function evaluateRouteAssembly(
     completeValidPrefix.push(evaluation.biomeKey);
   }
   const frozenEvaluations = Object.freeze(evaluations);
+  const completeValidEvaluations = frozenEvaluations.filter(
+    (evaluation): evaluation is Extract<ProjectBiomeEvaluation, { validity: 'valid' }> =>
+      evaluation.authoring === 'complete' && evaluation.validity === 'valid',
+  );
+  const resources = deriveResourceExecutionPolicy(
+    catalog,
+    completeValidEvaluations,
+    resourceAuthoring,
+  );
   const processing = Object.freeze({
     completeValidPrefix: Object.freeze(completeValidPrefix),
     active,
@@ -303,6 +316,7 @@ function evaluateRouteAssembly(
       processing,
       findings: Object.freeze(findings),
       summary: summarizeRoute(route.biomes.length, frozenEvaluations, processing),
+      resources,
     }),
     candidateArtifacts: Object.freeze(candidateArtifacts),
     routeStartKeepsakes,

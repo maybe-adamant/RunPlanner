@@ -5,6 +5,7 @@ import type {
   ExecutionAcquisitionDisposition,
   ExecutionDoors,
   ExecutionOverview,
+  ExecutionResourcePolicy,
   ExecutionRoomExitConformanceFactKind,
   ExecutionTimelineTransaction,
 } from '../../src/execution-plan/model';
@@ -15,6 +16,10 @@ type RoomActionKind = RoomActionReference['kind'];
 type TimelineTransactionKind = ExecutionTimelineTransaction['kind'];
 type AutomaticEffect = Extract<ExecutionTimelineTransaction, { kind: 'automatic' }>['effect'];
 type OverviewField = keyof ExecutionOverview;
+type ResourcePolicyField = Exclude<
+  keyof ExecutionResourcePolicy['occurrences'][number],
+  'occurrenceId'
+>;
 type DoorsKind = ExecutionDoors['kind'];
 
 /**
@@ -71,9 +76,12 @@ const executionDispositions = {
     purgingPool: 'covered',
     keepsakeRack: 'covered',
     fountain: 'covered',
-    resources: 'covered',
     additional: 'covered',
   } satisfies Record<OverviewField, ExecutionDisposition>,
+  resourcePolicy: {
+    pointDispositions: 'covered',
+    postExitElementCounts: 'covered',
+  } satisfies Record<ResourcePolicyField, ExecutionDisposition>,
   doors: {
     batch: 'covered',
     fixed: 'covered',

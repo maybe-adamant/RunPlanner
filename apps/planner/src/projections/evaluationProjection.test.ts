@@ -39,6 +39,10 @@ import {
   projectFeedbackHierarchy,
 } from './evaluationProjection';
 
+const emptyResourceExecutionPolicy = {
+  occurrences: [],
+} as const;
+
 const allFindingCodes = [
   'fieldsCageOutcomeUnavailable',
   'hubOpenSlotUnavailable',
@@ -320,6 +324,7 @@ describe('evaluation presentation', () => {
         blockedSuffix: ['G'],
       },
       findings: [fFinding],
+      resources: emptyResourceExecutionPolicy,
       summary: {
         configuredBiomeCount: 2,
         evaluatedBiomeCount: 1,

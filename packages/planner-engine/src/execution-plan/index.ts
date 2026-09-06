@@ -33,4 +33,6 @@ export {
   type ExecutionOccurrence,
   type ExecutionAnomalyReplacement,
   type ExecutionOverview,
+  type ExecutionResourcePolicy,
+  type ExecutionResourcePointDisposition,
 } from './model';

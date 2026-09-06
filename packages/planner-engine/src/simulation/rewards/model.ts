@@ -19,7 +19,7 @@ import type { RunStateAvailability, RunStateSnapshot } from './run-state';
 import type { ArcanaFearState } from '../arcana-fear';
 import type { KeepsakeState } from '../keepsakes';
 import type { EncounterPhaseAddress } from '../../authored-project/addresses';
-import type { TraitRarity } from '../../catalog-schema';
+import type { TraitElement, TraitRarity } from '../../catalog-schema';
 import type { NemesisRandomEventAddress } from '../../authored-project/addresses';
 import type { PlannerTimelineFacts } from '../timeline-facts';
 import type { StygianWellEffect } from '../stygian-well';
@@ -216,6 +216,11 @@ interface RewardSimulationBase {
 }
 
 export interface BiomeRewardSimulation extends RewardSimulationBase {
+  /** Absolute five-element counters after each reached room exit. */
+  readonly roomExitElementCounts: readonly {
+    readonly origin: import('../../authored-project/addresses').OccurrenceAddress;
+    readonly elementCounts: Readonly<Record<TraitElement, number>>;
+  }[];
   /** Reward transitions publish only exact owner relations; room actions publish structural facts. */
   readonly timelineFacts: PlannerTimelineFacts;
   /** Exact one-shot Gift Gift Gift volatile result reached at this biome start. */
