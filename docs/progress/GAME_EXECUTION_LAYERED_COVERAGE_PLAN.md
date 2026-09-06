@@ -10,9 +10,11 @@ closure now also covers Medea, Arachne, Narcissus, Circe, Icarus, and Echo
 without enabling their deferred route structure. The focused keepsake closure
 now covers all 33 selectable keepsakes, including Aromatic Phial target
 steering, complete retained-state reading, and Gift Gift Gift's volatile
-Hammer/Embryo replay. Gate E is therefore the next implementation boundary.
-Gate E's five commerce slices are locked as of 2026-09-05. Gates F onward
-remain scope outlines until they receive the same component-by-component
+Hammer/Embryo replay. Gate E's five commerce slices are complete as of
+2026-09-06: Anvil of Fates, all three World Shops, Pools of Purging, Stygian
+Wells, Shrines of Hermes, and their shared Travel Deal contacts now have bounded
+execution dispositions. Gate F is therefore the next implementation boundary.
+Gates F onward remain scope outlines until they receive the same component-by-component
 review. Do not begin a gate until its components, ownership, native contacts,
 pass-through boundary, and concrete witnesses have been discussed, cleaned up
 here, and locked.
@@ -94,7 +96,7 @@ callback is already known.
 
 ### Proven base retained
 
-- Protocol v21 publishes one selected Underworld F or F/G occurrence sequence
+- Protocol v24 publishes one selected Underworld F or F/G occurrence sequence
   with Overview, consequential Timeline transactions, local prerequisites,
   obligations, Doors, sparse room-exit conformance, and diagnostic Run State.
 - The active executor uses a route cursor and one Room Occurrence session. The
@@ -119,7 +121,7 @@ its coverage matrix proves the contact; working code is not exempt from audit.
 | Acquisition carriers  | Ordinary, level, direct-pickup, NPC, Mystery Boon, Artificer, Spell, and Path carriers are closed. Commerce remains Gate E; later-route carrier activation remains route-owned.          |
 | Trait effects         | Natural Selection, All Together, Concave Stone, and Sea Star have exact scoped products. Ransoms are native-authoritative, not a second executor implementation.                         |
 | Keepsake effects      | Closed for all 33 keepsakes. Phial steering, complete retained-state reading, and Gift's exact volatile Hammer/Embryo replay use bounded native contacts; passive effects remain native. |
-| Commerce              | World Shop, Anvil, Pool, Well, and Shrine inventory/outcome closure remains Gate E; this plan does not yet claim its exhaustive item/contact coverage.                                   |
+| Commerce              | Closed for World Shops, Anvil, Pools, Wells, Shrines, and Travel Deal. Native purchase, sale, delivery, and retained-effect algorithms remain game-owned.                                |
 | Later-route abilities | Spell/Hex, Path, and all six bespoke NPC menu/consequence adapters are covered but await route activation and bounded live native probes. Biome-specific structure remains deferred.     |
 
 ## Locked architectural rules
