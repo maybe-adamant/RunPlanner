@@ -68,6 +68,9 @@ A family is not covered when only its ordinary loot-screen carrier works.
   automatic results.
 - [Room features and actions](ROOM_FEATURES_AND_ACTIONS.md) — the Overview,
   Timeline, and Doors contacts that carry those rewards and abilities.
+- [Native conformance contacts](NATIVE_CONFORMANCE_CONTACTS.md) — every
+  blocking structural and room-exit comparison, its exact live game authority,
+  its checkpoint, and the narrow cases where planner provenance may be retained.
 
 ## Authorities and current boundary
 
