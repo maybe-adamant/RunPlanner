@@ -3,3 +3,4 @@ dist/
 coverage/
 package-lock.json
 test/fixtures/authored-project/checkpoints/*.runplanner.json
+packages/planner-engine/test/execution-plan/fixtures/*.execution.json
