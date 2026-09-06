@@ -113,6 +113,9 @@ function materializeHubRoom(
     gameName: room.gameName,
     encounterEnvelopeKey: room.encounterEnvelopeKey,
     encounterPhases: fixedEncounterPhases(catalog, room),
+    ...(room.unmodeledEncounterKeys === undefined
+      ? {}
+      : { unmodeledEncounterKeys: room.unmodeledEncounterKeys }),
     lifecycleProfileKey: 'EphyraHubRoom',
     counterEffects: room.counters,
     entered: true,

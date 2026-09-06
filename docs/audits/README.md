@@ -38,6 +38,7 @@ reader-facing taxonomy, not a package or runtime boundary.
 - [Game execution Timeline reconciliation](rooms-and-routes/GAME_EXECUTION_TIMELINE_RECONCILIATION_AUDIT.md) — Feasibility of owner-bound, partial-order runtime reconciliation across the closed Room Action catalog without callback replay or permutation enumeration.
 - [H Fields spatial points](rooms-and-routes/H_FIELDS_SPATIAL_POINTS_GAME_DATA_AUDIT.md) — Player-entry pairs, cage and optional-reward point inventories, runtime placement, map coordinates, and spatial discrepancies for all 15 H combat maps.
 - [I/Q World Shop phases](rooms-and-routes/I_Q_WORLD_SHOP_PHASE_GAME_DATA_AUDIT.md) — World Shop phase and inventory timing across I and Q.
+- [Noncombat and Empty encounter normalization](rooms-and-routes/NONCOMBAT_AND_EMPTY_ENCOUNTER_NORMALIZATION_AUDIT.md) — Native `Empty` placeholders, retained noncombat phases, and exact Intro, Fountain, Story, Shop, Preboss, Postboss, Hub, and Chaos encounter identities.
 - [Room action order](rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md) — Source-backed room lifecycle and action ordering contacts.
 - [Route detours](rooms-and-routes/ROUTE_DETOUR_FINDINGS.md) — Chaos, Oceanus Anomaly, Zagreus Contract, Spark, and other route-level detour, exit, and host-room findings.
 

@@ -226,6 +226,14 @@ describe('encounter envelope catalog', () => {
     ]);
     expect(catalog).not.toHaveProperty('encounterProfiles');
 
+    for (const gameName of ['G_Intro', 'H_Intro', 'I_Intro', 'N_Hub', 'O_Intro', 'Q_Intro']) {
+      expect(catalog.rooms.byKey[gameName]).toMatchObject({
+        encounterEnvelopeKey: 'EmptyEncounter',
+        encounterSlotBindings: [],
+        unmodeledEncounterKeys: ['Empty'],
+      });
+    }
+
     for (const room of catalog.rooms.values) {
       const envelope = catalog.encounterEnvelopes.byKey[room.encounterEnvelopeKey];
       expect(envelope).toBeDefined();
@@ -273,6 +281,26 @@ describe('encounter envelope catalog', () => {
       encounterSlotBindings: [
         { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Empty' },
       ],
+    });
+    for (const gameName of ['I_PreBoss01', 'I_PreBoss02']) {
+      expect(catalog.rooms.byKey[gameName]).toMatchObject({
+        incomingReward: { kind: 'shop', shopProfileKey: 'I_WorldShop' },
+        encounterEnvelopeKey: 'SingleEncounter',
+        encounterSlotBindings: [
+          { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Empty' },
+        ],
+      });
+    }
+    expect(catalog.rooms.byKey.Q_PreBoss01).toMatchObject({
+      incomingReward: { kind: 'shop', shopProfileKey: 'Q_WorldShop' },
+      encounterEnvelopeKey: 'SingleEncounter',
+      encounterSlotBindings: [
+        { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'TyphonShop' },
+      ],
+    });
+    expect(catalog.encounterDefinitions.byKey.TyphonShop).toMatchObject({
+      kind: 'nonCombat',
+      countsEncounterDepth: false,
     });
     expect(catalog.encounterDefinitions.byKey).not.toHaveProperty('Story_Chronos_01');
     expect(catalog.encounterSets.byKey.IEncountersDefault).toMatchObject({

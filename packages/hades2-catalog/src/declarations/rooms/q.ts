@@ -24,6 +24,7 @@ export const qRooms = [
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'EmptyEncounter',
+    unmodeledEncounterKeys: ['Empty'],
     encounterSlotBindings: [],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
@@ -601,7 +602,7 @@ export const qRooms = [
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [
-      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Shop' },
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'TyphonShop' },
     ],
     counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },

@@ -918,6 +918,9 @@ export function materializeAuthoredRoom(
     encounters: context.occurrence.encounters,
     encounterEnvelopeKey: context.room.encounterEnvelopeKey,
     encounterPhases: selectedEncounterPhases,
+    ...(context.room.unmodeledEncounterKeys === undefined
+      ? {}
+      : { unmodeledEncounterKeys: context.room.unmodeledEncounterKeys }),
     lifecycleProfileKey: leaf.lifecycleProfileKey,
     counterEffects: context.room.counters,
     entered: context.entered,

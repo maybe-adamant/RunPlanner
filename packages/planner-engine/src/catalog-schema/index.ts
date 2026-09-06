@@ -718,6 +718,8 @@ export interface RoomDeclaration {
   readonly individualRewardStoreKey?: string;
   readonly enteredRewardStoreHistory: EnteredRewardStoreHistoryPolicy;
   readonly encounterEnvelopeKey: string;
+  /** Native Encounter carriers intentionally omitted from the simulated phase envelope. */
+  readonly unmodeledEncounterKeys?: readonly string[];
   readonly advancesExperimentalHammerUses: boolean;
   /** Exact room-level policy for advancing delayed Hermes Shrine delivery uses. */
   readonly advancesHermesShrineDeliveryUses: boolean;

@@ -32,6 +32,7 @@ export const iRooms = [
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'EmptyEncounter',
+    unmodeledEncounterKeys: ['Empty'],
     encounterSlotBindings: [],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
@@ -963,7 +964,7 @@ export const iRooms = [
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [
-      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Shop' },
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Empty' },
     ],
     counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsPerRoom: 1 },
@@ -1001,7 +1002,7 @@ export const iRooms = [
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [
-      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Shop' },
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Empty' },
     ],
     counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsPerRoom: 1 },

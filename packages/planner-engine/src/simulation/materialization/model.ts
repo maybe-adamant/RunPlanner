@@ -152,6 +152,8 @@ export interface CanonicalAuthoredRoom {
   readonly encounters: RoomEncounterState;
   readonly encounterEnvelopeKey: string;
   readonly encounterPhases: readonly ResolvedEncounterPhase[];
+  /** Native Encounter carriers intentionally omitted from simulated phases. */
+  readonly unmodeledEncounterKeys?: readonly string[];
   readonly lifecycleProfileKey: string;
   readonly counterEffects: RoomCounterEffects;
   readonly entered: boolean;
@@ -245,6 +247,8 @@ export interface CanonicalHubRoom {
   readonly gameName: string;
   readonly encounterEnvelopeKey: string;
   readonly encounterPhases: readonly ResolvedEncounterPhase[];
+  /** Native Encounter carriers intentionally omitted from simulated phases. */
+  readonly unmodeledEncounterKeys?: readonly string[];
   readonly lifecycleProfileKey: string;
   readonly counterEffects: RoomCounterEffects;
   readonly entered: true;

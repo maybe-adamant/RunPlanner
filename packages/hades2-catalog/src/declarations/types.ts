@@ -458,6 +458,8 @@ export interface RawRoomDeclaration {
   readonly individualRewardStoreKey?: string;
   readonly enteredRewardStoreHistory: EnteredRewardStoreHistoryPolicy;
   readonly encounterEnvelopeKey: string;
+  /** Exact native carriers for a zero-slot envelope; they have no planner lifecycle effects. */
+  readonly unmodeledEncounterKeys?: readonly string[];
   /** Exact room-level policy for temporary Hammer encounter uses. */
   readonly advancesExperimentalHammerUses: boolean;
   /** Exact room-level policy for advancing delayed Hermes Shrine delivery uses. */
