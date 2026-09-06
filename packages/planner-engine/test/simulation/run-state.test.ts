@@ -155,7 +155,12 @@ describe('decision run-state snapshots', () => {
       ({
         owner: createRoomRunStateCheckpointAddress(occurrence, { kind: checkpoint }),
         checkpoint,
-        traits: { echoShopDuplicateStatus: undefined, steadyGrowth: {}, chaos: {} },
+        traits: {
+          equippedTraits: {},
+          echoShopDuplicateStatus: undefined,
+          steadyGrowth: {},
+          chaos: {},
+        },
         keepsakes: {
           olympianSources: [],
           jeweledPom: undefined,
