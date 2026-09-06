@@ -275,11 +275,11 @@ Night Bloom, Phase Shift, Twilight Curse, and Moon Water. The planner owns the
 selected layout, Rare/Epic node identities, God Sent node, banked points,
 invested points, and closed-tree state.
 
-Spell/Hex selection and Path acquisition are covered by focused v17 contacts;
-Moon Beam remains native-authoritative. Their ordinary route activation and
-live native probes remain deferred because F/G cannot reach those pickups. The
-product does not model individual Hex combat effects or player-selected node
-positions. The two bounded contacts are:
+Spell/Hex selection and Path acquisition are covered by focused protocol-v24
+contacts; Moon Beam remains native-authoritative. Their ordinary route
+activation and live native probes remain deferred because F/G cannot reach
+those pickups. The product does not model individual Hex combat effects or
+player-selected node positions. The two bounded contacts are:
 
 1. force the selected Spell at the Spell offer;
 2. force/observe the published node investment when Path points are spent.

@@ -17,27 +17,28 @@ a global action cursor.
 - Reward generation: `Scripts/RewardLogic.lua:210-330`
 - Fountain: `Scripts/InteractLogic.lua:741-790`
 - Resources: `Scripts/HarvestLogic.lua:266-330`
-- Current native contacts: `src/mods/room/features/hooks.lua`,
-  `src/mods/room/features/inventory_hooks.lua`, and
-  `src/mods/room/timeline/feature_interactions.lua` in the Plan Executor
+- Current native contacts: `src/mods/room/features/` for fixed room content and
+  inventories, `src/mods/navigation/` for doors and their rewards, and focused
+  action-family adapters beneath `src/mods/room/timeline/` in the Plan Executor
 
 ## Overview contacts
 
-| Published fact                                    | Native contact                                                                                                          | Current status                                                                 |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Current room identity                             | `ChooseStartingRoom`, `CreateRoom`, `StartRoom`                                                                         | Covered.                                                                       |
-| Encounter phases                                  | `ChooseEncounter`, `SetupRoomMultipleEncountersData`                                                                    | Covered for F/G.                                                               |
-| Incoming reward                                   | `SetupRoomReward`, `SpawnRoomReward`                                                                                    | Covered.                                                                       |
-| Effect-neutral required boss reward               | native required reward remains intact                                                                                   | Covered; it is not compiled as a simulated acquisition.                        |
-| Stygian Well presence                             | `IsWellShopEligible`                                                                                                    | Covered.                                                                       |
-| Purging Pool presence                             | `IsSellTraitShopEligible`                                                                                               | Covered.                                                                       |
-| World Shop inventory                              | room `StoreDataName` plus Shop contacts                                                                                 | Covered.                                                                       |
-| Keepsake Rack                                     | native obstacle with `UseKeepsakeRack`                                                                                  | Covered as room content; only an actual change creates a Timeline transaction. |
-| Fountain                                          | native obstacle with `UseHealthFountain`                                                                                | Covered.                                                                       |
-| Successful resource                               | declaration-owned room point plus `GrantElementFromTool`                                                                | Covered for the four element outcomes.                                         |
-| Chaos gate                                        | `HandleSecretSpawns`, `IsSecretDoorEligible`                                                                            | Covered.                                                                       |
-| Zagreus Contract                                  | `SpawnZagContract`                                                                                                      | Covered.                                                                       |
-| N side rooms, H cages, O wheels, Shrine of Hermes | Deferred route. The semantic product already owns most authored facts, but native contacts need route-specific mapping. |
+| Published fact                      | Native contact                                                                                                          | Current status                                                                 |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Current room identity               | `ChooseStartingRoom`, `CreateRoom`, `StartRoom`                                                                         | Covered.                                                                       |
+| Encounter phases                    | `ChooseEncounter`, `SetupRoomMultipleEncountersData`                                                                    | Covered for F/G.                                                               |
+| Incoming reward                     | `SetupRoomReward`, `SpawnRoomReward`                                                                                    | Covered.                                                                       |
+| Effect-neutral required boss reward | native required reward remains intact                                                                                   | Covered; it is not compiled as a simulated acquisition.                        |
+| Stygian Well presence               | `IsWellShopEligible`                                                                                                    | Covered.                                                                       |
+| Purging Pool presence               | `IsSellTraitShopEligible`                                                                                               | Covered.                                                                       |
+| World Shop inventory                | room `StoreDataName` plus Shop contacts                                                                                 | Covered.                                                                       |
+| Keepsake Rack                       | native obstacle with `UseKeepsakeRack`                                                                                  | Covered as room content; only an actual change creates a Timeline transaction. |
+| Fountain                            | native obstacle with `UseHealthFountain`                                                                                | Covered.                                                                       |
+| Successful resource                 | declaration-owned room point plus `GrantElementFromTool`                                                                | Covered for the four element outcomes.                                         |
+| Chaos gate                          | `HandleSecretSpawns`, `IsSecretDoorEligible`                                                                            | Covered.                                                                       |
+| Zagreus Contract                    | `SpawnZagContract`                                                                                                      | Covered.                                                                       |
+| N side rooms, H cages, O wheels     | Deferred route. The semantic product already owns most authored facts, but native contacts need route-specific mapping. |
+| Shrine of Hermes                    | Inventory and purchase/delivery carriers are covered; route navigation remains deferred.                                |
 
 Presence and interaction are different. An uninteracted Well or Pool is a
 valid Overview fact with no purchase/sale transaction. A Shop or Shrine still
@@ -45,17 +46,17 @@ requires full inventory authoring even when no offer is purchased.
 
 ## Timeline transaction contacts
 
-| Transaction             | Native contact                                                                    | Current status                                                                    |
-| ----------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Acquisition             | `UseLoot` or `UseConsumableItem`, plus producer-specific creation/unwrap contacts | Covered subject to the carrier matrix in Rewards and items.                       |
-| Encounter interaction   | encounter/NPC-specific menu contact                                               | Covered for F/G and Nemesis; future-biome contacts deferred.                      |
-| Shop purchase           | `HandleStorePurchase` or `RemoveStoreItem`                                        | Covered. Payment does not settle a later trait or level acquisition.              |
-| Well purchase           | `HandleStorePurchase`                                                             | Covered.                                                                          |
-| Travel Deal Well refill | `RestockWorldItem` and `SpawnStoreItemInWorld`                                    | Covered.                                                                          |
-| Pool sale               | `CreateSellButtons`, `HandleSellChoiceSelection`                                  | Covered.                                                                          |
-| Keepsake change         | `EquipKeepsake` after a real rack selection                                       | Covered. Opening/closing the rack without changing keepsake is not a transaction. |
-| Fountain use            | `UseHealthFountain`                                                               | Covered.                                                                          |
-| Automatic               | effect-specific callbacks                                                         | Covered for the closed four-effect union.                                         |
+| Transaction             | Native contact                                                                    | Current status                                                                                                                |
+| ----------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Acquisition             | `UseLoot` or `UseConsumableItem`, plus producer-specific creation/unwrap contacts | Covered subject to the carrier matrix in Rewards and items.                                                                   |
+| Encounter interaction   | encounter/NPC-specific menu contact                                               | Covered for F/G and Nemesis; future-biome contacts deferred.                                                                  |
+| Shop purchase           | `HandleStorePurchase` or `RemoveStoreItem`                                        | Covered. Payment does not settle a later trait or level acquisition.                                                          |
+| Well purchase           | `HandleStorePurchase`                                                             | Covered.                                                                                                                      |
+| Travel Deal Well refill | `RestockWorldItem` and `SpawnStoreItemInWorld`                                    | Covered.                                                                                                                      |
+| Pool sale               | `CreateSellButtons`, `HandleSellChoiceSelection`                                  | Intentionally omitted as a transaction: Overview fixes the menu and `traitInventory` conformance proves the authored removal. |
+| Keepsake change         | `EquipKeepsake` after a real rack selection                                       | Covered. Opening/closing the rack without changing keepsake is not a transaction.                                             |
+| Fountain use            | `UseHealthFountain`                                                               | Covered.                                                                                                                      |
+| Automatic               | effect-specific callbacks                                                         | Covered for the closed four-effect union.                                                                                     |
 
 Dependencies are planner-published ordering constraints between transaction
 owners. The executor checks only those edges; it must not infer semantic rules
@@ -98,5 +99,6 @@ room publishes only:
 2. named conformance facts that must agree before leaving.
 
 This keeps room sessions independent while still exposing pending-state drift.
-Hermes Shrine delivery is deferred route; its purchase and later delivery must
-remain separate contacts, with delivery—not payment—owning the acquisition.
+Hermes Shrine purchase and delivery are separate covered contacts, with
+delivery—not payment—owning the acquisition. Reaching a Shrine remains a
+deferred-route navigation concern.

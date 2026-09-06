@@ -14,8 +14,8 @@ pickup.
 - Reward creation: `Scripts/RewardLogic.lua:210-330`
 - Shops and Mystery Boons: `Scripts/StoreLogic.lua:326-430` and
   `Scripts/StoreLogic.lua:1134-1360`
-- Current adapters: focused `src/mods/room/timeline/` acquisition,
-  transformation, and feature modules in the Plan Executor
+- Current adapters: focused `src/mods/room/timeline/` acquisition, commerce,
+  interaction, and transformation modules in the Plan Executor
 
 ## Native acquisition contacts
 
@@ -26,8 +26,8 @@ pickup.
 | Direct random level item | `UseStoreRewardRandomStack` -> `AddStackToTraits`                                                                   | Covered for a bound published level resolution, including native target steering and the threaded native terminal.                                                                                                                    |
 | World Shop item          | `FillInShopOptions`, `SpawnStoreItemInWorld`, `RemoveStoreItem`; screen purchase uses `HandleStorePurchase`         | Covered for inventory identity, purchase binding, and published acquisition roles. Trait/level settlement occurs at the later native acquisition contact, not at payment.                                                             |
 | Stygian Well item        | `FillInShopOptions`, `CreateStoreButtons`, `HandleStorePurchase`, `RestockWorldItem`                                | Covered for exact declared Well effects, Twist, Extended, and Travel Deal refill binding.                                                                                                                                             |
-| Generated pickup         | `CreateConsumableItem`, `CreateLoot`, `GiveLoot`, `SpawnRoomReward`                                                 | Covered for published trait-generated children through producer-independent ready-action claiming. Other producer RNG and participation contacts retain their owning later gates.                                                     |
-| Mystery Boon             | `UnwrapRandomLoot`, `GiveLoot`, `CreateLoot`, then the ordinary trait screen                                        | Covered for an already-bound box, including Narcissus. Purchase and Shrine delivery retain their owning later gates.                                                                                                                  |
+| Generated pickup         | `CreateConsumableItem`, `CreateLoot`, `GiveLoot`, `SpawnRoomReward`                                                 | Covered for published trait-generated children through producer-independent ready-action claiming. Producer RNG and participation remain with their focused owning adapters.                                                          |
+| Mystery Boon             | `UnwrapRandomLoot`, `GiveLoot`, `CreateLoot`, then the ordinary trait screen                                        | Covered for bound and compatible ready boxes, including Narcissus and purchased or delivered boxes. Payment and delayed delivery remain native-owned contacts; the resulting acquisition uses the same Mystery Boon adapter.          |
 | Time Piece / Artificer   | `GoldifyPresentation`, `ConvertMetaRewardPresentation`, `ChooseRoomReward`, `SpawnRoomReward`                       | Time Piece is omitted at execution publication and proved in aggregate at room exit. The transformation audit closes Artificer's disposition, bounded native sequence, reward steering, and later producer-independent child handoff. |
 | Resource pickup          | `UseConsumableItem` plus the resource's use function                                                                | Covered for ordinary direct-pickup settlement. Published level behavior remains with the level adapter; fixed element mutation stays native-authoritative and settles before direct-pickup completion.                                |
 
@@ -60,7 +60,7 @@ Choice construction additionally lives in `Scripts/UpgradeChoiceLogic.lua`.
 | `AirBoost`, `EarthBoost`, `FireBoost`, `WaterBoost`, `ElementalBoost`                                      | Element contribution                        | Covered for direct settlement. Native fixed element mutation remains authoritative and settles before completion; the resulting element ledger remains a separate conformance fact. |
 | `StoreRewardRandomStack`                                                                                   | One random eligible trait gains one level   | Covered at the direct `AddStackToTraits` carrier; it is not a Pom screen.                                                                                                           |
 | `LastStandDrop`                                                                                            | Death Defiance                              | Exact producer identity is enforced; native ineligibility is a mismatch. Direct consumption uses the direct-pickup adapter after the object is bound.                               |
-| `ChaosWeaponUpgrade`                                                                                       | Anvil result                                | Deferred route in current F/G execution.                                                                                                                                            |
+| `ChaosWeaponUpgrade`                                                                                       | Anvil result                                | Covered as a purchased World Shop transformation with one removed and two added Hammer identities.                                                                                  |
 | `GiftDrop`                                                                                                 | Nectar plus one random eligible trait level | Covered: ordinary Nectar uses direct-pickup settlement, while a source-eligible level result uses the direct-level adapter.                                                         |
 
 ### Meta-progression items
@@ -88,9 +88,10 @@ because the planner groups required boss drops under one effect-neutral result.
 
 The five declared profiles are `RoomShop`, `SurfaceShop`, `WorldShop`,
 `I_WorldShop`, and `Q_WorldShop`. Only `RoomShop` and `WorldShop` occur in the
-current F/G execution extent. Surface Shrine and I/Q World Shop rows are
-deferred route, but their option identities are still covered above by the
-same acquisition carriers.
+current F/G execution extent. Their inventory, purchase, supplemental-offer,
+and Anvil contacts are covered. Surface Shrine and I/Q World Shop navigation is
+deferred route; their already-published inventories and purchases reuse the
+same strict commerce and acquisition boundaries when those routes are enabled.
 
 World Shop has three base slots: one Boon, one major non-Boon, and one minor.
 The special supplemental offers—Infernal Contract, Travel Deal, and Echo Gold

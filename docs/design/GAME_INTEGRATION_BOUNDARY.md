@@ -45,11 +45,11 @@ inventory generation only in the former, and constrain the latter.
 
 The planner workspace already separates the information the runtime consumes:
 
-| Planner surface | Execution meaning                                                      | Runtime responsibility                                                      |
-| --------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Overview        | What the occurrence contains                                           | Realize supported room objects and fixed contents, then observe contact     |
-| Timeline        | What happens in the occurrence and in which order                      | Realize enforceable offer facts; observe player actions and lifecycle order |
-| Doors           | Which exits exist, what they offer, and which continuation is selected | Generate supported exits/rewards and observe the selected traversal         |
+| Planner surface | Execution meaning                                                      | Runtime responsibility                                                   |
+| --------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Overview        | What the occurrence contains                                           | Realize supported room objects and fixed contents, then observe contact  |
+| Timeline        | Consequential occurrence actions and their sparse dependencies         | Realize enforceable facts; bind native actions to published transactions |
+| Doors           | Which exits exist, what they offer, and which continuation is selected | Generate supported exits/rewards and observe the selected traversal      |
 
 The protocol preserves concrete room and reward identifiers, repeatable room
 occurrences with stable IDs, physical exit identity and order, picked and
@@ -59,11 +59,11 @@ compatibility information.
 
 Commands fall into three execution dispositions:
 
-| Disposition | Examples                                                                | Contract                                                          |
-| ----------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Realize     | room/door generation, reward identity, selected trait offer, Chaos pair | Apply only through a verified fixed adapter                       |
-| Observe     | entering a room, choosing an exit, purchase or pickup order             | Compare semantic player transactions, not incidental callbacks    |
-| Verify      | Run State counters, bags, traits, retained effects                      | Compare bounded observable state; never use it to steer traversal |
+| Disposition | Examples                                                                | Contract                                                                  |
+| ----------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Realize     | room/door generation, reward identity, selected trait offer, Chaos pair | Apply only through a verified fixed adapter                               |
+| Observe     | entering a room, choosing an exit, purchase or pickup order             | Compare semantic player transactions, not incidental callbacks            |
+| Verify      | Named changed traits, charges, clocks, and retained effects             | Compare only published room-exit conformance facts; never steer with them |
 
 Some timeline steps combine these responsibilities: the runtime realizes an
 offer but observes whether and when the player accepts it. The plan remains
@@ -81,12 +81,13 @@ traversal.
 
 The conformance surface is bounded to:
 
-| Checkpoint                    | Compared product                                                                                                 |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Room entered                  | occurrence/room identity and the planner-modeled Run State                                                       |
-| Semantic Timeline transaction | selected trait or pickup, purchase, sale, keepsake change, fountain use, and other future-relevant player action |
-| Exits ready                   | complete exit count, physical types, target room identities, and reward identities                               |
-| Exit selected / before exit   | selected continuation, required Timeline settlement, and planner-modeled Run State                               |
+| Checkpoint                    | Compared product                                                                                                                    |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Room entered                  | occurrence/room identity, published Overview content, and any obligation due at `roomEntered`                                       |
+| Semantic Timeline transaction | the exact published transaction bound to the native action; Pool sales are intentionally absent from this set                       |
+| Exits ready                   | complete exit count, physical types, target room identities, reward identities, and obligations due at outgoing/exit-usable contact |
+| Exit selected                 | the published continuation chosen by the player                                                                                     |
+| Room exit                     | obligations due at `roomExit` and only the planner-published named conformance facts that changed in this occurrence                |
 
 The runtime may use several native calls to build one product. Conformance is
 decided against the completed semantic product rather than by requiring each
@@ -129,11 +130,21 @@ records only whether Ixion inserted the gate so removing that purchase can
 remove its generated topology. A visible Chaos gate consumes one pending Ixion
 regardless of how the gate originated.
 
-Run State is diagnostic at the published room-entered and before-room-exit
-checkpoints. The observable surface includes exact counters, ranged reward-bag
-counts, acquired traits, and retained effects. A mismatch stops further
-planner enforcement but never blocks the native contact or causes the Executor
-to choose a different room, reward, or action.
+Complete Run State snapshots are diagnostic-only at the published room-entered
+and before-room-exit checkpoints. They may expose counters, ranged reward-bag
+counts, acquired traits, and retained effects for later adjudication, but a
+difference in that diagnostic frame never blocks execution by itself. The
+planner separately publishes the sparse named facts that changed during the
+room. Only a mismatch in one of those named conformance facts, a required
+Timeline obligation, or another explicit structural/transaction comparison
+stops further planner enforcement. The native contact still completes and the
+Executor never chooses a substitute room, reward, or action.
+
+A Pool of Purging sale illustrates the boundary. The authored sale does not
+become an execution Timeline transaction: Overview constrains the visible Pool
+inventory and the room-exit `traitInventory` fact proves the expected trait
+removal. The Executor neither reimplements the sale nor requires its individual
+button callback to complete an action handle.
 
 ## Mismatch classification
 

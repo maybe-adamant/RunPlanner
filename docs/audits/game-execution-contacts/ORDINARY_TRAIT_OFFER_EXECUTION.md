@@ -284,7 +284,7 @@ cursor or producer inference:
 - screen callbacks recover their transaction through that bound loot;
 - owner completion remains shared across those handles.
 
-The v17 product carries base rarity alongside effective rarity, effective
-level, the selected-trait terminal, and room-exit keepsake conformance. No
-rarification-action wire shape or other planner semantic addition is justified
-by this audit.
+The current protocol-v24 product carries base rarity alongside effective
+rarity, effective level, the selected-trait terminal, and room-exit keepsake
+conformance. No rarification-action wire shape or other planner semantic
+addition is justified by this audit.
