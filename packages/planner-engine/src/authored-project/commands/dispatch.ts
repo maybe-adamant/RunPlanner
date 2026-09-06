@@ -216,6 +216,7 @@ function applyUnchecked(
     case 'ReplaceRewardWheelOffer':
     case 'ReplaceRewardWheelPicked':
     case 'ReplaceShopOffer':
+    case 'ReplaceAnvilResult':
     case 'SetPurgingPoolInteraction':
     case 'ReplacePurgingPoolSlot':
     case 'AddStygianWell':

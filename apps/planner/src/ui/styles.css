@@ -935,6 +935,12 @@ button:disabled {
   width: min(100%, 54rem);
 }
 
+.anvil-result-pickers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .trait-offer-options {
   display: grid;
   gap: 0.75rem;

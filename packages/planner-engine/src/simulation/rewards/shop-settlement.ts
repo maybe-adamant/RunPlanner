@@ -628,6 +628,7 @@ export function settleShopAcquisitionSite(
         ...(offer.levelResolutionsByAcquisitionRole === undefined
           ? {}
           : { levelResolutionsByAcquisitionRole: offer.levelResolutionsByAcquisitionRole }),
+        ...(offer.anvilResult === undefined ? {} : { anvilResult: offer.anvilResult }),
         ...(offer.dispositionByAcquisitionRole === undefined
           ? {}
           : { dispositionByAcquisitionRole: offer.dispositionByAcquisitionRole }),

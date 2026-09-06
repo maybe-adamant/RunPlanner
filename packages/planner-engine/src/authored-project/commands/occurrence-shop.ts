@@ -6,6 +6,7 @@ import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutati
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import type { ShopOccurrenceCommand } from './types';
 import { createUnresolvedAcquisitionRewardState } from '../traits';
+import { pickupEffectForOffer } from '../../reward-kernel/history';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   INFERNAL_CONTRACT_ENTRY_KEY,
@@ -32,13 +33,47 @@ export function applyShopOccurrenceCommand(
   }
   const offer = occurrence.state.shop.offers[command.offer.offerKey];
   if (offer === undefined) failCommand(command, `unknown shop offer ${command.offer.offerKey}`);
+  if (command.kind === 'ReplaceAnvilResult') {
+    const reward = offer.reward;
+    if (reward === null) failCommand(command, 'acquisition effect result requires a reward');
+    if (pickupEffectForOffer(catalog.rewards, reward.offer)?.effect.kind !== 'anvilOfFates')
+      failCommand(command, 'reward has no declared Anvil of Fates pickup effect');
+    if (JSON.stringify(offer.anvilResult) === JSON.stringify(command.value)) return document;
+    const replacement = Object.freeze({
+      ...offer,
+      anvilResult: command.value,
+    });
+    return updateOccurrenceTopology(
+      document,
+      located,
+      replaceOccurrence(
+        current,
+        Object.freeze({
+          ...occurrence,
+          state: Object.freeze({
+            ...occurrence.state,
+            shop: Object.freeze({
+              ...occurrence.state.shop,
+              offers: Object.freeze({
+                ...occurrence.state.shop.offers,
+                [command.offer.offerKey]: replacement,
+              }),
+            }),
+          }),
+        }),
+      ),
+    );
+  }
   if (offer.reward !== null && sameOccurrenceValue(offer.reward.offer, command.value))
     return document;
+  const reward = createUnresolvedAcquisitionRewardState(catalog, command.value, {
+    kind: 'shopProfile',
+    key: occurrence.state.shop.profileKey,
+  });
+  const pickupEffect = pickupEffectForOffer(catalog.rewards, command.value);
   const replacement = Object.freeze({
-    reward: createUnresolvedAcquisitionRewardState(catalog, command.value, {
-      kind: 'shopProfile',
-      key: occurrence.state.shop.profileKey,
-    }),
+    reward,
+    ...(pickupEffect?.effect.kind === 'anvilOfFates' ? { anvilResult: null } : {}),
   });
   return updateOccurrenceTopology(
     document,

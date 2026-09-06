@@ -1,8 +1,7 @@
 # Project schema boundary
 
-Schema 75 is the current Run Planner document baseline. It adds exact
-Transcendent Embryo blessing operands and the declaration-owned required Boss
-Reward action to each Boss room chronology.
+Schema 76 is the current Run Planner document baseline. It adds the exact
+declaration-owned Anvil of Fates result to authored World Shop offers.
 Migrate the immediately preceding single-route schema with:
 
 ```bash
@@ -27,7 +26,7 @@ output. It has no route-selection, in-place, or target-version mode.
 
 The schema-72 splitter's pure transformation is exported from
 `schema/split-project-72-to-73.js` for checkpoint conversion. The source value
-is never mutated. The production decoder accepts schema 75 only; stale
+is never mutated. The production decoder accepts schema 76 only; stale
 documents are not migrated implicitly in the application.
 
 Migrate a schema-74 document with:
@@ -40,6 +39,19 @@ The command preserves each authored Embryo blessing identity and adds an empty
 `blessingValues` object for repair. The planner requires those operands to be
 completed before the result can be used, and the command never overwrites the
 source.
+
+## Schema 75 to 76
+
+Adds an unresolved Anvil result to existing authored Anvil purchases while
+preserving the selected shop offer.
+
+```bash
+npm run schema:migrate-75-to-76 -- path/to/schema-75-project.runplanner.json
+```
+
+The command adds a `null` result for each existing Anvil World Shop offer and
+never overwrites the source. New Anvil purchases remain unresolved until the
+author selects their result.
 
 Run the focused boundary tests with:
 

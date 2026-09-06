@@ -21,6 +21,7 @@ export {
   factsWithHistory,
   resolveAcquisitionRole,
   recordLootTypeHistorySource,
+  pickupEffectForOffer,
 } from './history';
 export { levelResolutionEffectFor, type LevelResolutionEffectSource } from './level-effects';
 export {
@@ -44,6 +45,7 @@ export type {
   AcquisitionKind,
   AcquisitionLifecycleBinding,
   AcquisitionRoleDeclaration,
+  ConcreteAcquisitionPickupEffect,
   AcquisitionRoleResolution,
   AuthoredShopOffer,
   BoonSourcePayload,

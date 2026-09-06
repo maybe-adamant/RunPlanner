@@ -14,6 +14,7 @@ import type {
 
 /** Binds generated-pickup conversion controls and preserves retained Sea Star repair state. */
 export function bindAcquisitionConversionInteractions(input: {
+  readonly catalog: import('@run-planner/engine/catalog-schema').Catalog;
   readonly candidates: CandidateProjectionSession;
   readonly project: import('@run-planner/engine/simulation').ProjectEvaluationAssembly['project'];
   readonly rewardControls: ReadonlyMap<string, WorkspaceRewardControl>;
@@ -49,6 +50,34 @@ export function bindAcquisitionConversionInteractions(input: {
             )?.biomes
               .find((biome) => biome.biomeKey === conversion.address.biomeKey)
               ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
+      const anvilCapability = input.candidates.anvilResult(conversion.address);
+      const shopOffer =
+        owner.kind === 'shopOffer' && occurrence?.state.kind === 'shop'
+          ? occurrence.state.shop?.offers[owner.offerKey]
+          : undefined;
+      const anvil =
+        owner.kind !== 'shopOffer' ||
+        anvilCapability === undefined ||
+        shopOffer?.anvilResult === undefined
+          ? undefined
+          : Object.freeze({
+              value: shopOffer.anvilResult,
+              removableTraitKeys: anvilCapability.removableTraitKeys,
+              addedTraitKeysFor: anvilCapability.addedTraitKeysFor,
+              traitLabel: (traitKey: string) =>
+                input.catalog.traits.byKey[traitKey]?.label ?? traitKey,
+              intentFor: (
+                value: import('@run-planner/engine/authored-project').AuthoredAnvilResult,
+              ) =>
+                Object.freeze({
+                  command: Object.freeze({
+                    kind: 'ReplaceAnvilResult' as const,
+                    offer: owner,
+                    value,
+                  }),
+                  focus: Object.freeze({ owner: conversion.address, timing: 'after' as const }),
+                }),
+            });
       const seaStarProcced =
         occurrence?.acquisitionSites?.[seaStarDuplicateSiteKey(conversion.address)]
           ?.pickupEntries?.[SEA_STAR_DUPLICATE_ENTRY_KEY] !== undefined;
@@ -96,6 +125,7 @@ export function bindAcquisitionConversionInteractions(input: {
           key,
           owner: conversion.address,
           seaStarProcced,
+          ...(anvil === undefined ? {} : { anvil }),
           value: conversion.value,
         }),
       );

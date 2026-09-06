@@ -1,6 +1,6 @@
 import type { Catalog, TraitElement, TraitRarity } from '../catalog-schema';
 import type { EchoKeepsakeReplayAddress } from '../authored-project/addresses';
-import type { SemanticAddress } from '../authored-project/addresses';
+import { semanticAddressKey, type SemanticAddress } from '../authored-project/addresses';
 import type {
   AuthoredTraitOfferTraits,
   AuthoredChaosTraitOffer,
@@ -153,6 +153,17 @@ export interface TraitRemovalEvent {
   readonly match: 'acquisitionIdentity' | 'currentTraitKey';
 }
 
+/** One atomic Anvil of Fates transformation: remove one permanent Hammer, then add two. */
+export interface AnvilTransformationEvent {
+  readonly kind: 'anvilTransformation';
+  readonly owner: SemanticAddress;
+  readonly acquisitionRole: string;
+  readonly sequence: number;
+  readonly acquisitionPoint: string;
+  readonly removedTraitKey: string | null;
+  readonly addedTraitKeys: readonly [string, string];
+}
+
 export interface ChaosCurseInstance {
   readonly acquisitionIdentity: string;
   readonly owner: SemanticAddress;
@@ -241,6 +252,7 @@ export type TraitHistoryEvent =
   | TraitElementContributionEvent
   | DirectTraitGrantEvent
   | TraitRemovalEvent
+  | AnvilTransformationEvent
   | EchoKeepsakeReplayEvent
   | ChaosPairEvent
   | DirectChaosBlessingEvent
@@ -261,6 +273,7 @@ export function isTraitOfferMutationEvent(event: TraitHistoryEvent): boolean {
     case 'elementContribution':
     case 'directTraitGrant':
     case 'traitRemoval':
+    case 'anvilTransformation':
     case 'chaosPair':
     case 'directChaosBlessing':
     case 'directChaosBlessingRemoval':
@@ -823,6 +836,32 @@ export function foldTraitHistoryEvents(
           equipped[event.traitKey]?.acquisitionIdentity === event.acquisitionIdentity
         )
           delete equipped[event.traitKey];
+        continue;
+      }
+      if (event.kind === 'anvilTransformation') {
+        if (event.removedTraitKey !== null) {
+          const removed = equipped[event.removedTraitKey];
+          if (
+            removed !== undefined &&
+            catalog.traits.byKey[event.removedTraitKey]?.hammerCompatibility !== undefined
+          )
+            delete equipped[event.removedTraitKey];
+        }
+        for (const traitKey of event.addedTraitKeys) {
+          const declaration = catalog.traits.byKey[traitKey];
+          if (declaration?.hammerCompatibility === undefined || equipped[traitKey] !== undefined)
+            continue;
+          const giver = catalog.traitGivers.byKey.WeaponUpgrade;
+          if (giver === undefined || !giver.traitKeys.includes(traitKey)) continue;
+          equipped[traitKey] = Object.freeze({
+            traitKey,
+            giverKey: giver.key,
+            providerKind: giver.providerKind,
+            hammerRank: 'RankI' as const,
+            sourceRole: event.acquisitionRole,
+            acquisitionIdentity: `${semanticAddressKey(event.owner)}:${event.sequence}:${traitKey}`,
+          });
+        }
         continue;
       }
       if (event.kind === 'echoKeepsakeReplay') {

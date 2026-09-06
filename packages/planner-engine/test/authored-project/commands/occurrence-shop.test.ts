@@ -17,8 +17,44 @@ import {
 import { createCompleteNProject } from '../support/complete-n-project';
 import { nBiome } from '../support/configured-projects';
 import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
+import { loadSurfaceNOPQProject, qBiome, qOccurrenceIds } from '@run-planner/test-fixtures/surface';
 
 describe('authored-project Shop occurrence commands', () => {
+  it('stores the Anvil result only on its World Shop offer and clears it with the offer', () => {
+    const offer = createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'PremiumProgress');
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceShopOffer',
+      offer,
+      value: { rewardType: 'ChaosWeaponUpgrade' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAnvilResult',
+      offer,
+      value: {
+        kind: 'anvilOfFates',
+        removedTraitKey: 'StaffDoubleAttackTrait',
+        addedTraitKeys: ['StaffLongAttackTrait', 'StaffJumpSpecialTrait'],
+      },
+    });
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer,
+      value: { rewardType: 'MaxHealthDropBig' },
+    });
+    const state = project.route.biomes
+      .find((biome) => biome.biomeKey === 'Q')
+      ?.topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === qOccurrenceIds.preboss,
+      )?.state;
+    expect(
+      state?.kind === 'shop' ? state.shop?.offers.PremiumProgress?.anvilResult : undefined,
+    ).toBe(undefined);
+  });
+
   it('rejects a level-resolution child on Shop GiftDrop', () => {
     const shopId = createOccurrenceId('round-trip-n-preboss');
     const shopOffer = createShopOfferAddress(nBiome, shopId, 'MajorNonBoon');

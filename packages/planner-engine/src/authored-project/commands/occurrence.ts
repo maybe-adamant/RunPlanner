@@ -594,6 +594,7 @@ export function applyOccurrenceCommand(
     case 'ReplaceRewardWheelPicked':
       return applyShipOccurrenceCommand(document, catalog, located, command);
     case 'ReplaceShopOffer':
+    case 'ReplaceAnvilResult':
       return applyShopOccurrenceCommand(document, catalog, located, command);
     case 'SelectEncounter':
     case 'ResetEncounter':

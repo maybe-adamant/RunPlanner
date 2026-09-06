@@ -377,11 +377,17 @@ export type LocalVisitCommand =
       readonly occurrenceIds: readonly OccurrenceId[];
     };
 
-export type ShopOccurrenceCommand = {
-  readonly kind: 'ReplaceShopOffer';
-  readonly offer: ShopOfferAddress;
-  readonly value: ResolvedRewardOffer;
-};
+export type ShopOccurrenceCommand =
+  | {
+      readonly kind: 'ReplaceShopOffer';
+      readonly offer: ShopOfferAddress;
+      readonly value: ResolvedRewardOffer;
+    }
+  | {
+      readonly kind: 'ReplaceAnvilResult';
+      readonly offer: ShopOfferAddress;
+      readonly value: import('../model').AuthoredAnvilResult | null;
+    };
 export type PurgingPoolCommand =
   | {
       readonly kind: 'SetPurgingPoolInteraction';

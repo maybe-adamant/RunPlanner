@@ -1,5 +1,7 @@
 import {
+  acquisitionConversionCandidateForProjectEvaluationAssembly,
   createPreparedProjectCandidateSession,
+  type AcquisitionConversionCandidateCapability,
   type ProjectCandidateSession,
   type ProjectCandidateSessionEvaluation,
   type ProjectCandidateSessionQuery,
@@ -25,6 +27,9 @@ export interface CandidateProjectionCore {
   readonly nextOptionalHighTierTraitOfferDraft: ProjectCandidateCoreTraitDrafts['nextOptionalHighTierTraitOfferDraft'];
   readonly previousOptionalHighTierTraitOfferDraft: ProjectCandidateCoreTraitDrafts['previousOptionalHighTierTraitOfferDraft'];
   readonly chaosOfferDomain: ProjectCandidateCoreTraitDrafts['chaosOfferDomain'];
+  readonly anvilResult: (
+    owner: import('@run-planner/engine/authored-project').AcquisitionRoleAddress,
+  ) => NonNullable<AcquisitionConversionCandidateCapability['anvil']> | undefined;
   readonly projectOptions: <T>(
     key: string,
     values: readonly T[],
@@ -177,6 +182,9 @@ export function createCandidateProjectionCore(
         nextOptionalHighTierTraitOfferDraft: evaluator.nextOptionalHighTierTraitOfferDraft,
         previousOptionalHighTierTraitOfferDraft: evaluator.previousOptionalHighTierTraitOfferDraft,
         chaosOfferDomain: evaluator.chaosOfferDomain,
+        anvilResult: (
+          owner: import('@run-planner/engine/authored-project').AcquisitionRoleAddress,
+        ) => acquisitionConversionCandidateForProjectEvaluationAssembly(assembly, owner)?.anvil,
         projectOptions,
         projectOptionsCooperatively,
         memoizeOptions,

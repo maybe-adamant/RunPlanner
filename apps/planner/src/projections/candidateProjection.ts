@@ -327,6 +327,14 @@ export interface CandidateProjectionSession {
     value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults[keyof import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults],
   ) => readonly KeepsakeEquipResultOptionProjection[];
   readonly acquisitionConversion: (owner: AcquisitionRoleAddress) => CandidateProjectionEvaluation;
+  /** Exact Anvil domain carried by the existing acquisition frontier. */
+  readonly anvilResult: (
+    owner: AcquisitionRoleAddress,
+  ) =>
+    | NonNullable<
+        import('@run-planner/engine/simulation').AcquisitionConversionCandidateCapability['anvil']
+      >
+    | undefined;
 }
 
 export interface LevelResolutionCandidateProjection {
@@ -381,6 +389,7 @@ export function createCandidateSessionFactory(
     const session = Object.freeze({
       project: assembly.project,
       evaluation: assembly.evaluation,
+      anvilResult: core.anvilResult,
       ...rewardAdapters,
       ...traitAdapters,
     });

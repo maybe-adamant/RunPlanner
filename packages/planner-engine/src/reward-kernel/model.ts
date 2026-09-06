@@ -20,6 +20,9 @@ export type LevelResolutionEffect =
   | { readonly kind: 'randomTarget'; readonly levelCount: 1 }
   | { readonly kind: 'randomTargetIfAvailable'; readonly levelCount: 1 };
 
+/** Source-backed effect applied when a concrete pickup is consumed. */
+export type ConcreteAcquisitionPickupEffect = { readonly kind: 'anvilOfFates' };
+
 export interface BoonSourcePayload {
   readonly kind: 'BoonSource';
   readonly source: string;
@@ -63,6 +66,8 @@ export interface ConcreteAcquisitionDeclaration extends ConcreteAcquisitionAddre
   readonly artificerConversionEligible: boolean;
   /** Exact source CanDuplicate fact.  This is intentionally independent of kind and conversions. */
   readonly canDuplicate: boolean;
+  /** Native pickup effect; the carrier is intentionally irrelevant to this declaration. */
+  readonly pickupEffect?: ConcreteAcquisitionPickupEffect;
   /** Exact source-backed reconstruction used when this settled pickup becomes Echo's LastReward. */
   readonly lastRewardRecreation?: {
     readonly offer: ResolvedRewardOffer;

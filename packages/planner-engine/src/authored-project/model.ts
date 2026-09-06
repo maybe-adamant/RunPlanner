@@ -7,7 +7,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 75 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 76 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -24,7 +24,15 @@ export type OccurrenceId = string & {
 
 export interface ShopOfferState {
   readonly reward: AuthoredRewardState | null;
+  /** Exact result of a purchased Anvil of Fates. */
+  readonly anvilResult?: AuthoredAnvilResult | null;
 }
+
+export type AuthoredAnvilResult = {
+  readonly kind: 'anvilOfFates';
+  readonly removedTraitKey: string | null;
+  readonly addedTraitKeys: readonly [string, string];
+};
 
 export type TraitOffersByAcquisitionRole = Readonly<Record<string, AuthoredTraitOffer | null>>;
 export type LevelResolutionsByAcquisitionRole = Readonly<Record<string, AuthoredLevelResolution>>;

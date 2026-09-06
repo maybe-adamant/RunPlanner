@@ -25,10 +25,45 @@ const {
   createRepresentativeNOPQShopTraitProject,
   pOccurrenceIds,
   pBiome,
+  loadSurfaceNOPQProject,
+  qBiome,
+  qOccurrenceIds,
   createCandidateSessionFactory,
 } = support;
 
 describe('acquisition-conversion-interactions', () => {
+  it('projects the purchased Anvil result from its existing acquisition frontier', () => {
+    const offer = createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'PremiumProgress');
+    const acquisition = createAcquisitionRoleAddress(offer, 'self');
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceShopOffer',
+      offer,
+      value: { rewardType: 'ChaosWeaponUpgrade' },
+    });
+    project = replaceTestShopOfferActions(
+      project,
+      catalog,
+      createOccurrenceAddress(qBiome, qOccurrenceIds.preboss),
+      ['PremiumProgress'],
+    );
+
+    const interaction = bind(project, 'Surface', 'Q').interactions.acquisitionConversions.get(
+      semanticAddressKey(acquisition),
+    );
+    expect(interaction?.anvil).toMatchObject({ value: null });
+    expect(interaction?.anvil?.removableTraitKeys.length).toBeGreaterThan(0);
+    const removed = interaction?.anvil?.removableTraitKeys[0];
+    if (removed === undefined) throw new Error('Anvil removal domain is empty');
+    expect(interaction?.anvil?.addedTraitKeysFor(removed, []).length).toBeGreaterThan(1);
+    expect(
+      interaction?.anvil?.intentFor({
+        kind: 'anvilOfFates',
+        removedTraitKey: removed,
+        addedTraitKeys: ['StaffLongAttackTrait', 'StaffJumpSpecialTrait'],
+      }),
+    ).toMatchObject({ command: { kind: 'ReplaceAnvilResult', offer } });
+  });
+
   it('retains an invalid paid-Shop Time Piece conversion as an engine-backed repair control', () => {
     const shopOffer = createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'MajorNonBoon');
     const acquisition = createAcquisitionRoleAddress(shopOffer, 'weaponUpgrade');

@@ -1178,6 +1178,19 @@ export interface WorkspaceAcquisitionConversionInteraction {
   readonly artificerSupported: boolean;
   readonly seaStarSupported: boolean;
   readonly seaStarProcced: boolean;
+  /** Exact acquisition-owned Anvil editor, present only on the purchased Anvil role. */
+  readonly anvil?: {
+    readonly value: import('@run-planner/engine/authored-project').AuthoredAnvilResult | null;
+    readonly removableTraitKeys: readonly string[];
+    readonly addedTraitKeysFor: (
+      removedTraitKey: string | null,
+      priorAddedTraitKeys: readonly string[],
+    ) => readonly string[];
+    readonly traitLabel: (traitKey: string) => string;
+    readonly intentFor: (
+      value: import('@run-planner/engine/authored-project').AuthoredAnvilResult,
+    ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceAnvilResult' }>>;
+  };
   readonly intentFor: (
     value: import('@run-planner/engine/authored-project').AcquisitionDisposition,
   ) => WorkspacePayloadEditIntent<
