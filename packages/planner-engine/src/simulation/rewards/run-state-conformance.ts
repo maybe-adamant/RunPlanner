@@ -38,6 +38,7 @@ export function pendingKeepsakeEffects(state: KeepsakeState): PendingKeepsakeEff
 
 export type RoomExitConformanceFactKind =
   | 'traitInventory'
+  | 'elementCounts'
   | 'echoShopDuplicate'
   | 'steadyGrowth'
   | 'chaos'
@@ -120,8 +121,16 @@ export function deriveRoomExitConformanceDeltas(
     const roomEntry = snapshotFor(snapshots, occurrence, 'roomEntered');
     const baseline = previousExit ?? snapshotFor(snapshots, occurrence, 'roomEntered');
     previousExit = currentExit;
-    if (baseline === undefined) continue;
-    const facts: { readonly kind: RoomExitConformanceFactKind }[] = [];
+    const facts: { readonly kind: RoomExitConformanceFactKind }[] = [
+      Object.freeze({ kind: 'elementCounts' }),
+    ];
+    if (baseline === undefined) {
+      result.set(
+        occurrence.occurrenceId,
+        Object.freeze({ occurrenceId: occurrence.occurrenceId, facts: Object.freeze(facts) }),
+      );
+      continue;
+    }
     const add = (kind: RoomExitConformanceFactKind, before: unknown, after: unknown) => {
       if (changed(before, after)) facts.push(Object.freeze({ kind }));
     };

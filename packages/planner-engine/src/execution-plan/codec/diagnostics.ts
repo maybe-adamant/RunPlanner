@@ -1,4 +1,5 @@
 import type { ExecutionRunStateDiagnostic } from '../model';
+import type { TraitElement } from '../../catalog-schema';
 import {
   MAX_OWNER_STRING,
   array,
@@ -15,6 +16,18 @@ import {
   stableJson,
   type Dict,
 } from './primitives';
+
+const traitElements = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
+
+function elementCounts(value: unknown, label: string): Readonly<Record<TraitElement, number>> {
+  const record = object(value, label);
+  exact(record, traitElements, [], label);
+  return Object.freeze(
+    Object.fromEntries(
+      traitElements.map((element) => [element, integer(record[element], `${label}.${element}`)]),
+    ) as Record<TraitElement, number>,
+  );
+}
 
 export function runState(value: unknown, label: string): ExecutionRunStateDiagnostic {
   const record = object(value, label);
@@ -509,7 +522,7 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
     traits: Object.freeze({
       equipped: Object.freeze(equipped),
       slots: Object.freeze(slots),
-      elements: numberRecord(traits.elements, `${label}.traits.elements`),
+      elements: elementCounts(traits.elements, `${label}.traits.elements`),
       godRarityCounts: numberRecord(traits.godRarityCounts, `${label}.traits.godRarityCounts`),
       upgradableCount: integer(traits.upgradableCount, `${label}.traits.upgradableCount`),
       bannedTraitKeys: Object.freeze(

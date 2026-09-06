@@ -53,6 +53,7 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
   if (conformance !== undefined) exact(conformance, ['facts'], [], `${label}.roomExitConformance`);
   const allowedConformanceKinds = new Set<ExecutionRoomExitConformanceFactKind>([
     'traitInventory',
+    'elementCounts',
     'echoShopDuplicate',
     'steadyGrowth',
     'chaos',

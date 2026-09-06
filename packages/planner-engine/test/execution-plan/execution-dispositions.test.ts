@@ -80,7 +80,6 @@ const executionDispositions = {
   } satisfies Record<OverviewField, ExecutionDisposition>,
   resourcePolicy: {
     pointDispositions: 'covered',
-    postExitElementCounts: 'covered',
   } satisfies Record<ResourcePolicyField, ExecutionDisposition>,
   doors: {
     batch: 'covered',
@@ -89,6 +88,7 @@ const executionDispositions = {
   } satisfies Record<DoorsKind, ExecutionDisposition>,
   roomExitConformance: {
     traitInventory: 'covered',
+    elementCounts: 'covered',
     echoShopDuplicate: 'deferred-route',
     steadyGrowth: 'covered',
     chaos: 'covered',

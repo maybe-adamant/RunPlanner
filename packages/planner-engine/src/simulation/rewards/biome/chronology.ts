@@ -1,4 +1,4 @@
-import type { Catalog, TraitElement } from '../../../catalog-schema';
+import type { Catalog } from '../../../catalog-schema';
 import { fieldsOptionalRewardCountSupport } from '../../fields-optional-count';
 import type { PurgingPoolAssessment } from '../../purging-pool';
 import type { HermesShrineCandidateContext } from '../../hermes-shrine';
@@ -584,13 +584,6 @@ export function evaluateBiomeRewardChronology(
   const producerFrontiers = new Map<string, RewardProducerFrontier>();
   const shipLifecycleContexts = new Map<string, ShipLifecycleCandidateContext>();
   const runStateSnapshotsByOwner = new Map<string, RunStateSnapshot>();
-  const roomExitElementCounts = new Map<
-    string,
-    {
-      readonly origin: import('../../../authored-project/addresses').OccurrenceAddress;
-      readonly elementCounts: Readonly<Record<TraitElement, number>>;
-    }
-  >();
   const traitChildSettlementBuilders = new Map<
     string,
     {
@@ -1755,38 +1748,6 @@ export function evaluateBiomeRewardChronology(
             exited.runStateCheckpoint.view,
           );
         branches = exited.branches;
-        if (room !== undefined && room.origin.kind === 'occurrence') {
-          const elementCountsByBranch = branches.map(
-            (branch) =>
-              branch.traitHistory?.elementCounts ?? createTraitHistoryState().elementCounts,
-          );
-          const firstElementCounts = elementCountsByBranch[0];
-          if (firstElementCounts === undefined)
-            throw new BiomeRewardSimulationContractError(
-              `${room.gameName} room exit produced no reward branch`,
-            );
-          const elementCountKey = (counts: Readonly<Record<TraitElement, number>>): string =>
-            JSON.stringify(
-              (['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const).map(
-                (element) => counts[element],
-              ),
-            );
-          if (
-            elementCountsByBranch.some(
-              (counts) => elementCountKey(counts) !== elementCountKey(firstElementCounts),
-            )
-          )
-            throw new BiomeRewardSimulationContractError(
-              `${room.gameName} room-exit element counts diverge across surviving branches`,
-            );
-          roomExitElementCounts.set(
-            semanticAddressKey(room.origin),
-            Object.freeze({
-              origin: room.origin,
-              elementCounts: Object.freeze({ ...firstElementCounts }),
-            }),
-          );
-        }
         break;
       }
       default:
@@ -1875,7 +1836,6 @@ export function evaluateBiomeRewardChronology(
   const simulation: BiomeRewardSimulation = Object.freeze({
     biomeKey: snapshot.biomeKey,
     validity: immutableFindings.length === 0 && branches.length > 0 ? 'valid' : 'invalid',
-    roomExitElementCounts: Object.freeze([...roomExitElementCounts.values()]),
     ...(echoKeepsakeReplayOutcome === undefined
       ? {}
       : { volatileEchoKeepsakeReplay: echoKeepsakeReplayOutcome }),

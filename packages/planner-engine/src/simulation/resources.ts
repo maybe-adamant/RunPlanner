@@ -1,4 +1,4 @@
-import type { Catalog, ResourceFamily, TraitElement } from '../catalog-schema';
+import type { Catalog, ResourceFamily } from '../catalog-schema';
 import { createBiomeAddress, semanticAddressKey } from '../authored-project/addresses';
 import type { AuthoredRoutePlan, ResourcePlacement } from '../authored-project/model';
 import { composeBiomeHistoryPrefix } from './history/compose';
@@ -30,7 +30,6 @@ export interface ResourceExecutionPolicy {
   readonly occurrences: readonly {
     readonly occurrenceId: string;
     readonly pointDispositions: Readonly<Record<ResourceFamily, ResourcePointDisposition>>;
-    readonly postExitElementCounts?: Readonly<Record<TraitElement, number>>;
   }[];
 }
 
@@ -212,8 +211,6 @@ export function assessResourcePlacement(
 }
 
 const resourceFamilies = ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const;
-const traitElements = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
-
 type ResourceCandidate = {
   readonly biomeKey: string;
   readonly occurrenceId: string;
@@ -230,12 +227,6 @@ interface ResourcePointReference {
 interface ResourcePolicyEvaluation {
   readonly history: {
     readonly rooms: readonly { readonly origin: RoomHistoryOrigin }[];
-  };
-  readonly rewards: {
-    readonly roomExitElementCounts: readonly {
-      readonly origin: { readonly occurrenceId: string };
-      readonly elementCounts: Readonly<Record<TraitElement, number>>;
-    }[];
   };
 }
 
@@ -270,17 +261,6 @@ function resourcePointConflictReasons(
       reasons.push('room simple/complex capacity');
   }
   return reasons;
-}
-
-function resourceCounts(
-  counts: Readonly<Record<TraitElement, number>>,
-): Readonly<Record<TraitElement, number>> {
-  return Object.freeze(
-    Object.fromEntries(traitElements.map((element) => [element, counts[element] ?? 0])) as Record<
-      TraitElement,
-      number
-    >,
-  );
 }
 
 /**
@@ -364,22 +344,10 @@ export function deriveResourceExecutionPolicy(
     }
   }
 
-  const postExitCounts = new Map<string, Readonly<Record<TraitElement, number>>>();
-  for (const evaluation of evaluations)
-    for (const checkpoint of evaluation.rewards.roomExitElementCounts)
-      postExitCounts.set(checkpoint.origin.occurrenceId, resourceCounts(checkpoint.elementCounts));
-  const terminalOccurrenceId = candidates.at(-1)?.occurrenceId;
   const occurrences = candidates.map((candidate) => {
-    const postExitElementCounts =
-      candidate.occurrenceId === terminalOccurrenceId
-        ? undefined
-        : postExitCounts.get(candidate.occurrenceId);
-    if (candidate.occurrenceId !== terminalOccurrenceId && postExitElementCounts === undefined)
-      throw new Error(`${candidate.room.gameName} lacks post-exit element counts`);
     return Object.freeze({
       occurrenceId: candidate.occurrenceId,
       pointDispositions: Object.freeze({ ...pointDispositions.get(candidate.occurrenceId)! }),
-      ...(postExitElementCounts === undefined ? {} : { postExitElementCounts }),
     });
   });
   return Object.freeze({

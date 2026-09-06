@@ -89,12 +89,6 @@ export function validateExecutionGraph(
       );
       if (forced.length > 1) invalid(`resource ${family} has multiple forced points`);
     }
-    const terminalId = graph.selectedOccurrenceIds.at(-1);
-    for (const entry of graph.resources.occurrences) {
-      const hasCounts = entry.postExitElementCounts !== undefined;
-      if (entry.occurrenceId === terminalId ? hasCounts : !hasCounts)
-        invalid(`resource ${entry.occurrenceId} has an invalid post-exit count boundary`);
-    }
   }
 
   const transactions = new Map(
@@ -153,6 +147,10 @@ export function validateExecutionGraph(
       const kinds = entry.roomExitConformance.facts.map((fact) => fact.kind);
       if (new Set(kinds).size !== kinds.length)
         invalid(`${entry.id} room-exit conformance has duplicate facts`);
+      if (entry.diagnostics?.beforeRoomExit !== undefined && !kinds.includes('elementCounts'))
+        invalid(`${entry.id} room-exit conformance is missing elementCounts`);
+    } else if (entry.diagnostics?.beforeRoomExit !== undefined) {
+      invalid(`${entry.id} beforeRoomExit Run State is missing room-exit conformance`);
     }
   }
 

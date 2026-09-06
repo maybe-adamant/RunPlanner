@@ -1,19 +1,7 @@
-import type { TraitElement } from '../../catalog-schema';
 import type { ExecutionResourcePolicy } from '../model';
-import { array, exact, fail, integer, object, stringValue } from './primitives';
+import { array, exact, fail, object, stringValue } from './primitives';
 
 const families = ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const;
-const elements = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
-
-function counts(value: unknown, label: string): Readonly<Record<TraitElement, number>> {
-  const record = object(value, label);
-  exact(record, elements, [], label);
-  return Object.freeze(
-    Object.fromEntries(
-      elements.map((key) => [key, integer(record[key], `${label}.${key}`)]),
-    ) as Record<TraitElement, number>,
-  );
-}
 
 export function resources(value: unknown, label: string): ExecutionResourcePolicy {
   const record = object(value, label);
@@ -21,7 +9,7 @@ export function resources(value: unknown, label: string): ExecutionResourcePolic
   const occurrences = array(record.occurrences, `${label}.occurrences`).map((value, index) => {
     const rowLabel = `${label}.occurrences[${index}]`;
     const row = object(value, rowLabel);
-    exact(row, ['occurrenceId', 'pointDispositions'], ['postExitElementCounts'], rowLabel);
+    exact(row, ['occurrenceId', 'pointDispositions'], [], rowLabel);
     const pointsRecord = object(row.pointDispositions, `${rowLabel}.pointDispositions`);
     exact(pointsRecord, families, [], `${rowLabel}.pointDispositions`);
     const pointDispositions = Object.freeze(
@@ -40,14 +28,6 @@ export function resources(value: unknown, label: string): ExecutionResourcePolic
     return Object.freeze({
       occurrenceId: stringValue(row.occurrenceId, `${rowLabel}.occurrenceId`),
       pointDispositions,
-      ...(row.postExitElementCounts === undefined
-        ? {}
-        : {
-            postExitElementCounts: counts(
-              row.postExitElementCounts,
-              `${rowLabel}.postExitElementCounts`,
-            ),
-          }),
     });
   });
   return Object.freeze({
