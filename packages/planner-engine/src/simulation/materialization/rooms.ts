@@ -627,6 +627,9 @@ function materializeShopEntry(
                   authored.reward.levelResolutionsByAcquisitionRole,
                 dispositionByAcquisitionRole: authored.reward.dispositionByAcquisitionRole,
                 traitContext: traitContextForOffer(context, authored.reward.offer),
+                ...(authored.anvilResult === undefined
+                  ? {}
+                  : { anvilResult: authored.anvilResult }),
               }),
             ];
       }),

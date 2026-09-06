@@ -44,7 +44,6 @@ const CAN_DUPLICATE = new Set<string>([
   'ElementalBoost',
   'StoreRewardRandomStack',
   'LastStandDrop',
-  'ChaosWeaponUpgrade',
   'GiftDrop',
   'MetaCurrencyDrop',
   'MetaCurrencyBigDrop',
@@ -311,6 +310,7 @@ const rawAcquisitions = [
     gameName: 'ChaosWeaponUpgrade',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
+    pickupEffect: { kind: 'anvilOfFates' },
   },
   {
     gameName: 'InfernalContractBoon',

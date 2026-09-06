@@ -41,7 +41,6 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
         'ArmorBigBoost',
         'ArmorBoost',
         'CardUpgradePointsDrop',
-        'ChaosWeaponUpgrade',
         'CharonPointsDrop',
         'Currency',
         'EarthBoost',
@@ -84,6 +83,10 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
     expect(rewardKernelCatalog.acquisitions.byKey.StackUpgrade?.canDuplicate).toBe(true);
     expect(rewardKernelCatalog.acquisitions.byKey.HealDropMinor?.canDuplicate).toBe(false);
     expect(rewardKernelCatalog.acquisitions.byKey.WeaponUpgrade?.canDuplicate).toBe(false);
+    expect(rewardKernelCatalog.acquisitions.byKey.ChaosWeaponUpgrade).toMatchObject({
+      canDuplicate: false,
+      pickupEffect: { kind: 'anvilOfFates' },
+    });
     expect(() =>
       createRewardKernelCatalog(
         rawInput({

@@ -2,8 +2,12 @@ import type {
   WorkspaceInteractionCatalog,
   WorkspaceRoomActionRow,
 } from '@planner/projections/structured-workspace';
-import { workspaceInteractionKey } from '@planner/projections/structured-workspace';
+import {
+  requireWorkspaceInteraction,
+  workspaceInteractionKey,
+} from '@planner/projections/structured-workspace';
 import { PomResolutionLauncher } from '../rewards/PomResolutionEditor';
+import { AnvilResultLauncher } from '../rewards/AnvilResultEditor';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { TraitOfferLauncher } from '../rewards/TraitOfferEditor';
 import { FountainRarityEffectRow } from './FountainRarityEffectRow';
@@ -23,6 +27,13 @@ export function RoomActionInlineEditors({
     ...(row.rewardPayload?.inlineTraitOffers ?? []),
   ];
   const levels = row.rewardPayload?.inlineLevelResolutions ?? [];
+  const anvilInteractions = (row.rewardPayload?.control.conversions ?? []).flatMap((control) => {
+    const interaction = requireWorkspaceInteraction(
+      interactions.acquisitionConversions,
+      workspaceInteractionKey(control.address),
+    );
+    return interaction.anvil === undefined ? [] : [interaction.anvil];
+  });
   return (
     <>
       {!inlineRewardOffer || row.rewardPayload === undefined ? null : (
@@ -54,6 +65,9 @@ export function RoomActionInlineEditors({
           interactions={interactions}
           key={workspaceInteractionKey(control.address)}
         />
+      ))}
+      {anvilInteractions.map((interaction) => (
+        <AnvilResultLauncher interaction={interaction} key="anvil-of-fates" />
       ))}
       {row.fountainRarity === undefined ? null : (
         <FountainRarityEffectRow control={row.fountainRarity} interactions={interactions} />

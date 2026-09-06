@@ -1894,17 +1894,26 @@ free object, after which the ordinary acquisition path owns the object.
 - correct `ChaosWeaponUpgrade` from an effectless consumable into one atomic
   Hammer transformation and correct its declaration-owned `CanDuplicate` fact
   to `false`;
-- when an authored Anvil offer is purchased, expose one atomic Shop-row result
-  editor for the removed Hammer and two added Hammers. Reuse the existing
-  contextual Hammer picker language, while the engine supplies all eligibility,
-  distinctness, and pre-transformation exclusion domains;
+- model that transformation as the concrete acquisition's declared pickup
+  effect. Because the supported item exists only in World Shops, its exact
+  unresolved/resolved outcome remains on that authored Shop offer and reaches
+  generic acquisition settlement through the Shop purchase source; unrelated
+  incoming, local, Fields, and wheel reward carriers must not gain speculative
+  effect-result plumbing. Shop generation and the reward kernel must not gain
+  Anvil-specific policy;
+- when an authored Anvil offer is purchased, expose one atomic Shop-row editor
+  for that reward-owned effect: the removed Hammer and two added Hammers. Reuse
+  the existing contextual Hammer picker language, while the engine supplies all
+  eligibility, distinctness, and pre-transformation exclusion domains;
 - publish the exact removable Hammer and two exact distinct added Hammers from
   the validated planner state. The removed Hammer is nullable only when the
   native history requirement permits the Anvil but no current non-temporary
   Hammer is removable;
 - preserve the native candidate rule: a temporary Hammer cannot be removed,
   and neither the removed Hammer nor any Hammer present before the
-  transformation may be re-added; and
+  transformation may be re-added. Candidate legality is evaluated in native
+  order: remove the selected Hammer, add the first result, then assess the
+  second result against that updated trait frontier; and
 - apply the authored removal and additions to canonical simulation so every
   later offer, Hammer history query, and room-exit trait delta sees the truthful
   post-Anvil inventory.

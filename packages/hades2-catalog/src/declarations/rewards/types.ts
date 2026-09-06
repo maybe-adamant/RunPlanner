@@ -10,6 +10,7 @@ import type {
   ProducerLifecyclePointKey,
   SourceResolutionPoint,
   SourceSupportPolicyKey,
+  ConcreteAcquisitionPickupEffect,
 } from '@run-planner/engine/reward-kernel';
 
 export type RawPayloadDomainDeclaration = PayloadDomainDeclaration;
@@ -22,6 +23,7 @@ export interface RawConcreteAcquisitionDeclaration {
   readonly artificerConversionEligible?: boolean;
   /** Source CanDuplicate; every supported concrete acquisition declares it explicitly. */
   readonly canDuplicate: boolean;
+  readonly pickupEffect?: ConcreteAcquisitionPickupEffect;
   readonly lastRewardRecreation?: {
     readonly rewardType: string;
     readonly producerLifecycleKey: 'EchoLastReward';

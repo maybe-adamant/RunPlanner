@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.54.0-required-boss-rewards',
+  version: '0.55.0-anvil-of-fates',
   biomes,
   routes,
   arcanaCards,

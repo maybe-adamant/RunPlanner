@@ -145,6 +145,7 @@ function commandContractAddress(
     case 'ReplaceRewardWheelOffer':
       return command.offer;
     case 'ReplaceShopOffer':
+    case 'ReplaceAnvilResult':
       return command.offer;
     case 'SelectDerivedShopEntry':
     case 'EditDerivedShopEntry':

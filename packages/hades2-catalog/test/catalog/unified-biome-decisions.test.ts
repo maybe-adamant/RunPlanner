@@ -6,7 +6,7 @@ import { declarations } from '@run-planner/hades2-catalog/test-support';
 describe('unified biome decisions catalog', () => {
   it('assembles every supported biome through the common immutable catalog envelope', () => {
     const catalog = createCatalog(declarations);
-    expect(catalog.version).toBe('0.54.0-required-boss-rewards');
+    expect(catalog.version).toBe('0.55.0-anvil-of-fates');
     expect(catalog.biomeLayouts.values.map((layout) => layout.biomeKey)).toEqual([
       'F',
       'G',

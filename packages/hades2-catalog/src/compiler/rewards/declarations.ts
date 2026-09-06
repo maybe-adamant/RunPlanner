@@ -27,6 +27,7 @@ const SOURCE_SUPPORT_POLICIES = [
   'ordinaryBoonPeer',
   'ordinaryNoPeer',
 ] as const;
+const PICKUP_EFFECT_KINDS = ['anvilOfFates'] as const;
 
 function requireClosedValue<const Values extends readonly string[]>(
   value: unknown,
@@ -291,6 +292,17 @@ export function normalizeAcquisitions(
         goldConversionEligible: goldConversionEligible.has(acquisition.gameName),
         artificerConversionEligible: artificerConversionEligible.has(acquisition.gameName),
         canDuplicate: acquisition.canDuplicate,
+        ...(acquisition.pickupEffect === undefined
+          ? {}
+          : {
+              pickupEffect: Object.freeze({
+                kind: requireClosedValue(
+                  acquisition.pickupEffect.kind,
+                  PICKUP_EFFECT_KINDS,
+                  `acquisitions[${index}].pickupEffect.kind`,
+                ),
+              }),
+            }),
         ...(acquisition.pathPointGrant === undefined
           ? {}
           : { pathPointGrant: acquisition.pathPointGrant }),

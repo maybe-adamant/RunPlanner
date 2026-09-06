@@ -7,6 +7,7 @@ import type {
   RewardKernelCatalog,
   RewardKernelFacts,
   ProducerLifecyclePointKey,
+  ConcreteAcquisitionPickupEffect,
 } from './model';
 
 const EMPTY_RECORD = Object.freeze({}) as Readonly<Record<string, number>>;
@@ -133,6 +134,26 @@ export function resolveAcquisitionRole(
     }
   }
   return Object.freeze({ role: roleKey, lifecyclePoint, acquisition: Object.freeze(acquisition) });
+}
+
+/** Returns the declaration-owned pickup effects for the concrete roles in an offer. */
+export function pickupEffectForOffer(
+  catalog: RewardKernelCatalog,
+  offer: ResolvedRewardOffer,
+): { readonly role: string; readonly effect: ConcreteAcquisitionPickupEffect } | undefined {
+  const declaration = catalog.rewardTypes.byKey[offer.rewardType];
+  if (declaration === undefined) throw new Error(`unknown reward type ${offer.rewardType}`);
+  let result:
+    { readonly role: string; readonly effect: ConcreteAcquisitionPickupEffect } | undefined;
+  for (const role of declaration.acquisitionRoles.values) {
+    const resolved = resolveAcquisitionRole(catalog, offer, role.key, 'roomRewardPickup');
+    const effect = catalog.acquisitions.byKey[resolved.acquisition.gameName]?.pickupEffect;
+    if (effect === undefined) continue;
+    if (result !== undefined)
+      throw new Error(`reward type ${offer.rewardType} declares multiple pickup effects`);
+    result = Object.freeze({ role: role.key, effect });
+  }
+  return result;
 }
 
 export function applyConcreteAcquisition(

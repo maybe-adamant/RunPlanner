@@ -160,6 +160,7 @@ export function bindRewardChildInteractions(input: {
   });
 
   const acquisitionConversions = bindAcquisitionConversionInteractions({
+    catalog,
     candidates,
     project,
     rewardControls,

@@ -50,6 +50,10 @@ import {
   assessTimePieceConversion,
 } from './rewards/acquisition-settlement';
 import type { RewardBranchState } from './rewards/branch-primitives';
+import {
+  createAnvilCandidateCapability,
+  type AnvilCandidateCapability,
+} from './rewards/anvil-settlement';
 
 function emptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
   return Object.freeze({
@@ -638,6 +642,8 @@ export interface AcquisitionConversionCandidateCapability {
   readonly artificerReplacementAddress?: import('../authored-project/addresses').AcquisitionEntryAddress;
   readonly artificerReplacementRewardTypes?: readonly string[];
   readonly artificerReplacementOptions?: readonly import('../authored-project/model').AuthoredRewardState[];
+  /** Shop-only pickup effect frontier for a concrete acquisition declaration. */
+  readonly anvil?: AnvilCandidateCapability;
 }
 export interface AcquisitionConversionCandidateArtifacts {
   readonly at: (
@@ -676,6 +682,7 @@ export function createAcquisitionConversionCandidateArtifacts(
   const at = (address: AcquisitionRoleAddress) => {
     const entries = privateContexts.get(semanticAddressKey(address));
     if (entries === undefined) return undefined;
+    const anvil = createAnvilCandidateCapability(catalog, entries);
     return Object.freeze({
       timePieceAssessments: Object.freeze(
         entries.flatMap((entry) =>
@@ -761,6 +768,7 @@ export function createAcquisitionConversionCandidateArtifacts(
           ? { artificerReplacementAddress: first }
           : {};
       })(),
+      ...(anvil === undefined ? {} : { anvil }),
     });
   };
   return Object.freeze({

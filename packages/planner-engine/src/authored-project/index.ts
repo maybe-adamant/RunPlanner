@@ -283,6 +283,7 @@ export {
   type AuthoredFieldValue,
   type AuthoredRoomState,
   type AuthoredRewardState,
+  type AuthoredAnvilResult,
   type AuthoredNemesisRandomEventOutcome,
   type AcquisitionDisposition,
   type TraitOffersByAcquisitionRole,
