@@ -74,6 +74,12 @@ Encounter start/end, cleanup, screen construction, and similar callbacks may
 schedule a realization or identify the lifecycle window in which a semantic
 transaction occurs. Their exact callback names, duplicate contacts, and
 representation-only ordering are not independent conformance requirements.
+The supported native game functions used by those adapters are required host
+infrastructure. A missing function or an error raised by it propagates as an
+executor fault; it is not converted into ineligibility, a default value, or a
+plan mismatch. Protected calls are used only as exception-safe cleanup around
+temporary forcing scopes, and they restore that scope before immediately
+rethrowing the original error.
 When the runtime cannot safely realize the next published semantic result, it
 records the mismatch and stops planner realization. It must still invoke the
 native operation and must not prevent player input, room creation, or

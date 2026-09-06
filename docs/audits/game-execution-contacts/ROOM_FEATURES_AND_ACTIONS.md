@@ -69,20 +69,23 @@ Non-obligation transactions may remain incomplete without blocking the room.
 Normal door rooms and rewards are realized during native outgoing generation
 through `ChooseNextRoomData`, `IsRoomRewardEligible`, `ChooseRoomReward`, and
 `DoUnlockRoomExits`. Chaos and Zagreus Contract are additional exits and retain
-their dedicated native spawning contacts. `UseExitDoor` selects the next room;
-it is not a reason to compare every native transition string.
+their dedicated native spawning contacts. `UseExitDoor` opens the
+`exitUsable` Timeline checkpoint, but the executor does not interpret the
+selected destination or compare native transition strings there.
 
 For those additional exits, Overview is the authoritative declaration that the
-feature must spawn, but Navigation owns the resulting Door. At Doors-open it
-proves the complete additional-door set and each Door's occurrence, kind, and
-destination alongside the normal Door product. Room-exit conformance checks
-only retained state caused by the feature, such as consumption of an Ixion
-charge; it does not re-prove topology.
+feature must spawn, but Navigation owns the resulting Door. Immediately before
+room exit it proves the complete additional-door set and each Door's occurrence,
+kind, and destination alongside the normal Door product. The route cursor then
+advances without interpreting which Door was used; the following `StartRoom`
+proves the next published occurrence identity. Named room-exit conformance
+separately checks retained state caused by a feature, such as consumption of an
+Ixion charge.
 
 The blocking comparison boundary is:
 
 - room identity and authored Overview content after room entry;
-- normal and additional door room/reward facts when doors open;
+- normal and additional door room/reward facts immediately before room exit;
 - explicit required Timeline obligations at their published checkpoint.
 
 Run State frames remain diagnostics and sources for named room-exit conformance

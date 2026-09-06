@@ -610,7 +610,7 @@ Deliverables:
 - make `src/mods/navigation/` a narrow, stateless transition adapter. It owns
   the complete normal/additional Door product, each Door's destination and
   reward, native Door bindings, incoming-reward realization for the selected
-  transition, and reporting the selected destination back to the route session;
+  transition, and complete Door proof immediately before room exit;
 - make the room session the inner occurrence envelope. It owns the active
   occurrence, room-entry and room-exit checkpoints, local lifecycle windows,
   the sparse Timeline dependency graph, obligations, and coordination of
@@ -638,23 +638,26 @@ Deliverables:
 
 The route session is the sole outer cursor. Navigation does not own a second
 cursor, the current room, lifecycle windows, Timeline obligations, encounters,
-or room features. It reports the selected bound destination and lets the route
-session advance. The room session owns the volatile inner-room envelope and
-aggregates its component proofs: room entry compares the complete current room
-and Overview product; Doors open compares the complete navigation product; room
-exit closes local obligations and conformance. No component compares every
-native transition between those checkpoints.
+or room features. Room exit advances the route cursor without interpreting the
+selected native transition, and the following room entry proves the next
+published occurrence identity. The room session owns the volatile inner-room
+envelope and aggregates its component proofs: room entry compares the complete
+current room and Overview product; native Doors-open realizes the complete
+navigation product and opens its Timeline window; immediately before room exit,
+navigation proves that complete Door product and the room closes local
+obligations and conformance. No component compares every native transition
+between those checkpoints.
 
 Feature presence and behavior remain deliberately separate. The room feature
 component owns whether a Well, Pool, fountain, resource point, or other object
 is present and reports that structural fact to the room-entry proof; its later
 inventory, purchase, use, or acquisition behavior remains with the owning
 Timeline/feature gate. A feature that creates an exit owns its spawn condition,
-while navigation owns the resulting Door binding and selected-destination
-report. Navigation proves the complete additional-door set at Doors-open;
-room-exit conformance owns only retained effects such as Ixion consumption and
-does not re-prove that topology. Protocol decoding remains in the protocol
-family.
+while navigation owns the resulting Door binding. Navigation proves the
+complete additional-door set immediately before room exit; the following room
+entry—not a selected-destination report—proves which continuation was taken.
+Named room-exit conformance separately owns retained effects such as Ixion
+consumption. Protocol decoding remains in the protocol family.
 
 Room feature construction, native spawning contacts, and feature inventory
 realization live under one bounded `room/features/` family. This includes
