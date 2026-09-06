@@ -37,6 +37,7 @@ export function pendingKeepsakeEffects(state: KeepsakeState): PendingKeepsakeEff
 }
 
 export type RoomExitConformanceFactKind =
+  | 'traitInventory'
   | 'echoShopDuplicate'
   | 'steadyGrowth'
   | 'chaos'
@@ -64,6 +65,26 @@ function stable(value: unknown): string {
 
 function changed(left: unknown, right: unknown): boolean {
   return stable(left) !== stable(right);
+}
+
+/**
+ * The execution boundary only needs the native-observable portion of the
+ * modeled trait ledger.  Keep this projection here, beside the canonical
+ * snapshots, so room-exit conformance does not accidentally publish the
+ * simulation's private acquisition metadata.
+ */
+function modeledTraitInventory(snapshot: RunStateSnapshot): Readonly<Record<string, unknown>> {
+  return Object.fromEntries(
+    Object.values(snapshot.traits.equippedTraits).map((trait) => [
+      trait.traitKey,
+      {
+        traitKey: trait.traitKey,
+        ...(trait.rarity === undefined ? {} : { rarity: trait.rarity }),
+        ...(trait.level === undefined ? {} : { level: trait.level }),
+        ...(trait.hammerRank === undefined ? {} : { hammerRank: trait.hammerRank }),
+      },
+    ]),
+  );
 }
 
 function snapshotFor(
@@ -96,6 +117,7 @@ export function deriveRoomExitConformanceDeltas(
       previousExit = undefined;
       continue;
     }
+    const roomEntry = snapshotFor(snapshots, occurrence, 'roomEntered');
     const baseline = previousExit ?? snapshotFor(snapshots, occurrence, 'roomEntered');
     previousExit = currentExit;
     if (baseline === undefined) continue;
@@ -103,6 +125,15 @@ export function deriveRoomExitConformanceDeltas(
     const add = (kind: RoomExitConformanceFactKind, before: unknown, after: unknown) => {
       if (changed(before, after)) facts.push(Object.freeze({ kind }));
     };
+    // Unlike carry-state facts, this proof is deliberately local to the
+    // room's canonical entry and exit snapshots.  A later room must not prove
+    // a trait mutation that happened before an unobserved room boundary.
+    if (
+      roomEntry !== undefined &&
+      changed(modeledTraitInventory(roomEntry), modeledTraitInventory(currentExit))
+    ) {
+      facts.push(Object.freeze({ kind: 'traitInventory' }));
+    }
     add(
       'echoShopDuplicate',
       baseline.traits.echoShopDuplicateStatus,

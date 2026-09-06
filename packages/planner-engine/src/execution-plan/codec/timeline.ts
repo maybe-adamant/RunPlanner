@@ -324,18 +324,6 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
         : { twistResultKey: stringValue(record.twistResultKey, `${label}.twistResultKey`) }),
     });
   }
-  if (kind === 'poolSale') {
-    exact(record, ['kind', 'owner', 'window', 'slotKey', 'traitKey'], [], label);
-    if (!['left', 'middle', 'right'].includes(record.slotKey as string))
-      fail(`${label}.slotKey is unsupported`);
-    return Object.freeze({
-      kind,
-      owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
-      window: lifecycleWindow(record.window, `${label}.window`),
-      slotKey: record.slotKey as 'left' | 'middle' | 'right',
-      traitKey: stringValue(record.traitKey, `${label}.traitKey`),
-    });
-  }
   if (kind === 'keepsakeChange') {
     exact(record, ['kind', 'owner', 'window', 'keepsakeKey'], ['equipResults'], label);
     return Object.freeze({
