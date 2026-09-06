@@ -68,6 +68,50 @@ function planFor(project: ReturnType<typeof createCompleteFGProject>) {
   return { product, plan: compileExecutionPlan({ product }) };
 }
 
+function shrineOverviewWithPairing(
+  initialPurchase = true,
+  initialSource = true,
+  refillPurchase = true,
+  refillSource = true,
+) {
+  return {
+    encounterPhases: [],
+    requiredObjects: [],
+    hermesShrine: {
+      offers: [
+        {
+          generationKey: 'initial:first',
+          optionKey: 'Heal',
+          rewardType: 'HealBigDrop',
+          slotIndex: 1,
+          ...(initialPurchase ? { purchase: { roomDelay: 2, rushed: true } } : {}),
+          ...(initialSource ? { deliverySourceKey: 'hermesShrineDelivery:source:first' } : {}),
+        },
+        {
+          generationKey: 'initial:secondLeft',
+          optionKey: 'Health',
+          rewardType: 'MaxHealthDrop',
+          slotIndex: 2,
+        },
+        {
+          generationKey: 'initial:secondRight',
+          optionKey: 'Mana',
+          rewardType: 'MaxManaDrop',
+          slotIndex: 3,
+        },
+      ],
+      travelDealRefill: {
+        sourceGenerationKey: 'initial:first',
+        slotIndex: 1,
+        optionKey: 'Armor',
+        rewardType: 'ArmorDrop',
+        ...(refillPurchase ? { purchase: { roomDelay: 8, rushed: false } } : {}),
+        ...(refillSource ? { deliverySourceKey: 'hermesShrineDelivery:source:refill' } : {}),
+      },
+    },
+  };
+}
+
 function allTogetherProjection(selected: boolean) {
   const assembly = simulateProjectAssembly(
     catalog,
@@ -462,6 +506,22 @@ describe('execution-plan compiler and codec', () => {
       sourceOwner: 'refill-acquisition',
       groupIndex: 0,
     });
+  });
+
+  it('requires Shrine purchase and delivery source identities to be paired', () => {
+    for (const [initialPurchase, initialSource, refillPurchase, refillSource] of [
+      [true, false, true, true],
+      [false, true, true, true],
+      [true, true, true, false],
+      [true, true, false, true],
+    ] as const) {
+      expect(() =>
+        decodeExecutionOverview(
+          shrineOverviewWithPairing(initialPurchase, initialSource, refillPurchase, refillSource),
+          'overview',
+        ),
+      ).toThrow(/purchase and deliverySourceKey must be paired/);
+    }
   });
 
   it('publishes a non-default selected weapon and aspect as a verification-only start contract', () => {

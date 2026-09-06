@@ -7,6 +7,7 @@ import {
   createTraitOfferAddress,
   semanticAddressKey,
 } from '../../authored-project/addresses';
+import { parseHermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shrine-delivery';
 import type { TraitOfferOwnerAddress } from '../../authored-project/addresses';
 import { nemesisGeneratedPickupSiteKey } from '../../authored-project/pickup-producers';
 import type { CanonicalAuthoredRoom } from '../../simulation/materialization';
@@ -763,6 +764,11 @@ export function executionTimelineTransactions(
       acquisitionSource.resolvedStoreKey,
     );
     const acquisitionOwner = semanticAddressKey(timeline.action.owner);
+    const hermesShrineSourceKey =
+      source.kind === 'acquisitionEntry' &&
+      parseHermesShrineDeliveryEntryKey(source.entryKey) !== undefined
+        ? source.entryKey
+        : undefined;
     if (shopOffer !== undefined) {
       if (shopOffer.offer.rewardType === 'ChaosWeaponUpgrade' && shopOffer.anvilResult == null)
         throw new CompilerError(
@@ -796,6 +802,7 @@ export function executionTimelineTransactions(
         reward,
         producerLifecycleKey: acquisitionSource.producerLifecycleKey,
         roles,
+        ...(hermesShrineSourceKey === undefined ? {} : { hermesShrineSourceKey }),
         window: windowFor(acquisitionOwner),
       });
     }

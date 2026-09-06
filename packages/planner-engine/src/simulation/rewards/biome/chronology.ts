@@ -1818,6 +1818,21 @@ export function evaluateBiomeRewardChronology(
   const traitChildSettlementCheckpoints: TraitChildSettlementCheckpoints = Object.freeze({
     at: (address: SemanticAddress) => traitChildSettlementProducts.get(semanticAddressKey(address)),
   });
+  const publishedHermesShrineAssessments = Object.freeze(
+    [...hermesShrineAssessments.values()].map(({ origin, assessments }) => {
+      const travelDealRefills = hermesShrineTravelDealRefills.get(semanticAddressKey(origin));
+      return Object.freeze({
+        origin,
+        assessments: Object.freeze(
+          assessments.map((assessment, index) =>
+            travelDealRefills?.[index] === undefined
+              ? assessment
+              : Object.freeze({ ...assessment, travelDealRefill: travelDealRefills[index] }),
+          ),
+        ),
+      });
+    }),
+  );
   const simulation: BiomeRewardSimulation = Object.freeze({
     biomeKey: snapshot.biomeKey,
     validity: immutableFindings.length === 0 && branches.length > 0 ? 'valid' : 'invalid',
@@ -1841,7 +1856,7 @@ export function evaluateBiomeRewardChronology(
     runStateSnapshots: runStatePublication.snapshots,
     runStateAvailability: runStatePublication.availability,
     purgingPoolAssessments: Object.freeze([...purgingPoolAssessments.values()]),
-    hermesShrineAssessments: Object.freeze([...hermesShrineAssessments.values()]),
+    hermesShrineAssessments: publishedHermesShrineAssessments,
     stygianWellAssessments: Object.freeze([...stygianWellAssessments.values()]),
     hermesShrineDeliveries: Object.freeze([
       ...new Map(
@@ -1967,19 +1982,10 @@ export function evaluateBiomeRewardChronology(
     ),
     hermesShrineArtifacts: createHermesShrineCandidateArtifacts(
       new Map(
-        [...hermesShrineAssessments.values()].map(({ origin, assessments }) => {
-          const travelDealRefills = hermesShrineTravelDealRefills.get(semanticAddressKey(origin));
-          return [
-            semanticAddressKey(origin),
-            Object.freeze(
-              assessments.map((assessment, index) =>
-                travelDealRefills?.[index] === undefined
-                  ? assessment
-                  : Object.freeze({ ...assessment, travelDealRefill: travelDealRefills[index] }),
-              ),
-            ),
-          ] as const;
-        }),
+        publishedHermesShrineAssessments.map(({ origin, assessments }) => [
+          semanticAddressKey(origin),
+          assessments,
+        ]),
       ),
     ),
     stygianWellArtifacts: createStygianWellCandidateArtifacts(

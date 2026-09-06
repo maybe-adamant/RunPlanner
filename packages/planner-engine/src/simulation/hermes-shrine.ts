@@ -179,6 +179,8 @@ export interface HermesShrineAssessment {
   readonly inventoryIssues: readonly HermesShrineInventoryIssue[];
   /** Exact per-slot entry-generation domain after group, peer, and prefix requirements. */
   readonly candidateRewardTypesBySlot: Readonly<Record<HermesShrineSlotKey, readonly string[]>>;
+  /** Catalog option identity for each authored entry slot that resolves to its declared group. */
+  readonly optionKeysBySlot: Readonly<Partial<Record<HermesShrineSlotKey, string>>>;
   readonly complete: boolean;
 }
 
@@ -198,6 +200,8 @@ export interface HermesShrineCandidateContext {
 export interface HermesShrineTravelDealRefillAssessment {
   readonly sourceGenerationKey: import('../authored-project/model').HermesShrineGenerationKey;
   readonly candidateRewardTypes: readonly string[];
+  /** Catalog-owned native StoreData option identity for each candidate reward. */
+  readonly candidateOptionKeysByRewardType: Readonly<Record<string, string>>;
 }
 
 export function assessHermesShrineTravelDealRefill(
@@ -221,19 +225,19 @@ export function assessHermesShrineTravelDealRefill(
       .filter((offer): offer is NonNullable<typeof offer> => offer !== null)
       .map((offer) => offer.rewardType),
   );
+  const candidates = group.options.values
+    .filter((option) => !excluded.has(option.rewardType))
+    .filter((option) =>
+      requirements.every(
+        (requirement) =>
+          option.requirement === undefined || evaluateRequirement(option.requirement, requirement),
+      ),
+    );
   return Object.freeze({
     sourceGenerationKey,
-    candidateRewardTypes: Object.freeze(
-      group.options.values
-        .filter((option) => !excluded.has(option.rewardType))
-        .filter((option) =>
-          requirements.every(
-            (requirement) =>
-              option.requirement === undefined ||
-              evaluateRequirement(option.requirement, requirement),
-          ),
-        )
-        .map((option) => option.rewardType),
+    candidateRewardTypes: Object.freeze(candidates.map((option) => option.rewardType)),
+    candidateOptionKeysByRewardType: Object.freeze(
+      Object.fromEntries(candidates.map((option) => [option.rewardType, option.key])),
     ),
   });
 }
@@ -312,10 +316,23 @@ export function assessHermesShrine(
     ) as Record<HermesShrineSlotKey, readonly string[]>,
   );
   const inventoryIssues = assessHermesShrineInventory(catalog, shrine, requirements);
+  const optionKeysBySlot = Object.freeze(
+    Object.fromEntries(
+      SLOT_KEYS.flatMap((slotKey) => {
+        const offer = shrine.offerBySlot[slotKey];
+        const group = profile?.groups.byKey[profile.slots.byKey[slotKey]!.groupKey];
+        const option = group?.options.values.find(
+          (candidate) => candidate.rewardType === offer?.rewardType,
+        );
+        return option === undefined ? [] : [[slotKey, option.key]];
+      }),
+    ) as Partial<Record<HermesShrineSlotKey, string>>,
+  );
   return Object.freeze({
     placement,
     inventoryIssues,
     candidateRewardTypesBySlot,
+    optionKeysBySlot,
     complete: placement.eligible && inventoryIssues.length === 0,
   });
 }
