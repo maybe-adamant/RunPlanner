@@ -11,10 +11,11 @@ without enabling their deferred route structure. The focused keepsake closure
 now covers all 33 selectable keepsakes, including Aromatic Phial target
 steering, complete retained-state reading, and Gift Gift Gift's volatile
 Hammer/Embryo replay. Gate E is therefore the next implementation boundary.
-Gates E onward remain scope outlines until they receive the same
-component-by-component review. Do not begin a gate until its components,
-ownership, native contacts, pass-through boundary, and concrete witnesses have
-been discussed, cleaned up here, and locked.
+Gate E's five commerce slices are locked as of 2026-09-05. Gates F onward
+remain scope outlines until they receive the same component-by-component
+review. Do not begin a gate until its components, ownership, native contacts,
+pass-through boundary, and concrete witnesses have been discussed, cleaned up
+here, and locked.
 
 Starting commits:
 
@@ -118,7 +119,7 @@ its coverage matrix proves the contact; working code is not exempt from audit.
 | Acquisition carriers  | Ordinary, level, direct-pickup, NPC, Mystery Boon, Artificer, Spell, and Path carriers are closed. Commerce remains Gate E; later-route carrier activation remains route-owned.          |
 | Trait effects         | Natural Selection, All Together, Concave Stone, and Sea Star have exact scoped products. Ransoms are native-authoritative, not a second executor implementation.                         |
 | Keepsake effects      | Closed for all 33 keepsakes. Phial steering, complete retained-state reading, and Gift's exact volatile Hammer/Embryo replay use bounded native contacts; passive effects remain native. |
-| Commerce              | Shop, Well, Pool, and Shrine delivery closure remains Gate E; this plan does not claim its exhaustive item/contact coverage.                                                             |
+| Commerce              | World Shop, Anvil, Pool, Well, and Shrine inventory/outcome closure remains Gate E; this plan does not yet claim its exhaustive item/contact coverage.                                   |
 | Later-route abilities | Spell/Hex, Path, and all six bespoke NPC menu/consequence adapters are covered but await route activation and bounded live native probes. Biome-specific structure remains deferred.     |
 
 ## Locked architectural rules
@@ -1862,85 +1863,182 @@ callback cannot be scoped to the selected C1/acquisition handle, if its result
 requires a new cross-room dependency, or if faithful steering would copy the
 surrounding game algorithm.
 
-### Gate E — Cascading F/G commerce closure
+### Gate E — Universal commerce closure
 
-User-visible outcome: F/G Shops, Pools, and Wells use stable inventory and
-interaction primitives while native commerce, payment, and item application
-continue to manage themselves. Gate E is three ordered delivery gates, not one
-Shop-like rewrite.
+User-visible outcome: every already-modeled World Shop, Anvil of Fates, Pool
+of Purging, Stygian Well, and Shrine of Hermes has one bounded execution
+disposition. The executor forces exact visible inventory and genuinely
+volatile authored outcomes while native code continues to own payment, item
+application, trait removal, retained-effect clocks, and generated-object
+creation. Enabling a later route may add its room/navigation contact, but it
+must not reopen these commerce semantics.
 
-#### E1 — F/G Shops and purchase handoff
+Gate E is five ordered delivery gates, not one Shop-like rewrite. Inventory is
+Overview-owned feature state. World Shop and Well purchases retain their exact
+published Timeline owners; Pool sales and Shrine purchases follow the explicit
+publication exceptions below. Unpurchased offers remain visible inventory
+rather than empty obligations. Every acquired or generated object reuses C1,
+C2, C2.5, C3, D7, or another already-closed acquisition adapter according to
+its published shape.
 
-- steer the complete authored Room Shop and World Shop inventory at native
-  inventory generation, including offers the player does not purchase;
+Travel Deal is one planner-owned retained effect shared by World Shops,
+Stygian Wells, and Shrines. The validated plan supplies the exact replacement
+or refill plus any required local dependency. Each carrier realizes that exact
+item at its own native refill contact; Lua never recomputes “first purchase,”
+candidate eligibility, or competing-item policy. Gold Gold Gold needs no
+commerce actuator: native purchase code consumes the trait and creates its
+free object, after which the ordinary acquisition path owns the object.
+
+#### E1 — Anvil of Fates planner correction
+
+- correct `ChaosWeaponUpgrade` from an effectless consumable into one atomic
+  Hammer transformation and correct its declaration-owned `CanDuplicate` fact
+  to `false`;
+- when an authored Anvil offer is purchased, expose one atomic Shop-row result
+  editor for the removed Hammer and two added Hammers. Reuse the existing
+  contextual Hammer picker language, while the engine supplies all eligibility,
+  distinctness, and pre-transformation exclusion domains;
+- publish the exact removable Hammer and two exact distinct added Hammers from
+  the validated planner state. The removed Hammer is nullable only when the
+  native history requirement permits the Anvil but no current non-temporary
+  Hammer is removable;
+- preserve the native candidate rule: a temporary Hammer cannot be removed,
+  and neither the removed Hammer nor any Hammer present before the
+  transformation may be re-added; and
+- apply the authored removal and additions to canonical simulation so every
+  later offer, Hammer history query, and room-exit trait delta sees the truthful
+  post-Anvil inventory.
+
+Primary witnesses are one permanent-Hammer removal plus two distinct additions,
+a temporary Hammer excluded from removal and re-addition, candidate changes
+after editing an earlier Hammer, and later simulation reading the exact
+post-Anvil inventory. E1 is a complete Catalog / Planner Engine / application
+correction; it does not publish an unused execution field or add a provisional
+Lua hook.
+
+#### E2 — All three World Shop profiles and purchase handoff
+
+- steer the complete authored inventory for `WorldShop`, `I_WorldShop`, and
+  `Q_WorldShop` at native generation, including offers the player does not
+  purchase;
+- consume the engine-published slot list without reproducing profile
+  cardinality, group membership, I/Q run-half predicates, distinctness,
+  weights, or eligibility rules in Lua;
 - keep feature presence, inventory generation, purchase intent, payment, and
   later acquisition as separate facts;
-- bind the exact native slot/button, let native code pay costs and grant the
-  item, then hand acquired Boons, levels, and direct pickups to C1, C2, or
-  C2.5;
-- require each purchased item to remain the exact authored inventory result;
-  native unavailability is a mismatch and never triggers a substitute search;
-  and
-- leave price, Gold, and simulation-neutral purchase effects entirely native.
+- bind an authored paid purchase to its exact native slot/button only after the
+  native admission guard accepts it, let native code pay and grant the item,
+  then hand Boons, levels, direct pickups, Mystery Boons, Hammers, Spells, and
+  Path items to their existing acquisition adapters;
+- leave a rejected purchase retryable; an accepted purchase with no exact
+  published purchase owner remains a player divergence but must never block or
+  suppress the native action;
+- publish E1's exact Anvil result on its Shop purchase, steer only its removed
+  and two added identities inside the scoped native `ChaosHammerUpgrade` call,
+  and let native code perform the transformation. Ordinary room-exit trait
+  conformance proves the final Hammer delta;
+- realize the exact authored Travel Deal replacement at the World Shop's native
+  refill contact from planner-published readiness, without deriving purchase
+  order in the adapter;
+- realize Infernal Contract's one supplemental free World Shop pedestal as
+  feature inventory, not a paid `shopPurchase`; its object uses the ordinary
+  acquisition path; and
+- leave prices, Gold, and simulation-neutral purchase effects entirely native.
 
-Primary witnesses are a purchased and unpurchased offer in each F/G Shop
-shape, a native payment/application, a trait acquisition handoff, a consumable
-handoff, and exact-result/native-unavailable behavior.
+Primary witnesses are complete 3-, 5-, and 6-offer inventories; Q's two offers
+from one group remain distinct without Lua understanding that group; one
+purchased and one unpurchased offer; accepted and rejected purchase contacts;
+trait and direct-pickup handoffs; one Travel Deal replacement; one Infernal
+Contract free object that never enters paid-purchase handling; and exact scoped
+Anvil steering that does not affect unrelated Hammer RNG. A wrong or unavailable
+Anvil identity reports mismatch while preserving the native base path.
+Planner-owned tests retain the exhaustive Shop pool and I/Q phase matrices.
 
-#### E2 — Pool of Purging
+#### E3 — Pool of Purging
 
 - allow an uninteracted Pool to remain wholly native-generated;
-- when interaction is authored, steer the three declared sale choices without
-  replacing the native menu;
-- bind the selected slot and exact trait, let native sale code remove it, and
-  complete when the exact sale callback returns without reconstructing the
-  complete trait inventory at room exit; and
-- ignore Gold proceeds and reroll behavior.
+- when interaction is authored, steer its complete declared sale menu without
+  replacing the native menu or tracking which displayed row the player presses;
+- let native sale code remove all stacks of the selected traits;
+- omit authored Pool sales at the planner-to-executor publication boundary.
+  `poolSale` is not an execution transaction because no result remains to
+  steer; and
+- verify the intended removals through the sparse room-exit trait delta while
+  ignoring sale order, Gold proceeds, rerolls, and unmodeled trait inventory.
 
-Primary witnesses are uninteracted Pool pass-through, one sale, three sales in
-authored order, and a room-exit absence mismatch that disables enforcement
-without blocking the native sale callback.
+Primary witnesses are uninteracted Pool pass-through, exact interacted menu
+realization, one and three native sales reaching the expected room-exit trait
+delta, and a missing intended removal reporting mismatch without blocking the
+native sale. A focused engine witness owns the `poolSale` publication omission;
+the executor must not retain a dormant Pool-sale consumer.
 
-#### E3 — Stygian Well and Travel Deal
+#### E4 — Stygian Wells and their Travel Deal refill
 
 - allow an uninteracted Well to remain wholly native-generated and avoid false
   Timeline obligations;
-- steer an authored three-slot inventory and bind each purchased native item,
-  while letting native code pay, grant, stack, and expire every effect;
-- classify neutral, Spark, Yarn, Hymn, Discount, Empty Slot, Extended, Twist,
-  and Last Stand before implementation; steer only an exact authored Twist
-  identity or a later authored target that is genuinely volatile;
-- preserve Travel Deal's planner-owned purchase/refill prerequisites without
-  recomputing “first purchase” in Lua; once ready, steer the native refill item
-  and optional refill purchase; and
-- preserve Echo Gold Gold Gold as an exact purchase-to-native-child relation
-  only when its owning later-biome gate reaches that contact.
+- steer an interacted three-slot inventory and bind each consequential
+  purchased native item while letting native code pay, grant, stack, and expire
+  every effect;
+- retain the audited dispositions for neutral, Spark, Yarn, Hymn, Discount,
+  Empty Slot, Extended, Twist, and Last Stand. Steer only the exact nested Twist
+  identity or another genuinely volatile authored target; deterministic native
+  effects receive no second actuator;
+- realize the exact Travel Deal refill from planner-published prerequisites and
+  barriers, then treat an authored refill purchase as its own later transaction;
+  and
+- prove retained Spark, Yarn, Hymn, Discount, Empty Slot, and Extended state at
+  room exit through their existing conformance authority rather than inferred
+  purchase effects.
 
-Primary witnesses:
+Primary witnesses are interacted and uninteracted Wells; two same-contact
+purchases bound by distinct payload; Travel Deal source, refill readiness,
+competing-purchase barrier, and optional refill purchase; exact Twist and Last
+Stand results plus native-unavailable mismatch; one neutral stacking item with
+no extra actuator; and a test-owned classification for every normalized Well
+effect.
 
-- interacted and uninteracted Well;
-- Travel Deal source, refill readiness, competing-purchase barrier, and
-  optional refill purchase;
-- exact Twist and Last Stand results plus native-unavailable mismatch;
-- one neutral stacking item proving that native application creates no extra
-  actuator; and
-- a test-owned classification for every normalized Well effect.
+#### E5 — Shrines of Hermes and their Travel Deal refill
 
-Shrine of Hermes does not block F/G closure. Its full inventory, purchase/rush,
-native clock, local or delayed delivery, and Mystery Boon handoff become a
-separate commerce gate when N/O/P/Q execution reaches Shrine structure.
-That gate must include one same-room witness where a delivered Mystery Boon
-acquires a trait and the existing prior-trait-mutation relation publishes an
-exact dependency to a later ordinary offer whose validated prefix used that
-trait. It must not introduce blanket trait ordering or executor-side trait
-semantics.
-Surface and I/Q Shop variants likewise belong to their route/biome gates after
-E1 establishes the shared purchase contact; they are not speculative E1
-requirements.
+- publish and steer every Shrine's complete three-offer `SurfaceShop`
+  inventory, including unpurchased offers; for each authored purchase publish
+  its exact native `RoomDelay` from 2 through 8 and rushed disposition, plus any
+  authored Travel Deal refill and refill purchase;
+- preserve the authored rushed versus delayed disposition only as the input
+  needed to bind the expected native purchase/delivery result. Do not create an
+  executor-owned purchase clock, delivery scheduler, countdown decrement,
+  delivery-host lookup, or forced-completion algorithm;
+- let native code purchase the item, create and advance the pending delivery,
+  rush it, flush it at its native final boundary, and spawn the required object;
+- when the object materializes, reuse the ordinary acquisition pipeline for
+  Mystery Boon, Hermes, Spell, Talent, Pom, health, Magick, armor, Last Stand,
+  or any other already-published result. The acquisition transaction is the
+  only Timeline consumer for the delivered object; and
+- realize only the exact authored Travel Deal refill at the Shrine's native
+  refill contact. The adapter does not reinterpret why only the first rushed
+  purchase can refill while an ordinary delayed purchase cannot.
 
-Each E1-through-E3 slice has its own executor commit, independent review, and
-modpack pin. Run Planner changes are limited to demonstrated missing exact
-inventory or dependency facts.
+Primary witnesses are a complete inventory with an unpurchased offer, one
+delayed purchase carrying its exact native `RoomDelay`, one rushed same-room
+pickup, one later native-spawned pickup reusing the ordinary acquisition path,
+a delivered Mystery Boon reusing C3/C1, and a Travel Deal refill. The witnesses
+prove configuration and handoff at native contacts; they must not reproduce
+the planner's encounter-use chronology, forced-completion rules, or trait-order
+legality matrix.
+
+Each E1-through-E5 slice has its own coherent commit in the repositories it
+changes and an independent review; a modpack pin is required only when the
+executor changes. E1 is the named Planner-only correction; E3 includes the
+focused Planner publication correction. Any additional Planner change must
+demonstrate a missing exact inventory, outcome, dependency, or publication fact
+rather than moving native commerce policy into the engine.
+
+Execution protocol changes are made only in slices that alter the wire product:
+E2 adds the exact Anvil transformation, E3 removes `poolSale`, and E5 adds the
+Shrine inventory/purchase disposition. They receive strict protocol advances
+with regenerated byte fixtures and no compatibility decoder. E1 advances the
+authored project schema; migration preserves an existing Anvil offer and
+purchase but leaves its formerly unknowable random transformation unresolved
+for the user to author.
 
 ### Gate F — Cascading remaining actions and closure
 
