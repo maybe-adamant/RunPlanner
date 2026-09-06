@@ -27,6 +27,7 @@ import {
   nBiome,
   oBiome,
   oOccurrenceIds,
+  qBiome,
 } from '@run-planner/test-fixtures/surface';
 import {
   applyProjectCommand,
@@ -63,6 +64,7 @@ import {
   encodeExecutionPlan,
 } from '../../src/execution-plan';
 import { assembleTimelineRelations } from '../../src/execution-plan/assembly/timeline-relations';
+import { assembleExecutionOverview } from '../../src/execution-plan/assembly/overview';
 import { orderedExecutionRooms } from '../../src/execution-plan/assembly/route';
 import { executionTimelineTransactions } from '../../src/execution-plan/assembly/timeline-transactions';
 import { traitOffer as decodeExecutionTraitOffer } from '../../src/execution-plan/codec/rewards';
@@ -1070,6 +1072,103 @@ describe('engine-owned F/G execution semantic product', () => {
           ]),
         }),
       ]),
+    );
+  });
+
+  it('publishes an unpurchased Anvil only as visible Shop inventory', () => {
+    const shopId = createOccurrenceId('surface-q-preboss');
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(qBiome, shopId, 'PremiumProgress'),
+      value: { rewardType: 'ChaosWeaponUpgrade' },
+    });
+    project = authorLegalTraitOffers(project);
+    const assembly = simulateProjectAssembly(catalog, project);
+    const biome = assembly.evaluation.route.biomes.find(
+      (candidate): candidate is CompleteValidBiomeProjectEvaluation =>
+        candidate.biomeKey === 'Q' &&
+        candidate.authoring === 'complete' &&
+        candidate.validity === 'valid',
+    );
+    if (biome === undefined)
+      throw new Error(
+        `Anvil execution fixture lacks complete-valid Q: ${JSON.stringify(assembly.evaluation.findings)}`,
+      );
+    const room = orderedExecutionRooms([biome]).find(
+      (candidate) => candidate.occurrenceId === shopId,
+    );
+    if (room === undefined) throw new Error('Q World Shop occurrence is missing');
+    expect(assembleExecutionOverview(room, biome, undefined).shop?.offers).toContainEqual({
+      offerKey: 'PremiumProgress',
+      optionKey: 'ChaosWeaponUpgrade',
+      rewardType: 'ChaosWeaponUpgrade',
+    });
+    expect(
+      executionTimelineTransactions(
+        room,
+        biome,
+        mergePlannerTimelineFacts(
+          room.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
+          biome.rewards.timelineFacts,
+        ),
+      ),
+    ).not.toContainEqual(expect.objectContaining({ kind: 'shopPurchase' }));
+  });
+
+  it('requires and publishes the exact result for a purchased Anvil', () => {
+    const shopId = createOccurrenceId('surface-q-preboss');
+    const shop = createOccurrenceAddress(qBiome, shopId);
+    const offer = createShopOfferAddress(qBiome, shopId, 'PremiumProgress');
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceShopOffer',
+      offer,
+      value: { rewardType: 'ChaosWeaponUpgrade' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAnvilResult',
+      offer,
+      value: {
+        kind: 'anvilOfFates',
+        removedTraitKey: 'StaffDoubleAttackTrait',
+        addedTraitKeys: ['StaffLongAttackTrait', 'StaffJumpSpecialTrait'],
+      },
+    });
+    project = replaceTestShopOfferActions(project, catalog, shop, ['PremiumProgress']);
+    project = authorLegalTraitOffers(project);
+    const assembly = simulateProjectAssembly(catalog, project);
+    const biome = assembly.evaluation.route.biomes.find(
+      (candidate): candidate is CompleteValidBiomeProjectEvaluation =>
+        candidate.biomeKey === 'Q' &&
+        candidate.authoring === 'complete' &&
+        candidate.validity === 'valid',
+    );
+    if (biome === undefined)
+      throw new Error(
+        `purchased Anvil fixture lacks complete-valid Q: ${JSON.stringify(assembly.evaluation.findings)}`,
+      );
+    const room = orderedExecutionRooms([biome]).find(
+      (candidate) => candidate.occurrenceId === shopId,
+    );
+    if (room === undefined) throw new Error('Q World Shop occurrence is missing');
+    expect(
+      executionTimelineTransactions(
+        room,
+        biome,
+        mergePlannerTimelineFacts(
+          room.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
+          biome.rewards.timelineFacts,
+        ),
+      ),
+    ).toContainEqual(
+      expect.objectContaining({
+        kind: 'shopPurchase',
+        offerKey: 'PremiumProgress',
+        anvilResult: {
+          kind: 'anvilOfFates',
+          removedTraitKey: 'StaffDoubleAttackTrait',
+          addedTraitKeys: ['StaffLongAttackTrait', 'StaffJumpSpecialTrait'],
+        },
+      }),
     );
   });
 

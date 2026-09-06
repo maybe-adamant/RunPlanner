@@ -151,6 +151,9 @@ export function processShopInventory(
         origin: room.origin,
         profileKey: profile.key,
         optionKeys: witness.optionKeys,
+        slotGroupIndexes: profile.groups.values.flatMap((group, groupIndex) =>
+          Array.from({ length: group.offerCount }, () => groupIndex),
+        ),
       });
       next.push(
         Object.freeze({
