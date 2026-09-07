@@ -66,18 +66,6 @@ const findingCopy = {
     title: 'Fields door roll cannot occur here',
     description: 'The selected Min or Max outcome is unavailable at this point in the Fields.',
   },
-  fieldsActionMissing: {
-    title: 'Fields action is missing',
-    description: 'Insert this required cage combat or reward interaction into the room order.',
-  },
-  fieldsActionInactive: {
-    title: 'Fields action is inactive',
-    description: 'Remove this retained action or reactivate its cage through the door outcome.',
-  },
-  fieldsActionDependency: {
-    title: 'Fields reward is still locked',
-    description: 'Move this reward interaction after its matching cage combat.',
-  },
   biomeTopologyMissing: {
     title: 'Start this biome',
     description: 'Create its opening room before building the route.',
@@ -342,10 +330,6 @@ const findingCopy = {
   echoLastRunBoonOptionUnavailable: {
     title: 'Boon Boon Boon outcome is unavailable',
     description: 'Choose a source-resolved boon that is eligible at the pre-Echo frontier.',
-  },
-  echoShopDuplicateChildMissing: {
-    title: 'Create the Gold Gold Gold duplicate',
-    description: 'Create the acquisition decisions for the reached free Shop duplicate.',
   },
   fullTraitOfferWidthRequired: {
     title: 'Three choices are required',
@@ -905,6 +889,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Room`;
     case 'fieldsSpatial':
       return `${biomeLabel} · Fields layout`;
+    case 'roomFeature':
+      return `${biomeLabel} · Room feature`;
     case 'shopOffer':
       return `${biomeLabel} · Shop offer`;
     case 'acquisitionSite':

@@ -48,19 +48,23 @@ export interface StygianWellAssessment {
   readonly twistCandidateItemKeysByGeneration: Readonly<
     Partial<Record<import('../authored-project/model').StygianWellGenerationKey, readonly string[]>>
   >;
-  readonly issues: readonly (
-    | 'missing'
-    | 'wrongGroup'
-    | 'duplicate'
-    | 'refillMissing'
-    | 'refillUnavailable'
-    | 'refillWrongGroup'
-    | 'refillDuplicate'
-    | 'twistMissing'
-    | 'twistInvalid'
-    | 'twistOrphan'
-  )[];
+  readonly issues: readonly StygianWellAssessmentIssue[];
 }
+
+export type StygianWellAssessmentIssue =
+  | {
+      readonly kind: 'missing' | 'wrongGroup';
+      readonly generationKey: import('../authored-project/model').StygianWellGenerationKey;
+    }
+  | { readonly kind: 'duplicate' }
+  | {
+      readonly kind: 'refillMissing' | 'refillUnavailable' | 'refillWrongGroup' | 'refillDuplicate';
+      readonly generationKey: 'travelDealRefill';
+    }
+  | {
+      readonly kind: 'twistMissing' | 'twistInvalid' | 'twistOrphan';
+      readonly generationKey: import('../authored-project/model').StygianWellGenerationKey;
+    };
 
 export interface StygianWellPlacementAssessment {
   readonly forced: boolean;
@@ -207,24 +211,32 @@ export function assessStygianWell(
     });
   const values = STYGIAN_WELL_SLOT_KEYS.map((key) => well.offerKeyBySlot[key]);
   const issues: StygianWellAssessment['issues'][number][] = [];
-  if (values.some((value) => value === null)) issues.push('missing');
-  for (const key of STYGIAN_WELL_SLOT_KEYS)
-    if (well.offerKeyBySlot[key] !== null && !domains[key].includes(well.offerKeyBySlot[key]!))
-      issues.push('wrongGroup');
+  for (const key of STYGIAN_WELL_SLOT_KEYS) {
+    const generationKey = `initial:${key}` as const;
+    if (well.offerKeyBySlot[key] === null) {
+      issues.push({ kind: 'missing', generationKey });
+    } else if (!domains[key].includes(well.offerKeyBySlot[key]!)) {
+      issues.push({ kind: 'wrongGroup', generationKey });
+    }
+  }
   const selected = values.filter((value): value is string => value !== null);
-  if (new Set(selected).size !== selected.length) issues.push('duplicate');
+  if (new Set(selected).size !== selected.length) issues.push({ kind: 'duplicate' });
   if (
     travelDealRefill !== undefined &&
     (well.travelDealRefillKey === undefined || well.travelDealRefillKey === null)
   ) {
-    issues.push('refillMissing');
+    issues.push({ kind: 'refillMissing', generationKey: 'travelDealRefill' });
   } else if (well.travelDealRefillKey !== undefined && well.travelDealRefillKey !== null) {
-    if (travelDealRefill === undefined) issues.push('refillUnavailable');
+    if (travelDealRefill === undefined)
+      issues.push({ kind: 'refillUnavailable', generationKey: 'travelDealRefill' });
     else if (!travelDealRefill.candidateItemKeys.includes(well.travelDealRefillKey)) {
       const sourceDomain = sourceSlot === undefined ? [] : domains[sourceSlot];
-      issues.push(
-        sourceDomain.includes(well.travelDealRefillKey) ? 'refillDuplicate' : 'refillWrongGroup',
-      );
+      issues.push({
+        kind: sourceDomain.includes(well.travelDealRefillKey)
+          ? 'refillDuplicate'
+          : 'refillWrongGroup',
+        generationKey: 'travelDealRefill',
+      });
     }
   }
   for (const generation of [
@@ -243,10 +255,12 @@ export function assessStygianWell(
       ];
     const isPurchasedTwist =
       purchased.has(generation) && itemForGeneration(generation) === 'RandomStoreItem';
-    if (isPurchasedTwist && (result === undefined || result === null)) issues.push('twistMissing');
-    else if (isPurchasedTwist && !twistResults.has(result!)) issues.push('twistInvalid');
+    if (isPurchasedTwist && (result === undefined || result === null))
+      issues.push({ kind: 'twistMissing', generationKey: generation });
+    else if (isPurchasedTwist && !twistResults.has(result!))
+      issues.push({ kind: 'twistInvalid', generationKey: generation });
     else if (!isPurchasedTwist && result !== undefined && result !== null)
-      issues.push('twistOrphan');
+      issues.push({ kind: 'twistOrphan', generationKey: generation });
   }
   return Object.freeze({
     placement,

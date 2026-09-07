@@ -1,4 +1,5 @@
 import type { OccurrenceId } from './model';
+import type { ResourceFamily } from '../catalog-schema';
 
 interface BiomeOwnedAddress {
   readonly routeKey: string;
@@ -32,6 +33,33 @@ export interface FieldsSpatialAddress extends BiomeOwnedAddress {
   readonly kind: 'fieldsSpatial';
   readonly occurrenceId: OccurrenceId;
   readonly target: FieldsSpatialTarget;
+}
+/** A closed occurrence-owned Room Overview repair surface. */
+export type RoomFeatureTarget =
+  | { readonly kind: 'resource'; readonly family: ResourceFamily }
+  | { readonly kind: 'fieldsOptionalRewardCount' }
+  | { readonly kind: 'stygianWellPresence' }
+  | {
+      readonly kind: 'stygianWellOffer';
+      readonly generationKey: import('./model').StygianWellGenerationKey;
+    }
+  | {
+      readonly kind: 'stygianWellTwist';
+      readonly generationKey: import('./model').StygianWellGenerationKey;
+    }
+  | { readonly kind: 'stygianWellInventory' }
+  | { readonly kind: 'hermesShrinePresence' }
+  | {
+      readonly kind: 'hermesShrineOffer';
+      readonly generationKey: import('./model').HermesShrineGenerationKey;
+    }
+  | { readonly kind: 'hermesShrineInventory' }
+  | { readonly kind: 'purgingPoolOffer'; readonly slotKey: 'left' | 'middle' | 'right' }
+  | { readonly kind: 'purgingPoolInventory' };
+export interface RoomFeatureAddress extends BiomeOwnedAddress {
+  readonly kind: 'roomFeature';
+  readonly occurrenceId: OccurrenceId;
+  readonly target: RoomFeatureTarget;
 }
 export interface IncomingRewardAddress extends BiomeOwnedAddress {
   readonly kind: 'incomingReward';
@@ -335,6 +363,7 @@ export type SemanticAddress =
   | BiomeFieldAddress
   | OccurrenceAddress
   | FieldsSpatialAddress
+  | RoomFeatureAddress
   | IncomingRewardAddress
   | JudgmentArcanaAddress
   | FigurineArcanaAddress
@@ -459,6 +488,51 @@ export function createFieldsSpatialAddress(
     biomeKey: occurrence.biomeKey,
     occurrenceId: occurrence.occurrenceId,
     target: normalizedTarget,
+  });
+}
+export function createRoomFeatureAddress(
+  occurrence: OccurrenceAddress,
+  target: RoomFeatureTarget,
+): RoomFeatureAddress {
+  const normalizedTarget: RoomFeatureTarget = (() => {
+    switch (target.kind) {
+      case 'resource':
+        return Object.freeze({
+          kind: target.kind,
+          family: nonBlank(target.family, 'family') as ResourceFamily,
+        });
+      case 'stygianWellOffer':
+      case 'stygianWellTwist':
+        return Object.freeze({
+          kind: target.kind,
+          generationKey: nonBlank(
+            target.generationKey,
+            'generationKey',
+          ) as import('./model').StygianWellGenerationKey,
+        });
+      case 'hermesShrineOffer':
+        return Object.freeze({
+          kind: target.kind,
+          generationKey: nonBlank(
+            target.generationKey,
+            'generationKey',
+          ) as import('./model').HermesShrineGenerationKey,
+        });
+      case 'purgingPoolOffer':
+        return Object.freeze({
+          kind: target.kind,
+          slotKey: nonBlank(target.slotKey, 'slotKey') as 'left' | 'middle' | 'right',
+        });
+      default:
+        return Object.freeze({ kind: target.kind });
+    }
+  })();
+  return Object.freeze({
+    kind: 'roomFeature',
+    routeKey: occurrence.routeKey,
+    biomeKey: occurrence.biomeKey,
+    occurrenceId: occurrence.occurrenceId,
+    target: normalizedTarget as RoomFeatureTarget,
   });
 }
 export function createJudgmentArcanaAddress(
@@ -992,6 +1066,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'incomingReward':
       return JSON.stringify([...base, address.occurrenceId]);
     case 'fieldsSpatial':
+      return JSON.stringify([...base, address.occurrenceId, address.target]);
+    case 'roomFeature':
       return JSON.stringify([...base, address.occurrenceId, address.target]);
     case 'judgmentArcana':
       return JSON.stringify([...base, address.occurrenceId, address.phaseKey]);

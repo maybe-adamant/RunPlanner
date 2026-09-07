@@ -19,6 +19,7 @@ import {
   goldenFStartId,
 } from '@planner-test/support/structured-workspace/occurrence-assembly.test-support';
 import { loadNemesisFieldsCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 
 describe('structured workspace composer assembly', () => {
   it('does not need evaluation entry to preserve authored room-local controls', () => {
@@ -112,5 +113,52 @@ describe('structured workspace composer assembly', () => {
     ).assembly.node.room.roomLocal;
     if (dormant.kind !== 'fields') throw new Error('dormant H Fields room is missing');
     expect(dormant.spatial.some((control) => control.target.kind === 'nemesis')).toBe(false);
+  });
+
+  it('publishes forced-missing Shrine inventory rows on the Overview for repair', () => {
+    const checkpoint = loadSurfaceNOCheckpoint();
+    const project = {
+      ...checkpoint,
+      route: {
+        ...checkpoint.route,
+        biomes: checkpoint.route.biomes.map((biome) =>
+          biome.biomeKey !== 'N' || biome.topology === null
+            ? biome
+            : {
+                ...biome,
+                topology: {
+                  ...biome.topology,
+                  occurrences: biome.topology.occurrences.map((occurrence) => {
+                    if (occurrence.occurrenceId !== 'surface-n-preboss:postboss') return occurrence;
+                    const { hermesShrine: _removed, ...withoutShrine } = occurrence;
+                    void _removed;
+                    return withoutShrine;
+                  }),
+                },
+              },
+        ),
+      },
+    };
+    const result = assemble(
+      project,
+      'Surface',
+      'N',
+      createOccurrenceId('surface-n-preboss:postboss'),
+    );
+    const shrine = result.assembly.node.room.workbench.features.find(
+      (feature) => feature.kind === 'hermesShrine',
+    );
+    if (shrine?.kind !== 'hermesShrine') throw new Error('forced Shrine feature is missing');
+    expect(shrine.presence.kind).toBe('forcedPresent');
+    expect(shrine.slots).toHaveLength(3);
+    for (const slot of shrine.slots) {
+      expect(slot.rewardType).toBeNull();
+      expect(slot.candidateRewards.length).toBeGreaterThan(0);
+      expect(result.markers.destinations().get(slot.marker.focusKey)).toMatchObject({
+        focusAddress: slot.address,
+        nodeKey: result.assembly.node.key,
+        roomTab: 'overview',
+      });
+    }
   });
 });

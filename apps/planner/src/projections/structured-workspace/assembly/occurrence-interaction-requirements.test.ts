@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createRoomFeatureAddress } from '@run-planner/engine/authored-project';
 import {
   assemble,
   catalog,
@@ -68,11 +69,16 @@ describe('occurrence interaction requirements', () => {
       ...postboss,
       resources: [
         {
+          address: createRoomFeatureAddress(postboss.address, {
+            kind: 'resource',
+            family: 'Fishing',
+          }),
           family: 'Fishing' as const,
           label: 'Successful Fishing — Water',
           action: 'add' as const,
           interactionKey: 'resource:Fishing',
           legal: true,
+          marker: postboss.marker,
         },
       ],
       workbench: {
@@ -83,6 +89,10 @@ describe('occurrence interaction requirements', () => {
             kind: 'hermesShrine' as const,
             assessment: 'unassessed' as const,
             presence: { kind: 'optionalPresent' as const },
+            presenceAddress: createRoomFeatureAddress(postboss.address, {
+              kind: 'hermesShrinePresence',
+            }),
+            presenceMarker: postboss.marker,
             slots: [],
           },
         ],

@@ -6,6 +6,7 @@ import {
   createEncounterPhaseAddress,
   createFieldsSpatialAddress,
   createOccurrenceAddress,
+  createRoomFeatureAddress,
   createOccurrenceId,
   decodeProjectDocument,
   encodeProjectDocument,
@@ -267,7 +268,6 @@ describe('authored Fields occurrence payload commands', () => {
       phase: passive,
       encounterKey: 'NemesisRandomEvent',
     });
-
     expect(
       fieldsOptionalRewardCountSupport(
         catalog,
@@ -290,7 +290,7 @@ describe('authored Fields occurrence payload commands', () => {
     expect(overCapacityFindings).toContainEqual(
       expect.objectContaining({
         code: 'fieldsOptionalCapacityUnavailable',
-        origin: createFieldsSpatialAddress(occurrence, { kind: 'nemesis' }),
+        origin: createRoomFeatureAddress(occurrence, { kind: 'fieldsOptionalRewardCount' }),
       }),
     );
     expect(

@@ -113,8 +113,14 @@ export function applyOccurrenceCommand(
     }
     case 'ReplaceHermesShrineOffer': {
       const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
-      if (occurrence.hermesShrine === undefined)
-        failCommand(command, 'occurrence has no Hermes Shrine');
+      const room = catalog.rooms.byKey[occurrence.gameName];
+      const shrine: import('../model').HermesShrineState =
+        occurrence.hermesShrine ??
+        (room?.surfaceShop?.forced === true
+          ? Object.freeze({
+              offerBySlot: Object.freeze({ first: null, secondLeft: null, secondRight: null }),
+            })
+          : failCommand(command, 'occurrence has no Hermes Shrine'));
       if (!['first', 'secondLeft', 'secondRight'].includes(command.slotKey))
         failCommand(command, `unknown Hermes Shrine slot ${String(command.slotKey)}`);
       const profile = catalog.rewards.shops.byKey.SurfaceShop;
@@ -126,9 +132,9 @@ export function applyOccurrenceCommand(
       const nextOccurrence = Object.freeze({
         ...occurrence,
         hermesShrine: Object.freeze({
-          ...occurrence.hermesShrine,
+          ...shrine,
           offerBySlot: Object.freeze({
-            ...occurrence.hermesShrine.offerBySlot,
+            ...shrine.offerBySlot,
             [command.slotKey]: Object.freeze({ rewardType: command.value.rewardType }),
           }),
         }),
@@ -136,7 +142,7 @@ export function applyOccurrenceCommand(
       return updateOccurrence(
         document,
         located,
-        occurrence.hermesShrine.purchaseBySlot?.[command.slotKey]?.rushed === true
+        shrine.purchaseBySlot?.[command.slotKey]?.rushed === true
           ? withRushedHermesDelivery(
               nextOccurrence,
               command.occurrence,
@@ -553,8 +559,9 @@ export function applyOccurrenceCommand(
             ? undefined
             : well.offerKeyBySlot[slotKey];
       if (
-        parentItemKey !== 'RandomStoreItem' ||
-        !(well.purchasedGenerationKeys ?? []).includes(command.generationKey)
+        command.itemKey !== null &&
+        (parentItemKey !== 'RandomStoreItem' ||
+          !(well.purchasedGenerationKeys ?? []).includes(command.generationKey))
       )
         failCommand(command, 'Twist result requires a purchased RandomStoreItem generation');
       const twistResultItemKeys = new Set(

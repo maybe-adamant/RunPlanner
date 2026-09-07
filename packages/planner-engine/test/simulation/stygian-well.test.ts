@@ -711,7 +711,9 @@ describe('Stygian Well consequential purchase state', () => {
     expect(activeDiscount.twistCandidateItemKeysByGeneration['initial:secondLeft']).not.toContain(
       'TemporaryDiscountTrait',
     );
-    expect(activeDiscount.issues).toContain('twistInvalid');
+    expect(activeDiscount.issues).toContainEqual(
+      expect.objectContaining({ kind: 'twistInvalid', generationKey: 'initial:secondLeft' }),
+    );
   });
 
   it('requires a same-group refill only after the actual first ranked purchase activates Travel Deal', () => {
@@ -734,7 +736,9 @@ describe('Stygian Well consequential purchase state', () => {
       'initial:healing',
       true,
     );
-    expect(missing.issues).toContain('refillMissing');
+    expect(missing.issues).toContainEqual(
+      expect.objectContaining({ kind: 'refillMissing', generationKey: 'travelDealRefill' }),
+    );
     expect(missing.travelDealRefill?.candidateItemKeys).toContain('ArmorBoostStore');
     const withoutTravel = assessStygianWell(
       catalog,
@@ -747,7 +751,9 @@ describe('Stygian Well consequential purchase state', () => {
       false,
     );
     expect(withoutTravel.travelDealRefill).toBeUndefined();
-    expect(withoutTravel.issues).not.toContain('refillMissing');
+    expect(withoutTravel.issues).not.toContainEqual(
+      expect.objectContaining({ kind: 'refillMissing' }),
+    );
   });
 
   it('retains stale purchased initial and refill generations as repairable assessment findings', () => {
@@ -773,7 +779,11 @@ describe('Stygian Well consequential purchase state', () => {
     );
     expect(assessment.candidateItemKeysBySlot.secondLeft).toContain('RandomStoreItem');
     expect(assessment.issues).toEqual(
-      expect.arrayContaining(['missing', 'refillMissing', 'twistOrphan']),
+      expect.arrayContaining([
+        expect.objectContaining({ kind: 'missing', generationKey: 'initial:secondLeft' }),
+        expect.objectContaining({ kind: 'refillMissing', generationKey: 'travelDealRefill' }),
+        expect.objectContaining({ kind: 'twistOrphan', generationKey: 'initial:secondLeft' }),
+      ]),
     );
     expect(assessment.complete).toBe(false);
   });

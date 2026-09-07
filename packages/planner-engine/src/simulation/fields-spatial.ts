@@ -1,5 +1,6 @@
 import {
   createFieldsSpatialAddress,
+  createRoomFeatureAddress,
   type FieldsSpatialTarget,
 } from '../authored-project/addresses';
 import type { Catalog, FieldsSpatialDeclaration } from '../catalog-schema';
@@ -241,7 +242,7 @@ export function fieldsSpatialFindings(
         code: 'fieldsOptionalCapacityUnavailable',
         severity: 'error',
         phase: 'roomGeneration',
-        origin: createFieldsSpatialAddress(room.origin, { kind: 'nemesis' }),
+        origin: createRoomFeatureAddress(room.origin, { kind: 'fieldsOptionalRewardCount' }),
         evidence: Object.freeze({
           physicalCapacity: support.physicalMaximum,
           effectiveCapacity: support.effectiveMaximum,

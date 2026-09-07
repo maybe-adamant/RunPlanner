@@ -2,6 +2,7 @@ import type { Catalog, RoomDeclaration } from '../../../../catalog-schema';
 import {
   createAcquisitionEntryAddress,
   createBiomeAddress,
+  createRoomFeatureAddress,
   createRoomActionAddress,
   semanticAddressKey,
 } from '../../../../authored-project/addresses';
@@ -530,14 +531,28 @@ export function applyAcquisitionPointReachedTransition(
             refillSupported: supported,
           });
           if (refill === undefined || refill === null)
-            addFinding('hermesShrineTravelDealRefillMissing', room.origin, {
-              generationKey: shrineDelivery.generationKey,
-            });
+            addFinding(
+              'hermesShrineTravelDealRefillMissing',
+              createRoomFeatureAddress(room.origin, {
+                kind: 'hermesShrineOffer',
+                generationKey: 'travelDealRefill',
+              }),
+              {
+                generationKey: shrineDelivery.generationKey,
+              },
+            );
           else if (!supported)
-            addFinding('hermesShrineTravelDealRefillUnavailable', room.origin, {
-              generationKey: shrineDelivery.generationKey,
-              rewardType: refill.rewardType,
-            });
+            addFinding(
+              'hermesShrineTravelDealRefillUnavailable',
+              createRoomFeatureAddress(room.origin, {
+                kind: 'hermesShrineOffer',
+                generationKey: 'travelDealRefill',
+              }),
+              {
+                generationKey: shrineDelivery.generationKey,
+                rewardType: refill.rewardType,
+              },
+            );
         }
       }
       const acquisitionView =

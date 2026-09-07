@@ -17,6 +17,7 @@ export {
   extendedWellItemKeys,
   twistResultItemKeys,
   type StygianWellAssessment,
+  type StygianWellAssessmentIssue,
   type StygianWellCandidateContext,
   type StygianWellRunState,
 } from './stygian-well';

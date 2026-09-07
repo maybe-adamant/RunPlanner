@@ -878,6 +878,7 @@ export function activeEncounterPhasesForOwner(
       selectedDefinition.key === 'NemesisRandomEvent'
         ? Object.freeze({
             owner: createNemesisRandomEventAddress(address),
+            marker: input.markerDestinations.marker(createNemesisRandomEventAddress(address)),
             reward:
               input.occurrence?.acquisitionSites?.[nemesisGeneratedPickupSiteKey(domain.slotKey)]
                 ?.pickupEntries?.result?.offer ?? null,
