@@ -24,6 +24,8 @@ interface OccurrenceWorkbenchProps {
   readonly room: WorkspaceRoomSummary;
   readonly runState?: WorkspaceRunStateLauncher;
   readonly initialTab?: WorkspaceRoomTab;
+  /** Reapply a finding-owned tab request even when the requested tab is unchanged. */
+  readonly findingNavigationRevision?: number;
   readonly doors?: ReactNode;
   /** Exact room-owned additions to ordinary lifecycle rows. */
   readonly renderRoomActionRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
@@ -41,6 +43,7 @@ export function OccurrenceWorkbench({
   doors,
   incomingDoor,
   initialTab,
+  findingNavigationRevision,
   interactions,
   localVisit,
   room,
@@ -54,15 +57,18 @@ export function OccurrenceWorkbench({
   const roomIdentity = workspaceInteractionKey(room.address);
   const [tabState, setTabState] = useState({
     active: requestedTab,
+    findingNavigationRevision,
     roomIdentity,
     requested: requestedTab,
   });
   const activeTab =
-    tabState.roomIdentity === roomIdentity && tabState.requested === requestedTab
+    tabState.roomIdentity === roomIdentity &&
+    tabState.requested === requestedTab &&
+    tabState.findingNavigationRevision === findingNavigationRevision
       ? tabState.active
       : requestedTab;
   const setActiveTab = (tab: WorkspaceRoomTab): void =>
-    setTabState({ active: tab, roomIdentity, requested: requestedTab });
+    setTabState({ active: tab, findingNavigationRevision, roomIdentity, requested: requestedTab });
   const idPrefix = `occurrence-${room.occurrenceId}`;
   const tabId = (tab: WorkspaceRoomTab): string => `${idPrefix}-tab-${tab}`;
   const panelId = `${idPrefix}-panel`;

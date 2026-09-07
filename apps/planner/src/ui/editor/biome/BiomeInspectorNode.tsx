@@ -34,6 +34,7 @@ interface BiomeInspectorNodeProps {
   >;
   readonly hubTab?: WorkspaceHubTab;
   readonly roomTab?: WorkspaceRoomTab;
+  readonly findingNavigationRevision?: number;
   readonly sourceOccurrence?: Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }>;
 }
 
@@ -79,10 +80,16 @@ function OccurrenceInspector({
   node,
   outgoing,
   outgoingDecision,
+  findingNavigationRevision,
   roomTab,
 }: Pick<
   BiomeInspectorNodeProps,
-  'interactions' | 'node' | 'outgoing' | 'outgoingDecision' | 'roomTab'
+  | 'interactions'
+  | 'node'
+  | 'outgoing'
+  | 'outgoingDecision'
+  | 'findingNavigationRevision'
+  | 'roomTab'
 > & {
   readonly defaultToDoors?: boolean;
   readonly node: Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }>;
@@ -116,6 +123,7 @@ function OccurrenceInspector({
           inspectorOptionalRoomActionContent(node.room, interactions)
         }
         {...(node.runState === undefined ? {} : { runState: node.runState })}
+        {...(findingNavigationRevision === undefined ? {} : { findingNavigationRevision })}
         initialTab={roomTab ?? (defaultToDoors ? 'doors' : 'overview')}
         doors={
           outgoingDecision === undefined ? (
@@ -157,6 +165,9 @@ export function BiomeInspectorNode(props: BiomeInspectorNodeProps) {
         <HubDecisionWorkbench
           frontier={props.frontier}
           {...(props.hubTab === undefined ? {} : { initialTab: props.hubTab })}
+          {...(props.findingNavigationRevision === undefined
+            ? {}
+            : { findingNavigationRevision: props.findingNavigationRevision })}
           interactions={props.interactions}
           node={node}
         />

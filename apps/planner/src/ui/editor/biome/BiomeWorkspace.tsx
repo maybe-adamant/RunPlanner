@@ -379,24 +379,36 @@ export function BiomeWorkspace({
 }: BiomeWorkspaceProps) {
   const runStateTarget = useAppSelector((state) => state.editorSession.runStateTarget);
   const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
+  const selectedFinding = useAppSelector((state) => state.editorSession.selectedFinding);
+  const semanticNavigationRevision = useAppSelector(
+    (state) => state.editorSession.semanticNavigationRevision,
+  );
+  const findingOrigin =
+    selectedFinding !== null && ownsBiome(selectedFinding.origin, biome)
+      ? selectedFinding.origin
+      : undefined;
   const scopedFocusedOwner =
     focusedOwner !== null && ownsBiome(focusedOwner, biome) ? focusedOwner : undefined;
+  // A finding may focus a visible containing action while its origin owns the
+  // complete inspector, rail, and tab destination. Keep those responsibilities
+  // separate so a redirected marker cannot erase the finding's route target.
+  const destinationOwner = findingOrigin ?? scopedFocusedOwner;
   const explicitDestination =
-    scopedFocusedOwner === undefined
+    destinationOwner === undefined
       ? undefined
-      : focusByOwner.get(semanticAddressKey(scopedFocusedOwner));
+      : focusByOwner.get(semanticAddressKey(destinationOwner));
   const defaultSubject = resolveInspectorSubject(
     biome,
     biome.defaultInspectorDestination ?? undefined,
   );
   const subject =
-    scopedFocusedOwner === undefined
+    destinationOwner === undefined
       ? defaultSubject
       : (resolveInspectorSubject(biome, explicitDestination?.inspectorSubject) ?? defaultSubject);
   // An explicit semantic owner intentionally suppresses default rail selection
   // when it resolves through a coarse fallback or is stale after a removal.
   const selectedRailKey =
-    scopedFocusedOwner === undefined
+    destinationOwner === undefined
       ? biome.defaultInspectorDestination?.selectedRailKey
       : explicitDestination?.selectedRailKey;
   const inspectorTitle =
@@ -521,6 +533,9 @@ export function BiomeWorkspace({
             {...(explicitDestination?.roomTab === undefined
               ? {}
               : { roomTab: explicitDestination.roomTab })}
+            {...(findingOrigin === undefined
+              ? {}
+              : { findingNavigationRevision: semanticNavigationRevision })}
           />
         )}
       </aside>
