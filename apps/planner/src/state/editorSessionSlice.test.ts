@@ -2,6 +2,7 @@ import {
   createBiomeAddress,
   createEncounterPhaseAddress,
   createEchoLastRunBoonAddress,
+  createLevelResolutionAddress,
   createOccurrenceId,
   createOccurrenceAddress,
   createProjectAddress,
@@ -19,6 +20,7 @@ import {
   createEditorSessionReducer,
   editorSessionReconciled,
   findingSelected,
+  levelResolutionDialogOpened,
   routePanelSelected,
   routeSelected,
   runStateClosed,
@@ -106,6 +108,61 @@ describe('editor session navigation', () => {
     const explicit = reducer(fromFinding, traitOfferDialogOpened(trait));
     expect(explicit.focusedSemanticOwner).toEqual(trait);
     expect(explicit.traitDialogTarget).toEqual(trait);
+    expect(explicit.selectedFinding).toBeNull();
+  });
+
+  it('derives the finding panel from its origin while using focus only for the visible marker', () => {
+    const origin = createBiomeAddress('Surface', 'N');
+    const markerOnlyFocus = createBiomeAddress('Underworld', 'F');
+    const selected = reducer(
+      undefined,
+      findingSelected({
+        focusAddress: markerOnlyFocus,
+        key: 'origin-panel-finding',
+        origin,
+      }),
+    );
+
+    expect(selected.activePanel).toEqual({ kind: 'biome', biomeKey: 'N' });
+    expect(selected.focusedSemanticOwner).toEqual(markerOnlyFocus);
+  });
+
+  it('clears a selected finding when explicit route navigation takes over', () => {
+    const selection = { key: 'selected-finding', origin: createBiomeAddress('Underworld', 'F') };
+    const selected = reducer(undefined, findingSelected(selection));
+
+    expect(reducer(selected, routeSelected('Underworld')).selectedFinding).toBeNull();
+    expect(reducer(selected, settingsSelected()).selectedFinding).toBeNull();
+    expect(
+      reducer(
+        selected,
+        routePanelSelected({
+          routeKey: 'Underworld',
+          panel: { kind: 'biome', biomeKey: 'F' },
+        }),
+      ).selectedFinding,
+    ).toBeNull();
+  });
+
+  it('clears a selected finding when an explicit Pom dialog launcher opens', () => {
+    const trait = createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        createBiomeAddress('Underworld', 'F'),
+        { kind: 'occurrence', occurrenceId: createOccurrenceId('pom-launcher') },
+        'Encounter',
+      ),
+      'selection',
+    );
+    const level = createLevelResolutionAddress(trait.owner, 'self');
+    const selected = reducer(
+      undefined,
+      findingSelected({ key: 'selected-finding', origin: trait }),
+    );
+
+    const opened = reducer(selected, levelResolutionDialogOpened(level));
+
+    expect(opened.levelResolutionDialogTarget).toEqual(level);
+    expect(opened.selectedFinding).toBeNull();
   });
 
   it('keeps an exact finding selected while focusing its visible timeline action', () => {

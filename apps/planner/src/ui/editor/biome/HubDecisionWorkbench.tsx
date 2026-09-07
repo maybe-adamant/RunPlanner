@@ -27,6 +27,8 @@ import { RunStateLauncher } from './RunStateSheet';
 interface HubDecisionWorkbenchProps {
   readonly frontier: WorkspaceAuthoringFrontier | null;
   readonly initialTab?: WorkspaceHubTab;
+  /** Reapply a finding-owned tab request even when the requested tab is unchanged. */
+  readonly findingNavigationRevision?: number;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly node: WorkspaceHubDecisionNode;
 }
@@ -49,6 +51,7 @@ interface PendingHubMembershipFocus extends HubMembershipTransition {
 export function HubDecisionWorkbench({
   frontier,
   initialTab,
+  findingNavigationRevision,
   interactions,
   node,
 }: HubDecisionWorkbenchProps) {
@@ -90,15 +93,18 @@ export function HubDecisionWorkbench({
   const hubIdentity = semanticAddressKey(node.owner);
   const [tabState, setTabState] = useState({
     active: requestedTab,
+    findingNavigationRevision,
     hubIdentity,
     requested: requestedTab,
   });
   const activeTab =
-    tabState.hubIdentity === hubIdentity && tabState.requested === requestedTab
+    tabState.hubIdentity === hubIdentity &&
+    tabState.requested === requestedTab &&
+    tabState.findingNavigationRevision === findingNavigationRevision
       ? tabState.active
       : requestedTab;
   const setActiveTab = (tab: WorkspaceHubTab): void =>
-    setTabState({ active: tab, hubIdentity, requested: requestedTab });
+    setTabState({ active: tab, findingNavigationRevision, hubIdentity, requested: requestedTab });
   const pendingMembershipFocus = useRef<PendingHubMembershipFocus | undefined>(undefined);
   // Overview keeps every fixed slot in one stable declaration-ordered grid.
   // After a keyboard membership edit remounts that card, restore focus to the

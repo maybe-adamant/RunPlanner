@@ -167,6 +167,116 @@ function withoutWorkspaceEntry({ entry, ...biome }: WorkspaceBiome): Omit<Worksp
 }
 
 describe('BiomeWorkspace', () => {
+  it('uses the finding origin for its complete destination instead of redirected focus metadata', () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const projection = workspaceProjection(application);
+    const biome = projection.route.biomes.find((candidate) => candidate.biomeKey === 'F');
+    if (biome === undefined) throw new Error('F workspace is missing');
+    const redirected = [...projection.focusByOwner.values()].find(
+      (destination) =>
+        destination.roomTab === 'actions' &&
+        semanticAddressKey(destination.ownerAddress) !==
+          semanticAddressKey(destination.focusAddress),
+    );
+    if (redirected === undefined)
+      throw new Error('a redirected Room Timeline destination is missing');
+    const focusedDestination = projection.focusByOwner.get(
+      semanticAddressKey(redirected.focusAddress),
+    );
+    if (focusedDestination === undefined)
+      throw new Error('redirected focus destination is missing');
+    const focusByOwner = new Map(projection.focusByOwner);
+    focusByOwner.set(
+      semanticAddressKey(redirected.focusAddress),
+      Object.freeze({ ...focusedDestination, roomTab: 'overview' as const }),
+    );
+    const view = render(
+      <Provider store={application.store}>
+        <BiomeWorkspace
+          biome={biome}
+          focusByOwner={focusByOwner}
+          interactions={projection.interactions}
+          runStateLaunchers={projection.runStateLaunchers}
+        />
+      </Provider>,
+    );
+    const selection = {
+      focusAddress: redirected.focusAddress,
+      key: 'redirected-finding',
+      origin: redirected.ownerAddress,
+      traitDialogTarget: redirected.traitDialogTarget ?? null,
+      levelResolutionDialogTarget: redirected.levelResolutionDialogTarget ?? null,
+    } as const;
+
+    act(() => application.store.dispatch(findingSelected(selection)));
+    expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(selectedRailMarkerKeys(view.container)).toEqual(
+      redirected.selectedRailKey === undefined ? [] : [redirected.selectedRailKey],
+    );
+
+    return view.unmount();
+  });
+
+  it('reapplies a repeated finding tab request after the user changes tabs', async () => {
+    const view = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
+    const projection = workspaceProjection(view.application);
+    const destination = [...projection.focusByOwner.values()].find(
+      (candidate) => candidate.roomTab === 'actions',
+    );
+    if (destination === undefined) throw new Error('a Room Timeline destination is missing');
+    const selection = {
+      focusAddress: destination.focusAddress,
+      key: 'repeat-finding',
+      origin: destination.ownerAddress,
+      traitDialogTarget: destination.traitDialogTarget ?? null,
+      levelResolutionDialogTarget: destination.levelResolutionDialogTarget ?? null,
+    } as const;
+
+    act(() => view.application.store.dispatch(findingSelected(selection)));
+    expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
+    expect(screen.getByRole('tab', { name: 'Room Overview' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    act(() => view.application.store.dispatch(findingSelected(selection)));
+    expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+  });
+
+  it('reapplies a repeated finding Hub tab request', async () => {
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
+    const projection = workspaceProjection(view.application);
+    const destination = [...projection.focusByOwner.values()].find(
+      (candidate) => candidate.hubTab === 'timeline',
+    );
+    if (destination === undefined) throw new Error('a Hub Timeline destination is missing');
+    const selection = {
+      focusAddress: destination.focusAddress,
+      key: 'repeat-hub-finding',
+      origin: destination.ownerAddress,
+      traitDialogTarget: destination.traitDialogTarget ?? null,
+      levelResolutionDialogTarget: destination.levelResolutionDialogTarget ?? null,
+    } as const;
+
+    act(() => view.application.store.dispatch(findingSelected(selection)));
+    expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    await view.user.click(screen.getByRole('tab', { name: 'Hub Overview' }));
+    expect(screen.getByRole('tab', { name: 'Hub Overview' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    act(() => view.application.store.dispatch(findingSelected(selection)));
+    expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+  });
   it('opens an available Run State sheet without changing inspector selection or authored history, and restores launcher focus on close', async () => {
     const evaluationEvents: string[] = [];
     const application = createApplication({

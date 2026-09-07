@@ -11,9 +11,10 @@ import { authoredProjectReplaced } from './projectWorkspaceSlice';
 import { newProjectCreated, profileLoadSucceeded } from './profileSessionSlice';
 
 export interface FindingSelection {
-  /** Presentation-resolved visible control that receives navigation focus. */
+  /** Redirected semantic owner used only to focus and scroll its visible marker. */
   readonly focusAddress?: SemanticAddress;
   readonly key: string;
+  /** Stable finding owner that remains authoritative for workspace navigation. */
   readonly origin: SemanticAddress;
   /** Projection-resolved containing dialog for a fine-grained finding. */
   readonly traitDialogTarget?: TraitOfferAddress | null;
@@ -104,6 +105,7 @@ const editorSessionSlice = createSlice({
       state.activeSection = 'route';
       state.activePanel = routeOverviewPanel;
       state.focusedSemanticOwner = null;
+      state.selectedFinding = null;
       state.traitDialogTarget = null;
       state.levelResolutionDialogTarget = null;
       state.runStateTarget = null;
@@ -111,6 +113,7 @@ const editorSessionSlice = createSlice({
     settingsSelected(state) {
       state.activeSection = 'settings';
       state.focusedSemanticOwner = null;
+      state.selectedFinding = null;
       state.traitDialogTarget = null;
       state.levelResolutionDialogTarget = null;
       state.runStateTarget = null;
@@ -119,6 +122,7 @@ const editorSessionSlice = createSlice({
       state.activeSection = 'route';
       state.activePanel = action.payload.panel;
       state.focusedSemanticOwner = null;
+      state.selectedFinding = null;
       state.traitDialogTarget = null;
       state.levelResolutionDialogTarget = null;
       state.runStateTarget = null;
@@ -163,12 +167,12 @@ const editorSessionSlice = createSlice({
             : null
           : action.payload.levelResolutionDialogTarget;
       state.runStateTarget = null;
-      const route = routeKey(focusAddress);
+      const route = routeKey(action.payload.origin);
       if (route === null) {
         return;
       }
       state.activeSection = 'route';
-      state.activePanel = panelForOrigin(focusAddress);
+      state.activePanel = panelForOrigin(action.payload.origin);
     },
     editorSessionReconciled(state, action: PayloadAction<EditorSessionReconciliation>) {
       if (action.payload.clearFocusedSemanticOwner) {
@@ -187,6 +191,7 @@ const editorSessionSlice = createSlice({
     },
     traitOfferDialogOpened(state, action: PayloadAction<TraitOfferAddress>) {
       state.traitDialogTarget = action.payload;
+      state.selectedFinding = null;
       // An explicit launcher visit always starts at the outer offer. Findings
       // retain their exact child owner through `findingSelected` instead.
       state.focusedSemanticOwner = action.payload;
@@ -196,6 +201,7 @@ const editorSessionSlice = createSlice({
     },
     levelResolutionDialogOpened(state, action: PayloadAction<LevelResolutionAddress>) {
       state.levelResolutionDialogTarget = action.payload;
+      state.selectedFinding = null;
     },
     levelResolutionDialogClosed(state) {
       state.levelResolutionDialogTarget = null;
