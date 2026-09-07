@@ -28,8 +28,9 @@ semantic inputs. Materialization, history, validation, candidates, findings,
 and UI projections are replaceable derived products. Simulation models
 possibility, not probability. Game Room Declarations are unique; authored Room
 Occurrences are repeatable and own stable persisted IDs. Incomplete and
-context-invalid authored states remain editable, and UI-session state never
-enters authored history.
+context-invalid authored states remain visible and repairable; chronological
+authoring locks only the suffix beyond the engine-published first incomplete
+owner. UI-session state never enters authored history.
 
 ## Documentation
 

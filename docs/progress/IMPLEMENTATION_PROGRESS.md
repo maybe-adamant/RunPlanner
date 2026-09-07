@@ -381,8 +381,9 @@ passed. The build retained only the existing greater-than-500-kB chunk advisory.
 The 2026-08-25 repository cleanup made the root README a stable product and
 quickstart entry point, moved audit navigation into a subject-organized audit
 index, consolidated overlapping evidence without erasing source contacts, and
-retired completed delivery scaffolding. The progress directory now contains
-only this delivery record, the forward roadmap, and migration provenance.
+retired completed delivery scaffolding. Completed temporary delivery plans are
+removed after their durable facts and validation evidence are absorbed here or
+into their owning authorities.
 
 Occurrence presentation, occurrence semantic assembly, and workspace
 interaction binding now each use one deliberate composer over named complete
@@ -805,7 +806,7 @@ configuration/schema change; it is not rerun merely to create review evidence.
 
 ## F/G Execution Boundary
 
-The current F/G execution boundary is protocol v24. It exports only the exact
+The current F/G execution boundary is protocol v28. It exports only the exact
 complete-valid simulation assembly; the Plan Executor remains a strict decoder
 and native-seam translator rather than a second planner. The closed boundary
 now covers navigation and incoming rewards; fixed room features; ordinary,
@@ -822,10 +823,11 @@ The execution authority has one test-owned compile-time census of every
 authored room action and every published Overview, Timeline, Doors,
 acquisition-disposition, automatic-effect, and room-exit conformance union
 member. The executor does not mirror that census as a native callback registry.
-Its active F/G conformance readers are exactly `traitInventory`, `steadyGrowth`,
-`chaos`, `keepsakeEffects`, `rewardPriorities`, `pathOfStars`, `forfeit`, and
-`stygianWell`; `echoShopDuplicate` and `hermesShrineDeliveries` remain decoded
-but dormant until their owning routes are enabled. Diagnostics remain
+Its active F/G conformance readers are exactly `traitInventory`,
+`elementCounts`, `steadyGrowth`, `chaos`, `keepsakeEffects`,
+`rewardPriorities`, `pathOfStars`, `forfeit`, and `stygianWell`;
+`echoShopDuplicate` and `hermesShrineDeliveries` remain decoded but dormant
+until their owning routes are enabled. Diagnostics remain
 nonblocking, and only planner-published changed facts enter conformance.
 
 The Plan Executor is organized by responsibility: route session and
@@ -837,10 +839,10 @@ acquisition, commerce, encounter, interaction, and transformation contacts.
 sidecar. The final F/G inventory found no second production owner or superseded
 hook to delete.
 
-This is universal implementation and local adapter closure, not live host
-proof. The focused in-game F/G lanes and final Windows checks remain Gates G
-and H of the
-[Layered Game Execution Coverage Plan](GAME_EXECUTION_LAYERED_COVERAGE_PLAN.md).
+The focused in-game F/G campaign reached the end of its configured prefix on
+2026-09-06 without an unresolved executor mismatch. This is live proof of the
+F/G boundary only; later-biome navigation and dormant later-route contacts
+remain unclaimed.
 
 The F/G layered execution closure ran its one complete repository gate on
 2026-09-06. Workspace and fixture typechecking, fixture integrity at 3 files/22
@@ -858,8 +860,8 @@ generated G Intro Chaos sibling, three distinct displayed curse options, the
 selected curse/blessing acquisition, and its declaration-sized visible G return
 batch. The Lua session fixture also covers matching and deliberately divergent
 exact counter, bounded bag, trait, and retained-state Run State observations.
-Native game probes are not recorded as passed without a Hades II host; fixture
-success is compiler/decoder and session-contract evidence only.
+Those fixtures remain compiler/decoder and session-contract evidence; the
+separate focused live campaign is the host evidence for the F/G boundary.
 
 Live Chaos probing corrected the six return maps to physical exit counts
 `2/2/1/2/3/1`. The executor retains native lifecycle hooks for realization and
@@ -926,3 +928,9 @@ the editor, workspace, and simulation authorities. Their implementation passed
 the focused application and Hub suites, the complete planner-engine lane,
 typecheck, lint, formatting, and diff checks; this documentation-only closure
 did not rerun those completed lanes.
+
+The resource-point envelope, room-session replacement, and layered F/G
+execution plans were retired after their remaining protocol, conformance,
+native-contact, live-proof, and validation facts were absorbed into the game
+integration boundary and this record. The durable roadmap now begins at H
+rather than retaining completed F/G gate mechanics.
