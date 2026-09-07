@@ -26,11 +26,15 @@ import { createApplication } from './createApplication';
 const combat10Reward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat10'));
 
 function invalidTenOpenHubProject() {
-  const tenOpen = loadSurfaceNTenOpenInvalidProject();
+  const tenOpen = applyProjectCommand(loadSurfaceNTenOpenInvalidProject(), catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat04')),
+    value: { rewardType: 'MaxHealthDropBig' },
+  });
   return applyProjectCommand(tenOpen, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: combat10Reward,
-    value: { rewardType: 'WeaponUpgrade' },
+    value: { rewardType: 'MaxHealthDropBig' },
   });
 }
 
@@ -67,7 +71,6 @@ describe('application editor-session reconciliation', () => {
       expect(
         initialWorkspace.focusByOwner.get(semanticAddressKey(combat10Reward))?.ownerAddress,
       ).toEqual(combat10Reward);
-
       application.store.dispatch(
         authoredProjectCommandDispatched({
           kind: 'CloseHubSlot',

@@ -179,3 +179,57 @@ export function isAcquisitionAuthorshipMissingFinding(finding: SemanticFinding):
       return false;
   }
 }
+
+/**
+ * Required authored input, distinct from an authored value that is invalid in
+ * its reached context. Readiness uses this closed classification; it never
+ * infers incompleteness from wording or from lack of candidate coverage.
+ */
+export function isRequiredMissingInputFinding(
+  finding: SemanticFinding | undefined,
+): finding is SemanticFinding {
+  if (finding === undefined) return false;
+  switch (finding.code) {
+    case 'batchRewardStoreMissing':
+    case 'batchStateMissing':
+    case 'biomeFieldMissing':
+    case 'biomeTopologyMissing':
+    case 'continuationMissing':
+    case 'hubOpenSetIncomplete':
+    case 'hubVisitOrderIncomplete':
+    case 'pickedShopStateMissing':
+    case 'pickedTargetMissing':
+    case 'targetMissing':
+    case 'fieldsSpatialPointMissing':
+    case 'chaosRejectedBlockMissing':
+    case 'hermesShrineDeliveryPlacementRequired':
+    case 'rewardMissing':
+    case 'traitOfferMissing':
+    case 'allTogetherResultMissing':
+    case 'judgmentOutcomeMissing':
+    case 'figurineOutcomeMissing':
+    case 'keepsakeEquipResultMissing':
+    case 'steadyGrowthOutcomeMissing':
+    case 'transcendentEmbryoOutcomeMissing':
+    case 'fountainRarityResultMissing':
+    case 'stygianWellMissing':
+    case 'purgingPoolTraitMissing':
+    case 'nemesisOutcomeMissing':
+    case 'naturalSelectionResultMissing':
+    case 'concaveStoneResultMissing':
+    case 'circeResolutionMissing':
+    case 'echoPomTargetMissing':
+    case 'echoLastRunBoonMissing':
+    case 'hermesShrineInventoryMissing':
+    case 'hermesShrineTravelDealRefillMissing':
+    case 'targetedAcquisitionTargetMissing':
+    case 'missingPomTarget':
+      return true;
+    case 'stygianWellTwistInvalid':
+      return finding.evidence.reason === 'twistMissing';
+    case 'stygianWellTravelDealRefillUnavailable':
+      return finding.evidence.reason === 'refillMissing';
+    default:
+      return false;
+  }
+}

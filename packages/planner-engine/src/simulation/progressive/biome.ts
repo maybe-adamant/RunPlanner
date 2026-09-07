@@ -1,4 +1,5 @@
 import type { Catalog } from '../../catalog-schema';
+import { isRequiredMissingInputFinding } from '../model';
 import {
   createBiomeAddress,
   semanticAddressKey,
@@ -53,6 +54,7 @@ import {
   firstUnsupportedFinding,
   isProgressiveBlockingFinding,
   locateFinding,
+  findingLocation,
   mergedFindings,
   type ProgressiveBiomeSelectedProducts,
 } from './finding-location';
@@ -357,6 +359,7 @@ export function evaluateProgressiveBiomeAssemblyBeforeClamp(
     () => true,
     encounterLocated?.regionKey,
   );
+  const locatedBlock = encounterLocated ?? unsupported;
   return Object.freeze({
     evaluation: Object.freeze({
       materializedPrefix,
@@ -367,6 +370,15 @@ export function evaluateProgressiveBiomeAssemblyBeforeClamp(
         : unsupported === undefined
           ? {}
           : { blockedAt: unsupported.finding.origin }),
+      ...(locatedBlock === undefined
+        ? {}
+        : {
+            blockedKind: isRequiredMissingInputFinding(locatedBlock.finding)
+              ? ('incomplete' as const)
+              : ('invalid' as const),
+            blockedRegionKey: locatedBlock.regionKey,
+            blockedLocation: findingLocation(locatedBlock),
+          }),
     }),
     candidateArtifacts: evaluated.candidateArtifacts,
   });
@@ -447,6 +459,15 @@ export function evaluateProgressiveBiomeAssembly(
         : { assessmentPrefix: evaluated.evaluation.assessmentPrefix }),
       findings: mergedFindings(evaluated.evaluation),
       ...(blockedAt === undefined ? {} : { blockedAt }),
+      ...(encounterLocated === undefined
+        ? {}
+        : {
+            blockedKind: isRequiredMissingInputFinding(encounterLocated.finding)
+              ? ('incomplete' as const)
+              : ('invalid' as const),
+            blockedRegionKey: encounterLocated.regionKey,
+            blockedLocation: findingLocation(encounterLocated),
+          }),
     }),
     candidateArtifacts: createBiomeCandidateArtifacts(
       evaluated.candidateArtifacts.origin,

@@ -12,6 +12,7 @@ import {
 import type { BiomeHistoryPrefix, EncounterHistoryBlock } from '../history';
 import type {
   CanonicalBiome,
+  CanonicalAuthoredRoom,
   CanonicalDecision,
   CanonicalHubVisit,
   MaterializedBiomePrefix,
@@ -94,6 +95,15 @@ export function derivedAcquisitionEntryAncestor(
 
 export function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddress | undefined {
   if (address.kind === 'occurrence') return address;
+  if (
+    address.kind === 'localVisitDecision' ||
+    address.kind === 'localVisitSlot' ||
+    address.kind === 'localVisitOrder'
+  )
+    return createOccurrenceAddress(
+      createBiomeAddress(address.routeKey, address.biomeKey),
+      address.sourceOccurrenceId,
+    );
   if (address.kind === 'fieldsSpatial')
     return createOccurrenceAddress(
       createBiomeAddress(address.routeKey, address.biomeKey),
@@ -144,7 +154,7 @@ export function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddr
   return undefined;
 }
 
-function targetForOccurrence(
+export function targetForOccurrence(
   prefix: CanonicalBiome | MaterializedBiomePrefix,
   occurrenceId: OccurrenceAddress['occurrenceId'],
 ): TargetAddress | undefined {
@@ -232,8 +242,8 @@ export function mergedFindings(
   );
 }
 
-export function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
-  let origin = finding.origin;
+export function ownerOrigin(address: SemanticAddress): SemanticAddress {
+  let origin = address;
   while (
     origin.kind === 'traitOffer' ||
     origin.kind === 'naturalSelectionResult' ||
@@ -276,6 +286,12 @@ export function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
 export function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): boolean {
   if (origin.kind === 'fountainRarityOutcome') return ownsOccurrence(origin.action, occurrenceId);
   if (
+    origin.kind === 'localVisitDecision' ||
+    origin.kind === 'localVisitSlot' ||
+    origin.kind === 'localVisitOrder'
+  )
+    return origin.sourceOccurrenceId === occurrenceId;
+  if (
     origin.kind === 'traitOffer' ||
     origin.kind === 'naturalSelectionResult' ||
     origin.kind === 'levelResolution' ||
@@ -316,8 +332,18 @@ export function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): b
   return origin.kind === 'encounterPhase' && origin.owner.occurrenceId === occurrenceId;
 }
 
-function decisionOwnsFinding(decision: CanonicalDecision, finding: SemanticFinding): boolean {
-  const origin = findingOwnerOrigin(finding);
+function decisionOwnsAddress(decision: CanonicalDecision, address: SemanticAddress): boolean {
+  const origin = ownerOrigin(address);
+  if (decision.kind === 'hub' && 'hubKey' in origin && origin.hubKey === decision.origin.hubKey) {
+    return true;
+  }
+  if (
+    'source' in origin &&
+    decision.kind === 'batch' &&
+    JSON.stringify(origin.source) === JSON.stringify(decision.source)
+  ) {
+    return true;
+  }
   if (semanticAddressKey(decision.origin) === semanticAddressKey(origin)) return true;
   if (decision.kind === 'batch') {
     return (
@@ -356,13 +382,13 @@ function decisionOwnsFinding(decision: CanonicalDecision, finding: SemanticFindi
   );
 }
 
-function activeHubFrontierOwnsFinding(
+function activeHubFrontierOwnsAddress(
   prefix: CanonicalBiome | MaterializedBiomePrefix,
-  finding: SemanticFinding,
+  address: SemanticAddress,
 ): boolean {
   const frontier = prefix.kind === 'biomePrefix' ? prefix.frontier : undefined;
   if (!hasHubVisitDetails(frontier)) return false;
-  const origin = findingOwnerOrigin(finding);
+  const origin = ownerOrigin(address);
   return (
     semanticAddressKey(frontier.origin) === semanticAddressKey(origin) ||
     ownsOccurrence(origin, frontier.target.room.occurrenceId) ||
@@ -380,11 +406,10 @@ function hasHubVisitDetails(
   return frontier?.kind === 'hubVisit' && 'target' in frontier && 'localSlots' in frontier;
 }
 
-export interface LocatedFinding {
-  readonly finding: SemanticFinding;
-  /** Evaluator-owned atomic region used for first-blocking retention. */
-  readonly regionKey: string;
-  readonly aggregate?: FindingAggregate;
+export interface OwnerLocation {
+  readonly roomOccurrenceId?: string;
+  /** Index in the canonical room timeline; generation precedes its first entry. */
+  readonly roomTimelineIndex?: number;
   readonly historySequence?: number;
   readonly historyBoundary?: 'before' | 'at' | 'after';
   readonly decisionIndex: number;
@@ -405,30 +430,30 @@ export interface LocatedFinding {
 
 function targetIndex(
   decision: Extract<CanonicalDecision, { readonly kind: 'batch' }>,
-  finding: SemanticFinding,
+  address: SemanticAddress,
 ): number | undefined {
   const index = decision.targets.findIndex(
     (target) =>
-      semanticAddressKey(target.origin) === semanticAddressKey(findingOwnerOrigin(finding)) ||
-      ownsOccurrence(findingOwnerOrigin(finding), target.room.occurrenceId),
+      semanticAddressKey(target.origin) === semanticAddressKey(ownerOrigin(address)) ||
+      ownsOccurrence(ownerOrigin(address), target.room.occurrenceId),
   );
   return index < 0 ? undefined : index;
 }
 
 function additionalIndex(
   decision: Extract<CanonicalDecision, { readonly kind: 'batch' }>,
-  finding: SemanticFinding,
+  address: SemanticAddress,
 ): number | undefined {
   const index = decision.additional.findIndex(
     (continuation) =>
-      semanticAddressKey(continuation.origin) === semanticAddressKey(findingOwnerOrigin(finding)) ||
-      ownsOccurrence(findingOwnerOrigin(finding), continuation.room.occurrenceId),
+      semanticAddressKey(continuation.origin) === semanticAddressKey(ownerOrigin(address)) ||
+      ownsOccurrence(ownerOrigin(address), continuation.room.occurrenceId),
   );
   return index < 0 ? undefined : index;
 }
 
-function localSlotIndex(visit: CanonicalHubVisit, finding: SemanticFinding): number | undefined {
-  const origin = findingOwnerOrigin(finding);
+function localSlotIndex(visit: CanonicalHubVisit, address: SemanticAddress): number | undefined {
+  const origin = ownerOrigin(address);
   const index = visit.localSlots.findIndex(
     (slot) =>
       semanticAddressKey(slot.localVisit.origin) === semanticAddressKey(origin) ||
@@ -447,7 +472,7 @@ export interface HubVisitFindingLocation {
 
 function hubVisitFindingLocation(
   decision: Extract<CanonicalDecision, { readonly kind: 'hub' }>,
-  finding: SemanticFinding,
+  address: SemanticAddress,
   chronology?: FindingRegionEntry['chronology'],
 ): HubVisitFindingLocation | undefined {
   if (chronology?.kind === 'hubVisit') {
@@ -459,10 +484,26 @@ function hubVisitFindingLocation(
         : { localLifecycleIndex: chronology.localLifecycleIndex }),
     });
   }
-  const origin = findingOwnerOrigin(finding);
+  const origin = ownerOrigin(address);
+  if (
+    address.kind === 'incomingReward' &&
+    decision.board.targets.some((target) => ownsOccurrence(address, target.room.occurrenceId))
+  )
+    return undefined;
+  if (origin.kind === 'hubVisit' && origin.hubKey === decision.origin.hubKey) {
+    return Object.freeze({ visitIndex: origin.visitIndex - 1, phase: 'targetLifecycle' });
+  }
   for (const [index, visit] of decision.visits.entries()) {
-    const localIndex = localSlotIndex(visit, finding);
+    if (
+      (origin.kind === 'localVisitDecision' || origin.kind === 'localVisitOrder') &&
+      origin.sourceOccurrenceId === visit.target.room.occurrenceId
+    ) {
+      return Object.freeze({ visitIndex: index, phase: 'sideGeneration' });
+    }
+    const localIndex = localSlotIndex(visit, address);
     if (localIndex !== undefined) {
+      if (address.kind === 'incomingReward' || address.kind === 'localVisitSlot')
+        return Object.freeze({ visitIndex: index, phase: 'sideGeneration' });
       const enteredIndex = visit.enteredLocalRooms.findIndex(
         (slot) =>
           semanticAddressKey(slot.origin) ===
@@ -488,15 +529,15 @@ function hubVisitFindingLocation(
 
 function hubBoardTargetIndex(
   decision: Extract<CanonicalDecision, { readonly kind: 'hub' }>,
-  finding: SemanticFinding,
+  address: SemanticAddress,
   visitLocation: HubVisitFindingLocation | undefined,
 ): number | undefined {
-  if (visitLocation?.phase === 'targetLifecycle') return undefined;
-  const origin = findingOwnerOrigin(finding);
+  if (visitLocation !== undefined) return undefined;
+  const origin = ownerOrigin(address);
   const index = decision.board.targets.findIndex(
     (target) =>
       semanticAddressKey(target.origin) === semanticAddressKey(origin) ||
-      (origin.kind === 'incomingReward' && origin.occurrenceId === target.room.occurrenceId),
+      ownsOccurrence(origin, target.room.occurrenceId),
   );
   return index < 0 ? undefined : index;
 }
@@ -529,13 +570,11 @@ function prefixDecisionEntries(
       ]);
 }
 
-export function locateFinding(
+function locateStructuralOwner(
   prefix: CanonicalBiome | MaterializedBiomePrefix,
-  finding: SemanticFinding,
-  atomicRegion: string = ownerRegion(finding.origin),
+  address: SemanticAddress,
   chronology?: FindingRegionEntry['chronology'],
-  aggregate?: FindingAggregate,
-): LocatedFinding | undefined {
+): OwnerLocation | undefined {
   const historyChronology =
     chronology?.kind === 'history'
       ? chronology
@@ -544,17 +583,15 @@ export function locateFinding(
         : undefined;
   const fixedRoomIndex = (prefix.fixedRoomLinks ?? []).findIndex((link) => {
     const occurrenceId = link.target.occurrenceId;
-    if (ownsOccurrence(finding.origin, occurrenceId)) return true;
-    if (finding.origin.kind === 'keepsakeSelection') {
-      return (
-        finding.origin.owner !== 'routeStart' && finding.origin.owner.occurrenceId === occurrenceId
-      );
+    if (ownsOccurrence(address, occurrenceId)) return true;
+    if (address.kind === 'keepsakeSelection') {
+      return address.owner !== 'routeStart' && address.owner.occurrenceId === occurrenceId;
     }
     return (
-      finding.origin.kind === 'keepsakeEquipResult' &&
-      finding.origin.selection.kind === 'keepsakeSelection' &&
-      finding.origin.selection.owner !== 'routeStart' &&
-      finding.origin.selection.owner.occurrenceId === occurrenceId
+      address.kind === 'keepsakeEquipResult' &&
+      address.selection.kind === 'keepsakeSelection' &&
+      address.selection.owner !== 'routeStart' &&
+      address.selection.owner.occurrenceId === occurrenceId
     );
   });
   // Automatic Boss Arcana effects are terminal lifecycle children, not
@@ -562,15 +599,12 @@ export function locateFinding(
   // materialized biome and have no room occurrence to use for ordinary
   // ownership lookup.
   if (
-    (finding.origin.kind === 'judgmentArcana' || finding.origin.kind === 'figurineArcana') &&
-    finding.origin.routeKey === prefix.routeKey &&
-    finding.origin.biomeKey === prefix.biomeKey
+    (address.kind === 'judgmentArcana' || address.kind === 'figurineArcana') &&
+    address.routeKey === prefix.routeKey &&
+    address.biomeKey === prefix.biomeKey
   ) {
     return Object.freeze({
-      finding,
       decisionIndex: prefix.decisions.length - 1,
-      regionKey: atomicRegion,
-      ...(aggregate === undefined ? {} : { aggregate }),
       ...(historyChronology === undefined
         ? {}
         : {
@@ -583,17 +617,14 @@ export function locateFinding(
   // authored occurrence or normal-door decision. Its invalid persisted value
   // still belongs to the completed biome's final assessable region.
   if (
-    finding.origin.kind === 'keepsakeSelection' &&
-    finding.origin.owner !== 'routeStart' &&
-    finding.origin.routeKey === prefix.routeKey &&
-    finding.origin.biomeKey === prefix.biomeKey
+    address.kind === 'keepsakeSelection' &&
+    address.owner !== 'routeStart' &&
+    address.routeKey === prefix.routeKey &&
+    address.biomeKey === prefix.biomeKey
   ) {
     return Object.freeze({
-      finding,
       decisionIndex: prefix.decisions.length - 1,
       ...(fixedRoomIndex < 0 ? {} : { fixedRoomIndex }),
-      regionKey: atomicRegion,
-      ...(aggregate === undefined ? {} : { aggregate }),
       ...(historyChronology === undefined
         ? {}
         : {
@@ -606,18 +637,15 @@ export function locateFinding(
   // not ordinary topology decisions. Preserve their exact position so prefix
   // clamping can retain prior rooms without admitting later fixed rooms.
   if (
-    'routeKey' in finding.origin &&
-    'biomeKey' in finding.origin &&
-    finding.origin.routeKey === prefix.routeKey &&
-    finding.origin.biomeKey === prefix.biomeKey &&
+    'routeKey' in address &&
+    'biomeKey' in address &&
+    address.routeKey === prefix.routeKey &&
+    address.biomeKey === prefix.biomeKey &&
     fixedRoomIndex >= 0
   ) {
     return Object.freeze({
-      finding,
       decisionIndex: prefix.decisions.length - 1,
       fixedRoomIndex,
-      regionKey: atomicRegion,
-      ...(aggregate === undefined ? {} : { aggregate }),
       ...(historyChronology === undefined
         ? {}
         : {
@@ -629,7 +657,7 @@ export function locateFinding(
   // Retained Pool sales are occurrence-owned Postboss actions. They remain
   // repairable at the completed biome's final fixed-room region even when
   // their slot was cleared and therefore no longer has an active contribution.
-  const automaticRoomAction = finding.origin.kind === 'roomAction' ? finding.origin : undefined;
+  const automaticRoomAction = address.kind === 'roomAction' ? address : undefined;
   if (
     automaticRoomAction !== undefined &&
     automaticRoomAction.routeKey === prefix.routeKey &&
@@ -641,10 +669,7 @@ export function locateFinding(
     )
   ) {
     return Object.freeze({
-      finding,
       decisionIndex: prefix.decisions.length - 1,
-      regionKey: atomicRegion,
-      ...(aggregate === undefined ? {} : { aggregate }),
       ...(historyChronology === undefined
         ? {}
         : {
@@ -654,16 +679,13 @@ export function locateFinding(
     });
   }
   if (
-    finding.origin.kind === 'keepsakeEquipResult' &&
-    finding.origin.selection.kind === 'echoKeepsakeReplay' &&
-    finding.origin.routeKey === prefix.routeKey &&
-    finding.origin.biomeKey === prefix.biomeKey
+    address.kind === 'keepsakeEquipResult' &&
+    address.selection.kind === 'echoKeepsakeReplay' &&
+    address.routeKey === prefix.routeKey &&
+    address.biomeKey === prefix.biomeKey
   ) {
     return Object.freeze({
-      finding,
       decisionIndex: -1,
-      regionKey: atomicRegion,
-      ...(aggregate === undefined ? {} : { aggregate }),
       ...(historyChronology === undefined
         ? {}
         : {
@@ -673,18 +695,15 @@ export function locateFinding(
     });
   }
   if (
-    finding.origin.kind === 'keepsakeEquipResult' &&
-    finding.origin.selection.kind === 'keepsakeSelection' &&
-    finding.origin.selection.owner !== 'routeStart' &&
-    finding.origin.routeKey === prefix.routeKey &&
-    finding.origin.biomeKey === prefix.biomeKey
+    address.kind === 'keepsakeEquipResult' &&
+    address.selection.kind === 'keepsakeSelection' &&
+    address.selection.owner !== 'routeStart' &&
+    address.routeKey === prefix.routeKey &&
+    address.biomeKey === prefix.biomeKey
   ) {
     return Object.freeze({
-      finding,
       decisionIndex: prefix.decisions.length - 1,
       ...(fixedRoomIndex < 0 ? {} : { fixedRoomIndex }),
-      regionKey: atomicRegion,
-      ...(aggregate === undefined ? {} : { aggregate }),
       ...(historyChronology === undefined
         ? {}
         : {
@@ -693,15 +712,9 @@ export function locateFinding(
           }),
     });
   }
-  if (
-    prefix.entryRoom !== undefined &&
-    ownsOccurrence(finding.origin, prefix.entryRoom.occurrenceId)
-  ) {
+  if (prefix.entryRoom !== undefined && ownsOccurrence(address, prefix.entryRoom.occurrenceId)) {
     return Object.freeze({
-      finding,
       decisionIndex: -1,
-      regionKey: atomicRegion,
-      ...(aggregate === undefined ? {} : { aggregate }),
       ...(historyChronology === undefined
         ? {}
         : {
@@ -712,22 +725,46 @@ export function locateFinding(
   }
   const decisionEntry = prefixDecisionEntries(prefix).find(
     ({ decision }) =>
-      decisionOwnsFinding(decision, finding) ||
-      (decision.kind === 'hub' && activeHubFrontierOwnsFinding(prefix, finding)),
+      decisionOwnsAddress(decision, address) ||
+      (decision.kind === 'hub' && activeHubFrontierOwnsAddress(prefix, address)),
   );
-  if (decisionEntry === undefined) return undefined;
+  if (decisionEntry === undefined) {
+    const frontier = prefix.kind === 'biomePrefix' ? prefix.frontier : undefined;
+    if (address.kind === 'hubDecision' && frontier?.kind === 'exitDecision') {
+      return Object.freeze({ decisionIndex: prefix.decisions.length, frontierBatch: true });
+    }
+    if (
+      frontier?.kind === 'exitDecision' &&
+      'source' in address &&
+      JSON.stringify(frontier.origin.source) === JSON.stringify(address.source)
+    ) {
+      return Object.freeze({
+        decisionIndex: prefix.decisions.length,
+        frontierBatch: true,
+        ...(address.kind === 'target' ||
+        (address.kind === 'exitDecision' && frontier.targets.length === 0)
+          ? { targetIndex: frontier.targets.length }
+          : {}),
+      });
+    }
+    return undefined;
+  }
   const { decision, decisionIndex, frontierBatch } = decisionEntry;
-  const indexedTarget = decision.kind === 'batch' ? targetIndex(decision, finding) : undefined;
+  const indexedTarget =
+    decision.kind === 'batch'
+      ? (targetIndex(decision, address) ??
+        (address.kind === 'target' ||
+        (frontierBatch && address.kind === 'exitDecision' && decision.targets.length === 0)
+          ? decision.targets.length
+          : undefined))
+      : undefined;
   const indexedAdditional =
-    decision.kind === 'batch' ? additionalIndex(decision, finding) : undefined;
+    decision.kind === 'batch' ? additionalIndex(decision, address) : undefined;
   const hubVisitLocation =
-    decision.kind === 'hub' ? hubVisitFindingLocation(decision, finding, chronology) : undefined;
+    decision.kind === 'hub' ? hubVisitFindingLocation(decision, address, chronology) : undefined;
   const indexedHubBoard =
-    decision.kind === 'hub' ? hubBoardTargetIndex(decision, finding, hubVisitLocation) : undefined;
+    decision.kind === 'hub' ? hubBoardTargetIndex(decision, address, hubVisitLocation) : undefined;
   return Object.freeze({
-    finding,
-    regionKey: atomicRegion,
-    ...(aggregate === undefined ? {} : { aggregate }),
     ...(historyChronology === undefined
       ? {}
       : {
@@ -749,6 +786,149 @@ export function locateFinding(
             : { hubLocalLifecycleIndex: hubVisitLocation.localLifecycleIndex }),
         }),
   });
+}
+
+/** Shared finding/edit locator over materialization's existing timeline and Hub phases. */
+export function locateOwner(
+  prefix: CanonicalBiome | MaterializedBiomePrefix,
+  address: SemanticAddress,
+  chronology?: FindingRegionEntry['chronology'],
+): OwnerLocation | undefined {
+  const structural = locateStructuralOwner(prefix, address, chronology);
+  if (structural === undefined) return undefined;
+  const occurrence = occurrenceOwnerAddress(address);
+  if (occurrence === undefined) return structural;
+  const rooms: CanonicalAuthoredRoom[] = [];
+  if (prefix.entryRoom !== undefined) rooms.push(prefix.entryRoom);
+  for (const { decision } of prefixDecisionEntries(prefix)) {
+    if (decision.kind === 'batch')
+      rooms.push(
+        ...decision.targets.map((target) => target.room),
+        ...decision.additional.map((target) => target.room),
+      );
+    else
+      rooms.push(
+        ...decision.board.targets.map((target) => target.room),
+        ...decision.visits.flatMap((visit) => [visit.target.room, ...visit.localSlots]),
+      );
+  }
+  if (prefix.kind === 'biomePrefix' && prefix.frontier?.kind === 'exitDecision')
+    rooms.push(
+      ...prefix.frontier.targets.map((target) => target.room),
+      ...prefix.frontier.additional.map((target) => target.room),
+    );
+  if (prefix.kind === 'biomePrefix' && hasHubVisitDetails(prefix.frontier))
+    rooms.push(prefix.frontier.target.room, ...prefix.frontier.localSlots);
+  rooms.push(...(prefix.fixedRoomLinks ?? []).map((link) => link.target));
+  const room = rooms.find((room) => room.occurrenceId === occurrence.occurrenceId);
+  if (room === undefined) return structural;
+  const root = ownerOrigin(address);
+  const reward = rewardOwnerAddress(address);
+  const role = acquisitionRoleAncestor(address);
+  const same = (left: SemanticAddress, right: SemanticAddress) =>
+    semanticAddressKey(left) === semanticAddressKey(right);
+  let entryIndex = room.roomLifecycleTimeline.entries.findIndex((entry) => {
+    if (entry.kind === 'action') {
+      if (address.kind === 'roomAction') return entry.action.key === address.actionKey;
+      return (
+        same(entry.action.owner, root) ||
+        (role !== undefined && same(entry.action.owner, role)) ||
+        (reward !== undefined && same(entry.action.owner, reward))
+      );
+    }
+    if (entry.kind === 'automaticEffect') return same(entry.address, address);
+    return (
+      entry.boundary.kind === 'encounterStart' &&
+      address.kind === 'encounterPhase' &&
+      entry.boundary.phaseKey === address.phaseKey
+    );
+  });
+  const repairRow =
+    address.kind === 'roomAction' && entryIndex < 0
+      ? room.roomActionRoster.rows.find((row) => row.key === address.actionKey)
+      : undefined;
+  if (repairRow?.rank !== undefined && repairRow.rank !== null) {
+    entryIndex = room.roomLifecycleTimeline.entries.findIndex(
+      (entry) => entry.rank >= repairRow.rank!,
+    );
+    if (entryIndex < 0) entryIndex = room.roomLifecycleTimeline.entries.length;
+  }
+  const definition =
+    // Stale and unplaced required rows are containing-room repairs, not
+    // executable lifecycle positions. Arbitrary action keys get no position.
+    repairRow?.stale === true ||
+    (repairRow?.rank === null && repairRow.participation === 'required') ||
+    address.kind === 'occurrence' ||
+    address.kind === 'roomFeature' ||
+    (chronology?.kind !== 'history' &&
+      reward !== undefined &&
+      same(reward, address) &&
+      reward.kind !== 'rewardWheelOffer' &&
+      reward.kind !== 'acquisitionEntry');
+  return Object.freeze({
+    ...structural,
+    roomOccurrenceId: room.occurrenceId,
+    ...(definition
+      ? { roomTimelineIndex: -1 }
+      : entryIndex < 0
+        ? {}
+        : { roomTimelineIndex: entryIndex }),
+  });
+}
+
+export interface LocatedFinding extends OwnerLocation {
+  readonly finding: SemanticFinding;
+  /** Evaluator-owned atomic region used for first-blocking retention. */
+  readonly regionKey: string;
+  readonly aggregate?: FindingAggregate;
+}
+
+export function findingLocation(located: LocatedFinding): OwnerLocation {
+  return Object.freeze({
+    ...(located.roomOccurrenceId === undefined
+      ? {}
+      : { roomOccurrenceId: located.roomOccurrenceId }),
+    ...(located.roomTimelineIndex === undefined
+      ? {}
+      : { roomTimelineIndex: located.roomTimelineIndex }),
+    decisionIndex: located.decisionIndex,
+    ...(located.historySequence === undefined ? {} : { historySequence: located.historySequence }),
+    ...(located.historyBoundary === undefined ? {} : { historyBoundary: located.historyBoundary }),
+    ...(located.fixedRoomIndex === undefined ? {} : { fixedRoomIndex: located.fixedRoomIndex }),
+    ...(located.frontierBatch === undefined ? {} : { frontierBatch: located.frontierBatch }),
+    ...(located.targetIndex === undefined ? {} : { targetIndex: located.targetIndex }),
+    ...(located.additionalIndex === undefined ? {} : { additionalIndex: located.additionalIndex }),
+    ...(located.hubBoardTargetIndex === undefined
+      ? {}
+      : { hubBoardTargetIndex: located.hubBoardTargetIndex }),
+    ...(located.hubVisitIndex === undefined ? {} : { hubVisitIndex: located.hubVisitIndex }),
+    ...(located.hubVisitPhase === undefined ? {} : { hubVisitPhase: located.hubVisitPhase }),
+    ...(located.hubLocalLifecycleIndex === undefined
+      ? {}
+      : { hubLocalLifecycleIndex: located.hubLocalLifecycleIndex }),
+  });
+}
+
+export function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
+  return ownerOrigin(finding.origin);
+}
+
+export function locateFinding(
+  prefix: CanonicalBiome | MaterializedBiomePrefix,
+  finding: SemanticFinding,
+  atomicRegion: string = ownerRegion(finding.origin),
+  chronology?: FindingRegionEntry['chronology'],
+  aggregate?: FindingAggregate,
+): LocatedFinding | undefined {
+  const location = locateOwner(prefix, finding.origin, chronology);
+  return location === undefined
+    ? undefined
+    : Object.freeze({
+        ...location,
+        finding,
+        regionKey: atomicRegion,
+        ...(aggregate === undefined ? {} : { aggregate }),
+      });
 }
 
 export function firstUnsupportedFinding(
@@ -836,8 +1016,8 @@ export function encounterBlockChronology(block: EncounterHistoryBlock): HistoryF
   });
 }
 
-export function compareLocatedFindings(left: LocatedFinding, right: LocatedFinding): number {
-  const visitPhaseOrder = (phase: LocatedFinding['hubVisitPhase']): number =>
+export function compareOwnerLocations(left: OwnerLocation, right: OwnerLocation): number {
+  const visitPhaseOrder = (phase: OwnerLocation['hubVisitPhase']): number =>
     phase === 'targetLifecycle'
       ? 0
       : phase === 'sideGeneration'
@@ -845,9 +1025,9 @@ export function compareLocatedFindings(left: LocatedFinding, right: LocatedFindi
         : phase === 'localRoomLifecycle'
           ? 2
           : -1;
-  const hubStageOrder = (value: LocatedFinding): number =>
+  const hubStageOrder = (value: OwnerLocation): number =>
     value.hubVisitIndex === undefined ? 0 : 1;
-  const historyPosition = (value: LocatedFinding): readonly [number, number] | undefined =>
+  const historyPosition = (value: OwnerLocation): readonly [number, number] | undefined =>
     value.historySequence === undefined || value.historyBoundary === undefined
       ? undefined
       : [
@@ -856,13 +1036,19 @@ export function compareLocatedFindings(left: LocatedFinding, right: LocatedFindi
         ];
   const leftHistory = historyPosition(left);
   const rightHistory = historyPosition(right);
-  const historyOrder =
-    leftHistory === undefined || rightHistory === undefined
-      ? 0
-      : leftHistory[0] - rightHistory[0] || leftHistory[1] - rightHistory[1];
+  // Explicit history is authoritative even when both findings share an atomic
+  // checkpoint. Timeline positions below locate edits without that history.
+  if (leftHistory !== undefined && rightHistory !== undefined)
+    return leftHistory[0] - rightHistory[0] || leftHistory[1] - rightHistory[1];
   return (
-    historyOrder ||
+    (left.roomOccurrenceId !== undefined &&
+    left.roomOccurrenceId === right.roomOccurrenceId &&
+    left.roomTimelineIndex !== undefined &&
+    right.roomTimelineIndex !== undefined
+      ? left.roomTimelineIndex - right.roomTimelineIndex
+      : 0) ||
     left.decisionIndex - right.decisionIndex ||
+    (left.fixedRoomIndex ?? -1) - (right.fixedRoomIndex ?? -1) ||
     (left.targetIndex ?? -1) - (right.targetIndex ?? -1) ||
     (left.additionalIndex === undefined ? Number.MAX_SAFE_INTEGER : left.additionalIndex) -
       (right.additionalIndex === undefined ? Number.MAX_SAFE_INTEGER : right.additionalIndex) ||
@@ -872,4 +1058,8 @@ export function compareLocatedFindings(left: LocatedFinding, right: LocatedFindi
     visitPhaseOrder(left.hubVisitPhase) - visitPhaseOrder(right.hubVisitPhase) ||
     (left.hubLocalLifecycleIndex ?? -1) - (right.hubLocalLifecycleIndex ?? -1)
   );
+}
+
+export function compareLocatedFindings(left: LocatedFinding, right: LocatedFinding): number {
+  return compareOwnerLocations(left, right);
 }

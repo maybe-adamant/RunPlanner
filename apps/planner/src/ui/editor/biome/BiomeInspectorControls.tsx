@@ -341,6 +341,7 @@ export function StartRoomIdentityEditor({
   readonly node: Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }>;
 }) {
   const dispatch = useAppDispatch();
+  const findingTarget = useFindingTarget();
   if (node.isEntry !== true) return null;
   const picker = node.room.roomPicker;
   const startPicker = picker?.kind === 'startRoomPicker' ? picker : undefined;
@@ -365,6 +366,7 @@ export function StartRoomIdentityEditor({
         </div>
       ) : (
         <RoomSelector
+          findingTarget={findingTarget(interaction.owner, `start-${node.room.occurrenceId}-room`)}
           idPrefix={`start-${node.room.occurrenceId}`}
           interaction={interaction}
           label="Room"

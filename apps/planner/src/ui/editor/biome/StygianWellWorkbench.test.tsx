@@ -178,7 +178,9 @@ describe('Stygian Well workbench', () => {
     const offer = screen.getByRole('button', { name: 'Stygian Well Offer 2 Item' });
     expect((purchase as HTMLInputElement).checked).toBe(true);
     expect(offer.textContent).toContain('Unresolved');
-    expect(screen.queryByRole('button', { name: 'Stygian Well Offer 2 Twist result' })).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Stygian Well Offer 2 Twist result' }).textContent,
+    ).toContain('Life Essence');
 
     await view.user.click(offer);
     await view.user.click(screen.getByRole('option', { name: 'Fateful Twist' }));

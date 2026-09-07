@@ -9,12 +9,14 @@ import {
   createEmptyProjectDocument,
   createEncounterPhaseAddress,
   echoLastRewardPickupEntryKey,
+  createExitDecisionAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
   createRouteAddress,
+  createShopOfferAddress,
   createTraitOfferAddress,
   hermesShrineDeliveryEntryKey,
   type ProjectCommand,
@@ -45,6 +47,7 @@ import {
   createGoldenFGHProject,
   goldenFBiome,
   goldenFOccurrenceId,
+  goldenFStartId,
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
 import {
@@ -244,6 +247,137 @@ describe('project workspace application state', () => {
     );
   });
 
+  it('rejects a command beyond the incomplete authoring horizon without recording history', () => {
+    const { assembleProjectEvaluation, store } = createStore();
+    const biome = createBiomeAddress('Underworld', 'F');
+    const occurrenceId = createOccurrenceId('readiness-f-opening');
+    store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ConfigureRoutePrefix',
+        route: createRouteAddress('Underworld'),
+        configuredBiomeCount: 1,
+      }),
+    );
+    store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'CreateStart',
+        biome,
+        occurrenceId,
+        gameName: 'F_Opening01',
+      }),
+    );
+    const before = store.getState().projectWorkspace;
+    const evaluationCount = assembleProjectEvaluation.mock.calls.length;
+
+    store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'CreateBatch',
+        decision: createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId }),
+      }),
+    );
+
+    expect(store.getState().projectWorkspace).toBe(before);
+    expect(assembleProjectEvaluation).toHaveBeenCalledTimes(evaluationCount);
+  });
+
+  it.each(['add', 'remove', 'move'] as const)(
+    'rejects resource %s when either exact host is after missing input',
+    (operation) => {
+      const { store, assembleProjectEvaluation } = createStore();
+      const original = createCompleteFGProject();
+      const suffix = { biomeKey: 'F', occurrenceId: goldenFOccurrenceId(1, 1) };
+      const project: ProjectDocument = {
+        ...original,
+        route: {
+          ...original.route,
+          resourcePlacements: {
+            ...original.route.resourcePlacements,
+            Pickaxe: operation === 'add' ? null : suffix,
+          },
+          biomes: original.route.biomes.map((biome) =>
+            biome.biomeKey !== 'F' || biome.topology === null
+              ? biome
+              : {
+                  ...biome,
+                  topology: {
+                    ...biome.topology,
+                    occurrences: biome.topology.occurrences.map((room) =>
+                      room.occurrenceId !== goldenFStartId || room.state.kind !== 'counted'
+                        ? room
+                        : { ...room, state: { ...room.state, reward: null } },
+                    ),
+                  },
+                },
+          ),
+        },
+      };
+      store.dispatch(authoredProjectReplaced(project));
+      expect(store.getState().projectWorkspace.assembly?.evaluation.authoringHorizon.kind).toBe(
+        'incomplete',
+      );
+      const before = store.getState().projectWorkspace;
+      const calls = assembleProjectEvaluation.mock.calls.length;
+      store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceResourcePlacement',
+          route: createRouteAddress('Underworld'),
+          family: 'Pickaxe',
+          value:
+            operation === 'add'
+              ? suffix
+              : operation === 'remove'
+                ? null
+                : { biomeKey: 'F', occurrenceId: goldenFStartId },
+        }),
+      );
+      expect(store.getState().projectWorkspace).toBe(before);
+      expect(assembleProjectEvaluation).toHaveBeenCalledTimes(calls);
+    },
+  );
+
+  it('keeps initial Shop and Well participation add/remove reachable before a later horizon', () => {
+    const { store } = createStore();
+    const well = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'SetStygianWellInteraction',
+      occurrence: well,
+      interacted: true,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStygianWellOffer',
+      occurrence: well,
+      slotKey: 'healing',
+      itemKey: 'ArmorBoostStore',
+    });
+    store.dispatch(authoredProjectReplaced(project));
+    expect(store.getState().projectWorkspace.assembly?.evaluation.authoringHorizon.kind).toBe(
+      'incomplete',
+    );
+    const shop = createShopOfferAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop'),
+      'Minor',
+    );
+    for (const purchased of [true, false]) {
+      for (const command of [
+        {
+          kind: 'SetStygianWellPurchase',
+          occurrence: well,
+          generationKey: 'initial:healing',
+          purchased,
+        },
+        { kind: 'ReplaceShopPurchaseParticipation', offer: shop, purchased },
+      ] as const) {
+        const before = store.getState().projectWorkspace.history!.past.length;
+        store.dispatch(authoredProjectCommandDispatched(command));
+        expect(store.getState().projectWorkspace.history!.past).toHaveLength(before + 1);
+      }
+    }
+  });
+
   it('reschedules one delayed Shrine delivery through simulation as one undo step', () => {
     const { store } = createStore();
     const source = createOccurrenceAddress(nBiome, nLocalOccurrenceId('combat11', 'sideDoor1'));
@@ -303,6 +437,18 @@ describe('project workspace application state', () => {
 
     store.dispatch(authoredProjectUndoRequested());
     expect(presentProject(store)).toBe(delayTwo);
+    for (const purchase of [null, { delay: 2, rushed: false }] as const) {
+      const before = store.getState().projectWorkspace.history!.past.length;
+      store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'SetHermesShrinePurchase',
+          occurrence: source,
+          generationKey: 'initial:secondLeft',
+          purchase,
+        }),
+      );
+      expect(store.getState().projectWorkspace.history!.past).toHaveLength(before + 1);
+    }
   });
 
   it('undoes and redoes one atomic Echo Pom child edit with its outer selection', () => {

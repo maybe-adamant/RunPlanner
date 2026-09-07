@@ -4,10 +4,12 @@ import {
 } from '../candidate-artifacts';
 import type { MaterializedBiomePrefix } from '../materialization';
 import type { FindingRegionEntry } from '../finding-regions';
+import { isRequiredMissingInputFinding } from '../model';
 import type { BiomeRewardSimulation } from '../rewards';
 import type { TraitChildSettlementCheckpoints } from '../rewards/biome';
 import {
   blockedAncestorChain,
+  findingLocation,
   findingsAtRegion,
   mergedFindings,
   rewardOwnerAddress,
@@ -107,6 +109,11 @@ export function clampSelectedProducts(
           : interactionPrefix,
       findings: mergedFindings(evaluated.evaluation, retainedFindings),
       blockedAt: unsupported.finding.origin,
+      blockedKind: retainedFindings.some(isRequiredMissingInputFinding)
+        ? ('incomplete' as const)
+        : ('invalid' as const),
+      blockedRegionKey: unsupported.regionKey,
+      blockedLocation: findingLocation(unsupported),
     }),
     candidateArtifacts: createBiomeCandidateArtifacts(
       evaluated.candidateArtifacts.origin,

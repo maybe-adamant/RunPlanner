@@ -4,6 +4,7 @@ import {
   applyProjectHistoryCommands,
   applyProjectCommand,
   createProjectHistory,
+  projectCommandAuthoringAddresses,
   redoProjectHistory,
   undoProjectHistory,
   type ProjectCommand,
@@ -13,6 +14,7 @@ import {
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import {
   assertProjectEvaluationAssembly,
+  authoringReadinessAt,
   attestClockedTraitPickupPlacementForProjectEvaluationAssembly,
   hermesShrineDeliveryPlacementForPurchaseReschedule,
   type ProjectEvaluationAssembly,
@@ -93,6 +95,13 @@ export function createProjectWorkspaceReducer(
   return (state = initialState, action) => {
     if (authoredProjectCommandDispatched.match(action)) {
       if (state.kind === 'noProject') return state;
+      if (
+        projectCommandAuthoringAddresses(action.payload, state.history.present).some(
+          (owner) => authoringReadinessAt(state.assembly, owner) === 'locked',
+        )
+      ) {
+        return state;
+      }
       const history = (() => {
         if (action.payload.kind === 'PlaceClockedTraitPickup') {
           if (

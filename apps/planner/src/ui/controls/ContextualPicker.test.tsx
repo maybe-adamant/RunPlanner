@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import type { FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 import { ContextualPicker } from './ContextualPicker';
 
 afterEach(cleanup);
@@ -91,6 +92,43 @@ const model: ContextualPickerModel<string> = {
 };
 
 describe('ContextualPicker', () => {
+  it('keeps an associated label from opening an authoring-locked picker', async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    const findingTarget: FindingTargetProps = {
+      'aria-description': undefined,
+      'aria-disabled': true,
+      'data-authoring-locked': true,
+      'data-has-findings': false,
+      'data-selected-finding': false,
+      'data-semantic-owner': 'locked-owner',
+      id: 'locked-picker',
+      inert: true,
+      ref: () => undefined,
+    };
+    render(
+      <ContextualPicker
+        findingTarget={findingTarget}
+        id="locked-picker"
+        label="Reward"
+        model={model}
+        onOpenChange={onOpenChange}
+        onSelect={() => undefined}
+        placeholder="Select a reward"
+      />,
+    );
+
+    const trigger = screen.getByLabelText('Reward');
+    if (!(trigger instanceof HTMLButtonElement)) throw new Error('picker trigger is not a button');
+    expect(trigger.disabled).toBe(true);
+    const label = document.querySelector<HTMLLabelElement>('label[for="locked-picker"]');
+    if (label === null) throw new Error('picker label is missing');
+    await user.click(label);
+
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
   it('renders ordered sections, searchable options, and an unavailable disclosure', async () => {
     const user = userEvent.setup();
     render(

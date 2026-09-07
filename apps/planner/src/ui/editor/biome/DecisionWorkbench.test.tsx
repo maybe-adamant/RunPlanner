@@ -52,8 +52,10 @@ import {
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
 import {
+  loadSurfaceNOProject,
   loadSurfaceNOPQProject,
   loadSurfaceNEntryFrontierProject,
+  loadSurfaceNEntryFrontierResolvedProject,
   nBiome,
   nOccurrenceIds,
   oBiome,
@@ -189,33 +191,17 @@ function fTwoDoorBatchProject(): {
   readonly owner: ReturnType<typeof createExitDecisionAddress>;
   readonly project: ProjectDocument;
 } {
-  const start = createOccurrenceId('decision-workbench-f-start');
-  const combat = createOccurrenceId('decision-workbench-f-combat');
-  const source = { kind: 'occurrence' as const, occurrenceId: start };
-  let project = applyProjectCommand(emptyProject('Underworld'), catalog, {
-    kind: 'CreateStart',
-    biome: goldenFBiome,
-    occurrenceId: start,
-    gameName: 'F_Opening01',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateBatch',
-    decision: createExitDecisionAddress(goldenFBiome, source),
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceBatchRewardStore',
-    rewardStore: createBatchRewardStoreAddress(goldenFBiome, source),
-    storeKey: 'RunProgress',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateTarget',
-    target: createTargetAddress(goldenFBiome, source, 'exit1'),
-    occurrenceId: combat,
-    gameName: 'F_Combat03',
-  });
+  const source = {
+    kind: 'occurrence' as const,
+    occurrenceId: goldenFOccurrenceId(1, 1),
+  };
   const owner = createExitDecisionAddress(goldenFBiome, {
     kind: 'occurrence',
-    occurrenceId: combat,
+    occurrenceId: source.occurrenceId,
+  });
+  let project = applyProjectCommand(authorLegalTraitOffers(createGoldenFGHIProject()), catalog, {
+    kind: 'RemoveExitDecision',
+    decision: owner,
   });
   project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision: owner });
   project = applyProjectCommand(project, catalog, {
@@ -231,17 +217,17 @@ function nOpeningPreHubProject(): ProjectDocument {
 }
 
 function nOpeningDecisionProject(): ProjectDocument {
-  const project = applyProjectCommand(emptyProject('Surface'), catalog, {
-    kind: 'CreateStart',
-    biome: nBiome,
+  const decision = createExitDecisionAddress(nBiome, {
+    kind: 'occurrence',
     occurrenceId: nOccurrenceIds.opening,
+  });
+  const project = applyProjectCommand(loadSurfaceNEntryFrontierResolvedProject(), catalog, {
+    kind: 'RemoveExitDecision',
+    decision,
   });
   return applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',
-    decision: createExitDecisionAddress(nBiome, {
-      kind: 'occurrence',
-      occurrenceId: nOccurrenceIds.opening,
-    }),
+    decision,
   });
 }
 
@@ -296,6 +282,40 @@ function requiredTakeoverOwner(
 }
 
 describe('DecisionWorkbench', () => {
+  it('disables picker and button authoring after the same incomplete horizon', () => {
+    const biome = createBiomeAddress('Underworld', 'F');
+    const occurrenceId = createOccurrenceId('decision-workbench-readiness-opening');
+    let project = createProjectDocument(catalog, {
+      routeKey: 'Underworld',
+      configuredBiomeCount: 2,
+      projectId: 'decision-workbench-readiness',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId,
+      gameName: 'F_Opening01',
+    });
+    const decision = createExitDecisionAddress(biome, {
+      kind: 'occurrence',
+      occurrenceId,
+    });
+    project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
+
+    renderStaticDecisionWorkbench(project, 'Underworld', 'F', subjectForOwner(decision));
+    const room = screen.getByRole('button', { name: 'Door 1 room' });
+    expect(room.hasAttribute('inert')).toBe(true);
+    expect(room.getAttribute('aria-disabled')).toBe('true');
+    expect(room.dataset.authoringLocked).toBe('true');
+
+    cleanup();
+    renderStaticDecisionWorkbench(project, 'Underworld', 'G', currentFrontier);
+    const start = screen.getByRole('button', { name: 'Start biome' });
+    expect(start.hasAttribute('inert')).toBe(true);
+    expect(start.getAttribute('aria-disabled')).toBe('true');
+    expect(start.dataset.authoringLocked).toBe('true');
+  });
+
   it('renders an authored natural Chaos exit beside normal exits in its source decision', () => {
     const { biome, located, project, source } = authoredNaturalChaosFixture();
     renderDecisionWorkbench(
@@ -482,7 +502,7 @@ describe('DecisionWorkbench', () => {
     expect(screen.queryByText('Pom Slice')).toBeNull();
   });
 
-  it('renders the ordinary outgoing cards immediately after the fixed N start', async () => {
+  it('keeps N outgoing cards visible but inert until the opening reward is authored', async () => {
     const view = renderDecisionWorkbench(emptyProject('Surface'), 'Surface', 'N', currentFrontier);
     expect(screen.getByRole('heading', { name: 'Start biome' })).toBeTruthy();
     expect(screen.queryByText('N_Opening01')).toBeNull();
@@ -505,6 +525,32 @@ describe('DecisionWorkbench', () => {
     expect(screen.queryByRole('button', { name: 'Check Preboss rooms' })).toBeNull();
 
     expect(screen.queryByRole('button', { name: 'Add fixed next room' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Door 1 room' }).getAttribute('aria-disabled')).toBe(
+      'true',
+    );
+
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceIncomingReward',
+          reward: createIncomingRewardAddress(nBiome, openingId),
+          value: {
+            rewardType: 'Boon',
+            payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+          },
+        }),
+      ),
+    );
+    act(() => {
+      const authored = view.application.store.getState().projectWorkspace.history?.present;
+      if (authored === undefined) throw new Error('N project is missing');
+      view.application.store.dispatch(authoredProjectReplaced(authorLegalTraitOffers(authored)));
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Door 1 room' }).getAttribute('aria-disabled'),
+      ).not.toBe('true'),
+    );
 
     const before = view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
@@ -523,16 +569,12 @@ describe('DecisionWorkbench', () => {
   });
 
   it('uses the same generic start action for an Intro biome', async () => {
-    const view = renderDecisionWorkbench(
-      createProjectDocument(catalog, {
-        routeKey: 'Surface',
-        configuredBiomeCount: 4,
-        projectId: 'decision-workbench-intro-start',
-      }),
-      'Surface',
-      'P',
-      currentFrontier,
-    );
+    const project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ConfigureRoutePrefix',
+      route: { kind: 'route', routeKey: 'Surface' },
+      configuredBiomeCount: 4,
+    });
+    const view = renderDecisionWorkbench(project, 'Surface', 'P', currentFrontier);
     expect(screen.getByRole('heading', { name: 'Start biome' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Room' })).toBeNull();
 
@@ -598,10 +640,7 @@ describe('DecisionWorkbench', () => {
     if (possible === undefined) throw new Error('F Exit 1 has no selectable projected room');
     await view.user.click(possible);
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Door 2 room' })).not.toHaveProperty(
-        'disabled',
-        true,
-      ),
+      expect(screen.getByRole('button', { name: 'Door 2 room' })).toHaveProperty('disabled', true),
     );
     const readyDoor = screen.getByRole('article', { name: 'Door 2 unspecified room offer' });
     expect(within(readyDoor).getByText('Reward')).toBeTruthy();
@@ -778,9 +817,14 @@ describe('DecisionWorkbench', () => {
       kind: 'RemoveExitDecision',
       decision: owner,
     });
-    const project = applyProjectCommand(withoutDecision, catalog, {
+    let project = applyProjectCommand(withoutDecision, catalog, {
       decision: owner,
       kind: 'CreateBatch',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(goldenFBiome, owner.source),
+      storeKey: 'RunProgress',
     });
     const view = renderDecisionWorkbench(project, 'Underworld', 'F', subjectForOwner(owner));
     const before = view.application.store.getState().projectWorkspace.history!.past.length;
@@ -971,9 +1015,14 @@ describe('DecisionWorkbench', () => {
         decision: takeover.owner,
         kind: 'RemoveExitDecision',
       });
-      const project = applyProjectCommand(withoutTakeover, catalog, {
+      let project = applyProjectCommand(withoutTakeover, catalog, {
         decision: takeover.owner,
         kind: 'CreateBatch',
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceBatchRewardStore',
+        rewardStore: createBatchRewardStoreAddress(fixture.biome, takeover.owner.source),
+        storeKey: 'RunProgress',
       });
       const view = renderDecisionWorkbench(
         project,
@@ -1279,11 +1328,9 @@ describe('DecisionWorkbench', () => {
       occurrenceId: qOccurrenceIds.secondMiniboss1,
     });
     let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
-      kind: 'RemoveExitDecision',
-      decision: createExitDecisionAddress(oBiome, {
-        kind: 'occurrence',
-        occurrenceId: oOccurrenceIds.combat02,
-      }),
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nOccurrenceIds.preHub),
+      value: { rewardType: 'TalentDrop' },
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'RemoveExitDecision',

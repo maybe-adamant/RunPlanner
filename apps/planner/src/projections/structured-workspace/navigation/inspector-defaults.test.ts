@@ -203,7 +203,7 @@ describe('workspace inspector defaults', () => {
       }),
       'F',
     );
-    expect(retained.status).toBe('invalid');
+    expect(retained.status).toBe('incomplete');
     expect(retained.defaultInspectorDestination?.kind).toBe('node');
     if (retained.defaultInspectorDestination?.kind !== 'node') return;
     expect(nodeByKey(retained, retained.defaultInspectorDestination.nodeKey).kind).toBe(

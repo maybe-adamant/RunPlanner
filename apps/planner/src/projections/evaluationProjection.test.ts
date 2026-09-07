@@ -219,6 +219,7 @@ describe('evaluation presentation', () => {
     const selection = createRouteStartKeepsakeSelectionAddress('Underworld');
     const jeweledPom = createKeepsakeEquipResultAddress(selection, 'jeweledPom');
     const experimentalHammer = createKeepsakeEquipResultAddress(selection, 'experimentalHammer');
+    const transcendentEmbryo = createKeepsakeEquipResultAddress(selection, 'transcendentEmbryo');
 
     expect(presentFinding(finding('keepsakeEquipResultMissing', jeweledPom))).toEqual({
       title: 'Choose Jeweled Pom result',
@@ -236,8 +237,17 @@ describe('evaluation presentation', () => {
       title: 'Experimental Hammer result is unavailable',
       description: 'Choose a Hammer trait compatible with the active weapon and aspect.',
     });
+    expect(presentFinding(finding('keepsakeEquipResultMissing', transcendentEmbryo))).toEqual({
+      title: 'Choose Transcendent Embryo result',
+      description: 'Record the Chaos blessing granted when Transcendent Embryo is equipped.',
+    });
+    expect(presentFinding(finding('keepsakeEquipResultUnavailable', transcendentEmbryo))).toEqual({
+      title: 'Transcendent Embryo result is unavailable',
+      description: 'Choose a Chaos blessing eligible when Transcendent Embryo is equipped.',
+    });
     expect(findingDestinationLabel(catalog, jeweledPom)).toBe('Jeweled Pom result');
     expect(findingDestinationLabel(catalog, experimentalHammer)).toBe('Experimental Hammer result');
+    expect(findingDestinationLabel(catalog, transcendentEmbryo)).toBe('Transcendent Embryo result');
   });
 
   it('presents the missing Echo Pom child with both legal settlement shapes', () => {
@@ -339,6 +349,7 @@ describe('evaluation presentation', () => {
       status: 'incomplete',
       projectId: 'feedback-project',
       catalogVersion: catalog.version,
+      authoringHorizon: { kind: 'open' },
       route: underworld,
       findings: [fFinding],
       summary: underworld.summary,
@@ -368,11 +379,9 @@ describe('evaluation presentation', () => {
     if (fFeedback === undefined || gFeedback === undefined) {
       throw new Error('feedback hierarchy omitted a configured biome');
     }
-    expect(presentBiomeFeedbackContext(catalog, fFeedback)).toBe(
-      'Erebus is not evaluated yet. You can still edit it.',
-    );
+    expect(presentBiomeFeedbackContext(catalog, fFeedback)).toBe('Erebus is not evaluated yet.');
     expect(presentBiomeFeedbackContext(catalog, gFeedback)).toBe(
-      'Finish and fix Erebus before Oceanus can be evaluated. You can still edit it.',
+      'Finish and fix Erebus before Oceanus can be evaluated.',
     );
   });
 
@@ -385,7 +394,7 @@ describe('evaluation presentation', () => {
     } as const satisfies BiomeFeedbackPresentation;
 
     expect(presentBiomeFeedbackContext(catalog, feedback)).toBe(
-      'Finish the earlier biomes before this biome can be evaluated. You can still edit it.',
+      'Finish the earlier biomes before this biome can be evaluated.',
     );
   });
 

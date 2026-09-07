@@ -330,12 +330,10 @@ describe('underworld product loop', () => {
     const replayRow = document.getElementById(semanticOwnerControlElementId(replayEntry));
     if (!(replayRow instanceof HTMLElement))
       throw new Error('focused Echo Room Action row is missing');
-    expect(within(replayRow).queryByRole('button', { name: 'Reward' })).toBeNull();
-    await view.user.click(
-      within(replayRow).getByRole('button', {
-        name: `Update replay reward · ${rewardInteraction.summary({ rewardType: repairRewardType })}`,
-      }),
+    expect(replayRow.textContent).toBe(
+      `Update replay reward · ${rewardInteraction.summary({ rewardType: repairRewardType })}`,
     );
+    await view.user.click(replayRow);
 
     const authoredOccurrence = () =>
       currentProject(application)
@@ -617,34 +615,21 @@ describe('underworld product loop', () => {
     ).toBe(false);
   });
 
-  it('keeps a blocked downstream biome structurally authorable through the workspace', async () => {
+  it('keeps a blocked downstream biome visible but prevents authoring it', async () => {
     const application = createApplication();
     application.projectOperations.createNew('Underworld');
     const view = renderPlannerForInteraction({ application });
 
     await view.user.selectOptions(screen.getByLabelText('Configure route up to'), '2');
     await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
-    expect(
-      screen.getByText(
-        'Finish and fix Erebus before Oceanus can be evaluated. You can still edit it.',
-      ),
-    ).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Start biome' })).toBeTruthy();
-
-    await view.user.click(screen.getByRole('button', { name: 'Start biome' }));
-    const structure = screen.getByRole('region', { name: 'Oceanus route structure' });
-    await view.user.click(within(structure).getByRole('button', { name: /Continue route/ }));
-    await view.user.click(screen.getByRole('tab', { name: 'Room Doors' }));
-    expect(screen.getByRole('button', { name: 'Door 1 room' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Remove these doors' })).toBeNull();
-    expect(screen.queryByText('Add doors')).toBeNull();
+    expect(screen.getByText('Finish and fix Erebus before Oceanus can be evaluated.')).toBeTruthy();
+    const start = screen.getByRole('button', { name: 'Start biome' });
+    expect(start.getAttribute('aria-disabled')).toBe('true');
+    const before = currentProject(application);
+    await view.user.click(start);
     const g = currentProject(application).route.biomes.find((biome) => biome.biomeKey === 'G');
-    expect(g?.topology).not.toBeNull();
-
-    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Start biome' })).toBeTruthy());
-    const undone = currentProject(application).route.biomes.find((biome) => biome.biomeKey === 'G');
-    expect(undone?.topology).toBeNull();
+    expect(g?.topology).toBeNull();
+    expect(currentProject(application)).toBe(before);
   });
 
   it('shrinks a route prefix immediately and preserves existing undo behavior', async () => {

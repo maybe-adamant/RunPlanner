@@ -989,6 +989,8 @@ export type WorkspaceRoomInteraction =
        * bound mutation retain the exact decision owner.
        */
       readonly decisionOwner: ExitDecisionAddress;
+      /** A terminal Hub choice authors the Hub, while feedback retains the visible target owner. */
+      readonly readinessOwner: SemanticAddress;
       readonly intentFor: (gameName: string) => WorkspaceDecisionEntryRoomCommandIntent;
       readonly kind: 'decisionEntryRoom';
       readonly owner: TargetAddress;
@@ -2980,6 +2982,10 @@ export interface WorkspaceRoute {
 }
 
 export interface StructuredWorkspaceProjection {
+  /** Exact engine-owned readiness query for every semantic control root. */
+  readonly authoringReadiness: (
+    owner: SemanticAddress,
+  ) => import('@run-planner/engine/simulation').AuthoringReadiness;
   readonly findingsByRepairTarget: ReadonlyMap<
     string,
     readonly import('@run-planner/engine/simulation').SemanticFinding[]

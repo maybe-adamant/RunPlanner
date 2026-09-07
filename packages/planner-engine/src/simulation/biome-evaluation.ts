@@ -18,7 +18,7 @@ import {
 import { attestFigLeafBranchState, attestGorgonBranchState } from './keepsakes';
 import { attestPendingHermesSpellDrop } from './hermes-shrine';
 import { attestTalentDropsClosed } from './hex-progress';
-import { isAcquisitionAuthorshipMissingFinding } from './model';
+import { authoringRegion } from './finding-regions';
 import {
   composeBiomeHistoryWithEncounterValidation,
   type BiomeHistoryPrefix,
@@ -41,6 +41,7 @@ import {
   evaluateProgressiveBiomeAssemblyFromSelectedProducts,
   type ProgressiveBiomeContext,
 } from './progressive/biome';
+import { locateOwner } from './progressive/finding-location';
 import type { BiomeGenerationValidation } from './progressive/products';
 import { effectiveRouteResourcePlacements } from './resources';
 import { evaluateBiomeRewardsAssemblyInternal } from './rewards/biome';
@@ -379,12 +380,15 @@ export function evaluateBiomeAssembly(
   if (completeness.completion === 'incomplete') {
     const progressive = evaluateProgressiveBiomeAssembly(catalog, origin, plan, context);
     if (progressive === null) {
+      const requiredInput = completeness.requiredInput ?? completeness.frontier;
       return Object.freeze({
         evaluation: Object.freeze({
           biomeKey: plan.biomeKey,
           origin,
           authoring: 'incomplete',
           frontier: completeness.frontier,
+          requiredInput,
+          requiredInputRegion: authoringRegion(requiredInput),
           coverage: Object.freeze({ kind: 'none', reason: 'notEvaluated' }),
           findings: completeness.findings,
         }),
@@ -392,31 +396,44 @@ export function evaluateBiomeAssembly(
       });
     }
     const blockedAt = progressive.evaluation.blockedAt;
-    const unresolvedEntryReward =
-      progressive.evaluation.materializedPrefix.entryRoom?.unresolvedIncomingReward;
-    const entryAuthorshipBlocked =
-      blockedAt !== undefined &&
-      unresolvedEntryReward !== undefined &&
-      semanticAddressKey(blockedAt) === semanticAddressKey(unresolvedEntryReward.origin) &&
-      progressive.evaluation.findings.some(
-        (finding) =>
-          semanticAddressKey(finding.origin) === semanticAddressKey(blockedAt) &&
-          isAcquisitionAuthorshipMissingFinding(finding),
-      );
+    const incompleteStop = progressive.evaluation.blockedKind === 'incomplete';
+    const requiredInput =
+      blockedAt === undefined
+        ? (completeness.requiredInput ?? completeness.frontier)
+        : incompleteStop
+          ? blockedAt
+          : undefined;
+    const coveragePrefix =
+      progressive.evaluation.assessmentPrefix ?? progressive.evaluation.materializedPrefix;
+    const coveragePoint = materializedBiomePrefixCoveragePoint(coveragePrefix);
+    const requiredInputLocation =
+      requiredInput === undefined
+        ? undefined
+        : (progressive.evaluation.blockedLocation ??
+          locateOwner(progressive.evaluation.materializedPrefix, requiredInput) ??
+          (coveragePoint.checkpoint === 'beforeTargetGeneration'
+            ? locateOwner(progressive.evaluation.materializedPrefix, coveragePoint.owner)
+            : undefined));
     return Object.freeze({
       evaluation: Object.freeze({
         biomeKey: plan.biomeKey,
         origin,
         authoring: 'incomplete',
         frontier: completeness.frontier,
-        ...(blockedAt === undefined || entryAuthorshipBlocked
+        ...(requiredInput === undefined
           ? {}
-          : { validity: 'invalid' as const }),
+          : {
+              requiredInput,
+              ...(requiredInputLocation === undefined ? {} : { requiredInputLocation }),
+              requiredInputRegion:
+                incompleteStop && progressive.evaluation.blockedRegionKey !== undefined
+                  ? progressive.evaluation.blockedRegionKey
+                  : authoringRegion(requiredInput),
+            }),
+        ...(blockedAt === undefined || incompleteStop ? {} : { validity: 'invalid' as const }),
         coverage: Object.freeze({
           kind: 'prefix',
-          through: materializedBiomePrefixCoveragePoint(
-            progressive.evaluation.assessmentPrefix ?? progressive.evaluation.materializedPrefix,
-          ),
+          through: coveragePoint,
           ...(blockedAt === undefined ? {} : { blockedAt }),
         }),
         materializedPrefix: progressive.evaluation.materializedPrefix,
@@ -431,7 +448,7 @@ export function evaluateBiomeAssembly(
           structurallyEligibleRunStateOwners(progressive.evaluation.materializedPrefix),
         ),
         findings:
-          blockedAt === undefined || entryAuthorshipBlocked
+          blockedAt === undefined || incompleteStop
             ? Object.freeze([...completeness.findings, ...progressive.evaluation.findings])
             : progressive.evaluation.findings,
       }),
@@ -512,12 +529,22 @@ export function evaluateBiomeAssembly(
         biomeKey: plan.biomeKey,
         origin,
         authoring: 'complete',
+        validity: 'invalid',
+        ...(progressive.evaluation.blockedKind === 'incomplete'
+          ? {
+              requiredInput: blockedAt,
+              ...(progressive.evaluation.blockedLocation === undefined
+                ? {}
+                : { requiredInputLocation: progressive.evaluation.blockedLocation }),
+              requiredInputRegion:
+                progressive.evaluation.blockedRegionKey ?? authoringRegion(blockedAt),
+            }
+          : {}),
         coverage: Object.freeze({
           kind: 'prefix',
           through: materializedBiomePrefixCoveragePoint(assessmentPrefix),
           blockedAt,
         }),
-        validity: 'invalid',
         materializedPrefix: progressive.evaluation.materializedPrefix,
         ...(progressive.evaluation.assessmentPrefix === undefined
           ? {}
@@ -672,6 +699,19 @@ export function evaluateBiomeAssembly(
       biomeKey: plan.biomeKey,
       origin,
       authoring: 'complete',
+      validity: 'invalid',
+      ...(progressive.evaluation.blockedKind === 'incomplete' &&
+      progressive.evaluation.blockedAt !== undefined
+        ? {
+            requiredInput: progressive.evaluation.blockedAt,
+            ...(progressive.evaluation.blockedLocation === undefined
+              ? {}
+              : { requiredInputLocation: progressive.evaluation.blockedLocation }),
+            requiredInputRegion:
+              progressive.evaluation.blockedRegionKey ??
+              authoringRegion(progressive.evaluation.blockedAt),
+          }
+        : {}),
       coverage: Object.freeze({
         kind: 'prefix',
         through: materializedBiomePrefixCoveragePoint(assessmentPrefix),
@@ -679,7 +719,6 @@ export function evaluateBiomeAssembly(
           ? {}
           : { blockedAt: progressive.evaluation.blockedAt }),
       }),
-      validity: 'invalid',
       materializedPrefix: progressive.evaluation.materializedPrefix,
       ...(progressive.evaluation.assessmentPrefix === undefined
         ? {}

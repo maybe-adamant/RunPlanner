@@ -184,8 +184,11 @@ export function ContextualPicker<T>({
   const selectedExplanationId =
     selected?.explanation === undefined ? undefined : `${id}-selected-explanation`;
   const choicesLabel = choiceLabel ?? label;
+  const authoringLocked = findingTarget?.['data-authoring-locked'] === true;
+  const interactionDisabled = disabled || authoringLocked;
 
   function updateOpen(nextOpen: boolean): void {
+    if (nextOpen && interactionDisabled) return;
     if (controlledOpen === undefined) {
       setInternalOpen(nextOpen);
     }
@@ -218,7 +221,7 @@ export function ContextualPicker<T>({
             {...(ariaLabel === undefined ? {} : { 'aria-label': ariaLabel })}
             className="contextual-picker-trigger"
             data-candidate-state={selected?.state ?? 'unspecified'}
-            disabled={disabled}
+            disabled={interactionDisabled}
             {...findingTarget}
             id={id}
             ref={(node) => {

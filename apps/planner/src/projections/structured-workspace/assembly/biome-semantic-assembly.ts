@@ -173,6 +173,7 @@ function requireCompatibleOccurrenceAssemblyRequest(
 
 function statusFor(evaluation: ProjectBiomeEvaluation | undefined): WorkspaceStatus {
   if (evaluation === undefined) return 'blocked';
+  if (evaluation.requiredInput !== undefined) return 'incomplete';
   if (evaluation.authoring === 'incomplete') {
     return evaluation.validity === 'invalid' ? 'invalid' : 'incomplete';
   }

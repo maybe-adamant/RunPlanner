@@ -238,7 +238,6 @@ describe('progressive selected and blocked products', () => {
     );
     if (
       blocked === undefined ||
-      blocked.validity !== 'invalid' ||
       blocked.coverage.kind !== 'prefix' ||
       !('roomGeneration' in blocked) ||
       !('rewards' in blocked)
@@ -269,6 +268,11 @@ describe('progressive selected and blocked products', () => {
     const session = createPreparedProjectCandidateSession(catalog, blockedAssembly);
 
     expect(blocked.coverage.blockedAt).toEqual(trait);
+    expect(blocked.requiredInput).toEqual(trait);
+    expect(blockedAssembly.evaluation.authoringHorizon).toMatchObject({
+      kind: 'incomplete',
+      repairTarget: trait,
+    });
     expect(retainedAssessment?.targets.map((target) => semanticAddressKey(target.origin))).toEqual(
       baselineAssessment?.targets.map((target) => semanticAddressKey(target.origin)),
     );

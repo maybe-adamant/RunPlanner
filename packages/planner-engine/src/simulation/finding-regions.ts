@@ -63,6 +63,47 @@ export function ownerRegion(origin: SemanticAddress): string {
   return `owner:${semanticAddressKey(origin)}`;
 }
 
+/**
+ * Atomic authoring identity for generated sibling sets. This remains engine
+ * vocabulary: consumers compare the opaque key and never reconstruct these
+ * groupings from rendered controls.
+ */
+export function authoringRegion(origin: SemanticAddress): string {
+  if (origin.kind === 'hubOpenSet' || origin.kind === 'hubSlot') {
+    return `hubBoard:${origin.routeKey}:${origin.biomeKey}:${origin.hubKey}`;
+  }
+  if (
+    origin.kind === 'localVisitDecision' ||
+    origin.kind === 'localVisitSlot' ||
+    origin.kind === 'localVisitOrder'
+  ) {
+    return `hubSideGeneration:${origin.routeKey}:${origin.biomeKey}:${origin.sourceOccurrenceId}:${origin.groupKey}`;
+  }
+  if (origin.kind === 'rewardWheelOffer') {
+    return `rewardWheelOffers:${origin.routeKey}:${origin.biomeKey}:${origin.occurrenceId}:${origin.wheelKey}`;
+  }
+  if (origin.kind === 'localReward' && origin.groupKey === 'optionalRewards') {
+    return `fieldsOptionalRewards:${origin.routeKey}:${origin.biomeKey}:${origin.occurrenceId}`;
+  }
+
+  let traitOwner = origin;
+  while (
+    traitOwner.kind === 'traitAcquisitionTarget' ||
+    traitOwner.kind === 'circeResolution' ||
+    traitOwner.kind === 'echoPomTarget' ||
+    traitOwner.kind === 'naturalSelectionResult' ||
+    traitOwner.kind === 'echoLastRunBoon' ||
+    traitOwner.kind === 'echoLastReward' ||
+    traitOwner.kind === 'allTogetherSet'
+  ) {
+    traitOwner = traitOwner.trait;
+  }
+  if (traitOwner.kind === 'traitOffer') {
+    return `traitOffer:${semanticAddressKey(traitOwner)}`;
+  }
+  return ownerRegion(origin);
+}
+
 export function findingRegion(
   finding: SemanticFinding,
   atomicRegion: string = ownerRegion(finding.origin),

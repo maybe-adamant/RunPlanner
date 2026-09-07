@@ -46,7 +46,10 @@ function ProjectedHarness({ application, biomeKey, renderBiome, routeKey }: Proj
   const biome = workspace.route.biomes.find((candidate) => candidate.biomeKey === biomeKey);
   if (biome === undefined) throw new Error(`${routeKey}/${biomeKey} has no workspace biome`);
   return (
-    <FindingTargetScope findings={workspace.findingsByRepairTarget}>
+    <FindingTargetScope
+      authoringReadiness={workspace.authoringReadiness}
+      findings={workspace.findingsByRepairTarget}
+    >
       {renderBiome(biome, workspace)}
     </FindingTargetScope>
   );
@@ -224,11 +227,16 @@ export function renderStaticHubDecisionWorkbench(
   if (node?.kind !== 'hubDecision') throw new Error('Hub decision workbench is missing');
   return render(
     <Provider store={store}>
-      <HubDecisionWorkbench
-        frontier={biome.frontier}
-        interactions={workspace.interactions}
-        node={node}
-      />
+      <FindingTargetScope
+        authoringReadiness={workspace.authoringReadiness}
+        findings={workspace.findingsByRepairTarget}
+      >
+        <HubDecisionWorkbench
+          frontier={biome.frontier}
+          interactions={workspace.interactions}
+          node={node}
+        />
+      </FindingTargetScope>
     </Provider>,
   );
 }
@@ -272,12 +280,17 @@ export function renderStaticOccurrenceWorkbench(
   if (node === undefined) throw new Error('Occurrence workbench is missing');
   return render(
     <Provider store={store}>
-      <OccurrenceWorkbench
-        {...(node.incomingDoor === undefined ? {} : { incomingDoor: node.incomingDoor })}
-        interactions={workspace.interactions}
-        {...(node.localVisit === undefined ? {} : { localVisit: node.localVisit })}
-        room={node.room}
-      />
+      <FindingTargetScope
+        authoringReadiness={workspace.authoringReadiness}
+        findings={workspace.findingsByRepairTarget}
+      >
+        <OccurrenceWorkbench
+          {...(node.incomingDoor === undefined ? {} : { incomingDoor: node.incomingDoor })}
+          interactions={workspace.interactions}
+          {...(node.localVisit === undefined ? {} : { localVisit: node.localVisit })}
+          room={node.room}
+        />
+      </FindingTargetScope>
     </Provider>,
   );
 }
@@ -302,7 +315,16 @@ export function renderStaticDecisionWorkbench(
         node={subject.node}
       />
     );
-  return render(<Provider store={store}>{workbench}</Provider>);
+  return render(
+    <Provider store={store}>
+      <FindingTargetScope
+        authoringReadiness={workspace.authoringReadiness}
+        findings={workspace.findingsByRepairTarget}
+      >
+        {workbench}
+      </FindingTargetScope>
+    </Provider>,
+  );
 }
 
 export function renderBiomeClearAction(

@@ -64,7 +64,10 @@ export function App({
   }
 
   return (
-    <FindingTargetScope findings={workspace?.findingsByRepairTarget}>
+    <FindingTargetScope
+      {...(workspace === undefined ? {} : { authoringReadiness: workspace.authoringReadiness })}
+      findings={workspace?.findingsByRepairTarget}
+    >
       <main className="app-shell">
         <header className="app-header" data-entry={showEntry || undefined}>
           <div className="app-brand">

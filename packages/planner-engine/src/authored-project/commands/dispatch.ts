@@ -376,7 +376,11 @@ export function applyProjectCommand(
   }
 }
 
-export { projectCommandAddress, ProjectCommandContractError } from './contract';
+export {
+  projectCommandAddress,
+  projectCommandAuthoringAddresses,
+  ProjectCommandContractError,
+} from './contract';
 export type {
   DerivedShopEntryEditCommand,
   EncounterOccurrenceCommand,

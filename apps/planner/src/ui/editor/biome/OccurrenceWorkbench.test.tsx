@@ -212,7 +212,9 @@ describe('OccurrenceWorkbench', () => {
     const row = screen.getByText('Cage 1').closest('.fields-layout-row');
     if (!(row instanceof HTMLElement)) throw new Error('Cage 1 Layout row is missing');
 
-    expect(within(row).getByLabelText('1 finding')).toBeTruthy();
+    expect(
+      within(row).getByRole('combobox', { name: 'Point' }).getAttribute('data-has-findings'),
+    ).toBe('true');
   });
 
   it('adds the active Nemesis placement to Layout without moving its Overview authoring', () => {

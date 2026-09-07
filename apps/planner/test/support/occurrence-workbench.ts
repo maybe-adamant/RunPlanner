@@ -273,6 +273,7 @@ export function dormantShopProject(): {
   const start = createOccurrenceId('occurrence-workbench-f-start');
   const combat = createOccurrenceId('occurrence-workbench-f-combat');
   const shop = createOccurrenceId('occurrence-workbench-dormant-shop');
+  const shopSibling = createOccurrenceId('occurrence-workbench-shop-sibling');
   const source = { kind: 'occurrence' as const, occurrenceId: start };
   let project = applyProjectCommand(emptyFProject(), catalog, {
     kind: 'CreateStart',
@@ -321,8 +322,13 @@ export function dormantShopProject(): {
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateTarget',
     target: createTargetAddress(goldenFBiome, secondSource, 'exit1'),
-    occurrenceId: createOccurrenceId('occurrence-workbench-shop-sibling'),
+    occurrenceId: shopSibling,
     gameName: 'F_Combat04',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenFBiome, shopSibling),
+    value: { rewardType: 'MetaCurrencyDrop' },
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateTarget',
