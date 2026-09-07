@@ -4,6 +4,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   createBiomeAddress,
   createOccurrenceAddress,
+  createRoomFeatureAddress,
   type ResourcePlacement,
   type ResourcePlacements,
 } from '@run-planner/engine/authored-project';
@@ -512,7 +513,7 @@ describe('selected resource success legality', () => {
       expect.objectContaining({
         code: 'resourcePlacementUnavailable',
         severity: 'error',
-        origin: host.origin,
+        origin: createRoomFeatureAddress(host.origin, { kind: 'resource', family: 'Shovel' }),
         evidence: expect.objectContaining({ family: 'Shovel' }),
       }),
     );

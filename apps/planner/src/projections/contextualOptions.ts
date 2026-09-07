@@ -327,8 +327,6 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'trait', message: 'Author one to three previous-run boon outcomes.' };
     case 'echoLastRunBoonOptionUnavailable':
       return { kind: 'trait', message: 'Choose a currently eligible previous-run boon outcome.' };
-    case 'echoShopDuplicateChildMissing':
-      return { kind: 'reward', message: 'Create the decisions for the free Shop duplicate.' };
     case 'allTogetherResultMissing':
       return { kind: 'trait', message: 'Choose one direct trait outcome for every element set.' };
     case 'allTogetherResultUnavailable':
@@ -415,12 +413,6 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       };
     case 'fieldsCageOutcomeUnavailable':
       return { kind: 'fields', message: 'This Fields door outcome cannot occur at this point.' };
-    case 'fieldsActionMissing':
-      return { kind: 'fields', message: 'Insert this required Fields room action.' };
-    case 'fieldsActionInactive':
-      return { kind: 'fields', message: 'Remove this action for an inactive Fields cage.' };
-    case 'fieldsActionDependency':
-      return { kind: 'fields', message: 'Move this pickup after its cage combat.' };
     case 'hubOpenSlotUnavailable':
       return { kind: 'hub', message: 'This Hub room conflicts with the selected open set.' };
     case 'sideRoomGenerationUnavailable':

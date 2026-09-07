@@ -22,6 +22,7 @@ export function isFineGrainedFindingOwner(address: SemanticAddress): boolean {
     case 'target':
     case 'occurrence':
     case 'fieldsSpatial':
+    case 'roomFeature':
     case 'incomingReward':
     case 'localReward':
     case 'roomAction':
@@ -35,6 +36,7 @@ export function isFineGrainedFindingOwner(address: SemanticAddress): boolean {
     case 'shopOffer':
     case 'encounterPhase':
     case 'gorgonPhase':
+    case 'nemesisRandomEvent':
     case 'traitOffer':
     case 'traitAcquisitionTarget':
     case 'circeResolution':
@@ -42,14 +44,18 @@ export function isFineGrainedFindingOwner(address: SemanticAddress): boolean {
     case 'echoLastRunBoon':
     case 'echoLastReward':
     case 'allTogetherSet':
+    case 'naturalSelectionResult':
     case 'levelResolution':
     case 'judgmentArcana':
+    case 'figurineArcana':
     case 'acquisitionSite':
     case 'acquisitionEntry':
     case 'steadyGrowthOutcome':
     case 'transcendentEmbryoOutcome':
     case 'fountainRarityOutcome':
       return true;
+    case 'keepsakeSelection':
+      return address.owner !== 'routeStart';
     case 'keepsakeEquipResult':
       return (
         address.selection.kind === 'echoKeepsakeReplay' || address.selection.owner !== 'routeStart'

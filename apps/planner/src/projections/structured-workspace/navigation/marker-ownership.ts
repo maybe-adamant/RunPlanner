@@ -4,6 +4,7 @@ import type {
   WorkspaceMixedBatchNode,
   WorkspaceOrdinaryBatchNode,
   WorkspaceRewardControl,
+  WorkspaceRoomFeature,
   WorkspaceRoomLocal,
   WorkspaceRoomSummary,
   WorkspaceTakeoverBatchNode,
@@ -30,6 +31,7 @@ export function workspaceLocalDetailMarkers(
       return Object.freeze([
         ...roomLocal.cages.flatMap((cage) => rewardControlMarkers(cage.control)),
         ...roomLocal.spatial.map((control) => control.marker),
+        roomLocal.optionalRewardCountMarker,
       ]);
     case 'ship':
       return Object.freeze(
@@ -56,6 +58,41 @@ export function workspaceLocalDetailMarkers(
   }
 }
 
+/** Room Overview owns feature repair markers; action rows remain Timeline-owned. */
+export function workspaceRoomFeatureMarkers(
+  features: readonly WorkspaceRoomFeature[],
+): readonly WorkspaceMarker[] {
+  return Object.freeze(
+    features.flatMap((feature) => {
+      switch (feature.kind) {
+        case 'hermesShrine':
+          return [
+            feature.presenceMarker,
+            ...(feature.inventoryMarker === undefined ? [] : [feature.inventoryMarker]),
+            ...feature.slots.map((slot) => slot.marker),
+            ...(feature.travelDealRefill === undefined ? [] : [feature.travelDealRefill.marker]),
+          ];
+        case 'stygianWell':
+          return [
+            feature.presenceMarker,
+            ...(feature.inventoryMarker === undefined ? [] : [feature.inventoryMarker]),
+            ...feature.slots.flatMap((slot) => [
+              slot.marker,
+              ...(slot.twist === undefined ? [] : [slot.twist.marker]),
+            ]),
+          ];
+        case 'purgingPool':
+          return [feature.inventoryMarker, ...feature.slots.map((slot) => slot.marker)];
+        case 'chaos':
+          return feature.action === 'remove' ? [feature.marker] : [];
+        case 'zagreusContract':
+        case 'nemesisEvent':
+          return [];
+      }
+    }),
+  );
+}
+
 /**
  * Exact occurrence owners may be nested in a decision workbench, but they
  * retain one shared marker package for containment routing.
@@ -67,6 +104,7 @@ export function workspaceOccurrenceOwnedMarkers(
     room.marker,
     ...room.encounterPhases.flatMap((phase) => [
       phase.marker,
+      ...(phase.nemesisEvent === undefined ? [] : [phase.nemesisEvent.marker]),
       ...(phase.traitOffer === undefined
         ? []
         : [
@@ -127,6 +165,8 @@ export function workspaceOccurrenceOwnedMarkers(
         ]),
     ...(room.zagreusSpawn === undefined ? [] : [room.zagreusSpawn.marker]),
     ...(room.chaosSpawn === undefined ? [] : [room.chaosSpawn.marker]),
+    ...(room.resources?.map((resource) => resource.marker) ?? []),
+    ...workspaceRoomFeatureMarkers(room.workbench.features),
     ...(room.roomLocal.kind === 'fixed' ? [room.roomLocal.marker] : []),
   ]);
 }

@@ -3,6 +3,7 @@ import {
   createFigurineArcanaAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
+  createRoomFeatureAddress,
   createBiomeAddress,
   createOccurrenceAddress,
   createAcquisitionEntryAddress,
@@ -49,6 +50,7 @@ import type { WorkspaceOccurrenceInteractionRequirement } from '../interactions/
 import {
   workspaceLocalDetailMarkers,
   workspaceOccurrenceOwnedMarkers,
+  workspaceRoomFeatureMarkers,
 } from '../navigation/marker-ownership';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import {
@@ -427,6 +429,7 @@ export function assembleWorkspaceOccurrence(
   const localDetailMarkers = Object.freeze([
     ...encounterPhases.flatMap((phase) => [
       phase.marker,
+      ...(phase.nemesisEvent === undefined ? [] : [phase.nemesisEvent.marker]),
       ...(phase.traitOffer === undefined ? [] : [phase.traitOffer.marker]),
       ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker]),
     ]),
@@ -519,7 +522,7 @@ export function assembleWorkspaceOccurrence(
                 placement?.biomeKey === input.biome.biomeKey &&
                 placement.occurrenceId === occurrence.occurrenceId;
               const rule = room.resourcePointSupport.rules[family];
-              if (rule === undefined) {
+              if (rule === undefined && !here) {
                 throw new StructuredWorkspaceProjectionContractError(
                   `${room.gameName} declares ${family} without resource rules`,
                 );
@@ -547,8 +550,12 @@ export function assembleWorkspaceOccurrence(
                     })()
                   : undefined;
               return Object.freeze({
+                address: createRoomFeatureAddress(address, { kind: 'resource', family }),
                 family,
-                label: resourceOutcomeLabel(family, rule.element),
+                label: resourceOutcomeLabel(family, rule?.element),
+                marker: input.markerDestinations.marker(
+                  createRoomFeatureAddress(address, { kind: 'resource', family }),
+                ),
                 action: here
                   ? ('remove' as const)
                   : placement === null
@@ -583,6 +590,11 @@ export function assembleWorkspaceOccurrence(
     [
       ...(zagreusSpawn === undefined ? [] : [zagreusSpawn.marker]),
       ...(chaosSpawn === undefined ? [] : [chaosSpawn.marker]),
+      ...workspaceRoomFeatureMarkers(features),
+      ...(roomSummary.resources?.map((resource) => resource.marker) ?? []),
+      ...(input.isEntry === true && roomLocal.kind === 'incomingReward'
+        ? [roomLocal.control.marker]
+        : []),
     ],
     'overview',
   );
@@ -591,6 +603,7 @@ export function assembleWorkspaceOccurrence(
       [
         ...roomLocal.cages.map((cage) => cage.control.marker),
         ...roomLocal.optionalRewards.map((reward) => reward.control.marker),
+        roomLocal.optionalRewardCountMarker,
       ],
       'overview',
     );
@@ -603,6 +616,7 @@ export function assembleWorkspaceOccurrence(
     input.markerDestinations.setRoomTab(
       [
         phase.marker,
+        ...(phase.nemesisEvent === undefined ? [] : [phase.nemesisEvent.marker]),
         ...(phase.traitOffer === undefined ? [] : [phase.traitOffer.marker]),
         ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker]),
       ],
@@ -712,7 +726,7 @@ export function assembleWorkspaceOccurrence(
       input.markerDestinations.setRoomTab(
         [
           row.marker,
-          ...(row.rewardPayload === undefined ? [] : [row.rewardPayload.control.marker]),
+          ...(row.rewardPayload?.showOffer === true ? [row.rewardPayload.control.marker] : []),
           ...acquisitionMarkers,
           ...unavailableAcquisitionMarkers,
         ],

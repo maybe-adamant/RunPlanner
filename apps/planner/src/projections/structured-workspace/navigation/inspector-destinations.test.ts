@@ -38,6 +38,7 @@ import {
   goldenGBiome,
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
+import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   loadSurfaceNCompleteHubFrontierProject,
   loadSurfaceNEntryFrontierProject,
@@ -132,6 +133,31 @@ function emptyProject(routeKey: 'Surface' | 'Underworld', count: number): Projec
     routeKey,
     configuredBiomeCount: count,
   });
+}
+
+function removeForcedShrineInventory(project: ProjectDocument): ProjectDocument {
+  return {
+    ...project,
+    route: {
+      ...project.route,
+      biomes: project.route.biomes.map((biome) =>
+        biome.biomeKey !== 'N' || biome.topology === null
+          ? biome
+          : {
+              ...biome,
+              topology: {
+                ...biome.topology,
+                occurrences: biome.topology.occurrences.map((occurrence) => {
+                  if (occurrence.occurrenceId !== 'surface-n-preboss:postboss') return occurrence;
+                  const { hermesShrine: _removed, ...withoutShrine } = occurrence;
+                  void _removed;
+                  return withoutShrine;
+                }),
+              },
+            },
+      ),
+    },
+  };
 }
 
 function echoReplayProject(child?: {
@@ -308,6 +334,302 @@ function staleTravelDealShopProject(): {
 }
 
 describe('workspace inspector destinations', () => {
+  it('keeps missing Fields reward definitions on Overview even when pickup rows exist', () => {
+    const original = createGoldenFGHProject();
+    const fields = original.route.biomes
+      .find((entry) => entry.biomeKey === 'H')
+      ?.topology?.occurrences.find(
+        (room) => room.state.kind === 'fieldsCombat' && room.state.optionalRewardCount > 0,
+      );
+    if (fields?.state.kind !== 'fieldsCombat') throw new Error('Fields optional fixture missing');
+    const document: ProjectDocument = {
+      ...original,
+      route: {
+        ...original.route,
+        biomes: original.route.biomes.map((entry) =>
+          entry.biomeKey !== 'H' || entry.topology === null
+            ? entry
+            : {
+                ...entry,
+                topology: {
+                  ...entry.topology,
+                  occurrences: entry.topology.occurrences.map((room) =>
+                    room.occurrenceId !== fields.occurrenceId || room.state.kind !== 'fieldsCombat'
+                      ? room
+                      : {
+                          ...room,
+                          state: {
+                            ...room.state,
+                            optionalRewards: { ...room.state.optionalRewards, optional1: null },
+                          },
+                        },
+                  ),
+                },
+              },
+        ),
+      },
+    };
+    const assembled = assembly(document);
+    const finding = assembled.evaluation.findings.find(
+      (entry) =>
+        entry.code === 'rewardMissing' &&
+        entry.origin.kind === 'localReward' &&
+        entry.origin.groupKey === 'optionalRewards',
+    );
+    if (finding === undefined) throw new Error('optional reward finding missing');
+    const workspace = structuredWorkspace.project(assembled);
+    const room = occurrenceWorkbenchFor(biome(workspace, 'H'), fields.occurrenceId);
+    expect(
+      room.room.roomActions?.rows.some(
+        (row) =>
+          row.reference.kind === 'interactLocalReward' && row.reference.slotKey === 'optional1',
+      ),
+    ).toBe(true);
+    expect(destination(workspace, finding.origin)).toMatchObject({
+      focusAddress: finding.origin,
+      roomTab: 'overview',
+      inspectorSubject: { kind: 'node', nodeKey: room.key },
+    });
+  });
+
+  it('keeps opening reward definitions on Overview while their trait outcomes stay on Timeline', () => {
+    const workspace = project(createCompleteFGProject());
+    const opening = occurrenceWorkbenchFor(biome(workspace, 'F'), 'golden-f-start');
+    const reward = createIncomingRewardAddress(goldenFBiome, createOccurrenceId('golden-f-start'));
+    expect(destination(workspace, reward)).toMatchObject({
+      focusAddress: reward,
+      roomTab: 'overview',
+    });
+    const trait = opening.room.rewardControls.flatMap((control) => control.traitOffers ?? [])[0];
+    if (trait === undefined) throw new Error('opening trait missing');
+    expect(destination(workspace, trait.address)).toMatchObject({
+      focusAddress: { kind: 'roomAction' },
+      roomTab: 'actions',
+    });
+  });
+
+  it('keeps an orphaned Well mystery result visible and clearable', () => {
+    const original = createGoldenFGHIProject();
+    const owner = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
+    const document: ProjectDocument = {
+      ...original,
+      route: {
+        ...original.route,
+        biomes: original.route.biomes.map((entry) =>
+          entry.biomeKey !== 'F' || entry.topology === null
+            ? entry
+            : {
+                ...entry,
+                topology: {
+                  ...entry.topology,
+                  occurrences: entry.topology.occurrences.map((room) =>
+                    room.occurrenceId !== owner.occurrenceId
+                      ? room
+                      : {
+                          ...room,
+                          stygianWell: {
+                            offerKeyBySlot: {
+                              healing: 'ArmorBoostStore',
+                              secondLeft: null,
+                              secondRight: null,
+                            },
+                            interacted: true,
+                            twistResultKeyBySlot: { healing: 'TemporaryBoonRarityTrait' },
+                          },
+                        },
+                  ),
+                },
+              },
+        ),
+      },
+    };
+    const assembled = assembly(document);
+    const finding = assembled.evaluation.findings.find(
+      (entry) => entry.code === 'stygianWellTwistInvalid',
+    );
+    if (finding === undefined) throw new Error('orphan finding missing');
+    const workspace = structuredWorkspace.project(assembled);
+    expect(destination(workspace, finding.origin)).toMatchObject({
+      focusAddress: finding.origin,
+      roomTab: 'overview',
+    });
+    const control = [...workspace.interactions.stygianWellTwistResults.values()].find(
+      (entry) => entry.generationKey === 'initial:healing',
+    );
+    if (control === undefined) throw new Error('orphan repair missing');
+    expect(control.candidateItemKeys).toEqual([]);
+    const repaired = applyProjectCommand(document, catalog, control.intentFor(null).command);
+    expect(
+      assembly(repaired).evaluation.findings.some(
+        (entry) => entry.code === 'stygianWellTwistInvalid',
+      ),
+    ).toBe(false);
+  });
+
+  it('keeps a resource retained at an unsupported room available for removal', () => {
+    const original = createGoldenFGHIProject();
+    const occurrenceId = createOccurrenceId('golden-f-preboss-shop:postboss');
+    const document: ProjectDocument = {
+      ...original,
+      route: {
+        ...original.route,
+        resourcePlacements: {
+          ...original.route.resourcePlacements,
+          Fishing: { biomeKey: 'F', occurrenceId },
+        },
+      },
+    };
+    const assembled = assembly(document);
+    const finding = assembled.evaluation.findings.find(
+      (entry) => entry.code === 'resourcePlacementUnavailable',
+    );
+    if (finding === undefined) throw new Error('resource finding missing');
+    const workspace = structuredWorkspace.project(assembled);
+    const room = occurrenceWorkbenchFor(biome(workspace, 'F'), occurrenceId);
+    expect(room.room.resources).toContainEqual(
+      expect.objectContaining({ family: 'Fishing', action: 'remove', legal: false }),
+    );
+    expect(destination(workspace, finding.origin)).toMatchObject({
+      focusAddress: finding.origin,
+      roomTab: 'overview',
+      inspectorSubject: { kind: 'node', nodeKey: room.key },
+    });
+  });
+
+  it('routes forced-missing Shrine inventory findings to repairable offer rows', () => {
+    const document = removeForcedShrineInventory(loadSurfaceNOCheckpoint());
+    const assembled = assembly(document);
+    const findings = assembled.evaluation.findings.filter(
+      (finding) => finding.code === 'hermesShrineInventoryMissing',
+    );
+    expect(findings).toHaveLength(3);
+    const workspace = project(document);
+    const n = biome(workspace, 'N');
+    const workbench = occurrenceWorkbenchFor(n, 'surface-n-preboss:postboss');
+    const shrine = workbench.room.workbench.features.find(
+      (feature) => feature.kind === 'hermesShrine',
+    );
+    if (shrine?.kind !== 'hermesShrine') throw new Error('forced Shrine feature is missing');
+    expect(shrine.slots).toHaveLength(3);
+    for (const finding of findings) {
+      expect(finding.origin.kind).toBe('roomFeature');
+      if (finding.origin.kind !== 'roomFeature') continue;
+      expect(finding.origin.target.kind).toBe('hermesShrineOffer');
+      expect(destination(workspace, finding.origin)).toMatchObject({
+        focusAddress: finding.origin,
+        inspectorSubject: { kind: 'node', nodeKey: workbench.key },
+        nodeKey: workbench.key,
+        roomTab: 'overview',
+      });
+    }
+    expect(
+      [...workspace.interactions.hermesShrineOffers.values()].filter((interaction) =>
+        interaction.key.startsWith(
+          `hermesShrineOffer:${semanticAddressKey(workbench.room.address)}`,
+        ),
+      ),
+    ).toHaveLength(3);
+
+    const repaired = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: workbench.room.address,
+      slotKey: 'first',
+      value: { rewardType: 'HealBigDrop' },
+    });
+    const repairedOccurrence = repaired.route.biomes
+      .find((candidate) => candidate.biomeKey === 'N')
+      ?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === 'surface-n-preboss:postboss',
+      );
+    expect(repairedOccurrence?.hermesShrine?.offerBySlot.first).toEqual({
+      rewardType: 'HealBigDrop',
+    });
+  });
+
+  it('routes Fields capacity findings to Overview from a non-Overview authoring surface', () => {
+    const occurrence = createOccurrenceAddress(
+      goldenHBiome,
+      createOccurrenceId('golden-h-combat09'),
+    );
+    const phase = createEncounterPhaseAddress(
+      goldenHBiome,
+      { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+      'Passive',
+    );
+    let document = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisRandomEvent',
+    });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceFieldsOptionalRewardCount',
+      occurrence,
+      optionalRewardCount: 2,
+    });
+    const assembled = assembly(document);
+    const finding = assembled.evaluation.findings.find(
+      (candidate) => candidate.code === 'fieldsOptionalCapacityUnavailable',
+    );
+    if (finding === undefined) throw new Error('Fields capacity finding is missing');
+    const workspace = project(document);
+    const h = biome(workspace, 'H');
+    const workbench = occurrenceWorkbenchFor(h, occurrence.occurrenceId);
+    const nemesis = workbench.room.encounterPhases.find(
+      (entry) => entry.nemesisEvent !== undefined,
+    )?.nemesisEvent;
+    if (nemesis === undefined) throw new Error('Nemesis editor missing');
+    expect(destination(workspace, nemesis.owner)).toMatchObject({
+      focusAddress: nemesis.owner,
+      inspectorSubject: { kind: 'node', nodeKey: workbench.key },
+    });
+    expect(destination(workspace, finding.origin)).toMatchObject({
+      focusAddress: finding.origin,
+      inspectorSubject: { kind: 'node', nodeKey: workbench.key },
+      nodeKey: workbench.key,
+      roomTab: 'overview',
+    });
+  });
+
+  it('keeps Well, Pool, and additional-exit markers on their occurrence Overview', () => {
+    const workspace = project(createGoldenFGHIProject());
+    const f = biome(workspace, 'F');
+    const workbench = occurrenceWorkbenchFor(f, 'golden-f-preboss-shop:postboss');
+    const well = workbench.room.workbench.features.find(
+      (feature) => feature.kind === 'stygianWell',
+    );
+    const pool = workbench.room.workbench.features.find(
+      (feature) => feature.kind === 'purgingPool',
+    );
+    if (well?.kind !== 'stygianWell' || pool?.kind !== 'purgingPool') {
+      throw new Error('forced Well and Pool features are missing');
+    }
+    if (well.inventoryAddress === undefined || pool.inventoryAddress === undefined) {
+      throw new Error('Well and Pool inventory markers are missing');
+    }
+    for (const address of [well.presenceAddress, well.inventoryAddress, pool.inventoryAddress]) {
+      expect(destination(workspace, address)).toMatchObject({
+        focusAddress: address,
+        inspectorSubject: { kind: 'node', nodeKey: workbench.key },
+        nodeKey: workbench.key,
+        roomTab: 'overview',
+      });
+    }
+    const chaosRoom = f.nodes.find(
+      (node): node is Extract<typeof node, { readonly kind: 'occurrenceWorkbench' }> =>
+        node.kind === 'occurrenceWorkbench' && node.room.chaosSpawn !== undefined,
+    );
+    if (chaosRoom?.room.chaosSpawn === undefined) throw new Error('Chaos marker is missing');
+    expect(destination(workspace, chaosRoom.room.chaosSpawn.owner)).toMatchObject({
+      focusAddress: chaosRoom.room.chaosSpawn.owner,
+      inspectorSubject: { kind: 'node', nodeKey: chaosRoom.key },
+      nodeKey: chaosRoom.key,
+      roomTab: 'overview',
+    });
+  });
+
   it('routes an invalid Travel Deal refill finding to its containing Shop and remove-only action row', () => {
     const configured = staleTravelDealShopProject();
     const assembled = assembly(configured.document);

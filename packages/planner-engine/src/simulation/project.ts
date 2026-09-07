@@ -3,6 +3,7 @@ import {
   createBiomeAddress,
   createKeepsakeEquipResultAddress,
   createOccurrenceAddress,
+  createRoomFeatureAddress,
   createRouteStartKeepsakeSelectionAddress,
   semanticAddressKey,
 } from '../authored-project/addresses';
@@ -145,9 +146,12 @@ function evaluateRouteAssembly(
       code: 'resourcePlacementUnavailable' as const,
       severity: 'error' as const,
       phase: 'roomGeneration' as const,
-      origin: createOccurrenceAddress(
-        createBiomeAddress(route.routeKey, placement.biomeKey),
-        placement.occurrenceId,
+      origin: createRoomFeatureAddress(
+        createOccurrenceAddress(
+          createBiomeAddress(route.routeKey, placement.biomeKey),
+          placement.occurrenceId,
+        ),
+        { kind: 'resource', family },
       ),
       evidence: Object.freeze({ family, reasons: assessment?.reasons ?? [] }),
     });

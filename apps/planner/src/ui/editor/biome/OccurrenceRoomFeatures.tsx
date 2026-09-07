@@ -137,7 +137,7 @@ function ChaosSpawnWorkbench({
       />
       <span>Chaos Gate</span>
       <span className="owner-markers">
-        {feature.action === 'add' ? <SemanticOwnerMarker address={owner} /> : null}
+        <SemanticOwnerMarker address={owner} />
       </span>
     </label>
   );
@@ -258,6 +258,7 @@ function RoomResourceControls({
               type="checkbox"
             />
             <span>{resource.label}</span>
+            <SemanticOwnerMarker address={resource.address} />
           </label>
           {resource.action === 'move' && resource.currentPlacement !== undefined ? (
             <span className="resource-placement-disclosure">
@@ -424,7 +425,11 @@ export function RoomFeaturesWorkbench({
                         type="checkbox"
                       />
                       <span>Stygian Well</span>
+                      <SemanticOwnerMarker address={feature.presenceAddress} />
                     </label>
+                    {feature.inventoryAddress === undefined ? null : (
+                      <SemanticOwnerMarker address={feature.inventoryAddress} />
+                    )}
                     {feature.interactionKey === undefined
                       ? null
                       : (() => {
@@ -472,6 +477,7 @@ export function RoomFeaturesWorkbench({
                     <label className="room-feature-presence-row">
                       <input aria-label="Pool of Purging" checked disabled type="checkbox" />
                       <span>Pool of Purging</span>
+                      <SemanticOwnerMarker address={feature.inventoryAddress} />
                     </label>
                     <label className="room-feature-interact-toggle">
                       <input
@@ -503,6 +509,7 @@ export function RoomFeaturesWorkbench({
                                 executeIntent(interaction.intentFor(traitKey))
                               }
                             />
+                            <SemanticOwnerMarker address={slot.address} />
                             {slot.sale === undefined
                               ? null
                               : (() => {
@@ -577,7 +584,11 @@ export function RoomFeaturesWorkbench({
                       type="checkbox"
                     />
                     <span>Hermes Shrine</span>
+                    <SemanticOwnerMarker address={feature.presenceAddress} />
                   </label>
+                  {feature.inventoryAddress === undefined ? null : (
+                    <SemanticOwnerMarker address={feature.inventoryAddress} />
+                  )}
                   {feature.slots.map((slot) => {
                     const offer = requireWorkspaceInteraction(
                       interactions.hermesShrineOffers,
@@ -590,6 +601,7 @@ export function RoomFeaturesWorkbench({
                     return (
                       <HermesShrineSlotEditor
                         key={slot.key}
+                        marker={slot.marker}
                         label={slot.label}
                         {...(slot.rewardLabel === undefined
                           ? {}
@@ -606,6 +618,7 @@ export function RoomFeaturesWorkbench({
                         return (
                           <HermesShrineSlotEditor
                             label="Travel Deal"
+                            marker={refill.marker}
                             {...(refill.rewardLabel === undefined
                               ? {}
                               : { rewardLabel: refill.rewardLabel })}
@@ -741,6 +754,7 @@ function StygianWellSlotEditor({
         placeholder="Unresolved"
         {...(slot.itemLabel === undefined ? {} : { triggerLabel: slot.itemLabel })}
       />
+      <SemanticOwnerMarker address={slot.address} />
       <label className="shop-family-participation">
         <input
           aria-label={`Purchased Stygian Well ${slot.label}`}
@@ -752,20 +766,25 @@ function StygianWellSlotEditor({
         Purchased
       </label>
       {twist === undefined ? null : (
-        <ContextualPicker
-          ariaLabel={`Stygian Well ${slot.label} Twist result`}
-          id={`${twist.key}-picker`}
-          label={`${slot.label} Twist result`}
-          layout="inline"
-          loading={twistPicker.pending}
-          model={twistPicker.result ?? emptyNullablePicker}
-          onOpenChange={(open) => {
-            if (open) twistPicker.activate();
-          }}
-          onSelect={(itemKey) => executeIntent(twist.intentFor(itemKey))}
-          placeholder="Unresolved"
-          {...(slot.twist!.itemLabel === undefined ? {} : { triggerLabel: slot.twist!.itemLabel })}
-        />
+        <>
+          <ContextualPicker
+            ariaLabel={`Stygian Well ${slot.label} Twist result`}
+            id={`${twist.key}-picker`}
+            label={`${slot.label} Twist result`}
+            layout="inline"
+            loading={twistPicker.pending}
+            model={twistPicker.result ?? emptyNullablePicker}
+            onOpenChange={(open) => {
+              if (open) twistPicker.activate();
+            }}
+            onSelect={(itemKey) => executeIntent(twist.intentFor(itemKey))}
+            placeholder="Unresolved"
+            {...(slot.twist!.itemLabel === undefined
+              ? {}
+              : { triggerLabel: slot.twist!.itemLabel })}
+          />
+          <SemanticOwnerMarker address={slot.twist!.address} />
+        </>
       )}
     </div>
   );
@@ -773,11 +792,13 @@ function StygianWellSlotEditor({
 
 function HermesShrineSlotEditor({
   label,
+  marker,
   rewardLabel,
   offer,
   purchase,
 }: {
   readonly label: string;
+  readonly marker: import('@planner/projections/structured-workspace').WorkspaceMarker;
   readonly rewardLabel?: string;
   readonly offer: import('@planner/projections/structured-workspace').WorkspaceHermesShrineOfferInteraction;
   readonly purchase: import('@planner/projections/structured-workspace').WorkspaceHermesShrinePurchaseInteraction;
@@ -802,6 +823,7 @@ function HermesShrineSlotEditor({
         placeholder="Unresolved"
         {...(rewardLabel === undefined ? {} : { triggerLabel: rewardLabel })}
       />
+      <SemanticOwnerMarker address={marker.address} />
       <label className="shop-family-participation">
         <input
           aria-label={`Purchased Hermes Shrine ${label}`}

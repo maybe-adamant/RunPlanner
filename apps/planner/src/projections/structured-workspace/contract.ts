@@ -25,6 +25,7 @@ import {
   type LocalVisitOrderAddress,
   type LocalVisitSlotAddress,
   type RoomActionAddress,
+  type RoomFeatureAddress,
   type RoomActionReference,
   type ShopOfferAddress,
   type OccurrenceAddress,
@@ -1968,6 +1969,7 @@ export interface WorkspaceEncounterPhase {
     readonly label: string;
   };
   readonly nemesisEvent?: {
+    readonly marker: WorkspaceMarker;
     readonly owner: NemesisRandomEventAddress;
     readonly reward: ResolvedRewardOffer | null;
     readonly value: AuthoredNemesisRandomEventOutcome | null;
@@ -2030,6 +2032,8 @@ export type WorkspaceRoomLocal =
       readonly optionalRewardCount: number;
       readonly optionalRewardCapacity: number;
       readonly optionalRewardCountValues: readonly number[];
+      readonly optionalRewardCountAddress: RoomFeatureAddress;
+      readonly optionalRewardCountMarker: WorkspaceMarker;
       readonly optionalRewards: readonly WorkspaceFieldsOptionalRewardDescriptor[];
       readonly owner: OccurrenceAddress;
       readonly groupKey: string;
@@ -2076,6 +2080,7 @@ export type WorkspaceRoomFeature =
   | {
       readonly kind: 'chaos';
       readonly action: 'remove';
+      readonly marker: WorkspaceMarker;
       readonly presence:
         | Extract<WorkspaceFeaturePresence, { readonly kind: 'optionalPresent' }>
         | Extract<WorkspaceFeaturePresence, { readonly kind: 'forcedPresent' }>;
@@ -2085,6 +2090,8 @@ export type WorkspaceRoomFeature =
       /** Fixed Postboss inventory; candidates are produced by the engine assessment. */
       readonly kind: 'purgingPool';
       readonly assessment: WorkspaceFeatureAssessment;
+      readonly inventoryAddress: RoomFeatureAddress;
+      readonly inventoryMarker: WorkspaceMarker;
       readonly interactionKey: string;
       readonly interacted: boolean;
       readonly slots: readonly {
@@ -2093,6 +2100,8 @@ export type WorkspaceRoomFeature =
         readonly interactionKey: string;
         readonly key: 'left' | 'middle' | 'right';
         readonly label: string;
+        readonly address: RoomFeatureAddress;
+        readonly marker: WorkspaceMarker;
         readonly sale?: { readonly sold: boolean };
         readonly traitLabel?: string;
         readonly traitKey: string | null;
@@ -2103,9 +2112,15 @@ export type WorkspaceRoomFeature =
       readonly kind: 'hermesShrine';
       readonly assessment: WorkspaceFeatureAssessment;
       readonly presence: WorkspaceFeaturePresence;
+      readonly presenceAddress: RoomFeatureAddress;
+      readonly presenceMarker: WorkspaceMarker;
+      readonly inventoryAddress?: RoomFeatureAddress;
+      readonly inventoryMarker?: WorkspaceMarker;
       readonly presenceInteractionKey?: string;
       readonly slots: readonly {
         readonly key: import('@run-planner/engine/authored-project').HermesShrineSlotKey;
+        readonly address: RoomFeatureAddress;
+        readonly marker: WorkspaceMarker;
         readonly label: string;
         readonly rewardType: string | null;
         readonly rewardLabel?: string;
@@ -2120,6 +2135,8 @@ export type WorkspaceRoomFeature =
           import('@run-planner/engine/authored-project').HermesShrinePurchase | null;
       }[];
       readonly travelDealRefill?: {
+        readonly address: RoomFeatureAddress;
+        readonly marker: WorkspaceMarker;
         readonly rewardType: string | null;
         readonly rewardLabel?: string;
         readonly candidateRewardTypes: readonly string[];
@@ -2137,6 +2154,10 @@ export type WorkspaceRoomFeature =
       readonly kind: 'stygianWell';
       readonly assessment: WorkspaceFeatureAssessment;
       readonly presence: WorkspaceFeaturePresence;
+      readonly presenceAddress: RoomFeatureAddress;
+      readonly presenceMarker: WorkspaceMarker;
+      readonly inventoryAddress?: RoomFeatureAddress;
+      readonly inventoryMarker?: WorkspaceMarker;
       readonly presenceInteractionKey?: string;
       readonly interactionKey?: string;
       readonly interacted: boolean;
@@ -2144,6 +2165,8 @@ export type WorkspaceRoomFeature =
         readonly key:
           import('@run-planner/engine/authored-project').StygianWellSlotKey | 'travelDealRefill';
         readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
+        readonly address: RoomFeatureAddress;
+        readonly marker: WorkspaceMarker;
         readonly label: string;
         readonly itemKey: string | null;
         readonly itemLabel?: string;
@@ -2153,6 +2176,8 @@ export type WorkspaceRoomFeature =
         readonly purchaseInteractionKey: string;
         readonly purchased: boolean;
         readonly twist?: {
+          readonly address: RoomFeatureAddress;
+          readonly marker: WorkspaceMarker;
           readonly itemKey: string | null;
           readonly itemLabel?: string;
           readonly candidateItemKeys: readonly string[];
@@ -2247,8 +2272,10 @@ export interface WorkspaceRoomSummary {
   readonly rewardControls: readonly WorkspaceRewardControl[];
   /** Route-owned selected successful tool interactions, presented at their exact room. */
   readonly resources?: readonly {
+    readonly address: RoomFeatureAddress;
     readonly family: import('@run-planner/engine/catalog-schema').ResourceFamily;
     readonly label: string;
+    readonly marker: WorkspaceMarker;
     readonly action: 'add' | 'move' | 'remove';
     readonly interactionKey: string;
     readonly legal: boolean;

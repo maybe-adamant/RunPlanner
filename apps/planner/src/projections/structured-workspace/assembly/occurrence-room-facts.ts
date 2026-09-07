@@ -20,6 +20,7 @@ import {
   type AcquisitionSiteAddress,
   type AuthoredRewardState,
   createFieldsSpatialAddress,
+  createRoomFeatureAddress,
   type FieldsSpatialTarget,
 } from '@run-planner/engine/authored-project';
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
@@ -293,6 +294,7 @@ function roomLocalForOccurrence(
   controls: readonly WorkspaceRewardControl[],
 ): WorkspaceRoomLocal {
   const { occurrence } = input;
+  const address = createOccurrenceAddress(input.biome, occurrence.occurrenceId);
   const incoming = createIncomingRewardAddress(input.biome, occurrence.occurrenceId);
   switch (occurrence.state.kind) {
     case 'none':
@@ -481,6 +483,12 @@ function roomLocalForOccurrence(
         owner: createOccurrenceAddress(input.biome, occurrence.occurrenceId),
         optionalRewardCount: occurrence.state.optionalRewardCount,
         optionalRewardCapacity: optionalDescriptor.optionalRewardCapacity,
+        optionalRewardCountAddress: createRoomFeatureAddress(address, {
+          kind: 'fieldsOptionalRewardCount',
+        }),
+        optionalRewardCountMarker: input.markerDestinations.marker(
+          createRoomFeatureAddress(address, { kind: 'fieldsOptionalRewardCount' }),
+        ),
         optionalRewardCountValues: (() => {
           const support = fieldsOptionalRewardCountSupport(
             input.catalog,

@@ -1,5 +1,8 @@
 import type { Catalog } from '../../../../catalog-schema';
 import {
+  createAdditionalExitAddress,
+  createBiomeAddress,
+  createRoomFeatureAddress,
   createRoomRunStateCheckpointAddress,
   type OccurrenceAddress,
 } from '../../../../authored-project/addresses';
@@ -69,8 +72,10 @@ export function applyRoomEnteredTransition(
   const findings: LifecycleFinding[] = [];
   if (room !== undefined) {
     const declaration = catalog.rooms.byKey[room.gameName];
-    const capable =
-      declaration?.additionalExits.some((exit) => exit.kind === 'chaos' && exit.canHost) === true;
+    const chaosDeclaration = declaration?.additionalExits.find(
+      (exit) => exit.kind === 'chaos' && exit.canHost,
+    );
+    const capable = chaosDeclaration !== undefined;
     const chaosGate = chaosGateSourceOccurrenceIds.has(room.occurrenceId);
     const ixionGeneratedChaos = ixionGeneratedChaosSourceOccurrenceIds.has(room.occurrenceId);
     const ixionPending = next.some((branch) => branch.stygianWell.sparkUses > 0);
@@ -78,7 +83,15 @@ export function applyRoomEnteredTransition(
     if (capable && ixionPending && !chaosGate)
       findings.push(
         Object.freeze({
-          finding: rewardFinding('ixionChaosMissing', room.origin, { gameName: room.gameName }),
+          finding: rewardFinding(
+            'ixionChaosMissing',
+            createAdditionalExitAddress(
+              createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+              room.origin.occurrenceId,
+              chaosDeclaration!.key,
+            ),
+            { gameName: room.gameName },
+          ),
           region: ownerRegion(room.origin),
           chronology: findingChronology,
         }),
@@ -86,7 +99,15 @@ export function applyRoomEnteredTransition(
     if (ixionGeneratedChaos && !ixionPending)
       findings.push(
         Object.freeze({
-          finding: rewardFinding('ixionChaosUnavailable', room.origin, { gameName: room.gameName }),
+          finding: rewardFinding(
+            'ixionChaosUnavailable',
+            createAdditionalExitAddress(
+              createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+              room.origin.occurrenceId,
+              'chaos',
+            ),
+            { gameName: room.gameName },
+          ),
           region: ownerRegion(room.origin),
           chronology: findingChronology,
         }),
@@ -141,10 +162,19 @@ export function applyRoomEnteredTransition(
       for (const finding of assessment.findings)
         findings.push(
           Object.freeze({
-            finding: rewardFinding(finding.code, room.origin, {
-              ...finding.evidence,
-              ...(finding.slotKey === undefined ? {} : { slotKey: finding.slotKey }),
-            }),
+            finding: rewardFinding(
+              finding.code,
+              finding.slotKey === undefined
+                ? createRoomFeatureAddress(room.origin, { kind: 'purgingPoolInventory' })
+                : createRoomFeatureAddress(room.origin, {
+                    kind: 'purgingPoolOffer',
+                    slotKey: finding.slotKey,
+                  }),
+              {
+                ...finding.evidence,
+                ...(finding.slotKey === undefined ? {} : { slotKey: finding.slotKey }),
+              },
+            ),
             region: ownerRegion(room.origin),
             chronology: findingChronology,
           }),
@@ -202,7 +232,14 @@ export function applyRoomEnteredTransition(
           for (const slotKey of ['first', 'secondLeft', 'secondRight'] as const)
             findings.push(
               Object.freeze({
-                finding: rewardFinding('hermesShrineInventoryMissing', room.origin, { slotKey }),
+                finding: rewardFinding(
+                  'hermesShrineInventoryMissing',
+                  createRoomFeatureAddress(room.origin, {
+                    kind: 'hermesShrineOffer',
+                    generationKey: `initial:${slotKey}`,
+                  }),
+                  { slotKey },
+                ),
                 region: ownerRegion(room.origin),
                 chronology: findingChronology,
               }),
@@ -211,9 +248,11 @@ export function applyRoomEnteredTransition(
         if (assessment.inventory !== undefined && !assessment.placement.eligible)
           findings.push(
             Object.freeze({
-              finding: rewardFinding('hermesShrinePlacementUnavailable', room.origin, {
-                priorShrineCount: assessment.placement.priorShrineCount,
-              }),
+              finding: rewardFinding(
+                'hermesShrinePlacementUnavailable',
+                createRoomFeatureAddress(room.origin, { kind: 'hermesShrinePresence' }),
+                { priorShrineCount: assessment.placement.priorShrineCount },
+              ),
               region: ownerRegion(room.origin),
               chronology: findingChronology,
             }),
@@ -231,7 +270,12 @@ export function applyRoomEnteredTransition(
             Object.freeze({
               finding: rewardFinding(
                 code,
-                room.origin,
+                'slotKey' in issue
+                  ? createRoomFeatureAddress(room.origin, {
+                      kind: 'hermesShrineOffer',
+                      generationKey: `initial:${issue.slotKey}`,
+                    })
+                  : createRoomFeatureAddress(room.origin, { kind: 'hermesShrineInventory' }),
                 'slotKey' in issue ? { slotKey: issue.slotKey } : {},
               ),
               region: ownerRegion(room.origin),
@@ -281,27 +325,46 @@ export function applyRoomEnteredTransition(
         if (assessment.inventory !== undefined && !assessment.placement.eligible)
           findings.push(
             Object.freeze({
-              finding: rewardFinding('stygianWellPlacementUnavailable', room.origin, {
-                priorWellCount: assessment.placement.priorWellCount,
-              }),
+              finding: rewardFinding(
+                'stygianWellPlacementUnavailable',
+                createRoomFeatureAddress(room.origin, { kind: 'stygianWellPresence' }),
+                { priorWellCount: assessment.placement.priorWellCount },
+              ),
               region: ownerRegion(room.origin),
               chronology: findingChronology,
             }),
           );
         for (const issue of assessment.inventory?.issues ?? []) {
           const code =
-            issue === 'missing'
+            issue.kind === 'missing'
               ? 'stygianWellMissing'
-              : issue === 'wrongGroup'
+              : issue.kind === 'wrongGroup'
                 ? 'stygianWellWrongGroup'
-                : issue === 'duplicate'
+                : issue.kind === 'duplicate'
                   ? 'stygianWellDuplicate'
-                  : issue.startsWith('refill')
+                  : issue.kind.startsWith('refill')
                     ? 'stygianWellTravelDealRefillUnavailable'
                     : 'stygianWellTwistInvalid';
+          const origin =
+            issue.kind === 'duplicate'
+              ? createRoomFeatureAddress(room.origin, { kind: 'stygianWellInventory' })
+              : issue.kind.startsWith('refill')
+                ? createRoomFeatureAddress(room.origin, {
+                    kind: 'stygianWellOffer',
+                    generationKey: 'travelDealRefill',
+                  })
+                : issue.kind.startsWith('twist')
+                  ? createRoomFeatureAddress(room.origin, {
+                      kind: 'stygianWellTwist',
+                      generationKey: issue.generationKey,
+                    })
+                  : createRoomFeatureAddress(room.origin, {
+                      kind: 'stygianWellOffer',
+                      generationKey: issue.generationKey,
+                    });
           findings.push(
             Object.freeze({
-              finding: rewardFinding(code, room.origin, { reason: issue }),
+              finding: rewardFinding(code, origin, { reason: issue.kind }),
               region: ownerRegion(room.origin),
               chronology: findingChronology,
             }),

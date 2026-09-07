@@ -277,10 +277,13 @@ export function EncounterPhaseControl({
             workspaceInteractionKey(phase.nemesisEvent.owner),
           );
           return interaction === undefined ? null : (
-            <NemesisEventEditor
-              interaction={interaction}
-              key={`${interaction.key}:${JSON.stringify(interaction.value)}`}
-            />
+            <>
+              <SemanticOwnerMarker address={phase.nemesisEvent.owner} />
+              <NemesisEventEditor
+                interaction={interaction}
+                key={`${interaction.key}:${JSON.stringify(interaction.value)}`}
+              />
+            </>
           );
         })();
   if (!phase.customizable) {
@@ -355,6 +358,7 @@ export function FieldsWorkbench({
       )}
       <label className="field-control field-control-inline">
         <span>Optional pickups</span>
+        <SemanticOwnerMarker address={room.optionalRewardCountAddress} />
         <select
           aria-label="Optional pickups"
           onChange={(event) =>

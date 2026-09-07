@@ -16,7 +16,7 @@ function resourceFamilyLabel(family: ResourceFamily): string {
 /** Project the user-facing successful outcome from the declaration-owned rule. */
 export function resourceOutcomeLabel(
   family: ResourceFamily,
-  element: 'Fire' | 'Air' | 'Earth' | 'Water',
+  element?: 'Fire' | 'Air' | 'Earth' | 'Water',
 ): string {
-  return `Successful ${resourceFamilyLabel(family)} — ${element}`;
+  return `Successful ${resourceFamilyLabel(family)}${element === undefined ? '' : ` — ${element}`}`;
 }

@@ -99,7 +99,9 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
   }
 
   for (const source of rooms.values()) {
-    fieldsSpatialFindings(catalog, source).forEach((value) => addFinding(value));
+    fieldsSpatialFindings(catalog, source).forEach((value) =>
+      addFinding(value, ownerRegion(source.origin)),
+    );
     const sourceDeclaration = catalog.rooms.byKey[source.gameName];
     if (sourceDeclaration === undefined) continue;
     const parentHistory: ProgressiveRoomHistoryViews | undefined = history.rooms.find(
