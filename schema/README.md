@@ -1,15 +1,16 @@
 # Project schema boundary
 
-Schema 77 is the current Run Planner document baseline. It admits the complete
-selected-trait consequence inside Echo's Boon Boon Boon outcome. Migrate the
-immediately preceding single-route schema with:
+Schema 78 is the current Run Planner document baseline. It adds
+occurrence-owned Fields entry, cage, optional-reward, and Passive Nemesis
+placement leaves. Migrate the immediately preceding single-route schema with:
 
 ```bash
-npm run schema:migrate-76-to-77 -- path/to/schema-76-project.runplanner.json
+npm run schema:migrate-77-to-78 -- path/to/schema-77-project.runplanner.json
 ```
 
-The command writes one `-schema77` sibling, preserves the complete authored
-route, and never overwrites the source.
+The command writes one `-schema78` sibling, preserves the complete authored
+route, initializes the new Fields placements as unresolved, and never
+overwrites the source.
 
 A schema-72 document contains two independent route plans, so its boundary is
 a reviewed one-to-many split rather than a route-selection migration.
@@ -25,7 +26,7 @@ output. It has no route-selection, in-place, or target-version mode.
 
 The schema-72 splitter's pure transformation is exported from
 `schema/split-project-72-to-73.js` for checkpoint conversion. The source value
-is never mutated. The production decoder accepts schema 77 only; stale
+is never mutated. The production decoder accepts schema 78 only; stale
 documents are not migrated implicitly in the application.
 
 Migrate a schema-74 document with:
@@ -51,6 +52,17 @@ npm run schema:migrate-75-to-76 -- path/to/schema-75-project.runplanner.json
 The command adds a `null` result for each existing Anvil World Shop offer and
 never overwrites the source. New Anvil purchases remain unresolved until the
 author selects their result.
+
+## Schema 76 to 77
+
+Completes Echo Boon Boon Boon's nested selected result with the three
+option-owned volatile carrier consequences.
+
+```bash
+npm run schema:migrate-76-to-77 -- path/to/schema-76-project.runplanner.json
+```
+
+The command writes one `-schema77` sibling and never overwrites the source.
 
 Run the focused boundary tests with:
 

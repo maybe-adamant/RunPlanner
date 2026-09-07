@@ -5,7 +5,6 @@ import {
   applyProjectCommand,
   createEncounterPhaseAddress,
   createFieldsSpatialAddress,
-  createNemesisRandomEventAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   decodeProjectDocument,
@@ -255,7 +254,7 @@ describe('authored Fields occurrence payload commands', () => {
     expect(fieldsState(project, occurrenceId).optionalRewardCount).toBe(3);
   });
 
-  it('reduces a two-point H room to one optional reward while Passive Nemesis is active', () => {
+  it('requires a free optional point for Passive Nemesis in a two-point H room', () => {
     const occurrenceId = createOccurrenceId('golden-h-combat09');
     const occurrence = createOccurrenceAddress(goldenHBiome, occurrenceId);
     const passive = createEncounterPhaseAddress(
@@ -263,7 +262,7 @@ describe('authored Fields occurrence payload commands', () => {
       { kind: 'occurrence', occurrenceId },
       'Passive',
     );
-    const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'SelectEncounter',
       phase: passive,
       encounterKey: 'NemesisRandomEvent',
@@ -280,11 +279,51 @@ describe('authored Fields occurrence payload commands', () => {
       effectiveMaximum: 1,
       reservesNemesisPosition: true,
     });
-    expect(simulateProjectAssembly(catalog, project).evaluation.findings).toContainEqual(
+    const overCapacityFindings = simulateProjectAssembly(catalog, project).evaluation.findings;
+    expect(overCapacityFindings).toContainEqual(
       expect.objectContaining({
-        code: 'fieldsOptionalCapacityUnavailable',
-        origin: createNemesisRandomEventAddress(passive),
+        code: 'fieldsSpatialPointMissing',
+        origin: createFieldsSpatialAddress(occurrence, { kind: 'nemesis' }),
+        evidence: expect.objectContaining({ supportPointIds: [] }),
       }),
     );
+    expect(overCapacityFindings).toContainEqual(
+      expect.objectContaining({
+        code: 'fieldsOptionalCapacityUnavailable',
+        origin: createFieldsSpatialAddress(occurrence, { kind: 'nemesis' }),
+      }),
+    );
+    expect(
+      overCapacityFindings.filter(
+        (finding) => finding.code === 'fieldsOptionalCapacityUnavailable',
+      ),
+    ).toHaveLength(1);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFieldsOptionalRewardCount',
+      occurrence,
+      optionalRewardCount: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFieldsSpatialPoint',
+      spatial: createFieldsSpatialAddress(occurrence, { kind: 'nemesis' }),
+      pointId: 715349,
+    });
+    const repairedFindings = simulateProjectAssembly(catalog, project).evaluation.findings;
+    expect(repairedFindings).not.toContainEqual(
+      expect.objectContaining({
+        code: 'fieldsSpatialPointMissing',
+        origin: createFieldsSpatialAddress(occurrence, { kind: 'nemesis' }),
+      }),
+    );
+    expect(repairedFindings).not.toContainEqual(
+      expect.objectContaining({ code: 'fieldsOptionalCapacityUnavailable' }),
+    );
+    expect(
+      repairedFindings.filter(
+        (finding) =>
+          finding.code.startsWith('fieldsSpatial') ||
+          finding.code === 'fieldsOptionalCapacityUnavailable',
+      ),
+    ).toEqual([]);
   });
 });

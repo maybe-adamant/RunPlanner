@@ -7,11 +7,11 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 77 Boundary
+## Schema 78 Boundary
 
-Schema 77 is the sole persisted authored-project contract. The codec rejects
+Schema 78 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
-state for a stale document. The immediately preceding schema 76 has one focused
+state for a stale document. The immediately preceding schema 77 has one focused
 linear migration. The older conversion retained at this boundary is the
 standalone schema-72-to-73 splitter: schema 72 contains two independent route
 plans, so it emits one schema-73 document for each route and applies the
@@ -143,6 +143,10 @@ blessing operand map. Schema 76 adds the exact declaration-owned Anvil of Fates
 result to a purchased World Shop offer. Schema 77 admits the three
 option-owned volatile carrier consequences described below inside Echo Boon
 Boon Boon's nested selected result; it introduces no second consequence model.
+Schema 78 adds the occurrence-owned Fields spatial layout: entry start point,
+cage points, optional-reward points, and the Passive Nemesis point. Migration
+preserves every authored reward, encounter, and Room Action while leaving the
+new placement leaves unresolved for explicit repair.
 
 There is one biome plan and one topology language. Production state and
 semantic addresses have no layout-specific plan family, completion-transition
