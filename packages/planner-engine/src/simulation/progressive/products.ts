@@ -32,6 +32,10 @@ export interface ProgressiveBiomeEvaluation {
   readonly rewards: BiomeRewardSimulation;
   readonly findings: readonly SemanticFinding[];
   readonly blockedAt?: SemanticAddress;
+  /** Cause and location of the selected progressive stop. */
+  readonly blockedKind?: 'incomplete' | 'invalid';
+  readonly blockedRegionKey?: string;
+  readonly blockedLocation?: import('./finding-location').OwnerLocation;
 }
 
 /** The progressive evaluation plus the candidate artifacts it publishes. */

@@ -1,4 +1,5 @@
 export { hexBaseCapacity, hexEffectiveCapacity, attestTalentDropsClosed } from './hex-progress';
+export { authoringReadinessAt, type AuthoringReadiness } from './authoring-readiness';
 export {
   assessPurgingPool,
   isPurgingPoolEligibleTrait,
@@ -417,6 +418,7 @@ export { evaluateBiome, materializedBiomePrefixCoveragePoint } from './biome-eva
 export { simulateProject, simulateProjectAssembly } from './project';
 export type {
   ActiveRouteBiome,
+  AuthoringHorizon,
   BiomeAuthoring,
   BiomeEvaluationBase,
   BiomeEvaluationCheckpoint,

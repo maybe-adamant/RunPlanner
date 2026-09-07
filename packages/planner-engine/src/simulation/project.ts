@@ -25,6 +25,7 @@ import { createTraitHistoryState } from './trait-history';
 import type { BiomeHistoryPrefix } from './history';
 import type { MaterializedBiomePrefix } from './materialization';
 import type { SemanticFinding } from './model';
+import { authoringRegion } from './finding-regions';
 import {
   deriveResourceExecutionPolicy,
   effectiveRouteResourcePlacements,
@@ -42,6 +43,7 @@ import {
   type ProjectBiomeEvaluation,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
+  type AuthoringHorizon,
   type ProjectRouteEvaluation,
 } from './evaluation-products';
 
@@ -117,6 +119,7 @@ interface RouteProjectEvaluationAssembly {
     string,
     import('./candidate-artifacts').KeepsakeEquipResultCandidateCapability
   >;
+  readonly authoringHorizon: AuthoringHorizon;
 }
 
 function evaluateRouteAssembly(
@@ -131,6 +134,7 @@ function evaluateRouteAssembly(
   let active: ActiveRouteBiome | null = null;
   let blockedSuffix: readonly string[] = Object.freeze([]);
   let routeStartBlock: 'incomplete' | 'invalid' | null = null;
+  let authoringHorizon: AuthoringHorizon = Object.freeze({ kind: 'open' });
   const routeStartKeepsakes = new Map<string, KeepsakeSelectionCandidateCapability>();
   const routeStartKeepsakeEquipResults = new Map<
     string,
@@ -188,6 +192,11 @@ function evaluateRouteAssembly(
     const authoredResult = route.loadout.keepsakeEquipResults?.[routeStartEffect.kind];
     if (authoredResult === undefined) {
       routeStartBlock = 'incomplete';
+      authoringHorizon = Object.freeze({
+        kind: 'incomplete',
+        regionKey: authoringRegion(result),
+        repairTarget: result,
+      });
       findings.push(
         Object.freeze({
           code: 'keepsakeEquipResultMissing',
@@ -287,8 +296,18 @@ function evaluateRouteAssembly(
     candidateArtifacts.push(assembled.candidateArtifacts);
     findings.push(...evaluation.findings);
     if (evaluation.authoring === 'incomplete' || evaluation.validity === 'invalid') {
+      if (evaluation.requiredInput !== undefined) {
+        authoringHorizon = Object.freeze({
+          kind: 'incomplete',
+          regionKey: evaluation.requiredInputRegion ?? authoringRegion(evaluation.requiredInput),
+          repairTarget: evaluation.requiredInput,
+        });
+      }
       active = Object.freeze({
-        kind: evaluation.validity === 'invalid' ? 'invalid' : 'incomplete',
+        kind:
+          evaluation.requiredInput !== undefined || evaluation.validity !== 'invalid'
+            ? 'incomplete'
+            : 'invalid',
         biomeKey: evaluation.biomeKey,
       });
       blockedSuffix = Object.freeze(route.biomes.slice(index + 1).map((biome) => biome.biomeKey));
@@ -325,6 +344,7 @@ function evaluateRouteAssembly(
     candidateArtifacts: Object.freeze(candidateArtifacts),
     routeStartKeepsakes,
     routeStartKeepsakeEquipResults,
+    authoringHorizon,
   });
 }
 
@@ -346,6 +366,7 @@ export function simulateProjectAssembly(
     route,
     findings: Object.freeze(route.findings),
     summary: route.summary,
+    authoringHorizon: assembledRoute.authoringHorizon,
   });
   return createExactProjectEvaluationAssembly(
     project,

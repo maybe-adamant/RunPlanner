@@ -335,9 +335,10 @@ describe('contextual option projection', () => {
     const selection = createRouteStartKeepsakeSelectionAddress('Underworld');
     const jeweledPom = createKeepsakeEquipResultAddress(selection, 'jeweledPom');
     const experimentalHammer = createKeepsakeEquipResultAddress(selection, 'experimentalHammer');
+    const transcendentEmbryo = createKeepsakeEquipResultAddress(selection, 'transcendentEmbryo');
     const explanation = (
       code: 'keepsakeEquipResultMissing' | 'keepsakeEquipResultUnavailable',
-      origin: typeof jeweledPom | typeof experimentalHammer,
+      origin: typeof jeweledPom | typeof experimentalHammer | typeof transcendentEmbryo,
     ) =>
       explainCandidateEvaluation(
         catalog,
@@ -355,6 +356,12 @@ describe('contextual option projection', () => {
     );
     expect(explanation('keepsakeEquipResultUnavailable', experimentalHammer)).toBe(
       'Choose a Hammer trait compatible with the active weapon and aspect.',
+    );
+    expect(explanation('keepsakeEquipResultMissing', transcendentEmbryo)).toBe(
+      'Choose the Chaos blessing granted by Transcendent Embryo.',
+    );
+    expect(explanation('keepsakeEquipResultUnavailable', transcendentEmbryo)).toBe(
+      'Choose a Chaos blessing eligible when Transcendent Embryo is equipped.',
     );
   });
 

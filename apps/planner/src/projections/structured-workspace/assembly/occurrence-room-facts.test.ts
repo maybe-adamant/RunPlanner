@@ -170,7 +170,10 @@ describe('occurrence room facts', () => {
     ).toHaveLength(3);
     expect(projected.markers.destinations().get(semanticAddressKey(duplicate))).toMatchObject({
       ownerAddress: duplicate,
-      focusAddress: duplicate,
+      focusAddress: {
+        kind: 'roomAction',
+        occurrenceId: shopId,
+      },
       nodeKey: result.node.key,
     });
   });

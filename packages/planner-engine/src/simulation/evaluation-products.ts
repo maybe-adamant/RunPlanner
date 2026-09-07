@@ -13,6 +13,10 @@ export interface BiomeEvaluationBase {
   readonly authoring: 'incomplete' | 'complete';
   readonly coverage: BiomeEvaluationCoverage;
   readonly findings: readonly SemanticFinding[];
+  /** Present only when this biome owns the active required-input horizon. */
+  readonly requiredInput?: SemanticAddress;
+  readonly requiredInputRegion?: string;
+  readonly requiredInputLocation?: import('./progressive/finding-location').OwnerLocation;
 }
 
 interface IncompleteBiomeProjectEvaluationBase extends BiomeEvaluationBase {
@@ -143,7 +147,16 @@ export interface ProjectEvaluation {
   readonly route: ProjectRouteEvaluation;
   readonly findings: readonly SemanticFinding[];
   readonly summary: RouteEvaluationSummary;
+  readonly authoringHorizon: AuthoringHorizon;
 }
+
+export type AuthoringHorizon =
+  | { readonly kind: 'open' }
+  | {
+      readonly kind: 'incomplete';
+      readonly regionKey: string;
+      readonly repairTarget: SemanticAddress;
+    };
 
 export interface ProjectEvaluationAssembly {
   readonly project: ProjectDocument;
@@ -157,6 +170,9 @@ export function routeStatus(
 ): ProjectRouteEvaluation['status'] {
   if (configuredBiomeCount === 0) return 'empty';
   if (routeStartBlock !== null) return routeStartBlock;
+  if (evaluations.some((evaluation) => evaluation.requiredInput !== undefined)) {
+    return 'incomplete';
+  }
   if (evaluations.some((evaluation) => evaluation.validity === 'invalid')) {
     return 'invalid';
   }
@@ -171,10 +187,10 @@ export function summarizeRoute(
   processing: RouteProcessingRegions,
 ): RouteEvaluationSummary {
   const incompleteBiomeCount = evaluations.filter(
-    (evaluation) => evaluation.authoring === 'incomplete',
+    (evaluation) => evaluation.authoring === 'incomplete' || evaluation.requiredInput !== undefined,
   ).length;
   const invalidBiomeCount = evaluations.filter(
-    (evaluation) => evaluation.validity === 'invalid',
+    (evaluation) => evaluation.validity === 'invalid' && evaluation.requiredInput === undefined,
   ).length;
   return Object.freeze({
     configuredBiomeCount,

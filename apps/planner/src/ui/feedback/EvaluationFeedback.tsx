@@ -72,7 +72,11 @@ export function ProjectFindings({
   const selectedKey = selectedFinding === null ? null : selectedFinding.key;
 
   return (
-    <section className="project-findings" aria-labelledby="project-findings-title">
+    <section
+      className="project-findings"
+      data-findings-present={findings.length > 0 || undefined}
+      aria-labelledby="project-findings-title"
+    >
       <header className="project-findings-heading">
         <h2 id="project-findings-title">Findings</h2>
         <span className="findings-count">{findings.length}</span>

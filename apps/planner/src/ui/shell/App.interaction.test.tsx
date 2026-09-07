@@ -1807,7 +1807,7 @@ describe('planner history interaction', () => {
 
     await user.click(oceanus);
     const blockedBanner = screen.getByText(
-      'Finish and fix Erebus before Oceanus can be evaluated. You can still edit it.',
+      'Finish and fix Erebus before Oceanus can be evaluated.',
     );
     expect(blockedBanner.getAttribute('role')).toBeNull();
     expect(blockedBanner.closest('.editor-panel')?.getAttribute('aria-live')).toBe('polite');

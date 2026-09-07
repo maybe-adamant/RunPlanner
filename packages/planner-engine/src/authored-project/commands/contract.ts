@@ -1,6 +1,11 @@
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { AcquisitionSiteAddress, SemanticAddress } from '../addresses';
-import { semanticAddressKey } from '../addresses';
+import {
+  semanticAddressKey,
+  createBiomeAddress,
+  createOccurrenceAddress,
+  createRoomFeatureAddress,
+} from '../addresses';
 import type {
   AuthoredBiomePlan,
   BiomeTopology,
@@ -181,7 +186,92 @@ function commandContractAddress(
 export function projectCommandAddress(
   command: ProjectCommand,
 ): SemanticAddress | AcquisitionSiteAddress {
+  // Replacing the terminal batch authors the Hub decision itself. Command
+  // contract failures still belong to the batch being replaced, while
+  // chronological readiness belongs to the newly authored Hub region.
+  switch (command.kind) {
+    case 'ReplaceWithHubDecision':
+      return command.hub;
+    case 'ReplaceFieldsOptionalRewardCount':
+      return createRoomFeatureAddress(command.occurrence, { kind: 'fieldsOptionalRewardCount' });
+    case 'AddStygianWell':
+    case 'RemoveStygianWell':
+      return createRoomFeatureAddress(command.occurrence, { kind: 'stygianWellPresence' });
+    case 'SetStygianWellInteraction':
+      return createRoomFeatureAddress(command.occurrence, { kind: 'stygianWellInventory' });
+    case 'ReplaceStygianWellOffer':
+      return createRoomFeatureAddress(command.occurrence, {
+        kind: 'stygianWellOffer',
+        generationKey: `initial:${command.slotKey}`,
+      });
+    case 'ReplaceStygianWellTravelDealRefill':
+      return createRoomFeatureAddress(command.occurrence, {
+        kind: 'stygianWellOffer',
+        generationKey: 'travelDealRefill',
+      });
+    case 'ReplaceStygianWellTwistResult':
+      return createRoomFeatureAddress(command.occurrence, {
+        kind: 'stygianWellTwist',
+        generationKey: command.generationKey,
+      });
+    case 'SetStygianWellPurchase':
+      return createRoomFeatureAddress(command.occurrence, {
+        kind: 'stygianWellOffer',
+        generationKey: command.generationKey,
+      });
+    case 'SetPurgingPoolInteraction':
+      return createRoomFeatureAddress(command.occurrence, { kind: 'purgingPoolInventory' });
+    case 'ReplacePurgingPoolSlot':
+      return createRoomFeatureAddress(command.occurrence, {
+        kind: 'purgingPoolOffer',
+        slotKey: command.slotKey,
+      });
+    case 'SetHermesShrinePresence':
+      return createRoomFeatureAddress(command.occurrence, { kind: 'hermesShrinePresence' });
+    case 'ReplaceHermesShrineOffer':
+      return createRoomFeatureAddress(command.occurrence, {
+        kind: 'hermesShrineOffer',
+        generationKey: `initial:${command.slotKey}`,
+      });
+    case 'ReplaceHermesShrineTravelDealRefill':
+      return createRoomFeatureAddress(command.occurrence, {
+        kind: 'hermesShrineOffer',
+        generationKey: 'travelDealRefill',
+      });
+    case 'SetHermesShrinePurchase':
+      return createRoomFeatureAddress(command.occurrence, {
+        kind: 'hermesShrineOffer',
+        generationKey: command.generationKey,
+      });
+  }
   return commandContractAddress(command);
+}
+
+/** Resource relocation edits both the retained host and its replacement, including withdrawal. */
+export function projectCommandAuthoringAddresses(
+  command: ProjectCommand,
+  project: ProjectDocument,
+): readonly SemanticAddress[] {
+  if (command.kind !== 'ReplaceResourcePlacement') return [projectCommandAddress(command)];
+  const hosts = [project.route.resourcePlacements[command.family], command.value];
+  const addresses = hosts.flatMap((host) =>
+    host === null
+      ? []
+      : [
+          createRoomFeatureAddress(
+            createOccurrenceAddress(
+              createBiomeAddress(command.route.routeKey, host.biomeKey),
+              host.occurrenceId,
+            ),
+            { kind: 'resource', family: command.family },
+          ),
+        ],
+  );
+  return addresses.filter(
+    (address, index) =>
+      addresses.findIndex((other) => semanticAddressKey(other) === semanticAddressKey(address)) ===
+      index,
+  );
 }
 
 export function failCommand(command: CommandContractSubject, detail: string): never {
@@ -201,7 +291,7 @@ export function locateBiome(
   catalog: Catalog,
   command: BiomeOwnedProjectCommand,
 ): LocatedBiome {
-  const address = projectCommandAddress(command);
+  const address = commandContractAddress(command);
   if (address.kind === 'project' || address.kind === 'route')
     throw new Error('route command reached biome resolution');
   if (document.route.routeKey !== address.routeKey)

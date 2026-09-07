@@ -38,6 +38,8 @@ import type { CompletenessFindingCode, FindingEvidence, SemanticFinding } from '
 export interface IncompleteBiomeCompletenessResult {
   readonly completion: 'incomplete';
   readonly frontier: SemanticAddress;
+  /** Required setup may precede the first retained structural frontier. */
+  readonly requiredInput?: SemanticAddress;
   readonly findings: readonly SemanticFinding[];
 }
 
@@ -235,12 +237,16 @@ function evaluateHubDecisionCompleteness(
   }
 }
 
-function incomplete(findings: readonly SemanticFinding[]): IncompleteBiomeCompletenessResult {
+function incomplete(
+  findings: readonly SemanticFinding[],
+  requiredInput?: SemanticAddress,
+): IncompleteBiomeCompletenessResult {
   const first = findings[0];
   if (first === undefined) throw new CompletenessContractError('incomplete result needs a finding');
   return Object.freeze({
     completion: 'incomplete',
     frontier: first.origin,
+    ...(requiredInput === undefined ? {} : { requiredInput }),
     findings: Object.freeze(findings),
   });
 }
@@ -323,7 +329,7 @@ export function evaluateBiomeCompleteness(
           finding('continuationMissing', origin, { hubKey: hubProgression.hubKey }),
         ]);
       }
-      const handoffFindings = evaluateBatchCompleteness(
+      const handoffCompleteness = evaluateBatchCompleteness(
         catalog,
         biome,
         layout,
@@ -332,7 +338,9 @@ export function evaluateBiomeCompleteness(
         handoff,
         undefined,
       );
-      if (handoffFindings.length !== 0) return incomplete(handoffFindings);
+      if (handoffCompleteness.findings.length !== 0) {
+        return incomplete(handoffCompleteness.findings, handoffCompleteness.requiredInput);
+      }
       const selected = selectedExitTarget(handoff);
       if (selected === undefined) {
         const origin = createExitSelectionAddress(biome, sourceAddress(handoff.source));
@@ -368,7 +376,7 @@ export function evaluateBiomeCompleteness(
         finding('continuationMissing', origin, { hubKey: terminal.hubKey }),
       ]);
     }
-    const batchFindings = evaluateBatchCompleteness(
+    const batch = evaluateBatchCompleteness(
       catalog,
       biome,
       layout,
@@ -377,7 +385,9 @@ export function evaluateBiomeCompleteness(
       decision,
       room,
     );
-    if (batchFindings.length !== 0) return incomplete([...findings, ...batchFindings]);
+    if (batch.findings.length !== 0) {
+      return incomplete([...findings, ...batch.findings], batch.requiredInput);
+    }
 
     const selected = selectedExitContinuation(
       decision,
@@ -434,8 +444,9 @@ function evaluateBatchCompleteness(
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   decision: ExitDecision,
   room: RoomDeclaration | undefined,
-): readonly SemanticFinding[] {
+): { readonly findings: readonly SemanticFinding[]; readonly requiredInput?: SemanticAddress } {
   const findings: SemanticFinding[] = [];
+  let requiredInput: SemanticAddress | undefined;
   const source = sourceAddress(decision.source);
   const takeover = isTakeoverBatch(decision, occurrences, catalog);
   const emptyOrdinaryEnvelope = !takeover && decision.normal.targets.length === 0;
@@ -451,8 +462,9 @@ function evaluateBatchCompleteness(
     decision.normal.rewardStore.kind === 'authoredBaseStore' &&
     decision.normal.rewardStore.baseRewardStoreKey === null
   ) {
+    requiredInput = createBatchRewardStoreAddress(biome, source);
     findings.push(
-      finding('batchRewardStoreMissing', createBatchRewardStoreAddress(biome, source), {
+      finding('batchRewardStoreMissing', requiredInput, {
         ...(room === undefined ? {} : { parentGameName: room.gameName }),
       }),
     );
@@ -462,6 +474,7 @@ function evaluateBatchCompleteness(
     normalDecisionProgressionForLayout(layout)?.batchPolicy.kind === 'fields' &&
     decision.normal.batchState === null
   ) {
+    requiredInput ??= createExitDecisionAddress(biome, source);
     findings.push(
       finding('batchStateMissing', createExitDecisionAddress(biome, source), {
         batchPolicy: 'fields',
@@ -472,5 +485,8 @@ function evaluateBatchCompleteness(
   if (!emptyOrdinaryEnvelope && room !== undefined) {
     findMissingTargets(findings, biome, layout, topology, decision, room);
   }
-  return Object.freeze(findings);
+  return Object.freeze({
+    findings: Object.freeze(findings),
+    ...(requiredInput === undefined ? {} : { requiredInput }),
+  });
 }

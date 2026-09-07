@@ -46,8 +46,16 @@ export interface ProjectFeedbackPresentation {
 }
 
 export type BiomeStatusEvaluation =
-  | { readonly authoring: 'incomplete'; readonly validity?: 'invalid' }
-  | { readonly authoring: 'complete'; readonly validity: 'invalid' | 'valid' };
+  | {
+      readonly authoring: 'incomplete';
+      readonly validity?: 'invalid';
+      readonly requiredInput?: unknown;
+    }
+  | {
+      readonly authoring: 'complete';
+      readonly validity: 'invalid' | 'valid';
+      readonly requiredInput?: unknown;
+    };
 
 const findingCopy = {
   batchRewardStoreMissing: {
@@ -616,21 +624,34 @@ export function indexFindingsByOwner(findings: readonly SemanticFinding[]): Find
 }
 
 export function presentFinding(finding: SemanticFinding): FindingPresentation {
-  if (
-    finding.origin.kind === 'keepsakeEquipResult' &&
-    finding.origin.resultKind === 'experimentalHammer'
-  ) {
-    if (finding.code === 'keepsakeEquipResultMissing') {
-      return Object.freeze({
-        title: 'Choose Experimental Hammer result',
-        description: 'Record the Hammer trait granted when Experimental Hammer is equipped.',
-      });
+  if (finding.origin.kind === 'keepsakeEquipResult') {
+    if (finding.origin.resultKind === 'experimentalHammer') {
+      if (finding.code === 'keepsakeEquipResultMissing') {
+        return Object.freeze({
+          title: 'Choose Experimental Hammer result',
+          description: 'Record the Hammer trait granted when Experimental Hammer is equipped.',
+        });
+      }
+      if (finding.code === 'keepsakeEquipResultUnavailable') {
+        return Object.freeze({
+          title: 'Experimental Hammer result is unavailable',
+          description: 'Choose a Hammer trait compatible with the active weapon and aspect.',
+        });
+      }
     }
-    if (finding.code === 'keepsakeEquipResultUnavailable') {
-      return Object.freeze({
-        title: 'Experimental Hammer result is unavailable',
-        description: 'Choose a Hammer trait compatible with the active weapon and aspect.',
-      });
+    if (finding.origin.resultKind === 'transcendentEmbryo') {
+      if (finding.code === 'keepsakeEquipResultMissing') {
+        return Object.freeze({
+          title: 'Choose Transcendent Embryo result',
+          description: 'Record the Chaos blessing granted when Transcendent Embryo is equipped.',
+        });
+      }
+      if (finding.code === 'keepsakeEquipResultUnavailable') {
+        return Object.freeze({
+          title: 'Transcendent Embryo result is unavailable',
+          description: 'Choose a Chaos blessing eligible when Transcendent Embryo is equipped.',
+        });
+      }
     }
   }
   return findingCopy[finding.code];
@@ -704,6 +725,7 @@ export function presentBiomeStatus(
   if (evaluation === undefined) {
     return blockedBiomeStatus;
   }
+  if (evaluation.requiredInput !== undefined) return incompleteBiomeStatus;
   if (evaluation.authoring === 'incomplete') {
     return evaluation.validity === 'invalid' ? invalidIncompleteBiomeStatus : incompleteBiomeStatus;
   }
@@ -777,7 +799,7 @@ export function presentBiomeFeedbackContext(
     throw new Error(`Feedback references unknown biome ${feedback.biomeKey}`);
   }
   if (feedback.context === 'unassessed') {
-    return `${biome.label} is not evaluated yet. You can still edit it.`;
+    return `${biome.label} is not evaluated yet.`;
   }
   if (feedback.context !== 'blocked') {
     return undefined;
@@ -790,8 +812,8 @@ export function presentBiomeFeedbackContext(
     throw new Error(`Feedback references unknown blocking biome ${feedback.blockedByBiomeKey}`);
   }
   return blocker === undefined
-    ? 'Finish the earlier biomes before this biome can be evaluated. You can still edit it.'
-    : `Finish and fix ${blocker.label} before ${biome.label} can be evaluated. You can still edit it.`;
+    ? 'Finish the earlier biomes before this biome can be evaluated.'
+    : `Finish and fix ${blocker.label} before ${biome.label} can be evaluated.`;
 }
 
 function numberedDestinationLabel(prefix: string, key: string): string {

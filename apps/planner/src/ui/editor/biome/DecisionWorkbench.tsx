@@ -69,7 +69,11 @@ function TargetRoomSelector({
   }
   return (
     <RoomSelector
-      findingTarget={findingTarget(interaction.owner, `${idPrefix}-room`)}
+      findingTarget={findingTarget(
+        interaction.owner,
+        `${idPrefix}-room`,
+        interaction.kind === 'decisionEntryRoom' ? interaction.readinessOwner : interaction.owner,
+      )}
       {...(ariaLabel === undefined ? {} : { ariaLabel })}
       idPrefix={idPrefix}
       interaction={interaction}

@@ -1,13 +1,12 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Provider } from 'react-redux';
 import {
+  applyProjectCommand,
   createBiomeAddress,
   createExitDecisionAddress,
   createHubDecisionAddress,
   createHubOpenSetAddress,
-  createOccurrenceId,
   createRouteAddress,
-  createTargetAddress,
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
@@ -23,7 +22,10 @@ import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
 } from '@planner/state/projectWorkspaceSlice';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  loadSurfaceNEntryFrontierResolvedProject,
+  nOccurrenceIds,
+} from '@run-planner/test-fixtures/surface';
 import { createOpenTestApplication } from '@planner-test/fixtures/renderPlanner';
 import { App } from './App';
 import { semanticOwnerControlElementId } from '../feedback/semanticOwner';
@@ -132,49 +134,20 @@ describe('App', () => {
   it('navigates a Hub open-set completeness finding to the exact board owner', () => {
     const application = createApplication();
     const biome = createBiomeAddress('Surface', 'N');
-    const opening = createOccurrenceId('app-n-open-set-opening');
-    const preHub = createOccurrenceId('app-n-open-set-prehub');
-    application.projectOperations.createNew('Surface');
-    application.store.dispatch(
-      authoredProjectCommandDispatched({
-        kind: 'ConfigureRoutePrefix',
-        configuredBiomeCount: 1,
-        route: createRouteAddress('Surface'),
-      }),
-    );
-    application.store.dispatch(
-      authoredProjectCommandDispatched({ kind: 'CreateStart', biome, occurrenceId: opening }),
-    );
-    application.store.dispatch(
-      authoredProjectCommandDispatched({
-        kind: 'CreateBatch',
-        decision: createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: opening }),
-      }),
-    );
-    application.store.dispatch(
-      authoredProjectCommandDispatched({
-        gameName: 'N_PreHub01',
-        kind: 'CreateTarget',
-        occurrenceId: preHub,
-        target: createTargetAddress(biome, { kind: 'occurrence', occurrenceId: opening }, 'prehub'),
-      }),
-    );
     const preHubDecision = createExitDecisionAddress(biome, {
       kind: 'occurrence',
-      occurrenceId: preHub,
+      occurrenceId: nOccurrenceIds.preHub,
     });
-    application.store.dispatch(
-      authoredProjectCommandDispatched({ kind: 'CreateBatch', decision: preHubDecision }),
-    );
-    application.store.dispatch(
-      authoredProjectCommandDispatched({
+    const project = applyProjectCommand(
+      loadSurfaceNEntryFrontierResolvedProject(),
+      application.catalog,
+      {
         decision: preHubDecision,
         hub: createHubDecisionAddress(biome, 'hub'),
         kind: 'ReplaceWithHubDecision',
-      }),
+      },
     );
-    const project = application.store.getState().projectWorkspace.history!.present;
-    application.store.dispatch(authoredProjectReplaced(authorLegalTraitOffers(project)));
+    application.store.dispatch(authoredProjectReplaced(project));
     const finding = application.store
       .getState()
       .projectWorkspace.assembly!.evaluation.findings.find(

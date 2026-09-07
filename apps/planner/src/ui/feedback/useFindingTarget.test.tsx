@@ -87,3 +87,18 @@ it.each([false, true])(
     expect((input as HTMLInputElement).value).toBe('keyboard draft');
   },
 );
+
+it('makes a locked semantic control root inert before its input can be used', () => {
+  const application = createOpenTestApplication();
+  render(
+    <Provider store={application.store}>
+      <FindingTargetScope authoringReadiness={() => 'locked'} findings={new Map()}>
+        <Control group />
+      </FindingTargetScope>
+    </Provider>,
+  );
+  const target = screen.getByRole('region', { name: 'Inventory' });
+  expect(target.hasAttribute('inert')).toBe(true);
+  expect(target.getAttribute('aria-disabled')).toBe('true');
+  expect(target.dataset.authoringLocked).toBe('true');
+});

@@ -4,9 +4,11 @@ import {
   createDefaultAuthoredHexTree,
   transitionAuthoredHexTreeLayout,
   semanticAddressKey,
+  type SemanticAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
+  authoringReadinessAt,
   assertProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
@@ -664,6 +666,7 @@ export function createStructuredWorkspaceProjection(
       registerWorkspaceFindingDestinations(evaluation.findings, focusByOwner, route);
       const projectAddress = { kind: 'project' as const };
       const result = Object.freeze({
+        authoringReadiness: (owner: SemanticAddress) => authoringReadinessAt(assembly, owner),
         focusByOwner,
         findingsByRepairTarget: indexFindingsByRepairTarget(evaluation.findings, focusByOwner),
         interactions,

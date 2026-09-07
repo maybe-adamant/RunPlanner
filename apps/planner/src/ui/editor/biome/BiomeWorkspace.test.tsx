@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { catalog } from '@run-planner/hades2-catalog';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
@@ -153,7 +154,17 @@ function fTwoDoorBatchProject(): {
     rewardStore: createBatchRewardStoreAddress(biome, owner.source),
     storeKey: 'RunProgress',
   });
-  return { owner, project, start };
+  for (const occurrenceId of [start, combat]) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(biome, occurrenceId),
+      value:
+        occurrenceId === start
+          ? { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } }
+          : { rewardType: 'MaxHealthDrop' },
+    });
+  }
+  return { owner, project: authorLegalTraitOffers(project), start };
 }
 
 function inactiveOccurrenceDetails(node: WorkspaceNode): WorkspaceNode {
@@ -1258,13 +1269,22 @@ describe('BiomeWorkspace', () => {
       kind: 'occurrence',
       occurrenceId: goldenFStartId,
     });
-    const withoutDecision = applyProjectCommand(createGoldenFGHIProject(), catalog, {
-      kind: 'RemoveExitDecision',
-      decision: first,
-    });
-    const project = applyProjectCommand(withoutDecision, catalog, {
+    const withoutDecision = applyProjectCommand(
+      authorLegalTraitOffers(createGoldenFGHIProject()),
+      catalog,
+      {
+        kind: 'RemoveExitDecision',
+        decision: first,
+      },
+    );
+    let project = applyProjectCommand(withoutDecision, catalog, {
       decision: first,
       kind: 'CreateBatch',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(goldenFBiome, first.source),
+      storeKey: 'RunProgress',
     });
     const view = renderWorkspace(project, 'Underworld', 'F');
 

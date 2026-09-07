@@ -6,6 +6,7 @@ import { useAppSelector } from '@planner/state/store';
 import { semanticOwnerControlElementId } from './semanticOwner';
 
 interface TargetFeedback {
+  readonly authoringReadiness: StructuredWorkspaceProjection['authoringReadiness'] | undefined;
   readonly findings: StructuredWorkspaceProjection['findingsByRepairTarget'];
   readonly selectedKey: string | undefined;
   readonly focusKey: string | undefined;
@@ -13,6 +14,7 @@ interface TargetFeedback {
 }
 const emptyFindings: StructuredWorkspaceProjection['findingsByRepairTarget'] = new Map();
 const feedback = createContext<TargetFeedback>({
+  authoringReadiness: undefined,
   findings: emptyFindings,
   selectedKey: undefined,
   focusKey: undefined,
@@ -20,9 +22,11 @@ const feedback = createContext<TargetFeedback>({
 });
 
 export function FindingTargetScope({
+  authoringReadiness,
   children,
   findings,
 }: {
+  readonly authoringReadiness?: StructuredWorkspaceProjection['authoringReadiness'];
   readonly children: ReactNode;
   readonly findings: StructuredWorkspaceProjection['findingsByRepairTarget'] | undefined;
 }) {
@@ -31,17 +35,21 @@ export function FindingTargetScope({
   const revision = useAppSelector((state) => state.editorSession.semanticNavigationRevision);
   const value = useMemo(
     () => ({
+      authoringReadiness,
       findings: findings ?? emptyFindings,
       selectedKey: selected?.key,
       focusKey: focused == null ? undefined : semanticAddressKey(focused),
       revision,
     }),
-    [findings, selected, focused, revision],
+    [authoringReadiness, findings, selected, focused, revision],
   );
   return <feedback.Provider value={value}>{children}</feedback.Provider>;
 }
 
 export interface FindingTargetProps {
+  readonly 'aria-disabled': true | undefined;
+  readonly 'data-authoring-locked': true | undefined;
+  readonly inert: boolean;
   readonly id: string;
   readonly 'data-semantic-owner': string;
   readonly 'data-has-findings': boolean;
@@ -53,13 +61,21 @@ export interface FindingTargetProps {
 /** Binds feedback directly to an existing control or truthful group, including mapped controls. */
 // eslint-disable-next-line react-refresh/only-export-components -- The scope and hook form one feedback boundary.
 export function useFindingTarget() {
-  const { findings: findingsByTarget, selectedKey, focusKey, revision } = useContext(feedback);
+  const {
+    authoringReadiness,
+    findings: findingsByTarget,
+    selectedKey,
+    focusKey,
+    revision,
+  } = useContext(feedback);
   const handledRequest = useRef<string | undefined>(undefined);
   return (
     address: SemanticAddress,
     id = semanticOwnerControlElementId(address),
+    readinessOwner: SemanticAddress = address,
   ): FindingTargetProps => {
     const key = semanticAddressKey(address);
+    const locked = authoringReadiness?.(readinessOwner) === 'locked';
     const findings = findingsByTarget.get(key) ?? [];
     const selectedAtTarget =
       selectedKey !== undefined &&
@@ -68,6 +84,9 @@ export function useFindingTarget() {
     const request = `${revision}:${selectedKey ?? ''}:${key}`;
     return {
       id,
+      'aria-disabled': locked || undefined,
+      'data-authoring-locked': locked || undefined,
+      inert: locked,
       'data-semantic-owner': key,
       'data-has-findings': findings.length > 0,
       'data-selected-finding': selectedAtTarget,
