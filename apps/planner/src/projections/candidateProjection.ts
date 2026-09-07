@@ -51,6 +51,7 @@ import {
   type SteadyGrowthOutcomeAddress,
   type TranscendentEmbryoOutcomeAddress,
   type FountainRarityOutcomeAddress,
+  type FieldsSpatialAddress,
   type TraitOptionKey,
   type TargetAddress,
   type AuthoredKeepsakeEquipResults,
@@ -304,6 +305,10 @@ export interface CandidateProjectionSession {
   ) =>
     | EvaluatedFountainRarityOutcomeCandidate
     | import('@run-planner/engine/simulation').CandidateContextUnavailable;
+  readonly fieldsSpatialPoint: (
+    spatial: FieldsSpatialAddress,
+    pointId: number | null,
+  ) => CandidateOptionProjection<number | null>;
   readonly levelResolution: (
     owner: LevelResolutionAddress,
     value: AuthoredLevelResolution,
@@ -390,6 +395,11 @@ export function createCandidateSessionFactory(
       project: assembly.project,
       evaluation: assembly.evaluation,
       anvilResult: core.anvilResult,
+      fieldsSpatialPoint: (spatial: FieldsSpatialAddress, pointId: number | null) =>
+        Object.freeze({
+          value: pointId,
+          evaluation: core.fieldsSpatialPoint(spatial, pointId),
+        }),
       ...rewardAdapters,
       ...traitAdapters,
     });

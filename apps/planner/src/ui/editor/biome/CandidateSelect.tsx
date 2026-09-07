@@ -7,7 +7,7 @@ import {
 } from '@planner/ui/feedback/candidatePresentation';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 
-type SelectValue = number | string;
+type SelectValue = number | string | null;
 
 interface CandidateSelectProps<T extends SelectValue> {
   readonly id: string;
@@ -30,10 +30,12 @@ export function CandidateSelect<T extends SelectValue>({
 }: CandidateSelectProps<T>) {
   const candidates = useWorkspaceInteraction(interaction);
   const selected = candidates.result?.find((option) => option.value === interaction.selected);
-  const value = interaction.selected === undefined ? '' : String(interaction.selected);
+  const value = interaction.selected == null ? '' : String(interaction.selected);
 
   const replace = (raw: string): void => {
-    const choice = interaction.choices.find((candidate) => String(candidate.value) === raw);
+    const choice = interaction.choices.find((candidate) =>
+      candidate.value === null ? raw === '' : String(candidate.value) === raw,
+    );
     const option = candidates.result?.find((candidate) => candidate.value === choice?.value);
     if (choice !== undefined && candidateMayBeAuthored(option)) onReplace(choice.value);
   };
@@ -65,7 +67,7 @@ export function CandidateSelect<T extends SelectValue>({
             <option
               disabled={impossible}
               key={String(choice.value)}
-              value={String(choice.value)}
+              value={choice.value === null ? '' : String(choice.value)}
               {...candidateSelectState(option)}
             >
               {presentCandidateLabel(choice.label, option)}

@@ -19,6 +19,8 @@ import {
   type RewardWheelAddress,
   type ShopOfferAddress,
   type SideRoomGeneration,
+  type FieldsSpatialAddress,
+  type FieldsSpatialTarget,
 } from '@run-planner/engine/authored-project';
 
 import type {
@@ -36,6 +38,17 @@ import { StructuredWorkspaceProjectionContractError } from '../contract';
  * the A2 transition, while a dormant Shop produces no requirement at all.
  */
 export type WorkspaceOccurrenceInteractionRequirement =
+  | {
+      readonly kind: 'fieldsSpatialPoints';
+      readonly owner: OccurrenceAddress;
+      readonly controls: readonly {
+        readonly address: FieldsSpatialAddress;
+        readonly interactionKey: string;
+        readonly pointChoices: readonly { readonly label: string; readonly value: number | null }[];
+        readonly pointId: number | null;
+        readonly target: FieldsSpatialTarget;
+      }[];
+    }
   | {
       readonly kind: 'chaosSpawn';
       readonly owner: AdditionalExitAddress;

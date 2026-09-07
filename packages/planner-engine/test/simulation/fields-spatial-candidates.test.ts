@@ -79,6 +79,15 @@ describe('Fields spatial candidates', () => {
         ],
       },
     });
+    expect(simulateProjectAssembly(catalog, project).evaluation.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'fieldsSpatialPointDuplicate',
+        origin: createFieldsSpatialAddress(occurrence, {
+          kind: 'cage',
+          slotKey: 'cage1',
+        }),
+      }),
+    );
   });
 
   it('treats an active missing assignment as incomplete and allows dormant values', () => {
@@ -94,6 +103,21 @@ describe('Fields spatial candidates', () => {
         findings: [{ code: 'fieldsSpatialPointMissing' }],
       },
     });
+    let missingProject = loadNemesisFieldsCheckpoint();
+    missingProject = applyProjectCommand(missingProject, catalog, {
+      kind: 'ReplaceFieldsSpatialPoint',
+      spatial: createFieldsSpatialAddress(occurrence, { kind: 'cage', slotKey: 'cage1' }),
+      pointId: null,
+    });
+    expect(simulateProjectAssembly(catalog, missingProject).evaluation.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'fieldsSpatialPointMissing',
+        origin: createFieldsSpatialAddress(occurrence, {
+          kind: 'cage',
+          slotKey: 'cage1',
+        }),
+      }),
+    );
 
     let dormantProject = loadNemesisFieldsCheckpoint();
     dormantProject = applyProjectCommand(dormantProject, catalog, {
@@ -143,6 +167,35 @@ describe('Fields spatial candidates', () => {
       { kind: 'occurrence', occurrenceId: combat04Id },
       'Passive',
     );
+    let unoccupiedCombat04Project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceFieldsOptionalRewardCount',
+      occurrence: combat04,
+      optionalRewardCount: 0,
+    });
+    unoccupiedCombat04Project = applyProjectCommand(unoccupiedCombat04Project, catalog, {
+      kind: 'SelectEncounter',
+      phase: passive,
+      encounterKey: 'NemesisRandomEvent',
+    });
+    unoccupiedCombat04Project = applyProjectCommand(unoccupiedCombat04Project, catalog, {
+      kind: 'ReplaceNemesisRandomEventOutcome',
+      event: createNemesisRandomEventAddress(passive),
+      value: { kind: 'freeItem' },
+      reward: { rewardType: 'ArmorBoost' },
+    });
+    const sourceEligible = evaluate(
+      unoccupiedCombat04Project,
+      { kind: 'nemesis' },
+      572851,
+      combat04,
+    );
+    if (sourceEligible.kind !== 'fieldsSpatialPoint') {
+      throw new Error('missing unoccupied spatial candidate');
+    }
+    expect(catalog.rooms.byKey.H_Combat04?.fieldsSpatial?.optionalPointIds).toHaveLength(7);
+    expect(sourceEligible.result.supportPointIds).toHaveLength(6);
+    expect(sourceEligible.result.supportPointIds).not.toContain(572886);
+
     let combat04Project = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'SelectEncounter',
       phase: passive,
@@ -168,6 +221,7 @@ describe('Fields spatial candidates', () => {
       },
     });
     if (excluded.kind !== 'fieldsSpatialPoint') throw new Error('missing spatial candidate');
+    expect(excluded.result.supportPointIds).toHaveLength(4);
     expect(excluded.result.supportPointIds).not.toContain(572886);
   });
 });

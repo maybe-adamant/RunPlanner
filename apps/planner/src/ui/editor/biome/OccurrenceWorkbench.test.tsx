@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, screen, within } from '@testing-library/react';
-import type { ProjectDocument } from '@run-planner/engine/authored-project';
+import {
+  applyProjectCommand,
+  createFieldsSpatialAddress,
+  createOccurrenceAddress,
+  createOccurrenceId,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
+import { catalog } from '@run-planner/hades2-catalog';
 import { Provider } from 'react-redux';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
@@ -13,6 +20,8 @@ import {
   createGoldenFGHIProject,
   goldenFOccurrenceId,
   goldenFStartId,
+  goldenHBiome,
+  loadNemesisFieldsCheckpoint,
 } from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNProject,
@@ -124,6 +133,106 @@ describe('OccurrenceWorkbench', () => {
     expect(
       screen.getByRole('button', { name: 'Run State' }).closest('.room-workbench-tab-row'),
     ).not.toBeNull();
+  });
+
+  it('gives H Fields a dedicated Layout tab without changing the Timeline surface', () => {
+    renderStaticOccurrenceWorkbench(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'H',
+      occurrenceById(createOccurrenceId('golden-h-combat02')),
+    );
+
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Room Overview',
+      'Room Layout',
+      'Room Timeline',
+      'Room Doors',
+    ]);
+    openRoomTab('Room Layout');
+    const layout = screen.getByRole('region', { name: 'Fields Layout' });
+    expect(within(layout).getByRole('heading', { name: 'Entry' })).toBeTruthy();
+    expect(within(layout).getByRole('heading', { name: 'Cage placements' })).toBeTruthy();
+    expect(within(layout).getByRole('heading', { name: 'Optional pickups' })).toBeTruthy();
+    expect(within(layout).queryByRole('heading', { name: 'Nemesis' })).toBeNull();
+    expect(within(layout).getByRole('option', { name: 'Entry 1' })).toBeTruthy();
+    expect(within(layout).getAllByRole('option', { name: 'Cage Point 1' })).not.toHaveLength(0);
+    expect(within(layout).getAllByRole('option', { name: 'Optional Point 1' })).not.toHaveLength(0);
+    expect(layout.textContent).not.toMatch(/\b\d{5,}\b/);
+
+    openRoomTab('Room Timeline');
+    expect(screen.getByRole('region', { name: 'Room Timeline' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Fields Layout' })).toBeNull();
+  });
+
+  it('does not add the H Fields Layout tab to ordinary rooms', () => {
+    renderStaticOccurrenceWorkbench(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'F',
+      occurrenceById(goldenFOccurrenceId(1, 1)),
+    );
+
+    expect(screen.queryByRole('tab', { name: 'Room Layout' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Fields Layout' })).toBeNull();
+  });
+
+  it('edits an entry point through its candidate-backed Layout control', async () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const view = renderOccurrenceWorkbench(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'H',
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Layout');
+    const point = within(screen.getByRole('region', { name: 'Fields Layout' })).getAllByLabelText(
+      'Point',
+    )[0];
+    if (!(point instanceof HTMLSelectElement)) throw new Error('entry point picker is missing');
+    const alternate = within(point).getByRole('option', { name: 'Entry 2' });
+
+    await view.user.selectOptions(point, alternate);
+
+    expect((alternate as HTMLOptionElement).selected).toBe(true);
+  });
+
+  it('shows a missing active placement finding on its exact Layout row', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat05');
+    const project = applyProjectCommand(loadNemesisFieldsCheckpoint(), catalog, {
+      kind: 'ReplaceFieldsSpatialPoint',
+      spatial: createFieldsSpatialAddress(createOccurrenceAddress(goldenHBiome, occurrenceId), {
+        kind: 'cage',
+        slotKey: 'cage1',
+      }),
+      pointId: null,
+    });
+    renderOccurrenceWorkbench(project, 'Underworld', 'H', occurrenceById(occurrenceId));
+    openRoomTab('Room Layout');
+    const row = screen.getByText('Cage 1').closest('.fields-layout-row');
+    if (!(row instanceof HTMLElement)) throw new Error('Cage 1 Layout row is missing');
+
+    expect(within(row).getByLabelText('1 finding')).toBeTruthy();
+  });
+
+  it('adds the active Nemesis placement to Layout without moving its Overview authoring', () => {
+    renderStaticOccurrenceWorkbench(
+      loadNemesisFieldsCheckpoint(),
+      'Underworld',
+      'H',
+      occurrenceById(createOccurrenceId('golden-h-combat05')),
+    );
+
+    const overview = screen.getByRole('tab', { name: 'Room Overview' });
+    openRoomTab('Room Overview');
+    expect(
+      within(screen.getByLabelText('Encounter structure')).getByText('Nemesis Event'),
+    ).toBeTruthy();
+    openRoomTab('Room Layout');
+    const layout = screen.getByRole('region', { name: 'Fields Layout' });
+    expect(within(layout).getByRole('heading', { name: 'Nemesis' })).toBeTruthy();
+    expect(within(layout).getAllByRole('option', { name: 'Optional Point 1' })).not.toHaveLength(0);
+    expect(overview.getAttribute('aria-selected')).toBe('false');
   });
 
   it.each([

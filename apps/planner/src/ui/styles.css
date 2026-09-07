@@ -3138,6 +3138,61 @@ select {
   border-top: 0;
 }
 
+.fields-layout-editor {
+  display: grid;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #34353e;
+  border-radius: 10px;
+  background: rgb(10 11 14 / 35%);
+}
+
+.fields-layout-group {
+  display: grid;
+  gap: 6px;
+}
+
+.fields-layout-group h5 {
+  margin: 0;
+  color: #c8b8d8;
+  font-size: 0.76rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.fields-layout-row {
+  display: grid;
+  grid-template-columns: minmax(9rem, 1fr) minmax(12rem, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 5px 7px;
+  border: 1px solid #34353e;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 2%);
+}
+
+.fields-layout-context {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  color: #e3dde8;
+}
+
+.fields-layout-context-detail {
+  overflow: hidden;
+  color: #99939f;
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .fields-layout-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .room-overview-workbench > .room-features-workbench,
 .room-overview-workbench > .room-structure-workbench,
 .room-overview-workbench > .fields-room-editor,

@@ -19,6 +19,8 @@ import {
   semanticAddressKey,
   type AcquisitionSiteAddress,
   type AuthoredRewardState,
+  createFieldsSpatialAddress,
+  type FieldsSpatialTarget,
 } from '@run-planner/engine/authored-project';
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import {
@@ -388,11 +390,94 @@ function roomLocalForOccurrence(
             control: requireProjectedRewardControl(controls, address, 'countedReward'),
             key: slotKey,
             label: `Optional ${index + 1}`,
+            summary: (() => {
+              const control = requireProjectedRewardControl(controls, address, 'countedReward');
+              return control.offer === null
+                ? 'Choose reward'
+                : summarizeRewardOffer(input.catalog, control.offer);
+            })(),
           });
         });
+      const spatialDeclaration = room.fieldsSpatial;
+      if (spatialDeclaration === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${room.gameName} Fields state has no spatial declaration`,
+        );
+      }
+      const spatialState = occurrence.state.spatial;
+      const pointChoices = (target: FieldsSpatialTarget, pointIds: readonly number[]) =>
+        Object.freeze([
+          Object.freeze({ label: 'Choose point', value: null }),
+          ...pointIds.map((pointId, index) =>
+            Object.freeze({
+              label:
+                target.kind === 'entry'
+                  ? `Entry ${index + 1}`
+                  : target.kind === 'cage'
+                    ? `Cage Point ${index + 1}`
+                    : `Optional Point ${index + 1}`,
+              value: pointId,
+            }),
+          ),
+        ]);
+      const spatialControl = (
+        target: FieldsSpatialTarget,
+        label: string,
+        pointId: number | null,
+        pointIds: readonly number[],
+      ) => {
+        const spatialAddress = createFieldsSpatialAddress(
+          createOccurrenceAddress(input.biome, occurrence.occurrenceId),
+          target,
+        );
+        return Object.freeze({
+          address: spatialAddress,
+          interactionKey: semanticAddressKey(spatialAddress),
+          label,
+          marker: input.markerDestinations.marker(spatialAddress),
+          pointChoices: pointChoices(target, pointIds),
+          pointId,
+          target,
+        });
+      };
+      const spatial = Object.freeze([
+        spatialControl(
+          { kind: 'entry' },
+          'Entry',
+          spatialState.entryStartPointId,
+          spatialDeclaration.entryPairs.map((pair) => pair.startPointId),
+        ),
+        ...cages.map((cage) =>
+          spatialControl(
+            { kind: 'cage', slotKey: cage.key },
+            cage.label,
+            spatialState.cagePointIdBySlot[cage.key] ?? null,
+            spatialDeclaration.cagePointIds,
+          ),
+        ),
+        ...optionalRewards.map((reward) =>
+          spatialControl(
+            { kind: 'optional', slotKey: reward.key },
+            reward.label,
+            spatialState.optionalPointIdBySlot[reward.key] ?? null,
+            spatialDeclaration.optionalPointIds,
+          ),
+        ),
+        ...(Object.values(occurrence.encounters.encounterKeyByPhase).includes('NemesisRandomEvent')
+          ? [
+              spatialControl(
+                { kind: 'nemesis' },
+                'Nemesis',
+                spatialState.nemesisPointId,
+                spatialDeclaration.optionalPointIds,
+              ),
+            ]
+          : []),
+      ]);
       return Object.freeze({
         kind: 'fields' as const,
         cages: Object.freeze(cages),
+        spatial,
         owner: createOccurrenceAddress(input.biome, occurrence.occurrenceId),
         optionalRewardCount: occurrence.state.optionalRewardCount,
         optionalRewardCapacity: optionalDescriptor.optionalRewardCapacity,

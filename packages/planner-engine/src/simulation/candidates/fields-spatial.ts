@@ -1,4 +1,4 @@
-import type { Catalog, FieldsSpatialDeclaration } from '../../catalog-schema';
+import type { Catalog } from '../../catalog-schema';
 import {
   semanticAddressKey,
   type FieldsSpatialAddress,
@@ -16,6 +16,7 @@ import {
 } from './evaluated-biome';
 import type { CandidateContextUnavailable } from './availability';
 import { unavailableForBiome, unreachableTarget } from './availability';
+import { assessFieldsSpatialPoint } from '../fields-spatial';
 
 /** One exact physical point assignment in an occurrence-owned Fields layout. */
 export interface FieldsSpatialPointCandidateQuery {
@@ -83,112 +84,6 @@ function roomFor(
   );
 }
 
-function activeSlots(
-  room: CanonicalAuthoredRoom,
-  groupKey: string,
-  optional: boolean,
-): ReadonlySet<string> {
-  const resolved = optional ? (room.fieldsOptionalRewards ?? []) : (room.localRewards ?? []);
-  const unresolved = optional
-    ? (room.unresolvedFieldsOptionalRewards ?? [])
-    : (room.unresolvedLocalRewards ?? []);
-  return new Set(
-    [...resolved, ...unresolved]
-      .filter((reward) => reward.groupKey === groupKey)
-      .map((reward) => reward.slotKey),
-  );
-}
-
-function pointDomain(
-  declaration: FieldsSpatialDeclaration,
-  target: FieldsSpatialTarget,
-): readonly number[] {
-  switch (target.kind) {
-    case 'entry':
-      return declaration.entryPairs.map((pair) => pair.startPointId);
-    case 'cage':
-      return declaration.cagePointIds;
-    case 'optional':
-    case 'nemesis':
-      return declaration.optionalPointIds;
-  }
-}
-
-function targetActive(
-  room: CanonicalAuthoredRoom,
-  catalog: Catalog,
-  target: FieldsSpatialTarget,
-): boolean {
-  const declaration = catalog.rooms.byKey[room.gameName];
-  if (declaration?.fieldsOptionalRewards === undefined) return false;
-  switch (target.kind) {
-    case 'entry':
-      return true;
-    case 'cage': {
-      const cage = declaration.localChildren.find(
-        (child) =>
-          child.kind === 'boundedRewardSlots' && child.offerRewardCapability === 'fieldsCages',
-      );
-      return cage !== undefined && activeSlots(room, cage.key, false).has(target.slotKey);
-    }
-    case 'optional':
-      return activeSlots(room, declaration.fieldsOptionalRewards.key, true).has(target.slotKey);
-    case 'nemesis':
-      return room.encounterPhases.some((phase) => phase.encounterKey === 'NemesisRandomEvent');
-  }
-}
-
-function occupiedSiblingPoints(
-  room: CanonicalAuthoredRoom,
-  catalog: Catalog,
-  target: FieldsSpatialTarget,
-): ReadonlySet<number> {
-  const state = room.fieldsSpatial;
-  if (state === undefined) return new Set();
-  const declaration = catalog.rooms.byKey[room.gameName];
-  if (declaration?.fieldsSpatial === undefined) return new Set();
-  const occupied = new Set<number>();
-  if (target.kind === 'cage') {
-    const cage = declaration.localChildren.find(
-      (child) =>
-        child.kind === 'boundedRewardSlots' && child.offerRewardCapability === 'fieldsCages',
-    );
-    const active = cage === undefined ? new Set<string>() : activeSlots(room, cage.key, false);
-    for (const [slotKey, pointId] of Object.entries(state.cagePointIdBySlot)) {
-      if (slotKey !== target.slotKey && active.has(slotKey) && pointId !== null)
-        occupied.add(pointId);
-    }
-    return occupied;
-  }
-  if (target.kind === 'optional' || target.kind === 'nemesis') {
-    const active = activeSlots(room, declaration.fieldsOptionalRewards!.key, true);
-    for (const [slotKey, pointId] of Object.entries(state.optionalPointIdBySlot)) {
-      if (target.kind === 'optional' && slotKey === target.slotKey) continue;
-      if (active.has(slotKey) && pointId !== null) occupied.add(pointId);
-    }
-    if (target.kind === 'optional') {
-      if (targetActive(room, catalog, { kind: 'nemesis' }) && state.nemesisPointId !== null)
-        occupied.add(state.nemesisPointId);
-    }
-  }
-  return occupied;
-}
-
-function finding(
-  code:
-    'fieldsSpatialPointMissing' | 'fieldsSpatialPointUnavailable' | 'fieldsSpatialPointDuplicate',
-  query: FieldsSpatialPointCandidateQuery,
-  evidence: SemanticFinding['evidence'],
-): SemanticFinding {
-  return Object.freeze({
-    code,
-    severity: 'error',
-    phase: 'roomGeneration',
-    origin: query.spatial,
-    evidence,
-  });
-}
-
 export function evaluateFieldsSpatialPointCandidate(
   catalog: Catalog,
   _project: ProjectDocument,
@@ -215,59 +110,17 @@ export function evaluateFieldsSpatialPointCandidate(
     }),
   );
   if (room === undefined) return unreachableTarget(query.spatial);
-  const declaration = catalog.rooms.byKey[room.gameName]?.fieldsSpatial;
-  if (declaration === undefined) return unreachableTarget(query.spatial);
-  const active = targetActive(room, catalog, query.spatial.target);
-  const domain = pointDomain(declaration, query.spatial.target);
-  const excluded =
-    query.spatial.target.kind === 'nemesis'
-      ? new Set(declaration.nemesisExcludedOptionalPointIds)
-      : new Set<number>();
-  const occupied = occupiedSiblingPoints(room, catalog, query.spatial.target);
-  const supportPointIds = Object.freeze(
-    domain.filter((pointId) => !excluded.has(pointId) && !occupied.has(pointId)),
-  );
-  const findings: SemanticFinding[] = [];
-  if (active && query.pointId === null) {
-    findings.push(
-      finding('fieldsSpatialPointMissing', query, {
-        target: query.spatial.target.kind,
-        supportPointIds,
-      }),
-    );
-  } else if (query.pointId !== null && !domain.includes(query.pointId)) {
-    findings.push(
-      finding('fieldsSpatialPointUnavailable', query, {
-        pointId: query.pointId,
-        domain,
-      }),
-    );
-  } else if (active && query.pointId !== null && excluded.has(query.pointId)) {
-    findings.push(
-      finding('fieldsSpatialPointUnavailable', query, {
-        pointId: query.pointId,
-        reason: 'sourceExcluded',
-      }),
-    );
-  } else if (active && query.pointId !== null && occupied.has(query.pointId)) {
-    findings.push(
-      finding('fieldsSpatialPointDuplicate', query, {
-        pointId: query.pointId,
-        occupiedPointIds: [...occupied],
-      }),
-    );
-  }
-  const selectedPossible =
-    !active || (query.pointId !== null && supportPointIds.includes(query.pointId));
+  const assessment = assessFieldsSpatialPoint(catalog, room, query.spatial.target, query.pointId);
+  if (assessment === undefined) return unreachableTarget(query.spatial);
   return Object.freeze({
     kind: 'fieldsSpatialPoint',
     result: Object.freeze({
       spatial: query.spatial,
       target: query.spatial.target,
       pointId: query.pointId,
-      supportPointIds,
-      selectedPossible,
-      findings: Object.freeze(findings),
+      supportPointIds: assessment.supportPointIds,
+      selectedPossible: assessment.selectedPossible,
+      findings: assessment.findings,
     }),
   });
 }

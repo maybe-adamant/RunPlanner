@@ -43,6 +43,7 @@ import type {
   WorkspaceChaosSpawnInteraction,
   WorkspaceZagreusSpawnInteraction,
   WorkspaceResourcePlacementInteraction,
+  WorkspaceFieldsSpatialPointInteraction,
 } from '../contract';
 import type { WorkspaceOccurrenceInteractionRequirement } from './interaction-requirements';
 import { candidateInteraction } from './interaction-binding-primitives';
@@ -52,6 +53,7 @@ import {
 } from './room-feature-picker-model';
 
 export interface WorkspaceOccurrenceLocalInteractionCatalog {
+  readonly fieldsSpatialPoints: ReadonlyMap<string, WorkspaceFieldsSpatialPointInteraction>;
   readonly encounterPhases: ReadonlyMap<string, WorkspaceEncounterInteraction>;
   readonly nemesisEvents: ReadonlyMap<
     string,
@@ -158,6 +160,7 @@ export function bindOccurrenceLocalInteractions(
   contextualPicker: StructuredWorkspaceContextualServices['contextualPicker'],
   requirements: Iterable<WorkspaceOccurrenceInteractionRequirement>,
 ): WorkspaceOccurrenceLocalInteractionCatalog {
+  const fieldsSpatialPoints = new Map<string, WorkspaceFieldsSpatialPointInteraction>();
   const encounterPhases = new Map<string, WorkspaceEncounterInteraction>();
   const nemesisEvents = new Map<string, import('../contract').WorkspaceNemesisEventInteraction>();
   const nemesisFeatures = new Map<string, WorkspaceNemesisFeatureInteraction>();
@@ -205,6 +208,42 @@ export function bindOccurrenceLocalInteractions(
   };
   for (const requirement of requirements) {
     switch (requirement.kind) {
+      case 'fieldsSpatialPoints': {
+        for (const control of requirement.controls) {
+          if (fieldsSpatialPoints.has(control.interactionKey)) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${control.interactionKey} has multiple bound Fields spatial interactions`,
+            );
+          }
+          let options:
+            | readonly import('@planner/projections/candidateProjection').CandidateOptionProjection<
+                number | null
+              >[]
+            | undefined;
+          fieldsSpatialPoints.set(
+            control.interactionKey,
+            Object.freeze({
+              choices: control.pointChoices,
+              intentFor: (pointId: number | null) =>
+                Object.freeze({
+                  command: Object.freeze({
+                    kind: 'ReplaceFieldsSpatialPoint' as const,
+                    spatial: control.address,
+                    pointId,
+                  }),
+                }),
+              key: control.interactionKey,
+              load: () =>
+                (options ??= control.pointChoices.map((choice) =>
+                  candidates.fieldsSpatialPoint(control.address, choice.value),
+                )),
+              owner: control.address,
+              selected: control.pointId,
+            }),
+          );
+        }
+        break;
+      }
       case 'resourcePlacements': {
         for (const resource of requirement.resources) {
           const { interactionKey: key } = resource;
@@ -923,6 +962,7 @@ export function bindOccurrenceLocalInteractions(
     }
   }
   return Object.freeze({
+    fieldsSpatialPoints,
     encounterPhases,
     nemesisEvents,
     nemesisFeatures,

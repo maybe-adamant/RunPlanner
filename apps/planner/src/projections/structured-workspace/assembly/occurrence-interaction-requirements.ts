@@ -57,6 +57,25 @@ export function occurrenceInteractionRequirements(
   room: WorkspaceRoomSummary,
 ): readonly WorkspaceOccurrenceInteractionRequirement[] {
   const requirements: WorkspaceOccurrenceInteractionRequirement[] = [];
+  if (room.roomLocal.kind === 'fields') {
+    requirements.push(
+      Object.freeze({
+        kind: 'fieldsSpatialPoints' as const,
+        owner: room.address,
+        controls: Object.freeze(
+          room.roomLocal.spatial.map((control) =>
+            Object.freeze({
+              address: control.address,
+              interactionKey: control.interactionKey,
+              pointChoices: control.pointChoices,
+              pointId: control.pointId,
+              target: control.target,
+            }),
+          ),
+        ),
+      }),
+    );
+  }
   const topLevelEncounterRequirement = encounterPhaseInteractionRequirement(
     room.address,
     room.encounterPhases,
