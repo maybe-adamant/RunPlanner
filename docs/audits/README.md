@@ -78,6 +78,7 @@ reader-facing taxonomy, not a package or runtime boundary.
 ### Editor
 
 - [Editor UX](editor/EDITOR_UX_AUDIT.md) — Cross-biome terminology and editor-facing findings grounded in the current authoring model.
+- [Finding navigation and repair ownership](editor/FINDING_NAVIGATION_AND_REPAIR_OWNERSHIP_AUDIT.md) — Complete finding-vocabulary audit, destination preservation, exact field ownership, aggregate exceptions, and stale codes.
 
 ### Game execution contacts
 
