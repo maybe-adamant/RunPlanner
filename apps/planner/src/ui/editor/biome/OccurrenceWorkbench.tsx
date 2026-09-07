@@ -15,6 +15,7 @@ import { RunStateLauncher } from './RunStateSheet';
 import { AnomalyClearedControl } from './OccurrenceRoomFeatures';
 import { RoomActionsWorkbench } from './OccurrenceRoomActions';
 import { DirectRoomWorkbench, IncomingRewardOverview } from './OccurrenceDirectRoomWorkbench';
+import { FieldsLayoutWorkbench } from './OccurrenceEncounterWorkbench';
 
 interface OccurrenceWorkbenchProps {
   readonly incomingDoor?: WorkspaceDoorContract;
@@ -68,6 +69,7 @@ export function OccurrenceWorkbench({
   const tabRefs = useRef<Partial<Record<WorkspaceRoomTab, HTMLButtonElement | null>>>({});
   const tabOrder: WorkspaceRoomTab[] = [
     'overview',
+    ...(room.workbench.kind === 'fields' ? (['layout'] as const) : []),
     ...(room.workbench.kind === 'ship'
       ? room.workbench.phases.map((_phase, index) =>
           index === 0
@@ -163,6 +165,7 @@ export function OccurrenceWorkbench({
       <div className="room-workbench-tab-row">
         <nav aria-label="Room workbench" className="room-workbench-tabs" role="tablist">
           {tabButton('overview', 'Room Overview')}
+          {room.workbench.kind === 'fields' ? tabButton('layout', 'Room Layout') : null}
           {room.workbench.kind === 'ship'
             ? room.workbench.phases.map((phase, index) => {
                 const tab: WorkspaceRoomTab =
@@ -198,6 +201,8 @@ export function OccurrenceWorkbench({
             <AnomalyClearedControl room={room} />
             {renderDirectRoomWorkbench('overview')}
           </div>
+        ) : activeTab === 'layout' && room.workbench.kind === 'fields' ? (
+          <FieldsLayoutWorkbench interactions={interactions} room={room.workbench.fields} />
         ) : activeTab === 'doors' ? (
           (doors ?? <p className="fixed-room-state">No outgoing doors for this room.</p>)
         ) : activeTab === 'shipInactiveRepair' && room.workbench.kind === 'ship' ? (

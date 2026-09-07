@@ -46,6 +46,8 @@ export type {
   WorkspaceDoorReward,
   WorkspaceRoomActions,
   WorkspaceFieldsCageSlotControl,
+  WorkspaceFieldsSpatialControl,
+  WorkspaceFieldsSpatialPointInteraction,
   WorkspaceRoomLifecycleTimeline,
   WorkspaceRoomLifecycleTimelineEntry,
   WorkspaceRoomLifecycleBoundary,

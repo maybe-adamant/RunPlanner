@@ -29,6 +29,7 @@ export function workspaceLocalDetailMarkers(
     case 'fields':
       return Object.freeze([
         ...roomLocal.cages.flatMap((cage) => rewardControlMarkers(cage.control)),
+        ...roomLocal.spatial.map((control) => control.marker),
       ]);
     case 'ship':
       return Object.freeze(

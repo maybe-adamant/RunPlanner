@@ -58,6 +58,8 @@ import {
   type KeepsakeEquipResultAddress,
   type TraitOptionKey,
   type AuthoredNemesisRandomEventOutcome,
+  type FieldsSpatialAddress,
+  type FieldsSpatialTarget,
 } from '@run-planner/engine/authored-project';
 import type {
   RoomDeclaration,
@@ -113,6 +115,7 @@ export type WorkspaceStatus = 'blocked' | 'empty' | 'incomplete' | 'invalid' | '
 /** Transient destination for an entered-room workbench. */
 export type WorkspaceRoomTab =
   | 'overview'
+  | 'layout'
   | 'actions'
   | 'doors'
   | 'shipIntroActions'
@@ -1158,6 +1161,7 @@ export interface WorkspaceInteractionCatalog {
   readonly gorgonConditions: ReadonlyMap<string, WorkspaceGorgonConditionInteraction>;
   readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;
   readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceFieldsCageOutcomeInteraction>;
+  readonly fieldsSpatialPoints: ReadonlyMap<string, WorkspaceFieldsSpatialPointInteraction>;
   readonly roomActions: ReadonlyMap<string, WorkspaceRoomActionInteraction>;
   readonly hubSlots: ReadonlyMap<string, WorkspaceHubSlotInteraction>;
   readonly hubVisitOrders: ReadonlyMap<string, WorkspaceHubVisitOrderInteraction>;
@@ -1555,6 +1559,31 @@ export interface WorkspaceFieldsOptionalRewardDescriptor {
   readonly control: WorkspaceCountedRewardControl;
   readonly key: string;
   readonly label: string;
+  readonly summary: string;
+}
+
+/** One occurrence-owned physical placement row for an H Fields combat room. */
+export interface WorkspaceFieldsSpatialControl {
+  readonly address: FieldsSpatialAddress;
+  readonly interactionKey: string;
+  readonly label: string;
+  readonly marker: WorkspaceMarker;
+  readonly pointId: number | null;
+  readonly pointChoices: readonly { readonly label: string; readonly value: number | null }[];
+  readonly target: FieldsSpatialTarget;
+}
+
+export interface WorkspaceFieldsSpatialPointInteraction {
+  readonly key: string;
+  readonly owner: FieldsSpatialAddress;
+  readonly selected: number | null;
+  readonly choices: readonly { readonly label: string; readonly value: number | null }[];
+  readonly load: () => readonly CandidateOptionProjection<number | null>[];
+  readonly intentFor: (
+    pointId: number | null,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceFieldsSpatialPoint' }>
+  >;
 }
 
 export interface WorkspaceRoomActionProposal {
@@ -1997,6 +2026,7 @@ export type WorkspaceRoomLocal =
   | {
       readonly kind: 'fields';
       readonly cages: readonly WorkspaceFieldsCageDescriptor[];
+      readonly spatial: readonly WorkspaceFieldsSpatialControl[];
       readonly optionalRewardCount: number;
       readonly optionalRewardCapacity: number;
       readonly optionalRewardCountValues: readonly number[];

@@ -594,6 +594,10 @@ export function assembleWorkspaceOccurrence(
       ],
       'overview',
     );
+    input.markerDestinations.setRoomTab(
+      roomLocal.spatial.map((control) => control.marker),
+      'layout',
+    );
   }
   for (const phase of encounterPhases) {
     input.markerDestinations.setRoomTab(

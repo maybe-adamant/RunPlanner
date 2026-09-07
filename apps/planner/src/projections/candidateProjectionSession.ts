@@ -3,6 +3,7 @@ import {
   createPreparedProjectCandidateSession,
   type AcquisitionConversionCandidateCapability,
   type ProjectCandidateSession,
+  type ProjectCandidateEvaluation,
   type ProjectCandidateSessionEvaluation,
   type ProjectCandidateSessionQuery,
   type ProjectEvaluationAssembly,
@@ -30,6 +31,10 @@ export interface CandidateProjectionCore {
   readonly anvilResult: (
     owner: import('@run-planner/engine/authored-project').AcquisitionRoleAddress,
   ) => NonNullable<AcquisitionConversionCandidateCapability['anvil']> | undefined;
+  readonly fieldsSpatialPoint: (
+    spatial: import('@run-planner/engine/authored-project').FieldsSpatialAddress,
+    pointId: number | null,
+  ) => ProjectCandidateEvaluation;
   readonly projectOptions: <T>(
     key: string,
     values: readonly T[],
@@ -185,6 +190,16 @@ export function createCandidateProjectionCore(
         anvilResult: (
           owner: import('@run-planner/engine/authored-project').AcquisitionRoleAddress,
         ) => acquisitionConversionCandidateForProjectEvaluationAssembly(assembly, owner)?.anvil,
+        fieldsSpatialPoint: (
+          spatial: import('@run-planner/engine/authored-project').FieldsSpatialAddress,
+          pointId: number | null,
+        ) => {
+          const result = evaluator.evaluate([
+            Object.freeze({ kind: 'fieldsSpatialPoint' as const, spatial, pointId }),
+          ])[0];
+          if (result === undefined) throw new Error('Fields spatial candidate was not evaluated');
+          return result;
+        },
         projectOptions,
         projectOptionsCooperatively,
         memoizeOptions,
