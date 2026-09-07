@@ -176,6 +176,21 @@ contacts are explicit for every implemented effect. Individual Hex tree
 topology, node reachability, and effects remain outside the supported
 simulation scope.
 
+### Finding navigation and chronological authoring readiness
+
+The 2026-09-07 editor closure made each completed finding destination the one
+authority for route, rail, inspector, tab, focus, and inline repair feedback.
+Existing controls and truthful containers receive a persistent red border;
+numbered inline badges and their parallel raw-origin routing were retired.
+
+Progressive evaluation now distinguishes invalid authored input from required
+incompleteness. The engine publishes one exact incomplete atomic-region
+horizon and answers readiness for semantic command owners. The application
+keeps retained suffix state visible, disables later authoring at the control
+root, and guards direct dispatch without creating a UI ordering model. Invalid
+values remain editable. The same chronology covers ordinary routes and N Hub
+board, visit, side-room, Preboss, Boss, and Postboss boundaries.
+
 ### Hex talent layout closure
 
 The 2026-08-27 Hex closure added four frozen layouts and exact Rare/Epic
@@ -903,3 +918,11 @@ after its durable ownership, maintenance outcomes, and validation results were
 recorded. The remaining-keepsake execution plan was likewise retired after its
 catalog closure, three-contact lifecycle, Hex boundary, and validation evidence
 were absorbed here and in the focused keepsake audits.
+
+The finding-navigation and chronological-readiness plans and their temporary
+current-code audits were retired together after their shared destination,
+highlight, incomplete-horizon, and Hub chronology contracts were absorbed into
+the editor, workspace, and simulation authorities. Their implementation passed
+the focused application and Hub suites, the complete planner-engine lane,
+typecheck, lint, formatting, and diff checks; this documentation-only closure
+did not rerun those completed lanes.
