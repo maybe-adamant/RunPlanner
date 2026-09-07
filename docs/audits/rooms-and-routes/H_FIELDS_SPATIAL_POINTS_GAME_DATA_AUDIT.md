@@ -11,10 +11,11 @@ game facts needed to reason about finite, room-scoped physical locations for:
 - optional Fields rewards.
 
 It also records whether those source facts can support exact authored
-assignments such as “Cage 1 uses physical location 4” and a later static-map
-visualization. It does not define an authored schema, command vocabulary,
-application projection, React layout, delivery gate, migration, module name,
-or commit sequence. Those decisions belong to a later grounded plan.
+assignments such as “Cage 1 uses physical location 4,” a later static-map
+visualization, and a later executor adapter. It does not define an authored
+schema, command vocabulary, application projection, React layout, delivery
+gate, migration, module name, or commit sequence. Those decisions belong to a
+later grounded plan.
 
 The existing
 [Fields optional rewards and Artificer audit](../rewards-and-acquisition/FIELDS_OPTIONAL_REWARDS_AND_ARTIFICER_GAME_DATA_AUDIT.md)
@@ -52,6 +53,7 @@ The map binaries were decoded with HadesMapper commit
 `1b822578f656c1e6e2ac9ba9e6e054e0d98ce49f`. The decoder exposes each object's
 `Id`, `Name`, `GroupNames`, and `Location`. This audit selected:
 
+- the map's fixed `_PlayerUnit` object;
 - objects named `HeroStart` and `HeroEnd`;
 - objects named `LootPoint`; and
 - objects whose `GroupNames` contain `BonusRewardSpawnPoints`.
@@ -161,6 +163,61 @@ not change the room's underlying point set.
 Optional rewards are spawned with `NotRequiredPickup = true`. Physical
 placement does not turn them into required interactions and does not alter the
 existing room-action chronology.
+
+### Nemesis selects after optional rewards from the remaining physical points
+
+The selected entry pair does not constrain `NemesisRandomEvent` placement.
+`StartRoom` establishes the relevant order:
+
+1. `SetupHeroObject` attaches the hero to the map's fixed `_PlayerUnit`;
+2. `GatherRoomPresentationObjects` selects and records the future
+   `HeroStart`/`HeroEnd` pair without moving the hero;
+3. the H room's `StartUnthreadedEvents` run `SpawnRewardCages`;
+4. the selected encounter's `StartRoomUnthreadedEvents` run
+   `SpawnNemesisForRandomEvents`; and
+5. only afterward does `StartRoomPresentation` move the hero through the
+   selected entrance.
+
+Each optional `SpawnRoomReward` records its physical point in
+`MapState.RewardPointsUsed` before `SpawnRewardCages` returns. Nemesis then asks
+`SelectSpawnPoint` for `BonusRewardSpawnPoints` with
+`CheckRewardPointsUsed = true`, so every already occupied optional point is
+excluded before the NPC is placed. `BlockMaxBonusRewards` reserves capacity in
+rooms whose optional roll could otherwise fill their complete point set.
+
+`SelectSpawnPoint` also applies `RequireMinPlayerDistance = 300` against the
+hero's then-current `_PlayerUnit` location. Full-precision decoded geometry for
+all 15 combat maps found one excluded optional point:
+
+- in `H_Combat04`, `_PlayerUnit` `40000` at
+  `(9177.4033, 7871.2051)` is approximately `294.56` units from optional point
+  `572886` at `(9333.0898, 7621.1548)`.
+
+Every other optional point is more than 300 units from its map's `_PlayerUnit`;
+the next-smallest distance is greater than 500 units. The exact supported
+Nemesis domain is therefore the room's optional point set, minus active
+optional-reward assignments, and additionally minus point `572886` in
+`H_Combat04`. It does not depend on the selected entry. Under the supported
+optional-count bounds this always leaves at least one eligible preferred point,
+so the `LootPoint` fallback is not part of the planner's supported Fields
+Nemesis outcome.
+
+### Exact native override contacts are asymmetric
+
+The entry pair has a direct native override: `GatherRoomPresentationObjects`
+honors `CurrentRun.NextHeroStartPoint` and `CurrentRun.NextHeroEndPoint` before
+ordinary directional selection.
+
+The other three selections do not expose equivalent arguments.
+`SpawnRewardCages` ignores its `args` for point selection and calls
+`RemoveRandomValue` over the complete cage and optional point lists.
+`SpawnNemesisForRandomEvents` passes its encounter arguments to
+`SelectSpawnPoint`, but neither function accepts an exact point ID override.
+The audited IDs are valid native destination identities, but a later executor
+must use a bounded native selection contact for cage, optional, and Nemesis
+placement; it cannot obtain exact placement merely by copying a field into the
+room table. This is an execution-contact constraint, not a reason for the
+planner or compiler to infer placement.
 
 ## Room-level capacity summary
 
@@ -394,8 +451,9 @@ shape and the selected point assignments directly.
   position at runtime, but that fact does not add another independent map
   point.
 - The audit does not claim that authored physical assignments can force the
-  native game's RNG. It establishes representable exact outcomes for planning
-  and later runtime comparison.
+  native game's RNG through an existing declaration field. Entry has a direct
+  override; cage, optional, and Nemesis placement require a later bounded
+  selection adapter.
 
 ## Locked source conclusions
 
@@ -410,6 +468,11 @@ shape and the selected point assignments directly.
 - Optional reward count and optional physical placement are separate: up to
   four chance successes are randomly assigned without replacement to the
   map's optional point set.
+- Optional rewards are placed before Fields `NemesisRandomEvent`; their points
+  are recorded as used before Nemesis selection.
+- Nemesis placement is independent of the selected entry. Its preferred domain
+  is the unoccupied optional-point set, except that `H_Combat04` point `572886`
+  fails the native 300-unit player-distance requirement.
 - Physical point count cannot be inferred from logical reward capacity.
 - `H_Combat09` has three cage locations despite a declared maximum of two
   cage rewards.
@@ -419,5 +482,7 @@ shape and the selected point assignments directly.
 - Room-scoped map object identities can support exact occurrence assignments
   and static visual markers without conflating physical position with logical
   reward or encounter ownership.
+- Only entry exposes a direct exact native override; the other physical
+  selections require a later bounded runtime selection contact.
 - Mirroring and distance modeling are unnecessary for the agreed whole-room
   point-visualization scope.

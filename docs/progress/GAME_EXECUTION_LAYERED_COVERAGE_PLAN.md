@@ -20,10 +20,10 @@ were already closed by earlier acquisition, encounter, keepsake,
 transformation, and commerce slices. Gates F1 and F2 are now complete: residual
 native contacts are proved, the universal F/G disposition inventory is
 exhaustive, and durable execution authorities describe the current boundary.
-Gate G's focused live F/G proof is next; Gate H remains the final durable and
-Windows closure. Do not begin a later gate until its components, ownership,
-native contacts, pass-through boundary, and concrete witnesses have been
-discussed, cleaned up here, and locked.
+Gate G's focused live F/G proof completed on 2026-09-06; Gate H remains the
+final durable and Windows closure. Do not begin a later execution boundary
+until its components, ownership, native contacts, pass-through boundary, and
+concrete witnesses have been discussed, cleaned up, and locked.
 
 Starting commits:
 
@@ -2177,6 +2177,13 @@ limited to a demonstrated missing choice, carrier, or proof fact; otherwise its
 F2 changes are test and durable-document closure only.
 
 ### Gate G — Focused live F/G proof
+
+Completed on 2026-09-06. The iterative live proof exercised the required F/G
+layers through republished focused plans and culminated in a configured
+Underworld prefix reaching the end of G without an unresolved executor
+mismatch. The closing tested heads were Run Planner `85c6f3e6` and Plan
+Executor `78bbc34` on execution protocol 28. Later-route adapters remain
+source- or unit-proven only; this result does not claim H support.
 
 Only after Gates A-F are complete, resume in-game testing with several short
 plans rather than one enormous route intended to touch every feature.

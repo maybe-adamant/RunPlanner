@@ -11,8 +11,8 @@ the active frontier needed to orient the next delivery.
 
 ## Current Snapshot
 
-The current persisted contract is strict authored schema 74 with catalog
-`0.54.0-required-boss-rewards`. Each project contains one selected route;
+The current persisted contract is strict authored schema 77 with catalog
+`0.55.0-anvil-of-fates`. Each project contains one selected route;
 the browser product supports the eight catalog biomes across the two current
 route choices:
 
@@ -39,8 +39,11 @@ and repairable.
 The Phase 8 permission-minimal Tauri 2 Windows preview is complete. Its native
 profile flow now retains an opened or first-saved project target for in-place
 Save, while the browser retains upload/download behavior. The separate Plan
-Executor now consumes the supported F/G execution prefix as a thin declarative
-runtime auditor; it is not a second planner or simulator.
+Executor consumes the supported F/G execution prefix as a thin declarative
+runtime adapter; it is not a second planner or simulator. On 2026-09-06 the
+focused live campaign reached the end of a configured F/G prefix without an
+unresolved executor mismatch. H remains outside the published execution
+extent.
 
 ## Active Frontier and Blockers
 
@@ -50,11 +53,12 @@ catalog-driven route choice, singular
 evaluation/workspace pipeline, and owning product witnesses are closed with no
 recorded blocker.
 
-Phase 9, Simulation Conformance and Game Protocol, has closed the F/G execution
-boundary described by
+Phase 9, Simulation Conformance and Game Protocol, has closed and live-proven
+the F/G execution boundary described by
 [`GAME_INTEGRATION_BOUNDARY.md`](../design/GAME_INTEGRATION_BOUNDARY.md).
-Later biomes and live-host verification remain future gates; no native game
-probe is claimed without a Hades II host.
+The next planner frontier is exact H Fields spatial authoring; H execution
+publication and native realization follow only after that planner product is
+stable.
 
 There is no recorded active correctness queue in the former polish tracker.
 Future product observations must first identify their owning authority and,
@@ -99,9 +103,12 @@ milestones without repeating the delivery chronology.
 | Schema 68          | Boss and Postboss completion rooms became ordinary topology occurrences connected by fixed links; unreachable terminal I/Q Postboss drafts retired.                                      |
 | Schema 73          | Each project became a single selected-route document; the legacy schema-72 dual-route shape is converted by a lossless two-document splitter, and the older migration chain was retired. |
 | Schema 74          | Each project now persists the required Boss Reward chronology action; schema 73 migrates through one focused linear step.                                                                |
+| Schema 75          | Transcendent Embryo outcomes persist the exact blessing operand values shared with ordinary Chaos blessing authoring.                                                                    |
+| Schema 76          | Purchased Anvil of Fates outcomes persist one removed Hammer and the two exact added Hammers at acquisition settlement.                                                                  |
+| Schema 77          | Selected trait offers persist option-owned volatile carrier consequences, including nested Echo Boon Boon Boon outcomes.                                                                 |
 
 Catalog versions advanced alongside these boundaries. The current catalog is
-`0.54.0-required-boss-rewards`; exact declaration facts and source contacts
+`0.55.0-anvil-of-fates`; exact declaration facts and source contacts
 remain in the catalog package and focused audits rather than this status
 ledger.
 

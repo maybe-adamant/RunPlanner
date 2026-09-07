@@ -2,15 +2,15 @@
 
 ## Status
 
-Architecture locked on 2026-09-06 after review of the live H catalog, authored
-Fields state, reward materialization, structured workspace, and installed
-Hades II room-generation contacts. Implementation is intentionally deferred
-until the H planner phase. One bounded source-closure gate remains before
-production work: the new audit inventories optional points but explicitly does
-not yet close NPC placement, while Nemesis also applies a player-distance
-requirement at its preferred optional point.
+Architecture refreshed on 2026-09-06 after review of the live H catalog,
+authored Fields state, reward materialization, structured workspace, installed
+Hades II room-generation contacts, and the completed F/G live executor proof.
+The bounded Nemesis source closure is complete. This plan is ready for its
+planner-only implementation gates; H execution publication and realization
+remain a separate follow-up boundary.
 
-Starting Run Planner commit: `dab33a4c`
+Current rebase baseline: `85c6f3e6`
+Current authored schema: `77`; this plan advances it once to schema `78`.
 
 The worktree also contains the new source audit and its audit-index entry:
 
@@ -24,15 +24,23 @@ must be preserved when implementation begins.
 
 Add exact physical placement authoring for the 15 Mourning Fields combat Room
 Declarations while preserving the planner's existing Overview, Timeline, and
-Exits responsibilities:
+Exits responsibilities and introducing one H-specific Layout presentation:
 
 - Exits continue to author the target room, the batch-wide cage-count outcome,
   and each target room's logical cage reward identities.
-- The target occurrence's Room Overview becomes the single editor for every
-  Fields physical placement: player entry, cage locations, optional-reward
-  locations, and the supported Nemesis random-event location.
+- The target occurrence gains a dedicated Room Layout tab as the single editor
+  for every Fields physical placement: player entry, cage locations,
+  optional-reward locations, and the supported Nemesis random-event location.
+- Room Overview continues to author room-local semantic content such as
+  optional reward identities and Nemesis activation. Layout may show that
+  content as read-only placement context, but it cannot edit it.
 - Room Timeline remains unchanged. Cage activation, encounter, transformation,
   and pickup order continue to use the existing mixed occurrence chronology.
+
+This is an additive presentation and authoring surface for the new spatial
+facts only. Every pre-existing control remains in its current tab with its
+current responsibility and interaction shape; this plan does not move or
+redesign existing authoring merely to make related placement context visible.
 
 The persisted project must contain stable room-scoped game point identities,
 not UI coordinates or rendered marker positions. A later optional `View Map`
@@ -71,6 +79,13 @@ Installed game contacts:
 - `RoomPresentation.lua:GatherRoomPresentationObjects` selects one declared
   HeroStart/HeroEnd pair and honors explicit `NextHeroStartPoint` and
   `NextHeroEndPoint` values before applying ordinary direction filtering.
+- `RoomLogic.lua:StartRoom` runs the H room's `SpawnRewardCages` event before
+  the selected encounter's `SpawnNemesisForRandomEvents` event and before room
+  entrance presentation moves the hero.
+- The full map inventory leaves one source-ineligible Nemesis point:
+  `H_Combat04` optional point `572886` is within 300 units of that map's fixed
+  `_PlayerUnit`. Every other optional point satisfies the native distance
+  requirement.
 
 ## Locked source facts and planner simplifications
 
@@ -96,15 +111,16 @@ The planner preserves all three stages without inventing another chronology:
   complete physical Fields layout;
 - the target's cage reward leaves are edited through the preceding door's
   declaration-owned offer surface;
-- the target's physical layout and optional rewards are edited in its Overview;
-  and
+- the target's optional rewards and Nemesis activation remain edited in its
+  Overview;
+- the target's physical layout is edited in its dedicated Layout tab; and
 - the existing Timeline references the same logical reward and encounter
   owners without receiving placement actions.
 
 Where a value is displayed does not create a second persisted owner. The door
-card is a projection of its target occurrence's logical cage leaves. Overview
-may display those cage identities as read-only placement context, but it must
-not add another cage-reward editor or copy.
+card is a projection of its target occurrence's logical cage leaves. Layout may
+display those cage identities as read-only placement context, but it must not
+add another cage-reward editor or copy.
 
 ### One occurrence-owned spatial product
 
@@ -177,8 +193,9 @@ exact outcome for its room. This remains game-shaped because the native game
 explicitly honors a supplied next HeroStart/HeroEnd pair before ordinary
 direction filtering.
 
-The entry selection stays occurrence-owned in Overview. A predecessor or
-topology edit does not require transition-owned state or an entry action.
+The entry selection stays occurrence-owned and is edited in Layout. A
+predecessor or topology edit does not require transition-owned state or an
+entry action.
 
 ### Nemesis uses actual point capacity
 
@@ -199,6 +216,12 @@ Consequently `H_Combat03`, `H_Combat04`, and `H_Combat05` may retain four
 optional rewards with Nemesis because they have five, seven, and seven
 physical optional points respectively. Rooms whose ordinary maximum fills
 their point set lose one optional reward position when Nemesis is active.
+
+Nemesis placement candidates use the active room's optional point set minus
+active optional assignments. `H_Combat04` point `572886` is additionally
+unavailable because it fails the source-owned player-distance requirement.
+The candidate domain does not depend on the authored entry: Nemesis is placed
+before entrance presentation moves the hero from the map's fixed `_PlayerUnit`.
 
 This is an engine correction enabled by the new declaration data, not a UI
 special case.
@@ -237,7 +260,9 @@ The catalog owns one H-specific spatial declaration for each of
 
 - ordered HeroStart/HeroEnd pairs;
 - ordered `LootPoint` IDs; and
-- ordered `BonusRewardSpawnPoints` IDs.
+- ordered `BonusRewardSpawnPoints` IDs; and
+- the sparse optional-point exclusions imposed by Nemesis's native distance
+  requirement (`H_Combat04` point `572886` only).
 
 The raw declaration data should live beside the H room declarations in one
 focused data module rather than expanding every room declaration inline. The H
@@ -249,6 +274,7 @@ The normalized catalog contract validates:
 - identities are unique within their own point family and Room Declaration;
 - every entry start has exactly one paired end;
 - each Fields combat room has a nonempty set for all three families;
+- every Nemesis exclusion belongs to that declaration's optional point set;
 - bounded cage capacity does not exceed physical cage point count;
 - ordinary optional reward capacity is the lesser of four and physical
   optional point count; and
@@ -287,7 +313,7 @@ nemesis
 The command assigns or clears exactly one target. The engine returns the exact
 declaration-owned point domain and selected-validity result for that target.
 The application must not reproduce point membership, active-slot, uniqueness,
-Nemesis reservation, or any audited entry-to-Nemesis eligibility policy.
+Nemesis reservation, or the audited Nemesis-eligible point subset.
 
 Changing optional count, cage outcome, or Nemesis encounter activation retains
 dormant assignments. Replacing an occurrence with a different Room Declaration
@@ -295,19 +321,41 @@ resets every spatial assignment, even if the two declarations happen to reuse
 the same numeric object ID. Point identity is room-scoped; equal numbers across
 different maps are not compatible state.
 
-Schema 76 advances once. The schema-76-to-new-schema migration adds the
+Schema 77 advances once. The schema-77-to-78 migration adds the
 complete spatial leaf shape without fabricating exact historical placements;
 existing H rooms remain editable but incomplete until their active placements
 are authored. Repository fixtures receive explicit reviewed assignments rather
 than relying on migration defaults.
 
+### Later execution contact
+
+The persisted point IDs are also the only exact facts a later H execution
+adapter should consume. Entry has a direct native override through
+`NextHeroStartPoint`/`NextHeroEndPoint`. Native cage, optional-reward, and
+Nemesis functions do not expose exact point-ID arguments; they select randomly
+from map groups. Their later executor support therefore requires a bounded
+selection contact at those native functions. The compiler must serialize the
+planner-selected identities without deriving placement, and the executor must
+not reconstruct the planner's point legality or uniqueness policy.
+
+This constraint does not add execution work to the current plan. It records
+why mapping the pre-spatial H product into the executor first would create a
+temporary inference path that must later be removed.
+
 ### Planner application and React
 
-The application projects the engine product into the existing Fields portion
-of Room Overview. It owns only presentation labels, grouping, focus, and picker
-composition.
+The application projects the engine product into a dedicated Layout tab for H
+combat occurrences. It owns only presentation labels, grouping, focus, tab
+availability, and picker composition. The tab is conditional: occurrences
+without an H Fields spatial product do not render an empty Layout tab.
 
-The intended Overview is:
+The H combat room tab order is:
+
+```text
+Overview | Layout | Timeline | Doors
+```
+
+The intended Layout tab is:
 
 ```text
 Fields Layout
@@ -327,10 +375,11 @@ Nemesis                       [Optional Point 2]
 ```
 
 Only active cage and optional rows are shown. The Nemesis row appears only
-when the supported Nemesis room feature is active. The cage reward summary is
-read-only context; its edit control remains on the preceding door card. Each
-optional row keeps its existing reward editor and adds its placement picker in
-the same Overview section.
+when the supported Nemesis room feature is active. Cage and optional reward
+summaries are read-only context: cage editing remains on the preceding door
+card, while optional reward count and identity editing remain in Overview.
+Nemesis activation and outcome authoring likewise remain in Overview. Layout
+contains only the location picker for each active item.
 
 Picker labels are application vocabulary derived from declaration order:
 `Entry 1`, `Cage Point 1`, and `Optional Point 1`. Raw native object IDs must
@@ -338,8 +387,9 @@ not appear in the editor. Occupied or otherwise ineligible choices remain
 visible but unavailable with an engine-provided reason; retained invalid
 selections remain visible and repairable.
 
-Findings navigate directly to the exact placement control in Room Overview.
-No finding or placement control points to Room Timeline.
+Findings navigate directly to the exact placement control in Room Layout. No
+finding or placement control points to Room Overview, Room Timeline, or Room
+Doors.
 
 ## Explicit product split
 
@@ -352,47 +402,35 @@ Preceding Room · Exits
                  | same target occurrence; no copied rewards
                  v
 Target Room · Overview
+  optional reward count and identities
+  Nemesis activation and outcome
+  existing room-local features
+
+Target Room · Layout
   entry pair
-  cage physical assignments, labeled by those cage rewards
-  optional reward identities and physical assignments
-  Nemesis physical assignment
+  cage physical assignments, labeled by read-only cage identities
+  optional physical assignments, labeled by read-only reward identities
+  Nemesis physical assignment, shown only while Nemesis is active
 
 Target Room · Timeline
   existing cage/encounter/pickup order only
 ```
 
-This plan changes the first two products only. It neither adds nor removes a
-Timeline participant.
+This plan adds the Layout projection without moving the existing Exits or
+Overview authorities. It neither adds nor removes a Timeline participant.
 
-## Gate 0 — Close the Nemesis physical-point domain
+## Pre-implementation source closure — complete
 
-Intended commit: folded into the audit/plan commit before implementation
+Source closure established that optional rewards are placed and recorded before
+Nemesis selection, entry choice is irrelevant at that time, and exactly one map
+point has an additional source restriction: `H_Combat04` optional point
+`572886` fails the 300-unit minimum distance from the fixed `_PlayerUnit`.
+Every supported authored Nemesis state retains at least one eligible preferred
+optional point, so the `LootPoint` fallback stays outside the modeled domain.
 
-The architecture above does not depend on this result, but the exact Nemesis
-candidate matrix does. Before Gate A begins:
-
-- trace the relative room-start ordering of `SpawnRewardCages` and
-  `SpawnNemesisForRandomEvents`;
-- confirm how optional reward creation records `MapState.RewardPointsUsed`
-  before Nemesis calls `SelectSpawnPoint`;
-- account for `PreferredSpawnPointGroup = "BonusRewardSpawnPoints"`, its
-  `LootPoint` fallback, `CheckRewardPointsUsed`, and the encounter's
-  `RequireMinPlayerDistance = 300`;
-- compare every H entry/end pair with every optional point, or otherwise derive
-  the exact entry-dependent Nemesis point domain; and
-- update the spatial audit with the resulting source facts and bounded planner
-  disposition.
-
-If all declared optional points are valid for every authored entry, Nemesis
-uses the ordinary optional point domain minus active optional assignments. If
-some combinations are invalid, the engine candidate product additionally
-depends on the selected entry. If the source cannot support exact Nemesis
-placement without a broader distance/path model, narrow the Nemesis placement
-slice before production work rather than treating every optional point as
-legal.
-
-This gate adds evidence only. It must not add production distance arithmetic,
-coordinates, or a generic spatial model.
+The catalog declares the resulting per-room Nemesis-eligible optional subset.
+The engine consumes that subset directly; it must not add coordinate arithmetic,
+entry-dependent distance checks, or a generic spatial model.
 
 ## Gate A — Catalog and engine spatial authority
 
@@ -411,15 +449,17 @@ Intended commit: `feat(fields): author spatial layouts`
   adding simulation branches or history events.
 - Correct Fields optional-count support so Nemesis reserves a physical point
   rather than unconditionally subtracting one reward.
-- Advance the authored schema and provide one focused migration from schema 76.
+- Advance the authored schema to 78 and provide one focused migration from
+  schema 77.
 - Update H-bearing repository fixtures with explicit reviewed assignments and
   advance the fixture manifest.
 
 ### Primary tests
 
 - Catalog regression covers all 15 rooms' entry, cage-point, optional-point,
-  logical-cage-capacity, and ordinary optional-reward counts, including
-  `H_Combat09` and the three rooms with surplus optional points.
+  Nemesis-exclusion, logical-cage-capacity, and ordinary optional-reward
+  counts, including `H_Combat04`, `H_Combat09`, and the three rooms with
+  surplus optional points.
 - Catalog normalization rejects duplicate IDs, missing entry partners,
   impossible logical capacities, and spatial data on a non-Fields room.
 - The project codec round-trips every spatial selection and rejects point IDs
@@ -431,8 +471,9 @@ Intended commit: `feat(fields): author spatial layouts`
 - Active cage slots require distinct cage points; dormant cage slots retain
   values without consuming points.
 - Active optional slots and Nemesis share one uniqueness domain; the Nemesis
-  candidate domain also honors the bounded Gate-0 result. Inactive optional
-  slots and dormant Nemesis retain values without consuming points.
+  candidate domain excludes `H_Combat04` point `572886` without consulting the
+  selected entry. Inactive optional slots and dormant Nemesis retain values
+  without consuming points.
 - Nemesis reduces the optional reward maximum only when the active rewards
   would otherwise fill the concrete point set. `H_Combat04` still supports four
   optionals with Nemesis, while a two-point room supports only one.
@@ -454,39 +495,49 @@ tests, `npm run typecheck`, `npm run lint`, `npm run format:check`, and
 - No raw point ID treated as globally unique.
 - No correction invented for the `H_Combat13` enemy-group discrepancy.
 
-## Gate B — Fields Overview authoring
+## Gate B — Fields Layout authoring
 
 Intended commit: `feat(planner): edit Fields spatial layouts`
 
 ### Production work
 
-- Extend the structured workspace's Fields room-local product with the complete
-  engine-derived placement rows and contextual interactions.
+- Add a conditional Room Layout workspace surface for H combat occurrences and
+  populate it with the complete engine-derived placement rows and contextual
+  interactions.
 - Keep cage reward editing on the preceding door offer surface and project only
-  a read-only cage summary beside each Overview placement picker.
-- Consolidate optional reward count, identity, and location authoring inside the
-  existing Fields Overview workbench.
+  a read-only cage summary beside each Layout placement picker.
+- Keep optional reward count and identity authoring and Nemesis activation in
+  Room Overview; project their active identities into Layout as read-only
+  placement context.
+- Do not place spatial controls in Overview's existing Features grouping.
 - Render the selected entry and active cage, optional, and Nemesis placement
   controls with stable aligned rows and human labels.
-- Route every placement finding and marker to its exact Overview control.
-- Preserve the current Room Overview, Room Timeline, and Room Doors tab
-  behavior and keyboard/accessibility primitives.
+- Route every placement finding and marker to its exact Layout control.
+- Render the H combat tab order as Overview, Layout, Timeline, Doors while
+  preserving each existing tab's behavior and keyboard/accessibility
+  primitives. Do not show Layout for occurrences without the spatial product.
+- Leave every existing Overview, Timeline, and Doors authoring interaction in
+  place; Layout adds only the new spatial assignment controls and read-only
+  context needed to identify what is being placed.
 
 ### Primary tests
 
 - A prepared H target's preceding door still owns the editable cage reward
   controls and exposes every active cage summary.
-- Opening that target's Room Overview shows the same cage identities as
+- Opening that target's Room Layout shows the same cage identities as
   read-only labels alongside independently editable physical points.
-- Optional count and reward identities remain editable in Overview and each
-  active optional receives one location control.
-- Activating Nemesis adds its location row and uses the audited eligible subset
-  of the optional-point domain; removing Nemesis hides the row without deleting
-  its dormant value.
+- Optional count and reward identities remain editable only in Overview; each
+  active optional receives one location control in Layout.
+- Activating Nemesis in Overview adds its Layout location row and uses the
+  audited eligible subset of the optional-point domain; removing Nemesis hides
+  the row without deleting its dormant value.
+- H combat occurrences render `Overview | Layout | Timeline | Doors`, while a
+  representative non-H occurrence does not render Layout.
 - Occupied points are unavailable, while a retained conflicting or missing
   value remains visible with an exact finding and repair destination.
 - `H_Combat04` exposes seven optional physical choices despite allowing at most
-  four ordinary optional reward slots.
+  four ordinary optional reward slots, while its active Nemesis picker exposes
+  the six source-eligible points.
 - No raw object ID is rendered in summaries, labels, findings, or picker rows.
 - Editing placement does not change rendered Timeline rows or their order.
 
@@ -497,9 +548,15 @@ tests; `npm run test:planner`; typecheck, lint, format, and diff checks.
 
 - React dispatches complete bound commands and contains no point legality or
   uniqueness policy.
-- Room Overview is the only physical-placement editor.
+- Room Layout is the only physical-placement editor.
+- Room Overview retains optional-reward and Nemesis semantic authoring and does
+  not gain placement controls.
 - Room Doors does not gain placement controls.
 - Room Timeline does not gain placement controls, rows, or markers.
+- Room Layout contains no reward, encounter, feature-activation, or action-order
+  editor.
+- No existing authoring control is moved, duplicated, or redesigned as part of
+  introducing Layout.
 - No map canvas, image loader, marker-drag system, or CSS-coordinate model is
   introduced.
 
@@ -508,8 +565,8 @@ tests; `npm run test:planner`; typecheck, lint, format, and diff checks.
 Intended commit: `docs(fields): close spatial layout plan`
 
 - Update `H_GAME_RULES.md` with the occurrence-owned spatial layout, the
-  Exits/Overview/Timeline projection split, and corrected Nemesis optional
-  capacity.
+  Exits/Overview/Layout/Timeline projection split, and corrected Nemesis
+  optional capacity.
 - Update the spatial audit's current planner contact and final disposition
   without erasing its source facts or unresolved `H_Combat13` discrepancy.
 - Add the completed schema and feature result to
@@ -523,7 +580,7 @@ Intended commit: `docs(fields): close spatial layout plan`
 
 ## Deferred visual projection
 
-A later visual slice may add one `View Map` control to the Fields Overview.
+A later visual slice may add one `View Map` control to Room Layout.
 That view may:
 
 - select the Room Declaration's replaceable map image;
@@ -552,17 +609,20 @@ visual infrastructure for it.
   surface.
 - Replacing the existing cage reward, optional reward, encounter, acquisition,
   or room-action models.
-- Moving cage reward identity editing from the preceding door into Overview.
+- Moving cage reward identity editing from the preceding door into Layout.
+- Moving optional reward identity, Nemesis activation, encounter, or action
+  authoring into Layout.
 - Any Timeline schema, action, dependency, or ordering change.
 - A generic spatial-point abstraction prepared for unknown future biomes.
 
 ## Final acceptance
 
-The plan is complete when an H combat target can be authored with one exact
+The plan is complete when an H combat target renders
+`Overview | Layout | Timeline | Doors` and can be authored with one exact
 room-scoped physical layout; its cage identities still originate from the
 preceding door surface; its optional rewards and Nemesis remain Room Overview
-facts; its existing Timeline is byte-for-byte semantically unchanged; every
-active placement is declaration-valid and collision-free; inactive values are
-retained without consuming space; and the same persisted point identities are
-sufficient for a later read-only annotated map without changing the authored
-schema.
+facts; Layout edits only their physical locations; its existing Timeline is
+byte-for-byte semantically unchanged; every active placement is
+declaration-valid and collision-free; inactive values are retained without
+consuming space; and the same persisted point identities are sufficient for a
+later read-only annotated map without changing the authored schema.
