@@ -49,6 +49,7 @@ import {
   type FountainRarityOutcomeAddress,
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredEchoLastRunBoonOption,
+  type AuthoredAllTogetherResult,
   type AuthoredCirceResolution,
   type LevelResolutionAddress,
   type JudgmentArcanaAddress,
@@ -639,7 +640,27 @@ export interface WorkspaceEchoLastRunBoonDraftRow {
   readonly identity?: WorkspaceEchoLastRunBoonTraitIdentity;
   readonly rarity?: TraitRarity;
   readonly targetTraitKey?: string;
+  readonly allTogetherResult?: AuthoredAllTogetherResult;
+  readonly naturalSelectionTargets?: AuthoredEchoLastRunBoonOption['naturalSelectionTargets'];
 }
+
+export type WorkspaceEchoLastRunBoonCarrierDomain =
+  | {
+      readonly kind: 'allTogether';
+      readonly complete: boolean;
+      readonly sets: readonly {
+        readonly setKey: import('@run-planner/engine/catalog-schema').DirectTraitSetKey;
+        readonly picker: ContextualPickerModel<string | null>;
+      }[];
+    }
+  | {
+      readonly kind: 'naturalSelection';
+      readonly slotCount: number;
+      readonly complete: boolean;
+      readonly supported: boolean;
+      readonly picker: ContextualPickerModel<string>;
+      readonly traitLabel: (traitKey: string) => string;
+    };
 
 export interface WorkspaceEchoLastRunBoonDraftSupport {
   readonly rowSupport: readonly boolean[];
@@ -665,6 +686,15 @@ export interface WorkspaceEchoLastRunBoonDomain {
     option: AuthoredEchoLastRunBoonOption,
   ) => ContextualPickerModel<string>;
   readonly targetRequiredFor: (identity: WorkspaceEchoLastRunBoonTraitIdentity) => boolean;
+  readonly carrierKindFor: (
+    identity: WorkspaceEchoLastRunBoonTraitIdentity,
+  ) => WorkspaceEchoLastRunBoonCarrierDomain['kind'] | undefined;
+  readonly carrierForDraft: (
+    rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
+    selectedIndex: number,
+  ) => {
+    readonly load: () => WorkspaceEchoLastRunBoonCarrierDomain | undefined;
+  };
   /** Engine-owned trait distinctness for one transient compound-draft row. */
   readonly traitPickerFor: (
     occupiedTraitKeys: readonly string[],

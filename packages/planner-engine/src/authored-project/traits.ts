@@ -5,22 +5,25 @@ import { createNormalDispositionByAcquisitionRole } from './reward-state';
 import { levelResolutionEffectFor } from '../reward-kernel/level-effects';
 import type { LevelResolutionEffectSource } from '../reward-kernel/level-effects';
 
-export interface AuthoredTraitOption {
+export interface AuthoredTraitCarrierOutcome {
+  /** Exact random equipped-trait outcome for a targeted acquisition. */
+  readonly targetTraitKey?: string;
+  /** All Together's complete one-result-per-source-set outcome when authored. */
+  readonly allTogetherResult?: AuthoredAllTogetherResult;
+  /** Natural Selection's complete ordered successful-increment outcome. */
+  readonly naturalSelectionTargets?: OneToEight<string>;
+}
+
+export interface AuthoredTraitOption extends AuthoredTraitCarrierOutcome {
   readonly traitKey: string;
   /** Planner-rarityless traits, including Hammers and Story/NPC traits, omit rarity. */
   readonly rarity?: TraitRarity;
-  /** Exact random equipped-trait outcome for a targeted acquisition. */
-  readonly targetTraitKey?: string;
   /** Circe's closed exact Arcana/Fear outcome. Detail may remain dormant on an unselected option. */
   readonly circeResolution?: AuthoredCirceResolution;
   /** Echo Pom's exact random greatest-level target; null records a legal empty-domain no-op. */
   readonly echoPomTarget?: string | null;
   /** Echo's explicit previous-run approximation; dormant when this outer row is not selected. */
   readonly echoLastRunBoon?: AuthoredEchoLastRunBoonOffer;
-  /** All Together's complete one-result-per-source-set outcome when authored. */
-  readonly allTogetherResult?: AuthoredAllTogetherResult;
-  /** Natural Selection's complete ordered successful-increment outcome. */
-  readonly naturalSelectionTargets?: OneToEight<string>;
   /** Persephone's frozen additive contribution for this generated row. */
   readonly persephoneLevelBonus?: number;
 }
@@ -69,13 +72,10 @@ export function normalizeAllTogetherResult(
   ) as AuthoredAllTogetherResult;
 }
 
-export interface AuthoredEchoLastRunBoonOption {
+export interface AuthoredEchoLastRunBoonOption extends AuthoredTraitCarrierOutcome {
   readonly giverKey: string;
   readonly traitKey: string;
   readonly rarity: TraitRarity;
-  /** Declaration-owned selected-acquisition detail, currently Bridal Glow's exact target. */
-  readonly targetTraitKey?: string;
-  readonly naturalSelectionTargets?: AuthoredTraitOption['naturalSelectionTargets'];
 }
 
 export interface AuthoredEchoLastRunBoonOffer {
@@ -282,6 +282,10 @@ export function normalizeAuthoredEchoLastRunBoon(
       if (option.naturalSelectionTargets.some((key) => catalog.traits.byKey[key] === undefined))
         throw new Error('Echo Natural Selection result has an unknown target');
     }
+    const allTogetherResult =
+      option.allTogetherResult === undefined
+        ? undefined
+        : normalizeAllTogetherResult(catalog, option.traitKey, option.allTogetherResult);
     return Object.freeze({
       giverKey: option.giverKey,
       traitKey: option.traitKey,
@@ -290,6 +294,7 @@ export function normalizeAuthoredEchoLastRunBoon(
       ...(option.naturalSelectionTargets === undefined
         ? {}
         : { naturalSelectionTargets: option.naturalSelectionTargets }),
+      ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
     });
   });
   return Object.freeze({

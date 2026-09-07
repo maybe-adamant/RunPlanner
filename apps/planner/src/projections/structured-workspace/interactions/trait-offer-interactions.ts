@@ -48,6 +48,7 @@ import type {
   WorkspaceChaosOfferDomain,
   WorkspaceChaosOfferInteraction,
   WorkspaceHexTreeInteraction,
+  WorkspaceEchoLastRunBoonDraftRow,
 } from '../contract';
 
 function chaosDomainFromCandidate(
@@ -726,6 +727,112 @@ export function bindTraitOfferInteractions(input: {
                         }) =>
                           catalog.traits.byKey[identity.traitKey]?.targetedAcquisition !==
                           undefined,
+                        carrierKindFor: (identity: {
+                          readonly giverKey: string;
+                          readonly traitKey: string;
+                        }) => {
+                          const disposition =
+                            catalog.traits.byKey[identity.traitKey]?.selectedDisposition;
+                          return disposition?.kind === 'directTraitSets'
+                            ? ('allTogether' as const)
+                            : disposition?.kind === 'naturalSelection'
+                              ? ('naturalSelection' as const)
+                              : undefined;
+                        },
+                        carrierForDraft: (
+                          rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
+                          selectedIndex: number,
+                        ) =>
+                          Object.freeze({
+                            load: () => {
+                              if (
+                                rows.some(
+                                  (row) => row.identity === undefined || row.rarity === undefined,
+                                )
+                              )
+                                return undefined;
+                              const nestedOptions = rows.map((row) =>
+                                Object.freeze({
+                                  giverKey: row.identity!.giverKey,
+                                  traitKey: row.identity!.traitKey,
+                                  rarity: row.rarity!,
+                                  ...(row.targetTraitKey === undefined
+                                    ? {}
+                                    : { targetTraitKey: row.targetTraitKey }),
+                                  ...(row.allTogetherResult === undefined
+                                    ? {}
+                                    : { allTogetherResult: row.allTogetherResult }),
+                                  ...(row.naturalSelectionTargets === undefined
+                                    ? {}
+                                    : {
+                                        naturalSelectionTargets:
+                                          row.naturalSelectionTargets as import('@run-planner/engine/authored-project').AuthoredEchoLastRunBoonOption['naturalSelectionTargets'],
+                                      }),
+                                }),
+                              ) as unknown as AuthoredEchoLastRunBoonOffer['options'];
+                              const outerIndex = optionIndex(optionKey);
+                              const outerOption = offer.options[outerIndex];
+                              if (outerOption === undefined) return undefined;
+                              const outerOptions = [...offer.options];
+                              outerOptions[outerIndex] = Object.freeze({
+                                ...outerOption,
+                                echoLastRunBoon: Object.freeze({
+                                  options: Object.freeze(nestedOptions),
+                                  selectedOptionKey:
+                                    `option${selectedIndex + 1}` as import('@run-planner/engine/authored-project').TraitOptionKey,
+                                }),
+                              });
+                              const evaluated = candidates.echoLastRunBoon(
+                                control.address,
+                                Object.freeze({
+                                  ...offer,
+                                  options: Object.freeze(
+                                    outerOptions,
+                                  ) as AuthoredTraitOfferTraits['options'],
+                                }),
+                                optionKey,
+                              );
+                              if (
+                                evaluated.kind !== 'echoLastRunBoonDomain' ||
+                                evaluated.result.selectedCarrier === undefined
+                              )
+                                return undefined;
+                              const carrier = evaluated.result.selectedCarrier;
+                              if (carrier.kind === 'allTogether')
+                                return Object.freeze({
+                                  kind: 'allTogether' as const,
+                                  complete: carrier.complete,
+                                  sets: Object.freeze(
+                                    carrier.sets.map((set) =>
+                                      Object.freeze({
+                                        setKey: set.setKey,
+                                        picker: projectDirectTraitOutcomePicker(
+                                          set.candidates,
+                                          (traitKey) =>
+                                            traitKey === null
+                                              ? 'No grant (set exhausted)'
+                                              : (catalog.traits.byKey[traitKey]?.label ?? traitKey),
+                                          (traitKey) => traitKey ?? '__none__',
+                                        ),
+                                      }),
+                                    ),
+                                  ),
+                                });
+                              return Object.freeze({
+                                kind: 'naturalSelection' as const,
+                                slotCount: carrier.slotCount,
+                                complete: carrier.complete,
+                                supported: carrier.supported,
+                                picker: projectDirectTraitOutcomePicker(
+                                  carrier.nextTargetCandidates,
+                                  (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
+                                  (traitKey) => traitKey,
+                                ),
+                                traitLabel: (traitKey: string) =>
+                                  catalog.traits.byKey[traitKey]?.label ?? traitKey,
+                              });
+                            },
+                          }),
                         traitPickerFor: (
                           occupiedTraitKeys: readonly string[],
                           selected?: {

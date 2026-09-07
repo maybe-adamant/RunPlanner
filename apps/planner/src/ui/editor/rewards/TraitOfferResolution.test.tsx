@@ -16,6 +16,7 @@ import {
   createEchoLastRewardAddress,
   createEchoPomTargetAddress,
   createOccurrenceAddress,
+  optionIndex,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
   type AuthoredEchoLastRunBoonOption,
@@ -174,6 +175,8 @@ describe('resolution outcomes', () => {
     const identities = Object.freeze([
       Object.freeze({ giverKey: 'Aphrodite', traitKey: 'HighHealthOffenseBoon' }),
       Object.freeze({ giverKey: 'Hera', traitKey: 'BoonDecayBoon' }),
+      Object.freeze({ giverKey: 'Hera', traitKey: 'AllElementalBoon' }),
+      Object.freeze({ giverKey: 'Demeter', traitKey: 'GoodStuffBoon' }),
     ]);
     const echoDomainLoads = vi.fn();
     const interaction = Object.freeze({
@@ -247,13 +250,20 @@ describe('resolution outcomes', () => {
                             ? 'Aphrodite · Heart Breaker'
                             : identity.traitKey === 'BoonDecayBoon'
                               ? 'Hera · Bridal Glow'
-                              : 'Aphrodite · Romantic Spark',
+                              : identity.traitKey === 'AllElementalBoon'
+                                ? 'Hera · All Together'
+                                : identity.traitKey === 'GoodStuffBoon'
+                                  ? 'Demeter · Natural Selection'
+                                  : 'Aphrodite · Romantic Spark',
                         summaryFor: (nested: AuthoredEchoLastRunBoonOffer) => {
-                          const selected =
-                            nested.options[nested.selectedOptionKey === 'option1' ? 0 : 1];
+                          const selected = nested.options[optionIndex(nested.selectedOptionKey)];
                           return selected?.traitKey === 'BoonDecayBoon'
                             ? 'Hera · Bridal Glow · Heroic'
-                            : `Aphrodite · Heart Breaker · ${selected?.rarity ?? 'unknown'}`;
+                            : selected?.traitKey === 'AllElementalBoon'
+                              ? 'Hera · All Together · Legendary'
+                              : selected?.traitKey === 'GoodStuffBoon'
+                                ? 'Demeter · Natural Selection · Duo'
+                                : `Aphrodite · Heart Breaker · ${selected?.rarity ?? 'unknown'}`;
                         },
                         rarityPickerFor: (
                           identity: {
@@ -281,16 +291,30 @@ describe('resolution outcomes', () => {
                                   Object.freeze({ label: 'Common', value: 'Common' as const }),
                                   Object.freeze({ label: 'Rare', value: 'Rare' as const }),
                                 ]
-                              : [
-                                  Object.freeze({
-                                    label:
-                                      identity.traitKey === 'SprintEchoBoon' ? 'Duo' : 'Heroic',
-                                    value:
-                                      identity.traitKey === 'SprintEchoBoon'
-                                        ? ('Duo' as const)
-                                        : ('Heroic' as const),
-                                  }),
-                                ],
+                              : identity.traitKey === 'AllElementalBoon'
+                                ? [
+                                    Object.freeze({
+                                      label: 'Legendary',
+                                      value: 'Legendary' as const,
+                                    }),
+                                  ]
+                                : identity.traitKey === 'GoodStuffBoon'
+                                  ? [
+                                      Object.freeze({
+                                        label: 'Duo',
+                                        value: 'Duo' as const,
+                                      }),
+                                    ]
+                                  : [
+                                      Object.freeze({
+                                        label:
+                                          identity.traitKey === 'SprintEchoBoon' ? 'Duo' : 'Heroic',
+                                        value:
+                                          identity.traitKey === 'SprintEchoBoon'
+                                            ? ('Duo' as const)
+                                            : ('Heroic' as const),
+                                      }),
+                                    ],
                           );
                         },
                         targetPickerFor: () =>
@@ -304,6 +328,59 @@ describe('resolution outcomes', () => {
                           readonly giverKey: string;
                           readonly traitKey: string;
                         }) => identity.traitKey === 'BoonDecayBoon',
+                        carrierKindFor: (identity: {
+                          readonly giverKey: string;
+                          readonly traitKey: string;
+                        }) =>
+                          identity.traitKey === 'AllElementalBoon'
+                            ? ('allTogether' as const)
+                            : identity.traitKey === 'GoodStuffBoon'
+                              ? ('naturalSelection' as const)
+                              : undefined,
+                        carrierForDraft: (
+                          rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
+                          selectedIndex: number,
+                        ) => ({
+                          load: () => {
+                            const selectedRow = rows[selectedIndex];
+                            if (selectedRow?.identity?.traitKey === 'GoodStuffBoon') {
+                              const targets = selectedRow.naturalSelectionTargets ?? [];
+                              return {
+                                kind: 'naturalSelection' as const,
+                                slotCount: 2,
+                                complete: targets.length === 2,
+                                supported: true,
+                                picker: pickerModel([
+                                  Object.freeze({
+                                    label: 'Nova Strike',
+                                    value: 'ApolloWeaponBoon',
+                                  }),
+                                ]),
+                                traitLabel: (traitKey: string) =>
+                                  traitKey === 'ApolloWeaponBoon' ? 'Nova Strike' : traitKey,
+                              };
+                            }
+                            const result = selectedRow?.allTogetherResult;
+                            const sets = [
+                              ['earth', 'Earth Grant'],
+                              ['fire', 'Fire Grant'],
+                              ['air', 'Air Grant'],
+                              ['water', 'Water Grant'],
+                            ] as const;
+                            return {
+                              kind: 'allTogether' as const,
+                              complete: sets.every(([setKey]) =>
+                                Object.hasOwn(result ?? {}, setKey),
+                              ),
+                              sets: sets.map(([setKey, label]) => ({
+                                setKey,
+                                picker: pickerModel([
+                                  Object.freeze({ label, value: `${setKey}Trait` }),
+                                ]),
+                              })),
+                            };
+                          },
+                        }),
                         traitPickerFor: () =>
                           pickerModel(
                             identities.map((identity) =>
@@ -313,7 +390,11 @@ describe('resolution outcomes', () => {
                                     ? 'Aphrodite · Heart Breaker'
                                     : identity.traitKey === 'BoonDecayBoon'
                                       ? 'Hera · Bridal Glow'
-                                      : 'Aphrodite · Romantic Spark',
+                                      : identity.traitKey === 'AllElementalBoon'
+                                        ? 'Hera · All Together'
+                                        : identity.traitKey === 'GoodStuffBoon'
+                                          ? 'Demeter · Natural Selection'
+                                          : 'Aphrodite · Romantic Spark',
                                 value: identity,
                               }),
                             ),
@@ -376,7 +457,22 @@ describe('resolution outcomes', () => {
     await user.click(nestedRadios[1]!);
     await user.click(screen.getByLabelText('Boon Boon Boon selected trait target'));
     await user.click(await screen.findByText('Melting Point'));
-    expect(screen.queryByRole('button', { name: 'Add outcome' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Add outcome' }));
+    await user.click(screen.getByLabelText('Boon Boon Boon outcome 3'));
+    await user.click(await screen.findByText('Hera · All Together'));
+    const selectedAfterAppend = rendered.container.querySelectorAll(
+      'input[name="echo-last-run-selected"]',
+    );
+    await user.click(selectedAfterAppend[2]!);
+    for (const [setKey, grant] of [
+      ['earth', 'Earth Grant'],
+      ['fire', 'Fire Grant'],
+      ['air', 'Air Grant'],
+      ['water', 'Water Grant'],
+    ] as const) {
+      await user.click(screen.getByLabelText(`Echo All Together ${setKey} grant`));
+      await user.click(await screen.findByText(grant));
+    }
     await user.click(screen.getByRole('button', { name: 'Save Boon Boon Boon choice' }));
     expect(screen.getByRole('button', { name: 'Edit choice' })).toBeDefined();
     expect(commit).toHaveBeenCalledTimes(1);
@@ -392,8 +488,19 @@ describe('resolution outcomes', () => {
             rarity: 'Heroic',
             targetTraitKey: 'HephaestusWeaponBoon',
           },
+          {
+            giverKey: 'Hera',
+            traitKey: 'AllElementalBoon',
+            rarity: 'Legendary',
+            allTogetherResult: {
+              earth: 'earthTrait',
+              fire: 'fireTrait',
+              air: 'airTrait',
+              water: 'waterTrait',
+            },
+          },
         ],
-        selectedOptionKey: 'option2',
+        selectedOptionKey: 'option3',
       },
     });
 
@@ -449,6 +556,63 @@ describe('resolution outcomes', () => {
       'disabled',
       true,
     );
+    retainedRendered.unmount();
+
+    const naturalValue: AuthoredTraitOfferTraits = Object.freeze({
+      ...value,
+      options: Object.freeze([
+        Object.freeze({
+          traitKey: 'EchoLastRunBoon',
+          echoLastRunBoon: Object.freeze({
+            options: Object.freeze([
+              Object.freeze({
+                giverKey: 'Demeter',
+                traitKey: 'GoodStuffBoon',
+                rarity: 'Duo' as const,
+              }),
+            ] as const),
+            selectedOptionKey: 'option1' as const,
+          }),
+        }),
+        value.options[1],
+        value.options[2],
+      ]) as AuthoredTraitOfferTraits['options'],
+    });
+    const naturalInteraction = Object.freeze({ ...interaction, value: naturalValue });
+    const naturalInteractions: WorkspaceInteractionCatalog = Object.freeze({
+      ...interactions,
+      traitOffers: new Map([[naturalInteraction.key, naturalInteraction]]),
+    });
+    commit.mockClear();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor
+          address={naturalInteraction.owner}
+          interactions={naturalInteractions}
+          onChildCommit={commit}
+        />
+      </Provider>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Edit choice' }));
+    await user.click(screen.getByRole('button', { name: 'Choose all targets' }));
+    await user.click(await screen.findByRole('option', { name: 'Nova Strike' }));
+    await user.click(await screen.findByRole('option', { name: 'Nova Strike' }));
+    await user.click(screen.getByRole('button', { name: 'Save Boon Boon Boon choice' }));
+    const naturalSaved = commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits;
+    expect(naturalSaved.options[0]).toMatchObject({
+      traitKey: 'EchoLastRunBoon',
+      echoLastRunBoon: {
+        options: [
+          {
+            giverKey: 'Demeter',
+            traitKey: 'GoodStuffBoon',
+            rarity: 'Duo',
+            naturalSelectionTargets: ['ApolloWeaponBoon', 'ApolloWeaponBoon'],
+          },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
     application.dispose();
   });
 

@@ -8,6 +8,7 @@ import {
   semanticAddressKey,
 } from '../../authored-project/addresses';
 import { parseHermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shrine-delivery';
+import { optionIndex } from '../../authored-project/traits';
 import type { TraitOfferOwnerAddress } from '../../authored-project/addresses';
 import { nemesisGeneratedPickupSiteKey } from '../../authored-project/pickup-producers';
 import type { CanonicalAuthoredRoom } from '../../simulation/materialization';
@@ -131,6 +132,14 @@ export function executionTimelineTransactions(
       targetedAcquisition?.kind === 'upgradeHammerToRank2'
         ? targetedAcquisition.targetTraitKey
         : undefined;
+    const targetTraitKey =
+      targetedAcquisition?.kind === 'promoteGodTraitToHeroic'
+        ? targetedAcquisition.targetTraitKey
+        : undefined;
+    const concaveResidualOptionKey =
+      selectedTraitOffer.concaveStoneResult?.kind === 'proc'
+        ? selectedTraitOffer.concaveStoneResult.optionKey
+        : undefined;
     const echoPomTarget =
       selected.offer.giverKey === 'Echo' && selectedOption?.traitKey === 'EchoDoubleLevelBoon'
         ? selectedOption.echoPomTarget
@@ -180,6 +189,9 @@ export function executionTimelineTransactions(
       options: Object.freeze(
         selected.offer.options.map((option, index) => {
           const replacement = replacements[index];
+          const optionKey = `option${index + 1}`;
+          const carrierExecutes =
+            index === selectedOptionIndex || optionKey === concaveResidualOptionKey;
           return Object.freeze({
             key: option.traitKey,
             ...(baseRarities[index] === undefined || baseRarities[index] === option.rarity
@@ -187,7 +199,7 @@ export function executionTimelineTransactions(
               : { baseRarity: baseRarities[index] }),
             ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
             ...(levels[index] === undefined ? {} : { effectiveLevel: levels[index] }),
-            ...(option.allTogetherResult === undefined
+            ...(!carrierExecutes || option.allTogetherResult === undefined
               ? {}
               : {
                   allTogetherResult: Object.freeze({
@@ -197,9 +209,18 @@ export function executionTimelineTransactions(
                     water: option.allTogetherResult.water,
                   }),
                 }),
-            ...(option.naturalSelectionTargets === undefined
+            ...(!carrierExecutes || option.naturalSelectionTargets === undefined
               ? {}
               : { naturalSelectionTargets: Object.freeze([...option.naturalSelectionTargets]) }),
+            ...(() => {
+              const publishedTarget =
+                index === selectedOptionIndex
+                  ? targetTraitKey
+                  : optionKey === concaveResidualOptionKey
+                    ? option.targetTraitKey
+                    : undefined;
+              return publishedTarget === undefined ? {} : { targetTraitKey: publishedTarget };
+            })(),
             ...(selectedTraitOffer.concaveStoneResult === undefined ||
             selectedTraitOffer.selectedOptionKey !== `option${index + 1}`
               ? {}
@@ -240,7 +261,7 @@ export function executionTimelineTransactions(
               : {
                   echoLastRunBoon: Object.freeze({
                     options: Object.freeze(
-                      echoLastRunBoon.options.map((nested) =>
+                      echoLastRunBoon.options.map((nested, nestedIndex) =>
                         Object.freeze({
                           giver: nested.giverKey,
                           key: nested.traitKey,
@@ -248,15 +269,28 @@ export function executionTimelineTransactions(
                           ...(nested.lootHistorySource === undefined
                             ? {}
                             : { lootHistorySource: nested.lootHistorySource }),
-                          ...(nested.targetTraitKey === undefined
+                          ...(nestedIndex !== optionIndex(echoLastRunBoon.selectedOptionKey) ||
+                          nested.targetTraitKey === undefined
                             ? {}
                             : { targetTraitKey: nested.targetTraitKey }),
-                          ...(nested.naturalSelectionTargets === undefined
+                          ...(nestedIndex !== optionIndex(echoLastRunBoon.selectedOptionKey) ||
+                          nested.naturalSelectionTargets === undefined
                             ? {}
                             : {
                                 naturalSelectionTargets: Object.freeze([
                                   ...nested.naturalSelectionTargets,
                                 ]),
+                              }),
+                          ...(nestedIndex !== optionIndex(echoLastRunBoon.selectedOptionKey) ||
+                          nested.allTogetherResult === undefined
+                            ? {}
+                            : {
+                                allTogetherResult: Object.freeze({
+                                  earth: nested.allTogetherResult.earth,
+                                  fire: nested.allTogetherResult.fire,
+                                  air: nested.allTogetherResult.air,
+                                  water: nested.allTogetherResult.water,
+                                }),
                               }),
                         }),
                       ),

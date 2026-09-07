@@ -1054,6 +1054,8 @@ function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | un
       return origin;
     case 'acquisitionEntry':
       return origin;
+    case 'echoLastRunBoon':
+      return origin.trait.owner;
     default:
       return undefined;
   }
@@ -1367,6 +1369,12 @@ export function settleEncounterTraitOffer(
             ...(selectedChild.targetTraitKey === undefined
               ? {}
               : { targetTraitKey: selectedChild.targetTraitKey }),
+            ...(selectedChild.allTogetherResult === undefined
+              ? {}
+              : { allTogetherResult: selectedChild.allTogetherResult }),
+            ...(selectedChild.naturalSelectionTargets === undefined
+              ? {}
+              : { naturalSelectionTargets: selectedChild.naturalSelectionTargets }),
           }),
         ]) as AuthoredTraitOfferTraits['options'],
         selectedOptionKey: 'option1',

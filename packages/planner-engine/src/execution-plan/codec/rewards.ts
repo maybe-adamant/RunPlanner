@@ -240,6 +240,7 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
         'effectiveLevel',
         'allTogetherResult',
         'naturalSelectionTargets',
+        'targetTraitKey',
         'concaveStoneResult',
         'circeResolution',
         'icarusHammerTarget',
@@ -305,6 +306,14 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
               );
             })(),
           }),
+      ...(option.targetTraitKey === undefined
+        ? {}
+        : {
+            targetTraitKey: stringValue(
+              option.targetTraitKey,
+              `${label}.options[${index}].targetTraitKey`,
+            ),
+          }),
       ...(option.concaveStoneResult === undefined
         ? {}
         : {
@@ -351,7 +360,12 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
                   exact(
                     row,
                     ['giver', 'key', 'rarity'],
-                    ['lootHistorySource', 'targetTraitKey', 'naturalSelectionTargets'],
+                    [
+                      'lootHistorySource',
+                      'targetTraitKey',
+                      'naturalSelectionTargets',
+                      'allTogetherResult',
+                    ],
                     rowLabel,
                   );
                   return Object.freeze({
@@ -385,6 +399,14 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
                             ),
                           ),
                         }),
+                    ...(row.allTogetherResult === undefined
+                      ? {}
+                      : {
+                          allTogetherResult: allTogetherResult(
+                            row.allTogetherResult,
+                            `${rowLabel}.allTogetherResult`,
+                          ),
+                        }),
                   });
                 },
               );
@@ -397,6 +419,17 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
                   .includes(nestedSelected)
               )
                 fail(`${nestedLabel}.selected is not a valid option`);
+              for (const [nestedIndex, nestedOption] of nestedOptions.entries()) {
+                if (
+                  `option${nestedIndex + 1}` !== nestedSelected &&
+                  (nestedOption.targetTraitKey !== undefined ||
+                    nestedOption.allTogetherResult !== undefined ||
+                    nestedOption.naturalSelectionTargets !== undefined)
+                )
+                  fail(
+                    `${nestedLabel}.options[${nestedIndex}] carrier outcome must belong to the selected option`,
+                  );
+              }
               return Object.freeze({
                 options: Object.freeze(nestedOptions),
                 selected: nestedSelected as 'option1' | 'option2' | 'option3',
@@ -442,7 +475,23 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
   const selected = stringValue(record.selected, `${label}.selected`);
   const availableOptionKeys = ['option1', 'option2', 'option3'].slice(0, options.length);
   if (!availableOptionKeys.includes(selected)) fail(`${label}.selected is not a valid option`);
+  const selectedIndex = availableOptionKeys.indexOf(selected);
+  const selectedConcave = options[selectedIndex]?.concaveStoneResult;
   for (const [index, option] of options.entries()) {
+    if (
+      (option.targetTraitKey !== undefined ||
+        option.allTogetherResult !== undefined ||
+        option.naturalSelectionTargets !== undefined) &&
+      availableOptionKeys[index] !== selected
+    ) {
+      if (
+        selectedConcave?.kind !== 'proc' ||
+        selectedConcave.optionKey !== availableOptionKeys[index]
+      )
+        fail(
+          `${label}.options[${index}] carrier outcome must belong to the selected or Concave Stone residual option`,
+        );
+    }
     const concave = option.concaveStoneResult;
     if (concave === undefined) continue;
     const optionKey = availableOptionKeys[index];

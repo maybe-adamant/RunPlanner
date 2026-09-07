@@ -329,12 +329,13 @@ at the native contact; a missing declaration or target records a mismatch and
 native execution continues without an executor-chosen substitute.
 
 `AddTraitToHero` dispatches selected trait acquire functions on a native thread.
-Natural Selection and Bridal Glow therefore retain the exact transaction,
-selected outer trait, and room scope until `DistributeLevels` or
-`HeraSuperchargeBoon` reaches its terminal. Echo does not own copied versions of
-those effects, and the outer Echo transaction cannot complete before both the
-nested selection and its selected consequence have settled. The room-exit trait
-ledger remains the retained-state proof.
+Natural Selection, Bridal Glow, and All Together therefore retain the exact
+transaction, selected outer trait, and room scope until `DistributeLevels`,
+`HeraSuperchargeBoon`, or `GrantBoons` reaches its terminal. The nested authored
+outcome carries the same complete consequence data as a direct acquisition;
+Echo does not own copied versions of those effects. The outer Echo transaction
+cannot complete before both the nested selection and its selected consequence
+have settled. The room-exit trait ledger remains the retained-state proof.
 
 ## Planner and executor disposition
 

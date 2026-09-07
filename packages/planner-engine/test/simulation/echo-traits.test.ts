@@ -1342,6 +1342,105 @@ describe('Echo Gate B Boon Boon Boon', () => {
     );
   });
 
+  it('publishes the selected Echo carrier domain from the same pre-acquisition frontier', () => {
+    const project = completeGoldenFGHProject();
+    const history = historyFromTraits([
+      { giverKey: 'Hera', traitKey: 'HeraWeaponBoon', rarity: 'Common' },
+      { giverKey: 'Hera', traitKey: 'CommonGlobalDamageBoon', rarity: 'Common' },
+      { giverKey: 'Hera', traitKey: 'DamageSharePotencyBoon', rarity: 'Common' },
+    ]);
+    const artifacts = createTraitOfferCandidateArtifacts(
+      catalog,
+      new Map([
+        [
+          semanticAddressKey(echoOwner),
+          [
+            Object.freeze({
+              before: history,
+              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+            }),
+          ],
+        ],
+      ]),
+    );
+    const allTogether = evaluateEchoLastRunBoonDomain(
+      catalog,
+      project,
+      simulateProjectAssembly(catalog, project).evaluation,
+      artifacts,
+      {
+        kind: 'echoLastRunBoonDomain',
+        trait: echoOwner,
+        value: echoBoonOffer(
+          echoBoonChild(
+            Object.freeze([
+              { giverKey: 'Hera', traitKey: 'AllElementalBoon', rarity: 'Legendary' },
+            ]),
+          ),
+        ),
+        optionKey: 'option1',
+      },
+    );
+    expect(allTogether).toMatchObject({
+      kind: 'echoLastRunBoonDomain',
+      result: {
+        selectedCarrier: {
+          kind: 'allTogether',
+          complete: false,
+          sets: [{ setKey: 'earth' }, { setKey: 'fire' }, { setKey: 'air' }, { setKey: 'water' }],
+        },
+      },
+    });
+
+    const naturalHistory = historyFromTraits([
+      { giverKey: 'Apollo', traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+    ]);
+    const naturalArtifacts = createTraitOfferCandidateArtifacts(
+      catalog,
+      new Map([
+        [
+          semanticAddressKey(echoOwner),
+          [
+            Object.freeze({
+              before: naturalHistory,
+              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+            }),
+          ],
+        ],
+      ]),
+    );
+    const natural = evaluateEchoLastRunBoonDomain(
+      catalog,
+      project,
+      simulateProjectAssembly(catalog, project).evaluation,
+      naturalArtifacts,
+      {
+        kind: 'echoLastRunBoonDomain',
+        trait: echoOwner,
+        value: echoBoonOffer(
+          echoBoonChild(
+            Object.freeze([{ giverKey: 'Demeter', traitKey: 'GoodStuffBoon', rarity: 'Duo' }]),
+          ),
+        ),
+        optionKey: 'option1',
+      },
+    );
+    expect(natural).toMatchObject({
+      kind: 'echoLastRunBoonDomain',
+      result: {
+        selectedCarrier: {
+          kind: 'naturalSelection',
+          slotCount: 8,
+          complete: false,
+          supported: false,
+          nextTargetCandidates: [
+            expect.objectContaining({ value: 'ApolloWeaponBoon', support: 'forced' }),
+          ],
+        },
+      },
+    });
+  });
+
   it('reuses Bridal Glow acquisition semantics for the selected Echo outcome', () => {
     const history = historyFromTraits([
       { giverKey: 'Hephaestus', traitKey: 'HephaestusWeaponBoon', rarity: 'Common' },
@@ -1381,6 +1480,77 @@ describe('Echo Gate B Boon Boon Boon', () => {
       level: 5,
     });
     expect(result.history.lootTypeHistory.HeraUpgrade).toBe(1);
+  });
+
+  it('reuses All Together direct grants for the selected Echo outcome', () => {
+    const allTogetherResult = Object.freeze({
+      earth: 'ElementalDamageBoon',
+      fire: 'ElementalBaseDamageBoon',
+      air: 'ElementalDamageFloorBoon',
+      water: 'ElementalHealthBoon',
+    });
+    const history = historyFromTraits([
+      { giverKey: 'Hera', traitKey: 'HeraWeaponBoon', rarity: 'Common' },
+      { giverKey: 'Hera', traitKey: 'CommonGlobalDamageBoon', rarity: 'Common' },
+      { giverKey: 'Hera', traitKey: 'DamageSharePotencyBoon', rarity: 'Common' },
+    ]);
+    const result = processEncounterTraitOffer(
+      catalog,
+      baseBranch(history),
+      echoOwner.owner,
+      echoBoonOffer(
+        echoBoonChild(
+          Object.freeze([
+            {
+              giverKey: 'Hera',
+              traitKey: 'AllElementalBoon',
+              rarity: 'Legendary',
+              allTogetherResult,
+            },
+          ]),
+        ),
+      ),
+      10,
+      'encounterCompleted',
+    );
+    expect(result.traitHistory?.equippedTraits.AllElementalBoon).toBeDefined();
+    for (const traitKey of Object.values(allTogetherResult))
+      expect(result.traitHistory?.equippedTraits[traitKey]).toBeDefined();
+  });
+
+  it('reuses Natural Selection target order for the selected Echo outcome', () => {
+    const target = 'ApolloWeaponBoon';
+    const history = historyFromTraits([{ giverKey: 'Apollo', traitKey: target, rarity: 'Common' }]);
+    const result = processEncounterTraitOffer(
+      catalog,
+      baseBranch(history),
+      echoOwner.owner,
+      echoBoonOffer(
+        echoBoonChild(
+          Object.freeze([
+            {
+              giverKey: 'Demeter',
+              traitKey: 'GoodStuffBoon',
+              rarity: 'Duo',
+              naturalSelectionTargets: [
+                target,
+                target,
+                target,
+                target,
+                target,
+                target,
+                target,
+                target,
+              ] as const,
+            },
+          ]),
+        ),
+      ),
+      10,
+      'encounterCompleted',
+    );
+    expect(result.traitHistory?.equippedTraits.GoodStuffBoon).toBeDefined();
+    expect(result.traitHistory?.equippedTraits[target]).toMatchObject({ level: 9 });
   });
 
   it('requires targeted detail only from the selected nested row', () => {
@@ -1707,10 +1877,25 @@ describe('Echo Gate B Boon Boon Boon', () => {
             rarity: 'Heroic',
             targetTraitKey: 'HephaestusWeaponBoon',
           },
-          { giverKey: 'Artemis', traitKey: 'SupportingFireBoon', rarity: 'Rare' },
-          { giverKey: 'Zeus', traitKey: 'SprintEchoBoon', rarity: 'Duo' },
+          {
+            giverKey: 'Hera',
+            traitKey: 'AllElementalBoon',
+            rarity: 'Legendary',
+            allTogetherResult: {
+              earth: 'ElementalDamageBoon',
+              fire: 'ElementalBaseDamageBoon',
+              air: 'ElementalDamageFloorBoon',
+              water: 'ElementalHealthBoon',
+            },
+          },
+          {
+            giverKey: 'Demeter',
+            traitKey: 'GoodStuffBoon',
+            rarity: 'Duo',
+            naturalSelectionTargets: ['HephaestusWeaponBoon'],
+          },
         ] as const),
-        'option2',
+        'option1',
       ),
     );
     project = applyProjectCommand(project, catalog, {

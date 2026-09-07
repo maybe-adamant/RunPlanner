@@ -173,6 +173,22 @@ export interface EvaluatedEchoLastRunBoonDomain {
   readonly kind: 'echoLastRunBoonDomain';
   readonly result: {
     readonly candidates: readonly EvaluatedEchoLastRunBoonCandidate[];
+    readonly selectedCarrier?:
+      | {
+          readonly kind: 'allTogether';
+          readonly complete: boolean;
+          readonly sets: readonly {
+            readonly setKey: import('../../catalog-schema').DirectTraitSetKey;
+            readonly candidates: readonly EvaluatedDirectTraitOutcomeCandidate<string | null>[];
+          }[];
+        }
+      | {
+          readonly kind: 'naturalSelection';
+          readonly slotCount: number;
+          readonly complete: boolean;
+          readonly supported: boolean;
+          readonly nextTargetCandidates: readonly EvaluatedDirectTraitOutcomeCandidate<string>[];
+        };
   };
 }
 export type EchoLastRunBoonDomainEvaluation =

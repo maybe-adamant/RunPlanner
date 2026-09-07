@@ -7,11 +7,11 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 74 Boundary
+## Schema 77 Boundary
 
-Schema 74 is the sole persisted authored-project contract. The codec rejects
+Schema 77 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
-state for a stale document. The immediately preceding schema 73 has one focused
+state for a stale document. The immediately preceding schema 76 has one focused
 linear migration. The older conversion retained at this boundary is the
 standalone schema-72-to-73 splitter: schema 72 contains two independent route
 plans, so it emits one schema-73 document for each route and applies the
@@ -137,6 +137,12 @@ physical Rivals variant implied by the stored rank and route position. Its
 occurrence ID, fixed links, room-local state, and route resource address remain
 unchanged. The current document cannot contain a `routes` array or a
 compatibility route wrapper.
+
+Schema 75 completes every persisted Transcendent Embryo result with its
+blessing operand map. Schema 76 adds the exact declaration-owned Anvil of Fates
+result to a purchased World Shop offer. Schema 77 admits the three
+option-owned volatile carrier consequences described below inside Echo Boon
+Boon Boon's nested selected result; it introduces no second consequence model.
 
 There is one biome plan and one topology language. Production state and
 semantic addresses have no layout-specific plan family, completion-transition
@@ -720,9 +726,13 @@ retain ownership of the complete outer option.
 Natural Selection uses the same selected-trait outcome owner and persists one
 nonempty ordered `naturalSelectionTargets` sequence of one to eight known trait
 keys on the selected option. The sequence is the complete successful
-round-robin allocation, not eight independent Pom choices. Echo Boon Boon
-Boon's nested previous-run approximation may carry the same result. Ransom
-outcomes persist no removal set or level total.
+round-robin allocation, not eight independent Pom choices. Bridal Glow likewise
+persists its exact promoted-trait target on the carrying option. Concave Stone's
+chosen residual option and Echo Boon Boon Boon's selected nested option reuse
+these same option-owned All Together, Natural Selection, and Bridal Glow
+outcomes. Dormant sibling options may retain authored detail for later editing,
+but only an option that is actually acquired exports its carrier consequence to
+execution. Ransom outcomes persist no removal set or level total.
 
 Each trait option may retain one optional `persephoneLevelBonus`. When the
 active Aspect of Persephone row omits it, the authored result resolves as
