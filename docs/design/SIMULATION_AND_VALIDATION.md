@@ -81,6 +81,22 @@ The established short form remains:
 declaration -> catalog -> history -> validator -> feedback
 ```
 
+### Authoring readiness
+
+Progressive evaluation distinguishes required incompleteness from invalid
+authored input. The first incomplete atomic region publishes one engine-owned
+authoring horizon. Semantic owners before that region, within it, or containing
+its repair target are editable; later owners are locked. Invalid authored input
+does not create a readiness lock and remains available for explicit repair.
+
+Atomic regions group authoring that has no truthful internal order, such as one
+generated offer set or one Hub side-room sibling set. The engine locates both
+the horizon and queried command owners through the same semantic chronology;
+the application does not reconstruct order from tabs, rail positions, finding
+copy, or rendered controls. Readiness is derived output only: retained suffix
+values remain visible and persisted, and low-level authored commands continue
+to represent incomplete or invalid documents.
+
 Canonical materialization is the bridge between catalog/authored state and
 history. Declarations alone cannot produce history because concrete topology,
 rewards, purchases, encounters, and selected exits are authored choices.

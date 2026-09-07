@@ -159,10 +159,12 @@ complete-valid route prefix
 
 Each route remains ordered. F must be complete and valid before G receives
 contextual evaluation, and N must be complete and valid before O receives it.
-Later biome pages stay fully editable, but their contextual room, store, peer,
-bag, wheel, Hub, and side-room/local-visit states are unassessed. The editor must not
-derive a downstream seed from predecessor defaults, partial history, or
-hypothetical future completion.
+Later biome pages remain visible, but required upstream incompleteness locks
+their authoring controls and leaves their contextual room, store, peer, bag,
+wheel, Hub, and side-room/local-visit states unassessed. Invalid authored input
+does not create that lock and remains repairable. The editor must not derive a
+downstream seed from predecessor defaults, partial history, or hypothetical
+future completion.
 
 Within the active biome, a selector is assessed when evaluation coverage has
 reached its exact semantic pre-decision point. Missing unrelated downstream
@@ -217,7 +219,8 @@ Mandatory authored controls are projected from authored state and declaration
 requirements, not from findings, candidate support, or evaluation coverage.
 Those overlays may change a control's assessed state, availability, reason
 text, or emphasis, but they never suppress the control. An unassessed control
-remains visible without fabricated support.
+remains visible without fabricated support; when its semantic owner lies after
+the engine's incomplete authoring horizon, it is visible but disabled.
 
 A structurally active set-backed encounter phase therefore keeps its declared
 selection and authoring control when coverage is unavailable. Only a genuinely

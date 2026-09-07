@@ -890,10 +890,17 @@ findings and candidate context remain unavailable. If an earlier reached value
 is invalid and authorship is also incomplete, invalid presentation takes
 precedence without hiding the later authored frontier.
 
-Later biomes blocked by an earlier incomplete or invalid biome remain visible
-and editable. Their contextual validity is unavailable because the required
-history does not exist. The view should communicate that state without
-inventing local errors.
+Later biomes remain visible when an earlier biome blocks evaluation. Required
+incompleteness publishes an engine-owned authoring horizon and disables later
+semantic controls; invalidity alone leaves them editable for repair. Their
+contextual validity remains unavailable because the required history does not
+exist, without inventing local errors.
+
+Finding navigation and inline feedback consume one completed destination. Its
+resolved repair target owns the persistent red border and focus destination;
+React does not independently route raw finding origins or render numbered
+inline badges. Multiple findings may share one target while their individual
+explanations remain in the Findings panel.
 
 ## Undo and Redo UX
 

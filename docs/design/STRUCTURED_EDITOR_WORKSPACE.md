@@ -113,7 +113,9 @@ earlier biome. The catalog route collection is used only to populate the
 chooser; it is not rendered as sibling project workspaces.
 
 Selecting a biome changes UI-session navigation only. A downstream biome remains
-editable when blocked, but its contextual state remains unassessed.
+visible when blocked and its contextual state remains unassessed. Required
+upstream incompleteness locks its semantic authoring controls; upstream
+invalidity alone does not.
 
 ### Biome Structure
 
@@ -512,10 +514,11 @@ target, occurrence, or editable offer-time leaf.
 semantic and interaction assembly. For a blocked result it builds evaluated
 overlays from the clamped assessment prefix, never from the larger retained
 authored materialization. The full document remains the source of downstream
-decisions and controls. Those retained owners stay editable and unassessed;
+decisions and controls. Those retained owners stay visible and unassessed;
 they receive no canonical entered state, evaluator-derived physical-state
-overlay, Clockwork reward, or room-local evaluation fact. Declaration-derived
-physical exits and authored activation still keep their controls usable.
+overlay, Clockwork reward, or room-local evaluation fact. The readiness overlay
+keeps them visible and disables only owners after an incomplete horizon;
+invalidity alone leaves their repair interactions usable.
 
 The projector walks the authored start and then authored exit decisions or the
 Hub in selected-topology order. A selected target subtree precedes retained
@@ -558,6 +561,13 @@ existing exact inspector subject and may not be converted into a default-
 inspector or biome-shell fallback. These are local production contracts, not a
 second traversal that reconstructs an expected workspace after the product is
 built.
+
+The completed destination's resolved repair target is also the sole inline
+highlight owner. Navigation selects its route, biome, rail stop, inspector,
+tab, and dialog; redirected focus only scrolls or focuses the same repair
+target. Current findings mark that existing control or smallest truthful
+container with the shared red finding border without inserting numbered badge
+rows. Aggregate counts remain on navigation and the Findings panel.
 
 Test support independently enumerates the semantic owners, declaration-required
 editable leaves, and structural controls implied by catalog plus persisted
@@ -793,7 +803,9 @@ The workspace consumes the single atomic project evaluation:
 - published coverage stops at the first blocking atomic region, whose co-owned
   findings and exact repair interaction remain navigable;
 - the coverage frontier is visible at its semantic stop or Hub region;
-- retained later authored owners remain editable but are marked unassessed;
+- retained later authored owners remain visible and unassessed; required
+  incompleteness locks their authoring controls, while invalidity alone does
+  not;
 - later findings and candidate context remain unavailable rather than leaking
   from the retained authored materialization;
 - a downstream biome blocked by an earlier biome shows the upstream gate rather
