@@ -23,6 +23,16 @@ export interface OccurrenceAddress extends BiomeOwnedAddress {
   readonly kind: 'occurrence';
   readonly occurrenceId: OccurrenceId;
 }
+export type FieldsSpatialTarget =
+  | { readonly kind: 'entry' }
+  | { readonly kind: 'cage'; readonly slotKey: string }
+  | { readonly kind: 'optional'; readonly slotKey: string }
+  | { readonly kind: 'nemesis' };
+export interface FieldsSpatialAddress extends BiomeOwnedAddress {
+  readonly kind: 'fieldsSpatial';
+  readonly occurrenceId: OccurrenceId;
+  readonly target: FieldsSpatialTarget;
+}
 export interface IncomingRewardAddress extends BiomeOwnedAddress {
   readonly kind: 'incomingReward';
   readonly occurrenceId: OccurrenceId;
@@ -324,6 +334,7 @@ export type SemanticAddress =
   | BiomeAddress
   | BiomeFieldAddress
   | OccurrenceAddress
+  | FieldsSpatialAddress
   | IncomingRewardAddress
   | JudgmentArcanaAddress
   | FigurineArcanaAddress
@@ -433,6 +444,22 @@ export function createOccurrenceAddress(
   occurrenceId: OccurrenceId,
 ): OccurrenceAddress {
   return Object.freeze({ kind: 'occurrence', ...owner(biome), occurrenceId });
+}
+export function createFieldsSpatialAddress(
+  occurrence: OccurrenceAddress,
+  target: FieldsSpatialTarget,
+): FieldsSpatialAddress {
+  const normalizedTarget =
+    target.kind === 'entry' || target.kind === 'nemesis'
+      ? Object.freeze({ kind: target.kind })
+      : Object.freeze({ kind: target.kind, slotKey: nonBlank(target.slotKey, 'slotKey') });
+  return Object.freeze({
+    kind: 'fieldsSpatial',
+    routeKey: occurrence.routeKey,
+    biomeKey: occurrence.biomeKey,
+    occurrenceId: occurrence.occurrenceId,
+    target: normalizedTarget,
+  });
 }
 export function createJudgmentArcanaAddress(
   occurrence: OccurrenceAddress,
@@ -964,6 +991,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'occurrence':
     case 'incomingReward':
       return JSON.stringify([...base, address.occurrenceId]);
+    case 'fieldsSpatial':
+      return JSON.stringify([...base, address.occurrenceId, address.target]);
     case 'judgmentArcana':
       return JSON.stringify([...base, address.occurrenceId, address.phaseKey]);
     case 'figurineArcana':

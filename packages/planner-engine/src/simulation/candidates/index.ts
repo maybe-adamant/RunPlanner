@@ -146,6 +146,11 @@ export type {
   EvaluatedFountainRarityOutcomeCandidate,
 } from './fountain-rarity';
 export type {
+  FieldsSpatialPointCandidateQuery,
+  FieldsSpatialPointCandidateSupport,
+  EvaluatedFieldsSpatialPointCandidate,
+} from './fields-spatial';
+export type {
   FigurineArcanaCandidateQuery,
   EvaluatedFigurineArcanaCandidate,
 } from './figurine-arcana';

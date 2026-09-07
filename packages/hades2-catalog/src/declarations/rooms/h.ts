@@ -1,5 +1,6 @@
 import type { RawRoomDeclaration } from '../types';
 import { hResourcePointSupport } from '../resources';
+import { hFieldsSpatial } from './h-spatial';
 
 const chaosExit = {
   kind: 'chaos' as const,
@@ -57,6 +58,10 @@ function fieldsOptionalRewards(gameName: keyof typeof fieldsOptionalRewardCapaci
   };
 }
 
+function fieldsSpatial(gameName: keyof typeof hFieldsSpatial) {
+  return { fieldsSpatial: hFieldsSpatial[gameName]! };
+}
+
 export const hRooms = [
   {
     gameName: 'H_Intro',
@@ -80,6 +85,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat01',
+    ...fieldsSpatial('H_Combat01'),
     ...chaosHost(3),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
@@ -125,6 +131,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat02',
+    ...fieldsSpatial('H_Combat02'),
     ...chaosHost(3),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
@@ -178,6 +185,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat03',
+    ...fieldsSpatial('H_Combat03'),
     ...chaosHost(3),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
@@ -226,6 +234,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat04',
+    ...fieldsSpatial('H_Combat04'),
     ...chaosHost(4),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
@@ -274,6 +283,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat05',
+    ...fieldsSpatial('H_Combat05'),
     ...chaosHost(4),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
@@ -322,6 +332,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat06',
+    ...fieldsSpatial('H_Combat06'),
     ...chaosHost(3),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
@@ -370,6 +381,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat07',
+    ...fieldsSpatial('H_Combat07'),
     ...chaosHost(3),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
@@ -418,6 +430,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat08',
+    ...fieldsSpatial('H_Combat08'),
     ...chaosHost(3),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
@@ -466,6 +479,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat09',
+    ...fieldsSpatial('H_Combat09'),
     ...chaosHost(2),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
@@ -519,6 +533,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat10',
+    ...fieldsSpatial('H_Combat10'),
     ...chaosHost(4),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
@@ -567,6 +582,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat11',
+    ...fieldsSpatial('H_Combat11'),
     ...chaosHost(4),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
@@ -615,6 +631,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat12',
+    ...fieldsSpatial('H_Combat12'),
     ...chaosHost(3),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
@@ -663,6 +680,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat13',
+    ...fieldsSpatial('H_Combat13'),
     ...chaosHost(2),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
@@ -716,6 +734,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat14',
+    ...fieldsSpatial('H_Combat14'),
     ...chaosHost(3),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
@@ -769,6 +788,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat15',
+    ...fieldsSpatial('H_Combat15'),
     ...chaosHost(2),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),

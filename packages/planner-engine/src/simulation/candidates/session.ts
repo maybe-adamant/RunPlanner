@@ -152,6 +152,11 @@ import {
   type EvaluatedTranscendentEmbryoOutcomeCandidate,
   type TranscendentEmbryoOutcomeCandidateQuery,
 } from './transcendent-embryo';
+import {
+  evaluateFieldsSpatialPointCandidate,
+  type EvaluatedFieldsSpatialPointCandidate,
+  type FieldsSpatialPointCandidateQuery,
+} from './fields-spatial';
 
 export type ProjectCandidateQuery =
   | BatchRewardStoreCandidateQuery
@@ -181,7 +186,8 @@ export type ProjectCandidateQuery =
   | AcquisitionConversionCandidateQuery
   | SteadyGrowthOutcomeCandidateQuery
   | FountainRarityOutcomeCandidateQuery
-  | TranscendentEmbryoOutcomeCandidateQuery;
+  | TranscendentEmbryoOutcomeCandidateQuery
+  | FieldsSpatialPointCandidateQuery;
 
 /** Candidate-session-only query vocabulary, including focused trait support. */
 export type ProjectCandidateSessionQuery =
@@ -225,7 +231,8 @@ export type ProjectCandidateEvaluation =
   | EvaluatedAcquisitionConversionCandidate
   | EvaluatedSteadyGrowthOutcomeCandidate
   | EvaluatedFountainRarityOutcomeCandidate
-  | EvaluatedTranscendentEmbryoOutcomeCandidate;
+  | EvaluatedTranscendentEmbryoOutcomeCandidate
+  | EvaluatedFieldsSpatialPointCandidate;
 
 /** Result vocabulary corresponding to `ProjectCandidateSessionQuery`. */
 export type ProjectCandidateSessionEvaluation =
@@ -363,6 +370,8 @@ function evaluateCandidateQuery(
         )?.transcendentEmbryo,
         query,
       );
+    case 'fieldsSpatialPoint':
+      return evaluateFieldsSpatialPointCandidate(catalog, project, evaluation, query);
     case 'keepsakeEquipResult':
       return evaluateKeepsakeEquipResultCandidate(
         catalog,

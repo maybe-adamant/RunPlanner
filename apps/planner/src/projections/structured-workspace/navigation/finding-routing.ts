@@ -21,6 +21,7 @@ export function isFineGrainedFindingOwner(address: SemanticAddress): boolean {
     case 'exitSelection':
     case 'target':
     case 'occurrence':
+    case 'fieldsSpatial':
     case 'incomingReward':
     case 'localReward':
     case 'roomAction':

@@ -28,6 +28,9 @@ export function validateRoomTemplateContracts(
     if (room.fieldsOptionalRewards === undefined) {
       fail(`${path}.fieldsOptionalRewards`, 'FieldsCombat requires optional reward capacity');
     }
+    if (room.fieldsSpatial === undefined) {
+      fail(`${path}.fieldsSpatial`, 'FieldsCombat requires spatial point declarations');
+    }
     if (room.localChildren.length !== 1) {
       fail(`${path}.localChildren`, 'FieldsCombat requires exactly one cages descriptor');
     }
@@ -45,6 +48,21 @@ export function validateRoomTemplateContracts(
     }
     if (cages.fields.length !== 0) {
       fail(`${path}.localChildren[0].fields`, 'FieldsCombat cages do not own authored fields');
+    }
+    if (cages.maxActiveSlots > room.fieldsSpatial.cagePointIds.length) {
+      fail(
+        `${path}.localChildren[0].maxActiveSlots`,
+        'cannot exceed the declared physical cage point count',
+      );
+    }
+    if (
+      room.fieldsOptionalRewards.optionalRewardCapacity >
+      Math.min(4, room.fieldsSpatial.optionalPointIds.length)
+    ) {
+      fail(
+        `${path}.fieldsOptionalRewards.optionalRewardCapacity`,
+        'cannot exceed the declared physical optional point count or four chance trials',
+      );
     }
     if (
       cages.reward.storeKeys.length !== 1 ||
@@ -85,6 +103,12 @@ export function validateRoomTemplateContracts(
     room.fieldsOptionalRewards !== undefined
   ) {
     fail(`${path}.fieldsOptionalRewards`, 'is only valid for FieldsCombat');
+  }
+  if (
+    (room.mode.kind !== 'authored' || room.mode.templateKey !== 'FieldsCombat') &&
+    room.fieldsSpatial !== undefined
+  ) {
+    fail(`${path}.fieldsSpatial`, 'is only valid for FieldsCombat');
   }
   if (room.mode.kind === 'authored' && room.mode.templateKey === 'ShipCombat') {
     const envelope = encounterEnvelopes.byKey[room.encounterEnvelopeKey];

@@ -22,6 +22,9 @@ export type CompletenessFindingCode =
 
 export type RoomGenerationFindingCode =
   | 'fieldsCageOutcomeUnavailable'
+  | 'fieldsSpatialPointMissing'
+  | 'fieldsSpatialPointUnavailable'
+  | 'fieldsSpatialPointDuplicate'
   | 'hubOpenSlotUnavailable'
   | 'resourcePlacementUnavailable'
   | 'sideRoomGenerationUnavailable'

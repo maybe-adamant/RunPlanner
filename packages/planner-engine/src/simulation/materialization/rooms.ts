@@ -95,6 +95,7 @@ interface MaterializedRoomLeaf {
   readonly localRewards?: readonly CanonicalLocalReward[];
   readonly unresolvedLocalRewards?: CanonicalAuthoredRoom['unresolvedLocalRewards'];
   readonly fieldsOptionalRewards?: readonly CanonicalFieldsOptionalReward[];
+  readonly fieldsSpatial?: import('../../authored-project/model').FieldsSpatialState;
   readonly unresolvedFieldsOptionalRewards?: CanonicalAuthoredRoom['unresolvedFieldsOptionalRewards'];
   readonly rewardWheels?: readonly CanonicalRewardWheel[];
   readonly entryState?: CanonicalShopEntryState;
@@ -450,6 +451,7 @@ function materializeFieldsCombat(
     unresolvedFieldsOptionalRewards: Object.freeze(
       optionalLeaves.flatMap(({ base, reward }) => (reward === null ? [base] : [])),
     ),
+    fieldsSpatial: state.spatial,
   });
 }
 
@@ -990,6 +992,7 @@ export function materializeAuthoredRoom(
     ...(leaf.fieldsOptionalRewards === undefined
       ? {}
       : { fieldsOptionalRewards: leaf.fieldsOptionalRewards }),
+    ...(leaf.fieldsSpatial === undefined ? {} : { fieldsSpatial: leaf.fieldsSpatial }),
     ...(context.occurrence.state.kind !== 'fieldsCombat'
       ? {}
       : { fieldsOptionalRewardCount: context.occurrence.state.optionalRewardCount }),

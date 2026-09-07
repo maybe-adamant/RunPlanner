@@ -32,6 +32,7 @@ import type {
   SteadyGrowthOutcomeAddress,
   TranscendentEmbryoOutcomeAddress,
   FountainRarityOutcomeAddress,
+  FieldsSpatialAddress,
   TargetAddress,
 } from '../addresses';
 import type {
@@ -337,6 +338,11 @@ export type FieldsOccurrenceCommand = {
   readonly occurrence: OccurrenceAddress;
   readonly optionalRewardCount: number;
 };
+export type FieldsSpatialCommand = {
+  readonly kind: 'ReplaceFieldsSpatialPoint';
+  readonly spatial: FieldsSpatialAddress;
+  readonly pointId: number | null;
+};
 
 export type ShipOccurrenceCommand =
   | {
@@ -609,6 +615,7 @@ export type ProjectCommand =
   | RoomActionCommand
   | Exclude<RouteDetourCommand, { readonly kind: 'GenerateChaos' | 'RemoveGeneratedChaos' }>
   | OccurrenceLeafCommand
+  | FieldsSpatialCommand
   | AcquisitionSiteCommand
   | TraitOfferCommand
   | LevelResolutionCommand

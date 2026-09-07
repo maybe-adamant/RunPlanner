@@ -7,7 +7,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 77 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 78 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -161,11 +161,19 @@ export interface AuthoredAcquisitionSiteState {
   readonly pickupEntries?: Readonly<Record<string, AuthoredRewardState | null>>;
 }
 
+export interface FieldsSpatialState {
+  readonly entryStartPointId: number | null;
+  readonly cagePointIdBySlot: Readonly<Record<string, number | null>>;
+  readonly optionalPointIdBySlot: Readonly<Record<string, number | null>>;
+  readonly nemesisPointId: number | null;
+}
+
 export interface FieldsCombatState {
   readonly kind: 'fieldsCombat';
   readonly cages: Readonly<Record<string, AuthoredRewardState | null>>;
   readonly optionalRewardCount: number;
   readonly optionalRewards: Readonly<Record<string, AuthoredRewardState | null>>;
+  readonly spatial: FieldsSpatialState;
 }
 
 /**

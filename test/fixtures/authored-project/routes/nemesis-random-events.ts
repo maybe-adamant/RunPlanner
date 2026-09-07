@@ -5,6 +5,7 @@ import {
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
   createEncounterPhaseAddress,
+  createFieldsSpatialAddress,
   createNemesisRandomEventAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -128,6 +129,11 @@ export function createNemesisFieldsCheckpoint(): ProjectDocument {
     optionalRewardCount: 3,
   });
   project = selectedNemesis(project, passive);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceFieldsSpatialPoint',
+    spatial: createFieldsSpatialAddress(occurrence, { kind: 'nemesis' }),
+    pointId: 623602,
+  });
   // The complete F/G/H checkpoint intentionally retains an earlier unresolved
   // frontier, so H is not reached by simulation yet. Reuse the exact F reached
   // event candidate domain for this declaration-owned free-item pool.

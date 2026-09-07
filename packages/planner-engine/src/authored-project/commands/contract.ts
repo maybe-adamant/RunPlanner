@@ -111,6 +111,8 @@ function commandContractAddress(
       return command.rewardStore;
     case 'ReplaceFieldsCageOutcome':
       return command.decision;
+    case 'ReplaceFieldsSpatialPoint':
+      return command.spatial;
     case 'ReplaceOccurrenceRoom':
     case 'ReplaceShipEncounterCount':
     case 'ReplaceFieldsOptionalRewardCount':

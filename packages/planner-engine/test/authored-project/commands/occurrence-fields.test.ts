@@ -4,12 +4,19 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createEncounterPhaseAddress,
+  createFieldsSpatialAddress,
+  createNemesisRandomEventAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  decodeProjectDocument,
+  encodeProjectDocument,
   type FieldsCombatState,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { fieldsOptionalRewardCountSupport } from '@run-planner/engine/simulation';
+import {
+  fieldsOptionalRewardCountSupport,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
 import { createGoldenFGHProject, goldenHBiome } from '@run-planner/test-fixtures/underworld';
 
 function fieldsState(
@@ -34,44 +41,172 @@ function fieldsOccurrence(
   return occurrence;
 }
 
+type EncodedProject = {
+  route: {
+    biomes: Array<{
+      biomeKey: string;
+      topology?: {
+        occurrences: Array<{ occurrenceId: string; state: Record<string, unknown> }>;
+      } | null;
+    }>;
+  };
+};
+
+function encodedProject(project: ProjectDocument): EncodedProject {
+  return JSON.parse(encodeProjectDocument(project)) as EncodedProject;
+}
+
+function encodedFieldsState(
+  document: EncodedProject,
+  occurrenceId: string,
+): Record<string, unknown> {
+  const state = document.route.biomes
+    .find((biome) => biome.biomeKey === 'H')
+    ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId)?.state;
+  if (state === undefined) throw new Error('missing encoded Fields state');
+  return state;
+}
+
 describe('authored Fields occurrence payload commands', () => {
-  it.each([
-    ['golden-h-combat09', 2],
-    ['golden-h-combat02', 3],
-    ['golden-h-combat05', 4],
-  ] as const)('supports the full optional domain for %s (capacity %i)', (id, capacity) => {
-    const occurrenceId = createOccurrenceId(id);
+  it('assigns occurrence-owned spatial points without changing reward or timeline ownership', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat05');
     const occurrence = createOccurrenceAddress(goldenHBiome, occurrenceId);
-    let project = createGoldenFGHProject();
-    expect(
-      fieldsOptionalRewardCountSupport(
-        catalog,
-        fieldsOccurrence(project, occurrenceId),
-        occurrence,
-      ),
-    ).toMatchObject({
-      physicalMaximum: capacity,
-      effectiveMaximum: capacity,
-      reservesNemesisPosition: false,
+    const initial = createGoldenFGHProject();
+    const changed = applyProjectCommand(initial, catalog, {
+      kind: 'ReplaceFieldsSpatialPoint',
+      spatial: createFieldsSpatialAddress(occurrence, { kind: 'entry' }),
+      pointId: 755863,
     });
-    const retainedRewards = fieldsState(project, occurrenceId).optionalRewards;
-    for (let optionalRewardCount = 0; optionalRewardCount <= capacity; optionalRewardCount += 1) {
-      project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceFieldsOptionalRewardCount',
-        occurrence,
-        optionalRewardCount,
-      });
-      expect(fieldsState(project, occurrenceId)).toMatchObject({ optionalRewardCount });
-      expect(fieldsState(project, occurrenceId).optionalRewards).toEqual(retainedRewards);
-    }
-    expect(() =>
-      applyProjectCommand(project, catalog, {
-        kind: 'ReplaceFieldsOptionalRewardCount',
-        occurrence,
-        optionalRewardCount: capacity + 1,
+    const state = fieldsState(changed, occurrenceId);
+    expect(state.spatial.entryStartPointId).toBe(755863);
+    expect(Object.isFrozen(state.spatial)).toBe(true);
+    expect(state.cages).toEqual(fieldsState(initial, occurrenceId).cages);
+    expect(changed.route.biomes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ biomeKey: 'F' }),
+        expect.objectContaining({ biomeKey: 'G' }),
+      ]),
+    );
+    expect(
+      applyProjectCommand(changed, catalog, {
+        kind: 'ReplaceFieldsSpatialPoint',
+        spatial: createFieldsSpatialAddress(occurrence, { kind: 'entry' }),
+        pointId: 755863,
       }),
-    ).toThrow(`optional reward count must be within 0..${capacity}`);
+    ).toBe(changed);
+
+    const cageChanged = applyProjectCommand(changed, catalog, {
+      kind: 'ReplaceFieldsSpatialPoint',
+      spatial: createFieldsSpatialAddress(occurrence, { kind: 'cage', slotKey: 'cage1' }),
+      pointId: 573087,
+    });
+    expect(Object.isFrozen(fieldsState(cageChanged, occurrenceId).spatial.cagePointIdBySlot)).toBe(
+      true,
+    );
+    const optionalChanged = applyProjectCommand(cageChanged, catalog, {
+      kind: 'ReplaceFieldsSpatialPoint',
+      spatial: createFieldsSpatialAddress(occurrence, {
+        kind: 'optional',
+        slotKey: 'optional1',
+      }),
+      pointId: 572849,
+    });
+    expect(
+      Object.isFrozen(fieldsState(optionalChanged, occurrenceId).spatial.optionalPointIdBySlot),
+    ).toBe(true);
   });
+
+  it('resets room-scoped spatial identities when the Fields declaration changes', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat05');
+    const occurrence = createOccurrenceAddress(goldenHBiome, occurrenceId);
+    const assigned = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceFieldsSpatialPoint',
+      spatial: createFieldsSpatialAddress(occurrence, { kind: 'entry' }),
+      pointId: 755863,
+    });
+    const replaced = applyProjectCommand(assigned, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence,
+      gameName: 'H_Combat04',
+    });
+
+    expect(fieldsState(replaced, occurrenceId).spatial).toEqual({
+      entryStartPointId: null,
+      cagePointIdBySlot: { cage1: null, cage2: null, cage3: null },
+      optionalPointIdBySlot: {
+        optional1: null,
+        optional2: null,
+        optional3: null,
+        optional4: null,
+      },
+      nemesisPointId: null,
+    });
+  });
+
+  it('round-trips spatial selections and rejects points outside the selected declaration', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat05');
+    const occurrence = createOccurrenceAddress(goldenHBiome, occurrenceId);
+    const assigned = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceFieldsSpatialPoint',
+      spatial: createFieldsSpatialAddress(occurrence, { kind: 'entry' }),
+      pointId: 755863,
+    });
+    const encoded = encodedProject(assigned);
+    expect(fieldsState(decodeProjectDocument(encoded, catalog), occurrenceId).spatial).toEqual(
+      fieldsState(assigned, occurrenceId).spatial,
+    );
+
+    const invalid = encodedProject(assigned);
+    const state = encodedFieldsState(invalid, occurrenceId);
+    const spatial = state.spatial as Record<string, unknown>;
+    spatial.entryStartPointId = 999_999;
+    expect(() => decodeProjectDocument(invalid, catalog)).toThrow(/declared point set/);
+  });
+
+  it.each([
+    ['golden-h-combat09', 2, 2],
+    ['golden-h-combat02', 3, 3],
+    ['golden-h-combat05', 7, 4],
+  ] as const)(
+    'supports the full optional point domain for %s (physical %i, logical %i)',
+    (id, physicalMaximum, logicalMaximum) => {
+      const occurrenceId = createOccurrenceId(id);
+      const occurrence = createOccurrenceAddress(goldenHBiome, occurrenceId);
+      let project = createGoldenFGHProject();
+      expect(
+        fieldsOptionalRewardCountSupport(
+          catalog,
+          fieldsOccurrence(project, occurrenceId),
+          occurrence,
+        ),
+      ).toMatchObject({
+        physicalMaximum,
+        effectiveMaximum: logicalMaximum,
+        reservesNemesisPosition: false,
+      });
+      const retainedRewards = fieldsState(project, occurrenceId).optionalRewards;
+      for (
+        let optionalRewardCount = 0;
+        optionalRewardCount <= logicalMaximum;
+        optionalRewardCount += 1
+      ) {
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceFieldsOptionalRewardCount',
+          occurrence,
+          optionalRewardCount,
+        });
+        expect(fieldsState(project, occurrenceId)).toMatchObject({ optionalRewardCount });
+        expect(fieldsState(project, occurrenceId).optionalRewards).toEqual(retainedRewards);
+      }
+      expect(() =>
+        applyProjectCommand(project, catalog, {
+          kind: 'ReplaceFieldsOptionalRewardCount',
+          occurrence,
+          optionalRewardCount: logicalMaximum + 1,
+        }),
+      ).toThrow(`optional reward count must be within 0..${logicalMaximum}`);
+    },
+  );
 
   it('reserves one H optional position for Passive Nemesis without destroying retained overflow', () => {
     const occurrenceId = createOccurrenceId('golden-h-combat05');
@@ -101,8 +236,8 @@ describe('authored Fields occurrence payload commands', () => {
         occurrence,
       ),
     ).toMatchObject({
-      physicalMaximum: 4,
-      effectiveMaximum: 3,
+      physicalMaximum: 7,
+      effectiveMaximum: 4,
       reservesNemesisPosition: true,
     });
     // The physical declaration range remains authorable after enabling the
@@ -118,5 +253,38 @@ describe('authored Fields occurrence payload commands', () => {
       optionalRewardCount: 3,
     });
     expect(fieldsState(project, occurrenceId).optionalRewardCount).toBe(3);
+  });
+
+  it('reduces a two-point H room to one optional reward while Passive Nemesis is active', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat09');
+    const occurrence = createOccurrenceAddress(goldenHBiome, occurrenceId);
+    const passive = createEncounterPhaseAddress(
+      goldenHBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Passive',
+    );
+    const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase: passive,
+      encounterKey: 'NemesisRandomEvent',
+    });
+
+    expect(
+      fieldsOptionalRewardCountSupport(
+        catalog,
+        fieldsOccurrence(project, occurrenceId),
+        occurrence,
+      ),
+    ).toMatchObject({
+      physicalMaximum: 2,
+      effectiveMaximum: 1,
+      reservesNemesisPosition: true,
+    });
+    expect(simulateProjectAssembly(catalog, project).evaluation.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'fieldsOptionalCapacityUnavailable',
+        origin: createNemesisRandomEventAddress(passive),
+      }),
+    );
   });
 });

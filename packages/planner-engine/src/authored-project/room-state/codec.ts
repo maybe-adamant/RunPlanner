@@ -24,6 +24,7 @@ import {
 } from './reward-acquisition-codec';
 import { decodeEphyraCombatState, decodeShipCombatState } from './ship-ephyra-codec';
 import { decodeShopState } from './shop-codec';
+import { decodeFieldsSpatialState } from './fields-spatial-codec';
 
 function expectedKind(value: unknown, expected: string, path: string): void {
   const kind = expectString(value, `${path}.kind`);
@@ -56,7 +57,11 @@ export function decodeRoomState(
     case 'FieldsCombat': {
       requireOrdinaryRole(role, room, path);
       expectedKind(state.kind, 'fieldsCombat', path);
-      expectExactKeys(state, ['kind', 'cages', 'optionalRewardCount', 'optionalRewards'], path);
+      expectExactKeys(
+        state,
+        ['kind', 'cages', 'optionalRewardCount', 'optionalRewards', 'spatial'],
+        path,
+      );
       const descriptor = requireFieldsCages(room, path);
       const rawCages = expectRecord(state.cages, `${path}.cages`);
       expectExactKeys(rawCages, descriptor.slotKeys, `${path}.cages`);
@@ -123,6 +128,7 @@ export function decodeRoomState(
         cages: Object.freeze(cages),
         optionalRewardCount,
         optionalRewards: Object.freeze(optionalRewards),
+        spatial: decodeFieldsSpatialState(state.spatial, room, `${path}.spatial`),
       });
     }
     case 'ShipCombat':

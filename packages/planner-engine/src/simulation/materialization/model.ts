@@ -23,6 +23,7 @@ import type {
   OccurrenceId,
   RoomActionState,
   RoomEncounterState,
+  FieldsSpatialState,
 } from '../../authored-project/model';
 import type { AuthoredLevelResolution, AuthoredTraitOffer } from '../../authored-project/traits';
 import type { TraitOfferContext } from '../trait-offers';
@@ -213,6 +214,7 @@ export interface CanonicalAuthoredRoom {
     | 'traitContext'
   >[];
   readonly fieldsOptionalRewards?: readonly CanonicalFieldsOptionalReward[];
+  readonly fieldsSpatial?: FieldsSpatialState;
   /** Persisted Fields count, retained independently from resolved optional leaves. */
   readonly fieldsOptionalRewardCount?: number;
   readonly unresolvedFieldsOptionalRewards?: readonly Omit<

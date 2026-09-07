@@ -33,6 +33,7 @@ import { applyRoomActionCommand } from './room-actions';
 import { reconcileNewRequiredRoomActions } from '../room-action-defaults';
 import { reconcileSelectedPickupProducerState } from '../pickup-producers';
 import { reconcileChaosTopology } from '../chaos-gate-reconciliation';
+import { applyFieldsSpatialCommand } from './fields-spatial';
 
 /**
  * Generated pickup sites are derived from their exact source acquisition. Run
@@ -132,6 +133,13 @@ function applyUnchecked(
   switch (command.kind) {
     case 'ReplaceResourcePlacement':
       return applyResourcePlacementCommand(document, catalog, command);
+    case 'ReplaceFieldsSpatialPoint':
+      return applyFieldsSpatialCommand(
+        document,
+        catalog,
+        locateBiome(document, catalog, command),
+        command,
+      );
     case 'ReplaceRouteLoadout':
     case 'ReplaceAspectHexTree':
     case 'ReplaceManualArcanaSelection':

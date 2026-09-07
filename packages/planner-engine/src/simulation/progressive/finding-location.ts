@@ -94,6 +94,11 @@ export function derivedAcquisitionEntryAncestor(
 
 export function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddress | undefined {
   if (address.kind === 'occurrence') return address;
+  if (address.kind === 'fieldsSpatial')
+    return createOccurrenceAddress(
+      createBiomeAddress(address.routeKey, address.biomeKey),
+      address.occurrenceId,
+    );
   if (address.kind === 'fountainRarityOutcome') return occurrenceOwnerAddress(address.action);
   if (address.kind === 'steadyGrowthOutcome' || address.kind === 'transcendentEmbryoOutcome') {
     return address.owner.kind === 'occurrence' ? address.owner : undefined;
