@@ -8,7 +8,6 @@ import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { createEditorSessionReducer } from './editorSessionSlice';
-import { indexFindingsByOwner } from '../projections/evaluationProjection';
 import {
   createInitialProfileSessionState,
   createProfileSessionReducer,
@@ -76,9 +75,6 @@ export const selectProfileStatus = createSelector(
     }
     return encodeProjectDocument(project) === session.explicitBaselineJson ? 'Clean' : 'Dirty';
   },
-);
-export const selectProjectFindingsByOwner = createSelector(selectProjectEvaluation, (evaluation) =>
-  evaluation === undefined ? new Map() : indexFindingsByOwner(evaluation.findings),
 );
 export const selectCanUndoProject = (state: RootState) =>
   state.projectWorkspace.kind === 'openProject' &&

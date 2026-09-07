@@ -26,7 +26,7 @@ import {
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { createOpenTestApplication } from '@planner-test/fixtures/renderPlanner';
 import { App } from './App';
-import { semanticOwnerElementId } from '../feedback/semanticOwner';
+import { semanticOwnerControlElementId } from '../feedback/semanticOwner';
 
 function appMarkup(application: ReturnType<typeof createApplication>): string {
   return renderToStaticMarkup(
@@ -125,7 +125,7 @@ describe('App', () => {
     expect(application.store.getState().projectWorkspace.history!).toBe(historyBeforeNavigation);
     expect(markup).toContain('Start this biome');
     expect(markup).toContain('Create its opening room before building the route.');
-    expect(markup).toContain(semanticOwnerElementId(finding.origin));
+    expect(markup).toContain(semanticOwnerControlElementId(finding.origin));
     expect(markup).not.toContain('biomeTopologyMissing');
   });
 
@@ -194,7 +194,7 @@ describe('App', () => {
     expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(openSet);
     expect(application.store.getState().projectWorkspace.history!).toBe(historyBeforeNavigation);
     expect(markup).toContain('Hub Overview');
-    expect(markup).toContain(semanticOwnerElementId(openSet));
+    expect(markup).toContain(semanticOwnerControlElementId(openSet));
   });
 
   it('keeps route navigation outside authored history', () => {

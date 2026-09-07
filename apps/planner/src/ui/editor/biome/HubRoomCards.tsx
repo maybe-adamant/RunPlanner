@@ -12,7 +12,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { DoorRewardEditor } from './DoorRewardEditor';
 import {
   HubSlotMembershipControl,
@@ -64,6 +64,9 @@ export function OpenHubRoomCard({
   readonly showOrder?: boolean;
   readonly rewardPresentation?: HubRewardPresentation;
 }) {
+  const findingTarget = useFindingTarget();
+  const visitTarget =
+    showOrder && visitMarker !== undefined ? findingTarget(visitMarker.address) : undefined;
   const dispatch = useAppDispatch();
   const card = useRef<HTMLElement>(null);
   const rewards =
@@ -80,11 +83,7 @@ export function OpenHubRoomCard({
     visitMarker === undefined || visitMarker.assessment !== slot.marker.assessment;
   const roomHeading = (
     <div className="hub-slot-heading">
-      <div className="owner-markers">
-        <h3>{slot.label}</h3>
-        <SemanticOwnerMarker address={slot.marker.address} />
-        {visitMarker === undefined ? null : <SemanticOwnerMarker address={visitMarker.address} />}
-      </div>
+      <h3>{slot.label}</h3>
     </div>
   );
   const roomState = (
@@ -124,6 +123,8 @@ export function OpenHubRoomCard({
 
   return (
     <article
+      {...visitTarget}
+      tabIndex={visitTarget === undefined ? undefined : -1}
       aria-label={`${slot.label} Hub room`}
       className="hub-slot-card hub-open-room-card"
       data-dragging={pointerDragging || undefined}
@@ -135,7 +136,10 @@ export function OpenHubRoomCard({
       data-open="true"
       data-visit-position={visitPosition === -1 ? undefined : visitPosition + 1}
       data-visited={slot.room?.entered}
-      ref={card}
+      ref={(element) => {
+        card.current = element;
+        visitTarget?.ref(element);
+      }}
     >
       <div className="hub-roster-primary">
         {!showOrder || onPointerDragStarted === undefined ? null : (
@@ -201,7 +205,7 @@ export function OpenHubRoomCard({
       {rewards === undefined || rewards.length === 0 || slot.door === undefined ? null : (
         <div
           aria-label={`${slot.label} reward ${rewardPresentation}`}
-          className={`hub-main-reward room-state-with-marker${!showOrder ? ' hub-overview-reward-slot' : ''}`}
+          className={`hub-main-reward${!showOrder ? ' hub-overview-reward-slot' : ''}`}
           data-focused-main-reward={focusedMainReward || undefined}
           data-hub-main-reward-owner={rewardOwnerKey}
         >
@@ -215,9 +219,6 @@ export function OpenHubRoomCard({
             <div className="hub-timeline-reward-preview">
               <span>Reward</span>
               <strong>{rewards.map((candidate) => candidate.summary).join(', ')}</strong>
-              {rewards.map((candidate) => (
-                <SemanticOwnerMarker address={candidate.marker.address} key={candidate.key} />
-              ))}
             </div>
           )}
         </div>

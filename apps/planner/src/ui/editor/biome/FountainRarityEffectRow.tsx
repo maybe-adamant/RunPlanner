@@ -8,7 +8,7 @@ import {
   type WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
 import { useAppSelector } from '@planner/state/store';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
@@ -22,6 +22,7 @@ export function FountainRarityEffectRow({
   readonly control: WorkspaceFountainRarityControl;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
+  const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const focusedSemanticOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const semanticNavigationRevision = useAppSelector(
@@ -55,6 +56,7 @@ export function FountainRarityEffectRow({
   return (
     <div className="fountain-rarity-inline" data-fountain-rarity={control.address.action.actionKey}>
       <RandomTraitTargetPicker
+        findingTarget={findingTarget(control.address)}
         ariaLabel="Phial Target"
         id={semanticOwnerControlElementId(control.address)}
         interaction={interaction}
@@ -78,7 +80,6 @@ export function FountainRarityEffectRow({
           </button>
         </>
       ) : null}
-      <SemanticOwnerMarker address={control.address} />
     </div>
   );
 }

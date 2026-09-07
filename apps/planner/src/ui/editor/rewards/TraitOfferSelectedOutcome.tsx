@@ -16,6 +16,7 @@ import { useAppDispatch } from '@planner/state/store';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { TraitOfferCirceResolution } from './TraitOfferCirceResolution';
 import { replaceTraitOfferOption } from './traitOfferOptions';
 import { TraitOfferSelectedSpecialOutcomes } from './TraitOfferSelectedSpecialOutcomes';
@@ -47,6 +48,7 @@ export function TraitOfferSelectedOutcome({
     result: import('@run-planner/engine/authored-project').AuthoredConcaveStoneResult | null,
   ) => void;
 }) {
+  const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
   const selectedIndex = optionIndex(value.selectedOptionKey);
   const option = value.options[selectedIndex];
@@ -149,6 +151,7 @@ export function TraitOfferSelectedOutcome({
       )}
       {loadable.traitAcquisitionTarget === undefined ? null : (
         <ContextualPicker
+          findingTarget={findingTarget(loadable.traitAcquisitionTarget.address)}
           ariaLabel={`${value.selectedOptionKey} acquisition target`}
           id={semanticOwnerControlElementId(loadable.traitAcquisitionTarget.address)}
           label="Target"
@@ -165,6 +168,7 @@ export function TraitOfferSelectedOutcome({
       )}
       {loadable.circeResolution === undefined || circeDomain.result === undefined ? null : (
         <TraitOfferCirceResolution
+          findingTarget={findingTarget(loadable.circeResolution.control.address)}
           controlId={semanticOwnerControlElementId(loadable.circeResolution.control.address)}
           domain={circeDomain.result}
           option={option}
@@ -180,6 +184,7 @@ export function TraitOfferSelectedOutcome({
       )}
       {loadable.echoPomTarget === undefined || echoPomDomain.result === undefined ? null : (
         <ContextualPicker
+          findingTarget={findingTarget(loadable.echoPomTarget.control.address)}
           ariaLabel="Pom Pom Pom target"
           id={semanticOwnerControlElementId(loadable.echoPomTarget.control.address)}
           label="Greatest-level target"
@@ -202,10 +207,7 @@ export function TraitOfferSelectedOutcome({
         />
       )}
       {loadable.echoLastRunBoon === undefined ? null : (
-        <div
-          className="trait-dependent-choice-row"
-          id={semanticOwnerControlElementId(loadable.echoLastRunBoon.control.address)}
-        >
+        <div className="trait-dependent-choice-row">
           <div>
             <h4>Boon Boon Boon choice</h4>
             <p>
@@ -218,6 +220,7 @@ export function TraitOfferSelectedOutcome({
             </p>
           </div>
           <button
+            {...findingTarget(loadable.echoLastRunBoon.control.address)}
             className="quiet-action action-compact"
             onClick={onOpenEchoLastRunBoon}
             type="button"

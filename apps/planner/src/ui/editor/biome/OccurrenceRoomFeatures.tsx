@@ -10,7 +10,7 @@ import {
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -67,11 +67,13 @@ function ZagreusSpawnWorkbench({
   readonly feature: Extract<WorkspaceRoomFeature, { readonly kind: 'zagreusContract' }>;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
+  const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const owner = feature.action === 'add' ? feature.control.owner : feature.owner;
   return (
     <label className="room-feature-presence-row">
       <input
+        {...(feature.action === 'add' ? findingTarget(owner) : {})}
         checked={feature.action === 'remove'}
         data-command={feature.action === 'add' ? 'AddZagreusContract' : 'RemoveZagreusContract'}
         disabled={feature.presence.kind === 'optionalAbsent' && !feature.presence.enabled}
@@ -91,9 +93,6 @@ function ZagreusSpawnWorkbench({
         type="checkbox"
       />
       <span>Zagreus Contract</span>
-      <span className="owner-markers">
-        {feature.action === 'add' ? <SemanticOwnerMarker address={owner} /> : null}
-      </span>
     </label>
   );
 }
@@ -106,11 +105,13 @@ function ChaosSpawnWorkbench({
   readonly feature: Extract<WorkspaceRoomFeature, { readonly kind: 'chaos' }>;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
+  const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const owner = feature.action === 'add' ? feature.control.owner : feature.owner;
   return (
     <label className="room-feature-presence-row">
       <input
+        {...findingTarget(owner)}
         checked={feature.action === 'remove'}
         data-command={feature.action === 'add' ? 'AddChaos' : 'RemoveChaos'}
         disabled={
@@ -136,9 +137,6 @@ function ChaosSpawnWorkbench({
         type="checkbox"
       />
       <span>Chaos Gate</span>
-      <span className="owner-markers">
-        <SemanticOwnerMarker address={owner} />
-      </span>
     </label>
   );
 }
@@ -237,6 +235,7 @@ function RoomResourceControls({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly room: WorkspaceRoomSummary;
 }) {
+  const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
   const executeIntent = useCommandIntent();
   return (
@@ -245,6 +244,7 @@ function RoomResourceControls({
         <div className="room-feature-presence-row room-resource-row" key={resource.family}>
           <label className="room-resource-selection">
             <input
+              {...findingTarget(resource.address)}
               checked={resource.action === 'remove'}
               disabled={!resource.legal && resource.action !== 'remove'}
               onChange={() =>
@@ -258,7 +258,6 @@ function RoomResourceControls({
               type="checkbox"
             />
             <span>{resource.label}</span>
-            <SemanticOwnerMarker address={resource.address} />
           </label>
           {resource.action === 'move' && resource.currentPlacement !== undefined ? (
             <span className="resource-placement-disclosure">
@@ -325,6 +324,7 @@ export function RoomFeaturesWorkbench({
   readonly roomActions?: WorkspaceRoomActions;
   readonly room: WorkspaceRoomSummary;
 }) {
+  const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const additionalExits = features.filter(
     (
@@ -409,11 +409,19 @@ export function RoomFeaturesWorkbench({
                       feature.presenceInteractionKey,
                     );
               return (
-                <fieldset className="room-purging-pool" key="stygian-well">
+                <fieldset
+                  {...(feature.inventoryAddress === undefined
+                    ? {}
+                    : findingTarget(feature.inventoryAddress))}
+                  tabIndex={-1}
+                  className="room-purging-pool"
+                  key="stygian-well"
+                >
                   <legend className="visually-hidden">Stygian Well configuration</legend>
                   <div className="room-feature-interaction-header">
                     <label className="room-feature-presence-row">
                       <input
+                        {...findingTarget(feature.presenceAddress)}
                         aria-label="Stygian Well present"
                         checked={feature.presence.kind !== 'optionalAbsent'}
                         disabled={presence === undefined}
@@ -425,11 +433,7 @@ export function RoomFeaturesWorkbench({
                         type="checkbox"
                       />
                       <span>Stygian Well</span>
-                      <SemanticOwnerMarker address={feature.presenceAddress} />
                     </label>
-                    {feature.inventoryAddress === undefined ? null : (
-                      <SemanticOwnerMarker address={feature.inventoryAddress} />
-                    )}
                     {feature.interactionKey === undefined
                       ? null
                       : (() => {
@@ -471,13 +475,17 @@ export function RoomFeaturesWorkbench({
                 feature.interactionKey,
               );
               return (
-                <fieldset className="room-purging-pool" key="purging-pool">
+                <fieldset
+                  {...findingTarget(feature.inventoryAddress)}
+                  tabIndex={-1}
+                  className="room-purging-pool"
+                  key="purging-pool"
+                >
                   <legend className="visually-hidden">Pool of Purging configuration</legend>
                   <div className="room-feature-interaction-header">
                     <label className="room-feature-presence-row">
                       <input aria-label="Pool of Purging" checked disabled type="checkbox" />
                       <span>Pool of Purging</span>
-                      <SemanticOwnerMarker address={feature.inventoryAddress} />
                     </label>
                     <label className="room-feature-interact-toggle">
                       <input
@@ -500,6 +508,7 @@ export function RoomFeaturesWorkbench({
                         return (
                           <div className="shop-family-offer-row" key={slot.key}>
                             <PurgingPoolTraitPicker
+                              address={slot.address}
                               interaction={interaction}
                               label={slot.label}
                               {...(slot.traitLabel === undefined
@@ -509,7 +518,6 @@ export function RoomFeaturesWorkbench({
                                 executeIntent(interaction.intentFor(traitKey))
                               }
                             />
-                            <SemanticOwnerMarker address={slot.address} />
                             {slot.sale === undefined
                               ? null
                               : (() => {
@@ -569,10 +577,18 @@ export function RoomFeaturesWorkbench({
                       feature.presenceInteractionKey,
                     );
               return (
-                <fieldset className="room-purging-pool" key="hermes-shrine">
+                <fieldset
+                  {...(feature.inventoryAddress === undefined
+                    ? {}
+                    : findingTarget(feature.inventoryAddress))}
+                  tabIndex={-1}
+                  className="room-purging-pool"
+                  key="hermes-shrine"
+                >
                   <legend className="visually-hidden">Hermes Shrine configuration</legend>
                   <label className="room-feature-presence-row">
                     <input
+                      {...findingTarget(feature.presenceAddress)}
                       aria-label="Hermes Shrine present"
                       checked={feature.presence.kind !== 'optionalAbsent'}
                       disabled={presence === undefined}
@@ -584,11 +600,7 @@ export function RoomFeaturesWorkbench({
                       type="checkbox"
                     />
                     <span>Hermes Shrine</span>
-                    <SemanticOwnerMarker address={feature.presenceAddress} />
                   </label>
-                  {feature.inventoryAddress === undefined ? null : (
-                    <SemanticOwnerMarker address={feature.inventoryAddress} />
-                  )}
                   {feature.slots.map((slot) => {
                     const offer = requireWorkspaceInteraction(
                       interactions.hermesShrineOffers,
@@ -681,19 +693,23 @@ export function RoomEncounterStructureWorkbench({
 }
 
 function PurgingPoolTraitPicker({
+  address,
   interaction,
   label,
   onSelect,
   selectedLabel,
 }: {
+  readonly address: import('@run-planner/engine/authored-project').SemanticAddress;
   readonly interaction: import('@planner/projections/structured-workspace').WorkspacePurgingPoolSlotInteraction;
   readonly label: string;
   readonly onSelect: (traitKey: string | null) => void;
   readonly selectedLabel?: string;
 }) {
+  const findingTarget = useFindingTarget();
   const picker = useWorkspaceInteraction(interaction);
   return (
     <ContextualPicker
+      findingTarget={findingTarget(address)}
       ariaLabel={`Pool of Purging ${label} Item`}
       id={`${interaction.key}-picker`}
       label={`${label} Item`}
@@ -720,6 +736,7 @@ function StygianWellSlotEditor({
   >['slots'][number];
   readonly interactions: import('@planner/projections/structured-workspace').WorkspaceInteractionCatalog;
 }) {
+  const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const offer = requireWorkspaceInteraction(
     interactions.stygianWellOffers,
@@ -741,6 +758,7 @@ function StygianWellSlotEditor({
   return (
     <div className="shop-family-offer-row room-purging-pool-slot">
       <ContextualPicker
+        findingTarget={findingTarget(slot.address)}
         ariaLabel={`Stygian Well ${slot.label} Item`}
         id={`${offer.key}-picker`}
         label={`${slot.label} Item`}
@@ -754,7 +772,6 @@ function StygianWellSlotEditor({
         placeholder="Unresolved"
         {...(slot.itemLabel === undefined ? {} : { triggerLabel: slot.itemLabel })}
       />
-      <SemanticOwnerMarker address={slot.address} />
       <label className="shop-family-participation">
         <input
           aria-label={`Purchased Stygian Well ${slot.label}`}
@@ -768,6 +785,7 @@ function StygianWellSlotEditor({
       {twist === undefined ? null : (
         <>
           <ContextualPicker
+            findingTarget={findingTarget(slot.twist!.address)}
             ariaLabel={`Stygian Well ${slot.label} Twist result`}
             id={`${twist.key}-picker`}
             label={`${slot.label} Twist result`}
@@ -783,7 +801,6 @@ function StygianWellSlotEditor({
               ? {}
               : { triggerLabel: slot.twist!.itemLabel })}
           />
-          <SemanticOwnerMarker address={slot.twist!.address} />
         </>
       )}
     </div>
@@ -803,6 +820,7 @@ function HermesShrineSlotEditor({
   readonly offer: import('@planner/projections/structured-workspace').WorkspaceHermesShrineOfferInteraction;
   readonly purchase: import('@planner/projections/structured-workspace').WorkspaceHermesShrinePurchaseInteraction;
 }) {
+  const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const offerPicker = useWorkspaceInteraction(offer);
   const current = purchase.purchase;
@@ -810,6 +828,7 @@ function HermesShrineSlotEditor({
   return (
     <div className="shop-family-offer-row hermes-shrine-slot">
       <ContextualPicker
+        findingTarget={findingTarget(marker.address)}
         ariaLabel={`Hermes Shrine ${label} Item`}
         id={`${offer.key}-picker`}
         label={`${label} Item`}
@@ -823,7 +842,6 @@ function HermesShrineSlotEditor({
         placeholder="Unresolved"
         {...(rewardLabel === undefined ? {} : { triggerLabel: rewardLabel })}
       />
-      <SemanticOwnerMarker address={marker.address} />
       <label className="shop-family-participation">
         <input
           aria-label={`Purchased Hermes Shrine ${label}`}

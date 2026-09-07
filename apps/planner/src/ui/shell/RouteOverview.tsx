@@ -21,7 +21,8 @@ import {
   KeepsakeSelectionPicker,
 } from '@planner/ui/editor/KeepsakePickers';
 import { HexTreeEditor } from '@planner/ui/editor/rewards/HexTreeEditor';
-import { FindingCount, SemanticOwnerMarker, StatusBadge } from '../feedback/EvaluationFeedback';
+import { FindingCount, StatusBadge } from '../feedback/EvaluationFeedback';
+import { useFindingTarget } from '../feedback/useFindingTarget';
 
 const fearVowGridOrder = Object.freeze([
   'EnemyDamageShrineUpgrade',
@@ -68,6 +69,7 @@ export function RouteOverview({
   readonly workspaceRoute: WorkspaceRoute;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
+  const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
   const configuredBiomeCount = workspaceRoute.biomes.length;
   const configuredBiomeLabels = navigation.biomePanels
@@ -130,14 +132,17 @@ export function RouteOverview({
       >
     | undefined;
   return (
-    <section className="route-overview">
+    <section
+      className="route-overview"
+      {...findingTarget(workspaceRoute.marker.address)}
+      tabIndex={-1}
+    >
       <header className="panel-heading">
         <div>
           <p className="eyebrow">Route settings</p>
           <h2>{label}</h2>
         </div>
         <div className="panel-heading-actions">
-          <SemanticOwnerMarker address={workspaceRoute.marker.address} />
           <StatusBadge status={feedback.status} />
           <FindingCount count={feedback.findingCount} label={`${label} findings`} />
           <span className="neutral-status">{routeExtent}</span>

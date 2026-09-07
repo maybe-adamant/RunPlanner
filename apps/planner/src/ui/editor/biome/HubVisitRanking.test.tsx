@@ -182,13 +182,9 @@ describe('HubVisitRanking', () => {
     );
     expect(prefixCards).toHaveLength(6);
     for (const [index, card] of prefixCards.entries()) {
-      const marker = card.querySelector<HTMLElement>(
-        `[data-semantic-owner='${semanticAddressKey(
-          createHubVisitAddress(nBiome, 'hub', index + 1),
-        )}']`,
+      expect(card.getAttribute('data-semantic-owner')).toBe(
+        semanticAddressKey(createHubVisitAddress(nBiome, 'hub', index + 1)),
       );
-      expect(marker).not.toBeNull();
-      expect(marker?.closest('.hub-open-room-card')).toBe(card);
     }
   });
 
@@ -646,7 +642,17 @@ describe('HubVisitRanking', () => {
           createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
         )}']`,
       );
-    expect(invalidRewardMarker?.dataset.hasFindings).toBe('true');
+    expect(invalidRewardMarker).toBeNull();
+    const destination = view.application
+      .selectStructuredWorkspace(view.application.store.getState())!
+      .focusByOwner.get(
+        semanticAddressKey(createIncomingRewardAddress(nBiome, nOccurrenceId('combat10'))),
+      )!;
+    const repairTarget = screen.getByRole('region', { name: 'Ephyra Hub' });
+    expect(repairTarget.getAttribute('data-semantic-owner')).toBe(
+      semanticAddressKey(destination.focusAddress),
+    );
+    expect(repairTarget.getAttribute('data-has-findings')).toBe('true');
     expect(document.querySelectorAll('.hub-ranked-visit-prefix .hub-open-room-card')).toHaveLength(
       3,
     );

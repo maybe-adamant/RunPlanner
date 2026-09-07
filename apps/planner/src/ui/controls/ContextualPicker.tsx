@@ -1,6 +1,7 @@
 import * as Popover from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 
 import type {
   ContextualPickerItem,
@@ -9,6 +10,7 @@ import type {
 } from '@planner/projections/contextualPicker';
 
 interface ContextualPickerProps<T> {
+  readonly findingTarget?: FindingTargetProps;
   readonly ariaLabel?: string;
   readonly cancelLabel?: string;
   readonly choiceLabel?: string;
@@ -154,6 +156,7 @@ function PickerContent<T>({
 }
 
 export function ContextualPicker<T>({
+  findingTarget,
   ariaLabel,
   cancelLabel,
   choiceLabel,
@@ -216,8 +219,12 @@ export function ContextualPicker<T>({
             className="contextual-picker-trigger"
             data-candidate-state={selected?.state ?? 'unspecified'}
             disabled={disabled}
+            {...findingTarget}
             id={id}
-            ref={captureTrigger}
+            ref={(node) => {
+              captureTrigger(node);
+              findingTarget?.ref(node);
+            }}
             type="button"
           >
             <span>{disabled ? placeholder : (triggerLabel ?? selected?.label ?? placeholder)}</span>

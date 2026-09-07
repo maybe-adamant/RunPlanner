@@ -21,6 +21,7 @@ import {
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { CompoundOutcomeEditor } from './CompoundOutcomeEditor';
 import { naturalSelectionOptionWithTargets, replaceTraitOfferOption } from './traitOfferOptions';
 
@@ -45,6 +46,7 @@ function ConcaveStoneOutcomeEditor({
   readonly traitLabel: (traitKey: string) => string;
   readonly onSelect: (result: AuthoredConcaveStoneResult | null) => void;
 }) {
+  const findingTarget = useFindingTarget();
   const authoredResult = offer.concaveStoneResult;
   const authoredOptionKey = authoredResult?.kind === 'proc' ? authoredResult.optionKey : undefined;
   const authoredOption =
@@ -112,7 +114,12 @@ function ConcaveStoneOutcomeEditor({
     onSelect({ kind: 'noProc' });
   };
   return (
-    <fieldset className="trait-selected-outcome-detail" aria-label="Concave Stone outcome">
+    <fieldset
+      {...findingTarget(interaction.control.address)}
+      tabIndex={-1}
+      className="trait-selected-outcome-detail"
+      aria-label="Concave Stone outcome"
+    >
       <legend>Concave Stone</legend>
       <label>
         <input
@@ -208,6 +215,7 @@ function AllTogetherOutcomeEditor({
   readonly optionIndex: number;
   readonly onSelect: (result: AuthoredAllTogetherResult) => void;
 }) {
+  const findingTarget = useFindingTarget();
   const option = offer.options[optionIndex];
   const labelsForControls = () =>
     Object.freeze(
@@ -272,6 +280,7 @@ function AllTogetherOutcomeEditor({
           key,
           label: `${key[0]!.toUpperCase() + key.slice(1)}: ${label}`,
           controlId: semanticOwnerControlElementId(interaction.control.address),
+          findingTarget: findingTarget(interaction.control.address),
         };
       })}
       startLabel="Choose all grants"
@@ -299,6 +308,7 @@ function NaturalSelectionOutcomeEditor({
   readonly optionIndex: number;
   readonly onSelect: (targets: readonly string[]) => void;
 }) {
+  const findingTarget = useFindingTarget();
   const option = offer.options[optionIndex];
   const initial = option?.naturalSelectionTargets ?? Object.freeze([]);
   const [draft, setDraft] = useState<readonly string[]>(initial);
@@ -376,9 +386,6 @@ function NaturalSelectionOutcomeEditor({
     return {
       key: `position-${rowIndex + 1}`,
       label: `Position ${rowIndex + 1}: ${target === undefined ? 'Unspecified' : interaction.traitLabel(target)}${retained ? ' (retained)' : ''}`,
-      ...(rowIndex === 0
-        ? { controlId: semanticOwnerControlElementId(interaction.control.address) }
-        : {}),
     };
   });
   const repeated = [...new Set(draft)].flatMap((traitKey) => {
@@ -391,6 +398,7 @@ function NaturalSelectionOutcomeEditor({
         <p className="trait-selected-outcome-detail">Repeated targets: {repeated.join(', ')}</p>
       )}
       <CompoundOutcomeEditor
+        findingTarget={findingTarget(interaction.control.address)}
         activeIndex={activeIndex}
         complete={complete}
         legend="Natural Selection targets"

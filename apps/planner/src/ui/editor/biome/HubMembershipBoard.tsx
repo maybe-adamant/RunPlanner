@@ -12,7 +12,7 @@ import {
   type WorkspaceMarker,
 } from '@planner/projections/structured-workspace';
 import { candidateSupport } from '@planner/projections/candidateProjection';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -66,6 +66,7 @@ function HubSlotMembership({
   readonly onMembershipTransition: (transition: HubMembershipTransition) => void;
   readonly slot: WorkspaceHubSlot;
 }) {
+  const findingTarget = useFindingTarget();
   if (slot.open !== interaction.selected)
     throw new Error('A Hub slot interaction must match its projected membership state.');
   if (interaction.selected && slot.canClose && interaction.close === undefined)
@@ -146,6 +147,7 @@ function HubSlotMembership({
         }}
       >
         <input
+          {...findingTarget(slot.marker.address)}
           aria-busy={candidateState.pending || undefined}
           aria-label={`${slot.label} open`}
           checked={slot.open}
@@ -239,10 +241,7 @@ export function ClosedHubRoomOption({
       <div className="hub-roster-primary">
         <div className="hub-roster-identity">
           <div className="hub-slot-heading">
-            <div className="owner-markers">
-              <h3>{slot.label}</h3>
-              <SemanticOwnerMarker address={slot.marker.address} />
-            </div>
+            <h3>{slot.label}</h3>
           </div>
           <div className="hub-slot-meta">
             <div className="hub-slot-state">

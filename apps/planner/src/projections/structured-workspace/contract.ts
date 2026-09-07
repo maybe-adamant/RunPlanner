@@ -1627,7 +1627,6 @@ export interface WorkspaceRoomActionRow {
     /** Trait/Pom editing shown beside the action only while this role is actually acquired. */
     readonly inlineLevelResolutions: readonly WorkspaceLevelResolutionControl[];
     readonly inlineTraitOffers: readonly WorkspaceTraitOfferControl[];
-    readonly showOwner: boolean;
     readonly showOffer: boolean;
   };
   readonly stale: boolean;
@@ -2981,6 +2980,10 @@ export interface WorkspaceRoute {
 }
 
 export interface StructuredWorkspaceProjection {
+  readonly findingsByRepairTarget: ReadonlyMap<
+    string,
+    readonly import('@run-planner/engine/simulation').SemanticFinding[]
+  >;
   readonly focusByOwner: ReadonlyMap<string, WorkspaceInspectorDestination>;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly marker: WorkspaceMarker;

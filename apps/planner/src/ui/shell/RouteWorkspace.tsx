@@ -153,11 +153,8 @@ export function RouteWorkspace({
       return;
     }
     const phaseControl = document.getElementById(semanticOwnerControlElementId(phase));
-    const selector = phaseControl?.querySelector<HTMLButtonElement>(
-      'button.contextual-picker-trigger:not(:disabled)',
-    );
     pendingNpcPhaseFocus.current = null;
-    selector?.focus({ preventScroll: true });
+    phaseControl?.focus({ preventScroll: true });
   }, [displayedPanel, workspaceRoute.routeKey]);
 
   const navigateNpcIndexEntry = (phase: EncounterPhaseAddress): void => {

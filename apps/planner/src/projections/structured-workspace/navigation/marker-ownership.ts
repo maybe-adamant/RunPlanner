@@ -155,6 +155,7 @@ export function workspaceOccurrenceOwnedMarkers(
     ...(room.roomActions?.steadyGrowth?.map((effect) => effect.marker) ?? []),
     ...(room.roomActions?.transcendentEmbryo?.map((effect) => effect.marker) ?? []),
     ...(room.judgment === undefined ? [] : [room.judgment.marker]),
+    ...(room.figurine === undefined ? [] : [room.figurine.marker]),
     ...(room.keepsakeSelection === undefined
       ? []
       : [

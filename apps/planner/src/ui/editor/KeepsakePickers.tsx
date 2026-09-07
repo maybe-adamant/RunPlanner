@@ -8,6 +8,7 @@ import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
 import { useLayoutEffect } from 'react';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { TranscendentEmbryoOutcomeFields } from './rewards/TranscendentEmbryoOutcomeFields';
 
 type JeweledPomInteraction = Extract<
@@ -63,10 +64,12 @@ export function KeepsakeSelectionPicker({
   readonly interaction: WorkspaceKeepsakeSelectionInteraction;
   readonly label: string;
 }) {
+  const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
   const projection = useWorkspaceInteraction(interaction);
   return (
     <ContextualPicker
+      findingTarget={findingTarget(interaction.owner, id)}
       id={id}
       label={label}
       layout="inline"
@@ -95,6 +98,7 @@ export function KeepsakeEquipResultPicker({
   readonly interaction: WorkspaceKeepsakeEquipResultInteraction;
   readonly label?: string;
 }) {
+  const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
   const { activate, pending, result: domain } = useWorkspaceInteraction(interaction);
   const resultKind = interaction.owner.resultKind;
@@ -126,6 +130,7 @@ export function KeepsakeEquipResultPicker({
       }`}
     >
       <ContextualPicker
+        findingTarget={findingTarget(interaction.owner, id)}
         id={id}
         label={label}
         layout="inline"

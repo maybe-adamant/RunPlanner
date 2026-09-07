@@ -8,7 +8,7 @@ import {
   type WorkspaceTranscendentEmbryoDomain,
 } from '@planner/projections/structured-workspace';
 import { useAppSelector } from '@planner/state/store';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
@@ -23,6 +23,7 @@ export function TranscendentEmbryoEffectRow({
   readonly control: WorkspaceTranscendentEmbryoControl;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
+  const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const focusedSemanticOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const semanticNavigationRevision = useAppSelector(
@@ -72,6 +73,7 @@ export function TranscendentEmbryoEffectRow({
         ) : (
           <div className="transcendent-embryo-outcome-row">
             <RandomTraitTargetPicker
+              findingTarget={findingTarget(control.address)}
               ariaLabel="Transcendent Embryo blessing"
               id={semanticOwnerControlElementId(control.address)}
               interaction={{ traitLabel: interaction.blessingLabel }}
@@ -113,7 +115,6 @@ export function TranscendentEmbryoEffectRow({
             </button>
           </>
         ) : null}
-        <SemanticOwnerMarker address={control.address} />
       </div>
     </li>
   );

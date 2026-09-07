@@ -29,7 +29,7 @@ import { Provider } from 'react-redux';
 
 import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
-import { semanticOwnerElementId } from '@planner/ui/feedback/semanticOwner';
+import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import type { WorkspaceBiome, WorkspaceNode } from '@planner/projections/structured-workspace';
 import { findingSelected, semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import {
@@ -457,13 +457,15 @@ describe('Biome inspector controls', () => {
           semanticAddressKey(candidate.origin) === semanticAddressKey(owner),
       );
     if (finding === undefined) throw new Error('Judgment finding is missing');
-    expect(document.getElementById(semanticOwnerElementId(owner))).toBeTruthy();
+    expect(document.getElementById(semanticOwnerControlElementId(owner))).toBeTruthy();
     act(() =>
       view.application.store.dispatch(
         findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
       ),
     );
-    expect(document.activeElement).toBe(document.getElementById(semanticOwnerElementId(owner)));
+    expect(document.activeElement).toBe(
+      document.getElementById(semanticOwnerControlElementId(owner)),
+    );
     expect(inspector.querySelector('.room-judgment-popup')).toBeNull();
     expect(within(inspector).getByText('Start encounter')).toBeTruthy();
     expect(within(inspector).getByText('Boss defeated')).toBeTruthy();

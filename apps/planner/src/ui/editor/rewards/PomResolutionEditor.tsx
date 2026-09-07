@@ -22,7 +22,7 @@ import { useAppDispatch } from '@planner/state/store';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { useFindingTarget, type FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 
 function launcherId(address: LevelResolutionAddress): string {
   return `pom-launcher-${encodeURIComponent(semanticAddressKey(address))}`;
@@ -125,6 +125,7 @@ function candidatePicker(
 
 /** Shared single-target presentation leaf for random Pom-like effects. */
 export function RandomTraitTargetPicker({
+  findingTarget,
   ariaLabel,
   id,
   interaction,
@@ -137,6 +138,7 @@ export function RandomTraitTargetPicker({
   selected,
 }: {
   readonly ariaLabel: string;
+  readonly findingTarget?: FindingTargetProps;
   readonly id: string;
   readonly interaction: { readonly traitLabel: (traitKey: string) => string };
   readonly label?: string;
@@ -149,6 +151,7 @@ export function RandomTraitTargetPicker({
 }) {
   return (
     <ContextualPicker
+      {...(findingTarget === undefined ? {} : { findingTarget })}
       ariaLabel={ariaLabel}
       id={id}
       label={label}
@@ -170,6 +173,7 @@ export function PomResolutionLauncher({
   readonly control: WorkspaceLevelResolutionControl;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
+  const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
   const interaction = requireWorkspaceInteraction(
     interactions.levelResolutions,
@@ -192,6 +196,7 @@ export function PomResolutionLauncher({
         : 'Pom configuration has no findings';
   return (
     <button
+      {...findingTarget(control.address, launcherId(control.address))}
       aria-label={`${label}; ${statusLabel}`}
       className="trait-offer-launcher quiet-action action-compact"
       data-trait-status={control.status}
@@ -475,6 +480,7 @@ export function PomResolutionDialog({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly target: LevelResolutionAddress;
 }) {
+  const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
   const executeIntent = useCommandIntent();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -515,14 +521,13 @@ export function PomResolutionDialog({
       className="trait-offer-dialog-backdrop"
       ref={dialogRef}
     >
-      <div className="trait-offer-dialog">
+      <div className="trait-offer-dialog" {...findingTarget(target)} tabIndex={-1}>
         <header className="panel-heading">
           <div>
             <p className="eyebrow">{eyebrow}</p>
             <h2 id={dialogTitleId}>Pom target</h2>
           </div>
           <div className="panel-heading-actions">
-            <SemanticOwnerMarker address={target} />
             <button aria-label="Close Pom" className="quiet-action" onClick={close} type="button">
               Close
             </button>

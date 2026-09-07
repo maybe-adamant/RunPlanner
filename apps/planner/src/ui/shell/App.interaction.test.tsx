@@ -56,7 +56,7 @@ import {
   echoGiftHammerReplayAddress,
 } from '@planner-test/fixtures/echoGiftHammer';
 import { createEchoGoldHPrebossProject } from '@planner-test/fixtures/echoGoldShop';
-import { semanticOwnerControlElementId, semanticOwnerElementId } from '../feedback/semanticOwner';
+import { semanticOwnerControlElementId } from '../feedback/semanticOwner';
 import {
   reachedTraitOffers,
   authorLegalTraitOffers,
@@ -467,6 +467,92 @@ function allTogetherFindingFixture() {
 }
 
 describe('planner history interaction', () => {
+  it('highlights the missing Fields Optional 3 definition before navigation and repeatedly focuses that Overview picker', async () => {
+    const application = createApplication();
+    const original = createGoldenFGHProject();
+    const fields = original.route.biomes
+      .find((biome) => biome.biomeKey === 'H')
+      ?.topology?.occurrences.find((room) => room.gameName === 'H_Combat02');
+    if (fields?.state.kind !== 'fieldsCombat') throw new Error('H_Combat02 fixture is missing');
+    const project = {
+      ...original,
+      route: {
+        ...original.route,
+        biomes: original.route.biomes.map((biome) =>
+          biome.biomeKey !== 'H' || biome.topology === null
+            ? biome
+            : {
+                ...biome,
+                topology: {
+                  ...biome.topology,
+                  occurrences: biome.topology.occurrences.map((room) =>
+                    room.occurrenceId !== fields.occurrenceId || room.state.kind !== 'fieldsCombat'
+                      ? room
+                      : {
+                          ...room,
+                          state: {
+                            ...room.state,
+                            optionalRewardCount: 3,
+                            optionalRewards: { ...room.state.optionalRewards, optional3: null },
+                          },
+                        },
+                  ),
+                },
+              },
+        ),
+      },
+    };
+    application.store.dispatch(authoredProjectReplaced(project));
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const finding = application.store
+      .getState()
+      .projectWorkspace.assembly!.evaluation.findings.find(
+        (entry) =>
+          entry.code === 'rewardMissing' &&
+          entry.origin.kind === 'localReward' &&
+          entry.origin.slotKey === 'optional3' &&
+          entry.origin.occurrenceId === fields.occurrenceId,
+      );
+    if (finding === undefined) throw new Error('Optional 3 definition finding is missing');
+    const destination = workspace.focusByOwner.get(semanticAddressKey(finding.origin))!;
+    application.store.dispatch(
+      semanticOwnerNavigated(
+        createOccurrenceAddress(
+          { kind: 'biome', routeKey: 'Underworld', biomeKey: 'H' },
+          fields.occurrenceId,
+        ),
+      ),
+    );
+    const view = renderPlannerForInteraction({ application });
+    const targetSelector = `[data-semantic-owner='${semanticAddressKey(destination.focusAddress)}']`;
+    const picker = view.container.querySelector<HTMLButtonElement>(targetSelector);
+    expect(picker?.tagName).toBe('BUTTON');
+    expect(picker?.getAttribute('data-has-findings')).toBe('true');
+    expect(picker?.getAttribute('aria-description')).toContain('reward');
+    expect(view.container.querySelectorAll(targetSelector)).toHaveLength(1);
+    const findingsPanel = screen.getByRole('heading', { name: 'Findings' }).closest('section')!;
+    const index = application.store
+      .getState()
+      .projectWorkspace.assembly!.evaluation.findings.indexOf(finding);
+    const findingButton = within(findingsPanel).getAllByRole('button')[index]!;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+      expect(view.container.querySelector(targetSelector)).toBeNull();
+      await view.user.click(findingButton);
+      const repairedPicker = view.container.querySelector<HTMLButtonElement>(targetSelector);
+      await waitFor(() => expect(document.activeElement).toBe(repairedPicker));
+      expect(repairedPicker?.getAttribute('data-selected-finding')).toBe('true');
+      expect(screen.getByRole('tab', { name: 'Room Overview' }).getAttribute('aria-selected')).toBe(
+        'true',
+      );
+      expect(
+        Array.from(
+          view.container.querySelectorAll('[data-workspace-node][data-selected="true"]'),
+        ).map((node) => node.getAttribute('data-workspace-node')),
+      ).toEqual([destination.selectedRailKey]);
+    }
+    expect(application.store.getState().projectWorkspace.history!.present).toBe(project);
+  });
   it('keeps route identity, document history, and project information in the header', async () => {
     const { user } = renderPlannerForInteraction();
 
@@ -834,12 +920,13 @@ describe('planner history interaction', () => {
       createAcquisitionSiteAddress(createOccurrenceAddress(goldenFBiome, target), siteKey),
       'seaStarDuplicate',
     );
-    await waitFor(() =>
-      expect(document.getElementById(semanticOwnerElementId(child))).not.toBeNull(),
-    );
-    const childRow = document
-      .getElementById(semanticOwnerElementId(child))
-      ?.closest('[data-room-action-key]');
+    const childDestination = application
+      .selectStructuredWorkspace(application.store.getState())!
+      .focusByOwner.get(semanticAddressKey(child))!;
+    const childTarget = () =>
+      document.getElementById(semanticOwnerControlElementId(childDestination.focusAddress));
+    await waitFor(() => expect(childTarget()).not.toBeNull());
+    const childRow = childTarget()?.closest('[data-room-action-key]');
     expect(childRow?.textContent).toContain('seaStarDuplicate pickup');
     expect(
       application.store
@@ -851,7 +938,7 @@ describe('planner history interaction', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     await waitFor(() => expect(checkbox).toHaveProperty('checked', false));
-    expect(document.getElementById(semanticOwnerElementId(child))).toBeNull();
+    expect(childTarget()).toBeNull();
     expect(
       application.store
         .getState()
@@ -1305,7 +1392,9 @@ describe('planner history interaction', () => {
     });
     expect(destination).not.toHaveProperty('traitDialogTarget');
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(document.getElementById(semanticOwnerElementId(destination.focusAddress))).toBeTruthy();
+    expect(
+      document.getElementById(semanticOwnerControlElementId(destination.focusAddress)),
+    ).toBeTruthy();
     const action = document.getElementById(semanticOwnerControlElementId(destination.focusAddress));
     if (action === null) throw new Error('invalid Hammer pickup action is missing');
     await view.user.click(within(action).getByRole('button', { name: /Edit Trait/ }));
@@ -1420,19 +1509,26 @@ describe('planner history interaction', () => {
     expect(findingButton.classList.contains('findings-list-entry')).toBe(true);
     await view.user.click(findingButton);
 
+    const destination = application
+      .selectStructuredWorkspace(application.store.getState())!
+      .focusByOwner.get(semanticAddressKey(gold))!;
     await waitFor(() =>
-      expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(gold),
+      expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+        destination.focusAddress,
+      ),
     );
     expect(
       application
         .selectStructuredWorkspace(application.store.getState())!
         .focusByOwner.get(semanticAddressKey(gold)),
     ).toMatchObject({ ownerAddress: gold, biomeKey: 'H' });
-    const marker = document.getElementById(semanticOwnerElementId(gold));
-    expect(marker).toBeTruthy();
-    const actionRow = marker?.closest('[data-room-action-key]');
+    const actionRow = document.getElementById(
+      semanticOwnerControlElementId(destination.focusAddress),
+    );
+    expect(actionRow?.getAttribute('data-has-findings')).toBe('true');
+    expect(document.activeElement).toBe(actionRow);
     expect(actionRow?.textContent).toContain('Gold Gold Gold duplicate of Offer 3');
-    expect(actionRow?.textContent).toContain('Shop purchase is unavailable');
+    expect(actionRow?.getAttribute('aria-description')).toContain('Shop purchase is unavailable');
   });
 
   it('opens and focuses the exact All Together set control from its finding', async () => {
