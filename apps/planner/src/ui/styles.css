@@ -1642,8 +1642,7 @@ button:disabled {
   cursor: pointer;
 }
 
-.biome-rail-node:hover,
-.biome-rail-node[data-selected='true'] {
+.biome-rail-node:hover {
   border-color: rgb(226 185 113 / 55%);
   background: rgb(226 185 113 / 7%);
 }
@@ -1657,8 +1656,13 @@ button:disabled {
   opacity: 0.66;
 }
 
-.biome-rail-node[data-findings='true'] {
+.biome-rail-node[data-findings='true']:not([data-selected='true']) {
   border-color: rgb(218 115 115 / 55%);
+}
+
+.biome-rail-node[data-selected='true'] {
+  border-color: rgb(226 185 113 / 55%);
+  background: rgb(226 185 113 / 7%);
 }
 
 .biome-frontier-stop .biome-rail-node {

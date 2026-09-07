@@ -1209,9 +1209,8 @@ describe('planner history interaction', () => {
       .find((button) => button.textContent?.includes('trait'));
     if (findingButton === undefined) throw new Error('SpellDrop finding is not presented');
     await view.user.click(findingButton);
-    const destination = application
-      .selectStructuredWorkspace(application.store.getState())!
-      .focusByOwner.get(semanticAddressKey(target));
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const destination = workspace.focusByOwner.get(semanticAddressKey(target));
     if (destination === undefined) throw new Error('SpellDrop destination is missing');
     expect(destination).toMatchObject({
       ownerAddress: target,
@@ -1222,6 +1221,12 @@ describe('planner history interaction', () => {
     expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(
       destination.focusAddress,
     );
+    expect(destination.selectedRailKey).toBeDefined();
+    expect(
+      [...document.querySelectorAll('.biome-rail-node[data-selected="true"]')].map((node) =>
+        node.getAttribute('data-workspace-node'),
+      ),
+    ).toEqual([destination.selectedRailKey]);
     expect(screen.queryByRole('dialog')).toBeNull();
     const action = document.getElementById(semanticOwnerControlElementId(destination.focusAddress));
     if (action === null) throw new Error('SpellDrop pickup action is missing');

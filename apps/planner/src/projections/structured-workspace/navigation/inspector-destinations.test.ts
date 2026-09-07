@@ -57,6 +57,7 @@ import type {
   WorkspaceBiome,
   WorkspaceInspectorDestination,
 } from '../contract';
+import { workspaceOccurrenceOwnedMarkers } from './marker-ownership';
 
 const { structuredWorkspace } = createStructuredWorkspaceTestServices();
 
@@ -576,6 +577,24 @@ describe('workspace inspector destinations', () => {
     for (const owner of target.room.rewardControls.map((control) => control.marker.address)) {
       expect(destination(complete, owner)).toMatchObject({
         inspectorSubject: { kind: 'node', nodeKey: decision.key },
+      });
+    }
+    const selectedTarget = decision.targets.find((candidate) => candidate.selected);
+    if (selectedTarget === undefined) throw new Error('F selected target is missing');
+    const selectedWorkbench = occurrenceWorkbenchFor(f, selectedTarget.room.occurrenceId);
+    for (const owner of [
+      ...workspaceOccurrenceOwnedMarkers(selectedTarget.room),
+      ...selectedTarget.room.localDetailMarkers,
+    ].map((marker) => marker.address)) {
+      expect(destination(complete, owner).selectedRailKey).toBe(decisionRail.marker.focusKey);
+    }
+    for (const owner of [
+      selectedTarget.room.marker.address,
+      ...selectedTarget.room.localDetailMarkers.map((marker) => marker.address),
+    ]) {
+      expect(destination(complete, owner).inspectorSubject).toEqual({
+        kind: 'node',
+        nodeKey: selectedWorkbench.key,
       });
     }
 
