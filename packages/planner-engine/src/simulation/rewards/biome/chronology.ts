@@ -1,12 +1,10 @@
 import type { Catalog } from '../../../catalog-schema';
-import { fieldsOptionalRewardCountSupport } from '../../fields-optional-count';
 import type { PurgingPoolAssessment } from '../../purging-pool';
 import type { HermesShrineCandidateContext } from '../../hermes-shrine';
 import {
   createAcquisitionRoleAddress,
   createAcquisitionEntryAddress,
   createEncounterPhaseAddress,
-  createNemesisRandomEventAddress,
   createBiomeAddress,
   createTargetAddress,
   createEchoKeepsakeReplayAddress,
@@ -553,34 +551,6 @@ export function evaluateBiomeRewardChronology(
   // to a branch.  We still require Travel Deal to agree across every branch
   // at that first action prefix before publishing a refill generation.
   const firstRushedInitialGenerationByShrine = new Set<string>();
-  // H's event is a passive room feature, not a replacement for any cage or
-  // optional leaf.  Keep an over-cap authored count materialized for repair,
-  // but make the one reserved physical optional position an evaluated error.
-  for (const room of rooms.values()) {
-    if (room.kind !== 'authored' || room.fieldsOptionalRewardCount === undefined) continue;
-    const passive = createEncounterPhaseAddress(
-      createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
-      { kind: 'occurrence' as const, occurrenceId: room.occurrenceId },
-      'Passive',
-    );
-    const owner = createNemesisRandomEventAddress(passive);
-    const support = fieldsOptionalRewardCountSupport(catalog, room, room.origin);
-    if (
-      support === undefined ||
-      !support.reservesNemesisPosition ||
-      room.fieldsOptionalRewardCount <= support.effectiveMaximum
-    )
-      continue;
-    addRewardFinding(
-      findings,
-      rewardFinding('fieldsOptionalCapacityUnavailable', owner, {
-        physicalCapacity: support.physicalMaximum,
-        effectiveCapacity: support.effectiveMaximum,
-        selectedCount: room.fieldsOptionalRewardCount,
-      }),
-      ownerRegion(owner),
-    );
-  }
   const producerFrontiers = new Map<string, RewardProducerFrontier>();
   const shipLifecycleContexts = new Map<string, ShipLifecycleCandidateContext>();
   const runStateSnapshotsByOwner = new Map<string, RunStateSnapshot>();

@@ -12,10 +12,10 @@ game facts needed to reason about finite, room-scoped physical locations for:
 
 It also records whether those source facts can support exact authored
 assignments such as “Cage 1 uses physical location 4,” a later static-map
-visualization, and a later executor adapter. It does not define an authored
-schema, command vocabulary, application projection, React layout, delivery
-gate, migration, module name, or commit sequence. Those decisions belong to a
-later grounded plan.
+visualization, and a later executor adapter. The source evidence does not
+define an authored schema, command vocabulary, application projection, React
+layout, migration, module name, or commit sequence. The implemented planner
+disposition is recorded separately below.
 
 The existing
 [Fields optional rewards and Artificer audit](../rewards-and-acquisition/FIELDS_OPTIONAL_REWARDS_AND_ARTIFICER_GAME_DATA_AUDIT.md)
@@ -394,17 +394,21 @@ or an authored assignment.
 
 ## Current planner contact
 
-The current H catalog declares logical cage capacities, three cage slots, and
-effective optional reward capacities. The authored Fields occurrence retains
-logical cage reward values, a complete optional reward inventory, the active
-optional count, and the mixed room-action chronology. It does not declare
-entry points, cage locations, optional locations, or occurrence-specific
-physical assignments.
+Schema 78 and catalog normalization now carry each audited room's finite,
+room-scoped entry, cage, and optional point declarations into one
+occurrence-owned Fields spatial state. That state retains the selected entry,
+slot-keyed cage and optional assignments, and a Nemesis assignment. The engine
+derives activation and uniqueness from the existing logical cage prefix,
+optional prefix, and Passive encounter rather than introducing a second room
+chronology.
 
-This omission is currently explicit in the H and room-action authorities:
-physical map positions and travel distance remain outside the implemented
-baseline. No existing logical slot can be reinterpreted as a physical
-location:
+The Room Layout editor is the single mutation surface for these placements.
+It shows cage rewards, optional rewards, and Nemesis identity as read-only
+context while their existing Overview, Doors, and Timeline authorities remain
+unchanged. Candidate legality and project findings share one engine assessment,
+and exact findings navigate to the corresponding Layout control.
+
+No existing logical slot was reinterpreted as a physical location:
 
 - planner `cage1` through `cage3` identify reward/encounter ownership and
   chronology;
@@ -413,9 +417,9 @@ location:
 - existing capacity values bound logical reward count, not the number of
   physical host points.
 
-## Planner disposition for a later plan
+## Planner disposition
 
-The installed data is sufficient to support exact authored physical outcomes
+The installed data supports the delivered exact authored physical outcomes
 without changing reward generation, encounter selection, acquisition, or room
 chronology. The durable semantic facts are:
 
@@ -432,17 +436,18 @@ chronology. The durable semantic facts are:
 - numeric point labels are presentation vocabulary rather than persisted game
   identity.
 
-The agreed product boundary does not require authored mirroring, distance
-values, distance calculation, pathfinding, or automatic route optimization.
-The purpose of the later visual is to let the player understand the whole-room
-shape and the selected point assignments directly.
+The delivered product does not persist mirroring, distance values, distance
+calculation, pathfinding, or automatic route optimization. A future static-map
+view may project the same stable point identities onto replaceable visual
+assets without changing the authored model. Native H realization remains a
+separate execution-boundary slice.
 
 ## Remaining bounded questions
 
 - The `H_Combat13` `736880`/`621502` mismatch remains unresolved source
-  evidence. A later plan must choose whether to expose the observed map point
-  with an unmapped enemy group, omit group presentation for that point, or
-  wait for corrected game data; it must not invent a corrected source mapping.
+  evidence. The planner exposes the observed map point with no invented enemy
+  group mapping; later native testing or corrected game data may resolve the
+  source discrepancy.
 - Static capture-to-point marker positions have not been audited. They are
   replaceable visual calibration data rather than game-script facts.
 - The current scope does not establish physical points for noncombat H rooms,

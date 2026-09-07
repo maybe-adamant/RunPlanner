@@ -9,6 +9,7 @@ import {
   createBiomeAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
+  createFieldsSpatialAddress,
   createIncomingRewardAddress,
   createEncounterPhaseAddress,
   createLocalRewardAddress,
@@ -476,6 +477,49 @@ function authorFieldsOptionals(
   return next;
 }
 
+function authorFieldsSpatialLayout(
+  project: ProjectDocument,
+  occurrenceId: OccurrenceId,
+): ProjectDocument {
+  const occurrence = plan(project).topology?.occurrences.find(
+    (candidate) => candidate.occurrenceId === occurrenceId,
+  );
+  if (occurrence?.state.kind !== 'fieldsCombat') return project;
+  const declaration = catalog.rooms.byKey[occurrence.gameName]?.fieldsSpatial;
+  if (declaration === undefined)
+    throw new Error(`missing Fields spatial declaration for ${occurrence.gameName}`);
+  const entryPair = declaration.entryPairs[0];
+  if (entryPair === undefined) throw new Error(`${occurrence.gameName} has no Fields entry pair`);
+  const owner = createOccurrenceAddress(biome, occurrenceId);
+  const assignments: Array<readonly [Parameters<typeof createFieldsSpatialAddress>[1], number]> = [
+    [{ kind: 'entry' }, entryPair.startPointId],
+  ];
+  Object.entries(occurrence.state.cages)
+    .filter(([, reward]) => reward !== null)
+    .forEach(([slotKey], index) => {
+      const pointId = declaration.cagePointIds[index];
+      if (pointId === undefined) throw new Error(`${occurrence.gameName} has too few cage points`);
+      assignments.push([{ kind: 'cage', slotKey }, pointId]);
+    });
+  Object.entries(occurrence.state.optionalRewards)
+    .slice(0, occurrence.state.optionalRewardCount)
+    .forEach(([slotKey], index) => {
+      const pointId = declaration.optionalPointIds[index];
+      if (pointId === undefined)
+        throw new Error(`${occurrence.gameName} has too few optional points`);
+      assignments.push([{ kind: 'optional', slotKey }, pointId]);
+    });
+  let next = project;
+  for (const [target, pointId] of assignments) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceFieldsSpatialPoint',
+      spatial: createFieldsSpatialAddress(owner, target),
+      pointId,
+    });
+  }
+  return next;
+}
+
 describe('H Fields materialization', () => {
   it('keeps H completion room-history-driven across a selected Chaos detour', () => {
     const start = goldenHStartId;
@@ -584,6 +628,15 @@ describe('H Fields materialization', () => {
       'max',
     );
     project = authorThreeFieldsCages(project, bridgePeer);
+    for (const occurrenceId of [
+      abandoned,
+      ...chaosReturnPeers.map((peer) => peer.occurrenceId),
+      combat,
+      combatPeer,
+      bridgePeer,
+    ]) {
+      project = authorFieldsSpatialLayout(project, occurrenceId);
+    }
     project = authorLegalTraitOffers(project);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',

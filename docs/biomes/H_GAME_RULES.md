@@ -27,6 +27,13 @@ rechecked on 2026-08-15; source details remain in the focused audit.
   interactions. One entered-room chronology owns them all;
   [`ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`](../audits/rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md)
   owns the source evidence.
+- Each FieldsCombat occurrence also owns its exact physical layout: one player
+  entry, one retained cage-point assignment per cage slot, one retained
+  optional-point assignment per optional slot, and one retained Nemesis point.
+  Only active logical slots consume points. Active cage assignments are unique
+  within the cage-point family; active optional rewards and active Nemesis are
+  unique within their shared optional-point family. Dormant assignments remain
+  stable without reserving a point.
 - `H_PreBoss01` is an atomic takeover Preboss. For a two-door predecessor it
   creates a Shop occurrence on the first exit and a counted free-reward
   occurrence on the second. Its batch has no ordinary batch reward store, so
@@ -80,7 +87,8 @@ H outcome selects the lower or upper supported cage count before targets are
 authored. Cages outside that active prefix remain dormant authored leaves;
 they are neither discarded nor acquired.
 
-The exact optional maxima are declaration-owned from the installed map assets:
+The exact ordinary optional-reward maxima are declaration-owned from the
+installed map assets:
 
 ```text
 capacity 4: H_Combat01, 03, 04, 05, 06, 10
@@ -95,6 +103,14 @@ resolve sequentially on entry from the persistent 19-entry
 `FieldsOptionalRewards` bag without sibling exclusion. Generation consumes the
 bag whether or not a pickup is later taken, while unpicked optionals remain
 history-neutral.
+
+Nemesis does not mechanically subtract one from that ordinary maximum. Its
+active placement occupies one member of the same optional-point family, so the
+effective maximum is the lesser of the ordinary reward maximum and the number
+of points left after reserving Nemesis. `H_Combat03`, `H_Combat04`, and
+`H_Combat05` can therefore still host four optional rewards with Nemesis. On
+`H_Combat04`, optional point `572886` remains valid for ordinary optional
+rewards but is excluded from Nemesis candidates by the native distance rule.
 
 The order is:
 
@@ -133,14 +149,16 @@ replacement pickups may be ordered before or after Cleanup; future door-open-
 only room features remain Cleanup-only. There is no cage-only order or
 Fields-private acquisition fold.
 
-The editor keeps cage and optional identities in Room Overview and renders the
-single chronology in Room Timeline. Its engine-derived timeline brackets each
-ranked active `completeFieldsCage` with the exact ordinal Start/End boundaries;
-an unranked retained cage is repair work, not an active encounter cycle. Room
-Doors contains the outgoing decision and projects the active cage reward group
-from the selected room. Optional Fields rewards, including optional
-MetaProgress, remain entered-room controls; the offer surface references the
-same cage leaves without creating a second owner or chronology.
+The editor preserves four distinct occurrence views. Room Doors authors the
+outgoing decision and projects the selected target's active cage reward group.
+Room Overview authors optional reward identities/count and Nemesis activation.
+Room Layout is the sole editor for player entry and physical cage, optional,
+and Nemesis assignments; reward and event identities shown there are read-only
+context. Room Timeline retains the single mixed action chronology and brackets
+each ranked active `completeFieldsCage` with the exact ordinal Start/End
+boundaries. An unranked retained cage is repair work, not an active encounter
+cycle. These views reference the same occurrence-owned leaves without creating
+a second owner or chronology.
 
 ### Depth, force, and completion facts
 
@@ -159,15 +177,16 @@ resets are applied only after the selected Preboss has entered.
 ### Baseline boundaries
 
 The canonical H model preserves the progressed-save Fields route: physical
-doors, cage bounds, optional-pickup capacities and persistent bag, the mixed
-room chronology, forced windows, normal reward support, the bridge, the
+doors, declaration-owned entry/cage/optional point sets, exact occurrence
+assignments, cage bounds, optional-pickup capacities and persistent bag, the
+mixed room chronology, forced windows, normal reward support, the bridge, the
 WorldShop, and completion counters. `H_Bridge01` includes its fixed
 `Story_Echo_01` encounter and supported Echo trait offer. The model does not
-cover optional-pickup chance weights or map positions, pickup interaction
-during an active wave, weighted room-set replay, other NPC/random-event or
-unmodeled Shop interactions, combat-wave composition, rerolls, or
-profile-dependent variants. Those are explicit future modeling inputs, not
-hidden eligibility predicates.
+cover optional-pickup chance weights, visual map coordinates or pathfinding,
+pickup interaction during an active wave, weighted room-set replay, other
+NPC/random-event or unmodeled Shop interactions, combat-wave composition,
+rerolls, or profile-dependent variants. Those are explicit future modeling
+inputs, not hidden eligibility predicates.
 
 H miniboss room declarations own their sparse boon-rarity override. It applies
 to any eligible Olympian or Hermes offer materialized in the reached miniboss
@@ -197,9 +216,12 @@ supported.
 ## Product boundary
 
 The canonical product owns H catalog facts, authored Fields state, concrete
-encounter selection, cage and optional offer generation, the action chronology,
-shared acquisition dispositions including Artificer, semantic commands,
-validation, candidates, and workspace projection. Declaration-supported
+encounter selection, cage and optional offer generation, exact room-scoped
+physical layout, the action chronology, shared acquisition dispositions
+including Artificer, semantic commands, validation, candidates, and workspace
+projection. Room replacement resets declaration-scoped spatial state rather
+than carrying point identities into another map. Declaration-supported
 phase-produced NPC contacts and Gorgon Athena participate in the same room
-chronology. Other NPC/random-event variants and unsupported player systems
-remain outside the baseline until modeled explicitly.
+chronology. Static map visualization, H execution realization, other
+NPC/random-event variants, and unsupported player systems remain outside the
+baseline until modeled explicitly.

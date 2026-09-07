@@ -67,6 +67,7 @@ describe('authored room-state replacement', () => {
       role: 'ordinary',
       entryActive: true,
     });
+    if (replacementDefault.kind !== 'fieldsCombat') throw new Error('missing Fields replacement');
     const reconciled = reconcileReplacementRoomState(
       catalog,
       previousRoom,
@@ -80,6 +81,7 @@ describe('authored room-state replacement', () => {
     expect(reconciled).toEqual({
       ...previousState,
       optionalRewards: compatibleOptionalRewards,
+      spatial: replacementDefault.spatial,
     });
     expect(reconciled).not.toBe(previousState);
   });

@@ -8,6 +8,7 @@ import {
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
   createEncounterPhaseAddress,
+  createFieldsSpatialAddress,
   createIncomingRewardAddress,
   createNemesisRandomEventAddress,
   createOccurrenceAddress,
@@ -424,7 +425,7 @@ describe('Nemesis random events', () => {
     );
   });
 
-  it('reserves one H generator position while keeping the event freely ordered among cages', () => {
+  it('places the H event beside four optionals when the room has spare physical capacity', () => {
     const occurrenceId = createOccurrenceId('golden-h-combat05');
     const owner = createOccurrenceAddress(goldenHBiome, occurrenceId);
     const passive = createEncounterPhaseAddress(
@@ -497,19 +498,19 @@ describe('Nemesis random events', () => {
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
       expect(movedOccurrence?.roomActions.order[toIndex]).toEqual(eventReference);
     }
-    const overCapacity = simulateProjectAssembly(catalog, project);
-    expect(overCapacity.evaluation.findings).toContainEqual(
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFieldsSpatialPoint',
+      spatial: createFieldsSpatialAddress(owner, { kind: 'nemesis' }),
+      pointId: 623602,
+    });
+    const findings = simulateProjectAssembly(catalog, project).evaluation.findings;
+    expect(findings).not.toContainEqual(
       expect.objectContaining({
-        code: 'fieldsOptionalCapacityUnavailable',
-        origin: createNemesisRandomEventAddress(passive),
+        code: 'fieldsSpatialPointMissing',
+        origin: createFieldsSpatialAddress(owner, { kind: 'nemesis' }),
       }),
     );
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceFieldsOptionalRewardCount',
-      occurrence: owner,
-      optionalRewardCount: 3,
-    });
-    expect(simulateProjectAssembly(catalog, project).evaluation.findings).not.toContainEqual(
+    expect(findings).not.toContainEqual(
       expect.objectContaining({ code: 'fieldsOptionalCapacityUnavailable' }),
     );
   });

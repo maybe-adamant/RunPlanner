@@ -3,6 +3,7 @@ import {
   type FieldsSpatialTarget,
 } from '../authored-project/addresses';
 import type { Catalog, FieldsSpatialDeclaration } from '../catalog-schema';
+import { fieldsOptionalRewardCountSupport } from './fields-optional-count';
 import type { CanonicalAuthoredRoom } from './materialization';
 import type { SemanticFinding } from './model';
 
@@ -225,11 +226,29 @@ export function fieldsSpatialFindings(
   catalog: Catalog,
   room: CanonicalAuthoredRoom,
 ): readonly SemanticFinding[] {
-  return Object.freeze(
-    activeFieldsSpatialTargets(catalog, room).flatMap(
-      (target) =>
-        assessFieldsSpatialPoint(catalog, room, target, selectedPoint(room, target))?.findings ??
-        [],
-    ),
+  const spatialFindings = activeFieldsSpatialTargets(catalog, room).flatMap(
+    (target) =>
+      assessFieldsSpatialPoint(catalog, room, target, selectedPoint(room, target))?.findings ?? [],
   );
+  const support = fieldsOptionalRewardCountSupport(catalog, room, room.origin);
+  if (
+    room.fieldsOptionalRewardCount !== undefined &&
+    support?.reservesNemesisPosition === true &&
+    room.fieldsOptionalRewardCount > support.effectiveMaximum
+  ) {
+    spatialFindings.push(
+      Object.freeze({
+        code: 'fieldsOptionalCapacityUnavailable',
+        severity: 'error',
+        phase: 'roomGeneration',
+        origin: createFieldsSpatialAddress(room.origin, { kind: 'nemesis' }),
+        evidence: Object.freeze({
+          physicalCapacity: support.physicalMaximum,
+          effectiveCapacity: support.effectiveMaximum,
+          selectedCount: room.fieldsOptionalRewardCount,
+        }),
+      }),
+    );
+  }
+  return Object.freeze(spatialFindings);
 }

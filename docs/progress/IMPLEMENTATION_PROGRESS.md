@@ -11,7 +11,7 @@ the active frontier needed to orient the next delivery.
 
 ## Current Snapshot
 
-The current persisted contract is strict authored schema 77 with catalog
+The current persisted contract is strict authored schema 78 with catalog
 `0.55.0-anvil-of-fates`. Each project contains one selected route;
 the browser product supports the eight catalog biomes across the two current
 route choices:
@@ -56,9 +56,8 @@ recorded blocker.
 Phase 9, Simulation Conformance and Game Protocol, has closed and live-proven
 the F/G execution boundary described by
 [`GAME_INTEGRATION_BOUNDARY.md`](../design/GAME_INTEGRATION_BOUNDARY.md).
-The next planner frontier is exact H Fields spatial authoring; H execution
-publication and native realization follow only after that planner product is
-stable.
+Exact H Fields spatial authoring is now stable. H execution publication and
+native realization remain the next separate boundary.
 
 There is no recorded active correctness queue in the former polish tracker.
 Future product observations must first identify their owning authority and,
@@ -106,6 +105,7 @@ milestones without repeating the delivery chronology.
 | Schema 75          | Transcendent Embryo outcomes persist the exact blessing operand values shared with ordinary Chaos blessing authoring.                                                                    |
 | Schema 76          | Purchased Anvil of Fates outcomes persist one removed Hammer and the two exact added Hammers at acquisition settlement.                                                                  |
 | Schema 77          | Selected trait offers persist option-owned volatile carrier consequences, including nested Echo Boon Boon Boon outcomes.                                                                 |
+| Schema 78          | H Fields combat occurrences persist exact room-scoped entry, cage, optional-reward, and Nemesis physical point assignments.                                                              |
 
 Catalog versions advanced alongside these boundaries. The current catalog is
 `0.55.0-anvil-of-fates`; exact declaration facts and source contacts
@@ -238,6 +238,16 @@ representative full-lane witnesses:
 
 Pools and Wells alone allow runtime-random inventory at Interact. World Shops
 and Shrines author every visible inventory identity.
+
+Schema 78 closes exact H Fields spatial authoring without moving existing room
+semantics. The catalog owns the audited point sets for all 15 H combat maps;
+each occurrence owns retained entry, cage, optional, and Nemesis assignments;
+and one shared engine assessment owns candidate legality and findings. The
+editor adds a conditional Room Layout tab between Overview and Timeline while
+keeping reward identities in Doors/Overview and action order in Timeline.
+`H_Combat13` retains its observed source point without an invented enemy-group
+mapping. Static map visualization and native H realization remain separate
+future work.
 
 The 2026-08-28 room-feature availability and resource-presentation delivery,
 implemented from the locked two-gate plan, completed the application-side
@@ -575,6 +585,18 @@ Validation claims below are the executed checks retained because they establish
 important closure boundaries. They are not a promise that every historical
 intermediate suite was green.
 
+- The schema-78 H Fields spatial-authoring closure passed the complete
+  repository gate on 2026-09-06: all workspace and fixture typechecks, fixture
+  integrity at 3 files/22 tests, correctness at 271 files/2,816 tests, the
+  18-test performance policy lane and all eight same-host relative metrics,
+  ESLint, repository-wide Prettier, and the production build. The first closure
+  pass exposed four stale H witnesses that had not authored the new placement
+  prerequisites or still expected the old Nemesis capacity and room-replacement
+  behavior. Their focused 4-file/52-test lane passed after repair, and an
+  independent review moved the capacity finding into the early spatial
+  assessment so it remains visible at the progressive frontier. The final
+  complete gate then passed; the build retained only the existing
+  greater-than-500-kB application chunk advisory.
 - The Boss/Postboss topology correction closed on 2026-08-28 with canonical
   schema-68/catalog-0.49.0 checkpoint fixtures, a nonterminal F Postboss Pool
   witness, and I/Q Boss-only terminal witnesses. The final `npm run check`
