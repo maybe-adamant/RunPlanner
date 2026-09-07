@@ -10,6 +10,7 @@ import {
 import {
   workspaceHubMainRewardAcquisitionMarkers,
   workspaceHubMainRewardMarkers,
+  workspaceOccurrenceOwnedMarkers,
 } from './marker-ownership';
 
 /** Final workspace products needed to bind exact semantic focus for one biome. */
@@ -70,107 +71,9 @@ function subjectForDestination(
 }
 
 function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
-  const keys = [
-    room.marker.focusKey,
-    ...room.encounterPhases.flatMap((phase) => [
-      phase.marker.focusKey,
-      ...(phase.traitOffer === undefined
-        ? []
-        : [
-            phase.traitOffer.marker.focusKey,
-            ...(phase.traitOffer.traitAcquisitionTarget === undefined
-              ? []
-              : [phase.traitOffer.traitAcquisitionTarget.marker.focusKey]),
-            ...(phase.traitOffer.echoPomTarget === undefined
-              ? []
-              : [phase.traitOffer.echoPomTarget.marker.focusKey]),
-            ...(phase.traitOffer.echoLastRunBoon === undefined
-              ? []
-              : [phase.traitOffer.echoLastRunBoon.marker.focusKey]),
-            ...(phase.traitOffer.echoLastReward === undefined
-              ? []
-              : [phase.traitOffer.echoLastReward.marker.focusKey]),
-            ...(phase.traitOffer.allTogetherSets ?? []).map((set) => set.marker.focusKey),
-          ]),
-      ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker.focusKey]),
-    ]),
-    ...room.localDetailMarkers.map((marker) => marker.focusKey),
-    ...room.rewardControls.flatMap((control) => [
-      control.marker.focusKey,
-      ...(control.traitOffers ?? []).flatMap((trait) => [
-        trait.marker.focusKey,
-        ...(trait.traitAcquisitionTarget === undefined
-          ? []
-          : [trait.traitAcquisitionTarget.marker.focusKey]),
-        ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker.focusKey]),
-        ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker.focusKey]),
-        ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker.focusKey]),
-        ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker.focusKey]),
-        ...(trait.allTogetherSets ?? []).map((set) => set.marker.focusKey),
-      ]),
-      ...(control.levelResolutions ?? []).map((resolution) => resolution.marker.focusKey),
-    ]),
-  ];
-  switch (room.roomLocal.kind) {
-    case 'none':
-    case 'incomingReward':
-    case 'fields':
-      break;
-    case 'fixed':
-      keys.push(room.roomLocal.marker.focusKey);
-      break;
-    case 'ship':
-      keys.push(
-        ...room.roomLocal.wheels.flatMap((wheel) => [
-          wheel.marker.focusKey,
-          ...wheel.offers.flatMap((offer) => [
-            offer.control.marker.focusKey,
-            ...(offer.control.traitOffers ?? []).flatMap((trait) => [
-              trait.marker.focusKey,
-              ...(trait.traitAcquisitionTarget === undefined
-                ? []
-                : [trait.traitAcquisitionTarget.marker.focusKey]),
-              ...(trait.circeResolution === undefined
-                ? []
-                : [trait.circeResolution.marker.focusKey]),
-              ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker.focusKey]),
-              ...(trait.echoLastRunBoon === undefined
-                ? []
-                : [trait.echoLastRunBoon.marker.focusKey]),
-              ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker.focusKey]),
-              ...(trait.allTogetherSets ?? []).map((set) => set.marker.focusKey),
-            ]),
-            ...(offer.control.levelResolutions ?? []).map(
-              (resolution) => resolution.marker.focusKey,
-            ),
-          ]),
-        ]),
-      );
-      break;
-    case 'shop':
-      keys.push(
-        ...room.roomLocal.offers.flatMap((offer) => [
-          offer.purchase.marker.focusKey,
-          offer.rewardControl.marker.focusKey,
-          ...(offer.rewardControl.traitOffers ?? []).flatMap((trait) => [
-            trait.marker.focusKey,
-            ...(trait.traitAcquisitionTarget === undefined
-              ? []
-              : [trait.traitAcquisitionTarget.marker.focusKey]),
-            ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker.focusKey]),
-            ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker.focusKey]),
-            ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker.focusKey]),
-            ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker.focusKey]),
-            ...(trait.allTogetherSets ?? []).map((set) => set.marker.focusKey),
-          ]),
-          ...(offer.rewardControl.levelResolutions ?? []).map(
-            (resolution) => resolution.marker.focusKey,
-          ),
-        ]),
-      );
-      break;
-  }
-  return Object.freeze(keys);
+  return [...workspaceOccurrenceOwnedMarkers(room), ...room.localDetailMarkers].map(
+    (marker) => marker.focusKey,
+  );
 }
 
 /** Marker ownership used by a top-level rail node, not semantic lookup in React. */
@@ -233,6 +136,16 @@ function selectedRailKeysByFocusKey(
       case 'node':
         for (const focusKey of nodeOwnedFocusKeys(entry.node)) {
           registerRailFocusKey(result, focusKey, entry.marker.focusKey);
+        }
+        if (
+          (entry.node.kind === 'ordinaryBatch' ||
+            entry.node.kind === 'mixedBatch' ||
+            entry.node.kind === 'takeoverBatch') &&
+          entry.node.selectedContinuation !== undefined
+        ) {
+          for (const focusKey of roomOwnedFocusKeys(entry.node.selectedContinuation.door.room)) {
+            registerRailFocusKey(result, focusKey, entry.marker.focusKey);
+          }
         }
         registerRailFocusKey(result, entry.focusMarker.focusKey, entry.marker.focusKey);
         break;
