@@ -108,6 +108,12 @@ export interface CanonicalFieldsOptionalReward {
   readonly resolvedStoreKey: 'FieldsOptionalRewards';
 }
 
+/** Declaration-paired entry points completed from the authored start point. */
+export interface CanonicalFieldsEntryPair {
+  readonly startPointId: number;
+  readonly endPointId: number;
+}
+
 export interface CanonicalRewardWheelOffer {
   readonly origin: RewardWheelOfferAddress;
   readonly offerKey: string;
@@ -215,6 +221,8 @@ export interface CanonicalAuthoredRoom {
   >[];
   readonly fieldsOptionalRewards?: readonly CanonicalFieldsOptionalReward[];
   readonly fieldsSpatial?: FieldsSpatialState;
+  /** Canonical Fields entry pair; the authored state stores only its start. */
+  readonly fieldsEntryPair?: CanonicalFieldsEntryPair;
   /** Persisted Fields count, retained independently from resolved optional leaves. */
   readonly fieldsOptionalRewardCount?: number;
   readonly unresolvedFieldsOptionalRewards?: readonly Omit<

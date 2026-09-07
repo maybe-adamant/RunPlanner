@@ -1,4 +1,4 @@
-import type { ExecutionOccurrence, ExecutionResourcePolicy } from './model';
+import type { ExecutionDoorTarget, ExecutionOccurrence, ExecutionResourcePolicy } from './model';
 
 export interface ExecutionGraphDocument {
   readonly selectedOccurrenceIds: readonly string[];
@@ -37,11 +37,24 @@ export function validateExecutionGraph(
     if (target.biomeKey !== reference.biomeKey || target.gameName !== reference.gameName)
       invalid(`${label} ${reference.id} contradicts its occurrence identity`);
   };
+  const validateDoorCagePayload = (target: ExecutionDoorTarget, label: string): void => {
+    const referenced = occurrences.get(target.room.id);
+    if (referenced === undefined) return;
+    if (referenced.kind === 'FieldsEncounter') {
+      if (target.cageRewards === undefined)
+        invalid(`${label} must carry cageRewards for a FieldsEncounter target`);
+      if (target.cageRewards?.length !== referenced.overview.fields?.cagePoints.length)
+        invalid(`${label}.cageRewards must match the Fields target cagePoints length`);
+    } else if (target.cageRewards !== undefined) {
+      invalid(`${label}.cageRewards is only valid for a FieldsEncounter target`);
+    }
+  };
   const continuations = (entry: ExecutionOccurrence): Set<string> => {
     const result = new Set<string>();
     if (entry.doors.kind === 'batch') {
       for (const target of entry.doors.targets) {
         assertRoomReference(target.room, `${entry.id} door target`);
+        validateDoorCagePayload(target, `${entry.id} door target ${target.room.id}`);
         result.add(target.room.id);
       }
     } else if (entry.doors.kind === 'fixed') {

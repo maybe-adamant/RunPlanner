@@ -550,7 +550,11 @@ export function executionTimelineTransactions(
     // result; no executor transaction is published for the sale itself.
     if (
       timeline.action.reference.kind === 'collectRequiredReward' ||
-      timeline.action.reference.kind === 'sellPurgingPoolTrait'
+      timeline.action.reference.kind === 'sellPurgingPoolTrait' ||
+      // Fields cage completion is represented by the ordered encounter phases;
+      // native ChooseEncounter is the only steering contact.  The room action
+      // itself has no separate executable callback or transaction.
+      timeline.action.reference.kind === 'completeFieldsCage'
     )
       continue;
     if (

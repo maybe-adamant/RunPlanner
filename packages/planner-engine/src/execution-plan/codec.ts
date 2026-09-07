@@ -76,10 +76,16 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
   const extent = object(record.extent, 'execution plan.extent');
   exact(extent, ['kind', 'biomeKeys', 'terminalBiomeKey'], [], 'execution plan.extent');
   if (extent.kind !== 'configuredPrefix') fail('execution plan.extent.kind is unsupported');
-  const biomeKeys = stringArray(extent.biomeKeys, 'execution plan.extent.biomeKeys', 2);
+  const biomeKeys = stringArray(extent.biomeKeys, 'execution plan.extent.biomeKeys', 3);
   if (
     !(biomeKeys.length === 1 && biomeKeys[0] === 'F') &&
-    !(biomeKeys.length === 2 && biomeKeys[0] === 'F' && biomeKeys[1] === 'G')
+    !(biomeKeys.length === 2 && biomeKeys[0] === 'F' && biomeKeys[1] === 'G') &&
+    !(
+      biomeKeys.length === 3 &&
+      biomeKeys[0] === 'F' &&
+      biomeKeys[1] === 'G' &&
+      biomeKeys[2] === 'H'
+    )
   )
     fail('execution plan.extent.biomeKeys is unsupported');
   if (extent.terminalBiomeKey !== biomeKeys[biomeKeys.length - 1])
@@ -114,8 +120,9 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     startingKeepsake,
     extent: Object.freeze({
       kind: 'configuredPrefix' as const,
-      biomeKeys: Object.freeze(biomeKeys) as readonly ['F'] | readonly ['F', 'G'],
-      terminalBiomeKey: biomeKeys[biomeKeys.length - 1] as 'F' | 'G',
+      biomeKeys: Object.freeze(biomeKeys) as
+        readonly ['F'] | readonly ['F', 'G'] | readonly ['F', 'G', 'H'],
+      terminalBiomeKey: biomeKeys[biomeKeys.length - 1] as 'F' | 'G' | 'H',
     }),
     selectedOccurrenceIds: Object.freeze(
       stringArray(record.selectedOccurrenceIds, 'execution plan.selectedOccurrenceIds'),

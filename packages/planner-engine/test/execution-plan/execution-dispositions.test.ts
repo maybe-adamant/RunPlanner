@@ -77,6 +77,7 @@ const executionDispositions = {
     purgingPool: 'covered',
     keepsakeRack: 'covered',
     fountain: 'covered',
+    fields: 'covered',
     additional: 'covered',
   } satisfies Record<OverviewField, ExecutionDisposition>,
   resourcePolicy: {

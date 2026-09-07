@@ -12,10 +12,27 @@ import {
   object,
   stringValue,
 } from './primitives';
+import type { ExecutionFieldsLayout } from '../model';
 import { runState } from './diagnostics';
 import { doors } from './doors';
 import { overview } from './overview';
 import { timeline } from './timeline';
+
+function validateFieldsCageSlots(
+  layout: ExecutionFieldsLayout,
+  encounterPhases: readonly { readonly slotKey: string }[],
+  label: string,
+): void {
+  const activeCagePhases = encounterPhases.filter((phase) => /^Cage\d+$/.test(phase.slotKey));
+  if (activeCagePhases.length !== layout.cagePoints.length)
+    fail(`${label}.cagePoints must match the active cage encounter phases`);
+  activeCagePhases.forEach((phase, index) => {
+    const expectedPhase = `Cage${String(index + 1).padStart(2, '0')}`;
+    const expectedSlot = `cage${index + 1}`;
+    if (phase.slotKey !== expectedPhase || layout.cagePoints[index]?.slotKey !== expectedSlot)
+      fail(`${label}.cagePoints must use canonical ordered cage slots`);
+  });
+}
 
 export function occurrence(value: unknown, index: number): ExecutionOccurrence {
   const label = `occurrences[${index}]`;
@@ -78,6 +95,19 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
             fail(`${label}.roomExitConformance.facts[${factIndex}].kind is unsupported`);
           return Object.freeze({ kind });
         });
+  const parsedOverview = overview(record.overview, `${label}.overview`);
+  const isFieldsEncounter = record.kind === 'FieldsEncounter';
+  const hasFieldsLayout = parsedOverview.fields !== undefined;
+  if (isFieldsEncounter !== hasFieldsLayout)
+    fail(`${label}.overview.fields is required exactly for H Fields encounters`);
+  if (hasFieldsLayout && record.biomeKey !== 'H')
+    fail(`${label}.overview.fields is only valid for H Fields encounters`);
+  if (parsedOverview.fields !== undefined)
+    validateFieldsCageSlots(
+      parsedOverview.fields,
+      parsedOverview.encounterPhases,
+      `${label}.overview.fields`,
+    );
   return Object.freeze({
     id: stringValue(record.id, `${label}.id`, 256),
     owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
@@ -85,7 +115,7 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
     gameName: stringValue(record.gameName, `${label}.gameName`),
     kind: stringValue(record.kind, `${label}.kind`),
     ...(parsedAnomaly === undefined ? {} : { anomaly: parsedAnomaly }),
-    overview: overview(record.overview, `${label}.overview`),
+    overview: parsedOverview,
     timeline: timeline(record.timeline, `${label}.timeline`),
     doors: doors(record.doors, `${label}.doors`),
     ...(conformanceFacts === undefined

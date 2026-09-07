@@ -2,6 +2,7 @@ import { semanticAddressKey } from '../../authored-project/addresses';
 import type { CanonicalAuthoredRoom, CanonicalBatch } from '../../simulation/materialization';
 import type { ExecutionDoorTarget, ExecutionDoors, ExecutionReward } from '../model';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
+import { executionRewardFromOffer } from './overview';
 
 interface ExecutionDoorsInput {
   readonly room: CanonicalAuthoredRoom;
@@ -10,6 +11,15 @@ interface ExecutionDoorsInput {
   readonly crossBiomeTarget: CanonicalAuthoredRoom | undefined;
   readonly crossBiomeSourceId: string | undefined;
   readonly rewardForRoom: (room: CanonicalAuthoredRoom) => ExecutionReward | undefined;
+}
+
+function executionCageRewards(room: CanonicalAuthoredRoom): readonly ExecutionReward[] | undefined {
+  const rewards = room.localRewards
+    ?.filter((reward) => reward.groupKey === 'cages')
+    .map((reward) =>
+      executionRewardFromOffer(reward.offer, reward.producerLifecycleKey, reward.resolvedStoreKey),
+    );
+  return rewards === undefined || rewards.length === 0 ? undefined : Object.freeze(rewards);
 }
 
 export function assembleExecutionDoors({
@@ -28,6 +38,7 @@ export function assembleExecutionDoors({
     const targets: readonly ExecutionDoorTarget[] = Object.freeze(
       batch.targets.map((target) => {
         const reward = rewardForRoom(target.room);
+        const cageRewards = executionCageRewards(target.room);
         return Object.freeze({
           exitKey: target.exit.exitKey,
           index: target.exit.index,
@@ -37,6 +48,7 @@ export function assembleExecutionDoors({
             gameName: target.room.gameName,
           }),
           ...(reward === undefined ? {} : { reward }),
+          ...(cageRewards === undefined ? {} : { cageRewards }),
         });
       }),
     );
