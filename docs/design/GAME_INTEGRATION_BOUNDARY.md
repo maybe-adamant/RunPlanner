@@ -92,7 +92,6 @@ The conformance surface is bounded to:
 | Room entered                  | occurrence/room identity, published Overview content, and any obligation due at `roomEntered`                                       |
 | Semantic Timeline transaction | the exact published transaction bound to the native action; Pool sales are intentionally absent from this set                       |
 | Exits ready                   | complete exit count, physical types, target room identities, reward identities, and obligations due at outgoing/exit-usable contact |
-| Exit selected                 | the published continuation chosen by the player                                                                                     |
 | Room exit                     | obligations due at `roomExit` and only the planner-published named conformance facts that changed in this occurrence                |
 
 The runtime may use several native calls to build one product. Conformance is
@@ -191,10 +190,12 @@ checks, not permission to reproduce planner eligibility policy.
 ## Evidence and deferred scope
 
 Compiler, decoder, and session fixtures prove the local protocol contract.
-They do not constitute a live-game probe. A Hades II host is not available in
-the current delivery environment, so the prepared native probe remains
-unexecuted; no live result is claimed. Each supported native seam still needs
-recorded live contact before release confidence can rely on it.
+On 2026-09-06, focused live Hades II testing reached the end of a configured
+F/G prefix without an unresolved executor mismatch using protocol 28. That
+proves the supported F/G slice, not every reusable adapter or later-biome
+contact. Wrong continuation is detected by the next room-entry identity check;
+the executor deliberately has no separate selected-transition conformance
+checkpoint.
 
 Later-biome realization for H, I, N, O, P, Q, and Dream Dives remains deferred.
 Those biomes require their own bounded native commands and probes. Automatic
