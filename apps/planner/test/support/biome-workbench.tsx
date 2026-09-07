@@ -27,6 +27,7 @@ import {
 } from '@planner/ui/editor/biome/DecisionWorkbench';
 import { HubDecisionWorkbench } from '@planner/ui/editor/biome/HubDecisionWorkbench';
 import { OccurrenceWorkbench } from '@planner/ui/editor/biome/OccurrenceWorkbench';
+import { FindingTargetScope } from '@planner/ui/feedback/useFindingTarget';
 import { projectStructuredWorkspaceFixture } from '../fixtures/structuredWorkspace';
 
 interface ProjectedHarnessProps {
@@ -44,7 +45,11 @@ function ProjectedHarness({ application, biomeKey, renderBiome, routeKey }: Proj
   if (workspace === undefined) throw new Error('workspace projection is unavailable');
   const biome = workspace.route.biomes.find((candidate) => candidate.biomeKey === biomeKey);
   if (biome === undefined) throw new Error(`${routeKey}/${biomeKey} has no workspace biome`);
-  return renderBiome(biome, workspace);
+  return (
+    <FindingTargetScope findings={workspace.findingsByRepairTarget}>
+      {renderBiome(biome, workspace)}
+    </FindingTargetScope>
+  );
 }
 
 function renderProjectedHarness(

@@ -7,6 +7,7 @@ import { useState } from 'react';
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
 import type { WorkspaceCirceResolutionDomain } from '@planner/projections/structured-workspace';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import type { FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 
 function pickerValueLabel<T>(model: ContextualPickerModel<T>, value: T): string | undefined {
   return model.sections
@@ -16,11 +17,13 @@ function pickerValueLabel<T>(model: ContextualPickerModel<T>, value: T): string 
 
 export function TraitOfferCirceResolution({
   controlId,
+  findingTarget,
   domain,
   option,
   onSelect,
 }: {
   readonly controlId: string;
+  readonly findingTarget?: FindingTargetProps;
   readonly domain: WorkspaceCirceResolutionDomain;
   readonly option: AuthoredTraitOfferTraits['options'][number];
   readonly onSelect: (resolution: AuthoredCirceResolution) => void;
@@ -42,6 +45,7 @@ export function TraitOfferCirceResolution({
           <p className="feedback-text">{unavailableMessage}</p>
         )}
         <ContextualPicker
+          {...(findingTarget === undefined ? {} : { findingTarget })}
           ariaLabel="Black Night Vow"
           id={controlId}
           label="Vow to suppress"
@@ -62,10 +66,19 @@ export function TraitOfferCirceResolution({
       return (
         <>
           {unavailableMessage === undefined ? null : (
-            <p className="feedback-text">{unavailableMessage}</p>
+            <p
+              {...(selected[0] === undefined && (!domain.outerAvailable || !domain.branchAgreement)
+                ? findingTarget
+                : {})}
+              tabIndex={-1}
+              className="feedback-text"
+            >
+              {unavailableMessage}
+            </p>
           )}
           {selected[0] === undefined ? null : (
             <ContextualPicker
+              {...(findingTarget === undefined ? {} : { findingTarget })}
               ariaLabel="Red Citrine Arcana"
               id={controlId}
               label="Authored Arcana"
@@ -84,6 +97,7 @@ export function TraitOfferCirceResolution({
           )}
           {!domain.outerAvailable || !domain.branchAgreement ? null : (
             <button
+              {...(selected[0] === undefined ? findingTarget : {})}
               className="quiet-action action-compact"
               onClick={() =>
                 onSelect(Object.freeze({ kind: 'activateArcana', arcanaKeys: Object.freeze([]) }))
@@ -102,6 +116,7 @@ export function TraitOfferCirceResolution({
           <p className="feedback-text">{unavailableMessage}</p>
         )}
         <ContextualPicker
+          {...(findingTarget === undefined ? {} : { findingTarget })}
           ariaLabel="Red Citrine Arcana"
           id={controlId}
           label="Arcana to activate"
@@ -132,6 +147,7 @@ export function TraitOfferCirceResolution({
           : lapisDraft.map((key) => pickerValueLabel(domain.arcanaPicker, key) ?? key).join(' · ')}
       </p>
       <ContextualPicker
+        {...(findingTarget === undefined ? {} : { findingTarget })}
         cancelLabel="Cancel"
         choiceLabel={`Arcana ${lapisDraft.length + 1} of ${domain.requiredCount}`}
         closeOnSelect={false}

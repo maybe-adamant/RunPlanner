@@ -8,7 +8,7 @@ import {
   type WorkspaceSteadyGrowthDomain,
 } from '@planner/projections/structured-workspace';
 import { useAppSelector } from '@planner/state/store';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
@@ -22,6 +22,7 @@ export function SteadyGrowthEffectRow({
   readonly control: WorkspaceSteadyGrowthControl;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
+  const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const focusedSemanticOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const semanticNavigationRevision = useAppSelector(
@@ -67,6 +68,7 @@ export function SteadyGrowthEffectRow({
           <span>No eligible trait (no-op)</span>
         ) : (
           <RandomTraitTargetPicker
+            findingTarget={findingTarget(control.address)}
             ariaLabel="Steady Growth target"
             id={semanticOwnerControlElementId(control.address)}
             interaction={interaction}
@@ -89,7 +91,6 @@ export function SteadyGrowthEffectRow({
             </button>
           </>
         ) : null}
-        <SemanticOwnerMarker address={control.address} />
       </div>
     </li>
   );

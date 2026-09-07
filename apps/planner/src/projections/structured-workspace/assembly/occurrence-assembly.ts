@@ -668,9 +668,20 @@ export function assembleWorkspaceOccurrence(
           : [],
       ),
     );
+    const artificerOfferTargets = new Set(
+      roomActions.rows.flatMap((row) =>
+        row.artificerOutput === undefined ? [] : [row.artificerOutput.control.marker.focusKey],
+      ),
+    );
     for (const row of roomActions.rows) {
       const acquisitionMarkers = Object.freeze([
         ...(row.traitOffer === undefined ? [] : traitOfferMarkers(row.traitOffer)),
+        ...(row.rewardPayload !== undefined &&
+        !row.rewardPayload.showOffer &&
+        !artificerOfferTargets.has(row.rewardPayload.control.marker.focusKey) &&
+        row.rewardPayload.control.owner.address.kind === 'acquisitionEntry'
+          ? [row.rewardPayload.control.marker]
+          : []),
         ...(row.rewardPayload === undefined ? [] : rewardChildMarkers(row.rewardPayload.control)),
         ...(row.artificerOutput === undefined
           ? []

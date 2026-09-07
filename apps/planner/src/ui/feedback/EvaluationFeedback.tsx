@@ -1,34 +1,16 @@
-import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
+import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { type SemanticFinding } from '@run-planner/engine/simulation';
-import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react';
 
 import {
   findingDestinationLabel,
-  indexFindingsByOwner,
   presentFinding,
   semanticFindingKey,
   type StatusPresentation,
 } from '@planner/projections/evaluationProjection';
 import type { WorkspaceInspectorDestination } from '@planner/projections/structured-workspace';
 import { findingSelected } from '@planner/state/editorSessionSlice';
-import { selectProjectFindingsByOwner, useAppDispatch, useAppSelector } from '@planner/state/store';
-import { semanticOwnerElementId } from './semanticOwner';
-
-const scopedFindings = createContext<ReturnType<typeof indexFindingsByOwner> | undefined>(
-  undefined,
-);
-
-export function SemanticFindingsScope({
-  children,
-  findings,
-}: {
-  readonly children: ReactNode;
-  readonly findings: readonly SemanticFinding[];
-}) {
-  const index = useMemo(() => indexFindingsByOwner(findings), [findings]);
-  return <scopedFindings.Provider value={index}>{children}</scopedFindings.Provider>;
-}
+import { useAppDispatch, useAppSelector } from '@planner/state/store';
 
 export function StatusBadge({ status }: { readonly status: StatusPresentation }) {
   return (
@@ -71,80 +53,6 @@ export function FindingCount({ count, label }: { readonly count: number; readonl
     <span aria-label={`${count} ${label}`} className="findings-count" title={`${count} ${label}`}>
       {count}
     </span>
-  );
-}
-
-export function SemanticOwnerMarker({ address }: { readonly address: SemanticAddress }) {
-  const ownerKey = semanticAddressKey(address);
-  const elementId = semanticOwnerElementId(address);
-  const localFindings = useContext(scopedFindings);
-  const projectFindings = useAppSelector(selectProjectFindingsByOwner);
-  const findings = (localFindings ?? projectFindings).get(ownerKey) ?? [];
-  const selectedFinding = useAppSelector((state) => state.editorSession.selectedFinding);
-  const focusedSemanticOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
-  const navigationRevision = useAppSelector(
-    (state) => state.editorSession.semanticNavigationRevision,
-  );
-  const selectedKey = selectedFinding === null ? null : selectedFinding.key;
-  const selectedAtOwner =
-    selectedFinding !== null &&
-    focusedSemanticOwner !== null &&
-    semanticAddressKey(focusedSemanticOwner) === ownerKey;
-  const selectedSourceFinding =
-    selectedFinding === null
-      ? undefined
-      : (projectFindings.get(semanticAddressKey(selectedFinding.origin)) ?? []).find(
-          (finding: SemanticFinding) => semanticFindingKey(finding) === selectedFinding.key,
-        );
-  const presentedFindings =
-    findings.length > 0
-      ? findings
-      : selectedAtOwner && selectedSourceFinding !== undefined
-        ? [selectedSourceFinding]
-        : [];
-  const marker = useRef<HTMLSpanElement>(null);
-  const firstFinding = presentedFindings[0];
-  const firstFindingCopy = firstFinding === undefined ? undefined : presentFinding(firstFinding);
-  const focusedDetail =
-    firstFindingCopy === undefined
-      ? undefined
-      : `${firstFindingCopy.title}: ${firstFindingCopy.description}`;
-  const focusedDetailId = `${elementId}-finding-detail`;
-
-  useEffect(() => {
-    if (!selectedAtOwner || marker.current === null) {
-      return;
-    }
-    marker.current.focus({ preventScroll: true });
-    marker.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [navigationRevision, selectedAtOwner, selectedKey]);
-
-  return (
-    <>
-      <span
-        aria-describedby={focusedDetail === undefined ? undefined : focusedDetailId}
-        aria-label={
-          presentedFindings.length === 0
-            ? undefined
-            : `${presentedFindings.length} ${presentedFindings.length === 1 ? 'finding' : 'findings'}`
-        }
-        className="semantic-owner-marker"
-        data-has-findings={presentedFindings.length > 0}
-        data-selected={selectedAtOwner}
-        data-semantic-owner={ownerKey}
-        id={elementId}
-        ref={marker}
-        tabIndex={-1}
-        title={focusedDetail}
-      >
-        {presentedFindings.length === 0 ? null : presentedFindings.length}
-      </span>
-      {focusedDetail === undefined ? null : (
-        <span className="visually-hidden" id={focusedDetailId}>
-          {focusedDetail}
-        </span>
-      )}
-    </>
   );
 }
 

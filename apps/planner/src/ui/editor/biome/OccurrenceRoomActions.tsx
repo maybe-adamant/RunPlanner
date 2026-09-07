@@ -20,8 +20,7 @@ import {
   type WorkspaceRewardWheelDescriptor,
   type WorkspaceShipPhasePresentation,
 } from '@planner/projections/structured-workspace';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
-import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 export { SteadyGrowthEffectRow } from './SteadyGrowthEffectRow';
 import { SteadyGrowthEffectRow } from './SteadyGrowthEffectRow';
@@ -124,6 +123,7 @@ export function RoomActionsWorkbench({
   };
 }) {
   const executeIntent = useCommandIntent();
+  const findingTarget = useFindingTarget();
   const board = useRef<HTMLOListElement | HTMLDivElement>(null);
   const pendingPointerDrag = useRef<PendingRoomActionPointerDrag | undefined>(undefined);
   const activePointerDrag = useRef<RoomActionPointerDrag | undefined>(undefined);
@@ -359,7 +359,7 @@ export function RoomActionsWorkbench({
                 : undefined
           }
           data-room-action-key={row.key}
-          id={semanticOwnerControlElementId(row.address)}
+          {...findingTarget(row.address)}
           tabIndex={-1}
         >
           <div className="owner-markers room-action-identity">
@@ -378,7 +378,6 @@ export function RoomActionsWorkbench({
               {row.rank ?? '—'}
             </span>
             <strong>{row.label}</strong>
-            <SemanticOwnerMarker address={row.address} />
             {row.stale ? <span className="neutral-status">stale</span> : null}
             {row.rank === null && row.participation === 'required' ? (
               <span className="neutral-status">required</span>
@@ -459,8 +458,9 @@ export function RoomActionsWorkbench({
         <section
           aria-label={actions === undefined ? undefined : 'Room Timeline'}
           className="room-actions-workbench"
+          {...(actions === undefined ? {} : findingTarget(actions.owner))}
+          tabIndex={-1}
         >
-          {actions === undefined ? null : <SemanticOwnerMarker address={actions.owner} />}
           <p aria-live="polite" className="visually-hidden">
             {announcement}
           </p>
@@ -640,11 +640,15 @@ export function RoomActionsWorkbench({
       : [<Fragment key={entry.actionKey}>{renderRow(row, [], entry.supplement)}</Fragment>];
   });
   return (
-    <section aria-label="Room Timeline" className="room-actions-workbench">
+    <section
+      aria-label="Room Timeline"
+      className="room-actions-workbench"
+      {...findingTarget(actions.owner)}
+      tabIndex={-1}
+    >
       <header className="local-reward-heading">
         <div className="owner-markers">
           <h4>Room Timeline</h4>
-          <SemanticOwnerMarker address={actions.owner} />
         </div>
       </header>
       <p aria-live="polite" className="visually-hidden">

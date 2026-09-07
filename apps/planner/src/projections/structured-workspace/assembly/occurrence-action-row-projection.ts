@@ -313,7 +313,6 @@ function roomActionsForOccurrence(
                 control: resolvedRewardControl,
                 inlineLevelResolutions,
                 inlineTraitOffers,
-                showOwner: !isArtificerReplacement,
                 showOffer:
                   !isArtificerReplacement &&
                   ((row.reference.kind === 'interactLocalReward' && roomLocal.kind !== 'fields') ||

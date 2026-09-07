@@ -607,7 +607,7 @@ describe('DecisionWorkbench', () => {
     expect(within(readyDoor).getByText('Reward')).toBeTruthy();
     expect(within(readyDoor).getByText('Choose room to show reward')).toBeTruthy();
     const rewardTarget = document.querySelector<HTMLElement>(
-      '.biome-target-row:not([data-missing="true"]) .door-reward-list [id$="-reward"], .biome-target-row:not([data-missing="true"]) .door-reward-list [id$="-status"]',
+      '.biome-target-row:not([data-missing="true"]) .door-reward-list [data-semantic-owner]',
     );
     if (rewardTarget === null) throw new Error('F selected offer reward target is missing');
     await waitFor(() => expect(document.activeElement).toBe(rewardTarget));

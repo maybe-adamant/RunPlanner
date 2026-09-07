@@ -11,7 +11,7 @@ import {
   type WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
 import { useAppSelector } from '@planner/state/store';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { HubCompletionHandoff } from './HubCompletionHandoff';
 import {
@@ -55,6 +55,8 @@ export function HubDecisionWorkbench({
   interactions,
   node,
 }: HubDecisionWorkbenchProps) {
+  const findingTarget = useFindingTarget();
+  const openSetTarget = findingTarget(node.openSet.address);
   const executeIntent = useCommandIntent();
   const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const handoff =
@@ -150,11 +152,15 @@ export function HubDecisionWorkbench({
   };
 
   return (
-    <section className="hub-decision-workbench" aria-label="Ephyra Hub">
+    <section
+      {...findingTarget(node.owner)}
+      tabIndex={-1}
+      className="hub-decision-workbench"
+      aria-label="Ephyra Hub"
+    >
       <header className="decision-heading">
         <div className="owner-markers">
           <h3 id={`${titleId}-title`}>Ephyra Hub</h3>
-          <SemanticOwnerMarker address={node.owner} />
           {node.runState === undefined ? null : <RunStateLauncher launcher={node.runState} />}
         </div>
         <div className="hub-board-status">
@@ -202,15 +208,18 @@ export function HubDecisionWorkbench({
             <div className="hub-overview-heading">
               <div className="owner-markers">
                 <h4>Open rooms</h4>
-                <SemanticOwnerMarker address={node.openSet.address} />
                 <MarkerAssessment marker={node.openSet} />
               </div>
             </div>
             <p className="fixed-room-state">Open or close the rooms available on this Hub board.</p>
             <div
+              {...openSetTarget}
               aria-label="Hub room set"
               className="hub-overview-room-grid"
-              ref={overviewOpenMembershipRegion}
+              ref={(element) => {
+                overviewOpenMembershipRegion.current = element;
+                openSetTarget.ref(element);
+              }}
               role="group"
               tabIndex={-1}
             >

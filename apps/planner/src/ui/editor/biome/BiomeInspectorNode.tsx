@@ -10,7 +10,6 @@ import {
   type WorkspaceRoomTab,
 } from '@planner/projections/structured-workspace';
 import { AuthoringFrontier, BatchWorkbench, TopologyRemovalAction } from './DecisionWorkbench';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
 import {
@@ -64,7 +63,6 @@ function OccurrenceOutgoing({
         <section aria-label="Outgoing doors" className="outgoing-occurrence-state">
           <div className="owner-markers">
             <h3>Outgoing doors</h3>
-            <SemanticOwnerMarker address={outgoing.marker.address} />
           </div>
           <p className="fixed-room-state">
             {outgoing.kind === 'blockedOrUnentered' ? outgoing.message : outgoing.label}

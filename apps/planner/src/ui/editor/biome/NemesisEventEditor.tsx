@@ -3,8 +3,7 @@ import type {
   WorkspaceNemesisEventDomain,
   WorkspaceNemesisEventInteraction,
 } from '@planner/projections/structured-workspace';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
-import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -20,6 +19,7 @@ export function NemesisEventEditor({
 }: {
   readonly interaction: WorkspaceNemesisEventInteraction;
 }) {
+  const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const [draft, setDraft] = useState<AuthoredNemesisRandomEventOutcome | null>(interaction.value);
   const [rewardType, setRewardType] = useState<string | null>(
@@ -58,11 +58,11 @@ export function NemesisEventEditor({
     <section
       aria-label="Nemesis event"
       className="nemesis-event-editor"
-      id={semanticOwnerControlElementId(interaction.owner)}
+      {...findingTarget(interaction.owner)}
+      tabIndex={-1}
     >
       <div className="local-reward-heading">
         <h4>Nemesis event</h4>
-        <SemanticOwnerMarker address={interaction.owner} />
       </div>
       <div className="nemesis-event-fields">
         <label className="field-control">

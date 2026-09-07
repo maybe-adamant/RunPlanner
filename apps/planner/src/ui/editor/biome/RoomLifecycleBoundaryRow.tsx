@@ -2,8 +2,7 @@ import type {
   WorkspaceFieldsCageSlotControl,
   WorkspaceRoomLifecycleBoundary,
 } from '@planner/projections/structured-workspace';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
-import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 
 /** Render-only boundary row; timeline placement remains the projection's authority. */
 export function LifecycleBoundaryRow({
@@ -21,6 +20,7 @@ export function LifecycleBoundaryRow({
   readonly fieldsCageSlot?: WorkspaceFieldsCageSlotControl;
   readonly onSelectFieldsCage?: (proposalKey: string) => void;
 }) {
+  const findingTarget = useFindingTarget();
   return (
     <li
       aria-label={label}
@@ -29,9 +29,6 @@ export function LifecycleBoundaryRow({
       data-fields-cage-slot={fieldsCageSlot === undefined ? undefined : 'true'}
       data-lifecycle-boundary={boundary.key}
       data-room-action-drop-index={dropIndex}
-      {...(fieldsCageSlot === undefined
-        ? {}
-        : { id: semanticOwnerControlElementId(fieldsCageSlot.owner), tabIndex: -1 })}
     >
       <span aria-hidden="true" className="hub-roster-rank">
         ·
@@ -41,6 +38,7 @@ export function LifecycleBoundaryRow({
         <label className="fields-cage-slot-control">
           <span className="visually-hidden">Cage for encounter {fieldsCageSlot.slotOrdinal}</span>
           <select
+            {...findingTarget(fieldsCageSlot.owner)}
             aria-label={`Cage for encounter ${fieldsCageSlot.slotOrdinal}`}
             onChange={(event) => {
               const choice = fieldsCageSlot.choices.find(
@@ -60,7 +58,6 @@ export function LifecycleBoundaryRow({
               </option>
             ))}
           </select>
-          <SemanticOwnerMarker address={fieldsCageSlot.marker.address} />
         </label>
       )}
     </li>

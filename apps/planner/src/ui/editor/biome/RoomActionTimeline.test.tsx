@@ -405,7 +405,9 @@ describe('OccurrenceRoomActions', () => {
       occurrenceId,
       roomActionKey({ kind: 'completeFieldsCage', phaseKey: 'Cage01' }),
     );
-    expect(starts[0]?.getAttribute('id')).toBe(semanticOwnerControlElementId(cageOneAction));
+    expect(starts[0]?.querySelector('select')?.getAttribute('id')).toBe(
+      semanticOwnerControlElementId(cageOneAction),
+    );
   });
 
   it('moves a selected Fields cage into its fixed cycle as one undoable history step', async () => {

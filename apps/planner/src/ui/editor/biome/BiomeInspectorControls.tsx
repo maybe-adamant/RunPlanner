@@ -14,7 +14,7 @@ import {
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { RoomSelector } from './RoomSelector';
 import { RewardSurfaceEditor } from './DoorRewardEditor';
 import { TimelineActionDeleteButton } from './TimelineActionDeleteButton';
@@ -35,7 +35,6 @@ function PostbossKeepsakeControl({
         interaction={interaction}
         label="Choose Keepsake"
       />
-      <SemanticOwnerMarker address={interaction.owner} />
     </div>
   );
 }
@@ -100,6 +99,7 @@ function JudgmentArcanaControl({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly judgment: NonNullable<WorkspaceRoomSummary['judgment']>;
 }) {
+  const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
   const [open, setOpen] = useState(false);
   const control = interactions.judgmentArcana.get(workspaceInteractionKey(judgment.address));
@@ -109,9 +109,13 @@ function JudgmentArcanaControl({
       aria-label={`Judgment — choose ${judgment.requiredCount} inactive Arcana cards`}
       className="room-action-row room-timeline-effect-row"
     >
-      <button className="room-timeline-effect" onClick={() => setOpen(true)} type="button">
+      <button
+        {...findingTarget(control.owner)}
+        className="room-timeline-effect"
+        onClick={() => setOpen(true)}
+        type="button"
+      >
         Judgment — choose {judgment.requiredCount} inactive Arcana cards
-        <SemanticOwnerMarker address={control.owner} />
       </button>
       {open ? (
         <div aria-label="Judgment editor" className="room-judgment-popup" role="dialog">
@@ -170,6 +174,7 @@ function FigurineArcanaControl({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly figurine: NonNullable<WorkspaceRoomSummary['figurine']>;
 }) {
+  const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
   const [open, setOpen] = useState(false);
   const control = interactions.figurineArcana.get(workspaceInteractionKey(figurine.address));
@@ -179,9 +184,13 @@ function FigurineArcanaControl({
       aria-label={`Crystal Figurine — choose ${figurine.requiredCount} inactive Arcana cards`}
       className="room-action-row room-timeline-effect-row"
     >
-      <button className="room-timeline-effect" onClick={() => setOpen(true)} type="button">
+      <button
+        {...findingTarget(control.owner)}
+        className="room-timeline-effect"
+        onClick={() => setOpen(true)}
+        type="button"
+      >
         Crystal Figurine — choose {figurine.requiredCount} inactive Arcana cards ({figurine.rarity})
-        <SemanticOwnerMarker address={control.owner} />
       </button>
       {open ? (
         <div aria-label="Crystal Figurine editor" className="room-figurine-popup" role="dialog">
@@ -277,7 +286,6 @@ export function inspectorOptionalRoomActionContent(
           —
         </span>
         <strong>Keepsake Rack</strong>
-        <SemanticOwnerMarker address={selection.address} />
       </div>
       <div className="hub-rank-actions room-action-controls">
         <PostbossKeepsakeControl interaction={interaction} />
@@ -349,7 +357,6 @@ export function StartRoomIdentityEditor({
     <section aria-label="Start room configuration" className="start-room-identity">
       <div className="owner-markers">
         <h3>Room and reward</h3>
-        <SemanticOwnerMarker address={node.room.address} />
       </div>
       {startPicker === undefined || interaction === undefined ? (
         <div className="field-control field-control-inline start-room-fixed">

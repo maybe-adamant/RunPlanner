@@ -4,7 +4,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 
 export function HubCompletionHandoff({
@@ -14,6 +14,7 @@ export function HubCompletionHandoff({
   readonly interaction: WorkspaceCompletedHubHandoffInteraction | undefined;
   readonly node: WorkspaceHubDecisionNode;
 }) {
+  const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const dispatch = useAppDispatch();
   const exit = node.completedExit;
@@ -22,6 +23,8 @@ export function HubCompletionHandoff({
     throw new Error('The ready completed-Hub exit must expose its handoff interaction.');
   return (
     <article
+      {...(exit.kind === 'locked' ? findingTarget(exit.marker.address) : {})}
+      tabIndex={exit.kind === 'locked' ? -1 : undefined}
       aria-label={`${node.completedExit.targetLabel} room offer`}
       className="exit-row hub-exit-door"
       data-available={exit.kind !== 'locked'}
@@ -34,12 +37,9 @@ export function HubCompletionHandoff({
           <div>
             <h4>{node.completedExit.targetLabel}</h4>
           </div>
-          <div className="owner-markers">
-            <SemanticOwnerMarker address={exit.marker.address} />
-            <span className="neutral-status">
-              {exit.kind === 'opened' ? 'Opened' : available ? 'Ready' : 'Locked'}
-            </span>
-          </div>
+          <span className="neutral-status">
+            {exit.kind === 'opened' ? 'Opened' : available ? 'Ready' : 'Locked'}
+          </span>
         </div>
         {exit.kind === 'ready' ? (
           <p className="fixed-room-state">All required Hub visits are complete.</p>
@@ -49,6 +49,7 @@ export function HubCompletionHandoff({
           <p className="fixed-room-state">Complete the required Hub visits to unlock this door.</p>
         )}
         <button
+          {...(exit.kind === 'locked' ? {} : findingTarget(exit.marker.address))}
           className="primary-action"
           disabled={exit.kind === 'locked'}
           onClick={() => {

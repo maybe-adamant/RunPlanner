@@ -5,11 +5,12 @@ import {
   candidateMayBeAuthored,
   candidateSelectState,
 } from '@planner/ui/feedback/candidatePresentation';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 
 type SelectValue = number | string | null;
 
 interface CandidateSelectProps<T extends SelectValue> {
+  readonly bindFindingTarget?: boolean;
   readonly id: string;
   readonly interaction: WorkspaceCandidateInteraction<T>;
   readonly label: string;
@@ -22,12 +23,14 @@ interface CandidateSelectProps<T extends SelectValue> {
  * performs no work until focus or pointer intent asks for candidate evidence.
  */
 export function CandidateSelect<T extends SelectValue>({
+  bindFindingTarget = true,
   id,
   interaction,
   label,
   onReplace,
   placeholder,
 }: CandidateSelectProps<T>) {
+  const findingTarget = useFindingTarget();
   const candidates = useWorkspaceInteraction(interaction);
   const selected = candidates.result?.find((option) => option.value === interaction.selected);
   const value = interaction.selected == null ? '' : String(interaction.selected);
@@ -42,11 +45,9 @@ export function CandidateSelect<T extends SelectValue>({
 
   return (
     <label className="field-control field-control-inline biome-candidate-select" htmlFor={id}>
-      <span className="field-label-with-marker">
-        {label}
-        <SemanticOwnerMarker address={interaction.owner} />
-      </span>
+      <span>{label}</span>
       <select
+        {...(bindFindingTarget ? findingTarget(interaction.owner, id) : {})}
         {...candidateSelectState(selected)}
         aria-busy={candidates.pending || undefined}
         id={id}

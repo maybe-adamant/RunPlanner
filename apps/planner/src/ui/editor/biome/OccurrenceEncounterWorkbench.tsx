@@ -15,7 +15,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -30,11 +30,9 @@ const emptyEncounterPicker: import('@planner/projections/contextualPicker').Cont
   Object.freeze({ sections: Object.freeze([]) });
 function LocalVisitOrderSelect({
   interactions,
-  localVisit,
   slot,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly localVisit: WorkspaceLocalVisitDecision;
   readonly slot: WorkspaceLocalVisitDecision['slots'][number];
 }) {
   const executeIntent = useCommandIntent();
@@ -82,18 +80,15 @@ function LocalVisitOrderSelect({
           );
         })}
       </select>
-      <SemanticOwnerMarker address={localVisit.order} />
     </label>
   );
 }
 
 function LocalVisitSlotRow({
   interactions,
-  localVisit,
   slot,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly localVisit: WorkspaceLocalVisitDecision;
   readonly slot: WorkspaceLocalVisitDecision['slots'][number];
 }) {
   const executeIntent = useCommandIntent();
@@ -103,12 +98,7 @@ function LocalVisitSlotRow({
   );
   return (
     <tr className="ephyra-side-grid-row">
-      <th scope="row">
-        <div className="owner-markers">
-          <span>{slot.label}</span>
-          <SemanticOwnerMarker address={slot.address} />
-        </div>
-      </th>
+      <th scope="row">{slot.label}</th>
       <td className="ephyra-side-priority">{slot.availabilityRank}</td>
       <td>
         <CandidateSelect
@@ -119,7 +109,7 @@ function LocalVisitSlotRow({
         />
       </td>
       <td>
-        <LocalVisitOrderSelect interactions={interactions} localVisit={localVisit} slot={slot} />
+        <LocalVisitOrderSelect interactions={interactions} slot={slot} />
       </td>
       <td>
         {slot.generation !== 'generated' ? null : (
@@ -143,19 +133,22 @@ export function LocalVisitWorkbench({
   readonly localVisit: WorkspaceLocalVisitDecision;
   readonly nested?: boolean;
 }) {
+  const findingTarget = useFindingTarget();
   return (
-    <section aria-label="Ephyra side rooms" className="ephyra-side-editor">
+    <section
+      {...findingTarget(localVisit.address)}
+      tabIndex={-1}
+      aria-label="Ephyra side rooms"
+      className="ephyra-side-editor"
+    >
       <header className="local-reward-heading">
-        <div className="owner-markers">
-          {nested ? null : <h4>Side Rooms</h4>}
-          <SemanticOwnerMarker address={localVisit.address} />
-        </div>
+        {nested ? null : <h4>Side Rooms</h4>}
         <span className="neutral-status">
           {localVisit.visitOrder.length} visited · {localVisit.slots.length} possible
         </span>
       </header>
       <div className="ephyra-side-grid-scroll">
-        <table className="ephyra-side-grid">
+        <table {...findingTarget(localVisit.order)} tabIndex={-1} className="ephyra-side-grid">
           <caption className="visually-hidden">Ephyra side-room generation and visit order</caption>
           <thead>
             <tr>
@@ -168,12 +161,7 @@ export function LocalVisitWorkbench({
           </thead>
           <tbody>
             {localVisit.slots.map((slot) => (
-              <LocalVisitSlotRow
-                interactions={interactions}
-                key={slot.key}
-                localVisit={localVisit}
-                slot={slot}
-              />
+              <LocalVisitSlotRow interactions={interactions} key={slot.key} slot={slot} />
             ))}
           </tbody>
         </table>
@@ -183,20 +171,20 @@ export function LocalVisitWorkbench({
 }
 
 export function CustomizableEncounterPhaseControl({
-  idPrefix,
   interaction,
   phase,
 }: {
-  readonly idPrefix: string;
   readonly interaction: WorkspaceEncounterInteraction;
   readonly phase: WorkspaceEncounterPhase;
 }) {
+  const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const candidates = useWorkspaceInteraction(interaction);
   return (
     <>
       <ContextualPicker
-        id={`${idPrefix}-${phase.address.phaseKey}`}
+        findingTarget={findingTarget(phase.address)}
+        id={semanticOwnerControlElementId(phase.address)}
         label="Encounter"
         layout="inline"
         loading={candidates.pending}
@@ -222,7 +210,6 @@ export function CustomizableEncounterPhaseControl({
 }
 
 export function EncounterPhaseControl({
-  idPrefix,
   interactions,
   phase,
 }: {
@@ -230,6 +217,7 @@ export function EncounterPhaseControl({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly phase: WorkspaceEncounterPhase;
 }) {
+  const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const figLeafInteraction =
     phase.figLeaf === undefined
@@ -277,28 +265,23 @@ export function EncounterPhaseControl({
             workspaceInteractionKey(phase.nemesisEvent.owner),
           );
           return interaction === undefined ? null : (
-            <>
-              <SemanticOwnerMarker address={phase.nemesisEvent.owner} />
-              <NemesisEventEditor
-                interaction={interaction}
-                key={`${interaction.key}:${JSON.stringify(interaction.value)}`}
-              />
-            </>
+            <NemesisEventEditor
+              interaction={interaction}
+              key={`${interaction.key}:${JSON.stringify(interaction.value)}`}
+            />
           );
         })();
   if (!phase.customizable) {
     return (
       <section
+        {...findingTarget(phase.address)}
+        tabIndex={-1}
         aria-label={ariaLabel}
         className="encounter-phase-control"
         data-read-only="true"
-        id={semanticOwnerControlElementId(phase.address)}
       >
         <div className="local-reward-heading">
-          <div className="owner-markers">
-            <h4>{phase.label}</h4>
-            <SemanticOwnerMarker address={phase.address} />
-          </div>
+          <h4>{phase.label}</h4>
         </div>
         <div className="encounter-phase-settings">
           <p className="fixed-room-state">Encounter: {phase.selectedEncounter.label}</p>
@@ -314,23 +297,12 @@ export function EncounterPhaseControl({
     workspaceInteractionKey(phase.address),
   );
   return (
-    <section
-      aria-label={ariaLabel}
-      className="encounter-phase-control"
-      id={semanticOwnerControlElementId(phase.address)}
-    >
+    <section aria-label={ariaLabel} className="encounter-phase-control">
       <div className="local-reward-heading">
-        <div className="owner-markers">
-          <h4>{phase.label}</h4>
-          <SemanticOwnerMarker address={phase.address} />
-        </div>
+        <h4>{phase.label}</h4>
       </div>
       <div className="encounter-phase-settings">
-        <CustomizableEncounterPhaseControl
-          idPrefix={idPrefix}
-          interaction={interaction}
-          phase={phase}
-        />
+        <CustomizableEncounterPhaseControl interaction={interaction} phase={phase} />
         {figLeafControl}
         {gorgonControl}
         {nemesisEditor}
@@ -348,6 +320,7 @@ export function FieldsWorkbench({
   readonly nested?: boolean;
   readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'fields' }>;
 }) {
+  const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
   return (
     <section aria-label="Fields setup" className="fields-room-editor">
@@ -358,8 +331,8 @@ export function FieldsWorkbench({
       )}
       <label className="field-control field-control-inline">
         <span>Optional pickups</span>
-        <SemanticOwnerMarker address={room.optionalRewardCountAddress} />
         <select
+          {...findingTarget(room.optionalRewardCountAddress)}
           aria-label="Optional pickups"
           onChange={(event) =>
             dispatch(
@@ -506,6 +479,7 @@ export function RewardWheelWorkbench({
   readonly occurrence: OccurrenceAddress;
   readonly wheel: WorkspaceRewardWheelDescriptor;
 }) {
+  const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
   const store = requireWorkspaceInteraction(
     interactions.rewardWheelStores,
@@ -536,15 +510,18 @@ export function RewardWheelWorkbench({
   };
 
   return (
-    <section aria-label={wheel.label} className="reward-wheel">
+    <section
+      {...findingTarget(wheel.marker.address)}
+      tabIndex={-1}
+      aria-label={wheel.label}
+      className="reward-wheel"
+    >
       <div className="local-reward-heading">
-        <div className="owner-markers">
-          <h5>{wheel.label}</h5>
-          <SemanticOwnerMarker address={wheel.marker.address} />
-        </div>
+        <h5>{wheel.label}</h5>
       </div>
       <div className="reward-wheel-settings">
         <CandidateSelect
+          bindFindingTarget={false}
           id={`${idPrefix}-store`}
           interaction={store}
           label="Reward pool"
@@ -559,6 +536,7 @@ export function RewardWheelWorkbench({
           }
         />
         <CandidateSelect
+          bindFindingTarget={false}
           id={`${idPrefix}-count`}
           interaction={count}
           label="Offers"
@@ -603,10 +581,7 @@ export function RewardWheelWorkbench({
                 )}
                 <div className="exit-content">
                   <div className="local-reward-heading">
-                    <div className="owner-markers">
-                      <h6>{offer.label}</h6>
-                      <SemanticOwnerMarker address={offer.control.marker.address} />
-                    </div>
+                    <h6>{offer.label}</h6>
                   </div>
                   <RewardControlEditor
                     control={offer.control}
@@ -680,7 +655,7 @@ export function ShopWorkbench({
       <div className="shop-family-offer-list">
         {room.offers.map((offer) => (
           <div className="shop-family-offer-row" key={offer.key}>
-            <div className="owner-markers shop-family-item-control">
+            <div className="shop-family-item-control">
               <RewardControlEditor
                 control={offer.rewardControl}
                 idPrefix={`shop-${offer.rewardControl.marker.focusKey}`}
@@ -688,7 +663,6 @@ export function ShopWorkbench({
                 label={`${offer.label} Item`}
                 showAcquisitionChildren={false}
               />
-              <SemanticOwnerMarker address={offer.rewardControl.marker.address} />
             </div>
             <label className="shop-family-participation">
               <input
@@ -732,7 +706,7 @@ export function ShopWorkbench({
             </div>
           ) : 'rewardControl' in offer ? (
             <div className="shop-family-offer-row" key={offer.key}>
-              <div className="owner-markers shop-family-item-control">
+              <div className="shop-family-item-control">
                 <RewardControlEditor
                   control={offer.rewardControl}
                   idPrefix={`shop-${offer.rewardControl.marker.focusKey}`}
@@ -740,7 +714,6 @@ export function ShopWorkbench({
                   label={`${supplementalLabel(offer.kind)} Item`}
                   showAcquisitionChildren={false}
                 />
-                <SemanticOwnerMarker address={offer.rewardControl.marker.address} />
               </div>
               <label className="shop-family-participation">
                 <input

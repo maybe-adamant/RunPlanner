@@ -4,8 +4,6 @@ import {
   type WorkspaceInteractionCatalog,
   type WorkspaceRoomActionRow,
 } from '@planner/projections/structured-workspace';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
-import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
 
 /** Acquisition, conversion, and Artificer-output presentation for one action. */
@@ -24,7 +22,6 @@ export function RoomActionAcquisitionRow({
   const visible =
     showOffer ||
     payload.control.realizedAcquisition !== undefined ||
-    (payload.showOwner && payload.control.marker.findingCount > 0) ||
     (payload.control.conversions ?? []).some(
       (conversion) =>
         requireWorkspaceInteraction(
@@ -34,14 +31,7 @@ export function RoomActionAcquisitionRow({
     ) ||
     row.artificerOutput !== undefined;
   return (
-    <div
-      className="acquisition-entry-resolution"
-      data-empty={!visible || undefined}
-      {...(payload.showOwner
-        ? { id: semanticOwnerControlElementId(payload.control.owner.address), tabIndex: -1 }
-        : {})}
-    >
-      {payload.showOwner ? <SemanticOwnerMarker address={payload.control.marker.address} /> : null}
+    <div className="acquisition-entry-resolution" data-empty={!visible || undefined}>
       <div className="room-action-outcome-controls">
         <RewardControlEditor
           control={payload.control}
@@ -56,12 +46,7 @@ export function RoomActionAcquisitionRow({
             : { offerStartStep: payload.control.offerEditStartStep })}
         />
         {row.artificerOutput === undefined ? null : (
-          <div
-            className="room-action-artificer-output"
-            id={semanticOwnerControlElementId(row.artificerOutput.control.owner.address)}
-            tabIndex={-1}
-          >
-            <SemanticOwnerMarker address={row.artificerOutput.control.marker.address} />
+          <div className="room-action-artificer-output">
             <RewardControlEditor
               control={row.artificerOutput.control}
               idPrefix={`room-action-artificer-${row.artificerOutput.control.marker.focusKey}`}

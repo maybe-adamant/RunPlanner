@@ -12,7 +12,7 @@ import {
   type WorkspaceMarker,
 } from '@planner/projections/structured-workspace';
 import { candidateSupport } from '@planner/projections/candidateProjection';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -333,6 +333,7 @@ export function HubNextVisitTarget({
     readonly visitPosition: number;
   }[];
 }) {
+  const findingTarget = useFindingTarget();
   const nextVisit = visits[0];
   if (nextVisit === undefined) return null;
   const target = Object.freeze({ kind: 'nextVisit' as const });
@@ -362,7 +363,12 @@ export function HubNextVisitTarget({
       </div>
       <div className="hub-next-visit-owner-markers">
         {visits.map((visit) => (
-          <span className="hub-next-visit-owner" key={visit.visitPosition}>
+          <span
+            {...findingTarget(visit.marker.address)}
+            tabIndex={-1}
+            className="hub-next-visit-owner"
+            key={visit.visitPosition}
+          >
             <span className="hub-next-visit-owner-label">Visit {visit.visitPosition}</span>
             <span
               className="hub-next-visit-owner-assessment"
@@ -370,7 +376,6 @@ export function HubNextVisitTarget({
             >
               {assessmentLabel(visit.marker)}
             </span>
-            <SemanticOwnerMarker address={visit.marker.address} />
             <span className="visually-hidden"> is not planned.</span>
           </span>
         ))}

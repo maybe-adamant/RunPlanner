@@ -20,7 +20,7 @@ import {
   loadSurfaceNResourcesProject,
 } from '@run-planner/test-fixtures/surface';
 import { RouteWorkspace } from './RouteWorkspace';
-import { semanticOwnerElementId } from '../feedback/semanticOwner';
+import { semanticOwnerControlElementId } from '../feedback/semanticOwner';
 import { createOpenTestApplication } from '@planner-test/fixtures/renderPlanner';
 
 function routeWorkspaceMarkup(
@@ -151,7 +151,9 @@ describe('RouteWorkspace', () => {
     expect(markup).toContain('Open rooms');
     expect(markup).toContain('data-open="true"');
     expect(markup).toContain(
-      semanticOwnerElementId(createHubDecisionAddress(createBiomeAddress('Surface', 'N'), 'hub')),
+      semanticOwnerControlElementId(
+        createHubDecisionAddress(createBiomeAddress('Surface', 'N'), 'hub'),
+      ),
     );
   });
 });

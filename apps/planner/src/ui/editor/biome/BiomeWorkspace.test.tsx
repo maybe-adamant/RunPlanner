@@ -1416,9 +1416,9 @@ describe('BiomeWorkspace', () => {
     const rewardStatus = door.querySelector<HTMLElement>('.door-reward-list [id$="-status"]');
     if (rewardStatus === null) throw new Error('fixed Story reward status is missing');
     expect(rewardStatus.getAttribute('tabindex')).toBe('-1');
-    expect(
-      door.querySelector('.door-reward-list .room-state-with-marker > .semantic-owner-marker'),
-    ).not.toBeNull();
+    expect(rewardStatus.getAttribute('data-semantic-owner')).toBe(
+      semanticAddressKey(createIncomingRewardAddress(pBiome, storyOccurrenceId)),
+    );
 
     act(() =>
       view.application.store.dispatch(

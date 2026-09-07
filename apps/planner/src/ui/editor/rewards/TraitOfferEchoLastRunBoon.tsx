@@ -20,6 +20,7 @@ import { useAppSelector } from '@planner/state/store';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import { useFindingTarget, type FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
@@ -151,12 +152,14 @@ function EchoNaturalSelectionOutcome({
 
 function EchoLastRunBoonChoiceEditor({
   controlId,
+  findingTarget,
   domain,
   value,
   onBack,
   onComplete,
 }: {
   readonly controlId: string;
+  readonly findingTarget: FindingTargetProps;
   readonly domain: WorkspaceEchoLastRunBoonDomain;
   readonly value?: AuthoredEchoLastRunBoonOffer;
   readonly onBack: () => void;
@@ -235,7 +238,12 @@ function EchoLastRunBoonChoiceEditor({
   };
 
   return (
-    <section className="echo-last-run-choice" aria-label="Boon Boon Boon choice">
+    <section
+      {...findingTarget}
+      tabIndex={-1}
+      className="echo-last-run-choice"
+      aria-label="Boon Boon Boon choice"
+    >
       <header className="echo-last-run-choice-header">
         <div>
           <p className="eyebrow">Echo offer &gt; Boon Boon Boon choice</p>
@@ -279,7 +287,7 @@ function EchoLastRunBoonChoiceEditor({
               <legend>Outcome {index + 1}</legend>
               <ContextualPicker
                 ariaLabel={`Boon Boon Boon outcome ${index + 1}`}
-                id={index === 0 ? controlId : `${controlId}-${optionKey}`}
+                id={`${controlId}-${optionKey}`}
                 label="Trait"
                 model={traitPicker}
                 onSelect={(identity) => {
@@ -475,6 +483,7 @@ export function LoadedEchoLastRunBoonChoice({
   readonly onBack: () => void;
   readonly onComplete: (value: AuthoredEchoLastRunBoonOffer) => void;
 }) {
+  const findingTarget = useFindingTarget();
   const focusedSemanticOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const optionKey = offer.selectedOptionKey;
   const option = offer.options[optionIndex(optionKey)];
@@ -522,6 +531,7 @@ export function LoadedEchoLastRunBoonChoice({
   }
   return (
     <EchoLastRunBoonChoiceEditor
+      findingTarget={findingTarget(child.control.address)}
       controlId={semanticOwnerControlElementId(child.control.address)}
       domain={loaded.result}
       {...(option.echoLastRunBoon === undefined ? {} : { value: option.echoLastRunBoon })}

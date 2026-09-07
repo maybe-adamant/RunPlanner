@@ -1,9 +1,10 @@
 import type { WorkspaceBiomeField } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 
 function BiomeFieldControl({ field }: { readonly field: WorkspaceBiomeField }) {
+  const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
   const id = `biome-field-${field.marker.focusKey}`;
   const replace = (value: boolean | number | string): void => {
@@ -20,11 +21,9 @@ function BiomeFieldControl({ field }: { readonly field: WorkspaceBiomeField }) {
     case 'boolean':
       return (
         <label className="field-control biome-field" htmlFor={id}>
-          <span className="field-label-with-marker">
-            {field.label}
-            <SemanticOwnerMarker address={field.marker.address} />
-          </span>
+          <span>{field.label}</span>
           <select
+            {...findingTarget(field.marker.address, id)}
             id={id}
             onChange={(event) => replace(event.target.value === 'true')}
             value={field.value === null ? '' : String(field.value)}
@@ -43,11 +42,9 @@ function BiomeFieldControl({ field }: { readonly field: WorkspaceBiomeField }) {
     case 'boundedInteger':
       return (
         <label className="field-control biome-field" htmlFor={id}>
-          <span className="field-label-with-marker">
-            {field.label}
-            <SemanticOwnerMarker address={field.marker.address} />
-          </span>
+          <span>{field.label}</span>
           <select
+            {...findingTarget(field.marker.address, id)}
             id={id}
             onChange={(event) => replace(Number(event.target.value))}
             value={field.value === null ? '' : String(field.value)}
@@ -66,11 +63,9 @@ function BiomeFieldControl({ field }: { readonly field: WorkspaceBiomeField }) {
     case 'enum':
       return (
         <label className="field-control biome-field" htmlFor={id}>
-          <span className="field-label-with-marker">
-            {field.label}
-            <SemanticOwnerMarker address={field.marker.address} />
-          </span>
+          <span>{field.label}</span>
           <select
+            {...findingTarget(field.marker.address, id)}
             id={id}
             onChange={(event) => replace(event.target.value)}
             value={field.value ?? ''}

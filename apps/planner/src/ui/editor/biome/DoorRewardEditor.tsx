@@ -6,7 +6,8 @@ import {
   type WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
 import { useAppSelector } from '@planner/state/store';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { useEffect } from 'react';
 
@@ -26,6 +27,7 @@ export function RewardSurfaceEditor({
   readonly rewards: readonly WorkspaceDoorReward[];
   readonly visibility: 'hidden' | 'visible';
 }) {
+  const findingTarget = useFindingTarget();
   const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const editableRewards =
     visibility === 'hidden' ? rewards.filter((reward) => reward.control !== undefined) : rewards;
@@ -41,7 +43,9 @@ export function RewardSurfaceEditor({
     const target =
       firstEditableReward === undefined
         ? document.getElementById(`${idPrefix}-status`)
-        : document.getElementById(`${idPrefix}-${firstEditableReward.key}-reward`);
+        : document.getElementById(
+            semanticOwnerControlElementId(firstEditableReward.control!.owner.address),
+          );
     target?.focus({ preventScroll: true });
     target?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
   }, [firstEditableReward, focusOwner, focusedOwner, idPrefix]);
@@ -66,10 +70,10 @@ export function RewardSurfaceEditor({
         <p className="fixed-room-state">Reward hidden on this door.</p>
       ) : null}
       {editableRewards.map((reward, index) => (
-        <section className="room-state-with-marker" key={reward.key}>
-          <SemanticOwnerMarker address={reward.marker.address} />
+        <section key={reward.key}>
           {reward.control === undefined ? (
             <div
+              {...findingTarget(reward.marker.address)}
               aria-live={firstEditableReward === undefined && index === 0 ? 'polite' : undefined}
               className="field-control field-control-inline door-fixed-reward"
               id={

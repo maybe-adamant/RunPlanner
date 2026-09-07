@@ -16,7 +16,7 @@ import {
 import { traitOfferDialogClosed, traitOfferDialogOpened } from '@planner/state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { TraitOfferEditorShell } from './TraitOfferEditorShell';
 
@@ -61,6 +61,7 @@ export function TraitOfferLauncher({
   readonly control: WorkspaceTraitOfferControl;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
+  const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
   const interaction = requireWorkspaceInteraction(
     interactions.traitOffers,
@@ -103,19 +104,17 @@ export function TraitOfferLauncher({
         ? `${spellOffer ? 'spell' : 'trait'} configuration needs attention`
         : `${spellOffer ? 'spell' : 'trait'} configuration has no findings`;
   return (
-    <span className="trait-offer-launcher-with-marker">
-      <SemanticOwnerMarker address={control.marker.address} />
-      <button
-        aria-label={`${label}; ${statusLabel}`}
-        className="trait-offer-launcher quiet-action action-compact"
-        data-trait-status={status}
-        id={launcherId(control.address)}
-        onClick={() => dispatch(traitOfferDialogOpened(control.address))}
-        type="button"
-      >
-        {label}
-      </button>
-    </span>
+    <button
+      {...findingTarget(control.address, launcherId(control.address))}
+      aria-label={`${label}; ${statusLabel}`}
+      className="trait-offer-launcher quiet-action action-compact"
+      data-trait-status={status}
+      id={launcherId(control.address)}
+      onClick={() => dispatch(traitOfferDialogOpened(control.address))}
+      type="button"
+    >
+      {label}
+    </button>
   );
 }
 
@@ -173,6 +172,7 @@ export function TraitOfferDialog({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly target: TraitOfferAddress;
 }) {
+  const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
   const executeIntent = useCommandIntent();
   const focusedSemanticOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
@@ -261,7 +261,7 @@ export function TraitOfferDialog({
       className="trait-offer-dialog-backdrop"
       ref={dialogRef}
     >
-      <div className="trait-offer-dialog">
+      <div className="trait-offer-dialog" {...findingTarget(target)} tabIndex={-1}>
         <header className="panel-heading">
           <div>
             <p className="eyebrow">Trait offer</p>
@@ -270,7 +270,6 @@ export function TraitOfferDialog({
             </h2>
           </div>
           <div className="panel-heading-actions">
-            <SemanticOwnerMarker address={target} />
             <button
               aria-label="Close trait offer"
               className="quiet-action"

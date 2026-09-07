@@ -14,6 +14,8 @@ import {
 } from '@planner/projections/structured-workspace';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 
 interface RewardValueEditorProps {
   readonly candidateOwner: RewardCandidateOwner;
@@ -48,7 +50,6 @@ function offerKey(offer: ResolvedRewardOffer): string {
 
 export function RewardValueEditor({
   candidateOwner,
-  idPrefix,
   interactions,
   label = 'Reward',
   offer,
@@ -57,6 +58,7 @@ export function RewardValueEditor({
   summaryMode = 'offer',
   unresolvedSeed,
 }: RewardValueEditorProps) {
+  const findingTarget = useFindingTarget();
   const authoredOfferKey = offer === null ? '__unresolved__' : offerKey(offer);
   const resolver = requireWorkspaceInteraction(
     interactions.rewards,
@@ -140,10 +142,11 @@ export function RewardValueEditor({
   return (
     <div className="reward-value-editor">
       <ContextualPicker
+        findingTarget={findingTarget(candidateOwner.address)}
         cancelLabel="Cancel"
         choiceLabel={resolver.choiceLabel(active?.step ?? 'type', activeOffer)}
         closeOnSelect={false}
-        id={`${idPrefix}-reward`}
+        id={semanticOwnerControlElementId(candidateOwner.address)}
         label={label}
         layout="inline"
         loading={active !== undefined && domain.result === undefined}

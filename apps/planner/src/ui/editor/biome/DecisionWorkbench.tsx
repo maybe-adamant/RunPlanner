@@ -20,7 +20,7 @@ import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspac
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { CandidateSelect } from './CandidateSelect';
 import {
   AnomalyRoomControl,
@@ -62,12 +62,14 @@ function TargetRoomSelector({
   readonly label: string;
 }) {
   const interaction = requireWorkspaceInteraction(interactions.rooms, interactionKey);
+  const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   if (interaction.kind !== 'targetRoom' && interaction.kind !== 'decisionEntryRoom') {
     throw new BiomeWorkspaceContractError(`${interactionKey} is not a target-room interaction.`);
   }
   return (
     <RoomSelector
+      findingTarget={findingTarget(interaction.owner, `${idPrefix}-room`)}
       {...(ariaLabel === undefined ? {} : { ariaLabel })}
       idPrefix={idPrefix}
       interaction={interaction}
@@ -140,6 +142,7 @@ function TargetRow({
   readonly node: BatchNode;
   readonly target: WorkspacePhysicalTarget;
 }) {
+  const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
   const selectionInteraction =
     node.targets.length === 1 && node.zagreusContract === undefined && node.chaos === undefined
@@ -164,6 +167,12 @@ function TargetRow({
       data-available={target.physicalState === 'available'}
       data-picked={target.selected}
       data-retained={target.retained}
+      {...(node.targetInteraction !== 'replaceable' ||
+      door.room.roomPicker === undefined ||
+      door.room.anomaly !== undefined
+        ? findingTarget(target.marker.address)
+        : {})}
+      tabIndex={-1}
     >
       {selectionChoice === undefined ? (
         <div className="exit-marker" aria-hidden="true" />
@@ -195,8 +204,6 @@ function TargetRow({
             <h4>{door.room.label}</h4>
           </div>
           <div className="owner-markers">
-            <SemanticOwnerMarker address={target.marker.address} />
-            <SemanticOwnerMarker address={door.room.address} />
             <span className="neutral-status">{roomStatus(target)}</span>
           </div>
         </div>
@@ -267,6 +274,7 @@ function MissingTargetRow({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly target: WorkspaceMissingPhysicalTarget;
 }) {
+  const findingTarget = useFindingTarget();
   const interaction = interactions.rooms.get(target.marker.focusKey);
   const canEnterDecision = interaction?.kind === 'decisionEntryRoom';
   const canAuthorRoom = target.authoring.kind === 'ready' || canEnterDecision;
@@ -276,6 +284,8 @@ function MissingTargetRow({
       className="exit-row biome-target-row"
       data-available="true"
       data-missing="true"
+      {...(canAuthorRoom ? {} : findingTarget(target.marker.address))}
+      tabIndex={-1}
     >
       <div className="exit-marker" aria-hidden="true" />
       <div className="exit-content">
@@ -285,7 +295,6 @@ function MissingTargetRow({
             <h4>Choose room</h4>
           </div>
           <div className="owner-markers">
-            <SemanticOwnerMarker address={target.marker.address} />
             <span className="neutral-status">Unspecified</span>
           </div>
         </div>
@@ -358,9 +367,6 @@ function ZagreusContractExit({
             <p className="card-kicker">Additional exit</p>
             <h4>Zagreus contract</h4>
           </div>
-          <div className="owner-markers">
-            <SemanticOwnerMarker address={control.owner} />
-          </div>
         </div>
         <p className="fixed-room-state additional-exit-room-state">
           Room: {control.door.room.label}
@@ -408,9 +414,6 @@ function ChaosExit({
             <p className="card-kicker">Additional exit</p>
             <h4>Chaos gate</h4>
           </div>
-          <div className="owner-markers">
-            <SemanticOwnerMarker address={control.owner} />
-          </div>
         </div>
         <ChaosMapWorkbench control={control} interactions={interactions} />
       </div>
@@ -433,6 +436,7 @@ function TakeoverRepairAction({
 }: {
   readonly interaction: WorkspaceTakeoverRepairInteraction;
 }) {
+  const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   return (
     <section
@@ -442,10 +446,10 @@ function TakeoverRepairAction({
     >
       <div className="owner-markers">
         <h4>Fix Preboss doors</h4>
-        <SemanticOwnerMarker address={interaction.owner} />
       </div>
       <p className="fixed-room-state">Fix {interaction.label} to restore the missing doors.</p>
       <button
+        {...findingTarget(interaction.owner)}
         className="secondary-action"
         onClick={() => executeIntent(interaction.intent())}
         type="button"
@@ -580,6 +584,7 @@ export function BatchWorkbench({
   readonly label: string;
   readonly node: BatchNode;
 }) {
+  const findingTarget = useFindingTarget();
   const projectedTakeover =
     node.kind === 'takeoverBatch'
       ? requireWorkspaceInteraction(interactions.takeoverBatches, node.takeoverInteractionKey)
@@ -610,6 +615,8 @@ export function BatchWorkbench({
       className="decision-card biome-batch-workbench"
       data-batch-kind={node.kind}
       data-topology-state={node.topologyState}
+      {...(takeover?.presentation === 'repair' ? {} : findingTarget(node.owner))}
+      tabIndex={-1}
     >
       <header className="decision-heading">
         <div>
@@ -617,8 +624,6 @@ export function BatchWorkbench({
           <h3>Configure door offer</h3>
         </div>
         <div className="owner-markers">
-          <SemanticOwnerMarker address={node.owner} />
-          <SemanticOwnerMarker address={exitSelectionAddress(node.selection)} />
           {node.runState === undefined ? null : <RunStateLauncher launcher={node.runState} />}
         </div>
       </header>
@@ -626,6 +631,8 @@ export function BatchWorkbench({
       <div
         aria-label={`${label} room offers`}
         className="exit-list"
+        {...findingTarget(exitSelectionAddress(node.selection))}
+        tabIndex={-1}
         role={exitSelection === undefined ? 'group' : 'radiogroup'}
       >
         {node.targets.map((target) => (
@@ -676,6 +683,7 @@ function StartFrontier({
   readonly interaction: Extract<WorkspaceAuthoringFrontier, { readonly kind: 'start' }>;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
+  const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const start = requireWorkspaceInteraction(interactions.starts, interaction.interactionKey);
   return (
@@ -685,10 +693,10 @@ function StartFrontier({
         <h3>Start biome</h3>
         <p className="owner-markers">
           Create the opening room, then configure its room and reward.
-          <SemanticOwnerMarker address={start.owner} />
         </p>
       </div>
       <button
+        {...findingTarget(start.owner)}
         className="primary-action"
         onClick={() => executeIntent(start.intent())}
         type="button"

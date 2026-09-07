@@ -32,6 +32,7 @@ import type {
   WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace';
 import { TraitOfferDialog, TraitOfferEditor, TraitOfferLauncher } from './TraitOfferEditor';
+import { FindingTargetScope } from '@planner/ui/feedback/useFindingTarget';
 import {
   createGoldenFGHProject,
   createGoldenFGHIProject,
@@ -254,7 +255,9 @@ describe('trait offer editor entry and dialog', () => {
 
     render(
       <Provider store={application.store}>
-        <TraitOfferLauncher control={control} interactions={workspace.interactions} />
+        <FindingTargetScope findings={workspace.findingsByRepairTarget}>
+          <TraitOfferLauncher control={control} interactions={workspace.interactions} />
+        </FindingTargetScope>
       </Provider>,
     );
     expect(
@@ -262,7 +265,11 @@ describe('trait offer editor entry and dialog', () => {
         .getByRole('button', { name: /spell is not selected/ })
         .getAttribute('data-trait-status'),
     ).toBe('unspecified');
-    expect(screen.getByLabelText(/findings?/)).toBeTruthy();
+    expect(
+      screen
+        .getByRole('button', { name: /spell is not selected/ })
+        .getAttribute('data-has-findings'),
+    ).toBe('false');
     cleanup();
 
     render(

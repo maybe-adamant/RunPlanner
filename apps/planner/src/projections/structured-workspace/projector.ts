@@ -33,6 +33,7 @@ import { assembleWorkspaceBiomeSemantics } from './assembly/biome-semantic-assem
 import { requireWorkspaceRoom } from './assembly/catalog-room';
 import { presentWorkspaceBiome } from './presentation/biome-presentation';
 import { registerWorkspaceFindingDestinations } from './navigation/finding-routing';
+import { indexFindingsByRepairTarget } from './navigation/finding-highlights';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from './source-index';
 import { bindWorkspaceInteractions } from './interactions/interaction-binding';
 import {
@@ -664,6 +665,7 @@ export function createStructuredWorkspaceProjection(
       const projectAddress = { kind: 'project' as const };
       const result = Object.freeze({
         focusByOwner,
+        findingsByRepairTarget: indexFindingsByRepairTarget(evaluation.findings, focusByOwner),
         interactions,
         marker: Object.freeze({
           address: projectAddress,

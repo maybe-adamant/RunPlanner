@@ -10,7 +10,7 @@ import {
   type WorkspaceRoomTab,
   type WorkspaceRunStateLauncher,
 } from '@planner/projections/structured-workspace';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { RunStateLauncher } from './RunStateSheet';
 import { AnomalyClearedControl } from './OccurrenceRoomFeatures';
 import { RoomActionsWorkbench } from './OccurrenceRoomActions';
@@ -53,6 +53,7 @@ export function OccurrenceWorkbench({
   renderOptionalRoomActionContent,
   runState,
 }: OccurrenceWorkbenchProps) {
+  const findingTarget = useFindingTarget();
   const requestedTab = initialTab ?? 'overview';
   const roomIdentity = workspaceInteractionKey(room.address);
   const [tabState, setTabState] = useState({
@@ -160,11 +161,14 @@ export function OccurrenceWorkbench({
   );
 
   return (
-    <article className="room-card biome-occurrence-workbench">
+    <article
+      className="room-card biome-occurrence-workbench"
+      {...findingTarget(room.address)}
+      tabIndex={-1}
+    >
       <header className="room-card-heading">
         <h3 aria-label={heading}>{heading}</h3>
         <div className="owner-markers">
-          <SemanticOwnerMarker address={room.address} />
           {runState === undefined ? null : <RunStateLauncher launcher={runState} />}
         </div>
       </header>

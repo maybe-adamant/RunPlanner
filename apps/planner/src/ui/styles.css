@@ -58,6 +58,13 @@
   box-sizing: border-box;
 }
 
+fieldset {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
 html,
 body,
 #root {
@@ -827,12 +834,6 @@ button:disabled {
   margin-top: 0.45rem;
 }
 
-.trait-offer-launcher-with-marker {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
 .pickup-outcome-control {
   display: inline-flex;
   align-items: center;
@@ -1218,10 +1219,6 @@ button:disabled {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-}
-
-.trait-offer-option[data-has-findings='true'] {
-  border-color: var(--danger, #b42318);
 }
 
 .trait-offer-fixed-rarity {
@@ -2095,8 +2092,7 @@ button:disabled {
   gap: 7px;
 }
 
-.owner-markers,
-.field-label-with-marker {
+.owner-markers {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -2104,30 +2100,6 @@ button:disabled {
 
 .frontier-owner {
   justify-content: flex-start;
-}
-
-.semantic-owner-marker {
-  display: none;
-}
-
-.semantic-owner-marker[data-has-findings='true'] {
-  display: inline-grid;
-  min-width: 20px;
-  height: 20px;
-  place-items: center;
-  border: 1px solid rgb(218 115 115 / 52%);
-  border-radius: 999px;
-  color: #f0b0b0;
-  background: rgb(150 53 53 / 18%);
-  font-size: 0.7rem;
-  font-weight: 750;
-  line-height: 1;
-  scroll-margin-block: 35vh;
-}
-
-.semantic-owner-marker[data-selected='true'] {
-  outline: 2px solid #e2b971;
-  outline-offset: 3px;
 }
 
 .neutral-status {
@@ -2692,16 +2664,6 @@ select {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid #353640;
-}
-
-.room-state-with-marker {
-  display: grid;
-}
-
-.room-state-with-marker > .semantic-owner-marker[data-has-findings='true'] {
-  z-index: 1;
-  justify-self: end;
-  margin: 9px 6px -29px 0;
 }
 
 .fixed-room-state {
@@ -4432,7 +4394,7 @@ select {
   text-align: center;
 }
 
-.ephyra-side-grid .biome-candidate-select > .field-label-with-marker,
+.ephyra-side-grid .biome-candidate-select > span,
 .ephyra-side-entry-order > .visually-hidden {
   position: absolute;
   width: 1px;
@@ -4825,4 +4787,14 @@ select {
   .biome-hub-rail-visits {
     margin-left: 12px;
   }
+}
+
+/* Finding feedback wins over ordinary structural, selection, and drag-state shadows. */
+[data-semantic-owner][data-has-findings='true'] {
+  box-shadow: inset 0 0 0 2px #da7373;
+  scroll-margin-block: 35vh;
+}
+
+[data-semantic-owner][data-selected-finding='true'] {
+  box-shadow: inset 0 0 0 3px #e2b971;
 }

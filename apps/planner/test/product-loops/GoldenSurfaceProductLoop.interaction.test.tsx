@@ -52,10 +52,7 @@ import {
   pOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
-import {
-  semanticOwnerControlElementId,
-  semanticOwnerElementId,
-} from '@planner/ui/feedback/semanticOwner';
+import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 
 afterEach(() => {
   cleanup();
@@ -631,7 +628,9 @@ describe('surface product loop', () => {
     });
     expect(destination).not.toHaveProperty('traitDialogTarget');
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(document.getElementById(semanticOwnerElementId(destination.focusAddress))).toBeTruthy();
+    expect(
+      document.getElementById(semanticOwnerControlElementId(destination.focusAddress)),
+    ).toBeTruthy();
     const action = document.getElementById(semanticOwnerControlElementId(destination.focusAddress));
     if (action === null) throw new Error('invalid Hammer pickup action is missing');
     await view.user.click(within(action).getByRole('button', { name: /Edit Trait/ }));
