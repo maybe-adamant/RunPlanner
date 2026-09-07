@@ -32,6 +32,7 @@ export type {
   CanonicalHubVisit,
   CanonicalLocalVisitRoom,
   CanonicalFieldsOptionalReward,
+  CanonicalFieldsEntryPair,
   CanonicalLocalReward,
   CanonicalRewardWheel,
   CanonicalRewardWheelOffer,

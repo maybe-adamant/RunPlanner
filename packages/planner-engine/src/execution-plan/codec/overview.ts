@@ -11,6 +11,67 @@ import {
 } from './primitives';
 import { reward } from './rewards';
 import { roomReference } from './room';
+import type { ExecutionFieldsLayout } from '../model';
+
+function fields(value: unknown, label: string): ExecutionFieldsLayout {
+  const record = object(value, label);
+  exact(record, ['entryPair', 'cagePoints', 'optionalRewards'], ['nemesisPointId'], label);
+
+  const entryPair = object(record.entryPair, `${label}.entryPair`);
+  exact(entryPair, ['startPointId', 'endPointId'], [], `${label}.entryPair`);
+  const parsedEntryPair = Object.freeze({
+    startPointId: integer(entryPair.startPointId, `${label}.entryPair.startPointId`, 1),
+    endPointId: integer(entryPair.endPointId, `${label}.entryPair.endPointId`, 1),
+  });
+
+  const cagePoints = Object.freeze(
+    array(record.cagePoints, `${label}.cagePoints`).map((entry, index) => {
+      const row = object(entry, `${label}.cagePoints[${index}]`);
+      exact(row, ['slotKey', 'pointId'], [], `${label}.cagePoints[${index}]`);
+      return Object.freeze({
+        slotKey: stringValue(row.slotKey, `${label}.cagePoints[${index}].slotKey`),
+        pointId: integer(row.pointId, `${label}.cagePoints[${index}].pointId`, 1),
+      });
+    }),
+  );
+  if (cagePoints.length < 2 || cagePoints.length > 3)
+    fail(`${label}.cagePoints must contain two or three active cages`);
+  if (new Set(cagePoints.map((point) => point.slotKey)).size !== cagePoints.length)
+    fail(`${label}.cagePoints has duplicate slot keys`);
+  const pointIds = new Set(cagePoints.map((point) => point.pointId));
+
+  const optionalRewards = Object.freeze(
+    array(record.optionalRewards, `${label}.optionalRewards`).map((entry, index) => {
+      const row = object(entry, `${label}.optionalRewards[${index}]`);
+      exact(row, ['slotKey', 'pointId', 'reward'], [], `${label}.optionalRewards[${index}]`);
+      return Object.freeze({
+        slotKey: stringValue(row.slotKey, `${label}.optionalRewards[${index}].slotKey`),
+        pointId: integer(row.pointId, `${label}.optionalRewards[${index}].pointId`, 1),
+        reward: reward(row.reward, `${label}.optionalRewards[${index}].reward`),
+      });
+    }),
+  );
+  if (new Set(optionalRewards.map((entry) => entry.slotKey)).size !== optionalRewards.length)
+    fail(`${label}.optionalRewards has duplicate slot keys`);
+  for (const entry of optionalRewards) {
+    if (pointIds.has(entry.pointId)) fail(`${label} reuses a Fields point ID`);
+    pointIds.add(entry.pointId);
+  }
+
+  const parsedNemesisPointId =
+    record.nemesisPointId === undefined
+      ? undefined
+      : integer(record.nemesisPointId, `${label}.nemesisPointId`, 1);
+  if (parsedNemesisPointId !== undefined && pointIds.has(parsedNemesisPointId))
+    fail(`${label} reuses a Fields point ID`);
+
+  return Object.freeze({
+    entryPair: parsedEntryPair,
+    cagePoints,
+    optionalRewards,
+    ...(parsedNemesisPointId === undefined ? {} : { nemesisPointId: parsedNemesisPointId }),
+  });
+}
 
 export function overview(value: unknown, label: string) {
   const record = object(value, label);
@@ -27,6 +88,7 @@ export function overview(value: unknown, label: string) {
       'purgingPool',
       'keepsakeRack',
       'fountain',
+      'fields',
       'additional',
     ],
     label,
@@ -491,6 +553,8 @@ export function overview(value: unknown, label: string) {
                 }),
           });
         });
+  const parsedFields =
+    record.fields === undefined ? undefined : fields(record.fields, `${label}.fields`);
   return Object.freeze({
     ...(record.incomingReward === undefined
       ? {}
@@ -533,5 +597,6 @@ export function overview(value: unknown, label: string) {
           ),
         }),
     ...(additional === undefined ? {} : { additional: Object.freeze(additional) }),
+    ...(parsedFields === undefined ? {} : { fields: parsedFields }),
   });
 }

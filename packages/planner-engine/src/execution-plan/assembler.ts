@@ -36,11 +36,12 @@ export function assembleExecutionProduct({
   const keys = evaluation.route.configuredBiomeKeys;
   if (
     !(keys.length === 1 && keys[0] === 'F') &&
-    !(keys.length === 2 && keys[0] === 'F' && keys[1] === 'G')
+    !(keys.length === 2 && keys[0] === 'F' && keys[1] === 'G') &&
+    !(keys.length === 3 && keys[0] === 'F' && keys[1] === 'G' && keys[2] === 'H')
   ) {
     throw new CompilerError(
       'unsupportedExtent',
-      'execution supports only configured F or F/G prefixes',
+      'execution supports only configured F, F/G, or F/G/H prefixes',
     );
   }
   const biomes = completeExecutionBiomes(assembly);
@@ -145,8 +146,9 @@ export function assembleExecutionProduct({
   });
   const extent = Object.freeze({
     kind: 'configuredPrefix' as const,
-    biomeKeys: Object.freeze([...keys]) as readonly ['F'] | readonly ['F', 'G'],
-    terminalBiomeKey: keys[keys.length - 1] as 'F' | 'G',
+    biomeKeys: Object.freeze([...keys]) as
+      readonly ['F'] | readonly ['F', 'G'] | readonly ['F', 'G', 'H'],
+    terminalBiomeKey: keys[keys.length - 1] as 'F' | 'G' | 'H',
   });
   const startingEquipResults = executionKeepsakeEquipResults(
     assembly.project.route.loadout.keepsakeEquipResults,

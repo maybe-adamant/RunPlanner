@@ -9,6 +9,7 @@ import {
   createUnderworldFWellCheckpoint,
   goldenFBiome,
 } from '@run-planner/test-fixtures/underworld';
+import { loadUnderworldFGHCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { simulateProjectAssembly } from '../../src/simulation';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { allTogetherOffer, allTogetherResult } from '../simulation/shop-trait-purchase-support';
@@ -45,6 +46,7 @@ import fgFixture from './fixtures/fg.execution.json';
 import fgAnomalyFixture from './fixtures/fg-anomaly.execution.json';
 import fgIxionChaosFixture from './fixtures/fg-ixion-chaos.execution.json';
 import automaticBossFixture from './fixtures/automatic-boss.execution.json';
+import underworldFGHFixture from './fixtures/underworld-fgh.execution.json';
 import { bossAutomaticOutcomeProject } from './support/automatic-fixture';
 import { executionTimelineTransactions } from '../../src/execution-plan/assembly/timeline-transactions';
 import { orderedExecutionRooms } from '../../src/execution-plan/assembly/route';
@@ -1524,6 +1526,7 @@ describe('execution-plan compiler and codec', () => {
   it.each([
     ['f-opening', fOnlyProject(), fOpeningFixture],
     ['fg', createCompleteFGProject(), fgFixture],
+    ['fgh', loadUnderworldFGHCheckpoint(), underworldFGHFixture],
     ['fg-ixion-chaos', createCompleteFGIxionChaosProject(), fgIxionChaosFixture],
     ['fg-anomaly', createCompleteFGAnomalyProject(), fgAnomalyFixture],
     ['automatic-boss', bossAutomaticOutcomeProject(), automaticBossFixture],
@@ -1531,6 +1534,138 @@ describe('execution-plan compiler and codec', () => {
     const { plan } = planFor(project);
     if (fixture !== undefined) expect(decodeExecutionPlan(fixture)).toEqual(plan);
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+  });
+
+  it('publishes grouped Fields cage previews and the selected spatial layout', () => {
+    const { plan } = planFor(loadUnderworldFGHCheckpoint());
+    const fields = plan.occurrences.filter(
+      (occurrence) => occurrence.overview.fields !== undefined,
+    );
+    expect(fields.length).toBeGreaterThan(0);
+    const selectedFields = fields.find((occurrence) =>
+      plan.selectedOccurrenceIds.includes(occurrence.id),
+    );
+    expect(selectedFields?.overview.fields).toMatchObject({
+      entryPair: {
+        startPointId: expect.any(Number),
+        endPointId: expect.any(Number),
+      },
+      cagePoints: expect.arrayContaining([{ slotKey: 'cage1', pointId: expect.any(Number) }]),
+    });
+    const unpickedFields = plan.occurrences.find(
+      (occurrence) =>
+        occurrence.gameName === 'H_Combat03' && !plan.selectedOccurrenceIds.includes(occurrence.id),
+    );
+    expect(unpickedFields).toBeDefined();
+    expect(
+      plan.occurrences.some(
+        (occurrence) =>
+          occurrence.doors.kind === 'batch' &&
+          occurrence.doors.targets.some(
+            (target) =>
+              target.room.id === unpickedFields?.id &&
+              target.cageRewards !== undefined &&
+              target.cageRewards.length > 0,
+          ),
+      ),
+    ).toBe(true);
+  });
+
+  it('rejects swapped or unknown Fields cage slots', () => {
+    const swapped = JSON.parse(JSON.stringify(underworldFGHFixture)) as {
+      occurrences: Array<{
+        overview: {
+          fields?: { cagePoints: Array<{ slotKey: string }> };
+        };
+      }>;
+      planFingerprint?: string;
+    };
+    const fieldsOccurrence = swapped.occurrences.find(
+      (occurrence) => occurrence.overview.fields !== undefined,
+    );
+    if (fieldsOccurrence?.overview.fields === undefined)
+      throw new Error('fixture lacks Fields layout');
+    [
+      fieldsOccurrence.overview.fields.cagePoints[0]!.slotKey,
+      fieldsOccurrence.overview.fields.cagePoints[1]!.slotKey,
+    ] = [
+      fieldsOccurrence.overview.fields.cagePoints[1]!.slotKey,
+      fieldsOccurrence.overview.fields.cagePoints[0]!.slotKey,
+    ];
+    refreshWireFingerprint(swapped as unknown as Record<string, unknown>);
+    expect(() => decodeExecutionPlan(swapped)).toThrow(/canonical ordered cage slots/);
+
+    const unknown = JSON.parse(JSON.stringify(underworldFGHFixture)) as {
+      occurrences: Array<{
+        overview: {
+          fields?: { cagePoints: Array<{ slotKey: string }> };
+        };
+      }>;
+      planFingerprint?: string;
+    };
+    const unknownFieldsOccurrence = unknown.occurrences.find(
+      (occurrence) => occurrence.overview.fields !== undefined,
+    );
+    if (unknownFieldsOccurrence?.overview.fields === undefined)
+      throw new Error('fixture lacks Fields layout');
+    unknownFieldsOccurrence.overview.fields.cagePoints[0]!.slotKey = 'cage4';
+    refreshWireFingerprint(unknown as unknown as Record<string, unknown>);
+    expect(() => decodeExecutionPlan(unknown)).toThrow(/canonical ordered cage slots/);
+  });
+
+  it('requires door cage rewards to match the referenced Fields target', () => {
+    type WireTarget = {
+      room: { id: string };
+      cageRewards?: unknown[];
+    };
+    type WireOccurrence = {
+      id: string;
+      kind: string;
+      overview: { fields?: { cagePoints: unknown[] } };
+      doors?: { kind: string; targets?: WireTarget[] };
+    };
+    type WirePlan = { occurrences: WireOccurrence[]; [key: string]: unknown };
+    const fieldsTarget = (wire: WirePlan): WireTarget => {
+      const fields = wire.occurrences.find(
+        (entry) => entry.kind === 'FieldsEncounter' && entry.overview.fields !== undefined,
+      );
+      if (fields === undefined) throw new Error('fixture lacks Fields occurrence');
+      for (const source of wire.occurrences) {
+        if (source.doors?.kind !== 'batch') continue;
+        const target = source.doors.targets?.find((candidate) => candidate.room.id === fields.id);
+        if (target !== undefined) return target;
+      }
+      throw new Error('fixture lacks a door target for the Fields occurrence');
+    };
+
+    const missing = JSON.parse(JSON.stringify(underworldFGHFixture)) as WirePlan;
+    delete fieldsTarget(missing).cageRewards;
+    refreshWireFingerprint(missing);
+    expect(() => decodeExecutionPlan(missing)).toThrow(/must carry cageRewards/);
+
+    const short = JSON.parse(JSON.stringify(underworldFGHFixture)) as WirePlan;
+    const shortTarget = fieldsTarget(short);
+    if (shortTarget.cageRewards === undefined) throw new Error('fixture lacks cage rewards');
+    shortTarget.cageRewards = shortTarget.cageRewards.slice(0, -1);
+    refreshWireFingerprint(short);
+    expect(() => decodeExecutionPlan(short)).toThrow(/must match the Fields target cagePoints/);
+
+    const nonFields = JSON.parse(JSON.stringify(underworldFGHFixture)) as WirePlan;
+    const byId = new Map(nonFields.occurrences.map((entry) => [entry.id, entry]));
+    let nonFieldsTarget: WireTarget | undefined;
+    for (const source of nonFields.occurrences) {
+      if (source.doors?.kind !== 'batch') continue;
+      nonFieldsTarget = source.doors.targets?.find(
+        (candidate) => byId.get(candidate.room.id)?.kind !== 'FieldsEncounter',
+      );
+      if (nonFieldsTarget !== undefined) break;
+    }
+    if (nonFieldsTarget === undefined) throw new Error('fixture lacks a non-Fields door target');
+    nonFieldsTarget.cageRewards = [];
+    refreshWireFingerprint(nonFields);
+    expect(() => decodeExecutionPlan(nonFields)).toThrow(
+      /cageRewards is only valid for a FieldsEncounter target/,
+    );
   });
 
   it('publishes native-only Empty carriers without manufacturing timeline phases', () => {

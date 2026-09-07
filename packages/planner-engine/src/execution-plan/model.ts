@@ -8,7 +8,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 28 as const;
+export const EXECUTION_PROTOCOL_VERSION = 29 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
 
 export type ExecutionRunStateCount =
@@ -156,6 +156,24 @@ export interface ExecutionReward {
   readonly source?: string;
   readonly spurnedSource?: string;
   readonly acquisitionEnabled?: boolean;
+}
+
+/** Exact layout inputs consumed by native Mourning Fields setup. */
+export interface ExecutionFieldsLayout {
+  readonly entryPair: {
+    readonly startPointId: number;
+    readonly endPointId: number;
+  };
+  readonly cagePoints: readonly {
+    readonly slotKey: string;
+    readonly pointId: number;
+  }[];
+  readonly optionalRewards: readonly {
+    readonly slotKey: string;
+    readonly pointId: number;
+    readonly reward: ExecutionReward;
+  }[];
+  readonly nemesisPointId?: number;
 }
 
 /** Exact native result of the authored Anvil of Fates purchase. */
@@ -462,6 +480,8 @@ export interface ExecutionOverview {
   };
   readonly keepsakeRack?: { readonly keepsakeKey?: string };
   readonly fountain?: { readonly aromaticPhialTarget?: string };
+  /** Selected Fields entry/layout facts; cage identities stay on door targets. */
+  readonly fields?: ExecutionFieldsLayout;
   /** Chaos gates and Zagreus Contract exits are room features, not normal doors. */
   readonly additional?: readonly {
     readonly kind: 'chaos' | 'zagreusContract';
@@ -629,6 +649,8 @@ export interface ExecutionDoorTarget {
   readonly index: number;
   readonly room: { readonly id: string; readonly biomeKey: string; readonly gameName: string };
   readonly reward?: ExecutionReward;
+  /** Ordered cage rewards generated on this Fields target, including previews. */
+  readonly cageRewards?: readonly ExecutionReward[];
 }
 
 export type ExecutionDoors =
@@ -678,8 +700,8 @@ export interface ExecutionPlan {
   readonly startingKeepsake: ExecutionStartingKeepsake;
   readonly extent: {
     readonly kind: 'configuredPrefix';
-    readonly biomeKeys: readonly ['F'] | readonly ['F', 'G'];
-    readonly terminalBiomeKey: 'F' | 'G';
+    readonly biomeKeys: readonly ['F'] | readonly ['F', 'G'] | readonly ['F', 'G', 'H'];
+    readonly terminalBiomeKey: 'F' | 'G' | 'H';
   };
   /** Complete occurrence records; selectedOccurrenceIds is the route cursor. */
   readonly selectedOccurrenceIds: readonly string[];

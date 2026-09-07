@@ -8,12 +8,21 @@ import { hermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shri
 import { INFERNAL_CONTRACT_ENTRY_KEY } from '../../authored-project/shop';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation-products';
-import type { CanonicalAuthoredRoom, CanonicalBatch } from '../../simulation/materialization';
+import type {
+  CanonicalAuthoredRoom,
+  CanonicalBatch,
+  CanonicalFieldsEntryPair,
+} from '../../simulation/materialization';
 import type { RewardEvent } from '../../simulation/rewards/model';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import { agreement, executionRoomOwnerKey } from './support';
-import type { ExecutionKeepsakeEquipResults, ExecutionOverview, ExecutionReward } from '../model';
+import type {
+  ExecutionFieldsLayout,
+  ExecutionKeepsakeEquipResults,
+  ExecutionOverview,
+  ExecutionReward,
+} from '../model';
 import type { HermesShrineGenerationKey, HermesShrineSlotKey } from '../../authored-project/model';
 
 export function executionKeepsakeEquipResults(
@@ -475,6 +484,54 @@ function executionPurgingPool(
   });
 }
 
+function executionFieldsLayout(room: CanonicalAuthoredRoom): ExecutionFieldsLayout | undefined {
+  if (room.encounterEnvelopeKey !== 'FieldsEncounter') return undefined;
+  const entryPair: CanonicalFieldsEntryPair | undefined = room.fieldsEntryPair;
+  const spatial = room.fieldsSpatial;
+  if (entryPair === undefined || spatial === undefined)
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} lacks Fields entry layout`,
+    );
+
+  const cagePoints = room.encounterPhases.flatMap((phase) => {
+    const attachment = phase.rewardAttachment;
+    if (attachment?.kind !== 'localReward' || attachment.groupKey !== 'cages') return [];
+    const pointId = spatial.cagePointIdBySlot[attachment.slotKey];
+    if (pointId === null || pointId === undefined)
+      throw new CompilerError(
+        'executionCoverageMissing',
+        `${room.gameName} lacks Fields cage point ${attachment.slotKey}`,
+      );
+    return [{ slotKey: attachment.slotKey, pointId }];
+  });
+  const optionalRewards = (room.fieldsOptionalRewards ?? []).map((optional) => {
+    const pointId = spatial.optionalPointIdBySlot[optional.slotKey];
+    if (pointId === null || pointId === undefined)
+      throw new CompilerError(
+        'executionCoverageMissing',
+        `${room.gameName} lacks Fields optional point ${optional.slotKey}`,
+      );
+    return Object.freeze({
+      slotKey: optional.slotKey,
+      pointId,
+      reward: executionRewardFromOffer(
+        optional.offer,
+        optional.producerLifecycleKey,
+        optional.resolvedStoreKey,
+      ),
+    });
+  });
+  return Object.freeze({
+    entryPair: Object.freeze({ ...entryPair }),
+    cagePoints: Object.freeze(cagePoints.map((point) => Object.freeze(point))),
+    optionalRewards: Object.freeze(optionalRewards),
+    ...(spatial.nemesisPointId === null || spatial.nemesisPointId === undefined
+      ? {}
+      : { nemesisPointId: spatial.nemesisPointId }),
+  });
+}
+
 /** Assemble the complete room-entry realization facts for one occurrence. */
 export function assembleExecutionOverview(
   room: CanonicalAuthoredRoom,
@@ -486,6 +543,7 @@ export function assembleExecutionOverview(
   const hermesShrine = executionHermesShrine(room, biome);
   const stygianWell = executionStygianWell(room);
   const purgingPool = executionPurgingPool(room);
+  const fields = executionFieldsLayout(room);
   const additional = executionAdditionalExits(batch);
   const biomeAddress = createBiomeAddress(room.origin.routeKey, room.origin.biomeKey);
   return Object.freeze({
@@ -521,6 +579,7 @@ export function assembleExecutionOverview(
     ...(hermesShrine === undefined ? {} : { hermesShrine }),
     ...(stygianWell === undefined ? {} : { stygianWell }),
     ...(purgingPool === undefined ? {} : { purgingPool }),
+    ...(fields === undefined ? {} : { fields }),
     ...(!room.hasKeepsakeRack
       ? {}
       : {

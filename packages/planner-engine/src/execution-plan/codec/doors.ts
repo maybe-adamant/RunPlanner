@@ -9,7 +9,21 @@ export function doors(value: unknown, label: string): ExecutionDoors {
     exact(record, ['kind', 'owner', 'targets'], ['resolvedSharedRewardStoreKey'], label);
     const targets = array(record.targets, `${label}.targets`).map((entry, index) => {
       const row = object(entry, `${label}.targets[${index}]`);
-      exact(row, ['exitKey', 'index', 'room'], ['reward'], `${label}.targets[${index}]`);
+      exact(
+        row,
+        ['exitKey', 'index', 'room'],
+        ['reward', 'cageRewards'],
+        `${label}.targets[${index}]`,
+      );
+      const cageRewards =
+        row.cageRewards === undefined
+          ? undefined
+          : Object.freeze(
+              array(row.cageRewards, `${label}.targets[${index}].cageRewards`).map(
+                (entry, rewardIndex) =>
+                  reward(entry, `${label}.targets[${index}].cageRewards[${rewardIndex}]`),
+              ),
+            );
       return Object.freeze({
         exitKey: stringValue(row.exitKey, `${label}.targets[${index}].exitKey`),
         index: integer(row.index, `${label}.targets[${index}].index`),
@@ -17,6 +31,7 @@ export function doors(value: unknown, label: string): ExecutionDoors {
         ...(row.reward === undefined
           ? {}
           : { reward: reward(row.reward, `${label}.targets[${index}].reward`) }),
+        ...(cageRewards === undefined ? {} : { cageRewards }),
       });
     });
     return Object.freeze({
