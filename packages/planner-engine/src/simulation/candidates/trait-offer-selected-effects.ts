@@ -1,7 +1,10 @@
 import type { Catalog } from '../../catalog-schema';
 import { optionIndex } from '../../authored-project/traits';
 import type { ProjectDocument } from '../../authored-project/model';
-import type { TraitOfferCandidateArtifacts } from './trait-offer-capability';
+import type {
+  TraitOfferCandidateArtifacts,
+  TraitOfferCandidateCapability,
+} from './trait-offer-capability';
 import type { ProjectEvaluation } from '../evaluation-products';
 import type {
   AllTogetherSetDomainEvaluation,
@@ -321,11 +324,115 @@ export function evaluateEchoLastRunBoonDomain(
       });
     }),
   );
+  const child =
+    query.value.kind === 'traits'
+      ? query.value.options[optionIndex(query.optionKey)]?.echoLastRunBoon
+      : undefined;
+  const selectedChild =
+    child === undefined ? undefined : child.options[optionIndex(child.selectedOptionKey)];
+  const selectedDisposition =
+    selectedChild === undefined
+      ? undefined
+      : _catalog.traits.byKey[selectedChild.traitKey]?.selectedDisposition;
+  const selectedCarrier = (() => {
+    if (selectedChild === undefined || selectedDisposition === undefined) return undefined;
+    if (selectedDisposition.kind === 'directTraitSets') {
+      const nestedOffer = Object.freeze({
+        kind: 'traits' as const,
+        giverKey: selectedChild.giverKey,
+        options: Object.freeze([
+          Object.freeze({
+            traitKey: selectedChild.traitKey,
+            rarity: selectedChild.rarity,
+            ...(selectedChild.allTogetherResult === undefined
+              ? {}
+              : { allTogetherResult: selectedChild.allTogetherResult }),
+          }),
+        ]) as import('../../authored-project/traits').AuthoredTraitOfferTraits['options'],
+        selectedOptionKey: 'option1' as const,
+        rarificationActions: Object.freeze([]),
+      });
+      const evaluatedSets = selectedDisposition.sets.map((set) =>
+        allTogetherSetResult(_catalog, capability, nestedOffer, 'option1', set.key),
+      );
+      if (!evaluatedSets.every((set): set is NonNullable<typeof set> => set !== undefined))
+        return undefined;
+      const sets = Object.freeze(evaluatedSets);
+      return Object.freeze({
+        kind: 'allTogether' as const,
+        complete:
+          selectedChild.allTogetherResult !== undefined &&
+          sets.every((set) =>
+            set.candidates.some(
+              (candidate) => candidate.selected && candidate.support !== 'impossible',
+            ),
+          ),
+        sets,
+      });
+    }
+    if (selectedDisposition.kind === 'naturalSelection') {
+      const assessments = capability.naturalSelectionTargets(
+        selectedDisposition.levelCount,
+        selectedDisposition.slots,
+        selectedChild.naturalSelectionTargets,
+      );
+      const first = assessments[0];
+      if (first === undefined) return undefined;
+      const nextKeys = [
+        ...new Set(assessments.flatMap((assessment) => assessment.nextTargetTraitKeys)),
+      ];
+      return Object.freeze({
+        kind: 'naturalSelection' as const,
+        slotCount: selectedDisposition.levelCount,
+        complete: assessments.every((assessment) => assessment.complete),
+        supported: assessments.every((assessment) => assessment.legal),
+        nextTargetCandidates: outcomeCandidates(
+          nextKeys,
+          assessments.map((assessment) => assessment.nextTargetTraitKeys),
+          () => false,
+          true,
+          1,
+        ),
+      });
+    }
+    return undefined;
+  })();
   return Object.freeze({
     kind: 'echoLastRunBoonDomain',
     result: Object.freeze({
       candidates,
+      ...(selectedCarrier === undefined ? {} : { selectedCarrier }),
     }),
+  });
+}
+
+function allTogetherSetResult(
+  catalog: Catalog,
+  capability: TraitOfferCandidateCapability,
+  value: import('../../authored-project/traits').AuthoredTraitOfferTraits,
+  optionKey: import('../../authored-project/traits').TraitOptionKey,
+  setKey: import('../../catalog-schema').DirectTraitSetKey,
+) {
+  const branches = capability.allTogetherSet(value, optionKey, setKey);
+  if (branches[0] === undefined) return undefined;
+  const option = value.options[optionIndex(optionKey)];
+  const selected = option?.allTogetherResult?.[setKey];
+  const declaration = option === undefined ? undefined : catalog.traits.byKey[option.traitKey];
+  const set =
+    declaration?.selectedDisposition.kind === 'directTraitSets'
+      ? declaration.selectedDisposition.sets.find((candidate) => candidate.key === setKey)
+      : undefined;
+  const values: (string | null)[] = [
+    ...(set?.traitKeys ?? []),
+    ...(branches.some((branch) => branch.includes(null)) || selected === null ? [null] : []),
+  ].filter(
+    (candidate, index, all) =>
+      all.indexOf(candidate) === index &&
+      (branches.some((branch) => branch.includes(candidate)) || candidate === selected),
+  );
+  return Object.freeze({
+    setKey,
+    candidates: outcomeCandidates(values, branches, (candidate) => candidate === selected, true, 1),
   });
 }
 
@@ -338,37 +445,18 @@ export function evaluateAllTogetherSetDomain(
 ): AllTogetherSetDomainEvaluation {
   const capability = candidateArtifacts?.at(query.trait);
   if (capability === undefined) return unavailableForTraitOffer(evaluation, query.trait);
-  const branches = capability.allTogetherSet(query.value, query.optionKey, query.setKey);
-  const first = branches[0];
-  if (first === undefined) return unavailableForTraitOffer(evaluation, query.trait);
-  const option =
-    query.value.kind === 'traits' ? query.value.options[optionIndex(query.optionKey)] : undefined;
-  const selected = option?.allTogetherResult?.[query.setKey];
-  const declaration = option === undefined ? undefined : catalog.traits.byKey[option.traitKey];
-  const set =
-    declaration?.selectedDisposition.kind === 'directTraitSets'
-      ? declaration.selectedDisposition.sets.find((candidate) => candidate.key === query.setKey)
-      : undefined;
-  const values: (string | null)[] = [
-    ...(set?.traitKeys ?? []),
-    ...(branches.some((branch) => branch.includes(null)) || selected === null ? [null] : []),
-  ].filter(
-    (value, index, all) =>
-      all.indexOf(value) === index &&
-      (branches.some((branch) => branch.includes(value)) || value === selected),
+  if (query.value.kind !== 'traits') return unavailableForTraitOffer(evaluation, query.trait);
+  const result = allTogetherSetResult(
+    catalog,
+    capability,
+    query.value,
+    query.optionKey,
+    query.setKey,
   );
+  if (result === undefined) return unavailableForTraitOffer(evaluation, query.trait);
   return Object.freeze({
     kind: 'allTogetherSetDomain',
-    result: Object.freeze({
-      setKey: query.setKey,
-      candidates: outcomeCandidates<string | null>(
-        values,
-        branches,
-        (value) => value === selected,
-        true,
-        1,
-      ),
-    }),
+    result,
   });
 }
 

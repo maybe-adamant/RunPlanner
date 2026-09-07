@@ -20,6 +20,7 @@ import {
   createRouteStartKeepsakeSelectionAddress,
   semanticAddressKey,
   createTraitOfferAddress,
+  type AuthoredEchoLastRunBoonOffer,
   type AuthoredTraitOfferTraits,
 } from '../../src/authored-project';
 import {
@@ -200,6 +201,74 @@ function naturalSelectionProjection(selected: boolean) {
   });
 }
 
+function bridalGlowProjection() {
+  const assembly = simulateProjectAssembly(
+    catalog,
+    authorLegalTraitOffers(createCompleteFGProject()),
+  );
+  const biome = assembly.evaluation.route.biomes[0];
+  if (biome?.authoring !== 'complete' || biome.validity !== 'valid')
+    throw new Error('fixture lacks a complete-valid execution biome');
+  const source = biome.rewards.selectedTraitOffers.find(
+    (candidate) => candidate.offer.kind === 'traits',
+  );
+  if (source === undefined) throw new Error('fixture lacks an ordinary selected trait offer');
+  const targetTraitKey = 'ApolloWeaponBoon';
+  const offer: AuthoredTraitOfferTraits = Object.freeze({
+    kind: 'traits',
+    giverKey: 'Hera',
+    options: Object.freeze([
+      Object.freeze({
+        traitKey: 'BoonDecayBoon',
+        rarity: 'Epic' as const,
+        targetTraitKey,
+      }),
+      Object.freeze({ traitKey: 'HeraCastBoon', rarity: 'Common' as const }),
+      Object.freeze({ traitKey: 'HeraSprintBoon', rarity: 'Common' as const }),
+    ]) as AuthoredTraitOfferTraits['options'],
+    selectedOptionKey: 'option1',
+  });
+  return Object.freeze({
+    ...biome,
+    rewards: Object.freeze({
+      ...biome.rewards,
+      selectedTraitOffers: Object.freeze(
+        biome.rewards.selectedTraitOffers.map((candidate) =>
+          candidate === source
+            ? Object.freeze({
+                ...candidate,
+                offer,
+                branches: Object.freeze(
+                  candidate.branches.map((branch) =>
+                    Object.freeze({
+                      ...branch,
+                      targetedAcquisition: Object.freeze({
+                        applies: true,
+                        legal: true,
+                        sourceTraitKey: 'BoonDecayBoon',
+                        targetTraitKey,
+                        findings: Object.freeze([]),
+                        transition: Object.freeze({
+                          kind: 'promoteGodTraitToHeroic' as const,
+                          sourceTraitKey: 'BoonDecayBoon',
+                          targetTraitKey,
+                          oldRarity: 'Epic' as const,
+                          newRarity: 'Heroic' as const,
+                          oldLevel: 1,
+                          newLevel: 4,
+                        }),
+                      }),
+                    }),
+                  ),
+                ),
+              })
+            : candidate,
+        ),
+      ),
+    }),
+  });
+}
+
 function concaveStoneProjection() {
   const assembly = simulateProjectAssembly(
     catalog,
@@ -238,6 +307,114 @@ function concaveStoneProjection() {
       selectedTraitOffers: Object.freeze(
         biome.rewards.selectedTraitOffers.map((candidate) =>
           candidate === source ? Object.freeze({ ...candidate, offer }) : candidate,
+        ),
+      ),
+    }),
+  });
+}
+
+function concaveStoneBridalGlowProjection() {
+  const biome = concaveStoneProjection();
+  return Object.freeze({
+    ...biome,
+    rewards: Object.freeze({
+      ...biome.rewards,
+      selectedTraitOffers: Object.freeze(
+        biome.rewards.selectedTraitOffers.map((candidate) => {
+          if (
+            candidate.offer.kind !== 'traits' ||
+            candidate.offer.concaveStoneResult?.kind !== 'proc'
+          )
+            return candidate;
+          return Object.freeze({
+            ...candidate,
+            offer: Object.freeze({
+              ...candidate.offer,
+              options: Object.freeze([
+                candidate.offer.options[0]!,
+                Object.freeze({
+                  traitKey: 'BoonDecayBoon',
+                  rarity: 'Epic' as const,
+                  targetTraitKey: 'ApolloWeaponBoon',
+                }),
+                Object.freeze({ traitKey: 'HeraCastBoon', rarity: 'Common' as const }),
+              ]) as AuthoredTraitOfferTraits['options'],
+            }),
+          });
+        }),
+      ),
+    }),
+  });
+}
+
+function concaveStoneNaturalSelectionProjection() {
+  const biome = concaveStoneProjection();
+  return Object.freeze({
+    ...biome,
+    rewards: Object.freeze({
+      ...biome.rewards,
+      selectedTraitOffers: Object.freeze(
+        biome.rewards.selectedTraitOffers.map((candidate) =>
+          candidate.offer.kind === 'traits' && candidate.offer.concaveStoneResult?.kind === 'proc'
+            ? Object.freeze({
+                ...candidate,
+                offer: Object.freeze({
+                  ...candidate.offer,
+                  concaveStoneResult: Object.freeze({
+                    kind: 'proc' as const,
+                    optionKey: 'option3' as const,
+                  }),
+                }),
+              })
+            : candidate,
+        ),
+      ),
+    }),
+  });
+}
+
+function echoCarrierProjection(echoLastRunBoon: AuthoredEchoLastRunBoonOffer) {
+  const assembly = simulateProjectAssembly(
+    catalog,
+    authorLegalTraitOffers(createCompleteFGProject()),
+  );
+  const biome = assembly.evaluation.route.biomes[0];
+  if (biome?.authoring !== 'complete' || biome.validity !== 'valid')
+    throw new Error('fixture lacks a complete-valid execution biome');
+  const source = biome.rewards.selectedTraitOffers.find(
+    (candidate) => candidate.offer.kind === 'traits',
+  );
+  if (source === undefined) throw new Error('fixture lacks an ordinary selected trait offer');
+  const offer: AuthoredTraitOfferTraits = Object.freeze({
+    kind: 'traits',
+    giverKey: 'Echo',
+    options: Object.freeze([
+      Object.freeze({
+        traitKey: 'EchoLastRunBoon',
+        echoLastRunBoon,
+      }),
+      Object.freeze({ traitKey: 'DiminishingDodgeBoon' }),
+      Object.freeze({ traitKey: 'DiminishingHealthBoon' }),
+    ]) as AuthoredTraitOfferTraits['options'],
+    selectedOptionKey: 'option1',
+  });
+  return Object.freeze({
+    ...biome,
+    rewards: Object.freeze({
+      ...biome.rewards,
+      selectedTraitOffers: Object.freeze(
+        biome.rewards.selectedTraitOffers.map((candidate) =>
+          candidate === source
+            ? Object.freeze({
+                ...candidate,
+                offer,
+                branches: Object.freeze(
+                  candidate.branches.map((branch) =>
+                    Object.freeze({ ...branch, effectiveEchoLastRunBoon: echoLastRunBoon }),
+                  ),
+                ),
+              })
+            : candidate,
         ),
       ),
     }),
@@ -641,7 +818,7 @@ describe('execution-plan compiler and codec', () => {
     expect(occurrence?.roomExitConformance?.facts).toContainEqual({ kind: 'keepsakeEffects' });
   });
 
-  it('retains All Together maps on every carrying option from a complete-valid occurrence', () => {
+  it('publishes All Together only when its carrying option can execute', () => {
     const selectedBiome = allTogetherProjection(true);
     const selected = orderedExecutionRooms([selectedBiome]).flatMap((room) =>
       executionTimelineTransactions(
@@ -676,7 +853,7 @@ describe('execution-plan compiler and codec', () => {
       .flatMap((role) => (role.traitOffer?.kind === 'traits' ? [role.traitOffer] : []))
       .find((offer) => offer.options.some((option) => option.key === 'AllElementalBoon'));
     if (dormantOffer === undefined) throw new Error('dormant All Together offer is missing');
-    expect(dormantOffer.options[1]?.allTogetherResult).toEqual(allTogetherResult);
+    expect(dormantOffer.options[1]).not.toHaveProperty('allTogetherResult');
   });
 
   it('publishes proc/noProc only on the source role while an authored Sea Star child remains unpicked', () => {
@@ -735,7 +912,7 @@ describe('execution-plan compiler and codec', () => {
     }
   });
 
-  it('retains Natural Selection sequences on every carrying option from a complete-valid occurrence', () => {
+  it('publishes Natural Selection only when its carrying option can execute', () => {
     const selectedBiome = naturalSelectionProjection(true);
     const selectedOffer = orderedExecutionRooms([selectedBiome])
       .flatMap((room) =>
@@ -772,11 +949,29 @@ describe('execution-plan compiler and codec', () => {
       .flatMap((transaction) => (transaction.kind === 'acquisition' ? transaction.roles : []))
       .flatMap((role) => (role.traitOffer?.kind === 'traits' ? [role.traitOffer] : []))
       .find((offer) => offer.options.some((option) => option.key === 'GoodStuffBoon'));
-    expect(dormantOffer?.options[1]?.naturalSelectionTargets).toEqual([
-      'ApolloWeaponBoon',
-      'ApolloSpecialBoon',
-      'ApolloWeaponBoon',
-    ]);
+    expect(dormantOffer?.options[1]).not.toHaveProperty('naturalSelectionTargets');
+  });
+
+  it('publishes Bridal Glow target only on its selected source option', () => {
+    const biome = bridalGlowProjection();
+    const offer = orderedExecutionRooms([biome])
+      .flatMap((room) =>
+        executionTimelineTransactions(
+          room,
+          biome,
+          mergePlannerTimelineFacts(
+            room.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
+            biome.rewards.timelineFacts,
+          ),
+        ),
+      )
+      .flatMap((transaction) => (transaction.kind === 'acquisition' ? transaction.roles : []))
+      .flatMap((role) => (role.traitOffer?.kind === 'traits' ? [role.traitOffer] : []))
+      .find((candidate) => candidate.options.some((option) => option.key === 'BoonDecayBoon'));
+    if (offer === undefined) throw new Error('Bridal Glow offer is missing');
+    expect(offer.options[0]?.targetTraitKey).toBe('ApolloWeaponBoon');
+    expect(offer.options[1]).not.toHaveProperty('targetTraitKey');
+    expect(offer.options[2]).not.toHaveProperty('targetTraitKey');
   });
 
   it('publishes the frozen Stone result beside its source option without dropping residual consequences', () => {
@@ -798,7 +993,122 @@ describe('execution-plan compiler and codec', () => {
     if (offer === undefined) throw new Error('Concave Stone offer is missing');
     expect(offer.options[0]?.concaveStoneResult).toEqual({ kind: 'proc', optionKey: 'option2' });
     expect(offer.options[1]?.allTogetherResult).toEqual(allTogetherResult);
-    expect(offer.options[2]?.naturalSelectionTargets).toEqual(['ApolloWeaponBoon']);
+    expect(offer.options[2]).not.toHaveProperty('naturalSelectionTargets');
+  });
+
+  it('publishes Bridal Glow target when Concave Stone selects it as the residual', () => {
+    const biome = concaveStoneBridalGlowProjection();
+    const offer = orderedExecutionRooms([biome])
+      .flatMap((room) =>
+        executionTimelineTransactions(
+          room,
+          biome,
+          mergePlannerTimelineFacts(
+            room.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
+            biome.rewards.timelineFacts,
+          ),
+        ),
+      )
+      .flatMap((transaction) => (transaction.kind === 'acquisition' ? transaction.roles : []))
+      .flatMap((role) => (role.traitOffer?.kind === 'traits' ? [role.traitOffer] : []))
+      .find((candidate) => candidate.options.some((option) => option.concaveStoneResult));
+    if (offer === undefined) throw new Error('Concave Stone Bridal Glow offer is missing');
+    expect(offer.options[1]).toMatchObject({
+      key: 'BoonDecayBoon',
+      targetTraitKey: 'ApolloWeaponBoon',
+    });
+  });
+
+  it('publishes Natural Selection targets when Concave Stone selects it as the residual', () => {
+    const biome = concaveStoneNaturalSelectionProjection();
+    const offer = orderedExecutionRooms([biome])
+      .flatMap((room) =>
+        executionTimelineTransactions(
+          room,
+          biome,
+          mergePlannerTimelineFacts(
+            room.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
+            biome.rewards.timelineFacts,
+          ),
+        ),
+      )
+      .flatMap((transaction) => (transaction.kind === 'acquisition' ? transaction.roles : []))
+      .flatMap((role) => (role.traitOffer?.kind === 'traits' ? [role.traitOffer] : []))
+      .find((candidate) => candidate.options.some((option) => option.concaveStoneResult));
+    if (offer === undefined) throw new Error('Concave Stone Natural Selection offer is missing');
+    expect(offer.options[2]).toMatchObject({
+      key: 'GoodStuffBoon',
+      naturalSelectionTargets: ['ApolloWeaponBoon'],
+    });
+  });
+
+  it('publishes each selected Echo nested carrier consequence at the execution boundary', () => {
+    const cases: readonly {
+      readonly child: AuthoredEchoLastRunBoonOffer;
+      readonly expected: Readonly<Record<string, unknown>>;
+    }[] = [
+      {
+        child: Object.freeze({
+          options: Object.freeze([
+            Object.freeze({
+              giverKey: 'Hera',
+              traitKey: 'BoonDecayBoon',
+              rarity: 'Epic',
+              targetTraitKey: 'ApolloWeaponBoon',
+            }),
+          ]) as AuthoredEchoLastRunBoonOffer['options'],
+          selectedOptionKey: 'option1',
+        }),
+        expected: { targetTraitKey: 'ApolloWeaponBoon' },
+      },
+      {
+        child: Object.freeze({
+          options: Object.freeze([
+            Object.freeze({
+              giverKey: 'Hera',
+              traitKey: 'AllElementalBoon',
+              rarity: 'Legendary',
+              allTogetherResult,
+            }),
+          ]) as AuthoredEchoLastRunBoonOffer['options'],
+          selectedOptionKey: 'option1',
+        }),
+        expected: { allTogetherResult },
+      },
+      {
+        child: Object.freeze({
+          options: Object.freeze([
+            Object.freeze({
+              giverKey: 'Demeter',
+              traitKey: 'GoodStuffBoon',
+              rarity: 'Duo',
+              naturalSelectionTargets: Object.freeze(['ApolloWeaponBoon']),
+            }),
+          ]) as AuthoredEchoLastRunBoonOffer['options'],
+          selectedOptionKey: 'option1',
+        }),
+        expected: { naturalSelectionTargets: ['ApolloWeaponBoon'] },
+      },
+    ];
+    for (const { child, expected } of cases) {
+      const biome = echoCarrierProjection(child);
+      const offer = orderedExecutionRooms([biome])
+        .flatMap((room) =>
+          executionTimelineTransactions(
+            room,
+            biome,
+            mergePlannerTimelineFacts(
+              room.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
+              biome.rewards.timelineFacts,
+            ),
+          ),
+        )
+        .flatMap((transaction) => (transaction.kind === 'acquisition' ? transaction.roles : []))
+        .flatMap((role) => (role.traitOffer?.kind === 'traits' ? [role.traitOffer] : []))
+        .find((candidate) => candidate.giver === 'Echo');
+      if (offer === undefined) throw new Error('Echo carrier offer is missing');
+      expect(offer.options[0]?.echoLastRunBoon?.options[0]).toMatchObject(expected);
+    }
   });
 
   it('rejects ambiguous run-start Arcana and Hex identities before fingerprint validation', () => {
@@ -934,6 +1244,24 @@ describe('execution-plan compiler and codec', () => {
         'offer',
       ),
     ).toThrow(ExecutionPlanCodecError);
+  });
+
+  it('strictly decodes a selected targeted-acquisition trait', () => {
+    const offer = {
+      kind: 'traits',
+      giver: 'Hera',
+      options: [
+        { key: 'BoonDecayBoon', rarity: 'Epic', targetTraitKey: 'ApolloSprintBoon' },
+        { key: 'HeraCastBoon', rarity: 'Common' },
+      ],
+      selected: 'option1',
+    };
+    expect(decodeExecutionTraitOffer(offer, 'offer')).toMatchObject({
+      options: [{ targetTraitKey: 'ApolloSprintBoon' }, {}],
+    });
+    expect(() => decodeExecutionTraitOffer({ ...offer, selected: 'option2' }, 'offer')).toThrow(
+      ExecutionPlanCodecError,
+    );
   });
 
   it('requires the complete three-row Hex contract only for SpellDrop offers', () => {
@@ -1091,7 +1419,17 @@ describe('execution-plan compiler and codec', () => {
           echoLastRunBoon: {
             options: [
               { giver: 'Hera', key: 'HeraWeaponBoon', rarity: 'Rare' },
-              { giver: 'Zeus', key: 'ZeusSpecialBoon', rarity: 'Epic' },
+              {
+                giver: 'Zeus',
+                key: 'ZeusSpecialBoon',
+                rarity: 'Epic',
+                allTogetherResult: {
+                  earth: 'Earth',
+                  fire: 'Fire',
+                  air: 'Air',
+                  water: 'Water',
+                },
+              },
             ],
             selected: 'option2',
           },
@@ -1103,6 +1441,39 @@ describe('execution-plan compiler and codec', () => {
     const decodedBoon = decodeExecutionTraitOffer(boon, 'Echo offer');
     if (decodedBoon.kind !== 'traits') throw new Error('Echo must decode as a trait offer');
     expect(decodedBoon.options[0]?.echoLastRunBoon?.options).toHaveLength(2);
+    expect(decodedBoon.options[0]?.echoLastRunBoon?.options[1]?.allTogetherResult).toEqual({
+      earth: 'Earth',
+      fire: 'Fire',
+      air: 'Air',
+      water: 'Water',
+    });
+    const nonselectedCarrier = {
+      ...boon,
+      options: [
+        {
+          ...boon.options[0],
+          echoLastRunBoon: {
+            ...boon.options[0]!.echoLastRunBoon,
+            options: [
+              {
+                ...boon.options[0]!.echoLastRunBoon!.options[0],
+                allTogetherResult: {
+                  earth: 'Earth',
+                  fire: 'Fire',
+                  air: 'Air',
+                  water: 'Water',
+                },
+              },
+              boon.options[0]!.echoLastRunBoon!.options[1],
+            ],
+          },
+        },
+        boon.options[1],
+      ],
+    };
+    expect(() => decodeExecutionTraitOffer(nonselectedCarrier, 'Echo offer')).toThrow(
+      ExecutionPlanCodecError,
+    );
     expect(() => decodeExecutionTraitOffer({ ...boon, selected: 'option2' }, 'Echo offer')).toThrow(
       ExecutionPlanCodecError,
     );

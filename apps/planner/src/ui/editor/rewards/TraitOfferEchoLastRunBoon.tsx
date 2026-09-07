@@ -1,6 +1,8 @@
 import {
   optionIndex,
   semanticAddressKey,
+  type AuthoredAllTogetherResult,
+  type AuthoredEchoLastRunBoonOption,
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
@@ -10,6 +12,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
 import type {
   WorkspaceEchoLastRunBoonDomain,
+  WorkspaceEchoLastRunBoonCarrierDomain,
   WorkspaceEchoLastRunBoonTraitIdentity,
   WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace';
@@ -24,6 +27,8 @@ interface EchoLastRunBoonDraftRow {
   readonly identity?: WorkspaceEchoLastRunBoonTraitIdentity;
   readonly rarity?: TraitRarity;
   readonly targetTraitKey?: string;
+  readonly allTogetherResult?: AuthoredAllTogetherResult;
+  readonly naturalSelectionTargets?: AuthoredEchoLastRunBoonOption['naturalSelectionTargets'];
 }
 
 function rarityLabel(rarity: TraitRarity): string {
@@ -38,6 +43,110 @@ function pickerValueLabel<T>(model: ContextualPickerModel<T>, value: T): string 
 
 function pickerItems<T>(model: ContextualPickerModel<T>) {
   return model.sections.flatMap((section) => section.items);
+}
+
+function EchoAllTogetherOutcome({
+  controlId,
+  domain,
+  value,
+  onComplete,
+}: {
+  readonly controlId: string;
+  readonly domain: Extract<WorkspaceEchoLastRunBoonCarrierDomain, { readonly kind: 'allTogether' }>;
+  readonly value?: AuthoredAllTogetherResult;
+  readonly onComplete: (value: AuthoredAllTogetherResult) => void;
+}) {
+  const [draft, setDraft] = useState<Partial<AuthoredAllTogetherResult>>(value ?? {});
+  return (
+    <fieldset className="trait-selected-outcome-detail" aria-label="Echo All Together outcome">
+      <legend>Elemental grants</legend>
+      {domain.sets.map((set) => {
+        const selected = draft[set.setKey];
+        return (
+          <ContextualPicker
+            ariaLabel={`Echo All Together ${set.setKey} grant`}
+            id={`${controlId}-all-together-${set.setKey}`}
+            key={set.setKey}
+            label={`${set.setKey[0]!.toUpperCase()}${set.setKey.slice(1)}`}
+            model={set.picker}
+            onSelect={(traitKey) => {
+              const next = Object.freeze({ ...draft, [set.setKey]: traitKey });
+              setDraft(next);
+              if (domain.sets.every((candidate) => Object.hasOwn(next, candidate.setKey)))
+                onComplete(next as AuthoredAllTogetherResult);
+            }}
+            placeholder="Choose a grant"
+            {...(Object.hasOwn(draft, set.setKey)
+              ? {
+                  triggerLabel:
+                    pickerValueLabel(set.picker, selected ?? null) ??
+                    (selected === null ? 'No grant (set exhausted)' : String(selected)),
+                }
+              : {})}
+          />
+        );
+      })}
+    </fieldset>
+  );
+}
+
+function EchoNaturalSelectionOutcome({
+  controlId,
+  domain,
+  editing,
+  targets,
+  onEditingChange,
+  onChange,
+}: {
+  readonly controlId: string;
+  readonly domain: Extract<
+    WorkspaceEchoLastRunBoonCarrierDomain,
+    { readonly kind: 'naturalSelection' }
+  >;
+  readonly editing: boolean;
+  readonly targets: readonly string[];
+  readonly onEditingChange: (editing: boolean) => void;
+  readonly onChange: (targets: readonly string[] | undefined) => void;
+}) {
+  useEffect(() => {
+    if (domain.complete && editing) onEditingChange(false);
+  }, [domain.complete, editing, onEditingChange]);
+  return (
+    <fieldset className="trait-selected-outcome-detail" aria-label="Echo Natural Selection outcome">
+      <legend>Natural Selection targets</legend>
+      <p>
+        {targets.length === 0
+          ? 'Targets unspecified'
+          : targets.map((target) => domain.traitLabel(target)).join(' → ')}
+      </p>
+      {!editing ? (
+        <button
+          className="quiet-action action-compact"
+          onClick={() => {
+            onEditingChange(true);
+            onChange(undefined);
+          }}
+          type="button"
+        >
+          Choose all targets
+        </button>
+      ) : (
+        <ContextualPicker
+          ariaLabel="Echo Natural Selection next target"
+          closeOnSelect={false}
+          id={`${controlId}-natural-selection`}
+          label={`Target ${Math.min(targets.length + 1, domain.slotCount)} of ${domain.slotCount}`}
+          model={domain.picker}
+          onOpenChange={(open) => {
+            if (!open) onEditingChange(false);
+          }}
+          onSelect={(target) => onChange(Object.freeze([...targets, target]))}
+          open={true}
+          placeholder="Choose an eligible core trait"
+        />
+      )}
+    </fieldset>
+  );
 }
 
 function EchoLastRunBoonChoiceEditor({
@@ -67,6 +176,12 @@ function EchoLastRunBoonChoiceEditor({
               ...(option.targetTraitKey === undefined
                 ? {}
                 : { targetTraitKey: option.targetTraitKey }),
+              ...(option.allTogetherResult === undefined
+                ? {}
+                : { allTogetherResult: option.allTogetherResult }),
+              ...(option.naturalSelectionTargets === undefined
+                ? {}
+                : { naturalSelectionTargets: option.naturalSelectionTargets }),
             }),
           ),
         ),
@@ -74,6 +189,7 @@ function EchoLastRunBoonChoiceEditor({
   const [selectedIndex, setSelectedIndex] = useState<number>(() =>
     value === undefined ? 0 : optionIndex(value.selectedOptionKey),
   );
+  const [editingNaturalSelection, setEditingNaturalSelection] = useState(false);
   const selectedRow = rows[selectedIndex];
   const selectedComplete =
     selectedRow?.identity !== undefined && selectedRow.rarity !== undefined
@@ -84,11 +200,33 @@ function EchoLastRunBoonChoiceEditor({
           ...(selectedRow.targetTraitKey === undefined
             ? {}
             : { targetTraitKey: selectedRow.targetTraitKey }),
+          ...(selectedRow.allTogetherResult === undefined
+            ? {}
+            : { allTogetherResult: selectedRow.allTogetherResult }),
+          ...(selectedRow.naturalSelectionTargets === undefined
+            ? {}
+            : { naturalSelectionTargets: selectedRow.naturalSelectionTargets }),
         })
       : undefined;
   const selectedNeedsTarget =
     selectedRow?.identity !== undefined && domain.targetRequiredFor(selectedRow.identity);
   const draftSupport = domain.draftSupportFor(rows, selectedIndex);
+  const selectedCarrierKind =
+    selectedRow?.identity === undefined ? undefined : domain.carrierKindFor(selectedRow.identity);
+  const carrierReady = selectedComplete !== undefined && selectedCarrierKind !== undefined;
+  const carrierLoadable = useMemo(
+    () => (carrierReady ? domain.carrierForDraft(rows, selectedIndex) : undefined),
+    [carrierReady, domain, rows, selectedIndex],
+  );
+  const carrierController = useWorkspaceInteractionController<
+    WorkspaceEchoLastRunBoonCarrierDomain | undefined
+  >();
+  const carrierLoaded = carrierController.observe(carrierLoadable);
+  useEffect(() => {
+    if (carrierLoadable !== undefined) carrierController.activate(carrierLoadable);
+  }, [carrierController, carrierLoadable]);
+  const carrierComplete =
+    selectedCarrierKind === undefined || carrierLoaded.result?.complete === true;
 
   const updateRow = (index: number, next: EchoLastRunBoonDraftRow): void => {
     setRows((current) =>
@@ -145,6 +283,7 @@ function EchoLastRunBoonChoiceEditor({
                 label="Trait"
                 model={traitPicker}
                 onSelect={(identity) => {
+                  setEditingNaturalSelection(false);
                   const nextRarityPicker = domain.rarityPickerFor(identity);
                   const availableRarities = pickerItems(nextRarityPicker).filter(
                     (item) => item.state !== 'impossible',
@@ -185,7 +324,10 @@ function EchoLastRunBoonChoiceEditor({
                 <input
                   checked={selectedIndex === index}
                   name="echo-last-run-selected"
-                  onChange={() => setSelectedIndex(index)}
+                  onChange={() => {
+                    setEditingNaturalSelection(false);
+                    setSelectedIndex(index);
+                  }}
                   type="radio"
                 />
                 Echo grants this outcome
@@ -194,6 +336,7 @@ function EchoLastRunBoonChoiceEditor({
                 <button
                   className="quiet-action action-compact"
                   onClick={() => {
+                    setEditingNaturalSelection(false);
                     setRows((current) =>
                       Object.freeze(current.filter((_, rowIndex) => rowIndex !== index)),
                     );
@@ -234,6 +377,45 @@ function EchoLastRunBoonChoiceEditor({
           />
         </div>
       )}
+      {selectedCarrierKind === 'allTogether' && carrierLoaded.result?.kind === 'allTogether' ? (
+        <EchoAllTogetherOutcome
+          controlId={controlId}
+          domain={carrierLoaded.result}
+          key={`${selectedIndex}:${selectedRow?.identity?.traitKey ?? 'unselected'}`}
+          {...(selectedRow?.allTogetherResult === undefined
+            ? {}
+            : { value: selectedRow.allTogetherResult })}
+          onComplete={(allTogetherResult) =>
+            updateRow(selectedIndex, Object.freeze({ ...selectedRow, allTogetherResult }))
+          }
+        />
+      ) : null}
+      {selectedCarrierKind === 'naturalSelection' &&
+      carrierLoaded.result?.kind === 'naturalSelection' &&
+      selectedRow !== undefined ? (
+        <EchoNaturalSelectionOutcome
+          controlId={controlId}
+          domain={carrierLoaded.result}
+          editing={editingNaturalSelection}
+          onEditingChange={setEditingNaturalSelection}
+          targets={selectedRow.naturalSelectionTargets ?? Object.freeze([])}
+          onChange={(targets) => {
+            if (targets === undefined) {
+              const { naturalSelectionTargets: _removed, ...remaining } = selectedRow;
+              void _removed;
+              updateRow(selectedIndex, Object.freeze(remaining));
+            } else
+              updateRow(
+                selectedIndex,
+                Object.freeze({
+                  ...selectedRow,
+                  naturalSelectionTargets:
+                    targets as AuthoredEchoLastRunBoonOption['naturalSelectionTargets'],
+                }),
+              );
+          }}
+        />
+      ) : null}
       {!draftSupport.canAppend || !rows.every((row) => row.identity && row.rarity) ? null : (
         <button
           className="quiet-action action-compact"
@@ -246,7 +428,7 @@ function EchoLastRunBoonChoiceEditor({
       <div className="echo-last-run-choice-actions">
         <button
           className="primary-action"
-          disabled={!draftSupport.complete}
+          disabled={!draftSupport.complete || !carrierComplete}
           onClick={() => {
             if (!draftSupport.complete) return;
             const options = rows.map((row) =>
@@ -255,6 +437,12 @@ function EchoLastRunBoonChoiceEditor({
                 traitKey: row.identity!.traitKey,
                 rarity: row.rarity!,
                 ...(row.targetTraitKey === undefined ? {} : { targetTraitKey: row.targetTraitKey }),
+                ...(row.allTogetherResult === undefined
+                  ? {}
+                  : { allTogetherResult: row.allTogetherResult }),
+                ...(row.naturalSelectionTargets === undefined
+                  ? {}
+                  : { naturalSelectionTargets: row.naturalSelectionTargets }),
               }),
             ) as unknown as AuthoredEchoLastRunBoonOffer['options'];
             onComplete(

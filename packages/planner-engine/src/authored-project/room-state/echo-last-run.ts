@@ -36,6 +36,7 @@ export function decodeEchoLastRunBoon(
         'rarity',
         ...(option.targetTraitKey === undefined ? [] : ['targetTraitKey']),
         ...(option.naturalSelectionTargets === undefined ? [] : ['naturalSelectionTargets']),
+        ...(option.allTogetherResult === undefined ? [] : ['allTogetherResult']),
       ],
       optionPath,
     );
@@ -66,9 +67,25 @@ export function decodeEchoLastRunBoon(
                     `${optionPath}.naturalSelectionTargets[${targetIndex}]`,
                   ),
                 ),
-              ) as AuthoredEchoLastRunBoonOption['naturalSelectionTargets'],
+              ) as NonNullable<AuthoredEchoLastRunBoonOption['naturalSelectionTargets']>,
             };
           })()),
+      ...(option.allTogetherResult === undefined
+        ? {}
+        : {
+            allTogetherResult: Object.freeze(
+              Object.fromEntries(
+                Object.entries(
+                  expectRecord(option.allTogetherResult, `${optionPath}.allTogetherResult`),
+                ).map(([key, selected]) => [
+                  key,
+                  selected === null
+                    ? null
+                    : expectNonBlankString(selected, `${optionPath}.allTogetherResult.${key}`),
+                ]),
+              ),
+            ) as NonNullable<AuthoredEchoLastRunBoonOption['allTogetherResult']>,
+          }),
     }) satisfies AuthoredEchoLastRunBoonOption;
   });
   const selectedOptionKey = expectString(

@@ -19,7 +19,7 @@ import type { RunStateAvailability, RunStateSnapshot } from './run-state';
 import type { ArcanaFearState } from '../arcana-fear';
 import type { KeepsakeState } from '../keepsakes';
 import type { EncounterPhaseAddress } from '../../authored-project/addresses';
-import type { TraitElement, TraitRarity } from '../../catalog-schema';
+import type { TraitRarity } from '../../catalog-schema';
 import type { NemesisRandomEventAddress } from '../../authored-project/addresses';
 import type { PlannerTimelineFacts } from '../timeline-facts';
 import type { StygianWellEffect } from '../stygian-well';

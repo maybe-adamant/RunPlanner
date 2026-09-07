@@ -250,17 +250,38 @@ added. Its optional currency effect is native pass-through. It is not proven
 by the ordinary visible-trait rarity/level checks and does not become a direct
 consumable carrier.
 
+## Selected-trait consequence inventory
+
+Only three ordinary selected traits carry a volatile outcome that must be
+authored before their native acquire function runs. All three use the same
+option-owned result on every acquisition path; the executor changes only the
+native contact that consumes it.
+
+| Trait             | Authored consequence                                                  | Native steering contact                                                                       | Direct offer | Concave Stone residual          | Echo Boon Boon Boon                    |
+| ----------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------ | ------------------------------- | -------------------------------------- |
+| Bridal Glow       | One equipped trait key                                                | `AddRarityToTraits.ForceUpgrade` inside `HeraSuperchargeBoon`                                 | Same result  | Same result on the residual row | Same result on the selected nested row |
+| All Together      | One grant or exhausted `null` for each of Earth, Fire, Air, and Water | Four selections made by `GrantBoons`                                                          | Same result  | Same result on the residual row | Same result on the selected nested row |
+| Natural Selection | Ordered sequence of one to eight successful core-slot level targets   | Initial `FYShuffle` plus the observed `IncreaseTraitLevel` sequence inside `DistributeLevels` | Same result  | Same result on the residual row | Same result on the selected nested row |
+
+The remaining selected-trait dispositions are not missing instances of this
+carrier contract. Circe and Icarus already own dedicated option results and
+native contacts. Echo Pom owns its dedicated greatest-level target. Produced
+pickups become independent acquisitions once native code creates them. Ransom,
+Proper Upbringing, keepsake activation, and similar deterministic effects stay
+native-authoritative and are checked through later state rather than copied
+into another selected-option result.
+
 ## Bounded alternative paths
 
-| Path                                                                | Disposition                                                                                                                                        |
-| ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `UseLoot` rejects before pickup                                     | No acquisition begins. Native behavior continues.                                                                                                  |
-| Screen opens and authored selection occurs                          | Complete after the exact native selection callback returns.                                                                                        |
-| Wrong option is selected                                            | Let native selection finish, record player divergence, and stop steering.                                                                          |
-| Bound screen is rerolled                                            | Let native reroll finish and do not reinstall the initial authored offer; the exact authored terminal or room-exit conformance reports divergence. |
-| Calling Card or provider rarification                               | Let native behavior run without observing individual button presses; room-exit conformance owns the retained charge state.                         |
-| Concave Stone recursively invokes selection with `DoubleBoonChance` | Preserve the primary handle while the focused nested residual contact resolves; it is not a second primary terminal.                               |
-| Selection callback is observed again after completion               | Treat it as incidental native activity; never reuse the completed owner.                                                                           |
+| Path                                                                | Disposition                                                                                                                                                                                                        |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `UseLoot` rejects before pickup                                     | No acquisition begins. Native behavior continues.                                                                                                                                                                  |
+| Screen opens and authored selection occurs                          | Complete after the exact native selection callback returns.                                                                                                                                                        |
+| Wrong option is selected                                            | Let native selection finish, record player divergence, and stop steering.                                                                                                                                          |
+| Bound screen is rerolled                                            | Let native reroll finish and do not reinstall the initial authored offer; the exact authored terminal or room-exit conformance reports divergence.                                                                 |
+| Calling Card or provider rarification                               | Let native behavior run without observing individual button presses; room-exit conformance owns the retained charge state.                                                                                         |
+| Concave Stone recursively invokes selection with `DoubleBoonChance` | Preserve the primary handle while the focused nested residual contact resolves; the residual row carries its own Bridal Glow, Natural Selection, or All Together consequence and is not a second primary terminal. |
+| Selection callback is observed again after completion               | Treat it as incidental native activity; never reuse the completed owner.                                                                                                                                           |
 
 The reroll disposition is deliberate. The planner does not model reroll
 resources. Reapplying the initial authored rows would conceal the native reroll
@@ -284,7 +305,7 @@ cursor or producer inference:
 - screen callbacks recover their transaction through that bound loot;
 - owner completion remains shared across those handles.
 
-The current protocol-v24 product carries base rarity alongside effective
+The execution product carries base rarity alongside effective
 rarity, effective level, the selected-trait terminal, and room-exit keepsake
 conformance. No rarification-action wire shape or other planner semantic
 addition is justified by this audit.

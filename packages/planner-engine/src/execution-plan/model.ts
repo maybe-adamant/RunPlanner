@@ -8,7 +8,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 27 as const;
+export const EXECUTION_PROTOCOL_VERSION = 28 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
 
 export type ExecutionRunStateCount =
@@ -211,6 +211,7 @@ export interface ExecutionEchoLastRunBoonOffer {
     readonly lootHistorySource?: string;
     readonly targetTraitKey?: string;
     readonly naturalSelectionTargets?: readonly string[];
+    readonly allTogetherResult?: ExecutionAllTogetherResult;
   }[];
   readonly selected: ExecutionTraitOptionKey;
 }
@@ -233,6 +234,8 @@ export type ExecutionTraitOffer =
         readonly allTogetherResult?: ExecutionAllTogetherResult;
         /** Ordered successful increments produced inside Natural Selection's native distribution. */
         readonly naturalSelectionTargets?: readonly string[];
+        /** Exact equipped target selected by this trait's native acquisition effect. */
+        readonly targetTraitKey?: string;
         /** Frozen Concave Stone disposition owned by this selected source option. */
         readonly concaveStoneResult?: ExecutionConcaveStoneResult;
         /** Exact Arcana/Fear mutation selected by a Circe trait. */
