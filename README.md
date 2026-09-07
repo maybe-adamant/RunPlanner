@@ -41,7 +41,8 @@ Use the smallest authority that answers the question:
   [reward model](docs/design/REWARD_MODEL.md),
   [room lifecycle](docs/design/ROOM_LIFECYCLE_MODEL.md), and
   [simulation and validation](docs/design/SIMULATION_AND_VALIDATION.md) define
-  cross-cutting design.
+  cross-cutting design; [biome execution navigation](docs/design/BIOME_EXECUTION_NAVIGATION.md)
+  defines the normalized runtime structure of every fixed-route biome.
 - [Biome rules](docs/biomes/) contain the route authorities.
 - [Editor ownership](docs/design/EDITOR_MODEL.md), [contextual UX](docs/design/CONTEXTUAL_EDITOR_UX.md),
   and [structured workspace](docs/design/STRUCTURED_EDITOR_WORKSPACE.md) define
