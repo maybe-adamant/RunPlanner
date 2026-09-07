@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 77,
+  "schemaVersion": 78,
   "projectId": "golden-fg",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -2682,6 +2682,20 @@
                     }
                   },
                   "optional3": null
+                },
+                "spatial": {
+                  "entryStartPointId": 565481,
+                  "cagePointIdBySlot": {
+                    "cage1": 621502,
+                    "cage2": 622508,
+                    "cage3": 622860
+                  },
+                  "optionalPointIdBySlot": {
+                    "optional1": 572849,
+                    "optional2": 622840,
+                    "optional3": 736792
+                  },
+                  "nemesisPointId": null
                 }
               },
               "encounters": {
@@ -2845,6 +2859,19 @@
                       }
                     }
                   }
+                },
+                "spatial": {
+                  "entryStartPointId": 755837,
+                  "cagePointIdBySlot": {
+                    "cage1": 621502,
+                    "cage2": 715348,
+                    "cage3": 715375
+                  },
+                  "optionalPointIdBySlot": {
+                    "optional1": 572849,
+                    "optional2": 715349
+                  },
+                  "nemesisPointId": null
                 }
               },
               "encounters": {
@@ -2979,6 +3006,21 @@
                   "optional2": null,
                   "optional3": null,
                   "optional4": null
+                },
+                "spatial": {
+                  "entryStartPointId": 755842,
+                  "cagePointIdBySlot": {
+                    "cage1": 40055,
+                    "cage2": 568938,
+                    "cage3": 568943
+                  },
+                  "optionalPointIdBySlot": {
+                    "optional1": 686839,
+                    "optional2": 686840,
+                    "optional3": 686841,
+                    "optional4": 686910
+                  },
+                  "nemesisPointId": null
                 }
               },
               "encounters": {
@@ -3255,6 +3297,21 @@
                   },
                   "optional3": null,
                   "optional4": null
+                },
+                "spatial": {
+                  "entryStartPointId": 755863,
+                  "cagePointIdBySlot": {
+                    "cage1": 573087,
+                    "cage2": 621494,
+                    "cage3": 621539
+                  },
+                  "optionalPointIdBySlot": {
+                    "optional1": 572849,
+                    "optional2": 621492,
+                    "optional3": 622138,
+                    "optional4": 622142
+                  },
+                  "nemesisPointId": null
                 }
               },
               "encounters": {
@@ -3364,6 +3421,21 @@
                   "optional2": null,
                   "optional3": null,
                   "optional4": null
+                },
+                "spatial": {
+                  "entryStartPointId": 755846,
+                  "cagePointIdBySlot": {
+                    "cage1": 569103,
+                    "cage2": 573087,
+                    "cage3": 573088
+                  },
+                  "optionalPointIdBySlot": {
+                    "optional1": 572848,
+                    "optional2": 572849,
+                    "optional3": 572851,
+                    "optional4": 572886
+                  },
+                  "nemesisPointId": null
                 }
               },
               "encounters": {

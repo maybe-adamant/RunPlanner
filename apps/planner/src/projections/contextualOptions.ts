@@ -217,6 +217,15 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
   const sibling = siblingExplanation(catalog, finding);
   if (sibling !== undefined) return sibling;
   switch (finding.code) {
+    case 'fieldsSpatialPointMissing':
+      return { kind: 'generic', message: 'Choose a physical point for this active Fields item.' };
+    case 'fieldsSpatialPointUnavailable':
+      return { kind: 'generic', message: 'Choose a physical point available to this Fields item.' };
+    case 'fieldsSpatialPointDuplicate':
+      return {
+        kind: 'generic',
+        message: 'Choose a physical point not used by another active item.',
+      };
     case 'resourcePlacementUnavailable':
       return { kind: 'generic', message: 'This selected resource success needs repair.' };
     case 'purgingPoolTraitMissing':

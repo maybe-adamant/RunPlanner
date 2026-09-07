@@ -104,6 +104,7 @@ import {
   validateRequirementReferences,
 } from './requirements';
 import { normalizeRewardBinding, requireRewardStoreKey } from './rewardBindings';
+import { normalizeFieldsSpatial } from './fields-spatial';
 
 function normalizeEnteredStoreHistory(
   policy: EnteredRewardStoreHistoryPolicy,
@@ -945,6 +946,11 @@ export function normalizeRoom(
       reward,
     });
   })();
+  const fieldsSpatial = normalizeFieldsSpatial(
+    room.fieldsSpatial,
+    `${path}.fieldsSpatial`,
+    room.mode.kind === 'authored' && room.mode.templateKey === 'FieldsCombat',
+  );
   const boonRarityOverride = normalizeBoonRarityOverride(
     room.boonRarityOverride,
     `${path}.boonRarityOverride`,
@@ -1081,6 +1087,7 @@ export function normalizeRoom(
     ...(requiredObjects === undefined ? {} : { requiredObjects: Object.freeze(requiredObjects) }),
     localChildren,
     ...(fieldsOptionalRewards === undefined ? {} : { fieldsOptionalRewards }),
+    ...(fieldsSpatial === undefined ? {} : { fieldsSpatial }),
     ...(infernalContractReward === undefined ? {} : { infernalContractReward }),
   });
 }

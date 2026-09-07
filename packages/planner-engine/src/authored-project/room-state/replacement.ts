@@ -102,6 +102,7 @@ function reconcileFieldsCombatState(
     cages: Object.freeze(cages),
     optionalRewardCount,
     optionalRewards: Object.freeze(optionalRewards),
+    spatial: replacementState.spatial,
   });
 }
 

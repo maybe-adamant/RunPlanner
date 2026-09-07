@@ -23,6 +23,7 @@ import type {
   RoomLifecycleOperation,
   RoomLifecycleProducerPolicy,
   RoomStructuralTag,
+  FieldsSpatialDeclaration,
   RequiredRoomObjectDescriptor,
   SourceRewardStorePolicyOverride,
   BiomeDeclaration,
@@ -482,6 +483,7 @@ export interface RawRoomDeclaration {
     readonly optionalRewardCapacity: number;
     readonly reward: RawCountedRewardBinding;
   };
+  readonly fieldsSpatial?: FieldsSpatialDeclaration;
   readonly infernalContractReward?: {
     readonly entryKey: 'infernalContractReward';
     readonly producerLifecycleKey: string;

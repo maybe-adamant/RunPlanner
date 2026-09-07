@@ -19,15 +19,21 @@ export function fieldsOptionalRewardCountSupport(
   occurrence: Pick<RoomOccurrence, 'gameName' | 'encounters'>,
   origin: OccurrenceAddress,
 ): FieldsOptionalRewardCountSupport | undefined {
-  const physicalMaximum =
-    catalog.rooms.byKey[occurrence.gameName]?.fieldsOptionalRewards?.optionalRewardCapacity;
-  if (physicalMaximum === undefined) return undefined;
+  const room = catalog.rooms.byKey[occurrence.gameName];
+  const logicalMaximum = room?.fieldsOptionalRewards?.optionalRewardCapacity;
+  const pointCount = room?.fieldsSpatial?.optionalPointIds.length;
+  if (logicalMaximum === undefined || pointCount === undefined) return undefined;
+  const physicalMaximum = pointCount;
+  const ordinaryMaximum = Math.min(4, logicalMaximum, physicalMaximum);
   const reservesNemesisPosition =
     occurrence.encounters.encounterKeyByPhase.Passive === 'NemesisRandomEvent';
   return Object.freeze({
     occurrence: origin,
     physicalMaximum,
-    effectiveMaximum: physicalMaximum - (reservesNemesisPosition ? 1 : 0),
+    effectiveMaximum: Math.min(
+      ordinaryMaximum,
+      physicalMaximum - (reservesNemesisPosition ? 1 : 0),
+    ),
     reservesNemesisPosition,
   });
 }

@@ -19,6 +19,7 @@ import {
   requireEphyraSideRooms,
   requireFieldsCages,
   requireFieldsOptionalRewards,
+  requireFieldsSpatial,
   requireOrdinaryRole,
   requireShipCombatWheels,
   requireShopBinding,
@@ -98,6 +99,20 @@ function defaultFieldsOptionalRewards(
       ]),
     ),
   );
+}
+
+function defaultFieldsSpatial(room: RoomDeclaration, path: string) {
+  requireFieldsSpatial(room, path);
+  const cages = requireFieldsCages(room, path);
+  const optional = requireFieldsOptionalRewards(room, path);
+  return Object.freeze({
+    entryStartPointId: null,
+    cagePointIdBySlot: Object.freeze(Object.fromEntries(cages.slotKeys.map((key) => [key, null]))),
+    optionalPointIdBySlot: Object.freeze(
+      Object.fromEntries(optional.slotKeys.map((key) => [key, null])),
+    ),
+    nemesisPointId: null,
+  });
 }
 
 function defaultRewardWheel(
@@ -192,6 +207,7 @@ export function createDefaultRoomState(
           cages: Object.freeze(
             Object.fromEntries(Object.entries(cages).map(([slotKey]) => [slotKey, null])),
           ),
+          spatial: defaultFieldsSpatial(room, path),
         });
       }
     case 'ShipCombat':

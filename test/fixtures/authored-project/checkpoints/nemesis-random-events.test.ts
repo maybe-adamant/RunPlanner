@@ -101,11 +101,26 @@ describe('Nemesis random-event checkpoint recipes', () => {
     expect(sourceDecision(project)).toEqual(sourceDecision(createGoldenFGHIProject()));
   });
 
-  it('keeps H physical-four Fields at effective three and interleaves the optional free result among cage actions', () => {
+  it('keeps H physical-seven Fields at effective four and interleaves the optional free result among cage actions', () => {
     const id = createOccurrenceId('golden-h-combat05');
     const selected = occurrence(loadNemesisFieldsCheckpoint(), 'H', id);
     if (selected.state.kind !== 'fieldsCombat') throw new Error('H fixture is not a Fields room');
     expect(selected.state.optionalRewardCount).toBe(3);
+    expect(selected.state.spatial).toEqual({
+      entryStartPointId: 755863,
+      cagePointIdBySlot: {
+        cage1: 573087,
+        cage2: 621494,
+        cage3: 621539,
+      },
+      optionalPointIdBySlot: {
+        optional1: 572849,
+        optional2: 621492,
+        optional3: 622138,
+        optional4: 622142,
+      },
+      nemesisPointId: 623602,
+    });
     expect(
       fieldsOptionalRewardCountSupport(
         catalog,
@@ -113,8 +128,8 @@ describe('Nemesis random-event checkpoint recipes', () => {
         createOccurrenceAddress(goldenHBiome, id),
       ),
     ).toMatchObject({
-      physicalMaximum: 4,
-      effectiveMaximum: 3,
+      physicalMaximum: 7,
+      effectiveMaximum: 4,
       reservesNemesisPosition: true,
     });
     const resultIndex = selected.roomActions.order.findIndex(

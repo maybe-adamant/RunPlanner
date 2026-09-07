@@ -466,6 +466,18 @@ const findingCopy = {
     title: 'Nemesis needs one reward position',
     description: 'Reduce optional rewards by one while the Nemesis room feature is active.',
   },
+  fieldsSpatialPointMissing: {
+    title: 'Fields location missing',
+    description: 'Choose a physical point for this active Fields item.',
+  },
+  fieldsSpatialPointUnavailable: {
+    title: 'Fields location unavailable',
+    description: 'Choose a physical point supported by this room and active layout.',
+  },
+  fieldsSpatialPointDuplicate: {
+    title: 'Fields location is already used',
+    description: 'Choose a different physical point for this active Fields item.',
+  },
   resourcePlacementUnavailable: {
     title: 'Resource success needs repair',
     description:
@@ -891,6 +903,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Visit ${origin.visitIndex}`;
     case 'occurrence':
       return `${biomeLabel} · Room`;
+    case 'fieldsSpatial':
+      return `${biomeLabel} · Fields layout`;
     case 'shopOffer':
       return `${biomeLabel} · Shop offer`;
     case 'acquisitionSite':

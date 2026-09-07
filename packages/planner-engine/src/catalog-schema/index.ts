@@ -737,6 +737,8 @@ export interface RoomDeclaration {
   readonly localChildren: readonly LocalChildDescriptor[];
   /** Entry-generated, optional Fields pickups and their exact map capacity. */
   readonly fieldsOptionalRewards?: FieldsOptionalRewardDescriptor;
+  /** Exact room-scoped physical points for authored Fields combat layouts. */
+  readonly fieldsSpatial?: FieldsSpatialDeclaration;
   /** Source-owned zero-cost Infernal Contract pedestal at qualifying Preboss rooms. */
   readonly infernalContractReward?: {
     readonly entryKey: 'infernalContractReward';
@@ -750,6 +752,17 @@ export interface FieldsOptionalRewardDescriptor {
   readonly optionalRewardCapacity: number;
   readonly slotKeys: readonly string[];
   readonly reward: CountedRewardBinding;
+}
+
+/** Exact room-scoped physical points available to a Fields combat room. */
+export interface FieldsSpatialDeclaration {
+  readonly entryPairs: readonly {
+    readonly startPointId: number;
+    readonly endPointId: number;
+  }[];
+  readonly cagePointIds: readonly number[];
+  readonly optionalPointIds: readonly number[];
+  readonly nemesisExcludedOptionalPointIds: readonly number[];
 }
 
 export type AuthoredFieldInitialization<T> =

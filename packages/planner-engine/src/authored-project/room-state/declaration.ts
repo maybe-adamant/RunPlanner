@@ -2,6 +2,7 @@ import type {
   Catalog,
   EncounterRewardWheelAttachment,
   FieldsOptionalRewardDescriptor,
+  FieldsSpatialDeclaration,
   LocalChildDescriptor,
   RoomDeclaration,
 } from '../../catalog-schema';
@@ -84,6 +85,16 @@ export function requireFieldsOptionalRewards(
     failProjectDocument(path, 'FieldsCombat requires optional rewards');
   }
   return room.fieldsOptionalRewards;
+}
+
+export function requireFieldsSpatial(
+  room: RoomDeclaration,
+  path: string,
+): FieldsSpatialDeclaration {
+  if (room.fieldsSpatial === undefined) {
+    failProjectDocument(path, 'FieldsCombat requires spatial points');
+  }
+  return room.fieldsSpatial;
 }
 
 export function requireShipCombatWheels(
