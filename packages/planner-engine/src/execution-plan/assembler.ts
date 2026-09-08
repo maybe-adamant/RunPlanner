@@ -86,6 +86,7 @@ export function assembleExecutionProduct({
       ),
     ),
   );
+  const selectedOccurrenceIdSet = new Set(selectedOccurrenceIds);
   if (selectedOccurrenceIds.length === 0 || selectedOccurrenceIds[0] !== rooms[0]!.occurrenceId) {
     throw new CompilerError('openingMissing', 'execution route has no selected opening occurrence');
   }
@@ -191,6 +192,9 @@ export function assembleExecutionProduct({
       hubsBySource.get(executionRoomOwnerKey(room)),
       hubExitsBySource.get(executionRoomOwnerKey(room)),
       localSlotsByParent.get(room.occurrenceId),
+      room.roomKind === 'PostBoss' && selectedOccurrenceIdSet.has(room.occurrenceId)
+        ? 'postbossEntry'
+        : undefined,
     );
   });
   const extent = Object.freeze({

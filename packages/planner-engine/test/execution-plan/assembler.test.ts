@@ -1487,6 +1487,36 @@ describe('engine-owned F/G execution semantic product', () => {
     expect(postboss?.overview.fountain).toEqual({});
   });
 
+  it('marks selected canonical Postboss occurrences as recovery boundaries', () => {
+    const underworld = productFor(loadUnderworldFGHICheckpoint());
+    const surface = productFor(loadSurfaceNOPQProject());
+    for (const product of [underworld, surface]) {
+      const selected = new Set(product.selectedOccurrenceIds);
+      const marked = product.occurrences.filter(
+        (occurrence) => occurrence.resumeBoundary !== undefined,
+      );
+      expect(marked.length).toBeGreaterThan(0);
+      expect(marked.every((occurrence) => selected.has(occurrence.id))).toBe(true);
+      expect(marked.every((occurrence) => occurrence.resumeBoundary === 'postbossEntry')).toBe(
+        true,
+      );
+      expect(marked.every((occurrence) => occurrence.diagnostics?.roomEntered !== undefined)).toBe(
+        true,
+      );
+      expect(
+        product.occurrences
+          .filter((occurrence) => selected.has(occurrence.id))
+          .filter((occurrence) => occurrence.gameName.endsWith('_PostBoss01')).length,
+      ).toBe(marked.length);
+      expect(
+        product.occurrences
+          .filter((occurrence) => selected.has(occurrence.id))
+          .filter((occurrence) => !occurrence.gameName.endsWith('_PostBoss01'))
+          .every((occurrence) => occurrence.resumeBoundary === undefined),
+      ).toBe(true);
+    }
+  });
+
   it('closes a Postboss Yarn purchase through Well state without a cross-room edge', () => {
     const well = createOccurrenceAddress(
       goldenFBiome,

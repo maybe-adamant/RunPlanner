@@ -31,6 +31,7 @@ export function executionOccurrence(
   hub: CanonicalHubDecision | undefined,
   hubExit: CanonicalBatch | undefined,
   localSlots: readonly CanonicalLocalVisitRoom[] | undefined,
+  resumeBoundary: 'postbossEntry' | undefined,
 ): ExecutionOccurrence {
   const batch = batches.get(executionRoomOwnerKey(room));
   const publishedHub = hub === undefined ? undefined : hubOverview(hub, hubExit);
@@ -43,6 +44,7 @@ export function executionOccurrence(
     biomeKey: room.origin.biomeKey as import('../model').ExecutionBiomeKey,
     gameName: room.gameName,
     kind: room.encounterEnvelopeKey,
+    ...(resumeBoundary === undefined ? {} : { resumeBoundary }),
     ...(anomaly === undefined ? {} : { anomaly }),
     overview: Object.freeze({
       ...assembleExecutionOverview(room, biome, batch),

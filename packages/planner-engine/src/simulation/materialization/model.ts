@@ -1,4 +1,8 @@
-import type { RequiredRoomObjectDescriptor, RoomCounterEffects } from '../../catalog-schema';
+import type {
+  RequiredRoomObjectDescriptor,
+  RoomCounterEffects,
+  RoomKind,
+} from '../../catalog-schema';
 import type {
   AdditionalExitAddress,
   BatchRewardStoreAddress,
@@ -146,6 +150,8 @@ export interface CanonicalAuthoredRoom {
   readonly origin: OccurrenceAddress;
   readonly occurrenceId: OccurrenceId;
   readonly gameName: string;
+  /** Declaration-owned room classification retained for downstream products. */
+  readonly roomKind: RoomKind;
   /**
    * An Anomaly replacement still evaluates the normal G target it displaced.
    * Keep that authored provenance on the canonical room rather than asking a

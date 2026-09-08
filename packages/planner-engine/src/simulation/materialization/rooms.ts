@@ -924,6 +924,7 @@ export function materializeAuthoredRoom(
     origin: createOccurrenceAddress(context.biome, context.occurrence.occurrenceId),
     occurrenceId: context.occurrence.occurrenceId,
     gameName: context.room.gameName,
+    roomKind: context.room.kind,
     ...(anomalyReplacement === undefined ? {} : { anomalyReplacement }),
     encounters: context.occurrence.encounters,
     encounterEnvelopeKey: context.room.encounterEnvelopeKey,

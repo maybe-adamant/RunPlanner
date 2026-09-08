@@ -1627,6 +1627,49 @@ describe('execution-plan compiler and codec', () => {
     });
   });
 
+  it('rejects an unselected Postboss recovery boundary', () => {
+    const wire = JSON.parse(JSON.stringify(fgFixture)) as {
+      occurrences: Array<Record<string, unknown>>;
+    };
+    const selected = new Set(
+      (fgFixture as { selectedOccurrenceIds: string[] }).selectedOccurrenceIds,
+    );
+    const unselected = wire.occurrences.find(
+      (occurrence) => typeof occurrence.id === 'string' && !selected.has(occurrence.id),
+    );
+    if (unselected === undefined) throw new Error('fixture lacks an unselected occurrence');
+    unselected.resumeBoundary = 'postbossEntry';
+    expect(() => decodeExecutionPlan(wire)).toThrow(/resume boundary must be selected/);
+  });
+
+  it('rejects an unsupported Postboss recovery boundary value', () => {
+    const wire = JSON.parse(JSON.stringify(fgFixture)) as {
+      occurrences: Array<Record<string, unknown>>;
+    };
+    let marked: Record<string, unknown> | undefined;
+    for (const occurrence of wire.occurrences) {
+      if (occurrence.resumeBoundary === 'postbossEntry') marked = occurrence;
+    }
+    if (marked === undefined) throw new Error('fixture lacks a Postboss recovery boundary');
+    marked.resumeBoundary = 'postbossExit';
+    expect(() => decodeExecutionPlan(wire)).toThrow(/resumeBoundary is unsupported/);
+  });
+
+  it('rejects a Postboss recovery boundary without entry diagnostics', () => {
+    const wire = JSON.parse(JSON.stringify(fgFixture)) as {
+      occurrences: Array<Record<string, unknown>>;
+    };
+    let marked: Record<string, unknown> | undefined;
+    for (const occurrence of wire.occurrences) {
+      if (occurrence.resumeBoundary === 'postbossEntry') marked = occurrence;
+    }
+    if (marked === undefined) throw new Error('fixture lacks a Postboss recovery boundary');
+    marked.diagnostics = {};
+    expect(() => decodeExecutionPlan(wire)).toThrow(
+      /resume boundary requires roomEntered diagnostics/,
+    );
+  });
+
   it('publishes I Clockwork goals as ordinary rewards without changing I topology', () => {
     const { plan } = planFor(loadUnderworldFGHICheckpoint());
     expect(plan.extent).toEqual({
@@ -1655,7 +1698,7 @@ describe('execution-plan compiler and codec', () => {
     expect(boss?.doors).toMatchObject({ kind: 'terminal' });
   });
 
-  it('accepts only closed protocol-33 Underworld and Surface route prefixes', () => {
+  it('accepts only closed protocol-34 Underworld and Surface route prefixes', () => {
     const fixture = JSON.parse(JSON.stringify(underworldFGHIFixture));
     fixture.extent = {
       kind: 'configuredPrefix',
@@ -1986,6 +2029,13 @@ describe('execution-plan compiler and codec', () => {
       product: Object.freeze({
         ...product,
         selectedOccurrenceIds: Object.freeze([opening.id, disconnected.id]),
+        occurrences: Object.freeze(
+          product.occurrences.map((occurrence) => {
+            const withoutResumeBoundary = { ...occurrence };
+            delete withoutResumeBoundary.resumeBoundary;
+            return Object.freeze(withoutResumeBoundary);
+          }),
+        ),
       }),
     });
     expect(() => decodeExecutionPlan(disconnectedPlan)).toThrow(/disconnected/);
