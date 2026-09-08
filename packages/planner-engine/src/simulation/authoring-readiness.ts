@@ -1,13 +1,8 @@
-import { semanticAddressKey, type SemanticAddress } from '../authored-project/addresses';
-import { authoringRegion } from './finding-regions';
+import type { SemanticAddress } from '../authored-project/addresses';
+import { authoringBoundaryReadiness, resolveAuthoringBoundary } from './authoring-boundary';
 import type { ProjectBiomeEvaluation, ProjectEvaluationAssembly } from './evaluation-products';
 import type { CanonicalBiome, MaterializedBiomePrefix } from './materialization';
 import { assertExactProjectEvaluationAssembly } from './project-evaluation-assembly';
-import {
-  compareOwnerLocations,
-  locateOwner,
-  occurrenceOwnerAddress,
-} from './progressive/finding-location';
 
 export type AuthoringReadiness = 'editable' | 'locked';
 
@@ -33,23 +28,14 @@ export function authoringReadinessAt(
   assertExactProjectEvaluationAssembly(assembly);
   const horizon = assembly.evaluation.authoringHorizon;
   if (horizon.kind === 'open') return 'editable';
-  if (semanticAddressKey(owner) === semanticAddressKey(horizon.repairTarget)) return 'editable';
-  if (authoringRegion(owner) === horizon.regionKey) return 'editable';
-  const repairOccurrence = occurrenceOwnerAddress(horizon.repairTarget);
-  if (
-    owner.kind === 'occurrence' &&
-    repairOccurrence !== undefined &&
-    semanticAddressKey(owner) === semanticAddressKey(repairOccurrence)
-  )
-    return 'editable';
 
   if (owner.kind === 'project' || owner.kind === 'route') return 'editable';
   if (owner.kind === 'keepsakeSelection' && owner.owner === 'routeStart') return 'editable';
-  if (!('biomeKey' in owner) || !('biomeKey' in horizon.repairTarget)) return 'locked';
+  if (!('biomeKey' in owner) || !('biomeKey' in horizon.blockedAfter)) return 'locked';
   if (owner.biomeKey === 'routeStart') return 'editable';
 
   const route = assembly.project.route;
-  const horizonBiomeKey = horizon.repairTarget.biomeKey;
+  const horizonBiomeKey = horizon.blockedAfter.biomeKey;
   const ownerBiomeIndex = route.biomes.findIndex((biome) => biome.biomeKey === owner.biomeKey);
   const horizonBiomeIndex = route.biomes.findIndex((biome) => biome.biomeKey === horizonBiomeKey);
   if (ownerBiomeIndex !== horizonBiomeIndex) {
@@ -62,11 +48,10 @@ export function authoringReadinessAt(
   );
   const prefix = evaluation === undefined ? undefined : materialization(evaluation);
   if (prefix === undefined) return 'locked';
-  const ownerLocation = locateOwner(prefix, owner);
-  if (owner.kind === 'roomAction' && ownerLocation?.roomTimelineIndex === undefined)
-    return 'locked';
-  const horizonLocation =
-    evaluation?.requiredInputLocation ?? locateOwner(prefix, horizon.repairTarget);
-  if (ownerLocation === undefined || horizonLocation === undefined) return 'locked';
-  return compareOwnerLocations(ownerLocation, horizonLocation) <= 0 ? 'editable' : 'locked';
+  return authoringBoundaryReadiness(
+    prefix,
+    resolveAuthoringBoundary(prefix, owner),
+    horizon.blockedAfter,
+    evaluation?.requiredInputLocation,
+  );
 }

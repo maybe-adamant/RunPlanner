@@ -154,8 +154,8 @@ export type AuthoringHorizon =
   | { readonly kind: 'open' }
   | {
       readonly kind: 'incomplete';
-      readonly regionKey: string;
-      readonly repairTarget: SemanticAddress;
+      /** The first locked authoring region begins immediately after this repairable region. */
+      readonly blockedAfter: SemanticAddress;
     };
 
 export interface ProjectEvaluationAssembly {

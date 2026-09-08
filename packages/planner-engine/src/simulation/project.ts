@@ -6,6 +6,7 @@ import {
   createRoomFeatureAddress,
   createRouteStartKeepsakeSelectionAddress,
   semanticAddressKey,
+  type SemanticAddress,
 } from '../authored-project/addresses';
 import type { AuthoredRoutePlan, ProjectDocument } from '../authored-project/model';
 import { forcedChaosOccurrenceKeysForRoute } from '../authored-project/chaos-gate-reconciliation';
@@ -25,7 +26,7 @@ import { createTraitHistoryState } from './trait-history';
 import type { BiomeHistoryPrefix } from './history';
 import type { MaterializedBiomePrefix } from './materialization';
 import type { SemanticFinding } from './model';
-import { authoringRegion } from './finding-regions';
+import { resolveAuthoringBoundary } from './authoring-boundary';
 import {
   deriveResourceExecutionPolicy,
   effectiveRouteResourcePlacements,
@@ -122,6 +123,20 @@ interface RouteProjectEvaluationAssembly {
   readonly authoringHorizon: AuthoringHorizon;
 }
 
+function normalizeAuthoringHorizonPredecessor(evaluation: ProjectBiomeEvaluation): SemanticAddress {
+  const input = evaluation.requiredInput;
+  if (input === undefined) {
+    throw new ProjectSimulationContractError(
+      `${evaluation.biomeKey} incomplete evaluation has no repair target`,
+    );
+  }
+
+  const prefix = 'materializedPrefix' in evaluation ? evaluation.materializedPrefix : undefined;
+  if (prefix !== undefined) return resolveAuthoringBoundary(prefix, input);
+  if (input.kind === 'biome' || input.kind === 'biomeField') return input;
+  return createBiomeAddress(evaluation.origin.routeKey, evaluation.origin.biomeKey);
+}
+
 function evaluateRouteAssembly(
   catalog: Catalog,
   route: AuthoredRoutePlan,
@@ -194,8 +209,7 @@ function evaluateRouteAssembly(
       routeStartBlock = 'incomplete';
       authoringHorizon = Object.freeze({
         kind: 'incomplete',
-        regionKey: authoringRegion(result),
-        repairTarget: result,
+        blockedAfter: result,
       });
       findings.push(
         Object.freeze({
@@ -297,10 +311,10 @@ function evaluateRouteAssembly(
     findings.push(...evaluation.findings);
     if (evaluation.authoring === 'incomplete' || evaluation.validity === 'invalid') {
       if (evaluation.requiredInput !== undefined) {
+        const blockedAfter = normalizeAuthoringHorizonPredecessor(evaluation);
         authoringHorizon = Object.freeze({
           kind: 'incomplete',
-          regionKey: evaluation.requiredInputRegion ?? authoringRegion(evaluation.requiredInput),
-          repairTarget: evaluation.requiredInput,
+          blockedAfter,
         });
       }
       active = Object.freeze({

@@ -10,6 +10,7 @@ import {
   createLocalRewardAddress,
   createTraitAcquisitionTargetAddress,
 } from '@run-planner/engine/authored-project';
+import { authoringReadinessAt } from '@run-planner/engine/simulation';
 
 const {
   EMPTY_RESOURCE_PLACEMENTS,
@@ -271,8 +272,22 @@ describe('progressive selected and blocked products', () => {
     expect(blocked.requiredInput).toEqual(trait);
     expect(blockedAssembly.evaluation.authoringHorizon).toMatchObject({
       kind: 'incomplete',
-      repairTarget: trait,
+      blockedAfter: createOccurrenceAddress(goldenFBiome, chaosOccurrenceId),
     });
+    expect(authoringReadinessAt(blockedAssembly, containingDecision.origin)).toBe('editable');
+    expect(
+      authoringReadinessAt(
+        blockedAssembly,
+        createAdditionalExitAddress(goldenFBiome, sourceOccurrenceId, 'chaos'),
+      ),
+    ).toBe('editable');
+    expect(
+      authoringReadinessAt(
+        blockedAssembly,
+        createOccurrenceAddress(goldenFBiome, chaosOccurrenceId),
+      ),
+    ).toBe('editable');
+    expect(authoringReadinessAt(blockedAssembly, laterTarget)).toBe('locked');
     expect(retainedAssessment?.targets.map((target) => semanticAddressKey(target.origin))).toEqual(
       baselineAssessment?.targets.map((target) => semanticAddressKey(target.origin)),
     );
