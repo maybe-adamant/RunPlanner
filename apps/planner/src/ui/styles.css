@@ -529,6 +529,37 @@ button:disabled {
   gap: 6px;
 }
 
+.game-publication-selection {
+  display: grid;
+  min-width: min(100%, 440px);
+  align-items: center;
+  grid-template-columns: auto minmax(120px, 1fr) auto minmax(92px, 1fr) auto auto;
+  gap: 6px;
+  padding: 5px 7px;
+  border: 1px solid #504354;
+  border-radius: 7px;
+  background: rgb(56 39 66 / 55%);
+}
+
+.game-publication-selection legend {
+  grid-column: 1 / -1;
+  padding: 0;
+  color: #e2b971;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.game-publication-selection label {
+  color: #aaa7af;
+  font-size: 0.78rem;
+}
+
+.game-publication-selection select {
+  min-width: 0;
+  padding: 4px 7px;
+  font-size: 0.8rem;
+}
+
 .project-profile-feedback {
   display: flex;
   min-width: 0;
@@ -4661,6 +4692,20 @@ select {
 
   .project-profile-feedback .project-operation-result {
     text-align: left;
+  }
+
+  .game-publication-selection {
+    flex-basis: 100%;
+    min-width: 0;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .game-publication-selection legend {
+    grid-column: 1 / -1;
+  }
+
+  .game-publication-selection button {
+    grid-column: span 1;
   }
 
   .project-entry-panel {

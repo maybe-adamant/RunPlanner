@@ -13,7 +13,11 @@ import {
 import type { AutosaveRecoveryAdapter } from '../persistence/autosaveRecovery';
 import { createInitialProject } from '../composition/projectBootstrap';
 import type { ProfileFileAdapter, ProfileFileReference } from '../persistence/profileFile';
-import type { GamePlanDiscovery, GamePlanPublisher } from '../persistence/gamePlanPublisher';
+import type {
+  GamePlanDiscovery,
+  GamePlanPublisher,
+  GamePlanSlotNumber,
+} from '../persistence/gamePlanPublisher';
 import {
   newProjectCreated,
   profileLoadSucceeded,
@@ -38,7 +42,7 @@ export interface ProjectOperations {
   exportAutosaveRecovery(): Promise<ProjectOperationResult>;
   readonly gamePlanAvailable: boolean;
   discoverGameProfiles(): Promise<GamePlanDiscovery>;
-  publishGame(targetId: string): Promise<ProjectOperationResult>;
+  publishGame(targetId: string, slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult>;
   saveProfile(): Promise<ProjectOperationResult>;
   loadProfile(): Promise<ProjectOperationResult>;
 }
@@ -158,7 +162,10 @@ export function createProjectOperations(
         });
       }
     },
-    async publishGame(targetId: string): Promise<ProjectOperationResult> {
+    async publishGame(
+      targetId: string,
+      slotNumber: GamePlanSlotNumber,
+    ): Promise<ProjectOperationResult> {
       try {
         if (options.gamePlanPublisher === undefined) {
           throw new Error('Publish to Game is unavailable in this environment');
@@ -169,12 +176,15 @@ export function createProjectOperations(
         const plan = compileExecutionPlan({ product });
         const publication = await options.gamePlanPublisher.publish(
           targetId,
+          slotNumber,
           encodeExecutionPlan(plan),
         );
         return result(
           'publishGame',
           publication.status === 'published' ? 'success' : 'failure',
-          publication.message,
+          publication.status === 'published'
+            ? `Published to game profile ${targetId}, Slot ${slotNumber}.`
+            : publication.message,
         );
       } catch (error) {
         return failure('publishGame', error);
