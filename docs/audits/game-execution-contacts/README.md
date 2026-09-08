@@ -20,7 +20,7 @@ that contact without reimplementing planner policy?**
 | Native pass-through | The planner deliberately treats the result as simulation-neutral; the executor must not mistake the native side effect for a mismatch.  |
 | Adapter gap         | The execution product carries the fact, but the current native adapter does not yet realize or settle it completely.                    |
 | Protocol gap        | The planner models the result, but the execution semantic product does not publish enough information for a semantic-agnostic executor. |
-| Deferred route      | The declaration is modeled, but it cannot occur in the current F/G execution extent.                                                    |
+| Deferred route      | The declaration is modeled, but it cannot occur in either current fixed-route execution extent.                                         |
 | Probe required      | The exact native contact or outcome still needs source or live-game confirmation.                                                       |
 
 "Covered" is deliberately two-dimensional:
@@ -76,13 +76,14 @@ A family is not covered when only its ordinary loot-screen carrier works.
 
 The normalized catalog is the exhaustive identity authority. The execution
 union in `packages/planner-engine/src/execution-plan/model.ts` is the exhaustive
-wire authority. The current consumer is protocol v24 in
-`adamantRunPlanner-Plan_Executor`; its supported route extent is Underworld F
-or F/G, not the full planner catalog. A compile-time census beside the execution
-tests classifies every authored room action and every published Overview,
-Timeline, Doors, acquisition-disposition, automatic-effect, and conformance
-union member. That census is test authority only: runtime adapters remain
-organized by native carrier and do not duplicate it as a callback registry.
+wire authority. The current consumer is protocol 33 in
+`adamantRunPlanner-Plan_Executor`; its supported extents are complete-valid
+configured prefixes of the fixed Underworld and Surface routes. Dream Dive
+remains outside that boundary. A compile-time census beside the execution tests
+classifies every authored room action and every published Overview, Timeline,
+Doors, acquisition-disposition, automatic-effect, and conformance union member.
+That census is test authority only: runtime adapters remain organized by native
+carrier and do not duplicate it as a callback registry.
 
 Relevant durable authorities:
 
@@ -100,11 +101,12 @@ Relevant durable authorities:
    was carried correctly, but direct items use `UseStoreRewardRandomStack` and
    `AddStackToTraits`, not the ordinary Pom choice screen. The focused
    direct-level adapter now owns that contact.
-2. The v24 wire carries the bounded F/G structure, acquisition, selected-trait,
-   nested-consequence, loadout, Hex/Path, Sea Star, commerce, automatic, and
-   named room-exit conformance results described by the focused audits.
-   Later-route navigation remains deferred even where its reusable carrier is
-   already implemented.
+2. The v33 wire carries both fixed routes through the same structure,
+   acquisition, selected-trait, nested-consequence, loadout, Hex/Path, Sea Star,
+   commerce, automatic, and named room-exit conformance families. Biome-specific
+   navigation is limited to Fields cages, Ephyra Hub and side rooms, Thessaly
+   ShipCombat wheels, and native Anomaly entry; other fixed-route rooms reuse
+   the ordinary boundary.
 3. Starting weapon, aspect, Arcana, Fear, and keepsake are an explicit
    checked loadout contract; the executor observes rather than repairs them.
 4. Selecting a trait lets the game run that trait's ordinary acquire behavior.
@@ -118,11 +120,11 @@ Relevant durable authorities:
    random-effect coverage. The execution product and native adapter must also
    represent the authored negative result wherever vanilla could otherwise
    proc, and must cover both loot and direct-consumable carriers.
-7. The active F/G room-exit conformance set is `traitInventory`,
+7. The active room-exit conformance set is `traitInventory`,
    `elementCounts`, `steadyGrowth`, `chaos`, `keepsakeEffects`,
    `rewardPriorities`, `pathOfStars`, `forfeit`, and `stygianWell`.
    `echoShopDuplicate` and `hermesShrineDeliveries` remain decoded diagnostic
-   facts but are dormant until their owning routes are enabled. Changed named
-   facts are sparse; `elementCounts` is deliberately present at every complete
+   values rather than active room-exit conformance facts. Changed named facts
+   are sparse; `elementCounts` is deliberately present at every complete
    room-exit snapshot so unchanged vectors catch unintended gains. Complete Run
    State diagnostics never block execution.

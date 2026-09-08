@@ -2,12 +2,12 @@
 
 ## Current contract
 
-The active strict versioned protocol carries a complete-valid configured F or
-F/G prefix. The desktop publisher writes an execution-only JSON artifact to
-the Plan Executor's fixed inbox; the browser build has no publication
-capability. Publication is a start-of-run operation. The Executor cannot
-truthfully attach midway through a run, repair an edited plan, or resume
-enforcement after a mismatch.
+The active strict versioned protocol carries a complete-valid configured
+Underworld or Surface prefix, through `F/G/H/I` or `N/O/P/Q`. The desktop
+publisher writes an execution-only JSON artifact to the Plan Executor's fixed
+inbox; the browser build has no publication capability. Publication is a
+start-of-run operation. The Executor cannot truthfully attach midway through a
+run, repair an edited plan, or resume enforcement after a mismatch.
 
 The compiler consumes the exact simulation assembly that the planner already
 validated. It does not rerun candidate policy or duplicate validation. The
@@ -109,9 +109,9 @@ from their ordinary Timeline trace. Only the opening presentation is delayed;
 Jeweled Pom, Experimental Hammer, and Transcendent Embryo acquire their result
 when the keepsake is equipped.
 
-## Supported F/G surface
+## Supported fixed-route surface
 
-The current vertical slice covers ordinary F/G rooms and rewards, supported
+The current vertical slice covers ordinary fixed-route rooms and rewards, supported
 encounters and selected trait offers, fixed Preboss/Boss/Postboss continuation,
 World Shops, Stygian Wells, Purging Pools, Keepsake Racks, fountains, resources,
 and their supported acquisition dispositions. It also covers the following
@@ -121,6 +121,12 @@ special topology and interaction owners:
 - Anomaly replacement and its authored return;
 - Zagreus Contract as a distinct additional exit;
 - natural and Ixion-generated Chaos gates;
+- H Fields cage placement and cage rewards;
+- N Hub doors, rewards, side-room presence, and side-room rewards;
+- O ShipCombat phase count, wheel cohorts, wheel rewards, and selected pickups;
+- P's native ordered PreCombat/Combat envelope and Heracles suffix termination;
+- Q's ordinary stage-resolved rooms, World Shop, fixed Boss link, and terminal
+  topology;
 - three authored distinct Chaos curse options, the selected curse/blessing
   pair, acquisition, and the selected Chaos map's declaration-sized visible
   return batch to G.
@@ -189,15 +195,16 @@ checks, not permission to reproduce planner eligibility policy.
 
 ## Evidence and deferred scope
 
-Compiler, decoder, and session fixtures prove the local protocol contract.
-On 2026-09-06, focused live Hades II testing reached the end of a configured
-F/G prefix without an unresolved executor mismatch using protocol 28. That
-proves the supported F/G slice, not every reusable adapter or later-biome
-contact. Wrong continuation is detected by the next room-entry identity check;
-the executor deliberately has no separate selected-transition conformance
-checkpoint.
+Compiler, decoder, and session fixtures prove the local protocol contract for
+complete configured Underworld and Surface products. On 2026-09-06, focused
+live Hades II testing reached the end of a configured F/G prefix without an
+unresolved executor mismatch using protocol 28. That remains the only
+live-game claim; the complete Underworld and Surface products require their own
+live campaigns. Wrong continuation is detected by the next room-entry identity
+check; the executor deliberately has no separate selected-transition
+conformance checkpoint.
 
-Later-biome realization for H, I, N, O, P, Q, and Dream Dives remains deferred.
-Those biomes require their own bounded native commands and probes. Automatic
+Dream Dive route ordering, Postboss selection, and phase differences remain
+deferred pending their own source audit and authored-route product. Automatic
 diagnostic import and game-module UI beyond the fixed status surface are also
 deferred.

@@ -79,7 +79,7 @@ not need an empty effect transaction merely to prove that they were equipped.
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Simulation-neutral identity  | Silver Wheel, Knuckle Bones, Luckier Tooth, Ghost Onion, Evil Eye, Gold Purse, Engraved Pin, Discordant Bell, Metallic Droplet, White Antler, Silken Sash, Lion Fang, Blackened Fleece | Selection history, active interval, removal/blocking, and rank-III identity. Their Magick, health, Death Defiance, gold, armor, damage, speed, and real-time effects do not alter the current simulation. | Common identity contact only. Native effects pass through and are excluded from conformance.                                                                                                                                                                                     |
 | Olympian reward pressure     | Cloud Bangle, Iridescent Fan, Vivid Sea, Barley Sheaf, Harmonic Photon, Beautiful Mirror, Adamant Shard, Everlasting Ember, Sword Hilt                                                 | Provider pressure, one reward-force use, one provider rarification use, and retained source state. Later doors and offers are already resolved with the correct provider and rarity.                      | Native equip owns pressure and charge consumption. Navigation realizes the resolved door; the ordinary trait adapter realizes the resolved offer. No god-keepsake actuator exists. Retained charge/source state is checked at room exit.                                         |
-| Path reward pressure         | Moon Beam                                                                                                                                                                              | Talent-drop pressure and the exact added Path points on the next Talent acquisition.                                                                                                                      | Native equip owns pressure and point addition. Navigation and the generic Path acquisition contact consume the resolved products. There is no Moon Beam actuator; current F/G execution cannot yet exercise its later-route reward contact.                                      |
+| Path reward pressure         | Moon Beam                                                                                                                                                                              | Talent-drop pressure and the exact added Path points on the next Talent acquisition.                                                                                                                      | Native equip owns pressure and point addition. Navigation and the generic Path acquisition contact consume the resolved fixed-route products. There is no Moon Beam actuator; complete live proof remains pending.                                                               |
 | Conditional encounter        | Gorgon Amulet                                                                                                                                                                          | Pending/consumed keepsake state, the qualifying Athena encounter, and its exact offer when the modeled Death Defiance condition is met.                                                                   | Native eligibility, spawn, and use consumption remain authoritative. `AthenaUse` only binds the physical interaction to the published encounter; the ordinary trait adapter realizes the offer. No trigger steering or Athena spawning is reimplemented.                         |
 | Encounter skip               | Fig Leaf                                                                                                                                                                               | One exact phase-local skip/no-skip result plus retained uses and the biome activation latch.                                                                                                              | The executor steers only the bounded Fig Leaf `RandomChance`; native encounter code owns skipped spawning, use consumption, propagation, and presentation. Room-exit keepsake conformance proves the retained state.                                                             |
 | Fountain rarity              | Aromatic Phial                                                                                                                                                                         | Pending/consumed use and the exact eligible trait upgraded at the next fountain.                                                                                                                          | `fountainUse.aromaticPhialTarget` scopes the native rarity selector to the exact target. Native fountain use and rarity mutation remain authoritative.                                                                                                                           |
@@ -129,9 +129,8 @@ The keepsake boundary is closed without a general effect interpreter:
   result-producing native terminal, because native trait acquisition may be
   dispatched after the equip call returns.
 
-Moon Beam is a separate deferred-route contact, not a missing keepsake
-actuator: the existing generic navigation and Path contacts are the correct
-consumers once later route structure reaches Talent rewards.
+Moon Beam is not a separate keepsake actuator: the fixed-route product reaches
+Talent rewards through the existing generic navigation and Path contacts.
 
 ## Encounter-altering keepsake contacts
 
@@ -275,11 +274,11 @@ Night Bloom, Phase Shift, Twilight Curse, and Moon Water. The planner owns the
 selected layout, Rare/Epic node identities, God Sent node, banked points,
 invested points, and closed-tree state.
 
-Spell/Hex selection and Path acquisition are covered by focused protocol-v24
-contacts; Moon Beam remains native-authoritative. Their ordinary route
-activation and live native probes remain deferred because F/G cannot reach
-those pickups. The product does not model individual Hex combat effects or
-player-selected node positions. The two bounded contacts are:
+Spell/Hex selection and Path acquisition are covered by focused contacts;
+Moon Beam remains native-authoritative. The fixed-route product reaches those
+pickups, while complete live native probes remain pending. The product does not
+model individual Hex combat effects or player-selected node positions. The two
+bounded contacts are:
 
 1. force the selected Spell at the Spell offer;
 2. force/observe the published node investment when Path points are spent.

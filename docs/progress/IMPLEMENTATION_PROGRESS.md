@@ -39,11 +39,11 @@ and repairable.
 The Phase 8 permission-minimal Tauri 2 Windows preview is complete. Its native
 profile flow now retains an opened or first-saved project target for in-place
 Save, while the browser retains upload/download behavior. The separate Plan
-Executor consumes the supported F/G execution prefix as a thin declarative
-runtime adapter; it is not a second planner or simulator. On 2026-09-06 the
-focused live campaign reached the end of a configured F/G prefix without an
-unresolved executor mismatch. H remains outside the published execution
-extent.
+Executor consumes complete-valid configured prefixes for both fixed routes
+through execution protocol 33 as a thin declarative runtime adapter; it is not
+a second planner or simulator. On 2026-09-06 the focused live campaign reached
+the end of a configured F/G prefix without an unresolved executor mismatch.
+Complete Underworld and Surface live campaigns remain unclaimed.
 
 ## Active Frontier and Blockers
 
@@ -56,8 +56,9 @@ recorded blocker.
 Phase 9, Simulation Conformance and Game Protocol, has closed and live-proven
 the F/G execution boundary described by
 [`GAME_INTEGRATION_BOUNDARY.md`](../design/GAME_INTEGRATION_BOUNDARY.md).
-Exact H Fields spatial authoring is now stable. H execution publication and
-native realization remain the next separate boundary.
+The fixed-route expansion now publishes and decodes complete Underworld and
+Surface route products. Full-route live proof and the separately audited Dream
+Dive route remain the active execution frontier.
 
 There is no recorded active correctness queue in the former polish tracker.
 Future product observations must first identify their owning authority and,
@@ -806,28 +807,28 @@ configuration/schema change; it is not rerun merely to create review evidence.
 
 ## F/G Execution Boundary
 
-The current F/G execution boundary is protocol v28. It exports only the exact
-complete-valid simulation assembly; the Plan Executor remains a strict decoder
-and native-seam translator rather than a second planner. The closed boundary
-now covers navigation and incoming rewards; fixed room features; ordinary,
+Protocol v28 established the F/G execution boundary by exporting only the exact
+complete-valid simulation assembly; the Plan Executor remained a strict decoder
+and native-seam translator rather than a second planner. That boundary covered
+navigation and incoming rewards; fixed room features; ordinary,
 Chaos, NPC, direct, level, Spell/Path, and transformed acquisitions; selected
 trait consequences; checked starting loadout; Fig Leaf/Gorgon contacts; exact
 Sea Star dispositions; World Shops, Stygian Wells, Purging Pools, Hermes Shrine
 inventory and delivery carriers; Keepsake Rack and fountain interactions; and
 the four automatic outcomes. Ransoms, keepsake pressure, Moon Beam, and other
-named deterministic effects remain explicitly native-authoritative. Later-route
-navigation remains deferred even where its reusable carrier is already
-implemented.
+named deterministic effects remained explicitly native-authoritative. The
+later fixed-route navigation was added by protocol 33 without changing those
+ownership decisions.
 
 The execution authority has one test-owned compile-time census of every
 authored room action and every published Overview, Timeline, Doors,
 acquisition-disposition, automatic-effect, and room-exit conformance union
 member. The executor does not mirror that census as a native callback registry.
-Its active F/G conformance readers are exactly `traitInventory`,
+Its conformance readers are `traitInventory`,
 `elementCounts`, `steadyGrowth`, `chaos`, `keepsakeEffects`,
 `rewardPriorities`, `pathOfStars`, `forfeit`, and `stygianWell`;
-`echoShopDuplicate` and `hermesShrineDeliveries` remain decoded but dormant
-until their owning routes are enabled. Diagnostics remain
+`echoShopDuplicate` and `hermesShrineDeliveries` remain decoded diagnostic
+values rather than active room-exit conformance facts. Diagnostics remain
 nonblocking, and only planner-published changed facts enter conformance.
 
 The Plan Executor is organized by responsibility: route session and
@@ -841,8 +842,8 @@ hook to delete.
 
 The focused in-game F/G campaign reached the end of its configured prefix on
 2026-09-06 without an unresolved executor mismatch. This is live proof of the
-F/G boundary only; later-biome navigation and dormant later-route contacts
-remain unclaimed.
+F/G boundary only; later-biome navigation and dormant later-route contacts were
+still unclaimed at that milestone.
 
 The F/G layered execution closure ran its one complete repository gate on
 2026-09-06. Workspace and fixture typechecking, fixture integrity at 3 files/22
@@ -869,6 +870,33 @@ scheduling, but blocking conformance is now attached to room boundaries,
 completed exit batches, selected traversal, and future-relevant semantic
 Timeline transactions. Incidental encounter callbacks are not independent
 trace mismatches.
+
+### Fixed-route expansion
+
+Protocol 33 extends the same execution architecture through both fixed routes.
+Underworld now carries H Fields cage placement and reward realization while I
+uses the ordinary navigation boundary. Surface carries N Hub and side-room
+realization, O ShipCombat phase and wheel steering, P's native ordered
+PreCombat/Combat envelope including Heracles suffix termination, and Q's
+ordinary rooms, World Shop, fixed Boss link, and terminal topology. These are
+biome adapters over the shared room, navigation, feature, timeline, and
+conformance products; no executor-side route simulator was introduced.
+
+The checked-in `underworld-fghi`, `surface-nop`, and `surface-nopq` execution
+fixtures provide strict compiler/decoder evidence for the complete fixed-route
+products and are byte-identical between the planner and Plan Executor. The
+existing F/G live campaign remains the only live-game claim; complete
+Underworld and Surface campaigns are the next validation milestone before
+Dream Dive work.
+
+The fixed-route closure ran its complete repository gate on 2026-09-07.
+Workspace and fixture typechecking, fixture integrity at 3 files/22 tests,
+correctness at 275 files/2,871 tests, the 18-test performance policy suite, the
+same-host eight-metric comparison, ESLint, repository-wide Prettier, and the
+production build passed. The Plan Executor passed 383 Lua tests and Luacheck
+reported no warnings or errors across 95 source files. All 11 execution fixtures
+were byte-identical across repositories, and the parent modpack smoke passed its
+module entrypoint and coordinator pipeline.
 
 Protocol v8 keeps complete Run State diagnostics in the planner's semantic
 plan while encoding them as one complete opening frame followed by strictly
@@ -929,8 +957,9 @@ the focused application and Hub suites, the complete planner-engine lane,
 typecheck, lint, formatting, and diff checks; this documentation-only closure
 did not rerun those completed lanes.
 
-The resource-point envelope, room-session replacement, and layered F/G
-execution plans were retired after their remaining protocol, conformance,
-native-contact, live-proof, and validation facts were absorbed into the game
-integration boundary and this record. The durable roadmap now begins at H
-rather than retaining completed F/G gate mechanics.
+The resource-point envelope, room-session replacement, layered F/G execution,
+and fixed-route expansion plans were retired after their remaining protocol,
+conformance, native-contact, and validation facts were absorbed into the game
+integration boundary and this record. The durable roadmap now begins with
+full-route live proof and Dream Dive rather than retaining completed biome-gate
+mechanics.

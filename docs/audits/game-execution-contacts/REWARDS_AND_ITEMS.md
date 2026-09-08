@@ -42,7 +42,7 @@ Choice construction additionally lives in `Scripts/UpgradeChoiceLogic.lua`.
 | `AphroditeUpgrade`, `ApolloUpgrade`, `AresUpgrade`, `DemeterUpgrade`, `HephaestusUpgrade`, `HeraUpgrade`, `HestiaUpgrade`, `PoseidonUpgrade`, `ZeusUpgrade`, `HermesUpgrade` | Three-option trait offer and one selected trait                                      | Covered through the generic loot carrier.                                                                        |
 | `StackUpgrade`, `StackUpgradeBig`, `StackUpgradeTriple`                                                                                                                      | Visible target choice plus level count                                               | Covered by the visible-Pom adapter specified in the level-acquisition audit.                                     |
 | `WeaponUpgrade`                                                                                                                                                              | Hammer trait offer                                                                   | Covered through the generic trait carrier.                                                                       |
-| `SpellDrop`                                                                                                                                                                  | Ordered Hex offer; later Path state belongs to the selected spell                    | Covered by the Spell/Hex adapter and product; route activation and live native probing remain deferred.          |
+| `SpellDrop`                                                                                                                                                                  | Ordered Hex offer; later Path state belongs to the selected spell                    | Covered by the Spell/Hex adapter and fixed-route product; complete live native probing remains pending.          |
 | `TrialUpgrade`                                                                                                                                                               | Three Chaos curse choices, each paired with a blessing; the selected pair is applied | Covered by the Chaos pair adapter. `TrialUpgrade` is the native Chaos loot identity, not a blessing-only reward. |
 | `InfernalContractBoon`                                                                                                                                                       | Automatic encounter-clear trait, not a pickup                                        | Native pass-through. It is an Overview logical acquisition and must not be expected as a spawned room reward.    |
 
@@ -53,7 +53,7 @@ Choice construction additionally lives in `Scripts/UpgradeChoiceLogic.lua`.
 | `MaxHealthDrop`, `MaxHealthDropBig`, `MaxHealthDropSmall`, `EmptyMaxHealthSmallDrop`, `EmptyMaxHealthDrop` | Health-state change                         | Covered for direct acquisition settlement; the native health effect is pass-through because its amount is outside simulation. Exact identity may still be forced.                   |
 | `MaxManaDrop`, `MaxManaDropBig`, `MaxManaDropSmall`                                                        | Magick-state change                         | Covered for direct acquisition settlement; native Magick mutation is pass-through.                                                                                                  |
 | `Currency`, `RoomMoneyDrop`, `RoomMoneySmallDrop`, `RoomMoneyTripleDrop`, `RoomMoneyTinyDrop`              | Gold-state change                           | Covered for direct acquisition settlement; native Gold mutation is pass-through.                                                                                                    |
-| `TalentDrop`, `TalentBigDrop`, `MinorTalentDrop`                                                           | 3, 5, or 1 Path points                      | Covered by the specialized Path carrier and `OpenTalentScreen`; route activation and live native probing remain deferred, and they stay outside the generic direct-pickup carrier.  |
+| `TalentDrop`, `TalentBigDrop`, `MinorTalentDrop`                                                           | 3, 5, or 1 Path points                      | Covered by the specialized Path carrier and `OpenTalentScreen`; complete live native probing remains pending, and they stay outside the generic direct-pickup carrier.              |
 | `RoomRewardHealDrop`, `HealDrop`, `HealDropMinor`, `HealBigDrop`                                           | Healing                                     | Covered for direct acquisition settlement; native healing is pass-through.                                                                                                          |
 | `RoomRewardConsolationPrize`                                                                               | Vow of Forfeit onion and biome consumption  | Covered for direct consumption; reward replacement and Forfeit retained-state conformance are separately published.                                                                 |
 | `ArmorBoost`, `ArmorBigBoost`                                                                              | Armor                                       | Covered for direct acquisition settlement; native Armor mutation is pass-through.                                                                                                   |
@@ -87,11 +87,11 @@ because the planner groups required boss drops under one effect-neutral result.
 ## Shop and Shrine pools
 
 The five declared profiles are `RoomShop`, `SurfaceShop`, `WorldShop`,
-`I_WorldShop`, and `Q_WorldShop`. Only `RoomShop` and `WorldShop` occur in the
-current F/G execution extent. Their inventory, purchase, supplemental-offer,
-and Anvil contacts are covered. Surface Shrine and I/Q World Shop navigation is
-deferred route; their already-published inventories and purchases reuse the
-same strict commerce and acquisition boundaries when those routes are enabled.
+`I_WorldShop`, and `Q_WorldShop`. Their inventory, purchase,
+supplemental-offer, and Anvil contacts are covered by the fixed-route product.
+Surface Shrine and I/Q World Shop inventories and purchases reuse the same
+strict commerce and acquisition boundaries; complete-route live proof remains
+pending.
 
 World Shop has three base slots: one Boon, one major non-Boon, and one minor.
 The special supplemental offers—Infernal Contract, Travel Deal, and Echo Gold
