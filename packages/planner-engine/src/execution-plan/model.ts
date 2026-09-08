@@ -8,8 +8,9 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 29 as const;
+export const EXECUTION_PROTOCOL_VERSION = 33 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
+export type ExecutionBiomeKey = 'F' | 'G' | 'H' | 'I' | 'N' | 'O' | 'P' | 'Q';
 
 export type ExecutionRunStateCount =
   | { readonly kind: 'exact'; readonly count: number }
@@ -674,7 +675,7 @@ export type ExecutionDoors =
 export interface ExecutionOccurrence {
   readonly id: string;
   readonly owner: string;
-  readonly biomeKey: string;
+  readonly biomeKey: ExecutionBiomeKey;
   readonly gameName: string;
   readonly kind: string;
   /** Published only for the G Anomaly occurrence; ordinary target replacement stays in Doors/topology. */
@@ -689,20 +690,60 @@ export interface ExecutionOccurrence {
   };
 }
 
+export type ExecutionRouteKey = 'Underworld' | 'Surface';
+
+export type ExecutionConfiguredExtent =
+  | {
+      readonly kind: 'configuredPrefix';
+      readonly biomeKeys: readonly ['F'];
+      readonly terminalBiomeKey: 'F';
+    }
+  | {
+      readonly kind: 'configuredPrefix';
+      readonly biomeKeys: readonly ['F', 'G'];
+      readonly terminalBiomeKey: 'G';
+    }
+  | {
+      readonly kind: 'configuredPrefix';
+      readonly biomeKeys: readonly ['F', 'G', 'H'];
+      readonly terminalBiomeKey: 'H';
+    }
+  | {
+      readonly kind: 'configuredPrefix';
+      readonly biomeKeys: readonly ['F', 'G', 'H', 'I'];
+      readonly terminalBiomeKey: 'I';
+    }
+  | {
+      readonly kind: 'configuredPrefix';
+      readonly biomeKeys: readonly ['N'];
+      readonly terminalBiomeKey: 'N';
+    }
+  | {
+      readonly kind: 'configuredPrefix';
+      readonly biomeKeys: readonly ['N', 'O'];
+      readonly terminalBiomeKey: 'O';
+    }
+  | {
+      readonly kind: 'configuredPrefix';
+      readonly biomeKeys: readonly ['N', 'O', 'P'];
+      readonly terminalBiomeKey: 'P';
+    }
+  | {
+      readonly kind: 'configuredPrefix';
+      readonly biomeKeys: readonly ['N', 'O', 'P', 'Q'];
+      readonly terminalBiomeKey: 'Q';
+    };
+
 export interface ExecutionPlan {
   readonly format: typeof EXECUTION_PLAN_FORMAT;
   readonly protocolVersion: typeof EXECUTION_PROTOCOL_VERSION;
   readonly catalogVersion: string;
   readonly projectId: string;
   readonly planFingerprint: string;
-  readonly routeKey: 'Underworld';
+  readonly routeKey: ExecutionRouteKey;
   readonly startingLoadout: ExecutionStartingLoadout;
   readonly startingKeepsake: ExecutionStartingKeepsake;
-  readonly extent: {
-    readonly kind: 'configuredPrefix';
-    readonly biomeKeys: readonly ['F'] | readonly ['F', 'G'] | readonly ['F', 'G', 'H'];
-    readonly terminalBiomeKey: 'F' | 'G' | 'H';
-  };
+  readonly extent: ExecutionConfiguredExtent;
   /** Complete occurrence records; selectedOccurrenceIds is the route cursor. */
   readonly selectedOccurrenceIds: readonly string[];
   /** Engine-owned physical resource-point policy for each selected occurrence. */
@@ -714,7 +755,7 @@ export interface ExecutionPlan {
 export interface ExecutionSemanticProduct {
   readonly catalogVersion: string;
   readonly projectId: string;
-  readonly routeKey: 'Underworld';
+  readonly routeKey: ExecutionRouteKey;
   readonly startingLoadout: ExecutionStartingLoadout;
   readonly startingKeepsake: ExecutionStartingKeepsake;
   readonly extent: ExecutionPlan['extent'];

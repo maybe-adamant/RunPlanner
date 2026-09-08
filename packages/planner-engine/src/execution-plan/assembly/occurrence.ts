@@ -30,7 +30,7 @@ export function executionOccurrence(
   return Object.freeze({
     id: room.occurrenceId,
     owner: executionRoomOwnerKey(room),
-    biomeKey: room.origin.biomeKey,
+    biomeKey: room.origin.biomeKey as import('../model').ExecutionBiomeKey,
     gameName: room.gameName,
     kind: room.encounterEnvelopeKey,
     ...(anomaly === undefined ? {} : { anomaly }),
