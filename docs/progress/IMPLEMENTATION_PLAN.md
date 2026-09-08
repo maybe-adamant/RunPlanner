@@ -15,25 +15,25 @@ through the catalog, strict authored schema 78, catalog
 `0.55.0-anvil-of-fates`, simulation, validation, contextual authoring,
 persistence, and recovery. Each project owns one Underworld or Surface route.
 
-Execution protocol 28 publishes a complete-valid F or F/G prefix to the Plan
-Executor. The F/G boundary has focused live-game proof. The planner remains the
-sole simulator and semantic authority; the game module is a strict native
-adapter, not a second planner.
+Execution protocol 33 publishes complete-valid configured prefixes for both
+fixed routes, through `F/G/H/I` and `N/O/P/Q`. The F/G boundary has focused
+live-game proof; complete Underworld and Surface live campaigns remain to be
+run. The planner remains the sole simulator and semantic authority; the game
+module is a strict native adapter, not a second planner.
 
 ## Active Execution Frontier
 
-Extend the proven execution boundary by biome structure rather than rebuilding
-the already-closed universal acquisition, trait, keepsake, encounter,
-commerce, resource, and conformance layers.
+The fixed-route execution structure is complete. The next work is validation
+and then the distinct Dream Dive route model, without rebuilding the
+already-closed universal acquisition, trait, keepsake, encounter, commerce,
+resource, and conformance layers.
 
 The intended order is:
 
-1. Mourning Fields (`H`) and Tartarus (`I`), followed by complete Underworld
-   live proof;
-2. Ephyra (`N`), Thessaly (`O`), Olympus (`P`), and Summit (`Q`), followed by
-   complete Surface live proof; and
-3. Dream Dives only after route ordering and its Postboss and phase differences
-   have a dedicated source audit and authored-route product.
+1. complete Underworld (`F/G/H/I`) live proof;
+2. complete Surface (`N/O/P/Q`) live proof; and
+3. implement Dream Dives only after route ordering and its Postboss and phase
+   differences have a dedicated source audit and authored-route product.
 
 Each biome slice starts from its durable biome authority and the shared
 execution boundary. It adds only the topology, room structure, native

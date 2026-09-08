@@ -2,7 +2,7 @@
 
 ## Purpose and boundary
 
-This audit maps every blocking F/G conformance check to the native Hades II
+This audit maps every blocking fixed-route conformance check to the native Hades II
 state or query that owns the observed result. Its purpose is to prevent a
 reader from reconstructing game state from the execution plan, copying an
 expected value into the observed result, or reading a nearby field that looks
@@ -13,7 +13,7 @@ This file covers the three blocking structural conformance boundaries:
 1. room-entry structure: room identity, incoming reward, encounter, and fixed
    room features;
 2. outgoing Doors: normal and additional destinations and their rewards;
-3. named room-exit state: the nine active F/G facts, including element counts.
+3. named room-exit state: the nine active facts, including element counts.
 
 Immediate Timeline contacts such as a selected trait row or Well purchase are
 covered by their action-family audits in this directory. They may report an
@@ -74,9 +74,9 @@ settled, while the next room has not begun mutating run state.
 | `elementCounts`    | Absolute Aether, Earth, Air, Fire, and Water counts at the current room's complete `beforeRoomExit` snapshot. | `CurrentRun.Hero.Elements`, with absent keys treated as zero.                                                                                                                                                                                                                              | Published for every complete room-exit snapshot, including unchanged vectors. A contribution gathered during the prior room's native exit is therefore checked here; one gathered while leaving the current room is checked at the next authored occurrence. This is deliberately separate from `traitInventory`. |
 | `stygianWell`      | Pending Spark, Yarn, Hymn, Extended, discount-duration, and empty-slot-duration uses.                         | The corresponding live traits in `CurrentRun.Hero.Traits`; `RemainingUses` for Spark/Yarn/Extended/durations and `Uses` for Hymn. Duration sign derives from `UsesAsBosses`: boss-clocked Extended purchases are negative in the planner projection, encounter-clocked purchases positive. | `TraitData_Store.lua` declares the fields. `StoreLogic.lua:RecalculateStoreTraitDurations` realizes encounter duration; `HandleStorePurchase` changes an Extended target to `UsesAsBosses` and assigns `BossExtension`. Copying the planner's sign without reading `UsesAsBosses` would conflate the two clocks.  |
 
-`echoShopDuplicate` and `hermesShrineDeliveries` are valid planner conformance
-fact kinds but have no active F/G reader. They remain dormant until a supported
-route can publish them; silently returning an inferred value is not permitted.
+`echoShopDuplicate` and `hermesShrineDeliveries` are valid decoded diagnostic
+values but are not active room-exit conformance facts. Silently returning an
+inferred value for either is not permitted.
 
 ## Keepsake subfields
 

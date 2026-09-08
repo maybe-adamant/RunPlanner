@@ -21,15 +21,15 @@ NPC identity is not enough to identify a native trait-offer contact. Some NPCs
 use ordinary loot; others build bespoke menus before the generic selection
 function is reached.
 
-| Provider                         | Native offer contact                          | Current status                                                                                                                         |
-| -------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Arachne                          | `ArachneCostumeChoice`                        | Covered by the focused NPC acquisition adapter.                                                                                        |
-| Narcissus                        | `NarcissusBenefitChoice`                      | Covered for the menu, native generated children, and Mystery Boon handoff.                                                             |
-| Medea                            | `MedeaCurseChoice`                            | Menu and native selected effects are covered; P route navigation remains deferred.                                                     |
-| Circe                            | `CirceBlessingChoice`                         | Menu and exact Arcana/Fear consequences are covered; O route navigation remains deferred.                                              |
-| Icarus                           | `IcarusBenefitChoice`                         | Menu and Latest Model target are covered; deterministic levels and Supply Chain production remain native; P route navigation deferred. |
-| Echo                             | `EchoChoice`                                  | Menu, nested Boon replay, and Pom target are covered; other consequences remain native or hand off to their ordinary consumer.         |
-| Artemis, Athena, Hades, Dionysus | Ordinary loot or encounter-owned trait source | Covered only through the ordinary loot carrier reached by the encounter.                                                               |
+| Provider                         | Native offer contact                          | Current status                                                                                                                                         |
+| -------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Arachne                          | `ArachneCostumeChoice`                        | Covered by the focused NPC acquisition adapter.                                                                                                        |
+| Narcissus                        | `NarcissusBenefitChoice`                      | Covered for the menu, native generated children, and Mystery Boon handoff.                                                                             |
+| Medea                            | `MedeaCurseChoice`                            | Menu and native selected effects are covered; complete Surface live proof remains pending.                                                             |
+| Circe                            | `CirceBlessingChoice`                         | Menu and exact Arcana/Fear consequences are covered; complete Surface live proof remains pending.                                                      |
+| Icarus                           | `IcarusBenefitChoice`                         | Menu and Latest Model target are covered; deterministic levels and Supply Chain production remain native; complete Surface live proof remains pending. |
+| Echo                             | `EchoChoice`                                  | Menu, nested Boon replay, and Pom target are covered; other consequences remain native or hand off to their ordinary consumer.                         |
+| Artemis, Athena, Hades, Dionysus | Ordinary loot or encounter-owned trait source | Covered only through the ordinary loot carrier reached by the encounter.                                                                               |
 
 The six bespoke contacts are defined in `Scripts/EventLogic.lua`. Their explicit
 adapters are intentional; a single `UseLoot` hook does not cover these menus.
@@ -62,14 +62,14 @@ The game exposes single and multi-phase selection through `ChooseEncounter` and
 encounter-end lifecycle window. Boss defeat is observed at `Kill` only to open
 the declared boss-defeated window.
 
-| Encounter family                                                                                               | Status                                                                                                           |
-| -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| F/G Combat, Miniboss, Story, Shop, Boss                                                                        | Covered through exact room and encounter declarations.                                                           |
-| Chaos                                                                                                          | Covered for room/encounter and its trait-pair acquisition.                                                       |
-| G Anomaly                                                                                                      | Covered as a real one-exit Anomaly occurrence, not a hidden return.                                              |
-| Zagreus Contract                                                                                               | Covered as an additional exit and encounter occurrence.                                                          |
-| Devotion                                                                                                       | Covered where its chosen/spurned acquisitions are published.                                                     |
-| P PreCombat plus room-ending encounter, H bonus encounter, N side rooms, O wheels, I goals, Q structured rooms | Deferred route; each needs biome-specific execution facts without changing the general room-session coordinator. |
+| Encounter family                                                                                               | Status                                                                                                                                                         |
+| -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F/G Combat, Miniboss, Story, Shop, Boss                                                                        | Covered through exact room and encounter declarations.                                                                                                         |
+| Chaos                                                                                                          | Covered for room/encounter and its trait-pair acquisition.                                                                                                     |
+| G Anomaly                                                                                                      | Covered as a real one-exit Anomaly occurrence, not a hidden return.                                                                                            |
+| Zagreus Contract                                                                                               | Covered as an additional exit and encounter occurrence.                                                                                                        |
+| Devotion                                                                                                       | Covered where its chosen/spurned acquisitions are published.                                                                                                   |
+| P PreCombat plus room-ending encounter, H bonus encounter, N side rooms, O wheels, I goals, Q structured rooms | Covered through the generic phase adapter, Ephyra and ShipCombat adapters, and ordinary resolved I/Q room products; complete-route live proof remains pending. |
 
 Enemy composition, wave counts, and Fear-modified enemy generation are not
 currently authored execution facts. They remain outside the blocking execution
@@ -105,10 +105,9 @@ the phase's native lifecycle; transactions within that phase remain distinct
 by their complete semantic contact. A bare phase key therefore cannot be a
 unique transaction index.
 
-This identity model is sufficient for the current F/G encounters and for later
-H and O multi-phase rooms. Those later routes may add cage, wheel, or other
-phase-local contacts, but they do not require a second encounter cursor or a
-different phase-binding scheme.
+This identity model serves both fixed routes, including H cage encounters and O
+multi-phase rooms, without a second encounter cursor or a different
+phase-binding scheme.
 
 ## Closed automatic transaction union
 
@@ -136,7 +135,7 @@ an automatic member.
 The executor has unit coverage for all four automatic shapes, but byte-product
 fixtures should not be mistaken for complete native contact evidence. Current
 fixture coverage is strongest for F/G room flow, ordinary offers, Chaos, Wells,
-and shops. Concave Stone's second offer and each dormant-route NPC remain useful
+and shops. Concave Stone's second offer and later-biome NPCs remain useful
 bounded live probes even though their adapters have focused unit coverage.
 Encounter closure additionally needs focused witnesses for
 two native encounter tables sharing one declaration name and for two different
