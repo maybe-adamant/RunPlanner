@@ -83,6 +83,14 @@ export function validateExecutionGraph(
   };
 
   for (const occurrence of graph.occurrences) continuations(occurrence);
+  for (const occurrence of graph.occurrences) {
+    if (occurrence.resumeBoundary === undefined) continue;
+    if (occurrence.resumeBoundary !== 'postbossEntry')
+      invalid(`${occurrence.id} has an unsupported resume boundary`);
+    if (!selected.has(occurrence.id)) invalid(`${occurrence.id} resume boundary must be selected`);
+    if (occurrence.diagnostics?.roomEntered === undefined)
+      invalid(`${occurrence.id} resume boundary requires roomEntered diagnostics`);
+  }
   const nHubContinuations = new Set(
     graph.occurrences.flatMap((entry) =>
       entry.overview.hub === undefined

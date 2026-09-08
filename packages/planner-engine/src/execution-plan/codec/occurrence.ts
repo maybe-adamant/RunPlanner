@@ -167,9 +167,15 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
   exact(
     record,
     ['id', 'owner', 'biomeKey', 'gameName', 'kind', 'overview', 'timeline', 'doors'],
-    ['anomaly', 'roomExitConformance', 'diagnostics'],
+    ['anomaly', 'resumeBoundary', 'roomExitConformance', 'diagnostics'],
     label,
   );
+  const resumeBoundary =
+    record.resumeBoundary === undefined
+      ? undefined
+      : stringValue(record.resumeBoundary, `${label}.resumeBoundary`);
+  if (resumeBoundary !== undefined && resumeBoundary !== 'postbossEntry')
+    fail(`${label}.resumeBoundary is unsupported`);
   const anomaly =
     record.anomaly === undefined ? undefined : object(record.anomaly, `${label}.anomaly`);
   if (anomaly !== undefined)
@@ -245,6 +251,7 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
     biomeKey: biomeKey as ExecutionBiomeKey,
     gameName: stringValue(record.gameName, `${label}.gameName`),
     kind: stringValue(record.kind, `${label}.kind`),
+    ...(resumeBoundary === undefined ? {} : { resumeBoundary }),
     ...(parsedAnomaly === undefined ? {} : { anomaly: parsedAnomaly }),
     overview: parsedOverview,
     timeline: parsedTimeline,
