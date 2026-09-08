@@ -9,12 +9,14 @@ import {
   createHubSlotAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
+  createJudgmentArcanaAddress,
   createLocalVisitOrderAddress,
   createLocalVisitSlotAddress,
   createOccurrenceAddress,
   createRouteAddress,
   createRoomActionAddress,
   createLocalRewardAddress,
+  createShopOfferAddress,
   createTraitOfferAddress,
   createOccurrenceId,
   roomActionKey,
@@ -29,6 +31,8 @@ import {
   nOccurrenceId,
   nOccurrenceIds,
   nVisitSlotKeys,
+  oBiome,
+  oOccurrenceIds,
   createSurfaceNOHermesShrineDeliveryCheckpoint,
 } from '@run-planner/test-fixtures/surface';
 import {
@@ -443,5 +447,45 @@ describe('chronological authoring horizon', () => {
     ).toBe('editable');
     expect(authoringReadinessAt(assembly, preboss)).toBe('editable');
     expect(authoringReadinessAt(assembly, boss)).toBe('locked');
+  });
+
+  it('keeps Preboss Shop purchases editable before an incomplete fixed Boss outcome', () => {
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route: createRouteAddress('Surface'),
+      arcanaKeys: ['CastCount'],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceJudgmentArcana',
+      judgment: createJudgmentArcanaAddress(
+        createOccurrenceAddress(nBiome, createOccurrenceId(`${nOccurrenceIds.preboss}:boss`)),
+        'Encounter',
+      ),
+      arcanaKeys: ['ChanneledCast', 'HealthRegen', 'LowManaDamageBonus', 'CastBuff', 'BonusHealth'],
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    const oBoss = createOccurrenceAddress(
+      oBiome,
+      createOccurrenceId(`${oOccurrenceIds.preboss}:boss`),
+    );
+    const judgment = createJudgmentArcanaAddress(oBoss, 'Encounter');
+
+    expect(assembly.evaluation.authoringHorizon).toMatchObject({
+      kind: 'incomplete',
+      repairTarget: judgment,
+    });
+    expect(
+      authoringReadinessAt(
+        assembly,
+        createShopOfferAddress(oBiome, oOccurrenceIds.preboss, 'Boon'),
+      ),
+    ).toBe('editable');
+    expect(authoringReadinessAt(assembly, judgment)).toBe('editable');
+    expect(
+      authoringReadinessAt(
+        assembly,
+        createOccurrenceAddress(oBiome, createOccurrenceId(`${oOccurrenceIds.preboss}:postboss`)),
+      ),
+    ).toBe('locked');
   });
 });

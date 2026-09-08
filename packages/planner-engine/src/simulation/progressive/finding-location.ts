@@ -594,25 +594,6 @@ function locateStructuralOwner(
       address.selection.owner.occurrenceId === occurrenceId
     );
   });
-  // Automatic Boss Arcana effects are terminal lifecycle children, not
-  // authored Preboss occurrences. They follow every decision in the
-  // materialized biome and have no room occurrence to use for ordinary
-  // ownership lookup.
-  if (
-    (address.kind === 'judgmentArcana' || address.kind === 'figurineArcana') &&
-    address.routeKey === prefix.routeKey &&
-    address.biomeKey === prefix.biomeKey
-  ) {
-    return Object.freeze({
-      decisionIndex: prefix.decisions.length - 1,
-      ...(historyChronology === undefined
-        ? {}
-        : {
-            historySequence: historyChronology.sequence,
-            historyBoundary: historyChronology.boundary,
-          }),
-    });
-  }
   // The ordinary rack is a fixed Postboss first-action boundary, not an
   // authored occurrence or normal-door decision. Its invalid persisted value
   // still belongs to the completed biome's final assessable region.
