@@ -9,7 +9,10 @@ import {
   createUnderworldFWellCheckpoint,
   goldenFBiome,
 } from '@run-planner/test-fixtures/underworld';
-import { loadUnderworldFGHCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  loadUnderworldFGHCheckpoint,
+  loadUnderworldFGHICheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
 import { simulateProjectAssembly } from '../../src/simulation';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { allTogetherOffer, allTogetherResult } from '../simulation/shop-trait-purchase-support';
@@ -47,6 +50,7 @@ import fgAnomalyFixture from './fixtures/fg-anomaly.execution.json';
 import fgIxionChaosFixture from './fixtures/fg-ixion-chaos.execution.json';
 import automaticBossFixture from './fixtures/automatic-boss.execution.json';
 import underworldFGHFixture from './fixtures/underworld-fgh.execution.json';
+import underworldFGHIFixture from './fixtures/underworld-fghi.execution.json';
 import { bossAutomaticOutcomeProject } from './support/automatic-fixture';
 import { executionTimelineTransactions } from '../../src/execution-plan/assembly/timeline-transactions';
 import { orderedExecutionRooms } from '../../src/execution-plan/assembly/route';
@@ -1527,6 +1531,7 @@ describe('execution-plan compiler and codec', () => {
     ['f-opening', fOnlyProject(), fOpeningFixture],
     ['fg', createCompleteFGProject(), fgFixture],
     ['fgh', loadUnderworldFGHCheckpoint(), underworldFGHFixture],
+    ['fghi', loadUnderworldFGHICheckpoint(), underworldFGHIFixture],
     ['fg-ixion-chaos', createCompleteFGIxionChaosProject(), fgIxionChaosFixture],
     ['fg-anomaly', createCompleteFGAnomalyProject(), fgAnomalyFixture],
     ['automatic-boss', bossAutomaticOutcomeProject(), automaticBossFixture],
@@ -1534,6 +1539,96 @@ describe('execution-plan compiler and codec', () => {
     const { plan } = planFor(project);
     if (fixture !== undefined) expect(decodeExecutionPlan(fixture)).toEqual(plan);
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+  });
+
+  it('publishes I Clockwork goals as ordinary rewards without changing I topology', () => {
+    const { plan } = planFor(loadUnderworldFGHICheckpoint());
+    expect(plan.extent).toEqual({
+      kind: 'configuredPrefix',
+      biomeKeys: ['F', 'G', 'H', 'I'],
+      terminalBiomeKey: 'I',
+    });
+    const goal = plan.occurrences.find((occurrence) => occurrence.id === 'golden-i-combat01');
+    expect(goal?.overview.incomingReward).toEqual({
+      rewardType: 'ClockworkGoal',
+      producerLifecycleKey: 'ClockworkGoalRoom',
+    });
+    const nonGoal = plan.occurrences.find((occurrence) => occurrence.id === 'golden-i-miniboss01');
+    expect(nonGoal?.overview.incomingReward).toMatchObject({
+      rewardType: 'Boon',
+      producerLifecycleKey: 'RoomReward',
+    });
+    expect(plan.selectedOccurrenceIds).toContain('golden-i-preboss');
+    expect(plan.selectedOccurrenceIds).not.toContain('golden-i-miniboss01');
+    const preboss = plan.occurrences.find((occurrence) => occurrence.id === 'golden-i-preboss');
+    expect(preboss?.doors).toMatchObject({
+      kind: 'fixed',
+      target: { id: 'golden-i-preboss:boss', gameName: 'I_Boss01' },
+    });
+    const boss = plan.occurrences.find((occurrence) => occurrence.id === 'golden-i-preboss:boss');
+    expect(boss?.doors).toMatchObject({ kind: 'terminal' });
+  });
+
+  it('accepts only closed protocol-33 Underworld and Surface route prefixes', () => {
+    const fixture = JSON.parse(JSON.stringify(underworldFGHIFixture));
+    fixture.extent = {
+      kind: 'configuredPrefix',
+      biomeKeys: ['F', 'G', 'I'],
+      terminalBiomeKey: 'I',
+    };
+    expect(() => decodeExecutionPlan(fixture)).toThrow(ExecutionPlanCodecError);
+    fixture.extent = {
+      kind: 'configuredPrefix',
+      biomeKeys: ['F', 'G', 'H', 'I', 'N'],
+      terminalBiomeKey: 'N',
+    };
+    expect(() => decodeExecutionPlan(fixture)).toThrow(ExecutionPlanCodecError);
+    const sourceOccurrence = underworldFGHIFixture.occurrences.find(
+      (occurrence) => occurrence.id === 'golden-i-preboss:boss',
+    );
+    const sourceResource = underworldFGHIFixture.resources.occurrences.find(
+      (resource) => resource.occurrenceId === sourceOccurrence?.id,
+    );
+    if (sourceOccurrence === undefined || sourceResource === undefined)
+      throw new Error('fixture lacks a terminal occurrence');
+    const {
+      diagnostics: _diagnostics,
+      roomExitConformance: _roomExitConformance,
+      ...surfaceOccurrence
+    } = sourceOccurrence;
+    const surface = {
+      ...fixture,
+      routeKey: 'Surface',
+      extent: {
+        kind: 'configuredPrefix',
+        biomeKeys: ['N'],
+        terminalBiomeKey: 'N',
+      },
+      selectedOccurrenceIds: ['surface-opening'],
+      resources: {
+        occurrences: [{ ...sourceResource, occurrenceId: 'surface-opening' }],
+      },
+      occurrences: [
+        {
+          ...surfaceOccurrence,
+          id: 'surface-opening',
+          biomeKey: 'N',
+          gameName: 'N_Intro',
+        },
+      ],
+    };
+    refreshWireFingerprint(surface);
+    expect(decodeExecutionPlan(surface).extent).toEqual(surface.extent);
+    surface.occurrences[0]!.biomeKey = 'O';
+    refreshWireFingerprint(surface);
+    expect(() => decodeExecutionPlan(surface)).toThrow(ExecutionPlanCodecError);
+    fixture.routeKey = 'Surface';
+    fixture.extent = {
+      kind: 'configuredPrefix',
+      biomeKeys: ['F'],
+      terminalBiomeKey: 'F',
+    };
+    expect(() => decodeExecutionPlan(fixture)).toThrow(ExecutionPlanCodecError);
   });
 
   it('publishes grouped Fields cage previews and the selected spatial layout', () => {

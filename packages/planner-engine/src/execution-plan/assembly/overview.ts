@@ -47,6 +47,12 @@ export function executionKeepsakeEquipResults(
 }
 
 export function executionReward(room: CanonicalAuthoredRoom): ExecutionReward | undefined {
+  if (room.clockworkReward === 'goal') {
+    return Object.freeze({
+      rewardType: 'ClockworkGoal',
+      producerLifecycleKey: 'ClockworkGoalRoom',
+    });
+  }
   const incoming = room.incomingReward;
   if (incoming === undefined) return undefined;
   return executionRewardFromOffer(

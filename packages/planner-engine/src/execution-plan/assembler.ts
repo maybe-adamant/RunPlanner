@@ -1,6 +1,10 @@
 import { assertExactProjectEvaluationAssembly } from '../simulation/project-evaluation-assembly';
 import type { RunStateSnapshot } from '../simulation/rewards/run-state';
-import { EXECUTION_CATALOG_VERSION, type ExecutionSemanticProduct } from './model';
+import {
+  EXECUTION_CATALOG_VERSION,
+  type ExecutionConfiguredExtent,
+  type ExecutionSemanticProduct,
+} from './model';
 import { ExecutionCompilerError as CompilerError } from './assembler-errors';
 import { executionKeepsakeEquipResults } from './assembly/overview';
 import {
@@ -30,18 +34,42 @@ export function assembleExecutionProduct({
   if (evaluation.catalogVersion !== EXECUTION_CATALOG_VERSION) {
     throw new CompilerError('unsupportedExtent', 'execution catalog version is unsupported');
   }
-  if (evaluation.route.routeKey !== 'Underworld') {
-    throw new CompilerError('unsupportedRoute', 'F/G execution supports only the Underworld route');
-  }
+  const routeKey = evaluation.route.routeKey;
+  if (routeKey !== 'Underworld' && routeKey !== 'Surface')
+    throw new CompilerError(
+      'unsupportedRoute',
+      'execution supports only Underworld or Surface routes',
+    );
   const keys = evaluation.route.configuredBiomeKeys;
-  if (
+  const invalidUnderworldPrefix =
     !(keys.length === 1 && keys[0] === 'F') &&
     !(keys.length === 2 && keys[0] === 'F' && keys[1] === 'G') &&
-    !(keys.length === 3 && keys[0] === 'F' && keys[1] === 'G' && keys[2] === 'H')
+    !(keys.length === 3 && keys[0] === 'F' && keys[1] === 'G' && keys[2] === 'H') &&
+    !(
+      keys.length === 4 &&
+      keys[0] === 'F' &&
+      keys[1] === 'G' &&
+      keys[2] === 'H' &&
+      keys[3] === 'I'
+    );
+  const invalidSurfacePrefix =
+    !(keys.length === 1 && keys[0] === 'N') &&
+    !(keys.length === 2 && keys[0] === 'N' && keys[1] === 'O') &&
+    !(keys.length === 3 && keys[0] === 'N' && keys[1] === 'O' && keys[2] === 'P') &&
+    !(
+      keys.length === 4 &&
+      keys[0] === 'N' &&
+      keys[1] === 'O' &&
+      keys[2] === 'P' &&
+      keys[3] === 'Q'
+    );
+  if (
+    (routeKey === 'Underworld' && invalidUnderworldPrefix) ||
+    (routeKey === 'Surface' && invalidSurfacePrefix)
   ) {
     throw new CompilerError(
       'unsupportedExtent',
-      'execution supports only configured F, F/G, or F/G/H prefixes',
+      'execution supports only configured Underworld or Surface prefixes',
     );
   }
   const biomes = completeExecutionBiomes(assembly);
@@ -146,10 +174,9 @@ export function assembleExecutionProduct({
   });
   const extent = Object.freeze({
     kind: 'configuredPrefix' as const,
-    biomeKeys: Object.freeze([...keys]) as
-      readonly ['F'] | readonly ['F', 'G'] | readonly ['F', 'G', 'H'],
-    terminalBiomeKey: keys[keys.length - 1] as 'F' | 'G' | 'H',
-  });
+    biomeKeys: Object.freeze([...keys]),
+    terminalBiomeKey: keys[keys.length - 1],
+  }) as ExecutionConfiguredExtent;
   const startingEquipResults = executionKeepsakeEquipResults(
     assembly.project.route.loadout.keepsakeEquipResults,
   );
@@ -161,7 +188,7 @@ export function assembleExecutionProduct({
   const product = Object.freeze({
     catalogVersion: evaluation.catalogVersion,
     projectId: evaluation.projectId,
-    routeKey: 'Underworld' as const,
+    routeKey,
     startingLoadout,
     startingKeepsake: Object.freeze({
       keepsakeKey: assembly.project.route.loadout.startingKeepsakeKey,

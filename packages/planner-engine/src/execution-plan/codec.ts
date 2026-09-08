@@ -72,11 +72,12 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     fail('execution plan.protocolVersion is unsupported');
   if (record.catalogVersion !== EXECUTION_CATALOG_VERSION)
     fail('execution plan.catalogVersion is unsupported');
-  if (record.routeKey !== 'Underworld') fail('execution plan.routeKey is unsupported');
+  if (record.routeKey !== 'Underworld' && record.routeKey !== 'Surface')
+    fail('execution plan.routeKey is unsupported');
   const extent = object(record.extent, 'execution plan.extent');
   exact(extent, ['kind', 'biomeKeys', 'terminalBiomeKey'], [], 'execution plan.extent');
   if (extent.kind !== 'configuredPrefix') fail('execution plan.extent.kind is unsupported');
-  const biomeKeys = stringArray(extent.biomeKeys, 'execution plan.extent.biomeKeys', 3);
+  const biomeKeys = stringArray(extent.biomeKeys, 'execution plan.extent.biomeKeys', 4);
   if (
     !(biomeKeys.length === 1 && biomeKeys[0] === 'F') &&
     !(biomeKeys.length === 2 && biomeKeys[0] === 'F' && biomeKeys[1] === 'G') &&
@@ -85,9 +86,36 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
       biomeKeys[0] === 'F' &&
       biomeKeys[1] === 'G' &&
       biomeKeys[2] === 'H'
+    ) &&
+    !(
+      biomeKeys.length === 4 &&
+      biomeKeys[0] === 'F' &&
+      biomeKeys[1] === 'G' &&
+      biomeKeys[2] === 'H' &&
+      biomeKeys[3] === 'I'
+    ) &&
+    !(biomeKeys.length === 1 && biomeKeys[0] === 'N') &&
+    !(biomeKeys.length === 2 && biomeKeys[0] === 'N' && biomeKeys[1] === 'O') &&
+    !(
+      biomeKeys.length === 3 &&
+      biomeKeys[0] === 'N' &&
+      biomeKeys[1] === 'O' &&
+      biomeKeys[2] === 'P'
+    ) &&
+    !(
+      biomeKeys.length === 4 &&
+      biomeKeys[0] === 'N' &&
+      biomeKeys[1] === 'O' &&
+      biomeKeys[2] === 'P' &&
+      biomeKeys[3] === 'Q'
     )
   )
     fail('execution plan.extent.biomeKeys is unsupported');
+  if (
+    (record.routeKey === 'Underworld' && biomeKeys[0] !== 'F') ||
+    (record.routeKey === 'Surface' && biomeKeys[0] !== 'N')
+  )
+    fail('execution plan.routeKey disagrees with extent');
   if (extent.terminalBiomeKey !== biomeKeys[biomeKeys.length - 1])
     fail('execution plan.extent.terminalBiomeKey disagrees with biomeKeys');
   const decodedStartingLoadout = startingLoadout(record.startingLoadout);
@@ -109,21 +137,22 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
       occurrence(entry, index),
     ),
   );
+  if (occurrences.some((entry) => !biomeKeys.includes(entry.biomeKey)))
+    fail('execution plan.occurrences contains a biome outside extent');
   const plan = Object.freeze({
     format: EXECUTION_PLAN_FORMAT,
     protocolVersion: EXECUTION_PROTOCOL_VERSION,
     catalogVersion: EXECUTION_CATALOG_VERSION,
     projectId: stringValue(record.projectId, 'execution plan.projectId'),
     planFingerprint: stringValue(record.planFingerprint, 'execution plan.planFingerprint', 64),
-    routeKey: 'Underworld' as const,
+    routeKey: record.routeKey,
     startingLoadout: decodedStartingLoadout,
     startingKeepsake,
     extent: Object.freeze({
       kind: 'configuredPrefix' as const,
-      biomeKeys: Object.freeze(biomeKeys) as
-        readonly ['F'] | readonly ['F', 'G'] | readonly ['F', 'G', 'H'],
-      terminalBiomeKey: biomeKeys[biomeKeys.length - 1] as 'F' | 'G' | 'H',
-    }),
+      biomeKeys: Object.freeze(biomeKeys),
+      terminalBiomeKey: biomeKeys[biomeKeys.length - 1],
+    }) as ExecutionPlan['extent'],
     selectedOccurrenceIds: Object.freeze(
       stringArray(record.selectedOccurrenceIds, 'execution plan.selectedOccurrenceIds'),
     ),

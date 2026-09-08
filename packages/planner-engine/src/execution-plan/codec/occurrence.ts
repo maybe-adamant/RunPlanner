@@ -1,5 +1,6 @@
 import type {
   ExecutionAnomalyReplacement,
+  ExecutionBiomeKey,
   ExecutionOccurrence,
   ExecutionRoomExitConformanceFactKind,
 } from '../model';
@@ -108,10 +109,13 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
       parsedOverview.encounterPhases,
       `${label}.overview.fields`,
     );
+  const biomeKey = stringValue(record.biomeKey, `${label}.biomeKey`);
+  if (!['F', 'G', 'H', 'I', 'N', 'O', 'P', 'Q'].includes(biomeKey))
+    fail(`${label}.biomeKey is unsupported`);
   return Object.freeze({
     id: stringValue(record.id, `${label}.id`, 256),
     owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
-    biomeKey: stringValue(record.biomeKey, `${label}.biomeKey`),
+    biomeKey: biomeKey as ExecutionBiomeKey,
     gameName: stringValue(record.gameName, `${label}.gameName`),
     kind: stringValue(record.kind, `${label}.kind`),
     ...(parsedAnomaly === undefined ? {} : { anomaly: parsedAnomaly }),
