@@ -44,9 +44,12 @@ export function assembleTimelineRelations(
         ? 'roomExit'
         : transaction.window.kind === 'encounterEnd'
           ? 'roomExit'
-          : transaction.window.kind === 'standard' && transaction.window.phase === 'beforeCombat'
-            ? 'outgoingGeneration'
-            : 'exitUsable';
+          : transaction.window.kind === 'shipPreCombat' ||
+              transaction.window.kind === 'shipPostCombat'
+            ? 'exitUsable'
+            : transaction.window.kind === 'standard' && transaction.window.phase === 'beforeCombat'
+              ? 'outgoingGeneration'
+              : 'exitUsable';
     return Object.freeze({ owner: transaction.owner, checkpoint }) as ExecutionTimelineObligation;
   });
   // Keep lifecycle window validation close to its existing room authority;

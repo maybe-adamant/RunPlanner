@@ -40,6 +40,13 @@ export function lifecycleWindow(value: unknown, label: string): ExecutionLifecyc
       phaseKey: stringValue(record.phaseKey, `${label}.phaseKey`),
     });
   }
+  if (record.kind === 'shipPreCombat' || record.kind === 'shipPostCombat') {
+    exact(record, ['kind', 'wheelKey'], [], label);
+    return Object.freeze({
+      kind: record.kind,
+      wheelKey: stringValue(record.wheelKey, `${label}.wheelKey`),
+    });
+  }
   if (record.kind === 'postOutgoing') {
     exact(record, ['kind'], [], label);
     return Object.freeze({ kind: 'postOutgoing' });
@@ -84,6 +91,21 @@ export function nemesisOutcome(value: unknown, label: string) {
 export function transaction(value: unknown, label: string): ExecutionTimelineTransaction {
   const record = object(value, label);
   const kind = record.kind;
+  if (kind === 'chooseRewardWheel') {
+    exact(record, ['kind', 'owner', 'window', 'wheelKey', 'pickedOfferKey'], [], label);
+    const window = lifecycleWindow(record.window, `${label}.window`);
+    if (window.kind !== 'shipPreCombat')
+      fail(`${label}.window must be shipPreCombat for a wheel choice`);
+    const wheelKey = stringValue(record.wheelKey, `${label}.wheelKey`);
+    if (window.wheelKey !== wheelKey) fail(`${label}.window.wheelKey must match the wheel choice`);
+    return Object.freeze({
+      kind,
+      owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
+      window,
+      wheelKey,
+      pickedOfferKey: stringValue(record.pickedOfferKey, `${label}.pickedOfferKey`),
+    });
+  }
   if (kind === 'acquisition') {
     exact(
       record,

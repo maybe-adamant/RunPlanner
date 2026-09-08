@@ -82,6 +82,7 @@ export function overview(value: unknown, label: string) {
       'incomingReward',
       'effectNeutralRequiredReward',
       'unmodeledEncounterKeys',
+      'rewardWheels',
       'shop',
       'hermesShrine',
       'stygianWell',
@@ -131,6 +132,76 @@ export function overview(value: unknown, label: string) {
   }
   if (unmodeledEncounterKeys !== undefined && encounterPhases.length > 0) {
     fail(`${label}.unmodeledEncounterKeys cannot coexist with modeled encounter phases`);
+  }
+  const rewardWheels =
+    record.rewardWheels === undefined
+      ? undefined
+      : Object.freeze(
+          array(record.rewardWheels, `${label}.rewardWheels`).map((entry, index) => {
+            const wheel = object(entry, `${label}.rewardWheels[${index}]`);
+            exact(
+              wheel,
+              [
+                'wheelKey',
+                'phaseKey',
+                'phaseOwner',
+                'offerCount',
+                'storeKey',
+                'offers',
+                'pickedOfferKey',
+              ],
+              [],
+              `${label}.rewardWheels[${index}]`,
+            );
+            const wheelLabel = `${label}.rewardWheels[${index}]`;
+            const offers = Object.freeze(
+              array(wheel.offers, `${wheelLabel}.offers`).map((offerEntry, offerIndex) => {
+                const offer = object(offerEntry, `${wheelLabel}.offers[${offerIndex}]`);
+                exact(offer, ['offerKey', 'reward'], [], `${wheelLabel}.offers[${offerIndex}]`);
+                return Object.freeze({
+                  offerKey: stringValue(
+                    offer.offerKey,
+                    `${wheelLabel}.offers[${offerIndex}].offerKey`,
+                  ),
+                  reward: reward(offer.reward, `${wheelLabel}.offers[${offerIndex}].reward`),
+                });
+              }),
+            );
+            const offerCount = integer(wheel.offerCount, `${wheelLabel}.offerCount`, 1);
+            if (offerCount > 2) fail(`${wheelLabel}.offerCount must be one or two`);
+            if (offerCount !== offers.length)
+              fail(`${wheelLabel}.offerCount must match its active offers`);
+            const pickedOfferKey = stringValue(
+              wheel.pickedOfferKey,
+              `${wheelLabel}.pickedOfferKey`,
+            );
+            if (offers.filter((offer) => offer.offerKey === pickedOfferKey).length !== 1)
+              fail(`${wheelLabel}.pickedOfferKey must identify one active offer`);
+            const storeKey = stringValue(wheel.storeKey, `${wheelLabel}.storeKey`);
+            if (storeKey !== 'RunProgress' && storeKey !== 'MetaProgress')
+              fail(`${wheelLabel}.storeKey must be RunProgress or MetaProgress`);
+            return Object.freeze({
+              wheelKey: stringValue(wheel.wheelKey, `${wheelLabel}.wheelKey`),
+              phaseKey: stringValue(wheel.phaseKey, `${wheelLabel}.phaseKey`),
+              phaseOwner: stringValue(
+                wheel.phaseOwner,
+                `${wheelLabel}.phaseOwner`,
+                MAX_OWNER_STRING,
+              ),
+              offerCount,
+              storeKey,
+              offers,
+              pickedOfferKey,
+            });
+          }),
+        );
+  if (rewardWheels !== undefined) {
+    const wheelKeys = rewardWheels.map((wheel) => wheel.wheelKey);
+    const phaseKeys = rewardWheels.map((wheel) => wheel.phaseKey);
+    if (new Set(wheelKeys).size !== wheelKeys.length)
+      fail(`${label}.rewardWheels has duplicate wheel keys`);
+    if (new Set(phaseKeys).size !== phaseKeys.length)
+      fail(`${label}.rewardWheels has duplicate phase keys`);
   }
   const shop = record.shop === undefined ? undefined : object(record.shop, `${label}.shop`);
   if (
@@ -645,6 +716,7 @@ export function overview(value: unknown, label: string) {
     ...(unmodeledEncounterKeys === undefined
       ? {}
       : { unmodeledEncounterKeys: Object.freeze(unmodeledEncounterKeys) }),
+    ...(rewardWheels === undefined ? {} : { rewardWheels }),
     encounterPhases: Object.freeze(encounterPhases),
     requiredObjects: Object.freeze(stringArray(record.requiredObjects, `${label}.requiredObjects`)),
     ...(parsedShop === undefined ? {} : { shop: parsedShop }),

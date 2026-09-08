@@ -14,9 +14,11 @@ export function assembleLifecycleWindow(row: RoomActionWindow): ExecutionLifecyc
     return row.phaseKey === undefined
       ? Object.freeze({ kind: 'standard', phase: 'afterCombat' })
       : Object.freeze({ kind: 'encounterEnd', phaseKey: row.phaseKey });
+  if (row.kind === 'shipPreCombat' || row.kind === 'shipPostCombat')
+    return Object.freeze({ kind: row.kind, wheelKey: row.wheelKey });
   if (row.kind === 'postOutgoing') return Object.freeze({ kind: row.kind });
   throw new CompilerError(
     'executionCoverageMissing',
-    `lifecycle window ${row.kind} is outside the supported execution slice`,
+    'lifecycle window is outside the supported execution slice',
   );
 }
