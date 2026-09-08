@@ -111,10 +111,9 @@ export function occurrenceActionLabel(
         roomLocal.kind === 'shop'
           ? roomLocal.offers.find((candidate) => candidate.key === reference.offerKey)
           : undefined;
+      const inventoryReward = offer?.rewardControl.offer ?? undefined;
       const rewardLabel =
-        rewardControl?.offer === null || rewardControl?.offer === undefined
-          ? undefined
-          : summarizeRewardOffer(catalog, rewardControl.offer);
+        inventoryReward === undefined ? undefined : summarizeRewardOffer(catalog, inventoryReward);
       return `Buy ${rewardLabel ?? offer?.label ?? reference.offerKey}`;
     }
     case 'purchaseStygianWellOffer':

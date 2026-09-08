@@ -29,6 +29,7 @@ import {
   retainedHermesShrineDeliveryReward,
 } from '../hermes-shrine-delivery';
 import { createBiomeAddress } from '../addresses';
+import { rewardSourceResolvesAtAcquisition } from '../reward-state';
 import {
   roomActionDomainForOccurrence,
   scheduleRequiredRoomActions,
@@ -505,7 +506,14 @@ export function applyAcquisitionSiteCommand(
         candidate.pickups.some((pickup) => pickup.key === command.entry.entryKey),
     );
     const pickup = producer?.pickups.find((candidate) => candidate.key === command.entry.entryKey);
-    const supplementalEntry =
+    const shop = occurrence.state.kind === 'shop' ? occurrence.state.shop : undefined;
+    const shopInventoryReward = shop?.offers[command.entry.entryKey]?.reward;
+    const acquisitionResolvedEntry =
+      shopInventoryReward !== null &&
+      shopInventoryReward !== undefined &&
+      rewardSourceResolvesAtAcquisition(catalog, shopInventoryReward.offer);
+    const shopOwnedEntry =
+      acquisitionResolvedEntry ||
       command.entry.entryKey === INFERNAL_CONTRACT_ENTRY_KEY ||
       command.entry.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY ||
       command.entry.entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY;
@@ -516,7 +524,7 @@ export function applyAcquisitionSiteCommand(
     )
       failCommand(command, 'does not own a materialized pickup entry');
     if (
-      !supplementalEntry &&
+      !shopOwnedEntry &&
       pickup?.rewardType !== undefined &&
       pickup.rewardType !== command.value.rewardType
     )
@@ -525,14 +533,22 @@ export function applyAcquisitionSiteCommand(
       return document;
     const route = document.route.routeKey === site.routeKey ? document.route : undefined;
     if (route === undefined) failCommand(command, `unknown route ${site.routeKey}`);
-    if (supplementalEntry) {
+    if (shopOwnedEntry) {
       if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined)
-        failCommand(command, 'supplemental entry requires a materialized Shop');
+        failCommand(command, 'Shop-owned entry requires a materialized Shop');
       const room = catalog.rooms.byKey[occurrence.gameName];
       const source =
         command.entry.entryKey === INFERNAL_CONTRACT_ENTRY_KEY
           ? room?.infernalContractReward
           : undefined;
+      if (
+        acquisitionResolvedEntry &&
+        command.value.rewardType !== shopInventoryReward.offer.rewardType
+      )
+        failCommand(
+          command,
+          `must retain Shop inventory reward type ${shopInventoryReward.offer.rewardType}`,
+        );
       if (
         command.entry.entryKey === INFERNAL_CONTRACT_ENTRY_KEY &&
         (source === undefined || !source.rewardTypes.includes(command.value.rewardType))
@@ -547,22 +563,12 @@ export function applyAcquisitionSiteCommand(
         located,
         replaceOccurrence(
           topology,
-          Object.freeze({
-            ...occurrence,
-            acquisitionSites: Object.freeze({
-              ...(occurrence.acquisitionSites ?? {}),
-              roomExit: Object.freeze({
-                pickupEntries: Object.freeze({
-                  ...pickupEntries,
-                  [command.entry.entryKey]: createUnresolvedAcquisitionRewardState(
-                    catalog,
-                    command.value,
-                    effectSource,
-                  ),
-                }),
-              }),
-            }),
-          }),
+          replaceAuthoredAcquisitionEntryAtSite(
+            occurrence,
+            site,
+            command.entry.entryKey,
+            createUnresolvedAcquisitionRewardState(catalog, command.value, effectSource),
+          ),
         ),
       );
     }

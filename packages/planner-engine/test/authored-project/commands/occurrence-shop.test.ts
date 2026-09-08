@@ -103,6 +103,58 @@ describe('authored-project Shop occurrence commands', () => {
     );
   });
 
+  it('resolves a purchased Mystery Boon at its room-exit acquisition entry', () => {
+    const shopId = createOccurrenceId('round-trip-n-preboss');
+    const offer = createShopOfferAddress(nBiome, shopId, 'Boon');
+    const site = createAcquisitionSiteAddress(createOccurrenceAddress(nBiome, shopId), 'roomExit');
+    const entry = createAcquisitionEntryAddress(site, 'Boon');
+    const selectedMystery = { rewardType: 'BlindBoxLoot' as const };
+    let project = applyProjectCommand(createCompleteNProject(), catalog, {
+      kind: 'ReplaceShopOffer',
+      offer,
+      value: selectedMystery,
+    });
+    const occurrence = () =>
+      project.route.biomes
+        .find((biome) => biome.biomeKey === 'N')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopId);
+
+    const shopState = occurrence()?.state;
+    expect(
+      shopState?.kind === 'shop' ? shopState.shop?.offers.Boon?.reward?.offer : undefined,
+    ).toEqual(selectedMystery);
+    expect(occurrence()?.acquisitionSites?.roomExit?.pickupEntries?.Boon).toBeUndefined();
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopPurchaseParticipation',
+      offer,
+      purchased: true,
+    });
+    expect(occurrence()?.acquisitionSites?.roomExit?.pickupEntries?.Boon).toBeNull();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry,
+      value: {
+        rewardType: 'BlindBoxLoot',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      },
+    });
+    expect(occurrence()?.acquisitionSites?.roomExit?.pickupEntries?.Boon).toMatchObject({
+      offer: { rewardType: 'BlindBoxLoot', payload: { source: 'ApolloUpgrade' } },
+      traitOffersByAcquisitionRole: { hiddenSource: null },
+    });
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopPurchaseParticipation',
+      offer,
+      purchased: false,
+    });
+    expect(occurrence()?.acquisitionSites?.roomExit?.pickupEntries?.Boon).toBeUndefined();
+  });
+
   it('replaces an offer and complete purchase order independently and preserves unchanged identity', () => {
     const shopId = createOccurrenceId('round-trip-n-preboss');
     const offer = createShopOfferAddress(nBiome, shopId, 'MajorNonBoon');

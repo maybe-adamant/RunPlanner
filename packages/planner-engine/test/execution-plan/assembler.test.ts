@@ -35,6 +35,7 @@ import {
   artificerAcquisitionSite,
   artificerReplacementEntryKey,
   createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createAcquisitionRoleAddress,
   createEncounterPhaseAddress,
   createExitSelectionAddress,
@@ -1191,22 +1192,29 @@ describe('engine-owned F/G execution semantic product', () => {
     ).toBe(true);
   });
 
-  it('publishes a consequential World Shop purchase as an owner-bearing transaction', () => {
+  it('publishes a consequential World Shop purchase from its acquisition owner', () => {
     const shop = createOccurrenceAddress(goldenFBiome, createOccurrenceId('golden-f-preboss-shop'));
+    const entry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(shop, 'roomExit'),
+      'Boon',
+    );
     let project = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'ReplaceShopOffer',
       offer: createShopOfferAddress(goldenFBiome, shop.occurrenceId, 'Boon'),
+      value: { rewardType: 'BlindBoxLoot' },
+    });
+    project = replaceTestShopOfferActions(project, catalog, shop, ['Boon']);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry,
       value: {
-        rewardType: 'RandomLoot',
+        rewardType: 'BlindBoxLoot',
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
       },
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
-      trait: createTraitOfferAddress(
-        createShopOfferAddress(goldenFBiome, shop.occurrenceId, 'Boon'),
-        'source',
-      ),
+      trait: createTraitOfferAddress(entry, 'hiddenSource'),
       value: {
         kind: 'traits',
         giverKey: 'Apollo',
@@ -1218,7 +1226,6 @@ describe('engine-owned F/G execution semantic product', () => {
         selectedOptionKey: 'option1',
       },
     });
-    project = replaceTestShopOfferActions(project, catalog, shop, ['Boon']);
     project = authorLegalTraitOffers(project);
     const product = productFor(project);
     expect(product.occurrences.flatMap((occurrence) => occurrence.timeline.transactions)).toEqual(
@@ -1226,9 +1233,9 @@ describe('engine-owned F/G execution semantic product', () => {
         expect.objectContaining({
           kind: 'shopPurchase',
           offerKey: 'Boon',
-          rewardType: 'RandomLoot',
-          sourceOwner: expect.stringContaining('shopOffer'),
-          reward: expect.objectContaining({ rewardType: 'RandomLoot' }),
+          rewardType: 'BlindBoxLoot',
+          sourceOwner: semanticAddressKey(entry),
+          reward: expect.objectContaining({ rewardType: 'BlindBoxLoot' }),
           roles: expect.arrayContaining([
             expect.objectContaining({ traitOffer: expect.anything() }),
           ]),

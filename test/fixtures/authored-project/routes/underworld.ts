@@ -1,6 +1,8 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createAdditionalExitAddress,
   createAcquisitionRoleAddress,
   createBatchRewardStoreAddress,
@@ -721,12 +723,26 @@ export function createFMidshopUnresolvedBlindBoxBeforePomProject(): ProjectDocum
       payload: { kind: 'BoonSource', source: 'HephaestusUpgrade' },
     },
   });
-  return replaceTestShopOfferActions(
+  project = replaceTestShopOfferActions(
     project,
     catalog,
     createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
     ['Boon'],
   );
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceAcquisitionEntryOffer',
+    entry: createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(
+        createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
+        'roomExit',
+      ),
+      'Boon',
+    ),
+    value: {
+      rewardType: 'BlindBoxLoot',
+      payload: { kind: 'BoonSource', source: 'HephaestusUpgrade' },
+    },
+  });
 }
 
 export { authorTestArtificerReplacement };

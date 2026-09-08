@@ -13,6 +13,7 @@ import type {
   ShopProfileDeclaration,
   ShopPurchaseAcquisition,
   ShopPurchaseFailure,
+  ShopPurchaseGateResult,
   ShopPurchaseResult,
   ShopPurchaseSimulation,
 } from './model';
@@ -437,25 +438,24 @@ export function evaluateShopPurchases(
   return Object.freeze({ results: Object.freeze([result]), failures: Object.freeze([]) });
 }
 
-/** Settles one exact paid physical Shop slot against an explicit remaining-slot frontier. */
-export function evaluateShopPurchaseAtSlot(
-  catalog: RewardKernelCatalog,
+/**
+ * Evaluates only the physical Shop purchase gate. Reward acquisition remains
+ * owned by the producer lifecycle and may resolve a hidden payload afterward.
+ */
+export function evaluateShopPurchaseGateAtSlot(
   profile: ShopProfileDeclaration,
-  authored: readonly AuthoredShopOffer[],
   witness: ShopGenerationWitness,
   slotIndex: number,
   remainingSlotIndexes: readonly number[],
   initialHistory: RewardHistoryState,
   baseFacts: RewardKernelFacts,
   additionalOptionRequirements: Readonly<Record<string, RequirementExpression>> = {},
-): import('./model').ShopSinglePurchaseResult | undefined {
+): ShopPurchaseGateResult | undefined {
   const remaining = new Set(remainingSlotIndexes);
-  const authoredOffer = authored[slotIndex];
   const optionKey = witness.optionKeys[slotIndex];
   const option =
     optionKey === undefined ? undefined : optionByWitness(profile, slotIndex, optionKey);
-  if (authoredOffer === undefined || option === undefined || !remaining.has(slotIndex))
-    return undefined;
+  if (option === undefined || !remaining.has(slotIndex)) return undefined;
   const activeNames = new Set(
     [...remaining].flatMap((index) => {
       const key = witness.optionKeys[index];
@@ -472,29 +472,9 @@ export function evaluateShopPurchaseAtSlot(
       !evaluateRequirement(additionalRequirement, facts.requirements))
   )
     return undefined;
-  let history = initialHistory;
-  const acquisitions: ShopPurchaseAcquisition[] = [];
-  for (const binding of option.acquisitionLifecycle) {
-    const roleFacts = factsWithHistory(baseFacts, history, activeNames);
-    if (
-      !isOfferSupportedAtResolutionPoint(catalog, authoredOffer.offer, roleFacts, {
-        acquisitionRole: binding.role,
-      })
-    )
-      return undefined;
-    const event = resolveAcquisitionRole(
-      catalog,
-      authoredOffer.offer,
-      binding.role,
-      binding.lifecyclePoint,
-    );
-    history = applyConcreteAcquisition(catalog, history, event.acquisition);
-    acquisitions.push(Object.freeze({ slotIndex, optionKey: option.key, event }));
-  }
   remaining.delete(slotIndex);
   return Object.freeze({
-    history,
-    acquisitions: Object.freeze(acquisitions),
+    acquisitionLifecycle: option.acquisitionLifecycle,
     remainingSlotIndexes: Object.freeze([...remaining]),
   });
 }

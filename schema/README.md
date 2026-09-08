@@ -1,8 +1,20 @@
 # Project schema boundary
 
-Schema 78 is the current Run Planner document baseline. It adds
-occurrence-owned Fields entry, cage, optional-reward, and Passive Nemesis
-placement leaves. Migrate the immediately preceding single-route schema with:
+Schema 79 is the current Run Planner document baseline. It moves a purchased
+World Shop Mystery Boon's god source and trait result from generated inventory
+to its room-exit acquisition entry. Migrate the immediately preceding
+single-route schema with:
+
+```bash
+npm run schema:migrate-78-to-79 -- path/to/schema-78-project.runplanner.json
+```
+
+The command preserves a purchased Mystery Boon's authored source and trait
+result at acquisition time. An unpurchased Mystery remains type-only inventory,
+because its hidden source never resolves.
+
+Schema 78 added occurrence-owned Fields entry, cage, optional-reward, and
+Passive Nemesis placement leaves. Migrate schema 77 with:
 
 ```bash
 npm run schema:migrate-77-to-78 -- path/to/schema-77-project.runplanner.json
@@ -26,7 +38,7 @@ output. It has no route-selection, in-place, or target-version mode.
 
 The schema-72 splitter's pure transformation is exported from
 `schema/split-project-72-to-73.js` for checkpoint conversion. The source value
-is never mutated. The production decoder accepts schema 78 only; stale
+is never mutated. The production decoder accepts schema 79 only; stale
 documents are not migrated implicitly in the application.
 
 Migrate a schema-74 document with:

@@ -11,7 +11,7 @@ the active frontier needed to orient the next delivery.
 
 ## Current Snapshot
 
-The current persisted contract is strict authored schema 78 with catalog
+The current persisted contract is strict authored schema 79 with catalog
 `0.55.0-anvil-of-fates`. Each project contains one selected route;
 the browser product supports the eight catalog biomes across the two current
 route choices:
@@ -112,6 +112,7 @@ milestones without repeating the delivery chronology.
 | Schema 76          | Purchased Anvil of Fates outcomes persist one removed Hammer and the two exact added Hammers at acquisition settlement.                                                                  |
 | Schema 77          | Selected trait offers persist option-owned volatile carrier consequences, including nested Echo Boon Boon Boon outcomes.                                                                 |
 | Schema 78          | H Fields combat occurrences persist exact room-scoped entry, cage, optional-reward, and Nemesis physical point assignments.                                                              |
+| Schema 79          | Initial Shop Mystery Boons retain type-only inventory identity; a purchase gates the acquisition-owned god and trait result.                                                             |
 
 Catalog versions advanced alongside these boundaries. The current catalog is
 `0.55.0-anvil-of-fates`; exact declaration facts and source contacts

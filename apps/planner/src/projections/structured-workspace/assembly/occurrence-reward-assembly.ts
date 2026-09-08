@@ -97,6 +97,7 @@ export type WorkspaceDerivedAcquisitionEntry = {
     | 'hermesShrineDelivery'
     | 'clockedTraitPickup'
     | 'infernalContractReward'
+    | 'acquisitionResolvedReward'
     | 'travelDealPlaceholder'
     | 'travelDealRefill';
   readonly sourceOfferKey?: string;
@@ -448,6 +449,11 @@ export function rewardControl(
   fixedOfferEdit?: WorkspaceRewardControl['fixedOfferEdit'],
   suppressOfferPicker = false,
 ): WorkspaceRewardControl {
+  const payloadDeferred =
+    owner.kind === 'shopOffer' &&
+    offer !== null &&
+    input.catalog.rewards.rewardTypes.byKey[offer.rewardType]?.sourceResolution?.kind ===
+      'acquisitionRole';
   const fixedRewardType =
     offer === null && explicitRewardTypes.length === 1 ? explicitRewardTypes[0] : undefined;
   const fixedPayloadDomain =
@@ -490,22 +496,25 @@ export function rewardControl(
             ? ('visible' as const)
             : suppressOfferPicker
               ? ('hidden' as const)
-              : offer === null || offer.payload !== undefined || retainedSourceMismatch
+              : offer === null ||
+                  offer.payload !== undefined ||
+                  payloadDeferred ||
+                  retainedSourceMismatch
                 ? ('visible' as const)
                 : ('hidden' as const),
         ...(fixedOfferEdit === undefined ? {} : { fixedOfferEdit }),
         owner,
         retainedSourceMismatch,
         traitOffers:
-          authoredReward === null || realizedAcquisition !== undefined
+          authoredReward === null || payloadDeferred || realizedAcquisition !== undefined
             ? Object.freeze([])
             : traitOfferControls(input, owner, authoredReward),
         levelResolutions:
-          authoredReward === null || realizedAcquisition !== undefined
+          authoredReward === null || payloadDeferred || realizedAcquisition !== undefined
             ? Object.freeze([])
             : levelResolutionControls(input, owner, authoredReward),
         conversions:
-          authoredReward === null
+          authoredReward === null || payloadDeferred
             ? Object.freeze([])
             : conversionControls(input, owner, authoredReward),
         rewardTypes: Object.freeze([...explicitRewardTypes]),

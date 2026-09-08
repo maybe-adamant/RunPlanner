@@ -228,21 +228,21 @@ export function isOfferSupportedAtResolutionPoint(
   peers: RewardPeerContext = { priorOffers: [] },
 ): boolean {
   const rewardType = catalog.rewardTypes.byKey[offer.rewardType];
-  if (rewardType === undefined || !isPayloadLocallyValid(catalog, rewardType, offer.payload)) {
-    return false;
-  }
-  if (rewardType.sourceSupport === undefined) {
-    return true;
-  }
+  if (rewardType === undefined) return false;
   const declaredPoint = rewardType.sourceResolution;
+  const deferredAtOffer =
+    resolution === 'offer' &&
+    declaredPoint?.kind === 'acquisitionRole' &&
+    offer.payload === undefined;
+  if (!deferredAtOffer && !isPayloadLocallyValid(catalog, rewardType, offer.payload)) return false;
+  if (deferredAtOffer) return true;
   const shouldResolve =
     resolution === 'offer'
       ? declaredPoint?.kind === 'offer'
       : declaredPoint?.kind === 'acquisitionRole' &&
         declaredPoint.role === resolution.acquisitionRole;
-  if (!shouldResolve) {
-    return true;
-  }
+  if (!shouldResolve) return true;
+  if (rewardType.sourceSupport === undefined) return true;
   return supportedPayloads(catalog, rewardType, facts, peers).some(
     (supported) => offer.payload !== undefined && payloadEquals(supported, offer.payload),
   );

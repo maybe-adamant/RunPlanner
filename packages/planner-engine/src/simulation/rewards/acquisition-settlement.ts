@@ -142,6 +142,7 @@ export interface DerivedAcquisitionEntryFrontier {
     | 'echoDoubleShopReward'
     | 'echoLastReward'
     | 'infernalContractReward'
+    | 'acquisitionResolvedReward'
     | 'hermesShrineDelivery'
     | 'clockedTraitPickup'
     | 'travelDealPlaceholder'
@@ -230,6 +231,8 @@ export interface OwnedAcquisitionSettlementRequest {
   readonly timelineOwner?: SemanticAddress;
   readonly historySequence: number;
   readonly roleBindings?: readonly AcquisitionSettlementRole[];
+  /** Exact peer branches used to attest one directly selected trait screen. */
+  readonly directTraitAgreementBranches?: readonly RewardBranchState[];
   /** Exact authored Sea Star result sites whose source frontier must be retained. */
   readonly authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string>;
   /** Ordered sites publish a distinct dependent action instead of settling immediately. */
@@ -591,7 +594,7 @@ export function settleOwnedAcquisitionSite(
         Object.freeze({ site, entry: entry.address }),
         roleFrontiers,
         traitChildSettlements,
-        undefined,
+        request.directTraitAgreementBranches,
         true,
         false,
         request.authoredSeaStarDuplicateSiteKeys,
@@ -644,6 +647,145 @@ export function settleOwnedAcquisitionSite(
     branches: current,
     roleFrontiers: Object.freeze(roleFrontiers),
     traitChildSettlements: Object.freeze(traitChildSettlements),
+  });
+}
+
+/**
+ * Resolves a payload that belongs to acquisition rather than to its carrier.
+ * The caller proves that the carrier reached this point; this operation owns
+ * the eventual reward source, its candidate frontier, and ordinary role fold.
+ */
+export function settleAcquisitionResolvedReward(
+  catalog: Catalog,
+  branches: readonly RewardBranchState[],
+  request: {
+    readonly siteOwner: AcquisitionSiteOwnerAddress;
+    readonly pointKey: string;
+    readonly entryKey: string;
+    readonly visibleOffer: ResolvedRewardOffer;
+    readonly reward: AuthoredRewardState | null | undefined;
+    readonly producerLifecycleKey: string;
+    readonly producerKind?: CanonicalResolvedIncomingReward['producerKind'];
+    readonly instanceProvenance: 'free' | 'paid';
+    readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
+    readonly timelineOwner?: SemanticAddress;
+    readonly historySequence: number;
+    readonly branchCohortSize: number;
+    readonly directTraitAgreementBranches?: readonly RewardBranchState[];
+    readonly roleBindings?: readonly AcquisitionSettlementRole[];
+    readonly authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string>;
+  },
+  facts: RewardFactsFactory,
+  findings: Map<string, FindingRegionEntry>,
+  atomicRegion?: string,
+  findingChronology?: FindingChronology,
+): AcquisitionSettlementProduct {
+  const site = createAcquisitionSiteAddress(request.siteOwner, request.pointKey);
+  const address = createAcquisitionEntryAddress(site, request.entryKey);
+  const declaration = catalog.rewards.rewardTypes.byKey[request.visibleOffer.rewardType];
+  const resolution = declaration?.sourceResolution;
+  if (resolution?.kind !== 'acquisitionRole') {
+    throw new Error(`${request.visibleOffer.rewardType} does not resolve at acquisition`);
+  }
+  const frontier: DerivedAcquisitionEntryFrontier = Object.freeze({
+    address,
+    kind: 'acquisitionResolvedReward',
+    branchCohortSize: request.branchCohortSize,
+    rewardTypes: Object.freeze([request.visibleOffer.rewardType]),
+    branchesBeforeEntry: branches,
+    evaluateOffer: (offer: ResolvedRewardOffer) =>
+      Object.freeze({
+        findings: Object.freeze([]),
+        supported:
+          offer.rewardType === request.visibleOffer.rewardType &&
+          branches.every((branch) =>
+            isOfferSupportedAtResolutionPoint(
+              catalog.rewards,
+              offer,
+              facts(branch.history, undefined, branch),
+              { acquisitionRole: resolution.role },
+            ),
+          ),
+      }),
+  });
+  if (request.reward === undefined || request.reward === null) {
+    addRewardFinding(
+      findings,
+      rewardFinding('rewardMissing', address, {}),
+      atomicRegion ?? ownerRegion(address),
+      findingChronology ?? historyChronology(request.historySequence),
+    );
+    return Object.freeze({
+      site,
+      entries: Object.freeze([
+        Object.freeze({
+          address,
+          source: address,
+          acquisitionRoles: Object.freeze([]),
+          participation: 'optional' as const,
+        }),
+      ]),
+      branches: Object.freeze([]),
+      derivedEntryFrontiers: Object.freeze([frontier]),
+    });
+  }
+  if (request.reward.offer.rewardType !== request.visibleOffer.rewardType) {
+    addRewardFinding(
+      findings,
+      rewardFinding('rewardSourceUnavailable', address, {
+        reason: 'retainedSourceMismatch',
+        rewardType: request.visibleOffer.rewardType,
+      }),
+      atomicRegion ?? ownerRegion(address),
+      findingChronology ?? historyChronology(request.historySequence),
+    );
+    return Object.freeze({
+      site,
+      entries: Object.freeze([]),
+      branches: Object.freeze([]),
+      derivedEntryFrontiers: Object.freeze([frontier]),
+    });
+  }
+  const settled = settleOwnedAcquisitionSite(
+    catalog,
+    branches,
+    {
+      siteOwner: request.siteOwner,
+      pointKey: request.pointKey,
+      entryKey: request.entryKey,
+      source: Object.freeze({
+        origin: address,
+        offer: request.reward.offer,
+        producerLifecycleKey: request.producerLifecycleKey,
+        ...(request.producerKind === undefined ? {} : { producerKind: request.producerKind }),
+        instanceProvenance: request.instanceProvenance,
+        traitOffersByAcquisitionRole: request.reward.traitOffersByAcquisitionRole,
+        ...(request.reward.levelResolutionsByAcquisitionRole === undefined
+          ? {}
+          : {
+              levelResolutionsByAcquisitionRole: request.reward.levelResolutionsByAcquisitionRole,
+            }),
+        dispositionByAcquisitionRole: request.reward.dispositionByAcquisitionRole,
+        ...(request.traitContext === undefined ? {} : { traitContext: request.traitContext }),
+      }),
+      ...(request.timelineOwner === undefined ? {} : { timelineOwner: request.timelineOwner }),
+      historySequence: request.historySequence,
+      ...(request.roleBindings === undefined ? {} : { roleBindings: request.roleBindings }),
+      ...(request.directTraitAgreementBranches === undefined
+        ? {}
+        : { directTraitAgreementBranches: request.directTraitAgreementBranches }),
+      ...(request.authoredSeaStarDuplicateSiteKeys === undefined
+        ? {}
+        : { authoredSeaStarDuplicateSiteKeys: request.authoredSeaStarDuplicateSiteKeys }),
+    },
+    facts,
+    findings,
+    atomicRegion,
+    findingChronology,
+  );
+  return Object.freeze({
+    ...settled,
+    derivedEntryFrontiers: Object.freeze([frontier]),
   });
 }
 

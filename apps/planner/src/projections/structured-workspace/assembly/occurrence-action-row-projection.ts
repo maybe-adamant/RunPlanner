@@ -316,6 +316,9 @@ function roomActionsForOccurrence(
                 showOffer:
                   !isArtificerReplacement &&
                   ((row.reference.kind === 'interactLocalReward' && roomLocal.kind !== 'fields') ||
+                    (row.reference.kind === 'interactShopOffer' &&
+                      resolvedRewardControl.owner.kind === 'acquisitionEntry' &&
+                      resolvedRewardControl.offerEditVisibility === 'visible') ||
                     (row.reference.kind === 'interactAcquisitionEntry' &&
                       input.occurrence.state.kind !== 'shop' &&
                       resolvedRewardControl.offerEditVisibility === 'visible')),
