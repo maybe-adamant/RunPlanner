@@ -1,5 +1,9 @@
 import type { RunStateSnapshot } from '../../simulation/rewards/run-state';
-import type { CanonicalAuthoredRoom, CanonicalBatch } from '../../simulation/materialization';
+import type {
+  CanonicalAuthoredRoom,
+  CanonicalBatch,
+  CanonicalHubDecision,
+} from '../../simulation/materialization';
 import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation-products';
 import { semanticAddressKey } from '../../authored-project/addresses';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
@@ -36,16 +40,51 @@ export function orderedExecutionRooms(
     const snapshot = evaluation.snapshot;
     addRoom(rooms, seen, snapshot.entryRoom);
     for (const decision of snapshot.decisions) {
-      if (decision.kind !== 'batch') continue;
-      for (const target of decision.targets) addRoom(rooms, seen, target.room);
-      for (const additional of decision.additional) addRoom(rooms, seen, additional.room);
+      if (decision.kind === 'batch') {
+        for (const target of decision.targets) addRoom(rooms, seen, target.room);
+        for (const additional of decision.additional) addRoom(rooms, seen, additional.room);
+      } else {
+        for (const target of decision.board.targets) addRoom(rooms, seen, target.room);
+        for (const visit of decision.visits)
+          for (const local of visit.localSlots)
+            if (local.localVisit.generation === 'generated') addRoom(rooms, seen, local);
+      }
     }
     for (const link of snapshot.fixedRoomLinks) {
       addRoom(rooms, seen, link.source);
       addRoom(rooms, seen, link.target);
     }
   }
-  return rooms;
+  const selectedIds = biomes.flatMap((biome) =>
+    biome.history.rooms.flatMap((view) =>
+      view.origin.kind === 'occurrence' ? [view.origin.occurrenceId] : [],
+    ),
+  );
+  const hasHub = biomes.some((biome) =>
+    biome.snapshot.decisions.some((decision) => decision.kind === 'hub'),
+  );
+  if (!hasHub) return rooms;
+  const byId = new Map(rooms.map((room) => [room.occurrenceId, room] as const));
+  const selected = selectedIds.map((id) => {
+    const room = byId.get(id);
+    if (room === undefined)
+      throw new CompilerError('executionCoverageMissing', `selected occurrence ${id} is missing`);
+    return room;
+  });
+  const selectedSet = new Set(selectedIds);
+  return [...selected, ...rooms.filter((room) => !selectedSet.has(room.occurrenceId))];
+}
+
+export function executionHubs(
+  biomes: readonly CompleteValidBiomeProjectEvaluation[],
+): readonly CanonicalHubDecision[] {
+  return Object.freeze(
+    biomes.flatMap((evaluation) =>
+      evaluation.snapshot.decisions.filter(
+        (decision): decision is CanonicalHubDecision => decision.kind === 'hub',
+      ),
+    ),
+  );
 }
 
 export function executionBatchesByRoom(

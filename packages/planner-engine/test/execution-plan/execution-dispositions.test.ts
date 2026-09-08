@@ -79,6 +79,8 @@ const executionDispositions = {
     fountain: 'covered',
     fields: 'covered',
     additional: 'covered',
+    hub: 'covered',
+    localSlots: 'covered',
   } satisfies Record<OverviewField, ExecutionDisposition>,
   resourcePolicy: {
     pointDispositions: 'covered',
