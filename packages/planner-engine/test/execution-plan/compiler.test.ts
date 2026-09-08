@@ -1591,11 +1591,9 @@ describe('execution-plan compiler and codec', () => {
     );
     if (sourceOccurrence === undefined || sourceResource === undefined)
       throw new Error('fixture lacks a terminal occurrence');
-    const {
-      diagnostics: _diagnostics,
-      roomExitConformance: _roomExitConformance,
-      ...surfaceOccurrence
-    } = sourceOccurrence;
+    const surfaceOccurrence = { ...sourceOccurrence };
+    delete surfaceOccurrence.diagnostics;
+    delete surfaceOccurrence.roomExitConformance;
     const surface = {
       ...fixture,
       routeKey: 'Surface',
