@@ -295,6 +295,63 @@ function executionShop(
   });
 }
 
+function executionRewardWheels(
+  room: CanonicalAuthoredRoom,
+): ExecutionOverview['rewardWheels'] | undefined {
+  if (room.rewardWheels === undefined) return undefined;
+  const biome = createBiomeAddress(room.origin.routeKey, room.origin.biomeKey);
+  return Object.freeze(
+    room.rewardWheels.map((wheel) => {
+      if (wheel.unresolvedOffers.length > 0 || wheel.offers.length === 0)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName}.${wheel.wheelKey} lacks a complete active offer cohort`,
+        );
+      const phase = room.encounterPhases.find(
+        (candidate) => candidate.slotKey === wheel.encounterPhaseKey,
+      );
+      if (phase === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName}.${wheel.wheelKey} lacks its encounter phase`,
+        );
+      const picked = wheel.offers.find((offer) => offer.picked);
+      if (picked === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName}.${wheel.wheelKey} lacks its picked offer`,
+        );
+      const phaseOwner = semanticAddressKey(
+        createEncounterPhaseAddress(
+          biome,
+          { kind: 'occurrence', occurrenceId: room.occurrenceId },
+          phase.slotKey,
+        ),
+      );
+      return Object.freeze({
+        wheelKey: wheel.wheelKey,
+        phaseKey: phase.slotKey,
+        phaseOwner,
+        offerCount: wheel.offers.length,
+        storeKey: wheel.storeKey,
+        offers: Object.freeze(
+          wheel.offers.map((offer) =>
+            Object.freeze({
+              offerKey: offer.offerKey,
+              reward: executionRewardFromOffer(
+                offer.offer,
+                wheel.producerLifecycleKey,
+                wheel.storeKey,
+              ),
+            }),
+          ),
+        ),
+        pickedOfferKey: picked.offerKey,
+      });
+    }),
+  );
+}
+
 function executionHermesShrine(
   room: CanonicalAuthoredRoom,
   biome: CompleteValidBiomeProjectEvaluation,
@@ -547,6 +604,7 @@ export function assembleExecutionOverview(
   const incomingReward = executionReward(room);
   const shop = executionShop(room, biome);
   const hermesShrine = executionHermesShrine(room, biome);
+  const rewardWheels = executionRewardWheels(room);
   const stygianWell = executionStygianWell(room);
   const purgingPool = executionPurgingPool(room);
   const fields = executionFieldsLayout(room);
@@ -580,6 +638,7 @@ export function assembleExecutionOverview(
         })(),
       ),
     ),
+    ...(rewardWheels === undefined ? {} : { rewardWheels }),
     requiredObjects: Object.freeze((room.requiredObjects ?? []).map((object) => object.key)),
     ...(shop === undefined ? {} : { shop }),
     ...(hermesShrine === undefined ? {} : { hermesShrine }),

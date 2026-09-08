@@ -484,6 +484,27 @@ export function executionTimelineTransactions(
     // that were never authored have no active included node and never become
     // executor transactions.
     if (actionNode?.included !== true) continue;
+    const actionReference = timeline.action.reference;
+    if (actionReference.kind === 'chooseRewardWheel') {
+      const wheel = room.rewardWheels?.find(
+        (candidate) => candidate.wheelKey === actionReference.wheelKey,
+      );
+      const picked = wheel?.offers.find((offer) => offer.picked);
+      if (wheel === undefined || wheel.unresolvedOffers.length > 0 || picked === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} lacks a complete picked ${actionReference.wheelKey}`,
+        );
+      const chooseOwner = semanticAddressKey(timeline.action.owner);
+      add({
+        kind: 'chooseRewardWheel',
+        owner: chooseOwner,
+        window: windowFor(chooseOwner),
+        wheelKey: wheel.wheelKey,
+        pickedOfferKey: picked.offerKey,
+      });
+      continue;
+    }
     if (
       timeline.action.reference.kind === 'interactEncounter' ||
       timeline.action.reference.kind === 'interactGorgon'
@@ -562,9 +583,10 @@ export function executionTimelineTransactions(
       timeline.action.reference.kind !== 'interactLocalReward' &&
       timeline.action.reference.kind !== 'interactAcquisitionEntry' &&
       timeline.action.reference.kind !== 'interactShopOffer' &&
+      timeline.action.reference.kind !== 'interactWheelReward' &&
       timeline.action.reference.kind !== 'purchaseStygianWellOffer'
     ) {
-      const reference = timeline.action.reference;
+      const reference = actionReference;
       if (reference.kind === 'interactKeepsakeRack') {
         const keepsakeKey = room.keepsakeRack?.keepsakeKey;
         if (keepsakeKey === undefined)
@@ -595,7 +617,7 @@ export function executionTimelineTransactions(
       } else {
         throw new CompilerError(
           'executionCoverageMissing',
-          `${room.gameName} has an unsupported active Room Action ${reference.kind}`,
+          `${room.gameName} has an unsupported active Room Action`,
         );
       }
       continue;
@@ -640,7 +662,6 @@ export function executionTimelineTransactions(
       });
       continue;
     }
-    const actionReference = timeline.action.reference;
     const shopOffer =
       actionReference.kind === 'interactShopOffer'
         ? room.entryState?.offers.find(

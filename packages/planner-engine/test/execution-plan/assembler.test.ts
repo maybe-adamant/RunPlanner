@@ -48,6 +48,8 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
+  createRewardWheelAddress,
+  createRewardWheelOfferAddress,
   createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
   createTraitOfferAddress,
@@ -419,6 +421,117 @@ describe('engine-owned F/G execution semantic product', () => {
     expect(product.selectedOccurrenceIds).not.toContain('N_Hub');
     expect(product.occurrences.some((entry) => entry.gameName === 'N_Hub')).toBe(false);
     expect(() => encodeExecutionPlan(compileExecutionPlan({ product }))).not.toThrow();
+  });
+  it('publishes O ShipCombat wheel cohorts and their picked choices as one DAG', () => {
+    const product = productFor(loadSurfaceNOProject());
+    const shipRooms = product.occurrences.filter(
+      (occurrence) => occurrence.overview.rewardWheels !== undefined,
+    );
+    expect(shipRooms.length).toBeGreaterThan(0);
+    for (const room of shipRooms) {
+      const wheels = room.overview.rewardWheels!;
+      expect(wheels.length).toBeGreaterThan(0);
+      for (const wheel of wheels) {
+        expect(wheel.offerCount).toBe(wheel.offers.length);
+        expect(new Set(wheel.offers.map((offer) => offer.offerKey)).size).toBe(wheel.offers.length);
+        expect(wheel.offers.map((offer) => offer.offerKey)).toContain(wheel.pickedOfferKey);
+        const choice = room.timeline.transactions.find(
+          (transaction) =>
+            transaction.kind === 'chooseRewardWheel' && transaction.wheelKey === wheel.wheelKey,
+        );
+        expect(choice).toMatchObject({
+          kind: 'chooseRewardWheel',
+          wheelKey: wheel.wheelKey,
+          pickedOfferKey: wheel.pickedOfferKey,
+          window: { kind: 'shipPreCombat', wheelKey: wheel.wheelKey },
+        });
+        const pickup = room.timeline.transactions.find(
+          (transaction) =>
+            transaction.kind === 'acquisition' &&
+            transaction.sourceOwner.includes('rewardWheelOffer') &&
+            transaction.sourceOwner.includes(wheel.wheelKey),
+        );
+        expect(pickup).toBeDefined();
+        if (pickup?.kind !== 'acquisition' || choice?.kind !== 'chooseRewardWheel')
+          throw new Error('wheel transaction missing');
+        expect(room.timeline.dependencies).toContainEqual({
+          owner: pickup.owner,
+          afterOwner: choice.owner,
+        });
+        expect(pickup.reward).toEqual(
+          wheel.offers.find((offer) => offer.offerKey === wheel.pickedOfferKey)?.reward,
+        );
+        expect(
+          decodeExecutionOverview(JSON.parse(JSON.stringify(room.overview)), 'O overview'),
+        ).toEqual(room.overview);
+        expect(
+          decodeExecutionTransaction(JSON.parse(JSON.stringify(choice)), 'O wheel choice'),
+        ).toEqual(choice);
+        expect(
+          decodeExecutionTransaction(JSON.parse(JSON.stringify(pickup)), 'O wheel pickup'),
+        ).toEqual(pickup);
+      }
+    }
+  });
+  it('publishes both ShipCombat phase counts and wheel cohort widths', () => {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOfferCount',
+      wheel,
+      offerCount: 2,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel1', 'offer2'),
+      value: { rewardType: 'MetaCardPointsCommonBigDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel: createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2'),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
+      value: { rewardType: 'RoomMoneyDrop' },
+    });
+    const room = productFor(project).occurrences.find(
+      (candidate) => candidate.id === occurrence.occurrenceId,
+    );
+    expect(room?.overview.encounterPhases.map((phase) => phase.slotKey)).toEqual([
+      'Intro',
+      'Combat1',
+      'Combat2',
+    ]);
+    expect(room?.overview.rewardWheels?.map((entry) => entry.offerCount)).toEqual([2, 1]);
+    const wheelChoices = room?.timeline.transactions.filter(
+      (transaction) => transaction.kind === 'chooseRewardWheel',
+    );
+    const wheelPickups = room?.timeline.transactions.filter(
+      (transaction) =>
+        transaction.kind === 'acquisition' && transaction.window.kind === 'shipPostCombat',
+    );
+    expect(wheelChoices?.map((transaction) => transaction.wheelKey)).toEqual(['wheel1', 'wheel2']);
+    expect(
+      wheelPickups?.flatMap((transaction) =>
+        transaction.window.kind === 'shipPostCombat' ? [transaction.window.wheelKey] : [],
+      ),
+    ).toEqual(['wheel1', 'wheel2']);
+
+    const baseline = productFor(loadSurfaceNOProject()).occurrences.find(
+      (candidate) => candidate.id === occurrence.occurrenceId,
+    );
+    expect(baseline?.overview.encounterPhases.map((phase) => phase.slotKey)).toEqual([
+      'Intro',
+      'Combat1',
+    ]);
+    expect(baseline?.overview.rewardWheels?.map((entry) => entry.offerCount)).toEqual([1]);
   });
   it('assembles G Anomaly provenance, authored success, ordinary replacement, and fixed return', () => {
     const product = productFor(createCompleteFGAnomalyProject());

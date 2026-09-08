@@ -38,6 +38,8 @@ export type ExecutionLifecycleWindow =
   | { readonly kind: 'standard'; readonly phase: 'beforeCombat' | 'afterCombat' }
   | { readonly kind: 'bossDefeated'; readonly phaseKey: string }
   | { readonly kind: 'encounterEnd'; readonly phaseKey: string }
+  | { readonly kind: 'shipPreCombat'; readonly wheelKey: string }
+  | { readonly kind: 'shipPostCombat'; readonly wheelKey: string }
   | { readonly kind: 'postOutgoing' };
 
 /** Diagnostic evidence only. It is never a lifecycle or transaction cursor. */
@@ -434,6 +436,20 @@ export interface ExecutionOverview {
     /** Native Fig Leaf decision for this exact eligible phase, when supported. */
     readonly figLeafSkip?: boolean;
   }[];
+  /** Exact active ShipCombat wheel materialization for each encounter phase. */
+  readonly rewardWheels?: readonly {
+    readonly wheelKey: string;
+    readonly phaseKey: string;
+    /** Semantic owner of the encounter phase carrying this wheel. */
+    readonly phaseOwner: string;
+    readonly offerCount: number;
+    readonly storeKey: string;
+    readonly offers: readonly {
+      readonly offerKey: string;
+      readonly reward: ExecutionReward;
+    }[];
+    readonly pickedOfferKey: string;
+  }[];
   readonly requiredObjects: readonly string[];
   readonly shop?: {
     readonly profileKey: string;
@@ -529,6 +545,14 @@ export interface ExecutionAnomalyReplacement {
 }
 
 export type ExecutionTimelineTransaction =
+  | {
+      /** The player's exact wheel choice; native selection remains authoritative. */
+      readonly kind: 'chooseRewardWheel';
+      readonly owner: string;
+      readonly window: ExecutionLifecycleWindow;
+      readonly wheelKey: string;
+      readonly pickedOfferKey: string;
+    }
   | {
       readonly kind: 'acquisition';
       readonly owner: string;

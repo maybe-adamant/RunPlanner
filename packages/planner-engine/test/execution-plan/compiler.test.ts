@@ -15,6 +15,7 @@ import {
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { simulateProjectAssembly } from '../../src/simulation';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { loadSurfaceNOProject } from '@run-planner/test-fixtures/surface';
 import { allTogetherOffer, allTogetherResult } from '../simulation/shop-trait-purchase-support';
 import {
   applyProjectCommand,
@@ -51,6 +52,7 @@ import fgIxionChaosFixture from './fixtures/fg-ixion-chaos.execution.json';
 import automaticBossFixture from './fixtures/automatic-boss.execution.json';
 import underworldFGHFixture from './fixtures/underworld-fgh.execution.json';
 import underworldFGHIFixture from './fixtures/underworld-fghi.execution.json';
+import surfaceNOFixture from './fixtures/surface-no.execution.json';
 import { bossAutomaticOutcomeProject } from './support/automatic-fixture';
 import { executionTimelineTransactions } from '../../src/execution-plan/assembly/timeline-transactions';
 import { orderedExecutionRooms } from '../../src/execution-plan/assembly/route';
@@ -1535,10 +1537,86 @@ describe('execution-plan compiler and codec', () => {
     ['fg-ixion-chaos', createCompleteFGIxionChaosProject(), fgIxionChaosFixture],
     ['fg-anomaly', createCompleteFGAnomalyProject(), fgAnomalyFixture],
     ['automatic-boss', bossAutomaticOutcomeProject(), automaticBossFixture],
+    ['surface-no', loadSurfaceNOProject(), surfaceNOFixture],
   ])('keeps the %s product byte-stable', (_name, project, fixture) => {
     const { plan } = planFor(project);
     if (fixture !== undefined) expect(decodeExecutionPlan(fixture)).toEqual(plan);
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+  });
+
+  it('rejects disconnected or contradictory ShipCombat wheel products', () => {
+    type MutableShipOccurrence = {
+      overview: {
+        rewardWheels?: Array<{
+          phaseOwner: string;
+          offerCount: number;
+          storeKey: string;
+          offers: Array<Record<string, unknown>>;
+        }>;
+      };
+      timeline: {
+        transactions: Array<{
+          owner: string;
+          kind: string;
+          sourceOwner?: string;
+          window: { wheelKey?: string };
+        }>;
+        dependencies: Array<Record<string, unknown>>;
+        obligations: Array<{ owner: string; checkpoint: string }>;
+      };
+    };
+    const mutate = (change: (occurrence: MutableShipOccurrence) => void) => {
+      const wire = JSON.parse(JSON.stringify(surfaceNOFixture)) as Record<string, unknown> & {
+        occurrences: MutableShipOccurrence[];
+      };
+      const occurrence = wire.occurrences.find(
+        (candidate) => candidate.overview.rewardWheels !== undefined,
+      );
+      if (occurrence === undefined) throw new Error('surface fixture lacks ShipCombat');
+      change(occurrence);
+      refreshWireFingerprint(wire);
+      expect(() => decodeExecutionPlan(wire)).toThrow(ExecutionPlanCodecError);
+    };
+
+    mutate((occurrence) => {
+      occurrence.overview.rewardWheels![0]!.phaseOwner = 'wrong-phase';
+    });
+    mutate((occurrence) => {
+      const wheel = occurrence.overview.rewardWheels![0]!;
+      wheel.offerCount = 3;
+      wheel.offers.push({ ...wheel.offers[0], offerKey: 'offer3' });
+    });
+    mutate((occurrence) => {
+      occurrence.overview.rewardWheels![0]!.storeKey = 'HubRewards';
+    });
+    mutate((occurrence) => {
+      const choice = occurrence.timeline.transactions.find(
+        (transaction) => transaction.kind === 'chooseRewardWheel',
+      );
+      if (choice === undefined) throw new Error('surface fixture lacks a wheel choice');
+      choice.window.wheelKey = 'wheel2';
+    });
+    mutate((occurrence) => {
+      const acquisition = occurrence.timeline.transactions.find(
+        (transaction) => transaction.kind === 'acquisition',
+      );
+      if (acquisition === undefined) throw new Error('surface fixture lacks a wheel acquisition');
+      acquisition.sourceOwner = 'wrong-source';
+    });
+    mutate((occurrence) => {
+      occurrence.timeline.dependencies = [];
+    });
+    mutate((occurrence) => {
+      const removedOwners = new Set(
+        occurrence.timeline.transactions.map((transaction) => transaction.owner),
+      );
+      occurrence.overview.rewardWheels = [];
+      occurrence.timeline.transactions = [];
+      occurrence.timeline.dependencies = [];
+      occurrence.timeline.obligations = occurrence.timeline.obligations.filter(
+        (obligation) => !removedOwners.has(obligation.owner),
+      );
+    });
   });
 
   it('publishes I Clockwork goals as ordinary rewards without changing I topology', () => {

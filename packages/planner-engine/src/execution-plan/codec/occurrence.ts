@@ -19,6 +19,132 @@ import { doors } from './doors';
 import { overview } from './overview';
 import { timeline } from './timeline';
 
+function validateRewardWheelProduct(
+  occurrence: Pick<
+    ExecutionOccurrence,
+    'id' | 'owner' | 'biomeKey' | 'kind' | 'overview' | 'timeline'
+  >,
+  label: string,
+): void {
+  const wheels = occurrence.overview.rewardWheels ?? [];
+  const combatPhases = occurrence.overview.encounterPhases.filter(
+    (phase) => phase.slotKey !== 'Intro' && phase.kind === 'combat',
+  );
+  if (
+    (occurrence.kind === 'ShipEncounter' && wheels.length !== combatPhases.length) ||
+    (occurrence.kind !== 'ShipEncounter' && wheels.length > 0)
+  )
+    fail(`${label}.overview.rewardWheels must match the Ship encounter phases`);
+  const wheelChoiceCount = occurrence.timeline.transactions.filter(
+    (transaction) => transaction.kind === 'chooseRewardWheel',
+  ).length;
+  const isWheelOfferOwner = (owner: string) => {
+    try {
+      const parsed = JSON.parse(owner) as unknown;
+      return Array.isArray(parsed) && parsed[0] === 'rewardWheelOffer';
+    } catch {
+      return false;
+    }
+  };
+  const wheelAcquisitionCount = occurrence.timeline.transactions.filter(
+    (transaction) =>
+      transaction.kind === 'acquisition' &&
+      transaction.window.kind === 'shipPostCombat' &&
+      isWheelOfferOwner(transaction.sourceOwner),
+  ).length;
+  if (wheelChoiceCount !== wheels.length || wheelAcquisitionCount !== wheels.length)
+    fail(`${label}.overview.rewardWheels is disconnected from its timeline product`);
+  if (wheels.length === 0) return;
+
+  let routeKey: string;
+  try {
+    const owner = JSON.parse(occurrence.owner) as unknown;
+    if (
+      !Array.isArray(owner) ||
+      owner.length !== 4 ||
+      owner[0] !== 'occurrence' ||
+      typeof owner[1] !== 'string' ||
+      owner[2] !== occurrence.biomeKey ||
+      owner[3] !== occurrence.id
+    )
+      throw new Error('mismatch');
+    routeKey = owner[1];
+  } catch {
+    fail(`${label}.owner cannot identify its reward-wheel phases`);
+  }
+
+  const sameReward = (left: unknown, right: unknown) =>
+    JSON.stringify(left) === JSON.stringify(right);
+  for (const wheel of wheels) {
+    const phase = occurrence.overview.encounterPhases.filter(
+      (candidate) =>
+        candidate.slotKey === wheel.phaseKey &&
+        candidate.slotKey !== 'Intro' &&
+        candidate.kind === 'combat',
+    );
+    if (phase.length !== 1)
+      fail(`${label}.overview.rewardWheels.${wheel.wheelKey} must name one active combat phase`);
+    const expectedPhaseOwner = JSON.stringify([
+      'encounterPhase',
+      routeKey,
+      occurrence.biomeKey,
+      { kind: 'occurrence', occurrenceId: occurrence.id },
+      wheel.phaseKey,
+    ]);
+    if (wheel.phaseOwner !== expectedPhaseOwner)
+      fail(`${label}.overview.rewardWheels.${wheel.wheelKey} has a mismatched phase owner`);
+
+    const expectedChoiceOwner = JSON.stringify([
+      'rewardWheel',
+      routeKey,
+      occurrence.biomeKey,
+      occurrence.id,
+      wheel.wheelKey,
+    ]);
+    const choices = occurrence.timeline.transactions.filter(
+      (transaction) =>
+        transaction.kind === 'chooseRewardWheel' &&
+        transaction.owner === expectedChoiceOwner &&
+        transaction.wheelKey === wheel.wheelKey &&
+        transaction.pickedOfferKey === wheel.pickedOfferKey &&
+        transaction.window.kind === 'shipPreCombat' &&
+        transaction.window.wheelKey === wheel.wheelKey,
+    );
+    if (choices.length !== 1)
+      fail(`${label}.overview.rewardWheels.${wheel.wheelKey} must match one wheel choice`);
+
+    const picked = wheel.offers.find((offer) => offer.offerKey === wheel.pickedOfferKey)!;
+    const expectedAcquisitionOwner = JSON.stringify([
+      'rewardWheelOffer',
+      routeKey,
+      occurrence.biomeKey,
+      occurrence.id,
+      wheel.wheelKey,
+      wheel.pickedOfferKey,
+    ]);
+    const acquisitions = occurrence.timeline.transactions.filter(
+      (transaction) =>
+        transaction.kind === 'acquisition' &&
+        transaction.owner === expectedAcquisitionOwner &&
+        transaction.sourceOwner === expectedAcquisitionOwner &&
+        transaction.producerLifecycleKey === picked.reward.producerLifecycleKey &&
+        sameReward(transaction.reward, picked.reward) &&
+        transaction.window.kind === 'shipPostCombat' &&
+        transaction.window.wheelKey === wheel.wheelKey,
+    );
+    if (acquisitions.length !== 1)
+      fail(`${label}.overview.rewardWheels.${wheel.wheelKey} must match one picked acquisition`);
+    if (
+      !occurrence.timeline.dependencies.some(
+        (dependency) =>
+          dependency.owner === acquisitions[0]!.owner &&
+          dependency.afterOwner === choices[0]!.owner,
+      )
+    )
+      fail(`${label}.overview.rewardWheels.${wheel.wheelKey} is missing its choice dependency`);
+  }
+}
+
 function validateFieldsCageSlots(
   layout: ExecutionFieldsLayout,
   encounterPhases: readonly { readonly slotKey: string }[],
@@ -112,7 +238,8 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
   const biomeKey = stringValue(record.biomeKey, `${label}.biomeKey`);
   if (!['F', 'G', 'H', 'I', 'N', 'O', 'P', 'Q'].includes(biomeKey))
     fail(`${label}.biomeKey is unsupported`);
-  return Object.freeze({
+  const parsedTimeline = timeline(record.timeline, `${label}.timeline`);
+  const parsed = Object.freeze({
     id: stringValue(record.id, `${label}.id`, 256),
     owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
     biomeKey: biomeKey as ExecutionBiomeKey,
@@ -120,7 +247,7 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
     kind: stringValue(record.kind, `${label}.kind`),
     ...(parsedAnomaly === undefined ? {} : { anomaly: parsedAnomaly }),
     overview: parsedOverview,
-    timeline: timeline(record.timeline, `${label}.timeline`),
+    timeline: parsedTimeline,
     doors: doors(record.doors, `${label}.doors`),
     ...(conformanceFacts === undefined
       ? {}
@@ -148,4 +275,6 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
           }),
         }),
   });
+  validateRewardWheelProduct(parsed, label);
+  return parsed;
 }
