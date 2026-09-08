@@ -44,6 +44,7 @@ export function bindRewardPayloadInteractions(input: {
           input.candidates.rewardDomain(control.owner, rewardTypes, control.offer ?? undefined),
         model: input.rewardPicker.project,
         owner: control.owner.address,
+        resolvesAtAcquisition: input.rewardPicker.resolvesAtAcquisition,
         selected: control.offer,
         summary: input.rewardPicker.summary,
       }),

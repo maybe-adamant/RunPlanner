@@ -3,7 +3,6 @@ import {
   createEchoKeepsakeReplayAddress,
   createEncounterPhaseAddress,
   createLevelResolutionAddress,
-  createShopOfferAddress,
   createTraitOfferAddress,
   semanticAddressKey,
 } from '../../authored-project/addresses';
@@ -673,14 +672,7 @@ export function executionTimelineTransactions(
         'executionCoverageMissing',
         `${room.gameName} lacks World Shop offer ${actionReference.offerKey}`,
       );
-    const source =
-      actionReference.kind === 'interactShopOffer'
-        ? createShopOfferAddress(
-            createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
-            room.occurrenceId,
-            actionReference.offerKey,
-          )
-        : sourceForAction(timeline.action.owner);
+    const source = sourceForAction(timeline.action.owner);
     if (
       source.kind !== 'incomingReward' &&
       source.kind !== 'localReward' &&

@@ -9,6 +9,7 @@ export type RewardPickerStep = 'type' | 'source' | 'chosen' | 'spurned';
 
 export interface RewardPickerProjectionService {
   readonly choiceLabel: (step: RewardPickerStep, offer?: ResolvedRewardOffer) => string;
+  readonly resolvesAtAcquisition: (offer: ResolvedRewardOffer) => boolean;
   readonly project: (
     domain: ProjectedRewardDomain,
     step: RewardPickerStep,
@@ -298,6 +299,7 @@ export function createRewardPickerProjection(
           return 'Spurned God';
       }
     },
+    resolvesAtAcquisition: (offer) => hasEventualSource(catalog, offer),
     project(domain: ProjectedRewardDomain, step: RewardPickerStep, selected?: ResolvedRewardOffer) {
       const resolved = stepOptions(domain, step, selected);
       const selectedValue = selectedKey(step, selected);

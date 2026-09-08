@@ -4,6 +4,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createAcquisitionSiteAddress,
+  createAcquisitionEntryAddress,
   createAdditionalExitAddress,
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
@@ -444,7 +445,7 @@ describe('F candidate support', () => {
       'roomExit',
     );
     const hiddenSource = createTraitOfferAddress(
-      createShopOfferAddress(goldenFBiome, fMidshopPomShopId, 'Boon'),
+      createAcquisitionEntryAddress(site, 'Boon'),
       'hiddenSource',
     );
     const selected = simulateProject(catalog, project);

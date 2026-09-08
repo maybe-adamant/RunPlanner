@@ -27,7 +27,7 @@ export { levelResolutionEffectFor, type LevelResolutionEffectSource } from './le
 export {
   evaluateShopGenerationSupport,
   evaluateShopPurchases,
-  evaluateShopPurchaseAtSlot,
+  evaluateShopPurchaseGateAtSlot,
   findShopGenerationWitnesses,
   findShopIndexedGenerationWitnesses,
   findShopPartialGenerationWitnesses,
@@ -82,6 +82,7 @@ export type {
   ShopPurchaseAcquisition,
   ShopPurchaseFailure,
   ShopPurchaseSimulation,
+  ShopPurchaseGateResult,
   SourceResolutionPoint,
   SourceSupportPolicyKey,
 } from './model';

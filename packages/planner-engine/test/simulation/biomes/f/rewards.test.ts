@@ -727,9 +727,26 @@ function invalidBlindBoxPurchaseProject(): ProjectDocument {
       payload: { kind: 'BoonSource', source: 'DemeterUpgrade' },
     },
   });
+  const blindBoxEntry = createAcquisitionEntryAddress(
+    createAcquisitionSiteAddress(createOccurrenceAddress(biome, shop), 'roomExit'),
+    'Boon',
+  );
+  project = replaceShopActions(
+    project,
+    createAcquisitionSiteAddress(createOccurrenceAddress(biome, shop), 'roomExit'),
+    ['Boon'],
+  );
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceAcquisitionEntryOffer',
+    entry: blindBoxEntry,
+    value: {
+      rewardType: 'BlindBoxLoot',
+      payload: { kind: 'BoonSource', source: 'DemeterUpgrade' },
+    },
+  });
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceTraitOffer',
-    trait: createTraitOfferAddress(createShopOfferAddress(biome, shop, 'Boon'), 'hiddenSource'),
+    trait: createTraitOfferAddress(blindBoxEntry, 'hiddenSource'),
     value: {
       kind: 'traits',
       giverKey: 'Demeter',
@@ -741,11 +758,6 @@ function invalidBlindBoxPurchaseProject(): ProjectDocument {
       selectedOptionKey: 'option1',
     },
   });
-  project = replaceShopActions(
-    project,
-    createAcquisitionSiteAddress(createOccurrenceAddress(biome, shop), 'roomExit'),
-    ['Boon'],
-  );
   project = addTakeover(project, shop, [
     createOccurrenceId('blind-preboss-shop'),
     createOccurrenceId('blind-preboss-free'),
@@ -1238,7 +1250,7 @@ describe('F reward-history simulation', () => {
     );
   });
 
-  it('addresses unsupported shop inventory and purchased options separately', () => {
+  it('addresses unsupported shop inventory and acquired Mystery sources separately', () => {
     const offerResult = evaluate(invalidShopOfferProject()).rewards;
     let purchaseProject = invalidBlindBoxPurchaseProject();
     purchaseProject = replaceShopActions(
@@ -1254,7 +1266,7 @@ describe('F reward-history simulation', () => {
       (finding) => finding.code === 'shopOfferUnavailable',
     );
     const purchaseFindings = purchaseResult.findings.filter(
-      (finding) => finding.code === 'shopPurchaseUnavailable',
+      (finding) => finding.code === 'rewardAcquisitionUnavailable',
     );
 
     expect(offerFindings).toEqual([
@@ -1341,6 +1353,18 @@ describe('F reward-history simulation', () => {
       'Boon',
       'MajorNonBoon',
     ]);
+    const blindBoxEntry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(shop, 'roomExit'),
+      'Boon',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: blindBoxEntry,
+      value: {
+        rewardType: 'BlindBoxLoot',
+        payload: { kind: 'BoonSource', source: 'DemeterUpgrade' },
+      },
+    });
     const preShopOffers = [
       {
         owner: createIncomingRewardAddress(biome, fGenerationOccurrenceId(2, 1)),
@@ -1390,7 +1414,7 @@ describe('F reward-history simulation', () => {
     }
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
-      trait: createTraitOfferAddress(createShopOfferAddress(biome, shopId, 'Boon'), 'hiddenSource'),
+      trait: createTraitOfferAddress(blindBoxEntry, 'hiddenSource'),
       value: {
         kind: 'traits',
         giverKey: 'Demeter',

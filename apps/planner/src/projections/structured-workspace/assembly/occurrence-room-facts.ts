@@ -109,7 +109,6 @@ export function assembleOccurrenceRewardLocal(
           );
           return Object.freeze(
             Object.entries(input.occurrence.acquisitionSites).flatMap(([siteKey, state]) => {
-              if (input.occurrence.state.kind === 'shop' && siteKey === 'roomExit') return [];
               const site = acquisitionSiteFromStorageKey(address, siteKey);
               if (site === undefined) {
                 throw new StructuredWorkspaceProjectionContractError(
@@ -118,6 +117,19 @@ export function assembleOccurrenceRewardLocal(
               }
               const derivedEntries = input.derivedAcquisitionEntries?.(site) ?? Object.freeze([]);
               return Object.entries(state.pickupEntries ?? {}).flatMap(([key, reward]) => {
+                const shopInventoryReward =
+                  input.occurrence.state.kind === 'shop' && siteKey === 'roomExit'
+                    ? input.occurrence.state.shop?.offers[key]?.reward
+                    : undefined;
+                if (input.occurrence.state.kind === 'shop' && siteKey === 'roomExit') {
+                  if (
+                    shopInventoryReward === null ||
+                    shopInventoryReward === undefined ||
+                    input.catalog.rewards.rewardTypes.byKey[shopInventoryReward.offer.rewardType]
+                      ?.sourceResolution?.kind !== 'acquisitionRole'
+                  )
+                    return [];
+                }
                 const shrineDelivery =
                   siteKey === 'hermesShrineDelivery'
                     ? parseHermesShrineDeliveryEntryKey(key)
@@ -153,6 +165,9 @@ export function assembleOccurrenceRewardLocal(
                       });
                 const rewardTypes =
                   capability?.rewardTypes ??
+                  (shopInventoryReward === null || shopInventoryReward === undefined
+                    ? undefined
+                    : Object.freeze([shopInventoryReward.offer.rewardType])) ??
                   (pickup?.rewardType === undefined
                     ? Object.freeze([])
                     : Object.freeze([pickup.rewardType]));

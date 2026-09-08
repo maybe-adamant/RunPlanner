@@ -12,6 +12,7 @@ import {
   createUnresolvedShopAcquisitionRewardState,
 } from '../../authored-project/traits';
 import { parseArtificerReplacementEntryKey } from '../../authored-project/artificer';
+import { rewardSourceResolvesAtAcquisition } from '../../authored-project/reward-state';
 
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
@@ -23,7 +24,7 @@ import {
 import {
   applyOfferProjection,
   evaluateShopGenerationSupport,
-  evaluateShopPurchaseAtSlot,
+  evaluateShopPurchaseGateAtSlot,
   findShopIndexedGenerationWitnesses,
   purchaseInteractionName,
   isPayloadLocallyValid,
@@ -66,6 +67,7 @@ import {
   applyProducerRoleHistory,
   withStoredArtificerReplacements,
   historyChronology,
+  settleAcquisitionResolvedReward,
   settleOwnedAcquisitionSite,
   type AcquisitionRoleFrontier,
   type AcquisitionSettlementProduct,
@@ -217,9 +219,6 @@ export function settleShopAcquisitionSite(
   const profile = catalog.rewards.shops.byKey[entry.profileKey];
   if (profile === undefined) return fail(`unknown shop profile ${entry.profileKey}`);
   const requirements = shopRequirements(declaration, entry.profileKey, fail);
-  const authored: readonly AuthoredShopOffer[] = entry.offers.map((offer) => ({
-    offer: offer.offer,
-  }));
   const order =
     context.order ??
     Object.freeze(
@@ -948,13 +947,15 @@ export function settleShopAcquisitionSite(
       }
 
       const slotIndex = entry.offers.findIndex((offer) => offer.offerKey === entryKey);
-      const offer = slotIndex < 0 ? undefined : entry.offers[slotIndex];
-      if (offer === undefined)
+      const inventoryOffer = slotIndex < 0 ? undefined : entry.offers[slotIndex];
+      if (inventoryOffer === undefined)
         return fail(`${room.gameName} acquisition order has unknown entry ${entryKey}`);
-      const purchase = evaluateShopPurchaseAtSlot(
-        catalog.rewards,
+      const acquisitionResolved = rewardSourceResolvesAtAcquisition(catalog, inventoryOffer.offer);
+      const authoredPurchaseReward = acquisitionResolved
+        ? room.acquisitionSites.roomExit?.entries[entryKey]
+        : undefined;
+      const purchase = evaluateShopPurchaseGateAtSlot(
         profile,
-        authored,
         execution.witness,
         slotIndex,
         execution.remainingSlotIndexes,
@@ -975,9 +976,7 @@ export function settleShopAcquisitionSite(
         );
         continue;
       }
-      const bindings = purchase.acquisitions.map(({ event }) =>
-        Object.freeze({ role: event.role, lifecyclePoint: event.lifecyclePoint }),
-      );
+      const bindings = purchase.acquisitionLifecycle;
       const optionKey = execution.witness.optionKeys[slotIndex];
       const shopOption =
         optionKey === undefined
@@ -985,19 +984,62 @@ export function settleShopAcquisitionSite(
           : profile.groups.byKey[profile.slots.values[slotIndex]!.groupKey]?.options.byKey[
               optionKey
             ];
-      const paidOffer =
+      const paidOffer: PaidOffer =
         shopOption?.boonRarityOverride === undefined
-          ? offer
+          ? inventoryOffer
           : Object.freeze({
-              ...offer,
+              ...inventoryOffer,
               traitContext: Object.freeze({
-                ...(offer.traitContext ?? {}),
+                ...(inventoryOffer.traitContext ?? {}),
                 boonRarityItemOverride: shopOption.boonRarityOverride,
               }),
             });
       const prePurchaseTraits = execution.candidate.traitHistory;
       materializeGold(execution, paidOffer, bindings);
-      if (!settlePaid(execution, paidOffer, bindings, agreementBranches)) continue;
+      if (acquisitionResolved) {
+        const purchaseActionOwner = actionOwnerForOffer(entryKey);
+        const settled = settleAcquisitionResolvedReward(
+          catalog,
+          Object.freeze([execution.candidate]),
+          {
+            siteOwner: room.origin,
+            pointKey: 'roomExit',
+            entryKey,
+            visibleOffer: inventoryOffer.offer,
+            reward: authoredPurchaseReward,
+            producerLifecycleKey: profile.key,
+            producerKind: 'shop',
+            instanceProvenance: 'paid',
+            ...(paidOffer.traitContext === undefined
+              ? {}
+              : { traitContext: paidOffer.traitContext }),
+            ...(purchaseActionOwner === undefined ? {} : { timelineOwner: purchaseActionOwner }),
+            historySequence,
+            branchCohortSize,
+            roleBindings: bindings,
+            directTraitAgreementBranches: agreementBranches,
+            ...(context.authoredSeaStarDuplicateSiteKeys === undefined
+              ? {}
+              : {
+                  authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys,
+                }),
+          },
+          context.facts,
+          findings,
+          ownerRegion(room.origin),
+          context.findingChronology,
+        );
+        derivedEntryFrontiers.push(...(settled.derivedEntryFrontiers ?? []));
+        roleFrontiers.push(...(settled.roleFrontiers ?? []));
+        traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
+        for (const settledEntry of settled.entries)
+          recordRoles(entryKey, settledEntry.acquisitionRoles);
+        if (settled.branches.length !== 1) {
+          entryPurchaseFailureRecorded = true;
+          continue;
+        }
+        execution.candidate = settled.branches[0]!;
+      } else if (!settlePaid(execution, paidOffer, bindings, agreementBranches)) continue;
       execution.remainingSlotIndexes = purchase.remainingSlotIndexes;
       if (!execution.firstNormalPurchaseSeen) {
         execution.firstNormalPurchaseSeen = true;
@@ -1009,13 +1051,20 @@ export function settleShopAcquisitionSite(
           const optionKey = execution.witness.optionKeys[slotIndex];
           const option = profile.groups.byKey[slot.groupKey]?.options.byKey[optionKey ?? ''];
           const interaction =
-            option === undefined ? undefined : purchaseInteractionName(option, offer.offer);
+            option === undefined
+              ? undefined
+              : purchaseInteractionName(option, inventoryOffer.offer);
           const excludedNames = new Set<string>();
           if (interaction !== undefined) {
             excludedNames.add(interaction);
             excludedNames.add(`${interaction}Drop`);
           }
-          const travelRefill = deriveTravelRefill(execution, offer, slotIndex, excludedNames);
+          const travelRefill = deriveTravelRefill(
+            execution,
+            inventoryOffer,
+            slotIndex,
+            excludedNames,
+          );
           if (travelRefill !== undefined) {
             execution.travelRefill = travelRefill;
             const address = createAcquisitionEntryAddress(site, TRAVEL_DEAL_REFILL_ENTRY_KEY);
@@ -1025,7 +1074,7 @@ export function settleShopAcquisitionSite(
                 address,
                 kind: 'travelDealRefill' as const,
                 branchCohortSize,
-                sourceOfferKey: offer.offerKey,
+                sourceOfferKey: inventoryOffer.offerKey,
                 slotIndex,
                 rewardTypes: travelRefill.rewardTypes,
                 branchesBeforeEntry,
@@ -1176,9 +1225,12 @@ export function settleShopAcquisitionSite(
           });
         }
         const acquisitionRoles = rolesByOfferKey.get(offer.offerKey) ?? [];
+        const acquisitionResolved = rewardSourceResolvesAtAcquisition(catalog, offer.offer);
         return Object.freeze({
           address: createAcquisitionEntryAddress(site, offer.offerKey),
-          source: offer.offerOrigin,
+          source: acquisitionResolved
+            ? createAcquisitionEntryAddress(site, offer.offerKey)
+            : offer.offerOrigin,
           acquisitionRoles,
           participation: 'optional' as const,
         });

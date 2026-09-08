@@ -45,9 +45,12 @@ function sourceAction(
         return reference.kind === 'interactShopOffer' && reference.offerKey === owner.offerKey;
       case 'acquisitionEntry':
         return (
-          reference.kind === 'interactAcquisitionEntry' &&
-          reference.siteKey === owner.site.pointKey &&
-          reference.entryKey === owner.entryKey
+          (reference.kind === 'interactAcquisitionEntry' &&
+            reference.siteKey === owner.site.pointKey &&
+            reference.entryKey === owner.entryKey) ||
+          (owner.site.pointKey === 'roomExit' &&
+            reference.kind === 'interactShopOffer' &&
+            reference.offerKey === owner.entryKey)
         );
       case 'encounterPhase':
       case 'gorgonPhase':

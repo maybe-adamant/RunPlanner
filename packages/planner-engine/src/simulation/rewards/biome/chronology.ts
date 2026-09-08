@@ -399,6 +399,7 @@ export function evaluateBiomeRewardChronology(
       if (
         (first?.kind !== 'travelDealRefill' &&
           first?.kind !== 'infernalContractReward' &&
+          first?.kind !== 'acquisitionResolvedReward' &&
           first?.kind !== 'echoDoubleShopReward') ||
         combined.length !== first.branchCohortSize ||
         combined.some((candidate) => candidate.evaluateOffer === undefined) ||
@@ -428,7 +429,7 @@ export function evaluateBiomeRewardChronology(
           owners: Object.freeze([first.address]),
           evaluateOffer: (owner: SemanticAddress, offer: ResolvedRewardOffer) => {
             if (semanticAddressKey(owner) !== key)
-              return fail('derived Shop reward frontier received a foreign owner');
+              return fail('derived acquisition frontier received a foreign owner');
             const results = combined.map((candidate) => candidate.evaluateOffer!(offer));
             return Object.freeze({
               findings: Object.freeze(results.flatMap((result) => result.findings)),

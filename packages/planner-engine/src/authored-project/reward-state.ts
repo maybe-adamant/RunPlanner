@@ -22,3 +22,14 @@ export function createNormalDispositionByAcquisitionRole(
     ),
   );
 }
+
+/** Whether this reward's payload becomes concrete only when its acquisition begins. */
+export function rewardSourceResolvesAtAcquisition(
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+): boolean {
+  return (
+    catalog.rewards.rewardTypes.byKey[offer.rewardType]?.sourceResolution?.kind ===
+    'acquisitionRole'
+  );
+}

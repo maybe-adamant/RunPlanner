@@ -230,7 +230,7 @@ describe('P core loop', () => {
     const p = surface?.biomes.find((biome) => biome.biomeKey === 'P');
 
     expect(evaluation.findings).toContainEqual(
-      expect.objectContaining({ code: 'shopPurchaseUnavailable', origin: purchase }),
+      expect.objectContaining({ code: 'rewardMissing', origin: purchase }),
     );
     expect(p).toMatchObject({ authoring: 'complete', validity: 'invalid' });
     const previous = surface?.biomes.find((biome) => biome.biomeKey === 'O');

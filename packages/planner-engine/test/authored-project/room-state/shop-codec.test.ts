@@ -79,6 +79,35 @@ describe('Shop room-state decoder', () => {
     ).toThrow('levelResolutionsByAcquisitionRole: Pom resolutions are not supported');
   });
 
+  it('accepts only type-only acquisition-resolved Shop inventory', () => {
+    const declaration = room('F_Shop01');
+    const raw = mutable(
+      createDefaultRoomState(catalog, declaration, { role: 'ordinary', entryActive: true }),
+    );
+    const offers = (raw.shop as Record<string, unknown>).offers as Record<
+      string,
+      Record<string, unknown>
+    >;
+    offers.Boon!.reward = {
+      offer: { rewardType: 'BlindBoxLoot' },
+      dispositionByAcquisitionRole: {},
+      traitOffersByAcquisitionRole: {},
+    };
+    expect(
+      decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+    ).toEqual(raw);
+
+    (offers.Boon!.reward as Record<string, unknown>).offer = {
+      rewardType: 'BlindBoxLoot',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    };
+    expect(() =>
+      decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+    ).toThrow(
+      '$.room.state.shop.offers.Boon.reward.offer.payload: is not a project document field',
+    );
+  });
+
   it('rejects malformed Preboss role state at the exact persisted kind path', () => {
     expect(() =>
       decodeRoomState(

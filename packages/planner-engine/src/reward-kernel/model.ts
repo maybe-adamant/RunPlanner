@@ -299,8 +299,8 @@ export interface ShopPurchaseSimulation {
   readonly failures: readonly ShopPurchaseFailure[];
 }
 
-export interface ShopSinglePurchaseResult {
-  readonly history: RewardHistoryState;
-  readonly acquisitions: readonly ShopPurchaseAcquisition[];
+/** The physical purchase frontier before any reward acquisition is resolved. */
+export interface ShopPurchaseGateResult {
+  readonly acquisitionLifecycle: readonly AcquisitionLifecycleBinding[];
   readonly remainingSlotIndexes: readonly number[];
 }

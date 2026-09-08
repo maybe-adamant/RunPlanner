@@ -937,9 +937,11 @@ publishes ordinary paid-purchase trait and Pom controls only from participating
 `interactShopOffer` rows in Room Timeline. Unpurchased initial inventory exposes
 only `Purchased` membership in Overview; it has no acquisition-child control,
 finding, trait event, or equipped-state fold until its entry participates.
-The inventory remains the only reward-identity editor. Once purchased, its
-Room Timeline row exposes resolution children and chronology only; it cannot
-turn the purchased Boon, Mystery Boon, Pom, or other item into another reward.
+The inventory remains the only reward-identity editor. A Mystery Boon remains
+type-only there; selecting `Purchased` creates the acquisition entry where its
+god and trait are authored. Once purchased, the Room Timeline row exposes
+resolution children and chronology only; it cannot turn the purchased Boon,
+Mystery Boon, Pom, or other item into another reward.
 
 The same Room Timeline chronology contains declaration-produced pickups such as Narcissus
 outputs. It derives entry labels, required/optional classification, lifecycle

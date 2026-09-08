@@ -175,11 +175,12 @@ owns when each role occurs. The same concrete loot must not encode whether it
 came from a room reward, a cage, a shop purchase, or a multi-stage Devotion.
 
 Offer payload authorship and game-visible resolution timing are also separate.
-Most payloads are both authored and resolved at offer generation. Blind Box
-still persists the intended eventual source as complete planner intent, but the
-box remains the only game-visible offer and that source is validated and
-resolved only after purchase. An unpurchased Blind Box never validates or emits
-its dormant source.
+Most payloads are both authored and resolved at offer generation. A producer
+such as Narcissus can author a Blind Box's eventual source before the produced
+pickup is taken. Initial Shop inventory is different: it persists only the
+visible box identity, and a participating purchase creates the acquisition
+entry that owns and resolves the eventual source. An unpurchased Shop Blind Box
+therefore has no dormant source to validate or emit.
 
 Offer identity, acquisition identity, and semantic effect are separate. Big,
 Triple, and self-consumed wrapper variants retain the exact ledger keys written
@@ -811,12 +812,15 @@ order, or a simulation witness. Presence forms the unordered participant set
 exposed by Purchase and Picked up checkboxes; position is the later chronology.
 Membership insertion or deletion is structural, preserves the relative order
 of retained participants, and never requires the current chronology to settle.
-New participants append until the author uses the separate move controls. A Blind Box
-offer persists its intended eventual `BoonSource`, but source support is not
-validated while the box is merely offered. When the box is purchased, the
-simulator applies the one authored order, evaluates each purchase against the
-history from earlier authored purchases, and never retries another permutation.
-It retains ordinary reward-source possibility branches within that fixed order.
+New participants append until the author uses the separate move controls. A
+Shop Blind Box slot persists only `BlindBoxLoot`. Selecting its purchase creates
+the acquisition entry where the eventual `BoonSource` and trait screen are
+authored. Shop settlement owns only inventory membership, purchase requirements,
+and purchase order; after that gate succeeds, the ordinary acquisition
+settlement resolves the Mystery source and trait outcome. The simulator applies
+the one authored order, evaluates that source against history from earlier
+authored actions, and never retries another permutation. It retains ordinary
+reward-source possibility branches within that fixed order.
 
 Payload and order are deliberately separate. A dormant Travel or Gold entry
 may persist its complete reward and nested acquisition detail while absent from

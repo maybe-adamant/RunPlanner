@@ -146,6 +146,7 @@ export interface WorkspaceBiomeSource {
       | 'hermesShrineDelivery'
       | 'clockedTraitPickup'
       | 'infernalContractReward'
+      | 'acquisitionResolvedReward'
       | 'travelDealPlaceholder'
       | 'travelDealRefill';
     readonly sourceOfferKey?: string;

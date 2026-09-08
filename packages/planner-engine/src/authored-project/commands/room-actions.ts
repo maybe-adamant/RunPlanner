@@ -7,6 +7,7 @@ import {
   structurallyActiveOccurrenceIds,
 } from '../room-action-defaults';
 import { createBiomeAddress } from '../addresses';
+import { reconcileAcquisitionResolvedRewardEntry } from '../acquisition-entry';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { updateOccurrence } from './occurrence-mutation';
 import type { RoomActionCommand } from './types';
@@ -51,34 +52,38 @@ export function applyRoomActionCommand(
     });
     const key = roomActionKey(reference);
     const existingIndex = order.findIndex((candidate) => roomActionKey(candidate) === key);
-    if (!command.purchased) {
-      if (existingIndex < 0) return document;
-      return updateOccurrence(
-        document,
-        located,
-        Object.freeze({
-          ...occurrence,
-          roomActions: Object.freeze({
-            order: Object.freeze(order.filter((_, index) => index !== existingIndex)),
-          }),
-        }),
-      );
+    const participationChanges = command.purchased ? existingIndex < 0 : existingIndex >= 0;
+    if (command.purchased && participationChanges) {
+      if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined) {
+        failCommand(command, `${occurrence.gameName} has no materialized shop inventory`);
+      }
+      if (occurrence.state.shop.offers[command.offer.offerKey] === undefined) {
+        failCommand(command, `unknown shop offer ${command.offer.offerKey}`);
+      }
     }
-    if (existingIndex >= 0) return document;
-    if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined) {
-      failCommand(command, `${occurrence.gameName} has no materialized shop inventory`);
-    }
-    if (occurrence.state.shop.offers[command.offer.offerKey] === undefined) {
-      failCommand(command, `unknown shop offer ${command.offer.offerKey}`);
-    }
-    return updateOccurrence(
-      document,
-      located,
-      Object.freeze({
-        ...occurrence,
-        roomActions: Object.freeze({ order: Object.freeze([...order, reference]) }),
-      }),
+    const nextOrder = participationChanges
+      ? command.purchased
+        ? Object.freeze([...order, reference])
+        : Object.freeze(order.filter((_, index) => index !== existingIndex))
+      : order;
+    const withParticipation =
+      nextOrder === order
+        ? occurrence
+        : Object.freeze({
+            ...occurrence,
+            roomActions: Object.freeze({ order: nextOrder }),
+          });
+    const nextOccurrence = reconcileAcquisitionResolvedRewardEntry(
+      catalog,
+      withParticipation,
+      command.offer.offerKey,
+      command.purchased,
+      occurrence.state.kind === 'shop'
+        ? occurrence.state.shop?.offers[command.offer.offerKey]?.reward
+        : undefined,
     );
+    if (nextOccurrence === occurrence) return document;
+    return updateOccurrence(document, located, nextOccurrence);
   }
   const existingIndex = order.findIndex(
     (reference) => roomActionKey(reference) === command.action.actionKey,

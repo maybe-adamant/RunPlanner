@@ -107,7 +107,9 @@ export function RewardValueEditor({
     }
     switch (active.step) {
       case 'type':
-        if (value.payload === undefined) {
+        if (candidateOwner.address.kind === 'shopOffer' && resolver.resolvesAtAcquisition(value)) {
+          commit(Object.freeze({ rewardType: value.rewardType }));
+        } else if (value.payload === undefined) {
           commit(value);
         } else if (value.payload.kind === 'BoonSource') {
           advance(value, 'source');

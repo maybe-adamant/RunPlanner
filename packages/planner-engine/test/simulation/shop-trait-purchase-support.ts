@@ -509,41 +509,52 @@ export function echoGoldShop(
     ...(options.replaceMinorWithSpell ? { Minor: spellOffer } : {}),
     ...(options.offerOverrides ?? {}),
   };
+  const resolvedShopRewards = Object.freeze(
+    Object.fromEntries(
+      Object.entries(baseState.shop.offers).map(([key]) => {
+        const override = offerOverrides[key];
+        const rewardOverride =
+          options.rewardOverrides?.[key] ?? (key === 'Minor' ? spellReward : undefined);
+        const explicitOffer =
+          override ??
+          (room.gameName === 'I_PreBoss02'
+            ? explicitIWorldShopOffers[key]
+            : explicitWorldShopOffers[key]);
+        if (rewardOverride === undefined && explicitOffer === undefined) {
+          throw new Error(`missing explicit World Shop fixture offer for ${key}`);
+        }
+        return [
+          key,
+          rewardOverride ??
+            completeShopFixtureReward(explicitOffer!, loadout, baseState.shop!.profileKey),
+        ];
+      }),
+    ),
+  );
   const shop: NonNullable<typeof baseState.shop> = Object.freeze({
     ...baseState.shop,
     offers: Object.freeze(
       Object.fromEntries(
-        Object.entries(baseState.shop.offers).map(([key]) => {
-          const override = offerOverrides[key];
-          const rewardOverride =
-            options.rewardOverrides?.[key] ?? (key === 'Minor' ? spellReward : undefined);
-          const explicitOffer =
-            override ??
-            (room.gameName === 'I_PreBoss02'
-              ? explicitIWorldShopOffers[key]
-              : explicitWorldShopOffers[key]);
-          if (rewardOverride === undefined && explicitOffer === undefined) {
-            throw new Error(`missing explicit World Shop fixture offer for ${key}`);
-          }
-          return [
-            key,
-            rewardOverride === undefined
-              ? Object.freeze({
-                  reward: completeShopFixtureReward(
-                    explicitOffer!,
-                    loadout,
-                    baseState.shop!.profileKey,
-                  ),
-                })
-              : Object.freeze({ reward: rewardOverride }),
-          ];
-        }),
+        Object.entries(resolvedShopRewards).map(([key, reward]) => [
+          key,
+          Object.freeze({
+            reward:
+              catalog.rewards.rewardTypes.byKey[reward.offer.rewardType]?.sourceResolution?.kind ===
+              'acquisitionRole'
+                ? Object.freeze({
+                    offer: Object.freeze({ rewardType: reward.offer.rewardType }),
+                    traitOffersByAcquisitionRole: Object.freeze({}),
+                    dispositionByAcquisitionRole: Object.freeze({}),
+                  })
+                : reward,
+          }),
+        ]),
       ),
     ),
   });
   const sourceKey = order.find((key) => shop.offers[key]?.reward?.offer.rewardType !== 'SpellDrop');
   const duplicateKey = sourceKey === undefined ? undefined : ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY;
-  const source = sourceKey === undefined ? undefined : shop.offers[sourceKey]?.reward;
+  const source = sourceKey === undefined ? undefined : resolvedShopRewards[sourceKey];
   const duplicateOffer =
     source === undefined || source === null
       ? undefined
@@ -630,11 +641,23 @@ export function echoGoldShop(
     state: Object.freeze({ ...baseState, shop }),
     acquisitionSites: Object.freeze({
       roomExit: Object.freeze({
-        ...(options.includeDuplicate !== true ||
-        duplicateKey === undefined ||
-        duplicateValue === undefined
-          ? {}
-          : { pickupEntries: Object.freeze({ [duplicateKey]: duplicateValue }) }),
+        pickupEntries: Object.freeze({
+          ...Object.fromEntries(
+            authoredOrder.flatMap((entryKey) => {
+              const reward = resolvedShopRewards[entryKey];
+              return reward !== undefined &&
+                catalog.rewards.rewardTypes.byKey[reward.offer.rewardType]?.sourceResolution
+                  ?.kind === 'acquisitionRole'
+                ? [[entryKey, reward] as const]
+                : [];
+            }),
+          ),
+          ...(options.includeDuplicate !== true ||
+          duplicateKey === undefined ||
+          duplicateValue === undefined
+            ? {}
+            : { [duplicateKey]: duplicateValue }),
+        }),
       }),
       ...(options.duplicateConversion !== 'artificer'
         ? {}

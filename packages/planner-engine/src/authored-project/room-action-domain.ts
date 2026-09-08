@@ -5,6 +5,7 @@ import {
 } from '../catalog-schema';
 import {
   createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createAcquisitionRoleAddress,
   createEncounterPhaseAddress,
   createGorgonPhaseAddress,
@@ -28,6 +29,7 @@ import {
   seaStarDuplicateUsesFreshObject,
 } from './sea-star';
 import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from './shop';
+import { rewardSourceResolvesAtAcquisition } from './reward-state';
 import type { RoomActionReference, RoomOccurrence } from './model';
 import {
   encounterEnvelopeSlots,
@@ -358,7 +360,23 @@ function baseContribution(
             ),
       );
     }
-    case 'interactShopOffer':
+    case 'interactShopOffer': {
+      const reward =
+        occurrence.state.kind === 'shop'
+          ? occurrence.state.shop?.offers[reference.offerKey]?.reward
+          : undefined;
+      const owner =
+        reward !== null &&
+        reward !== undefined &&
+        rewardSourceResolvesAtAcquisition(catalog, reward.offer)
+          ? createAcquisitionEntryAddress(
+              createAcquisitionSiteAddress(
+                createOccurrenceAddress(biome, occurrence.occurrenceId),
+                'roomExit',
+              ),
+              reference.offerKey,
+            )
+          : createShopOfferAddress(biome, occurrence.occurrenceId, reference.offerKey);
       return contribution(
         biome,
         occurrence,
@@ -366,8 +384,9 @@ function baseContribution(
         'optional',
         frozen({ kind: 'postOutgoing' }),
         [],
-        createShopOfferAddress(biome, occurrence.occurrenceId, reference.offerKey),
+        owner,
       );
+    }
     case 'sellPurgingPoolTrait':
       return contribution(
         biome,

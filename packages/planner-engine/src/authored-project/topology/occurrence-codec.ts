@@ -29,6 +29,7 @@ import {
 } from '../pickup-producers';
 import { parseArtificerReplacementEntryKey } from '../artificer';
 import { parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
+import { rewardSourceResolvesAtAcquisition } from '../reward-state';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   INFERNAL_CONTRACT_ENTRY_KEY,
@@ -586,6 +587,13 @@ export function decodeRoomOccurrence(input: {
       );
     }
     for (const [entryKey, entry] of Object.entries(acquisitionSites.roomExit.pickupEntries ?? {})) {
+      const inventoryReward = state.shop.offers[entryKey]?.reward;
+      if (
+        inventoryReward !== null &&
+        inventoryReward !== undefined &&
+        rewardSourceResolvesAtAcquisition(catalog, inventoryReward.offer)
+      )
+        continue;
       if (entryKey === INFERNAL_CONTRACT_ENTRY_KEY) {
         const descriptor = room.infernalContractReward;
         if (

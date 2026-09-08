@@ -2,7 +2,7 @@ import type { Catalog } from '../../catalog-schema';
 import type { ShopRewardBinding } from '../../reward-kernel/bindings';
 import type { ShopProfileDeclaration } from '../../reward-kernel/model';
 import { pickupEffectForOffer, type ResolvedRewardOffer } from '../../reward-kernel';
-import type { AuthoredAnvilResult, ShopOfferState, ShopState } from '../model';
+import type { AuthoredAnvilResult, AuthoredRewardState, ShopOfferState, ShopState } from '../model';
 import {
   expectArray,
   expectExactKeys,
@@ -16,6 +16,46 @@ import {
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '../shop';
 import { decodeNullableRewardState } from './reward-acquisition-codec';
+import { rewardSourceResolvesAtAcquisition } from '../reward-state';
+
+function decodeShopInventoryReward(
+  value: unknown,
+  catalog: Catalog,
+  path: string,
+  profileKey: string,
+): AuthoredRewardState | null {
+  if (value === null) return null;
+  const raw = expectRecord(value, path);
+  const offer = expectRecord(raw.offer, `${path}.offer`);
+  const rewardType = expectString(offer.rewardType, `${path}.offer.rewardType`);
+  if (catalog.rewards.rewardTypes.byKey[rewardType]?.sourceResolution?.kind !== 'acquisitionRole')
+    return decodeNullableRewardState(value, catalog, path, {
+      kind: 'shopProfile',
+      key: profileKey,
+    });
+
+  expectExactKeys(
+    raw,
+    ['offer', 'traitOffersByAcquisitionRole', 'dispositionByAcquisitionRole'],
+    path,
+  );
+  expectExactKeys(offer, ['rewardType'], `${path}.offer`);
+  const traits = expectRecord(
+    raw.traitOffersByAcquisitionRole,
+    `${path}.traitOffersByAcquisitionRole`,
+  );
+  const dispositions = expectRecord(
+    raw.dispositionByAcquisitionRole,
+    `${path}.dispositionByAcquisitionRole`,
+  );
+  expectExactKeys(traits, [], `${path}.traitOffersByAcquisitionRole`);
+  expectExactKeys(dispositions, [], `${path}.dispositionByAcquisitionRole`);
+  return Object.freeze({
+    offer: Object.freeze({ rewardType }),
+    traitOffersByAcquisitionRole: Object.freeze({}),
+    dispositionByAcquisitionRole: Object.freeze({}),
+  });
+}
 
 function decodeAnvilResult(
   value: unknown,
@@ -23,7 +63,9 @@ function decodeAnvilResult(
   offer: ResolvedRewardOffer,
   path: string,
 ): AuthoredAnvilResult | null | undefined {
-  const expected = pickupEffectForOffer(catalog.rewards, offer);
+  const expected = rewardSourceResolvesAtAcquisition(catalog, offer)
+    ? undefined
+    : pickupEffectForOffer(catalog.rewards, offer);
   if (expected === undefined) {
     if (value !== undefined)
       failProjectDocument(path, 'pickup effect results are not supported for this reward');
@@ -101,10 +143,12 @@ function decodeShopOffers(
     const offerPath = `${path}.offers.${slot.key}`;
     const rawOffer = expectRecord(rawOffers[slot.key], offerPath);
     expectExactKeys(rawOffer, ['reward', 'anvilResult'], offerPath);
-    const reward = decodeNullableRewardState(rawOffer.reward, catalog, `${offerPath}.reward`, {
-      kind: 'shopProfile',
-      key: profile.key,
-    });
+    const reward = decodeShopInventoryReward(
+      rawOffer.reward,
+      catalog,
+      `${offerPath}.reward`,
+      profile.key,
+    );
     if (reward === null) {
       if (rawOffer.anvilResult !== undefined)
         failProjectDocument(`${offerPath}.anvilResult`, 'requires a selected Anvil reward');

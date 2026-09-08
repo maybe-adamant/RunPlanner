@@ -431,14 +431,20 @@ describe('reward editor projections', () => {
     expect(screen.queryByText('Reward type')).toBeNull();
   });
 
-  it('labels a Blind Box source without an extra eventual qualifier', async () => {
+  it('keeps Shop Blind Box inventory type-only when replacing its visible offer', async () => {
     const project = createGoldenFGHIProject();
     const blindBox = {
       rewardType: 'BlindBoxLoot',
       payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
     };
     const user = userEvent.setup();
-    renderReward({ interactions: interactionsFor(project), offer: blindBox, owner: blindBoxOwner });
+    const onReplace = vi.fn();
+    renderReward({
+      interactions: interactionsFor(project),
+      offer: blindBox,
+      onReplace,
+      owner: blindBoxOwner,
+    });
 
     const trigger = screen.getByLabelText('Reward');
     expect(trigger.textContent).toContain('Mystery Boon · Apollo');
@@ -447,7 +453,8 @@ describe('reward editor projections', () => {
     await screen.findByText('Reward type');
     await user.click(within(await screen.findByRole('listbox')).getByText('Mystery Boon'));
 
-    expect(await screen.findByText('Eventual God')).toBeTruthy();
+    expect(onReplace).toHaveBeenCalledWith({ rewardType: 'BlindBoxLoot' });
+    expect(screen.queryByText('Eventual God')).toBeNull();
   });
 
   it('opens an unresolved declaration-fixed Blind Box directly at its total source picker', async () => {

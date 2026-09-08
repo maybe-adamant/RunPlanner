@@ -1459,6 +1459,30 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(within(timeline).queryByRole('region', { name: 'Timeline repairs' })).toBeNull();
   });
 
+  it('authors a World Shop Mystery Boon source only after purchasing it', async () => {
+    const view = renderOccurrenceWorkbench(
+      loadSurfaceNOPQProject(),
+      'Surface',
+      'P',
+      occurrenceById(pOccurrenceIds.prebossShop),
+    );
+
+    await view.user.click(screen.getByRole('button', { name: 'Offer 1 Item' }));
+    await view.user.click(within(await screen.findByRole('listbox')).getByText('Mystery Boon'));
+    expect(screen.queryByText('Eventual God')).toBeNull();
+
+    await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Offer 1' }));
+    openRoomTab('Room Timeline');
+    const purchase = screen.getByText('Buy Mystery Boon').closest('li');
+    if (purchase === null) throw new Error('purchased Mystery Boon row is missing');
+    await view.user.click(within(purchase).getByRole('button', { name: 'Reward' }));
+    expect(await screen.findByText('Eventual God')).toBeTruthy();
+    await view.user.click(within(await screen.findByRole('listbox')).getByText('Apollo'));
+    const resolvedPurchase = screen.getByText('Buy Mystery Boon').closest('li');
+    if (resolvedPurchase === null) throw new Error('resolved Mystery Boon row is missing');
+    expect(within(resolvedPurchase).getByRole('button', { name: /Trait/ })).toBeTruthy();
+  });
+
   it('removes the Shop Death Defiance repair control while retaining purchase authoring', async () => {
     const project = createGoldenFGHIProject();
     const shop = project.route.biomes

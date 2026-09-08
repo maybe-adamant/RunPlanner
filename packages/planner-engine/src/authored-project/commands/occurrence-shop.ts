@@ -6,6 +6,8 @@ import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutati
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import type { ShopOccurrenceCommand } from './types';
 import { createUnresolvedAcquisitionRewardState } from '../traits';
+import { rewardSourceResolvesAtAcquisition } from '../reward-state';
+import { reconcileAcquisitionResolvedRewardEntry } from '../acquisition-entry';
 import { pickupEffectForOffer } from '../../reward-kernel/history';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
@@ -64,35 +66,54 @@ export function applyShopOccurrenceCommand(
       ),
     );
   }
-  if (offer.reward !== null && sameOccurrenceValue(offer.reward.offer, command.value))
+  if (
+    offer.reward !== null &&
+    offer.reward.offer.rewardType === command.value.rewardType &&
+    ((rewardSourceResolvesAtAcquisition(catalog, command.value) &&
+      offer.reward.offer.payload === undefined) ||
+      sameOccurrenceValue(offer.reward.offer, command.value))
+  )
     return document;
-  const reward = createUnresolvedAcquisitionRewardState(catalog, command.value, {
-    kind: 'shopProfile',
-    key: occurrence.state.shop.profileKey,
-  });
-  const pickupEffect = pickupEffectForOffer(catalog.rewards, command.value);
+  const resolvesAtAcquisition = rewardSourceResolvesAtAcquisition(catalog, command.value);
+  const reward = resolvesAtAcquisition
+    ? Object.freeze({
+        offer: Object.freeze({ rewardType: command.value.rewardType }),
+        traitOffersByAcquisitionRole: Object.freeze({}),
+        dispositionByAcquisitionRole: Object.freeze({}),
+      })
+    : createUnresolvedAcquisitionRewardState(catalog, command.value, {
+        kind: 'shopProfile',
+        key: occurrence.state.shop.profileKey,
+      });
+  const pickupEffect = resolvesAtAcquisition
+    ? undefined
+    : pickupEffectForOffer(catalog.rewards, command.value);
   const replacement = Object.freeze({
     reward,
     ...(pickupEffect?.effect.kind === 'anvilOfFates' ? { anvilResult: null } : {}),
   });
-  return updateOccurrenceTopology(
-    document,
-    located,
-    replaceOccurrence(
-      current,
-      Object.freeze({
-        ...occurrence,
-        state: Object.freeze({
-          ...occurrence.state,
-          shop: Object.freeze({
-            ...occurrence.state.shop,
-            offers: Object.freeze({
-              ...occurrence.state.shop.offers,
-              [command.offer.offerKey]: replacement,
-            }),
+  const purchaseSelected = occurrence.roomActions.order.some(
+    (reference) =>
+      reference.kind === 'interactShopOffer' && reference.offerKey === command.offer.offerKey,
+  );
+  const nextOccurrence = reconcileAcquisitionResolvedRewardEntry(
+    catalog,
+    Object.freeze({
+      ...occurrence,
+      state: Object.freeze({
+        ...occurrence.state,
+        shop: Object.freeze({
+          ...occurrence.state.shop,
+          offers: Object.freeze({
+            ...occurrence.state.shop.offers,
+            [command.offer.offerKey]: replacement,
           }),
         }),
       }),
-    ),
+    }),
+    command.offer.offerKey,
+    purchaseSelected,
+    reward,
   );
+  return updateOccurrenceTopology(document, located, replaceOccurrence(current, nextOccurrence));
 }

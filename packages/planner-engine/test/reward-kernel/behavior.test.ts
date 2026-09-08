@@ -13,7 +13,7 @@ import {
   oldestSupportedRewardPriority,
   createRewardHistoryState,
   evaluateShopGenerationSupport,
-  evaluateShopPurchaseAtSlot,
+  evaluateShopPurchaseGateAtSlot,
   factsWithHistory,
   findShopGenerationWitnesses,
   isOfferSupportedAtResolutionPoint,
@@ -198,6 +198,14 @@ describe('source support', () => {
     expect(isOfferSupportedAtResolutionPoint(rewardKernelCatalog, blindBox, capped, 'offer')).toBe(
       true,
     );
+    expect(
+      isOfferSupportedAtResolutionPoint(
+        rewardKernelCatalog,
+        { rewardType: 'BlindBoxLoot' },
+        capped,
+        'offer',
+      ),
+    ).toBe(true);
     expect(
       isOfferSupportedAtResolutionPoint(rewardKernelCatalog, blindBox, capped, {
         acquisitionRole: 'hiddenSource',
@@ -737,10 +745,8 @@ describe('ordered shop transitions', () => {
       ),
     ).toEqual([]);
     expect(
-      evaluateShopPurchaseAtSlot(
-        rewardKernelCatalog,
+      evaluateShopPurchaseGateAtSlot(
         profile,
-        authored,
         witness,
         1,
         [0, 1, 2],
@@ -750,10 +756,8 @@ describe('ordered shop transitions', () => {
       ),
     ).toBeUndefined();
     expect(
-      evaluateShopPurchaseAtSlot(
-        rewardKernelCatalog,
+      evaluateShopPurchaseGateAtSlot(
         profile,
-        authored,
         witness,
         1,
         [0, 1, 2],

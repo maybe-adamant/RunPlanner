@@ -350,6 +350,7 @@ export interface WorkspaceRewardInteraction {
   readonly key: string;
   readonly owner: RewardCandidateOwner['address'];
   readonly choiceLabel: (step: RewardPickerStep, offer?: ResolvedRewardOffer) => string;
+  readonly resolvesAtAcquisition: (offer: ResolvedRewardOffer) => boolean;
   readonly load: () => Promise<ProjectedRewardDomain>;
   readonly model: (
     domain: ProjectedRewardDomain,
