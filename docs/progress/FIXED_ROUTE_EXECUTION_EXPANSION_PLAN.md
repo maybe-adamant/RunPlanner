@@ -258,7 +258,9 @@ native restoration.
 
 1. Realize the already-declared Surface `['N']` extent by publishing one Hub
    navigation product from the existing canonical Hub decision. It is owned by
-   the PreHub occurrence whose outgoing decision becomes the Hub. It contains:
+   the selected occurrence whose outgoing decision becomes the Hub: normally
+   PreHub, or the selected Opening Chaos occurrence on that takeover path. It
+   contains:
    - native Hub room identity;
    - every open physical slot, room, and reward, including unvisited slots;
    - the canonical final handoff target; and

@@ -399,6 +399,29 @@ export interface ExecutionStartingLoadout {
 }
 
 export interface ExecutionOverview {
+  /** Persistent N Hub board, published on the selected occurrence that reaches the Hub. */
+  readonly hub?: {
+    readonly room: { readonly gameName: string };
+    readonly slots: readonly {
+      readonly slotKey: string;
+      readonly physicalDoorId: number;
+      readonly room: { readonly id: string; readonly biomeKey: string; readonly gameName: string };
+      readonly reward: ExecutionReward;
+    }[];
+    readonly finalHandoff: {
+      readonly id: string;
+      readonly biomeKey: string;
+      readonly gameName: string;
+    };
+  };
+  /** Complete declared N side-door state for a visited main room. */
+  readonly localSlots?: readonly {
+    readonly slotKey: string;
+    readonly physicalDoorId: number;
+    readonly generation: 'generated' | 'notGenerated';
+    readonly room?: { readonly id: string; readonly biomeKey: string; readonly gameName: string };
+    readonly reward?: ExecutionReward;
+  }[];
   readonly incomingReward?: ExecutionReward;
   /** Preserve the room's native required reward without treating it as a simulated acquisition. */
   readonly effectNeutralRequiredReward?: true;

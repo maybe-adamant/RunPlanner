@@ -11,6 +11,11 @@ import { assembleExecutionDoors } from './doors';
 import { assembleGAnomalyReplacement } from './g-anomaly';
 import type { ExecutionOccurrence } from '../model';
 import type { RoomExitConformanceDelta } from '../../simulation/rewards/run-state-conformance';
+import type {
+  CanonicalHubDecision,
+  CanonicalLocalVisitRoom,
+} from '../../simulation/materialization';
+import { hubOverview, localSlotsOverview } from './hub';
 
 export function executionOccurrence(
   room: CanonicalAuthoredRoom,
@@ -23,8 +28,13 @@ export function executionOccurrence(
   transactions: ReturnType<typeof executionTimelineTransactions>,
   timelineFacts: PlannerTimelineFacts,
   roomExitConformance: RoomExitConformanceDelta | undefined,
+  hub: CanonicalHubDecision | undefined,
+  hubExit: CanonicalBatch | undefined,
+  localSlots: readonly CanonicalLocalVisitRoom[] | undefined,
 ): ExecutionOccurrence {
   const batch = batches.get(executionRoomOwnerKey(room));
+  const publishedHub = hub === undefined ? undefined : hubOverview(hub, hubExit);
+  const publishedLocalSlots = localSlots === undefined ? undefined : localSlotsOverview(localSlots);
   const diagnostics = assembleOccurrenceDiagnostics(room, snapshots);
   const anomaly = assembleGAnomalyReplacement(room);
   return Object.freeze({
@@ -34,7 +44,11 @@ export function executionOccurrence(
     gameName: room.gameName,
     kind: room.encounterEnvelopeKey,
     ...(anomaly === undefined ? {} : { anomaly }),
-    overview: assembleExecutionOverview(room, biome, batch),
+    overview: Object.freeze({
+      ...assembleExecutionOverview(room, biome, batch),
+      ...(publishedHub === undefined ? {} : { hub: publishedHub }),
+      ...(publishedLocalSlots === undefined ? {} : { localSlots: publishedLocalSlots }),
+    }),
     timeline: assembleTimelineRelations(transactions, room, timelineFacts),
     doors: assembleExecutionDoors({
       room,

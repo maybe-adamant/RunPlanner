@@ -90,6 +90,8 @@ export function overview(value: unknown, label: string) {
       'fountain',
       'fields',
       'additional',
+      'hub',
+      'localSlots',
     ],
     label,
   );
@@ -555,6 +557,84 @@ export function overview(value: unknown, label: string) {
         });
   const parsedFields =
     record.fields === undefined ? undefined : fields(record.fields, `${label}.fields`);
+  const hub = record.hub === undefined ? undefined : object(record.hub, `${label}.hub`);
+  if (hub !== undefined) exact(hub, ['room', 'slots', 'finalHandoff'], [], `${label}.hub`);
+  const parsedHub =
+    hub === undefined
+      ? undefined
+      : (() => {
+          const room = object(hub.room, `${label}.hub.room`);
+          exact(room, ['gameName'], [], `${label}.hub.room`);
+          return Object.freeze({
+            room: Object.freeze({
+              gameName: stringValue(room.gameName, `${label}.hub.room.gameName`),
+            }),
+            slots: Object.freeze(
+              array(hub.slots, `${label}.hub.slots`).map((entry, index) => {
+                const row = object(entry, `${label}.hub.slots[${index}]`);
+                exact(
+                  row,
+                  ['slotKey', 'physicalDoorId', 'room', 'reward'],
+                  [],
+                  `${label}.hub.slots[${index}]`,
+                );
+                return Object.freeze({
+                  slotKey: stringValue(row.slotKey, `${label}.hub.slots[${index}].slotKey`),
+                  physicalDoorId: integer(
+                    row.physicalDoorId,
+                    `${label}.hub.slots[${index}].physicalDoorId`,
+                    1,
+                  ),
+                  room: roomReference(row.room, `${label}.hub.slots[${index}].room`),
+                  reward: reward(row.reward, `${label}.hub.slots[${index}].reward`),
+                });
+              }),
+            ),
+            finalHandoff: roomReference(hub.finalHandoff, `${label}.hub.finalHandoff`),
+          });
+        })();
+  const localSlots =
+    record.localSlots === undefined
+      ? undefined
+      : Object.freeze(
+          array(record.localSlots, `${label}.localSlots`).map((entry, index) => {
+            const row = object(entry, `${label}.localSlots[${index}]`);
+            exact(
+              row,
+              ['slotKey', 'physicalDoorId', 'generation'],
+              ['room', 'reward'],
+              `${label}.localSlots[${index}]`,
+            );
+            const generation = stringValue(
+              row.generation,
+              `${label}.localSlots[${index}].generation`,
+            );
+            if (generation !== 'generated' && generation !== 'notGenerated')
+              fail(`${label}.localSlots[${index}].generation is unsupported`);
+            if (
+              (row.room === undefined) !== (row.reward === undefined) ||
+              (generation === 'generated') !== (row.room !== undefined)
+            )
+              fail(
+                `${label}.localSlots[${index}] must carry room and reward exactly when generated`,
+              );
+            return Object.freeze({
+              slotKey: stringValue(row.slotKey, `${label}.localSlots[${index}].slotKey`),
+              physicalDoorId: integer(
+                row.physicalDoorId,
+                `${label}.localSlots[${index}].physicalDoorId`,
+                1,
+              ),
+              generation: generation as 'generated' | 'notGenerated',
+              ...(row.room === undefined
+                ? {}
+                : {
+                    room: roomReference(row.room, `${label}.localSlots[${index}].room`),
+                    reward: reward(row.reward, `${label}.localSlots[${index}].reward`),
+                  }),
+            });
+          }),
+        );
   return Object.freeze({
     ...(record.incomingReward === undefined
       ? {}
@@ -598,5 +678,7 @@ export function overview(value: unknown, label: string) {
         }),
     ...(additional === undefined ? {} : { additional: Object.freeze(additional) }),
     ...(parsedFields === undefined ? {} : { fields: parsedFields }),
+    ...(parsedHub === undefined ? {} : { hub: parsedHub }),
+    ...(localSlots === undefined ? {} : { localSlots }),
   });
 }

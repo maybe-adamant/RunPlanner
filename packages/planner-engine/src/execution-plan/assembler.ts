@@ -13,7 +13,9 @@ import {
   executionFixedTargetsByRoom,
   executionRoomSnapshots,
   orderedExecutionRooms,
+  executionHubs,
 } from './assembly/route';
+import { hubBySource, hubExitByRoom } from './assembly/hub';
 import { executionRoomOwnerKey } from './assembly/support';
 import { executionOccurrence } from './assembly/occurrence';
 import { validateExecutionProduct } from './assembly/validation';
@@ -88,6 +90,22 @@ export function assembleExecutionProduct({
     throw new CompilerError('openingMissing', 'execution route has no selected opening occurrence');
   }
   const batches = executionBatchesByRoom(biomes);
+  const hubs = executionHubs(biomes);
+  const hubsBySource = hubBySource(hubs);
+  const hubExitsBySource = hubExitByRoom(
+    hubs,
+    biomes.flatMap((biome) =>
+      biome.snapshot.decisions.filter(
+        (decision): decision is import('../simulation/materialization').CanonicalBatch =>
+          decision.kind === 'batch',
+      ),
+    ),
+  );
+  const localSlotsByParent = new Map(
+    hubs.flatMap((hub) =>
+      hub.visits.map((visit) => [visit.target.room.occurrenceId, visit.localSlots] as const),
+    ),
+  );
   const fixedTargets = executionFixedTargetsByRoom(biomes);
   const snapshots = new Map<string, RunStateSnapshot>();
   for (const biome of biomes) {
@@ -170,6 +188,9 @@ export function assembleExecutionProduct({
       transactions,
       facts,
       roomExitConformance.get(room.occurrenceId),
+      hubsBySource.get(executionRoomOwnerKey(room)),
+      hubExitsBySource.get(executionRoomOwnerKey(room)),
+      localSlotsByParent.get(room.occurrenceId),
     );
   });
   const extent = Object.freeze({

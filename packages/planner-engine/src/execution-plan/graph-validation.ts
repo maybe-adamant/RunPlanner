@@ -65,14 +65,67 @@ export function validateExecutionGraph(
       assertRoomReference(additional.room, `${entry.id} additional room`);
       result.add(additional.room.id);
     }
+    if (entry.overview.hub !== undefined) {
+      for (const slot of entry.overview.hub.slots) {
+        assertRoomReference(slot.room, `${entry.id} Hub slot`);
+        result.add(slot.room.id);
+      }
+      assertRoomReference(entry.overview.hub.finalHandoff, `${entry.id} Hub final handoff`);
+      result.add(entry.overview.hub.finalHandoff.id);
+    }
+    for (const slot of entry.overview.localSlots ?? []) {
+      if (slot.room !== undefined) {
+        assertRoomReference(slot.room, `${entry.id} local slot`);
+        result.add(slot.room.id);
+      }
+    }
     return result;
   };
 
   for (const occurrence of graph.occurrences) continuations(occurrence);
+  const nHubContinuations = new Set(
+    graph.occurrences.flatMap((entry) =>
+      entry.overview.hub === undefined
+        ? []
+        : [
+            ...entry.overview.hub.slots.map((slot) => slot.room.id),
+            entry.overview.hub.finalHandoff.id,
+          ],
+    ),
+  );
+  const nLocalParentBySide = new Map<string, ExecutionOccurrence>();
+  for (const entry of graph.occurrences) {
+    for (const slot of entry.overview.localSlots ?? []) {
+      if (slot.room !== undefined) nLocalParentBySide.set(slot.room.id, entry);
+    }
+  }
+  const hasNativeEphyraContinuation = (
+    predecessor: ExecutionOccurrence,
+    successor: string,
+  ): boolean => {
+    if (predecessor.biomeKey !== 'N') return false;
+    // A main returns to the Hub after its native completion. A generated side
+    // first restores its declared parent, then that same Hub. Neither restore
+    // is an execution occurrence or transaction.
+    const parent = nLocalParentBySide.get(predecessor.id);
+    if (
+      parent !== undefined &&
+      parent.overview.localSlots?.some((slot) => slot.room?.id === successor)
+    )
+      return true;
+    return (
+      nHubContinuations.has(successor) &&
+      (predecessor.overview.localSlots !== undefined || parent !== undefined)
+    );
+  };
   for (let index = 0; index + 1 < graph.selectedOccurrenceIds.length; index += 1) {
     const predecessor = occurrences.get(graph.selectedOccurrenceIds[index]!);
     const successor = graph.selectedOccurrenceIds[index + 1]!;
-    if (predecessor === undefined || !continuations(predecessor).has(successor))
+    if (
+      predecessor === undefined ||
+      (!hasNativeEphyraContinuation(predecessor, successor) &&
+        !continuations(predecessor).has(successor))
+    )
       invalid(`selectedOccurrenceIds is disconnected at ${graph.selectedOccurrenceIds[index]}`);
   }
 

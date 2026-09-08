@@ -373,6 +373,53 @@ function postbossKeepsakeOrderProject(
 }
 
 describe('engine-owned F/G execution semantic product', () => {
+  it('publishes the complete N Hub board and generated unvisited local slots without restores', () => {
+    const source = loadSurfaceNOProject();
+    const project = Object.freeze({
+      ...source,
+      route: Object.freeze({
+        ...source.route,
+        biomes: Object.freeze(source.route.biomes.slice(0, 1)),
+      }),
+    });
+    const product = assembleExecutionProduct({
+      assembly: simulateProjectAssembly(catalog, authorLegalTraitOffers(project)),
+    });
+    const preHub = product.occurrences.find((entry) => entry.id === 'surface-n-prehub');
+    expect(preHub?.overview.hub?.room.gameName).toBe('N_Hub');
+    expect(preHub?.overview.hub?.slots.length).toBeGreaterThan(8);
+    expect(
+      preHub?.overview.hub?.slots.some(
+        (slot) => !product.selectedOccurrenceIds.includes(slot.room.id),
+      ),
+    ).toBe(true);
+    const main = product.occurrences.find((entry) =>
+      entry.overview.localSlots?.some(
+        (slot) =>
+          slot.generation === 'generated' &&
+          !product.selectedOccurrenceIds.includes(slot.room?.id ?? ''),
+      ),
+    );
+    expect(main?.overview.localSlots).toBeDefined();
+    expect(
+      product.occurrences.some(
+        (entry) =>
+          !product.selectedOccurrenceIds.includes(entry.id) &&
+          entry.overview.localSlots === undefined &&
+          preHub?.overview.hub?.slots.some((slot) => slot.room.id === entry.id),
+      ),
+    ).toBe(true);
+    const notGenerated = product.occurrences.flatMap((entry) =>
+      (entry.overview.localSlots ?? []).filter((slot) => slot.generation === 'notGenerated'),
+    );
+    expect(notGenerated.length).toBeGreaterThan(0);
+    expect(notGenerated.every((slot) => slot.room === undefined && slot.reward === undefined)).toBe(
+      true,
+    );
+    expect(product.selectedOccurrenceIds).not.toContain('N_Hub');
+    expect(product.occurrences.some((entry) => entry.gameName === 'N_Hub')).toBe(false);
+    expect(() => encodeExecutionPlan(compileExecutionPlan({ product }))).not.toThrow();
+  });
   it('assembles G Anomaly provenance, authored success, ordinary replacement, and fixed return', () => {
     const product = productFor(createCompleteFGAnomalyProject());
     const anomaly = product.occurrences.find((occurrence) => occurrence.anomaly !== undefined);
