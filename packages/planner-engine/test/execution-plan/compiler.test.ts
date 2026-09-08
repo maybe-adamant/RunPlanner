@@ -15,7 +15,11 @@ import {
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { simulateProjectAssembly } from '../../src/simulation';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
-import { loadSurfaceNOProject } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNOProject,
+  loadSurfaceNOPProject,
+  loadSurfaceNOPQProject,
+} from '@run-planner/test-fixtures/surface';
 import { allTogetherOffer, allTogetherResult } from '../simulation/shop-trait-purchase-support';
 import {
   applyProjectCommand,
@@ -53,6 +57,8 @@ import automaticBossFixture from './fixtures/automatic-boss.execution.json';
 import underworldFGHFixture from './fixtures/underworld-fgh.execution.json';
 import underworldFGHIFixture from './fixtures/underworld-fghi.execution.json';
 import surfaceNOFixture from './fixtures/surface-no.execution.json';
+import surfaceNOPFixture from './fixtures/surface-nop.execution.json';
+import surfaceNOPQFixture from './fixtures/surface-nopq.execution.json';
 import { bossAutomaticOutcomeProject } from './support/automatic-fixture';
 import { executionTimelineTransactions } from '../../src/execution-plan/assembly/timeline-transactions';
 import { orderedExecutionRooms } from '../../src/execution-plan/assembly/route';
@@ -1538,6 +1544,8 @@ describe('execution-plan compiler and codec', () => {
     ['fg-anomaly', createCompleteFGAnomalyProject(), fgAnomalyFixture],
     ['automatic-boss', bossAutomaticOutcomeProject(), automaticBossFixture],
     ['surface-no', loadSurfaceNOProject(), surfaceNOFixture],
+    ['surface-nop', loadSurfaceNOPProject(), surfaceNOPFixture],
+    ['surface-nopq', loadSurfaceNOPQProject(), surfaceNOPQFixture],
   ])('keeps the %s product byte-stable', (_name, project, fixture) => {
     const { plan } = planFor(project);
     if (fixture !== undefined) expect(decodeExecutionPlan(fixture)).toEqual(plan);
