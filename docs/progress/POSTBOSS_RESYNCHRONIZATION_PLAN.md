@@ -6,19 +6,19 @@ Status: **locked for later implementation**.
 
 Planning bases:
 
-- Run Planner: `87bdc4ea01f51398cf0f1da6a6686e81b97e3fc9`
-- Plan Executor: `70079e5ee50a19f5b568f381271e87ec7f08cd2b`
-- Modpack parent: `3ce5b71bd6b1382bfbbd111a66ddd0535318acb3`
+- Run Planner: `ea2915d7`
+- Plan Executor: `5cf1cb8`
+- Modpack parent: `f923f8e`
 
-This plan consumes the Plan Executor host's active-plan inbox capability. It
-does not depend on whether that host exposes one published file or several
-slots.
+This plan consumes the Plan Executor host's selected active-plan capability.
+Published-slot identity remains host configuration and does not enter the
+execution protocol or recovered route session.
 
 ## Objective
 
-Permit one bounded mid-run admission: loading Hades II at the untouched start
-of a selected Postboss room may synchronize the active execution plan when the
-live modeled state matches that plan's expected Postboss-entry state.
+Permit one bounded mid-run admission: loading Hades II at the start of a
+selected Postboss room may synchronize the active execution plan when the live
+admission state matches that plan's expected Postboss-entry state.
 
 The feature exists to reuse game-save checkpoints at biome boundaries. For
 example, a matching `H_PostBoss01` save can synchronize the full Underworld
@@ -53,11 +53,11 @@ This is resynchronization, not continuation of serialized executor machinery.
   kind and provide exact route-position mappings. The execution compiler must
   publish that existing fact rather than asking Lua to recognize room-name
   strings.
-- Native `LeaveRoom` constructs the next room, assigns it to
-  `CurrentRun.CurrentRoom`, and requests the `_Temp` checkpoint before loading
-  the map. Native `OnAnyLoad` starts a saved current room when its exits are not
-  already unlocked. A restored Postboss checkpoint therefore provides the
-  clean room-entry seam assumed by this plan.
+- Native save restoration resumes either at room entry or after the current
+  room has fully settled and opened its exits. A Postboss room has no combat,
+  so loading a Postboss save enters that room at its Timeline origin. Recovery
+  never has to infer which Postboss interactions have already occurred or
+  reconstruct a partial room session.
 
 ## Current implementation
 
@@ -74,7 +74,9 @@ This is resynchronization, not continuation of serialized executor machinery.
 - Decoding expands sequential diagnostic deltas into complete expected
   `roomEntered` and `beforeRoomExit` states. Ongoing execution intentionally
   treats those complete frames as diagnostic-only and blocks only on named
-  conformance facts.
+  conformance facts. Recovery can therefore read the matched occurrence's
+  expanded `roomEntered` state directly; it needs neither another absolute
+  checkpoint nor a history walk.
 
 ## Locked decisions
 
@@ -90,7 +92,7 @@ This is resynchronization, not continuation of serialized executor machinery.
 - A selected route's final biome has no Postboss and therefore no recovery
   boundary after its Boss.
 - Hub restores, side-room parent restores, Shops, Reprieves, Stories, Intro
-  rooms, Preboss rooms, Boss rooms, and an already-open Postboss are ineligible.
+  rooms, Preboss rooms, and Boss rooms are ineligible.
 
 ### Exact active plan
 
@@ -108,19 +110,24 @@ This is resynchronization, not continuation of serialized executor machinery.
 - The expected state is the marked occurrence's already-expanded
   `diagnostics.roomEntered` product plus the immutable weapon/aspect identity
   from the starting loadout.
-- Arcana, keepsake, traits, Elements, clocks, bags, priorities, and every other
-  mutable modeled value come from the Postboss room-entry frame, not the
-  starting loadout.
-- Comparison uses semantic native projections and the planner's existing
-  exact/range semantics. It never compares raw Lua object graphs.
-- Traits and other native state outside the planner's modeled projection remain
-  ignored under the same policy as ordinary conformance.
-- The complete diagnostic frame becomes blocking only for this exceptional
-  admission decision. It remains diagnostic-only during ordinary synchronized
-  execution.
-- Every section required for admission must have one audited native reader. A
-  missing reader makes recovery unsupported and passive; expected values are
-  never copied into the observed side.
+- Admission derives only the nine existing authoritative conformance families
+  from that frame: `traitInventory`, `elementCounts`, `steadyGrowth`, `chaos`,
+  `keepsakeEffects`, `rewardPriorities`, `pathOfStars`, `forfeit`, and
+  `stygianWell`.
+- Each family reuses its ordinary native reader and its existing exact, set,
+  ordered, absence, or range semantics. Recovery does not introduce a generic
+  deep comparison of the diagnostic frame or raw Lua object graphs.
+- Trait comparison remains limited to the planner's modeled inventory;
+  unrelated native traits and other unmodeled state remain ignored under the
+  ordinary conformance policy.
+- Other diagnostic sections—including counters, reward bags, god-pool
+  internals, Arcana and Vow history, Artificer state, Echo duplicate state, and
+  Hermes delivery bookkeeping—remain diagnostic evidence. Recovery adds no
+  native readers or blocking comparisons for them; any consequential mismatch
+  is caught later at its ordinary owning boundary.
+- Expected values are never copied into the observed side. The expanded frame
+  remains a source for the named admission projection, not a new globally
+  blocking Run State comparison.
 
 ### Fresh sessions only
 
@@ -176,7 +183,8 @@ The host provides one active decoded-plan source. The runtime owns one
 
 1. recognizes fresh-process mid-run attachment;
 2. resolves the current room against marked selected occurrences;
-3. asks the admission projection to compare expected and observed state;
+3. asks the admission projection to compare weapon/aspect and the existing
+   bounded conformance surface;
 4. constructs the route cursor and room coordinator on success; and
 5. records one passive mismatch on failure.
 
@@ -185,24 +193,24 @@ consumers after successful admission.
 
 ### Native admission projection
 
-A focused recovery projection owns the complete Postboss-entry comparison. It
-reuses the same low-level native readers as room-exit conformance and loadout
-verification but does not make transaction adapters or the protocol decoder
-aware of native game state.
+A focused recovery projection derives the bounded expected values from the
+expanded Postboss-entry frame and compares them through the existing low-level
+native readers and conformance semantics. It adds no recovery-only reader and
+does not make transaction adapters or the protocol decoder aware of native game
+state.
 
 ## Delivery gates
 
 ### Gate A — Recovery contract and wire marker
 
-1. Audit the diagnostic sections against the current native reader inventory;
-   record each reusable reader and each genuinely missing Postboss-entry
-   projection before runtime work begins.
-2. Publish `resumeBoundary: "postbossEntry"` from canonical `PostBoss` room
+1. Publish `resumeBoundary: "postbossEntry"` from canonical `PostBoss` room
    kind.
-3. Extend the strict model, codec, product validation, and decoder without
+2. Extend the strict model, codec, product validation, and decoder without
    teaching Lua canonical room-kind policy.
-4. Prove that F/G/H and N/O/P Postboss occurrences are marked when selected,
+3. Prove that F/G/H and N/O/P Postboss occurrences are marked when selected,
    while I/Q terminals and every non-Postboss occurrence are not.
+4. Prove the decoder exposes the marked occurrence's fully expanded
+   `roomEntered` frame without publishing a second resume snapshot.
 5. Refresh only protocol fixtures whose bytes change and keep planner/executor
    copies byte-identical.
 
@@ -211,16 +219,16 @@ coordinated executor protocol commit.
 
 ### Gate B — Admission state projection
 
-1. Implement one complete expected-versus-native Postboss-entry projection
-   using audited readers.
-2. Compare immutable weapon/aspect identity and all mutable modeled sections at
-   the Postboss frame.
-3. Preserve exact, set, ordered, absent, and ranged semantics from their owning
-   planner products rather than one generic deep-equality helper.
-4. Keep the projection read-only and independent of route/session creation.
-5. Add focused mutation tests that vary expected and native values
-   independently for every reader family. Reuse existing conformance matrices
-   instead of duplicating them when the exact reader and semantics are shared.
+1. Project immutable weapon/aspect identity and the nine named admission
+   families from the matched occurrence's expanded entry frame.
+2. Compare them through the existing loadout and conformance readers, preserving
+   their owned exact, set, ordered, absent, and ranged semantics.
+3. Keep the projection read-only and independent of route/session creation;
+   do not add recovery-only native readers or duplicate the complete owning
+   conformance matrices.
+4. Add focused witnesses for a complete match, weapon/aspect rejection, each
+   family reaching its existing comparator, modeled-trait mismatch, and
+   tolerated unrelated or diagnostic-only native state.
 
 Commit boundary: `feat(executor): verify postboss admission state`.
 
@@ -242,10 +250,10 @@ the modpack-parent integration commit.
 
 ### Gate D — Live proof and closure
 
-1. With a full Underworld plan active, restore an untouched H Postboss
+1. With a full Underworld plan active, restore an H Postboss entry
    checkpoint whose state matches and complete a focused I test.
-2. Prove one mismatched Postboss state becomes passive without blocking the
-   game.
+2. Prove one admission-checked Postboss state mismatch becomes passive without
+   blocking the game.
 3. Prove one non-Postboss mid-run load becomes passive and never retries.
 4. If feasible in the same campaign, repeat the successful contact at a Surface
    Postboss; otherwise retain it as the next explicit live-evidence gap.
@@ -267,9 +275,8 @@ Commit boundary: `docs(execution): close postboss resynchronization`.
 | Postboss absent from active plan prefix                         | Passive mismatch.                                                 |
 | Valid but wrong active plan                                     | Room or expected-state admission mismatch; native room continues. |
 | Invalid protocol, catalog, or self-fingerprint                  | Active-plan load failure; native room continues.                  |
-| Correct Postboss room with one modeled state difference         | Passive mismatch naming the state section.                        |
-| Correct state plus unrelated unmodeled native data              | Admission succeeds.                                               |
-| Postboss whose actions or exits are already settled             | Ineligible; no partial-room reconstruction.                       |
+| Correct Postboss room with one admission-checked difference     | Passive mismatch naming the state section.                        |
+| Correct state plus unrelated or diagnostic-only native data     | Admission succeeds.                                               |
 | Successful recovery followed by Postboss actions and next biome | Ordinary room/timeline/door execution continues.                  |
 
 ## Explicit exclusions
