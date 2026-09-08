@@ -1,16 +1,16 @@
 # Occurrence Authoring Boundaries
 
-Status: locked implementation contract; implementation not started  
+Status: Gate A complete; Gate B scope locked and not started
 Base: `7d39c264` (`fix(engine): preserve fixed boss authoring order`)
 
-The worktree contains a narrow `targetIndex` symptom fix in
-`simulation/progressive/finding-location.ts` and its test. Gate A replaces that
-work; it is not independently deliverable.
+The earlier narrow `targetIndex` symptom fix was discarded before delivery.
+Gate A replaces it with the occurrence-boundary correction below.
 
 ## Objective
 
 Keep exact progressive evaluation unchanged, but normalize the engine's
-authoring horizon to one of two positions for each occurrence:
+authoring horizon immediately after one of two repairable regions for each
+occurrence:
 
 ```text
 Occurrence interior  ->  Outgoing decision
@@ -42,6 +42,19 @@ The supplied saves expose one overly precise locking policy in three forms:
 
 These are not three feature defects. Authoring readiness is using internal
 target and timeline positions where it only needs the occurrence boundary.
+
+The Hermes-delivery witness then exposed a separate lifecycle defect at the
+same occurrence. A reached Steady Growth or Transcendent Embryo threshold is an
+automatic encounter-end effect. A matured Hermes delivery or Supply Chain drop
+may create a physical pickup during the same native end-effect function, but
+the pickup cannot affect those automatic outcomes because the player cannot
+acquire it until the encounter phase has finished. Adding an unresolved Shrine
+also broadens one finding region enough to publish an orphaned Steady Growth
+finding without its exact candidate product.
+
+That defect is not authoring-readiness policy and must not be hidden by a
+feature-specific readiness exception. This plan therefore has a second focused
+engine gate after the occurrence-boundary correction.
 
 ## Locked Policy
 
@@ -98,9 +111,11 @@ not redesign them.
 
 ## Engine Change
 
-Adjust the existing `AuthoringHorizon` product so an incomplete horizon names
-the normalized occurrence-interior or outgoing-decision boundary. Do not add a
-second public cursor or make the application derive this boundary.
+Adjust the existing `AuthoringHorizon` product so an incomplete horizon states
+that authoring is blocked _after_ the normalized occurrence-interior or
+outgoing-decision region. It must not present the start of the repairable region
+as the first locked point. Do not add a second public cursor or make the
+application derive this boundary.
 
 `authoringReadinessAt` compares the semantic owner being edited with that
 normalized boundary. It no longer compares exact positions within the active
@@ -136,8 +151,8 @@ Hermes-, Chaos-, trait-, action-, or biome-specific readiness rules.
 
 ## Gate A — Boundary Correction
 
-1. Normalize the existing engine authoring horizon to occurrence interior or
-   outgoing decision.
+1. Normalize the existing engine authoring horizon to begin after the
+   repairable occurrence interior or outgoing decision.
 2. Make `authoringReadinessAt` use only that coarse boundary.
 3. Preserve exact progressive evaluation, findings, candidates, and command
    validation.
@@ -188,9 +203,136 @@ Reject the gate if it:
 - creates a second authoring cursor instead of simplifying the existing
   horizon.
 
-## Gate B — Closure
+## Gate B — Encounter-End Effect and Pickup Handoff
 
-After Gate A passes focused implementation and review:
+### Authoritative lifecycle
+
+The reached lifecycle remains:
+
+```text
+encounterCompleted
+  -> encounterEndEffectsApplied
+       -> deterministic encounter-use clocks and expirations
+       -> deterministic room-upgrade clocks
+       -> authored Steady Growth / Transcendent Embryo outcomes
+  -> afterEncounterPhase
+       -> expose and acquire matured Supply Chain pickups
+       -> expose and acquire matured Hermes Shrine deliveries
+       -> continue later authored room actions
+```
+
+`encounterEndEffectsApplied` owns the complete automatic post-encounter state.
+`afterEncounterPhase` owns the acquisition surface for objects produced by
+those effects. Moving an acquisition frontier later does not move its producer
+clock or change when the game creates the physical object.
+
+The currently modeled encounter-end families are:
+
+- Experimental Hammer use decrement and expiry;
+- encounter-counted Chaos curse decrement and blessing maturation;
+- encounter-duration Stygian Well state;
+- Supply Chain progress and maturity;
+- Hermes Shrine delivery progress and maturity;
+- Steady Growth progress and rarity result; and
+- Transcendent Embryo progress and blessing replacement.
+
+Judgment and Crystal Figurine remain earlier `bossDefeated` effects. Quick
+Buck, Buried Treasure, Bridal Glow, and other immediate trait consequences
+remain acquisition effects. Native combat, health, Magick, keepsake experience,
+and presentation-only encounter-end behavior remain outside simulation.
+
+### Guard ownership
+
+The event is not one all-or-nothing counter. Its effect families retain the
+native declaration-backed guards:
+
+- `IgnoreEncounterUses` suppresses Experimental Hammer, encounter-counted
+  Chaos curses, pending Shrine deliveries, and encounter-duration Well items;
+- `SkipRoomsPerUpgrade` suppresses Supply Chain, Steady Growth, and
+  Transcendent Embryo; and
+- `SkipTimedDropResources` defers a reached Supply Chain drop without losing
+  its accumulated progress.
+
+A Fig Leaf-skipped phase still advances every effect whose resolved phase
+reaches end effects. `execution: skippedByFigLeaf` is not itself a delivery
+clock suppressor. Noncombat and declaration-owned `skipEndEncounterEffects`
+phases continue to emit no `encounterEndEffectsApplied` event.
+
+N side rooms are the representative guard witness. All fifteen inherit
+`IgnoreEncounterUses` and `SkipRoomsPerUpgrade`; none may advance either guard
+family. Correct the remaining `N_Sub10` through `N_Sub15` Experimental Hammer
+declarations and give Chaos and Well encounter durations the same normalized
+encounter-use guard already consumed by Hammer and Shrine delivery behavior.
+Do not add N-name checks to the transition.
+
+### Engine product correction
+
+1. Apply every automatic effect to the branch before publishing any generated
+   pickup's acquisition frontier.
+2. Carry reached Supply Chain maturities and due Shrine deliveries across the
+   internal encounter-end/after-phase seam without settling either pickup.
+3. At `afterEncounterPhase`, publish those acquisition frontiers against the
+   complete post-effect branch and let the existing authored room-action order
+   settle them.
+4. Keep Supply Chain pickups optional and Hermes deliveries required. Do not
+   add an order edge between independent pickups beyond the order the author
+   selected.
+5. Give Shrine inventory, automatic outcomes, and generated pickup placement
+   distinct exact finding regions. A broad occurrence region must not make a
+   later automatic finding visible without its candidate context and child
+   settlement.
+6. Retain each reached Steady Growth and Embryo outcome, its timeline fact,
+   candidate context, and finding as one complete product through progressive
+   clamping.
+
+This is an engine lifecycle and catalog-normalization correction. The
+application consumes the corrected products and should need no Hermes-, Supply
+Chain-, Steady Growth-, Embryo-, Fig Leaf-, or N-specific condition.
+
+Intended commit: `fix(engine): preserve encounter-end effect ordering`
+
+### Required witnesses
+
+- A Steady Growth threshold and matured Hermes delivery in one phase expose the
+  Steady Growth target before the delivery pickup, and the delivery acquisition
+  observes the post-growth branch.
+- The same ordering holds for a Transcendent Embryo transformation and a
+  matured delivery.
+- A Supply Chain threshold and Steady Growth threshold in one phase settle all
+  automatic effects before either Pom Slice can be acquired.
+- Adding or removing an unresolved Hermes Shrine in the room does not create,
+  hide, or orphan an already-reached automatic outcome.
+- A required delivery can be placed before a later unresolved incoming trait
+  without consuming that incoming reward before its producer point.
+- A Fig Leaf-skipped phase that reaches end effects advances a pending Shrine
+  delivery; an end-effect-suppressed phase does not.
+- Every N side room suppresses Experimental Hammer, encounter-counted Chaos,
+  encounter-duration Well, Shrine delivery, Supply Chain, Steady Growth, and
+  Embryo advancement while retaining ordinary encounter completion.
+- Multi-phase O/P/H rooms apply the same contract independently at every phase
+  that emits `encounterEndEffectsApplied`.
+
+Use focused lifecycle-transition, trait-level-effect, Hermes-delivery,
+Experimental Hammer, Chaos, Well, Fig Leaf, and representative N/multi-phase
+tests. Keep one policy owner per effect family; product-loop tests retain only
+the supplied same-room workflow witness.
+
+### Review requirements
+
+Reject Gate B if it:
+
+- moves the Supply Chain or Shrine delivery clock out of encounter-end effects;
+- permits a generated pickup to mutate automatic effects from the checkpoint
+  that created it;
+- invents a special order edge between otherwise independent pickups;
+- implements native effect scheduling a second time in the application;
+- keys a counter guard on biome, room name, or presentation phase rather than a
+  normalized source fact; or
+- fixes an orphaned finding by fabricating UI candidate data.
+
+## Gate C — Closure
+
+After Gates A and B pass focused implementation and independent review:
 
 1. Record the two-position authoring boundary in the smallest relevant design
    documents.
@@ -198,11 +340,13 @@ After Gate A passes focused implementation and review:
 3. Delete this temporary plan.
 4. Run one complete `npm run check` for phase closure.
 
-Intended commit: `docs(planner): close occurrence authoring boundaries`
+Intended commit: `docs(planner): close occurrence and encounter-end boundaries`
 
 ## Exclusions
 
-- No schema, migration, catalog, execution-plan, or game-executor change.
+- No authored persistence schema, migration, execution-plan, or game-executor
+  change. Catalog contract edits are limited to correcting normalized source
+  guards already established by the N side-room audit.
 - No persisted cursor, wizard state, automatic repair, suffix pruning, or
   destructive cleanup.
 - No redesign of topology, exact chronology, candidate legality, Hub behavior,

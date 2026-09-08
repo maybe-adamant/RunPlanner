@@ -3,6 +3,7 @@ import type { AcquisitionSiteAddress, SemanticAddress } from '../addresses';
 import {
   semanticAddressKey,
   createBiomeAddress,
+  createExitDecisionAddress,
   createOccurrenceAddress,
   createRoomFeatureAddress,
 } from '../addresses';
@@ -252,6 +253,28 @@ export function projectCommandAuthoringAddresses(
   command: ProjectCommand,
   project: ProjectDocument,
 ): readonly SemanticAddress[] {
+  if (command.kind === 'ReplaceChaosMap') {
+    const plan = project.route.biomes.find(
+      (biome) =>
+        biome.biomeKey === command.occurrence.biomeKey &&
+        project.route.routeKey === command.occurrence.routeKey,
+    );
+    const host = plan?.topology?.occurrences.find((occurrence) =>
+      occurrence.additionalExits.some(
+        (additional) =>
+          additional.kind === 'chaos' &&
+          additional.occurrenceId === command.occurrence.occurrenceId,
+      ),
+    );
+    if (host !== undefined) {
+      return [
+        createExitDecisionAddress(
+          createBiomeAddress(command.occurrence.routeKey, command.occurrence.biomeKey),
+          { kind: 'occurrence', occurrenceId: host.occurrenceId },
+        ),
+      ];
+    }
+  }
   if (command.kind !== 'ReplaceResourcePlacement') return [projectCommandAddress(command)];
   const hosts = [project.route.resourcePlacements[command.family], command.value];
   const addresses = hosts.flatMap((host) =>

@@ -2,6 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   clockedTraitGeneratedPickupEntryKey,
+  createAdditionalExitAddress,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createBiomeAddress,
@@ -266,6 +267,21 @@ describe('project workspace application state', () => {
         gameName: 'F_Opening01',
       }),
     );
+    const beforePresence = projectHistory(store).past.length;
+    store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'AddChaos',
+        additional: createAdditionalExitAddress(biome, occurrenceId, 'chaos'),
+        occurrenceId: createOccurrenceId('readiness-f-opening-chaos'),
+      }),
+    );
+    expect(projectHistory(store).past).toHaveLength(beforePresence + 1);
+    expect(
+      presentProject(store).route.biomes[0]?.topology?.occurrences[0]?.additionalExits,
+    ).toContainEqual(
+      expect.objectContaining({ kind: 'chaos', occurrenceId: 'readiness-f-opening-chaos' }),
+    );
+
     const before = store.getState().projectWorkspace;
     const evaluationCount = assembleProjectEvaluation.mock.calls.length;
 

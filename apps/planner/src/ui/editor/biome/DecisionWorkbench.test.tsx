@@ -370,6 +370,47 @@ describe('DecisionWorkbench', () => {
     ).toBe(false);
   });
 
+  it('keeps Chaos presence editable inside an incomplete source occurrence', async () => {
+    const occurrenceId = createOccurrenceId('incomplete-chaos-source');
+    let project = createProjectDocument(catalog, {
+      projectId: 'incomplete-chaos-source-project',
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome: goldenFBiome,
+      occurrenceId,
+      gameName: 'F_Opening01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenFBiome, occurrenceId),
+      value: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      },
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceForId(occurrenceId),
+    );
+    await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
+    const presence = within(screen.getByLabelText('Room features')).getByRole('checkbox', {
+      name: 'Chaos Gate',
+    });
+    const before = view.application.store.getState().projectWorkspace.history!.past.length;
+
+    expect(presence).toHaveProperty('disabled', false);
+    await view.user.click(presence);
+
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      before + 1,
+    );
+  });
+
   it('shows an automatic Spark gate as locked room evidence and an editable outgoing door', () => {
     const well = createOccurrenceAddress(
       goldenFBiome,
@@ -640,7 +681,7 @@ describe('DecisionWorkbench', () => {
     if (possible === undefined) throw new Error('F Exit 1 has no selectable projected room');
     await view.user.click(possible);
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Door 2 room' })).toHaveProperty('disabled', true),
+      expect(screen.getByRole('button', { name: 'Door 2 room' })).toHaveProperty('disabled', false),
     );
     const readyDoor = screen.getByRole('article', { name: 'Door 2 unspecified room offer' });
     expect(within(readyDoor).getByText('Reward')).toBeTruthy();

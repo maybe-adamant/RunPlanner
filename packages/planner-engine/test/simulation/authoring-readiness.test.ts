@@ -4,6 +4,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createExitDecisionAddress,
+  createKeepsakeEquipResultAddress,
   createHubDecisionAddress,
   createHubOpenSetAddress,
   createHubSlotAddress,
@@ -16,9 +17,11 @@ import {
   createRouteAddress,
   createRoomActionAddress,
   createLocalRewardAddress,
+  createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
-  createTraitOfferAddress,
+  createTargetAddress,
   createOccurrenceId,
+  hermesShrineDeliveryEntryKey,
   roomActionKey,
 } from '@run-planner/engine/authored-project';
 import { authoringReadinessAt, simulateProjectAssembly } from '@run-planner/engine/simulation';
@@ -39,6 +42,8 @@ import {
   createCompleteFGProject,
   goldenFBiome,
   goldenFOccurrenceId,
+  goldenGBiome,
+  goldenGOccurrenceId,
   createGoldenFGHProject,
   goldenHBiome,
   createCompleteFGIxionChaosProject,
@@ -46,9 +51,40 @@ import {
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { compareOwnerLocations } from '../../src/simulation/progressive/finding-location';
 
-import { createFProject, fBiome, fDecision, fStartId } from './support/f-takeover-project';
+import {
+  createFProject,
+  createFOpeningBatch,
+  createFStart,
+  createUnresolvedFOpeningBatch,
+  fBiome,
+  fDecision,
+  fStartId,
+} from './support/f-takeover-project';
 
 describe('chronological authoring horizon', () => {
+  it('keeps route-start loadout repairable while locking the first occurrence', () => {
+    const selection = createRouteStartKeepsakeSelectionAddress('Underworld');
+    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection,
+      keepsakeKey: 'TempHammerKeepsake',
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    const result = createKeepsakeEquipResultAddress(selection, 'experimentalHammer');
+
+    expect(assembly.evaluation.authoringHorizon).toMatchObject({
+      kind: 'incomplete',
+      blockedAfter: result,
+    });
+    expect(authoringReadinessAt(assembly, selection)).toBe('editable');
+    expect(
+      authoringReadinessAt(
+        assembly,
+        createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
+      ),
+    ).toBe('locked');
+  });
+
   it('preserves equality at an explicit history checkpoint over structural and timeline coordinates', () => {
     const history = { historySequence: 12, historyBoundary: 'at' as const };
     expect(
@@ -64,7 +100,7 @@ describe('chronological authoring horizon', () => {
       ),
     ).toBeGreaterThan(0);
   });
-  it('orders real same-room pickups and retains the blocking action and containing repair', () => {
+  it('keeps the whole incomplete occurrence editable while locking its outgoing decision', () => {
     const id = createOccurrenceId('golden-h-combat09');
     const reward = createLocalRewardAddress(goldenHBiome, id, 'cages', 'cage2');
     const blocking = createRoomActionAddress(
@@ -95,14 +131,23 @@ describe('chronological authoring horizon', () => {
     const assembly = simulateProjectAssembly(catalog, project);
     expect(assembly.evaluation.authoringHorizon).toMatchObject({
       kind: 'incomplete',
-      repairTarget: createTraitOfferAddress(reward, 'self'),
+      blockedAfter: createOccurrenceAddress(goldenHBiome, id),
     });
     expect(authoringReadinessAt(assembly, blocking)).toBe('editable');
     expect(authoringReadinessAt(assembly, reward)).toBe('editable');
     expect(authoringReadinessAt(assembly, createOccurrenceAddress(goldenHBiome, id))).toBe(
       'editable',
     );
-    expect(authoringReadinessAt(assembly, later)).toBe('locked');
+    expect(authoringReadinessAt(assembly, later)).toBe('editable');
+    expect(
+      authoringReadinessAt(
+        assembly,
+        createExitDecisionAddress(goldenHBiome, {
+          kind: 'occurrence',
+          occurrenceId: id,
+        }),
+      ),
+    ).toBe('locked');
   });
 
   it('keeps generated Hub side siblings editable while locking entered local lifecycles and later visits', () => {
@@ -139,9 +184,9 @@ describe('chronological authoring horizon', () => {
       throw new Error('entered side fixture lacks its real acquisition action');
     expect(assembly.evaluation.authoringHorizon).toMatchObject({
       kind: 'incomplete',
-      repairTarget: createIncomingRewardAddress(nBiome, first),
+      blockedAfter: createOccurrenceAddress(nBiome, nOccurrenceId('combat05')),
     });
-    expect(authoringReadinessAt(assembly, createOccurrenceAddress(nBiome, first))).toBe('editable');
+    expect(authoringReadinessAt(assembly, createOccurrenceAddress(nBiome, first))).toBe('locked');
     expect(authoringReadinessAt(assembly, createIncomingRewardAddress(nBiome, second))).toBe(
       'editable',
     );
@@ -162,8 +207,70 @@ describe('chronological authoring horizon', () => {
     ).toBe('locked');
   });
 
+  it('keeps normal-door siblings editable as decision inputs without opening their room lifecycles', () => {
+    const original = createCompleteFGProject();
+    const selected = goldenFOccurrenceId(2, 1);
+    const sibling = goldenFOccurrenceId(2, 2);
+    const project = {
+      ...original,
+      route: {
+        ...original.route,
+        biomes: original.route.biomes.map((biome) =>
+          biome.biomeKey !== 'F' || biome.topology === null
+            ? biome
+            : {
+                ...biome,
+                topology: {
+                  ...biome.topology,
+                  occurrences: biome.topology.occurrences.map((room) =>
+                    room.occurrenceId !== selected || room.state.kind !== 'counted'
+                      ? room
+                      : {
+                          ...room,
+                          state: {
+                            ...room.state,
+                            reward:
+                              room.state.reward === null
+                                ? null
+                                : {
+                                    ...room.state.reward,
+                                    traitOffersByAcquisitionRole: { source: null },
+                                  },
+                          },
+                        },
+                  ),
+                },
+              },
+        ),
+      },
+    };
+    const assembly = simulateProjectAssembly(catalog, project);
+    const siblingRoom = project.route.biomes
+      .find((biome) => biome.biomeKey === 'F')!
+      .topology!.occurrences.find((room) => room.occurrenceId === sibling)!;
+    const siblingAction = siblingRoom.roomActions.order[0];
+    if (siblingAction === undefined) throw new Error('F sibling lacks its reward action');
+
+    expect(assembly.evaluation.authoringHorizon).toMatchObject({
+      kind: 'incomplete',
+      blockedAfter: createOccurrenceAddress(goldenFBiome, selected),
+    });
+    expect(authoringReadinessAt(assembly, createIncomingRewardAddress(goldenFBiome, sibling))).toBe(
+      'editable',
+    );
+    expect(
+      authoringReadinessAt(
+        assembly,
+        createRoomActionAddress(goldenFBiome, sibling, roomActionKey(siblingAction)),
+      ),
+    ).toBe('locked');
+  });
+
   it('classifies an omitted due Shrine delivery placement as incomplete', () => {
     let project = createSurfaceNOHermesShrineDeliveryCheckpoint();
+    const deliveryHost = oOccurrenceIds.devotion;
+    const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondLeft');
     project = {
       ...project,
       route: {
@@ -175,21 +282,25 @@ describe('chronological authoring horizon', () => {
                 ...biome,
                 topology: {
                   ...biome.topology,
-                  occurrences: biome.topology.occurrences.map((room) => ({
-                    ...room,
-                    acquisitionSites: {
-                      ...room.acquisitionSites,
-                      hermesShrineDelivery: { pickupEntries: {} },
-                    },
-                    roomActions: {
-                      ...room.roomActions,
-                      order: room.roomActions.order.filter(
-                        (action) =>
-                          action.kind !== 'interactAcquisitionEntry' ||
-                          action.siteKey !== 'hermesShrineDelivery',
-                      ),
-                    },
-                  })),
+                  occurrences: biome.topology.occurrences.map((room) =>
+                    room.occurrenceId !== deliveryHost
+                      ? room
+                      : {
+                          ...room,
+                          acquisitionSites: {
+                            ...room.acquisitionSites,
+                            hermesShrineDelivery: { pickupEntries: {} },
+                          },
+                          roomActions: {
+                            ...room.roomActions,
+                            order: room.roomActions.order.filter(
+                              (action) =>
+                                action.kind !== 'interactAcquisitionEntry' ||
+                                action.entryKey !== entryKey,
+                            ),
+                          },
+                        },
+                  ),
                 },
               },
         ),
@@ -199,11 +310,38 @@ describe('chronological authoring horizon', () => {
     const finding = assembly.evaluation.findings.find(
       (finding) => finding.code === 'hermesShrineDeliveryPlacementRequired',
     );
-    expect(finding).toBeDefined();
+    if (finding?.origin.kind !== 'acquisitionEntry') {
+      throw new Error('fixture lacks its due Shrine delivery entry');
+    }
     expect(assembly.evaluation.authoringHorizon).toMatchObject({
       kind: 'incomplete',
-      repairTarget: finding?.origin,
+      blockedAfter: createOccurrenceAddress(oBiome, oOccurrenceIds.devotion),
     });
+    expect(authoringReadinessAt(assembly, finding.origin)).toBe('editable');
+
+    const encounterPhaseKey = finding.evidence.encounterPhaseKey;
+    if (typeof encounterPhaseKey !== 'string') {
+      throw new Error('due Shrine delivery lacks its encounter phase');
+    }
+    const placed = applyProjectCommand(project, catalog, {
+      kind: 'PlaceHermesShrineDelivery',
+      entry: finding.origin,
+      encounterPhaseKey,
+    });
+    const reference = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: finding.origin.site.pointKey,
+      entryKey: finding.origin.entryKey,
+      encounterPhaseKey,
+    };
+    const action = createRoomActionAddress(
+      oBiome,
+      oOccurrenceIds.devotion,
+      roomActionKey(reference),
+    );
+    expect(() =>
+      applyProjectCommand(placed, catalog, { kind: 'MoveRoomAction', action, toIndex: 0 }),
+    ).not.toThrow();
   });
 
   it('classifies an active Rejected curse without its blocked boon as incomplete', () => {
@@ -228,7 +366,7 @@ describe('chronological authoring horizon', () => {
     expect(finding).toBeDefined();
     expect(assembly.evaluation.authoringHorizon).toMatchObject({
       kind: 'incomplete',
-      repairTarget: finding?.origin,
+      blockedAfter: createOccurrenceAddress(goldenGBiome, goldenGOccurrenceId(6, 1)),
     });
   });
   it('locks only owners after a missing opening reward', () => {
@@ -243,8 +381,7 @@ describe('chronological authoring horizon', () => {
 
     expect(assembly.evaluation.authoringHorizon).toEqual({
       kind: 'incomplete',
-      regionKey: expect.any(String),
-      repairTarget: reward,
+      blockedAfter: createOccurrenceAddress(fBiome, fStartId),
     });
     expect(authoringReadinessAt(assembly, createRouteAddress('Underworld'))).toBe('editable');
     expect(authoringReadinessAt(assembly, createOccurrenceAddress(fBiome, fStartId))).toBe(
@@ -252,6 +389,54 @@ describe('chronological authoring horizon', () => {
     );
     expect(authoringReadinessAt(assembly, reward)).toBe('editable');
     expect(authoringReadinessAt(assembly, fDecision())).toBe('locked');
+
+    const repaired = createFStart();
+    const repairedAssembly = simulateProjectAssembly(catalog, repaired);
+    expect(repairedAssembly.evaluation.authoringHorizon).toMatchObject({
+      kind: 'incomplete',
+      blockedAfter: fDecision(),
+    });
+    expect(authoringReadinessAt(repairedAssembly, fDecision())).toBe('editable');
+  });
+
+  it('keeps an incomplete outgoing batch editable while locking later occurrences', () => {
+    const project = createUnresolvedFOpeningBatch(createFStart());
+    const assembly = simulateProjectAssembly(catalog, project);
+    const opening = createOccurrenceAddress(fBiome, fStartId);
+
+    expect(assembly.evaluation.authoringHorizon).toMatchObject({
+      kind: 'incomplete',
+      blockedAfter: fDecision(),
+    });
+    expect(authoringReadinessAt(assembly, opening)).toBe('editable');
+    expect(authoringReadinessAt(assembly, fDecision())).toBe('editable');
+    expect(
+      authoringReadinessAt(
+        assembly,
+        createOccurrenceAddress(fBiome, createOccurrenceId('not-yet-created')),
+      ),
+    ).toBe('locked');
+  });
+
+  it('keeps a generated door reward editable without opening the target occurrence', () => {
+    let project = createFOpeningBatch(createFStart());
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, fDecision().source, 'exit1'),
+      occurrenceId: createOccurrenceId('pending-f-target'),
+      gameName: 'F_Combat02',
+    });
+    const target = createTargetAddress(fBiome, fDecision().source, 'exit1');
+    const occurrence = createOccurrenceAddress(fBiome, createOccurrenceId('pending-f-target'));
+    const reward = createIncomingRewardAddress(fBiome, occurrence.occurrenceId);
+    const assembly = simulateProjectAssembly(catalog, project);
+    expect(assembly.evaluation.authoringHorizon).toMatchObject({
+      kind: 'incomplete',
+      blockedAfter: fDecision(),
+    });
+    expect(authoringReadinessAt(assembly, target)).toBe('editable');
+    expect(authoringReadinessAt(assembly, reward)).toBe('editable');
+    expect(authoringReadinessAt(assembly, occurrence)).toBe('locked');
   });
 
   it('does not turn an invalid opening reward into an incomplete horizon', () => {
@@ -291,7 +476,7 @@ describe('chronological authoring horizon', () => {
 
     expect(assembly.evaluation.authoringHorizon).toMatchObject({
       kind: 'incomplete',
-      repairTarget: { kind: 'hubOpenSet', biomeKey: 'N', hubKey: 'hub' },
+      blockedAfter: createHubDecisionAddress(nBiome, 'hub'),
     });
     expect(authoringReadinessAt(assembly, createHubSlotAddress(nBiome, 'hub', 'combat12'))).toBe(
       'editable',
@@ -304,10 +489,12 @@ describe('chronological authoring horizon', () => {
     const uncreated = simulateProjectAssembly(catalog, loadSurfaceNEntryFrontierResolvedProject());
     expect(uncreated.evaluation.authoringHorizon).toMatchObject({
       kind: 'incomplete',
-      repairTarget: hub,
+      blockedAfter: hub,
     });
     expect(authoringReadinessAt(uncreated, hub)).toBe('editable');
-    expect(authoringReadinessAt(uncreated, createHubOpenSetAddress(nBiome, 'hub'))).toBe('locked');
+    expect(authoringReadinessAt(uncreated, createHubOpenSetAddress(nBiome, 'hub'))).toBe(
+      'editable',
+    );
 
     const incompleteVisits = simulateProjectAssembly(
       catalog,
@@ -319,7 +506,7 @@ describe('chronological authoring horizon', () => {
     );
     expect(incompleteVisits.evaluation.authoringHorizon).toMatchObject({
       kind: 'incomplete',
-      repairTarget: createHubVisitAddress(nBiome, 'hub', 6),
+      blockedAfter: createHubDecisionAddress(nBiome, 'hub'),
     });
     expect(authoringReadinessAt(incompleteVisits, hub)).toBe('editable');
     expect(
@@ -342,7 +529,7 @@ describe('chronological authoring horizon', () => {
     );
     expect(missingHandoff.evaluation.authoringHorizon).toMatchObject({
       kind: 'incomplete',
-      repairTarget: handoff,
+      blockedAfter: handoff,
     });
     expect(authoringReadinessAt(missingHandoff, handoff)).toBe('editable');
     expect(
@@ -376,13 +563,12 @@ describe('chronological authoring horizon', () => {
     };
     const assembly = simulateProjectAssembly(catalog, project);
     const reward = createIncomingRewardAddress(nBiome, occurrenceId);
-
     expect(assembly.evaluation.authoringHorizon).toMatchObject({
       kind: 'incomplete',
-      repairTarget: reward,
+      blockedAfter: createHubDecisionAddress(nBiome, 'hub'),
     });
     expect(authoringReadinessAt(assembly, createOccurrenceAddress(nBiome, occurrenceId))).toBe(
-      'editable',
+      'locked',
     );
     expect(authoringReadinessAt(assembly, reward)).toBe('editable');
     expect(
@@ -428,10 +614,9 @@ describe('chronological authoring horizon', () => {
       nBiome,
       createOccurrenceId(`${nOccurrenceIds.preboss}:boss`),
     );
-
     expect(assembly.evaluation.authoringHorizon).toMatchObject({
       kind: 'incomplete',
-      repairTarget: preboss,
+      blockedAfter: preboss,
     });
     expect(
       authoringReadinessAt(assembly, createOccurrenceAddress(nBiome, nOccurrenceIds.opening)),
@@ -472,7 +657,7 @@ describe('chronological authoring horizon', () => {
 
     expect(assembly.evaluation.authoringHorizon).toMatchObject({
       kind: 'incomplete',
-      repairTarget: judgment,
+      blockedAfter: oBoss,
     });
     expect(
       authoringReadinessAt(
