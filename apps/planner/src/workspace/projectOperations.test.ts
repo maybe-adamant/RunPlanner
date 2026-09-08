@@ -136,15 +136,18 @@ function createPublicationAutosaveFixture(): {
 
 describe('project profile operations', () => {
   it('publishes a complete F prefix through the separate game capability', async () => {
-    const published: { targetId: string; json: string }[] = [];
+    const published: { targetId: string; slotNumber: number; json: string }[] = [];
     const profile = createProfileFixture();
     const autosave = createPublicationAutosaveFixture();
     const gamePlanPublisher: GamePlanPublisher = {
       discoverProfiles: () =>
         Promise.resolve({ status: 'available', targets: [], message: 'Choose a profile.' }),
-      publish: (targetId, json) => {
-        published.push({ targetId, json });
-        return Promise.resolve({ status: 'published', message: 'Published.' });
+      publish: (targetId, slotNumber, json) => {
+        published.push({ targetId, slotNumber, json });
+        return Promise.resolve({
+          status: 'published',
+          message: `Published profile ${targetId} Slot ${slotNumber}.`,
+        });
       },
     };
     const application = createApplication({
@@ -171,10 +174,10 @@ describe('project profile operations', () => {
     const beforePendingAutosaves = autosave.scheduler.pendingCount;
     const beforeAutosaveWrites = profile.saves.length;
 
-    await expect(application.projectOperations.publishGame('profile-a')).resolves.toEqual({
+    await expect(application.projectOperations.publishGame('profile-a', 3)).resolves.toEqual({
       operation: 'publishGame',
       status: 'success',
-      message: 'Published.',
+      message: 'Published to game profile profile-a, Slot 3.',
     });
     expect(published).toHaveLength(1);
     const publication = published[0];
@@ -201,20 +204,20 @@ describe('project profile operations', () => {
   });
 
   it('rejects an invalid publication before invoking the game writer', async () => {
-    const published: { targetId: string; json: string }[] = [];
+    const published: { targetId: string; slotNumber: number; json: string }[] = [];
     const application = createApplication({
       gamePlanPublisher: {
         discoverProfiles: () =>
           Promise.resolve({ status: 'available', targets: [], message: 'Choose a profile.' }),
-        publish: (targetId, json) => {
-          published.push({ targetId, json });
+        publish: (targetId, slotNumber, json) => {
+          published.push({ targetId, slotNumber, json });
           return Promise.resolve({ status: 'published', message: 'Published.' });
         },
       },
     });
     application.projectOperations.createNew('Underworld');
 
-    await expect(application.projectOperations.publishGame('profile-a')).resolves.toMatchObject({
+    await expect(application.projectOperations.publishGame('profile-a', 1)).resolves.toMatchObject({
       operation: 'publishGame',
       status: 'failure',
     });

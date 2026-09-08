@@ -7,7 +7,11 @@ import type {
   ProjectOperationResult,
   ProjectOperations,
 } from '@planner/workspace/projectOperations';
-import type { GamePlanDiscovery } from '@planner/persistence/gamePlanPublisher';
+import {
+  GAME_PLAN_SLOT_NUMBERS,
+  type GamePlanDiscovery,
+  type GamePlanSlotNumber,
+} from '@planner/persistence/gamePlanPublisher';
 import { selectProfileSession, selectProfileStatus, useAppSelector } from '@planner/state/store';
 import { ActionIcon } from '../controls/ActionIcon';
 
@@ -30,10 +34,11 @@ export function ProjectFileControls({
   const [pendingOperation, setPendingOperation] = useState<ProjectOperation | null>(null);
   const [gameDiscovery, setGameDiscovery] = useState<GamePlanDiscovery | null>(null);
   const [selectedGameProfile, setSelectedGameProfile] = useState<string>('');
+  const [selectedGameSlot, setSelectedGameSlot] = useState<GamePlanSlotNumber | ''>('');
   const runProfileOperation = async (
     operation: ProjectOperation,
     run: () => Promise<ProjectOperationResult>,
-  ) => {
+  ): Promise<ProjectOperationResult> => {
     setPendingOperation(operation);
     try {
       const operationResult = await run();
@@ -41,6 +46,7 @@ export function ProjectFileControls({
       if (operation === 'loadProfile' && operationResult.status === 'success') {
         onEntryOpenChange(false);
       }
+      return operationResult;
     } finally {
       setPendingOperation(null);
     }
@@ -51,10 +57,9 @@ export function ProjectFileControls({
     try {
       const discovery = await operations.discoverGameProfiles();
       setGameDiscovery(discovery);
-      const onlyTarget = discovery.targets[0];
-      if (discovery.targets.length === 1 && onlyTarget !== undefined) {
-        const publication = await operations.publishGame(onlyTarget.id);
-        setResult(publication);
+      if (discovery.status === 'available' && discovery.targets.length > 0) {
+        setSelectedGameProfile(discovery.targets.length === 1 ? discovery.targets[0]!.id : '');
+        setSelectedGameSlot('');
       } else {
         setResult({
           operation: 'publishGame',
@@ -68,8 +73,15 @@ export function ProjectFileControls({
   };
 
   const publishSelectedGamePlan = async () => {
-    if (selectedGameProfile.length === 0) return;
-    await runProfileOperation('publishGame', () => operations.publishGame(selectedGameProfile));
+    if (selectedGameProfile.length === 0 || selectedGameSlot === '') return;
+    const publication = await runProfileOperation('publishGame', () =>
+      operations.publishGame(selectedGameProfile, selectedGameSlot),
+    );
+    if (publication.status === 'success') {
+      setGameDiscovery(null);
+      setSelectedGameProfile('');
+      setSelectedGameSlot('');
+    }
   };
 
   const feedback = (
@@ -240,33 +252,69 @@ export function ProjectFileControls({
               <ActionIcon name="save" />
               {pendingOperation === 'publishGame' ? 'Publishing…' : 'Publish to Game'}
             </button>
-            {gameDiscovery !== null && gameDiscovery.targets.length > 1 && (
-              <>
-                <label className="visually-hidden" htmlFor="game-profile-target">
-                  Game profile
-                </label>
+            {gameDiscovery?.status === 'available' && gameDiscovery.targets.length > 0 && (
+              <fieldset className="game-publication-selection" aria-label="Publish to game">
+                <legend>Publish to game</legend>
+                <label htmlFor="game-profile-target">Profile</label>
                 <select
                   id="game-profile-target"
                   disabled={pendingOperation !== null}
                   onChange={(event) => setSelectedGameProfile(event.target.value)}
                   value={selectedGameProfile}
                 >
-                  <option value="">Choose game profile…</option>
+                  <option value="">Choose profile…</option>
                   {gameDiscovery.targets.map((target) => (
                     <option key={target.id} value={target.id}>
                       {target.label}
                     </option>
                   ))}
                 </select>
+                <label htmlFor="game-plan-slot">Slot</label>
+                <select
+                  id="game-plan-slot"
+                  disabled={pendingOperation !== null}
+                  onChange={(event) => {
+                    const value = Number(event.target.value);
+                    if (GAME_PLAN_SLOT_NUMBERS.includes(value as GamePlanSlotNumber)) {
+                      setSelectedGameSlot(value as GamePlanSlotNumber);
+                    } else {
+                      setSelectedGameSlot('');
+                    }
+                  }}
+                  value={selectedGameSlot}
+                >
+                  <option value="">Choose slot…</option>
+                  {GAME_PLAN_SLOT_NUMBERS.map((slotNumber) => (
+                    <option key={slotNumber} value={slotNumber}>
+                      Slot {slotNumber}
+                    </option>
+                  ))}
+                </select>
                 <button
                   className="secondary-action action-compact"
-                  disabled={pendingOperation !== null || selectedGameProfile.length === 0}
+                  disabled={
+                    pendingOperation !== null ||
+                    selectedGameProfile.length === 0 ||
+                    selectedGameSlot === ''
+                  }
                   onClick={() => void publishSelectedGamePlan()}
                   type="button"
                 >
-                  Publish
+                  {pendingOperation === 'publishGame' ? 'Publishing…' : 'Publish'}
                 </button>
-              </>
+                <button
+                  className="quiet-action action-compact"
+                  disabled={pendingOperation !== null}
+                  onClick={() => {
+                    setGameDiscovery(null);
+                    setSelectedGameProfile('');
+                    setSelectedGameSlot('');
+                  }}
+                  type="button"
+                >
+                  Cancel
+                </button>
+              </fieldset>
             )}
           </>
         )}

@@ -12,13 +12,14 @@ describe('Tauri game-plan publisher adapter', () => {
 
     await expect(publisher.discoverProfiles()).resolves.toMatchObject({ status: 'available' });
     await expect(
-      publisher.publish('profile-a', '{"format":"run-planner-execution"}'),
+      publisher.publish('profile-a', 3, '{"format":"run-planner-execution"}'),
     ).resolves.toMatchObject({
       status: 'published',
     });
     expect(invoke).toHaveBeenNthCalledWith(1, 'game_plan_discover_profiles');
     expect(invoke).toHaveBeenNthCalledWith(2, 'game_plan_publish', {
       targetId: 'profile-a',
+      slotNumber: 3,
       planJson: '{"format":"run-planner-execution"}',
     });
   });

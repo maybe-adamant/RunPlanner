@@ -20,9 +20,16 @@ export interface GamePlanPublication {
   readonly message: string;
 }
 
+export const GAME_PLAN_SLOT_NUMBERS = [1, 2, 3, 4, 5, 6] as const;
+export type GamePlanSlotNumber = (typeof GAME_PLAN_SLOT_NUMBERS)[number];
+
 export interface GamePlanPublisher {
   readonly discoverProfiles: () => Promise<GamePlanDiscovery>;
-  readonly publish: (targetId: string, planJson: string) => Promise<GamePlanPublication>;
+  readonly publish: (
+    targetId: string,
+    slotNumber: GamePlanSlotNumber,
+    planJson: string,
+  ) => Promise<GamePlanPublication>;
 }
 
 export interface TauriGamePlanEnvironment {
@@ -34,7 +41,11 @@ export function createTauriGamePlanPublisher(
 ): GamePlanPublisher {
   return Object.freeze({
     discoverProfiles: () => environment.invoke<GamePlanDiscovery>('game_plan_discover_profiles'),
-    publish: (targetId: string, planJson: string) =>
-      environment.invoke<GamePlanPublication>('game_plan_publish', { targetId, planJson }),
+    publish: (targetId: string, slotNumber: GamePlanSlotNumber, planJson: string) =>
+      environment.invoke<GamePlanPublication>('game_plan_publish', {
+        targetId,
+        slotNumber,
+        planJson,
+      }),
   });
 }

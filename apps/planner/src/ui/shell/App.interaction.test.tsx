@@ -37,6 +37,7 @@ import type {
   AutosaveScheduler,
 } from '@planner/persistence/autosaveRecovery';
 import type { ProfileFileAdapter, ProfileFileReference } from '@planner/persistence/profileFile';
+import type { GamePlanPublisher } from '@planner/persistence/gamePlanPublisher';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
@@ -570,6 +571,90 @@ describe('planner history interaction', () => {
     expect(within(about).getAllByText('Ctrl/Cmd', { selector: 'kbd' })).toHaveLength(2);
     expect(within(about).queryByText('Rooms')).toBeNull();
     expect(screen.getByRole('button', { name: 'Route' })).toBeTruthy();
+  });
+
+  it('requires an explicit game profile and plan slot before publishing', async () => {
+    const publications: { targetId: string; slotNumber: number; json: string }[] = [];
+    const gamePlanPublisher: GamePlanPublisher = {
+      discoverProfiles: () =>
+        Promise.resolve({
+          status: 'available',
+          targets: [
+            { id: 'profile-a', label: 'Profile A', moduleVersion: '0.0.1' },
+            { id: 'profile-b', label: 'Profile B', moduleVersion: '0.0.1' },
+          ],
+          message: 'Choose a profile.',
+        }),
+      publish: (targetId, slotNumber, json) => {
+        publications.push({ targetId, slotNumber, json });
+        return Promise.resolve({ status: 'published', message: 'Published.' });
+      },
+    };
+    const application = createApplication({ gamePlanPublisher });
+    const project = createCompleteFGProject();
+    application.store.dispatch(
+      authoredProjectReplaced({
+        ...project,
+        route: { ...project.route, biomes: project.route.biomes.slice(0, 1) },
+      }),
+    );
+    const { user } = renderPlannerForInteraction({ application });
+
+    await user.click(screen.getByRole('button', { name: 'Publish to Game' }));
+    expect(publications).toHaveLength(0);
+    expect(screen.getByLabelText('Profile')).toBeTruthy();
+    expect(screen.getByLabelText('Slot')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Publish$/ })).toHaveProperty('disabled', true);
+
+    await user.click(screen.getByRole('button', { name: /^Cancel$/ }));
+    await user.click(screen.getByRole('button', { name: 'Publish to Game' }));
+    expect((screen.getByLabelText('Profile') as HTMLSelectElement).value).toBe('');
+    expect((screen.getByLabelText('Slot') as HTMLSelectElement).value).toBe('');
+
+    await user.selectOptions(screen.getByLabelText('Profile'), 'profile-b');
+    await user.selectOptions(screen.getByLabelText('Slot'), '3');
+    await user.click(screen.getByRole('button', { name: /^Publish$/ }));
+
+    expect(publications).toHaveLength(1);
+    expect(publications[0]).toMatchObject({ targetId: 'profile-b', slotNumber: 3 });
+    expect(screen.getByText('Published to game profile profile-b, Slot 3.')).toBeTruthy();
+  });
+
+  it('preselects the only compatible profile without selecting a publication slot', async () => {
+    const publications: { targetId: string; slotNumber: number; json: string }[] = [];
+    const application = createApplication({
+      gamePlanPublisher: {
+        discoverProfiles: () =>
+          Promise.resolve({
+            status: 'available' as const,
+            targets: [{ id: 'profile-a', label: 'Profile A', moduleVersion: '0.0.1' }],
+            message: 'Choose a profile.',
+          }),
+        publish: (targetId, slotNumber, json) => {
+          publications.push({ targetId, slotNumber, json });
+          return Promise.resolve({ status: 'published' as const, message: 'Published.' });
+        },
+      },
+    });
+    const project = createCompleteFGProject();
+    application.store.dispatch(
+      authoredProjectReplaced({
+        ...project,
+        route: { ...project.route, biomes: project.route.biomes.slice(0, 1) },
+      }),
+    );
+    const { user } = renderPlannerForInteraction({ application });
+
+    await user.click(screen.getByRole('button', { name: 'Publish to Game' }));
+
+    expect((screen.getByLabelText('Profile') as HTMLSelectElement).value).toBe('profile-a');
+    expect((screen.getByLabelText('Slot') as HTMLSelectElement).value).toBe('');
+    expect(
+      Array.from((screen.getByLabelText('Slot') as HTMLSelectElement).options).map(
+        (option) => option.value,
+      ),
+    ).toEqual(['', '1', '2', '3', '4', '5', '6']);
+    expect(publications).toHaveLength(0);
   });
 
   it('binds visible history controls to semantic project history', async () => {
