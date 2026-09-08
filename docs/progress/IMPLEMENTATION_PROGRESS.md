@@ -41,9 +41,14 @@ profile flow now retains an opened or first-saved project target for in-place
 Save, while the browser retains upload/download behavior. The separate Plan
 Executor consumes complete-valid configured prefixes for both fixed routes
 through execution protocol 33 as a thin declarative runtime adapter; it is not
-a second planner or simulator. On 2026-09-06 the focused live campaign reached
-the end of a configured F/G prefix without an unresolved executor mismatch.
-Complete Underworld and Surface live campaigns remain unclaimed.
+a second planner or simulator. The desktop transport publishes to six fixed
+slots in an explicitly selected compatible profile, while the Executor's
+persistent `ActivePlanSlot` chooses which slot is admitted for the next session;
+publication never hot-swaps a live session. The retired
+`active.runplanner.json` inbox is not read or migrated. On 2026-09-06 the
+focused live campaign reached the end of a configured F/G prefix without an
+unresolved executor mismatch. Complete Underworld and Surface live campaigns
+remain unclaimed.
 
 ## Active Frontier and Blockers
 
@@ -138,6 +143,12 @@ application composition -> React UI`.
   fixture integrity owns canonical bytes, metadata, and cached-base identity.
 - The Phase 8 desktop shell wraps the browser product without moving domain or
   simulation behavior into Rust.
+- Published execution plans use six fixed profile-scoped transport slots. The
+  desktop native adapter owns profile rediscovery, slot filename resolution,
+  containment, bounds, and atomic replacement. The Plan Executor owns the
+  persistent active-slot setting, selected-slot inspection, and freezing the
+  decoded plan at new-session admission; slot identity is not part of the
+  planner document, execution protocol semantics, or live-session state.
 
 ## Feature Closures
 
@@ -286,6 +297,25 @@ the ranked action and dormant immediate equip-result detail, while deletion
 clears the complete owned subtree. Run State history records only the starting
 equip and real replacements, with each entry carrying its actual effective
 biome so skipped racks do not collapse chronology labels.
+
+### Published plan slots
+
+The six-slot transport closure publishes each validated execution plan to an
+explicitly selected compatible r2modman profile and fixed Slot 1 through Slot
+6 destination. The planner never chooses the first profile implicitly and
+never writes an active-pointer file. The Plan Executor persists `ActivePlanSlot`
+(defaulting to Slot 1), displays the selected slot's bounded status, and loads
+only that slot at the next new-run admission. A plan frozen into a live session
+remains unchanged when the setting or another slot changes. Postboss
+resynchronization remains a separate, unstarted recovery plan.
+The retired `active.runplanner.json` path has no compatibility reader; empty,
+malformed, protocol-incompatible, and catalog-incompatible selected slots use
+the existing passive admission-error policy.
+
+The closure was delivered as the native publication, planner selection, and
+Executor host slices. The six fixed-name mapping, range rejection, slot
+isolation, atomic replacement, selection freeze, and empty/malformed-slot
+contacts remain covered by their owning Rust, application, and Lua tests.
 
 ### O reward presentation closure
 

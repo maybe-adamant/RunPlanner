@@ -4,10 +4,24 @@
 
 The active strict versioned protocol carries a complete-valid configured
 Underworld or Surface prefix, through `F/G/H/I` or `N/O/P/Q`. The desktop
-publisher writes an execution-only JSON artifact to the Plan Executor's fixed
-inbox; the browser build has no publication capability. Publication is a
-start-of-run operation. The Executor cannot truthfully attach midway through a
-run, repair an edited plan, or resume enforcement after a mismatch.
+publisher writes an execution-only JSON artifact to one of six fixed Plan
+Executor slots in an explicitly selected compatible r2modman profile; the
+browser build has no publication capability. Publishing a slot and selecting
+the active slot are separate operations. The Executor owns a persistent
+`ActivePlanSlot` selection, reads only that slot at the next run admission, and
+freezes the decoded plan for the live session. Execution admission is a
+start-of-run operation; publication does not hot-swap a live session. The
+Executor cannot truthfully attach midway through a run, repair
+an edited plan, or resume enforcement after a mismatch.
+
+The transport names the slots `slot-1.runplanner.json` through
+`slot-6.runplanner.json` under the Plan Executor configuration directory. The
+planner never writes an active-pointer file, activates a slot implicitly, or
+chooses a profile when more than one compatible profile is present. The
+retired `active.runplanner.json` name has no compatibility reader or automatic
+migration. An empty or invalid selected slot therefore remains a bounded
+admission error, while publishing another slot does not disturb a frozen live
+session.
 
 The compiler consumes the exact simulation assembly that the planner already
 validated. It does not rerun candidate policy or duplicate validation. The
@@ -188,6 +202,17 @@ it. Run State diagnostics remain complete in the planner's semantic plan; on
 the wire, frame zero replaces every closed top-level diagnostic section and
 later sequential frames replace only changed sections. `artificer: null` is an
 explicit replacement that clears prior state.
+
+Publication is profile-scoped transport, not authored or execution semantics.
+The desktop adapter resolves a compatible profile again at write time, maps a
+caller-supplied slot number in the closed range 1 through 6 to its fixed
+filename, confines the destination below that profile's Plan Executor
+configuration tree, rejects links and non-regular files, enforces the existing
+1 MiB bound, and atomically replaces only the selected slot. The Plan Executor
+persists `ActivePlanSlot` (defaulting to Slot 1), displays the selected slot's
+bounded status, and loads and freezes that one slot only at the next new-run
+admission. Changing the setting cannot hot-swap a live session. Mid-run
+recovery remains unsupported.
 
 The Plan Executor verifies protocol and catalog identity before opening a
 session. Runtime identifier existence and checkpoint contact are conformance
