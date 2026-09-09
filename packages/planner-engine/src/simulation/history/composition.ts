@@ -138,6 +138,12 @@ export interface RoomLifecycleCompositionOptions {
   readonly stopAfterOutgoing?: boolean;
   /** Continue only through this real post-outgoing lifecycle point, then stop traversal. */
   readonly continueThroughAcquisitionPoint?: string;
+  /**
+   * A frontier room without an explicit acquisition-point operation may still
+   * own post-outgoing Room Actions. Retain those actions without committing or
+   * exiting the room, which still depends on the unresolved door selection.
+   */
+  readonly continueThroughPostOutgoingActions?: boolean;
 }
 
 interface BiomeHistoryEnvelopeOptions<
@@ -312,6 +318,13 @@ export function appendRoomLifecycle(
   let projectedOutgoing = false;
   let reachedOutgoing = false;
   for (const event of fragment.events) {
+    if (
+      options.stopAfterOutgoing &&
+      options.continueThroughPostOutgoingActions === true &&
+      event.kind === 'roomCommitted'
+    ) {
+      return;
+    }
     options.beforeEvent?.(writer, event);
     appendLifecycleEvent(writer, event, fail);
     options.afterEvent?.(writer, event);
@@ -322,7 +335,11 @@ export function appendRoomLifecycle(
       }
       options.outgoing?.(writer, room);
       projectedOutgoing = options.outgoing !== undefined;
-      if (options.stopAfterOutgoing && options.continueThroughAcquisitionPoint === undefined) {
+      if (
+        options.stopAfterOutgoing &&
+        options.continueThroughAcquisitionPoint === undefined &&
+        options.continueThroughPostOutgoingActions !== true
+      ) {
         return;
       }
     }

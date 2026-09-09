@@ -391,6 +391,7 @@ interface ClockworkAwareLifecycleOptions {
   readonly outgoing?: (writer: HistorySegmentWriter) => void;
   readonly stopAfterOutgoing?: boolean;
   readonly continueThroughAcquisitionPoint?: string;
+  readonly continueThroughPostOutgoingActions?: boolean;
   readonly beforeEvent?: (writer: HistorySegmentWriter, event: RoomLifecycleEvent) => void;
   readonly afterEvent?: (writer: HistorySegmentWriter, event: RoomLifecycleEvent) => void;
 }
@@ -412,7 +413,9 @@ function postOutgoingAcquisitionPoint(
 
 function postOutgoingAcquisitionOption(catalog: Catalog, room: CanonicalAuthoredRoom) {
   const point = postOutgoingAcquisitionPoint(catalog, room);
-  return point === undefined ? {} : { continueThroughAcquisitionPoint: point };
+  return point === undefined
+    ? { continueThroughPostOutgoingActions: true }
+    : { continueThroughAcquisitionPoint: point };
 }
 
 /**
@@ -445,6 +448,9 @@ function appendClockworkAwareRoomLifecycle(
     ...(options.continueThroughAcquisitionPoint === undefined
       ? {}
       : { continueThroughAcquisitionPoint: options.continueThroughAcquisitionPoint }),
+    ...(options.continueThroughPostOutgoingActions === undefined
+      ? {}
+      : { continueThroughPostOutgoingActions: options.continueThroughPostOutgoingActions }),
     beforeEvent(beforeWriter, event) {
       options.beforeEvent?.(beforeWriter, event);
       if (

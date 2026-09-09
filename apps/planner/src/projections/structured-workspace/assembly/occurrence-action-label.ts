@@ -132,14 +132,22 @@ export function occurrenceActionLabel(
           ? roomLocal.supplementalOffers.find((candidate) => candidate.key === reference.entryKey)
           : undefined;
       const shrineDelivery = parseHermesShrineDeliveryEntryKey(reference.entryKey);
+      const explicitRewardType =
+        rewardControl?.offer?.rewardType ??
+        (rewardControl?.kind === 'explicitReward' && rewardControl.rewardTypes.length === 1
+          ? rewardControl.rewardTypes[0]
+          : undefined);
+      const explicitRewardLabel =
+        explicitRewardType === undefined
+          ? undefined
+          : (catalog.rewards.rewardTypes.byKey[explicitRewardType]?.label ?? explicitRewardType);
       const entryLabel =
         parseArtificerReplacementEntryKey(reference.entryKey) !== undefined
           ? 'Artificer'
           : parseEchoLastRewardPickupEntryKey(reference.entryKey) !== undefined
             ? 'Reward Reward Reward replay'
-            : rewardControl?.kind === 'explicitReward' && rewardControl.rewardTypes.length === 1
-              ? (catalog.rewards.rewardTypes.byKey[rewardControl.rewardTypes[0]!]?.label ??
-                reference.entryKey)
+            : explicitRewardLabel !== undefined
+              ? explicitRewardLabel
               : shrineDelivery !== undefined
                 ? 'Hermes Shrine delivery'
                 : reference.entryKey;

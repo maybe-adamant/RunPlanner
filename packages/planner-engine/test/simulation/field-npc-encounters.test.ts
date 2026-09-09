@@ -2,6 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createAcquisitionSiteAddress,
+  createBiomeAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
@@ -37,6 +38,7 @@ import type {
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   attestClockedTraitPickupPlacementForProjectEvaluationAssembly,
+  authoringReadinessAt,
   clockedTraitPickupPlacementForProjectEvaluationAssembly,
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
   levelResolutionCandidateForProjectEvaluationAssembly,
@@ -1652,7 +1654,50 @@ describe('field NPC encounter requirements', () => {
     );
 
     const levelResolution = createLevelResolutionAddress(accepted.address, 'self');
+    const maturityBiome = project.route.biomes.find(
+      (biome) => biome.biomeKey === matured.site.biomeKey,
+    );
+    const maturityDecision = maturityBiome?.topology?.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.source.kind === 'occurrence' &&
+        matured.site.owner.kind === 'occurrence' &&
+        decision.source.occurrenceId === matured.site.owner.occurrenceId,
+    );
+    if (maturityDecision?.kind !== 'exit' || maturityDecision.selection.kind !== 'normal') {
+      throw new Error('Supply Chain maturity has no selected ordinary continuation');
+    }
+    const selectedExitKey = maturityDecision.selection.exitKey;
+    const selectedTarget = maturityDecision.normal.targets.find(
+      (target) => target.exitKey === selectedExitKey,
+    );
+    if (selectedTarget === undefined) {
+      throw new Error('Supply Chain maturity selection has no target');
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'RemoveExitDecision',
+      decision: createExitDecisionAddress(
+        createBiomeAddress(matured.site.routeKey, matured.site.biomeKey),
+        { kind: 'occurrence', occurrenceId: selectedTarget.occurrenceId },
+      ),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(
+        createBiomeAddress(matured.site.routeKey, matured.site.biomeKey),
+        matured.site.owner,
+      ),
+      value: { kind: 'unresolved' },
+    });
     const placedAssembly = simulateProjectAssembly(catalog, project);
+    expect(authoringReadinessAt(placedAssembly, levelResolution)).toBe('editable');
+    expect(
+      placedAssembly.evaluation.findings.some(
+        (finding) =>
+          finding.code === 'missingPomTarget' &&
+          semanticAddressKey(finding.origin) === semanticAddressKey(levelResolution),
+      ),
+    ).toBe(true);
     const targetTraitKey = levelResolutionCandidateForProjectEvaluationAssembly(
       placedAssembly,
       levelResolution,
