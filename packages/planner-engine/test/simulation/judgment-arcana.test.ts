@@ -728,6 +728,54 @@ describe('Judgment fixed Boss lifecycle', () => {
     ).toHaveLength(2);
   });
 
+  it('caps Fated Judgment draws to the eligible remainder and accepts an exhausted pool', () => {
+    const baseline = createArcanaFearState(catalog, createDefaultRouteLoadout(catalog));
+    const baselineActive = new Set(baseline.arcana.active.map((card) => card.key));
+    const fatedExcluded = catalog.arcanaCards.values
+      .filter((card) => card.fatedIncompatible === true && !baselineActive.has(card.key))
+      .map((card) => card.key);
+    const safeRemainder = catalog.arcanaCards.values
+      .filter((card) => card.fatedIncompatible !== true && !baselineActive.has(card.key))
+      .slice(0, 2)
+      .map((card) => card.key);
+    expect(fatedExcluded).toHaveLength(3);
+    expect(safeRemainder).toHaveLength(2);
+
+    const partialState = stateWithExactInactiveArcana([...fatedExcluded, ...safeRemainder]);
+    const partial = evaluateNBossLifecycle(
+      partialState,
+      safeRemainder,
+      undefined,
+      [],
+      createKeepsakeState(catalog, 'HadesAndPersephoneKeepsake', partialState),
+    );
+    expect(partial.judgmentArcanaArtifacts.at(judgmentOwner())).toMatchObject({
+      requiredCount: 2,
+      inactiveArcanaKeys: safeRemainder,
+    });
+    expect(partial.simulation.branches).toHaveLength(1);
+    expect(partial.simulation.findings).not.toContainEqual(
+      expect.objectContaining({ code: 'judgmentOutcomeWrongCardinality' }),
+    );
+
+    const exhaustedState = stateWithExactInactiveArcana(fatedExcluded);
+    const exhausted = evaluateNBossLifecycle(
+      exhaustedState,
+      [],
+      undefined,
+      [],
+      createKeepsakeState(catalog, 'HadesAndPersephoneKeepsake', exhaustedState),
+    );
+    expect(exhausted.judgmentArcanaArtifacts.at(judgmentOwner())).toMatchObject({
+      requiredCount: 0,
+      inactiveArcanaKeys: [],
+    });
+    expect(exhausted.simulation.branches).toHaveLength(1);
+    expect(exhausted.simulation.findings).not.toContainEqual(
+      expect.objectContaining({ code: 'judgmentOutcomeTargetUnavailable' }),
+    );
+  });
+
   it('filters Fated-incompatible Figurine cards from the candidate and rejects an authored exclusion', () => {
     const seeded = createArcanaFearState(catalog, createDefaultRouteLoadout(catalog));
     const safeKey = inactive(['CardDraw', 'DoorReroll'], 1)[0];

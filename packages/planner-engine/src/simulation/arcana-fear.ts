@@ -126,6 +126,20 @@ export function inactiveArcanaKeys(catalog: Catalog, state: ArcanaFearState): re
   );
 }
 
+/** Inactive cards remaining in the native random-draw pool for the current run mode. */
+export function randomArcanaDrawKeys(
+  catalog: Catalog,
+  state: ArcanaFearState,
+  fatedStatus: 'Unknown' | 'Fated' | 'Unfated' = 'Unknown',
+): readonly string[] {
+  return Object.freeze(
+    inactiveArcanaKeys(catalog, state).filter(
+      (key) =>
+        fatedStatus !== 'Fated' || catalog.arcanaCards.byKey[key]?.fatedIncompatible !== true,
+    ),
+  );
+}
+
 /**
  * Native random Arcana draws accept a dependent card when one of its named
  * companions is already active or is activated earlier in the same draw set.
@@ -202,9 +216,8 @@ export function circeResolutionDomain(
 ): CirceResolutionDomain {
   if (effect === 'activateArcana') {
     const activeArcanaKeys = state.arcana.active.map((card) => card.key);
-    const arcanaKeys = inactiveArcanaKeys(catalog, state).filter(
+    const arcanaKeys = randomArcanaDrawKeys(catalog, state, fatedStatus).filter(
       (key) =>
-        (fatedStatus !== 'Fated' || catalog.arcanaCards.byKey[key]?.fatedIncompatible !== true) &&
         unsatisfiedRandomArcanaRequirementKeys(catalog, activeArcanaKeys, [key]).length === 0,
     );
     return Object.freeze({
@@ -238,6 +251,7 @@ export function circeResolutionDomain(
 export function judgmentRequiredCount(
   catalog: Catalog,
   state: ArcanaFearState,
+  fatedStatus: 'Unknown' | 'Fated' | 'Unfated' = 'Unknown',
 ): number | undefined {
   const judgment = state.arcana.active.find((card) => card.key === 'CardDraw');
   if (judgment === undefined) return undefined;
@@ -245,7 +259,7 @@ export function judgmentRequiredCount(
     catalog.arcanaCards.byKey[judgment.key]?.postBossActivationCounts?.[judgment.rarity];
   return count === undefined
     ? undefined
-    : Math.min(count, inactiveArcanaKeys(catalog, state).length);
+    : Math.min(count, randomArcanaDrawKeys(catalog, state, fatedStatus).length);
 }
 
 export type ArcanaTransitionReason =
