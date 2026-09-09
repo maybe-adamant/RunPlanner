@@ -4,6 +4,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
+import type { ProfileFileReference, ProfileFileRestoreResult } from './profileFile';
 
 import {
   autosaveWriteFailed,
@@ -24,6 +25,8 @@ export interface AutosaveScheduler {
 }
 
 export interface StartupProjectState<TPrepared> {
+  readonly activeProfileFile?: ProfileFileReference;
+  readonly clearActiveProfileFile: boolean;
   readonly preparedProject?: TPrepared;
   readonly profileSession: ProfileSessionState;
 }
@@ -36,27 +39,132 @@ export function restoreStartupProject<TPrepared>(
   catalog: Catalog,
   recovery: AutosaveRecoveryAdapter | undefined,
   prepareProject: (project: ProjectDocument) => TPrepared,
+  profileRestore: ProfileFileRestoreResult = Object.freeze({ status: 'none' }),
 ): StartupProjectState<TPrepared> {
-  if (recovery === undefined) {
+  const prepareJson = (json: string) => {
+    const project = parseProjectDocument(json, catalog);
     return Object.freeze({
-      profileSession: createInitialProfileSessionState(),
+      canonicalJson: encodeProjectDocument(project),
+      preparedProject: prepareProject(project),
+    });
+  };
+  const recoveryJson = (() => {
+    if (recovery === undefined) return Object.freeze({ status: 'none' as const });
+    try {
+      const json = recovery.read();
+      return json === null
+        ? Object.freeze({ status: 'none' as const })
+        : Object.freeze({ status: 'available' as const, json });
+    } catch (error) {
+      return Object.freeze({ status: 'failure' as const, error });
+    }
+  })();
+  const profileFileError = profileRestore.status === 'failure' ? profileRestore.message : null;
+  const restored = profileRestore.status === 'loaded' ? profileRestore.loaded : undefined;
+  const preparedDisk = (() => {
+    if (restored === undefined) return Object.freeze({ status: 'none' as const });
+    try {
+      return Object.freeze({
+        status: 'prepared' as const,
+        file: restored.file,
+        ...prepareJson(restored.json),
+      });
+    } catch (error) {
+      return Object.freeze({ status: 'failure' as const, error });
+    }
+  })();
+
+  if (preparedDisk.status === 'prepared') {
+    const fileName = preparedDisk.file.fileName;
+    const baseline = preparedDisk.canonicalJson;
+    if (recoveryJson.status === 'none') {
+      return Object.freeze({
+        activeProfileFile: preparedDisk.file,
+        clearActiveProfileFile: false,
+        preparedProject: preparedDisk.preparedProject,
+        profileSession: createInitialProfileSessionState({
+          explicitBaselineJson: baseline,
+          fileName,
+        }),
+      });
+    }
+    if (recoveryJson.status === 'failure') {
+      return Object.freeze({
+        activeProfileFile: preparedDisk.file,
+        clearActiveProfileFile: false,
+        profileSession: createInitialProfileSessionState({
+          explicitBaselineJson: baseline,
+          fileName,
+          recoveryStatus: 'blocked',
+          recoveryError: `Autosave recovery failed: ${errorDetail(recoveryJson.error)}`,
+        }),
+      });
+    }
+    try {
+      const recovered = prepareJson(recoveryJson.json);
+      const equivalent = recovered.canonicalJson === baseline;
+      return Object.freeze({
+        activeProfileFile: preparedDisk.file,
+        clearActiveProfileFile: false,
+        preparedProject: equivalent ? preparedDisk.preparedProject : recovered.preparedProject,
+        profileSession: createInitialProfileSessionState({
+          explicitBaselineJson: baseline,
+          fileName,
+          recoveryStatus: equivalent ? 'none' : 'recovered',
+        }),
+      });
+    } catch (error) {
+      return Object.freeze({
+        activeProfileFile: preparedDisk.file,
+        clearActiveProfileFile: false,
+        profileSession: createInitialProfileSessionState({
+          explicitBaselineJson: baseline,
+          fileName,
+          recoveryStatus: 'blocked',
+          recoveryError: `Autosave recovery failed: ${errorDetail(error)}`,
+        }),
+      });
+    }
+  }
+
+  const invalidRestoredProfileError =
+    preparedDisk.status === 'failure'
+      ? `Active profile recovery failed: ${errorDetail(preparedDisk.error)}`
+      : profileFileError;
+  const clearActiveProfileFile = preparedDisk.status === 'failure';
+  if (recoveryJson.status === 'none') {
+    return Object.freeze({
+      clearActiveProfileFile,
+      profileSession: createInitialProfileSessionState({
+        profileFileError: invalidRestoredProfileError,
+      }),
+    });
+  }
+  if (recoveryJson.status === 'failure') {
+    return Object.freeze({
+      clearActiveProfileFile,
+      profileSession: createInitialProfileSessionState({
+        profileFileError: invalidRestoredProfileError,
+        recoveryStatus: 'blocked',
+        recoveryError: `Autosave recovery failed: ${errorDetail(recoveryJson.error)}`,
+      }),
     });
   }
   try {
-    const json = recovery.read();
-    if (json === null) {
-      return Object.freeze({
-        profileSession: createInitialProfileSessionState(),
-      });
-    }
-    const project = parseProjectDocument(json, catalog);
+    const recovered = prepareJson(recoveryJson.json);
     return Object.freeze({
-      preparedProject: prepareProject(project),
-      profileSession: createInitialProfileSessionState({ recoveryStatus: 'recovered' }),
+      clearActiveProfileFile,
+      preparedProject: recovered.preparedProject,
+      profileSession: createInitialProfileSessionState({
+        profileFileError: invalidRestoredProfileError,
+        recoveryStatus: 'recovered',
+      }),
     });
   } catch (error) {
     return Object.freeze({
+      clearActiveProfileFile,
       profileSession: createInitialProfileSessionState({
+        profileFileError: invalidRestoredProfileError,
         recoveryStatus: 'blocked',
         recoveryError: `Autosave recovery failed: ${errorDetail(error)}`,
       }),

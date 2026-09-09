@@ -12,9 +12,10 @@ import {
   type AutosaveScheduler,
 } from './autosaveRecovery';
 import { createApplication } from '../composition/createApplication';
+import { createInitialProject } from '../composition/projectBootstrap';
 import { settingsSelected } from '../state/editorSessionSlice';
 import type { ProfileFileAdapter, ProfileFileReference } from './profileFile';
-import { profileSaveSucceeded } from '../state/profileSessionSlice';
+import { newProjectCreated, profileSaveSucceeded } from '../state/profileSessionSlice';
 import {
   authoredProjectCommandDispatched,
   authoredProjectUndoRequested,
@@ -38,7 +39,21 @@ interface RecoveryFixture extends AutosaveRecoveryAdapter {
 }
 
 function profileReference(fileName: string): ProfileFileReference {
-  return { fileName, write: () => Promise.resolve() };
+  return {
+    activate: () => Promise.resolve(),
+    fileName,
+    write: () => Promise.resolve(),
+  };
+}
+
+function profileAdapter(
+  overrides: Pick<ProfileFileAdapter, 'load' | 'saveAs'>,
+): ProfileFileAdapter {
+  return {
+    clearActive: () => Promise.resolve(),
+    restoreActive: () => Promise.resolve({ status: 'none' }),
+    ...overrides,
+  };
 }
 
 function createRecoveryFixture(raw: string | null = null): RecoveryFixture {
@@ -119,7 +134,7 @@ function createSchedulerFixture(): SchedulerFixture {
 
 function configureF(application: ReturnType<typeof createApplication>): void {
   if (selectPresentProject(application.store.getState()) === undefined) {
-    application.projectOperations.createNew('Underworld');
+    application.store.dispatch(newProjectCreated(createInitialProject(catalog, 'Underworld')));
   }
   application.store.dispatch(
     authoredProjectCommandDispatched({
@@ -149,10 +164,10 @@ function setFearRank(application: ReturnType<typeof createApplication>, rank: nu
 
 describe('profile status', () => {
   it('derives clean and dirty from the normalized explicit baseline, including undo-to-clean', async () => {
-    const profileFile: ProfileFileAdapter = {
+    const profileFile = profileAdapter({
       saveAs: (fileName) => Promise.resolve(profileReference(fileName)),
       load: () => Promise.resolve(null),
-    };
+    });
     const application = createApplication({ profileFile });
 
     expect(selectProfileStatus(application.store.getState())).toBe('Unsaved');
@@ -165,8 +180,144 @@ describe('profile status', () => {
     application.store.dispatch(authoredProjectUndoRequested());
     expect(selectProfileStatus(application.store.getState())).toBe('Clean');
 
-    application.projectOperations.createNew('Surface');
+    await application.projectOperations.createNew('Surface');
     expect(selectProfileStatus(application.store.getState())).toBe('Unsaved');
+  });
+});
+
+describe('desktop active-profile startup', () => {
+  const underworld = createProjectDocument(catalog, {
+    projectId: 'remembered-underworld',
+    routeKey: 'Underworld',
+    configuredBiomeCount: 1,
+  });
+  const surface = createProjectDocument(catalog, {
+    projectId: 'newer-surface-recovery',
+    routeKey: 'Surface',
+    configuredBiomeCount: 1,
+  });
+
+  it('opens a remembered file clean when no autosave exists', () => {
+    const file = profileReference('underworld.runplanner.json');
+    const startup = restoreStartupProject(catalog, undefined, (project) => project, {
+      status: 'loaded',
+      loaded: { file, json: encodeProjectDocument(underworld) },
+    });
+
+    expect(startup).toMatchObject({
+      activeProfileFile: file,
+      clearActiveProfileFile: false,
+      preparedProject: underworld,
+      profileSession: {
+        fileName: 'underworld.runplanner.json',
+        recoveryStatus: 'none',
+      },
+    });
+    expect(startup.profileSession.explicitBaselineJson).toBe(encodeProjectDocument(underworld));
+  });
+
+  it('treats canonically equivalent autosave formatting as clean', () => {
+    const canonical = encodeProjectDocument(underworld);
+    const recovery = createRecoveryFixture(JSON.stringify(JSON.parse(canonical), null, 2));
+    const startup = restoreStartupProject(catalog, recovery, (project) => project, {
+      status: 'loaded',
+      loaded: {
+        file: profileReference('underworld.runplanner.json'),
+        json: canonical,
+      },
+    });
+
+    expect(startup.preparedProject).toEqual(underworld);
+    expect(startup.profileSession.recoveryStatus).toBe('none');
+  });
+
+  it('restores newer autosave work while retaining the disk baseline and Save target', async () => {
+    const writes: string[] = [];
+    const file: ProfileFileReference = {
+      activate: () => Promise.resolve(),
+      fileName: 'underworld.runplanner.json',
+      write: (json) => {
+        writes.push(json);
+        return Promise.resolve();
+      },
+    };
+    const application = createApplication({
+      autosaveRecovery: createRecoveryFixture(encodeProjectDocument(surface)),
+      autosaveScheduler: createSchedulerFixture(),
+      profileFile: profileAdapter({
+        saveAs: () => Promise.reject(new Error('Save must retain the remembered target')),
+        load: () => Promise.resolve(null),
+      }),
+      profileFileRestore: {
+        status: 'loaded',
+        loaded: { file, json: encodeProjectDocument(underworld) },
+      },
+    });
+
+    expect(presentProject(application)).toEqual(surface);
+    expect(selectProfileSession(application.store.getState())).toMatchObject({
+      explicitBaselineJson: encodeProjectDocument(underworld),
+      fileName: 'underworld.runplanner.json',
+      recoveryStatus: 'recovered',
+    });
+    await expect(application.projectOperations.saveProfile()).resolves.toMatchObject({
+      status: 'success',
+    });
+    expect(writes).toEqual([encodeProjectDocument(surface)]);
+  });
+
+  it('recovers autosave anonymously and clears an invalid remembered association', async () => {
+    let clearCount = 0;
+    const application = createApplication({
+      autosaveRecovery: createRecoveryFixture(encodeProjectDocument(surface)),
+      autosaveScheduler: createSchedulerFixture(),
+      profileFile: {
+        ...profileAdapter({
+          saveAs: (fileName) => Promise.resolve(profileReference(fileName)),
+          load: () => Promise.resolve(null),
+        }),
+        clearActive: () => {
+          clearCount += 1;
+          return Promise.resolve();
+        },
+      },
+      profileFileRestore: {
+        status: 'loaded',
+        loaded: { file: profileReference('broken.runplanner.json'), json: '{not json' },
+      },
+    });
+
+    await application.startupReady;
+    expect(clearCount).toBe(1);
+    expect(presentProject(application)).toEqual(surface);
+    expect(selectProfileSession(application.store.getState())).toMatchObject({
+      explicitBaselineJson: null,
+      fileName: null,
+      profileFileError: expect.stringContaining('Active profile recovery failed'),
+      recoveryStatus: 'recovered',
+    });
+  });
+
+  it('blocks corrupt autosave while retaining the valid remembered target', () => {
+    const file = profileReference('underworld.runplanner.json');
+    const startup = restoreStartupProject(
+      catalog,
+      createRecoveryFixture('{bad autosave'),
+      (project) => project,
+      {
+        status: 'loaded',
+        loaded: { file, json: encodeProjectDocument(underworld) },
+      },
+    );
+
+    expect(startup.activeProfileFile).toBe(file);
+    expect(startup.clearActiveProfileFile).toBe(false);
+    expect(startup.preparedProject).toBeUndefined();
+    expect(startup.profileSession).toMatchObject({
+      explicitBaselineJson: encodeProjectDocument(underworld),
+      fileName: 'underworld.runplanner.json',
+      recoveryStatus: 'blocked',
+    });
   });
 });
 
@@ -215,7 +366,7 @@ describe('autosave recovery lifecycle', () => {
     expect(recovery.clearCount).toBe(0);
   });
 
-  it('debounces only effective authored replacements and never changes the explicit baseline', () => {
+  it('debounces only effective authored replacements and never changes the explicit baseline', async () => {
     const recovery = createRecoveryFixture();
     const scheduler = createSchedulerFixture();
     const application = createApplication({
@@ -223,7 +374,7 @@ describe('autosave recovery lifecycle', () => {
       autosaveRecovery: recovery,
       autosaveScheduler: scheduler,
     });
-    application.projectOperations.createNew('Underworld');
+    await application.projectOperations.createNew('Underworld');
     // Route selection is itself an autosave-observable publication. Flush it
     // before establishing the explicit profile baseline for this test.
     scheduler.flush();
@@ -288,7 +439,7 @@ describe('autosave recovery lifecycle', () => {
     expect(selectExplicitProfileBaselineJson(application.store.getState())).toBeNull();
   });
 
-  it('preserves corrupt recovery and suspends writes until explicit discard', () => {
+  it('preserves corrupt recovery and suspends writes until explicit discard', async () => {
     const recovery = createRecoveryFixture('{not json');
     const scheduler = createSchedulerFixture();
     const application = createApplication({
@@ -302,7 +453,7 @@ describe('autosave recovery lifecycle', () => {
     });
     expect(selectProjectEvaluation(application.store.getState())).toBeUndefined();
     configureF(application);
-    application.projectOperations.createNew('Underworld');
+    await application.projectOperations.createNew('Underworld');
     expect(recovery.raw).toBe('{not json');
     expect(recovery.writes).toEqual([]);
     expect(scheduler.delays).toEqual([]);
@@ -388,14 +539,14 @@ describe('autosave recovery lifecycle', () => {
     const application = createApplication({
       autosaveRecovery: recovery,
       autosaveScheduler: scheduler,
-      profileFile: {
+      profileFile: profileAdapter({
         saveAs: (fileName) => Promise.resolve(profileReference(fileName)),
         load: () =>
           Promise.resolve({
             file: profileReference('valid-profile.runplanner.json'),
             json: validJson,
           }),
-      },
+      }),
     });
 
     await expect(application.projectOperations.loadProfile()).resolves.toMatchObject({
@@ -416,14 +567,14 @@ describe('autosave recovery lifecycle', () => {
     const application = createApplication({
       autosaveRecovery: recovery,
       autosaveScheduler: createSchedulerFixture(),
-      profileFile: {
+      profileFile: profileAdapter({
         saveAs: (fileName) => Promise.resolve(profileReference(fileName)),
         load: () =>
           Promise.resolve({
             file: profileReference('valid-profile.runplanner.json'),
             json: validJson,
           }),
-      },
+      }),
     });
     const state = application.store.getState();
 

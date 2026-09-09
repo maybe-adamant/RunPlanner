@@ -7,9 +7,13 @@ import {
 
 function createEnvironment(overrides: Partial<TauriProfileFileEnvironment> = {}) {
   return {
+    activate: vi.fn(() => Promise.resolve()),
+    clearActive: vi.fn(() => Promise.resolve()),
     open: vi.fn(() => Promise.resolve<string | null>(null)),
     readTextFile: vi.fn(() => Promise.resolve('{}')),
+    restoreActive: vi.fn(() => Promise.resolve(null)),
     save: vi.fn(() => Promise.resolve<string | null>(null)),
+    writeActive: vi.fn(() => Promise.resolve()),
     writeTextFile: vi.fn(() => Promise.resolve()),
     ...overrides,
   };
@@ -24,9 +28,11 @@ describe('Tauri profile-file adapter', () => {
 
     const file = await adapter.saveAs('run-plan.runplanner.json', '{"version":1}');
     expect(file?.fileName).toBe('surface.runplanner.json');
+    await file?.activate();
     await file?.write('{"version":2}');
 
     expect(environment.save).toHaveBeenCalledOnce();
+    expect(environment.activate).toHaveBeenCalledWith('C:\\Plans\\surface.runplanner.json');
     expect(environment.writeTextFile).toHaveBeenNthCalledWith(
       1,
       'C:\\Plans\\surface.runplanner.json',
@@ -72,5 +78,44 @@ describe('Tauri profile-file adapter', () => {
 
     await expect(adapter.load()).resolves.toBeNull();
     expect(environment.readTextFile).not.toHaveBeenCalled();
+  });
+
+  it('restores the host-owned active target and writes through the native session', async () => {
+    const environment = createEnvironment({
+      restoreActive: vi.fn(() =>
+        Promise.resolve({
+          fileName: 'remembered.runplanner.json',
+          json: '{"route":"Surface"}',
+        }),
+      ),
+    });
+    const adapter = createTauriProfileFileAdapter(environment);
+
+    const restored = await adapter.restoreActive();
+    expect(restored).toMatchObject({
+      status: 'loaded',
+      loaded: {
+        file: { fileName: 'remembered.runplanner.json' },
+        json: '{"route":"Surface"}',
+      },
+    });
+    if (restored.status !== 'loaded') throw new Error('expected restored profile');
+    await restored.loaded.file.write('{"route":"updated"}');
+
+    expect(environment.writeActive).toHaveBeenCalledWith('{"route":"updated"}');
+    expect(environment.writeTextFile).not.toHaveBeenCalled();
+  });
+
+  it('reports native restore failure without inventing an active target', async () => {
+    const adapter = createTauriProfileFileAdapter(
+      createEnvironment({
+        restoreActive: vi.fn(() => Promise.reject(new Error('stale path'))),
+      }),
+    );
+
+    await expect(adapter.restoreActive()).resolves.toEqual({
+      status: 'failure',
+      message: 'Could not restore the active profile: stale path',
+    });
   });
 });

@@ -8,6 +8,7 @@ export interface ProfileSessionState {
   readonly recoveryStatus: 'none' | 'recovered' | 'blocked';
   readonly recoveryError: string | null;
   readonly autosaveError: string | null;
+  readonly profileFileError: string | null;
 }
 
 export const newProjectCreated = createAction<ProjectDocument>('profile/newProjectCreated');
@@ -25,6 +26,9 @@ export const autosaveWriteSucceeded = createAction('profile/autosaveWriteSucceed
 export const autosaveWriteFailed = createAction<{ readonly message: string }>(
   'profile/autosaveWriteFailed',
 );
+export const profileFileErrorReported = createAction<{ readonly message: string }>(
+  'profile/profileFileErrorReported',
+);
 export const recoveryDiscarded = createAction('profile/recoveryDiscarded');
 
 export function createInitialProfileSessionState(
@@ -36,6 +40,7 @@ export function createInitialProfileSessionState(
     recoveryStatus: 'none',
     recoveryError: null,
     autosaveError: null,
+    profileFileError: null,
     ...overrides,
   });
 }
@@ -49,12 +54,14 @@ export function createProfileSessionReducer(
         ...state,
         explicitBaselineJson: null,
         fileName: null,
+        profileFileError: null,
         recoveryStatus: state.recoveryStatus === 'blocked' ? 'blocked' : 'none',
       }))
       .addCase(profileLoadSucceeded, (state, action) => ({
         ...state,
         explicitBaselineJson: action.payload.baselineJson,
         fileName: action.payload.fileName,
+        profileFileError: null,
         recoveryStatus: 'none',
         recoveryError: null,
       }))
@@ -62,12 +69,17 @@ export function createProfileSessionReducer(
         ...state,
         explicitBaselineJson: action.payload.baselineJson,
         fileName: action.payload.fileName,
+        profileFileError: null,
         recoveryStatus: state.recoveryStatus === 'recovered' ? 'none' : state.recoveryStatus,
       }))
       .addCase(autosaveWriteSucceeded, (state) => ({ ...state, autosaveError: null }))
       .addCase(autosaveWriteFailed, (state, action) => ({
         ...state,
         autosaveError: action.payload.message,
+      }))
+      .addCase(profileFileErrorReported, (state, action) => ({
+        ...state,
+        profileFileError: action.payload.message,
       }))
       .addCase(recoveryDiscarded, (state) => ({
         ...state,

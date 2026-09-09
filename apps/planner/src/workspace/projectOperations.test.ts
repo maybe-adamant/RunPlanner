@@ -16,6 +16,7 @@ import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoin
 import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '../composition/createApplication';
+import { createInitialProject } from '../composition/projectBootstrap';
 import type { GamePlanPublisher } from '../persistence/gamePlanPublisher';
 import type { AutosaveRecoveryAdapter, AutosaveScheduler } from '../persistence/autosaveRecovery';
 import {
@@ -28,6 +29,7 @@ import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
 } from '../state/projectWorkspaceSlice';
+import { newProjectCreated } from '../state/profileSessionSlice';
 import {
   selectExplicitProfileBaselineJson,
   selectPresentProject,
@@ -44,6 +46,16 @@ interface ProfileFixture {
   setSaveCancelled(cancelled: boolean): void;
 }
 
+function profileAdapter(
+  overrides: Pick<ProfileFileAdapter, 'load' | 'saveAs'>,
+): ProfileFileAdapter {
+  return {
+    clearActive: () => Promise.resolve(),
+    restoreActive: () => Promise.resolve({ status: 'none' }),
+    ...overrides,
+  };
+}
+
 function createProfileFixture(): ProfileFixture {
   let loadJson: string | null = null;
   let loadFileName = 'loaded-route.runplanner.json';
@@ -51,6 +63,7 @@ function createProfileFixture(): ProfileFixture {
   let saveAsCount = 0;
   const saves: { fileName: string; json: string }[] = [];
   const referenceFor = (fileName: string): ProfileFileReference => ({
+    activate: () => Promise.resolve(),
     fileName,
     write: (json) => {
       saves.push({ fileName, json });
@@ -59,6 +72,7 @@ function createProfileFixture(): ProfileFixture {
   });
   return {
     adapter: {
+      clearActive: () => Promise.resolve(),
       saveAs: (fileName, json) => {
         saveAsCount += 1;
         if (saveCancelled) return Promise.resolve(null);
@@ -69,6 +83,7 @@ function createProfileFixture(): ProfileFixture {
         Promise.resolve(
           loadJson === null ? null : { file: referenceFor(loadFileName), json: loadJson },
         ),
+      restoreActive: () => Promise.resolve({ status: 'none' }),
     },
     saves,
     saveAsCount: () => saveAsCount,
@@ -83,7 +98,7 @@ function createProfileFixture(): ProfileFixture {
 }
 
 function configureF(application: ReturnType<typeof createApplication>): void {
-  application.projectOperations.createNew('Underworld');
+  application.store.dispatch(newProjectCreated(createInitialProject(catalog, 'Underworld')));
   application.store.dispatch(
     authoredProjectCommandDispatched({
       kind: 'ConfigureRoutePrefix',
@@ -217,7 +232,7 @@ describe('project profile operations', () => {
         },
       },
     });
-    application.projectOperations.createNew('Underworld');
+    await application.projectOperations.createNew('Underworld');
 
     await expect(application.projectOperations.publishGame('profile-a', 1)).resolves.toMatchObject({
       operation: 'publishGame',
@@ -227,12 +242,22 @@ describe('project profile operations', () => {
   });
 
   it('reuses one host file reference until New clears it', async () => {
+    let activationCount = 0;
+    let clearCount = 0;
     let saveAsCount = 0;
     let writeCount = 0;
     const profileFile: ProfileFileAdapter = {
+      clearActive: () => {
+        clearCount += 1;
+        return Promise.resolve();
+      },
       saveAs: (fileName) => {
         saveAsCount += 1;
         return Promise.resolve({
+          activate: () => {
+            activationCount += 1;
+            return Promise.resolve();
+          },
           fileName,
           write: () => {
             writeCount += 1;
@@ -241,17 +266,28 @@ describe('project profile operations', () => {
         });
       },
       load: () => Promise.resolve(null),
+      restoreActive: () => Promise.resolve({ status: 'none' }),
     };
     const application = createApplication({ profileFile });
 
     configureF(application);
     await application.projectOperations.saveProfile();
     await application.projectOperations.saveProfile();
-    expect({ saveAsCount, writeCount }).toEqual({ saveAsCount: 1, writeCount: 1 });
+    expect({ activationCount, clearCount, saveAsCount, writeCount }).toEqual({
+      activationCount: 1,
+      clearCount: 0,
+      saveAsCount: 1,
+      writeCount: 1,
+    });
 
-    application.projectOperations.createNew('Surface');
+    await application.projectOperations.createNew('Surface');
     await application.projectOperations.saveProfile();
-    expect({ saveAsCount, writeCount }).toEqual({ saveAsCount: 2, writeCount: 1 });
+    expect({ activationCount, clearCount, saveAsCount, writeCount }).toEqual({
+      activationCount: 2,
+      clearCount: 1,
+      saveAsCount: 2,
+      writeCount: 1,
+    });
   });
 
   it('saves and loads only the normalized project with a fresh evaluation, history, and baseline', async () => {
@@ -277,7 +313,9 @@ describe('project profile operations', () => {
       'route',
     ]);
 
-    expect(application.projectOperations.createNew('Underworld').status).toBe('success');
+    await expect(application.projectOperations.createNew('Underworld')).resolves.toMatchObject({
+      status: 'success',
+    });
     expect(presentProject(application)).not.toEqual(savedProject);
     expect(selectExplicitProfileBaselineJson(application.store.getState())).toBeNull();
     expect(selectProfileSession(application.store.getState()).fileName).toBeNull();
@@ -464,7 +502,7 @@ describe('project profile operations', () => {
   it('establishes the exact pending-save snapshot as baseline after a later edit', async () => {
     let resolveSave: ((file: ProfileFileReference) => void) | undefined;
     const saves: { fileName: string; json: string }[] = [];
-    const profileFile: ProfileFileAdapter = {
+    const profileFile = profileAdapter({
       saveAs: (fileName, json) => {
         saves.push({ fileName, json });
         return new Promise((resolve) => {
@@ -472,7 +510,7 @@ describe('project profile operations', () => {
         });
       },
       load: () => Promise.resolve(null),
-    };
+    });
     const application = createApplication({ profileFile });
     configureF(application);
     const pendingSnapshot = presentProject(application);
@@ -487,7 +525,11 @@ describe('project profile operations', () => {
         rank: 1,
       }),
     );
-    resolveSave?.({ fileName: DEFAULT_PROFILE_FILE_NAME, write: () => Promise.resolve() });
+    resolveSave?.({
+      activate: () => Promise.resolve(),
+      fileName: DEFAULT_PROFILE_FILE_NAME,
+      write: () => Promise.resolve(),
+    });
     await expect(saving).resolves.toMatchObject({ status: 'success' });
 
     expect(saves).toEqual([{ fileName: 'run-plan.runplanner.json', json: pendingJson }]);
@@ -523,12 +565,12 @@ describe('project profile operations', () => {
     expect(cancelled.store.getState()).toBe(cancelledState);
 
     const failing = createApplication({
-      profileFile: {
+      profileFile: profileAdapter({
         saveAs: () => Promise.reject(new Error('save denied')),
         load: () => Promise.reject(new Error('load denied')),
-      },
+      }),
     });
-    failing.projectOperations.createNew('Underworld');
+    await failing.projectOperations.createNew('Underworld');
     const failingState = failing.store.getState();
     await expect(failing.projectOperations.saveProfile()).resolves.toEqual({
       operation: 'saveProfile',
@@ -618,6 +660,7 @@ describe('project profile operations', () => {
     let recoveryRaw: string | null = '{bad recovery';
     let clearCount = 0;
     let establishedTargetWrites = 0;
+    let rejectedTargetActivations = 0;
     let rejectedTargetWrites = 0;
     const recovery: AutosaveRecoveryAdapter = {
       read: () => recoveryRaw,
@@ -633,9 +676,10 @@ describe('project profile operations', () => {
       autosaveRecovery: recovery,
       autosaveScheduler: { schedule: () => () => undefined },
     });
-    application.projectOperations.createNew('Underworld');
+    await application.projectOperations.createNew('Underworld');
     const project = presentProject(application);
     const establishedFile: ProfileFileReference = {
+      activate: () => Promise.resolve(),
       fileName: 'current.runplanner.json',
       write: () => {
         establishedTargetWrites += 1;
@@ -643,6 +687,10 @@ describe('project profile operations', () => {
       },
     };
     const rejectedFile: ProfileFileReference = {
+      activate: () => {
+        rejectedTargetActivations += 1;
+        return Promise.resolve();
+      },
       fileName: 'rejected.runplanner.json',
       write: () => {
         rejectedTargetWrites += 1;
@@ -655,10 +703,10 @@ describe('project profile operations', () => {
       prepareProjectWorkspace: () => {
         throw new Error('workspace projection failed');
       },
-      profileFile: {
+      profileFile: profileAdapter({
         saveAs: () => Promise.resolve(establishedFile),
         load: () => Promise.resolve({ file: rejectedFile, json: encodeProjectDocument(project) }),
-      },
+      }),
       store: application.store,
     });
 
@@ -675,7 +723,71 @@ describe('project profile operations', () => {
     expect(clearCount).toBe(0);
     await expect(operations.saveProfile()).resolves.toMatchObject({ status: 'success' });
     expect(establishedTargetWrites).toBe(1);
+    expect(rejectedTargetActivations).toBe(0);
     expect(rejectedTargetWrites).toBe(0);
+  });
+
+  it('restores blocked autosave and retains the prior target when native Load activation fails', async () => {
+    let recoveryRaw: string | null = '{bad recovery';
+    let priorTargetWrites = 0;
+    const recovery: AutosaveRecoveryAdapter = {
+      clear: () => {
+        recoveryRaw = null;
+      },
+      read: () => recoveryRaw,
+      write: (json) => {
+        recoveryRaw = json;
+      },
+    };
+    const application = createApplication({
+      autosaveRecovery: recovery,
+      autosaveScheduler: { schedule: () => () => undefined },
+    });
+    application.store.dispatch(
+      newProjectCreated(createInitialProject(application.catalog, 'Underworld')),
+    );
+    const project = presentProject(application);
+    const workspace = application.store.getState().projectWorkspace;
+    if (workspace.kind !== 'openProject') throw new Error('expected open workspace');
+    const priorFile: ProfileFileReference = {
+      activate: () => Promise.resolve(),
+      fileName: 'prior.runplanner.json',
+      write: () => {
+        priorTargetWrites += 1;
+        return Promise.resolve();
+      },
+    };
+    const rejectedFile: ProfileFileReference = {
+      activate: () => Promise.reject(new Error('activation denied')),
+      fileName: 'rejected.runplanner.json',
+      write: () => Promise.resolve(),
+    };
+    const operations = createProjectOperations({
+      activeProfileFile: priorFile,
+      autosaveRecovery: recovery,
+      catalog,
+      prepareProjectWorkspace: (loadedProject) => ({
+        assembly: workspace.assembly,
+        project: loadedProject,
+      }),
+      profileFile: profileAdapter({
+        saveAs: () => Promise.resolve(null),
+        load: () => Promise.resolve({ file: rejectedFile, json: encodeProjectDocument(project) }),
+      }),
+      store: application.store,
+    });
+    const state = application.store.getState();
+
+    await expect(operations.loadProfile()).resolves.toEqual({
+      operation: 'loadProfile',
+      status: 'failure',
+      message: 'Load Profile failed: activation denied',
+    });
+    expect(application.store.getState()).toBe(state);
+    expect(recoveryRaw).toBe('{bad recovery');
+
+    await expect(operations.saveProfile()).resolves.toMatchObject({ status: 'success' });
+    expect(priorTargetWrites).toBe(1);
   });
 
   it('rejects schema-8 and stale-catalog profiles without replacing the current workspace', async () => {

@@ -25,10 +25,12 @@ import { allocateOccurrenceId, type OccurrenceIdFactory } from '../workspace/occ
 import {
   createUnavailableProfileFileAdapter,
   type ProfileFileAdapter,
+  type ProfileFileRestoreResult,
 } from '../persistence/profileFile';
 import type { GamePlanPublisher } from '../persistence/gamePlanPublisher';
 import { createPlannerStore } from '../state/store';
 import type { PreparedProjectWorkspace } from '../state/projectWorkspaceSlice';
+import { profileFileErrorReported } from '../state/profileSessionSlice';
 
 export interface CreateApplicationOptions {
   readonly allocateOccurrenceId?: OccurrenceIdFactory;
@@ -36,6 +38,7 @@ export interface CreateApplicationOptions {
   readonly autosaveRecovery?: AutosaveRecoveryAdapter;
   readonly autosaveScheduler?: AutosaveScheduler;
   readonly profileFile?: ProfileFileAdapter;
+  readonly profileFileRestore?: ProfileFileRestoreResult;
   readonly gamePlanPublisher?: GamePlanPublisher;
   readonly observeEvaluationWork?: (event: ApplicationEvaluationEvent) => void;
 }
@@ -94,7 +97,13 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     }
     return Object.freeze({ assembly, project });
   };
-  const startup = restoreStartupProject(catalog, options.autosaveRecovery, prepareProjectWorkspace);
+  const profileFile = options.profileFile ?? createUnavailableProfileFileAdapter();
+  const startup = restoreStartupProject(
+    catalog,
+    options.autosaveRecovery,
+    prepareProjectWorkspace,
+    options.profileFileRestore,
+  );
   const store = createPlannerStore({
     catalog,
     assembleProjectEvaluation,
@@ -106,11 +115,14 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     structuredWorkspace,
   });
   const projectOperations = createProjectOperations({
+    ...(startup.activeProfileFile === undefined
+      ? {}
+      : { activeProfileFile: startup.activeProfileFile }),
     ...(options.autosaveRecovery === undefined
       ? {}
       : { autosaveRecovery: options.autosaveRecovery }),
     catalog,
-    profileFile: options.profileFile ?? createUnavailableProfileFileAdapter(),
+    profileFile,
     prepareProjectWorkspace,
     ...(options.gamePlanPublisher === undefined
       ? {}
@@ -126,6 +138,16 @@ export function createApplication(options: CreateApplicationOptions = {}) {
           scheduler: options.autosaveScheduler,
           store,
         });
+  const startupReady = startup.clearActiveProfileFile
+    ? profileFile.clearActive().catch((error: unknown) => {
+        const existing = store.getState().profileSession.profileFileError;
+        store.dispatch(
+          profileFileErrorReported({
+            message: `${existing === null ? '' : `${existing} `}Could not clear the unsafe active profile: ${error instanceof Error ? error.message : String(error)}`,
+          }),
+        );
+      })
+    : Promise.resolve();
   const selectStructuredWorkspace = (state: ReturnType<typeof store.getState>) =>
     state.projectWorkspace.kind === 'openProject'
       ? structuredWorkspace.project(state.projectWorkspace.assembly)
@@ -139,6 +161,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     store,
     selectStructuredWorkspace,
     structuredWorkspace,
+    startupReady,
     dispose(): void {
       editorSessionReconciliation.dispose();
       autosaveCoordinator?.dispose();

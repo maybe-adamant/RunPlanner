@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::env;
-use std::fs::{self, OpenOptions};
-use std::io::Write;
+use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
+
+use crate::atomic_file;
 
 const GAME_ID: &str = "HadesII";
 const R2MODMAN_DIRECTORY: &str = "r2modmanPlus-local";
@@ -17,7 +17,6 @@ const EXECUTOR_NAME: &str = "Plan_Executor";
 const EXECUTOR_VERSION: &str = "0.0.1";
 const MAX_PLAN_BYTES: usize = 1_048_576;
 const MAX_MANIFEST_BYTES: u64 = 16_384;
-static TEMP_FILE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 const PLAN_SLOT_FILES: [&str; 6] = [
     "slot-1.runplanner.json",
@@ -247,41 +246,9 @@ fn safe_destination(profile: &CompatibleProfile, slot_number: u8) -> Result<Path
     Ok(destination)
 }
 
-fn temporary_path(destination: &Path) -> Result<PathBuf, String> {
-    let parent = destination
-        .parent()
-        .ok_or_else(|| "plan slot has no parent directory".to_owned())?;
-    let sequence = TEMP_FILE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
-    Ok(parent.join(format!(
-        ".{}.{}.{}.tmp",
-        destination
-            .file_name()
-            .and_then(|name| name.to_str())
-            .ok_or_else(|| "plan slot has no file name".to_owned())?,
-        std::process::id(),
-        sequence
-    )))
-}
-
 fn atomic_write(profile: &CompatibleProfile, slot_number: u8, bytes: &[u8]) -> Result<(), String> {
     let destination = safe_destination(profile, slot_number)?;
-    let temporary = temporary_path(&destination)?;
-    let result = (|| -> Result<(), String> {
-        let mut file = OpenOptions::new()
-            .create_new(true)
-            .write(true)
-            .open(&temporary)
-            .map_err(|error| format!("could not create temporary plan: {error}"))?;
-        file.write_all(bytes)
-            .map_err(|error| format!("could not write temporary plan: {error}"))?;
-        file.sync_all()
-            .map_err(|error| format!("could not flush temporary plan: {error}"))?;
-        replace_file(&temporary, &destination)
-    })();
-    if result.is_err() {
-        let _ = fs::remove_file(&temporary);
-    }
-    result
+    atomic_file::write(&destination, bytes, "plan slot")
 }
 
 fn bounded_atomic_write(
@@ -293,40 +260,6 @@ fn bounded_atomic_write(
         return Err(format!("game plan exceeds the {MAX_PLAN_BYTES}-byte limit"));
     }
     atomic_write(profile, slot_number, bytes)
-}
-
-#[cfg(target_os = "windows")]
-fn replace_file(temporary: &Path, destination: &Path) -> Result<(), String> {
-    use std::os::windows::ffi::OsStrExt;
-    use windows_sys::Win32::Storage::FileSystem::{
-        MoveFileExW, MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH,
-    };
-    let source: Vec<u16> = temporary.as_os_str().encode_wide().chain(Some(0)).collect();
-    let target: Vec<u16> = destination
-        .as_os_str()
-        .encode_wide()
-        .chain(Some(0))
-        .collect();
-    let moved = unsafe {
-        MoveFileExW(
-            source.as_ptr(),
-            target.as_ptr(),
-            MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
-        )
-    };
-    if moved == 0 {
-        return Err(format!(
-            "could not replace plan slot: {}",
-            std::io::Error::last_os_error()
-        ));
-    }
-    Ok(())
-}
-
-#[cfg(not(target_os = "windows"))]
-fn replace_file(temporary: &Path, destination: &Path) -> Result<(), String> {
-    fs::rename(temporary, destination)
-        .map_err(|error| format!("could not replace plan slot: {error}"))
 }
 
 #[tauri::command]
