@@ -52,6 +52,7 @@ function profileAdapter(
   return {
     clearActive: () => Promise.resolve(),
     restoreActive: () => Promise.resolve({ status: 'none' }),
+    supportsSaveAs: true,
     ...overrides,
   };
 }
@@ -84,6 +85,7 @@ function createProfileFixture(): ProfileFixture {
           loadJson === null ? null : { file: referenceFor(loadFileName), json: loadJson },
         ),
       restoreActive: () => Promise.resolve({ status: 'none' }),
+      supportsSaveAs: true,
     },
     saves,
     saveAsCount: () => saveAsCount,
@@ -267,6 +269,7 @@ describe('project profile operations', () => {
       },
       load: () => Promise.resolve(null),
       restoreActive: () => Promise.resolve({ status: 'none' }),
+      supportsSaveAs: true,
     };
     const application = createApplication({ profileFile });
 
@@ -288,6 +291,211 @@ describe('project profile operations', () => {
       saveAsCount: 2,
       writeCount: 1,
     });
+  });
+
+  it('Save As always chooses a new target and makes later Save write that target', async () => {
+    const saveAsCalls: { fileName: string; json: string }[] = [];
+    const writes: { fileName: string; json: string }[] = [];
+    const activations: string[] = [];
+    let saveAsCount = 0;
+    const referenceFor = (fileName: string): ProfileFileReference => ({
+      activate: () => {
+        activations.push(fileName);
+        return Promise.resolve();
+      },
+      fileName,
+      write: (json) => {
+        writes.push({ fileName, json });
+        return Promise.resolve();
+      },
+    });
+    const profileFile: ProfileFileAdapter = {
+      clearActive: () => Promise.resolve(),
+      load: () => Promise.resolve(null),
+      restoreActive: () => Promise.resolve({ status: 'none' }),
+      saveAs: (suggestedFileName, json) => {
+        const saveAsIndex = saveAsCount++;
+        const fileName =
+          saveAsIndex === 0
+            ? 'route-a.runplanner.json'
+            : saveAsIndex === 1
+              ? 'route-b.runplanner.json'
+              : 'route-c.runplanner.json';
+        saveAsCalls.push({ fileName: suggestedFileName, json });
+        return Promise.resolve(referenceFor(fileName));
+      },
+      supportsSaveAs: true,
+    };
+    const application = createApplication({ profileFile });
+    configureF(application);
+    expect(application.projectOperations.saveAsAvailable).toBe(true);
+
+    await expect(application.projectOperations.saveProfile()).resolves.toMatchObject({
+      status: 'success',
+    });
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceFearVowRank',
+        route: createRouteAddress('Underworld'),
+        vowKey: 'EnemyDamageShrineUpgrade',
+        rank: 1,
+      }),
+    );
+    const saveAsSnapshot = presentProject(application);
+    const saveAsJson = encodeProjectDocument(saveAsSnapshot);
+
+    await expect(application.projectOperations.saveProfileAs()).resolves.toEqual({
+      operation: 'saveProfileAs',
+      status: 'success',
+      message: 'Saved as a new file.',
+    });
+    expect(saveAsCalls).toHaveLength(2);
+    expect(saveAsCalls[1]?.fileName).toBe('route-a.runplanner.json');
+    expect(saveAsCalls[1]?.json).toBe(saveAsJson);
+    expect(activations).toEqual(['route-a.runplanner.json', 'route-b.runplanner.json']);
+    expect(selectProfileSession(application.store.getState()).fileName).toBe(
+      'route-b.runplanner.json',
+    );
+    expect(selectExplicitProfileBaselineJson(application.store.getState())).toBe(saveAsJson);
+
+    await application.projectOperations.saveProfile();
+    expect(writes).toEqual([{ fileName: 'route-b.runplanner.json', json: saveAsJson }]);
+
+    await application.projectOperations.createNew('Surface');
+    await application.projectOperations.saveProfile();
+    expect(saveAsCalls[2]?.fileName).toBe(DEFAULT_PROFILE_FILE_NAME);
+    expect(activations).toEqual([
+      'route-a.runplanner.json',
+      'route-b.runplanner.json',
+      'route-c.runplanner.json',
+    ]);
+  });
+
+  it('preserves the active target and baseline when Save As is cancelled or fails', async () => {
+    let mode: 'success' | 'cancel' | 'writeFailure' | 'activationFailure' = 'success';
+    const writes: { fileName: string; json: string }[] = [];
+    const referenceFor = (fileName: string): ProfileFileReference => ({
+      activate: () =>
+        mode === 'activationFailure'
+          ? Promise.reject(new Error('activation denied'))
+          : Promise.resolve(),
+      fileName,
+      write: (json) => {
+        writes.push({ fileName, json });
+        return Promise.resolve();
+      },
+    });
+    const profileFile: ProfileFileAdapter = {
+      clearActive: () => Promise.resolve(),
+      load: () => Promise.resolve(null),
+      restoreActive: () => Promise.resolve({ status: 'none' }),
+      saveAs: (_suggestedFileName, json) => {
+        if (mode === 'cancel') return Promise.resolve(null);
+        if (mode === 'writeFailure') return Promise.reject(new Error('save denied'));
+        return Promise.resolve(referenceFor(`route-${json.length}.runplanner.json`));
+      },
+      supportsSaveAs: true,
+    };
+    const application = createApplication({ profileFile });
+    configureF(application);
+    await application.projectOperations.saveProfile();
+    const baseline = selectExplicitProfileBaselineJson(application.store.getState());
+    const stateAfterInitialSave = application.store.getState();
+
+    mode = 'cancel';
+    await expect(application.projectOperations.saveProfileAs()).resolves.toEqual({
+      operation: 'saveProfileAs',
+      status: 'cancelled',
+      message: 'Save As cancelled.',
+    });
+    expect(application.store.getState()).toBe(stateAfterInitialSave);
+    expect(selectExplicitProfileBaselineJson(application.store.getState())).toBe(baseline);
+
+    mode = 'writeFailure';
+    await expect(application.projectOperations.saveProfileAs()).resolves.toEqual({
+      operation: 'saveProfileAs',
+      status: 'failure',
+      message: 'Save As failed: save denied',
+    });
+    expect(application.store.getState()).toBe(stateAfterInitialSave);
+    expect(selectExplicitProfileBaselineJson(application.store.getState())).toBe(baseline);
+
+    mode = 'activationFailure';
+    await expect(application.projectOperations.saveProfileAs()).resolves.toEqual({
+      operation: 'saveProfileAs',
+      status: 'failure',
+      message: 'Save As failed: activation denied',
+    });
+    expect(application.store.getState()).toBe(stateAfterInitialSave);
+    expect(selectExplicitProfileBaselineJson(application.store.getState())).toBe(baseline);
+
+    mode = 'success';
+    await application.projectOperations.saveProfile();
+    expect(writes).toHaveLength(1);
+    expect(writes[0]?.json).toBe(baseline);
+  });
+
+  it('binds Save As to its invocation snapshot without marking concurrent edits clean', async () => {
+    let saveAsCount = 0;
+    let resolvePendingSaveAs: ((file: ProfileFileReference) => void) | undefined;
+    const writes: { fileName: string; json: string }[] = [];
+    const referenceFor = (fileName: string): ProfileFileReference => ({
+      activate: () => Promise.resolve(),
+      fileName,
+      write: (json) => {
+        writes.push({ fileName, json });
+        return Promise.resolve();
+      },
+    });
+    const application = createApplication({
+      profileFile: {
+        clearActive: () => Promise.resolve(),
+        load: () => Promise.resolve(null),
+        restoreActive: () => Promise.resolve({ status: 'none' }),
+        saveAs: () => {
+          saveAsCount += 1;
+          if (saveAsCount === 1) return Promise.resolve(referenceFor('route-a.runplanner.json'));
+          return new Promise((resolve) => {
+            resolvePendingSaveAs = resolve;
+          });
+        },
+        supportsSaveAs: true,
+      },
+    });
+    configureF(application);
+    await application.projectOperations.saveProfile();
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceFearVowRank',
+        route: createRouteAddress('Underworld'),
+        vowKey: 'EnemyDamageShrineUpgrade',
+        rank: 1,
+      }),
+    );
+    const invocationJson = encodeProjectDocument(presentProject(application));
+
+    const savingAs = application.projectOperations.saveProfileAs();
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceFearVowRank',
+        route: createRouteAddress('Underworld'),
+        vowKey: 'EnemyDamageShrineUpgrade',
+        rank: 2,
+      }),
+    );
+    const laterJson = encodeProjectDocument(presentProject(application));
+    resolvePendingSaveAs?.(referenceFor('route-b.runplanner.json'));
+    await expect(savingAs).resolves.toMatchObject({ status: 'success' });
+
+    expect(selectExplicitProfileBaselineJson(application.store.getState())).toBe(invocationJson);
+    expect(selectProfileSession(application.store.getState()).fileName).toBe(
+      'route-b.runplanner.json',
+    );
+    expect(laterJson).not.toBe(invocationJson);
+    expect(encodeProjectDocument(presentProject(application))).toBe(laterJson);
+
+    await application.projectOperations.saveProfile();
+    expect(writes).toEqual([{ fileName: 'route-b.runplanner.json', json: laterJson }]);
   });
 
   it('saves and loads only the normalized project with a fresh evaluation, history, and baseline', async () => {
