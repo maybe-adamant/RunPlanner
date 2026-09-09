@@ -263,10 +263,10 @@ is published as an `automatic` execution transaction and is an obligation at
 its native callback window.
 
 Scheduled acquisitions are ordinary acquisition transactions after maturity.
-Scheduled-maturity simulation establishes where the object exists; the existing acquisition
-stack owns Mystery Boon resolution, trait offers, Pom targeting, and other
-payload behavior. The executor must not re-derive which source created the
-object.
+Scheduled-maturity simulation establishes where the object exists; the
+existing acquisition stack owns Mystery Boon resolution, trait offers, Pom
+targeting, and other payload behavior. The executor must not re-derive which
+source created the object.
 
 At room exit, any published obligation which was not completed is a mismatch.
 The executor also compares the relevant conformance delta. This lets native
@@ -275,19 +275,19 @@ acquisition payload.
 
 ## End-to-end assessment
 
-| Family                         | Trigger and simulator state                                                                                                                                    | Candidate and authored contract                                                                                                                       | Timeline and execution contract                                                                                                                  | Assessment                  |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------- |
-| Steady Growth                  | `CheckChamberTraits`; rarity-scaled progress; target mutation applied at `encounterEndEffectsApplied`                                                          | Exact eligible target intersection and interval; missing/unavailable findings retain the reached phase                                                | Fixed `automatic` transaction; executor scopes `AddRarityToTraits` to the declared source and target; room exit catches a missing callback       | Substantively closed        |
-| Transcendent Embryo            | Eight qualifying encounters; old marked blessing removed and one same-rarity result applied after other chamber traits                                         | Exact blessing identities and declaration-owned magnitude domains; retained result is assessed against every branch                                   | Fixed `automatic` transaction; executor scopes `AddRandomChaosBlessing`, rarity, and processed values                                            | Substantively closed        |
-| Judgment                       | Non-final boss defeat and active Arcana capacity                                                                                                               | Exact ordered Arcana set; Fates legality is evaluated as the set advances                                                                             | Fixed `bossDefeated` automatic transaction; native `AddRandomMetaUpgrades` selection is steered and counted                                      | Closed                      |
-| Crystal Figurine               | Eligible non-final boss defeat after Judgment                                                                                                                  | Exact ordered Arcana set and rarity; candidate sees Judgment's preceding state                                                                        | Fixed `bossDefeated` automatic transaction with an explicit dependency after Judgment                                                            | Closed                      |
-| Shrine delivery                | Purchased source stores delay and payload; a rush is due in the source room, exact qualifying phases decrement delayed items, and final Preboss can flush them | Exact due host/phase frontier; payload and Mystery Boon source resolve at acquisition; delayed reschedule is one source edit plus one exact placement | Required acquisition transaction keyed by delivery source; native pending-item copies carry that identity; normal acquisition adapters finish it | Closed                      |
-| Supply Chain                   | Seven qualifying encounters; invalid timed-drop rooms hold progress at six; maturity exposes two optional Pom Slices                                           | Exact two-entry frontier with acquisition identity and phase; each accepted Slice is placed separately and uses ordinary Pom resolution               | Only accepted optional pickups are published; ordinary acquisition and level adapters consume them                                               | Stable-identity defect open |
-| Gift Gift Gift volatile replay | Captured keepsake replays once at the succeeding biome start                                                                                                   | Exact Hammer or Embryo equip-result candidate; deterministic replay families require no authored volatile result                                      | Entry occurrence receives one `keepsakeReplay` transaction; native `EquipKeepsake` and the corresponding selector complete it                    | Closed                      |
+| Family                         | Trigger and simulator state                                                                                                                                    | Candidate and authored contract                                                                                                                         | Timeline and execution contract                                                                                                                  | Assessment           |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------- |
+| Steady Growth                  | `CheckChamberTraits`; rarity-scaled progress; target mutation applied at `encounterEndEffectsApplied`                                                          | Exact eligible target intersection and interval; missing/unavailable findings retain the reached phase                                                  | Fixed `automatic` transaction; executor scopes `AddRarityToTraits` to the declared source and target; room exit catches a missing callback       | Substantively closed |
+| Transcendent Embryo            | Eight qualifying encounters; old marked blessing removed and one same-rarity result applied after other chamber traits                                         | Exact blessing identities and declaration-owned magnitude domains; retained result is assessed against every branch                                     | Fixed `automatic` transaction; executor scopes `AddRandomChaosBlessing`, rarity, and processed values                                            | Substantively closed |
+| Judgment                       | Non-final boss defeat and active Arcana capacity                                                                                                               | Exact ordered Arcana set; Fates legality is evaluated as the set advances                                                                               | Fixed `bossDefeated` automatic transaction; native `AddRandomMetaUpgrades` selection is steered and counted                                      | Closed               |
+| Crystal Figurine               | Eligible non-final boss defeat after Judgment                                                                                                                  | Exact ordered Arcana set and rarity; candidate sees Judgment's preceding state                                                                          | Fixed `bossDefeated` automatic transaction with an explicit dependency after Judgment                                                            | Closed               |
+| Shrine delivery                | Purchased source stores delay and payload; a rush is due in the source room, exact qualifying phases decrement delayed items, and final Preboss can flush them | Exact due host/phase frontier; payload and Mystery Boon source resolve at acquisition; delayed reschedule is one source edit plus one exact placement   | Required acquisition transaction keyed by delivery source; native pending-item copies carry that identity; normal acquisition adapters finish it | Closed               |
+| Supply Chain                   | Seven qualifying encounters; invalid timed-drop rooms hold progress at six; maturity exposes two optional Pom Slices                                           | Exact two-entry frontier with stable semantic acquisition identity and phase; each accepted Slice is placed separately and uses ordinary Pom resolution | Only accepted optional pickups are published; ordinary acquisition and level adapters consume them                                               | Closed               |
+| Gift Gift Gift volatile replay | Captured keepsake replays once at the succeeding biome start                                                                                                   | Exact Hammer or Embryo equip-result candidate; deterministic replay families require no authored volatile result                                        | Entry occurrence receives one `keepsakeReplay` transaction; native `EquipKeepsake` and the corresponding selector complete it                    | Closed               |
 
 ## Findings
 
-### 1. Scheduled source cleanup is correct, but Supply identity is unstable
+### 1. Scheduled source cleanup and Supply identity are stable
 
 The required invariant is:
 
@@ -297,25 +297,25 @@ The required invariant is:
 > repair detail.
 
 Shrine removal and room replacement retract every active delivery action whose
-encoded source occurrence disappeared. Supply Chain replacement, Concave Stone
-deactivation, and encounter-selection changes likewise retract only the active
-later action owned by the lost semantic source. That source-removal behavior is
-correct.
+encoded source occurrence disappeared. Supply Chain replacement and
+encounter-selection changes likewise retract only the active later action owned
+by the lost semantic source. That source-removal behavior is correct. Concave
+Stone does not carry Supply Chain through this path: Stone is restricted to
+shop-aware God traits, while Supply Chain is an Icarus trait.
 
-Supply Chain nevertheless persists the producing trait's simulation
-`acquisitionIdentity`, which currently includes the global history sequence.
-Generating an unvisited earlier N side room shifts that sequence while leaving
-the Icarus source and its due Q occurrence unchanged. The two retained Pom
-Slice keys then cease to match the derived frontier, producing
-`rewardSourceUnavailable` and hiding their target controls.
+Supply Chain now persists the semantic trait-offer owner and acquisition role
+without the global history sequence. The declaration pickup key continues to
+distinguish `pom1` from `pom2`, while the derived frontier independently owns
+the due occurrence and lifecycle phase. Exact source removal retracts the
+active later actions; unrelated earlier chronology does not.
 
-**Disposition:** open for the scheduled-acquisition identity correction.
-Persisted scheduled ownership must use the stable semantic trait acquisition
-plus the declaration pickup key. Global sequence remains chronology evidence
-only. A focused schema migration must rekey the retained acquisition entries
-and their Room Action references without changing targets, participation, or
-order. The existing signal-specific maturity transitions do not require
-consolidation to correct this defect.
+**Disposition:** closed in schema 80. The focused migration rekeys legacy
+entries and their matching Room Action references atomically, preserves
+targets, participation, and order, and rejects key collisions. The product
+regression generates an unvisited earlier N side room with a valid reward and
+proves both later Q Slices remain present, editable, unchanged, and loadable
+through the project parser. The existing signal-specific maturity transitions
+remain unchanged; no universal scheduler was introduced.
 
 ### 2. Same-phase automatic presentation preserves native order
 
