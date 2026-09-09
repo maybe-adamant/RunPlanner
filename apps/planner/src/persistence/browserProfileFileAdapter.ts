@@ -36,6 +36,7 @@ export function createBrowserProfileFileAdapter(
 
   return Object.freeze({
     clearActive: () => Promise.resolve(),
+    supportsSaveAs: false,
     saveAs(suggestedFileName: string, json: string): Promise<ProfileFileReference> {
       download(suggestedFileName, json);
       return Promise.resolve(referenceFor(suggestedFileName));

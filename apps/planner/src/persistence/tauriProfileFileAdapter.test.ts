@@ -26,6 +26,7 @@ describe('Tauri profile-file adapter', () => {
     });
     const adapter = createTauriProfileFileAdapter(environment);
 
+    expect(adapter.supportsSaveAs).toBe(true);
     const file = await adapter.saveAs('run-plan.runplanner.json', '{"version":1}');
     expect(file?.fileName).toBe('surface.runplanner.json');
     await file?.activate();

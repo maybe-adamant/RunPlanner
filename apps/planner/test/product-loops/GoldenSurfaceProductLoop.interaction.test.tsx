@@ -76,6 +76,7 @@ function createPersistence(): {
   return {
     profileFile: {
       clearActive: () => Promise.resolve(),
+      supportsSaveAs: false,
       saveAs: (fileName, json) => {
         storedFileName = fileName;
         storedJson = json;

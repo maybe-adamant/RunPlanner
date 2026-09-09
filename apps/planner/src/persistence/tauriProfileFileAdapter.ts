@@ -62,6 +62,7 @@ export function createTauriProfileFileAdapter(
 
   return Object.freeze({
     clearActive: () => environment.clearActive(),
+    supportsSaveAs: true,
     async saveAs(suggestedFileName: string, json: string): Promise<ProfileFileReference | null> {
       const path = await environment.save({
         defaultPath: suggestedFileName,

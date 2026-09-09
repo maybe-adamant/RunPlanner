@@ -93,6 +93,7 @@ function profileAdapter(
   return {
     clearActive: () => Promise.resolve(),
     restoreActive: () => Promise.resolve({ status: 'none' }),
+    supportsSaveAs: false,
     ...overrides,
   };
 }

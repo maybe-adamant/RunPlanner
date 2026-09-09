@@ -28,7 +28,13 @@ import type { PreparedProjectWorkspace } from '../state/projectWorkspaceSlice';
 import { selectPresentProject, selectProfileSession, type PlannerStore } from '../state/store';
 
 export type ProjectOperation =
-  'discardRecovery' | 'exportRecovery' | 'loadProfile' | 'new' | 'publishGame' | 'saveProfile';
+  | 'discardRecovery'
+  | 'exportRecovery'
+  | 'loadProfile'
+  | 'new'
+  | 'publishGame'
+  | 'saveProfile'
+  | 'saveProfileAs';
 
 export type ProjectOperationResult = {
   readonly operation: ProjectOperation;
@@ -41,9 +47,11 @@ export interface ProjectOperations {
   discardAutosaveRecovery(): ProjectOperationResult;
   exportAutosaveRecovery(): Promise<ProjectOperationResult>;
   readonly gamePlanAvailable: boolean;
+  readonly saveAsAvailable: boolean;
   discoverGameProfiles(): Promise<GamePlanDiscovery>;
   publishGame(targetId: string, slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult>;
   saveProfile(): Promise<ProjectOperationResult>;
+  saveProfileAs(): Promise<ProjectOperationResult>;
   loadProfile(): Promise<ProjectOperationResult>;
 }
 
@@ -64,6 +72,7 @@ const operationLabels: Readonly<Record<ProjectOperation, string>> = Object.freez
   new: 'New project',
   publishGame: 'Publish to Game',
   saveProfile: 'Save Profile',
+  saveProfileAs: 'Save As',
 });
 export const DEFAULT_PROFILE_FILE_NAME = 'run-plan.runplanner.json';
 export const DEFAULT_AUTOSAVE_EXPORT_FILE_NAME = 'run-planner-autosave.runplanner.json';
@@ -102,6 +111,7 @@ export function createProjectOperations(
   const currentProject = () => selectPresentProject(options.store.getState());
   return Object.freeze({
     gamePlanAvailable: options.gamePlanPublisher !== undefined,
+    saveAsAvailable: options.profileFile.supportsSaveAs === true,
     async createNew(routeKey: string): Promise<ProjectOperationResult> {
       try {
         const project = createInitialProject(options.catalog, routeKey);
@@ -218,6 +228,29 @@ export function createProjectOperations(
         return result('saveProfile', 'success', 'Saved the profile.');
       } catch (error) {
         return failure('saveProfile', error);
+      }
+    },
+    async saveProfileAs(): Promise<ProjectOperationResult> {
+      try {
+        const snapshot = currentProject();
+        if (snapshot === undefined) {
+          throw new Error('No project is open');
+        }
+        const suggestedFileName =
+          selectProfileSession(options.store.getState()).fileName ?? DEFAULT_PROFILE_FILE_NAME;
+        const baselineJson = encodeProjectDocument(snapshot);
+        const savedFile = await options.profileFile.saveAs(suggestedFileName, baselineJson);
+        if (savedFile === null) {
+          return result('saveProfileAs', 'cancelled', 'Save As cancelled.');
+        }
+        await savedFile.activate();
+        activeProfileFile = savedFile;
+        options.store.dispatch(
+          profileSaveSucceeded({ baselineJson, fileName: savedFile.fileName }),
+        );
+        return result('saveProfileAs', 'success', 'Saved as a new file.');
+      } catch (error) {
+        return failure('saveProfileAs', error);
       }
     },
     async loadProfile(): Promise<ProjectOperationResult> {

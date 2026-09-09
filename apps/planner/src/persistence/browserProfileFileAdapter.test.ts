@@ -21,6 +21,7 @@ describe('browser profile-file adapter', () => {
       document,
     });
 
+    expect(adapter.supportsSaveAs).toBe(false);
     const file = await adapter.saveAs('erebus-route.runplanner.json', '{"project":true}');
     expect(file?.fileName).toBe('erebus-route.runplanner.json');
     await file?.write('{"project":"updated"}');
