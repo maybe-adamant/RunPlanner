@@ -9,6 +9,23 @@ import {
 import { describe, expect, it } from 'vitest';
 
 describe('reward compiler acquisition, reward-type, and store normalizers', () => {
+  it('declares the exact element contribution of each fixed element pickup', () => {
+    expect(
+      Object.fromEntries(
+        ['AirBoost', 'EarthBoost', 'FireBoost', 'WaterBoost', 'ElementalBoost'].map((gameName) => [
+          gameName,
+          rewardKernelCatalog.acquisitions.byKey[gameName]?.elementContributions,
+        ]),
+      ),
+    ).toEqual({
+      AirBoost: { Air: 1 },
+      EarthBoost: { Earth: 1 },
+      FireBoost: { Fire: 1 },
+      WaterBoost: { Water: 1 },
+      ElementalBoost: { Earth: 1, Air: 1, Fire: 1, Water: 1 },
+    });
+  });
+
   it('normalizes and guards the exact 1/3/5 concrete Path grants', () => {
     expect({
       MinorTalentDrop: rewardKernelCatalog.acquisitions.byKey.MinorTalentDrop?.pathPointGrant,
