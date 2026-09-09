@@ -218,16 +218,20 @@ route contains only fresh authored occurrences.
 
 ### Execution disposition
 
-N earns two bounded realization adapters:
+N earns three bounded realization contacts within one Ephyra navigation adapter:
 
-1. **Persistent Hub board realization.** At the native Hub-board contact,
+1. **Hub-entry realization.** An occurrence that owns the published Hub product
+   has a planner-terminal outgoing envelope but one native structural exit to
+   `N_Hub`. Force and prove that single native destination without turning the
+   Hub into an execution occurrence. This applies equally to the normal
+   `N_PreHub01` source and an N-entry Chaos source.
+2. **Persistent Hub board realization.** At the native Hub-board contact,
    install the exact open physical doors and force every open door's room and
    reward. This includes unvisited offers because the complete board exists
-   before the first visit and contributes to the Hub reward lookup. Reuse that
-   native board across returns. When native Hub progression exposes its
-   completion continuation, the ordinary navigation contact realizes the
-   planner-authored Preboss handoff.
-2. **Main-local side realization.** At each visited main room's side-door
+   before the first visit and contributes to the Hub reward lookup. Realize and
+   prove that board once. Native persistence owns later Hub returns, while the
+   fresh-occurrence sequence proves visit order and the eventual Preboss entry.
+3. **Main-local side realization.** At each visited main room's side-door
    contact, steer every declared slot to its published generated disposition
    and force each generated door's room and reward, including generated but
    unvisited slots. Let the native persistent-room path perform every parent
@@ -243,9 +247,11 @@ execution plan.
 
 Opening, PreHub, every fresh main and side occurrence, Preboss, Boss, and
 Postboss otherwise reuse the established room, reward, encounter, timeline,
-and conformance adapters. Native N declarations remain responsible for the
-actual return transitions and side-room counter suppression; the executor does
-not implement Hub visit counts, side-room clocks, pylons, or restoration.
+and conformance adapters. The Hub-entry contact only realizes the structural
+destination already named by the Hub product. Native N declarations remain
+responsible for the actual return transitions and side-room counter
+suppression; the executor does not implement Hub visit counts, side-room
+clocks, pylons, or restoration.
 
 ## Thessaly (`O`)
 
