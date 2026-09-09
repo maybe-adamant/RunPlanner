@@ -601,10 +601,17 @@ describe('planner history interaction', () => {
     const { user } = renderPlannerForInteraction({ application });
 
     await user.click(screen.getByRole('button', { name: 'Publish to Game' }));
+    const publicationDialog = screen.getByRole('dialog', { name: 'Publish to game' });
     expect(publications).toHaveLength(0);
-    expect(screen.getByLabelText('Profile')).toBeTruthy();
-    expect(screen.getByLabelText('Slot')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /^Publish$/ })).toHaveProperty('disabled', true);
+    expect(document.querySelector('.project-file-actions')?.contains(publicationDialog)).toBe(
+      false,
+    );
+    expect(within(publicationDialog).getByLabelText('Profile')).toBeTruthy();
+    expect(within(publicationDialog).getByLabelText('Slot')).toBeTruthy();
+    expect(within(publicationDialog).getByRole('button', { name: /^Publish$/ })).toHaveProperty(
+      'disabled',
+      true,
+    );
 
     await user.click(screen.getByRole('button', { name: /^Cancel$/ }));
     await user.click(screen.getByRole('button', { name: 'Publish to Game' }));
