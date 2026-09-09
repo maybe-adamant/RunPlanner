@@ -2069,7 +2069,8 @@ button:disabled {
   flex-wrap: nowrap;
 }
 
-.transcendent-embryo-outcome-row > .contextual-picker {
+.transcendent-embryo-outcome-row > .contextual-picker,
+.scheduled-trait-effect-identity > .contextual-picker {
   min-width: 13rem;
   grid-template-columns: auto minmax(8rem, 1fr);
   column-gap: 6px;
@@ -3949,6 +3950,10 @@ select {
   flex-wrap: wrap;
 }
 
+.room-action-row > .room-action-identity.scheduled-trait-effect-identity {
+  flex-wrap: nowrap;
+}
+
 .room-action-inline-editors {
   display: flex;
   align-items: center;
@@ -4471,11 +4476,15 @@ select {
   background: rgb(255 255 255 / 2%);
 }
 
-.ephyra-side-grid tbody th {
-  width: 22%;
+.ephyra-side-grid tbody tr > :first-child {
   border-left: 1px solid #373842;
   border-radius: 9px 0 0 9px;
+}
+
+.ephyra-side-grid tbody th {
+  width: 22%;
   text-align: left;
+  vertical-align: middle;
 }
 
 .ephyra-side-grid tbody td:last-child {
@@ -4489,12 +4498,39 @@ select {
   border-top: 1px solid rgb(68 69 80 / 65%);
 }
 
-.ephyra-side-priority {
-  width: 8%;
+.ephyra-side-grid tbody td.ephyra-side-priority {
+  width: 6%;
   color: #d5c897;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   text-align: center;
+  vertical-align: middle;
+}
+
+.ephyra-side-visit-order {
+  width: 7rem;
+}
+
+.ephyra-side-grid .field-control.ephyra-side-entry-order {
+  width: 7rem;
+  min-width: 7rem;
+}
+
+.ephyra-side-reward-cell .field-control-inline {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ephyra-side-reward-cell .contextual-picker > label,
+.ephyra-side-reward-cell .door-fixed-reward > span:first-child {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  margin: -1px;
+  clip: rect(0, 0, 0, 0);
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .ephyra-side-grid .biome-candidate-select > span,

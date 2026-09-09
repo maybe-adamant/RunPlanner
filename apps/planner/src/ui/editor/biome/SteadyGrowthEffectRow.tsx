@@ -59,7 +59,7 @@ export function SteadyGrowthEffectRow({
       className="room-action-row room-timeline-effect-row"
       data-steady-growth={control.address.phaseKey}
     >
-      <div className="owner-markers room-action-identity">
+      <div className="owner-markers room-action-identity scheduled-trait-effect-identity">
         <span aria-hidden="true" className="hub-roster-rank">
           ·
         </span>
@@ -72,6 +72,8 @@ export function SteadyGrowthEffectRow({
             ariaLabel="Steady Growth target"
             id={semanticOwnerControlElementId(control.address)}
             interaction={interaction}
+            label="Target"
+            layout="inline"
             model={domain?.picker ?? { sections: Object.freeze([]) }}
             onSelect={(target) => executeIntent(interaction.intentFor(target))}
             onOpenChange={onOpenChange}

@@ -63,7 +63,7 @@ export function TranscendentEmbryoEffectRow({
       className="room-action-row room-timeline-effect-row"
       data-transcendent-embryo={control.address.phaseKey}
     >
-      <div className="owner-markers room-action-identity">
+      <div className="owner-markers room-action-identity scheduled-trait-effect-identity">
         <span aria-hidden="true" className="hub-roster-rank">
           ·
         </span>
