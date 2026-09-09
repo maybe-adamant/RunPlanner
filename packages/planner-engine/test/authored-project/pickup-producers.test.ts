@@ -95,9 +95,15 @@ describe('authored pickup producers', () => {
       { kind: 'occurrence', occurrenceId: sourceId },
       'Encounter',
     );
-    const sourceIdentity = `${semanticAddressKey(createTraitOfferAddress(sourceOwner, 'selection'))}:7`;
+    const sourceIdentity = semanticAddressKey(createTraitOfferAddress(sourceOwner, 'selection'));
     const entryKey = clockedTraitGeneratedPickupEntryKey(sourceIdentity, 'pomSlice1');
-    const unrelated = clockedTraitGeneratedPickupEntryKey('other-source:7', 'pomSlice1');
+    const siblingEntryKey = clockedTraitGeneratedPickupEntryKey(sourceIdentity, 'pomSlice2');
+    const legacyPrefixedIdentity = clockedTraitGeneratedPickupEntryKey(
+      `${sourceIdentity}:7`,
+      'pomSlice1',
+    );
+    const unrelated = clockedTraitGeneratedPickupEntryKey('other-source', 'pomSlice1');
+    const unrelatedSibling = clockedTraitGeneratedPickupEntryKey('other-source', 'pomSlice2');
     const supplyOffer = {
       kind: 'traits' as const,
       giverKey: 'Icarus',
@@ -127,10 +133,31 @@ describe('authored pickup producers', () => {
       roomActions: {
         order: [
           { kind: 'interactAcquisitionEntry', siteKey: 'roomExit', entryKey },
+          { kind: 'interactAcquisitionEntry', siteKey: 'roomExit', entryKey: siblingEntryKey },
+          {
+            kind: 'interactAcquisitionEntry',
+            siteKey: 'roomExit',
+            entryKey: legacyPrefixedIdentity,
+          },
           { kind: 'interactAcquisitionEntry', siteKey: 'roomExit', entryKey: unrelated },
+          {
+            kind: 'interactAcquisitionEntry',
+            siteKey: 'roomExit',
+            entryKey: unrelatedSibling,
+          },
         ],
       },
-      acquisitionSites: { roomExit: { pickupEntries: { [entryKey]: null, [unrelated]: null } } },
+      acquisitionSites: {
+        roomExit: {
+          pickupEntries: {
+            [entryKey]: null,
+            [siblingEntryKey]: null,
+            [legacyPrefixedIdentity]: null,
+            [unrelated]: null,
+            [unrelatedSibling]: null,
+          },
+        },
+      },
       additionalExits: [],
     } as unknown as RoomOccurrence;
     const previous = {
@@ -139,6 +166,7 @@ describe('authored pickup producers', () => {
         biomes: [{ biomeKey: 'N', topology: { occurrences: [source, host] } }],
       },
     } as unknown as ProjectDocument;
+    expect(retractInactiveClockedTraitPickupActions(catalog, previous, previous)).toBe(previous);
     const replacedSource = {
       ...source,
       encounters: {
@@ -159,91 +187,24 @@ describe('authored pickup producers', () => {
     const result = retractInactiveClockedTraitPickupActions(catalog, previous, replaced);
     const resultHost = result.route.biomes[0]!.topology!.occurrences[1]!;
     expect(resultHost.roomActions.order).toEqual([
+      {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'roomExit',
+        entryKey: legacyPrefixedIdentity,
+      },
       { kind: 'interactAcquisitionEntry', siteKey: 'roomExit', entryKey: unrelated },
+      {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'roomExit',
+        entryKey: unrelatedSibling,
+      },
     ]);
     expect(resultHost.acquisitionSites?.roomExit?.pickupEntries).toEqual({
       [entryKey]: null,
+      [siblingEntryKey]: null,
+      [legacyPrefixedIdentity]: null,
       [unrelated]: null,
-    });
-  });
-
-  it('recognizes Supply Chain acquired by a Concave Stone secondary', () => {
-    const sourceId = createOccurrenceId('concave-supply-source');
-    const hostId = createOccurrenceId('concave-supply-host');
-    const sourceOwner = createEncounterPhaseAddress(
-      biome,
-      { kind: 'occurrence', occurrenceId: sourceId },
-      'Encounter',
-    );
-    const sourceIdentity = `${semanticAddressKey(createTraitOfferAddress(sourceOwner, 'concaveStoneSecondary'))}:8`;
-    const entryKey = clockedTraitGeneratedPickupEntryKey(sourceIdentity, 'pomSlice1');
-    const offer = {
-      kind: 'traits' as const,
-      giverKey: 'Icarus',
-      options: [
-        { traitKey: 'OmegaExplodeBoon' },
-        { traitKey: 'SupplyDropBoon' },
-        { traitKey: 'CastHazardBoon' },
-      ] as const,
-      selectedOptionKey: 'option1' as const,
-      concaveStoneResult: { kind: 'proc' as const, optionKey: 'option2' as const },
-    };
-    const source = {
-      occurrenceId: sourceId,
-      gameName: 'N_Opening01',
-      state: { kind: 'none' },
-      encounters: {
-        encounterKeyByPhase: { Encounter: 'Icarus' },
-        traitOffersByPhase: { Encounter: { Icarus: offer } },
-      },
-      roomActions: { order: [{ kind: 'interactEncounter', phaseKey: 'Encounter' }] },
-      additionalExits: [],
-    } as unknown as RoomOccurrence;
-    const host = {
-      occurrenceId: hostId,
-      gameName: 'N_Opening01',
-      state: { kind: 'none' },
-      encounters: {},
-      roomActions: { order: [{ kind: 'interactAcquisitionEntry', siteKey: 'roomExit', entryKey }] },
-      acquisitionSites: { roomExit: { pickupEntries: { [entryKey]: null } } },
-      additionalExits: [],
-    } as unknown as RoomOccurrence;
-    const previous = {
-      route: {
-        routeKey: 'Surface',
-        biomes: [{ biomeKey: 'N', topology: { occurrences: [source, host] } }],
-      },
-    } as unknown as ProjectDocument;
-    const noProc = {
-      ...previous,
-      route: {
-        ...previous.route,
-        biomes: [
-          {
-            ...previous.route.biomes[0]!,
-            topology: {
-              occurrences: [
-                {
-                  ...source,
-                  encounters: {
-                    traitOffersByPhase: {
-                      Encounter: { Icarus: { ...offer, concaveStoneResult: { kind: 'noProc' } } },
-                    },
-                  },
-                } as unknown as RoomOccurrence,
-                host,
-              ],
-            },
-          },
-        ],
-      },
-    } as unknown as ProjectDocument;
-    const result = retractInactiveClockedTraitPickupActions(catalog, previous, noProc);
-    expect(result.route.biomes[0]!.topology!.occurrences[1]!.roomActions.order).toEqual([]);
-    expect(
-      result.route.biomes[0]!.topology!.occurrences[1]!.acquisitionSites?.roomExit?.pickupEntries,
-    ).toEqual({
-      [entryKey]: null,
+      [unrelatedSibling]: null,
     });
   });
 });

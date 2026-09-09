@@ -13,7 +13,11 @@ import {
   loadUnderworldFGHCheckpoint,
   loadUnderworldFGHICheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { simulateProjectAssembly } from '../../src/simulation';
+import {
+  derivedAcquisitionEntriesForProjectEvaluationAssembly,
+  levelResolutionCandidateForProjectEvaluationAssembly,
+  simulateProjectAssembly,
+} from '../../src/simulation';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   loadSurfaceNOProject,
@@ -23,15 +27,26 @@ import {
 import { allTogetherOffer, allTogetherResult } from '../simulation/shop-trait-purchase-support';
 import {
   applyProjectCommand,
+  clockedTraitGeneratedPickupEntryKey,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
   createIncomingRewardAddress,
+  createLocalVisitSlotAddress,
   createOccurrenceId,
+  createOccurrenceAddress,
+  createLevelResolutionAddress,
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   parseHermesShrineDeliveryEntryKey,
+  parseClockedTraitGeneratedPickupEntryKey,
   semanticAddressKey,
   createTraitOfferAddress,
+  parseProjectDocument,
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredTraitOfferTraits,
+  type ProjectDocument,
 } from '../../src/authored-project';
 import {
   assembleExecutionProduct,
@@ -62,13 +77,17 @@ import surfaceNOPFixture from './fixtures/surface-nop.execution.json';
 import surfaceNOPQFixture from './fixtures/surface-nopq.execution.json';
 import surfaceScheduledLifecycleFixture from './fixtures/surface-scheduled-lifecycle.execution.json';
 import { bossAutomaticOutcomeProject } from './support/automatic-fixture';
-import { surfaceScheduledLifecycleProject } from './support/scheduled-lifecycle-fixture';
+import {
+  surfaceScheduledLifecycleProject,
+  surfaceScheduledLifecycleWithQSupplyChainSlicesProject,
+} from './support/scheduled-lifecycle-fixture';
 import { executionTimelineTransactions } from '../../src/execution-plan/assembly/timeline-transactions';
 import { orderedExecutionRooms } from '../../src/execution-plan/assembly/route';
 import {
   EMPTY_PLANNER_TIMELINE_FACTS,
   mergePlannerTimelineFacts,
 } from '../../src/simulation/timeline-facts';
+import { migrateProjectDocument } from '../../../../schema/migrate-project-79-to-80.js';
 
 function fOnlyProject(project = createCompleteFGProject()) {
   return Object.freeze({
@@ -84,6 +103,36 @@ function planFor(project: ReturnType<typeof createCompleteFGProject>) {
   const assembly = simulateProjectAssembly(catalog, project);
   const product = assembleExecutionProduct({ assembly });
   return { product, plan: compileExecutionPlan({ product }) };
+}
+
+function qSupplyChainSlices(project: ProjectDocument) {
+  return project.route.biomes
+    .filter((biome) => biome.biomeKey === 'Q')
+    .flatMap((biome) =>
+      (biome.topology?.occurrences ?? []).flatMap((occurrence) => {
+        const site = occurrence.acquisitionSites?.roomExit;
+        return Object.entries(site?.pickupEntries ?? {}).flatMap(([entryKey, entry]) => {
+          const parsed = parseClockedTraitGeneratedPickupEntryKey(entryKey);
+          if (parsed === undefined || !['pom1', 'pom2'].includes(parsed.pickupKey)) return [];
+          const actionIndex = occurrence.roomActions.order.findIndex(
+            (action) =>
+              action.kind === 'interactAcquisitionEntry' &&
+              action.siteKey === 'roomExit' &&
+              action.entryKey === entryKey,
+          );
+          return [
+            {
+              pickupKey: parsed.pickupKey,
+              occurrenceId: occurrence.occurrenceId,
+              entryKey,
+              entry,
+              actionIndex,
+            },
+          ];
+        });
+      }),
+    )
+    .sort((left, right) => left.pickupKey.localeCompare(right.pickupKey));
 }
 
 function shrineOverviewWithPairing(
@@ -1620,6 +1669,127 @@ describe('execution-plan compiler and codec', () => {
         }),
       }),
     );
+  });
+
+  it('preserves both Q Supply Chain Slices after an earlier unvisited side-room edit', () => {
+    const project = surfaceScheduledLifecycleWithQSupplyChainSlicesProject();
+    const before = qSupplyChainSlices(project);
+    expect(before.map((entry) => entry.pickupKey)).toEqual(['pom1', 'pom2']);
+    expect(before.every((entry) => entry.actionIndex >= 0)).toBe(true);
+
+    const generated = applyProjectCommand(project, catalog, {
+      kind: 'SetLocalVisitGeneration',
+      slot: createLocalVisitSlotAddress(
+        { kind: 'biome', routeKey: project.route.routeKey, biomeKey: 'N' },
+        createOccurrenceId('surface-n-combat23'),
+        'sideRooms',
+        'sideDoor1',
+      ),
+      generation: 'generated',
+    });
+    const edited = applyProjectCommand(generated, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(
+        { kind: 'biome', routeKey: project.route.routeKey, biomeKey: 'N' },
+        createOccurrenceId('surface-n-combat23-sideDoor1'),
+      ),
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    const assembly = simulateProjectAssembly(catalog, edited);
+    expect(assembly.evaluation.route.summary.eligibleForExecutionPlan).toBe(true);
+    expect(qSupplyChainSlices(edited)).toEqual(before);
+
+    for (const slice of before) {
+      const site = createAcquisitionSiteAddress(
+        createOccurrenceAddress(
+          { kind: 'biome', routeKey: edited.route.routeKey, biomeKey: 'Q' },
+          slice.occurrenceId,
+        ),
+        'roomExit',
+      );
+      const address = createAcquisitionEntryAddress(site, slice.entryKey);
+      expect(
+        derivedAcquisitionEntriesForProjectEvaluationAssembly(assembly, site).some(
+          (entry) =>
+            entry.kind === 'clockedTraitPickup' && entry.address.entryKey === slice.entryKey,
+        ),
+      ).toBe(true);
+      expect(
+        levelResolutionCandidateForProjectEvaluationAssembly(
+          assembly,
+          createLevelResolutionAddress(address, 'self'),
+        ),
+      ).toBeDefined();
+    }
+
+    const roundTripped = decodeProjectDocument(JSON.parse(encodeProjectDocument(edited)), catalog);
+    expect(qSupplyChainSlices(roundTripped)).toEqual(before);
+    expect(
+      simulateProjectAssembly(catalog, roundTripped).evaluation.route.summary
+        .eligibleForExecutionPlan,
+    ).toBe(true);
+  });
+
+  it('loads migrated legacy Supply Chain entries through the project parser', () => {
+    const project = surfaceScheduledLifecycleWithQSupplyChainSlicesProject();
+    const before = qSupplyChainSlices(project);
+    expect(before.map((entry) => entry.pickupKey)).toEqual(['pom1', 'pom2']);
+
+    const legacy = JSON.parse(encodeProjectDocument(project)) as {
+      schemaVersion: number;
+      route: {
+        biomes: {
+          biomeKey: string;
+          topology: null | {
+            occurrences: {
+              acquisitionSites?: Record<string, { pickupEntries?: Record<string, unknown> }>;
+              roomActions: {
+                order: { kind: string; siteKey?: string; entryKey?: string }[];
+              };
+            }[];
+          };
+        }[];
+      };
+    };
+    legacy.schemaVersion = 79;
+    for (const biome of legacy.route.biomes) {
+      if (biome.biomeKey !== 'Q') continue;
+      for (const occurrence of biome.topology?.occurrences ?? []) {
+        const entries = occurrence.acquisitionSites?.roomExit?.pickupEntries;
+        if (entries === undefined) continue;
+        const mappings = new Map<string, string>();
+        for (const key of Object.keys(entries)) {
+          const parsed = parseClockedTraitGeneratedPickupEntryKey(key);
+          if (parsed === undefined || !['pom1', 'pom2'].includes(parsed.pickupKey)) continue;
+          mappings.set(
+            key,
+            clockedTraitGeneratedPickupEntryKey(
+              `${parsed.acquisitionIdentity}:339`,
+              parsed.pickupKey,
+            ),
+          );
+        }
+        for (const [stableKey, legacyKey] of mappings) {
+          entries[legacyKey] = entries[stableKey];
+          delete entries[stableKey];
+        }
+        occurrence.roomActions.order = occurrence.roomActions.order.map((action) =>
+          action.kind === 'interactAcquisitionEntry' &&
+          action.siteKey === 'roomExit' &&
+          action.entryKey !== undefined &&
+          mappings.has(action.entryKey)
+            ? { ...action, entryKey: mappings.get(action.entryKey)! }
+            : action,
+        );
+      }
+    }
+
+    const migrated = migrateProjectDocument(legacy);
+    const loaded = parseProjectDocument(JSON.stringify(migrated), catalog);
+    expect(qSupplyChainSlices(loaded)).toEqual(before);
+    expect(
+      simulateProjectAssembly(catalog, loaded).evaluation.route.summary.eligibleForExecutionPlan,
+    ).toBe(true);
   });
 
   it('rejects disconnected or contradictory ShipCombat wheel products', () => {

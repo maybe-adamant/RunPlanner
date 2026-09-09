@@ -408,6 +408,13 @@ function applyTraitOfferForAcquisitionInternal(
       ? undefined
       : catalog.traits.byKey[selectedForIdentity.traitKey]?.selectedDisposition;
   const acquisitionIdentityOwner = traitOwnerAddress(reward.origin);
+  const traitOfferIdentity =
+    acquisitionIdentityOwner === undefined
+      ? undefined
+      : semanticAddressKey(createTraitOfferAddress(acquisitionIdentityOwner, role));
+  // A clocked pickup producer survives unrelated chronology edits, so its
+  // persisted identity is the semantic offer owner and role alone. Other
+  // acquisition identities retain their event sequence semantics.
   const acquisitionIdentity =
     (effectiveAuthored.kind === 'chaos' ||
       selectedForIdentityDisposition?.kind === 'steadyGrowth' ||
@@ -416,8 +423,11 @@ function applyTraitOfferForAcquisitionInternal(
       (selectedForIdentityDisposition?.kind === 'echo' &&
         (selectedForIdentityDisposition.effect === 'doubleShop' ||
           selectedForIdentityDisposition.effect === 'repeatKeepsake'))) &&
-    acquisitionIdentityOwner !== undefined
-      ? `${semanticAddressKey(createTraitOfferAddress(acquisitionIdentityOwner, role))}:${sequence}`
+    traitOfferIdentity !== undefined
+      ? selectedForIdentityDisposition?.kind === 'producePickups' &&
+        selectedForIdentityDisposition.clock !== undefined
+        ? traitOfferIdentity
+        : `${traitOfferIdentity}:${sequence}`
       : undefined;
   const applied = recordReachedTraitOffer(
     catalog,
