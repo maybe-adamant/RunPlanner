@@ -1575,6 +1575,14 @@ describe('execution-plan compiler and codec', () => {
         transaction: expect.objectContaining({ kind: 'automatic', effect: 'steadyGrowth' }),
       }),
     );
+    for (const occurrence of plan.occurrences) {
+      expect(occurrence.roomExitConformance?.facts ?? []).not.toContainEqual({
+        kind: 'hermesShrineDeliveries',
+      });
+      expect(occurrence.roomExitConformance?.facts ?? []).not.toContainEqual({
+        kind: 'echoShopDuplicate',
+      });
+    }
     expect(transactions).toContainEqual(
       expect.objectContaining({
         biomeKey: 'Q',
@@ -2004,6 +2012,25 @@ describe('execution-plan compiler and codec', () => {
     expect(encoded.length).toBeLessThan(JSON.stringify(plan).length * 0.75);
     expect(decodeExecutionPlan(wire)).toEqual(plan);
   });
+
+  it.each(['echoShopDuplicate', 'hermesShrineDeliveries'])(
+    'rejects diagnostic-only %s state as an active room-exit fact',
+    (kind) => {
+      const { plan } = planFor(fOnlyProject());
+      const wire = JSON.parse(encodeExecutionPlan(plan)) as {
+        occurrences: Array<{
+          roomExitConformance?: { facts: Array<{ kind: string }> };
+        }>;
+      };
+      const occurrence = wire.occurrences.find(
+        (candidate) => candidate.roomExitConformance !== undefined,
+      );
+      if (occurrence?.roomExitConformance === undefined)
+        throw new Error('fixture lacks room-exit conformance');
+      occurrence.roomExitConformance.facts.push({ kind });
+      expect(() => decodeExecutionPlan(wire)).toThrow(/kind is unsupported/);
+    },
+  );
 
   it('strictly validates the resource policy references and room-exit element fact', () => {
     const { plan } = planFor(fOnlyProject());
