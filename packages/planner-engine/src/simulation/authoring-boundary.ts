@@ -152,6 +152,8 @@ export function resolveAuthoringBoundary(
         return address.selection.owner;
       }
       return ownerBiome;
+    case 'keepsakeSelection':
+      return address.owner === 'routeStart' ? ownerBiome : address.owner;
   }
   const occurrence =
     occurrenceOwnerAddress(address) ?? occurrenceOwnerAddress(ownerOrigin(address));

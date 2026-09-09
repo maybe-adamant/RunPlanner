@@ -892,6 +892,11 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     );
     if (unranked !== undefined) return blockAt(next, unranked);
     for (const delivery of deliveries) {
+      // Encounter end makes the delivery available; it does not let the
+      // delivery leapfrog a peer post-encounter action authored before it.
+      const current = rankedRows[cursor];
+      if (current !== undefined && current.rank! < delivery.rank!) break;
+      if (current === undefined || current.rank! > delivery.rank!) continue;
       next = consumeExact(delivery.reference, operationIndex, next, true);
       if (next.blockedAt !== undefined) return next;
     }

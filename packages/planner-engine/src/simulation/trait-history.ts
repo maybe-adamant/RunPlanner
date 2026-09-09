@@ -1219,6 +1219,7 @@ export function advanceSteadyGrowthProgress(
 }
 
 export interface ReachedPickupProducerMaturity {
+  readonly traitKey: string;
   readonly acquisitionIdentity: string;
   readonly producerLifecycleKey: string;
   readonly pickups: readonly import('../catalog-schema').TraitPickupDeclaration[];
@@ -1267,6 +1268,7 @@ export function advancePickupProducerProgress(
     if (matured)
       maturities.push(
         Object.freeze({
+          traitKey: trait.traitKey,
           acquisitionIdentity: trait.acquisitionIdentity,
           producerLifecycleKey: disposition.producerLifecycleKey,
           pickups: disposition.pickups,

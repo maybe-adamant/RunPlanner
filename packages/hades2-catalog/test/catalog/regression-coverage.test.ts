@@ -158,14 +158,14 @@ const roomFacts = [
 ] as const;
 
 const normalizedBiomeSnapshotHashes = [
-  ['F', '27a6c68399b4d98a'],
-  ['G', 'fbc49eac1c29353f'],
-  ['H', 'ea08ab14e20e2a4a'],
-  ['I', '670a881b718a4462'],
-  ['N', '75bdb4ce41d67bc4'],
-  ['O', 'eb5a068554b303f7'],
-  ['P', '8be36a5c1b0209b8'],
-  ['Q', '580de7cf5f859494'],
+  ['F', '607d6aa58c237a76'],
+  ['G', 'e03be4aaa7707d3b'],
+  ['H', '5d712dd0a75404d6'],
+  ['I', '62d1ea2369b90952'],
+  ['N', 'eb4de64c3f1e840f'],
+  ['O', '10b7437e68a7e55f'],
+  ['P', '8211e77a35e75dd0'],
+  ['Q', 'c8aeb8cb0841ee84'],
 ] as const;
 
 function normalizedBiomeSnapshot(biomeKey: string) {
@@ -352,11 +352,28 @@ describe('catalog regression coverage retained through unified decisions', () =>
       'N_Sub07',
       'N_Sub08',
       'N_Sub09',
+      'N_Sub10',
+      'N_Sub11',
+      'N_Sub12',
+      'N_Sub13',
+      'N_Sub14',
+      'N_Sub15',
     ]);
     const sideBinding = catalog.rooms.byKey.N_Sub01?.encounterSlotBindings[0];
     expect(sideBinding?.kind).toBe('set');
     if (sideBinding?.kind === 'set') expect(sideBinding.encounterSetKey).toBe('NEncountersSubRoom');
     expect(catalog.rooms.byKey.F_Opening01?.advancesExperimentalHammerUses).toBe(true);
+    expect(
+      catalog.rooms.values
+        .filter((room) => room.gameName.startsWith('N_Sub'))
+        .every(
+          (room) =>
+            room.ignoreEncounterUses &&
+            room.skipRoomsPerUpgrade &&
+            !room.advancesExperimentalHammerUses &&
+            !room.advancesHermesShrineDeliveryUses,
+        ),
+    ).toBe(true);
   });
 
   it('declares delayed Hermes Shrine use advancement independently of room shape', () => {

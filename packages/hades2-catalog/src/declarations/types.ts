@@ -463,6 +463,8 @@ export interface RawRoomDeclaration {
   readonly unmodeledEncounterKeys?: readonly string[];
   /** Exact room-level policy for temporary Hammer encounter uses. */
   readonly advancesExperimentalHammerUses: boolean;
+  /** Source `IgnoreEncounterUses`; suppresses encounter-counted end effects. */
+  readonly ignoreEncounterUses?: boolean;
   /** Exact room-level policy for advancing delayed Hermes Shrine delivery uses. */
   readonly advancesHermesShrineDeliveryUses?: boolean;
   /** Source `SkipRoomsPerUpgrade`, used by Steady Growth at end effects. */

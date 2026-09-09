@@ -571,6 +571,9 @@ export function normalizeRoom(
   if (typeof room.advancesExperimentalHammerUses !== 'boolean') {
     fail(`${path}.advancesExperimentalHammerUses`, 'must be a boolean');
   }
+  if (room.ignoreEncounterUses !== undefined && typeof room.ignoreEncounterUses !== 'boolean') {
+    fail(`${path}.ignoreEncounterUses`, 'must be a boolean when declared');
+  }
   if (
     room.advancesHermesShrineDeliveryUses !== undefined &&
     typeof room.advancesHermesShrineDeliveryUses !== 'boolean'
@@ -1057,6 +1060,7 @@ export function normalizeRoom(
       ? {}
       : { unmodeledEncounterKeys: Object.freeze(unmodeledEncounterKeys) }),
     advancesExperimentalHammerUses: room.advancesExperimentalHammerUses,
+    ignoreEncounterUses: room.ignoreEncounterUses ?? false,
     advancesHermesShrineDeliveryUses: room.advancesHermesShrineDeliveryUses ?? true,
     skipRoomsPerUpgrade: room.skipRoomsPerUpgrade ?? false,
     skipTimedDropResources: room.skipTimedDropResources ?? false,

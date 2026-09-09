@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   appendSteadyGrowthTimelineEffects,
+  appendTranscendentEmbryoTimelineEffects,
   assembleRoomLifecycleTimeline as assembleTimeline,
   type RoomActionRoster,
 } from '../../src/simulation';
 import {
   createOccurrenceId,
   createSteadyGrowthOutcomeAddress,
+  createTranscendentEmbryoOutcomeAddress,
   type OccurrenceAddress,
 } from '../../src/authored-project/addresses';
 import type { RoomLifecycleStructure } from '../../src/authored-project';
@@ -211,6 +213,26 @@ describe('room lifecycle timeline', () => {
       effect: 'steadyGrowth',
       phaseKey: 'Combat',
     });
+  });
+
+  it('keeps Steady Growth before Transcendent Embryo at one encounter end', () => {
+    const timeline = assembleRoomLifecycleTimeline({
+      owner,
+      lifecycleProfileKey: 'StandardCombatRoom',
+      encounterPhases: Object.freeze([encounter('Combat')]),
+      roomActionRoster: roster(),
+    });
+    const steadyGrowth = createSteadyGrowthOutcomeAddress(owner, 'Combat');
+    const embryo = createTranscendentEmbryoOutcomeAddress(owner, 'Combat');
+    const enriched = appendTranscendentEmbryoTimelineEffects(
+      appendSteadyGrowthTimelineEffects(timeline, [steadyGrowth]),
+      [embryo],
+    );
+    expect(
+      enriched.entries
+        .filter((entry) => entry.kind === 'automaticEffect')
+        .map((entry) => entry.effect),
+    ).toEqual(['steadyGrowth', 'transcendentEmbryo']);
   });
 
   it('keeps each multi-encounter Steady Growth checkpoint with its own phase', () => {

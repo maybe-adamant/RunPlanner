@@ -13,6 +13,7 @@ import surfaceNShrineSideRoomDeliveryRaw from './surface-n-shrine-side-room-deli
 import surfaceNORaw from './surface-no.runplanner.json';
 import surfaceNOHermesShrineDeliveryRaw from './surface-no-hermes-shrine-delivery.runplanner.json';
 import surfaceNOPRaw from './surface-nop.runplanner.json';
+import surfacePSteadyGrowthShrineFrontierRaw from './surface-p-steady-growth-shrine-frontier.runplanner.json';
 import surfaceNOPQRaw from './surface-nopq.runplanner.json';
 import surfaceNCompleteHubRaw from './surface-n-complete-hub-frontier.runplanner.json';
 import surfaceNEntryResolvedRaw from './surface-n-entry-frontier-resolved.runplanner.json';
@@ -35,6 +36,9 @@ export const surfaceCheckpointArtifacts = Object.freeze({
   'surface-no': checkpointArtifact(surfaceNORaw),
   'surface-no-hermes-shrine-delivery': checkpointArtifact(surfaceNOHermesShrineDeliveryRaw),
   'surface-nop': checkpointArtifact(surfaceNOPRaw),
+  'surface-p-steady-growth-shrine-frontier': checkpointArtifact(
+    surfacePSteadyGrowthShrineFrontierRaw,
+  ),
   'surface-nopq': checkpointArtifact(surfaceNOPQRaw),
   'surface-n-entry-frontier': checkpointArtifact(surfaceNEntryRaw),
   'surface-n-entry-frontier-resolved': checkpointArtifact(surfaceNEntryResolvedRaw),
@@ -86,6 +90,10 @@ export function loadSurfaceNOHermesShrineDeliveryCheckpoint(): ProjectDocument {
 
 export function loadSurfaceNOPCheckpoint(): ProjectDocument {
   return surfaceCheckpointArtifacts['surface-nop'].load();
+}
+
+export function loadSurfacePSteadyGrowthShrineFrontierCheckpoint(): ProjectDocument {
+  return surfaceCheckpointArtifacts['surface-p-steady-growth-shrine-frontier'].load();
 }
 
 export function loadSurfaceNOPQCheckpoint(): ProjectDocument {

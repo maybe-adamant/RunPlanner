@@ -3,20 +3,25 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  assembleRoomActionDomain,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createAcquisitionRoleAddress,
   createBiomeAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createRoomActionAddress,
   createRouteStartKeepsakeSelectionAddress,
+  createSteadyGrowthOutcomeAddress,
   hermesShrineDeliveryEntryKey,
   parseHermesShrineDeliveryEntryKey,
+  roomActionKey,
   semanticAddressKey,
   createDefaultAuthoredHexTree,
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
+  assembleRoomActionRoster,
   hermesShrineCandidateForProjectEvaluationAssembly,
   simulateProject,
   simulateProjectAssembly,
@@ -31,6 +36,7 @@ import {
   oOccurrenceIds,
   pBiome,
 } from '@run-planner/test-fixtures/surface';
+import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   assessHermesShrineInventory,
   assessHermesShrinePlacement,
@@ -607,6 +613,126 @@ describe('Hermes Shrine delayed-delivery derivation', () => {
     expect(
       evaluation.materializedPrefix.fixedRoomLinks?.map((link) => link.target.gameName),
     ).toEqual(['N_Boss01', 'N_PostBoss01']);
+  });
+
+  it('preserves a reached automatic outcome while an unresolved Shrine is added and removed', () => {
+    const project = loadSurfacePSteadyGrowthShrineFrontierCheckpoint();
+    const plan = project.route.biomes.find((biome) => biome.biomeKey === 'P');
+    const occurrence = plan?.topology?.occurrences.find(
+      (room) => room.occurrenceId === 'c34604d0-c4e3-4c26-8539-54a82158716f',
+    );
+    if (occurrence === undefined) throw new Error('checkpoint lost the reached P occurrence');
+    const host = createOccurrenceAddress(pBiome, occurrence.occurrenceId);
+    const outcomeKey = semanticAddressKey({
+      kind: 'steadyGrowthOutcome',
+      routeKey: 'Surface',
+      biomeKey: 'P',
+      owner: host,
+      phaseKey: 'Combat',
+    });
+    const assertReachedOutcome = (candidate: typeof project) => {
+      const biome = simulateProjectAssembly(catalog, candidate).evaluation.route.biomes.find(
+        (item) => item.biomeKey === 'P',
+      );
+      if (biome === undefined || !('rewards' in biome))
+        throw new Error('checkpoint lost its P reward evaluation');
+      expect(
+        biome.rewards.steadyGrowthOutcomes.map((outcome) => semanticAddressKey(outcome.address)),
+      ).toContain(outcomeKey);
+      expect(
+        biome.rewards.findings.some(
+          (finding) =>
+            finding.code === 'steadyGrowthOutcomeMissing' &&
+            semanticAddressKey(finding.origin) === outcomeKey,
+        ),
+      ).toBe(true);
+    };
+
+    assertReachedOutcome(project);
+    const added = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePresence',
+      occurrence: host,
+      present: true,
+    });
+    assertReachedOutcome(added);
+    const removed = applyProjectCommand(added, catalog, {
+      kind: 'SetHermesShrinePresence',
+      occurrence: host,
+      present: false,
+    });
+    assertReachedOutcome(removed);
+  });
+
+  it('interleaves a due P delivery with its producer-owned incoming reward in either order', () => {
+    let project = loadSurfacePSteadyGrowthShrineFrontierCheckpoint();
+    const occurrenceId = createOccurrenceId('c34604d0-c4e3-4c26-8539-54a82158716f');
+    const host = createOccurrenceAddress(pBiome, occurrenceId);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSteadyGrowthTarget',
+      outcome: createSteadyGrowthOutcomeAddress(host, 'Combat'),
+      targetTraitKey: 'HeraCastBoon',
+    });
+    const deliveryFinding = simulateProjectAssembly(catalog, project).evaluation.findings.find(
+      (finding) =>
+        finding.code === 'hermesShrineDeliveryPlacementRequired' &&
+        finding.origin.kind === 'acquisitionEntry' &&
+        finding.origin.site.owner.kind === 'occurrence' &&
+        finding.origin.site.owner.occurrenceId === occurrenceId,
+    );
+    if (deliveryFinding?.origin.kind !== 'acquisitionEntry') {
+      throw new Error('checkpoint lost its due P Shrine delivery');
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'PlaceHermesShrineDelivery',
+      entry: deliveryFinding.origin,
+      encounterPhaseKey: 'Combat',
+    });
+    let occurrence = project.route.biomes
+      .find((biome) => biome.biomeKey === 'P')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
+    const deliveryIndex = occurrence?.roomActions.order.findIndex(
+      (reference) =>
+        reference.kind === 'interactAcquisitionEntry' &&
+        reference.siteKey === 'hermesShrineDelivery',
+    );
+    const incomingIndex = occurrence?.roomActions.order.findIndex(
+      (reference) => reference.kind === 'interactIncomingReward',
+    );
+    expect(incomingIndex).toBe(0);
+    expect(deliveryIndex).toBe(1);
+    expect(() => simulateProjectAssembly(catalog, project)).not.toThrow();
+
+    const delivery = occurrence?.roomActions.order[deliveryIndex ?? -1];
+    if (delivery === undefined) throw new Error('placed Shrine delivery is missing');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'MoveRoomAction',
+      action: createRoomActionAddress(pBiome, occurrenceId, roomActionKey(delivery)),
+      toIndex: 0,
+    });
+    occurrence = project.route.biomes
+      .find((biome) => biome.biomeKey === 'P')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
+    expect(occurrence?.roomActions.order.map((reference) => reference.kind)).toEqual([
+      'interactAcquisitionEntry',
+      'interactIncomingReward',
+    ]);
+    if (occurrence === undefined) throw new Error('delivery host occurrence is missing');
+    const domain = assembleRoomActionDomain({ catalog, biome: pBiome, occurrence });
+    const roster = assembleRoomActionRoster({
+      owner: host,
+      order: occurrence.roomActions.order,
+      contributions: domain.contributions,
+      lifecycleStructure: domain.lifecycleStructure,
+    });
+    expect(
+      roster.proposals.find(
+        (proposal) =>
+          proposal.kind === 'move' &&
+          proposal.reference.kind === 'interactIncomingReward' &&
+          proposal.toIndex === 0,
+      ),
+    ).toMatchObject({ structurallyAuthorable: true });
+    expect(() => simulateProjectAssembly(catalog, project)).not.toThrow();
   });
 });
 

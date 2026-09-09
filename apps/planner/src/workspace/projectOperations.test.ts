@@ -4,6 +4,7 @@ import {
   createOccurrenceAddress,
   createRouteAddress,
   encodeProjectDocument,
+  semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import {
   createCompleteFGProject,
@@ -11,6 +12,7 @@ import {
   goldenGBiome,
   goldenHStartId,
 } from '@run-planner/test-fixtures/underworld';
+import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/surface';
 import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '../composition/createApplication';
@@ -303,6 +305,86 @@ describe('project profile operations', () => {
       json: savedJson,
     });
     expect(profile.saveAsCount()).toBe(1);
+  });
+
+  it('loads a reached Steady Growth outcome at a blocked Shrine frontier', async () => {
+    const profile = createProfileFixture();
+    profile.setLoadJson(
+      JSON.stringify(surfaceCheckpointArtifacts['surface-p-steady-growth-shrine-frontier'].raw),
+      'surface-p-steady-growth-shrine-frontier.runplanner.json',
+    );
+    const application = createApplication({ profileFile: profile.adapter });
+
+    await expect(application.projectOperations.loadProfile()).resolves.toEqual({
+      operation: 'loadProfile',
+      status: 'success',
+      message: 'Loaded the profile.',
+    });
+    const evaluation = selectProjectEvaluation(application.store.getState());
+    const finding = evaluation?.findings.find(
+      (candidate) =>
+        candidate.code === 'steadyGrowthOutcomeMissing' &&
+        candidate.origin.kind === 'steadyGrowthOutcome' &&
+        candidate.origin.biomeKey === 'P',
+    );
+    if (finding?.origin.kind !== 'steadyGrowthOutcome') {
+      throw new Error('loaded profile lost its reached P Steady Growth outcome');
+    }
+    const steadyGrowthOutcome = finding.origin;
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const interaction = workspace?.interactions.steadyGrowth.get(
+      semanticAddressKey(steadyGrowthOutcome),
+    );
+    const candidates = interaction
+      ?.forTarget()
+      .load()
+      ?.picker.sections.flatMap((section) => section.items.map((item) => item.value));
+    expect(candidates).toHaveLength(9);
+    expect(candidates).toEqual(
+      expect.arrayContaining([
+        'AphroditeSpecialBoon',
+        'BoonDecayBoon',
+        'CastNovaBoon',
+        'DamageSharePotencyBoon',
+        'DoubleBoltBoon',
+        'FocusCritBoon',
+        'FocusLightningBoon',
+        'HeraCastBoon',
+        'SprintShieldBoon',
+      ]),
+    );
+
+    if (interaction === undefined) throw new Error('Steady Growth interaction is unavailable');
+    application.store.dispatch(
+      authoredProjectCommandDispatched(interaction.intentFor('HeraCastBoon').command),
+    );
+    expect(
+      selectProjectEvaluation(application.store.getState())?.findings.some(
+        (candidate) =>
+          semanticAddressKey(candidate.origin) === semanticAddressKey(steadyGrowthOutcome),
+      ),
+    ).toBe(false);
+
+    const deliveryFinding = selectProjectEvaluation(application.store.getState())?.findings.find(
+      (candidate) =>
+        candidate.code === 'hermesShrineDeliveryPlacementRequired' &&
+        candidate.origin.kind === 'acquisitionEntry' &&
+        candidate.origin.site.owner.kind === 'occurrence' &&
+        candidate.origin.site.owner.occurrenceId === steadyGrowthOutcome.owner.occurrenceId,
+    );
+    if (deliveryFinding?.origin.kind !== 'acquisitionEntry') {
+      throw new Error('loaded profile lost its due Shrine delivery placement');
+    }
+    const deliveryEntry = deliveryFinding.origin;
+    expect(() =>
+      application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'PlaceHermesShrineDelivery',
+          entry: deliveryEntry,
+          encounterPhaseKey: 'Combat',
+        }),
+      ),
+    ).not.toThrow();
   });
 
   it('reconciles a pre-fix Ixion purchase into its forced gate while loading', async () => {

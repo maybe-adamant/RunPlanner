@@ -1698,6 +1698,20 @@ describe('field NPC encounter requirements', () => {
           ),
       ),
     ).toBe(false);
+
+    const sourceRemoved = select(project, icarusPhase, 'GeneratedO');
+    const sourceRemovedHost = authoredOccurrence(
+      sourceRemoved,
+      matured.site.biomeKey,
+      matured.site.owner.occurrenceId,
+    );
+    expect(sourceRemovedHost.roomActions.order).not.toContainEqual(
+      expect.objectContaining({ entryKey: accepted.address.entryKey }),
+    );
+    expect(
+      sourceRemovedHost.acquisitionSites?.roomExit?.pickupEntries?.[accepted.address.entryKey],
+    ).toBeDefined();
+    expect(() => simulateProjectAssembly(catalog, sourceRemoved)).not.toThrow();
   });
 
   it('uses the shared encounter-owned trait path for Athena across P phase dormancy and completion', () => {

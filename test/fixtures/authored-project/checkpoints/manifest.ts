@@ -183,6 +183,17 @@ export const checkpointManifest = Object.freeze([
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
+    id: 'surface-p-steady-growth-shrine-frontier',
+    file: 'surface-p-steady-growth-shrine-frontier.runplanner.json',
+    route: 'Surface',
+    configuredBiomePrefix: ['N', 'O', 'P', 'Q'],
+    scenario:
+      'Reached P Steady Growth outcome sharing an occurrence with unresolved Shrine authoring',
+    schemaVersion: 79,
+    catalogVersion: '0.55.0-anvil-of-fates',
+    provenance: 'saved user profile reproducing the Gate B application-load failure',
+  },
+  {
     id: 'surface-nopq',
     file: 'surface-nopq.runplanner.json',
     route: 'Surface',
