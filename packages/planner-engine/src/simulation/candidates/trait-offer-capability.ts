@@ -564,7 +564,14 @@ export function createTraitOfferCandidateArtifacts(
                   ? undefined
                   : catalog.traits.byKey[option.traitKey]?.selectedDisposition;
               if (effect?.kind !== 'circe' || context.arcanaFear === undefined) return [];
-              return [circeResolutionDomain(catalog, context.arcanaFear, effect.effect)];
+              return [
+                circeResolutionDomain(
+                  catalog,
+                  context.arcanaFear,
+                  effect.effect,
+                  context.keepsakes?.fatedStatus,
+                ),
+              ];
             }),
           ),
         echoPomTargets: (value: AuthoredTraitOffer, optionKey: TraitOptionKey) =>

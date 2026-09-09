@@ -136,6 +136,12 @@ The operation does not re-check a card's ordinary manual/automatic activation
 rule. An inactive automatic card is therefore a valid temporary draw and can
 remain active even while its awakening condition is false.
 
+The draw loop stops when its eligible inactive pools are empty, even if the
+requested count has not been reached. Red Citrine, Judgment, and Crystal
+Figurine therefore resolve exactly `min(requested count, eligible inactive
+cards)` outcomes; a fully exhausted pool resolves zero outcomes rather than
+creating an impossible selection requirement.
+
 Three selection details affect the native draw:
 
 - `CastCount`/Eternity has `RandomDrawChance = 0.1`; a failed roll moves it to

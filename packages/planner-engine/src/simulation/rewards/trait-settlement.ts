@@ -1217,7 +1217,12 @@ export function settleEncounterTraitOffer(
     const owner = createTraitOfferAddress(origin as TraitOfferOwnerAddress, acquisitionRole);
     const circeDomain =
       disposition?.kind === 'circe'
-        ? circeResolutionDomain(catalog, branch.arcanaFear, disposition.effect)
+        ? circeResolutionDomain(
+            catalog,
+            branch.arcanaFear,
+            disposition.effect,
+            branch.keepsakes.fatedStatus,
+          )
         : undefined;
     const source = {
       origin,

@@ -19,9 +19,9 @@ import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../../materiali
 import { advanceStygianWellBossUses } from '../../../stygian-well';
 import {
   activateTemporaryArcana,
-  inactiveArcanaKeys,
   judgmentRequiredCount,
   orderRandomArcanaSelection,
+  randomArcanaDrawKeys,
 } from '../../../arcana-fear';
 import {
   assessGorgonChildSettlement,
@@ -312,7 +312,7 @@ export function applyEncounterSettlementTransition(inputs: {
     const requiredCount =
       frontier === undefined || first === undefined
         ? undefined
-        : judgmentRequiredCount(catalog, first);
+        : judgmentRequiredCount(catalog, first, judgmentBranches[0]?.keepsakes.fatedStatus);
     const judgmentCandidate =
       requiredCount === undefined || first === undefined
         ? undefined
@@ -320,12 +320,10 @@ export function applyEncounterSettlementTransition(inputs: {
             key: semanticAddressKey(owner),
             requiredCount,
             activeArcanaKeys: Object.freeze(first.arcana.active.map((card) => card.key)),
-            inactiveArcanaKeys: Object.freeze(
-              inactiveArcanaKeys(catalog, first).filter(
-                (key) =>
-                  judgmentBranches[0]?.keepsakes.fatedStatus !== 'Fated' ||
-                  catalog.arcanaCards.byKey[key]?.fatedIncompatible !== true,
-              ),
+            inactiveArcanaKeys: randomArcanaDrawKeys(
+              catalog,
+              first,
+              judgmentBranches[0]?.keepsakes.fatedStatus,
             ),
           });
     const judgmentSelected = room.encounters.judgmentArcanaKeysByPhase?.[event.phaseKey] ?? [];
@@ -333,7 +331,11 @@ export function applyEncounterSettlementTransition(inputs: {
       branches.flatMap((branch) => {
         if (hasActiveChaosSemanticTag(branch.traitHistory ?? createTraitHistoryState(), 'Barren'))
           return [advanceRewardBranches([branch], event.sequence)[0]!];
-        const required = judgmentRequiredCount(catalog, branch.arcanaFear);
+        const required = judgmentRequiredCount(
+          catalog,
+          branch.arcanaFear,
+          branch.keepsakes.fatedStatus,
+        );
         if (required === undefined) return [advanceRewardBranches([branch], event.sequence)[0]!];
         const selected = judgmentSelected;
         if (selected.length !== required) {
@@ -352,6 +354,7 @@ export function applyEncounterSettlementTransition(inputs: {
           );
           return [];
         }
+        if (selected.length === 0) return [advanceRewardBranches([branch], event.sequence)[0]!];
         const assessed = activateTemporaryArcana(catalog, branch.arcanaFear, selected, {
           owner,
           sequence: event.sequence,
@@ -407,12 +410,10 @@ export function applyEncounterSettlementTransition(inputs: {
     const figurineFrontier = figurineEligible ? figurineBranches[0]?.arcanaFear : undefined;
     const figurineInactive =
       figurineEligible && figurineFrontier !== undefined
-        ? Object.freeze(
-            inactiveArcanaKeys(catalog, figurineFrontier).filter(
-              (key) =>
-                figurineBranches[0]?.keepsakes.fatedStatus !== 'Fated' ||
-                catalog.arcanaCards.byKey[key]?.fatedIncompatible !== true,
-            ),
+        ? randomArcanaDrawKeys(
+            catalog,
+            figurineFrontier,
+            figurineBranches[0]?.keepsakes.fatedStatus,
           )
         : Object.freeze([]);
     const figurineRequiredCount = figurineEligible
