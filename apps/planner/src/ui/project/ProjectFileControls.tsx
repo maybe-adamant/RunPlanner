@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
 
@@ -14,6 +14,122 @@ import {
 } from '@planner/persistence/gamePlanPublisher';
 import { selectProfileSession, selectProfileStatus, useAppSelector } from '@planner/state/store';
 import { ActionIcon } from '../controls/ActionIcon';
+
+function GamePublicationDialog({
+  discovery,
+  pending,
+  selectedProfile,
+  selectedSlot,
+  onCancel,
+  onProfileChange,
+  onPublish,
+  onSlotChange,
+}: {
+  readonly discovery: GamePlanDiscovery;
+  readonly pending: boolean;
+  readonly selectedProfile: string;
+  readonly selectedSlot: GamePlanSlotNumber | '';
+  readonly onCancel: () => void;
+  readonly onProfileChange: (profileId: string) => void;
+  readonly onPublish: () => void;
+  readonly onSlotChange: (slot: GamePlanSlotNumber | '') => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (dialog === null) return;
+    if (typeof dialog.showModal === 'function' && !dialog.open) {
+      try {
+        dialog.showModal();
+      } catch {
+        dialog.setAttribute('open', '');
+      }
+    } else if (!dialog.open) {
+      dialog.setAttribute('open', '');
+    }
+  }, []);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (dialog === null) return;
+    const cancel = (event: Event) => {
+      event.preventDefault();
+      if (!pending) onCancel();
+    };
+    dialog.addEventListener('cancel', cancel);
+    return () => dialog.removeEventListener('cancel', cancel);
+  }, [onCancel, pending]);
+
+  return (
+    <dialog
+      aria-labelledby="game-publication-dialog-title"
+      aria-modal="true"
+      className="game-publication-dialog-backdrop"
+      ref={dialogRef}
+    >
+      <section className="game-publication-dialog">
+        <header className="panel-heading">
+          <div>
+            <p className="eyebrow">Game module</p>
+            <h2 id="game-publication-dialog-title">Publish to game</h2>
+          </div>
+        </header>
+        <fieldset className="game-publication-selection">
+          <legend className="visually-hidden">Publication target</legend>
+          <label htmlFor="game-profile-target">Profile</label>
+          <select
+            id="game-profile-target"
+            disabled={pending}
+            onChange={(event) => onProfileChange(event.target.value)}
+            value={selectedProfile}
+          >
+            <option value="">Choose profile…</option>
+            {discovery.targets.map((target) => (
+              <option key={target.id} value={target.id}>
+                {target.label}
+              </option>
+            ))}
+          </select>
+          <label htmlFor="game-plan-slot">Slot</label>
+          <select
+            id="game-plan-slot"
+            disabled={pending}
+            onChange={(event) => {
+              const value = Number(event.target.value);
+              onSlotChange(
+                GAME_PLAN_SLOT_NUMBERS.includes(value as GamePlanSlotNumber)
+                  ? (value as GamePlanSlotNumber)
+                  : '',
+              );
+            }}
+            value={selectedSlot}
+          >
+            <option value="">Choose slot…</option>
+            {GAME_PLAN_SLOT_NUMBERS.map((slotNumber) => (
+              <option key={slotNumber} value={slotNumber}>
+                Slot {slotNumber}
+              </option>
+            ))}
+          </select>
+        </fieldset>
+        <footer className="game-publication-actions">
+          <button className="quiet-action" disabled={pending} onClick={onCancel} type="button">
+            Cancel
+          </button>
+          <button
+            className="secondary-action"
+            disabled={pending || selectedProfile.length === 0 || selectedSlot === ''}
+            onClick={onPublish}
+            type="button"
+          >
+            {pending ? 'Publishing…' : 'Publish'}
+          </button>
+        </footer>
+      </section>
+    </dialog>
+  );
+}
 
 export function ProjectFileControls({
   operations,
@@ -35,6 +151,11 @@ export function ProjectFileControls({
   const [gameDiscovery, setGameDiscovery] = useState<GamePlanDiscovery | null>(null);
   const [selectedGameProfile, setSelectedGameProfile] = useState<string>('');
   const [selectedGameSlot, setSelectedGameSlot] = useState<GamePlanSlotNumber | ''>('');
+  const closeGamePublication = useCallback(() => {
+    setGameDiscovery(null);
+    setSelectedGameProfile('');
+    setSelectedGameSlot('');
+  }, []);
   const runProfileOperation = async (
     operation: ProjectOperation,
     run: () => Promise<ProjectOperationResult>,
@@ -78,9 +199,7 @@ export function ProjectFileControls({
       operations.publishGame(selectedGameProfile, selectedGameSlot),
     );
     if (publication.status === 'success') {
-      setGameDiscovery(null);
-      setSelectedGameProfile('');
-      setSelectedGameSlot('');
+      closeGamePublication();
     }
   };
 
@@ -242,81 +361,15 @@ export function ProjectFileControls({
           {pendingOperation === 'loadProfile' ? 'Loading…' : 'Load'}
         </button>
         {operations.gamePlanAvailable && (
-          <>
-            <button
-              className="secondary-action action-compact"
-              disabled={pendingOperation !== null || !hasProject}
-              onClick={() => void discoverAndPublishGamePlan()}
-              type="button"
-            >
-              <ActionIcon name="save" />
-              {pendingOperation === 'publishGame' ? 'Publishing…' : 'Publish to Game'}
-            </button>
-            {gameDiscovery?.status === 'available' && gameDiscovery.targets.length > 0 && (
-              <fieldset className="game-publication-selection" aria-label="Publish to game">
-                <legend>Publish to game</legend>
-                <label htmlFor="game-profile-target">Profile</label>
-                <select
-                  id="game-profile-target"
-                  disabled={pendingOperation !== null}
-                  onChange={(event) => setSelectedGameProfile(event.target.value)}
-                  value={selectedGameProfile}
-                >
-                  <option value="">Choose profile…</option>
-                  {gameDiscovery.targets.map((target) => (
-                    <option key={target.id} value={target.id}>
-                      {target.label}
-                    </option>
-                  ))}
-                </select>
-                <label htmlFor="game-plan-slot">Slot</label>
-                <select
-                  id="game-plan-slot"
-                  disabled={pendingOperation !== null}
-                  onChange={(event) => {
-                    const value = Number(event.target.value);
-                    if (GAME_PLAN_SLOT_NUMBERS.includes(value as GamePlanSlotNumber)) {
-                      setSelectedGameSlot(value as GamePlanSlotNumber);
-                    } else {
-                      setSelectedGameSlot('');
-                    }
-                  }}
-                  value={selectedGameSlot}
-                >
-                  <option value="">Choose slot…</option>
-                  {GAME_PLAN_SLOT_NUMBERS.map((slotNumber) => (
-                    <option key={slotNumber} value={slotNumber}>
-                      Slot {slotNumber}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  className="secondary-action action-compact"
-                  disabled={
-                    pendingOperation !== null ||
-                    selectedGameProfile.length === 0 ||
-                    selectedGameSlot === ''
-                  }
-                  onClick={() => void publishSelectedGamePlan()}
-                  type="button"
-                >
-                  {pendingOperation === 'publishGame' ? 'Publishing…' : 'Publish'}
-                </button>
-                <button
-                  className="quiet-action action-compact"
-                  disabled={pendingOperation !== null}
-                  onClick={() => {
-                    setGameDiscovery(null);
-                    setSelectedGameProfile('');
-                    setSelectedGameSlot('');
-                  }}
-                  type="button"
-                >
-                  Cancel
-                </button>
-              </fieldset>
-            )}
-          </>
+          <button
+            className="secondary-action action-compact"
+            disabled={pendingOperation !== null || !hasProject}
+            onClick={() => void discoverAndPublishGamePlan()}
+            type="button"
+          >
+            <ActionIcon name="save" />
+            {pendingOperation === 'publishGame' ? 'Publishing…' : 'Publish to Game'}
+          </button>
         )}
         {profileSession.recoveryStatus === 'blocked' && (
           <>
@@ -345,6 +398,18 @@ export function ProjectFileControls({
           </>
         )}
       </div>
+      {gameDiscovery?.status === 'available' && gameDiscovery.targets.length > 0 && (
+        <GamePublicationDialog
+          discovery={gameDiscovery}
+          onCancel={closeGamePublication}
+          onProfileChange={setSelectedGameProfile}
+          onPublish={() => void publishSelectedGamePlan()}
+          onSlotChange={setSelectedGameSlot}
+          pending={pendingOperation === 'publishGame'}
+          selectedProfile={selectedGameProfile}
+          selectedSlot={selectedGameSlot}
+        />
+      )}
     </section>
   );
 }
