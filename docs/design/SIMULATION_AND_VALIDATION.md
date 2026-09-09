@@ -84,18 +84,23 @@ declaration -> catalog -> history -> validator -> feedback
 ### Authoring readiness
 
 Progressive evaluation distinguishes required incompleteness from invalid
-authored input. The first incomplete atomic region publishes one engine-owned
-authoring horizon. Semantic owners before that region, within it, or containing
-its repair target are editable; later owners are locked. Invalid authored input
-does not create a readiness lock and remains available for explicit repair.
+authored input. Exact simulation and findings stop at the exact missing owner,
+but the engine normalizes authoring readiness to the end of one repairable
+region. Route-start loadout remains wholly editable and locks the first
+occurrence. Within the route, an incomplete occurrence interior remains wholly
+editable and locks its outgoing decision; an incomplete outgoing decision
+remains wholly editable and locks the selected next occurrence. Earlier regions
+remain editable, and retained later values remain visible but locked. Invalid
+authored input does not create a readiness lock and remains available for
+explicit repair.
 
-Atomic regions group authoring that has no truthful internal order, such as one
-generated offer set or one Hub side-room sibling set. The engine locates both
-the horizon and queried command owners through the same semantic chronology;
-the application does not reconstruct order from tabs, rail positions, finding
-copy, or rendered controls. Readiness is derived output only: retained suffix
-values remain visible and persisted, and low-level authored commands continue
-to represent incomplete or invalid documents.
+Atomic regions still group authoring that has no truthful internal order, such
+as one generated offer set or one Hub side-room sibling set. The engine locates
+the exact incomplete owner, normalized horizon, and queried command owners
+through the same semantic chronology; the application does not reconstruct
+order from tabs, rail positions, finding copy, or rendered controls. Readiness
+is derived output only, and low-level authored commands continue to represent
+incomplete or invalid documents.
 
 Canonical materialization is the bridge between catalog/authored state and
 history. Declarations alone cannot produce history because concrete topology,
@@ -1432,8 +1437,7 @@ realization is the shop target.
 `CANDIDATE_EVALUATION_MODEL.md` is the detailed authority for project-bound
 candidate sessions, typed pre-decision contexts, domain evaluation, replay
 horizons, caching, and refactor constraints. This section retains the
-simulation-level contract; `../progress/IMPLEMENTATION_PLAN.md` owns delivery
-order.
+simulation-level contract.
 
 Candidate domains are declaration-derived and stable. Declaration-impossible
 values may be absent. Context-invalid values remain present and receive

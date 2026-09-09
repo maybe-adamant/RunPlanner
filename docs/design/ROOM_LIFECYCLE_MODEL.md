@@ -612,6 +612,15 @@ settles its authored rarity target immediately at that checkpoint and publishes
 one fixed automatic timeline effect after End encounter. It is not a movable
 Room Action, and it does not introduce a second lifecycle clock or scheduler.
 
+One encounter-end checkpoint settles every fixed automatic outcome before it
+publishes any pickup created by a matured clock. Steady Growth precedes
+Transcendent Embryo in that fixed order. Supply Chain and Hermes Shrine clocks
+may mature at the same checkpoint, but their pickup frontiers observe the final
+post-automatic branches and become ordinary acquisitions only at
+`afterEncounterPhase`. Their authored acquisition rows may interleave with
+other post-encounter pickups; acquiring one can never affect an automatic
+outcome from the checkpoint that created it.
+
 ## Operations, Effects, and Events
 
 Operations, effects, and events are deliberately different concepts:

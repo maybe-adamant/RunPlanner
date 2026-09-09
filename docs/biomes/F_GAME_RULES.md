@@ -30,8 +30,8 @@ sources are:
 
 ## Feature Projection Map
 
-The disposition vocabulary is defined by `../design/CATALOG_MODEL.md`; implementation
-coverage is defined by `../progress/MIGRATION_PROVENANCE.md`.
+The disposition vocabulary is defined by `../design/CATALOG_MODEL.md`;
+implementation coverage is recorded directly in this map and its focused tests.
 
 | Feature                                      | Verified game behavior                                                                                                    | Disposition and planner projection                                                                                                                                    | Implementation status | Reconsider when                                            |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | ---------------------------------------------------------- |

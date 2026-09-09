@@ -159,8 +159,7 @@ not by an exit decision or a second occurrence container.
 Historical delivery records may refer to `LinearBiome`, `HubBiome`, terminal
 transitions, fixed-entry slots, continuations, or picked contracts. Those names
 identify the pre-unified migration state only; they are not current persisted
-or semantic contracts. [`MIGRATION_PROVENANCE.md`](../progress/MIGRATION_PROVENANCE.md)
-retains that evidence.
+or semantic contracts. Git history retains that migration evidence.
 
 ```ts
 interface AuthoredBiomePlan {

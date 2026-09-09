@@ -44,8 +44,7 @@ Historical migration evidence may use `LinearBiome`, `HubBiome`,
 `ForkedPreboss`, `ShopPreboss`, `entryOfferPolicy`, or terminal-policy names.
 Those names describe the pre-unified catalog only. Current declarations use
 the common layout, a `Preboss` template, and `prebossBatchPolicy`; the
-historical ledger remains in
-[`MIGRATION_PROVENANCE.md`](../progress/MIGRATION_PROVENANCE.md).
+superseded migration vocabulary remains available in Git history.
 
 The generic `CreateStart` transition uses the fixed identity directly or the
 first declaration-ordered `authoredChoice` identity as its initial occurrence.
@@ -106,9 +105,8 @@ simplification records the feature that would force reconsideration. If two
 alternatives differ on a currently modeled fact, they must be modeled exactly
 or marked deferred; they cannot be called simplified.
 
-These dispositions describe product intent, not delivery progress.
-`../progress/MIGRATION_PROVENANCE.md` separately records whether a projection is only
-documented or is already declared, authored, simulated, and presented.
+These dispositions describe product intent, not delivery progress. Current
+coverage is recorded by the owning feature map and its focused tests.
 
 ## Evidence Sources
 
@@ -799,8 +797,8 @@ vocabulary is reconciled by this design set.
 `ROOM_LIFECYCLE_MODEL.md` owns the ordered operations that turn an entered
 occurrence into one composable history fragment.
 `../biomes/F_GAME_RULES.md` and `../biomes/G_GAME_RULES.md` own their concrete
-biome facts. `../progress/MIGRATION_PROVENANCE.md` records evidence disposition
-and port-verification history.
+biome facts. Focused audits retain source evidence and explicit modeling
+dispositions; Git history retains superseded delivery records.
 
 ## Trait Offer Catalog
 

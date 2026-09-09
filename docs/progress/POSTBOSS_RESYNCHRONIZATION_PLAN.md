@@ -2,7 +2,7 @@
 
 ## Status and bases
 
-Status: **locked for later implementation**.
+Status: **Gates A-C implemented; Gate D live proof and closure remain**.
 
 Planning bases:
 

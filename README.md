@@ -48,8 +48,6 @@ Use the smallest authority that answers the question:
   and [structured workspace](docs/design/STRUCTURED_EDITOR_WORKSPACE.md) define
   application/editor boundaries.
 - [Source audit map](docs/audits/README.md) routes source evidence by subject.
-- [Progress](docs/progress/IMPLEMENTATION_PROGRESS.md) records durable delivery
-  history.
 
 ## Quickstart
 
