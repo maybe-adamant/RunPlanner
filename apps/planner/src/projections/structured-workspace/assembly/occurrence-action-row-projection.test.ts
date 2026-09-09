@@ -114,7 +114,7 @@ describe('structured workspace actions assembly', () => {
       {},
     );
 
-    expect(label).toBe('Interact with Pom Slice pickup');
+    expect(label).toBe('Interact with Supply Chain Pom Slice pickup');
     expect(label).not.toContain('clockedTraitGenerated:');
   });
 

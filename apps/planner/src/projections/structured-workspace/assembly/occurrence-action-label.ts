@@ -1,5 +1,6 @@
 import {
   parseArtificerReplacementEntryKey,
+  parseClockedTraitGeneratedPickupEntryKey,
   parseEchoLastRewardPickupEntryKey,
   parseHermesShrineDeliveryEntryKey,
 } from '@run-planner/engine/authored-project';
@@ -53,10 +54,10 @@ export function occurrenceActionLabel(
   >,
   purgingPoolTraitKeyBySlot?: Readonly<Record<'left' | 'middle' | 'right', string | null>>,
 ): string {
-  const pickupLabel = (subject: string): string => {
+  const pickupLabel = (subject: string, includeOfferSummary = true): string => {
     const label = `Interact with ${subject} pickup`;
     const summary =
-      rewardControl?.offer === null || rewardControl?.offer === undefined
+      !includeOfferSummary || rewardControl?.offer === null || rewardControl?.offer === undefined
         ? undefined
         : summarizeRewardOffer(catalog, rewardControl.offer);
     const described =
@@ -127,6 +128,7 @@ export function occurrenceActionLabel(
     case 'interactGorgon':
       return 'Interact with Athena';
     case 'interactAcquisitionEntry': {
+      const clockedTraitPickup = parseClockedTraitGeneratedPickupEntryKey(reference.entryKey);
       const supplemental =
         roomLocal.kind === 'shop'
           ? roomLocal.supplementalOffers.find((candidate) => candidate.key === reference.entryKey)
@@ -144,13 +146,15 @@ export function occurrenceActionLabel(
       const entryLabel =
         parseArtificerReplacementEntryKey(reference.entryKey) !== undefined
           ? 'Artificer'
-          : parseEchoLastRewardPickupEntryKey(reference.entryKey) !== undefined
-            ? 'Reward Reward Reward replay'
-            : explicitRewardLabel !== undefined
-              ? explicitRewardLabel
-              : shrineDelivery !== undefined
-                ? 'Hermes Shrine delivery'
-                : reference.entryKey;
+          : clockedTraitPickup !== undefined
+            ? 'Supply Chain Pom Slice'
+            : parseEchoLastRewardPickupEntryKey(reference.entryKey) !== undefined
+              ? 'Reward Reward Reward replay'
+              : explicitRewardLabel !== undefined
+                ? explicitRewardLabel
+                : shrineDelivery !== undefined
+                  ? 'Hermes Shrine delivery'
+                  : reference.entryKey;
       if (shrineDelivery !== undefined) {
         if (rewardControl?.offer?.rewardType === 'BlindBoxLoot') {
           return `Receive ${entryLabel}`;
@@ -161,7 +165,7 @@ export function occurrenceActionLabel(
             : summarizeRewardOffer(catalog, rewardControl.offer);
         return `Receive ${summary}`;
       }
-      return pickupLabel(supplemental?.label ?? entryLabel);
+      return pickupLabel(supplemental?.label ?? entryLabel, clockedTraitPickup === undefined);
     }
     case 'useFountain':
       return 'Use fountain';
