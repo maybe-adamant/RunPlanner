@@ -81,6 +81,43 @@ describe('structured workspace actions assembly', () => {
     );
   });
 
+  it('labels an authored clocked pickup from its reward without exposing its persisted key', () => {
+    const owner = createOccurrenceAddress(goldenFBiome, goldenFStartId);
+    const entry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(owner, 'roomExit'),
+      clockedTraitGeneratedPickupEntryKey('icarus-supply', 'pom2'),
+    );
+    const label = occurrenceActionLabel(
+      catalog,
+      {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'roomExit',
+        entryKey: entry.entryKey,
+        encounterPhaseKey: 'Encounter',
+      },
+      { kind: 'none' },
+      [],
+      Object.freeze({
+        kind: 'explicitReward' as const,
+        marker: Object.freeze({
+          address: entry,
+          assessment: 'unassessed' as const,
+          findingCount: 0,
+          focusKey: semanticAddressKey(entry),
+        }),
+        offer: Object.freeze({ rewardType: 'StoreRewardRandomStack' }),
+        offerEditVisibility: 'hidden' as const,
+        owner: Object.freeze({ kind: 'acquisitionEntry' as const, address: entry }),
+        retainedSourceMismatch: false,
+        rewardTypes: Object.freeze([]),
+      }),
+      {},
+    );
+
+    expect(label).toBe('Interact with Pom Slice pickup');
+    expect(label).not.toContain('clockedTraitGenerated:');
+  });
+
   it('shows the simulation-neutral Boss pickup as a required end-encounter action', () => {
     const project = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
     const { assembly } = assemble(
