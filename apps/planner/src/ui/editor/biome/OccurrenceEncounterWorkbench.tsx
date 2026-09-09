@@ -98,8 +98,8 @@ function LocalVisitSlotRow({
   );
   return (
     <tr className="ephyra-side-grid-row">
-      <th scope="row">{slot.label}</th>
       <td className="ephyra-side-priority">{slot.availabilityRank}</td>
+      <th scope="row">{slot.label}</th>
       <td>
         <CandidateSelect
           id={`local-${slot.marker.focusKey}-generation`}
@@ -108,10 +108,10 @@ function LocalVisitSlotRow({
           onReplace={(value) => executeIntent(generation.intentFor(value))}
         />
       </td>
-      <td>
+      <td className="ephyra-side-visit-order">
         <LocalVisitOrderSelect interactions={interactions} slot={slot} />
       </td>
-      <td>
+      <td className="ephyra-side-reward-cell">
         {slot.generation !== 'generated' ? null : (
           <DoorRewardEditor
             door={slot.door}
@@ -141,19 +141,25 @@ export function LocalVisitWorkbench({
       aria-label="Ephyra side rooms"
       className="ephyra-side-editor"
     >
-      <header className="local-reward-heading">
-        {nested ? null : <h4>Side Rooms</h4>}
+      {nested ? (
         <span className="neutral-status">
           {localVisit.visitOrder.length} visited · {localVisit.slots.length} possible
         </span>
-      </header>
+      ) : (
+        <h4 className="room-feature-category-heading">
+          <span>Side Rooms</span>
+          <span className="room-feature-heading-note">
+            {localVisit.visitOrder.length} visited · {localVisit.slots.length} possible
+          </span>
+        </h4>
+      )}
       <div className="ephyra-side-grid-scroll">
         <table {...findingTarget(localVisit.order)} tabIndex={-1} className="ephyra-side-grid">
           <caption className="visually-hidden">Ephyra side-room generation and visit order</caption>
           <thead>
             <tr>
-              <th scope="col">Room</th>
               <th scope="col">Priority</th>
+              <th scope="col">Room</th>
               <th scope="col">Generated</th>
               <th scope="col">Visit order</th>
               <th scope="col">Door reward</th>
