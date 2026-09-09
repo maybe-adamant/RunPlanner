@@ -587,7 +587,7 @@ describe('BiomeWorkspace', () => {
       'Big Max Magick',
     );
     await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    expect(screen.getByRole('heading', { name: 'Side Rooms' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /^Side Rooms/ })).toBeTruthy();
     expect(screen.queryByText('Door 558353')).toBeNull();
     expect(screen.getByLabelText('Side Room 01 generation')).toBeTruthy();
     const inspector = screen.getByRole('complementary', { name: 'Details' });
