@@ -195,7 +195,7 @@ describe('decision run-state snapshots', () => {
     ]);
   });
 
-  it('promotes Shrine deliveries and Well effects and derives only their changed exit facts', () => {
+  it('keeps Echo and Shrine bookkeeping diagnostic while deriving active exit facts', () => {
     const occurrence = createOccurrenceAddress(
       createBiomeAddress('Underworld', 'F'),
       createOccurrenceId('run-state-retained-effects'),
@@ -214,6 +214,7 @@ describe('decision run-state snapshots', () => {
     });
     const afterBranch = Object.freeze({
       ...beforeBranch,
+      pendingHermesShrineDeliveries: Object.freeze({}),
       keepsakes: Object.freeze({
         ...beforeBranch.keepsakes,
         timePiece: Object.freeze({ remainingCharges: 1 }),
@@ -252,9 +253,26 @@ describe('decision run-state snapshots', () => {
         enteredBiomeCount: 1,
         rewardFacts: () => requirementFacts(0),
       })!;
-    const entered = snapshot('roomEntered', beforeBranch);
-    const exited = snapshot('beforeRoomExit', afterBranch);
+    const enteredBase = snapshot('roomEntered', beforeBranch);
+    const exitedBase = snapshot('beforeRoomExit', afterBranch);
+    const entered: RunStateSnapshot = Object.freeze({
+      ...enteredBase,
+      traits: Object.freeze({
+        ...enteredBase.traits,
+        echoShopDuplicateStatus: 'pending' as const,
+      }),
+    });
+    const exited: RunStateSnapshot = Object.freeze({
+      ...exitedBase,
+      traits: Object.freeze({
+        ...exitedBase.traits,
+        echoShopDuplicateStatus: 'consumed' as const,
+      }),
+    });
     expect(entered.pendingHermesShrineDeliveries).toEqual({ 'delivery-source': delivery });
+    expect(exited.pendingHermesShrineDeliveries).toEqual({});
+    expect(entered.traits.echoShopDuplicateStatus).toBe('pending');
+    expect(exited.traits.echoShopDuplicateStatus).toBe('consumed');
     expect(exited.stygianWell.sparkUses).toBe(1);
     const deltas = deriveRoomExitConformanceDeltas(
       [occurrence],

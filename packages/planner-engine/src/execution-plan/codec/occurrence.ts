@@ -204,14 +204,12 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
   const allowedConformanceKinds = new Set<ExecutionRoomExitConformanceFactKind>([
     'traitInventory',
     'elementCounts',
-    'echoShopDuplicate',
     'steadyGrowth',
     'chaos',
     'keepsakeEffects',
     'rewardPriorities',
     'pathOfStars',
     'forfeit',
-    'hermesShrineDeliveries',
     'stygianWell',
   ]);
   const conformanceFacts =

@@ -39,14 +39,12 @@ export function pendingKeepsakeEffects(state: KeepsakeState): PendingKeepsakeEff
 export type RoomExitConformanceFactKind =
   | 'traitInventory'
   | 'elementCounts'
-  | 'echoShopDuplicate'
   | 'steadyGrowth'
   | 'chaos'
   | 'keepsakeEffects'
   | 'rewardPriorities'
   | 'pathOfStars'
   | 'forfeit'
-  | 'hermesShrineDeliveries'
   | 'stygianWell';
 
 export interface RoomExitConformanceDelta {
@@ -143,11 +141,6 @@ export function deriveRoomExitConformanceDeltas(
     ) {
       facts.push(Object.freeze({ kind: 'traitInventory' }));
     }
-    add(
-      'echoShopDuplicate',
-      baseline.traits.echoShopDuplicateStatus,
-      currentExit.traits.echoShopDuplicateStatus,
-    );
     add('steadyGrowth', baseline.traits.steadyGrowth, currentExit.traits.steadyGrowth);
     add('chaos', baseline.traits.chaos, currentExit.traits.chaos);
     add(
@@ -162,11 +155,6 @@ export function deriveRoomExitConformanceDeltas(
     // previously compared bank/closure pair.
     add('pathOfStars', baseline.hexObserver, currentExit.hexObserver);
     add('forfeit', baseline.forfeitStatus, currentExit.forfeitStatus);
-    add(
-      'hermesShrineDeliveries',
-      baseline.pendingHermesShrineDeliveries,
-      currentExit.pendingHermesShrineDeliveries,
-    );
     add('stygianWell', baseline.stygianWell, currentExit.stygianWell);
     if (facts.length > 0)
       result.set(

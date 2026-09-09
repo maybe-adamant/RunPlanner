@@ -95,14 +95,12 @@ const executionDispositions = {
   roomExitConformance: {
     traitInventory: 'covered',
     elementCounts: 'covered',
-    echoShopDuplicate: 'deferred-route',
     steadyGrowth: 'covered',
     chaos: 'covered',
     keepsakeEffects: 'covered',
     rewardPriorities: 'covered',
     pathOfStars: 'covered',
     forfeit: 'covered',
-    hermesShrineDeliveries: 'deferred-route',
     stygianWell: 'covered',
   } satisfies Record<ExecutionRoomExitConformanceFactKind, ExecutionDisposition>,
 } as const;
@@ -113,6 +111,6 @@ describe('execution semantic dispositions', () => {
     expect(executionDispositions.overviewFields.effectNeutralRequiredReward).toBe(
       'native-authoritative',
     );
-    expect(executionDispositions.roomExitConformance.hermesShrineDeliveries).toBe('deferred-route');
+    expect(executionDispositions.roomExitConformance.stygianWell).toBe('covered');
   });
 });
