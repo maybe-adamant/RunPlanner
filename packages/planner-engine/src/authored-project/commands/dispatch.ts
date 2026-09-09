@@ -31,9 +31,13 @@ import {
 } from '../addresses';
 import { applyRoomActionCommand } from './room-actions';
 import { reconcileNewRequiredRoomActions } from '../room-action-defaults';
-import { reconcileSelectedPickupProducerState } from '../pickup-producers';
+import {
+  reconcileSelectedPickupProducerState,
+  retractInactiveClockedTraitPickupActions,
+} from '../pickup-producers';
 import { reconcileChaosTopology } from '../chaos-gate-reconciliation';
 import { applyFieldsSpatialCommand } from './fields-spatial';
+import { retractMissingHermesShrineDeliveryActions } from '../hermes-shrine-delivery';
 
 /**
  * Generated pickup sites are derived from their exact source acquisition. Run
@@ -345,18 +349,27 @@ export function applyProjectCommand(
     // then schedule the newly active generated actions. This is one ordered
     // command-local composition rather than an ambient fixed-point pass.
     const withTopologyImpact = reconcileResourcePlacementTopology(proposal);
-    const withSourceActions = reconcileNewRequiredRoomActions(
+    const withoutRemovedShrineDeliveries = retractMissingHermesShrineDeliveryActions(
       document,
       withTopologyImpact,
+    );
+    const withSourceActions = reconcileNewRequiredRoomActions(
+      document,
+      withoutRemovedShrineDeliveries,
       catalog,
+    );
+    const withRetractedClockedPickups = retractInactiveClockedTraitPickupActions(
+      catalog,
+      document,
+      withSourceActions,
     );
     const withGeneratedPickupState = reconcileGeneratedPickupProducerState(
       document,
-      withSourceActions,
+      withRetractedClockedPickups,
       catalog,
     );
     const withRequiredActions = reconcileNewRequiredRoomActions(
-      withSourceActions,
+      withRetractedClockedPickups,
       withGeneratedPickupState,
       catalog,
     );

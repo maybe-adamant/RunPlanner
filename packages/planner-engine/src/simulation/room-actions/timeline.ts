@@ -68,6 +68,43 @@ export interface RoomLifecycleTimelineInput {
   readonly roomActionRoster: RoomActionRoster;
 }
 
+function appendAutomaticTimelineEffects(
+  timeline: RoomLifecycleTimeline,
+  effects: readonly Extract<RoomLifecycleTimelineEntry, { readonly kind: 'automaticEffect' }>[],
+): RoomLifecycleTimeline {
+  if (effects.length === 0) return timeline;
+  type AutomaticEffect = Extract<RoomLifecycleTimelineEntry, { readonly kind: 'automaticEffect' }>;
+  const byPhase = new Map<string, AutomaticEffect[]>();
+  const allEffects = [
+    ...timeline.entries.filter(
+      (entry): entry is AutomaticEffect => entry.kind === 'automaticEffect',
+    ),
+    ...effects,
+  ];
+  for (const effect of allEffects) {
+    const key = effect.phaseKey;
+    const current = byPhase.get(key) ?? [];
+    current.push(effect);
+    byPhase.set(key, current);
+  }
+  const order = (effect: AutomaticEffect) => (effect.effect === 'steadyGrowth' ? 0 : 1);
+  const entries: RoomLifecycleTimelineEntry[] = [];
+  for (const entry of timeline.entries) {
+    const boundary = entry.kind === 'boundary' ? entry.boundary : undefined;
+    if (boundary?.kind === 'encounterEnd') {
+      entries.push(entry);
+      for (const effect of (byPhase.get(boundary.phaseKey) ?? []).sort(
+        (left, right) => order(left) - order(right),
+      ))
+        entries.push(effect);
+      continue;
+    }
+    if (entry.kind === 'automaticEffect') continue;
+    entries.push(entry);
+  }
+  return Object.freeze({ ...timeline, entries: Object.freeze(entries) });
+}
+
 /**
  * Add reached Steady Growth checkpoints to the engine-owned room timeline.
  * The effect is fixed immediately after its phase's encounter end; consumers
@@ -81,25 +118,27 @@ export function appendSteadyGrowthTimelineEffects(
     (outcome) => semanticAddressKey(outcome.owner) === semanticAddressKey(timeline.owner),
   );
   if (owned.length === 0) return timeline;
-  const entries: RoomLifecycleTimelineEntry[] = [];
-  for (const entry of timeline.entries) {
-    entries.push(entry);
-    if (entry.kind !== 'boundary' || entry.boundary.kind !== 'encounterEnd') continue;
-    for (const outcome of owned) {
-      if (outcome.phaseKey !== entry.boundary.phaseKey) continue;
-      entries.push(
-        Object.freeze({
-          kind: 'automaticEffect' as const,
-          effect: 'steadyGrowth' as const,
-          address: outcome,
-          boundary: entry.boundary,
-          phaseKey: outcome.phaseKey,
-          rank: entry.rank,
-        }),
-      );
-    }
-  }
-  return Object.freeze({ ...timeline, entries: Object.freeze(entries) });
+  const effects = owned.flatMap((outcome) => {
+    const boundary = timeline.entries.find(
+      (entry) =>
+        entry.kind === 'boundary' &&
+        entry.boundary.kind === 'encounterEnd' &&
+        entry.boundary.phaseKey === outcome.phaseKey,
+    );
+    return boundary?.kind === 'boundary' && boundary.boundary.kind === 'encounterEnd'
+      ? [
+          Object.freeze({
+            kind: 'automaticEffect' as const,
+            effect: 'steadyGrowth' as const,
+            address: outcome,
+            boundary: boundary.boundary,
+            phaseKey: outcome.phaseKey,
+            rank: boundary.rank,
+          }),
+        ]
+      : [];
+  });
+  return appendAutomaticTimelineEffects(timeline, effects);
 }
 
 /**
@@ -115,25 +154,27 @@ export function appendTranscendentEmbryoTimelineEffects(
     (outcome) => semanticAddressKey(outcome.owner) === semanticAddressKey(timeline.owner),
   );
   if (owned.length === 0) return timeline;
-  const entries: RoomLifecycleTimelineEntry[] = [];
-  for (const entry of timeline.entries) {
-    entries.push(entry);
-    if (entry.kind !== 'boundary' || entry.boundary.kind !== 'encounterEnd') continue;
-    for (const outcome of owned) {
-      if (outcome.phaseKey !== entry.boundary.phaseKey) continue;
-      entries.push(
-        Object.freeze({
-          kind: 'automaticEffect' as const,
-          effect: 'transcendentEmbryo' as const,
-          address: outcome,
-          boundary: entry.boundary,
-          phaseKey: outcome.phaseKey,
-          rank: entry.rank,
-        }),
-      );
-    }
-  }
-  return Object.freeze({ ...timeline, entries: Object.freeze(entries) });
+  const effects = owned.flatMap((outcome) => {
+    const boundary = timeline.entries.find(
+      (entry) =>
+        entry.kind === 'boundary' &&
+        entry.boundary.kind === 'encounterEnd' &&
+        entry.boundary.phaseKey === outcome.phaseKey,
+    );
+    return boundary?.kind === 'boundary' && boundary.boundary.kind === 'encounterEnd'
+      ? [
+          Object.freeze({
+            kind: 'automaticEffect' as const,
+            effect: 'transcendentEmbryo' as const,
+            address: outcome,
+            boundary: boundary.boundary,
+            phaseKey: outcome.phaseKey,
+            rank: boundary.rank,
+          }),
+        ]
+      : [];
+  });
+  return appendAutomaticTimelineEffects(timeline, effects);
 }
 
 function checkpointRank(roster: RoomActionRoster, key: string): number | undefined {

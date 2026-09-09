@@ -27,6 +27,7 @@ import {
   createOccurrenceId,
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
+  parseHermesShrineDeliveryEntryKey,
   semanticAddressKey,
   createTraitOfferAddress,
   type AuthoredEchoLastRunBoonOffer,
@@ -59,7 +60,9 @@ import underworldFGHIFixture from './fixtures/underworld-fghi.execution.json';
 import surfaceNOFixture from './fixtures/surface-no.execution.json';
 import surfaceNOPFixture from './fixtures/surface-nop.execution.json';
 import surfaceNOPQFixture from './fixtures/surface-nopq.execution.json';
+import surfaceScheduledLifecycleFixture from './fixtures/surface-scheduled-lifecycle.execution.json';
 import { bossAutomaticOutcomeProject } from './support/automatic-fixture';
+import { surfaceScheduledLifecycleProject } from './support/scheduled-lifecycle-fixture';
 import { executionTimelineTransactions } from '../../src/execution-plan/assembly/timeline-transactions';
 import { orderedExecutionRooms } from '../../src/execution-plan/assembly/route';
 import {
@@ -1546,10 +1549,69 @@ describe('execution-plan compiler and codec', () => {
     ['surface-no', loadSurfaceNOProject(), surfaceNOFixture],
     ['surface-nop', loadSurfaceNOPProject(), surfaceNOPFixture],
     ['surface-nopq', loadSurfaceNOPQProject(), surfaceNOPQFixture],
+    [
+      'surface-scheduled-lifecycle',
+      surfaceScheduledLifecycleProject(),
+      surfaceScheduledLifecycleFixture,
+    ],
   ])('keeps the %s product byte-stable', (_name, project, fixture) => {
     const { plan } = planFor(project);
     if (fixture !== undefined) expect(decodeExecutionPlan(fixture)).toEqual(plan);
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+  });
+
+  it('reaches a complete Surface automatic and scheduled-acquisition lifecycle', () => {
+    const { plan } = planFor(surfaceScheduledLifecycleProject());
+    expect(plan.extent.biomeKeys).toEqual(['N', 'O', 'P', 'Q']);
+    const transactions = plan.occurrences.flatMap((occurrence) =>
+      occurrence.timeline.transactions.map((transaction) => ({
+        biomeKey: occurrence.biomeKey,
+        transaction,
+      })),
+    );
+    expect(transactions).toContainEqual(
+      expect.objectContaining({
+        biomeKey: 'Q',
+        transaction: expect.objectContaining({ kind: 'automatic', effect: 'steadyGrowth' }),
+      }),
+    );
+    expect(transactions).toContainEqual(
+      expect.objectContaining({
+        biomeKey: 'Q',
+        transaction: expect.objectContaining({
+          kind: 'automatic',
+          effect: 'transcendentEmbryo',
+        }),
+      }),
+    );
+    const shrineDeliveries = transactions.filter(
+      (entry) =>
+        entry.transaction.kind === 'acquisition' &&
+        entry.transaction.hermesShrineSourceKey !== undefined,
+    );
+    expect(
+      shrineDeliveries.map((entry) => ({
+        hostBiomeKey: entry.biomeKey,
+        sourceBiomeKey:
+          entry.transaction.kind === 'acquisition'
+            ? parseHermesShrineDeliveryEntryKey(entry.transaction.hermesShrineSourceKey!)?.biomeKey
+            : undefined,
+      })),
+    ).toEqual([
+      { hostBiomeKey: 'N', sourceBiomeKey: 'N' },
+      { hostBiomeKey: 'O', sourceBiomeKey: 'N' },
+      { hostBiomeKey: 'O', sourceBiomeKey: 'O' },
+      { hostBiomeKey: 'P', sourceBiomeKey: 'O' },
+    ]);
+    expect(transactions).toContainEqual(
+      expect.objectContaining({
+        biomeKey: 'P',
+        transaction: expect.objectContaining({
+          kind: 'acquisition',
+          sourceOwner: expect.stringContaining('clockedTraitGenerated'),
+        }),
+      }),
+    );
   });
 
   it('rejects disconnected or contradictory ShipCombat wheel products', () => {

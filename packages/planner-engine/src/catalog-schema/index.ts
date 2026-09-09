@@ -721,6 +721,8 @@ export interface RoomDeclaration {
   /** Native Encounter carriers intentionally omitted from the simulated phase envelope. */
   readonly unmodeledEncounterKeys?: readonly string[];
   readonly advancesExperimentalHammerUses: boolean;
+  /** Source `IgnoreEncounterUses`; suppresses encounter-counted end effects. */
+  readonly ignoreEncounterUses: boolean;
   /** Exact room-level policy for advancing delayed Hermes Shrine delivery uses. */
   readonly advancesHermesShrineDeliveryUses: boolean;
   /** Source `SkipRoomsPerUpgrade`; suppresses Steady Growth's end-effects clock. */

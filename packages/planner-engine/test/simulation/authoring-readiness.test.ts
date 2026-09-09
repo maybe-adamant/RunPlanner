@@ -17,6 +17,7 @@ import {
   createRouteAddress,
   createRoomActionAddress,
   createLocalRewardAddress,
+  createPostbossKeepsakeSelectionAddress,
   createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
   createTargetAddress,
@@ -29,6 +30,7 @@ import {
   loadSurfaceNProject,
   loadSurfaceNEntryFrontierResolvedProject,
   loadSurfaceNOProject,
+  loadSurfaceNOPQProject,
   nBiome,
   nLocalOccurrenceId,
   nOccurrenceId,
@@ -83,6 +85,23 @@ describe('chronological authoring horizon', () => {
         createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
       ),
     ).toBe('locked');
+  });
+
+  it('keeps a Postboss keepsake selection editable while its equip result is incomplete', () => {
+    const owner = createOccurrenceAddress(nBiome, createOccurrenceId('surface-n-preboss:postboss'));
+    const selection = createPostbossKeepsakeSelectionAddress(owner);
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection,
+      keepsakeKey: 'HadesAndPersephoneKeepsake',
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+
+    expect(assembly.evaluation.authoringHorizon).toMatchObject({
+      kind: 'incomplete',
+      blockedAfter: owner,
+    });
+    expect(authoringReadinessAt(assembly, selection)).toBe('editable');
   });
 
   it('preserves equality at an explicit history checkpoint over structural and timeline coordinates', () => {

@@ -41,6 +41,7 @@ reader-facing taxonomy, not a package or runtime boundary.
 - [Noncombat and Empty encounter normalization](rooms-and-routes/NONCOMBAT_AND_EMPTY_ENCOUNTER_NORMALIZATION_AUDIT.md) — Native `Empty` placeholders, retained noncombat phases, and exact Intro, Fountain, Story, Shop, Preboss, Postboss, Hub, and Chaos encounter identities.
 - [Room action order](rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md) — Source-backed room lifecycle and action ordering contacts.
 - [Route detours](rooms-and-routes/ROUTE_DETOUR_FINDINGS.md) — Chaos, Oceanus Anomaly, Zagreus Contract, Spark, and other route-level detour, exit, and host-room findings.
+- [Scheduled and automatic Timeline outcomes](rooms-and-routes/SCHEDULED_AND_AUTOMATIC_TIMELINE_OUTCOMES_AUDIT.md) — Encounter-end clocks, fixed automatic effects, scheduled acquisitions, progressive candidates, execution publication, and source-owned invalidation.
 
 ### Rewards and acquisition
 

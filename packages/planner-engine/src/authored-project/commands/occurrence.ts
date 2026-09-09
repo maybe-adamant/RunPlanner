@@ -15,7 +15,6 @@ import { hermesShrineInitialSlotKey } from '../model';
 import {
   defaultHermesShrineDeliveryReward,
   hermesShrineDeliveryEntryKey,
-  parseHermesShrineDeliveryEntryKey,
   unplaceHermesShrineDelivery,
 } from '../hermes-shrine-delivery';
 
@@ -74,28 +73,6 @@ export function applyOccurrenceCommand(
           located,
           Object.freeze({
             ...withoutShrine,
-            // Removing the source feature clears only its active same-room
-            // delivery actions.  The authored delivery payload remains as
-            // dormant repair detail and cross-room delivery actions retain
-            // their own host chronology.
-            roomActions: Object.freeze({
-              ...occurrence.roomActions,
-              order: Object.freeze(
-                occurrence.roomActions.order.filter((reference) => {
-                  if (
-                    reference.kind !== 'interactAcquisitionEntry' ||
-                    reference.siteKey !== 'hermesShrineDelivery'
-                  )
-                    return true;
-                  const parsed = parseHermesShrineDeliveryEntryKey(reference.entryKey);
-                  return !(
-                    parsed?.routeKey === command.occurrence.routeKey &&
-                    parsed.biomeKey === command.occurrence.biomeKey &&
-                    parsed.sourceOccurrenceId === command.occurrence.occurrenceId
-                  );
-                }),
-              ),
-            }),
           }),
         );
       }

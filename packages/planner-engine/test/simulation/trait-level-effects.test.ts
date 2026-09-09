@@ -74,6 +74,36 @@ function historyFrom(
   );
 }
 
+function selectedTraitOffer(giverKey: string, traitKey: string): AuthoredTraitOffer {
+  const giver = catalog.traitGivers.byKey[giverKey];
+  if (giver === undefined || !giver.traitKeys.some((candidate) => candidate === traitKey))
+    throw new Error(`missing ${traitKey} in ${giverKey}`);
+  const safeAlternatives: Readonly<Record<string, readonly string[]>> = {
+    SupplyDropBoon: ['OmegaExplodeBoon', 'CastHazardBoon'],
+    BoonGrowthBoon: ['DemeterCastBoon', 'DemeterSprintBoon'],
+  };
+  const alternatives =
+    safeAlternatives[traitKey] ??
+    giver.traitKeys.filter((candidate) => candidate !== traitKey).slice(0, 2);
+  const optionFor = (candidate: string) => {
+    const declaration = catalog.traits.byKey[candidate];
+    return declaration?.rarityDomain.kind === 'ranked' &&
+      declaration.rarityDomain.freshOfferRarities.some((rarity) => rarity === 'Common')
+      ? { traitKey: candidate, rarity: 'Common' as const }
+      : { traitKey: candidate };
+  };
+  const options = [
+    optionFor(traitKey),
+    ...alternatives.map((candidate) => optionFor(candidate)),
+  ] as unknown as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'];
+  return Object.freeze({
+    kind: 'traits',
+    giverKey,
+    options: Object.freeze(options),
+    selectedOptionKey: 'option1',
+  });
+}
+
 describe('Latest Model Hammer Rank II target predicate', () => {
   const latestModelOffer: AuthoredTraitOffer = Object.freeze({
     kind: 'traits',
@@ -241,6 +271,193 @@ describe('Icarus occupied-slot level upgrades', () => {
 });
 
 describe('Supply Chain lifecycle', () => {
+  it('publishes a matured Supply Chain pickup from the final Steady Growth branch', () => {
+    const occurrence = createOccurrenceAddress(goldenFBiome, goldenFStartId);
+    const traitOrigin = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: goldenFStartId },
+      'Encounter',
+    );
+    const initial = initializeTestRewardBranches()[0]!;
+    const coreSettlement = settleEncounterTraitOffer(
+      catalog,
+      initial,
+      traitOrigin,
+      selectedTraitOffer('Apollo', 'ApolloWeaponBoon'),
+      1,
+      'encounterCompleted',
+      new Map(),
+      undefined,
+      'selection',
+    );
+    const supplySettlement = settleEncounterTraitOffer(
+      catalog,
+      coreSettlement.branch,
+      traitOrigin,
+      selectedTraitOffer('Icarus', 'SupplyDropBoon'),
+      2,
+      'encounterCompleted',
+      new Map(),
+      undefined,
+      'selection',
+    );
+    const steadySettlement = settleEncounterTraitOffer(
+      catalog,
+      supplySettlement.branch,
+      traitOrigin,
+      selectedTraitOffer('Demeter', 'BoonGrowthBoon'),
+      3,
+      'encounterCompleted',
+      new Map(),
+      undefined,
+      'selection',
+    );
+    const before = steadySettlement.branch.traitHistory!;
+    const supply = before.equippedTraits.SupplyDropBoon!;
+    const steady = before.equippedTraits.BoonGrowthBoon!;
+    expect(before.equippedTraits.ApolloWeaponBoon).toBeDefined();
+    const progressed = foldTraitHistoryEvents(catalog, [
+      ...before.events,
+      {
+        kind: 'pickupProducerProgress' as const,
+        owner: occurrence,
+        acquisitionRole: 'pickupProducer' as const,
+        sequence: 4,
+        acquisitionPoint: 'encounterEndEffectsApplied' as const,
+        traitKey: 'SupplyDropBoon',
+        acquisitionIdentity: supply.acquisitionIdentity!,
+        oldProgress: 0,
+        newProgress: 6,
+        requiredInterval: 7,
+        matured: false,
+      },
+      {
+        kind: 'steadyGrowthProgress' as const,
+        owner: occurrence,
+        acquisitionRole: 'steadyGrowth' as const,
+        sequence: 5,
+        acquisitionPoint: 'encounterEndEffectsApplied' as const,
+        traitKey: 'BoonGrowthBoon',
+        acquisitionIdentity: steady.acquisitionIdentity!,
+        oldProgress: 0,
+        newProgress: 5,
+        requiredInterval: 6,
+      },
+    ]);
+    const branch = Object.freeze({
+      ...steadySettlement.branch,
+      traitHistory: progressed,
+      history: attachTraitHistory(steadySettlement.branch.history, progressed),
+      pendingHermesShrineDeliveries: Object.freeze({
+        delivery: Object.freeze({
+          sourceKey: 'delivery',
+          sourceOrigin: occurrence,
+          generationKey: 'initial:first' as const,
+          rewardType: 'Boon',
+          remainingUses: 1,
+        }),
+      }),
+    });
+    const room = {
+      kind: 'authored',
+      origin: occurrence,
+      occurrenceId: occurrence.occurrenceId,
+      gameName: 'F_Opening01',
+      encounters: { steadyGrowthTargetByPhase: { Encounter: 'ApolloWeaponBoon' } },
+      encounterPhases: [{ slotKey: 'Encounter', advancesHermesShrineDeliveryUses: true }],
+    } as unknown as CanonicalAuthoredRoom;
+    const transition = applyEncounterEndEffectsTransition(
+      catalog,
+      Object.freeze({
+        kind: 'encounterEndEffectsApplied' as const,
+        origin: occurrence,
+        phaseKey: 'Encounter',
+        execution: 'normal' as const,
+        figLeafSkipOwner: false,
+        operationIndex: 1,
+        sequence: 6,
+      }),
+      room,
+      1,
+      4,
+      [branch],
+    );
+    const pickup = transition.derivedAcquisitionEntryFrontiers.find(
+      (frontier) => frontier.kind === 'clockedTraitPickup',
+    );
+    expect(pickup).toBeDefined();
+    expect(
+      pickup?.branchesBeforeEntry[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon,
+    ).toMatchObject({
+      rarity: 'Rare',
+    });
+    const delivery = transition.derivedAcquisitionEntryFrontiers.find(
+      (frontier) => frontier.kind === 'hermesShrineDelivery',
+    );
+    expect(
+      delivery?.branchesBeforeEntry[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon,
+    ).toMatchObject({
+      rarity: 'Rare',
+    });
+  });
+
+  it('advances Shrine delivery on a Fig Leaf-skipped end effect but not a suppressed room', () => {
+    const occurrence = createOccurrenceAddress(goldenFBiome, goldenFStartId);
+    const base = initializeTestRewardBranches()[0];
+    if (base === undefined) throw new Error('missing test reward branch');
+    const branch = Object.freeze({
+      ...base,
+      pendingHermesShrineDeliveries: Object.freeze({
+        delivery: Object.freeze({
+          sourceKey: 'delivery',
+          sourceOrigin: occurrence,
+          generationKey: 'initial:first' as const,
+          rewardType: 'Boon',
+          remainingUses: 1,
+        }),
+      }),
+    });
+    const room = {
+      kind: 'authored',
+      origin: occurrence,
+      occurrenceId: occurrence.occurrenceId,
+      gameName: 'F_Opening01',
+      encounters: {},
+      encounterPhases: [{ slotKey: 'Encounter', advancesHermesShrineDeliveryUses: true }],
+    } as unknown as CanonicalAuthoredRoom;
+    const figLeafEnd = Object.freeze({
+      kind: 'encounterEndEffectsApplied' as const,
+      origin: occurrence,
+      phaseKey: 'Encounter',
+      execution: 'skippedByFigLeaf' as const,
+      figLeafSkipOwner: true,
+      operationIndex: 1,
+      sequence: 1,
+    });
+    const advanced = applyEncounterEndEffectsTransition(catalog, figLeafEnd, room, 1, 4, [branch]);
+    expect(advanced.branches[0]?.pendingHermesShrineDeliveries.delivery).toMatchObject({
+      remainingUses: 0,
+      dueAt: occurrence,
+      dueSequence: 1,
+    });
+    expect(advanced.derivedAcquisitionEntryFrontiers).toEqual([
+      expect.objectContaining({ kind: 'hermesShrineDelivery' }),
+    ]);
+
+    const suppressed = applyEncounterEndEffectsTransition(
+      catalog,
+      Object.freeze({ ...figLeafEnd, sequence: 2, operationIndex: 2 }),
+      { ...room, gameName: 'N_Sub01' } as unknown as CanonicalAuthoredRoom,
+      1,
+      4,
+      [branch],
+    );
+    expect(suppressed.branches[0]?.pendingHermesShrineDeliveries.delivery).toMatchObject({
+      remainingUses: 1,
+    });
+    expect(suppressed.derivedAcquisitionEntryFrontiers).toEqual([]);
+  });
+
   it('counts every qualifying O encounter phase and defers a Chaos threshold', () => {
     const occurrence = createOccurrenceAddress(goldenFBiome, goldenFStartId);
     const base = initializeTestRewardBranches()[0]!;

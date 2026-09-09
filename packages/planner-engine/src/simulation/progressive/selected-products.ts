@@ -78,10 +78,6 @@ export function retainBlockedRegionProducts(
     blockedAt.kind === 'judgmentArcana' ? blockedAt : undefined;
   const blockedFigurineAt: FigurineArcanaAddress | undefined =
     blockedAt.kind === 'figurineArcana' ? blockedAt : undefined;
-  const blockedSteadyGrowthAt: SteadyGrowthOutcomeAddress | undefined =
-    blockedAt.kind === 'steadyGrowthOutcome' ? blockedAt : undefined;
-  const blockedTranscendentEmbryoAt: TranscendentEmbryoOutcomeAddress | undefined =
-    blockedAt.kind === 'transcendentEmbryoOutcome' ? blockedAt : undefined;
   const blockedNemesisAt: NemesisRandomEventAddress | undefined =
     blockedAt.kind === 'nemesisRandomEvent' ? blockedAt : undefined;
   const blockedKeepsakeAt: KeepsakeSelectionAddress | undefined =
@@ -90,6 +86,10 @@ export function retainBlockedRegionProducts(
     blockedAt.kind === 'keepsakeEquipResult' ? blockedAt : undefined;
   const blockedAcquisitionAt = acquisitionRoleAncestor(blockedAt);
   const blockedDerivedAcquisitionAt = derivedAcquisitionEntryAncestor(blockedAt);
+  const occurrenceOwner = ancestors.occurrenceOwner;
+  const belongsToBlockedOccurrence = (owner: SemanticAddress): boolean =>
+    occurrenceOwner !== undefined &&
+    semanticAddressKey(owner) === semanticAddressKey(occurrenceOwner);
   const blockedKey = blockedTraitAt === undefined ? undefined : semanticAddressKey(blockedTraitAt);
   const blockedTraitCapabilityAddress:
     TraitOfferAddress | NaturalSelectionResultAddress | undefined =
@@ -149,25 +149,46 @@ export function retainBlockedRegionProducts(
       (resolution) => !retainedLevelKeys.has(semanticAddressKey(resolution.address)),
     ),
   ]);
+  const retainedTranscendentEmbryoKeys = new Set(
+    retainedRewards.transcendentEmbryoOutcomes.map((outcome) =>
+      semanticAddressKey(outcome.address),
+    ),
+  );
   const transcendentEmbryoOutcomes = Object.freeze([
     ...retainedRewards.transcendentEmbryoOutcomes,
-    ...(blockedTranscendentEmbryoAt === undefined ||
-    retainedRewards.transcendentEmbryoOutcomes.some(
+    ...selectedRewards.transcendentEmbryoOutcomes.filter(
       (outcome) =>
-        semanticAddressKey(outcome.address) === semanticAddressKey(blockedTranscendentEmbryoAt),
-    )
-      ? []
-      : selectedRewards.transcendentEmbryoOutcomes.filter(
-          (outcome) =>
-            semanticAddressKey(outcome.address) === semanticAddressKey(blockedTranscendentEmbryoAt),
-        )),
+        belongsToBlockedOccurrence(outcome.address.owner) &&
+        !retainedTranscendentEmbryoKeys.has(semanticAddressKey(outcome.address)),
+    ),
   ]);
+  const retainedSteadyGrowthKeys = new Set(
+    retainedRewards.steadyGrowthOutcomes.map((outcome) => semanticAddressKey(outcome.address)),
+  );
+  const steadyGrowthOutcomes = Object.freeze([
+    ...retainedRewards.steadyGrowthOutcomes,
+    ...selectedRewards.steadyGrowthOutcomes.filter(
+      (outcome) =>
+        belongsToBlockedOccurrence(outcome.address.owner) &&
+        !retainedSteadyGrowthKeys.has(semanticAddressKey(outcome.address)),
+    ),
+  ]);
+  const retainedAutomaticOutcomeKeys = new Set([
+    ...steadyGrowthOutcomes.map((outcome) => semanticAddressKey(outcome.address)),
+    ...transcendentEmbryoOutcomes.map((outcome) => semanticAddressKey(outcome.address)),
+  ]);
+  const reachedAutomaticOutcomeFindings = selectedRewards.findings.filter(
+    (finding) =>
+      (finding.code === 'steadyGrowthOutcomeMissing' ||
+        finding.code === 'transcendentEmbryoOutcomeMissing') &&
+      retainedAutomaticOutcomeKeys.has(semanticAddressKey(finding.origin)),
+  );
   const retainedFindingKeys = new Set(
     retainedRewards.findings.map((finding) => findingIdentityKey(finding)),
   );
   const rewardFindings = Object.freeze([
     ...retainedRewards.findings,
-    ...blockedRewardFindings.filter((finding) => {
+    ...[...blockedRewardFindings, ...reachedAutomaticOutcomeFindings].filter((finding) => {
       const key = findingIdentityKey(finding);
       if (retainedFindingKeys.has(key)) return false;
       retainedFindingKeys.add(key);
@@ -263,34 +284,22 @@ export function retainBlockedRegionProducts(
               ? blockedFigurineCapability
               : retainedArtifacts.figurineArcana.at(address),
         });
-  const blockedSteadyGrowthCapability =
-    blockedSteadyGrowthAt === undefined
-      ? undefined
-      : (selectedArtifacts.steadyGrowth.at(blockedSteadyGrowthAt) ??
-        blockedArtifacts.steadyGrowth.at(blockedSteadyGrowthAt));
-  const steadyGrowth: SteadyGrowthCandidateArtifacts =
-    blockedSteadyGrowthAt === undefined || blockedSteadyGrowthCapability === undefined
-      ? retainedArtifacts.steadyGrowth
-      : Object.freeze({
-          at: (address: SteadyGrowthOutcomeAddress) =>
-            semanticAddressKey(address) === semanticAddressKey(blockedSteadyGrowthAt)
-              ? blockedSteadyGrowthCapability
-              : retainedArtifacts.steadyGrowth.at(address),
-        });
-  const blockedTranscendentEmbryoCapability =
-    blockedTranscendentEmbryoAt === undefined
-      ? undefined
-      : (selectedArtifacts.transcendentEmbryo.at(blockedTranscendentEmbryoAt) ??
-        blockedArtifacts.transcendentEmbryo.at(blockedTranscendentEmbryoAt));
-  const transcendentEmbryo: TranscendentEmbryoCandidateArtifacts =
-    blockedTranscendentEmbryoAt === undefined || blockedTranscendentEmbryoCapability === undefined
-      ? retainedArtifacts.transcendentEmbryo
-      : Object.freeze({
-          at: (address: TranscendentEmbryoOutcomeAddress) =>
-            semanticAddressKey(address) === semanticAddressKey(blockedTranscendentEmbryoAt)
-              ? blockedTranscendentEmbryoCapability
-              : retainedArtifacts.transcendentEmbryo.at(address),
-        });
+  const steadyGrowth: SteadyGrowthCandidateArtifacts = Object.freeze({
+    at: (address: SteadyGrowthOutcomeAddress) =>
+      belongsToBlockedOccurrence(address.owner)
+        ? (selectedArtifacts.steadyGrowth.at(address) ??
+          blockedArtifacts.steadyGrowth.at(address) ??
+          retainedArtifacts.steadyGrowth.at(address))
+        : retainedArtifacts.steadyGrowth.at(address),
+  });
+  const transcendentEmbryo: TranscendentEmbryoCandidateArtifacts = Object.freeze({
+    at: (address: TranscendentEmbryoOutcomeAddress) =>
+      belongsToBlockedOccurrence(address.owner)
+        ? (selectedArtifacts.transcendentEmbryo.at(address) ??
+          blockedArtifacts.transcendentEmbryo.at(address) ??
+          retainedArtifacts.transcendentEmbryo.at(address))
+        : retainedArtifacts.transcendentEmbryo.at(address),
+  });
   const blockedKeepsakeCapability =
     blockedKeepsakeAt === undefined
       ? undefined
@@ -394,7 +403,6 @@ export function retainBlockedRegionProducts(
       ? undefined
       : (selectedArtifacts.rewardProducers.at(rewardOwner) ??
         blockedArtifacts.rewardProducers.at(rewardOwner));
-  const occurrenceOwner = ancestors.occurrenceOwner;
   const shipCapability =
     occurrenceOwner === undefined
       ? undefined
@@ -543,6 +551,7 @@ export function retainBlockedRegionProducts(
     rewards:
       selectedTraitOffers.length === retainedRewards.selectedTraitOffers.length &&
       selectedLevelResolutions.length === retainedRewards.selectedLevelResolutions.length &&
+      steadyGrowthOutcomes.length === retainedRewards.steadyGrowthOutcomes.length &&
       transcendentEmbryoOutcomes.length === retainedRewards.transcendentEmbryoOutcomes.length &&
       rewardFindings.length === retainedRewards.findings.length &&
       blockedChildSettlement === undefined &&
@@ -560,6 +569,7 @@ export function retainBlockedRegionProducts(
             runStateSnapshots,
             selectedTraitOffers,
             selectedLevelResolutions,
+            steadyGrowthOutcomes,
             transcendentEmbryoOutcomes,
           }),
     artifacts,

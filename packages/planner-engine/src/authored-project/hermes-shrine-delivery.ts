@@ -165,6 +165,72 @@ export function unplaceHermesShrineDelivery(
   });
 }
 
+/**
+ * Removing a Shrine feature invalidates every active delivery it sourced,
+ * regardless of the later occurrence that was selected as its host. Delivery
+ * payload remains in its existing site as dormant repair detail.
+ */
+export function unplaceHermesShrineDeliveriesFromSource(
+  document: ProjectDocument,
+  source: OccurrenceAddress,
+): ProjectDocument {
+  return mapOccurrences(document, (routeKey, biomeKey, occurrence) => {
+    const nextOrder = occurrence.roomActions.order.filter((reference) => {
+      if (
+        reference.kind !== 'interactAcquisitionEntry' ||
+        reference.siteKey !== HERMES_SHRINE_DELIVERY_SITE_KEY
+      )
+        return true;
+      const parsed = parseHermesShrineDeliveryEntryKey(reference.entryKey);
+      return !(
+        parsed?.routeKey === source.routeKey &&
+        parsed.biomeKey === source.biomeKey &&
+        parsed.sourceOccurrenceId === source.occurrenceId
+      );
+    });
+    return nextOrder.length === occurrence.roomActions.order.length
+      ? occurrence
+      : Object.freeze({
+          ...occurrence,
+          roomActions: Object.freeze({
+            ...occurrence.roomActions,
+            order: Object.freeze(nextOrder),
+          }),
+        });
+  });
+}
+
+/**
+ * Reconciles active delivery actions after any semantic command removes a
+ * Shrine-bearing occurrence or its Shrine feature. Retained delivery payload
+ * remains dormant for repair; only actions whose exact source disappeared are
+ * retracted.
+ */
+export function retractMissingHermesShrineDeliveryActions(
+  previous: ProjectDocument,
+  document: ProjectDocument,
+): ProjectDocument {
+  let reconciled = document;
+  for (const previousBiome of previous.route.biomes) {
+    for (const previousOccurrence of previousBiome.topology?.occurrences ?? []) {
+      if (previousOccurrence.hermesShrine === undefined) continue;
+      const currentOccurrence = reconciled.route.biomes
+        .find((biome) => biome.biomeKey === previousBiome.biomeKey)
+        ?.topology?.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === previousOccurrence.occurrenceId,
+        );
+      if (currentOccurrence?.hermesShrine !== undefined) continue;
+      reconciled = unplaceHermesShrineDeliveriesFromSource(reconciled, {
+        kind: 'occurrence',
+        routeKey: previous.route.routeKey,
+        biomeKey: previousBiome.biomeKey,
+        occurrenceId: previousOccurrence.occurrenceId,
+      });
+    }
+  }
+  return reconciled;
+}
+
 /** Find one retained payload, preferring the destination's context-specific draft. */
 export function retainedHermesShrineDeliveryReward(
   document: ProjectDocument,

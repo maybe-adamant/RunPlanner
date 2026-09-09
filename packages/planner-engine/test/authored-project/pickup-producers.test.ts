@@ -4,11 +4,19 @@ import { catalog } from '@run-planner/hades2-catalog';
 import { loadSurfaceNQuickBuckCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { nBiome, nOccurrenceIds } from '@run-planner/test-fixtures/surface';
 
-import { createBiomeAddress, createOccurrenceId } from '../../src/authored-project/addresses';
-import type { RoomOccurrence } from '../../src/authored-project/model';
 import {
+  createBiomeAddress,
+  createEncounterPhaseAddress,
+  createOccurrenceId,
+  createTraitOfferAddress,
+  semanticAddressKey,
+} from '../../src/authored-project/addresses';
+import type { ProjectDocument, RoomOccurrence } from '../../src/authored-project/model';
+import {
+  clockedTraitGeneratedPickupEntryKey,
   parseTraitGeneratedPickupSiteKey,
   reconcileSelectedPickupProducerState,
+  retractInactiveClockedTraitPickupActions,
   selectedPickupProducers,
 } from '../../src/authored-project/pickup-producers';
 
@@ -77,5 +85,165 @@ describe('authored pickup producers', () => {
       quickBuckGold: { offer: { rewardType: 'RoomMoneyDrop' } },
     });
     expect(reconciled.roomActions.order).toContainEqual(producer.sourceAction);
+  });
+
+  it('retracts only a removed Supply Chain source’s later clocked action and retains its payload', () => {
+    const sourceId = createOccurrenceId('supply-source');
+    const hostId = createOccurrenceId('supply-host');
+    const sourceOwner = createEncounterPhaseAddress(
+      biome,
+      { kind: 'occurrence', occurrenceId: sourceId },
+      'Encounter',
+    );
+    const sourceIdentity = `${semanticAddressKey(createTraitOfferAddress(sourceOwner, 'selection'))}:7`;
+    const entryKey = clockedTraitGeneratedPickupEntryKey(sourceIdentity, 'pomSlice1');
+    const unrelated = clockedTraitGeneratedPickupEntryKey('other-source:7', 'pomSlice1');
+    const supplyOffer = {
+      kind: 'traits' as const,
+      giverKey: 'Icarus',
+      options: [
+        { traitKey: 'SupplyDropBoon' },
+        { traitKey: 'OmegaExplodeBoon' },
+        { traitKey: 'CastHazardBoon' },
+      ] as const,
+      selectedOptionKey: 'option1' as const,
+    };
+    const source = {
+      occurrenceId: sourceId,
+      gameName: 'N_Opening01',
+      state: { kind: 'none' },
+      encounters: {
+        encounterKeyByPhase: { Encounter: 'Icarus' },
+        traitOffersByPhase: { Encounter: { Icarus: supplyOffer } },
+      },
+      roomActions: { order: [{ kind: 'interactEncounter', phaseKey: 'Encounter' }] },
+      additionalExits: [],
+    } as unknown as RoomOccurrence;
+    const host = {
+      occurrenceId: hostId,
+      gameName: 'N_Opening01',
+      state: { kind: 'none' },
+      encounters: {},
+      roomActions: {
+        order: [
+          { kind: 'interactAcquisitionEntry', siteKey: 'roomExit', entryKey },
+          { kind: 'interactAcquisitionEntry', siteKey: 'roomExit', entryKey: unrelated },
+        ],
+      },
+      acquisitionSites: { roomExit: { pickupEntries: { [entryKey]: null, [unrelated]: null } } },
+      additionalExits: [],
+    } as unknown as RoomOccurrence;
+    const previous = {
+      route: {
+        routeKey: 'Surface',
+        biomes: [{ biomeKey: 'N', topology: { occurrences: [source, host] } }],
+      },
+    } as unknown as ProjectDocument;
+    const replacedSource = {
+      ...source,
+      encounters: {
+        traitOffersByPhase: {
+          Encounter: { Icarus: { ...supplyOffer, selectedOptionKey: 'option2' as const } },
+        },
+      },
+    } as unknown as RoomOccurrence;
+    const replaced = {
+      ...previous,
+      route: {
+        ...previous.route,
+        biomes: [
+          { ...previous.route.biomes[0]!, topology: { occurrences: [replacedSource, host] } },
+        ],
+      },
+    } as unknown as ProjectDocument;
+    const result = retractInactiveClockedTraitPickupActions(catalog, previous, replaced);
+    const resultHost = result.route.biomes[0]!.topology!.occurrences[1]!;
+    expect(resultHost.roomActions.order).toEqual([
+      { kind: 'interactAcquisitionEntry', siteKey: 'roomExit', entryKey: unrelated },
+    ]);
+    expect(resultHost.acquisitionSites?.roomExit?.pickupEntries).toEqual({
+      [entryKey]: null,
+      [unrelated]: null,
+    });
+  });
+
+  it('recognizes Supply Chain acquired by a Concave Stone secondary', () => {
+    const sourceId = createOccurrenceId('concave-supply-source');
+    const hostId = createOccurrenceId('concave-supply-host');
+    const sourceOwner = createEncounterPhaseAddress(
+      biome,
+      { kind: 'occurrence', occurrenceId: sourceId },
+      'Encounter',
+    );
+    const sourceIdentity = `${semanticAddressKey(createTraitOfferAddress(sourceOwner, 'concaveStoneSecondary'))}:8`;
+    const entryKey = clockedTraitGeneratedPickupEntryKey(sourceIdentity, 'pomSlice1');
+    const offer = {
+      kind: 'traits' as const,
+      giverKey: 'Icarus',
+      options: [
+        { traitKey: 'OmegaExplodeBoon' },
+        { traitKey: 'SupplyDropBoon' },
+        { traitKey: 'CastHazardBoon' },
+      ] as const,
+      selectedOptionKey: 'option1' as const,
+      concaveStoneResult: { kind: 'proc' as const, optionKey: 'option2' as const },
+    };
+    const source = {
+      occurrenceId: sourceId,
+      gameName: 'N_Opening01',
+      state: { kind: 'none' },
+      encounters: {
+        encounterKeyByPhase: { Encounter: 'Icarus' },
+        traitOffersByPhase: { Encounter: { Icarus: offer } },
+      },
+      roomActions: { order: [{ kind: 'interactEncounter', phaseKey: 'Encounter' }] },
+      additionalExits: [],
+    } as unknown as RoomOccurrence;
+    const host = {
+      occurrenceId: hostId,
+      gameName: 'N_Opening01',
+      state: { kind: 'none' },
+      encounters: {},
+      roomActions: { order: [{ kind: 'interactAcquisitionEntry', siteKey: 'roomExit', entryKey }] },
+      acquisitionSites: { roomExit: { pickupEntries: { [entryKey]: null } } },
+      additionalExits: [],
+    } as unknown as RoomOccurrence;
+    const previous = {
+      route: {
+        routeKey: 'Surface',
+        biomes: [{ biomeKey: 'N', topology: { occurrences: [source, host] } }],
+      },
+    } as unknown as ProjectDocument;
+    const noProc = {
+      ...previous,
+      route: {
+        ...previous.route,
+        biomes: [
+          {
+            ...previous.route.biomes[0]!,
+            topology: {
+              occurrences: [
+                {
+                  ...source,
+                  encounters: {
+                    traitOffersByPhase: {
+                      Encounter: { Icarus: { ...offer, concaveStoneResult: { kind: 'noProc' } } },
+                    },
+                  },
+                } as unknown as RoomOccurrence,
+                host,
+              ],
+            },
+          },
+        ],
+      },
+    } as unknown as ProjectDocument;
+    const result = retractInactiveClockedTraitPickupActions(catalog, previous, noProc);
+    expect(result.route.biomes[0]!.topology!.occurrences[1]!.roomActions.order).toEqual([]);
+    expect(
+      result.route.biomes[0]!.topology!.occurrences[1]!.acquisitionSites?.roomExit?.pickupEntries,
+    ).toEqual({
+      [entryKey]: null,
+    });
   });
 });

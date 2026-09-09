@@ -203,6 +203,82 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
     ]);
   });
 
+  it('publishes a same-phase Shrine delivery from the final Embryo branch', () => {
+    const encounterOwner = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'F'),
+      createOccurrenceId('embryo-delivery-chronology'),
+    );
+    const equipped = applyTranscendentEmbryoEquipResult(
+      catalog,
+      branchWithHistory(
+        createTraitHistoryState(),
+        createKeepsakeState(catalog, 'RandomBlessingKeepsake'),
+      ),
+      'RandomBlessingKeepsake',
+      embryoOutcome('ChaosElementalBlessing'),
+      encounterOwner,
+      0,
+      'ordinary',
+      'Epic',
+      { routeKey: 'Underworld' },
+    );
+    let keepsakes = equipped.keepsakes;
+    for (let index = 0; index < 7; index += 1)
+      keepsakes = advanceTranscendentEmbryoProgress(keepsakes).state;
+    const branch = Object.freeze({
+      ...equipped,
+      keepsakes,
+      pendingHermesShrineDeliveries: Object.freeze({
+        delivery: Object.freeze({
+          sourceKey: 'delivery',
+          sourceOrigin: encounterOwner,
+          generationKey: 'initial:first' as const,
+          rewardType: 'Boon',
+          remainingUses: 1,
+        }),
+      }),
+    });
+    const room = {
+      kind: 'authored',
+      origin: encounterOwner,
+      occurrenceId: encounterOwner.occurrenceId,
+      gameName: 'F_Opening01',
+      encounters: {
+        transcendentEmbryoBlessingByPhase: {
+          Encounter: embryoOutcome('ChaosWeaponBlessing'),
+        },
+      },
+      encounterPhases: [{ slotKey: 'Encounter', advancesHermesShrineDeliveryUses: true }],
+    } as unknown as CanonicalAuthoredRoom;
+    const transition = applyEncounterEndEffectsTransition(
+      catalog,
+      Object.freeze({
+        kind: 'encounterEndEffectsApplied' as const,
+        origin: encounterOwner,
+        phaseKey: 'Encounter',
+        execution: 'normal' as const,
+        figLeafSkipOwner: false,
+        operationIndex: 1,
+        sequence: 1,
+      }),
+      room,
+      1,
+      4,
+      [branch],
+    );
+    const delivery = transition.derivedAcquisitionEntryFrontiers.find(
+      (frontier) => frontier.kind === 'hermesShrineDelivery',
+    );
+    expect(delivery).toBeDefined();
+    expect(delivery?.branchesBeforeEntry[0]?.keepsakes.transcendentEmbryo).toMatchObject({
+      progress: 0,
+      markedBlessingKey: 'ChaosWeaponBlessing',
+    });
+    expect(delivery?.branchesBeforeEntry[0]?.traitHistory?.maturedChaosBlessings).toContainEqual(
+      expect.objectContaining({ blessingKey: 'ChaosWeaponBlessing' }),
+    );
+  });
+
   it('retains the existing route-start Jeweled Pom acquisition', () => {
     const loadout = {
       ...createDefaultRouteLoadout(catalog),

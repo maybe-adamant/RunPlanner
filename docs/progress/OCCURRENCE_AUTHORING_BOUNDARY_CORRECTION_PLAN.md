@@ -1,6 +1,6 @@
 # Occurrence Authoring Boundaries
 
-Status: Gate A complete; Gate B scope locked and not started
+Status: Gates A and B complete; Gate C not started
 Base: `7d39c264` (`fix(engine): preserve fixed boss authoring order`)
 
 The earlier narrow `targetIndex` symptom fix was discarded before delivery.
@@ -205,6 +205,13 @@ Reject the gate if it:
 
 ## Gate B — Encounter-End Effect and Pickup Handoff
 
+The durable cross-family evidence and current implementation assessment are
+recorded in
+`../audits/rooms-and-routes/SCHEDULED_AND_AUTOMATIC_TIMELINE_OUTCOMES_AUDIT.md`.
+This gate closes only the open encounter-end scheduler findings from that
+audit. Already-closed passive counters, boss Arcana contacts, Gift Gift Gift
+replay, and native executor adapters are not reopened.
+
 ### Authoritative lifecycle
 
 The reached lifecycle remains:
@@ -284,6 +291,25 @@ Do not add N-name checks to the transition.
 6. Retain each reached Steady Growth and Embryo outcome, its timeline fact,
    candidate context, and finding as one complete product through progressive
    clamping.
+7. Make scheduled-acquisition invalidation source-complete. Removing a Shrine
+   feature retracts every active delivery action sourced by that occurrence,
+   including later hosts. Removing or replacing the upstream Supply Chain
+   acquisition retracts every later active `clockedTraitGenerated` entry and
+   action owned by that acquisition identity. Retained payload may remain only
+   as dormant repair detail.
+8. Preserve the canonical same-phase automatic order in every consumer:
+   Steady Growth precedes Transcendent Embryo, matching simulation and the
+   native deferred Embryo transformation. This remains fixed lifecycle order,
+   not a movable Room Action or a speculative dependency edge.
+9. Add one focused full-Surface execution-product fixture spanning N, O, P,
+   and Q. Equip Transcendent Embryo at route start, acquire Epic Steady Growth
+   from Demeter in N, acquire Supply Chain from Icarus in O, and schedule
+   rushed and delayed deliveries from the forced N and O Postboss Shrines.
+   Continue through P and Q so the fixture witnesses the later clocks,
+   placements, selections, and route-tail state even though most positive
+   outcomes originate in N and O. This is one product witness, not a family of
+   miniature fixtures, and it must not add a protocol shape or executor-side
+   scheduling policy.
 
 This is an engine lifecycle and catalog-normalization correction. The
 application consumes the corrected products and should need no Hermes-, Supply
@@ -311,6 +337,32 @@ Intended commit: `fix(engine): preserve encounter-end effect ordering`
   Embryo advancement while retaining ordinary encounter completion.
 - Multi-phase O/P/H rooms apply the same contract independently at every phase
   that emits `encounterEndEffectsApplied`.
+- Removing a Shrine source after placing one of its delayed deliveries removes
+  the active later-host action in the same semantic edit. No unrelated Shrine
+  delivery is moved or removed.
+- Removing or replacing Supply Chain after accepting one of its matured Pom
+  Slices removes that exact later entry and action. An unrelated clocked pickup
+  remains intact, and a merely stale proposed command still fails exact
+  attestation.
+- The source-cleanup witnesses use normal authoring, simulation/candidate
+  derivation, and the semantic placement command through a real qualifying
+  lifecycle path; synthetic entry-key mutation may supplement but does not
+  replace that coverage.
+- A phase reaching both Steady Growth and Transcendent Embryo exposes and
+  publishes them in that order. Neither appears in `roomActions.order`.
+- The one checked-in N-through-Q lifecycle fixture contains reached Steady
+  Growth and Embryo automatic transactions, an Icarus Supply Chain Pom Slice,
+  and N/O Shrine delivery acquisitions. Encode/decode and fixture integrity
+  preserve their exact owners and later P/Q hosts.
+- The real `state3-schema79.json` Surface checkpoint loads through the complete
+  application profile path without throwing. Its reached P `steadyGrowthOutcome`
+  keeps an exact workspace destination even while the same occurrence contains
+  unresolved Shrine/delivery authoring, and its contextual picker exposes the
+  nine eligible traits carried by the engine capability and can settle one.
+  Settling that outcome then permits the due delivery and producer-owned
+  incoming reward in either authored order, and re-evaluates the complete
+  project without a lifecycle insertion exception.
+  This is an acceptance fixture, not only a transition-unit assertion.
 
 Use focused lifecycle-transition, trait-level-effect, Hermes-delivery,
 Experimental Hammer, Chaos, Well, Fig Leaf, and representative N/multi-phase
@@ -328,7 +380,11 @@ Reject Gate B if it:
 - implements native effect scheduling a second time in the application;
 - keys a counter guard on biome, room name, or presentation phase rather than a
   normalized source fact; or
-- fixes an orphaned finding by fabricating UI candidate data.
+- fixes an orphaned finding by fabricating UI candidate data;
+- leaves a persisted scheduled acquisition active after its source disappears;
+- repairs stale scheduler state in the execution-plan compiler or executor; or
+- introduces a generic scheduler action shared by fixed automatic effects and
+  concrete pickups.
 
 ## Gate C — Closure
 
@@ -347,8 +403,9 @@ Intended commit: `docs(planner): close occurrence and encounter-end boundaries`
 - No authored persistence schema, migration, execution-plan, or game-executor
   change. Catalog contract edits are limited to correcting normalized source
   guards already established by the N side-room audit.
-- No persisted cursor, wizard state, automatic repair, suffix pruning, or
-  destructive cleanup.
+- No persisted cursor, wizard state, broad automatic repair, or suffix pruning.
+  Gate B permits only exact source-owned retraction of scheduled acquisition
+  actions whose authorizing Shrine or Supply Chain source was removed.
 - No redesign of topology, exact chronology, candidate legality, Hub behavior,
   or finding navigation.
 - No broad React refactor or restyle.

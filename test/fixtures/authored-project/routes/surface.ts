@@ -124,7 +124,9 @@ export function loadSurfaceNProject(): ProjectDocument {
   return loadSurfaceNCheckpoint();
 }
 
-export function createSurfaceNOHermesShrineDeliveryCheckpoint(): ProjectDocument {
+export function createSurfaceNOHermesShrineDeliveryCheckpoint(options?: {
+  readonly placeDelayedDelivery?: boolean;
+}): ProjectDocument {
   let project = loadSurfaceNOProject();
   const shrine = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
   project = applyProjectCommand(project, catalog, {
@@ -157,6 +159,7 @@ export function createSurfaceNOHermesShrineDeliveryCheckpoint(): ProjectDocument
     purchase: { delay: 2, rushed: false },
   });
   const deliveryHost = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
+  if (options?.placeDelayedDelivery === false) return project;
   return applyProjectCommand(project, catalog, {
     kind: 'PlaceHermesShrineDelivery',
     entry: createAcquisitionEntryAddress(

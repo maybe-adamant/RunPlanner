@@ -25,6 +25,7 @@ import {
   foldTraitHistoryEvents,
   settleSteadyGrowthThreshold,
   type ReachedSteadyGrowthThreshold,
+  type ReachedPickupProducerMaturity,
 } from '../../../traits';
 import { advanceStygianWellEncounterUses } from '../../../stygian-well';
 import {
@@ -137,16 +138,10 @@ function advancePickupProducersAt(
   deferMaturity: boolean,
 ): {
   readonly branches: readonly RewardBranchState[];
-  readonly maturities: readonly {
-    readonly branch: RewardBranchState;
-    readonly maturity: import('../../../trait-history').ReachedPickupProducerMaturity;
-  }[];
+  readonly maturities: readonly ReachedPickupProducerMaturity[];
 } {
   const next: RewardBranchState[] = [];
-  const maturities: {
-    readonly branch: RewardBranchState;
-    readonly maturity: import('../../../trait-history').ReachedPickupProducerMaturity;
-  }[] = [];
+  const maturities: ReachedPickupProducerMaturity[] = [];
   for (const branch of branches) {
     const before = branch.traitHistory ?? createTraitHistoryState();
     const advanced = advancePickupProducerProgress(catalog, before, owner, sequence, deferMaturity);
@@ -159,8 +154,7 @@ function advancePickupProducersAt(
             history: attachTraitHistory(branch.history, advanced.history),
           });
     next.push(updated);
-    for (const maturity of advanced.maturities)
-      maturities.push(Object.freeze({ branch: updated, maturity }));
+    for (const maturity of advanced.maturities) maturities.push(maturity);
   }
   return Object.freeze({ branches: Object.freeze(next), maturities: Object.freeze(maturities) });
 }
@@ -246,6 +240,33 @@ function advanceSteadyGrowthAt(
     blocked: Object.freeze(blocked),
     thresholds: Object.freeze(thresholds),
   });
+}
+
+function pickupMaturityKey(maturity: ReachedPickupProducerMaturity): string {
+  return `${maturity.traitKey}:${maturity.acquisitionIdentity}:${maturity.producerLifecycleKey}`;
+}
+
+/**
+ * A maturity is eligible for a frontier only when its own final branch still
+ * carries the progress event that reached it. This keeps automatic effects
+ * branch-local: a branch removed by Steady Growth or Embryo cannot leak its
+ * generated pickup into a surviving branch.
+ */
+function branchReachedPickupMaturity(
+  branch: RewardBranchState,
+  maturity: ReachedPickupProducerMaturity,
+  sequence: number,
+): boolean {
+  return (
+    branch.traitHistory?.events.some(
+      (historyEvent) =>
+        historyEvent.kind === 'pickupProducerProgress' &&
+        historyEvent.sequence === sequence &&
+        historyEvent.traitKey === maturity.traitKey &&
+        historyEvent.acquisitionIdentity === maturity.acquisitionIdentity &&
+        historyEvent.matured,
+    ) ?? false
+  );
 }
 
 function advanceTranscendentEmbryoAt(
@@ -381,19 +402,23 @@ export function applyEncounterEndEffectsTransition(
   let next = branches;
   if (
     declaration?.advancesExperimentalHammerUses === true &&
+    declaration.ignoreEncounterUses !== true &&
     !(room?.lifecycleProfileKey === 'FieldsCombatRoom' && event.phaseKey === 'Passive')
   )
     next = advanceExperimentalHammerForEndEffects(catalog, next, event.origin, event.sequence);
-  next = advanceChaosClockAt(catalog, next, event.sequence);
+  if (declaration?.ignoreEncounterUses !== true)
+    next = advanceChaosClockAt(catalog, next, event.sequence);
   next = Object.freeze(
     next.map((branch) =>
       Object.freeze({
         ...branch,
-        stygianWell: advanceStygianWellEncounterUses(branch.stygianWell),
+        stygianWell:
+          declaration?.ignoreEncounterUses === true
+            ? branch.stygianWell
+            : advanceStygianWellEncounterUses(branch.stygianWell),
       }),
     ),
   );
-  const derivedAcquisitionEntryFrontiers: DerivedAcquisitionEntryFrontier[] = [];
   const pickupOwner = event.origin.kind === 'occurrence' ? event.origin : undefined;
   const pickupAdvance =
     pickupOwner === undefined || declaration?.skipRoomsPerUpgrade === true
@@ -407,40 +432,13 @@ export function applyEncounterEndEffectsTransition(
         );
   if (pickupAdvance !== undefined) {
     next = pickupAdvance.branches;
-    const cohortSize = next.length;
-    for (const { branch, maturity } of pickupAdvance.maturities) {
-      const site = createAcquisitionSiteAddress(pickupOwner!, 'roomExit');
-      for (const pickup of maturity.pickups) {
-        const fixedReward = createUnresolvedAcquisitionRewardState(
-          catalog,
-          { rewardType: pickup.rewardType },
-          { kind: 'producerLifecycle', key: maturity.producerLifecycleKey },
-        );
-        derivedAcquisitionEntryFrontiers.push(
-          Object.freeze({
-            address: createAcquisitionEntryAddress(
-              site,
-              clockedTraitGeneratedPickupEntryKey(maturity.acquisitionIdentity, pickup.key),
-            ),
-            kind: 'clockedTraitPickup',
-            branchCohortSize: cohortSize,
-            rewardTypes: Object.freeze([pickup.rewardType]),
-            fixedReward,
-            producerLifecycleKey: maturity.producerLifecycleKey,
-            encounterPhaseKey: event.phaseKey,
-            participation: 'optional',
-            branchesBeforeEntry: Object.freeze([branch]),
-          }),
-        );
-      }
-    }
   }
   const deliveryPlacementFindings: LifecycleFinding[] = [];
   const encounterPhase = room?.encounterPhases?.find((phase) => phase.slotKey === event.phaseKey);
   if (
     event.origin.kind === 'occurrence' &&
-    event.execution === 'normal' &&
     declaration?.advancesHermesShrineDeliveryUses === true &&
+    declaration.ignoreEncounterUses !== true &&
     encounterPhase?.advancesHermesShrineDeliveryUses === true
   ) {
     const deliveryHost = event.origin;
@@ -469,14 +467,96 @@ export function applyEncounterEndEffectsTransition(
         });
       }),
     );
-    for (const branch of next) {
+  }
+  const steadyOwner: SteadyGrowthOutcomeAddress['owner'] | undefined =
+    event.origin.kind === 'occurrence' ? event.origin : undefined;
+  const steadyGrowthTarget =
+    room?.kind === 'authored'
+      ? room.encounters.steadyGrowthTargetByPhase?.[event.phaseKey]
+      : undefined;
+  const steadyAdvance =
+    steadyOwner === undefined || declaration?.skipRoomsPerUpgrade === true
+      ? undefined
+      : advanceSteadyGrowthAt(
+          catalog,
+          next,
+          steadyOwner,
+          event.phaseKey,
+          steadyGrowthTarget,
+          event.sequence,
+        );
+  const embryoTarget =
+    room?.kind === 'authored'
+      ? room.encounters.transcendentEmbryoBlessingByPhase?.[event.phaseKey]
+      : undefined;
+  const embryoAdvance =
+    steadyAdvance === undefined
+      ? undefined
+      : advanceTranscendentEmbryoAt(
+          catalog,
+          steadyAdvance.branches,
+          steadyOwner!,
+          event.phaseKey,
+          embryoTarget,
+          event.sequence,
+          event.origin.routeKey,
+          '',
+        );
+  // All automatic end-effects branches must settle before any generated
+  // pickup or delivery frontier is published. The matching below uses the
+  // progress event retained by each final branch, so a filtered branch cannot
+  // leak its maturity into another branch.
+  const finalBranches = embryoAdvance?.branches ?? steadyAdvance?.branches ?? next;
+  const derivedAcquisitionEntryFrontiers: DerivedAcquisitionEntryFrontier[] = [];
+  if (pickupAdvance !== undefined && pickupOwner !== undefined) {
+    const maturitiesByKey = new Map<string, ReachedPickupProducerMaturity>();
+    for (const maturity of pickupAdvance.maturities)
+      maturitiesByKey.set(pickupMaturityKey(maturity), maturity);
+    const site = createAcquisitionSiteAddress(pickupOwner, 'roomExit');
+    for (const branch of finalBranches) {
+      for (const maturity of maturitiesByKey.values()) {
+        if (!branchReachedPickupMaturity(branch, maturity, event.sequence)) continue;
+        for (const pickup of maturity.pickups) {
+          const fixedReward = createUnresolvedAcquisitionRewardState(
+            catalog,
+            { rewardType: pickup.rewardType },
+            { kind: 'producerLifecycle', key: maturity.producerLifecycleKey },
+          );
+          derivedAcquisitionEntryFrontiers.push(
+            Object.freeze({
+              address: createAcquisitionEntryAddress(
+                site,
+                clockedTraitGeneratedPickupEntryKey(maturity.acquisitionIdentity, pickup.key),
+              ),
+              kind: 'clockedTraitPickup',
+              branchCohortSize: finalBranches.length,
+              rewardTypes: Object.freeze([pickup.rewardType]),
+              fixedReward,
+              producerLifecycleKey: maturity.producerLifecycleKey,
+              encounterPhaseKey: event.phaseKey,
+              participation: 'optional',
+              branchesBeforeEntry: Object.freeze([branch]),
+            }),
+          );
+        }
+      }
+    }
+  }
+  if (
+    event.origin.kind === 'occurrence' &&
+    declaration?.advancesHermesShrineDeliveryUses === true &&
+    declaration.ignoreEncounterUses !== true &&
+    encounterPhase?.advancesHermesShrineDeliveryUses === true
+  ) {
+    const deliveryHost = event.origin;
+    const site = createAcquisitionSiteAddress(deliveryHost, 'hermesShrineDelivery');
+    for (const branch of finalBranches) {
       for (const delivery of Object.values(branch.pendingHermesShrineDeliveries)) {
         if (
           delivery.dueAt === undefined ||
           semanticAddressKey(delivery.dueAt) !== semanticAddressKey(deliveryHost)
         )
           continue;
-        const site = createAcquisitionSiteAddress(deliveryHost, 'hermesShrineDelivery');
         const entryKey = hermesShrineDeliveryEntryKey(
           delivery.sourceOrigin,
           delivery.generationKey,
@@ -515,7 +595,7 @@ export function applyEncounterEndEffectsTransition(
           Object.freeze({
             address: createAcquisitionEntryAddress(site, entryKey),
             kind: 'hermesShrineDelivery',
-            branchCohortSize: next.length,
+            branchCohortSize: finalBranches.length,
             rewardTypes: Object.freeze([delivery.rewardType]),
             encounterPhaseKey: event.phaseKey,
             ...(fixedReward === null ? {} : { fixedReward }),
@@ -529,53 +609,11 @@ export function applyEncounterEndEffectsTransition(
       }
     }
   }
-  const steadyOwner: SteadyGrowthOutcomeAddress['owner'] | undefined =
-    event.origin.kind === 'occurrence' ? event.origin : undefined;
-  const steadyGrowthTarget =
-    room?.kind === 'authored'
-      ? room.encounters.steadyGrowthTargetByPhase?.[event.phaseKey]
-      : undefined;
-  const steadyAdvance =
-    steadyOwner === undefined || declaration?.skipRoomsPerUpgrade === true
-      ? undefined
-      : advanceSteadyGrowthAt(
-          catalog,
-          next,
-          steadyOwner,
-          event.phaseKey,
-          steadyGrowthTarget,
-          event.sequence,
-        );
-  if (steadyAdvance === undefined)
-    return Object.freeze({
-      branches: advanceRewardBranches(next, event.sequence),
-      derivedAcquisitionEntryFrontiers: Object.freeze(derivedAcquisitionEntryFrontiers),
-      hermesShrineDeliveryPlacementRequired: deliveryPlacementFindings.length > 0,
-      steadyGrowthThresholds: Object.freeze([]),
-      transcendentEmbryoThresholds: Object.freeze([]),
-      traitChildSettlements: Object.freeze([]),
-      timelineFacts: EMPTY_PLANNER_TIMELINE_FACTS,
-      findings: Object.freeze(deliveryPlacementFindings),
-    });
-  const embryoTarget =
-    room?.kind === 'authored'
-      ? room.encounters.transcendentEmbryoBlessingByPhase?.[event.phaseKey]
-      : undefined;
-  const embryoAdvance = advanceTranscendentEmbryoAt(
-    catalog,
-    steadyAdvance.branches,
-    steadyOwner!,
-    event.phaseKey,
-    embryoTarget,
-    event.sequence,
-    event.origin.routeKey,
-    '',
-  );
   const timelineNodes: PlannerTimelineNode[] = [
-    ...steadyAdvance.thresholds.map(({ address }) =>
+    ...(steadyAdvance?.thresholds ?? []).map(({ address }) =>
       Object.freeze({ owner: address, included: true }),
     ),
-    ...embryoAdvance.thresholds.map(({ address }) =>
+    ...(embryoAdvance?.thresholds ?? []).map(({ address }) =>
       Object.freeze({ owner: address, included: true }),
     ),
   ];
@@ -585,7 +623,7 @@ export function applyEncounterEndEffectsTransition(
       : Object.freeze({ nodes: Object.freeze(timelineNodes), dependencies: Object.freeze([]) });
   const findings: LifecycleFinding[] = [...deliveryPlacementFindings];
   const traitChildSettlements: ReachedTraitChildCheckpoint[] = [];
-  for (const blocked of steadyAdvance.blocked) {
+  for (const blocked of steadyAdvance?.blocked ?? []) {
     traitChildSettlements.push(Object.freeze({ address: blocked.address, branch: blocked.branch }));
     findings.push(
       Object.freeze({
@@ -603,12 +641,12 @@ export function applyEncounterEndEffectsTransition(
               : { targetTraitKey: blocked.targetTraitKey }),
           }),
         ),
-        region: ownerRegion(event.origin),
+        region: ownerRegion(blocked.address),
         chronology: Object.freeze({ kind: 'history', sequence: event.sequence, boundary: 'at' }),
       }),
     );
   }
-  for (const blocked of embryoAdvance.blocked) {
+  for (const blocked of embryoAdvance?.blocked ?? []) {
     traitChildSettlements.push(Object.freeze({ address: blocked.address, branch: blocked.branch }));
     findings.push(
       Object.freeze({
@@ -629,17 +667,17 @@ export function applyEncounterEndEffectsTransition(
                 }),
           }),
         ),
-        region: ownerRegion(event.origin),
+        region: ownerRegion(blocked.address),
         chronology: Object.freeze({ kind: 'history', sequence: event.sequence, boundary: 'at' }),
       }),
     );
   }
   return Object.freeze({
-    branches: advanceRewardBranches(embryoAdvance.branches, event.sequence),
+    branches: advanceRewardBranches(finalBranches, event.sequence),
     derivedAcquisitionEntryFrontiers: Object.freeze(derivedAcquisitionEntryFrontiers),
     hermesShrineDeliveryPlacementRequired: deliveryPlacementFindings.length > 0,
-    steadyGrowthThresholds: steadyAdvance.thresholds,
-    transcendentEmbryoThresholds: embryoAdvance.thresholds,
+    steadyGrowthThresholds: steadyAdvance?.thresholds ?? Object.freeze([]),
+    transcendentEmbryoThresholds: embryoAdvance?.thresholds ?? Object.freeze([]),
     traitChildSettlements: Object.freeze(traitChildSettlements),
     timelineFacts,
     findings: Object.freeze(findings),

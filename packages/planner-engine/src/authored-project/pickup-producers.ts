@@ -1,7 +1,13 @@
 import type { Catalog } from '../catalog-schema';
-import type { RoomActionReference, RoomEncounterState, RoomOccurrence } from './model';
+import type {
+  ProjectDocument,
+  RoomActionReference,
+  RoomEncounterState,
+  RoomOccurrence,
+} from './model';
 import {
   createAcquisitionEntryAddress,
+  createBiomeAddress,
   createEncounterPhaseAddress,
   createGorgonPhaseAddress,
   createNemesisRandomEventAddress,
@@ -24,9 +30,110 @@ import {
   materializeGorgonAthenaOffer,
   optionIndex,
   TRAIT_OPTION_KEYS,
+  traitOfferOption,
   type AuthoredTraitOffer,
   type TraitOptionKey,
 } from './traits';
+
+function clockedPickupAcquisitionRoles(
+  catalog: Catalog,
+  offer: AuthoredTraitOffer | null | undefined,
+  primaryRole: string,
+): readonly string[] {
+  if (offer?.kind !== 'traits') return [];
+  const roles: string[] = [];
+  const producesClockedPickups = (traitKey: string | undefined) => {
+    const disposition =
+      traitKey === undefined ? undefined : catalog.traits.byKey[traitKey]?.selectedDisposition;
+    return disposition?.kind === 'producePickups' && disposition.clock !== undefined;
+  };
+  if (producesClockedPickups(traitOfferOption(offer, offer.selectedOptionKey)?.traitKey))
+    roles.push(primaryRole);
+  if (
+    offer.concaveStoneResult?.kind === 'proc' &&
+    producesClockedPickups(traitOfferOption(offer, offer.concaveStoneResult.optionKey)?.traitKey)
+  )
+    roles.push('concaveStoneSecondary');
+  return roles;
+}
+
+function selectedClockedPickupSourceKeys(
+  catalog: Catalog,
+  document: ProjectDocument,
+): ReadonlySet<string> {
+  const keys = new Set<string>();
+  const route = document.route;
+  for (const plan of route.biomes) {
+    const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
+    for (const occurrence of plan.topology?.occurrences ?? []) {
+      for (const source of traitPickupOffers(catalog, biome, occurrence)) {
+        if (
+          source.source.owner.kind === 'encounterPhase' &&
+          (!source.sourceNormal || !source.selectedEncounterSource)
+        )
+          continue;
+        const primaryRole =
+          source.source.owner.kind === 'encounterPhase'
+            ? 'selection'
+            : source.source.acquisitionRole;
+        for (const role of clockedPickupAcquisitionRoles(catalog, source.offer, primaryRole))
+          keys.add(semanticAddressKey(createTraitOfferAddress(source.source.owner, role)));
+      }
+    }
+  }
+  return keys;
+}
+
+/**
+ * A reached clocked-trait pickup keeps its payload for repair, but it cannot
+ * retain an active later-host action once the exact acquisition that created
+ * its clock is removed or replaced.
+ */
+export function retractInactiveClockedTraitPickupActions(
+  catalog: Catalog,
+  previous: ProjectDocument,
+  document: ProjectDocument,
+): ProjectDocument {
+  const currentSources = selectedClockedPickupSourceKeys(catalog, document);
+  const invalidatedPrefixes = [...selectedClockedPickupSourceKeys(catalog, previous)].filter(
+    (key) => !currentSources.has(key),
+  );
+  if (invalidatedPrefixes.length === 0) return document;
+  const route = document.route;
+  let changed = false;
+  const biomes = route.biomes.map((plan) => {
+    if (plan.topology === null) return plan;
+    const occurrences = plan.topology.occurrences.map((occurrence) => {
+      const order = occurrence.roomActions.order.filter((reference) => {
+        if (reference.kind !== 'interactAcquisitionEntry' || reference.siteKey !== 'roomExit')
+          return true;
+        const parsed = parseClockedTraitGeneratedPickupEntryKey(reference.entryKey);
+        if (parsed === undefined) return true;
+        return !invalidatedPrefixes.some((prefix) =>
+          parsed.acquisitionIdentity.startsWith(`${prefix}:`),
+        );
+      });
+      if (order.length === occurrence.roomActions.order.length) return occurrence;
+      changed = true;
+      return Object.freeze({
+        ...occurrence,
+        roomActions: Object.freeze({ ...occurrence.roomActions, order: Object.freeze(order) }),
+      });
+    });
+    return occurrences.some((occurrence, index) => occurrence !== plan.topology!.occurrences[index])
+      ? Object.freeze({
+          ...plan,
+          topology: Object.freeze({ ...plan.topology, occurrences: Object.freeze(occurrences) }),
+        })
+      : plan;
+  });
+  return changed
+    ? Object.freeze({
+        ...document,
+        route: Object.freeze({ ...route, biomes: Object.freeze(biomes) }),
+      })
+    : document;
+}
 
 export interface SelectedPickupProducer {
   readonly traitKey?: string;
@@ -253,6 +360,11 @@ function traitPickupOffers(
   readonly source: TraitOfferAddress;
   readonly sourceAction: RoomActionReference;
   readonly sourceNormal: boolean;
+  /**
+   * Encounter offers survive selection changes for repair, but only the
+   * selected encounter owns a live clocked acquisition.
+   */
+  readonly selectedEncounterSource: boolean;
   readonly sourceIsStory: boolean;
   readonly offer: AuthoredTraitOffer | null;
 }[] {
@@ -260,6 +372,7 @@ function traitPickupOffers(
     source: TraitOfferAddress;
     sourceAction: RoomActionReference;
     sourceNormal: boolean;
+    selectedEncounterSource: boolean;
     sourceIsStory: boolean;
     offer: AuthoredTraitOffer | null;
   }[] = [];
@@ -320,6 +433,7 @@ function traitPickupOffers(
         source,
         sourceAction: Object.freeze(sourceAction),
         sourceNormal: participates && reward.dispositionByAcquisitionRole[role]?.kind === 'normal',
+        selectedEncounterSource: true,
         sourceIsStory,
         offer,
       });
@@ -381,6 +495,8 @@ function traitPickupOffers(
         source: createTraitOfferAddress(owner, encounterKey),
         sourceAction: Object.freeze({ kind: 'interactEncounter', phaseKey }),
         sourceNormal: actionKeys.has(roomActionKey({ kind: 'interactEncounter', phaseKey })),
+        selectedEncounterSource:
+          occurrence.encounters.encounterKeyByPhase?.[phaseKey] === encounterKey,
         sourceIsStory,
         offer,
       });
@@ -401,6 +517,7 @@ function traitPickupOffers(
       source: createTraitOfferAddress(createGorgonPhaseAddress(encounter), 'gorgonAthena'),
       sourceAction: Object.freeze({ kind: 'interactGorgon', phaseKey }),
       sourceNormal: actionKeys.has(roomActionKey({ kind: 'interactGorgon', phaseKey })),
+      selectedEncounterSource: true,
       sourceIsStory,
       offer: offer ?? null,
     });

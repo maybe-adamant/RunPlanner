@@ -14,10 +14,19 @@ import {
   hermesShrineDeliveryEntryKey,
   parseHermesShrineDeliveryEntryKey,
 } from '@run-planner/engine/authored-project';
+import {
+  createSurfaceNOHermesShrineDeliveryCheckpoint,
+  oBiome,
+  oOccurrenceIds,
+} from '@run-planner/test-fixtures/surface';
 import { createEnteredNLocalProject, nLocalOccurrenceId } from '../support/complete-n-project';
 import { initializeTestRewardBranches } from '../../support/arcana-fear';
 import type { CanonicalAuthoredRoom } from '../../../src/simulation/materialization';
 import { applyEncounterEndEffectsTransition } from '../../../src/simulation/rewards/biome/lifecycle-transitions/encounter-end-effects';
+import {
+  hermesShrineDeliveryPlacementForPurchaseReschedule,
+  simulateProjectAssembly,
+} from '../../../src/simulation';
 
 function shrinePhase(
   slotKey: string,
@@ -128,6 +137,97 @@ describe('Hermes Shrine delivery placement', () => {
       entryKey,
       encounterPhaseKey: 'Encounter',
     });
+  });
+
+  it('retracts an actual matured Shrine delivery from its later host while retaining payload', () => {
+    let project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
+    const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const host = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
+    const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
+    const delayedEntryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondLeft');
+    const placement = hermesShrineDeliveryPlacementForPurchaseReschedule(
+      simulateProjectAssembly(catalog, project),
+      source,
+      'initial:secondLeft',
+    );
+    if (placement === undefined)
+      throw new Error('matured Shrine delivery did not publish an exact placement frontier');
+    project = applyProjectCommand(project, catalog, placement);
+    expect(() => simulateProjectAssembly(catalog, project)).not.toThrow();
+    const removed = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePresence',
+      occurrence: source,
+      present: false,
+    });
+    expect(() => simulateProjectAssembly(catalog, removed)).not.toThrow();
+    const removedHost = removed.route.biomes
+      .find((candidate) => candidate.biomeKey === oBiome.biomeKey)
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === host.occurrenceId);
+    const activeDeliveryKeys = removed.route.biomes.flatMap((biome) =>
+      (biome.topology?.occurrences ?? []).flatMap((occurrence) =>
+        occurrence.roomActions.order.flatMap((reference) =>
+          reference.kind === 'interactAcquisitionEntry' &&
+          reference.siteKey === 'hermesShrineDelivery'
+            ? [reference.entryKey]
+            : [],
+        ),
+      ),
+    );
+    expect(activeDeliveryKeys).not.toContain(entryKey);
+    expect(activeDeliveryKeys).not.toContain(delayedEntryKey);
+    expect(
+      removedHost?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[delayedEntryKey],
+    ).toMatchObject({ offer: { rewardType: 'MaxHealthDrop' } });
+  });
+
+  it('retracts an actual delayed delivery when room replacement removes its source Shrine', () => {
+    let project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
+    const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const host = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
+    const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondLeft');
+    const placement = hermesShrineDeliveryPlacementForPurchaseReschedule(
+      simulateProjectAssembly(catalog, project),
+      source,
+      'initial:secondLeft',
+    );
+    if (placement === undefined)
+      throw new Error('matured Shrine delivery did not publish an exact placement frontier');
+    project = applyProjectCommand(project, catalog, placement);
+    const hostBeforeReplacement = project.route.biomes
+      .find((biome) => biome.biomeKey === oBiome.biomeKey)
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === host.occurrenceId);
+    expect(hostBeforeReplacement?.roomActions.order).toContainEqual(
+      expect.objectContaining({
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'hermesShrineDelivery',
+        entryKey,
+      }),
+    );
+
+    const replaced = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: source,
+      gameName: 'O_Combat01',
+    });
+    const sourceAfterReplacement = replaced.route.biomes
+      .find((biome) => biome.biomeKey === oBiome.biomeKey)
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === source.occurrenceId);
+    const hostAfterReplacement = replaced.route.biomes
+      .find((biome) => biome.biomeKey === oBiome.biomeKey)
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === host.occurrenceId);
+
+    expect(sourceAfterReplacement?.hermesShrine).toBeUndefined();
+    expect(hostAfterReplacement?.roomActions.order).not.toContainEqual(
+      expect.objectContaining({
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'hermesShrineDelivery',
+        entryKey,
+      }),
+    );
+    expect(
+      hostAfterReplacement?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey],
+    ).toMatchObject({ offer: { rewardType: 'MaxHealthDrop' } });
+    expect(() => simulateProjectAssembly(catalog, replaced)).not.toThrow();
   });
 
   it('publishes a required derived footprint when a due host has no site', () => {
