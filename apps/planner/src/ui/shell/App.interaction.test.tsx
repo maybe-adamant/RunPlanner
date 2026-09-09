@@ -1019,7 +1019,14 @@ describe('planner history interaction', () => {
       document.getElementById(semanticOwnerControlElementId(childDestination.focusAddress));
     await waitFor(() => expect(childTarget()).not.toBeNull());
     const childRow = childTarget()?.closest('[data-room-action-key]');
-    expect(childRow?.textContent).toContain('seaStarDuplicate pickup');
+    expect(childDestination.focusAddress.kind).toBe('roomAction');
+    if (childDestination.focusAddress.kind !== 'roomAction') {
+      throw new Error('Sea Star duplicate does not focus its room action');
+    }
+    expect(childRow?.getAttribute('data-room-action-key')).toBe(
+      childDestination.focusAddress.actionKey,
+    );
+    expect(childRow?.textContent).toContain('Interact with Gold pickup');
     expect(
       application.store
         .getState()
