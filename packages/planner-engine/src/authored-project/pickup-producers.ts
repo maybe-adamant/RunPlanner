@@ -35,26 +35,20 @@ import {
   type TraitOptionKey,
 } from './traits';
 
-function clockedPickupAcquisitionRoles(
+function clockedPickupAcquisitionRole(
   catalog: Catalog,
   offer: AuthoredTraitOffer | null | undefined,
   primaryRole: string,
-): readonly string[] {
-  if (offer?.kind !== 'traits') return [];
-  const roles: string[] = [];
+): string | undefined {
+  if (offer?.kind !== 'traits') return undefined;
   const producesClockedPickups = (traitKey: string | undefined) => {
     const disposition =
       traitKey === undefined ? undefined : catalog.traits.byKey[traitKey]?.selectedDisposition;
     return disposition?.kind === 'producePickups' && disposition.clock !== undefined;
   };
   if (producesClockedPickups(traitOfferOption(offer, offer.selectedOptionKey)?.traitKey))
-    roles.push(primaryRole);
-  if (
-    offer.concaveStoneResult?.kind === 'proc' &&
-    producesClockedPickups(traitOfferOption(offer, offer.concaveStoneResult.optionKey)?.traitKey)
-  )
-    roles.push('concaveStoneSecondary');
-  return roles;
+    return primaryRole;
+  return undefined;
 }
 
 function selectedClockedPickupSourceKeys(
@@ -76,7 +70,8 @@ function selectedClockedPickupSourceKeys(
           source.source.owner.kind === 'encounterPhase'
             ? 'selection'
             : source.source.acquisitionRole;
-        for (const role of clockedPickupAcquisitionRoles(catalog, source.offer, primaryRole))
+        const role = clockedPickupAcquisitionRole(catalog, source.offer, primaryRole);
+        if (role !== undefined)
           keys.add(semanticAddressKey(createTraitOfferAddress(source.source.owner, role)));
       }
     }
@@ -95,10 +90,10 @@ export function retractInactiveClockedTraitPickupActions(
   document: ProjectDocument,
 ): ProjectDocument {
   const currentSources = selectedClockedPickupSourceKeys(catalog, document);
-  const invalidatedPrefixes = [...selectedClockedPickupSourceKeys(catalog, previous)].filter(
+  const invalidatedSources = [...selectedClockedPickupSourceKeys(catalog, previous)].filter(
     (key) => !currentSources.has(key),
   );
-  if (invalidatedPrefixes.length === 0) return document;
+  if (invalidatedSources.length === 0) return document;
   const route = document.route;
   let changed = false;
   const biomes = route.biomes.map((plan) => {
@@ -109,9 +104,10 @@ export function retractInactiveClockedTraitPickupActions(
           return true;
         const parsed = parseClockedTraitGeneratedPickupEntryKey(reference.entryKey);
         if (parsed === undefined) return true;
-        return !invalidatedPrefixes.some((prefix) =>
-          parsed.acquisitionIdentity.startsWith(`${prefix}:`),
-        );
+        // Generated entry keys carry the exact semantic producer identity;
+        // never treat another identity that merely shares its prefix as owned
+        // by this source.
+        return !invalidatedSources.includes(parsed.acquisitionIdentity);
       });
       if (order.length === occurrence.roomActions.order.length) return occurrence;
       changed = true;

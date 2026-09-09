@@ -17,10 +17,12 @@ import {
   createIncomingRewardAddress,
   createKeepsakeEquipResultAddress,
   createLevelResolutionAddress,
+  createLocalVisitOrderAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
+  type AcquisitionEntryAddress,
   type ProjectDocument,
 } from '../../../src/authored-project';
 import {
@@ -167,11 +169,72 @@ function acceptOneSupplyChainSlice(project: ProjectDocument): ProjectDocument {
   return settleReachedAutomaticOutcomes(next);
 }
 
+function acceptSupplyChainSliceAtAddress(
+  project: ProjectDocument,
+  entry: AcquisitionEntryAddress,
+): ProjectDocument {
+  const assembly = simulateProjectAssembly(catalog, project);
+  const placement = clockedTraitPickupPlacementForProjectEvaluationAssembly(assembly, entry);
+  if (placement === undefined)
+    throw new Error(
+      `scheduled lifecycle fixture lacks an attested Supply Chain placement for ${entry.entryKey}`,
+    );
+  let next = applyProjectCommand(project, catalog, placement);
+  const levelResolution = createLevelResolutionAddress(entry, 'self');
+  const levelCandidate = levelResolutionCandidateForProjectEvaluationAssembly(
+    simulateProjectAssembly(catalog, next),
+    levelResolution,
+  );
+  const targetTraitKey = levelCandidate?.branches[0]?.eligibleTargetTraitKeys[0];
+  if (targetTraitKey === undefined)
+    throw new Error(
+      `scheduled lifecycle fixture lacks a Supply Chain Pom target for ${entry.entryKey}`,
+    );
+  next = applyProjectCommand(next, catalog, {
+    kind: 'ReplaceLevelResolution',
+    levelResolution,
+    value: { kind: 'random', targetTraitKey },
+  });
+  return settleReachedAutomaticOutcomes(next);
+}
+
+function acceptQSupplyChainSlices(project: ProjectDocument): ProjectDocument {
+  let next = project;
+  for (const pickupKey of ['pom1', 'pom2']) {
+    const assembly = simulateProjectAssembly(catalog, next);
+    const entry = next.route.biomes
+      .flatMap((biome) =>
+        (biome.topology?.occurrences ?? []).flatMap((occurrence) =>
+          derivedAcquisitionEntriesForProjectEvaluationAssembly(
+            assembly,
+            createAcquisitionSiteAddress(
+              createOccurrenceAddress(
+                { kind: 'biome', routeKey: next.route.routeKey, biomeKey: biome.biomeKey },
+                occurrence.occurrenceId,
+              ),
+              'roomExit',
+            ),
+          ),
+        ),
+      )
+      .find(
+        (candidate) =>
+          candidate.kind === 'clockedTraitPickup' &&
+          candidate.address.biomeKey === 'Q' &&
+          candidate.address.entryKey.endsWith(`:${pickupKey}`),
+      );
+    if (entry === undefined || entry.kind !== 'clockedTraitPickup')
+      throw new Error(`scheduled lifecycle fixture lacks Q Supply Chain ${pickupKey}`);
+    next = acceptSupplyChainSliceAtAddress(next, entry.address);
+  }
+  return next;
+}
+
 /**
  * One complete Surface route which exercises fixed encounter-end outcomes and
  * both scheduler-produced acquisition families through ordinary authoring.
  */
-export function surfaceScheduledLifecycleProject(): ProjectDocument {
+function buildSurfaceScheduledLifecycleProject(clearLocalVisits = false): ProjectDocument {
   let project = authorLegalTraitOffers(
     applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceHubVisitOrder',
@@ -179,6 +242,15 @@ export function surfaceScheduledLifecycleProject(): ProjectDocument {
       hubSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'combat03'],
     }),
   );
+  if (clearLocalVisits) {
+    for (const occurrenceId of ['combat05', 'combat02', 'combat11']) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceLocalVisitOrder',
+        order: createLocalVisitOrderAddress(nBiome, nOccurrenceId(occurrenceId), 'sideRooms'),
+        occurrenceIds: [],
+      });
+    }
+  }
 
   const keepsake = createRouteStartKeepsakeSelectionAddress('Surface');
   project = applyProjectCommand(project, catalog, {
@@ -280,4 +352,13 @@ export function surfaceScheduledLifecycleProject(): ProjectDocument {
       )}`,
     );
   return project;
+}
+
+export function surfaceScheduledLifecycleProject(): ProjectDocument {
+  return buildSurfaceScheduledLifecycleProject();
+}
+
+/** The long scheduled-effects route with both Q Supply Chain Pom Slices authored. */
+export function surfaceScheduledLifecycleWithQSupplyChainSlicesProject(): ProjectDocument {
+  return acceptQSupplyChainSlices(buildSurfaceScheduledLifecycleProject(true));
 }

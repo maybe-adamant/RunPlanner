@@ -1,8 +1,20 @@
 # Project schema boundary
 
-Schema 79 is the current Run Planner document baseline. It moves a purchased
-World Shop Mystery Boon's god source and trait result from generated inventory
-to its room-exit acquisition entry. Migrate the immediately preceding
+Schema 80 is the current Run Planner document baseline. It replaces the
+sequence-bearing source portion of generated clocked-pickup entry keys with
+the stable semantic acquisition identity and updates matching Room Action
+references. Migrate the immediately preceding single-route schema with:
+
+```bash
+npm run schema:migrate-79-to-80 -- path/to/schema-79-project.runplanner.json
+```
+
+The command preserves generated pickup payloads and authoring detail, rewrites
+entry keys and matching references together, and refuses migrated-key
+collisions. It never overwrites the source.
+
+Schema 79 moved a purchased World Shop Mystery Boon's god source and trait
+result from generated inventory to its room-exit acquisition entry. Migrate the immediately preceding
 single-route schema with:
 
 ```bash
@@ -38,7 +50,7 @@ output. It has no route-selection, in-place, or target-version mode.
 
 The schema-72 splitter's pure transformation is exported from
 `schema/split-project-72-to-73.js` for checkpoint conversion. The source value
-is never mutated. The production decoder accepts schema 79 only; stale
+is never mutated. The production decoder accepts schema 80 only; stale
 documents are not migrated implicitly in the application.
 
 Migrate a schema-74 document with:

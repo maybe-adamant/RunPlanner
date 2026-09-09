@@ -5,6 +5,7 @@ import {
   createOccurrenceAddress,
   createTraitAcquisitionTargetAddress,
   createTraitOfferAddress,
+  semanticAddressKey,
   type AuthoredTraitOffer,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
@@ -271,6 +272,44 @@ describe('Icarus occupied-slot level upgrades', () => {
 });
 
 describe('Supply Chain lifecycle', () => {
+  it('uses the semantic offer owner as the clocked pickup producer identity', () => {
+    const traitOrigin = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: goldenFStartId },
+      'Encounter',
+    );
+    const offer = selectedTraitOffer('Icarus', 'SupplyDropBoon');
+    const first = settleEncounterTraitOffer(
+      catalog,
+      initializeTestRewardBranches()[0]!,
+      traitOrigin,
+      offer,
+      11,
+      'encounterCompleted',
+      new Map(),
+      undefined,
+      'selection',
+    );
+    const second = settleEncounterTraitOffer(
+      catalog,
+      initializeTestRewardBranches()[0]!,
+      traitOrigin,
+      offer,
+      97,
+      'encounterCompleted',
+      new Map(),
+      undefined,
+      'selection',
+    );
+    const expected = semanticAddressKey(createTraitOfferAddress(traitOrigin, 'selection'));
+    expect(first.branch.traitHistory?.equippedTraits.SupplyDropBoon?.acquisitionIdentity).toBe(
+      expected,
+    );
+    expect(second.branch.traitHistory?.equippedTraits.SupplyDropBoon?.acquisitionIdentity).toBe(
+      expected,
+    );
+  });
+
   it('publishes a matured Supply Chain pickup from the final Steady Growth branch', () => {
     const occurrence = createOccurrenceAddress(goldenFBiome, goldenFStartId);
     const traitOrigin = createEncounterPhaseAddress(
@@ -565,6 +604,7 @@ describe('Supply Chain lifecycle', () => {
       encounterPhases: [{ slotKey: 'Encounter' }],
     } as unknown as CanonicalAuthoredRoom;
     const maturedAt: number[] = [];
+    const maturedEntryKeys: string[][] = [];
     for (let sequence = 1; sequence <= 14; sequence += 1) {
       const transition = applyEncounterEndEffectsTransition(
         catalog,
@@ -585,6 +625,11 @@ describe('Supply Chain lifecycle', () => {
       branches = transition.branches;
       if (transition.derivedAcquisitionEntryFrontiers.length > 0) {
         maturedAt.push(sequence);
+        maturedEntryKeys.push(
+          transition.derivedAcquisitionEntryFrontiers
+            .map((frontier) => frontier.address.entryKey)
+            .sort(),
+        );
         expect(transition.derivedAcquisitionEntryFrontiers).toHaveLength(2);
         expect(
           new Set(
@@ -621,6 +666,7 @@ describe('Supply Chain lifecycle', () => {
       );
     }
     expect(maturedAt).toEqual([7, 14]);
+    expect(maturedEntryKeys[1]).toEqual(maturedEntryKeys[0]);
 
     for (let sequence = 15; sequence <= 20; sequence += 1) {
       branches = applyEncounterEndEffectsTransition(
