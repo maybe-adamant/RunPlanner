@@ -1,4 +1,9 @@
-import type { LoadedProfileFile, ProfileFileAdapter, ProfileFileReference } from './profileFile';
+import type {
+  LoadedProfileFile,
+  ProfileFileAdapter,
+  ProfileFileReference,
+  ProfileFileRestoreResult,
+} from './profileFile';
 
 interface ProfileDialogOptions {
   readonly defaultPath?: string;
@@ -10,9 +15,16 @@ interface ProfileDialogOptions {
 }
 
 export interface TauriProfileFileEnvironment {
+  readonly activate: (path: string) => Promise<void>;
+  readonly clearActive: () => Promise<void>;
   readonly open: (options: ProfileDialogOptions) => Promise<string | null>;
   readonly readTextFile: (path: string) => Promise<string>;
+  readonly restoreActive: () => Promise<{
+    readonly fileName: string;
+    readonly json: string;
+  } | null>;
   readonly save: (options: ProfileDialogOptions) => Promise<string | null>;
+  readonly writeActive: (json: string) => Promise<void>;
   readonly writeTextFile: (path: string, json: string) => Promise<void>;
 }
 
@@ -28,16 +40,28 @@ function fileNameFromPath(path: string): string {
   return fileName;
 }
 
+function errorDetail(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export function createTauriProfileFileAdapter(
   environment: TauriProfileFileEnvironment,
 ): ProfileFileAdapter {
   const referenceFor = (path: string): ProfileFileReference =>
     Object.freeze({
+      activate: () => environment.activate(path),
       fileName: fileNameFromPath(path),
       write: (json: string) => environment.writeTextFile(path, json),
     });
+  const restoredReference = (fileName: string): ProfileFileReference =>
+    Object.freeze({
+      activate: () => Promise.resolve(),
+      fileName,
+      write: (json: string) => environment.writeActive(json),
+    });
 
   return Object.freeze({
+    clearActive: () => environment.clearActive(),
     async saveAs(suggestedFileName: string, json: string): Promise<ProfileFileReference | null> {
       const path = await environment.save({
         defaultPath: suggestedFileName,
@@ -57,6 +81,24 @@ export function createTauriProfileFileAdapter(
       if (path === null) return null;
       const json = await environment.readTextFile(path);
       return Object.freeze({ file: referenceFor(path), json });
+    },
+    async restoreActive(): Promise<ProfileFileRestoreResult> {
+      try {
+        const restored = await environment.restoreActive();
+        if (restored === null) return Object.freeze({ status: 'none' as const });
+        return Object.freeze({
+          status: 'loaded' as const,
+          loaded: Object.freeze({
+            file: restoredReference(restored.fileName),
+            json: restored.json,
+          }),
+        });
+      } catch (error) {
+        return Object.freeze({
+          status: 'failure' as const,
+          message: `Could not restore the active profile: ${errorDetail(error)}`,
+        });
+      }
     },
   });
 }

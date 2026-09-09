@@ -66,6 +66,7 @@ function createPersistence(): {
   let storedJson: string | null = null;
   let storedFileName: string | null = null;
   const storedFile = (fileName: string) => ({
+    activate: () => Promise.resolve(),
     fileName,
     write: (json: string) => {
       storedJson = json;
@@ -74,6 +75,7 @@ function createPersistence(): {
   });
   return {
     profileFile: {
+      clearActive: () => Promise.resolve(),
       saveAs: (fileName, json) => {
         storedFileName = fileName;
         storedJson = json;
@@ -85,6 +87,7 @@ function createPersistence(): {
             ? null
             : { file: storedFile(storedFileName), json: storedJson },
         ),
+      restoreActive: () => Promise.resolve({ status: 'none' as const }),
     },
     readStoredJson: () => storedJson,
   };

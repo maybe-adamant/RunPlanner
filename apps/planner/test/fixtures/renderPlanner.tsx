@@ -4,6 +4,8 @@ import type { ReactNode } from 'react';
 import { Provider } from 'react-redux';
 
 import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
+import { createInitialProject } from '@planner/composition/projectBootstrap';
+import { newProjectCreated } from '@planner/state/profileSessionSlice';
 import { App } from '@planner/ui/shell/App';
 
 interface RenderPlannerOptions {
@@ -16,7 +18,9 @@ interface RenderPlannerOptions {
 /** Creates the explicit open-project state used by editor interaction tests. */
 export function createOpenTestApplication(routeKey = 'Underworld'): PlannerApplication {
   const application = createApplication();
-  application.projectOperations.createNew(routeKey);
+  application.store.dispatch(
+    newProjectCreated(createInitialProject(application.catalog, routeKey)),
+  );
   return application;
 }
 

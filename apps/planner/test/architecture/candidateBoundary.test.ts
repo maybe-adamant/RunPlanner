@@ -39,6 +39,7 @@ describe('candidate application boundary', () => {
       'editorNavigation',
       'projectOperations',
       'selectStructuredWorkspace',
+      'startupReady',
       'store',
       'structuredWorkspace',
     ]);

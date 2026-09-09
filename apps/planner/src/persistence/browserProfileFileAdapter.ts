@@ -26,6 +26,7 @@ export function createBrowserProfileFileAdapter(
   };
   const referenceFor = (fileName: string): ProfileFileReference =>
     Object.freeze({
+      activate: () => Promise.resolve(),
       fileName,
       write(json: string): Promise<void> {
         download(fileName, json);
@@ -34,6 +35,7 @@ export function createBrowserProfileFileAdapter(
     });
 
   return Object.freeze({
+    clearActive: () => Promise.resolve(),
     saveAs(suggestedFileName: string, json: string): Promise<ProfileFileReference> {
       download(suggestedFileName, json);
       return Promise.resolve(referenceFor(suggestedFileName));
@@ -81,5 +83,6 @@ export function createBrowserProfileFileAdapter(
         }
       });
     },
+    restoreActive: () => Promise.resolve(Object.freeze({ status: 'none' as const })),
   });
 }

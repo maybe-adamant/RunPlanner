@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
-import { isTauri } from '@tauri-apps/api/core';
+import { invoke as tauriInvoke, isTauri } from '@tauri-apps/api/core';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 
@@ -20,11 +20,14 @@ import { ApplicationFaultBoundary } from './ui/shell/ApplicationFaultBoundary';
 
 const devBrowserErrorReporter = installDevBrowserErrorReporter();
 const rootElement = document.getElementById('root');
+const tauriHost = isTauri();
 const autosaveRecovery = createBrowserAutosaveRecoveryAdapter({
   storage: () => globalThis.localStorage,
 });
-const profileFile = isTauri()
+const profileFile = tauriHost
   ? createTauriProfileFileAdapter({
+      activate: (path) => tauriInvoke('profile_file_activate', { path }),
+      clearActive: () => tauriInvoke('profile_file_clear_active'),
       open: (options) =>
         open({
           directory: false,
@@ -36,6 +39,10 @@ const profileFile = isTauri()
           title: options.title,
         }),
       readTextFile,
+      restoreActive: () =>
+        tauriInvoke<{ readonly fileName: string; readonly json: string } | null>(
+          'profile_file_restore_active',
+        ),
       save: (options) =>
         save({
           ...(options.defaultPath === undefined ? {} : { defaultPath: options.defaultPath }),
@@ -46,6 +53,7 @@ const profileFile = isTauri()
           title: options.title,
         }),
       writeTextFile,
+      writeActive: (json) => tauriInvoke('profile_file_write_active', { json }),
     })
   : createBrowserProfileFileAdapter({
       Blob: globalThis.Blob,
@@ -64,8 +72,11 @@ const application = createApplication({
     setTimeout: (task, delayMs) => globalThis.window.setTimeout(task, delayMs),
   }),
   profileFile,
-  ...(isTauri() ? { gamePlanPublisher: createTauriGamePlanPublisher() } : {}),
+  profileFileRestore: await profileFile.restoreActive(),
+  ...(tauriHost ? { gamePlanPublisher: createTauriGamePlanPublisher() } : {}),
 });
+
+await application.startupReady;
 
 createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
   <StrictMode>

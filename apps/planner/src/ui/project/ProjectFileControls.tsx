@@ -164,7 +164,10 @@ export function ProjectFileControls({
     try {
       const operationResult = await run();
       setResult(operationResult);
-      if (operation === 'loadProfile' && operationResult.status === 'success') {
+      if (
+        (operation === 'loadProfile' || operation === 'new') &&
+        operationResult.status === 'success'
+      ) {
         onEntryOpenChange(false);
       }
       return operationResult;
@@ -225,6 +228,11 @@ export function ProjectFileControls({
           {profileSession.autosaveError}
         </p>
       )}
+      {profileSession.profileFileError !== null && (
+        <p className="project-operation-result" data-status="failure" role="alert">
+          {profileSession.profileFileError}
+        </p>
+      )}
       {result !== null && (
         <p
           className="project-operation-result"
@@ -265,8 +273,7 @@ export function ProjectFileControls({
                 disabled={pendingOperation !== null}
                 key={route.routeKey}
                 onClick={() => {
-                  setResult(operations.createNew(route.routeKey));
-                  onEntryOpenChange(false);
+                  void runProfileOperation('new', () => operations.createNew(route.routeKey));
                 }}
                 type="button"
               >

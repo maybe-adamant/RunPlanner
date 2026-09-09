@@ -37,7 +37,7 @@ export type ProjectOperationResult = {
 };
 
 export interface ProjectOperations {
-  createNew(routeKey: string): ProjectOperationResult;
+  createNew(routeKey: string): Promise<ProjectOperationResult>;
   discardAutosaveRecovery(): ProjectOperationResult;
   exportAutosaveRecovery(): Promise<ProjectOperationResult>;
   readonly gamePlanAvailable: boolean;
@@ -48,6 +48,7 @@ export interface ProjectOperations {
 }
 
 interface CreateProjectOperationsOptions {
+  readonly activeProfileFile?: ProfileFileReference;
   readonly autosaveRecovery?: AutosaveRecoveryAdapter;
   readonly catalog: Catalog;
   readonly profileFile: ProfileFileAdapter;
@@ -97,13 +98,14 @@ function loadedProfileFileName(fileName: string): string {
 export function createProjectOperations(
   options: CreateProjectOperationsOptions,
 ): ProjectOperations {
-  let activeProfileFile: ProfileFileReference | null = null;
+  let activeProfileFile = options.activeProfileFile ?? null;
   const currentProject = () => selectPresentProject(options.store.getState());
   return Object.freeze({
     gamePlanAvailable: options.gamePlanPublisher !== undefined,
-    createNew(routeKey: string): ProjectOperationResult {
+    async createNew(routeKey: string): Promise<ProjectOperationResult> {
       try {
         const project = createInitialProject(options.catalog, routeKey);
+        await options.profileFile.clearActive();
         activeProfileFile = null;
         options.store.dispatch(newProjectCreated(project));
         return result('new', 'success', 'Created a new project.');
@@ -205,6 +207,7 @@ export function createProjectOperations(
           if (savedFile === null) {
             return result('saveProfile', 'cancelled', 'Save Profile cancelled.');
           }
+          await savedFile.activate();
         } else {
           await savedFile.write(baselineJson);
         }
@@ -227,11 +230,33 @@ export function createProjectOperations(
         const baselineJson = encodeProjectDocument(project);
         const fileName = loadedProfileFileName(loaded.file.fileName);
         const prepared = options.prepareProjectWorkspace(project);
+        const autosaveRecovery = options.autosaveRecovery;
+        let clearedRecoveryJson: string | null = null;
         if (selectProfileSession(options.store.getState()).recoveryStatus === 'blocked') {
-          if (options.autosaveRecovery === undefined) {
+          if (autosaveRecovery === undefined) {
             throw new Error('Autosave recovery is unavailable in this environment');
           }
-          options.autosaveRecovery.clear();
+          const recoveryJson = autosaveRecovery.read();
+          if (recoveryJson === null) {
+            throw new Error('Blocked autosave recovery is missing');
+          }
+          autosaveRecovery.clear();
+          clearedRecoveryJson = recoveryJson;
+        }
+        try {
+          await loaded.file.activate();
+        } catch (error) {
+          if (clearedRecoveryJson !== null && autosaveRecovery !== undefined) {
+            try {
+              autosaveRecovery.write(clearedRecoveryJson);
+            } catch (restoreError) {
+              throw new Error(
+                `${errorDetail(error)}; restoring blocked autosave also failed: ${errorDetail(restoreError)}`,
+                { cause: restoreError },
+              );
+            }
+          }
+          throw error;
         }
         options.store.dispatch(
           profileLoadSucceeded({

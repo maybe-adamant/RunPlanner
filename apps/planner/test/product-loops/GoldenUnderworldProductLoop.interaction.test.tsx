@@ -617,7 +617,7 @@ describe('underworld product loop', () => {
 
   it('keeps a blocked downstream biome visible but prevents authoring it', async () => {
     const application = createApplication();
-    application.projectOperations.createNew('Underworld');
+    await application.projectOperations.createNew('Underworld');
     const view = renderPlannerForInteraction({ application });
 
     await view.user.selectOptions(screen.getByLabelText('Configure route up to'), '2');
@@ -634,7 +634,7 @@ describe('underworld product loop', () => {
 
   it('shrinks a route prefix immediately and preserves existing undo behavior', async () => {
     const application = createApplication();
-    application.projectOperations.createNew('Underworld');
+    await application.projectOperations.createNew('Underworld');
     application.store.dispatch(
       authoredProjectCommandDispatched({
         configuredBiomeCount: 1,
