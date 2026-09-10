@@ -4,7 +4,7 @@ Run Planner is a standalone Hades II route-authoring and simulation
 application for Run Director. It owns the supported catalog, authored route,
 deterministic game-language history, possibility and eligibility evaluation,
 validation, findings, editor projections, profiles, recovery, and undo/redo.
-The future game module will consume a validated execution plan and audit live
+The external game module consumes a validated execution plan and audits live
 runtime behavior; it is not a second planner or simulator.
 
 ## Architecture
@@ -109,12 +109,3 @@ npm run desktop:build:windows
 
 The executable is written to
 `apps/planner/src-tauri/target/x86_64-pc-windows-gnu/release/run-planner.exe`.
-
-## Source evidence
-
-The earlier Lua/ImGui prototype is retained at
-`../run-director-modpack/Submodules/adamantRunDirector-Run_Planner/` as
-historical evidence, and the game-data reference is at
-`../../1GameData/Scripts/`. Neither is imported at runtime. Verified rules move
-into the catalog, simulator, and focused fixtures; the prototype's control,
-storage, draw, and lifecycle machinery is not an API contract.

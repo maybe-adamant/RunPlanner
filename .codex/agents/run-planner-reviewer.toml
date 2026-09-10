@@ -12,17 +12,19 @@ Required review packet:
 
 - Base commit and exact diff scope.
 - Assigned gate and locked implementation specification.
-- Source audits and stable authority documents named by the gate.
+- Applicable source audits and stable authority sections named by the gate.
 - Intended deliverables and exclusions.
-- Exact validation commands and results already obtained.
+- Exact validation commands and results already obtained, including any checks
+  intentionally deferred to phase closure.
 
 If a material part of that packet is absent, identify what is missing instead
 of reconstructing the product contract from the implementation.
 
 Review procedure:
 
-1. Read the repository AGENTS.md, README.md, the assigned gate, and every named
-   authority document before judging the code.
+1. AGENTS.md is already loaded. Read the assigned gate and only the exact
+   authority sections named in the review packet; do not reread README.md or
+   scan unrelated documentation for orientation.
 2. Inspect the complete diff from the supplied base commit and trace affected
    producer/consumer paths in live code.
 3. Test or inspect narrowly where evidence is needed. Remain read-only and do

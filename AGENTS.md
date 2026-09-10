@@ -2,21 +2,18 @@
 
 This repository is the standalone Run Planner application. It is app-first:
 the catalog, authored plan, simulator, validator, and sophisticated editor live
-here. The Hades II game module is a later consumer of a declarative plan and
-must not shape the current UI or simulation around ImGui or ModpackLib.
+here. The Hades II game module is an external downstream consumer of a
+declarative plan and must not shape the current UI or simulation around ImGui
+or ModpackLib.
 
 ## Read Before Editing
 
-Read `README.md` and the relevant authority documents under `docs/` before
-changing architecture or domain behavior. Stable cross-cutting design lives in
+Use `README.md` as the documentation map when a task does not already provide a
+focused navigation packet. Before changing architecture or domain behavior,
+read the exact relevant authority sections under `docs/`; do not read the whole
+README or broad document sets by default. Stable cross-cutting design lives in
 `docs/design/`, biome rules live in `docs/biomes/`, source evidence lives in
-`docs/audits/`, and delivery history lives in `docs/progress/`. The
-task-oriented documentation map is maintained in `README.md`.
-
-The prior implementation at
-`../run-director-modpack/Submodules/adamantRunDirector-Run_Planner/` is evidence,
-not an API contract. Harvest verified rules and fixtures; do not port control,
-storage, draw, or lifecycle machinery mechanically.
+`docs/audits/`, and temporary implementation plans live in `docs/progress/`.
 
 ## Dependency Direction
 
@@ -57,7 +54,8 @@ the result.
 
 - Owns the pure authored model, addresses, codecs, defaults, semantic commands,
   history, requirements, reward kernel, materialization, simulation, candidates,
-  validation, findings, and engine-owned authoring queries.
+  validation, findings, engine-owned authoring queries, and execution-plan
+  assembly and codecs.
 - Answers “what does this authored state mean?”, “is this transition valid?”,
   and “what pure derived result follows from the catalog and authored snapshot?”
 - Defines the normalized interfaces it consumes but must not import the
@@ -159,55 +157,35 @@ TypeScript, ESLint, or an architecture test in addition to documenting it.
   evidence only. The acceptance target is a smaller, explicit change
   neighborhood with no parallel path or unexplained production growth.
 
-## Delivery Workflow and Agent Roles
+## Main-Session Orchestration Only
+
+This section applies to the main delivery orchestrator. Subagents follow the
+shared repository rules, their custom-agent instructions, and their focused
+task packet; they must not adopt the orchestration role themselves.
 
 Use the multi-agent gate routine for substantial cross-lane features,
-foundational model corrections, schema changes, and explicitly gated plans.
-Do not add this ceremony to a small focused fix that one agent can safely
-implement and review directly.
+foundational model corrections, schema changes, and explicitly gated plans—not
+for a small focused fix that one agent can safely implement and review.
 
-The main session is the delivery orchestrator. It owns scope, authority
-selection, the locked plan, task decomposition, finding dispositions, final
-bird's-eye review, Git operations, and user communication. It must retain
-enough live-code context to challenge both the implementation and the review;
-delegation is not a substitute for understanding the resulting diff.
+The main session owns scope, authority selection, locked plans, task packets,
+finding dispositions, final review, Git operations, and user communication. For
+each delegated gate it must:
 
-For each implementation gate:
+- inventory the base and worktree, then provide a self-contained packet naming
+  the exact gate, ownership, deliverables, exclusions, acceptance tests,
+  expected deletions, starting files or symbols, and governing document sections;
+- omit full parent history by default and permit only one write-capable agent in
+  the shared worktree, while allowing distinct bounded read-only investigations;
+- reuse an executor for remediation or adjacent coherent work, but replace it
+  when ownership, design, or context changes materially;
+- use a fresh independent reviewer after implementation stabilizes and perform
+  one bounded remediation pass rather than an open-ended review loop; and
+- own broad phase-closure checks and the final bird's-eye review of contract
+  fidelity, ownership, superseded paths, tests, growth, and documentation.
 
-1. Start from a clean or explicitly inventoried base commit and record the
-   exact gate, authorities, deliverables, exclusions, and acceptance tests.
-2. Spawn a fresh executor for that gate. Give it ownership of the complete
-   vertical slice, tell it that other agents may share the worktree, and
-   prohibit unrelated cleanup or contract reinterpretation.
-3. Let the executor use narrow owning-lane tests while implementing. Do not run
-   the complete repository suite after every adjustment.
-4. After the implementation is stable, spawn a fresh independent adversarial
-   reviewer as a sibling of the executor under the main session. The executor
-   must not review itself or own the review agent.
-5. Give the reviewer the base commit, exact diff, locked plan or gate, named
-   source audits and stable authorities, explicit exclusions, and validation
-   results. The reviewer remains read-only and reports only actionable,
-   evidence-backed findings.
-6. Route accepted findings back to the executor or a narrowly owned remediation
-   worker. Use one bounded verification pass after material review fixes; do
-   not create an open-ended reviewer loop.
-7. The main session performs the final holistic diff review: contract fidelity,
-   cross-lane ownership, deletion of superseded paths, test ownership,
-   production growth, and documentation disposition.
-8. Commit only after that final review and only when authorized. Use one
-   coherent Conventional Commit per delivery gate unless the locked plan names
-   a different intentional boundary.
-
-Use fresh executor and reviewer instances for each gate; stale agent context is
-not an authority. Prefer the repository's configured specialized agent roles
-or the model/effort setup explicitly requested for the task. Keep the workflow
-role-based in repository guidance so later model changes do not alter the
-ownership contract.
-
-An executor or reviewer must stop and return a concrete blocker when the live
-code contradicts the locked contract or a material product decision remains.
-The main session decides whether to amend the plan, narrow the gate, or ask the
-user. Agents must not quietly broaden the slice to satisfy an acceptance row.
+The main session decides whether a reported contract conflict requires a plan
+amendment, narrower scope, or user input. Delegation does not replace its own
+understanding of the live diff.
 
 ## Modeling Rules
 
@@ -251,16 +229,9 @@ not accumulate wrapper layers that conceal ownership.
 
 ## Testing
 
-Once the project is scaffolded, every domain change should run the repository's
-declared scripts for:
-
-- TypeScript type checking;
-- Vitest unit and fixture tests;
-- linting;
-- formatting or diff checks;
-- production build when application wiring changes.
-
-Use the narrowest truthful test lane during implementation:
+Use the narrowest truthful test lane during implementation. Executors own the
+affected lane and explicitly assigned acceptance tests; the main session owns
+broad phase-closure verification:
 
 - `npm run test:changed` for tests related to uncommitted source or fixture
   changes;
@@ -367,12 +338,11 @@ Temporary implementation plans are intentionally isolated:
 
 At completion of the final slice, absorb institutional knowledge into the
 smallest stable owning documents under `docs/design/`, `docs/biomes/`, and
-`docs/audits/`; update the durable delivery record in `docs/progress/`; remove
-gate language from production comments; and delete the temporary plan in the
-same closure change. Update an audit's planner disposition without erasing
-source facts or documented source/model discrepancies. `README.md` should link
-only durable authorities and long-lived project trackers that remain useful
-after the delivery branch is gone.
+`docs/audits/`; remove gate language from production comments; and delete the
+temporary plan in the same closure change. Update an audit's planner
+disposition without erasing source facts or documented source/model
+discrepancies. `README.md` should link only durable authorities and long-lived
+project trackers that remain useful after the delivery branch is gone.
 
 Run one complete repository gate at phase closure, after narrow implementation
 tests and review fixes are stable. Record the truthful result in the durable
@@ -381,6 +351,5 @@ review evidence.
 
 ## Git
 
-Use Conventional Commits. Inspect the live worktree before editing, preserve
-unrelated user work, and never delete the previous game-module prototype as
-part of app work unless explicitly requested.
+Use Conventional Commits. Inspect the live worktree before editing and preserve
+unrelated user work.
