@@ -85,6 +85,14 @@ that steering handle is not proof that the player chose or retained the
 authored result. The plan remains conditional on player cooperation;
 enforcement does not erase player agency.
 
+Exact source correlation precedes readiness. A materialized native action must
+bind to its published owner rather than to another transaction with a similar
+god, reward, or item payload. If the player consumes that exact action before
+its published prerequisites complete, the runtime records the generic
+`transaction-prerequisite` mismatch and becomes passive while still invoking
+the native action. This protects DAG order without turning transaction
+completion into semantic result verification.
+
 Native hooks and conformance checkpoints are deliberately different concepts.
 Encounter start/end, cleanup, screen construction, and similar callbacks may
 schedule a realization or identify the lifecycle window in which a semantic
@@ -96,10 +104,11 @@ executor fault; it is not converted into ineligibility, a default value, or a
 plan mismatch. Protected calls are used only as exception-safe cleanup around
 temporary forcing scopes, and they restore that scope before immediately
 rethrowing the original error.
-When the runtime cannot safely realize the next published semantic result, it
-records the mismatch and stops planner realization. It must still invoke the
-native operation and must not prevent player input, room creation, or
-traversal.
+When a standard checkpoint fails, or an exact-bound irreversible action begins
+before its published prerequisites, the runtime records the mismatch and stops
+planner realization. It must still invoke the native operation and must not
+prevent player input, room creation, or traversal. An ordinary steering failure
+remains diagnostic until one of those boundaries proves divergence.
 
 The conformance surface is bounded to:
 
@@ -118,13 +127,16 @@ into a second game model.
 
 Selected acquisition transactions remain on the wire with their exact roles,
 payloads, and meaningful local dependencies, but they are not checkpoint
-obligations. Their completion means that the executor reached its last owned
-steering contact and may release a local dependent. A missing or different
-player acquisition does not become an adapter-local semantic comparison:
-durable modeled results are checked only by the sparse named room-exit
-conformance facts selected by the planner. Simulation-neutral health, Magick,
-Gold, Armor, healing, and meta-progression results intentionally have no
-blocking completion proof.
+obligations. Their completion means that the native action reached its declared
+terminal and may release a local dependent; it does not attest that steering or
+the resulting state matched. A missing or different player acquisition does
+not become an adapter-local semantic comparison: durable modeled results are
+checked only by the sparse named room-exit conformance facts selected by the
+planner. Simulation-neutral health, Magick, Gold, Armor, healing, and
+meta-progression results intentionally have no blocking completion proof.
+The executor trusts planner eligibility and does not preflight exact trait rows
+through `IsTraitEligible`, duo requirements, replacement constraints, or a
+second offer-legality policy before forcing them.
 
 The route-start keepsake is a pre-room realization, not a room Timeline step.
 The wire carries its exact selected key and any already-authored immediate
@@ -189,9 +201,9 @@ publish execution transactions. A purchased row instead publishes its acquired
 result, which the ordinary source-independent acquisition, transformation, or
 item-effect adapter settles. Travel Deal is the sole dynamic inventory
 exception: the wire names its exact refill realization and payload. World
-Shop's dedicated refill callback can report an unexpected refill; Well and
-Shrine use generic native contacts and pass through when no refill was
-published.
+Shop's dedicated refill callback can report an unexpected refill
+diagnostically; Well and Shrine use generic native contacts and pass through
+when no refill was published.
 
 ## Mismatch classification
 
@@ -238,7 +250,9 @@ recovery remains unsupported.
 
 The Plan Executor verifies protocol and catalog identity before opening a
 session. Runtime identifier existence and checkpoint contact are conformance
-checks, not permission to reproduce planner eligibility policy.
+checks, not permission to reproduce planner eligibility policy. Exact source
+binding and published prerequisite readiness are execution coordination, not
+eligibility inference.
 
 ## Evidence and deferred scope
 

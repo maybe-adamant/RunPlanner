@@ -63,8 +63,16 @@ owners. The executor checks only those edges; it must not infer semantic rules
 such as "Travel Deal goes first" or "Phial follows a rack change." Obligations
 are the independently published subset that must complete by a checkpoint.
 Acquisition transactions are intentionally absent from that subset: their
-completion records only the last executor-owned steering contact and local DAG
-readiness. Other published transaction kinds retain one explicit obligation.
+completion records only that the native action reached its declared terminal
+and establishes local DAG readiness. It does not attest to the steered result.
+Other published transaction kinds retain one explicit obligation.
+
+Material exact native contacts must retain their published source identity. Two
+Shop pedestals may carry the same god while owning different normal and boosted
+offers; payload similarity or authored order cannot identify them. Once an
+exact-bound action is consumed, an unmet prerequisite is an immediate generic
+DAG-readiness mismatch. This is not purchase verification and does not add an
+eligibility pass before trait forcing.
 
 ## Doors contacts
 

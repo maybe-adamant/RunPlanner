@@ -71,6 +71,9 @@ A family is not covered when only its ordinary loot-screen carrier works.
 - [Native conformance contacts](NATIVE_CONFORMANCE_CONTACTS.md) — every
   blocking structural and room-exit comparison, its exact live game authority,
   its checkpoint, and the narrow cases where planner provenance may be retained.
+- [Execution mismatch policy](EXECUTION_MISMATCH_POLICY.md) — the first-mismatch
+  state transition, legitimate blocking causes, non-blocking contacts, and the
+  boundary between admission errors, executor faults, and live divergence.
 
 ## Authorities and current boundary
 
@@ -131,5 +134,9 @@ Relevant durable authorities:
    State diagnostics never block execution.
 8. Acquisition transactions are steering capabilities, not checkpoint
    obligations. Their completion may release a same-room DAG dependent after
-   the last executor-owned intervention; only planner-selected named
-   conformance facts prove durable modeled outcomes.
+   the native action reaches its declared terminal; it does not attest to the
+   steered result. Only planner-selected named conformance facts prove durable
+   modeled outcomes.
+9. Exact native source identity selects the transaction; carrier/provider
+   similarity and authored order never do. Consuming that exact action before
+   its published prerequisites is the generic immediate DAG-readiness mismatch.
