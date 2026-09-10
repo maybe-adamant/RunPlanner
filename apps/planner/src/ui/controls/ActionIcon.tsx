@@ -1,4 +1,5 @@
-export type ActionIconName = 'discard' | 'info' | 'load' | 'new' | 'redo' | 'save' | 'undo';
+export type ActionIconName =
+  'discard' | 'info' | 'load' | 'new' | 'publish' | 'redo' | 'save' | 'saveAs' | 'undo';
 
 export function ActionIcon({ name }: { readonly name: ActionIconName }) {
   const content = (() => {
@@ -15,6 +16,20 @@ export function ActionIcon({ name }: { readonly name: ActionIconName }) {
           <>
             <path d="M3 2.5h9.5l1 1v10h-11v-11Z" />
             <path d="M5 2.5v4h6v-4M5 13.5v-5h6v5" />
+          </>
+        );
+      case 'saveAs':
+        return (
+          <>
+            <path d="M3 2.5h6l3 3v3M9 2.5v3h3" />
+            <path d="m6.5 13.5 1.8-.4 4.2-4.2-1.4-1.4-4.2 4.2z" />
+          </>
+        );
+      case 'publish':
+        return (
+          <>
+            <path d="M8 10.5v-8M5.5 5 8 2.5 10.5 5" />
+            <path d="M3 8.5v5h10v-5" />
           </>
         );
       case 'load':
