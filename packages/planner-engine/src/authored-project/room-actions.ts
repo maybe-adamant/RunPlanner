@@ -11,6 +11,7 @@ import { parseHermesShrineDeliveryEntryKey } from './hermes-shrine-delivery';
 import { authoredAcquisitionSources } from './acquisition-sources';
 import { echoLastRewardPickupEntryKeys, activeSelectedPickupProducers } from './pickup-producers';
 import { seaStarDuplicateSourceIsActive } from './sea-star';
+import { rewardSourceResolvesAtAcquisition } from './reward-state';
 export { roomActionKey } from './room-action-key';
 import { roomActionKey } from './room-action-key';
 
@@ -208,6 +209,18 @@ export function activeRoomActionReferences(
   );
   for (const [siteKey, site] of Object.entries(occurrence.acquisitionSites ?? {})) {
     for (const entryKey of Object.keys(site.pickupEntries ?? {})) {
+      const shopInventoryReward =
+        occurrence.state.kind === 'shop' && siteKey === 'roomExit'
+          ? occurrence.state.shop?.offers[entryKey]?.reward
+          : undefined;
+      // A paid acquisition-resolved Shop entry is payload owned by its one
+      // purchase action. It is not a second pickup participant.
+      if (
+        shopInventoryReward !== null &&
+        shopInventoryReward !== undefined &&
+        rewardSourceResolvesAtAcquisition(catalog, shopInventoryReward.offer)
+      )
+        continue;
       if (
         structuralEchoEntries.has(entryKey) &&
         !activePickupEntries.has(JSON.stringify([siteKey, entryKey]))

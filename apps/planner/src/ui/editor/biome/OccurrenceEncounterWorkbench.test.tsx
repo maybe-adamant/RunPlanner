@@ -1473,6 +1473,8 @@ describe('OccurrenceEncounterWorkbench', () => {
 
     await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Offer 1' }));
     openRoomTab('Room Timeline');
+    const timeline = screen.getByRole('region', { name: 'Room Timeline' });
+    expect(within(timeline).queryByText(/Interact with Mystery Boon pickup/)).toBeNull();
     const purchase = screen.getByText('Buy Mystery Boon').closest('li');
     if (purchase === null) throw new Error('purchased Mystery Boon row is missing');
     await view.user.click(within(purchase).getByRole('button', { name: 'Reward' }));
