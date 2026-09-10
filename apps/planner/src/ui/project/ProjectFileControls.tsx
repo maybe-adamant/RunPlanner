@@ -409,7 +409,7 @@ export function ProjectFileControls({
                     })
                   }
                 >
-                  <ActionIcon name="save" />
+                  <ActionIcon name="saveAs" />
                   {pendingOperation === 'saveProfileAs' ? 'Saving…' : 'Save As…'}
                 </DropdownMenu.Item>
               )}
@@ -425,7 +425,7 @@ export function ProjectFileControls({
                       })
                     }
                   >
-                    <ActionIcon name="save" />
+                    <ActionIcon name="publish" />
                     {pendingOperation === 'publishGame' ? 'Publishing…' : 'Publish to Game…'}
                   </DropdownMenu.Item>
                 </>
