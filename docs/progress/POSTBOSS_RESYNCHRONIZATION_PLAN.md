@@ -44,8 +44,9 @@ This is resynchronization, not continuation of serialized executor machinery.
 ## Authorities and source facts
 
 - [`GAME_INTEGRATION_BOUNDARY.md`](../design/GAME_INTEGRATION_BOUNDARY.md) owns
-  admission, frozen-plan, mismatch, and compiler/executor boundaries. Its
-  current start-of-run-only statement must change only when this plan closes.
+  admission, frozen-plan, mismatch, and compiler/executor boundaries. It now
+  records the implemented bounded Postboss admission contract; this plan
+  retains only the remaining live-proof and closure work.
 - [`ROOM_LIFECYCLE_MODEL.md`](../design/ROOM_LIFECYCLE_MODEL.md) owns the fresh
   Postboss room lifecycle.
 - [`NATIVE_CONFORMANCE_CONTACTS.md`](../audits/game-execution-contacts/NATIVE_CONFORMANCE_CONTACTS.md)

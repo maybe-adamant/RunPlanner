@@ -18,98 +18,52 @@ rooms.
 The lifecycle is catalog-derived simulation behavior. It is not persisted UI
 state and is not an execution script authored by the user.
 
-The design concept previously described as a "single-room history profile" is
-split deliberately into the reusable `RoomLifecycleProfile` declaration and
-the concrete `RoomHistoryFragment` it produces. This keeps the recipe distinct
-from recorded history.
+The reusable `RoomLifecycleProfile` declaration is distinct from the concrete
+`RoomHistoryFragment` it produces. This keeps the recipe separate from
+recorded history.
 
-## Evidence Status
+## Source Concordance
 
-The general separation between target generation, entry, acquisition, and
-later outgoing generation is verified against the Hades II extraction. The
-midshop ordering was specifically re-audited on 2026-07-19 against:
-
-```text
-../../1GameData/Scripts/RoomLogic.lua
-../../1GameData/Scripts/EncounterData.lua
-../../1GameData/Scripts/EncounterData_Unique.lua
-../../1GameData/Scripts/EncounterData_Devotion.lua
-../../1GameData/Scripts/EncounterSets.lua
-../../1GameData/Scripts/EncounterLogic.lua
-../../1GameData/Scripts/InteractLogic.lua
-../../1GameData/Scripts/UpgradeChoiceLogic.lua
-../../1GameData/Scripts/RewardLogic.lua
-../../1GameData/Scripts/RunLogic.lua
-../../1GameData/Scripts/StoreLogic.lua
-```
-
-Relevant call sites are:
-
-- `EncounterSets.lua:446-453`, `UpgradeChoiceLogic.lua:1035-1066`, and
-  `InteractLogic.lua:1124-1149`: an ordinary encounter spawns its reward after
-  combat, and completing a loot or consumable pickup removes the required
-  object before outgoing exits unlock;
-- `EncounterData_Devotion.lua:34-54`, `EncounterLogic.lua:1682-1730`, and
-  `RewardLogic.lua:395-398`: Devotion selects and acquires the chosen source
-  before starting combat, then spawns the spurned source after combat;
-- `RoomLogic.lua:4372-4394`: the prior room is committed, the next room becomes
-  current, and `RunShopGeneration` resolves shop inventory;
-- `StoreLogic.lua:150-196`: ordinary shop Boon sources resolve while inventory
-  is generated;
-- `EncounterData_Unique.lua:15-30`: Shop is a noncombat encounter;
-- `RoomLogic.lua:1848-1940`: the encounter completes and initiates exit unlock;
-- `RoomLogic.lua:3871-3961`: outgoing rooms and their rewards are generated;
-- `StoreLogic.lua:1134-1295`: later player purchases remove options and apply
-  their effects;
-- `RewardLogic.lua:187-207` and `RunLogic.lua:1819-1845`: ordinary source
-  support reads acquired `LootTypeHistory`, plus explicit peer exclusions, not
-  unpurchased shop offers.
-- `RoomLogic.lua:1900-1903`: every counting encounter increments room, biome,
-  and route encounter depth when that encounter starts;
-- `RoomLogic.lua:4372-4394` and `RunLogic.lua:1857-1869`: the source room is
-  appended to history and depth caches are recomputed after its outgoing batch
-  exists but before the selected target's encounter preparation and shop
-  generation;
-- `RunLogic.lua:1912-1928`: biome-local encounter depth and related ledgers
-  reset at the layout-owned biome transition rather than at an arbitrary room
-  event.
+The separation between target generation, entry, acquisition, outgoing
+generation, encounter counters, room-history commit, and biome reset is
+verified against the Hades II extraction. The source inventory and exact call
+sites belong to
+[`ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`](../audits/rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md).
+This document owns the normalized semantic boundaries derived from that
+evidence, not a duplicate source index.
 
 Focused biome authorities remain responsible for verifying that each special
 room selects an accurate profile. A new lifecycle profile is not considered
 closed until its ordering has a game-data audit and a canonical fixture.
 
-## Game Event Concordance
+## Semantic Boundary Concordance
 
 The planner's lifecycle vocabulary names semantic state boundaries. Those
-names must remain tied to the game functions and state transitions that make
-the boundary observable. They are not assumed to be one-to-one wrappers around
-Lua functions: the game sometimes spreads one semantic transition across
-several calls, and the planner intentionally groups a few source sequences.
+boundaries may be exact, grouped, or derived:
 
-Every boundary is classified as one of:
+- **Exact** boundaries correspond to directly observable game-state
+  transitions.
+- **Grouped** boundaries deliberately treat a closed ordered sequence as one
+  semantic operation.
+- **Derived** boundaries name a useful interval or capability implied by game
+  state rather than one universal callback.
 
-- **Exact**: the planner boundary corresponds to a directly observable game
-  state transition, even if one game function performs surrounding work too;
-- **Grouped**: the planner intentionally treats several ordered game steps as
-  one atomic boundary; or
-- **Derived**: the boundary names a useful state interval or capability that
-  follows from game state but is not dispatched as one universal game event.
+The source audit owns the native functions and call-site evidence for these
+classifications. This document owns their normalized meaning:
 
-### Shared correspondence
-
-| Planner seam                    | Engine authority                                                  | Game-data anchor                                                                                                                                                                                                             | Status and exact meaning                                                                                                                                                                                                                                                                                                                                                                         |
-| ------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Room preparation                | `prepareRoom` and entry-time `materializeOfferPoint` operations   | `LeaveRoom` commits the source, selects/records the next room's encounter data, assigns `CurrentRoom`, and runs `RunShopGeneration` before map load (`RoomLogic.lua:4372-4394`)                                              | **Grouped.** Preparation is later than predecessor commit and earlier than the target's `StartRoom`. It must not regenerate the incoming room or reward already attached to the chosen door.                                                                                                                                                                                                     |
-| Room entered                    | `enterRoom`; editor `roomEntered` boundary                        | `StartRoom` begins the entered room and applies room-entry state/hooks (`RoomLogic.lua:1067-1342`)                                                                                                                           | **Exact semantic transition.** The next room is already current and its entry-time preparation already exists. `roomEntered` does not include predecessor commit or target generation.                                                                                                                                                                                                           |
-| Start encounter                 | `startEncounter(phase)`; editor `encounterStart` boundary         | `StartEncounter` marks the encounter in progress, records it as active, and applies definition-owned encounter-depth changes before running its event sequence (`RoomLogic.lua:1848-1919`, especially `1897-1905`)           | **Grouped player-facing boundary around an exact engine transition.** It begins the closed mandatory start sequence and ends with the encounter active. When no unrelated player action can interleave, that sequence may also contain a required pre-combat choice such as Devotion's chosen source or a Ship wheel selection. `StartEncounterEffects` alone is not the universal anchor.       |
-| Encounter completed             | `completeEncounter(phase)`                                        | after `RunEvents` returns, `StartEncounter` removes the active encounter, marks it complete, and updates completion caches before applying encounter-end effects (`RoomLogic.lua:1919-1939`)                                 | **Exact internal checkpoint.** Completion identity, encounter-local offers, and phase blockers settle here even when the phase is noncombat, skipped by Fig Leaf, or declares `SkipEndEncounterEffects`. It is not a separate player-facing timeline row.                                                                                                                                        |
-| Encounter ended                 | `encounterEndEffectsApplied`; editor `encounterEnd` boundary      | `StartEncounter` runs applicable `EndEncounterEffects` after completion and only then checks exit readiness (`RoomLogic.lua:1919-1939`)                                                                                      | **Exact post-state when end effects apply.** Encounter-use effects and newly materialized deliveries are visible to later actions. Noncombat and declaration-owned `SkipEndEncounterEffects` phases complete without emitting this event; their visible End encounter boundary remains the completion edge before the next phase or room work. A Fig Leaf spawn skip alone does not suppress it. |
-| Required-object barrier cleared | Room Action dependencies and fixed roster checkpoints             | `CheckRoomExitsReady` requires no `RoomRequiredObjects`, no blocking screens, no incomplete required active encounter, and a completed multiple-encounter sequence (`RoomLogic.lua:3100-3129`)                               | **Derived barrier.** There is no authored action named “clear barrier.” Each object/encounter completion changes the inputs; the first successful readiness check authorizes the next fixed transition.                                                                                                                                                                                          |
-| Outgoing batch generated        | `generateOutgoingBatch`; internal `outgoingGeneration` checkpoint | readiness calls `UnlockRoomExits`, which reaches `DoUnlockRoomExits`; that function creates/restores target rooms and resolves their incoming rewards before making doors usable (`RoomLogic.lua:3778-3844`, `3871-3988`)    | **Exact internal checkpoint.** It is the point after target identity/reward materialization is frozen. It remains simulation/history authority but is not a player-facing timeline row. `room.ExitsUnlocked = true` at the beginning of `UnlockRoomExits` is not itself the generation checkpoint.                                                                                               |
-| Cleanup · Doors open            | editor `cleanup` interval anchored to roster `exitUsable`         | after target generation, `DoUnlockRoomExits` creates door previews and sets each eligible `door.ReadyToUse = true`; its callbacks enable the Well, purge shop, Surface Shop, and related objects (`RoomLogic.lua:3778-4094`) | **Derived player-facing interval.** It begins only when every required action has resolved and the door or equivalent continuation is usable. Eligible optional actions may occur before or after this boundary; door-open-only contacts occur after it. Using the selected continuation ends the interval.                                                                                      |
-| Exit usable                     | roster `exitUsable` capability/checkpoint                         | door interaction checks the room-readiness and `ReadyToUse` facts established by the unlock path (`RoomLogic.lua:757-789`, `3996-4010`)                                                                                      | **Exact capability that anchors Cleanup.** It remains an engine predicate for profiles with a door or another continuation, but is not rendered as a second sibling row. Required actions cannot follow it; later optional actions do not mutate the already-generated outgoing batch.                                                                                                           |
-| Room committed                  | `commitRoom`                                                      | `LeaveRoom` appends the source room to `RoomHistory` and updates run-history caches before preparing the selected target (`RoomLogic.lua:4372-4394`)                                                                         | **Exact semantic transition.** Commit occurs after the source's outgoing batch and supported remaining local work. It is not the moment doors first become usable.                                                                                                                                                                                                                               |
-| Room exited                     | `exitRoom`                                                        | the selected door invokes `LeaveRoom`; after source leave effects and commit, the selected target becomes `CurrentRoom` and map loading begins (`RoomLogic.lua:4159-4400`)                                                   | **Grouped transfer.** The operation closes the source fragment and hands the already-generated target to preparation/entry. It does not choose or regenerate the target.                                                                                                                                                                                                                         |
+| Planner seam                    | Engine authority                                                  | Classification and normalized meaning                                                                                                                                                                                                               |
+| ------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Room preparation                | `prepareRoom` and entry-time `materializeOfferPoint` operations   | **Grouped.** Preparation follows predecessor commit and precedes the target's room-entry event. It consumes the room and incoming reward already attached to the chosen door rather than regenerating them.                                         |
+| Room entered                    | `enterRoom`; editor `roomEntered` boundary                        | **Exact.** The target room is already current and its entry-time preparation already exists. This boundary excludes predecessor commit and target generation.                                                                                       |
+| Start encounter                 | `startEncounter(phase)`; editor `encounterStart` boundary         | **Grouped around an exact transition.** It begins the closed mandatory start sequence and ends with the encounter active. A required pre-combat choice may share that sequence only when no unrelated player action can interleave.                 |
+| Encounter completed             | `completeEncounter(phase)`                                        | **Exact internal checkpoint.** Completion identity, encounter-local offers, and phase blockers settle even for noncombat, Fig Leaf-skipped, and end-effect-suppressed phases. It is not a separate player-facing row.                               |
+| Encounter ended                 | `encounterEndEffectsApplied`; editor `encounterEnd` boundary      | **Exact post-state when end effects apply.** Encounter-use effects and newly materialized deliveries are visible to later actions. A phase that suppresses end effects completes without this event but retains its visible End encounter boundary. |
+| Required-object barrier cleared | Room Action dependencies and fixed roster checkpoints             | **Derived.** There is no authored clear-barrier action. Required object and encounter completion change the inputs until the fixed next transition becomes available.                                                                               |
+| Outgoing batch generated        | `generateOutgoingBatch`; internal `outgoingGeneration` checkpoint | **Exact internal checkpoint.** Target identities and incoming rewards are frozen. It remains simulation/history authority but is not a player-facing row.                                                                                           |
+| Cleanup · Doors open            | editor `cleanup` interval anchored to roster `exitUsable`         | **Derived player-facing interval.** It begins when required work is resolved and a door or equivalent continuation is usable. Eligible optional actions may occur on either side; using the continuation ends the interval.                         |
+| Exit usable                     | roster `exitUsable` capability/checkpoint                         | **Exact capability anchoring Cleanup.** Profiles with a continuation retain this predicate without rendering another row. Required actions cannot follow it, and later optional actions do not mutate the frozen outgoing batch.                    |
+| Room committed                  | `commitRoom`                                                      | **Exact.** Commit follows outgoing generation and supported remaining local work. It is distinct from the earlier moment when exits become usable.                                                                                                  |
+| Room exited                     | `exitRoom`                                                        | **Grouped transfer.** The source fragment closes and hands the already-generated target to preparation and entry. The transfer does not choose or regenerate that target.                                                                           |
 
 The editor boundary order describes semantic visibility, not a literal call
 stack. `cleanup` is the one player-facing final-room interval and is labeled
@@ -124,7 +78,7 @@ must not imply that an optional cleanup action is required before leaving.
 
 Devotion's chosen-source decision and acquisition occur before combat, followed
 immediately by the encounter start; the spurned source is created only after
-combat (`EncounterData_Devotion.lua:34-54`, `EncounterLogic.lua:1682-1730`).
+combat.
 The game exposes no unrelated room feature, door, or free room action between
 the required first choice and combat activation. The player-facing Start
 encounter boundary therefore groups that closed mandatory sequence without
@@ -142,15 +96,15 @@ kinds. Only `combat`, `miniboss`, and `boss` phase kinds render a combat spine.
 
 #### Boss/Postboss occurrences and Judgment
 
-The fixed Boss occurrence has the `BossRoom` lifecycle. Its player-facing timeline is `Room
-entered -> Start encounter -> Boss defeated -> End encounter -> Cleanup · Doors
-open`. `Boss defeated` is an exact derived seam before generic encounter-end
-effects. When Judgment is active, it is one engine-owned fixed effect at that
-seam, not a Room Action or persisted ordering value. Its exact existing
-The occurrence-plus-phase Judgment Arcana address owns the editor, candidate frontier, finding,
-and semantic command. End encounter remains the later seam for post-encounter
-delivery. A reached Steady Growth threshold then settles after End encounter
-and before Cleanup.
+The fixed Boss occurrence has the `BossRoom` lifecycle. Its player-facing
+timeline is `Room entered -> Start encounter -> Boss defeated -> End encounter
+-> Cleanup · Doors open`. `Boss defeated` is an exact lifecycle seam before
+generic encounter-end effects. When Judgment is active, it is one engine-owned
+fixed effect at that seam, not a Room Action or persisted ordering value. The
+occurrence-plus-phase Judgment Arcana address owns the editor, candidate
+frontier, finding, and semantic command. End encounter remains the later seam
+for post-encounter delivery. A reached Steady Growth threshold then settles
+after End encounter and before Cleanup.
 
 The fixed Postboss occurrence uses the same timeline presentation without a
 combat interval. Its active shape is `Room entered -> ranked actions
@@ -172,11 +126,10 @@ reconstructed from a rendered row or a generic room checkpoint.
 
 #### Mourning Fields
 
-`StartFieldsEncounter` rejects a new cage while another required encounter or
-an object with `BlockFieldsEncounterStart` remains active, then configures the
-cage encounter and calls `StartEncounter`. Only after that synchronous
-encounter returns does it enable the cage reward and destroy the cage obstacle
-(`EncounterLogic.lua:2890-2947`).
+Fields rejects a new cage while another required encounter or an object with
+`BlockFieldsEncounterStart` remains active. It then runs the selected cage
+encounter synchronously; only after completion does the cage reward become
+available and the cage obstacle disappear.
 
 Fields has a fixed lifecycle skeleton and an authored cage permutation. After
 room entry, each active cage occupies exactly one ordinal encounter cycle:
@@ -215,22 +168,21 @@ cage cycle.
 
 #### Thessaly ShipCombat
 
-The game executes the active multiple-encounter list sequentially from
-`StartRoom` (`RoomLogic.lua:1319-1334`). For a normal Ship combat phase:
+The game executes the active multiple-encounter list sequentially. For a normal
+Ship combat phase:
 
-1. `ShipsEncounterSetup` generates and exposes the wheel options, waits for
-   `ShipsEncounterSelected`, and then starts encounter effects
-   (`RoomLogic.lua:1375-1446`);
-2. `UseShipWheel` records the selected store/reward on the current encounter;
+1. the phase generates and exposes its wheel options, waits for a selection,
+   and then starts encounter effects;
+2. the wheel interaction records the selected store/reward on the current
+   encounter;
 3. the encounter event sequence runs combat, spawns the selected room reward,
-   and calls `WaitForNextEncounterReady`
-   (`EncounterSets.lua:474-490`, with Icarus/Heracles variants at `550-593`);
-4. `WaitForNextEncounterReady` does not return while a required object or a
-   blocking choice/dialog screen remains (`RoomLogic.lua:1369-1373`); and
-5. only then can `StartRoom` advance to the next selected encounter.
+   and begins the next-encounter readiness wait;
+4. that wait does not complete while a required object or blocking choice
+   remains; and
+5. only then can the room lifecycle advance to the next selected encounter.
 
 The planner's `nextPhaseUsable(wheel)` is consequently a **derived Ship-only
-barrier**, not a free action and not one Lua callback. It means the preceding
+barrier**, not a free action and not one native callback. It means the preceding
 phase's required-object wait has cleared and the next phase's
 `ShipsEncounterSetup` may expose its wheel. Wheel configuration belongs at
 that next-phase boundary; `chooseRewardWheel` records the player's selection,
@@ -241,12 +193,11 @@ its required post-combat objects have resolved.
 
 #### Ephyra restoration
 
-`RestoreUnlockRoomExits` restores a persistent parent/Hub room and its door
-state. It does not replay `StartRoom`, its encounters, or its earlier local
-actions. The planner therefore treats Hub/main/side traversal and restoration
-as topology between distinct entered-occurrence fragments, not additional
-`roomEntered`, `encounterStart`, or `encounterEnd` events inside one room
-timeline.
+Ephyra restoration returns to the persistent parent or Hub room and its door
+state without replaying room entry, encounters, or earlier local actions. The
+planner therefore treats Hub/main/side traversal and restoration as topology
+between distinct entered-occurrence fragments, not additional `roomEntered`,
+`encounterStart`, or `encounterEnd` events inside one room timeline.
 
 ### Rule for adding or moving a boundary
 
@@ -499,7 +450,7 @@ endings do not expose this Postboss interaction set in the supported topology.
 
 ## Closed Operation Vocabulary
 
-The initial semantic vocabulary is deliberately small:
+The semantic vocabulary is deliberately small:
 
 ```ts
 type RoomLifecycleOperation =
@@ -1129,10 +1080,8 @@ an entered-room fragment and never emit concrete acquisitions.
 
 Each physical target has a `roomCreated` event followed by a
 `targetGenerationCompleted` marker. Room/reward legality, incoming-offer, bag,
-and offer-projection events occupy that interval in physical order. Commit 4
-initially contains only creation in the interval; later reward integration may
-insert its events without moving either boundary or changing the target's
-pre/post generation views.
+and offer-projection events occupy that interval in physical order without
+moving either boundary or changing the target's pre/post generation views.
 
 ## Possibility and Validation
 
@@ -1217,7 +1166,7 @@ decision rather than an automatic return callback. The offer ledger is distinct
 from entry: skipped and selected gates consume the same source offer, while
 only selected Chaos runs the inserted-room lifecycle.
 
-## Audit and Fixture Requirements
+## Extension Requirements
 
 Every lifecycle profile must record:
 
@@ -1261,7 +1210,7 @@ Exact / Simplified / Deferred / Excluded notes:
 Required fixtures:
 ```
 
-Future runtime mismatch reports should identify the room occurrence, lifecycle
+Runtime mismatch reports identify the room occurrence, lifecycle
 operation, expected pre-state, observed event, and subsequent divergence. A
 mismatch updates the relevant lifecycle profile or audit; the game module must
 not grow an independent timing workaround.

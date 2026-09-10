@@ -2,14 +2,10 @@
 
 ## Purpose
 
-This document defines the contextual-selection foundation for Phase 7 of the
-standalone editor. It begins after the complete F/G/H/I and N/O/P/Q product
-loops, using all eight concrete editors rather than an F-shaped projection.
-
-The work is organized by user-facing ideas rather than by a global visual
-redesign. Its goal is to make room and reward authoring context-aware, compact,
-and deliberate while preserving the existing authored-project, simulation,
-validation, and semantic-command authorities.
+This document defines contextual selection across the F/G/H/I and N/O/P/Q
+editors. Its goal is to make room and reward authoring context-aware, compact,
+and deliberate while preserving authored-project, simulation, validation, and
+semantic-command authority.
 
 This document owns contextual selector behavior. `EDITOR_MODEL.md` remains the
 broader authority for editor ownership, topology projection, findings,
@@ -21,7 +17,7 @@ presentation policy.
 
 ## Scope
 
-The immediate work contains six independent ideas:
+The contextual-selection contract covers six concerns:
 
 1. context-aware room selection;
 2. one grouped room picker instead of a required Type/Room sequence;
@@ -30,18 +26,18 @@ The immediate work contains six independent ideas:
 5. reward choices informed by counted-bag state;
 6. one compact compound interaction for reward type and payload.
 
-Each idea may land as a separate reviewed slice, but they share one assessment
-and presentation boundary. They consume one progressive biome evaluation
-foundation from `SIMULATION_AND_VALIDATION.md`; authoring-prefix support is not
-a seventh UI feature or a second candidate simulator.
+They share one assessment and presentation boundary and consume the progressive
+biome evaluation defined by `SIMULATION_AND_VALIDATION.md`;
+authoring-prefix support is not a seventh UI feature or a second candidate
+simulator.
 
 Frontier guidance consumes the same progressive coverage and candidate
 evidence as contextual selection. Ordinary-decision, takeover Preboss, I
 mixed-batch, completed-Hub, and declaration-fixed width-one Preboss behaviors
 do not collapse into one action.
 
-The broad visual treatment of route findings, enrichment color, graph views,
-and final application styling are also outside this first set. Existing
+The broad visual treatment of route findings, enrichment color, and graph views
+is outside this contract. Existing
 semantic findings and navigation remain in force; contextual controls add
 local selection guidance rather than replacing validation.
 
@@ -133,51 +129,23 @@ focus, and open an unavailable disclosure; it does not decide category order,
 required-first policy, selected-invalid pinning, or ordinary-versus-diagnostic
 visibility from raw candidates.
 
-## Progressive Evaluation Foundation
+## Progressive Evaluation Input
 
-The central project evaluator derives the maximum truthful assessed prefix of
-the active biome from the current authored project. Only a complete-valid
-biome publishes a canonical snapshot, final history, completion transition,
-and downstream seed. A complete-invalid or incomplete-invalid biome instead
-publishes retained authored materialization plus assessment clamped to its
-first blocking region. Contextual selectors consume addressed pre-decision
-views from that single result.
+Contextual selectors consume addressed candidate capabilities from the single
+project evaluation defined by `SIMULATION_AND_VALIDATION.md` and
+`CANDIDATE_EVALUATION_MODEL.md`. A selector is assessed only when progressive
+coverage reaches its semantic pre-decision point. Earlier covered controls keep
+their evidence; the repair owner at the authoring horizon keeps its capability;
+later owners remain visible but unassessed.
 
-Downstream incompleteness does not block an already-covered selector. An F
-plan may therefore explain that Combat 14 is unavailable at Decision 3 before
-Preboss is authored or picked.
+A complete-valid route prefix seeds the active biome. Required upstream
+incompleteness locks the downstream authoring suffix, while invalid authored
+input remains editable for repair. The application does not manufacture a seed
+from defaults, partial history, or hypothetical completion, and it does not
+replay simulation to recover candidate facts beyond the published horizon.
 
-Progressive evaluation remains route-gated:
-
-```text
-complete-valid route prefix
-  -> progressively evaluated active biome
-  -> blocked downstream biome suffix
-```
-
-Each route remains ordered. F must be complete and valid before G receives
-contextual evaluation, and N must be complete and valid before O receives it.
-Later biome pages remain visible, but required upstream incompleteness locks
-their authoring controls and leaves their contextual room, store, peer, bag,
-wheel, Hub, and side-room/local-visit states unassessed. Invalid authored input
-does not create that lock and remains repairable. The editor must not derive a
-downstream seed from predecessor defaults, partial history, or hypothetical
-future completion.
-
-Within the active biome, a selector is assessed when evaluation coverage has
-reached its exact semantic pre-decision point. Missing unrelated downstream
-decisions or Preboss-handoff structure does not make that context unavailable. A
-missing or unsupported upstream state still does.
-
-Earlier covered controls retain their candidate context, the blocked owner
-retains its exact repair interaction, and later owners report unavailable
-coverage. The application does not replay selected-path evaluation to recover
-facts beyond that horizon.
-
-The UI may display an addressed coverage point as `evaluated through Decision
-4`, but decision indexes and rendered rows never enter simulation identity.
-Only a complete and valid biome may seed the next biome or contribute to an
-execution-ready route.
+Decision indexes and rendered rows are presentation only. Only semantic
+addresses identify candidate inputs, coverage, and findings.
 
 ## Shared Candidate Language
 
@@ -242,14 +210,13 @@ The ordinary picker emphasizes supported authoring:
   unassessed.
 
 An `Unavailable` disclosure may expose impossible values with their reasons.
-These entries are inspectable but not selectable. This replaces the old
-choice between an entirely hidden support-first mode and an always-expanded
-diagnostic mode.
+These entries are inspectable but not selectable, keeping ordinary choices
+compact while preserving on-demand diagnostic evidence.
 
 Color is supplementary. Text, grouping, icons, and accessible descriptions
 must carry the same meaning.
 
-## Idea 1: Context-Aware Room Selection
+## Context-Aware Room Selection
 
 ### Room Exclusion Families
 
@@ -287,10 +254,9 @@ generation and avoids guessing over unknown same-batch peers.
 
 ### Structured Requirement Failures
 
-Production currently reports the coarse room reason
-`eligibilityRequirement`. That is insufficient for contextual explanations.
-The assessment must retain the failed normalized requirement and its concrete
-evidence.
+An `eligibilityRequirement` reason retains the failed normalized requirement
+and its concrete evidence so contextual explanations do not depend on a coarse
+reason code alone.
 
 A counter-range failure identifies at least:
 
@@ -318,10 +284,10 @@ Required force pressure matters to ordinary authoring and receives the
 room more or less valid in this possibility simulator and does not need a
 prominent ordinary badge.
 
-## Idea 2: One Grouped Room Picker
+## Grouped Room Picker
 
-The required two-step `Type` then `Room` interaction is retired. Room kind is
-navigation, not authored or session selection state.
+Room kind is navigation, not authored or session selection state. One grouped
+picker selects the concrete room directly.
 
 One accessible searchable picker groups concrete room labels:
 
@@ -357,7 +323,7 @@ Once an occurrence has a room, its selector has no empty replacement. The room
 may be replaced, or the occurrence may be removed through an explicit owning
 structural command.
 
-## Idea 3: Resolved-Store-Aware Rewards
+## Resolved-Store-Aware Rewards
 
 A reward editor consumes the exact resolved store at its offer point. Its
 ordinary reward-type domain must not remain a union of every store that the
@@ -376,7 +342,7 @@ Changing a parent batch store retains every authored child reward. A now-
 unsupported child remains visible and invalid until replaced. The editor never
 repairs child rewards as a side effect of changing the parent store.
 
-## Idea 4: Joint Sibling Reward Awareness
+## Joint Sibling Reward Awareness
 
 Generated siblings share physical offer order, peer-duplicate rules, Boon
 source rules, Devotion projection, and counted-bag mutation where declared.
@@ -400,7 +366,7 @@ Changing an earlier sibling may invalidate a retained later reward. The later
 reward remains authored; sibling awareness guides repair but does not perform
 it.
 
-## Idea 5: Counted-Bag Awareness
+## Counted-Bag Awareness
 
 Counted-bag state should affect the candidate picker before the user authors an
 impossible reward. An unavailable candidate distinguishes at least:
@@ -425,7 +391,7 @@ An optional diagnostic disclosure may explain unavailable entries and whether
 a possible reward is supported by at least one reachable bag state. Exact bag
 branches remain simulation evidence, not ordinary editor rows.
 
-## Idea 6: Compact Compound Reward Picker
+## Compact Compound Reward Picker
 
 Reward type and payload form one semantic value and should use one compact
 control while closed:
@@ -481,10 +447,10 @@ interface ContextualOption<T> {
 }
 ```
 
-The production bridge now implements this vocabulary in the application
-projection layer. It consumes typed candidate evidence, preserves the richer
+The application projection bridge implements this vocabulary. It consumes
+typed candidate evidence, preserves the richer
 engine result, and maps unavailable addressed coverage to `unassessed`. The
-grouped room picker consumes the ordered model. Counted reward editors now
+grouped room picker consumes the ordered model. Counted reward editors
 consume a producer-resolved type domain and one application-owned relational
 payload domain. That domain evaluates complete offers through the existing
 possibility frontier, aggregates Boon and Devotion source choices over concrete
@@ -495,8 +461,7 @@ when another pair is what proves aggregate support. Relational assessment yields
 between candidate simulations so opening or hovering a dense Devotion domain
 does not monopolize one browser interaction task. Semantic sibling evidence
 identifies the conflicting Exit, cage, wheel offer, side room, or Hub room
-without exposing occurrence IDs. The compact compound reward picker remains a
-subsequent slice.
+without exposing occurrence IDs.
 
 Before React consumption, the application projects these options into an
 ordered picker model containing required, semantic-category, unassessed, and
@@ -611,71 +576,35 @@ The common component must support:
 - cached stable option projections rather than rebuilding domains during
   every draw.
 
-## Implementation Seams
+## Ownership Seams
 
 ### Simulation and Core
 
-- replace the binary incomplete early return with one progressive biome result
-  carrying authoring frontier and semantic evaluation coverage;
-- reuse the normal materialization, lifecycle, history, room-generation, and
-  reward authorities for every covered prefix;
-- reserve canonical snapshot, final biome history, completion, and downstream
-  seeding for complete-valid results;
-- replace the blanket active-biome `biomeIncomplete` candidate outcome with an
-  addressed coverage-not-reached reason while preserving distinct
-  `upstreamIncomplete` and `upstreamInvalid` route-gate reasons;
-- enrich room requirement failure evidence beyond the coarse
-  `eligibilityRequirement` reason;
-- preserve exact candidate ownership and evaluation coverage;
-- retain reward findings/evidence needed to distinguish store, bag, peer, and
-  source exclusions;
-- continue evaluating concrete reward proposals through the selected-plan
-  reward authority.
+Simulation publishes one progressive biome result carrying the authoring
+frontier and semantic evaluation coverage. Covered prefixes reuse normal
+materialization, lifecycle, history, room-generation, and reward authorities;
+canonical snapshots, final biome history, completion, and downstream seeding
+exist only for complete-valid results.
+
+Candidate evidence preserves exact ownership and distinguishes unavailable
+coverage, upstream incompleteness, upstream invalidity, requirement failure,
+store exclusion, bag depletion, peer conflict, and source exclusion. Concrete
+reward proposals continue through the selected-plan reward authority.
 
 ### Application Projection
 
-- map typed simulation facts to the common contextual option vocabulary;
-- aggregate room categories from child support;
-- aggregate Devotion first-source support from complete pair candidates;
-- centralize player-facing candidate explanations;
-- cache projections by immutable project identity and semantic owner.
+Application projections map typed simulation facts to the common contextual
+option vocabulary, aggregate room categories and Devotion pair support,
+centralize player-facing explanations, and cache results by immutable project
+identity and semantic owner.
 
 ### React UI
 
-- replace the two native room selects with one accessible grouped picker;
-- replace vertically stacked reward/payload selects with the compound reward
-  picker;
-- keep transient search, disclosure, and partial payload progress out of the
-  authored project;
-- render simulation facts but never infer them.
+React renders one accessible grouped room picker and one compound reward picker.
+Transient search, disclosure, and partial payload progress remain outside the
+authored project. Components render simulation facts and never infer them.
 
-## Recommended Delivery Order
-
-1. preserve the completed cross-biome audit and decision record;
-2. progressive biome evaluation and validated-route-prefix gating for ordinary
-   decision and Hub coverage shapes;
-3. candidate evidence and presentation-contract hardening;
-4. shared contextual option resolver and reason-copy fixtures;
-5. one application-projected contextual-picker model and its first grouped room
-   picker consumer;
-6. resolved-store-aware reward-type domains;
-7. peer-, source-, Devotion-pair, and counted-bag-aware reward payload domains;
-8. compact compound reward picker;
-9. coverage-derived feedback and blocked presentation;
-10. shared `WorkspaceBiome` structured-workspace projection;
-11. ordinary decision rail and focused-inspector presentation;
-12. `HubDecisionWorkbench`, ranked board with its explicit visit-prefix cutoff,
-    and focused-inspector presentation;
-13. frontier, prompt-free repair, accessibility, performance, and responsiveness
-    closure across F/G/H/I/N/O/P/Q.
-
-Each slice should leave the existing product loop usable. Contextual-selector
-slices do not change frontier topology or commands; the final closure may
-change presentation only after the variant-owned action contract is preserved.
-
-## Acceptance
-
-This work closes when:
+## Required Invariants
 
 - an incomplete active biome publishes contextual support for every covered
   decision without publishing a canonical snapshot;

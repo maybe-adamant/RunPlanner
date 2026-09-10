@@ -35,8 +35,8 @@ Navigation owns:
 
 Room features, encounters, pickups, purchases, and other timeline actions are
 not navigation. When extending a biome reveals one of those contacts, this
-document names it as an adjacent room-session delta so the implementation plan
-routes it to the correct owner.
+document names it as an adjacent room-session delta rather than misclassifying
+it as navigation.
 
 ## How a biome earns new execution work
 
@@ -176,7 +176,7 @@ responsible for its Clockwork counters and goal lifecycle.
 
 One product adaptation is required: a materialized Goal must cross the
 execution boundary as the ordinary exact reward identity `ClockworkGoal`.
-Today the canonical room records it as `clockworkReward: 'goal'` rather than an
+The canonical room records it as `clockworkReward: 'goal'` rather than an
 ordinary `incomingReward`; the compiler must map that fact into the existing
 execution reward shape. It must not publish an I-specific counter or cap
 controller.
@@ -390,7 +390,7 @@ World Shop realization and any room-local delivery or timeline behavior belong
 to their existing feature and timeline adapters. They are not Q navigation
 work merely because they occur in a Q room.
 
-## Planning and acceptance
+## Execution Delta Summary
 
 The complete fixed-route delta is intentionally small:
 
@@ -405,21 +405,19 @@ The complete fixed-route delta is intentionally small:
 | P     | None; carry the existing ordered encounter product through the expanded route extent.        |
 | Q     | None; carry ordinary occurrences through the expanded route extent.                          |
 
-The later-biome implementation plan is driven by the dispositions in this
-document, not by a generic checklist of biome features. For each enabled
-biome, a gate should contain only:
+Execution work for an enabled biome is limited to:
 
 1. route/protocol extent changes needed to admit its occurrences;
 2. existing execution facts that require a small mapping into a baseline
    product;
 3. native hooks explicitly earned by the comparison above; and
-4. one representative fixture or native-harness witness for each earned
-   contact.
+4. representative fixture or native-harness evidence for each earned contact.
 
 Planner legality matrices remain tested by their planner and catalog owners.
 Executor tests prove translation and native contact behavior, not that the
 planner's candidate, cap, or force rules are correct a second time.
 
-Dream Dives require a separate route-order and completion-room comparison. A
-future Dream Dive plan may reuse biome contacts established here, but it must
-not make fixed-route adapters infer route position from room names.
+Dream Dives remain outside this fixed-route contract. They require a separate
+route-order and completion-room comparison; any implementation may reuse the
+biome contacts established here but must not make fixed-route adapters infer
+route position from room names.

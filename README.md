@@ -29,8 +29,8 @@ and UI projections are replaceable derived products. Simulation models
 possibility, not probability. Game Room Declarations are unique; authored Room
 Occurrences are repeatable and own stable persisted IDs. Incomplete and
 context-invalid authored states remain visible and repairable; chronological
-authoring locks only the suffix beyond the engine-published first incomplete
-owner. UI-session state never enters authored history.
+authoring locks only the suffix beyond the engine-published authoring horizon.
+UI-session state never enters authored history.
 
 ## Documentation
 
@@ -38,15 +38,20 @@ Use the smallest authority that answers the question:
 
 - [Architecture](docs/design/ARCHITECTURE.md), [catalog model](docs/design/CATALOG_MODEL.md),
   [authored project](docs/design/AUTHORED_PROJECT_MODEL.md),
+  [game generation](docs/design/GAME_GENERATION_RULES.md),
   [reward model](docs/design/REWARD_MODEL.md),
-  [room lifecycle](docs/design/ROOM_LIFECYCLE_MODEL.md), and
-  [simulation and validation](docs/design/SIMULATION_AND_VALIDATION.md) define
-  cross-cutting design; [biome execution navigation](docs/design/BIOME_EXECUTION_NAVIGATION.md)
-  defines the normalized runtime structure of every fixed-route biome.
+  [room lifecycle](docs/design/ROOM_LIFECYCLE_MODEL.md),
+  [simulation and validation](docs/design/SIMULATION_AND_VALIDATION.md), and
+  [candidate evaluation](docs/design/CANDIDATE_EVALUATION_MODEL.md) define the
+  planner's cross-cutting model.
 - [Biome rules](docs/biomes/) contain the route authorities.
 - [Editor ownership](docs/design/EDITOR_MODEL.md), [contextual UX](docs/design/CONTEXTUAL_EDITOR_UX.md),
   and [structured workspace](docs/design/STRUCTURED_EDITOR_WORKSPACE.md) define
   application/editor boundaries.
+- [Game integration](docs/design/GAME_INTEGRATION_BOUNDARY.md) defines the
+  compiler/executor contract; [biome execution navigation](docs/design/BIOME_EXECUTION_NAVIGATION.md)
+  defines only the biome-specific execution work beyond the shared F/G
+  baseline.
 - [Source audit map](docs/audits/README.md) routes source evidence by subject.
 
 ## Quickstart

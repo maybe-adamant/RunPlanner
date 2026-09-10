@@ -32,12 +32,12 @@ ownership rules.
 
 ## Application Shell
 
-The shell preserves the useful high-level navigation proven by the ImGui
-prototype while keeping route choice at the project boundary:
+The shell keeps route choice at the project boundary and exposes:
 
-- one horizontal tab for the selected route, followed by Settings;
-- route-local biome navigation;
-- a route settings panel;
+- a compact header with route identity, file operations, history, and About;
+- route-local navigation beginning with Route and the configured biomes;
+- nonempty NPC, Traits, Resources, Shrines, and Wells indexes after a
+  separator;
 - one shared route-structure workspace;
 - a route status and findings surface;
 - one focused semantic inspector.
@@ -47,11 +47,10 @@ not project identity.
 
 Route and panel navigation is one generic UI-session model. Before a project is
 open, the application presents a catalog-driven route chooser. Once open, the
-active route is the document's `route.routeKey`, while a nullable top-level
-section selects Settings; the session retains one tagged route panel: overview,
-one catalog biome, or a route-local read-only index. The route navigation
-presents the selected Route followed by its ordered biome rail as the primary
-run structure. A separator then introduces only the non-empty NPC, Traits,
+active route is the document's `route.routeKey`; the session retains one tagged
+route panel: overview, one catalog biome, or a route-local read-only index. The
+navigation presents Route followed by the ordered biome rail as the primary
+run structure. A separator then introduces only the nonempty NPC, Traits,
 Resources, Shrines, and Wells indexes. Index visibility uses the same
 application-projected rows as its panel; it does not create an empty authoring
 destination. If project replacement or Undo removes the active index's last
@@ -86,303 +85,32 @@ semantic evidence, topology state, or candidate support locally.
 
 ## Workspace Projection
 
-The application projects every configured biome into one `WorkspaceBiome`
-envelope. The envelope has an exhaustive node union for starts, ordinary
-batches, takeover Preboss batches, mixed batches, the Hub decision, occurrence
-workbenches, and completion. React renders that projection through one
-`BiomeWorkspace`; it does not choose a layout-specific editor by layout type
-or read authored decision arrays to reconstruct topology.
+The application projects every configured biome into one exhaustive
+`WorkspaceBiome` envelope. It preserves semantic owner and occurrence
+identity, attaches engine-backed interactions and findings, exposes progressive
+coverage and the first incomplete authoring horizon, and references every
+active occurrence workbench. React renders that product; it does not traverse
+authored topology, decode semantic addresses, or infer room and reward
+capabilities.
 
-Ordinary decision nodes project:
+The projection distinguishes selected authorship from evaluated history. A
+selected continuation is a `Room selected`; only an evaluated entry is a
+`Door taken`. Incomplete and context-invalid material remains visible at its
+stable owner, while candidate evidence and findings appear only where the
+engine's coverage reaches them.
 
-- the start or fixed entry;
-- selected-spine decisions and physical exit targets in declaration-owned
-  order;
-- one selected continuation, unselected generated leaves, and retained
-  unavailable exits;
-- authoring frontiers and declaration-owned ordinary or Preboss batch actions;
-- referenced room-local workbenches;
-- findings, coverage, and candidate interactions attached by semantic address.
+Normalized declarations select the supported start, ordinary-decision,
+Preboss, Hub, side-room, encounter-phase, and completion products. The
+application may compose those products into one workspace but must not create a
+second topology, reward, lifecycle, or candidate policy. Every semantic owner
+has one interaction path and one finding destination even when several views
+reference it.
 
-The one Hub decision node projects:
-
-- its exact PreHub occurrence source and derived Hub room;
-- the 26 declaration-fixed Hub slots, of which nine or ten may be open;
-- one complete target room and incoming reward for every open slot;
-- the dense ordered pylon-visit prefix, through six positions;
-- generated/unavailable and entered-order state for side-room slots under
-  visited combat targets;
-- derived parent restores and Hub returns;
-- the completed-Hub handoff to the fixed width-one Preboss Shop and derived
-  completion sequence;
-- findings and candidate state attached by semantic address.
-
-The topology-free frontier exposes only the generic `Start biome` action. It
-creates and focuses the actual Opening or Intro occurrence; it does not own a
-second room picker or reward editor. The created start occurrence then owns its
-Room/Reward composition, including F's multi-choice Opening replacement picker
-and each fixed Opening or Intro identity.
-
-Every physical door uses the same Room/Reward composition. Before a room is
-selected the Reward row says `Choose room to show reward`; afterward the
-selected Room Declaration explicitly resolves it to no reward, one reward
-editor, or all active reward editors declared by that room. The application
-adapts this room-owned product for the editor, while React does not infer reward
-presence from biome, room name, template, or room-local chronology. This also
-covers H's active Fields cage offer group.
-
-Inside F/G/I room pickers, Combat candidates append their declaration-owned
-normal-door count, such as `Combat 02 (2 Doors)`, so downstream capacity is
-visible before selection. The suffix is picker-only: selected triggers, room
-titles, rails, timelines, history, and persisted catalog labels retain the
-canonical room label. Additional exits do not contribute to this count.
-
-`HubDecisionWorkbench` is the sole N-specific renderer inside
-`BiomeWorkspace`. Its occurrence-like tabs make the persistent board readable
-without changing its model: Hub Overview renders the complete fixed-slot set
-and exclusively owns both open/closed participation and each open room's main
-reward identity editor; Hub Timeline renders the exact authored visit prefix,
-compact next-visit target, visit cutoff, presentation-only tail, and read-only
-reward context; and Hub Exit presents the declaration-owned fixed target as one
-custom `Preboss` card. It stays visibly locked until the existing completed-Hub
-handoff capability is available, then exposes one `Open next room` action—no
-candidate picker or arbitrary room replacement. It may not persist a second
-door-count value.
-
-The Timeline roster makes rank, identity, traversal state, and reordering
-readable. Membership and main reward-identity controls never appear there;
-closing a slot remains the single semantic operation that reconciles its
-authored occurrence and visit references. Its read-only reward summary links
-the exact semantic owner back to the existing Overview editor without creating
-another ownership path.
-
-Hub destination ownership is explicit in the application projection. Hub
-membership and the incoming identity of a main-room reward open Hub Overview;
-the main visit and ordering owner opens Hub Timeline; and selecting an entered
-main-room or side-room occurrence opens that occurrence's Overview. Side-room
-generation, entry order, and side reward identity remain on the parent main
-occurrence's Overview. Exact trait, Pom, spell, and other lifecycle or
-acquisition owners still open their containing occurrence Timeline. React
-consumes these destinations and never derives them from address shape, rendered
-ancestry, or the currently selected tab.
-
-Membership controls create or remove the one authored occurrence owned by a
-fixed slot; visited slots cannot be closed until their visit references are
-replaced or explicitly removed. A Hub-decision-owned aggregate interaction
-evaluates complete proposed prefixes lazily on control intent, so rendering the
-26-slot board does not replay every alternative. Per-visit markers and exact
-destinations remain positional products even though they share that aggregate
-interaction.
-
-Before that node exists, the exact PreHub terminal decision projects one Hub
-takeover control. The application binds its engine-evaluated support and the
-complete `ReplaceWithHubDecision` intent; React neither derives depth nor
-constructs the command. Selecting it replaces the terminal decision card with
-the existing Hub workbench, while removal and Undo restore the same card.
-
-An authored Hub visit activates a combat room's side-room table. Each declared
-row then projects generation and visit-order controls; a visited row owns a
-unique ordinal (`1` when it is the only entered sibling). A side reward becomes
-an active workspace leaf only when that row's authored generation is
-`generated`: it receives its exact marker, reward interaction, and editor even
-before evaluated entry. A `notGenerated` row retains its authored offer value
-for a later re-enable, but publishes no current reward leaf. Evaluated entry
-controls acquisition, not reward activation. Generated and visited totals are
-derived. The editor must allow every permutation, and it must not suggest that
-reordering entries changes already-generated sibling offers. Reordering
-preserves the final modeled parent-exit state while changing the exact
-history/execution trace.
-
-The N route rail nests entered side occurrences beneath their owning main visit.
-Only side occurrences present in the authored local `visitOrder` appear there;
-generated but unentered rows remain available through the parent Overview only.
-Side entries retain their authored side-entry order, select the side occurrence
-when focused, and do not increment the Hub's six-main-visit count. Parent-owned
-side generation, order, and reward-identity markers continue to select the
-parent main visit.
-
-Hub Timeline roster cards use one shared structural column layout for drag
-handle, rank, identity, visit metadata, room details, and reorder controls.
-Long labels wrap inside the identity column rather than shifting later
-controls. The Hub Overview fixed-slot board uses three columns at its normal
-width, two at an intermediate container width, and one on narrow layouts;
-declaration order and fixed membership slots do not change with those breakpoints.
-These are presentation rules only and do not enter authored state or UI-session
-persistence.
-
-Projectors consume normalized domain state and never infer topology from
-rendered components.
-
-### Decision and Room Data Hierarchy
-
-The authored and projected hierarchy is:
-
-```text
-decision batch
-  -> physical target reference
-    -> Room Occurrence
-      -> mandatory offer-time leaves
-      -> optional picked-room details
-```
-
-The batch owns decision topology and selection. A target is the relationship
-from one physical exit to one persisted Room Occurrence. The occurrence owns
-its game room declaration and room-local state, including its incoming reward
-and any local reward leaves. Presentation may place the room and its complete
-offer-reward surface together on the decision card without transferring
-semantic ownership to the batch or target. An offer surface can be empty,
-incoming, or a declaration-owned local group; the selected room remains the
-authority for that distinction.
-
-Every structurally owned occurrence must have one reachable control package.
-That package may be nested in its decision workbench; it need not appear as a
-standalone workspace node. Exact target, occurrence, reward, and room-local
-addresses all resolve to that containing inspector and then to their own
-interaction.
-
-Mandatory offer-time leaves remain authored and editable for picked and
-unpicked rooms. Optional picked-room details become active only when the
-authored topology activates the occurrence:
-
-| Occurrence source                 | Authored activation                                |
-| --------------------------------- | -------------------------------------------------- |
-| Biome start or fixed entry        | active when the occurrence exists                  |
-| Linked exit                       | active when the link exists                        |
-| Ordinary or takeover batch target | active when selected by its decision               |
-| N Hub main target                 | active when present in the authored visit sequence |
-| Fixed Boss/Postboss occurrence    | fixed link and ordinary occurrence-local detail    |
-
-Activation is not simulated entry. The workspace carries authored
-`detailsActive` separately from evaluated `entered`, so progressive coverage or
-an unavailable evaluator cannot erase authored detail ownership. Dormant
-optional state is retained and becomes editable again if the same occurrence is
-reactivated.
-
-### Lifecycle Room Workbenches and Encounter Phases
-
-A details-active room renders one tabbed occurrence workbench. The application
-projection publishes the closed Standard, Fields, Ship, or Shop composition;
-React renders that composition without switching on biome keys, room labels,
-or lifecycle-profile strings. The ordinary shape is Room Overview, Room
-Timeline, and Room Doors. Tabs are transient editor-session state and do not
-move semantic ownership or enter authored history.
-
-Room Overview contains read-only incoming-door context and only meaningful
-room-local setup. An N main room keeps its parent-owned side-room generation
-and visit order there. Fields keeps cage and optional identities there. Shops
-keep inventory, conditions, and Purchased markers there. Room features remain
-Overview-owned. Room Timeline renders the engine-owned lifecycle timeline and
-the one occurrence-owned action chronology; encounter controls attach to their
-exact Start encounter boundaries. Room Doors renders the existing total
-outgoing-stage product without changing decision, target, or reward ownership.
-Empty sections remain absent. One fixed utility slot at the top of each active
-tab presents its projected lifecycle Run State: Overview and ordinary Room
-Timeline share the entry snapshot, each Ship Timeline tab uses its phase-start
-snapshot, and Doors uses the pre-exit snapshot. An inactive Room Timeline
-remains launcher-free.
-
-Fixed Boss/Postboss occurrences use the ordinary occurrence workbench and
-timeline language. Boss renders the fixed `Room entered -> Start encounter -> Boss
-defeated -> End encounter -> Cleanup · Doors open` spine, with Judgment attached
-to `Boss defeated` when active. A fixed Postboss renders the shared Room
-Timeline product at its exact occurrence owner: required `Use fountain`,
-required `Choose keepsake` when replacing, and `Cleanup · Doors open` after the
-required action. Its rack and fountain rows are ranked by the engine; React
-does not infer action membership or legal positions.
-
-A normal active required action is already ranked when its owner becomes
-structurally active. Its row is move-only within engine-published legal
-positions: it has neither a Position selector nor a generic Remove action.
-Deliberately malformed input that already omits a required action remains
-visible as repair state and exposes one direct `Restore required action`
-control bound to the engine's canonical late insertion, not a menu of
-application-chosen positions. Optional participation and stale-row repair keep
-their existing owning controls.
-
-ShipCombat uses Room Overview, Intro Timeline, Combat 1 Timeline, optional Combat
-2 Timeline, and Room Doors. Encounter count stays in Overview. Each phase tab
-consumes the engine timeline, including its encounter picker and following
-wheel boundary; one inactive repair surface retains rows from a dormant phase.
-The tabs never create phase-local orders.
-
-The room header is compact orientation and renders only `Entering <room>` plus
-cross-tab markers or controls. Room Overview renders the predecessor-owned
-offer-reward surface once as compact read-only incoming context: the visible
-reward summary, `Hidden`, or `None`. It never rediscovers or edits that reward
-from room-local state. Room-feature children likewise render their bound action
-directly under `Room features`; they do not add a duplicate Chaos-gate or
-Zagreus-contract heading above that action.
-
-For encounter selection, meaningful means a set-backed phase with two or more
-declaration-owned authored profiles; it does not mean that two exact game
-definitions or two candidates happen to be eligible in the current evaluation.
-The control projects the exact `EncounterPhaseAddress`, selected authored
-profile, bound candidate interaction, marker, and reset intent. A profile may
-resolve to one declaration-owned contextual definition during preparation, as
-Biome I Combat resolves its Goal or NonGoal game identity. React does not
-inspect a set, evaluate a requirement, resolve a contextual definition, or
-decide whether a phase terminates another phase.
-
-A singleton set remains a semantic phase owner with an exact marker and focus
-destination, but it does not produce a one-option picker or no-op reset button.
-If its retained selection has a phase-owned finding, the containing Encounter
-section shows it as read-only diagnostic information. Empty placeholder
-sections are not rendered merely because a room has potential detail state.
-
-An active invalid phase remains visible and correctable even when an upstream
-evaluation prefix is blocked. Conversely, a structurally dormant phase retains
-its authored selection without a control, candidate, finding, history, or NPC
-row. This is an activation rule, not a validity-based visibility rule.
-
-The route NPC index is read-only. It groups resolved standard NPC definitions
-by declaration-owned `npcPresentationKey` and navigates to the exact phase in
-its containing inspector. The grouping never selects candidates, defines
-history, or creates an NPC-specific authoring path.
-
-## Structured Workspace Presentation
-
-The primary editor presents a route rail, one shared biome-structure region, and
-a focused semantic inspector. This is a structured projection over the unified
-workspace envelope, not a graph canvas or a second serialized UI tree.
-
-For ordinary biomes, the structure rail is an outline of authored decision
-points rather than an exhaustive entity index. Each decision appears once with
-its decision label and semantic assessment. When exactly one target is
-authored as selected, that stop navigates to the continuation occurrence stage
-and may also carry the selected room label; when that room has one direct,
-compactly displayable reward, it carries a structured reward token as well.
-These are authored-selection context, not a claim that simulation entered the
-room. The predecessor occurrence stage retains the complete outgoing-door
-surface with room selection, reward selection, and picked state together.
-Generated unpicked targets remain fully inspectable in that decision surface;
-their rewards still participate in sibling, bag, source, and possibility
-evaluation. For N, the center region remains the fixed Hub ranked board with
-its explicit visit-prefix cutoff rather than a false ordinary spine. Its fixed Opening and
-PreHub stages and authored Hub visits may each show the same read-only primary
-reward token when their room declares one; Ephyra side-room offers never become
-an aggregate rail reward.
-
-Rail inclusion controls visual prominence and navigation only. It does not
-control whether a semantic owner, authored value, finding, or editor exists.
-Occurrence, target, reward, retained-invalid, and room-local products remain in
-the exhaustive workspace projection even when they do not receive independent
-rail stops.
-
-The structure projection consumes authored topology plus progressive or
-canonical evaluation. Only a complete-valid biome is described as canonical.
-Complete-invalid and incomplete results use the same authored-first projection
-with an optional reached assessment overlay when coverage exists; their
-coverage frontier, retained later authorship, and blocked or unassessed regions
-remain visibly distinct.
-
-A configured empty biome may show a read-only declared outline around its live
-frontier. Fixed-count layouts may show exact remaining stages; variable layouts
-show only a truthfully projected completion horizon or state that length varies.
-The UI never derives an expected route length or interprets force rules locally.
-
-`STRUCTURED_EDITOR_WORKSPACE.md` owns the concrete route-rail,
-ordinary-decision, Hub, inspector, coverage, empty-outline, prompt-removal,
-and repair presentation contracts.
+`STRUCTURED_EDITOR_WORKSPACE.md` owns the concrete route rail,
+Overview/Layout/Timeline/Doors placement, ordinary and Hub workbenches,
+responsive layout, and focus behavior. `CONTEXTUAL_EDITOR_UX.md` owns
+selector presentation. This document owns the application-state and semantic
+projection boundary shared by both.
 
 ## Rows Versus Domain Language
 
@@ -869,12 +597,10 @@ owner address and projects them into UI destinations:
 Finding resolution is direct lookup. It never scans rows for a matching game
 room name.
 
-The visible `Findings` panel is route-scoped: an active route tab lists only
-that route evaluation's findings, across its configured biomes. Settings has
-no Findings panel. Project and route status summaries may still expose
-aggregate counts, but they do not turn Settings into a diagnostic destination.
-If a future project-owned finding is introduced, it requires an explicit
-presentation destination rather than falling back to Settings.
+The visible `Findings` panel is route-scoped and lists that route evaluation's
+findings across its configured biomes. Project and route status summaries may
+still expose aggregate counts. A project-owned finding requires an explicit
+presentation destination rather than an unrelated panel fallback.
 
 Context-invalid authored values remain visible and are decorated.
 Declaration-impossible values may be absent. Contextual pickers ordinarily
@@ -922,8 +648,8 @@ Expected examples:
 - clearing a biome is one undo step;
 - navigation and panel expansion are not undoable project edits.
 
-The command history may later power an edit log, but the initial product needs
-only reliable undo and redo.
+The command history owns reliable undo and redo; no edit-log product is
+defined.
 
 ## Project and Session State
 
@@ -1041,25 +767,18 @@ valid desktop file can open; the user may explicitly Discard Autosave, or
 successfully load a profile, to clear that blockade. The app must never
 overwrite corrupt recovery merely because the chooser is visible.
 
-## Graph Policy
+## Topology Visualization Policy
 
 Do not begin with a freeform graph canvas. Ordinary decision topology and Hub
 topology have stronger semantic structure than arbitrary nodes and edges, and a
 structured editor is easier to make readable and accessible.
 
 The structured workspace in `STRUCTURED_EDITOR_WORKSPACE.md` is the primary
-authoring surface. A later graph remains an optional overview projection rather
-than a prerequisite for showing the picked path or Hub visit structure.
-
-React Flow may later provide:
-
-- an overview projection;
-- pan and zoom over large plans;
-- visual branch inspection;
-- navigation to a selected decision.
-
-It must consume semantic topology. Dragging a node may change transient layout
-only unless a separately designed semantic command exists.
+authoring surface. Any topology visualization is an optional overview
+projection rather than a prerequisite for showing the picked path or Hub visit
+structure. It must consume semantic topology; viewport, coordinates, and
+selection remain transient unless a separately designed semantic command owns
+a durable change.
 
 ## Accessibility and Keyboard Interaction
 
@@ -1187,7 +906,7 @@ corresponding child without reopening the dialog; dormant authored detail is
 preserved by the engine. React does not calculate target eligibility, manually
 active Arcana cost, Fear totals, or Circe removal policy.
 
-Route settings own the starting loadout controls: manual Arcana toggles and
+Route Overview owns the starting loadout controls: manual Arcana toggles and
 declaration-bounded Fear ranks. The engine supplies current starting Grasp
 cost/capacity and assesses each proposed Arcana toggle or Void rank; React only
 disables proposals that the engine rejects. Ordinary automatic Arcana
@@ -1220,25 +939,6 @@ observes the live draft but does not persist any new authored data. Run State
 may show the engine-derived `Proper Upbringing active` status, but it does not
 display a global rarity or replacement ledger.
 
-## Initial F Editor Acceptance
-
-The first usable editor slice is complete when a user can:
-
-- create or load a project;
-- configure the Underworld prefix through F;
-- select an F opening;
-- add decisions and choose one or more physical targets;
-- select one concrete base reward pool for every generated decision;
-- select the picked exit;
-- edit every referenced F room's supported reward state;
-- terminate through the F preboss model;
-- retain downstream decisions across compatible upstream replacements;
-- see incomplete and invalid findings at semantic owners;
-- undo and redo every semantic edit;
-- save, reload, and reproduce the same authored project and simulation result.
-
-The slice need not have Tauri packaging or game export.
-
 ## Rejected Editor Shapes
 
 Do not introduce:
@@ -1253,5 +953,4 @@ Do not introduce:
 - hiding a currently authored invalid choice;
 - automatic surviving-exit selection;
 - graph coordinates as domain topology;
-- a large generic form generator that obscures room semantics;
-- parity with the old ImGui layout as a goal in itself.
+- a large generic form generator that obscures room semantics.

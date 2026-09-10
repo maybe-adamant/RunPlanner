@@ -7,14 +7,14 @@ authored project to canonical simulated facts, lifecycle history, validation,
 candidate results, and semantic findings.
 
 The simulator is the app's theory of how supported Hades II route generation
-behaves. The later game module will test that theory through runtime auditing;
-it will not duplicate it.
+behaves. The external game module tests that theory through runtime auditing;
+it does not duplicate it.
 
-## Cross-Biome Freeze Status
+## Cross-Biome Contract
 
 The possibility-support, materialization, reward-store, fixed-slot, and
-persistent-hub contracts in this document are globally locked by the completed
-F/G/P/Q/H/O/I/N audit set. Every configured biome from those declarations is
+persistent-hub contracts apply across F/G/P/Q/H/O/I/N. Every configured biome
+from those declarations is
 evaluated by the same occurrence/topology pipeline: completeness,
 materialization, lifecycle, event-folded history, room generation, reward
 simulation, selected-plan validation, and candidate support consume the same
@@ -885,136 +885,24 @@ The canonical snapshot is not the eventual execution-plan JSON. It is a rich
 internal simulation product from which the app can later compile the smallest
 runtime document justified by game probing.
 
-## Lifecycle Event Stream
+## Lifecycle Composition
 
-History preserves game timing rather than reconstructing it from final room
-aggregates. The canonical operation order comes from
-`ROOM_LIFECYCLE_MODEL.md`:
+The simulator consumes the canonical operation order and event vocabulary from
+`ROOM_LIFECYCLE_MODEL.md`. It folds each resolved
+`RoomLifecycleProfile` into addressed history events; it does not reconstruct
+timing from final room aggregates or maintain a parallel lifecycle matrix.
 
-```text
-room.prepare
-room.enter
-room.start_encounter / room.complete_encounter
-room.encounter_end_effects, when the resolved phase permits them
-room.offer_point / room.advance_producer, when declared
-room.generate_outgoing
-remaining room-local operations
-room.commit
-room.exit
+Encounter completion and encounter-end effects remain distinct inputs.
+Automatic effects, expirations, reward readiness, outgoing generation, room
+commit, and biome reset occur only at the lifecycle boundaries declared by the
+resolved profile. Multi-phase H and O rooms and N's Opening, PreHub, Hub, main,
+side, restore, and completion sequence use the same fold while their biome
+authorities provide the concrete phase and topology products.
 
-selected Preboss enters
-follow its fixed Boss/Postboss room links, when present
-biome.complete
-next biome entry or route completion
-```
-
-Prepared Encounter Envelope phases emit ordered, resolved-definition-owned
-events. A counting combat phase may produce:
-
-```text
-encounter.start
-biomeEncounterDepth increment
-reward.offer
-reward.offer_projection, when declared
-combat.complete
-concrete_acquisition.emit
-encounter.complete
-encounter.end_effects_applied
-```
-
-`encounterCompleted` and `encounterEndEffectsApplied` are distinct addressed
-facts. Completion exists for every executed active phase, including noncombat,
-Fig Leaf-skipped, and declaration-owned end-effect-suppressed phases. The later
-event exists only when the resolved declaration permits `EndEncounterEffects`;
-Fig Leaf's execution result does not suppress it by itself. Encounter-counted
-Chaos maturation and Experimental Hammer duration consume that later event,
-while encounter-local trait settlement and other completion-owned products
-remain on completion.
-
-Steady Growth is another consumer of this event, not a new lifecycle event. A
-qualifying checkpoint advances each equipped acquisition once, and a reached
-threshold inserts its automatic rarity mutation after End encounter and before
-Cleanup. Boss Judgment remains attached to `bossDefeated` before that later
-end-effects seam.
-
-The lifecycle profile owns operation order. Encounter, room, reward, and layout
-declarations own the typed effects invoked by those operations. The simulator
-must not infer timing later from a generic reward list or final room aggregate.
-
-H Fields combat is a concrete multi-phase projection rather than one generic
-combat event. Materialization first derives the active cage prefix for every
-combat target from the batch outcome and peer capacities. For each occurrence
-in physical target order, its ordinary incoming offer resolves before its
-active cage offers; this preserves cross-target counted-bag and Boon-source
-history. On entry, the picked combat room emits one non-counting passive phase
-followed by one counting encounter and required acquisition for every active
-cage. The unpicked targets never emit those encounter or acquisition events.
-The batch's semantic Max outcome updates `fieldsMaxDoorsRolled` even when
-capacity or an empty combat-target set makes that update visually opaque.
-
-N hub materialization is also explicitly phased:
-
-```text
-fixed Opening offer, entry, encounter, acquisition, commit
-fixed PreHub offer, entry, encounter, acquisition, commit
-derived Hub entry
-generate all open hub targets and incoming offers in physical order
-derive hubRewardLookup from every hub offer
-for each authored main visit:
-  enter the selected target
-  spawn required SoulPylon
-  start and complete the counting main encounter
-  destroy the required pylon and acquire the incoming reward
-  evaluate local generation pressure in availability order
-  jointly validate and offer the generated side-slot reward batch
-  for each authored entered side slot:
-    enter, resolve its non-counting encounter, and acquire its reward
-    restore the same main occurrence
-  restore the same Hub room
-enter fixed authored PreBoss and resolve its shop
-walk the fixed Boss and Postboss room links, when present
-```
-
-The hub lookup is produced before the first selected visit and remains based on
-the full open board. A restore event appends history without creating another
-occurrence, offer, acquisition, or encounter-start event.
-
-The active N lifecycle/history and reward path implements this trace.
-Exact fixed-entry, Hub-board, main, side, restore, Preboss, and completion
-events fold through the shared history ledgers, including required Soul Pylons
-and generated-side-room counters. Reward replay consumes every open target in
-physical order, resolves each generated side group jointly, acquires only
-entered rooms, derives `hubRewardLookup` from the full initial board, and then
-validates the fixed Preboss shop. These facts remain replaceable simulation
-output; none are inferred from a final room aggregate or persisted beside the
-authored Hub plan.
-
-Selected Hub validation composes those products through normal N route
-simulation. Its authored-possibility ledgers are deliberately narrow:
-
-- each declared open-slot constraint records its constrained and selected-open
-  slot keys, maximum count, and selected support;
-- each visited parent-local slot records visit ordinal, availability rank,
-  generated count before evaluation, required pressure count, supported
-  generation outcomes, and selected support.
-
-An unsupported open-set outcome is addressed to every participating invalid
-Hub slot. An unsupported local generation outcome is addressed to the exact
-parent occurrence and side-slot key. Complete-but-invalid authorship is never
-repaired or discarded. Fixed slot identity and physical order, six distinct
-open visits, Pylon spawn/completion, side-entry ordinals, parent and Hub
-restores, fixed Preboss, completion rooms, and biome completion are constructed
-canonical invariants; disagreement at those contacts is a contract failure, not
-a recoverable semantic finding. Reward and shop findings remain owned by the
-reward replay rather than being duplicated by Hub validation.
-
-Every permutation of a parent's entered side slots is legal. Because all
-sibling offers exist before the first entry and supported side acquisitions do
-not revise those offers, permutations with the same generated set, entered set,
-and resolved offers and acquisitions produce the same modeled state at final
-parent exit. The
-entered ordinals remain semantic only to preserve exact room/acquisition trace
-and eventual execution intent; generated and entered counts are derived.
+Canonical simulation retains exact event ownership and order so validation,
+candidate evaluation, and execution-plan assembly can reference the same
+semantic points. It does not persist lifecycle history in the authored project
+or infer additional phases from a room name.
 
 ## Counter and Ledger Axes
 
@@ -1143,7 +1031,7 @@ project-bound candidate session.
 
 Validation checks reached selected facts in lifecycle order:
 
-- start, fixed-entry, selected-Preboss, and layout roles;
+- start, N PreHub/Hub handoff, selected-Preboss, and layout roles;
 - physical exits and target compatibility;
 - room eligibility at the correct generation point;
 - creation and appearance caps on separate ledgers;
@@ -1176,8 +1064,8 @@ judged only by their declared current-history rules. I preboss offers likewise
 use distinct occurrence identities. Each declined preboss materializes as an
 unpicked target in its real `ClockworkDoorBatch`; a later batch may create a
 new occurrence. Only the picked preboss contributes entry and local shop
-acquisitions. The simulator never restores the old singleton-control or
-synthetic-companion workaround.
+acquisitions. The simulator does not synthesize a singleton control or
+companion occurrence.
 
 For N, one authored main occurrence may contribute an initial entry record and
 several restored-parent history records after side rooms. The hub likewise
@@ -1192,54 +1080,14 @@ address.
 `REWARD_MODEL.md` defines reward vocabulary and producer composition. This
 section owns the history-dependent simulation of those normalized facts.
 
-The simulator keeps these distinct:
+The simulator preserves the Reward Model's distinctions among stores, bags,
+offer points, offers, offer projections, concrete acquisitions, history
+projections, settlement sites, and acquisition entries. It resolves them in
+lifecycle order without collapsing offer identity into acquisition history or
+Shop inventory into a counted reward bag.
 
-`Reward type`
-: Picker and offer identity such as `Boon`, including its payload domain and
-complete offer default.
-
-`Store entry`
-: One concrete counted-bag member with requirements, multiplicity position,
-duplicate policy, and reward type.
-
-`Reward store`
-: Offer-point-resolved provenance and counted domain.
-
-`Reward bag`
-: Ordered counted multiset copied from a game store.
-
-`Offer point`
-: Lifecycle moment producing one or more resolved offers.
-
-`Reward offer`
-: Resolved store, reward type, complete payload, and semantic source. It can be
-offered without ever being acquired.
-
-`Offer projection`
-: Reward-type-specific current-run writes caused by materializing an offer.
-Devotion spacing is the only initial projection; generic offer history and bag
-consumption remain offer-point mechanics.
-
-`Concrete acquisition`
-: One most-concrete loot, consumable, or resource identity emitted by producer
-lifecycle at a specific point.
-
-`History projection`
-: Typed game-history writes folded only from a concrete acquisition.
-
-`Shop profile`
-: Shop option domain; it is not a counted reward bag.
-
-`Settlement site`
-: One reached instance of a declaration-owned acquisition point, addressed by
-its exact occurrence or local owner and point key.
-
-`Acquisition entry`
-: One atomic concrete acquisition at a settlement site. It retains the
-producer-owned source and may own acquisition-time trait or level detail.
-
-Canonical simulation settles all current acquisition families through that
-one product. Ordinary room, Devotion, O wheel, H cage, entered N main/side,
+Canonical simulation settles all supported acquisition families through that
+shared product. Ordinary room, Devotion, O wheel, H cage, entered N main/side,
 and active Nemesis random-event results have engine-derived required
 classification and lifecycle windows. The
 activating semantic command default-inserts their exact required references in
@@ -1396,7 +1244,7 @@ resolution. A target forced or individual store still resolves from its Room
 Declaration and uses the same offer machinery. A target with no producer and
 no resolved store emits no reward offer and consumes no bag entry.
 
-Fixed-entry and Preboss offer points that do not own an authored batch store
+Declaration-owned entry and Preboss offer points that do not own an authored batch store
 receive their store from normalized declaration policy. They reuse the same
 bag, offer, offer-projection, and acquisition machinery after that resolution.
 
@@ -1434,120 +1282,22 @@ realization is the shop target.
 
 ## Candidate Evaluation
 
-`CANDIDATE_EVALUATION_MODEL.md` is the detailed authority for project-bound
-candidate sessions, typed pre-decision contexts, domain evaluation, replay
-horizons, caching, and refactor constraints. This section retains the
-simulation-level contract.
+`CANDIDATE_EVALUATION_MODEL.md` owns project-bound candidate sessions, typed
+pre-decision contexts, domain evaluation, replay horizons, caching, and exact
+trait-offer artifacts. This document supplies their selected-simulation input:
+the maximum truthful coverage, addressed pre-decision views, and the same
+support evaluators and finding producers used by the authored plan.
 
-Candidate domains are declaration-derived and stable. Declaration-impossible
-values may be absent. Context-invalid values remain present and receive
-semantic invalid results.
+Candidate results report possible, forced, impossible, or unassessed support
+without scores or likelihoods. Declaration-impossible values may be absent;
+context-invalid authored values remain represented for repair. A prior
+incomplete biome or an unreached local owner never receives invented history.
 
-Candidate results report possible, forced, or impossible membership plus the
-same semantic findings used for the selected plan. They do not report a score
-or likelihood.
-
-Trait-offer candidate branches carry the active Persephone maximum and the
-derived effective level for each materialized option. The application receives
-the maximum only for a universally agreeing active row, and receives an
-effective level only when all surviving branches agree. A branch disagreement
-remains explicit rather than being collapsed to a first branch. The candidate
-product reuses the selected settlement resolver, including omission as `+0`,
-Premium Service's prior-selection chronology, replacement precedence, and
-frozen Calling Card or Concave Stone outcomes.
-
-For one candidate domain, simulation:
-
-1. validates the request against its authored semantic owner and declaration;
-2. derives the exact current pre-decision context through normal project
-   simulation;
-3. prepares that context once for every requested alternative;
-4. invokes the same support evaluator and finding producer used for the
-   selected value at the smallest affected semantic region;
-5. returns ordered typed support, findings, and evidence without publishing or
-   persisting scratch state.
-
-The shared query set covers authored starts, ordinary room targets, batch
-reward stores, incoming and free rewards, room-local rewards, WorldShop offers,
-purchase choices, and policy-owned Fields door-roll outcomes. Preboss uses those
-same incoming-reward and WorldShop addresses rather than a second specialized
-candidate vocabulary.
-
-N extends that shared vocabulary with four Hub-structural queries: fixed-slot
-open membership, one visit-position replacement, one parent-local generation
-outcome, and one complete parent-local entered order. Fixed-entry and Hub-target
-rewards continue to use `incomingReward`; side-room rewards use `localReward`;
-the fixed Preboss continues to use the common shop-offer and purchase queries.
-Open proposals carry an occurrence ID because opening a physical slot creates
-one authored Room Occurrence; the candidate result never invents or persists a
-second identity.
-
-F/G/H/I/N/O/P/Q candidate preparation consumes the normal project evaluation;
-there is no production candidate-only biome simulator. A candidate is
-assessable when the complete evaluation or progressive prefix has reached its
-semantic owner and required checkpoint. Otherwise it reports addressed
-`coverageNotReached` evidence containing the owner, checkpoint, and current
-coverage. When coverage stops specifically because a required authored reward
-pool, Fields door roll, or biome field is unresolved, dependent candidates
-instead report `authoredPrerequisiteMissing` with that exact semantic owner.
-The prerequisite control itself remains evaluable from the already-prepared
-prefix. Room candidates reuse the biome's addressed generation views. H
-Min/Max candidates use the same pure support evaluator as selected simulation
-at the source room's `preOutgoing` history view because the proposed value
-cannot change its own prior context. Cage and Preboss alternatives apply one
-immutable semantic replacement and replay H through the common reward
-authority with the already-evaluated G seed.
-
-N candidate preparation locates the selected Hub product in normal Surface
-route evaluation. Slot membership reuses open-count and declaration-owned
-constraint validation; visits replay the six-visit product; side generation
-replays global ranked-prefix pressure; entered order replays the exact
-acquisition trace. Reward and shop proposals use the same immutable
-replacement/replay path as other decision-spine biomes. N does not claim
-per-slot prefix coverage while its jointly generated board is incomplete. An
-invalid board keeps its atomic physical board region assessable for repair, but
-withholds every visit and parent-local candidate beyond that owner. An invalid
-visit-local owner similarly withholds later local and visit candidates. The
-exact blocking board, side-generation, local-reward, or lifecycle owner keeps
-its pre-decision repair context even on an incomplete prefix; only later owners
-are withheld. Once a region is reached without an earlier block, its candidates
-use the same addressed coverage contract as other biome prefixes. Selected
-invalid values remain evaluated and retain exact findings.
-
-If a prior biome is not complete and valid, candidates in every later biome
-report unavailable upstream context. If the active biome has not yet covered a
-queried owner because required earlier structure or a supported pre-state is
-missing, that owner reports unavailable local context. Neither case invents
-history from defaults or unauthored futures.
-
-Ordered candidate domains for one authored snapshot use one prepared candidate
-session bound to the exact immutable project and its published
-`ProjectEvaluation`. The application keeps option arrays in a weak cache keyed
-by that identity pair, semantic owner, and domain. A semantic edit therefore
-invalidates the session once, while navigation and repeated renders consume the
-same structures.
-
-Room candidates reuse addressed generation views. Reward and shop alternatives
-reuse a typed producer frontier captured by selected reward simulation and
-evaluate the complete producer domain without applying one temporary project
-command or rebuilding the addressed biome per offer. Room-local and Hub
-candidates replay only their declared semantic region unless a genuinely broad
-field requires a scoped biome suffix. Unrelated later topology is never a
-candidate input. React triggers and presents the application projection but
-never implements these rules.
-
-A candidate contact does not require unrelated downstream topology
-to remain complete when the proposed value changes structural capacity. For
-example, a room candidate reads the target's already-derived pre-generation
-history and runs the selected-plan room-support calculation for the proposed
-game name; it does not misreport that context as unavailable merely because
-the proposed room would require later exit reconciliation. Validators beyond
-the candidate's semantic effect are replayed only when that candidate domain
-depends on them.
-
-Candidate evaluation is added after selected-plan F simulation is correct. It
-must reuse materializers and validators rather than creating a parallel rules
-engine for UI coloring.
+Candidate evaluation is not a parallel biome simulator. It consumes opaque
+artifacts prepared by the same project evaluation, evaluates one exact semantic
+domain on demand, and replays only the smallest region owned by that domain.
+The application and React receive bound products rather than histories,
+ledgers, or policy inputs from which they could reconstruct the answer.
 
 ## Findings
 
@@ -1641,7 +1391,7 @@ Each route simulation records:
 - validated-prefix identity and an exact route-end, incomplete, or invalid
   processing horizon;
 - semantic findings in stable route and phase order;
-- whether the route is eligible for future execution-plan compilation.
+- whether the route is eligible for execution-plan compilation.
 
 The core contains complete F, G, H, I, N, O, P, and Q simulation through one
 common biome evaluator. Its progression-specific work is selected by the
@@ -1666,7 +1416,7 @@ Use:
 
 - focused game-data audit notes;
 - executable fixtures describing the current hypothesis;
-- captured future runtime mismatch reports;
+- captured runtime mismatch reports;
 - explicit bounded uncertainty only where the game itself permits several
   outcomes relevant to validation.
 
@@ -1706,7 +1456,7 @@ reward records that the game resets per biome (`BiomeUseRecord`,
 only G-local entered-store history even though the canonical history retains
 the validated F prefix.
 
-Trait-bearing acquisition roles now fold an explicit equipped-trait ledger
+Trait-bearing acquisition roles fold an explicit equipped-trait ledger
 beside the existing loot/use history. Each reached offer records its semantic
 owner, provider, options, selected option, acquisition point, and pre-offer
 state. Every materialized alternative must be legal against the same state; an

@@ -1,6 +1,6 @@
 # Game Integration Boundary
 
-## Current contract
+## Contract
 
 The active strict versioned protocol carries a complete-valid configured
 Underworld or Surface prefix, through `F/G/H/I` or `N/O/P/Q`. The desktop
@@ -9,19 +9,20 @@ Executor slots in an explicitly selected compatible r2modman profile; the
 browser build has no publication capability. Publishing a slot and selecting
 the active slot are separate operations. The Executor owns a persistent
 `ActivePlanSlot` selection, reads only that slot at the next run admission, and
-freezes the decoded plan for the live session. Execution admission is a
-start-of-run operation; publication does not hot-swap a live session. The
-Executor cannot truthfully attach midway through a run, repair
-an edited plan, or resume enforcement after a mismatch.
+freezes the decoded plan for the live session. Execution normally admits at
+run start; publication does not hot-swap a live session. One bounded recovery
+path may instead admit a freshly loaded game at the start of an explicitly
+marked Postboss occurrence when its native room, weapon/aspect, and published
+entry-conformance state match. No other mid-run attachment, edited-plan repair,
+or recovery after a mismatch is supported.
 
 The transport names the slots `slot-1.runplanner.json` through
 `slot-6.runplanner.json` under the Plan Executor configuration directory. The
 planner never writes an active-pointer file, activates a slot implicitly, or
-chooses a profile when more than one compatible profile is present. The
-retired `active.runplanner.json` name has no compatibility reader or automatic
-migration. An empty or invalid selected slot therefore remains a bounded
-admission error, while publishing another slot does not disturb a frozen live
-session.
+chooses a profile when more than one compatible profile is present. There is no
+compatibility alias, active-pointer reader, or implicit migration. An empty or
+invalid selected slot therefore remains a bounded admission error, while
+publishing another slot does not disturb a frozen live session.
 
 The compiler consumes the exact simulation assembly that the planner already
 validated. It does not rerun candidate policy or duplicate validation. The
@@ -149,7 +150,7 @@ when the keepsake is equipped.
 
 ## Supported fixed-route surface
 
-The current vertical slice covers ordinary fixed-route rooms and rewards, supported
+The supported fixed-route surface covers ordinary rooms and rewards, supported
 encounters and selected trait offers, fixed Preboss/Boss/Postboss continuation,
 World Shops, Stygian Wells, Purging Pools, Keepsake Racks, fountains, resources,
 and their supported acquisition dispositions. It also covers the following
@@ -280,8 +281,17 @@ configuration tree, rejects links and non-regular files, enforces the existing
 1 MiB bound, and atomically replaces only the selected slot. The Plan Executor
 persists `ActivePlanSlot` (defaulting to Slot 1), displays the selected slot's
 bounded status, and loads and freezes that one slot only at the next new-run
-admission. Changing the setting cannot hot-swap a live session. Mid-run
-recovery remains unsupported.
+or eligible Postboss admission. Changing the setting cannot hot-swap a live
+session.
+
+Postboss recovery is a fresh admission, not restoration of serialized executor
+state. It is attempted once when a new game process attaches to an existing run
+at a selected occurrence marked `resumeBoundary: "postbossEntry"`. The executor
+adopts the already-restored native room, compares the existing bounded
+conformance families plus weapon/aspect identity, and constructs fresh route
+and room coordinators at that occurrence. A mismatch makes execution passive;
+the executor does not search another slot, retry at later rooms, replay loadout
+effects, or reconstruct earlier Timeline progress.
 
 The Plan Executor verifies protocol and catalog identity before opening a
 session. Runtime identifier existence and checkpoint contact are conformance
@@ -289,15 +299,11 @@ checks, not permission to reproduce planner eligibility policy. Exact source
 binding and published prerequisite readiness are execution coordination, not
 eligibility inference.
 
-## Evidence and deferred scope
+## Deferred scope
 
-Compiler, decoder, and session fixtures prove the local protocol contract for
-complete configured Underworld and Surface products. Focused live Hades II
-testing reached the end of a configured F/G prefix without an unresolved
-executor mismatch. That remains the only live-game claim; the complete
-Underworld and Surface products require their own live campaigns. Wrong
-continuation is detected by the next room-entry identity check; the executor
-deliberately has no separate selected-transition conformance checkpoint.
+Wrong continuation is detected by the next room-entry identity check; the
+executor deliberately has no separate selected-transition conformance
+checkpoint.
 
 Dream Dive route ordering, Postboss selection, and phase differences remain
 deferred pending their own source audit and authored-route product. Automatic

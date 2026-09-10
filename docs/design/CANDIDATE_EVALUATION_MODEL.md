@@ -21,7 +21,7 @@ between them:
 Candidate results are replaceable derived data. They never enter the authored
 project, profile document, autosave, undo history, or canonical game history.
 
-## Current Production Shape
+## Candidate Assembly
 
 One semantic edit or profile replacement creates a new immutable
 `ProjectDocument` and one exact evaluation assembly; undo and redo restore
@@ -32,13 +32,7 @@ simulation execution. Room-target, reward-producer, lifecycle, encounter, and
 trait-offer preparation bind that one assembly. None reacquires project
 evaluation or recovers a capability from public evaluation data.
 
-Before the candidate refactor, the application expanded control domains into
-independent scalar queries. Reward, shop, room-lifecycle, and Hub alternatives
-could apply temporary commands and replay the complete addressed biome once per
-value. A 72-pair Devotion domain therefore repeated the same materialization,
-history walk, and selected-biome evaluation 72 times.
-
-Production now prepares one semantic context per contacted owner:
+Candidate assembly prepares one semantic context per contacted owner:
 
 - room targets use their selected-simulation generation context;
 - rewards use typed producer frontiers;
@@ -52,11 +46,12 @@ Production now prepares one semantic context per contacted owner:
 - selected Circe effect options expose their exact pre-effect Arcana or Fear
   target domain.
 
-The structured workspace owns every declaration-derived interaction domain.
-React activates one zero-argument loader through a shared adapter and cannot
-construct a candidate request. Project-identity caching avoids repeated contact
-for the same immutable snapshot; a semantic edit correctly invalidates the
-workspace and every interaction result.
+The candidate session owns evaluation of every declaration-derived domain; the
+structured workspace binds each domain to its semantic control. React activates
+one zero-argument loader through a shared adapter and cannot construct a
+candidate request. Project-identity caching avoids repeated contact for the
+same immutable snapshot; a semantic edit correctly invalidates the workspace
+and every interaction result.
 
 ## Core Decision
 
@@ -194,10 +189,10 @@ document identity and reuse that identity's cached assembly and session; a
 cache miss still creates a fresh matching assembly. Navigation, focus, search,
 and disclosure do not invalidate it.
 
-The application API is domain-shaped rather than scalar-shaped. The former
-scalar compatibility service has been deleted. Engine fixtures bind the same
-production session factory, workspace fixtures compose the production
-structured-workspace boundary, and React fixtures activate its descriptors.
+The application API is domain-shaped rather than scalar-shaped. Engine
+fixtures bind the same production session factory, workspace fixtures compose
+the production structured-workspace boundary, and React fixtures activate its
+descriptors.
 
 ### First-blocking artifact horizon
 
@@ -407,10 +402,8 @@ explicitly rather than inheriting a generic fallback.
 
 ## Reward Producer Frontiers
 
-Reward candidates are the first and highest-value conversion to the new model.
-
-Selected reward simulation already holds the necessary state while walking the
-room lifecycle. At every covered reward producer it must retain a typed
+Selected reward simulation holds the necessary state while walking the room
+lifecycle. At every covered reward producer it retains a typed
 pre-decision frontier containing enough state to rerun that producer:
 
 - every reachable latent reward branch;
@@ -625,8 +618,8 @@ replay.
 A normal `SpellDrop` is one such fixed-three, rarityless trait-offer
 capability. The engine exposes its exact self-child capability and candidates;
 the application does not duplicate the eight-spell pool or inspect loadout
-identity. Aspect of Selene instead owns its complete Sky Fall tree in schema
-65's `loadout.aspectHexTree`; its later concrete Spell Drop settles the
+identity. Aspect of Selene instead owns its complete Sky Fall tree in
+`loadout.aspectHexTree`; its later concrete Spell Drop settles the
 three-point Path screen without a trait-offer child, so it publishes neither a
 trait-offer candidate capability nor a missing-child finding.
 
@@ -751,7 +744,7 @@ The established boundary provides:
 
 ## Non-Goals
 
-This refactor does not:
+The candidate model does not:
 
 - add incremental Redux simulation across authored project identities;
 - store candidate results or interaction progress in authored Redux history;
@@ -761,6 +754,3 @@ This refactor does not:
 - introduce probability, ranking, or likely-route guidance;
 - automatically repair retained downstream authorship;
 - add a Web Worker merely to conceal repeated biome simulation.
-
-A worker remains a later delivery option if the corrected owner-domain
-algorithm still exceeds the interaction budget.
