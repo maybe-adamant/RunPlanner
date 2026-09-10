@@ -123,6 +123,7 @@ RunPlanner/
     design/
     biomes/
     audits/
+    investigations/
     progress/
 ```
 

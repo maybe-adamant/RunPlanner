@@ -273,75 +273,6 @@ The executor also compares the relevant conformance delta. This lets native
 game logic own the clock while the executor only steers the random result or
 acquisition payload.
 
-## End-to-end assessment
-
-| Family                         | Trigger and simulator state                                                                                                                                    | Candidate and authored contract                                                                                                                         | Timeline and execution contract                                                                                                                  | Assessment           |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------- |
-| Steady Growth                  | `CheckChamberTraits`; rarity-scaled progress; target mutation applied at `encounterEndEffectsApplied`                                                          | Exact eligible target intersection and interval; missing/unavailable findings retain the reached phase                                                  | Fixed `automatic` transaction; executor scopes `AddRarityToTraits` to the declared source and target; room exit catches a missing callback       | Substantively closed |
-| Transcendent Embryo            | Eight qualifying encounters; old marked blessing removed and one same-rarity result applied after other chamber traits                                         | Exact blessing identities and declaration-owned magnitude domains; retained result is assessed against every branch                                     | Fixed `automatic` transaction; executor scopes `AddRandomChaosBlessing`, rarity, and processed values                                            | Substantively closed |
-| Judgment                       | Non-final boss defeat and active Arcana capacity                                                                                                               | Exact ordered Arcana set; Fates legality is evaluated as the set advances                                                                               | Fixed `bossDefeated` automatic transaction; native `AddRandomMetaUpgrades` selection is steered and counted                                      | Closed               |
-| Crystal Figurine               | Eligible non-final boss defeat after Judgment                                                                                                                  | Exact ordered Arcana set and rarity; candidate sees Judgment's preceding state                                                                          | Fixed `bossDefeated` automatic transaction with an explicit dependency after Judgment                                                            | Closed               |
-| Shrine delivery                | Purchased source stores delay and payload; a rush is due in the source room, exact qualifying phases decrement delayed items, and final Preboss can flush them | Exact due host/phase frontier; payload and Mystery Boon source resolve at acquisition; delayed reschedule is one source edit plus one exact placement   | Required acquisition transaction keyed by delivery source; native pending-item copies carry that identity; normal acquisition adapters finish it | Closed               |
-| Supply Chain                   | Seven qualifying encounters; invalid timed-drop rooms hold progress at six; maturity exposes two optional Pom Slices                                           | Exact two-entry frontier with stable semantic acquisition identity and phase; each accepted Slice is placed separately and uses ordinary Pom resolution | Only accepted optional pickups are published; ordinary acquisition and level adapters consume them                                               | Closed               |
-| Gift Gift Gift volatile replay | Captured keepsake replays once at the succeeding biome start                                                                                                   | Exact Hammer or Embryo equip-result candidate; deterministic replay families require no authored volatile result                                        | Entry occurrence receives one `keepsakeReplay` transaction; native `EquipKeepsake` and the corresponding selector complete it                    | Closed               |
-
-## Findings
-
-### 1. Scheduled source cleanup and Supply identity are stable
-
-The required invariant is:
-
-> If an upstream edit removes or changes the source which authorized a
-> persisted scheduled acquisition, the source mutation must atomically retract
-> every active later-host action. Retained payload may remain only as dormant
-> repair detail.
-
-Shrine removal and room replacement retract every active delivery action whose
-encoded source occurrence disappeared. Supply Chain replacement and
-encounter-selection changes likewise retract only the active later action owned
-by the lost semantic source. That source-removal behavior is correct. Concave
-Stone does not carry Supply Chain through this path: Stone is restricted to
-shop-aware God traits, while Supply Chain is an Icarus trait.
-
-Supply Chain now persists the semantic trait-offer owner and acquisition role
-without the global history sequence. The declaration pickup key continues to
-distinguish `pom1` from `pom2`, while the derived frontier independently owns
-the due occurrence and lifecycle phase. Exact source removal retracts the
-active later actions; unrelated earlier chronology does not.
-
-**Disposition:** closed in schema 80. The focused migration rekeys legacy
-entries and their matching Room Action references atomically, preserves
-targets, participation, and order, and rejects key collisions. The product
-regression generates an unvisited earlier N side room with a valid reward and
-proves both later Q Slices remain present, editable, unchanged, and loadable
-through the project parser. The existing signal-specific maturity transitions
-remain unchanged; no universal scheduler was introduced.
-
-### 2. Same-phase automatic presentation preserves native order
-
-The simulator, Timeline, and execution transaction product all apply Steady
-Growth before Transcendent Embryo, matching the native rule that Embryo's
-transformation is deferred until after the `RoomsPerUpgrade` loop. Neither is
-a movable Room Action.
-
-**Disposition:** closed with one canonical fixed automatic-effect projection.
-
-### 3. Golden execution fixture exercises the scheduled lifecycle
-
-One checked-in full-Surface execution fixture starts with Transcendent Embryo,
-acquires Epic Steady Growth in N and Supply Chain from Icarus in O, schedules
-rushed and delayed deliveries from the N and O Postboss Shrines, and continues
-through P and Q. It carries Steady Growth and Embryo automatic transactions
-into Q, hosts the delayed O Shrine delivery and a matured Supply Chain Slice in
-P, and preserves every encoded source identity through a static encode/decode
-round trip. It does not exercise insertion of unrelated earlier history and
-therefore did not expose the open Supply identity defect.
-
-Judgment and Figurine remain covered by the `automatic-boss` byte fixture;
-Gift Gift Gift replay remains covered by its focused compiler and Lua tests.
-
-**Disposition:** closed by the N-through-Q scheduled-lifecycle byte product.
-
 ## Durable conclusions
 
 - Shared scheduled-maturity ownership with signal-specific coordinators is
@@ -362,6 +293,8 @@ Gift Gift Gift replay remains covered by its focused compiler and Lua tests.
   decoding is appropriate for preserving authored invalid states, but it is
   not sufficient authority for creating or retaining an active scheduled
   placement.
-- Cross-room scheduled-entry cleanup belongs to the upstream semantic mutation. The
-  execution-plan compiler remains a parser of a validated planner product and
-  must not repair stale authored state.
+- Cross-room scheduled-entry cleanup belongs to the upstream semantic mutation.
+  If that mutation removes or changes the source, it retracts every active
+  later-host action; retained payload may remain only as dormant repair detail.
+  The execution-plan compiler remains a parser of a validated planner product
+  and must not repair stale authored state.

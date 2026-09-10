@@ -60,6 +60,13 @@ predicate intentionally excludes every exceptional disposition below.
 | Mechanical steering mismatch | exact authored identity only                                           | Owning native offer or nested-effect contact                           | A claimed contact that cannot accept the published input mismatches; adapters do not rerun planner eligibility or compare later selections. |
 | Chaos requirement and values | curse option, selected curse values, blessing, rarity, blessing values | Post-sort Chaos row construction and scoped processed-trait data       | Covered by the focused Chaos adapter.                                                                                                       |
 
+Ordinary and Chaos steering applies only to the initial authored screen;
+native rerolls remain native. Chaos rows are replaced after the game's own row
+sorting, repeated curse identities remain valid in different positions, and
+processed curse/blessing values are scoped to the selected pair. Finishing
+initial screen construction completes steering, while the later player choice
+and durable inventory remain native and checkpoint-owned.
+
 ## Exceptional selected dispositions
 
 These families cannot inherit ordinary trait coverage merely because the

@@ -584,10 +584,8 @@ batch does not expose retroactive conversion to Preboss. An authored takeover
 batch continues to expose its exact reconciliation action when it needs
 repair.
 
-The shared decision presentation and variant-owned action sets are recorded in
-`../audits/editor/EDITOR_UX_AUDIT.md`. React may share the container, but
-it does not reinterpret takeover, mixed, declaration-fixed width-one, or
-completed-Hub Preboss semantics.
+React may share the decision container, but it does not reinterpret takeover,
+mixed, declaration-fixed width-one, or completed-Hub Preboss semantics.
 
 ### Room feature presence and resource placement
 
@@ -701,8 +699,16 @@ payload domain
   -> room template
 ```
 
-A parent selection immediately installs the selected child's complete declared
-defaults. The UI never commits an intermediate empty payload or reward.
+A source-fixed child may install its complete declaration-owned value. A
+player-selected reward, offer, or trait result instead begins unresolved; the
+editor must not turn the first declaration member or currently valid candidate
+into authored intent. Once the player authors a complete value, later context
+changes preserve it as selected-invalid repair state rather than clearing,
+rerolling, or replacing it silently. Missing authorship and invalid authorship
+are therefore distinct states.
+
+The UI never commits an intermediate partial payload. A compound picker keeps
+its progress in session state and dispatches one complete semantic value.
 
 Reward type and payload project through one compact compound picker. A
 payload-free reward commits immediately; Boon advances to one source choice;

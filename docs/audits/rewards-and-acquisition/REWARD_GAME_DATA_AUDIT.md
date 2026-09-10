@@ -643,42 +643,6 @@ Boss-specific and weapon-dependent automatic drops are not projected as
 RunProgress or MetaProgress acquisitions. Boss/postboss Room Declarations still
 carry their exact layout position and entered-store history policy.
 
-## Phase 2.6 Gate
-
-The reward catalog is not ready for canonical Phase 3 history until all of the
-following are true:
-
-1. store entries own `allowDuplicates` and exact current-run requirements;
-   the shared picker appends at most one complete base set while retaining
-   leftovers, and a still-empty supported call fails its refill invariant;
-2. counted simulation preserves distinct exact post-consumption bag states
-   without requiring diagnostic consumers to expose behaviorally equivalent
-   internal splits;
-3. reward types, resolved offers, concrete acquisitions, and history
-   projections are distinct; reward types own closed self/fixed/payload-source
-   roles and producer lifecycle supports zero/multiple acquisition points;
-4. Devotion payload roles are explicit;
-5. every source-bearing reward type selects an audited source-support policy
-   and semantic resolution point;
-6. shops use ordered group declarations with offer counts, per-option
-   requirements, and without-replacement support;
-7. Blind Box persists its intended hidden source, and purchased-shop simulation
-   validates it in the one persisted authored order without trying another
-   permutation;
-8. `WorldShop`, `I_WorldShop`, and `Q_WorldShop` are distinct complete profiles;
-9. MetaProgress normalizes the exact 13-entry fully progressed projection and
-   rejects the mutually exclusive 19-entry union;
-10. excluded and deferred mechanics remain out of production requirement data;
-11. offer projections include exact Devotion offer-time spacing and no
-    acquisition-time substitute;
-12. every supported concrete acquisition selects the audited `lootAndUse` or
-    `consumableAndUse` history-projection profile independently of acquisition
-    kind;
-
-Phase 2.7 must then switch F/G persistence and consumers to this reward
-authority. Phase 2.8 requires every dormant later-biome declaration to use the
-same normalized vocabulary before Phase 3 begins.
-
 ## Current Planner Disposition
 
 Schema 41 retains exact concrete acquisition identity through Echo's two

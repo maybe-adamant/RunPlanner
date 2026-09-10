@@ -724,7 +724,7 @@ phase. Satisfied means the source predicate "no remaining Death Defiance" is
 true at that frontier; unsatisfied leaves the pending keepsake effect unconsumed
 so a later eligible phase may receive Athena. The fact controls encounter
 timing only. It is not reused by the resulting Athena offer, which follows the
-[runtime eligibility audit](../rewards-and-acquisition/RUNTIME_OFFER_FALLBACK_AUDIT.md), and it must not
+[volatile eligibility audit](../rewards-and-acquisition/VOLATILE_OFFER_ELIGIBILITY_GAME_DATA_AUDIT.md), and it must not
 become a route loadout flag or synthetic Death Defiance ledger.
 
 A hosted combat skipped by Fig Leaf cannot consume Gorgon Amulet:

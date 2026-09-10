@@ -321,6 +321,20 @@ models merely to remember unfinished research.
 
 ### Audit and Plan Lifecycle
 
+Use `docs/investigations/` for temporary pre-plan analysis: bug-family
+inventories, competing models, codebase assessments, and live-game probes. An
+investigation states its question, current evidence, uncertainties, and
+recommended disposition without becoming repository authority. Revise it
+freely while the question is open; do not link it from the root README or make
+stable documents depend on it.
+
+At delivery closure, delete the investigation and its temporary plan by
+default. Promote only the durable result: source-backed game facts and bounded
+unknowns to `docs/audits/`, accepted cross-cutting policy to `docs/design/`,
+and accepted biome behavior to `docs/biomes/`. An investigation may remain only
+while it owns a concrete unresolved question or pending probe; it must not
+survive merely as implementation history.
+
 Use `docs/audits/` for durable evidence. A source audit records game facts,
 source locations, uncertainties, discrepancies, and the final planner
 disposition. It must not become an implementation checklist or prescribe React

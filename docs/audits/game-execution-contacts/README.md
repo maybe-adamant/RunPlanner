@@ -1,142 +1,84 @@
-# Game execution contact audit
+# Game execution contacts
 
 This directory maps the planner's closed semantic vocabulary to the native
-Hades II contacts through which those semantics can be realized or observed.
-It exists to prevent a semantic family from appearing covered merely because
-one of its native carriers works. A Pom of Power choice, Nectar, a Pom Slice,
-an NPC gift, and a purchased item can all produce a level change while reaching
-that change through different game functions.
+Hades II contacts through which those semantics are realized or observed. It
+exists because the same planner result may travel through several native
+carriers: a level can come from a Pom screen, Nectar, a Pom Slice, an NPC, or a
+purchased item.
 
-The owning game facts remain in the focused audits linked below. These files
-record the additional execution question: **where does the game expose the
-fact, and does the current execution boundary carry enough information to use
-that contact without reimplementing planner policy?**
+These inventories preserve contact evidence, not delivery history. The
+planner/game ownership contract, transaction policy, checkpoints, and mismatch
+classification belong to
+[Game Integration Boundary](../../design/GAME_INTEGRATION_BOUNDARY.md). Source
+facts remain in the focused game-data audits linked by each inventory.
 
-## Reading the status
+## Coverage vocabulary
 
-| Status              | Meaning                                                                                                                                 |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Covered             | The execution product carries the fact and the executor has a native contact for realizing or observing it.                             |
-| Native pass-through | The planner deliberately treats the result as simulation-neutral; the executor must not mistake the native side effect for a mismatch.  |
-| Adapter gap         | The execution product carries the fact, but the current native adapter does not yet realize or settle it completely.                    |
-| Protocol gap        | The planner models the result, but the execution semantic product does not publish enough information for a semantic-agnostic executor. |
-| Deferred route      | The declaration is modeled, but it cannot occur in either current fixed-route execution extent.                                         |
-| Probe required      | The exact native contact or outcome still needs source or live-game confirmation.                                                       |
+| Status              | Meaning                                                                                                                 |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Covered             | The execution product carries the fact and the executor has a bounded native realization or observation contact.        |
+| Native pass-through | Native code owns the deterministic or simulation-neutral effect; the executor must not recreate it.                     |
+| Adapter gap         | The semantic fact exists, but no complete native adapter currently realizes or observes it.                             |
+| Protocol gap        | The planner models the result, but the execution product does not carry enough information for a semantic-agnostic use. |
+| Deferred route      | The declaration is modeled but cannot occur in the supported fixed-route execution boundary.                            |
+| Probe required      | Source or live-game evidence is still insufficient to claim the native contact.                                         |
 
-"Covered" is deliberately two-dimensional:
+Coverage always requires both a planner semantic result and a disposition for
+every native carrier that can produce it. Working through one carrier does not
+prove the family—for example, an ordinary Pom screen does not prove Nectar or a
+Pom Slice.
 
-1. The planner semantic result must be present: trait offer, level resolution,
-   generated pickup, retained effect, room object, door, or automatic outcome.
-2. Every native carrier capable of producing that result must have a
-   disposition: loot screen, direct consumable, World Shop, Stygian Well,
-   bespoke NPC menu, keepsake equip, automatic callback, or room lifecycle.
+## Durable inventories
 
-A family is not covered when only its ordinary loot-screen carrier works.
-
-## Audit library
-
-- [Rewards and items](REWARDS_AND_ITEMS.md) — all reward identities,
-  acquisition carriers, generated pickups, shops, Shrines, and Wells.
-- [Traits and offers](TRAITS_AND_OFFERS.md) — provider families, ordinary
+- [Rewards and items](REWARDS_AND_ITEMS.md) owns reward identities,
+  acquisition carriers, generated pickups, Shops, Shrines, and Wells.
+- [Traits and offers](TRAITS_AND_OFFERS.md) owns provider families, ordinary
   equipment, exceptional trait dispositions, Chaos, replacement, and level
   outcomes.
-- [Ordinary trait-offer execution](ORDINARY_TRAIT_OFFER_EXECUTION.md) — exact
-  Olympian, Hermes, and Hammer loot, initial-screen steering, nested effects,
-  and named-conformance boundary.
-- [Chaos trait-offer execution](CHAOS_TRAIT_OFFER_EXECUTION.md) — exact
-  Trial Upgrade admission, post-sort paired-row steering, native Denial and
-  reroll boundaries, processed values, and room-exit pair conformance.
-- [Level-acquisition execution](LEVEL_ACQUISITION_EXECUTION.md) — visible Pom
-  menus and direct Pom Slice/Nectar target steering, accepted entry contacts,
-  threaded steering completion, and shared acquisition ownership.
-- [Direct-pickup acquisition execution](DIRECT_PICKUP_ACQUISITION_EXECUTION.md)
-  — bound-or-ready action correlation, accepted consumable use, native
-  dependency release, specialized exclusions, focused handoff, and the Sea Star
-  reuse boundary.
-- [Reward transformation execution](REWARD_TRANSFORMATION_EXECUTION.md) —
-  Time Piece publication omission and Artificer source disposition, bounded
-  native contacts, Artificer reward steering, Forfeit handoff, and
-  producer-independent replacement acquisition.
-- [NPC trait and generated-pickup execution](NPC_TRAIT_AND_GENERATED_PICKUP_EXECUTION.md)
-  — bespoke Arachne/Narcissus menus, native trait-owned drop production,
-  generated-child handoff, and Narcissus Mystery Boon resolution.
-- [Keepsakes, loadout, and abilities](KEEPSAKES_LOADOUT_AND_ABILITIES.md) — the
-  exhaustive 33-keepsake planner/native/executor boundary plus weapons,
-  aspects, Arcana, Vows, Hexes, and tools.
+- [Keepsakes, loadout, and abilities](KEEPSAKES_LOADOUT_AND_ABILITIES.md) owns
+  the execution disposition of weapons, aspects, Arcana, Vows, Hexes, tools,
+  and every supported keepsake family.
 - [NPCs, encounters, and automatic outcomes](NPCS_ENCOUNTERS_AND_AUTOMATICS.md)
-  — generic and bespoke trait menus, Nemesis, encounter selection, and forced
-  automatic results.
-- [Room features and actions](ROOM_FEATURES_AND_ACTIONS.md) — the Overview,
-  Timeline, and Doors contacts that carry those rewards and abilities.
-- [Native conformance contacts](NATIVE_CONFORMANCE_CONTACTS.md) — every
-  blocking structural and room-exit comparison, its exact live game authority,
-  its checkpoint, and the narrow cases where planner provenance may be retained.
-- [Execution mismatch policy](EXECUTION_MISMATCH_POLICY.md) — the first-mismatch
-  state transition, legitimate blocking causes, non-blocking contacts, and the
-  boundary between admission errors, executor faults, and live divergence.
-
-## Authorities and current boundary
+  owns bespoke NPC menus, encounter/phase identity, Nemesis, and fixed
+  automatic outcomes.
+- [Room features and actions](ROOM_FEATURES_AND_ACTIONS.md) owns the native
+  contacts carrying Overview, Timeline, and Doors facts.
+- [Native conformance contacts](NATIVE_CONFORMANCE_CONTACTS.md) owns every
+  blocking structural and room-exit comparison and the native reader used for
+  it.
 
 The normalized catalog is the exhaustive identity authority. The execution
 union in `packages/planner-engine/src/execution-plan/model.ts` is the exhaustive
-wire authority. The current `adamantRunPlanner-Plan_Executor` consumer accepts
-complete-valid configured prefixes of the fixed Underworld and Surface routes
-through the strict current outcome-driven wire. Dream Dive remains outside that
-boundary. A compile-time census beside the execution tests classifies every
-authored room action and every published Overview, Timeline, Doors,
-acquisition-disposition, automatic-effect, and conformance union member.
-That census is test authority only: runtime adapters remain organized by native
-carrier and do not duplicate it as a callback registry.
+wire authority. Compile-time execution censuses own closed-union coverage;
+these documents explain native meaning and must not duplicate those tests as a
+manually maintained manifest.
 
-Relevant durable authorities:
+## Cross-family invariants
 
-- [Game integration boundary](../../design/GAME_INTEGRATION_BOUNDARY.md)
-- [Timeline reconciliation](../rooms-and-routes/GAME_EXECUTION_TIMELINE_RECONCILIATION_AUDIT.md)
-- [Reward game data](../rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md)
-- [Acquisition, delivery, and settlement](../rewards-and-acquisition/ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md)
-- [Run-impacting trait effects](../traits/RUN_IMPACTING_TRAIT_EFFECTS_GAME_DATA_AUDIT.md)
-- [Keepsakes](../loadout-and-progression/KEEPSAKE_GAME_DATA_AUDIT.md)
-- [Room features](../room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md)
+1. Exact native source identity selects a transaction. Provider similarity,
+   equal payloads, and authored order never substitute for owner binding.
+2. Acquisition transactions are steering capabilities, not durable-result
+   proof. Their completion can release a same-room dependency; named room-exit
+   conformance proves modeled state.
+3. Ordinary payment, affordability, and purchase counters remain native.
+   Purchased outcomes enter the same acquisition, transformation, or item
+   consumer as their free counterparts.
+4. Simulation-neutral native drops remain visible to the game without becoming
+   obligations or mismatches.
+5. Native clocks and deterministic trait effects remain native unless the
+   planner publishes a bounded randomized target that requires steering.
+6. The active room-exit conformance set is `traitInventory`, `elementCounts`,
+   `steadyGrowth`, `chaos`, `keepsakeEffects`, `rewardPriorities`,
+   `pathOfStars`, `forfeit`, and `stygianWell`. Complete Run State is diagnostic
+   only.
+7. Biome-specific navigation remains limited to the structure that ordinary
+   navigation cannot express: Fields cages, Ephyra Hub and side rooms, Thessaly
+   wheels, and native Anomaly entry.
 
-## Current cross-family findings
+## Maintenance rule
 
-1. Nectar/Pom Slice was the representative carrier lesson: `levelResolution`
-   was carried correctly, but direct items use `UseStoreRewardRandomStack` and
-   `AddStackToTraits`, not the ordinary Pom choice screen. The focused
-   direct-level adapter now owns that contact.
-2. The current wire carries both fixed routes through the same structure,
-   acquisition, selected-trait, nested-consequence, loadout, Hex/Path, Sea Star,
-   item-effect, transformation, Travel Deal refill, automatic, and named
-   room-exit conformance families. Ordinary payment and purchase counters stay
-   native. Biome-specific navigation is limited to Fields cages, Ephyra Hub and
-   side rooms, Thessaly ShipCombat wheels, and native Anomaly entry; other
-   fixed-route rooms reuse the ordinary boundary.
-3. Starting weapon, aspect, Arcana, Fear, and keepsake are an explicit
-   checked loadout contract; the executor observes rather than repairs them.
-4. Selecting a trait lets the game run that trait's ordinary acquire behavior.
-   That is sufficient only when the planner does not author a random or
-   multi-target result. Exceptional dispositions must be checked individually
-   rather than inheriting generic trait-offer coverage.
-5. Simulation-neutral native drops, including meta-progression rewards, must
-   remain visible to the game without becoming execution obligations or
-   mismatch candidates.
-6. Sea Star demonstrates why a positive producer relation is not complete
-   random-effect coverage. The execution product and native adapter must also
-   represent the authored negative result wherever vanilla could otherwise
-   proc, and must cover both loot and direct-consumable carriers.
-7. The active room-exit conformance set is `traitInventory`,
-   `elementCounts`, `steadyGrowth`, `chaos`, `keepsakeEffects`,
-   `rewardPriorities`, `pathOfStars`, `forfeit`, and `stygianWell`.
-   `echoShopDuplicate` and `hermesShrineDeliveries` remain decoded diagnostic
-   values rather than active room-exit conformance facts. Changed named facts
-   are sparse; `elementCounts` is deliberately present at every complete
-   room-exit snapshot so unchanged vectors catch unintended gains. Complete Run
-   State diagnostics never block execution.
-8. Acquisition transactions are steering capabilities, not checkpoint
-   obligations. Their completion may release a same-room DAG dependent after
-   the native action reaches its declared terminal; it does not attest to the
-   steered result. Only planner-selected named conformance facts prove durable
-   modeled outcomes.
-9. Exact native source identity selects the transaction; carrier/provider
-   similarity and authored order never do. Consuming that exact action before
-   its published prerequisites is the generic immediate DAG-readiness mismatch.
+Add durable contact evidence to the narrowest inventory above. A focused
+pre-plan lifecycle analysis belongs in `docs/investigations/` and is deleted at
+delivery closure after any lasting source facts or policy are promoted. Do not
+add another execution-slice audit merely to record how one implementation gate
+was completed.
