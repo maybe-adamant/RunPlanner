@@ -76,12 +76,14 @@ Commands fall into three execution dispositions:
 | Disposition | Examples                                                                | Contract                                                                  |
 | ----------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | Realize     | room/door generation, reward identity, selected trait offer, Chaos pair | Apply only through a verified fixed adapter                               |
-| Observe     | entering a room, choosing an exit, or producing a published outcome     | Compare semantic player transactions, not incidental callbacks            |
+| Observe     | entering a room, choosing an exit, or completing a required interaction | Compare only explicit structural facts and obligated transactions         |
 | Verify      | Named changed traits, charges, clocks, and retained effects             | Compare only published room-exit conformance facts; never steer with them |
 
-Some timeline steps combine these responsibilities: the runtime realizes an
-offer but observes whether and when the player accepts it. The plan remains
-conditional on player cooperation; enforcement does not erase player agency.
+Some timeline steps combine these responsibilities. An acquisition adapter
+claims a ready owner and steers its randomized native surface, but completing
+that steering handle is not proof that the player chose or retained the
+authored result. The plan remains conditional on player cooperation;
+enforcement does not erase player agency.
 
 Native hooks and conformance checkpoints are deliberately different concepts.
 Encounter start/end, cleanup, screen construction, and similar callbacks may
@@ -101,18 +103,28 @@ traversal.
 
 The conformance surface is bounded to:
 
-| Checkpoint                    | Compared product                                                                                                                    |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Room entered                  | occurrence/room identity, published Overview content, and any obligation due at `roomEntered`                                       |
-| Semantic Timeline transaction | the exact published transaction bound to the native action; Pool sales are intentionally absent from this set                       |
-| Exits ready                   | complete exit count, physical types, target room identities, reward identities, and obligations due at outgoing/exit-usable contact |
-| Room exit                     | obligations due at `roomExit` and only the planner-published named conformance facts that changed in this occurrence                |
+| Checkpoint                    | Compared product                                                                                                                                                   |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Room entered                  | occurrence/room identity, published Overview content, and any obligation due at `roomEntered`                                                                      |
+| Semantic Timeline transaction | the exact published transaction bound to the native action when it is an explicit obligation; acquisition handles instead express steering and local DAG readiness |
+| Exits ready                   | complete exit count, physical types, target room identities, reward identities, and obligations due at outgoing/exit-usable contact                                |
+| Room exit                     | obligations due at `roomExit` and only the planner-published named conformance facts that changed in this occurrence                                               |
 
 The runtime may use several native calls to build one product. Conformance is
 decided against the completed semantic product rather than by requiring each
 construction callback to mirror an execution-plan row. This keeps lifecycle
 wiring available for realization without turning native implementation detail
 into a second game model.
+
+Selected acquisition transactions remain on the wire with their exact roles,
+payloads, and meaningful local dependencies, but they are not checkpoint
+obligations. Their completion means that the executor reached its last owned
+steering contact and may release a local dependent. A missing or different
+player acquisition does not become an adapter-local semantic comparison:
+durable modeled results are checked only by the sparse named room-exit
+conformance facts selected by the planner. Simulation-neutral health, Magick,
+Gold, Armor, healing, and meta-progression results intentionally have no
+blocking completion proof.
 
 The route-start keepsake is a pre-room realization, not a room Timeline step.
 The wire carries its exact selected key and any already-authored immediate

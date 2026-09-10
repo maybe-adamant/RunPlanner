@@ -75,7 +75,7 @@ published producer or concrete acquisition owner
   -> accepted interaction
   -> bind its existing owner or claim one compatible ready normal action
   -> native effect sequence
-  -> bounded native terminal
+  -> last executor-owned steering contact
 ```
 
 That common boundary is owner correlation, not a claim that every native item
@@ -137,22 +137,27 @@ the published final count; it must not simply set `StackNum` early and allow
 native code to add the bonus again. Native button construction, sorting,
 presentation, choice logging, and `IncreaseTraitLevel` remain in control.
 
-The adapter must correlate the selected button by trait identity. Physical
-button index is presentation state and can change after native sorting.
+Physical button index is presentation state and can change after native
+sorting. The adapter publishes the complete authored target surface rather
+than using a later selected-button comparison as settlement proof. It retains
+the selection contact only when Sea Star still has one published chance result
+to steer there.
 
 A native reroll deliberately abandons the frozen first offer. The executor
-does not reinstall the authored rows on a reroll. The exact authored result is
-owned by the native terminal and any resulting state mismatch is reported by
-the room-exit conformance boundary; the runtime does not introduce a reroll
-cursor.
+does not reinstall the authored rows on a reroll. Any modeled durable
+difference is reported by the room-exit conformance boundary; the runtime does
+not introduce a reroll cursor.
 
-### Native terminal
+### Steering completion
 
-The adapter steers the exact selected trait and level count before native
-selection. After `HandleUpgradeChoiceSelection` returns, the transaction
-completes at that bounded callback terminal. Room-exit conformance, rather
-than a second Hero-state proof in the callback, owns any modeled level-state
-diagnostic. The executor never calls `IncreaseTraitLevel` directly.
+The adapter steers the offered target identities and final level count before
+native selection. After the initial `CreateBoonLootButtons` call returns, it
+has finished a plain visible Pom intervention and may complete the acquisition
+handle. When Sea Star applies, the handle remains through the selected-button
+callback only so its published chance result can be supplied. The chosen
+target and level mutation are native behavior; room-exit `traitInventory`, not
+the acquisition adapter, owns any modeled durable result. The executor never
+calls `IncreaseTraitLevel` directly.
 
 ## Direct random-level carrier
 
@@ -191,8 +196,8 @@ several native guards. The exact consumable may carry its bound handle into a
 copied `UseFunctionArgs`, but that transport must not begin the action.
 `UseStoreRewardRandomStack` is the first carrier-specific contact reached only
 after native acceptance. Once it runs, no later player cancellation exists;
-the threaded non-`Thread` invocation of `AddStackToTraits` is the stable
-terminal.
+the threaded non-`Thread` invocation of `AddStackToTraits` is the last contact
+at which the executor supplies the published target and count.
 
 This distinction corrects the legacy broad hook, which began direct level
 transactions before `UseConsumableItem` had accepted the interaction.
@@ -201,20 +206,16 @@ transactions before `UseConsumableItem` had accepted the interaction.
 
 For a non-null target, the executor supplies the exact native `TraitName`, one
 target, and the published `NumStacks` at `AddStackToTraits`, after
-`UseStoreRewardRandomStack` has performed any native count adjustment. It then
-lets `AddStackToTraits` perform the mutation and presentation. If the target is
-absent or no longer upgradeable, the planner state and native state disagree.
-The adapter reports the mismatch and allows the unmodified native call to
-continue under the global stop-enforcement policy.
+`UseStoreRewardRandomStack` has performed any native count adjustment. For a
+published null target it supplies zero targets. The planner already validated
+eligibility at that point, so the adapter does not call
+`GetAllUpgradeableGodTraits`, inspect Hero traits, or substitute another
+target. It lets `AddStackToTraits` perform the mutation and presentation.
 
-For a legal null target, the adapter first confirms that native state also has
-no upgradeable target. It then supplies zero targets so the native effect is a
-no-op. If native state has an eligible target, null is not treated as a license
-to suppress that mutation; it is a mismatch, and native behavior continues.
-
-The non-threaded `AddStackToTraits` return is the stable terminal. A native
-unavailable target reports an exact-contact mismatch and leaves the base call
-operational; the asynchronous presentation is not part of the transaction.
+After the non-threaded `AddStackToTraits` call returns, the last owned steering
+operation is complete. The asynchronous presentation is not part of the
+transaction. A durable level difference is owned by room-exit conformance,
+not by an immediate eligibility or result comparison in this adapter.
 
 ## Ownership disposition
 
@@ -223,7 +224,7 @@ ordinary traits and level outcomes are both concrete consumers. Ordinary
 Olympian/Hermes/Hammer acquisition remains the trait specialization of that
 family; visible and direct level effects are level specializations.
 Bound-or-ready acquisition correlation is shared, while each specialization
-owns its accepted entry, callback sequence, and native terminal.
+owns its accepted entry, callback sequence, and last steering contact.
 
 This boundary does not create generic future directories or a registry of
 game callbacks. Dispatch remains explicit over the closed implemented

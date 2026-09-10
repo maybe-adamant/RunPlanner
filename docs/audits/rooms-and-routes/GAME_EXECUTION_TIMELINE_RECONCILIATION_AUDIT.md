@@ -122,8 +122,11 @@ Timeline reconciliation is viable only when all of the following hold:
 
 1. Every participating action can be associated with one semantic owner before
    or at its first player-significant native contact.
-2. A semantic transaction has one completion proof even when native execution
-   uses several callbacks or an asynchronous presentation thread.
+2. A semantic transaction has one completion ledger even when native execution
+   uses several callbacks or an asynchronous presentation thread. Completion
+   means its owning adapter finished its runtime responsibility; only an
+   explicit obligation or named conformance fact turns that into blocking
+   proof.
 3. Every hard ordering relation inside one occurrence is expressible as a
    lifecycle window, a source dependency, or a fixed checkpoint obligation;
    every modeled effect that survives the occurrence has an engine-owned
@@ -202,19 +205,21 @@ duplicate or representation-only callbacks are not conformance events.
 
 ### Reward-source and pickup actions
 
-| Authored family            | Stable identity and native proof                                                                                   | Ordering disposition                                                                                                                                                               | Runtime consequence                                                                                   |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `interactIncomingReward`   | source occurrence, producer point, and acquisition role; the realized reward object can retain that owner          | normal pickup or Artificer is one published source transaction; Time Piece consumes the acquisition at planner publication; trait/Pom subcontacts complete a published transaction | exact for the published disposition and payload; every published source has one checkpoint obligation |
-| `interactLocalReward`      | occurrence, local group, slot, and where applicable phase                                                          | follows its cage barrier when attached; authored Fields pickups may occur in any legal gap but are not anonymous                                                                   | same contract as an incoming source; untouched optional pickups are omitted before execution          |
-| `interactWheelReward`      | occurrence, wheel, selected offer, and spawned reward object                                                       | hard after matching combat and before the next phase's required-object barrier                                                                                                     | exact for modeled disposition and payload                                                             |
-| `interactAcquisitionEntry` | acquisition site plus entry key; the materialized object is distinct even when its game name equals another pickup | follows its producer when generated; Shrine delivery also follows its exact maturity checkpoint; required entries block their owning checkpoint                                    | exact for modeled pickups; untouched optional entries need no fabricated acquisition                  |
+| Authored family            | Stable identity and native proof                                                                                   | Ordering disposition                                                                                                                                                             | Runtime consequence                                                                                           |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `interactIncomingReward`   | source occurrence, producer point, and acquisition role; the realized reward object can retain that owner          | normal pickup or Artificer is one published source transaction; Time Piece consumes the acquisition at planner publication; trait/Pom subcontacts complete steering where needed | a normal acquisition is not obligated; an Artificer transformation retains its explicit checkpoint obligation |
+| `interactLocalReward`      | occurrence, local group, slot, and where applicable phase                                                          | follows its cage barrier when attached; authored Fields pickups may occur in any legal gap but are not anonymous                                                                 | same disposition as an incoming source; untouched optional pickups are omitted before execution               |
+| `interactWheelReward`      | occurrence, wheel, selected offer, and spawned reward object                                                       | hard after matching combat and before the next phase's required-object barrier                                                                                                   | publishes the modeled acquisition payload and exact local dependencies without an acquisition obligation      |
+| `interactAcquisitionEntry` | acquisition site plus entry key; the materialized object is distinct even when its game name equals another pickup | follows its producer when generated; Shrine delivery also follows its exact maturity checkpoint                                                                                  | publishes steering for modeled pickups; untouched optional entries need no fabricated acquisition             |
 
 An acquisition may contain several native subcontacts. A Boon can open a
 screen, construct options, accept one selection, apply a trait, and close the
 screen. A Pom can similarly select and apply a target. Concave Stone can add a
-second frozen selection before the acquisition transaction finishes. These are
-not independent Timeline rows unless the source creates another freely
-interactable world object.
+second frozen selection before the acquisition adapter finishes its steering.
+Completion of that owner may release a local dependent, but it is not a
+checkpoint proof that the player retained the authored result. These
+subcontacts are not independent Timeline rows unless the source creates
+another freely interactable world object.
 
 The following source-backed cases deliberately remain separate transactions:
 
@@ -228,13 +233,13 @@ The following source-backed cases deliberately remain separate transactions:
 
 ### Shop-like and room-object actions
 
-| Authored family            | Stable identity and native proof                                                                     | Ordering disposition                                                                                                                    | Runtime consequence                                                                                                                         |
-| -------------------------- | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `interactShopOffer`        | exact generated offer/slot and its native store object                                               | native payment produces a separately published outcome; an Echo/Contract child remains another action                                   | initial inventory is Overview content; a published outcome settles at its acquisition or transformation terminal, never at payment          |
-| `purchaseStygianWellOffer` | exact generation key and generated native option                                                     | native payment and immediate Well effect remain one native sequence; retained-state rules stay planner-owned                            | published item effects and authored Twist results settle at their native terminals; simulation-neutral economic/combat detail is diagnostic |
-| `sellPurgingPoolTrait`     | exact Pool slot and trait identity; trait removal proves completion                                  | separate sales of distinct traits commute when no other sensitive action is interleaved; each sale must still remove its authored trait | no execution transaction; Overview constrains inventory and room-exit trait-inventory conformance proves removal                            |
-| `interactKeepsakeRack`     | the room has one rack and one selected replacement; its successful native `EquipKeepsake` commits it | only Phial-sensitive swaps are ordered with the fountain; later actions may observe other immediate equip results                       | exact replacement transaction; opening/closing without a change is not an authored action                                                   |
-| `useFountain`              | the room has one declared fountain; disabling/removing the required object proves use                | order is sensitive to Phial-changing rack actions and trait mutations; its rarity callback is part of this transaction                  | exact required transaction; healing amount remains neutral                                                                                  |
+| Authored family            | Stable identity and native proof                                                                     | Ordering disposition                                                                                                                    | Runtime consequence                                                                                                                                                |
+| -------------------------- | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `interactShopOffer`        | exact generated offer/slot and its native store object                                               | native payment produces a separately published outcome; an Echo/Contract child remains another action                                   | initial inventory is Overview content; a published acquisition steers through its ordinary carrier while transformations remain obligated; never settle at payment |
+| `purchaseStygianWellOffer` | exact generation key and generated native option                                                     | native payment and immediate Well effect remain one native sequence; retained-state rules stay planner-owned                            | published item effects and authored Twist results settle at their native terminals; simulation-neutral economic/combat detail is diagnostic                        |
+| `sellPurgingPoolTrait`     | exact Pool slot and trait identity; trait removal proves completion                                  | separate sales of distinct traits commute when no other sensitive action is interleaved; each sale must still remove its authored trait | no execution transaction; Overview constrains inventory and room-exit trait-inventory conformance proves removal                                                   |
+| `interactKeepsakeRack`     | the room has one rack and one selected replacement; its successful native `EquipKeepsake` commits it | only Phial-sensitive swaps are ordered with the fountain; later actions may observe other immediate equip results                       | exact replacement transaction; opening/closing without a change is not an authored action                                                                          |
+| `useFountain`              | the room has one declared fountain; disabling/removing the required object proves use                | order is sensitive to Phial-changing rack actions and trait mutations; its rarity callback is part of this transaction                  | exact required transaction; healing amount remains neutral                                                                                                         |
 
 Opening a Well or Pool and leaving it without a selected purchase or sale is
 not an authored Timeline action. Presence and `interacted` inventory policy are
@@ -244,19 +249,19 @@ chronology.
 
 ### Automatic and feature-local contacts
 
-| Contact                        | Why it is not a freely ordered action                                                           | Reconciliation disposition                                                                                 |
-| ------------------------------ | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Steady Growth                  | a qualifying encounter-end effect increments the clock and may force one authored rarity target | bind the random target at the exact end-effects seam and verify the mutation; no player-action matching    |
-| Transcendent Embryo maturity   | its encounter counter transforms one exact blessing automatically                               | bind the authored replacement at the exact end-effects seam and verify; no player-action matching          |
-| Successful resource collection | the planner assumes automatic room-exit collection at one authored point                        | realize the Overview object and verify/log the fixed room-exit element contribution; it is not reorderable |
-| Shrine purchase                | native purchase schedules pending delivery; it does not acquire the delivered item              | native producer contact, not a room-action row                                                             |
-| Rushed Shrine delivery         | closing the Shrine after the deliberate rushed purchase creates a required pickup               | the delivery pickup is the Timeline transaction; purchase/rush setup is its producer contact               |
-| Delayed Shrine delivery        | a qualifying encounter-end effect matures retained pending state                                | the later required pickup is owned by its reached delivery site and exact phase                            |
+| Contact                        | Why it is not a freely ordered action                                                           | Reconciliation disposition                                                                                    |
+| ------------------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Steady Growth                  | a qualifying encounter-end effect increments the clock and may force one authored rarity target | bind the random target at the exact end-effects seam and verify the mutation; no player-action matching       |
+| Transcendent Embryo maturity   | its encounter counter transforms one exact blessing automatically                               | bind the authored replacement at the exact end-effects seam and verify; no player-action matching             |
+| Successful resource collection | the planner assumes automatic room-exit collection at one authored point                        | realize the Overview object and verify/log the fixed room-exit element contribution; it is not reorderable    |
+| Shrine purchase                | native purchase schedules pending delivery; it does not acquire the delivered item              | native producer contact, not a room-action row                                                                |
+| Rushed Shrine delivery         | closing the Shrine after the deliberate rushed purchase creates the selected pickup             | the delivery acquisition carries steering and local dependencies; purchase/rush setup is its producer contact |
+| Delayed Shrine delivery        | a qualifying encounter-end effect matures retained pending state                                | the later selected pickup is owned by its reached delivery site and exact phase                               |
 
 Multiple delayed Shrine items can mature together. Their materialized pickup
 objects retain separate delivery-entry owners; their acquisition order is the
-ordinary order of those required pickup actions, not the order in which native
-countdown callbacks happened.
+ordinary authored order of those selected pickups, not the order in which
+native countdown callbacks happened.
 
 Rushed Shrine purchases are resolved deliberately one at a time. The first
 rushed delivery is also the first accepted purchase for Travel Deal purposes;
@@ -348,13 +353,13 @@ Shrine deliveries, an active Chaos pair, or a temporary Hammer trait.
 
 ### Room-local state that must not escape as a dependency
 
-| Room-local state                                                                                 | Closure rule                                                                                                                                                                |
-| ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| initial Shop inventory and local outcomes, including Travel Deal refill and Gold materialization | Overview proves initial inventory; settle only published outcomes and refill realization in that Shop, never carrying their owners into another occurrence                  |
-| generated acquisition sites and entries                                                          | required entries settle before their checkpoint; untouched optional entries may be abandoned at room exit; either way no unresolved owner becomes a later-room prerequisite |
-| Sea Star duplicate eligibility retained for an exact source                                      | consume it through the separately authored local duplicate or discard it when the optional local opportunity closes                                                         |
-| local object inventory for Wells, Pools, Shrines, Shops, resources, and racks                    | Overview proves presence/inventory; an unopened or unselected optional object creates no Timeline completion debt                                                           |
-| modal trait, Pom, Hex, Chaos, NPC, or replacement screen state                                   | complete as one semantic transaction before another player room action can interleave                                                                                       |
+| Room-local state                                                                                 | Closure rule                                                                                                                                                                        |
+| ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| initial Shop inventory and local outcomes, including Travel Deal refill and Gold materialization | Overview proves initial inventory; settle only published outcomes and refill realization in that Shop, never carrying their owners into another occurrence                          |
+| generated acquisition sites and entries                                                          | selected entries publish local steering and may be abandoned incomplete at room exit; untouched optional entries are omitted; no unresolved owner becomes a later-room prerequisite |
+| Sea Star duplicate eligibility retained for an exact source                                      | consume it through the separately authored local duplicate or discard it when the optional local opportunity closes                                                                 |
+| local object inventory for Wells, Pools, Shrines, Shops, resources, and racks                    | Overview proves presence/inventory; an unopened or unselected optional object creates no Timeline completion debt                                                                   |
+| modal trait, Pom, Hex, Chaos, NPC, or replacement screen state                                   | complete as one semantic transaction before another player room action can interleave                                                                                               |
 
 Room-local data may be necessary while evaluating one occurrence, but it is not
 carry state. Required local work blocks the relevant lifecycle checkpoint;
@@ -365,11 +370,12 @@ optional unchosen work simply closes with the room.
 The complete trait inventory and history, god pool, reward bags and use
 history, equipped Arcana and spent Artificer capacity, Fated status, selected
 keepsake history, invested Hex tree, and route counters also survive rooms.
-They are broad persistent ledgers, not unresolved action obligations. Their
-local mutations are proved by the transaction that caused them, while Room
-Overview and Doors prove the later outputs that depend on them. Complete Run
-State remains diagnostic evidence and must not be promoted back into a
-universal blocking room-exit comparison.
+They are broad persistent ledgers, not unresolved action obligations. The
+planner publishes a sparse named conformance fact when one of their modeled
+values must be checked; Room Overview and Doors prove later structural outputs.
+An acquisition transaction does not independently prove those mutations.
+Complete Run State remains diagnostic evidence and must not be promoted back
+into a universal blocking room-exit comparison.
 
 ### Room-exit conformance boundary
 
@@ -494,9 +500,12 @@ the sparse prerequisite edge.
 The authored planner retains both available optional actions and the actions the
 player chose to perform. The execution product does not. At the planner-owned
 publication boundary, an untouched optional action is omitted, while an active
-required or optional action becomes one intended transaction with exactly one
-checkpoint obligation. The executor therefore receives no second notion of
-optional participation and never decides which published nodes matter.
+required or optional action becomes one intended transaction. Every published
+non-acquisition transaction has exactly one checkpoint obligation. A published
+acquisition instead carries steering and dependency information but no
+obligation; named room-exit conformance owns any durable modeled result. The
+executor therefore receives no second notion of optional participation and
+never decides which published nodes matter.
 
 Dependencies are filtered to those intended published endpoints. Dependency
 closure must not retain an unchosen competitor, guidance action, or destroyed

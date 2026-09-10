@@ -46,23 +46,25 @@ requires full inventory authoring even when no offer is purchased.
 
 ## Timeline transaction contacts
 
-| Transaction             | Native contact                                                                    | Current status                                                                                                                |
-| ----------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Acquisition             | `UseLoot` or `UseConsumableItem`, plus producer-specific creation/unwrap contacts | Covered subject to the carrier matrix in Rewards and items.                                                                   |
-| Encounter interaction   | encounter/NPC-specific menu contact                                               | Covered for the fixed-route NPC and encounter families; complete-route live proof remains pending.                            |
-| Shop purchase           | `HandleStorePurchase` or `RemoveStoreItem`                                        | Covered. Payment does not settle a later trait or level acquisition.                                                          |
-| Well purchase           | `HandleStorePurchase`                                                             | Covered.                                                                                                                      |
-| Travel Deal Well refill | `RestockWorldItem` and `SpawnStoreItemInWorld`                                    | Covered.                                                                                                                      |
-| Pool sale               | `CreateSellButtons`, `HandleSellChoiceSelection`                                  | Intentionally omitted as a transaction: Overview fixes the menu and `traitInventory` conformance proves the authored removal. |
-| Keepsake change         | `EquipKeepsake` after a real rack selection                                       | Covered. Opening/closing the rack without changing keepsake is not a transaction.                                             |
-| Fountain use            | `UseHealthFountain`                                                               | Covered.                                                                                                                      |
-| Automatic               | effect-specific callbacks                                                         | Covered for the closed four-effect union.                                                                                     |
+| Transaction             | Native contact                                                                    | Current status                                                                                                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Acquisition             | `UseLoot` or `UseConsumableItem`, plus producer-specific creation/unwrap contacts | Covered subject to the carrier matrix in Rewards and items. It steers outcomes and may release DAG dependents, but is not a checkpoint obligation or semantic proof. |
+| Encounter interaction   | encounter/NPC-specific menu contact                                               | Covered for the fixed-route NPC and encounter families; complete-route live proof remains pending.                                                                   |
+| Item effect             | effect-specific native Well/item contact                                          | Covered for published consequential Well effects; ordinary payment itself has no execution transaction.                                                              |
+| Transformation          | Anvil, Artificer, or Well Twist contact                                           | Covered by the focused transformation adapters.                                                                                                                      |
+| Travel Deal Well refill | `RestockWorldItem` and `SpawnStoreItemInWorld`                                    | Covered.                                                                                                                                                             |
+| Pool sale               | `CreateSellButtons`, `HandleSellChoiceSelection`                                  | Intentionally omitted as a transaction: Overview fixes the menu and `traitInventory` conformance proves the authored removal.                                        |
+| Keepsake change         | `EquipKeepsake` after a real rack selection                                       | Covered. Opening/closing the rack without changing keepsake is not a transaction.                                                                                    |
+| Fountain use            | `UseHealthFountain`                                                               | Covered.                                                                                                                                                             |
+| Automatic               | effect-specific callbacks                                                         | Covered for the closed four-effect union.                                                                                                                            |
 
 Dependencies are planner-published ordering constraints between transaction
 owners. The executor checks only those edges; it must not infer semantic rules
 such as "Travel Deal goes first" or "Phial follows a rack change." Obligations
 are the independently published subset that must complete by a checkpoint.
-Non-obligation transactions may remain incomplete without blocking the room.
+Acquisition transactions are intentionally absent from that subset: their
+completion records only the last executor-owned steering contact and local DAG
+readiness. Other published transaction kinds retain one explicit obligation.
 
 ## Doors contacts
 

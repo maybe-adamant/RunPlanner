@@ -11,7 +11,8 @@ or authored-project change is required.
 The focused Chaos acquisition adapter owns this path beside the ordinary trait
 adapter. It binds the exact object after native pickup acceptance, scopes its
 state to that object, and prepares the selected blessing only after native row
-sorting. No broad Timeline path participates.
+sorting. It completes steering after the full initial screen has accepted the
+published rows and values; no broad Timeline path participates.
 
 This audit does not cover Chaos-gate topology, Transcendent Embryo, curse-clock
 advancement, or the gameplay effects of a matured blessing. Those already have
@@ -167,10 +168,9 @@ button, whose `RerollBoonLoot` calls `SetTraitsOnLoot` before rebuilding the
 screen with `reroll = true`.
 
 The adapter applies the authored offer only to the initial screen. A reroll
-remains native and is not silently replaced with the original three rows. If
-the player then selects a different pair, the exact terminal proof records the
-divergence. A reroll that happens to produce and select the same exact pair may
-still satisfy the terminal, matching the ordinary offer policy.
+remains native and is not silently replaced with the original three rows. The
+adapter does not compare a later selected pair. If that choice changes modeled
+durable state, the room-exit `chaos` fact records the divergence.
 
 Other bounded paths are:
 
@@ -179,24 +179,26 @@ Other bounded paths are:
 | `UseLoot` is rejected before `HandleLootPickup`           | No transaction begins; native behavior continues.                                                |
 | The bound role was omitted because Time Piece consumed it | No Chaos acquisition is enforced; retained Time Piece conformance owns the intended destruction. |
 | The native screen has fewer than three transforming rows  | Record mismatch and stop steering; do not invent peer blessings.                                 |
-| The player selects the wrong curse position               | Let native selection finish, fail the exact pair proof, and stop steering.                       |
+| The player selects a different curse position             | Let native selection finish; the acquisition adapter performs no local semantic comparison.      |
 | A later processed-trait call occurs outside the row scope | Native pass-through.                                                                             |
 
-## Terminal proof and later conformance
+## Steering completion and later conformance
 
-After native `HandleUpgradeChoiceSelection` returns, the exact selected-row
-callback completes the acquisition. The executor does not reconstruct the
-equipped curse/blessing as a second terminal proof. The room-exit `chaos`
-conformance fact owns active versus matured state and the remaining clock.
-Diagnostic Run State retains the native banned-trait set for investigation
-without turning Denial into a second blocking action.
+After the initial native `CreateBoonLootButtons` call has constructed all three
+rows with their authored curse requirements and selected-pair values, the
+adapter has finished its intervention and may complete the acquisition's DAG
+handle. Native selection is not an execution terminal. The room-exit `chaos`
+conformance fact owns the acquired pair, active versus matured state, and the
+remaining clock. Diagnostic Run State retains the native banned-trait set for
+investigation without turning Denial into a second blocking action.
 
 ## Execution disposition
 
 Direct Chaos acquisition is one focused adapter contract. It binds the exact
 `TrialUpgrade` object at materialization, admits the transaction at
 `HandleLootPickup`, scopes initial post-sort row preparation and processed-value
-overrides to that object, and completes at the exact selected-row callback.
+overrides to that object, and completes steering after native initial-screen
+construction returns.
 
 Native code remains authoritative for transforming-row generation, rerolls,
 Denial, trait equipment, curse clocks, and blessing maturation. The closed
@@ -218,6 +220,7 @@ Closure evidence requires:
    operands, including Revelation's two blessing values;
 6. native Denial sees authored curse names while blessings remain nested;
 7. reroll leaves the regenerated offer native;
-8. exact selected-row terminal and wrong-selection divergence; and
+8. completion after initial screen construction with no selection callback or
+   adapter-local wrong-selection divergence; and
 9. no Chaos acquisition state or transforming-generation hook remains in the
    broad legacy Timeline module.
