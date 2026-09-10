@@ -2,7 +2,7 @@ import type { Catalog } from '../../../../catalog-schema';
 import {
   createBiomeAddress,
   createRoomActionAddress,
-  createWellRefillRealizationAddress,
+  createTravelDealRefillRealizationAddress,
   semanticAddressKey,
   type SemanticAddress,
 } from '../../../../authored-project/addresses';
@@ -75,18 +75,7 @@ export function applyWellPurchaseTransition(inputs: {
       candidate.reference.kind === 'purchaseStygianWellOffer' &&
       candidate.reference.generationKey.startsWith('initial:'),
   );
-  const sourceGenerationKey =
-    sourceRow?.reference.kind === 'purchaseStygianWellOffer'
-      ? sourceRow.reference.generationKey
-      : undefined;
   const refillItemKey = well?.travelDealRefillKey;
-  const sourcesTravelDealRefill =
-    sourceGenerationKey !== undefined && refillItemKey !== undefined && refillItemKey !== null;
-  const refillPurchaseRow = activeWellRows.find(
-    (candidate) =>
-      candidate.reference.kind === 'purchaseStygianWellOffer' &&
-      candidate.reference.generationKey === 'travelDealRefill',
-  );
   const pendingExtendedOwners: SemanticAddress[] = [];
   let extendedSourceOwner: SemanticAddress | undefined;
   for (const candidate of activeWellRows) {
@@ -122,16 +111,8 @@ export function applyWellPurchaseTransition(inputs: {
     itemKey === 'RandomStoreItem' && twistChildKey !== undefined
       ? well?.twistResultKeyBySlot?.[twistChildKey]
       : undefined;
-  const isSourcePurchase =
-    row !== undefined &&
-    sourcesTravelDealRefill &&
-    candidateOwnerEquals(row.owner, sourceRow?.owner);
-  const isTravelDealCompetitor =
-    sourcesTravelDealRefill &&
-    row?.reference.kind === 'purchaseStygianWellOffer' &&
-    row.reference.generationKey.startsWith('initial:') &&
-    sourceRow !== undefined &&
-    !candidateOwnerEquals(row.owner, sourceRow.owner);
+  const extendedDirectPurchase =
+    itemKey !== undefined && itemKey !== null && extendedWellItemKeys(catalog).includes(itemKey);
   const timelineFacts: PlannerTimelineFacts = Object.freeze({
     nodes:
       row === undefined
@@ -139,30 +120,15 @@ export function applyWellPurchaseTransition(inputs: {
         : Object.freeze([
             Object.freeze({
               owner: row.owner,
-              included:
-                (effect !== undefined && effect !== 'neutral') ||
-                isSourcePurchase ||
-                isTravelDealCompetitor,
+              included: effect !== undefined && (effect !== 'neutral' || extendedDirectPurchase),
             }),
           ]),
     dependencies:
-      row === undefined
+      row === undefined ||
+      extendedSourceOwner === undefined ||
+      semanticAddressKey(extendedSourceOwner) === semanticAddressKey(row.owner)
         ? Object.freeze([])
-        : Object.freeze(
-            [
-              extendedSourceOwner,
-              ...(sourcesTravelDealRefill &&
-              sourceRow !== undefined &&
-              row.reference.kind === 'purchaseStygianWellOffer' &&
-              row.reference.generationKey.startsWith('initial:') &&
-              !candidateOwnerEquals(row.owner, sourceRow.owner)
-                ? [sourceRow.owner]
-                : []),
-            ]
-              .filter((source): source is SemanticAddress => source !== undefined)
-              .filter((source) => semanticAddressKey(source) !== semanticAddressKey(row.owner))
-              .map((source) => Object.freeze({ owner: row.owner, afterOwner: source })),
-          ),
+        : Object.freeze([Object.freeze({ owner: row.owner, afterOwner: extendedSourceOwner })]),
   });
   const sourceOwner = sourceRow?.owner;
   const refillRealization = (() => {
@@ -190,7 +156,7 @@ export function applyWellPurchaseTransition(inputs: {
         ? authoredRoom.stygianWell?.twistResultKeyBySlot?.travelDealRefill
         : undefined;
     return Object.freeze({
-      owner: createWellRefillRealizationAddress(
+      owner: createTravelDealRefillRealizationAddress(
         createBiomeAddress(authoredRoom.origin.routeKey, authoredRoom.origin.biomeKey),
         authoredRoom.origin.occurrenceId,
       ),
@@ -215,17 +181,9 @@ export function applyWellPurchaseTransition(inputs: {
           dependencies: Object.freeze([
             ...timelineFacts.dependencies,
             Object.freeze({
-              owner: refillRealization.owner,
-              afterOwner: refillRealization.sourceOwner,
+              owner: refillRealization.inventoryOwner,
+              afterOwner: refillRealization.owner,
             }),
-            ...(refillPurchaseRow === undefined
-              ? []
-              : [
-                  Object.freeze({
-                    owner: refillPurchaseRow.owner,
-                    afterOwner: refillRealization.owner,
-                  }),
-                ]),
           ]),
         });
   if (

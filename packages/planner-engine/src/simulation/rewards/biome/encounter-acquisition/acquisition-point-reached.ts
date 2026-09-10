@@ -1,9 +1,11 @@
 import type { Catalog, RoomDeclaration } from '../../../../catalog-schema';
+import type { PlannerTimelineFacts } from '../../../timeline-facts';
 import {
   createAcquisitionEntryAddress,
   createBiomeAddress,
   createRoomFeatureAddress,
   createRoomActionAddress,
+  createTravelDealRefillRealizationAddress,
   semanticAddressKey,
 } from '../../../../authored-project/addresses';
 import type { RouteLoadout } from '../../../../authored-project/model';
@@ -69,6 +71,8 @@ export interface AcquisitionPointReachedTransition {
   readonly roleFrontiers: readonly AcquisitionRoleFrontier[];
   readonly traitChildSettlements: readonly ReachedTraitChildCheckpoint[];
   readonly authoredSiteSettlement: AuthoredSiteSettlementResult | undefined;
+  /** A dynamic Shrine Travel Deal owner, published when its refill is created. */
+  readonly timelineFacts?: PlannerTimelineFacts;
   /** Present only for Shrine purchase events; replaces the coordinator's room state. */
   readonly hermesShrineRefillState: HermesShrineRefillState | undefined;
 }
@@ -102,6 +106,7 @@ function transitionResult(input: {
   readonly traitChildSettlements?: readonly ReachedTraitChildCheckpoint[] | undefined;
   readonly authoredSiteSettlement?: AuthoredSiteSettlementResult | undefined;
   readonly hermesShrineRefillState?: HermesShrineRefillState | undefined;
+  readonly timelineFacts?: PlannerTimelineFacts;
 }): AcquisitionPointReachedTransition {
   return Object.freeze({
     branches: Object.freeze(input.branches),
@@ -111,6 +116,7 @@ function transitionResult(input: {
     traitChildSettlements: Object.freeze(input.traitChildSettlements ?? []),
     authoredSiteSettlement: input.authoredSiteSettlement,
     hermesShrineRefillState: input.hermesShrineRefillState,
+    ...(input.timelineFacts === undefined ? {} : { timelineFacts: input.timelineFacts }),
   });
 }
 
@@ -637,6 +643,35 @@ export function applyAcquisitionPointReachedTransition(
         roleFrontiers: settled.roleFrontiers,
         traitChildSettlements: settled.traitChildSettlements,
         hermesShrineRefillState: refillState,
+        ...(refillState?.refillSupported === true
+          ? {
+              timelineFacts: Object.freeze({
+                nodes: Object.freeze([
+                  Object.freeze({
+                    owner: createTravelDealRefillRealizationAddress(
+                      createBiomeAddress(sourceOrigin.routeKey, sourceOrigin.biomeKey),
+                      sourceOrigin.occurrenceId,
+                    ),
+                    included: true,
+                  }),
+                ]),
+                dependencies: Object.freeze(
+                  deliveryActionOwner !== undefined &&
+                    semanticAddressKey(sourceOrigin) === semanticAddressKey(event.origin)
+                    ? [
+                        Object.freeze({
+                          owner: deliveryActionOwner,
+                          afterOwner: createTravelDealRefillRealizationAddress(
+                            createBiomeAddress(sourceOrigin.routeKey, sourceOrigin.biomeKey),
+                            sourceOrigin.occurrenceId,
+                          ),
+                        }),
+                      ]
+                    : [],
+                ),
+              }),
+            }
+          : {}),
       });
     }
     const parsed = parseArtificerReplacementEntryKey(event.entryKey);

@@ -8,7 +8,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 34 as const;
+export const EXECUTION_PROTOCOL_VERSION = 35 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
 export type ExecutionBiomeKey = 'F' | 'G' | 'H' | 'I' | 'N' | 'O' | 'P' | 'Q';
 
@@ -185,6 +185,61 @@ export interface ExecutionAnvilResult {
   readonly removedTraitKey: string | null;
   readonly addedTraitKeys: readonly [string, string];
 }
+
+/**
+ * The planner's one source-independent Travel Deal replacement product.
+ *
+ * The replacement has different native coordinates for each carrier, so the
+ * union preserves those coordinates instead of flattening them into a
+ * source-specific pseudo-purchase.  `ExecutionTimelineTransaction.owner` is
+ * the single refill-realization owner; `source` and `replacement` describe
+ * only the native position/generation and expected replacement payload.
+ */
+export type ExecutionTravelDealRefill =
+  | {
+      readonly carrier: 'worldShop';
+      readonly source: {
+        readonly owner: string;
+        readonly offerKey: string;
+      };
+      readonly replacement: {
+        readonly slotIndex: number;
+        readonly groupIndex: number;
+        readonly optionKey: string;
+        readonly reward: ExecutionReward;
+      };
+    }
+  | {
+      readonly carrier: 'stygianWell';
+      readonly source: {
+        readonly owner: string;
+        readonly generationKey: Exclude<ExecutionWellGenerationKey, 'travelDealRefill'>;
+      };
+      readonly replacement: {
+        readonly generationKey: 'travelDealRefill';
+        readonly offerKey: string;
+        readonly effect: ExecutionWellEffect;
+        readonly twistResultKey?: string;
+      };
+    }
+  | {
+      readonly carrier: 'hermesShrine';
+      readonly source: {
+        readonly generationKey: Exclude<ExecutionHermesShrineGenerationKey, 'travelDealRefill'>;
+        readonly slotIndex: 1 | 2 | 3;
+      };
+      readonly replacement: {
+        readonly generationKey: 'travelDealRefill';
+        readonly slotIndex: 1 | 2 | 3;
+        readonly optionKey: string;
+        readonly rewardType: string;
+        readonly deliverySourceKey?: string;
+        readonly purchase?: {
+          readonly roomDelay: 2 | 3 | 4 | 5 | 6 | 7 | 8;
+          readonly rushed: boolean;
+        };
+      };
+    };
 
 /** The one free pedestal item spawned by an Infernal Contract. */
 export interface ExecutionInfernalContract {
@@ -461,21 +516,11 @@ export interface ExecutionOverview {
       readonly spurnedSource?: string;
     }[];
     readonly infernalContract?: ExecutionInfernalContract;
-    readonly travelDealRefill?: {
-      readonly sourceOfferKey: string;
-      /** Exact acquisition-entry owner of the generated replacement pickup. */
-      readonly sourceOwner: string;
-      readonly slotIndex: number;
-      /** Native StoreData group containing the replaced slot. */
-      readonly groupIndex: number;
-      readonly optionKey: string;
-      readonly reward: ExecutionReward;
-    };
   };
   /** Complete native SurfaceShop inventory and authored delivery dispositions. */
   readonly hermesShrine?: {
     readonly offers: readonly {
-      readonly generationKey: ExecutionHermesShrineGenerationKey;
+      readonly generationKey: Exclude<ExecutionHermesShrineGenerationKey, 'travelDealRefill'>;
       /** Native StoreData option identity. */
       readonly optionKey: string;
       readonly rewardType: string;
@@ -488,25 +533,11 @@ export interface ExecutionOverview {
         readonly rushed: boolean;
       };
     }[];
-    /** Planner-proven first-rush readiness for the native Travel Deal refill contact. */
-    readonly travelDealRefill?: {
-      readonly sourceGenerationKey: Exclude<ExecutionHermesShrineGenerationKey, 'travelDealRefill'>;
-      readonly slotIndex: 1 | 2 | 3;
-      readonly optionKey: string;
-      readonly rewardType: string;
-      /** Exact delivery entry key carried through native pending-item copies. */
-      readonly deliverySourceKey?: string;
-      readonly purchase?: {
-        readonly roomDelay: 2 | 3 | 4 | 5 | 6 | 7 | 8;
-        readonly rushed: boolean;
-      };
-    };
   };
   readonly stygianWell?: {
     readonly interacted: boolean;
     readonly offers?: readonly {
-      readonly generationKey:
-        'initial:healing' | 'initial:secondLeft' | 'initial:secondRight' | 'travelDealRefill';
+      readonly generationKey: 'initial:healing' | 'initial:secondLeft' | 'initial:secondRight';
       readonly offerKey: string;
       readonly twistResultKey?: string;
     }[];
@@ -622,36 +653,33 @@ export type ExecutionTimelineTransaction =
       readonly window: ExecutionLifecycleWindow;
     }
   | {
-      readonly kind: 'shopPurchase';
+      /** The source-independent result of an accepted direct/item-effect use. */
+      readonly kind: 'itemEffect';
       readonly owner: string;
       readonly window: ExecutionLifecycleWindow;
-      readonly offerKey: string;
-      readonly rewardType: string;
-      readonly sourceOwner: string;
-      readonly reward: ExecutionReward;
-      readonly producerLifecycleKey: string;
-      readonly roles: readonly ExecutionAcquisitionRole[];
-      readonly anvilResult?: ExecutionAnvilResult;
+      readonly itemKey: string;
+      readonly effect: ExecutionWellEffect;
+      readonly extended: boolean;
     }
   | {
-      readonly kind: 'wellPurchase';
+      /** A native transformation, such as Anvil or Stygian Well Twist. */
+      readonly kind: 'transformation';
       readonly owner: string;
       readonly window: ExecutionLifecycleWindow;
-      readonly offerKey: string;
-      readonly generationKey: ExecutionWellGenerationKey;
-      readonly effect: ExecutionWellEffect;
-      readonly extendedDirectPurchase: boolean;
-      readonly twistResultKey?: string;
+      readonly transformation:
+        | ExecutionAnvilResult
+        | {
+            readonly kind: 'stygianWellTwist';
+            readonly sourceItemKey: string;
+            readonly resultItemKey: string;
+          };
     }
   | {
-      /** Planner-owned automatic Travel Deal refill realization. */
-      readonly kind: 'wellRefill';
+      /** The exact dynamic replacement created by Travel Deal. */
+      readonly kind: 'travelDealRefill';
       readonly owner: string;
       readonly window: ExecutionLifecycleWindow;
-      readonly generationKey: 'travelDealRefill';
-      readonly offerKey: string;
-      readonly effect: ExecutionWellEffect;
-      readonly twistResultKey?: string;
+      readonly refill: ExecutionTravelDealRefill;
     }
   | {
       readonly kind: 'keepsakeChange';

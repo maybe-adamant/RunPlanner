@@ -1177,9 +1177,9 @@ describe('engine-owned F/G execution semantic product', () => {
       .flatMap((occurrence) => occurrence.timeline.transactions)
       .find(
         (transaction) =>
-          transaction.kind === 'wellPurchase' && transaction.generationKey === 'initial:healing',
+          transaction.kind === 'itemEffect' && transaction.itemKey === 'ArmorBoostStore',
       );
-    expect(neutralPurchase).toMatchObject({ kind: 'wellPurchase', effect: 'neutral' });
+    expect(neutralPurchase).toMatchObject({ kind: 'itemEffect', effect: 'neutral' });
     expect(
       neutral.occurrences
         .flatMap((occurrence) => occurrence.timeline.obligations)
@@ -1231,9 +1231,7 @@ describe('engine-owned F/G execution semantic product', () => {
     expect(product.occurrences.flatMap((occurrence) => occurrence.timeline.transactions)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          kind: 'shopPurchase',
-          offerKey: 'Boon',
-          rewardType: 'BlindBoxLoot',
+          kind: 'acquisition',
           sourceOwner: semanticAddressKey(entry),
           reward: expect.objectContaining({ rewardType: 'BlindBoxLoot' }),
           roles: expect.arrayContaining([
@@ -1242,6 +1240,75 @@ describe('engine-owned F/G execution semantic product', () => {
         }),
       ]),
     );
+  });
+
+  it('publishes a purchased World Shop Travel Deal replacement as an acquisition outcome', () => {
+    const shopId = createOccurrenceId('golden-f-preboss-shop');
+    const shop = createOccurrenceAddress(goldenFBiome, shopId);
+    const site = createAcquisitionSiteAddress(shop, 'roomExit');
+    const refill = createAcquisitionEntryAddress(site, 'travelDealRefill');
+    let project = applyProjectCommand(createUnderworldFWellCheckpoint(), catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(goldenFBiome, shopId, 'MajorNonBoon'),
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    project = replaceTestShopOfferActions(project, catalog, shop, ['MajorNonBoon']);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectDerivedShopEntry',
+      site,
+      entryKey: 'travelDealRefill',
+      sourceOfferKey: 'MajorNonBoon',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: refill,
+      value: { rewardType: 'ArmorBoost' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(
+        goldenFBiome,
+        shopId,
+        roomActionKey({
+          kind: 'interactAcquisitionEntry',
+          siteKey: 'roomExit',
+          entryKey: 'travelDealRefill',
+        }),
+      ),
+      reference: {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'roomExit',
+        entryKey: 'travelDealRefill',
+      },
+      index: 1,
+    });
+    const product = productFor(authorLegalTraitOffers(project));
+    const room = product.occurrences.find((occurrence) => occurrence.id === shopId);
+    expect(room?.timeline.transactions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'travelDealRefill',
+          refill: expect.objectContaining({ carrier: 'worldShop' }),
+        }),
+        expect.objectContaining({
+          kind: 'acquisition',
+          sourceOwner: semanticAddressKey(refill),
+          reward: expect.objectContaining({ rewardType: 'ArmorBoost' }),
+        }),
+      ]),
+    );
+    const refillTransaction = room?.timeline.transactions.find(
+      (transaction) => transaction.kind === 'travelDealRefill',
+    );
+    const replacementTransaction = room?.timeline.transactions.find(
+      (transaction) =>
+        transaction.kind === 'acquisition' &&
+        transaction.sourceOwner === semanticAddressKey(refill),
+    );
+    expect(room?.timeline.dependencies).toContainEqual({
+      owner: replacementTransaction?.owner,
+      afterOwner: refillTransaction?.owner,
+    });
   });
 
   it('publishes an unpurchased Anvil only as visible Shop inventory', () => {
@@ -1332,6 +1399,12 @@ describe('engine-owned F/G execution semantic product', () => {
       generationKey: 'initial:first',
       purchase: { delay: 2, rushed: true },
     });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: shrineAddress,
+      generationKey: 'travelDealRefill',
+      purchase: { delay: 2, rushed: false },
+    });
     project = authorLegalTraitOffers(project);
 
     const assembly = simulateProjectAssembly(catalog, project);
@@ -1364,14 +1437,6 @@ describe('engine-owned F/G execution semantic product', () => {
       expect.objectContaining({ generationKey: 'initial:secondRight', slotIndex: 3 }),
     ]);
     expect(overview.hermesShrine?.offers[2]).not.toHaveProperty('purchase');
-    expect(overview.hermesShrine?.travelDealRefill).toMatchObject({
-      sourceGenerationKey: 'initial:first',
-      slotIndex: 1,
-      optionKey: 'ArmorBoost',
-      rewardType: 'ArmorBoost',
-    });
-    expect(overview.hermesShrine?.travelDealRefill).not.toHaveProperty('purchase');
-
     const timeline = executionTimelineTransactions(
       shrineRoom,
       nEvaluation,
@@ -1380,6 +1445,20 @@ describe('engine-owned F/G execution semantic product', () => {
         nEvaluation.rewards.timelineFacts,
       ),
     );
+    const shrineRefill = timeline.find((transaction) => transaction.kind === 'travelDealRefill');
+    expect(shrineRefill).toMatchObject({
+      kind: 'travelDealRefill',
+      refill: {
+        carrier: 'hermesShrine',
+        source: { generationKey: 'initial:first', slotIndex: 1 },
+        replacement: {
+          generationKey: 'travelDealRefill',
+          optionKey: 'ArmorBoost',
+          rewardType: 'ArmorBoost',
+          purchase: { roomDelay: 2, rushed: false },
+        },
+      },
+    });
     const rushedDelivery = timeline.find(
       (transaction) =>
         transaction.kind === 'acquisition' &&
@@ -1441,9 +1520,8 @@ describe('engine-owned F/G execution semantic product', () => {
       ),
     ).toContainEqual(
       expect.objectContaining({
-        kind: 'shopPurchase',
-        offerKey: 'PremiumProgress',
-        anvilResult: {
+        kind: 'transformation',
+        transformation: {
           kind: 'anvilOfFates',
           removedTraitKey: 'StaffDoubleAttackTrait',
           addedTraitKeys: ['StaffLongAttackTrait', 'StaffJumpSpecialTrait'],
@@ -1472,10 +1550,12 @@ describe('engine-owned F/G execution semantic product', () => {
       (candidate) => candidate.id === shop.occurrenceId,
     );
     const minorPurchase = occurrence?.timeline.transactions.find(
-      (transaction) => transaction.kind === 'shopPurchase' && transaction.offerKey === 'Minor',
+      (transaction) =>
+        transaction.kind === 'acquisition' && transaction.sourceOwner === semanticAddressKey(minor),
     );
     const boonPurchase = occurrence?.timeline.transactions.find(
-      (transaction) => transaction.kind === 'shopPurchase' && transaction.offerKey === 'Boon',
+      (transaction) =>
+        transaction.kind === 'acquisition' && transaction.reward.rewardType === 'RandomLoot',
     );
     expect(minorPurchase).toBeDefined();
     expect(boonPurchase).toBeDefined();
@@ -1545,7 +1625,7 @@ describe('engine-owned F/G execution semantic product', () => {
     const product = productFor(authorLegalTraitOffers(project));
     const yarn = product.occurrences
       .flatMap((occurrence) => occurrence.timeline.transactions)
-      .find((transaction) => transaction.kind === 'wellPurchase' && transaction.effect === 'yarn');
+      .find((transaction) => transaction.kind === 'itemEffect' && transaction.effect === 'yarn');
     expect(yarn).toBeDefined();
     const sourceOccurrence = product.occurrences.find((occurrence) =>
       occurrence.timeline.transactions.some((transaction) => transaction.owner === yarn?.owner),
@@ -1585,11 +1665,15 @@ describe('engine-owned F/G execution semantic product', () => {
       .flatMap((occurrence) => occurrence.timeline.transactions)
       .find(
         (transaction) =>
-          transaction.kind === 'wellPurchase' &&
-          transaction.offerKey === 'RandomStoreItem' &&
-          transaction.twistResultKey === 'TemporaryBoonRarityTrait',
+          transaction.kind === 'transformation' &&
+          transaction.transformation.kind === 'stygianWellTwist' &&
+          transaction.transformation.sourceItemKey === 'RandomStoreItem' &&
+          transaction.transformation.resultItemKey === 'TemporaryBoonRarityTrait',
       );
-    expect(twist).toMatchObject({ kind: 'wellPurchase', effect: 'yarn' });
+    expect(twist).toMatchObject({
+      kind: 'transformation',
+      transformation: { kind: 'stygianWellTwist' },
+    });
     expect(twist).toBeDefined();
     const twistOccurrence = product.occurrences.find((occurrence) =>
       occurrence.timeline.transactions.some((transaction) => transaction.owner === twist?.owner),
@@ -1765,46 +1849,48 @@ describe('engine-owned F/G execution semantic product', () => {
       occurrence.id.endsWith(':postboss'),
     );
     const refill = wellOccurrence?.timeline.transactions.find(
-      (transaction) => transaction.kind === 'wellRefill',
-    );
-    const refillPurchase = wellOccurrence?.timeline.transactions.find(
-      (transaction) =>
-        transaction.kind === 'wellPurchase' && transaction.generationKey === 'travelDealRefill',
+      (transaction) => transaction.kind === 'travelDealRefill',
     );
     const nextWellTransaction = wellOccurrence?.timeline.transactions.find(
       (transaction) =>
-        transaction.kind === 'wellPurchase' && transaction.generationKey === 'initial:secondRight',
+        transaction.kind === 'itemEffect' &&
+        transaction.itemKey === 'TemporaryImprovedDefenseTrait',
+    );
+    const refillOutcome = wellOccurrence?.timeline.transactions.find(
+      (transaction) =>
+        transaction.kind === 'itemEffect' && transaction.itemKey === 'ExtendedShopTrait',
     );
     const source = wellOccurrence?.timeline.transactions.find(
       (transaction) =>
-        transaction.kind === 'wellPurchase' && transaction.generationKey === 'initial:secondLeft',
+        transaction.kind === 'itemEffect' &&
+        transaction.itemKey === 'TemporaryImprovedSecondaryTrait',
     );
     const fountain = wellOccurrence?.timeline.transactions.find(
       (transaction) => transaction.kind === 'fountainUse',
     );
     expect(refill).toMatchObject({
-      kind: 'wellRefill',
-      generationKey: 'travelDealRefill',
-      offerKey: 'ExtendedShopTrait',
+      kind: 'travelDealRefill',
+      refill: {
+        carrier: 'stygianWell',
+        replacement: {
+          generationKey: 'travelDealRefill',
+          offerKey: 'ExtendedShopTrait',
+        },
+      },
     });
-    expect(refillPurchase).toBeDefined();
     expect(nextWellTransaction).toBeDefined();
-    expect(source).toMatchObject({ kind: 'wellPurchase', effect: 'neutral' });
-    expect(wellOccurrence?.timeline.dependencies).toContainEqual({
-      owner: refill?.owner,
-      afterOwner: source?.owner,
+    expect(refillOutcome).toBeDefined();
+    expect(source).toMatchObject({
+      kind: 'itemEffect',
+      effect: 'neutral',
+      extended: true,
     });
+    expect(wellOccurrence?.timeline.dependencies).not.toContainEqual(
+      expect.objectContaining({ afterOwner: source?.owner }),
+    );
     expect(wellOccurrence?.timeline.dependencies).toContainEqual({
-      owner: refillPurchase?.owner,
+      owner: refillOutcome?.owner,
       afterOwner: refill?.owner,
-    });
-    expect(wellOccurrence?.timeline.dependencies).toContainEqual({
-      owner: nextWellTransaction?.owner,
-      afterOwner: source?.owner,
-    });
-    expect(wellOccurrence?.timeline.dependencies).toContainEqual({
-      owner: nextWellTransaction?.owner,
-      afterOwner: refillPurchase?.owner,
     });
     expect(wellOccurrence?.timeline.dependencies).not.toContainEqual(
       expect.objectContaining({ owner: fountain?.owner }),
@@ -1843,35 +1929,40 @@ describe('engine-owned F/G execution semantic product', () => {
       (candidate) => candidate.id === wellId,
     );
     const refill = occurrence?.timeline.transactions.find(
-      (transaction) => transaction.kind === 'wellRefill',
+      (transaction) => transaction.kind === 'travelDealRefill',
     );
     const refillPurchase = occurrence?.timeline.transactions.find(
       (transaction) =>
-        transaction.kind === 'wellPurchase' && transaction.generationKey === 'travelDealRefill',
+        transaction.kind === 'itemEffect' && transaction.itemKey === 'ExtendedShopTrait',
     );
     const source = occurrence?.timeline.transactions.find(
       (transaction) =>
-        transaction.kind === 'wellPurchase' && transaction.generationKey === 'initial:secondLeft',
+        transaction.kind === 'itemEffect' &&
+        transaction.itemKey === 'TemporaryImprovedSecondaryTrait',
     );
     const competitor = occurrence?.timeline.transactions.find(
       (transaction) =>
-        transaction.kind === 'wellPurchase' && transaction.generationKey === 'initial:secondRight',
+        transaction.kind === 'itemEffect' &&
+        transaction.itemKey === 'TemporaryImprovedDefenseTrait',
     );
     expect(refill).toMatchObject({
-      kind: 'wellRefill',
-      generationKey: 'travelDealRefill',
-      offerKey: 'ExtendedShopTrait',
+      kind: 'travelDealRefill',
+      refill: {
+        carrier: 'stygianWell',
+        replacement: {
+          generationKey: 'travelDealRefill',
+          offerKey: 'ExtendedShopTrait',
+        },
+      },
     });
     expect(refillPurchase).toBeUndefined();
-    expect(source).toMatchObject({ kind: 'wellPurchase', effect: 'neutral' });
-    expect(competitor).toBeUndefined();
-    expect(occurrence?.timeline.dependencies).toContainEqual({
-      owner: refill?.owner,
-      afterOwner: source?.owner,
+    expect(source).toMatchObject({
+      kind: 'itemEffect',
+      effect: 'neutral',
+      extended: true,
     });
-    expect(occurrence?.timeline.dependencies).toEqual([
-      { owner: refill?.owner, afterOwner: source?.owner },
-    ]);
+    expect(competitor).toBeUndefined();
+    expect(occurrence?.timeline.dependencies).toEqual([]);
   });
 
   it('projects only supplied occurrence-local dependencies without semantic inference', () => {
