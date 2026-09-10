@@ -55,13 +55,13 @@ The planner already publishes two complementary facts:
 
 - `occurrence.overview.shop.offers[]` identifies each inventory row with an
   `offerKey`, `optionKey`, and authored reward; and
-- a purchased result becomes an acquisition transaction with an opaque,
-  canonical `sourceOwner` naming the exact shop offer.
+- a participating row's action becomes a Timeline transaction with its own
+  opaque, canonical `owner`.
 
-The Lua inventory stamps the native store object with `offerKey`, but the strict
-acquisition transaction protocol does not publish `offerKey`. The runtime can
-therefore lose the exact join and fall back to provider/game-name order. Existing
-Lua tests conceal the gap by manually adding an unsupported `offerKey` field to
+The Lua inventory stamps the native store object with `offerKey`, but the
+Overview row does not publish its exact transaction owner. The runtime can
+therefore lose the join and fall back to provider/game-name order. Existing Lua
+tests conceal the gap by manually adding an unsupported `offerKey` field to
 transactions.
 
 This is unsafe in I/Q World Shops where a normal and boosted boon can share a
@@ -90,30 +90,45 @@ order to justify callback-local mismatches.
 
 ## Locked Contract
 
-### 1. Exact World Shop source binding
+### 1. Exact World Shop transaction binding
 
-`ExecutionOverview.shop.offers[]` gains a required `sourceOwner` for each World
-Shop offer. It is the same canonical source-owner string already carried by an
-acquisition transaction produced from that offer.
+`ExecutionOverview.shop.offers[]` gains an optional `transactionOwner`. It is
+present exactly when interacting with that authored row publishes a Timeline
+transaction, and it equals that transaction's canonical `owner`.
+
+This is deliberately the transaction owner rather than the acquisition
+`sourceOwner`:
+
+- a direct boon or ordinary pickup normally has its Shop offer as the
+  acquisition source;
+- a purchased Mystery Boon is represented by its acquisition-entry source; and
+- Anvil of Fates publishes a transformation rather than an acquisition.
+
+All three still have one exact Timeline transaction for the participating Shop
+row. Simulation-neutral and unselected rows may have no transaction and omit the
+field.
 
 The two shop identities remain distinct:
 
 - `offerKey` identifies the inventory slot and remains the inventory assembly
   key; and
-- `sourceOwner` is the direct Overview-to-Timeline join used at the native
-  acquisition contact.
+- `transactionOwner`, when present, is the direct Overview-to-Timeline join used
+  at the native action contact.
 
 The planner constructs both identities. Lua treats both as opaque strings. Lua
 must not parse a planner address, infer boost state from a native name, or derive
 one identity from the other.
 
-When a native World Shop object is created, inventory assembly stamps its exact
-`sourceOwner` onto that object. When the object is consumed, the World Shop
-adapter resolves only the transaction indexed by that source owner.
+Inventory assembly marks every native object as World Shop material and carries
+its `transactionOwner` when one was published. The mark and owner must survive
+all native StoreOptions/button copies. At materialization, the adapter binds the
+object directly through the existing Timeline owner index.
 
-If no transaction exists for the stamped source, the contact is unowned and the
-native action continues. It must not claim another transaction by provider,
-carrier, authored order, or readiness.
+If the row has no `transactionOwner`, the object is unowned and the native action
+continues. Its World Shop marker prevents later generic acquisition or
+transformation claims from attaching it to another ready transaction. A
+published owner missing from the occurrence is malformed cross-product data,
+not an invitation to fall back.
 
 This join is correlation only. It does not restore purchase transactions,
 payment verification, affordability checks, or commerce-owned acquisition
@@ -209,8 +224,8 @@ No mismatch path may return early merely to preserve planner state.
 
 `packages/planner-engine` owns:
 
-- the canonical World Shop offer source identity;
-- publication of the direct shop Overview-to-Timeline join;
+- the canonical World Shop offer and participating-transaction identities;
+- publication of the direct shop-row-to-Timeline-transaction join;
 - the execution protocol and strict codec;
 - graph dependencies and required obligations;
 - the execution protocol version bump; and
@@ -246,23 +261,25 @@ Implement the missing product join before changing mismatch policy.
 
 Planner Engine work:
 
-1. Add required `sourceOwner` to every `ExecutionOverview.shop.offers[]` row.
-2. Construct it from the same typed shop-offer address already used by the
-   acquisition transaction assembler.
-3. Extend strict TypeScript codecs and validation so shop source owners are
-   bounded and unique inside the occurrence. The assembler's primary test and a
-   real fixture prove that a selected shop acquisition carries the identical
-   source owner; neither decoder infers provenance from the string's contents.
+1. Add optional `transactionOwner` to `ExecutionOverview.shop.offers[]`, present
+   exactly when the row's participating action publishes a transaction.
+2. Join the row to that transaction through the canonical room-action owner
+   already produced by the planner. Do not infer from reward type.
+3. Extend strict TypeScript codecs and occurrence validation so each published
+   owner is bounded, unique among Shop rows, and names exactly one transaction
+   in the same occurrence. Neither decoder infers provenance from the string's
+   contents.
 4. Bump the execution protocol once from 35 to 36.
 5. Regenerate execution fixtures from real authored plans; do not hand-author
    unsupported transaction fields.
 
 Plan Executor work:
 
-1. Decode the shop row's `sourceOwner` strictly.
-2. Stamp the native World Shop object with the exact opaque source owner during
-   inventory realization.
-3. Resolve store acquisition through the existing Timeline source index.
+1. Decode the optional shop-row `transactionOwner` strictly.
+2. Preserve a World Shop origin marker and the optional exact owner through
+   StoreOptions, button-data, and native-object copies.
+3. Resolve a published owner through the existing Timeline owner index; an
+   unowned marked object remains ineligible for generic ready-claim fallback.
 4. Remove World Shop reliance on synthetic acquisition `offerKey` fields and
    same-provider/readiness fallback matching.
 5. Preserve native boost presentation and rarity override on the exact normal or
@@ -271,7 +288,7 @@ Plan Executor work:
 Primary witnesses:
 
 - one planner fixture contains same-provider normal and boosted World Shop boon
-  offers and proves distinct `offerKey`, `sourceOwner`, and rarity payloads;
+  offers and proves distinct `offerKey`, `transactionOwner`, and rarity payloads;
 - the Lua strict decoder consumes that real fixture shape;
 - buying the two independent offers in reverse order installs each exact payload
   without mismatch;
@@ -345,7 +362,7 @@ Primary witnesses:
 Apply the same boundary to keepsakes, automatic outcomes, encounters,
 transformations, and loadout-owned steering.
 
-1. Preserve explicit source binding and lifecycle terminal contacts.
+1. Preserve explicit transaction binding and lifecycle terminal contacts.
 2. Preserve standard room-exit trait/arcana/keepsake/effect conformance.
 3. Convert callback-local outcome comparisons into diagnostics unless they are
    one of the locked checkpoint families.
@@ -405,7 +422,8 @@ the tested production heads are unchanged.
 
 Before closing each gate, review specifically for:
 
-- exact source correlation accidentally falling back to provider or readiness;
+- exact transaction correlation accidentally falling back to provider or
+  readiness;
 - a new executor semantic rule not present in the published product;
 - a peripheral adapter retaining direct mismatch authority without belonging to
   the closed list;
@@ -413,5 +431,5 @@ Before closing each gate, review specifically for:
 - mismatch paths suppressing native behavior;
 - diagnostics becoming an unbounded state/event system;
 - synthetic tests passing data that the strict production codec cannot emit;
-- protocol duplication between `offerKey` and `sourceOwner`; and
+- protocol duplication between `offerKey` and `transactionOwner`; and
 - superseded acquisition-steering or mismatch paths left live in parallel.
