@@ -2,7 +2,8 @@
 
 ## Status and bases
 
-Status: **Gates A-C implemented; Gate D live proof and closure remain**.
+Status: **Gates A-B implemented; Gate C requires live-evidence remediation;
+Gate D live proof and closure remain**.
 
 Planning bases:
 
@@ -61,16 +62,19 @@ This is resynchronization, not continuation of serialized executor machinery.
 
 ## Current implementation
 
-- `StartNewRun` is the only execution admission.
-- The active plan is decoded and frozen while the hero is constructed, the
-  starting loadout is verified after native startup, and the route cursor begins
-  at selected occurrence one.
-- The route cursor has no supported constructor at a later selected occurrence.
-- The runtime session is stored in a `currentRun` cache and contains transient
-  room coordinators, handles, native-object bindings, callbacks, and mismatch
-  state. None of that is valid recovery input.
-- Execution occurrences contain the canonical Postboss room as an ordinary
-  occurrence, but the wire does not explicitly mark it as a recovery boundary.
+- `StartNewRun` admits ordinary execution at selected occurrence one. Gate C
+  added a second, bounded admission at marked Postboss entry and an indexed
+  route constructor for that exact occurrence.
+- The first Gate C implementation stored the runtime session in a `currentRun`
+  cache. Live save/reload proved that this serializes transient room
+  coordinators, handles, native-object bindings, callbacks, and mismatch state
+  into the native save and can corrupt that save with `extra data at end`.
+  Runtime execution state must instead be process-local from construction.
+- The first Gate C implementation also realized a replacement Postboss room
+  after Hades II had already restored one. Recovery must instead adopt the
+  restored native room and construct only fresh executor coordinators.
+- Execution occurrences now mark canonical selected Postboss rooms explicitly
+  as recovery boundaries.
 - Decoding expands sequential diagnostic deltas into complete expected
   `roomEntered` and `beforeRoomExit` states. Ongoing execution intentionally
   treats those complete frames as diagnostic-only and blocks only on named
@@ -134,11 +138,16 @@ This is resynchronization, not continuation of serialized executor machinery.
 - Serialized executor session state is discarded. Recovery never restores an
   old route object, room coordinator, timeline handle, native-object binding,
   forcing scope, callback, or mismatch.
+- The executor registers no save-backed cache for runtime execution state. One
+  process-local state object is constructed at the composition root and is
+  explicitly reset at each new-run admission.
 - Success constructs a fresh route cursor at the matched selected occurrence,
   then constructs and enters an ordinary fresh room session for that Postboss.
-- The current native Postboss room is prepared through the same Overview and
-  incoming-reward realization products required at ordinary creation. The
-  recovery adapter adds no Postboss feature policy.
+- Success adopts the native Postboss room that Hades II already restored. It
+  stamps only the matched occurrence identity, then enters that same room
+  through the ordinary route/room lifecycle. It does not prepare, realize,
+  replace, or mutate the room from planner Overview or incoming-reward
+  products; those products own room creation, which has already happened.
 - The Postboss Timeline begins with no completed handles. Its Rack, fountain,
   Well, Pool, delivery, and other authored actions proceed normally.
 - Start-of-run keepsake and Hex effects are not replayed.
@@ -236,11 +245,12 @@ Commit boundary: `feat(executor): verify postboss admission state`.
 
 1. Add the one fresh-process mid-run admission entry point at native room
    start.
-2. Discard any serialized transient executor state before evaluating recovery.
+2. Remove the executor's save-backed runtime cache. Construct runtime state in
+   process-local composition scope and reset it explicitly for every new run.
 3. Add route construction at one exact selected index without weakening normal
    cursor advancement.
-4. On success, prepare, realize, and enter the matched Postboss through a fresh
-   ordinary room session.
+4. On success, adopt and enter the already-restored native Postboss through a
+   fresh ordinary room session without reconstructing or replacing it.
 5. On failure, record one passive mismatch and prove no later room retries.
 6. Prove that no loadout effect, completed Timeline action, or previous forcing
    scope is replayed.
@@ -252,14 +262,16 @@ the modpack-parent integration commit.
 
 1. With a full Underworld plan active, restore an H Postboss entry
    checkpoint whose state matches and complete a focused I test.
-2. Prove one admission-checked Postboss state mismatch becomes passive without
+2. Prove the executor adds no runtime graph to `CurrentRun`, and that the
+   native checkpoint saves and reloads without executor serialization errors.
+3. Prove one admission-checked Postboss state mismatch becomes passive without
    blocking the game.
-3. Prove one non-Postboss mid-run load becomes passive and never retries.
-4. If feasible in the same campaign, repeat the successful contact at a Surface
+4. Prove one non-Postboss mid-run load becomes passive and never retries.
+5. If feasible in the same campaign, repeat the successful contact at a Surface
    Postboss; otherwise retain it as the next explicit live-evidence gap.
-5. Run the complete planner, executor, Luacheck, fixture-identity, and parent
+6. Run the complete planner, executor, Luacheck, fixture-identity, and parent
    smoke gates once after focused tests stabilize.
-6. Amend the durable start-of-run-only integration contract with this single
+7. Amend the durable start-of-run-only integration contract with this single
    Postboss exception, update the native-contact audit and delivery history,
    and delete this temporary plan.
 
