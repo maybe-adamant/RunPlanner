@@ -763,7 +763,7 @@ describe('engine-owned F/G execution semantic product', () => {
     expect(mysteryOccurrence?.timeline.transactions).toContain(mysteryTransaction);
   });
 
-  it('publishes an authored optional acquisition as one obligated transaction', () => {
+  it('publishes an authored optional acquisition without making it an obligation', () => {
     const project = narcissusMysteryBoonProject();
     const assembly = simulateProjectAssembly(catalog, project);
     const product = assembleExecutionProduct({ assembly });
@@ -807,15 +807,14 @@ describe('engine-owned F/G execution semantic product', () => {
     expect(occurrence.timeline.transactions).toContainEqual(
       expect.objectContaining({ owner: mystery.transaction.owner }),
     );
-    expect(occurrence.timeline.obligations).toContainEqual(
-      expect.objectContaining({ owner: mystery.transaction.owner }),
-    );
     expect(
       occurrence.timeline.obligations.filter(
         (obligation) => obligation.owner === mystery.transaction.owner,
       ),
-    ).toHaveLength(1);
-    expect(occurrence.timeline.obligations).toHaveLength(occurrence.timeline.transactions.length);
+    ).toHaveLength(0);
+    expect(occurrence.timeline.obligations.length).toBeLessThan(
+      occurrence.timeline.transactions.length,
+    );
   });
 
   it('publishes the selected Circe resolution from a real complete-valid O occurrence', () => {
@@ -1125,7 +1124,7 @@ describe('engine-owned F/G execution semantic product', () => {
     );
   });
 
-  it('publishes required Onion and an authored neutral Well purchase', () => {
+  it('publishes an Onion acquisition without obligation and obligates a neutral Well effect', () => {
     const onion = productFor(onionObligationProject());
     const opening = onion.occurrences[0]!;
     const consolation = opening.timeline.transactions.find(
@@ -1136,10 +1135,9 @@ describe('engine-owned F/G execution semantic product', () => {
     expect(consolation).toBeDefined();
     if (consolation?.kind !== 'acquisition')
       throw new Error('required Onion transaction is missing');
-    expect(opening.timeline.obligations).toContainEqual({
-      owner: consolation.owner,
-      checkpoint: 'outgoingGeneration',
-    });
+    expect(opening.timeline.obligations).not.toContainEqual(
+      expect.objectContaining({ owner: consolation.owner }),
+    );
 
     let neutralProject = createCompleteFGProject();
     neutralProject = applyProjectCommand(neutralProject, catalog, {
@@ -2005,7 +2003,7 @@ describe('engine-owned F/G execution semantic product', () => {
     expect(projected.dependencies).not.toContainEqual({ owner: key(y), afterOwner: key(z) });
   });
 
-  it('publishes exactly one obligation for every intended transaction', () => {
+  it('obligates every intended non-acquisition transaction and no acquisition', () => {
     for (const project of [
       fOnlyProject(),
       artificerCreatedBoonProject(),
@@ -2014,17 +2012,50 @@ describe('engine-owned F/G execution semantic product', () => {
     ]) {
       const product = productFor(project);
       for (const occurrence of product.occurrences) {
-        expect(occurrence.timeline.obligations).toHaveLength(
-          occurrence.timeline.transactions.length,
+        const obligatedTransactions = occurrence.timeline.transactions.filter(
+          (transaction) => transaction.kind !== 'acquisition',
         );
+        expect(occurrence.timeline.obligations).toHaveLength(obligatedTransactions.length);
         for (const transaction of occurrence.timeline.transactions)
           expect(
             occurrence.timeline.obligations.filter(
               (obligation) => obligation.owner === transaction.owner,
             ),
-          ).toHaveLength(1);
+          ).toHaveLength(transaction.kind === 'acquisition' ? 0 : 1);
       }
     }
+  });
+
+  it('retains acquisition dependencies while omitting both owners from obligations', () => {
+    const product = productFor(loadSurfaceNOProject());
+    const occurrence = product.occurrences.find((entry) =>
+      entry.timeline.dependencies.some((dependency) => {
+        const byOwner = new Map(
+          entry.timeline.transactions.map((transaction) => [transaction.owner, transaction]),
+        );
+        return (
+          byOwner.get(dependency.owner)?.kind === 'acquisition' &&
+          byOwner.get(dependency.afterOwner)?.kind === 'acquisition'
+        );
+      }),
+    );
+    expect(occurrence).toBeDefined();
+    if (occurrence === undefined) throw new Error('fixture lacks an acquisition dependency');
+    const byOwner = new Map(
+      occurrence.timeline.transactions.map((transaction) => [transaction.owner, transaction]),
+    );
+    const dependency = occurrence.timeline.dependencies.find(
+      (entry) =>
+        byOwner.get(entry.owner)?.kind === 'acquisition' &&
+        byOwner.get(entry.afterOwner)?.kind === 'acquisition',
+    );
+    expect(dependency).toBeDefined();
+    expect(occurrence.timeline.obligations).not.toContainEqual(
+      expect.objectContaining({ owner: dependency?.owner }),
+    );
+    expect(occurrence.timeline.obligations).not.toContainEqual(
+      expect.objectContaining({ owner: dependency?.afterOwner }),
+    );
   });
 
   it('retains Chaos continuations in Overview, not normal Doors', () => {

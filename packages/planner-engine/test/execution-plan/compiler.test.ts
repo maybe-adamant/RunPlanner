@@ -2492,12 +2492,29 @@ describe('execution-plan compiler and codec', () => {
     );
 
     const selected = new Set(product.selectedOccurrenceIds);
-    const sourceForUnselected = product.occurrences.find(
-      (occurrence) =>
-        selected.has(occurrence.id) && occurrence.timeline.transactions[0] !== undefined,
+    const sourceForUnselected = product.occurrences.find((occurrence) => {
+      if (!selected.has(occurrence.id) || occurrence.resumeBoundary !== undefined) return false;
+      const obligatedOwners = new Set(
+        occurrence.timeline.obligations.map((obligation) => obligation.owner),
+      );
+      return occurrence.timeline.transactions.some((transaction) =>
+        obligatedOwners.has(transaction.owner),
+      );
+    });
+    const sourceTransaction = sourceForUnselected?.timeline.transactions.find((transaction) =>
+      sourceForUnselected.timeline.obligations.some(
+        (obligation) => obligation.owner === transaction.owner,
+      ),
     );
-    if (sourceForUnselected?.timeline.transactions[0] === undefined)
-      throw new Error('fixture lacks a transaction occurrence to clone');
+    const sourceObligation = sourceForUnselected?.timeline.obligations.find(
+      (obligation) => obligation.owner === sourceTransaction?.owner,
+    );
+    if (
+      sourceForUnselected === undefined ||
+      sourceTransaction === undefined ||
+      sourceObligation === undefined
+    )
+      throw new Error('fixture lacks an obligated transaction occurrence to clone');
     const unselectedOwner = 'unselected-occurrence-owner';
     const unselected = Object.freeze({
       ...sourceForUnselected,
@@ -2507,14 +2524,14 @@ describe('execution-plan compiler and codec', () => {
         ...sourceForUnselected.timeline,
         transactions: Object.freeze([
           Object.freeze({
-            ...sourceForUnselected.timeline.transactions[0],
+            ...sourceTransaction,
             owner: unselectedOwner,
           }),
         ]),
         dependencies: Object.freeze([]),
         obligations: Object.freeze([
           Object.freeze({
-            ...sourceForUnselected.timeline.obligations[0]!,
+            ...sourceObligation,
             owner: unselectedOwner,
           }),
         ]),
