@@ -125,8 +125,9 @@ other non-level traits must not receive an invented stack value.
 Jeweled Pom, Aspect of Persephone, Premium Service, and their eligibility rules
 are planner-side sources of one indivisible `effectiveLevel`. The executor does
 not identify or recompute those sources. For a fresh eligible row it supplies
-the final value through the native `StackNum` input, then verifies the acquired
-trait's level after selection.
+the final value through the native `StackNum` input. If the level is part of
+modeled durable state, the planner-selected room-exit `traitInventory` fact
+checks it later; the acquisition adapter does not read it back.
 
 This deliberately does not mutate Persephone's native provider distribution.
 The source combines Persephone's internal stack encoding with
@@ -202,12 +203,13 @@ records it for save/history purposes, but game source does not consume that
 history elsewhere during the run.
 
 Several offers may occur in one room without a per-offer charge cursor. Each
-selected trait completes at its exact native terminal, while room-exit
-conformance remains the authority for the aggregate retained charge state. If
-an incorrect spend makes a later native rarification unavailable, the owning
-contact reports the exact mismatch and native behavior remains operational.
+offer installs its exact authored rows, while room-exit conformance remains the
+authority for the acquired trait and aggregate retained charge state. If an
+incorrect spend makes a later authored surface mechanically impossible, that
+later steering contact reports the mismatch and native behavior remains
+operational.
 
-## Selection and native terminal
+## Selection and steering completion
 
 `HandleUpgradeChoiceSelection` is the native authority for all of the
 following:
@@ -220,22 +222,29 @@ following:
 - closing the screen; and
 - unlocking exits when appropriate.
 
-The executor observes the selected button but calls the native function first.
-After the exact selected-row callback returns, the acquisition completes from
-that bounded structural terminal. The adapter does not reconstruct the Hero's
-trait inventory, rarity, levels, or replacement state as a semantic proof.
+For a plain acquisition, the executor has finished its intervention after the
+initial `CreateBoonLootButtons` call returns with the authored rows installed.
+It may complete the steering owner there and release local DAG dependents. The
+later selected button, trait equipment, inventory, rarity, level, replacement,
+and screen closure remain native behavior and are not adapter-local semantic
+proof.
 
-This terminal settles only the primary acquisition. `AddTraitData` launches a
-trait's `AcquireFunctionName` on a thread, so the outer return does not claim a
-consequential selected-trait effect has finished.
+An authored selected-trait consequence retains the same owner through its last
+executor-owned nested steering contact. `AddTraitData` may launch the trait's
+`AcquireFunctionName` on a thread, so All Together, Natural Selection, Bridal
+Glow, Concave Stone, or Sea Star completes only after its own published random
+input has been supplied. This is still steering completion, not a readback of
+the resulting Hero state.
 
-### Native eligibility mismatch
+### Mechanical steering mismatch
 
-The selected identity remains the exact authored identity. If the native offer
-contact rejects it, the adapter reports a mismatch and does not complete the
-transaction. It does not substitute another provider member or infer the
-source predicate. Native input and the base callback remain operational after
-planner enforcement is disabled.
+The planner has already established eligibility. The adapter installs the
+published rows without calling `IsTraitEligible` or reconstructing provider
+policy. It reports an immediate mismatch only if a claimed native surface
+cannot accept that published input or a selected nested effect cannot receive
+its required random steering value. It does not substitute another provider
+member. Native input and the base callback remain operational after planner
+enforcement is disabled.
 
 ### Whole-offer Fallback Gold
 
@@ -244,10 +253,10 @@ Selecting it calls native `AddTraitToHero`, whose acquisition function emits
 optional currency. The planner models neither the gold amount nor a generated
 pickup obligation.
 
-`fallbackGold` therefore uses the same screen carrier but a distinct terminal:
-the native selection/history has completed and the hidden trait has been
-added. Its optional currency effect is native pass-through. It is not proven
-by the ordinary visible-trait rarity/level checks and does not become a direct
+`fallbackGold` therefore uses the same screen carrier and completes steering
+after its one authored row is installed. Its later selection, history, hidden
+trait, and optional currency effect are native pass-through. It is not proven
+by ordinary visible-trait rarity/level checks and does not become a direct
 consumable carrier.
 
 ## Selected-trait consequence inventory
@@ -257,11 +266,11 @@ authored before their native acquire function runs. All three use the same
 option-owned result on every acquisition path; the executor changes only the
 native contact that consumes it.
 
-| Trait             | Authored consequence                                                  | Native steering contact                                                                       | Direct offer | Concave Stone residual          | Echo Boon Boon Boon                    |
-| ----------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------ | ------------------------------- | -------------------------------------- |
-| Bridal Glow       | One equipped trait key                                                | `AddRarityToTraits.ForceUpgrade` inside `HeraSuperchargeBoon`                                 | Same result  | Same result on the residual row | Same result on the selected nested row |
-| All Together      | One grant or exhausted `null` for each of Earth, Fire, Air, and Water | Four selections made by `GrantBoons`                                                          | Same result  | Same result on the residual row | Same result on the selected nested row |
-| Natural Selection | Ordered sequence of one to eight successful core-slot level targets   | Initial `FYShuffle` plus the observed `IncreaseTraitLevel` sequence inside `DistributeLevels` | Same result  | Same result on the residual row | Same result on the selected nested row |
+| Trait             | Authored consequence                                                  | Native steering contact                                                              | Direct offer | Concave Stone residual          | Echo Boon Boon Boon                    |
+| ----------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ------------ | ------------------------------- | -------------------------------------- |
+| Bridal Glow       | One equipped trait key                                                | `AddRarityToTraits.ForceUpgrade` inside `HeraSuperchargeBoon`                        | Same result  | Same result on the residual row | Same result on the selected nested row |
+| All Together      | One grant or exhausted `null` for each of Earth, Fire, Air, and Water | Four selections made by `GrantBoons`                                                 | Same result  | Same result on the residual row | Same result on the selected nested row |
+| Natural Selection | Ordered sequence of one to eight successful core-slot level targets   | Initial `FYShuffle` inside `DistributeLevels`; native mutation remains authoritative | Same result  | Same result on the residual row | Same result on the selected nested row |
 
 The remaining selected-trait dispositions are not missing instances of this
 carrier contract. Circe and Icarus already own dedicated option results and
@@ -276,9 +285,9 @@ into another selected-option result.
 | Path                                                                | Disposition                                                                                                                                                                                                        |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `UseLoot` rejects before pickup                                     | No acquisition begins. Native behavior continues.                                                                                                                                                                  |
-| Screen opens and authored selection occurs                          | Complete after the exact native selection callback returns.                                                                                                                                                        |
-| Wrong option is selected                                            | Let native selection finish, record player divergence, and stop steering.                                                                                                                                          |
-| Bound screen is rerolled                                            | Let native reroll finish and do not reinstall the initial authored offer; the exact authored terminal or room-exit conformance reports divergence.                                                                 |
+| Initial screen installs the authored rows                           | Complete the plain acquisition's steering owner after native screen construction returns.                                                                                                                          |
+| Wrong option is selected                                            | Let native selection finish. The adapter does not compare it; a published named conformance fact may later report the durable difference.                                                                          |
+| Bound screen is rerolled                                            | Let native reroll finish and do not reinstall the initial authored offer; room-exit conformance reports a modeled durable divergence when one exists.                                                              |
 | Calling Card or provider rarification                               | Let native behavior run without observing individual button presses; room-exit conformance owns the retained charge state.                                                                                         |
 | Concave Stone recursively invokes selection with `DoubleBoonChance` | Preserve the primary handle while the focused nested residual contact resolves; the residual row carries its own Bridal Glow, Natural Selection, or All Together consequence and is not a second primary terminal. |
 | Selection callback is observed again after completion               | Treat it as incidental native activity; never reuse the completed owner.                                                                                                                                           |
@@ -292,8 +301,9 @@ authored result reports a mismatch; the native reroll remains playable.
 
 The focused ordinary adapter satisfies this contract. It begins at
 `HandleLootPickup`, keeps its state on the bound native loot, installs the
-published base rarity once, and retains the outer scope through Concave Stone's
-bounded recursive selection.
+published base rarity once, completes plain steering after the initial screen
+is constructed, and retains the outer scope only for a published nested effect
+such as Concave Stone.
 
 The occurrence-local Timeline product is sufficient and uses no global action
 cursor or producer inference:
@@ -305,7 +315,7 @@ cursor or producer inference:
 - screen callbacks recover their transaction through that bound loot;
 - owner completion remains shared across those handles.
 
-The execution product carries base rarity alongside effective
-rarity, effective level, the selected-trait terminal, and room-exit keepsake
-conformance. No rarification-action wire shape or other planner semantic
-addition is justified by this audit.
+The execution product carries base rarity alongside effective rarity,
+effective level, selected nested-effect inputs, and room-exit conformance. No
+rarification-action wire shape or other planner semantic addition is justified
+by this audit.

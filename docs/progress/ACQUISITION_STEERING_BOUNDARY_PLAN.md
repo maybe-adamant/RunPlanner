@@ -2,7 +2,7 @@
 
 ## Status and bases
 
-Status: **Gate A implemented; Gates B-C remain**.
+Status: **Gates A-B implemented; Gate C live closure remains**.
 
 Planning bases:
 

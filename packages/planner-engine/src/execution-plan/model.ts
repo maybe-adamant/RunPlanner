@@ -359,9 +359,10 @@ export interface ExecutionLevelResolution {
 /** Published acquisition roles are all intended materializations.
  *
  * Time Piece is intentionally absent: the planner consumes that acquisition
- * during simulation and publication omits it.  The aggregate of intended
- * acquisitions plus room-exit keepsake conformance proves the authored room
- * outcome without a second runtime adapter or exact source-identity claim.
+ * during simulation and publication omits it. Published acquisitions steer
+ * their exact native outcomes and retain meaningful local dependencies;
+ * planner-selected named conformance independently proves durable modeled
+ * state. Simulation-neutral acquisitions require no second runtime proof.
  */
 export type ExecutionAcquisitionDisposition = 'normal' | 'artificer';
 
@@ -382,7 +383,7 @@ export interface ExecutionAcquisitionRole {
    */
   readonly seaStarResult?: { readonly kind: 'proc' | 'noProc' };
   /**
-   * Source-owned Artificer materialization proof used when its generated
+   * Source-owned Artificer materialization input used when its generated
    * child was consumed by Time Piece and therefore has no transaction of its
    * own.  This is intentionally only the native replacement identity and
    * reward steering payload; it is not a second acquisition node.

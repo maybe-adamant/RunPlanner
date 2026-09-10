@@ -82,7 +82,7 @@ sequence. A native object with no compatible ready action runs unchanged. This
 preserves unmodeled drops while allowing generated and transformed pickups to
 reuse the consumer without teaching it their source semantics.
 
-## Accepted interaction and terminal
+## Accepted interaction and steering completion
 
 `UseConsumableItem` rejects an attempted interaction before native use begins
 when death handling, item blocking, costs, requirements, or living enemies
@@ -98,7 +98,7 @@ terminal. Native code still has to:
 4. update `LastReward`; and
 5. refresh exit readiness.
 
-The truthful execution boundary is therefore:
+The useful execution boundary is therefore:
 
 ```text
 bound or unbound candidate enters UseConsumableItem
@@ -106,13 +106,15 @@ bound or unbound candidate enters UseConsumableItem
   -> ConsumableUsedPresentation confirms acceptance
   -> retain its bound owner or claim one compatible ready normal action
   -> native UseConsumableItem returns
-  -> complete the resolved acquisition
+  -> release any local dependency owned by the resolved acquisition
 ```
 
 A rejected attempt never begins the transaction. An error after acceptance
-does not complete it. Completion after the native call returns is the
-structural terminal for the synchronous native sequence; simulation-neutral
-presentation or health/Gold threads are not execution obligations.
+does not complete its steering handle. Completion after the native call
+returns records only that this synchronous contact finished and may release a
+local DAG dependent. It is not proof of the item's semantic result, and the
+acquisition itself is not a checkpoint obligation. Simulation-neutral
+presentation or health/Gold threads require no blocking proof.
 
 The executor does not call the item's use functions itself. In particular, it
 does not reproduce health, Magick, Gold, Armor, element, Forfeit, resource,
@@ -144,7 +146,7 @@ Sharing `UseConsumableItem` is not sufficient to join this family:
 
 | Acquisition                                          | Owning boundary                                                                                                                                                               |
 | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `StoreRewardRandomStack` and source-eligible Nectar  | Direct level acquisition; native target steering and a bounded native terminal are required.                                                                                  |
+| `StoreRewardRandomStack` and source-eligible Nectar  | Direct level acquisition; native target/count steering at the bounded `AddStackToTraits` contact is required.                                                                 |
 | `TalentDrop`, `TalentBigDrop`, and `MinorTalentDrop` | Spell/Path/Hex execution. Their `OpenTalentScreen` use function starts an interactive talent-tree action.                                                                     |
 | Trait, Pom, Chaos, and Spell loot                    | Their native choice-screen adapters.                                                                                                                                          |
 | `BlindBoxLoot` and other wrapped rewards             | The producer and generated-child chain, followed by the child's applicable consumer.                                                                                          |
@@ -172,8 +174,9 @@ keeps the native base path operational; no substitute is exposed to the
 consumer.
 
 This keeps Death Defiance eligibility and other volatile offer policy with the
-native contact that can answer it. The pickup consumer only verifies the exact
-realized identity it was given.
+native contact that can answer it. The pickup consumer only claims a compatible
+published role for the accepted native identity it was given; it does not
+compare a later semantic result.
 
 ## Sea Star boundary
 
@@ -187,19 +190,19 @@ while the source interaction is active. After a proc, the completed source
 binding yields to the ordinary compatible-ready claim for the newly ready
 duplicate action on its next accepted use; no separate object-correlation
 mechanism exists. The direct-pickup adapter remains responsible only for that
-accepted-use claim and terminal.
+accepted-use claim and bounded dependency release.
 
 ## Planner and executor disposition
 
 The planner remains the sole authority for which acquisition exists and which
 specialized result, producer relation, and lifecycle apply. The executor
-contributes only native correlation and the accepted-use/terminal boundary
-described above.
+contributes only native correlation and the accepted-use/dependency-release
+boundary described above.
 
 Representative execution witnesses are sufficient:
 
-- an accepted ordinary Max Health pickup completes only after the native use
-  call returns;
+- an accepted ordinary Max Health pickup releases its handle only after the
+  native use call returns;
 - a rejected interaction does not begin;
 - a fixed element pickup has applied its native element trait before
   completion;

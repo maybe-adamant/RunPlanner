@@ -41,18 +41,18 @@ A family is not covered when only its ordinary loot-screen carrier works.
   equipment, exceptional trait dispositions, Chaos, replacement, and level
   outcomes.
 - [Ordinary trait-offer execution](ORDINARY_TRAIT_OFFER_EXECUTION.md) — exact
-  Olympian, Hermes, and Hammer loot, screen, row-action, selection, and terminal
-  contacts.
+  Olympian, Hermes, and Hammer loot, initial-screen steering, nested effects,
+  and named-conformance boundary.
 - [Chaos trait-offer execution](CHAOS_TRAIT_OFFER_EXECUTION.md) — exact
   Trial Upgrade admission, post-sort paired-row steering, native Denial and
-  reroll boundaries, processed values, and selected-pair proof.
+  reroll boundaries, processed values, and room-exit pair conformance.
 - [Level-acquisition execution](LEVEL_ACQUISITION_EXECUTION.md) — visible Pom
   menus and direct Pom Slice/Nectar target steering, accepted entry contacts,
-  threaded completion, and shared acquisition ownership.
+  threaded steering completion, and shared acquisition ownership.
 - [Direct-pickup acquisition execution](DIRECT_PICKUP_ACQUISITION_EXECUTION.md)
   — bound-or-ready action correlation, accepted consumable use, native
-  terminal settlement, specialized exclusions, focused handoff, and the Sea
-  Star reuse boundary.
+  dependency release, specialized exclusions, focused handoff, and the Sea Star
+  reuse boundary.
 - [Reward transformation execution](REWARD_TRANSFORMATION_EXECUTION.md) —
   Time Piece publication omission and Artificer source disposition, bounded
   native contacts, Artificer reward steering, Forfeit handoff, and
@@ -129,3 +129,7 @@ Relevant durable authorities:
    are sparse; `elementCounts` is deliberately present at every complete
    room-exit snapshot so unchanged vectors catch unintended gains. Complete Run
    State diagnostics never block execution.
+8. Acquisition transactions are steering capabilities, not checkpoint
+   obligations. Their completion may release a same-room DAG dependent after
+   the last executor-owned intervention; only planner-selected named
+   conformance facts prove durable modeled outcomes.

@@ -220,19 +220,21 @@ any BlindBoxLoot enters UseConsumableItem
        -> CreateLoot returns the exact provider loot object
        -> the hidden-source role binds to that object
   -> player interacts with the provider loot
-       -> ordinary trait-offer steering and native terminal
+       -> ordinary trait-offer steering completes after the authored rows are installed
 ```
 
-The box use begins the acquisition but does not complete it. Completion belongs
-to the ordinary trait interaction after the hidden provider has been created
-and its native screen has closed. `UnwrapRandomLoot` is a bounded native scope,
-not a callback cursor or a second Timeline owner.
+The box use begins the acquisition but does not complete its steering handle.
+Completion belongs to the ordinary trait interaction after the hidden provider
+has been created and its authored rows have been installed. The later selected
+trait and screen closure are native/conformance-owned. `UnwrapRandomLoot` is a
+bounded native scope, not a callback cursor or a second Timeline owner.
 
 Once a Mystery Box exists, this effect chain is producer-agnostic: an already-
 bound transaction carrying the exact `box` role and its `afterUnwrap`
-`hiddenSource` role may use the same unwrap/provider/trait path. Commerce owns
-purchase creation and binding; this slice does not claim an unbound shop
-purchase.
+`hiddenSource` role may use the same unwrap/provider/trait path. An accepted
+unbound box may instead claim one compatible ready acquisition. The adapter
+does not distinguish room, NPC, Shop, or Shrine provenance after the box
+exists.
 
 The executor changes only `GiveLoot`'s native `ForceLootName` input. It must
 preserve the native ordering in which `GiveLoot` runs before the created loot
