@@ -4,6 +4,7 @@ import type { HermesShrineCandidateContext } from '../../hermes-shrine';
 import {
   createAcquisitionRoleAddress,
   createAcquisitionEntryAddress,
+  createTravelDealRefillRealizationAddress,
   createEncounterPhaseAddress,
   createBiomeAddress,
   createTargetAddress,
@@ -396,6 +397,34 @@ export function evaluateBiomeRewardChronology(
       );
       derivedAcquisitionEntryContexts.set(key, combined);
       const first = combined[0];
+      if (first?.kind === 'travelDealRefill' && first.address.site.owner.kind === 'occurrence') {
+        const origin = first.address.site.owner;
+        const host = rooms.get(semanticAddressKey(origin));
+        const authoredEntry =
+          host?.kind === 'authored'
+            ? host.acquisitionSites[first.address.site.pointKey]?.entries[first.address.entryKey]
+            : undefined;
+        if (authoredEntry !== undefined) {
+          const realizationOwner = createTravelDealRefillRealizationAddress(
+            createBiomeAddress(origin.routeKey, origin.biomeKey),
+            origin.occurrenceId,
+          );
+          recordTimelineNode(realizationOwner, true);
+          const replacementAction =
+            host?.kind === 'authored'
+              ? host.roomActionRoster.rows.find(
+                  (row) =>
+                    !row.stale &&
+                    row.rank !== null &&
+                    row.reference.kind === 'interactAcquisitionEntry' &&
+                    row.reference.siteKey === first.address.site.pointKey &&
+                    row.reference.entryKey === first.address.entryKey,
+                )
+              : undefined;
+          if (replacementAction !== undefined)
+            recordTimelineDependency(replacementAction.owner, realizationOwner);
+        }
+      }
       if (
         (first?.kind !== 'travelDealRefill' &&
           first?.kind !== 'infernalContractReward' &&
@@ -1591,6 +1620,7 @@ export function evaluateBiomeRewardChronology(
         for (const frontier of transition.producerFrontiers)
           indexRewardProducerFrontier(producerFrontiers, frontier);
         recordAcquisitionRoleFrontiers(transition.roleFrontiers);
+        recordTimelineFacts(transition.timelineFacts);
         if (room !== undefined)
           recordTraitChildSettlements(transition.traitChildSettlements, room.origin);
         break;
@@ -1666,6 +1696,7 @@ export function evaluateBiomeRewardChronology(
         for (const frontier of transition.producerFrontiers)
           indexRewardProducerFrontier(producerFrontiers, frontier);
         recordAcquisitionRoleFrontiers(transition.roleFrontiers);
+        recordTimelineFacts(transition.timelineFacts);
         if (room !== undefined)
           recordTraitChildSettlements(transition.traitChildSettlements, room.origin);
         if (transition.authoredSiteSettlement !== undefined && room !== undefined)

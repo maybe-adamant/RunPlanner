@@ -25,7 +25,7 @@ import type { PlannerTimelineFacts } from '../timeline-facts';
 import type { StygianWellEffect } from '../stygian-well';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 
-/** Exact planner-owned realization of a Travel Deal Well refill. */
+/** Exact planner-owned realization of a Travel Deal Stygian Well refill. */
 export interface WellRefillRealization {
   readonly owner: SemanticAddress;
   /** Stable inventory owner; it becomes the purchase owner only when bought. */
@@ -231,7 +231,7 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
           readonly value: NonNullable<AuthoredKeepsakeEquipResults['transcendentEmbryo']>;
         };
   };
-  /** Deferred Travel Deal refill payloads, separate from authored purchases. */
+  /** Deferred Stygian Well Travel Deal refill payloads, separate from authored purchases. */
   readonly wellRefillRealizations: readonly WellRefillRealization[];
   /** Exact automatic Boss resolutions; empty Figurine keys mean consumption without activation. */
   readonly bossArcanaOutcomes: readonly BossArcanaOutcome[];

@@ -59,7 +59,7 @@ import {
 } from './branch-primitives';
 import { type ReachedTraitChildCheckpoint } from './trait-settlement';
 import { addRewardFinding, rewardFinding } from './findings';
-import type { PlannerTimelineDependency, PlannerTimelineNode } from '../timeline-facts';
+import { EMPTY_PLANNER_TIMELINE_FACTS } from '../timeline-facts';
 
 export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalVisitRoom;
 
@@ -240,16 +240,6 @@ export function settleShopAcquisitionSite(
         row.rank !== null &&
         row.reference.kind === 'interactShopOffer' &&
         row.reference.offerKey === offerKey,
-    )?.owner;
-  const actionOwnerForPurchaseKey = (purchaseKey: string): SemanticAddress | undefined =>
-    room.roomActionRoster.rows.find(
-      (row) =>
-        !row.stale &&
-        row.rank !== null &&
-        ((row.reference.kind === 'interactShopOffer' && row.reference.offerKey === purchaseKey) ||
-          (row.reference.kind === 'interactAcquisitionEntry' &&
-            row.reference.siteKey === 'roomExit' &&
-            row.reference.entryKey === purchaseKey)),
     )?.owner;
   const roleFrontiers: AcquisitionRoleFrontier[] = [];
   const derivedEntryFrontiers: DerivedAcquisitionEntryFrontier[] = [];
@@ -1165,40 +1155,6 @@ export function settleShopAcquisitionSite(
       context.findingChronology ?? historyChronology(historySequence),
     );
   }
-  const timelineNodes = new Map<string, PlannerTimelineNode>();
-  const timelineDependencies = new Map<string, PlannerTimelineDependency>();
-  const recordFirstPurchaseBarrier = (
-    sourcePurchaseKey: string | undefined,
-    qualifyingPurchaseKeys: readonly string[],
-  ): void => {
-    if (sourcePurchaseKey === undefined) return;
-    const sourceOwner = actionOwnerForPurchaseKey(sourcePurchaseKey);
-    if (sourceOwner === undefined) return;
-    const sourceOwnerKey = semanticAddressKey(sourceOwner);
-    timelineNodes.set(sourceOwnerKey, Object.freeze({ owner: sourceOwner, included: true }));
-    for (const purchaseKey of qualifyingPurchaseKeys) {
-      const competitorOwner = actionOwnerForPurchaseKey(purchaseKey);
-      if (competitorOwner === undefined) continue;
-      const competitorOwnerKey = semanticAddressKey(competitorOwner);
-      if (competitorOwnerKey === sourceOwnerKey) continue;
-      timelineDependencies.set(
-        `${competitorOwnerKey}\u0000${sourceOwnerKey}`,
-        Object.freeze({ owner: competitorOwner, afterOwner: sourceOwner }),
-      );
-    }
-  };
-  for (const frontier of derivedEntryFrontiers) {
-    if (frontier.kind === 'travelDealRefill')
-      recordFirstPurchaseBarrier(
-        frontier.sourceOfferKey,
-        entry.offers.map((offer) => offer.offerKey),
-      );
-    if (frontier.kind === 'echoDoubleShopReward')
-      recordFirstPurchaseBarrier(
-        frontier.sourceOfferKey,
-        frontier.eligibleSourceOfferKeys ?? Object.freeze([]),
-      );
-  }
   return Object.freeze({
     site,
     entries: Object.freeze(
@@ -1240,10 +1196,7 @@ export function settleShopAcquisitionSite(
     roleFrontiers: Object.freeze(roleFrontiers),
     derivedEntryFrontiers: Object.freeze(derivedEntryFrontiers),
     traitChildSettlements: Object.freeze(traitChildSettlements),
-    timelineFacts: Object.freeze({
-      nodes: Object.freeze([...timelineNodes.values()]),
-      dependencies: Object.freeze([...timelineDependencies.values()]),
-    }),
+    timelineFacts: EMPTY_PLANNER_TIMELINE_FACTS,
   });
 }
 

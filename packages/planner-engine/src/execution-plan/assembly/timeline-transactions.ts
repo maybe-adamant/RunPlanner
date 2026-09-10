@@ -21,7 +21,12 @@ import {
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import { agreement, executionRoomOwnerKey } from './support';
 import { assembleLifecycleWindow } from './lifecycle';
-import { executionKeepsakeEquipResults, executionRewardFromOffer } from './overview';
+import {
+  executionKeepsakeEquipResults,
+  executionRewardFromOffer,
+  hermesShrineTravelDealRefill,
+  travelDealRefill,
+} from './overview';
 import type {
   ExecutionAcquisitionRole,
   ExecutionLevelResolution,
@@ -623,14 +628,15 @@ export function executionTimelineTransactions(
     }
     if (timeline.action.reference.kind === 'purchaseStygianWellOffer') {
       const generationKey = timeline.action.reference.generationKey;
-      const slot =
-        generationKey === 'travelDealRefill'
-          ? undefined
-          : (generationKey.slice('initial:'.length) as 'healing' | 'secondLeft' | 'secondRight');
+      const slot = generationKey.startsWith('initial:')
+        ? (generationKey.slice('initial:'.length) as 'healing' | 'secondLeft' | 'secondRight')
+        : undefined;
       const offerKey =
         generationKey === 'travelDealRefill'
           ? room.stygianWell?.travelDealRefillKey
-          : room.stygianWell?.offerKeyBySlot[slot!];
+          : slot === undefined
+            ? undefined
+            : room.stygianWell?.offerKeyBySlot[slot];
       if (offerKey === undefined || offerKey === null)
         throw new CompilerError(
           'executionCoverageMissing',
@@ -645,20 +651,33 @@ export function executionTimelineTransactions(
       const extendedDirectPurchase =
         room.stygianWellExtendedDirectPurchaseItemKeys?.includes(offerKey) === true;
       const twistResultKey =
-        room.stygianWell?.twistResultKeyBySlot?.[
-          generationKey === 'travelDealRefill' ? 'travelDealRefill' : slot!
-        ];
+        generationKey === 'travelDealRefill'
+          ? room.stygianWell?.twistResultKeyBySlot?.travelDealRefill
+          : slot === undefined
+            ? undefined
+            : room.stygianWell?.twistResultKeyBySlot?.[slot];
       const wellOwner = semanticAddressKey(timeline.action.owner);
-      add({
-        kind: 'wellPurchase',
-        owner: wellOwner,
-        generationKey,
-        offerKey,
-        effect,
-        extendedDirectPurchase,
-        ...(twistResultKey === undefined || twistResultKey === null ? {} : { twistResultKey }),
-        window: windowFor(wellOwner),
-      });
+      if (twistResultKey !== undefined && twistResultKey !== null) {
+        add({
+          kind: 'transformation',
+          owner: wellOwner,
+          transformation: Object.freeze({
+            kind: 'stygianWellTwist',
+            sourceItemKey: offerKey,
+            resultItemKey: twistResultKey,
+          }),
+          window: windowFor(wellOwner),
+        });
+      } else {
+        add({
+          kind: 'itemEffect',
+          owner: wellOwner,
+          itemKey: offerKey,
+          effect,
+          extended: extendedDirectPurchase,
+          window: windowFor(wellOwner),
+        });
+      }
       continue;
     }
     const shopOffer =
@@ -831,20 +850,25 @@ export function executionTimelineTransactions(
           'executionCoverageMissing',
           `${room.gameName} has an Anvil result on non-Anvil offer ${shopOffer.offerKey}`,
         );
-      add({
-        kind: 'shopPurchase',
-        owner: acquisitionOwner,
-        sourceOwner: semanticAddressKey(source),
-        reward,
-        producerLifecycleKey: acquisitionSource.producerLifecycleKey,
-        roles,
-        offerKey: shopOffer.offerKey,
-        rewardType: shopOffer.offer.rewardType,
-        ...(shopOffer.anvilResult == null
-          ? {}
-          : { anvilResult: Object.freeze({ ...shopOffer.anvilResult }) }),
-        window: windowFor(acquisitionOwner),
-      });
+      if (shopOffer.offer.rewardType === 'ChaosWeaponUpgrade') {
+        add({
+          kind: 'transformation',
+          owner: acquisitionOwner,
+          transformation: Object.freeze({ ...shopOffer.anvilResult! }),
+          window: windowFor(acquisitionOwner),
+        });
+      } else {
+        add({
+          kind: 'acquisition',
+          owner: acquisitionOwner,
+          sourceOwner: semanticAddressKey(source),
+          reward,
+          producerLifecycleKey: acquisitionSource.producerLifecycleKey,
+          roles,
+          ...(hermesShrineSourceKey === undefined ? {} : { hermesShrineSourceKey }),
+          window: windowFor(acquisitionOwner),
+        });
+      }
     } else {
       add({
         kind: 'acquisition',
@@ -866,14 +890,58 @@ export function executionTimelineTransactions(
       refill.owner.routeKey !== room.origin.routeKey
     )
       continue;
+    const sourceRow = activeRows.find(
+      (candidate) => semanticAddressKey(candidate.owner) === semanticAddressKey(refill.sourceOwner),
+    );
+    if (
+      sourceRow?.reference.kind !== 'purchaseStygianWellOffer' ||
+      !sourceRow.reference.generationKey.startsWith('initial:')
+    )
+      throw new CompilerError(
+        'executionCoverageMissing',
+        `${room.gameName} lacks Travel Deal Well source generation`,
+      );
     add({
-      kind: 'wellRefill',
+      kind: 'travelDealRefill',
       owner: semanticAddressKey(refill.owner),
-      generationKey: 'travelDealRefill',
-      offerKey: refill.offerKey,
-      effect: refill.effect,
-      ...(refill.twistResultKey === undefined ? {} : { twistResultKey: refill.twistResultKey }),
+      refill: Object.freeze({
+        carrier: 'stygianWell',
+        source: Object.freeze({
+          owner: semanticAddressKey(refill.sourceOwner),
+          generationKey: sourceRow.reference.generationKey as
+            'initial:healing' | 'initial:secondLeft' | 'initial:secondRight',
+        }),
+        replacement: Object.freeze({
+          generationKey: 'travelDealRefill',
+          offerKey: refill.offerKey,
+          effect: refill.effect,
+          ...(refill.twistResultKey === undefined ? {} : { twistResultKey: refill.twistResultKey }),
+        }),
+      }),
       window: windowFor(semanticAddressKey(refill.sourceOwner)),
+    });
+  }
+  const worldRefill = travelDealRefill(
+    room,
+    biome,
+    room.entryState?.offers.map((offer) => ({ offerKey: offer.offerKey })) ?? [],
+  );
+  if (worldRefill !== undefined) {
+    const sourceWindow = windowFor(worldRefill.refill.source.owner);
+    add({
+      kind: 'travelDealRefill',
+      owner: worldRefill.owner,
+      refill: worldRefill.refill,
+      window: sourceWindow,
+    });
+  }
+  const shrineRefill = hermesShrineTravelDealRefill(room, biome);
+  if (shrineRefill !== undefined) {
+    add({
+      kind: 'travelDealRefill',
+      owner: shrineRefill.owner,
+      refill: shrineRefill.refill,
+      window: windowFor(shrineRefill.sourceOwner),
     });
   }
   for (const outcome of biome.rewards.bossArcanaOutcomes) {

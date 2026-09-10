@@ -161,9 +161,9 @@ export interface RoomActionAddress extends BiomeOwnedAddress {
   readonly occurrenceId: OccurrenceId;
   readonly actionKey: string;
 }
-/** Planner-owned deferred realization of one Travel Deal Well refill. */
-export interface WellRefillRealizationAddress extends BiomeOwnedAddress {
-  readonly kind: 'wellRefillRealization';
+/** Planner-owned deferred realization of one Travel Deal refill. */
+export interface TravelDealRefillRealizationAddress extends BiomeOwnedAddress {
+  readonly kind: 'travelDealRefillRealization';
   readonly occurrenceId: OccurrenceId;
   readonly generationKey: 'travelDealRefill';
 }
@@ -379,7 +379,7 @@ export type SemanticAddress =
   | HubDecisionAddress
   | LocalRewardAddress
   | RoomActionAddress
-  | WellRefillRealizationAddress
+  | TravelDealRefillRealizationAddress
   | RoomRunStateCheckpointAddress
   | LocalVisitDecisionAddress
   | LocalVisitSlotAddress
@@ -691,12 +691,12 @@ export function createRoomActionAddress(
     actionKey: nonBlank(actionKey, 'actionKey'),
   });
 }
-export function createWellRefillRealizationAddress(
+export function createTravelDealRefillRealizationAddress(
   biome: BiomeAddress,
   occurrenceId: OccurrenceId,
-): WellRefillRealizationAddress {
+): TravelDealRefillRealizationAddress {
   return Object.freeze({
-    kind: 'wellRefillRealization',
+    kind: 'travelDealRefillRealization',
     ...owner(biome),
     occurrenceId,
     generationKey: 'travelDealRefill' as const,
@@ -1100,7 +1100,7 @@ export function semanticAddressKey(address: SemanticAddress): string {
       return JSON.stringify([...base, address.occurrenceId, address.groupKey, address.slotKey]);
     case 'roomAction':
       return JSON.stringify([...base, address.occurrenceId, address.actionKey]);
-    case 'wellRefillRealization':
+    case 'travelDealRefillRealization':
       return JSON.stringify([...base, address.occurrenceId, address.generationKey]);
     case 'roomRunStateCheckpoint':
       return JSON.stringify([

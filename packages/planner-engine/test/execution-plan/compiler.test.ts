@@ -135,12 +135,7 @@ function qSupplyChainSlices(project: ProjectDocument) {
     .sort((left, right) => left.pickupKey.localeCompare(right.pickupKey));
 }
 
-function shrineOverviewWithPairing(
-  initialPurchase = true,
-  initialSource = true,
-  refillPurchase = true,
-  refillSource = true,
-) {
+function shrineOverviewWithPairing(initialPurchase = true, initialSource = true) {
   return {
     encounterPhases: [],
     requiredObjects: [],
@@ -167,14 +162,6 @@ function shrineOverviewWithPairing(
           slotIndex: 3,
         },
       ],
-      travelDealRefill: {
-        sourceGenerationKey: 'initial:first',
-        slotIndex: 1,
-        optionKey: 'Armor',
-        rewardType: 'ArmorDrop',
-        ...(refillPurchase ? { purchase: { roomDelay: 8, rushed: false } } : {}),
-        ...(refillSource ? { deliverySourceKey: 'hermesShrineDelivery:source:refill' } : {}),
-      },
     },
   };
 }
@@ -657,59 +644,47 @@ describe('execution-plan compiler and codec', () => {
     expect(() =>
       decodeExecutionAcquisitionRole({ ...role, disposition: 'artificer' }, 'role'),
     ).toThrow(/only valid for normal roles/);
-    expect(() =>
-      decodeExecutionTransaction(
-        {
-          kind: 'shopPurchase',
-          owner: 'purchase',
-          window: { kind: 'standard', phase: 'beforeCombat' },
-          offerKey: 'offer',
-          rewardType: 'MetaCurrencyDrop',
-          sourceOwner: 'source',
-          reward: { rewardType: 'MetaCurrencyDrop', producerLifecycleKey: 'Shop' },
-          producerLifecycleKey: 'Shop',
-          roles: [role],
-        },
-        'transaction',
-      ),
-    ).toThrow(/may not publish Sea Star results for purchases/);
+    const acquisition = decodeExecutionTransaction(
+      {
+        kind: 'acquisition',
+        owner: 'acquisition',
+        window: { kind: 'standard', phase: 'beforeCombat' },
+        sourceOwner: 'source',
+        reward: { rewardType: 'MetaCurrencyDrop', producerLifecycleKey: 'Shop' },
+        producerLifecycleKey: 'Shop',
+        roles: [role],
+      },
+      'transaction',
+    );
+    expect(acquisition.kind).toBe('acquisition');
   });
 
-  it('decodes the published Anvil result only on a Shop purchase', () => {
+  it('decodes the published Anvil result as a transformation outcome', () => {
     const transaction = {
-      kind: 'shopPurchase' as const,
-      owner: 'purchase',
+      kind: 'transformation' as const,
+      owner: 'transformation',
       window: { kind: 'standard' as const, phase: 'beforeCombat' as const },
-      offerKey: 'Anvil',
-      rewardType: 'ChaosWeaponUpgrade',
-      sourceOwner: 'shop-source',
-      reward: { rewardType: 'ChaosWeaponUpgrade', producerLifecycleKey: 'Q_WorldShop' },
-      producerLifecycleKey: 'Q_WorldShop',
-      roles: [],
-      anvilResult: {
+      transformation: {
         kind: 'anvilOfFates' as const,
         removedTraitKey: null,
         addedTraitKeys: ['StaffLongAttackTrait', 'StaffJumpSpecialTrait'] as const,
       },
     };
     const decoded = decodeExecutionTransaction(transaction, 'transaction');
-    if (decoded.kind !== 'shopPurchase') throw new Error('expected a Shop purchase');
-    expect(decoded.anvilResult).toEqual(transaction.anvilResult);
+    if (decoded.kind !== 'transformation') throw new Error('expected a transformation');
+    expect(decoded.transformation).toEqual(transaction.transformation);
     expect(() =>
       decodeExecutionTransaction(
         {
           ...transaction,
-          anvilResult: { ...transaction.anvilResult, addedTraitKeys: ['OnlyOne'] },
+          transformation: { ...transaction.transformation, addedTraitKeys: ['OnlyOne'] },
         },
         'transaction',
       ),
     ).toThrow(/addedTraitKeys/);
     expect(() =>
-      decodeExecutionTransaction({ ...transaction, anvilResult: undefined }, 'transaction'),
-    ).toThrow(/required for an Anvil purchase/);
-    expect(() =>
-      decodeExecutionTransaction({ ...transaction, rewardType: 'MaxHealthDrop' }, 'transaction'),
-    ).toThrow(/only valid for an Anvil purchase/);
+      decodeExecutionTransaction({ ...transaction, transformation: undefined }, 'transaction'),
+    ).toThrow(/transformation is required/);
   });
 
   it('decodes an unpurchased Anvil inventory without a purchase result', () => {
@@ -726,17 +701,6 @@ describe('execution-plan compiler and codec', () => {
               rewardType: 'ChaosWeaponUpgrade',
             },
           ],
-          travelDealRefill: {
-            sourceOfferKey: 'Anvil',
-            sourceOwner: 'refill-acquisition',
-            slotIndex: 0,
-            groupIndex: 0,
-            optionKey: 'MaxHealthDropBig',
-            reward: {
-              rewardType: 'MaxHealthDropBig',
-              producerLifecycleKey: 'Q_WorldShop',
-            },
-          },
         },
       },
       'overview',
@@ -746,22 +710,16 @@ describe('execution-plan compiler and codec', () => {
       optionKey: 'ChaosWeaponUpgrade',
       rewardType: 'ChaosWeaponUpgrade',
     });
-    expect(overview.shop?.travelDealRefill).toMatchObject({
-      sourceOwner: 'refill-acquisition',
-      groupIndex: 0,
-    });
   });
 
   it('requires Shrine purchase and delivery source identities to be paired', () => {
-    for (const [initialPurchase, initialSource, refillPurchase, refillSource] of [
-      [true, false, true, true],
-      [false, true, true, true],
-      [true, true, true, false],
-      [true, true, false, true],
+    for (const [initialPurchase, initialSource] of [
+      [true, false],
+      [false, true],
     ] as const) {
       expect(() =>
         decodeExecutionOverview(
-          shrineOverviewWithPairing(initialPurchase, initialSource, refillPurchase, refillSource),
+          shrineOverviewWithPairing(initialPurchase, initialSource),
           'overview',
         ),
       ).toThrow(/purchase and deliverySourceKey must be paired/);
@@ -1938,7 +1896,7 @@ describe('execution-plan compiler and codec', () => {
     expect(boss?.doors).toMatchObject({ kind: 'terminal' });
   });
 
-  it('accepts only closed protocol-34 Underworld and Surface route prefixes', () => {
+  it('accepts only closed protocol-35 Underworld and Surface route prefixes', () => {
     const fixture = JSON.parse(JSON.stringify(underworldFGHIFixture));
     fixture.extent = {
       kind: 'configuredPrefix',

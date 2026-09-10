@@ -211,12 +211,7 @@ export function overview(value: unknown, label: string) {
   )
     fail(`${label}.effectNeutralRequiredReward must be true when present`);
   if (shop !== undefined)
-    exact(
-      shop,
-      ['profileKey', 'offers'],
-      ['travelDealRefill', 'infernalContract'],
-      `${label}.shop`,
-    );
+    exact(shop, ['profileKey', 'offers'], ['infernalContract'], `${label}.shop`);
   const contract =
     shop?.infernalContract === undefined
       ? undefined
@@ -258,46 +253,6 @@ export function overview(value: unknown, label: string) {
               });
             }),
           ),
-          ...(shop.travelDealRefill === undefined
-            ? {}
-            : {
-                travelDealRefill: (() => {
-                  const row = object(shop.travelDealRefill, `${label}.shop.travelDealRefill`);
-                  exact(
-                    row,
-                    [
-                      'sourceOfferKey',
-                      'sourceOwner',
-                      'slotIndex',
-                      'groupIndex',
-                      'optionKey',
-                      'reward',
-                    ],
-                    [],
-                    `${label}.shop.travelDealRefill`,
-                  );
-                  return Object.freeze({
-                    sourceOfferKey: stringValue(
-                      row.sourceOfferKey,
-                      `${label}.shop.travelDealRefill.sourceOfferKey`,
-                    ),
-                    sourceOwner: stringValue(
-                      row.sourceOwner,
-                      `${label}.shop.travelDealRefill.sourceOwner`,
-                    ),
-                    slotIndex: integer(row.slotIndex, `${label}.shop.travelDealRefill.slotIndex`),
-                    groupIndex: integer(
-                      row.groupIndex,
-                      `${label}.shop.travelDealRefill.groupIndex`,
-                    ),
-                    optionKey: stringValue(
-                      row.optionKey,
-                      `${label}.shop.travelDealRefill.optionKey`,
-                    ),
-                    reward: reward(row.reward, `${label}.shop.travelDealRefill.reward`),
-                  });
-                })(),
-              }),
           ...(contract === undefined
             ? {}
             : {
@@ -336,7 +291,7 @@ export function overview(value: unknown, label: string) {
     shrine === undefined
       ? undefined
       : (() => {
-          exact(shrine, ['offers'], ['travelDealRefill'], `${label}.hermesShrine`);
+          exact(shrine, ['offers'], [], `${label}.hermesShrine`);
           const offers = Object.freeze(
             array(shrine.offers, `${label}.hermesShrine.offers`, 3).map((entry, index) => {
               const row = object(entry, `${label}.hermesShrine.offers[${index}]`);
@@ -392,74 +347,8 @@ export function overview(value: unknown, label: string) {
             }),
           );
           if (offers.length !== 3) fail(`${label}.hermesShrine.offers must contain three offers`);
-          const refill =
-            shrine.travelDealRefill === undefined
-              ? undefined
-              : (() => {
-                  const row = object(
-                    shrine.travelDealRefill,
-                    `${label}.hermesShrine.travelDealRefill`,
-                  );
-                  exact(
-                    row,
-                    ['sourceGenerationKey', 'slotIndex', 'optionKey', 'rewardType'],
-                    ['purchase', 'deliverySourceKey'],
-                    `${label}.hermesShrine.travelDealRefill`,
-                  );
-                  if (
-                    !shrineGenerationKeys.includes(
-                      row.sourceGenerationKey as (typeof shrineGenerationKeys)[number],
-                    )
-                  )
-                    fail(
-                      `${label}.hermesShrine.travelDealRefill.sourceGenerationKey is unsupported`,
-                    );
-                  if (
-                    row.slotIndex !==
-                    shrineGenerationKeys.indexOf(
-                      row.sourceGenerationKey as (typeof shrineGenerationKeys)[number],
-                    ) +
-                      1
-                  )
-                    fail(`${label}.hermesShrine.travelDealRefill.slotIndex is not source order`);
-                  if ((row.purchase === undefined) !== (row.deliverySourceKey === undefined))
-                    fail(
-                      `${label}.hermesShrine.travelDealRefill.purchase and deliverySourceKey must be paired`,
-                    );
-                  return Object.freeze({
-                    sourceGenerationKey:
-                      row.sourceGenerationKey as (typeof shrineGenerationKeys)[number],
-                    slotIndex: row.slotIndex as 1 | 2 | 3,
-                    optionKey: stringValue(
-                      row.optionKey,
-                      `${label}.hermesShrine.travelDealRefill.optionKey`,
-                    ),
-                    rewardType: stringValue(
-                      row.rewardType,
-                      `${label}.hermesShrine.travelDealRefill.rewardType`,
-                    ),
-                    ...(row.deliverySourceKey === undefined
-                      ? {}
-                      : {
-                          deliverySourceKey: stringValue(
-                            row.deliverySourceKey,
-                            'deliverySourceKey',
-                            MAX_OWNER_STRING,
-                          ),
-                        }),
-                    ...(row.purchase === undefined
-                      ? {}
-                      : {
-                          purchase: shrinePurchase(
-                            row.purchase,
-                            `${label}.hermesShrine.travelDealRefill.purchase`,
-                          ),
-                        }),
-                  });
-                })();
           return Object.freeze({
             offers,
-            ...(refill === undefined ? {} : { travelDealRefill: refill }),
           });
         })();
   const well =
@@ -490,20 +379,14 @@ export function overview(value: unknown, label: string) {
                       `${label}.stygianWell.offers[${index}]`,
                     );
                     if (
-                      ![
-                        'initial:healing',
-                        'initial:secondLeft',
-                        'initial:secondRight',
-                        'travelDealRefill',
-                      ].includes(row.generationKey as string)
+                      !['initial:healing', 'initial:secondLeft', 'initial:secondRight'].includes(
+                        row.generationKey as string,
+                      )
                     )
                       fail(`${label}.stygianWell.offers[${index}].generationKey is unsupported`);
                     return Object.freeze({
                       generationKey: row.generationKey as
-                        | 'initial:healing'
-                        | 'initial:secondLeft'
-                        | 'initial:secondRight'
-                        | 'travelDealRefill',
+                        'initial:healing' | 'initial:secondLeft' | 'initial:secondRight',
                       offerKey: stringValue(
                         row.offerKey,
                         `${label}.stygianWell.offers[${index}].offerKey`,

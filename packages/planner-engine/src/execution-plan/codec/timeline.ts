@@ -2,6 +2,7 @@ import type {
   ExecutionLifecycleWindow,
   ExecutionTimeline,
   ExecutionTimelineTransaction,
+  ExecutionTravelDealRefill,
   ExecutionVolatileKeepsakeEquipResults,
 } from '../model';
 import {
@@ -10,11 +11,11 @@ import {
   booleanValue,
   exact,
   fail,
+  integer,
   object,
   numberRecord,
   stringArray,
   stringValue,
-  wellGenerationKey,
 } from './primitives';
 import { acquisitionRole, anvilResult, equipResults, reward, traitOffer } from './rewards';
 
@@ -86,6 +87,166 @@ export function nemesisOutcome(value: unknown, label: string) {
     return Object.freeze({ kind: 'damageContest' as const, result: record.result });
   }
   fail(`${label}.kind is unsupported`);
+}
+
+function wellEffect(value: unknown, label: string) {
+  if (
+    value !== 'neutral' &&
+    value !== 'spark' &&
+    value !== 'discount' &&
+    value !== 'emptySlot' &&
+    value !== 'extended' &&
+    value !== 'yarn' &&
+    value !== 'hymn' &&
+    value !== 'twist' &&
+    value !== 'lastStand'
+  )
+    fail(`${label} is unsupported`);
+  return value;
+}
+
+function travelDealRefill(value: unknown, label: string): ExecutionTravelDealRefill {
+  const record = object(value, label);
+  if (record.carrier === 'worldShop') {
+    exact(record, ['carrier', 'source', 'replacement'], [], label);
+    const source = object(record.source, `${label}.source`);
+    exact(source, ['owner', 'offerKey'], [], `${label}.source`);
+    const replacement = object(record.replacement, `${label}.replacement`);
+    exact(
+      replacement,
+      ['slotIndex', 'groupIndex', 'optionKey', 'reward'],
+      [],
+      `${label}.replacement`,
+    );
+    return Object.freeze({
+      carrier: 'worldShop',
+      source: Object.freeze({
+        owner: stringValue(source.owner, `${label}.source.owner`, MAX_OWNER_STRING),
+        offerKey: stringValue(source.offerKey, `${label}.source.offerKey`),
+      }),
+      replacement: Object.freeze({
+        slotIndex: integer(replacement.slotIndex, `${label}.replacement.slotIndex`),
+        groupIndex: integer(replacement.groupIndex, `${label}.replacement.groupIndex`),
+        optionKey: stringValue(replacement.optionKey, `${label}.replacement.optionKey`),
+        reward: reward(replacement.reward, `${label}.replacement.reward`),
+      }),
+    });
+  }
+  if (record.carrier === 'stygianWell') {
+    exact(record, ['carrier', 'source', 'replacement'], [], label);
+    const source = object(record.source, `${label}.source`);
+    exact(source, ['owner', 'generationKey'], [], `${label}.source`);
+    const generationKey = stringValue(source.generationKey, `${label}.source.generationKey`);
+    if (
+      generationKey !== 'initial:healing' &&
+      generationKey !== 'initial:secondLeft' &&
+      generationKey !== 'initial:secondRight'
+    )
+      fail(`${label}.source.generationKey is unsupported`);
+    const replacement = object(record.replacement, `${label}.replacement`);
+    exact(
+      replacement,
+      ['generationKey', 'offerKey', 'effect'],
+      ['twistResultKey'],
+      `${label}.replacement`,
+    );
+    if (replacement.generationKey !== 'travelDealRefill')
+      fail(`${label}.replacement.generationKey is unsupported`);
+    return Object.freeze({
+      carrier: 'stygianWell',
+      source: Object.freeze({
+        owner: stringValue(source.owner, `${label}.source.owner`, MAX_OWNER_STRING),
+        generationKey: generationKey as
+          'initial:healing' | 'initial:secondLeft' | 'initial:secondRight',
+      }),
+      replacement: Object.freeze({
+        generationKey: 'travelDealRefill' as const,
+        offerKey: stringValue(replacement.offerKey, `${label}.replacement.offerKey`),
+        effect: wellEffect(replacement.effect, `${label}.replacement.effect`),
+        ...(replacement.twistResultKey === undefined
+          ? {}
+          : {
+              twistResultKey: stringValue(
+                replacement.twistResultKey,
+                `${label}.replacement.twistResultKey`,
+              ),
+            }),
+      }),
+    });
+  }
+  if (record.carrier === 'hermesShrine') {
+    exact(record, ['carrier', 'source', 'replacement'], [], label);
+    const source = object(record.source, `${label}.source`);
+    exact(source, ['generationKey', 'slotIndex'], [], `${label}.source`);
+    const generationKey = stringValue(source.generationKey, `${label}.source.generationKey`);
+    if (
+      generationKey !== 'initial:first' &&
+      generationKey !== 'initial:secondLeft' &&
+      generationKey !== 'initial:secondRight'
+    )
+      fail(`${label}.source.generationKey is unsupported`);
+    const sourceSlotIndex = integer(source.slotIndex, `${label}.source.slotIndex`, 1);
+    if (sourceSlotIndex > 3) fail(`${label}.source.slotIndex is unsupported`);
+    const replacement = object(record.replacement, `${label}.replacement`);
+    exact(
+      replacement,
+      ['generationKey', 'slotIndex', 'optionKey', 'rewardType'],
+      ['deliverySourceKey', 'purchase'],
+      `${label}.replacement`,
+    );
+    if (replacement.generationKey !== 'travelDealRefill')
+      fail(`${label}.replacement.generationKey is unsupported`);
+    const replacementSlotIndex = integer(
+      replacement.slotIndex,
+      `${label}.replacement.slotIndex`,
+      1,
+    );
+    if (replacementSlotIndex > 3 || replacementSlotIndex !== sourceSlotIndex)
+      fail(`${label}.replacement.slotIndex must match source slotIndex`);
+    const hasDelivery = replacement.deliverySourceKey !== undefined;
+    const hasPurchase = replacement.purchase !== undefined;
+    if (hasDelivery !== hasPurchase)
+      fail(`${label}.replacement.purchase and deliverySourceKey must be paired`);
+    const purchase =
+      replacement.purchase === undefined
+        ? undefined
+        : (() => {
+            const row = object(replacement.purchase, `${label}.replacement.purchase`);
+            exact(row, ['roomDelay', 'rushed'], [], `${label}.replacement.purchase`);
+            const roomDelay = integer(row.roomDelay, `${label}.replacement.purchase.roomDelay`);
+            if (roomDelay < 2 || roomDelay > 8)
+              fail(`${label}.replacement.purchase.roomDelay must be 2-8`);
+            return Object.freeze({
+              roomDelay: roomDelay as 2 | 3 | 4 | 5 | 6 | 7 | 8,
+              rushed: booleanValue(row.rushed, `${label}.replacement.purchase.rushed`),
+            });
+          })();
+    return Object.freeze({
+      carrier: 'hermesShrine',
+      source: Object.freeze({
+        generationKey: generationKey as
+          'initial:first' | 'initial:secondLeft' | 'initial:secondRight',
+        slotIndex: sourceSlotIndex as 1 | 2 | 3,
+      }),
+      replacement: Object.freeze({
+        generationKey: 'travelDealRefill' as const,
+        slotIndex: replacementSlotIndex as 1 | 2 | 3,
+        optionKey: stringValue(replacement.optionKey, `${label}.replacement.optionKey`),
+        rewardType: stringValue(replacement.rewardType, `${label}.replacement.rewardType`),
+        ...(replacement.deliverySourceKey === undefined
+          ? {}
+          : {
+              deliverySourceKey: stringValue(
+                replacement.deliverySourceKey,
+                `${label}.replacement.deliverySourceKey`,
+                MAX_OWNER_STRING,
+              ),
+            }),
+        ...(purchase === undefined ? {} : { purchase }),
+      }),
+    });
+  }
+  fail(`${label}.carrier is unsupported`);
 }
 
 export function transaction(value: unknown, label: string): ExecutionTimelineTransaction {
@@ -239,120 +400,48 @@ export function transaction(value: unknown, label: string): ExecutionTimelineTra
       window: lifecycleWindow(record.window, `${label}.window`),
     });
   }
-  if (kind === 'shopPurchase') {
-    exact(
-      record,
-      [
-        'kind',
-        'owner',
-        'window',
-        'offerKey',
-        'rewardType',
-        'sourceOwner',
-        'reward',
-        'producerLifecycleKey',
-        'roles',
-      ],
-      ['anvilResult'],
-      label,
-    );
-    const roles = Object.freeze(
-      array(record.roles, `${label}.roles`).map((entry, index) =>
-        acquisitionRole(entry, `${label}.roles[${index}]`),
-      ),
-    );
-    if (roles.some((role) => role.seaStarResult !== undefined))
-      fail(`${label}.roles may not publish Sea Star results for purchases`);
-    const rewardType = stringValue(record.rewardType, `${label}.rewardType`);
-    if (rewardType === 'ChaosWeaponUpgrade' && record.anvilResult === undefined)
-      fail(`${label}.anvilResult is required for an Anvil purchase`);
-    if (rewardType !== 'ChaosWeaponUpgrade' && record.anvilResult !== undefined)
-      fail(`${label}.anvilResult is only valid for an Anvil purchase`);
+  if (kind === 'itemEffect') {
+    exact(record, ['kind', 'owner', 'window', 'itemKey', 'effect', 'extended'], [], label);
     return Object.freeze({
       kind,
       owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
       window: lifecycleWindow(record.window, `${label}.window`),
-      offerKey: stringValue(record.offerKey, `${label}.offerKey`),
-      rewardType,
-      sourceOwner: stringValue(record.sourceOwner, `${label}.sourceOwner`, MAX_OWNER_STRING),
-      reward: reward(record.reward, `${label}.reward`),
-      producerLifecycleKey: stringValue(
-        record.producerLifecycleKey,
-        `${label}.producerLifecycleKey`,
-      ),
-      roles,
-      ...(record.anvilResult === undefined
-        ? {}
-        : { anvilResult: anvilResult(record.anvilResult, `${label}.anvilResult`) }),
+      itemKey: stringValue(record.itemKey, `${label}.itemKey`),
+      effect: wellEffect(record.effect, `${label}.effect`),
+      extended: booleanValue(record.extended, `${label}.extended`),
     });
   }
-  if (kind === 'wellPurchase') {
-    exact(
-      record,
-      ['kind', 'owner', 'window', 'offerKey', 'generationKey', 'effect', 'extendedDirectPurchase'],
-      ['twistResultKey'],
-      label,
-    );
+  if (kind === 'transformation') {
+    exact(record, ['kind', 'owner', 'window', 'transformation'], [], label);
+    const value = object(record.transformation, `${label}.transformation`);
+    if (value.kind === 'anvilOfFates') {
+      return Object.freeze({
+        kind,
+        owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
+        window: lifecycleWindow(record.window, `${label}.window`),
+        transformation: anvilResult(value, `${label}.transformation`),
+      });
+    }
+    if (value.kind !== 'stygianWellTwist') fail(`${label}.transformation.kind is unsupported`);
+    exact(value, ['kind', 'sourceItemKey', 'resultItemKey'], [], `${label}.transformation`);
     return Object.freeze({
       kind,
       owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
       window: lifecycleWindow(record.window, `${label}.window`),
-      offerKey: stringValue(record.offerKey, `${label}.offerKey`),
-      generationKey: wellGenerationKey(record.generationKey, `${label}.generationKey`),
-      effect: (() => {
-        if (
-          record.effect !== 'neutral' &&
-          record.effect !== 'spark' &&
-          record.effect !== 'discount' &&
-          record.effect !== 'emptySlot' &&
-          record.effect !== 'extended' &&
-          record.effect !== 'yarn' &&
-          record.effect !== 'hymn' &&
-          record.effect !== 'twist' &&
-          record.effect !== 'lastStand'
-        )
-          fail(`${label}.effect is unsupported`);
-        return record.effect;
-      })(),
-      extendedDirectPurchase: booleanValue(
-        record.extendedDirectPurchase,
-        `${label}.extendedDirectPurchase`,
-      ),
-      ...(record.twistResultKey === undefined
-        ? {}
-        : { twistResultKey: stringValue(record.twistResultKey, `${label}.twistResultKey`) }),
+      transformation: Object.freeze({
+        kind: 'stygianWellTwist' as const,
+        sourceItemKey: stringValue(value.sourceItemKey, `${label}.transformation.sourceItemKey`),
+        resultItemKey: stringValue(value.resultItemKey, `${label}.transformation.resultItemKey`),
+      }),
     });
   }
-  if (kind === 'wellRefill') {
-    exact(
-      record,
-      ['kind', 'owner', 'window', 'generationKey', 'offerKey', 'effect'],
-      ['twistResultKey'],
-      label,
-    );
-    if (record.generationKey !== 'travelDealRefill') fail(`${label}.generationKey is unsupported`);
-    if (
-      record.effect !== 'neutral' &&
-      record.effect !== 'spark' &&
-      record.effect !== 'discount' &&
-      record.effect !== 'emptySlot' &&
-      record.effect !== 'extended' &&
-      record.effect !== 'yarn' &&
-      record.effect !== 'hymn' &&
-      record.effect !== 'twist' &&
-      record.effect !== 'lastStand'
-    )
-      fail(`${label}.effect is unsupported`);
+  if (kind === 'travelDealRefill') {
+    exact(record, ['kind', 'owner', 'window', 'refill'], [], label);
     return Object.freeze({
       kind,
       owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
       window: lifecycleWindow(record.window, `${label}.window`),
-      generationKey: 'travelDealRefill' as const,
-      offerKey: stringValue(record.offerKey, `${label}.offerKey`),
-      effect: record.effect,
-      ...(record.twistResultKey === undefined
-        ? {}
-        : { twistResultKey: stringValue(record.twistResultKey, `${label}.twistResultKey`) }),
+      refill: travelDealRefill(record.refill, `${label}.refill`),
     });
   }
   if (kind === 'keepsakeChange') {

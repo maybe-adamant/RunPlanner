@@ -2,6 +2,7 @@ import {
   createAcquisitionEntryAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createTravelDealRefillRealizationAddress,
   semanticAddressKey,
 } from '../../authored-project/addresses';
 import { hermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shrine-delivery';
@@ -22,6 +23,7 @@ import type {
   ExecutionKeepsakeEquipResults,
   ExecutionOverview,
   ExecutionReward,
+  ExecutionTravelDealRefill,
 } from '../model';
 import type { HermesShrineGenerationKey, HermesShrineSlotKey } from '../../authored-project/model';
 
@@ -120,12 +122,8 @@ export function travelDealRefill(
   offers: readonly { readonly offerKey: string }[],
 ):
   | {
-      readonly sourceOfferKey: string;
-      readonly sourceOwner: string;
-      readonly slotIndex: number;
-      readonly groupIndex: number;
-      readonly optionKey: string;
-      readonly reward: ExecutionReward;
+      readonly owner: string;
+      readonly refill: Extract<ExecutionTravelDealRefill, { readonly carrier: 'worldShop' }>;
     }
   | undefined {
   const entryLocation = Object.values(room.acquisitionSites)
@@ -170,6 +168,18 @@ export function travelDealRefill(
       'executionCoverageMissing',
       `${room.gameName} lacks Travel Deal source`,
     );
+  const sourceAction = room.roomActionRoster.rows.find(
+    (candidate) =>
+      !candidate.stale &&
+      candidate.rank !== null &&
+      candidate.reference.kind === 'interactShopOffer' &&
+      candidate.reference.offerKey === row.sourceOfferKey,
+  );
+  if (sourceAction === undefined)
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} lacks Travel Deal source action ${row.sourceOfferKey}`,
+    );
   const optionRows = biome.rewards.branches.map((branch) =>
     branch.events
       .filter(
@@ -212,12 +222,25 @@ export function travelDealRefill(
     `${room.gameName} Travel Deal option`,
   );
   return Object.freeze({
-    sourceOfferKey: row.sourceOfferKey,
-    sourceOwner: semanticAddressKey(entryAddress),
-    slotIndex: row.slotIndex,
-    groupIndex,
-    optionKey,
-    reward: executionRewardFromOffer(entry.offer, 'Shop'),
+    owner: semanticAddressKey(
+      createTravelDealRefillRealizationAddress(
+        createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+        room.occurrenceId,
+      ),
+    ),
+    refill: Object.freeze({
+      carrier: 'worldShop' as const,
+      source: Object.freeze({
+        owner: semanticAddressKey(sourceAction.owner),
+        offerKey: row.sourceOfferKey,
+      }),
+      replacement: Object.freeze({
+        slotIndex: row.slotIndex,
+        groupIndex,
+        optionKey,
+        reward: executionRewardFromOffer(entry.offer, 'Shop'),
+      }),
+    }),
   });
 }
 
@@ -273,7 +296,6 @@ function executionShop(
       }),
     ),
   );
-  const refill = travelDealRefill(room, biome, offers);
   const contractEntry = room.acquisitionSites.roomExit?.entries[INFERNAL_CONTRACT_ENTRY_KEY];
   const contract =
     contractEntry === undefined || contractEntry === null
@@ -290,7 +312,6 @@ function executionShop(
   return Object.freeze({
     profileKey: room.entryState.profileKey,
     offers,
-    ...(refill === undefined ? {} : { travelDealRefill: refill }),
     ...(contract === undefined ? {} : { infernalContract: contract }),
   });
 }
@@ -350,6 +371,106 @@ function executionRewardWheels(
       });
     }),
   );
+}
+
+/**
+ * Project the exact Shrine Travel Deal replacement into the shared timeline
+ * product. Initial Shrine offers stay in the room Overview; only the dynamic
+ * replacement crosses the Timeline boundary.
+ */
+export function hermesShrineTravelDealRefill(
+  room: CanonicalAuthoredRoom,
+  biome: CompleteValidBiomeProjectEvaluation,
+):
+  | {
+      readonly owner: string;
+      readonly sourceOwner: string;
+      readonly refill: Extract<ExecutionTravelDealRefill, { readonly carrier: 'hermesShrine' }>;
+    }
+  | undefined {
+  const shrine = room.hermesShrine;
+  const refillOffer = shrine?.travelDealRefill?.offer;
+  if (shrine === undefined || refillOffer === undefined || refillOffer === null) return undefined;
+  const travelDeal = shrine.travelDealRefill;
+  if (travelDeal === undefined) return undefined;
+  const shrineDeliverySite = room.acquisitionSites.hermesShrineDelivery;
+  if (shrineDeliverySite === undefined)
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} lacks Shrine delivery site for Travel Deal refill`,
+    );
+  const owner = executionRoomOwnerKey(room);
+  const assessments = biome.rewards.hermesShrineAssessments.find(
+    (candidate) => semanticAddressKey(candidate.origin) === owner,
+  )?.assessments;
+  if (assessments === undefined || assessments.length === 0)
+    throw new CompilerError('executionCoverageMissing', `${room.gameName} lacks Shrine assessment`);
+  const refillEvidence = agreement(
+    assessments.map((assessment) => {
+      const refill = assessment.travelDealRefill;
+      const optionKey = refill?.candidateOptionKeysByRewardType[refillOffer.rewardType];
+      if (refill === undefined || optionKey === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} lacks native SurfaceShop option ${refillOffer.rewardType}`,
+        );
+      return Object.freeze({ sourceGenerationKey: refill.sourceGenerationKey, optionKey });
+    }),
+    `${room.gameName} Shrine Travel Deal refill`,
+  );
+  const sourceGenerationKey = refillEvidence.sourceGenerationKey as Exclude<
+    HermesShrineGenerationKey,
+    'travelDealRefill'
+  >;
+  const slotIndex = (
+    {
+      'initial:first': 1,
+      'initial:secondLeft': 2,
+      'initial:secondRight': 3,
+    } as const
+  )[sourceGenerationKey];
+  const sourceEntryKey = hermesShrineDeliveryEntryKey(room.origin, sourceGenerationKey);
+  const sourceAction = room.roomActionRoster.rows.find(
+    (candidate) =>
+      !candidate.stale &&
+      candidate.rank !== null &&
+      candidate.reference.kind === 'interactAcquisitionEntry' &&
+      candidate.reference.siteKey === 'hermesShrineDelivery' &&
+      candidate.reference.entryKey === sourceEntryKey,
+  );
+  if (sourceAction === undefined)
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} lacks Shrine Travel Deal source action`,
+    );
+  return Object.freeze({
+    owner: semanticAddressKey(
+      createTravelDealRefillRealizationAddress(
+        createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+        room.occurrenceId,
+      ),
+    ),
+    sourceOwner: semanticAddressKey(sourceAction.owner),
+    refill: Object.freeze({
+      carrier: 'hermesShrine' as const,
+      source: Object.freeze({ generationKey: sourceGenerationKey, slotIndex }),
+      replacement: Object.freeze({
+        generationKey: 'travelDealRefill' as const,
+        slotIndex,
+        optionKey: refillEvidence.optionKey,
+        rewardType: refillOffer.rewardType,
+        ...(travelDeal.purchase === undefined
+          ? {}
+          : {
+              deliverySourceKey: hermesShrineDeliveryEntryKey(room.origin, 'travelDealRefill'),
+              purchase: Object.freeze({
+                roomDelay: travelDeal.purchase.delay,
+                rushed: travelDeal.purchase.rushed,
+              }),
+            }),
+      }),
+    }),
+  });
 }
 
 function executionHermesShrine(
@@ -414,66 +535,7 @@ function executionHermesShrine(
       });
     }),
   );
-  const refillOffer = shrine.travelDealRefill?.offer;
-  const refillEvidence =
-    refillOffer === undefined || refillOffer === null
-      ? undefined
-      : agreement(
-          assessments.map((assessment) => {
-            const refill = assessment.travelDealRefill;
-            const optionKey = refill?.candidateOptionKeysByRewardType[refillOffer.rewardType];
-            if (refill === undefined || optionKey === undefined)
-              throw new CompilerError(
-                'executionCoverageMissing',
-                `${room.gameName} lacks native SurfaceShop option ${refillOffer.rewardType}`,
-              );
-            return Object.freeze({
-              sourceGenerationKey: refill.sourceGenerationKey,
-              optionKey,
-            });
-          }),
-          `${room.gameName} Shrine Travel Deal refill`,
-        );
-  const refill =
-    refillEvidence === undefined || refillOffer === undefined || refillOffer === null
-      ? undefined
-      : Object.freeze({
-          sourceGenerationKey: refillEvidence.sourceGenerationKey as Exclude<
-            HermesShrineGenerationKey,
-            'travelDealRefill'
-          >,
-          slotIndex: (
-            {
-              'initial:first': 1,
-              'initial:secondLeft': 2,
-              'initial:secondRight': 3,
-            } as const
-          )[
-            refillEvidence.sourceGenerationKey as Exclude<
-              HermesShrineGenerationKey,
-              'travelDealRefill'
-            >
-          ],
-          optionKey: refillEvidence.optionKey,
-          rewardType: refillOffer.rewardType,
-          ...(shrine.travelDealRefill?.purchase === undefined
-            ? {}
-            : {
-                deliverySourceKey: hermesShrineDeliveryEntryKey(room.origin, 'travelDealRefill'),
-              }),
-          ...(shrine.travelDealRefill?.purchase === undefined
-            ? {}
-            : {
-                purchase: Object.freeze({
-                  roomDelay: shrine.travelDealRefill.purchase.delay,
-                  rushed: shrine.travelDealRefill.purchase.rushed,
-                }),
-              }),
-        });
-  return Object.freeze({
-    offers,
-    ...(refill === undefined ? {} : { travelDealRefill: refill }),
-  });
+  return Object.freeze({ offers });
 }
 
 function executionStygianWell(
@@ -501,11 +563,6 @@ function executionStygianWell(
                   'initial:secondRight',
                   room.stygianWell.offerKeyBySlot.secondRight,
                   room.stygianWell.twistResultKeyBySlot?.secondRight,
-                ],
-                [
-                  'travelDealRefill',
-                  room.stygianWell.travelDealRefillKey,
-                  room.stygianWell.twistResultKeyBySlot?.travelDealRefill,
                 ],
               ] as const
             ).flatMap(([generationKey, offerKey, twistResultKey]) => {

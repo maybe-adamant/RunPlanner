@@ -135,9 +135,6 @@ export function assembleExecutionProduct({
       room.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
       biome.rewards.timelineFacts,
     );
-    // Publication is the planner-owned semantic boundary: only nodes marked
-    // included by the reward fold become execution transactions.  Generic
-    // relation assembly receives the already-filtered product below.
     const transactions = executionTimelineTransactions(room, biome, allFacts);
     const transactionOwners = new Set(transactions.map((transaction) => transaction.owner));
     const facts = Object.freeze({

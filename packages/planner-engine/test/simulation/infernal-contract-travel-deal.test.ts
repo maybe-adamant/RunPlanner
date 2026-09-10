@@ -462,36 +462,15 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     }
   });
 
-  it('publishes the resolved first-purchase barriers without ordering unrelated Contract work', () => {
+  it('retains first-purchase legality without publishing purchase barriers', () => {
     for (const result of [
       settle({ order: ['Minor', 'MajorNonBoon'], travel: true }),
       settle({ order: ['Minor', 'MajorNonBoon'], echo: true }),
     ]) {
-      const source = result.canonical.roomActionRoster.rows.find(
-        (row) => row.reference.kind === 'interactShopOffer' && row.reference.offerKey === 'Minor',
+      expect(result.settlement.derivedEntryFrontiers).toEqual(
+        expect.arrayContaining([expect.objectContaining({ sourceOfferKey: 'Minor' })]),
       );
-      const competitor = result.canonical.roomActionRoster.rows.find(
-        (row) =>
-          row.reference.kind === 'interactShopOffer' && row.reference.offerKey === 'MajorNonBoon',
-      );
-      const contract = result.canonical.roomActionRoster.rows.find(
-        (row) =>
-          row.reference.kind === 'interactAcquisitionEntry' &&
-          row.reference.entryKey === 'infernalContractReward',
-      );
-      expect(source).toBeDefined();
-      expect(competitor).toBeDefined();
-      expect(result.settlement.timelineFacts?.nodes).toContainEqual({
-        owner: source?.owner,
-        included: true,
-      });
-      expect(result.settlement.timelineFacts?.dependencies).toContainEqual({
-        owner: competitor?.owner,
-        afterOwner: source?.owner,
-      });
-      expect(result.settlement.timelineFacts?.dependencies).not.toContainEqual(
-        expect.objectContaining({ owner: contract?.owner }),
-      );
+      expect(result.settlement.timelineFacts?.dependencies).toEqual([]);
     }
   });
 

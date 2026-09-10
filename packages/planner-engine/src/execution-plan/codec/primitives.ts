@@ -1,4 +1,4 @@
-import type { ExecutionRunStateCount, ExecutionWellGenerationKey } from '../model';
+import type { ExecutionRunStateCount } from '../model';
 
 export const MAX_ITEMS = 256;
 export const MAX_STRING = 512;
@@ -40,18 +40,6 @@ export function stringValue(value: unknown, label: string, max = MAX_STRING): st
   if (typeof value !== 'string' || value.length === 0 || value.length > max)
     fail(`${label} must be a bounded non-empty string`);
   return value;
-}
-
-export function wellGenerationKey(value: unknown, label: string): ExecutionWellGenerationKey {
-  const parsed = stringValue(value, label);
-  if (
-    parsed !== 'initial:healing' &&
-    parsed !== 'initial:secondLeft' &&
-    parsed !== 'initial:secondRight' &&
-    parsed !== 'travelDealRefill'
-  )
-    fail(`${label} is unsupported`);
-  return parsed;
 }
 
 export function booleanValue(value: unknown, label: string): boolean {
