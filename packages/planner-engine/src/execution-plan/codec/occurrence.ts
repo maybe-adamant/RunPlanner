@@ -165,13 +165,17 @@ function validateShopTransactionOwners(
   occurrence: Pick<ExecutionOccurrence, 'overview' | 'timeline'>,
   label: string,
 ): void {
-  const owners = occurrence.overview.shop?.offers.flatMap((offer) =>
-    offer.transactionOwner === undefined ? [] : [offer.transactionOwner],
-  ) ?? [];
+  const owners =
+    occurrence.overview.shop?.offers.flatMap((offer) =>
+      offer.transactionOwner === undefined ? [] : [offer.transactionOwner],
+    ) ?? [];
   if (new Set(owners).size !== owners.length)
     fail(`${label}.overview.shop.offers has duplicate transaction owners`);
   for (const owner of owners) {
-    if (occurrence.timeline.transactions.filter((transaction) => transaction.owner === owner).length !== 1)
+    if (
+      occurrence.timeline.transactions.filter((transaction) => transaction.owner === owner)
+        .length !== 1
+    )
       fail(`${label}.overview.shop transaction owner must name one occurrence transaction`);
   }
 }

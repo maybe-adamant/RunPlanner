@@ -1232,7 +1232,9 @@ describe('engine-owned F/G execution semantic product', () => {
     const transaction = product.occurrences
       .flatMap((occurrence) => occurrence.timeline.transactions)
       .find(
-        (candidate): candidate is Extract<ExecutionTimelineTransaction, { readonly kind: 'acquisition' }> =>
+        (
+          candidate,
+        ): candidate is Extract<ExecutionTimelineTransaction, { readonly kind: 'acquisition' }> =>
           candidate.kind === 'acquisition' && candidate.sourceOwner === semanticAddressKey(entry),
       );
     expect(transaction).toMatchObject({
@@ -1530,8 +1532,9 @@ describe('engine-owned F/G execution semantic product', () => {
       },
     });
     expect(
-      occurrence?.overview.shop?.offers.find((candidate) => candidate.offerKey === 'PremiumProgress')
-        ?.transactionOwner,
+      occurrence?.overview.shop?.offers.find(
+        (candidate) => candidate.offerKey === 'PremiumProgress',
+      )?.transactionOwner,
     ).toBe(transaction?.owner);
   });
 
@@ -1562,7 +1565,9 @@ describe('engine-owned F/G execution semantic product', () => {
       (transaction) =>
         transaction.kind === 'acquisition' && transaction.reward.rewardType === 'RandomLoot',
     );
-    expect(occurrence?.overview.shop?.offers.find((offer) => offer.offerKey === 'Minor')).toMatchObject({
+    expect(
+      occurrence?.overview.shop?.offers.find((offer) => offer.offerKey === 'Minor'),
+    ).toMatchObject({
       offerKey: 'Minor',
       transactionOwner: minorPurchase?.owner,
     });
@@ -1589,12 +1594,13 @@ describe('engine-owned F/G execution semantic product', () => {
       offer: boosted,
       value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
-    project = replaceTestShopOfferActions(project, catalog, shop, ['MixedProgress1', 'MixedProgress2']);
+    project = replaceTestShopOfferActions(project, catalog, shop, [
+      'MixedProgress1',
+      'MixedProgress2',
+    ]);
     project = authorLegalTraitOffers(project);
 
-    const occurrence = productFor(project).occurrences.find(
-      (candidate) => candidate.id === shopId,
-    );
+    const occurrence = productFor(project).occurrences.find((candidate) => candidate.id === shopId);
     const rows = occurrence?.overview.shop?.offers.filter(
       (offer) => offer.offerKey === 'MixedProgress1' || offer.offerKey === 'MixedProgress2',
     );
@@ -1603,12 +1609,16 @@ describe('engine-owned F/G execution semantic product', () => {
       'BoostedRandomLoot',
       'RandomLoot',
     ]);
-    expect(rows?.map((offer) => offer.transactionOwner).every((owner) => owner !== undefined)).toBe(true);
+    expect(rows?.map((offer) => offer.transactionOwner).every((owner) => owner !== undefined)).toBe(
+      true,
+    );
     expect(new Set(rows?.map((offer) => offer.transactionOwner)).size).toBe(2);
 
     for (const row of rows ?? []) {
       const transaction = occurrence?.timeline.transactions.find(
-        (candidate): candidate is Extract<ExecutionTimelineTransaction, { readonly kind: 'acquisition' }> =>
+        (
+          candidate,
+        ): candidate is Extract<ExecutionTimelineTransaction, { readonly kind: 'acquisition' }> =>
           candidate.kind === 'acquisition' && candidate.owner === row.transactionOwner,
       );
       expect(transaction).toBeDefined();
@@ -1619,7 +1629,9 @@ describe('engine-owned F/G execution semantic product', () => {
       expect(transaction?.sourceOwner).toBe(
         semanticAddressKey(row.offerKey === 'MixedProgress1' ? normal : boosted),
       );
-      const traitOffer = transaction?.roles.find((role) => role.traitOffer !== undefined)?.traitOffer;
+      const traitOffer = transaction?.roles.find(
+        (role) => role.traitOffer !== undefined,
+      )?.traitOffer;
       expect(traitOffer).toMatchObject({ giver: 'Apollo' });
     }
   });

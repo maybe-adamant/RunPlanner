@@ -280,20 +280,22 @@ function executionShop(
 ): ExecutionOverview['shop'] | undefined {
   if (room.entryState === undefined) return undefined;
   const optionKeys = shopOptionKeys(room, biome);
-  const transactionByOwner = new Map(transactions.map((transaction) => [transaction.owner, transaction]));
+  const transactionByOwner = new Map(
+    transactions.map((transaction) => [transaction.owner, transaction]),
+  );
   const transactionOwnerByOffer = new Map(
-    room.roomLifecycleTimeline.entries
-      .flatMap((entry) =>
-        entry.kind === 'action' && entry.action.reference.kind === 'interactShopOffer'
-          ? [[entry.action.reference.offerKey, semanticAddressKey(entry.action.owner)] as const]
-          : [],
-      ),
+    room.roomLifecycleTimeline.entries.flatMap((entry) =>
+      entry.kind === 'action' && entry.action.reference.kind === 'interactShopOffer'
+        ? [[entry.action.reference.offerKey, semanticAddressKey(entry.action.owner)] as const]
+        : [],
+    ),
   );
   const offers = Object.freeze(
     room.entryState.offers.map((offer, index) =>
       (() => {
         const actionOwner = transactionOwnerByOffer.get(offer.offerKey);
-        const transaction = actionOwner === undefined ? undefined : transactionByOwner.get(actionOwner);
+        const transaction =
+          actionOwner === undefined ? undefined : transactionByOwner.get(actionOwner);
         return Object.freeze({
           offerKey: offer.offerKey,
           ...(transaction === undefined ? {} : { transactionOwner: transaction.owner }),
