@@ -76,6 +76,7 @@ import surfaceNFixture from './fixtures/surface-n.execution.json';
 import surfaceNOFixture from './fixtures/surface-no.execution.json';
 import surfaceNOPFixture from './fixtures/surface-nop.execution.json';
 import surfaceNOPQFixture from './fixtures/surface-nopq.execution.json';
+import surfaceQShopCorrelationFixture from './fixtures/surface-q-shop-correlation.execution.json';
 import surfaceScheduledLifecycleFixture from './fixtures/surface-scheduled-lifecycle.execution.json';
 import { bossAutomaticOutcomeProject } from './support/automatic-fixture';
 import {
@@ -599,6 +600,27 @@ function selectedTransactionPair(product: ExecutionSemanticProduct): {
 }
 
 describe('execution-plan compiler and codec', () => {
+  it('round trips the compact selected normal and boosted World Shop correlation fixture', () => {
+    const plan = decodeExecutionPlan(surfaceQShopCorrelationFixture);
+    const shop = plan.occurrences.find((occurrence) => occurrence.id === 'surface-q-preboss');
+    const rows = shop?.overview.shop?.offers.filter(
+      (offer) => offer.offerKey === 'MixedProgress1' || offer.offerKey === 'MixedProgress2',
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows?.map((row) => row.optionKey).sort()).toEqual(['BoostedRandomLoot', 'RandomLoot']);
+    expect(new Set(rows?.map((row) => row.transactionOwner)).size).toBe(2);
+    for (const row of rows ?? []) {
+      const transaction = shop?.timeline.transactions.find(
+        (candidate) => candidate.owner === row.transactionOwner,
+      );
+      expect(transaction).toMatchObject({
+        kind: 'acquisition',
+        reward: { rewardType: 'RandomLoot', source: 'ApolloUpgrade' },
+      });
+    }
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+  });
+
   it('accepts source-owned replacement materialization only for Artificer roles', () => {
     const role = {
       role: 'self',
@@ -711,6 +733,22 @@ describe('execution-plan compiler and codec', () => {
       optionKey: 'ChaosWeaponUpgrade',
       rewardType: 'ChaosWeaponUpgrade',
     });
+    expect(() =>
+      decodeExecutionOverview(
+        {
+          encounterPhases: [],
+          requiredObjects: [],
+          shop: {
+            profileKey: 'Q_WorldShop',
+            offers: [
+              { offerKey: 'one', transactionOwner: 'same', optionKey: 'One', rewardType: 'One' },
+              { offerKey: 'two', transactionOwner: 'same', optionKey: 'Two', rewardType: 'Two' },
+            ],
+          },
+        },
+        'overview',
+      ),
+    ).toThrow(/duplicate transaction owners/);
   });
 
   it('requires Shrine purchase and delivery source identities to be paired', () => {
@@ -1901,7 +1939,7 @@ describe('execution-plan compiler and codec', () => {
     expect(boss?.doors).toMatchObject({ kind: 'terminal' });
   });
 
-  it('accepts only closed protocol-35 Underworld and Surface route prefixes', () => {
+  it('accepts only closed protocol-36 Underworld and Surface route prefixes', () => {
     const fixture = JSON.parse(JSON.stringify(underworldFGHIFixture));
     fixture.extent = {
       kind: 'configuredPrefix',

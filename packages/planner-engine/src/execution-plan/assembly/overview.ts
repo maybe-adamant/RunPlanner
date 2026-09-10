@@ -23,6 +23,7 @@ import type {
   ExecutionKeepsakeEquipResults,
   ExecutionOverview,
   ExecutionReward,
+  ExecutionTimelineTransaction,
   ExecutionTravelDealRefill,
 } from '../model';
 import type { HermesShrineGenerationKey, HermesShrineSlotKey } from '../../authored-project/model';
@@ -275,25 +276,40 @@ function executionAdditionalExits(
 function executionShop(
   room: CanonicalAuthoredRoom,
   biome: CompleteValidBiomeProjectEvaluation,
+  transactions: readonly ExecutionTimelineTransaction[],
 ): ExecutionOverview['shop'] | undefined {
   if (room.entryState === undefined) return undefined;
   const optionKeys = shopOptionKeys(room, biome);
+  const transactionByOwner = new Map(transactions.map((transaction) => [transaction.owner, transaction]));
+  const transactionOwnerByOffer = new Map(
+    room.roomLifecycleTimeline.entries
+      .flatMap((entry) =>
+        entry.kind === 'action' && entry.action.reference.kind === 'interactShopOffer'
+          ? [[entry.action.reference.offerKey, semanticAddressKey(entry.action.owner)] as const]
+          : [],
+      ),
+  );
   const offers = Object.freeze(
     room.entryState.offers.map((offer, index) =>
-      Object.freeze({
-        offerKey: offer.offerKey,
-        optionKey: optionKeys[index]!,
-        rewardType: offer.offer.rewardType,
-        ...(offer.offer.payload?.kind === 'BoonSource'
-          ? { source: offer.offer.payload.source }
-          : {}),
-        ...(offer.offer.payload?.kind === 'DevotionPair'
-          ? {
-              source: offer.offer.payload.chosenSource,
-              spurnedSource: offer.offer.payload.spurnedSource,
-            }
-          : {}),
-      }),
+      (() => {
+        const actionOwner = transactionOwnerByOffer.get(offer.offerKey);
+        const transaction = actionOwner === undefined ? undefined : transactionByOwner.get(actionOwner);
+        return Object.freeze({
+          offerKey: offer.offerKey,
+          ...(transaction === undefined ? {} : { transactionOwner: transaction.owner }),
+          optionKey: optionKeys[index]!,
+          rewardType: offer.offer.rewardType,
+          ...(offer.offer.payload?.kind === 'BoonSource'
+            ? { source: offer.offer.payload.source }
+            : {}),
+          ...(offer.offer.payload?.kind === 'DevotionPair'
+            ? {
+                source: offer.offer.payload.chosenSource,
+                spurnedSource: offer.offer.payload.spurnedSource,
+              }
+            : {}),
+        });
+      })(),
     ),
   );
   const contractEntry = room.acquisitionSites.roomExit?.entries[INFERNAL_CONTRACT_ENTRY_KEY];
@@ -657,9 +673,10 @@ export function assembleExecutionOverview(
   room: CanonicalAuthoredRoom,
   biome: CompleteValidBiomeProjectEvaluation,
   batch: CanonicalBatch | undefined,
+  transactions: readonly ExecutionTimelineTransaction[],
 ): ExecutionOverview {
   const incomingReward = executionReward(room);
-  const shop = executionShop(room, biome);
+  const shop = executionShop(room, biome, transactions);
   const hermesShrine = executionHermesShrine(room, biome);
   const rewardWheels = executionRewardWheels(room);
   const stygianWell = executionStygianWell(room);

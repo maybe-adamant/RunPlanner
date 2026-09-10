@@ -47,7 +47,7 @@ export function executionOccurrence(
     ...(resumeBoundary === undefined ? {} : { resumeBoundary }),
     ...(anomaly === undefined ? {} : { anomaly }),
     overview: Object.freeze({
-      ...assembleExecutionOverview(room, biome, batch),
+      ...assembleExecutionOverview(room, biome, batch, transactions),
       ...(publishedHub === undefined ? {} : { hub: publishedHub }),
       ...(publishedLocalSlots === undefined ? {} : { localSlots: publishedLocalSlots }),
     }),

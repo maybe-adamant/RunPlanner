@@ -161,6 +161,21 @@ function validateFieldsCageSlots(
   });
 }
 
+function validateShopTransactionOwners(
+  occurrence: Pick<ExecutionOccurrence, 'overview' | 'timeline'>,
+  label: string,
+): void {
+  const owners = occurrence.overview.shop?.offers.flatMap((offer) =>
+    offer.transactionOwner === undefined ? [] : [offer.transactionOwner],
+  ) ?? [];
+  if (new Set(owners).size !== owners.length)
+    fail(`${label}.overview.shop.offers has duplicate transaction owners`);
+  for (const owner of owners) {
+    if (occurrence.timeline.transactions.filter((transaction) => transaction.owner === owner).length !== 1)
+      fail(`${label}.overview.shop transaction owner must name one occurrence transaction`);
+  }
+}
+
 export function occurrence(value: unknown, index: number): ExecutionOccurrence {
   const label = `occurrences[${index}]`;
   const record = object(value, label);
@@ -280,6 +295,7 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
           }),
         }),
   });
+  validateShopTransactionOwners(parsed, label);
   validateRewardWheelProduct(parsed, label);
   return parsed;
 }
