@@ -210,12 +210,14 @@ describe('surface product loop', () => {
     recovery.flush();
     expect(recovery.readStoredJson()).toBe(encodeProjectDocument(authored));
 
-    await view.user.click(screen.getByRole('button', { name: 'Save' }));
+    await view.user.click(screen.getByRole('button', { name: 'File' }));
+    await view.user.click(screen.getByRole('menuitem', { name: 'Save' }));
     await screen.findByText('Saved the profile.');
     expect(persistence.readStoredJson()).toBe(encodeProjectDocument(authored));
     expect(selectProfileStatus(application.store.getState())).toBe('Clean');
 
-    await view.user.click(screen.getByRole('button', { name: 'New' }));
+    await view.user.click(screen.getByRole('button', { name: 'File' }));
+    await view.user.click(screen.getByRole('menuitem', { name: 'New' }));
     expect(currentEvaluation(application).status).toBe('valid');
     await view.user.click(
       within(screen.getByRole('group', { name: 'Choose route' })).getByRole('button', {
@@ -223,7 +225,8 @@ describe('surface product loop', () => {
       }),
     );
     expect(currentEvaluation(application).status).toBe('empty');
-    await view.user.click(screen.getByRole('button', { name: 'Load' }));
+    await view.user.click(screen.getByRole('button', { name: 'File' }));
+    await view.user.click(screen.getByRole('menuitem', { name: 'Load…' }));
     await screen.findByText('Loaded the profile.');
     expect(currentProject(application)).toEqual(authored);
 

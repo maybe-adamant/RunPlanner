@@ -361,7 +361,7 @@ runs pure package tests and focused UI-adapter tests. Type checking remains a
 separate required command because test transformation alone is not a type
 proof.
 
-Test-only authored-project checkpoints are strict, schema-74-encoded
+Test-only authored-project checkpoints are strict, current-schema
 `ProjectDocument` inputs under `test/fixtures/authored-project/checkpoints/`.
 Static route-scoped imports feed lazy loaders that decode and freeze each
 checkpoint through the production codec; tests never load serialized
@@ -453,15 +453,17 @@ The desktop host's responsibilities remain narrow:
 
 - native window and packaging;
 - open/save dialogs;
-- scoped project-file access;
+- scoped project-file access and one machine-local active-file reference;
 - clipboard integration;
 - application preferences and update plumbing if later required.
 
 No simulator rule moves into Rust merely because Tauri is present. The host
-enables only native Open/Save dialogs and text reads/writes for paths selected
-through those dialogs; their dynamic filesystem scope is not persisted across
-application restarts. Tauri's native file-drop interception remains disabled
-so ordinary HTML pointer and drag interactions retain browser parity.
+enables native Open/Save dialogs and text reads/writes only for paths granted
+through those dialogs. It may persist the last accepted profile path in its
+machine-local application-data directory and reconstruct that one scoped
+reference on restart; Rust does not parse or validate planner JSON. Tauri's
+native file-drop interception remains disabled so ordinary HTML pointer and
+drag interactions retain browser parity.
 
 ### React Flow
 
@@ -642,27 +644,29 @@ The app persists an authored project document, not Redux state and not a
 simulation cache. The document contains only durable semantic choices and its
 schema version.
 
-The normalized schema-74 `ProjectDocument` is also the portable profile-file
-format. It contains exactly one selected route and its authored state; a
-profile is one saved planning workspace, not a container for sibling runs. A
-filename belongs to the application profile session, not the authored
-document. Load captures the selected file's basename, later saves reuse it,
-and New or recovery-only startup clears it so Save falls back to
-`run-plan.runplanner.json`. A future wrapper is justified only if one profile
-must own durable data that is not part of one authored project, such as several
-projects or application preferences.
+The normalized current-schema `ProjectDocument` is also the portable
+profile-file format. It contains exactly one selected route and its authored
+state. One profile is one saved planning workspace; it is not a container for
+sibling runs. A filename and native path belong to the application and host
+file session, not the authored document. A future wrapper is justified only if
+one profile must own durable data that is not part of one authored project,
+such as several projects or application preferences.
 
 Manual profile persistence and automatic recovery are separate application
 authorities:
 
 ```ts
 interface ProfileFileAdapter {
+  readonly supportsSaveAs: boolean;
+  clearActive(): Promise<void>;
   saveAs(suggestedFileName: string, json: string): Promise<ProfileFileReference | null>;
   load(): Promise<{ readonly file: ProfileFileReference; readonly json: string } | null>;
+  restoreActive(): Promise<ProfileFileRestoreResult>;
 }
 
 interface ProfileFileReference {
   readonly fileName: string;
+  activate(): Promise<void>;
   write(json: string): Promise<void>;
 }
 
@@ -673,19 +677,26 @@ interface AutosaveRecoveryAdapter {
 }
 ```
 
-`ProfileFileAdapter` owns explicit user-directed Save and Load operations. A
-successful Load or first Save returns one host-owned file reference. Project
-operations retain that reference outside Redux, authored JSON, and undo/redo;
-later Save calls write through it, while New clears it. The reference from an
-invalid or cancelled Load is never established.
+`ProfileFileAdapter` owns explicit user-directed Load, Save, and Save As
+operations. A successful Load, first Save, or Save As returns one host-owned
+file reference. Project operations retain that reference outside Redux,
+authored JSON, and undo/redo; later Save calls write through it, while New
+clears it before publishing the new project. A selected reference is activated
+only after its document has been accepted or its snapshot has been written.
+Cancellation, invalid content, preparation failure, and write failure leave
+the prior active reference and baseline unchanged.
 
 The browser adapter deliberately keeps one portable behavior: references write
-through ordinary downloads and Load uses an HTML file input. The Tauri adapter
-uses native dialogs and a dynamically scoped native path, so later Save
-overwrites the opened or first-saved file in place. `AutosaveRecoveryAdapter`
-owns a separate browser-local recovery key and never substitutes for an
-explicit profile file. Browser and native globals remain confined to their
-own adapters and application composition.
+through ordinary downloads and Load uses an HTML file input. Save As would be
+identical to Save there, so the browser menu omits it. The Tauri adapter uses
+native dialogs and persists one accepted path through narrow native commands;
+later Save overwrites that file after a restart, while Save As writes and
+activates another file. The native host stores only path metadata and raw
+bytes. Project decoding, canonical comparison, recovery precedence, and dirty
+state remain application responsibilities. `AutosaveRecoveryAdapter` owns a
+separate browser-local recovery key and never substitutes for an explicit
+profile file. Browser and native globals remain confined to their own adapters
+and application composition.
 
 The application keeps the fingerprint of the last successfully saved snapshot
 or explicitly loaded profile as session state. Dirty state is derived by
@@ -693,8 +704,19 @@ comparing that fingerprint with the current normalized project fingerprint.
 If the user edits while an asynchronous save is pending, success establishes
 the serialized snapshot as the baseline and the newer current project remains
 dirty. Autosave writes do not establish a clean baseline. Undoing back to the
-explicit baseline is therefore clean even without another save, while
-restoring an autosave is always reported as recovered and unsaved.
+explicit baseline is therefore clean even without another save. Anonymous or
+different-content autosave recovery is reported as recovered and unsaved;
+canonically equivalent desktop recovery is recognized as the clean disk
+snapshot.
+
+Desktop startup reconciles the remembered disk document with autosave before
+constructing the synchronous application. A missing autosave opens the disk
+document clean; canonically equivalent recovery also opens clean. Different
+valid recovery opens as recovered work, retains the disk snapshot as its
+baseline, and keeps Save bound to that file. A missing, unreadable, or invalid
+remembered file falls back to valid recovery anonymously and clears the stale
+association. Corrupt recovery remains blocked and exportable without erasing a
+valid remembered file. Browser startup retains anonymous recovery behavior.
 
 Autosave observes only effective authored-project replacements, including
 semantic edits, undo/redo, route selection through New, and successful profile

@@ -960,26 +960,31 @@ The user-facing project lifecycle has one explicit file workflow:
 
 - **New** opens the catalog-driven route chooser and creates a fresh project
   only after a route is selected;
-- **Save Profile** writes the normalized `ProjectDocument` through the
-  platform profile-file adapter;
-- **Load Profile** decodes one selected profile file and replaces the project
-  only after the entire document passes catalog validation.
+- **Load…** decodes one selected profile file and replaces the project only
+  after the entire document passes catalog validation and immediate workspace
+  preparation;
+- **Save** writes the normalized `ProjectDocument` through the platform
+  profile-file adapter;
+- **Save As…** is exposed by the desktop host, writes another file, and makes
+  it the active Save target; and
+- **Publish to Game…** opens the existing profile-and-slot publication dialog
+  without changing the active project file.
 
 Local Save/Load and Export/Import are not retained as two public persistence
-concepts. Browser Save Profile uses a
-download and Browser Load Profile uses an upload. A later desktop host may use
-native file dialogs through the same application contract. The application
-profile session remembers the basename returned by Load Profile and reuses it
-for later saves. New and recovery-only startup have no filename, so Save
-Profile suggests `run-plan.runplanner.json`. The filename never enters the
-authored document, undo history, or dirty-state comparison.
+concepts. Browser Save uses a download and Browser Load uses an upload; because
+browser Save As would be the same operation, it is not exposed separately. The
+desktop host uses native dialogs and remembers one accepted project file across
+restarts. Save overwrites that file, Save As switches to a new file, and New
+clears the association before publishing a fresh project. The filename and
+native path never enter the authored document, Redux, undo history, autosave
+JSON, or dirty-state comparison.
 
 Explicit profile replacement is atomic: successful load resets undo/redo,
 runs one fresh simulation, proves the immediate structured workspace can be
 projected, installs that prepared workspace as the clean baseline, and then
-queues recovery autosave. The host file does not become the active Save target
-and a blocked recovery is not cleared until preparation succeeds. Cancellation
-is a no-op. Read, decode, simulation, or immediate-projection failure leaves the
+queues recovery autosave. Only then does the selected desktop file become the
+active Save target, and only then is blocked recovery cleared. Cancellation is
+a no-op. Read, decode, simulation, or immediate-projection failure leaves the
 current project, history, evaluation, clean baseline, host file target, and
 recovery value untouched.
 
@@ -991,10 +996,12 @@ editor is remounted. Both this surface and blocked startup recovery allow the
 untouched raw autosave value to be exported through the host's normal Save As
 flow for diagnosis. Export neither decodes nor migrates the value, does not make
 the exported file the active project target, and does not clear recovery. The
-user may also explicitly discard only the autosave recovery copy and restart at
-the route chooser; this never modifies the source profile file.
+user may also explicitly discard only the autosave recovery copy. With no
+desktop file association, restart returns to the route chooser. A valid
+remembered desktop file remains associated and can reopen after recovery is
+discarded; discard never modifies that source file.
 
-Autosave is a distinct recovery channel, not an implicit Save Profile action.
+Autosave is a distinct recovery channel, not an implicit Save action.
 It observes effective authored changes only and is debounced. Navigation,
 finding selection, panel state, and simulation publication do not trigger it.
 Autosave failure is presented without blocking continued editing.
@@ -1007,20 +1014,24 @@ an imperative flag:
 | Fresh startup               | none                      | No project before route choice |
 | Open New chooser            | unchanged                 | Unchanged until route choice   |
 | Select route through New    | none                      | Unsaved                        |
-| Save Profile succeeds       | serialized snapshot       | Clean only if still equal      |
+| Save succeeds               | serialized snapshot       | Clean only if still equal      |
 | Semantic edit               | unchanged                 | Dirty if unequal               |
 | Undo/redo                   | unchanged                 | Clean exactly when equal again |
-| Load Profile succeeds       | loaded project            | Clean                          |
+| Load succeeds               | loaded project            | Clean                          |
 | Restore autosave at startup | recovered project         | Recovered / Unsaved            |
 | Autosave write              | unchanged                 | No dirty-state change          |
 
 On startup, a valid recovery document is decoded and prepared through the same
 catalog-aware project boundary and receives a fresh history, simulation, and
-immediate workspace projection. Before a route is
+immediate workspace projection. Browser recovery remains anonymous. Desktop
+startup also reads its remembered file: equivalent recovery opens that file
+clean, while different recovery retains the disk document as baseline and the
+same active Save target. An invalid remembered file falls back to valid
+recovery anonymously and clears the unsafe association. Before a route is
 selected, no authored project, history, evaluation, or dirty status exists. If
-recovery is corrupt, the editor remains in the no-project state, reports the
-failure, preserves the raw recovery value, and suspends further autosave. The
-route chooser remains available; the user may explicitly Discard Autosave, or
+recovery is corrupt, the editor reports the failure, preserves the raw value,
+and suspends further autosave. The route chooser remains available when no
+valid desktop file can open; the user may explicitly Discard Autosave, or
 successfully load a profile, to clear that blockade. The app must never
 overwrite corrupt recovery merely because the chooser is visible.
 
