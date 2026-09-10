@@ -288,6 +288,27 @@ Test helpers may construct inputs and observe outputs, but must not reproduce
 production eligibility, topology, lifecycle, reward, focus, or candidate
 policy. Do not test React, Redux Toolkit, or third-party component internals.
 
+### Generated fixture discipline
+
+Treat checked-in JSON execution fixtures as generated protocol products, not as
+scratch serialization output.
+
+- Generate their semantic content through the owning planner fixture/product
+  builder. Do not hand-author wire fields that production cannot emit.
+- Preserve each existing fixture's checked-in serialization exactly. Do not run
+  a broad JSON or Prettier rewrite over execution fixtures. New fixtures use the
+  direct compact `encodeExecutionPlan` output plus one trailing newline; legacy
+  pretty-printed fixtures remain in their established form until retired.
+- Regenerate only fixtures whose semantic product changed. For a protocol-wide
+  scalar such as the version number, use a bounded mechanical edit rather than
+  rebuilding otherwise unchanged products.
+- The planner copy is authoritative. Mirror changed execution fixtures to the
+  Plan Executor byte-for-byte, then verify every mirrored pair with `cmp` (or an
+  equivalent byte comparison).
+- Before handoff, inspect fixture `git diff --numstat` and a representative diff.
+  Unexpected whole-file churn or formatting-only changes are a failed fixture
+  update and must be corrected before review.
+
 ## Documentation
 
 Update the owning document whenever a modeling or ownership decision changes.
