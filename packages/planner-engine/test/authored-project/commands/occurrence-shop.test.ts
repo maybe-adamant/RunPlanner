@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  activeRoomActionReferences,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createOccurrenceAddress,
@@ -143,6 +144,15 @@ describe('authored-project Shop occurrence commands', () => {
       offer: { rewardType: 'BlindBoxLoot', payload: { source: 'ApolloUpgrade' } },
       traitOffersByAcquisitionRole: { hiddenSource: null },
     });
+    expect(
+      activeRoomActionReferences(catalog, nBiome, occurrence()!).filter(
+        (reference) =>
+          (reference.kind === 'interactShopOffer' && reference.offerKey === 'Boon') ||
+          (reference.kind === 'interactAcquisitionEntry' &&
+            reference.siteKey === 'roomExit' &&
+            reference.entryKey === 'Boon'),
+      ),
+    ).toEqual([{ kind: 'interactShopOffer', offerKey: 'Boon' }]);
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
       project,
     );
