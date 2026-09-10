@@ -4,8 +4,8 @@ These audits preserve source-backed Hades II facts, source contacts, observed
 uncertainties, discrepancies with the planner, and the current planner
 disposition. They are evidence, not package architecture or implementation
 plans: stable ownership rules belong in `docs/design/`, biome behavior belongs
-in `docs/biomes/`, and temporary delivery mechanics belong in
-`docs/progress/`.
+in `docs/biomes/`, pre-plan analysis belongs in `docs/investigations/`, and
+temporary delivery mechanics belong in `docs/progress/`.
 
 ## Where to look
 
@@ -23,8 +23,6 @@ reader-facing taxonomy, not a package or runtime boundary.
   keepsakes, and keepsake-driven progression behave?
 - [Room features](room-features/) — Which optional or automatic room features
   exist, where can they occur, and which effects matter to the simulation?
-- [Editor](editor/) — What source-backed terminology and cross-biome authoring
-  findings should inform the editor without becoming editor architecture?
 - [Game execution contacts](game-execution-contacts/) — Through which native
   Hades II functions are planner-modeled rewards, traits, abilities, room
   features, and actions realized or observed?
@@ -35,7 +33,6 @@ reader-facing taxonomy, not a package or runtime boundary.
 
 - [Encounter selection and composition](rooms-and-routes/ENCOUNTER_SELECTION_AND_COMPOSITION_FINDINGS.md) — Encounter envelopes, selectable compositions, and their room-level constraints.
 - [Enemy formation and Fear Vows](rooms-and-routes/ENEMY_FORMATION_AND_FEAR_VOW_GAME_DATA_AUDIT.md) — Generated Combat and Devotion waves, enemy types and counts, and the intervention order for Hordes, Menace, Fangs, Return, and adjacent Vows.
-- [Game execution Timeline reconciliation](rooms-and-routes/GAME_EXECUTION_TIMELINE_RECONCILIATION_AUDIT.md) — Feasibility of owner-bound, partial-order runtime reconciliation across the closed Room Action catalog without callback replay or permutation enumeration.
 - [H Fields spatial points](rooms-and-routes/H_FIELDS_SPATIAL_POINTS_GAME_DATA_AUDIT.md) — Player-entry pairs, cage and optional-reward point inventories, runtime placement, map coordinates, and spatial discrepancies for all 15 H combat maps.
 - [I/Q World Shop phases](rooms-and-routes/I_Q_WORLD_SHOP_PHASE_GAME_DATA_AUDIT.md) — World Shop phase and inventory timing across I and Q.
 - [Noncombat and Empty encounter normalization](rooms-and-routes/NONCOMBAT_AND_EMPTY_ENCOUNTER_NORMALIZATION_AUDIT.md) — Native `Empty` placeholders, retained noncombat phases, and exact Intro, Fountain, Story, Shop, Preboss, Postboss, Hub, and Chaos encounter identities.
@@ -46,10 +43,9 @@ reader-facing taxonomy, not a package or runtime boundary.
 ### Rewards and acquisition
 
 - [Acquisition, delivery, and room settlement](rewards-and-acquisition/ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md) — Pickup, purchase, generated delivery, and room-settlement evidence.
-- [Authored reward and trait defaults](rewards-and-acquisition/AUTHORED_REWARD_AND_TRAIT_DEFAULTS_AUDIT.md) — Unresolved and retained-invalid authored reward and trait defaults against source declarations.
 - [Fields optional rewards and Artificer](rewards-and-acquisition/FIELDS_OPTIONAL_REWARDS_AND_ARTIFICER_GAME_DATA_AUDIT.md) — Fields optional inventory and Artificer conversion facts.
 - [Reward game data](rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md) — Reward declarations, bags, stores, and acquisition identity evidence.
-- [Runtime offer eligibility](rewards-and-acquisition/RUNTIME_OFFER_FALLBACK_AUDIT.md) — Volatile native predicates and the exact-authored-result mismatch policy.
+- [Volatile offer eligibility](rewards-and-acquisition/VOLATILE_OFFER_ELIGIBILITY_GAME_DATA_AUDIT.md) — Volatile native predicates, the Gorgon exception, and the exact-result/no-substitution boundary.
 
 ### Traits
 
@@ -75,10 +71,6 @@ reader-facing taxonomy, not a package or runtime boundary.
 ### Room features
 
 - [Room features](room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md) — Natural resources, Pools of Purging, Shrines of Hermes, Stygian Wells, and related feature-specific source evidence.
-
-### Editor
-
-- [Editor UX](editor/EDITOR_UX_AUDIT.md) — Cross-biome terminology and editor-facing findings grounded in the current authoring model.
 
 ### Game execution contacts
 

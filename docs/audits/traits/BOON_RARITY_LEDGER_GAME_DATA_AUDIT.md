@@ -214,12 +214,10 @@ choice receives a special selection-time upgrade if the first selected choice
 activated Proper Upbringing after the second choice had already been generated
 as Common.
 
-Before the rarity-ledger slice, a Proper-only
-`minimumScalableGodTraitRarity: Rare` projection captured this effect in
-isolation. Gate A replaced that special case with the declaration's exact
-numeric contribution in the general offer-local ledger, so room/item
-overrides, Arcana, and future Chaos effects can compose without another floor
-authority.
+The planner represents Proper Upbringing through its declaration's exact
+numeric contribution in the general offer-local ledger rather than a separate
+minimum-rarity floor. Room/item overrides, Arcana, and future modifiers can
+therefore compose without another authority.
 
 ## Yarn of Ariadne
 
@@ -350,12 +348,11 @@ Ownership consequences:
 - candidate evaluation owns the possible/impossible rarity result; and
 - React renders that result without recomputing chance arithmetic.
 
-Gate A landed this contract at catalog version
-`0.30.0-boon-rarity-ledger`. Miniboss overrides are normalized on the exact
-F-Q room declarations, and I/Q boosted rarity is normalized on the exact
-generated Shop option entries. Room context wins over item context; sparse
-missing keys fall back to the provider base; additive contributions precede
-multiplicative contributions; and no ledger is persisted.
+Miniboss overrides are normalized on the exact F-Q room declarations, and I/Q
+boosted rarity is normalized on the exact generated Shop option entries. Room
+context wins over item context; sparse missing keys fall back to the provider
+base; additive contributions precede multiplicative contributions; and no
+ledger is persisted.
 
 Proper Upbringing's promotion of already equipped Common traits remains a
 separate chronological transition. The general ledger consumes its active

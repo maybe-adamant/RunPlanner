@@ -33,10 +33,11 @@ function is reached.
 
 The six bespoke contacts are defined in `Scripts/EventLogic.lua`. Their explicit
 adapters are intentional; a single `UseLoot` hook does not cover these menus.
-The six bespoke contacts and their consequence boundaries are specified in
-[NPC trait and generated-pickup execution](NPC_TRAIT_AND_GENERATED_PICKUP_EXECUTION.md).
-Coverage of a dormant contact does not claim that its route navigation is
-enabled.
+The native NPC source remains the stable owner through menu construction and
+selection. Trait-owned generated pickups remain separate acquisitions claimed
+at their own accepted interaction; the executor neither recreates the drop nor
+requires source-trait provenance. Coverage of a dormant contact does not claim
+that its route navigation is enabled.
 
 ## Nemesis random events
 

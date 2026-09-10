@@ -207,11 +207,22 @@ when no refill was published.
 
 ## Mismatch classification
 
-The first mismatch freezes further planner realization and reports the
-plan/catalog fingerprints, semantic owner, checkpoint, expected value,
-observed value, and bounded event context. The executor then becomes passive:
-the game continues natively, and no hooked game function returns early merely
-because the execution session desynchronized.
+Runtime contacts have five distinct outcomes. Adapters must not promote a
+weaker outcome into a mismatch merely because they can observe it.
+
+| Outcome             | Meaning                                                                                             | Runtime disposition                                                                                          |
+| ------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Admission rejection | A selected slot is absent, malformed, incompatible, or not a complete execution plan.               | Do not create a synchronized session; report the admission error.                                            |
+| Executor fault      | A required host function is missing or throws, or a decoded-plan/session invariant fails.           | Restore temporary forcing scope, report or propagate the fault, and do not describe it as player divergence. |
+| Incidental contact  | Native code reaches a supported hook but no compatible published owner claims it.                   | Pass through unchanged without completing a transaction or desynchronizing.                                  |
+| Diagnostic          | A bounded actuator could not install or apply its intended steering.                                | Record bounded evidence and continue native behavior without changing synchronization.                       |
+| Execution mismatch  | A standard checkpoint or premature exact-owner action proves the remaining simulated prefix unsafe. | Preserve the first mismatch, stop later realization, and let the native game continue.                       |
+
+The first execution mismatch reports the plan/catalog fingerprints, semantic
+owner, checkpoint, expected value, observed value, and bounded event context.
+The executor then becomes passive: the game continues natively, and no hooked
+game function returns early merely because the execution session
+desynchronized.
 
 - A `playerDivergence` means the player performed a different observable action
   from the published trace.
@@ -224,6 +235,30 @@ corrected at the planner-engine or adapter authority. A compiler correction is
 appropriate only when its lossless translation omitted or misencoded an
 already-explicit engine fact. The Executor must not hide a discrepancy with
 fallback planning.
+
+Representative boundaries keep this policy concrete:
+
+- A trait, Pom, or automatic-effect adapter completes when its native steering
+  terminal returns. A local steering failure is diagnostic; the published
+  room-exit trait, Arcana, keepsake, or retained-effect fact proves the durable
+  outcome.
+- Travel Deal binds one exact dynamic refill carrier, generation, and slot. An
+  unrelated refill passes through. A refill at the wrong published slot is
+  diagnostic and does not complete the declared refill; the outstanding
+  obligation fails at its ordinary deadline if the exact terminal never
+  occurs.
+- Artificer completes only after the expected replacement is observed and the
+  source is destroyed. A presentation callback or wrong replacement is useful
+  diagnostic evidence, but it is not the declared terminal.
+- A native encounter, pickup, purchase, or transformation with no compatible
+  owner is incidental. Its existence is not itself a reason to stop a run.
+
+Faults remain a separate infrastructure boundary. Unknown Timeline handles,
+conflicting native bindings, missing decoded owners, unsupported lifecycle
+checkpoints, closed-session use, malformed post-admission payloads, and missing
+or throwing required native functions are executor defects. Exception guards
+may restore temporary forcing state before rethrowing; they are never fallback
+gameplay behavior.
 
 ## Compatibility, transport, and security
 

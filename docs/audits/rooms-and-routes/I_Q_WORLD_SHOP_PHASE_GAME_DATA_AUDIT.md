@@ -4,8 +4,8 @@
 
 This is an implementation-free source audit of the first- and second-half
 inventory rules for `I_WorldShop` and `Q_WorldShop`. It records the complete
-phase-sensitive option matrices so a later implementation plan can consume
-settled facts without rereading game data.
+phase-sensitive option matrices that govern their normalized catalog
+declarations and planner eligibility.
 
 The audit answers:
 

@@ -317,7 +317,7 @@ qualify by itself; the Aspect's later concrete Spell Drop does. This still does
 not prove acquisition of the required Olympian node. The authored Task Force
 selection expresses that deeper intent and remains the exact result sent to
 execution. Live native ineligibility follows the
-[Runtime Offer Eligibility audit](../rewards-and-acquisition/RUNTIME_OFFER_FALLBACK_AUDIT.md).
+[Volatile Offer Eligibility audit](../rewards-and-acquisition/VOLATILE_OFFER_ELIGIBILITY_GAME_DATA_AUDIT.md).
 No generated Path talent needs to enter the simulated equipped-trait ledger
 merely to support Task Force.
 
