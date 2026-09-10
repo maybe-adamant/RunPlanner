@@ -1226,18 +1226,20 @@ describe('engine-owned F/G execution semantic product', () => {
     });
     project = authorLegalTraitOffers(project);
     const product = productFor(project);
-    expect(product.occurrences.flatMap((occurrence) => occurrence.timeline.transactions)).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          kind: 'acquisition',
-          sourceOwner: semanticAddressKey(entry),
-          reward: expect.objectContaining({ rewardType: 'BlindBoxLoot' }),
-          roles: expect.arrayContaining([
-            expect.objectContaining({ traitOffer: expect.anything() }),
-          ]),
-        }),
-      ]),
-    );
+    const shopOffer = product.occurrences
+      .find((occurrence) => occurrence.id === shop.occurrenceId)
+      ?.overview.shop?.offers.find((offer) => offer.offerKey === 'Boon');
+    const transaction = product.occurrences
+      .flatMap((occurrence) => occurrence.timeline.transactions)
+      .find(
+        (candidate): candidate is Extract<ExecutionTimelineTransaction, { readonly kind: 'acquisition' }> =>
+          candidate.kind === 'acquisition' && candidate.sourceOwner === semanticAddressKey(entry),
+      );
+    expect(transaction).toMatchObject({
+      reward: { rewardType: 'BlindBoxLoot' },
+      roles: expect.arrayContaining([expect.objectContaining({ traitOffer: expect.anything() })]),
+    });
+    expect(shopOffer?.transactionOwner).toBe(transaction?.owner);
   });
 
   it('publishes a purchased World Shop Travel Deal replacement as an acquisition outcome', () => {
@@ -1332,11 +1334,15 @@ describe('engine-owned F/G execution semantic product', () => {
       (candidate) => candidate.occurrenceId === shopId,
     );
     if (room === undefined) throw new Error('Q World Shop occurrence is missing');
-    expect(assembleExecutionOverview(room, biome, undefined).shop?.offers).toContainEqual({
+    const overviewOffer = assembleExecutionOverview(room, biome, undefined, []).shop?.offers.find(
+      (offer) => offer.offerKey === 'PremiumProgress',
+    );
+    expect(overviewOffer).toMatchObject({
       offerKey: 'PremiumProgress',
       optionKey: 'ChaosWeaponUpgrade',
       rewardType: 'ChaosWeaponUpgrade',
     });
+    expect(overviewOffer).not.toHaveProperty('transactionOwner');
     expect(
       executionTimelineTransactions(
         room,
@@ -1420,7 +1426,7 @@ describe('engine-owned F/G execution semantic product', () => {
       (room) => room.occurrenceId === shrineAddress.occurrenceId,
     );
     if (shrineRoom === undefined) throw new Error('Shrine execution fixture lacks N Postboss');
-    const overview = assembleExecutionOverview(shrineRoom, nEvaluation, undefined);
+    const overview = assembleExecutionOverview(shrineRoom, nEvaluation, undefined, []);
     expect(overview.hermesShrine?.offers).toEqual([
       expect.objectContaining({
         generationKey: 'initial:first',
@@ -1507,25 +1513,26 @@ describe('engine-owned F/G execution semantic product', () => {
       (candidate) => candidate.occurrenceId === shopId,
     );
     if (room === undefined) throw new Error('Q World Shop occurrence is missing');
-    expect(
-      executionTimelineTransactions(
-        room,
-        biome,
-        mergePlannerTimelineFacts(
-          room.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
-          biome.rewards.timelineFacts,
-        ),
-      ),
-    ).toContainEqual(
-      expect.objectContaining({
-        kind: 'transformation',
-        transformation: {
-          kind: 'anvilOfFates',
-          removedTraitKey: 'StaffDoubleAttackTrait',
-          addedTraitKeys: ['StaffLongAttackTrait', 'StaffJumpSpecialTrait'],
-        },
-      }),
+    const product = productFor(project);
+    const occurrence = product.occurrences.find((candidate) => candidate.id === shopId);
+    const transaction = occurrence?.timeline.transactions.find(
+      (candidate) =>
+        candidate.kind === 'transformation' &&
+        candidate.transformation.kind === 'anvilOfFates' &&
+        candidate.transformation.removedTraitKey === 'StaffDoubleAttackTrait',
     );
+    expect(transaction).toMatchObject({
+      kind: 'transformation',
+      transformation: {
+        kind: 'anvilOfFates',
+        removedTraitKey: 'StaffDoubleAttackTrait',
+        addedTraitKeys: ['StaffLongAttackTrait', 'StaffJumpSpecialTrait'],
+      },
+    });
+    expect(
+      occurrence?.overview.shop?.offers.find((candidate) => candidate.offerKey === 'PremiumProgress')
+        ?.transactionOwner,
+    ).toBe(transaction?.owner);
   });
 
   it('binds a same-Shop Pom mutation dependency to its purchase transaction', () => {
@@ -1555,12 +1562,66 @@ describe('engine-owned F/G execution semantic product', () => {
       (transaction) =>
         transaction.kind === 'acquisition' && transaction.reward.rewardType === 'RandomLoot',
     );
+    expect(occurrence?.overview.shop?.offers.find((offer) => offer.offerKey === 'Minor')).toMatchObject({
+      offerKey: 'Minor',
+      transactionOwner: minorPurchase?.owner,
+    });
     expect(minorPurchase).toBeDefined();
     expect(boonPurchase).toBeDefined();
     expect(occurrence?.timeline.dependencies).toContainEqual({
       owner: boonPurchase?.owner,
       afterOwner: minorPurchase?.owner,
     });
+  });
+
+  it('publishes exact owners for distinct normal and boosted same-provider Q boons', () => {
+    const shopId = createOccurrenceId('surface-q-preboss');
+    const shop = createOccurrenceAddress(qBiome, shopId);
+    const normal = createShopOfferAddress(qBiome, shopId, 'MixedProgress1');
+    const boosted = createShopOfferAddress(qBiome, shopId, 'MixedProgress2');
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: normal,
+      value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: boosted,
+      value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    project = replaceTestShopOfferActions(project, catalog, shop, ['MixedProgress1', 'MixedProgress2']);
+    project = authorLegalTraitOffers(project);
+
+    const occurrence = productFor(project).occurrences.find(
+      (candidate) => candidate.id === shopId,
+    );
+    const rows = occurrence?.overview.shop?.offers.filter(
+      (offer) => offer.offerKey === 'MixedProgress1' || offer.offerKey === 'MixedProgress2',
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows?.map((offer) => offer.optionKey).sort()).toEqual([
+      'BoostedRandomLoot',
+      'RandomLoot',
+    ]);
+    expect(rows?.map((offer) => offer.transactionOwner).every((owner) => owner !== undefined)).toBe(true);
+    expect(new Set(rows?.map((offer) => offer.transactionOwner)).size).toBe(2);
+
+    for (const row of rows ?? []) {
+      const transaction = occurrence?.timeline.transactions.find(
+        (candidate): candidate is Extract<ExecutionTimelineTransaction, { readonly kind: 'acquisition' }> =>
+          candidate.kind === 'acquisition' && candidate.owner === row.transactionOwner,
+      );
+      expect(transaction).toBeDefined();
+      expect(transaction?.reward).toMatchObject({
+        rewardType: 'RandomLoot',
+        source: 'ApolloUpgrade',
+      });
+      expect(transaction?.sourceOwner).toBe(
+        semanticAddressKey(row.offerKey === 'MixedProgress1' ? normal : boosted),
+      );
+      const traitOffer = transaction?.roles.find((role) => role.traitOffer !== undefined)?.traitOffer;
+      expect(traitOffer).toMatchObject({ giver: 'Apollo' });
+    }
   });
 
   it('publishes declaration-owned Postboss rack and fountain presence without interactions', () => {

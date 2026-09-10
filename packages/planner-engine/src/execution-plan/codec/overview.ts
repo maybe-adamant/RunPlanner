@@ -229,11 +229,20 @@ export function overview(value: unknown, label: string) {
               exact(
                 row,
                 ['offerKey', 'optionKey', 'rewardType'],
-                ['source', 'spurnedSource'],
+                ['transactionOwner', 'source', 'spurnedSource'],
                 `${label}.shop.offers[${index}]`,
               );
               return Object.freeze({
                 offerKey: stringValue(row.offerKey, `${label}.shop.offers[${index}].offerKey`),
+                ...(row.transactionOwner === undefined
+                  ? {}
+                  : {
+                      transactionOwner: stringValue(
+                        row.transactionOwner,
+                        `${label}.shop.offers[${index}].transactionOwner`,
+                        MAX_OWNER_STRING,
+                      ),
+                    }),
                 optionKey: stringValue(row.optionKey, `${label}.shop.offers[${index}].optionKey`),
                 rewardType: stringValue(
                   row.rewardType,
@@ -268,6 +277,15 @@ export function overview(value: unknown, label: string) {
                 }),
               }),
         });
+  if (
+    parsedShop !== undefined &&
+    new Set(
+      parsedShop.offers.flatMap((offer) =>
+        offer.transactionOwner === undefined ? [] : [offer.transactionOwner],
+      ),
+    ).size !== parsedShop.offers.filter((offer) => offer.transactionOwner !== undefined).length
+  )
+    fail(`${label}.shop.offers has duplicate transaction owners`);
   const shrine =
     record.hermesShrine === undefined
       ? undefined
