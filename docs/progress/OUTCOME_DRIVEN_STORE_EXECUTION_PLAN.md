@@ -2,7 +2,7 @@
 
 Status: locked for implementation  
 Planner base: `b7be25edfeefaac163ef607b1465d33e28df31ca`  
-Plan Executor base: `0f059e4a34f279d2ebb2461fad7ec0073131f69`  
+Plan Executor base: `0f0599e4a34f279d2ebb2461fad7ec0073131f69`
 Modpack base: `1c78803d42c6f539fce9af4def12d2c9c8f68624`
 
 ## Objective
@@ -197,7 +197,7 @@ The runtime behavior is deliberately small:
 | Expected refill occurs at the expected position | constrain it to the published option and complete the refill owner |
 | Refill occurs at another position               | record a mismatch and leave the owner incomplete                   |
 | Expected refill never occurs                    | the refill owner fails its room checkpoint                         |
-| No refill is published and native creates one   | record an unexpected-refill mismatch                               |
+| No refill is published and World Shop invokes its dedicated refill callback | record an unexpected-refill mismatch                    |
 | Refilled item is later acquired                 | its separate outcome transaction handles it normally               |
 
 The execution graph contains no source-purchase node, competitor-purchase
@@ -345,8 +345,10 @@ Acceptance:
 - World Shop and Well tests contain no purchase-counter assertions;
 - delayed and rushed Shrine deliveries are settled only by their eventual
   acquisition outcomes;
-- correct, wrong-position, missing, and unexpected Travel Deal refill cases are
-  covered for World Shop, Well, and Shrine;
+- correct, wrong-position, and missing Travel Deal refill cases are covered for
+  World Shop, Well, and Shrine; World Shop additionally covers an unexpected
+  refill through its dedicated native callback, while generic Well and Shrine
+  purchase contacts remain pass-through when no refill is published;
 - Anvil and Twist retain their existing steering behavior after relocation; and
 - no removed purchase transaction survives in protocol fixtures or runtime
   indexes.

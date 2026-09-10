@@ -72,6 +72,7 @@ import fgIxionChaosFixture from './fixtures/fg-ixion-chaos.execution.json';
 import automaticBossFixture from './fixtures/automatic-boss.execution.json';
 import underworldFGHFixture from './fixtures/underworld-fgh.execution.json';
 import underworldFGHIFixture from './fixtures/underworld-fghi.execution.json';
+import surfaceNFixture from './fixtures/surface-n.execution.json';
 import surfaceNOFixture from './fixtures/surface-no.execution.json';
 import surfaceNOPFixture from './fixtures/surface-nop.execution.json';
 import surfaceNOPQFixture from './fixtures/surface-nopq.execution.json';
@@ -1565,6 +1566,10 @@ describe('execution-plan compiler and codec', () => {
     const { plan } = planFor(project);
     if (fixture !== undefined) expect(decodeExecutionPlan(fixture)).toEqual(plan);
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+  });
+
+  it('keeps the published Surface N prefix decodable', () => {
+    expect(() => decodeExecutionPlan(surfaceNFixture)).not.toThrow();
   });
 
   it('reaches a complete Surface automatic and scheduled-acquisition lifecycle', () => {
