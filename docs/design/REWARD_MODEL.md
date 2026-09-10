@@ -3,9 +3,7 @@
 ## Purpose
 
 This document defines the reward vocabulary shared by catalog
-declarations, authored room state, simulation, and the editor. It carries the
-verified reward hierarchy forward without carrying the old Lib control or
-storage implementation.
+declarations, authored room state, simulation, and the editor.
 
 `CATALOG_MODEL.md` owns declaration normalization. This document owns what the
 reward declaration kinds mean and how they compose. `ROOM_LIFECYCLE_MODEL.md`
@@ -15,15 +13,13 @@ and legality.
 `../audits/rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md` records the underlying game evidence and the exact,
 simplified, deferred, or excluded disposition of each audited mechanic.
 
-## Cross-Biome Freeze Status
+## Cross-Biome Contract
 
-Possibility-only evaluation is locked. The generated-batch base-store and
-resolved-offer-only leaf split described below is the globally frozen
-F/G/P/Q/H/O/I/N contract. N confirms that one persistent heterogeneous board
-can use `none` while every target resolves declaration-owned provenance. The
-implemented F/G/H/I and N/O/P/Q product loops use this contract as their sole
-connected reward authority. Declaration-owned biome state and fixed-entry
-continuation ownership do not change this reward contract.
+Possibility-only evaluation and the generated-batch base-store/
+resolved-offer-only leaf split apply across F/G/P/Q/H/O/I/N. N demonstrates
+that one persistent heterogeneous board can use `none` while every target
+resolves declaration-owned provenance. Route-specific topology does not change
+this shared reward contract.
 
 ## Composition
 
@@ -81,7 +77,7 @@ consumed when the offer is generated, not when its reward is acquired.
 `Resolved Reward Offer`
 : The complete authored planner offer at its semantic resolution point. It
 retains the reward type that explains store behavior and any complete payload,
-such as `Boon` plus `ApolloUpgrade`. A payload may contain future planner intent
+such as `Boon` plus `ApolloUpgrade`. A payload may contain deferred planner intent
 that is not yet game-visible, as for Blind Box. The offer is not itself a claim
 that loot entered history.
 
@@ -186,7 +182,7 @@ Offer identity, acquisition identity, and semantic effect are separate. Big,
 Triple, and self-consumed wrapper variants retain the exact ledger keys written
 by the game even when they have a related base effect. Spawn wrappers such as
 `WeaponUpgradeDrop` and `ShopHermesUpgrade` remain exact offer identities but
-resolve fixed concrete loot identities. A future semantic-effect alias may
+resolve fixed concrete loot identities. A typed semantic-effect alias may
 support deeper resource or trait simulation, but it cannot replace the ledger
 identity consumed by requirements.
 
@@ -197,7 +193,7 @@ label does not migrate authored state.
 
 A payload domain owns the shape and local validity of one resolved-offer
 payload.
-The initial domains are:
+The supported domains are:
 
 | Domain         | Value                                | Local rule                                   |
 | -------------- | ------------------------------------ | -------------------------------------------- |
@@ -230,7 +226,7 @@ complete resolved-offer default atomically.
 A source-bearing reward type selects one normalized source-support policy and
 one semantic resolution point. Payload shape alone is insufficient: the same
 `BoonSource` value is supported differently for an ordinary door Boon, a shop
-Boon, and a Blind Box. The initial policy vocabulary is closed:
+Boon, and a Blind Box. The policy vocabulary is closed:
 
 `ordinaryBoonPeer`
 : Resolve one ordinary source while its offer is generated. Apply the ordinary
@@ -352,8 +348,8 @@ with `consumableAndUse`: its custom spell-screen path records use and
 The planner does not project persistent `GameState.UseRecord`; save/profile
 history is outside the project input boundary. It also does not collapse Big,
 Triple, self-consumed wrapper, or random-Stack identities to a semantic base
-name. Future trait/resource simulation may add typed semantic effects beside these
-profiles without changing their exact ledger writes.
+name. Deeper trait or resource simulation may add typed semantic effects beside
+these profiles without changing their exact ledger writes.
 
 Ordinary god loot resolves its trait-bearing role through the equipped-trait
 ledger described below; the concrete selected trait, rather than the loot
@@ -461,7 +457,7 @@ use this form while ordinary I combat retains the Tartarus store default.
 
 ## Producer Kinds
 
-The initial semantic producer kinds are:
+The semantic producer kinds are:
 
 `none`
 : Produces no modeled reward and owns no reward state.
@@ -756,7 +752,7 @@ authoritative. Group and slot cardinality do not change; Q's first group still
 selects two distinct option keys without replacement after phase filtering.
 The current fixed-route evaluator supplies `biomeIndex + 1` as
 `enteredBiomeCount`, which is equivalent for the supported fixed-order routes.
-A future Dream Dive implementation must change that fact producer to provide
+Dream Dive support must change that fact producer to provide
 the actual reordered reached count through the existing engine input, not
 change Shop declarations. The exact generated option identity is also the
 source witness consumed by the offer-local boon-rarity ledger.
@@ -790,9 +786,7 @@ inspect the current shop therefore see the complete generated shop inventory
 at that checkpoint, not a post-purchase remainder. This query is not a
 counted-store lookup.
 
-The normalized requirement kind is `notInCurrentRoomShopOptions`; the legacy
-prototype name `notInStore` is retired at the shared reward-kernel requirement
-boundary.
+The normalized requirement kind is `notInCurrentRoomShopOptions`.
 
 Purchases remove options and update acquisition history after the outgoing
 batch already exists. They cannot change that batch or the selected next room's
@@ -801,7 +795,7 @@ selected room later generates its own outgoing batch. The exact operation order
 is defined by `ROOM_LIFECYCLE_MODEL.md`.
 
 Exact prices, money, health, last-stand inventory, discounts, and affordability
-are deferred. The first complete model authors purchases under a
+are deferred. The model authors purchases under a
 sufficient-resource and valid-use assumption. This deliberately admits some
 purchases that one concrete resource state could not make; it does not weaken
 offer-generation requirements or downstream acquisition effects.
@@ -863,9 +857,10 @@ Action product. Every declared Postboss fountain contributes required
 `useFountain`; `interactKeepsakeRack` is also required when a replacement is
 active. The rack action applies the selected keepsake and its immediate equip
 result at its ranked position, so `useFountain` observes either the carried
-Boss keepsake or the replacement according to the authored order. Retain omits
-the rack participant. The route-position Postboss remains active with the same
-occurrence ownership and chronology whenever the route supplies one.
+Boss keepsake or the replacement according to the authored order. Absence of a
+replacement omits the rack participant. The route-position Postboss remains
+active with the same occurrence ownership and chronology whenever the route
+supplies one.
 
 Mandatory ordinary entries derive their required classification and legal
 lifecycle window from the engine's structural action domain. The semantic
@@ -1068,34 +1063,10 @@ nonempty. These are the `ordinaryBoonPeer` rules. Devotion instead uses
 current-run ordinary god-loot history at offer generation, and the authored
 chosen/spurned order records which member is acquired before and after combat.
 
-## F/G Producer Mapping
-
-The first implementation slice uses these verified bindings:
-
-| Producer                      | Kind    | Domain/profile or fixed reward | Forced store | Eligible | Ineligible                                          |
-| ----------------------------- | ------- | ------------------------------ | ------------ | -------- | --------------------------------------------------- |
-| `F_Opening01..03`             | counted | RunProgress                    | RunProgress  | --       | Devotion, RoomMoneyDrop, MaxHealthDrop, MaxManaDrop |
-| `F_Combat01`                  | counted | RunProgress                    | RunProgress  | --       | Devotion                                            |
-| `F_Combat02..22`              | counted | RunProgress, MetaProgress      | --           | --       | --                                                  |
-| `F_MiniBoss01..03`            | counted | RunProgress                    | RunProgress  | Boon     | --                                                  |
-| `F_Reprieve01`                | counted | RunProgress, MetaProgress      | --           | --       | Devotion                                            |
-| `F_Story01`                   | fixed   | Story                          | --           | --       | --                                                  |
-| `F_Shop01`                    | shop    | WorldShop                      | --           | --       | --                                                  |
-| free entry of `F_PreBoss01`   | counted | RunProgress                    | RunProgress  | --       | Devotion, RoomMoneyDrop                             |
-| shop entry of `F_PreBoss01`   | shop    | WorldShop                      | RunProgress  | --       | --                                                  |
-| `G_Intro`                     | none    | --                             | --           | --       | --                                                  |
-| `G_Combat04/05/07/08`         | counted | RunProgress, MetaProgress      | --           | --       | Devotion                                            |
-| other `G_Combat01..20`        | counted | RunProgress, MetaProgress      | --           | --       | --                                                  |
-| `G_MiniBoss01..03`            | counted | RunProgress                    | RunProgress  | Boon     | --                                                  |
-| `G_Reprieve01`                | counted | RunProgress, MetaProgress      | --           | --       | Devotion                                            |
-| `G_Story01`                   | fixed   | Story                          | --           | --       | --                                                  |
-| `G_Shop01`                    | shop    | WorldShop                      | --           | --       | --                                                  |
-| free entries of `G_PreBoss01` | counted | RunProgress                    | RunProgress  | --       | Devotion, RoomMoneyDrop                             |
-| shop entry of `G_PreBoss01`   | shop    | WorldShop                      | RunProgress  | --       | --                                                  |
-
-The target Room Declaration embeds the applicable producer binding and forced
-store override. Template code does not switch on room name or biome to
-reconstruct either fact.
+Concrete producer bindings belong to room declarations and their biome
+authorities. Every target Room Declaration embeds its applicable producer
+binding and forced-store override. Shared template code consumes that normalized
+fact and never switches on room name or biome to reconstruct it.
 
 ## Validation Boundaries
 
@@ -1197,8 +1168,7 @@ target and Boon Decay's superchargeable target are distinct predicates over
 that ledger and are not aliases or persisted shadow counters. Those three
 upgradeability products use the core-god declaration fact, excluding Hermes
 and field-NPC traits while leaving their independent boon-rarity facts intact.
-The old ordinary-source increment approximation is retired. NPC/Story
-effect-backed choices remain outside this persistent trait lifecycle unless
+NPC/Story effect-backed choices remain outside this persistent trait lifecycle unless
 their declaration owns one of the engine's closed acquisition transitions.
 Unmodeled numeric combat-value curves and other undeclared mutations and
 providers remain deferred. Pom eligibility, level mutations, and the narrow
@@ -1251,6 +1221,5 @@ recompute reward legality.
 
 `../biomes/H_GAME_RULES.md`, `../biomes/O_GAME_RULES.md`, `../biomes/I_GAME_RULES.md`, and
 `../biomes/N_GAME_RULES.md` are the authorities for cages, wheels, derived
-Goal/NonGoal realizations, and persistent hub/side-room rewards. All four are
-implemented through their active biome product loops; their biome-specific
-rules remain outside this shared reward authority.
+Goal/NonGoal realizations, and persistent hub/side-room rewards. Their
+biome-specific rules remain outside this shared reward authority.

@@ -12,11 +12,10 @@ authored choices or lifecycle simulation algorithms.
 
 ## Unified Biome Decisions and Encounter Composition
 
-The current authored contract uses one `BiomeLayout` envelope
-instead of a layout-specific split. It also gives every Room Declaration one
-explicit room-local encounter composition; concrete authored encounter choices
-are defined below rather than inferred from a room template or baseline
-profile:
+The authored contract uses one `BiomeLayout` envelope and gives every Room
+Declaration one explicit room-local encounter composition. Concrete authored
+encounter choices are defined below rather than inferred from a room template
+or baseline profile:
 
 - `start` is either `authoredChoice` or declaration-fixed `fixedAuthored`;
 - `progression` is either ordinary `generated` normal-door batches or the N
@@ -38,21 +37,10 @@ the same width-one normal-door batch. N starts with fixed authored
 reach `N_PreHub01`, and its required depth-2 terminal resolution replaces an
 exact empty envelope with the source-bearing Hub decision keyed by `hub`.
 
-### Superseded vocabulary
-
-Historical migration evidence may use `LinearBiome`, `HubBiome`,
-`ForkedPreboss`, `ShopPreboss`, `entryOfferPolicy`, or terminal-policy names.
-Those names describe the pre-unified catalog only. Current declarations use
-the common layout, a `Preboss` template, and `prebossBatchPolicy`; the
-superseded migration vocabulary remains available in Git history.
-
 The generic `CreateStart` transition uses the fixed identity directly or the
 first declaration-ordered `authoredChoice` identity as its initial occurrence.
 That initial choice is not a separate authoring surface: authored-choice starts
 remain replaceable on the created occurrence.
-
-`0.15.0-unified-biome-decisions` is the first catalog version using this
-contract. The active declaration language below uses this one envelope.
 
 ## Catalog Principle
 
@@ -70,10 +58,9 @@ game data and verified audits
   -> authored project + simulator
 ```
 
-There is one application catalog authority. Do not maintain parallel
-hand-authored TypeScript and Lua catalogs. During migration, Lua declarations
-are evidence; after parity tests are accepted, TypeScript declarations in this
-project become the app authority.
+There is one application catalog authority. TypeScript declarations in this
+project are authoritative; game scripts and focused audits provide evidence.
+Do not maintain a parallel Lua catalog.
 
 ## Modeling Dispositions
 
@@ -89,15 +76,15 @@ collapsed because they produce the same modeled history, counters, rewards,
 eligibility, and validation result.
 
 `Deferred`
-: The distinction can change modeled facts, but its required authored or
-simulation feature is planned for a later slice. The active baseline must say
-how the behavior is suppressed or conditioned until then.
+: The distinction can change modeled facts, but the required authored or
+simulation feature is absent from the supported product. The active baseline
+must say how the behavior is suppressed or conditioned.
 
 `Excluded`
 : The behavior is deliberately outside the current product input and output
 surface, such as save-profile progression, dream-run variants, or room
-presentation. Exclusion is documented and may be reconsidered later, but
-does not create production `unsupported` state.
+presentation. Exclusion is documented but does not create production
+`unsupported` state.
 
 A simplification is valid only while all collapsed alternatives are
 observationally equivalent to every current canonical consumer. Each
@@ -113,11 +100,10 @@ coverage is recorded by the owning feature map and its focused tests.
 Declaration work uses:
 
 - game scripts under `../../1GameData/Scripts/` as primary behavioral evidence;
-- focused audits and revamp documents under the previous Run Planner module as
-  interpreted evidence;
+- focused source audits in this repository as interpreted evidence;
 - targeted in-game probes when scripts are ambiguous or behavior depends on
   engine implementation;
-- future structured conformance reports once a game-module auditor exists.
+- structured conformance reports from the external game-module auditor.
 
 Every surprising simplification or divergence from vanilla should be recorded
 near its declaration family or in a focused audit document. Straightforward
@@ -202,8 +188,8 @@ kind; it does not contain callbacks.
 
 ## Keepsake Declarations
 
-The normalized catalog contains the exact 33-key ordinary rack inventory. Each
-entry owns its stable game key, player-facing label, fixed planner rank III
+The normalized catalog contains the complete declared ordinary rack inventory.
+Each entry owns its stable game key, player-facing label, fixed planner rank III
 (`Epic`), and Fated disposition (`neutral`, `enabling`, or `opposing`). Catalog
 normalization rejects missing, duplicate, unknown, or misclassified entries.
 The planner assumes the inventory is unlocked and does not represent profile
@@ -218,17 +204,16 @@ are `1/2/3/4`. Ordinary player selection remains fixed at `Epic`; the profiles
 are catalog facts, not authored rank choices.
 
 Cherished Heirloom declares one closed selected disposition that equips the Duo
-trait and advances the current supported keepsake by one rank. The other 27
-identities remain legal selection, chronology, no-return, and Fated-history
-participants without an individual gameplay-effect descriptor. Adding a later
-effect means extending the closed supported union and its owning transitions;
-declarations never carry callbacks and no generic keepsake-effect registry is
-introduced.
+trait and advances the current supported keepsake by one rank. Keepsakes
+without an individual gameplay-effect descriptor remain legal selection,
+chronology, no-return, and Fated-history participants. Adding an effect means
+extending the closed supported union and its owning transitions; declarations
+never carry callbacks and no generic keepsake-effect registry is introduced.
 
 Every keepsake also owns one closed Gift Gift Gift disposition. Gorgon Amulet,
 Jeweled Pom, Discordant Bell, and Aromatic Phial are excluded. Fig Leaf and
 Experimental Hammer declare their one-shot replay schedules, Calling Card and
-Time Piece declare every-biome replay, and the other 25 eligible identities
+Time Piece declare every-biome replay, and remaining eligible identities may
 declare an effect-neutral planner result. These are two independent data facts:
 whether Gift may capture an identity and what biome-start transition is
 supported. The catalog does not turn either axis into a callback.
@@ -285,9 +270,9 @@ They also do not own the transition after completion. The containing route's
 ordered biome references determine whether history advances to another biome
 or completes the route.
 
-Concrete structural extensions for F through Q should be added with their
-implementation slice and covered by focused fixtures. A biome is not declared
-supported merely because its letter appears in the route order.
+Every production biome has complete normalized structural declarations and
+focused fixtures. A biome is not supported merely because its letter appears
+in route order.
 
 N's layout owns the fixed mapping from semantic Hub slot to concrete Room
 Declaration. Authored state selects a supported open set and visit order; it
@@ -557,14 +542,14 @@ it can resolve. A resolved offer retains that reward type and its complete
 payload.
 
 Source support uses a closed registry rather than reward-name switches. The
-initial policies are `ordinaryBoonPeer`, `ordinaryNoPeer`, and
+supported policies are `ordinaryBoonPeer`, `ordinaryNoPeer`, and
 `devotionAcquiredPair`. Their declared resolution point determines whether
 support is checked while materializing the offer or at one addressed
 acquisition role. Catalog normalization rejects a source-bearing payload with
 no policy or a policy paired with an incompatible resolution point.
 
 An offer projection owns reward-type-specific current-run writes caused by
-materializing an offer. The initial vocabulary contains only
+materializing an offer. The vocabulary contains only
 `devotionSpacing`; common offer history, counted-entry consumption, and peer
 constraints remain offer-point behavior rather than repeated declaration data.
 
@@ -735,9 +720,8 @@ only when their structural room and slot activation conditions hold.
 
 ## Catalog Versioning
 
-The normalized catalog exposes a version suitable for project compatibility
-checks and updates it with semantic declaration changes. A content fingerprint
-can replace or supplement that explicit version later.
+The normalized catalog exposes a compatibility identity and changes it whenever
+declaration semantics change.
 
 Project loading distinguishes:
 
@@ -748,8 +732,9 @@ Project loading distinguishes:
 Do not silently reinterpret an existing project after a declaration change
 that alters its semantic meaning.
 
-The future game execution artifact will carry catalog compatibility data, but
-its exact algorithm remains deferred.
+The execution artifact carries the exact catalog version admitted by its
+strict decoder. Compatibility is explicit; the executor never guesses across
+catalog boundaries.
 
 ## Production Biome Contract
 
@@ -759,7 +744,7 @@ Project creation, loading, semantic commands, simulation dispatch, and editor
 navigation consume the same route declarations without a second application
 capability matrix.
 
-Future incomplete biome work must remain outside the assembled production
+Incomplete biome work must remain outside the assembled production
 catalog until its complete vertical product loop is ready. Focused test
 catalogs may still exercise new declaration vocabulary before production
 assembly. Room, layout, and route declarations do not carry development-status
@@ -785,20 +770,14 @@ Do not place future biomes or mechanics in production routes through
 placeholders. Catalog route placement is a supported-product contract, not a
 development-progress marker.
 
-The verified F/G/H/I/N/O/P/Q game-rule audits, declaration imports, and
-cross-biome closure are complete. They extend normalized catalog vocabulary
-only where concrete game facts require it.
-`../biomes/P_GAME_RULES.md`, `../biomes/Q_GAME_RULES.md`, `../biomes/H_GAME_RULES.md`,
-`../biomes/O_GAME_RULES.md`, `../biomes/I_GAME_RULES.md`, and
-`../biomes/N_GAME_RULES.md` are completed game-rule authorities. Their shared
-vocabulary is reconciled by this design set.
+F/G/H/I/N/O/P/Q extend normalized catalog vocabulary only where concrete game
+facts require it. Their documents under `docs/biomes/` own the corresponding
+route facts, while this design set owns the shared declaration vocabulary.
 
 `GAME_GENERATION_RULES.md` owns shared generation behavior.
 `ROOM_LIFECYCLE_MODEL.md` owns the ordered operations that turn an entered
 occurrence into one composable history fragment.
-`../biomes/F_GAME_RULES.md` and `../biomes/G_GAME_RULES.md` own their concrete
-biome facts. Focused audits retain source evidence and explicit modeling
-dispositions; Git history retains superseded delivery records.
+Focused audits retain source evidence and explicit modeling dispositions.
 
 ## Trait Offer Catalog
 
@@ -882,9 +861,9 @@ not make Artemis or Athena ordinary Olympian providers: field-NPC offers do not
 participate in the first-Olympian composition rule, ordinary-slot replacement
 composition, god-pool source history, or reward-source support.
 
-The normalized catalog contains 302 memberships across the 21 non-Hammer givers and 92
-memberships under the Hammer giver. Selene's `SpellDrop` giver is a rarityless
-`spell` provider with an ordered eight-trait pool; its ninth base trait, Sky
+The normalized catalog contains the complete declared membership set for every
+supported giver. Selene's `SpellDrop` giver is a rarityless `spell` provider
+with an ordered trait pool; its aspect-granted base trait, Sky
 Fall, is outside that pool and is linked only by `SuitHexAspect` as its
 starting trait. Every spell occupies the shared `Spell` equipment slot, which
 is distinct from the original five ordinary-boon slots. Echo contributes exactly eight
@@ -976,7 +955,7 @@ simulation counters, candidate policy, or React presentation.
 
 For each declaration family:
 
-1. inventory the old app/module facts;
+1. inventory the supported game facts and current declarations;
 2. identify the relevant game-data source;
 3. resolve inconsistencies before authoring;
 4. record each relevant fact's Exact, Simplified, Deferred, or Excluded

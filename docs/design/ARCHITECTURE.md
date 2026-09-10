@@ -3,7 +3,7 @@
 ## Purpose
 
 This document defines the standalone app's product boundary, layer ownership,
-dependency direction, lifecycle, and initial technology responsibilities.
+dependency direction, lifecycle, and technology responsibilities.
 
 It does not define biome rules, concrete persisted topology, validator
 algorithms, or UI layout details. Those belong to the adjacent authorities.
@@ -22,9 +22,9 @@ The app owns:
 - game-language lifecycle history and ledgers;
 - completeness, legality, candidate evaluation, and feedback;
 - undo/redo and all rich editor interactions;
-- eventual compilation of a declarative execution-plan document.
+- compilation of a declarative execution-plan document.
 
-The future game module owns only:
+The external game module owns only:
 
 - parsing and contact validation of an exported plan;
 - translation through fixed, known runtime adapters;
@@ -78,7 +78,7 @@ authored state + matching evaluation assembly
       -> React editor
 
 validated derived result
-  -> future execution-plan compiler
+  -> execution-plan compiler
       -> JSON document for the game module
 ```
 
@@ -283,7 +283,7 @@ The application layer owns composition and orchestration:
 - simulation scheduling;
 - derived-result publication;
 - portable profile-file and autosave-recovery adapters;
-- future Tauri integration;
+- Tauri desktop integration;
 - error boundaries and developer diagnostics.
 
 It does not own biome or reward rules.
@@ -315,10 +315,11 @@ only the completed intent-bound feature neighborhoods; the application does not
 claim a project-wide zero-command-literal boundary.
 The selected route and its panel are catalog-driven UI-session state; they do
 not introduce route-specific reducers or authored fields. A project document
-contains one route, so the shell presents that route and Settings rather than
-switchable sibling authored runs. A fresh session has no project until the
-user chooses a catalog route, and the no-project state has no evaluation,
-history, Save, Undo, or Redo product to publish.
+contains one route, so the shell presents its route overview, biome panels, and
+nonempty route indexes rather than switchable sibling authored runs. A fresh
+session has no project until the user chooses a catalog route, and the
+no-project state has no evaluation, history, Save, Undo, or Redo product to
+publish.
 
 ## Technology Responsibilities
 
@@ -357,7 +358,8 @@ authored state and triggers a fresh simulation.
 
 ### Vite and Vitest
 
-Vite hosts the initial browser application and builds the React SPA. Vitest
+Vite hosts the browser application and builds the React SPA used by both web
+and desktop hosts. Vitest
 runs pure package tests and focused UI-adapter tests. Type checking remains a
 separate required command because test transformation alone is not a type
 proof.
@@ -387,68 +389,26 @@ A shape-only schema bump may use a temporary raw JSON transformer in that same
 schema commit: parse the prior documents as unknown, transform the exact shape,
 strict-decode with the new codec and catalog, canonical-encode the replacements,
 update manifest metadata and hashes, run fixture integrity and the complete
-gate, then delete the transformer. The schema-72-to-73 route split is the
-deliberate one-to-many exception: it emits one complete document per route and
-does not choose or discard a sibling. Semantic changes require a per-checkpoint
-intent decision; production compatibility decoding and a permanent fixture
-migration framework remain out of scope.
+gate, then delete the transformer. A one-to-many migration must emit every
+complete document without choosing or discarding a sibling. Semantic changes
+require a per-checkpoint intent decision; production compatibility decoding and
+a permanent fixture migration framework remain out of scope.
 
-Correctness and performance are separate Vitest products. The default
-configuration selects every package and application test except the single
-performance witness, so `npm run test:correctness` is one correctness lane
-instead of a regular/heavy manifest split. It uses the fixed eight-worker value
-selected by sequential repository calibration, a 120-second test and hook
-watchdog, a 30-second teardown watchdog, and `retry: 0`. These watchdogs are
-non-termination guards, not duration verdicts. Fixture integrity remains a
-separate one-worker command while inheriting the shared watchdogs. Correctness
-tests do not carry local timeout or retry overrides; Testing Library uses one
-shared ten-second asynchronous wait for functional UI failures.
-
-The shared progress reporter emits file start/completion, a 30-second
-heartbeat for active files, and a slowest-file summary. These timings are
-diagnostics only and never change a pass/fail result.
-
-The isolated performance witness records exactly eight named, millisecond
-metrics: Underworld and Surface full rebuild, cold candidate projection,
-representative edit publication, and cached Undo publication. Full rebuild
-uses one application and project, performs one unmeasured warmup, and then
-measures three calls; the reported value is their median. Each cold candidate,
-edit, and cached Undo sample uses a fresh application and prepared project
-state, and retains its evaluation-work assertions.
-
-`npm run test:performance:compare` runs candidate and base snapshots
-sequentially on the same host. An uncommitted worktree compares against
-`HEAD`; a clean worktree compares against `HEAD^`; `RUN_PLANNER_PERFORMANCE_BASE_REF`
-or `--base-ref` supplies an explicit base. A clean base that resolves to the
-candidate revision is rejected. The comparator creates a detached temporary
-base worktree, bootstraps it with `npm install --ignore-scripts --prefer-offline`,
-and performs targeted cleanup on ordinary success and failure paths. If
-single- or double-force removal cannot be verified absent, the command fails
-and preserves the registered directory while removing separable snapshot
-files, avoiding stale Git metadata.
-
-Non-Undo metrics regress only when they are strictly more than 20 percent and
-at least 100 ms slower; cached Undo uses strictly more than 50 percent and at
-least 10 ms, with the absolute comparisons inclusive. Missing, incompatible,
-negative, or non-finite snapshots are errors. The canonical 1,000 ms
-interaction and 50 ms cached-Undo targets remain report-only for generic hosts;
-`npm run test:performance:absolute` is the explicit absolute-enforcement
-command.
-
-### shadcn/ui and Tailwind
-
-Adopt component source selectively for accessible interaction primitives and
-consistent styling. Copied components become project code and should remain
-small, inspectable, and aligned with the editor's design language.
+Correctness and performance are separate test products. Correctness tests use
+shared non-termination watchdogs and no retry-based masking. Performance tests
+measure representative full rebuild, candidate, edit, and cached-Undo work in
+an isolated lane and compare revisions on the same host. Exact commands,
+worker counts, watchdog values, metric sets, and regression thresholds belong
+to repository test configuration and contributor instructions rather than this
+architecture authority.
 
 ### Tauri
 
 Tauri is a permission-minimal host around the same Vite application used by
 browser development. Its current responsibility is native window creation,
-no-install platform packaging, and native project-file persistence. The first
-supported artifact is a Windows x64 ZIP containing the unbundled executable;
-later Linux and macOS artifacts may use their platform-native unpack-and-run
-formats.
+no-install platform packaging, and native project-file persistence. Platform
+packaging remains a host concern and does not alter application or domain
+semantics.
 
 The desktop host's responsibilities remain narrow:
 
@@ -466,16 +426,9 @@ reference on restart; Rust does not parse or validate planner JSON. Tauri's
 native file-drop interception remains disabled so ordinary HTML pointer and
 drag interactions retain browser parity.
 
-### React Flow
-
-React Flow is optional and deferred. If adopted, it renders a graph projection
-of canonical authored topology. Node coordinates, selection rectangles,
-viewport state, and visual edges remain UI-session data. They never become
-the authored plan.
-
 ## Application Lifecycle
 
-The initial lifecycle is intentionally simple:
+The application lifecycle is:
 
 ```text
 choose a catalog route, or load a profile
@@ -502,14 +455,9 @@ autosave publication. New route selection creates one route document; it does
 not create a placeholder or retain another route in the same project.
 
 There is no source revision, rebuild revision, incremental invalidation graph,
-or background worker in the initial architecture. The complete route model is
-small enough to favor correctness and explicitness. Performance optimization
-must be driven by measurement.
-
-If simulation later becomes perceptibly expensive, the first escalation is a
-worker boundary around the same pure function and immutable input/output
-contract. Incremental simulation is not introduced until profiling shows it
-is necessary.
+or background worker. The complete route model favors correctness and
+explicitness. Performance optimization is driven by measurement and must
+preserve the same pure simulation input/output contract.
 
 ## Atomic Derived Publication
 
@@ -639,7 +587,7 @@ Construct complete named collaborators and return new system objects. Tests
 can compose the same planner engine with fixture catalogs and in-memory project
 repositories.
 
-## Persistence Boundary
+## Application Persistence Boundary
 
 The app persists an authored project document, not Redux state and not a
 simulation cache. The document contains only durable semantic choices and its
@@ -649,7 +597,7 @@ The normalized current-schema `ProjectDocument` is also the portable
 profile-file format. It contains exactly one selected route and its authored
 state. One profile is one saved planning workspace; it is not a container for
 sibling runs. A filename and native path belong to the application and host
-file session, not the authored document. A future wrapper is justified only if
+file session, not the authored document. A separate wrapper is justified only if
 one profile must own durable data that is not part of one authored project,
 such as several projects or application preferences.
 
@@ -741,8 +689,8 @@ These remain transient:
 - hover, focus, and selection rectangles;
 - simulation history and findings;
 - candidate colors and messages;
-- undo/redo history in the initial product;
-- future graph viewport and node positions unless explicitly introduced as
+- undo/redo history;
+- graph viewport and node positions unless explicitly introduced as
   user presentation preferences in a separate settings document.
 
 ## Performance Policy
@@ -758,53 +706,21 @@ Correctness comes first, but the editor should remain responsive:
 - keep React component subscriptions narrow;
 - benchmark full-project simulation before designing incremental caches.
 
-Unlike the ImGui implementation, ordinary React render allocation is not a
-domain constraint. Performance work should target observed latency rather than
-recreating draw-path restrictions from the game module.
+Ordinary React render allocation is not a domain constraint. Performance work
+targets observed latency rather than imposing game-module draw-path
+restrictions on the editor.
 
-## Trait Offer Ownership
+## Feature Ownership
 
-Trait declarations, giver pools and rarity policies, encounter-owned provider
-declarations, targeted-transition descriptors, and Hammer Rank-II capability
-belong to `hades2-catalog`; normalized requirements, route loadout, authored
-reward and encounter children, semantic commands, trait history, lifecycle
-folding, candidates, and findings belong to `planner-engine`. The planner
-application owns only composition, persistence, workspace closure, interaction
-binding, route projections, and React presentation. The engine consumes the
-catalog contract without importing the catalog implementation, and the UI
-never evaluates trait legality or reconstructs lifecycle chronology.
-
-The equipped-trait ledger is replaceable simulation output beside exact loot
-and use ledgers. It is carried through validated route branches, not persisted
-as a second authored model. Stable trait offer owners are either a reward owner
-plus acquisition role or an exact encounter phase plus the `selection` role;
-option keys are evidence within that offer's assessment and never semantic
-owners or finding addresses.
-
-The authored offer at that owner is a closed schema-22 outcome: either one to
-three materialized trait options with one selected option, or mutually
-exclusive Fallback Gold. The engine alone derives ordinary, optional
-high-tier, and replacement domains; folds Denial's exact unselected bans into
-trait history after a valid selection; and materializes Forfeit's first
-qualifying RoomReward as its fixed Red Onion before concrete Boon/Hermes and
-trait settlement.
-Catalog declarations provide only the closed effect facts and exact Denial
-participant set. Redux and React own no shadow offer-composition,
-banned-trait, or Forfeit-usage model.
-
-Reached selected-offer assessments are biome-level, data-only reward products.
-The exact assembly separately retains opaque address-indexed alternative
-capabilities backed by private branch-local pre-offer history and context.
-Reward branches carry downstream trait state, not diagnostic assessment traces
-or candidate capabilities; the application may present selected assessment but
-cannot use it to evaluate a replacement.
-
-Target selection follows the same boundary. The engine exposes an opaque
-exact-address capability derived from branch-local pre-offer history; the
-application adapts it into a picker, and React never traverses the equipped
-ledger or switches on a provider or trait name.
-
-No room, Shop, or component may switch on Hammer trait names.
+Cross-layer features follow the same package direction as the rest of the
+application. Catalog declarations own normalized game facts; the planner
+engine owns authored meaning, simulation state, legality, candidates, and
+findings; the application adapts complete engine products into interactions;
+React renders them. Trait-offer semantics are specified by
+`REWARD_MODEL.md` and `SIMULATION_AND_VALIDATION.md`, while their editor
+surface is specified by `EDITOR_MODEL.md` and `CONTEXTUAL_EDITOR_UX.md`.
+Neither the application nor React reconstructs provider, rarity, replacement,
+slot, or lifecycle policy.
 
 ## Rejected Shapes
 
@@ -813,7 +729,7 @@ Do not introduce:
 - simulation logic inside React components;
 - a UI tree as the authored topology authority;
 - persisted Redux store snapshots as the project format;
-- a second validator in the future game module;
+- a second validator in the external game module;
 - game-module APIs inside the planner-engine package;
 - arbitrary executable plan code;
 - a graph library as topology storage;

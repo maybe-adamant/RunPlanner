@@ -7,159 +7,31 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 78 Boundary
+## Authored Document Boundary
 
-Schema 78 is the sole persisted authored-project contract. The codec rejects
-every other schema version rather than manufacturing current topology or leaf
-state for a stale document. The immediately preceding schema 77 has one focused
-linear migration. The older conversion retained at this boundary is the
-standalone schema-72-to-73 splitter: schema 72 contains two independent route
-plans, so it emits one schema-73 document for each route and applies the
-catalog-version boundary corrections named below.
-The accumulated 49-to-72 migration chain is retired; schema 71 and older are
-unsupported migration inputs. The focused schema-73-to-74 migration begins the
-new linear chain by adding the required Boss Reward room action. Catalog
-versions must match exactly at decode contact, and the
-strict production decoder has no implicit stale-schema compatibility path.
+The current schema is the sole persisted authored-project contract. The
+production codec rejects every other schema and every mismatched catalog
+version rather than manufacturing current topology or leaf state from stale
+data. Supported offline migration commands are documented beside their scripts
+in [`schema/README.md`](../../schema/README.md); migration history is not part
+of this design authority.
 
-Schemas 46 and 47 completed the occurrence-owned topology and chronology
-cutover: every supported authored main or N side room is a `RoomOccurrence`,
-and every authored interaction in those ordinary occurrence rooms is referenced
-from one occurrence-owned `roomActions.order`. Schema 48
-removed the redundant authored
-project name; the profile filename is application session state. Schema 49 adds
-the closed `useFountain`/`interactKeepsakeRack` references. Ordinary room lifecycle timelines,
-Run State checkpoints, Shop Purchased markers, and the Boss
-`bossDefeated`/Judgment seam remain products over this authored state. Mandatory
-Room Action defaults likewise use the existing `roomActions.order`: semantic
-commands add newly active required references at their engine-owned canonical
-late position without adding a required-action set, derived order, or second
-chronology field.
+One document contains one selected route. Every supported main room, fixed
+Boss/Postboss room, and generated N side room is an occurrence in the same
+topology. Each occurrence owns one `roomActions.order`; sparse acquisition
+sites own payload, not another chronology. Derived history, simulation output,
+automatic mutations, pending schedules, runtime eligibility, findings, and UI
+session state never enter the document.
 
-Schema 50 adds the boon-rarity ledger contacts, schema 51 adds the closed Chaos
-trait outcome, and schema 52 adds the Natural Selection result and sparse Steady
-Growth target contacts described below. Schema 53 adds sparse phase-local
-Nemesis random-event outcomes and their exact generated acquisition ownership;
-switching away from the event retains its detail dormant for restoration.
-Schema 54 removes general Death Defiance offer-condition state from traits,
-Shops, and Keepsake results while preserving Gorgon Amulet's narrowly owned
-`athenaTriggerConditionMet` phase fact. Runtime offer fallbacks are not authored,
-simulated, or exported; an unavailable exact result is an execution mismatch.
-Derived history, progress, Ransom removals, automatic rarity mutations, and
-Nemesis settlement remain outside the persisted document. Schema 55 introduced the
-fixed Boss/Postboss occurrences; schema 68 replaces that parallel completion
-container with ordinary topology occurrences and `fixedRoomLinks`. Selecting a
-Preboss creates its declaration-fixed Boss and route-position Postboss chain,
-when present, in `topology.occurrences`; each room owns the same encounter,
-acquisition-site, Room Action, and optional feature leaves as any other room.
-The strict codec validates the fixed identities, room kinds, links, and
-collision with editable topology.
-Automatic creation does not combine those occurrences into one evaluation
-unit. Progressive coverage advances through Preboss, Boss, and Postboss in
-their lifecycle order, retaining the blocked occurrence for repair without
-marking later fixed rooms as assessed.
+Generated clocked-pickup entry keys use the stable semantic acquisition
+identity rather than a sequence position. Reordering or regenerating unrelated
+scheduled effects therefore does not rename an authored pickup or its matching
+Room Action reference.
 
-Schema 69 narrows Shrine inventory to its three visible reward identities.
-Concrete payload, trait, level, and acquisition disposition state belongs to
-the rushed or delayed delivery entry where the item is actually acquired.
-
-Schema 70 removes Shrine purchases from the room-action language. A Shrine
-feature owns the visible offer and sparse purchase timing; only its concrete
-required `hermesShrineDelivery` pickup enters an occurrence's one action order.
-Rushed delivery is source-local, while a delayed delivery is derived at its
-reached host and can be atomically materialized there when that host has no
-authored acquisition site yet. The source occurrence remains encoded in the
-delivery entry identity, including for visited Hub side rooms.
-Changing purchase timing is one semantic edit: it removes the delivery's old
-active host, asks simulation for the newly reached host, and relocates the
-retained payload there. One Shrine generation therefore has at most one active
-delivery footprint, and Undo restores the complete prior schedule.
-
-Schema 71 unifies authored Chaos gates. Legacy natural and Ixion-forced gate
-records migrate to one `chaos` additional exit; only gates generated by an
-exact Ixion purchase carry `origin`, while migrated and newly authored gates
-omit it. Room declarations separately expose Chaos hosting and ordinary spawn
-capability. Ixion consumption is derived from reached host-capable rooms and
-does not create a second gate identity.
-
-Schema 56 adds a complete, route-owned four-family selected-resource record.
-Each value is null or an exact `(biomeKey, occurrenceId)` address. Structural
-topology deletion clears its exact target; room replacement retains the address
-for contextual repair. The resource result itself remains simulation output.
-
-Schema 57 adds the three fixed Pool of Purging slots on F/G/H
-Postboss occurrences. The physical Pool is always present. Its occurrence-owned
-`interacted` flag distinguishes a runtime-random, unmodeled inventory from an
-opened exact screen: only the latter activates the persisted nullable slot
-details and Pool sale Room Actions. Disabling interaction removes those sale
-actions atomically but retains slot details dormantly for restoration and Undo.
-
-Schema 58 adds occurrence-owned Shrine of Hermes state at declaration-owned
-ordinary and fixed Postboss hosts. Every present Shrine persists all three
-visible initial offer identities; it has no global interaction flag or random
-inventory bypass. Sparse per-generation purchase state records delay and rush,
-and an optional fourth Travel Deal refill retains its own offer and delayed
-purchase. Pending delivery, maturity host, Spell reservation, and runtime offer
-fallbacks remain derived simulation output rather than persisted state.
-
-Schema 59 adds occurrence-owned Stygian Well state at declaration-owned
-ordinary and fixed Postboss hosts. A Well's `interacted` flag is the narrow
-runtime-random boundary: inactive inventory and purchase detail remains
-dormant, while an interacted Well has three stable initial generations and at
-most one Travel Deal refill generation. Purchases, refill participation, and
-Twist detail are occurrence-local; pending temporary effects, one-step runtime
-fallbacks, and their expiry are derived simulation output.
-
-Schema 64 adds the optional `persephoneLevelBonus` to each authored trait
-option. Omission is the complete ordinary result (`+0`), so a generated
-three-option screen does not require three explicit zero values. Explicit zero
-and nonzero values round-trip and remain frozen with their option; an out-of-
-range value is retained for repair and receives an engine-owned candidate
-finding. The active maximum (`5` before Premium Service and `8` afterward) is
-contextual simulation output, not a persisted field.
-
-Schema 65 adds the complete selected-Hex layout and high-value node identities.
-Schema 66 expands Trial Upgrade into its complete three-option Chaos envelope.
-Schema 67 makes Postboss Keepsake Rack authorship sparse: a physical rack remains
-declaration data, while an occurrence owns a `keepsakeRack` leaf only when the
-player actually selects a replacement. The 66-to-67 migration deletes retained
-no-op leaves and compacts replacement leaves without changing their selected
-key or immediate equip-result children.
-
-Schema 73 made the project document single-route. Schema 74 retains that shape;
-its `route` is the only
-authored run in the file; the catalog's route collection remains the source of
-available route choices, not a persisted sibling-run collection. A schema-72
-source is split by copying each complete route subtree without choosing among
-authored alternatives. While advancing that source from catalog 0.51 to 0.52,
-the splitter also rewrites an already-created fixed Boss occurrence to the
-physical Rivals variant implied by the stored rank and route position. Its
-occurrence ID, fixed links, room-local state, and route resource address remain
-unchanged. The current document cannot contain a `routes` array or a
-compatibility route wrapper.
-
-Schema 75 completes every persisted Transcendent Embryo result with its
-blessing operand map. Schema 76 adds the exact declaration-owned Anvil of Fates
-result to a purchased World Shop offer. Schema 77 admits the three
-option-owned volatile carrier consequences described below inside Echo Boon
-Boon Boon's nested selected result; it introduces no second consequence model.
-Schema 78 adds the occurrence-owned Fields spatial layout: entry start point,
-cage points, optional-reward points, and the Passive Nemesis point. Migration
-preserves every authored reward, encounter, and Room Action while leaving the
-new placement leaves unresolved for explicit repair.
-
-There is one biome plan and one topology language. Production state and
-semantic addresses have no layout-specific plan family, completion-transition
-decision, fixed-entry slot, continuation, or picked contract. Fixed Boss and
-Postboss transitions are represented by the narrow `fixedRoomLinks` relation,
-not by an exit decision or a second occurrence container.
-
-### Superseded vocabulary
-
-Historical delivery records may refer to `LinearBiome`, `HubBiome`, terminal
-transitions, fixed-entry slots, continuations, or picked contracts. Those names
-identify the pre-unified migration state only; they are not current persisted
-or semantic contracts. Git history retains that migration evidence.
+There is one biome plan and one topology language. Room occurrences, sourced
+decisions, their selected exits, and the narrow `fixedRoomLinks` relation carry
+the complete topology. Fixed Boss and Postboss transitions use
+`fixedRoomLinks`; authored exits remain owned by their source decision.
 
 ```ts
 interface AuthoredBiomePlan {
@@ -310,14 +182,16 @@ effect detail to another frontier.
 
 Only immediate equip outcomes are persisted beneath a selection. Jeweled Pom
 and Experimental Hammer use one closed `KeepsakeEquipResultAddress` family with
-effect-specific complete children; the result is reached on start or
-replacement and is dormant while another identity is selected.
+effect-specific complete children; Transcendent Embryo stores its selected
+blessing and complete operand map at the reached automatic outcome. The result
+is reached on start or replacement and is dormant while another identity is
+selected.
 Calling Card row actions stay on their exact trait offers, Time Piece conversion
 choices stay on exact acquisition roles, and Fig Leaf/Gorgon results stay on
 exact encounter phases. This preserves one semantic owner for every authored
 effect decision rather than creating a keepsake-owned catch-all result bag.
 
-Schema 30 gives Gorgon Amulet one strict phase-local Athena child. It persists
+Gorgon Amulet owns one strict phase-local Athena child. It persists
 only three ordered distinct Athena trait identities and the selected option
 key. Athena provider, offer kind, and reached rarity are derived; the Death
 Defiance condition remains on the parent Gorgon phase. Keepsake rank and the
@@ -325,7 +199,7 @@ result of Cherished Heirloom are never authored: ordinary selection is fixed at
 Epic and simulation derives both Cherished transitions from catalog facts and
 canonical trait history.
 
-Schema 38 introduced Echo's active authored children without adding effect state to
+Echo's active authored children do not add a generic effect-state container to
 the project. Pom persists one selected greatest-level target or the explicit
 empty-domain `null` result. Boon persists one to three distinct trait-key rows
 whose giver identity and equipped rarity are explicit, plus only the selected
@@ -341,25 +215,27 @@ Experimental Hammer replay persists its selected-compatible or explicit
 exhausted result beneath that succeeding biome's start address. Dormant Echo
 option detail remains structurally retained but is not active authorship.
 
-Schemas 39 and 40 give every Fields combat occurrence one closed `actionOrder`,
-one selected optional-reward count, and complete retained optional-reward
-values through the declaration's exact capacity. The action sequence contains
-atomic cage completions and interactions with cage, active optional, and
-Artificer-replacement pickups. Optional participation is sequence membership,
-not a second boolean. Lowering the active count removes newly dormant optional
-actions while retaining their values and dispositions; restoring the count
-does not silently restore participation.
+Every Fields combat occurrence owns one selected optional-reward count,
+complete retained optional-reward values through the declaration's exact
+capacity, and its declaration-bounded spatial layout. Entry, cage,
+optional-reward, and Passive Nemesis points remain room-local placement facts;
+the action sequence independently contains atomic cage completions and
+interactions with cage, active optional, and Artificer-replacement pickups.
+Optional participation is sequence membership, not a second boolean. Lowering
+the active count removes newly dormant optional actions while retaining their
+values, dispositions, and compatible placement; restoring the count does not
+silently restore participation.
 
-Schema 41 replaces the former `normal | gold` role state with one exact
-acquisition disposition: `normal`, `timePiece`, or `artificer` with a complete
-`RunProgress` replacement reward. The child belongs to its exact source and
-acquisition role. Ordinary ordered acquisition sites represent its later
-pickup with a collision-safe source-derived entry key; Fields uses its one
-room-action chronology. Mandatory singleton room rewards derive their required
-classification and pickup checkpoint, but activation/default reconciliation
-persists the exact pickup reference in the occurrence's one shared
-`roomActions.order`; there is no separate or synthetic one-row order. No
-pending Artificer map or remaining-use counter is authored.
+Every authorable acquisition role has one exact disposition: `normal`,
+`timePiece`, or `artificer` with a complete `RunProgress` replacement reward.
+The child belongs to its exact source and acquisition role. Ordinary ordered
+acquisition sites represent its later pickup with a collision-safe
+source-derived entry key; Fields uses its one room-action chronology. Mandatory
+singleton room rewards derive their required classification and pickup
+checkpoint, but activation/default reconciliation persists the exact pickup
+reference in the occurrence's one shared `roomActions.order`; there is no
+separate or synthetic one-row order. No pending Artificer map or remaining-use
+counter is authored.
 
 ## Common Decision Model
 
@@ -505,8 +381,8 @@ ordinary peers remain real unpicked occurrences.
 
 The route declaration names the sole physical Preboss for each route position;
 alternative maps are not authoring choices. Underworld therefore uses
-`I_PreBoss02`, while a future Dream route can select `I_PreBoss01` through the
-same route-owned field. Each completion declaration similarly names its normal
+`I_PreBoss02`; Dream Dive route support selects `I_PreBoss01` through the same
+route-owned field. Each completion declaration similarly names its normal
 Boss and, where the game has a distinct map, its Rivals Boss. The resolved Boss
 is the Rivals map exactly when the configured Rivals rank reaches that
 one-based route position. P and I have no distinct map and retain `Boss01`.
@@ -568,7 +444,21 @@ it; changing selection removes unselected inventory. Its materialized state
 owns declaration-keyed offers. Exact `interactShopOffer` membership in the
 occurrence's `roomActions.order` is both the Purchased fact and the purchase
 order; no purchased set or Shop-private order is persisted. A counted-free
-Preboss keeps its complete resolved offer regardless of selection.
+Preboss keeps its complete resolved offer regardless of selection. A purchased
+Mystery Boon stores its hidden source and trait result at the acquisition entry
+where it resolves, not in generated Shop inventory. A purchased Anvil of Fates
+offer owns its exact removed Hammer and two acquired Hammers at that same
+settlement boundary.
+
+A declaration-owned Pool of Purging persists its fixed slots only after the
+player authors interaction; disabling interaction removes sale actions while
+retaining dormant slot detail. A present Shrine of Hermes persists its visible
+initial inventory and sparse purchase timing, while its rushed or delayed
+delivery owns concrete acquisition payload. A Stygian Well uses its
+`interacted` flag as the boundary between native-random inventory and three
+authored initial generations. Travel Deal refill state is occurrence-local to
+its Shop, Shrine, or Well carrier. Pending deliveries, temporary effects,
+Spell reservations, and expiry remain derived simulation state.
 
 An acquisition site is sparse occurrence-owned payload state for one exact
 authorable lifecycle point. A declaration-produced pickup stores its exact
@@ -626,9 +516,9 @@ actions remain membership-controlled by their existing owner. An active
 required row may be moved within its legal range but cannot be generically
 removed.
 
-This guarantee is deliberately delta-only. A decoded or deliberately malformed
-schema-50 document may already omit a required reference, and an unrelated edit
-does not normalize that omission. Evaluation retains the missing-required
+This guarantee is deliberately delta-only. A deliberately malformed document
+may already omit a required reference, and an unrelated edit does not normalize
+that omission. Evaluation retains the missing-required
 finding and publishes one engine-owned canonical restore intent. Dormant and
 stale rows likewise remain authored until an explicit owning command removes
 them; reactivation of the same key reuses its retained position rather than
@@ -714,7 +604,7 @@ edit may retain a context-invalid outcome for explicit repair.
 `SpellDrop` uses that same `traits` shape at its existing `self` acquisition
 role: exactly three distinct, rarityless options from Selene's ordered
 eight-spell provider pool and one selected option. It is not a separate spell
-offer model. Under Aspect of Selene, schema 65 instead requires one complete
+offer model. Under Aspect of Selene, the loadout instead requires one complete
 `loadout.aspectHexTree` for fixed Sky Fall. Its later concrete Spell Drop has
 no trait-offer child—nullable, dormant, and retained children are all
 unsupported—and settles the three-point Path screen.
@@ -819,9 +709,8 @@ canonical projection for maps and markers, not another identity source.
 | pool-backed encounter phase       | `EncounterPhaseAddress` with occurrence owner and stable phase key          |
 | Boss/Postboss occurrence          | `OccurrenceAddress`                                                         |
 
-`ContinuationAddress`, `PickedAddress`, fixed-entry addresses, parent-only
-batch-store identity, and rendered target indexes are absent from the current
-semantic-address union.
+Every address is anchored to its semantic occurrence, decision, or
+declaration-owned child rather than a rendered position.
 
 ## Commands
 
@@ -865,7 +754,7 @@ stable indented JSON with a trailing newline:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 74;
+  schemaVersion: typeof PROJECT_DOCUMENT_SCHEMA_VERSION;
   projectId: string;
   catalogVersion: string;
   route: AuthoredRoutePlan;
@@ -897,5 +786,5 @@ history.
 The authored model contains no generic special-exit placeholder, probability
 score, RNG seed, game-profile predicate, generic graph edge,
 rendered coordinate, React state, ImGui storage, silent repair, or guessed
-fallback. Chaos uses the closed additional-exit envelope; it does not
-create a separate completion or layout-specific biome-plan family.
+fallback. Chaos uses the closed additional-exit envelope without altering the
+common biome-plan shape.

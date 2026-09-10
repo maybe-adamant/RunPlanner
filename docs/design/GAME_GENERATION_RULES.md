@@ -11,7 +11,8 @@ fields remain in the documents under `docs/biomes/` and the normalized
 catalog.
 
 `ROOM_LIFECYCLE_MODEL.md` owns the ordered within-room timing used by these
-rules. The prior game-module implementation is evidence, not a production API.
+rules. Game scripts and focused audits provide evidence; the external game
+module is a consumer, not generation authority.
 
 ## Candidate and door contract
 
@@ -151,7 +152,7 @@ is diagnostic evidence, not a UI rule. F/G/H/O/P/Q can become required through
 this policy; O and Q differ only in their physical width-one takeover shape.
 I remains outside this family because its Preboss is an ordinary target.
 
-Takeover concerns normal exits only. A future additional special exit belongs
+Takeover concerns normal exits only. An additional special exit belongs
 to the enclosing decision but is not replaced, counted, or selected by the
 current takeover policy.
 
