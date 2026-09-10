@@ -8,7 +8,9 @@ or compatible ready normal acquisition, not about treating every
 `UseConsumableItem` carrier as the same semantic action.
 
 Visible Poms, direct level items, trait loot, Mystery Boons, generated-child
-producers, purchases, and transformations retain their specialized owners.
+producers, and transformations retain their specialized owners. Native payment
+does not create an execution owner; a paid result enters the same outcome
+consumer as its free counterpart.
 Talent Drops are also excluded: although their outer interaction calls
 `UseConsumableItem`, their declared function opens the interactive Path of
 Stars screen.
@@ -60,17 +62,17 @@ A direct-pickup consumer uses the role only when no specialized result or
 producer-owned child sequence supersedes it. It does not infer behavior from a
 Lua inventory of item names and does not search authored order for the next
 matching acquisition. No new execution or authored-project field is required.
-The initial execution slice claims only normal `acquisition` transactions;
-commerce transactions and the Artificer disposition remain with their owning
-adapters even when their native object is also consumable. Time Piece removes
-the acquisition before execution publication.
+The direct-pickup consumer claims only normal `acquisition` transactions;
+item-effect and transformation results retain their owning adapters even when
+their native object is also consumable. Time Piece removes the acquisition
+before execution publication.
 
 ## Bound-or-ready correlation
 
 `CreateConsumableItem` returns the concrete native item and
-`CreateConsumableItemFromData` attaches that object to the world. An ordinary
-room reward or purchase may bind its execution owner to that exact object when
-it is materialized.
+`CreateConsumableItemFromData` attaches that object to the world. A materialized
+room or store object may bind its execution owner to that exact object without
+making its producer or payment an execution concern.
 
 Native-produced pickups need not receive source provenance when they are
 created. After native use guards accept the interaction, an unbound object may
@@ -147,7 +149,7 @@ Sharing `UseConsumableItem` is not sufficient to join this family:
 | Trait, Pom, Chaos, and Spell loot                    | Their native choice-screen adapters.                                                                                                                                          |
 | `BlindBoxLoot` and other wrapped rewards             | The producer and generated-child chain, followed by the child's applicable consumer.                                                                                          |
 | `ChaosWeaponUpgrade`                                 | Randomized Hammer transformation.                                                                                                                                             |
-| NPC choices, purchases, and Shrine delivery          | Their creation or commerce owner remains separate; the resulting normal pickup may reuse this consumer.                                                                       |
+| NPC choices and Shrine delivery                      | Their creation remains native; the resulting normal pickup may reuse this consumer. Store payment likewise has no execution owner.                                            |
 | Artificer and Time Piece                             | Artificer's source disposition belongs to the transformation boundary and its child may later reuse this consumer. Time Piece is omitted at publication and creates no child. |
 
 The direct-pickup consumer must not absorb these lifecycles merely because one
@@ -206,5 +208,5 @@ Representative execution witnesses are sufficient:
 - a Talent Drop is not claimed by this consumer.
 
 These witnesses own the carrier boundary. Catalog tests remain the exhaustive
-identity authority, and producer gates own generated, purchased, duplicated,
-or transformed object correlation.
+identity authority, and producer gates own generated, store-materialized,
+duplicated, or transformed object correlation.

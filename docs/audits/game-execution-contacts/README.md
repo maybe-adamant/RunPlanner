@@ -76,12 +76,12 @@ A family is not covered when only its ordinary loot-screen carrier works.
 
 The normalized catalog is the exhaustive identity authority. The execution
 union in `packages/planner-engine/src/execution-plan/model.ts` is the exhaustive
-wire authority. The current consumer is protocol 33 in
-`adamantRunPlanner-Plan_Executor`; its supported extents are complete-valid
-configured prefixes of the fixed Underworld and Surface routes. Dream Dive
-remains outside that boundary. A compile-time census beside the execution tests
-classifies every authored room action and every published Overview, Timeline,
-Doors, acquisition-disposition, automatic-effect, and conformance union member.
+wire authority. The current `adamantRunPlanner-Plan_Executor` consumer accepts
+complete-valid configured prefixes of the fixed Underworld and Surface routes
+through the strict current outcome-driven wire. Dream Dive remains outside that
+boundary. A compile-time census beside the execution tests classifies every
+authored room action and every published Overview, Timeline, Doors,
+acquisition-disposition, automatic-effect, and conformance union member.
 That census is test authority only: runtime adapters remain organized by native
 carrier and do not duplicate it as a callback registry.
 
@@ -101,12 +101,13 @@ Relevant durable authorities:
    was carried correctly, but direct items use `UseStoreRewardRandomStack` and
    `AddStackToTraits`, not the ordinary Pom choice screen. The focused
    direct-level adapter now owns that contact.
-2. The v33 wire carries both fixed routes through the same structure,
+2. The current wire carries both fixed routes through the same structure,
    acquisition, selected-trait, nested-consequence, loadout, Hex/Path, Sea Star,
-   commerce, automatic, and named room-exit conformance families. Biome-specific
-   navigation is limited to Fields cages, Ephyra Hub and side rooms, Thessaly
-   ShipCombat wheels, and native Anomaly entry; other fixed-route rooms reuse
-   the ordinary boundary.
+   item-effect, transformation, Travel Deal refill, automatic, and named
+   room-exit conformance families. Ordinary payment and purchase counters stay
+   native. Biome-specific navigation is limited to Fields cages, Ephyra Hub and
+   side rooms, Thessaly ShipCombat wheels, and native Anomaly entry; other
+   fixed-route rooms reuse the ordinary boundary.
 3. Starting weapon, aspect, Arcana, Fear, and keepsake are an explicit
    checked loadout contract; the executor observes rather than repairs them.
 4. Selecting a trait lets the game run that trait's ordinary acquire behavior.

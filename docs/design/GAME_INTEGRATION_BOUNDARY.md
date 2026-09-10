@@ -76,7 +76,7 @@ Commands fall into three execution dispositions:
 | Disposition | Examples                                                                | Contract                                                                  |
 | ----------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | Realize     | room/door generation, reward identity, selected trait offer, Chaos pair | Apply only through a verified fixed adapter                               |
-| Observe     | entering a room, choosing an exit, purchase or pickup order             | Compare semantic player transactions, not incidental callbacks            |
+| Observe     | entering a room, choosing an exit, or producing a published outcome     | Compare semantic player transactions, not incidental callbacks            |
 | Verify      | Named changed traits, charges, clocks, and retained effects             | Compare only published room-exit conformance facts; never steer with them |
 
 Some timeline steps combine these responsibilities: the runtime realizes an
@@ -171,6 +171,16 @@ inventory and the room-exit `traitInventory` fact proves the expected trait
 removal. The Executor neither reimplements the sale nor requires its individual
 button callback to complete an action handle.
 
+Shop, Well, and Shrine inventory is likewise Overview content. Ordinary
+payment, affordability, and purchase-counter behavior remain native and do not
+publish execution transactions. A purchased row instead publishes its acquired
+result, which the ordinary source-independent acquisition, transformation, or
+item-effect adapter settles. Travel Deal is the sole dynamic inventory
+exception: the wire names its exact refill realization and payload. World
+Shop's dedicated refill callback can report an unexpected refill; Well and
+Shrine use generic native contacts and pass through when no refill was
+published.
+
 ## Mismatch classification
 
 The first mismatch freezes further planner realization and reports the
@@ -221,13 +231,12 @@ checks, not permission to reproduce planner eligibility policy.
 ## Evidence and deferred scope
 
 Compiler, decoder, and session fixtures prove the local protocol contract for
-complete configured Underworld and Surface products. On 2026-09-06, focused
-live Hades II testing reached the end of a configured F/G prefix without an
-unresolved executor mismatch using protocol 28. That remains the only
-live-game claim; the complete Underworld and Surface products require their own
-live campaigns. Wrong continuation is detected by the next room-entry identity
-check; the executor deliberately has no separate selected-transition
-conformance checkpoint.
+complete configured Underworld and Surface products. Focused live Hades II
+testing reached the end of a configured F/G prefix without an unresolved
+executor mismatch. That remains the only live-game claim; the complete
+Underworld and Surface products require their own live campaigns. Wrong
+continuation is detected by the next room-entry identity check; the executor
+deliberately has no separate selected-transition conformance checkpoint.
 
 Dream Dive route ordering, Postboss selection, and phase differences remain
 deferred pending their own source audit and authored-route product. Automatic
