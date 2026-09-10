@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
 
@@ -151,6 +152,7 @@ export function ProjectFileControls({
   const [gameDiscovery, setGameDiscovery] = useState<GamePlanDiscovery | null>(null);
   const [selectedGameProfile, setSelectedGameProfile] = useState<string>('');
   const [selectedGameSlot, setSelectedGameSlot] = useState<GamePlanSlotNumber | ''>('');
+  const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const closeGamePublication = useCallback(() => {
     setGameDiscovery(null);
     setSelectedGameProfile('');
@@ -204,6 +206,11 @@ export function ProjectFileControls({
     if (publication.status === 'success') {
       closeGamePublication();
     }
+  };
+
+  const queueFileMenuAction = (action: () => void) => {
+    setFileMenuOpen(false);
+    window.setTimeout(action, 0);
   };
 
   const feedback = (
@@ -341,43 +348,91 @@ export function ProjectFileControls({
     >
       {feedback}
       <div className="project-file-actions">
-        <button
-          className="danger-action action-compact"
-          onClick={() => onEntryOpenChange(true)}
-          type="button"
-        >
-          <ActionIcon name="new" />
-          New
-        </button>
-        <button
-          className="secondary-action action-compact"
-          disabled={pendingOperation !== null || !hasProject}
-          onClick={() => void runProfileOperation('saveProfile', () => operations.saveProfile())}
-          type="button"
-        >
-          <ActionIcon name="save" />
-          {pendingOperation === 'saveProfile' ? 'Saving…' : 'Save'}
-        </button>
-        <button
-          className="danger-action action-compact"
-          disabled={pendingOperation !== null}
-          onClick={() => void runProfileOperation('loadProfile', () => operations.loadProfile())}
-          type="button"
-        >
-          <ActionIcon name="load" />
-          {pendingOperation === 'loadProfile' ? 'Loading…' : 'Load'}
-        </button>
-        {operations.gamePlanAvailable && (
-          <button
-            className="secondary-action action-compact"
-            disabled={pendingOperation !== null || !hasProject}
-            onClick={() => void discoverAndPublishGamePlan()}
-            type="button"
-          >
-            <ActionIcon name="save" />
-            {pendingOperation === 'publishGame' ? 'Publishing…' : 'Publish to Game'}
-          </button>
-        )}
+        <DropdownMenu.Root onOpenChange={setFileMenuOpen} open={fileMenuOpen}>
+          <DropdownMenu.Trigger asChild>
+            <button
+              aria-label="File"
+              className="secondary-action action-compact project-file-menu-trigger"
+              disabled={pendingOperation !== null}
+              type="button"
+            >
+              File
+            </button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              align="end"
+              className="project-file-menu"
+              collisionPadding={12}
+              sideOffset={8}
+            >
+              <DropdownMenu.Item
+                className="project-file-menu-item"
+                disabled={pendingOperation !== null || !hasProject}
+                onSelect={() => queueFileMenuAction(() => onEntryOpenChange(true))}
+              >
+                <ActionIcon name="new" />
+                New
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                className="project-file-menu-item"
+                disabled={pendingOperation !== null}
+                onSelect={() =>
+                  queueFileMenuAction(() => {
+                    void runProfileOperation('loadProfile', () => operations.loadProfile());
+                  })
+                }
+              >
+                <ActionIcon name="load" />
+                {pendingOperation === 'loadProfile' ? 'Loading…' : 'Load…'}
+              </DropdownMenu.Item>
+              <DropdownMenu.Separator className="project-file-menu-separator" />
+              <DropdownMenu.Item
+                className="project-file-menu-item"
+                disabled={pendingOperation !== null || !hasProject}
+                onSelect={() =>
+                  queueFileMenuAction(() => {
+                    void runProfileOperation('saveProfile', () => operations.saveProfile());
+                  })
+                }
+              >
+                <ActionIcon name="save" />
+                {pendingOperation === 'saveProfile' ? 'Saving…' : 'Save'}
+              </DropdownMenu.Item>
+              {operations.saveAsAvailable && (
+                <DropdownMenu.Item
+                  className="project-file-menu-item"
+                  disabled={pendingOperation !== null || !hasProject}
+                  onSelect={() =>
+                    queueFileMenuAction(() => {
+                      void runProfileOperation('saveProfileAs', () => operations.saveProfileAs());
+                    })
+                  }
+                >
+                  <ActionIcon name="save" />
+                  {pendingOperation === 'saveProfileAs' ? 'Saving…' : 'Save As…'}
+                </DropdownMenu.Item>
+              )}
+              {operations.gamePlanAvailable && (
+                <>
+                  <DropdownMenu.Separator className="project-file-menu-separator" />
+                  <DropdownMenu.Item
+                    className="project-file-menu-item"
+                    disabled={pendingOperation !== null || !hasProject}
+                    onSelect={() =>
+                      queueFileMenuAction(() => {
+                        void discoverAndPublishGamePlan();
+                      })
+                    }
+                  >
+                    <ActionIcon name="save" />
+                    {pendingOperation === 'publishGame' ? 'Publishing…' : 'Publish to Game…'}
+                  </DropdownMenu.Item>
+                </>
+              )}
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
         {profileSession.recoveryStatus === 'blocked' && (
           <>
             <button
