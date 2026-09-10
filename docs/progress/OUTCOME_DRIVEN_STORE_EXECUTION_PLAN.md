@@ -1,9 +1,15 @@
 # Outcome-driven store execution plan
 
-Status: locked for implementation  
+Status: Gates A and B implemented; Gate C live validation pending
 Planner base: `b7be25edfeefaac163ef607b1465d33e28df31ca`  
 Plan Executor base: `0f0599e4a34f279d2ebb2461fad7ec0073131f69`
 Modpack base: `1c78803d42c6f539fce9af4def12d2c9c8f68624`
+
+Implemented commits: planner `7d6ad12b`, shared-fixture correction
+`756c6d67`, and Plan Executor `cffa2fb`. The complete planner repository gate,
+Plan Executor suite and lint, shared-fixture comparison, and local module boot
+smoke pass. Gate C remains open only for its bounded live-game route; retire
+this plan after that evidence is recorded in the durable integration boundary.
 
 ## Objective
 
@@ -192,13 +198,13 @@ lifecycle window and obligation checkpoint
 
 The runtime behavior is deliberately small:
 
-| Native observation                              | Result                                                             |
-| ----------------------------------------------- | ------------------------------------------------------------------ |
-| Expected refill occurs at the expected position | constrain it to the published option and complete the refill owner |
-| Refill occurs at another position               | record a mismatch and leave the owner incomplete                   |
-| Expected refill never occurs                    | the refill owner fails its room checkpoint                         |
-| No refill is published and World Shop invokes its dedicated refill callback | record an unexpected-refill mismatch                    |
-| Refilled item is later acquired                 | its separate outcome transaction handles it normally               |
+| Native observation                                                          | Result                                                             |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Expected refill occurs at the expected position                             | constrain it to the published option and complete the refill owner |
+| Refill occurs at another position                                           | record a mismatch and leave the owner incomplete                   |
+| Expected refill never occurs                                                | the refill owner fails its room checkpoint                         |
+| No refill is published and World Shop invokes its dedicated refill callback | record an unexpected-refill mismatch                               |
+| Refilled item is later acquired                                             | its separate outcome transaction handles it normally               |
 
 The execution graph contains no source-purchase node, competitor-purchase
 barriers, or refill-purchase node. The planner remains the sole authority that
