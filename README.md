@@ -85,10 +85,13 @@ complete gate.
 ## Desktop preview
 
 The desktop host wraps the same production Vite build without adding
-Rust-side domain behavior. Its native Open/Save flow remembers the selected
-project file and overwrites it on later saves; the browser build retains
-portable upload/download behavior. On a machine with the platform's Tauri
-prerequisites:
+Rust-side domain behavior. Its native File menu remembers the last accepted
+project file across restarts: Save overwrites that file, while Save As chooses
+and activates another one. Autosave remains a separate recovery channel, so
+recovered unsaved edits stay associated with their desktop file without
+writing it implicitly. The browser build retains portable upload/download
+behavior and exposes no duplicate Save As command. On a machine with the
+platform's Tauri prerequisites:
 
 ```bash
 npm run desktop:dev
