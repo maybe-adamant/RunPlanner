@@ -529,6 +529,57 @@ button:disabled {
   gap: 6px;
 }
 
+.project-file-menu {
+  z-index: 100;
+  min-width: 188px;
+  padding: 6px;
+  border: 1px solid #41424c;
+  border-radius: 10px;
+  color: #ede8df;
+  background: #202128;
+  box-shadow: 0 16px 44px rgb(0 0 0 / 38%);
+}
+
+.project-file-menu-item {
+  display: flex;
+  width: 100%;
+  min-height: 34px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 6px;
+  color: #ded9d0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.project-file-menu-item[data-highlighted] {
+  outline: 0;
+  color: #fffaf2;
+  background: #2b2c35;
+}
+
+.project-file-menu-item[data-disabled] {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.project-file-menu-item .action-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.project-file-menu-separator {
+  height: 1px;
+  margin: 5px 2px;
+  background: #363741;
+}
+
 .game-publication-selection {
   display: grid;
   min-width: 0;

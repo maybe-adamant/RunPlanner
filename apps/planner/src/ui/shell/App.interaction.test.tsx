@@ -88,7 +88,8 @@ function profileReference(fileName: string): ProfileFileReference {
 }
 
 function profileAdapter(
-  overrides: Pick<ProfileFileAdapter, 'load' | 'saveAs'>,
+  overrides: Pick<ProfileFileAdapter, 'load' | 'saveAs'> &
+    Partial<Pick<ProfileFileAdapter, 'supportsSaveAs'>>,
 ): ProfileFileAdapter {
   return {
     clearActive: () => Promise.resolve(),
@@ -611,7 +612,8 @@ describe('planner history interaction', () => {
     );
     const { user } = renderPlannerForInteraction({ application });
 
-    await user.click(screen.getByRole('button', { name: 'Publish to Game' }));
+    await user.click(screen.getByRole('button', { name: 'File' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Publish to Game…' }));
     const publicationDialog = screen.getByRole('dialog', { name: 'Publish to game' });
     expect(publications).toHaveLength(0);
     expect(document.querySelector('.project-file-actions')?.contains(publicationDialog)).toBe(
@@ -625,7 +627,8 @@ describe('planner history interaction', () => {
     );
 
     await user.click(screen.getByRole('button', { name: /^Cancel$/ }));
-    await user.click(screen.getByRole('button', { name: 'Publish to Game' }));
+    await user.click(screen.getByRole('button', { name: 'File' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Publish to Game…' }));
     expect((screen.getByLabelText('Profile') as HTMLSelectElement).value).toBe('');
     expect((screen.getByLabelText('Slot') as HTMLSelectElement).value).toBe('');
 
@@ -663,7 +666,8 @@ describe('planner history interaction', () => {
     );
     const { user } = renderPlannerForInteraction({ application });
 
-    await user.click(screen.getByRole('button', { name: 'Publish to Game' }));
+    await user.click(screen.getByRole('button', { name: 'File' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Publish to Game…' }));
 
     expect((screen.getByLabelText('Profile') as HTMLSelectElement).value).toBe('profile-a');
     expect((screen.getByLabelText('Slot') as HTMLSelectElement).value).toBe('');
@@ -2233,6 +2237,92 @@ describe('route loadout interaction', () => {
 });
 
 describe('project profile interaction', () => {
+  it('uses the menu primitive for keyboard navigation, Escape focus return, and outside dismissal', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createCompleteFGProject()));
+    const { user } = renderPlannerForInteraction({ application });
+    const trigger = screen.getByRole('button', { name: 'File' });
+
+    trigger.focus();
+    await user.keyboard('{Enter}');
+
+    const menu = screen.getByRole('menu', { name: 'File' });
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((item) => item.textContent?.trim()),
+    ).toEqual(['New', 'Load…', 'Save']);
+    expect(within(menu).getAllByRole('separator')).toHaveLength(1);
+    expect(document.activeElement).toBe(within(menu).getByRole('menuitem', { name: 'New' }));
+
+    await user.keyboard('{ArrowDown}');
+    expect(document.activeElement).toBe(within(menu).getByRole('menuitem', { name: 'Load…' }));
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+
+    await user.click(trigger);
+    expect(screen.getByRole('menu', { name: 'File' })).toBeTruthy();
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('exposes native Save As, reports its result, and closes before pending work', async () => {
+    let finishLoad: (() => void) | undefined;
+    let menuVisibleWhenLoadStarted: boolean | undefined;
+    const savedAs: string[] = [];
+    const application = createApplication({
+      profileFile: profileAdapter({
+        supportsSaveAs: true,
+        saveAs: (_fileName, json) => {
+          savedAs.push(json);
+          return Promise.resolve(profileReference('alternate.runplanner.json'));
+        },
+        load: () => {
+          menuVisibleWhenLoadStarted = screen.queryByRole('menu') !== null;
+          return new Promise<null>((resolve) => {
+            finishLoad = () => resolve(null);
+          });
+        },
+      }),
+    });
+    application.store.dispatch(authoredProjectReplaced(createCompleteFGProject()));
+    const { user } = renderPlannerForInteraction({ application });
+    const trigger = screen.getByRole('button', { name: 'File' });
+
+    await user.click(trigger);
+    const menu = screen.getByRole('menu', { name: 'File' });
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((item) => item.textContent?.trim()),
+    ).toEqual(['New', 'Load…', 'Save', 'Save As…']);
+    expect(within(menu).getByRole('menuitem', { name: 'Save As…' })).toHaveProperty(
+      'ariaDisabled',
+      null,
+    );
+
+    await user.click(within(menu).getByRole('menuitem', { name: 'Save As…' }));
+    expect(await screen.findByText('Saved as a new file.')).toBeTruthy();
+    expect(savedAs).toHaveLength(1);
+
+    await user.click(trigger);
+    await user.click(
+      within(screen.getByRole('menu', { name: 'File' })).getByRole('menuitem', { name: 'Load…' }),
+    );
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(menuVisibleWhenLoadStarted).toBe(false);
+    expect(trigger).toHaveProperty('disabled', true);
+    expect(screen.getByRole('region', { name: 'Project profile' }).getAttribute('aria-busy')).toBe(
+      'true',
+    );
+
+    finishLoad?.();
+    expect(await screen.findByText('Load Profile cancelled.')).toBeTruthy();
+    expect(trigger).toHaveProperty('disabled', false);
+  });
+
   it('saves, replaces, and reloads the project through the visible profile controls', async () => {
     let profileJson: string | null = null;
     let profileFileName: string | null = null;
@@ -2271,15 +2361,12 @@ describe('project profile interaction', () => {
         name: 'Underworld',
       }),
     );
-    expect(screen.getByRole('button', { name: 'New' }).classList.contains('danger-action')).toBe(
-      true,
-    );
-    expect(
-      screen.getByRole('button', { name: 'Save' }).classList.contains('secondary-action'),
-    ).toBe(true);
-    expect(screen.getByRole('button', { name: 'Load' }).classList.contains('danger-action')).toBe(
-      true,
-    );
+    await user.click(screen.getByRole('button', { name: 'File' }));
+    const fileMenu = screen.getByRole('menu', { name: 'File' });
+    expect(within(fileMenu).getByRole('menuitem', { name: 'New' })).toBeTruthy();
+    expect(within(fileMenu).getByRole('menuitem', { name: 'Save' })).toBeTruthy();
+    expect(within(fileMenu).getByRole('menuitem', { name: 'Load…' })).toBeTruthy();
+    await user.keyboard('{Escape}');
     expect(screen.getByText('Unsaved')).toBeTruthy();
     await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
     application.store.dispatch(
@@ -2298,7 +2385,8 @@ describe('project profile interaction', () => {
       }),
     );
     const savedEvaluation = application.store.getState().projectWorkspace.assembly!.evaluation;
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'File' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Save' }));
     expect(await screen.findByText('Saved the profile.')).toBeTruthy();
     expect(screen.getByText('Clean')).toBeTruthy();
     expect(profileFileName).toBe('run-plan.runplanner.json');
@@ -2317,14 +2405,16 @@ describe('project profile interaction', () => {
     expect(profileJson).not.toBeNull();
 
     const workspaceBeforeNew = application.store.getState().projectWorkspace;
-    await user.click(screen.getByRole('button', { name: 'New' }));
+    await user.click(screen.getByRole('button', { name: 'File' }));
+    await user.click(screen.getByRole('menuitem', { name: 'New' }));
     expect(screen.getByRole('heading', { name: 'Choose a new route' })).toBeTruthy();
     expect(screen.queryByRole('navigation', { name: 'Planner sections' })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(application.store.getState().projectWorkspace).toBe(workspaceBeforeNew);
     expect(screen.getByText('Dirty')).toBeTruthy();
 
-    await user.click(screen.getByRole('button', { name: 'New' }));
+    await user.click(screen.getByRole('button', { name: 'File' }));
+    await user.click(screen.getByRole('menuitem', { name: 'New' }));
     await user.click(
       within(screen.getByRole('group', { name: 'Choose route' })).getByRole('button', {
         name: 'Underworld',
@@ -2334,7 +2424,8 @@ describe('project profile interaction', () => {
     expect(screen.getByText('Created a new project.')).toBeTruthy();
     expect(screen.getByText('Unsaved')).toBeTruthy();
 
-    await user.click(screen.getByRole('button', { name: 'Load' }));
+    await user.click(screen.getByRole('button', { name: 'File' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Load…' }));
     expect(await screen.findByText('Loaded the profile.')).toBeTruthy();
     expect(configuredBiomeCount(application)).toBe(1);
     expect(
