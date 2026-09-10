@@ -11,9 +11,10 @@ import type {
 /**
  * Project planner-published timeline facts into the wire shape.
  *
- * This adapter deliberately has no action-family policy. It retains the
- * owner-bearing nodes selected by the planner, copies their opaque edges, and
- * derives only the existing lifecycle checkpoint representation.
+ * This adapter retains the owner-bearing nodes selected by the planner and
+ * copies their opaque edges. Acquisition transactions are steering and DAG
+ * instructions; durable outcome proof belongs to room-exit conformance, so
+ * only non-acquisition transactions become lifecycle obligations.
  */
 export function assembleTimelineRelations(
   transactions: readonly ExecutionTimelineTransaction[],
@@ -38,20 +39,26 @@ export function assembleTimelineRelations(
         localTransactionOwners.has(dependency.owner) &&
         localTransactionOwners.has(dependency.afterOwner),
     );
-  const obligations = transactions.map((transaction) => {
-    const checkpoint =
-      transaction.window.kind === 'postOutgoing'
-        ? 'roomExit'
-        : transaction.window.kind === 'encounterEnd'
+  const obligations = transactions
+    .filter((transaction) => transaction.kind !== 'acquisition')
+    .map((transaction) => {
+      const checkpoint =
+        transaction.window.kind === 'postOutgoing'
           ? 'roomExit'
-          : transaction.window.kind === 'shipPreCombat' ||
-              transaction.window.kind === 'shipPostCombat'
-            ? 'exitUsable'
-            : transaction.window.kind === 'standard' && transaction.window.phase === 'beforeCombat'
-              ? 'outgoingGeneration'
-              : 'exitUsable';
-    return Object.freeze({ owner: transaction.owner, checkpoint }) as ExecutionTimelineObligation;
-  });
+          : transaction.window.kind === 'encounterEnd'
+            ? 'roomExit'
+            : transaction.window.kind === 'shipPreCombat' ||
+                transaction.window.kind === 'shipPostCombat'
+              ? 'exitUsable'
+              : transaction.window.kind === 'standard' &&
+                  transaction.window.phase === 'beforeCombat'
+                ? 'outgoingGeneration'
+                : 'exitUsable';
+      return Object.freeze({
+        owner: transaction.owner,
+        checkpoint,
+      }) as ExecutionTimelineObligation;
+    });
   // Keep lifecycle window validation close to its existing room authority;
   // no action meaning is inferred by this projection.
   for (const row of room.roomActionRoster.rows) {

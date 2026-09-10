@@ -211,9 +211,15 @@ export function validateExecutionGraph(
       if (!owners.has(obligation.owner)) invalid(`${entry.id} has an unresolved obligation owner`);
       obligationCounts.set(obligation.owner, (obligationCounts.get(obligation.owner) ?? 0) + 1);
     }
-    for (const owner of owners) {
-      if (obligationCounts.get(owner) !== 1)
-        invalid(`${entry.id} must publish exactly one obligation for ${owner}`);
+    for (const transaction of entry.timeline.transactions) {
+      const expectedCount = transaction.kind === 'acquisition' ? 0 : 1;
+      if ((obligationCounts.get(transaction.owner) ?? 0) !== expectedCount) {
+        invalid(
+          transaction.kind === 'acquisition'
+            ? `${entry.id} must not publish an acquisition obligation for ${transaction.owner}`
+            : `${entry.id} must publish exactly one obligation for ${transaction.owner}`,
+        );
+      }
     }
     if (entry.roomExitConformance !== undefined) {
       if (entry.diagnostics?.beforeRoomExit === undefined)

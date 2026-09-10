@@ -2,8 +2,7 @@
 
 ## Status and bases
 
-Status: **locked for implementation after the current Postboss recovery change
-is committed separately**.
+Status: **Gate A implemented; Gates B-C remain**.
 
 Planning bases:
 
