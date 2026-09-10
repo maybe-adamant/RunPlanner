@@ -15,10 +15,19 @@ This file covers the three blocking structural conformance boundaries:
 2. outgoing Doors: normal and additional destinations and their rewards;
 3. named room-exit state: the nine active facts, including element counts.
 
-Immediate Timeline contacts such as a selected trait row or Well purchase are
-covered by their action-family audits in this directory. They may report an
-adapter mismatch at their native callback, but they are not alternate readers
-of the named room-exit state below.
+Immediate Timeline contacts such as a selected trait row or Well effect are
+covered by their action-family audits in this directory. They steer an exact
+published owner and may complete it to unlock DAG dependents, but callback-local
+success is not a separate semantic mismatch boundary. The owner completes when
+the native action reaches its declared terminal even if steering did not
+produce the expected result. Failed steering remains diagnostic until an
+obligation, structural proof, or named conformance checkpoint proves that the
+next simulated prefix is unsafe.
+
+An exact-bound action attempted before its published prerequisites is the one
+generic immediate Timeline mismatch. It proves an irreversible ordering
+violation without rechecking the action's domain semantics. Unowned or merely
+observational contacts still pass through.
 
 ## Reader invariant
 
