@@ -739,13 +739,20 @@ ordinary reward is still acquired separately. This differs from the existing
 `AthenaCombatP` encounter declaration, which is a selectable P encounter that
 occupies the room's combat phase.
 
-Athena then publishes her ordinary three-option trait offer. Rank III supplies
-a rarity-level bonus of three, which makes every ordinary Athena option at
-least Epic. The planner derives Gorgon rarity from its chronological keepsake
-rank: an ordinary rank-III appearance is Epic and a rank-IV appearance under
-prior Cherished Heirloom is Heroic. The reached encounter snapshots that rarity
-for all three rows. The offer otherwise reuses Athena's existing trait
-prerequisites and selection lifecycle.
+Athena then publishes her ordinary three-option trait offer. The chronological
+keepsake rank supplies a rarity-level bonus of `1/2/3/4`, which Athena converts
+into a sparse Common/Rare/Epic/Heroic source override. That override enters the
+ordinary rarity ledger before permanent bonuses; ranks II through IV suppress
+temporary bonuses. Rank I retains ordinary Common/Rare/Epic possibilities,
+rank II guarantees at least Rare while retaining Epic, rank III guarantees
+Epic, and rank IV guarantees Heroic. Each option rolls separately, so the
+game can produce mixed rank-I/rank-II rows. The planner deliberately retains
+its identity-only Gorgon child and forces the lowest reachable rarity across
+all three rows as one legal deterministic realization; it does not claim to
+enumerate every random mixture. The offer otherwise reuses Athena's existing
+trait prerequisites and selection lifecycle. The detailed rarity evidence,
+precedence rules, and planner simplification live in the boon-rarity ledger
+audit.
 
 Gorgon Amulet is not permanent. If it is replaced before finding an eligible
 encounter, its pending appearance is lost. After Athena appears, the exhausted

@@ -11,10 +11,16 @@ which boon rarities can appear. It covers:
 - the exact interaction between a miniboss room and a delayed Shrine of Hermes
   delivery;
 - Proper Upbringing's activation and future-offer effect;
+- pool-wide rarity-bucket selection for Infusions and other mixed rarity
+  domains;
+- the Artemis, Athena, and Dionysus NPC providers that participate in the same
+  god-loot rarity bonuses;
+- Gorgon Amulet's Athena source override and temporary-bonus suppression;
 - Yarn of Ariadne's one-off rarity boost and consumption boundary; and
 - direct boon and Hermes offers in the I and Q World Shops.
 
-The evidence was checked on 2026-08-22 against the installed Hades II scripts:
+The evidence was checked on 2026-08-22 and the expanded offer-pool evidence was
+rechecked on 2026-09-10 against the installed Hades II scripts:
 
 - `HeroData.lua`, `TraitData.lua`, `RoomLogic.lua`, and `TraitLogic.lua` for the
   base tables, modifier precedence, and sequential rarity checks;
@@ -23,6 +29,10 @@ The evidence was checked on 2026-08-22 against the installed Hades II scripts:
 - `RoomDataF/G/H/I/N/O/P/Q.lua` for miniboss overrides;
 - `TraitData_Elementals.lua`, `TraitLogic.lua`, and `UpgradeChoiceLogic.lua` for
   Proper Upbringing;
+- `NPCData_Artemis.lua`, `NPCData_Athena.lua`, and `NPCData_Dionysus.lua` for
+  shop-aware NPC rarity participation and provider roll order;
+- `KeepsakeData.lua` and `EncounterPresentation.lua` for Gorgon Amulet's
+  rank-scaled Athena source override;
 - `StoreData.lua`, `TraitData_Store.lua`, `StoreLogic.lua`,
   `UpgradeChoiceLogic.lua`, `RequirementsData.lua`, and `RoomDataI/Q.lua` for
   Yarn of Ariadne and the I/Q World Shops; and
@@ -89,6 +99,31 @@ For planner possibility analysis:
 
 `IsRarityForcedCommon` is a separate earlier guard. When it succeeds, the game
 clears the chance table and does not apply the ledger.
+
+The rarity check is not always evaluated independently against each proposed
+trait. `SetTraitsOnLoot` first handles any already-chosen priority identities:
+each such identity rolls rarity against its own supported domain. For the
+remaining fill positions, it builds one bucket per rarity from every currently
+eligible trait, rolls only among nonempty buckets in the provider's declared
+order, selects one trait from the winning bucket, and then removes that trait
+identity from every bucket before filling the next position. Consequently,
+whether one exact non-priority trait/rarity pair is possible can depend on the
+other eligible traits and on the identities already placed in earlier offer
+positions.
+
+This distinction matters for declarations that support different rarity
+domains. A Common-only trait cannot win while a guaranteed later nonempty
+bucket remains. It can become possible after earlier positions exhaust that
+bucket. A trait supporting Common, Rare, and Epic can participate in whichever
+of those buckets the reached ledger makes possible. Duo and Legendary remain
+later independent checks over their own nonempty buckets; they are not delayed
+until ordinary scalable traits are exhausted.
+
+After the rarity-sensitive and replacement fills, a separate final pass may
+fill remaining positions from identities that failed the first rarity roll.
+Vow of Denial disables that pass. The offer feasibility model must therefore
+compose the sequential bucket state with the existing Denial/exhaustion rule;
+it must not turn the first-pass bucket calculation into a universal ban.
 
 ## Override and modifier precedence
 
@@ -219,6 +254,74 @@ numeric contribution in the general offer-local ledger rather than a separate
 minimum-rarity floor. Room/item overrides, Arcana, and future modifiers can
 therefore compose without another authority.
 
+The ten ordinary Infusion declarations inherit `UnityTrait`. Their internal
+rarity buckets still participate in this fill algorithm even though the game
+presents every result as `Infusion`, gives each inherited tier the same
+multiplier, blocks later rarification, and excludes the trait from
+`GodBoonRarities`. Four children narrow their bucket membership to Common:
+`ElementalDamageBoon`, `ElementalBaseDamageBoon`, `ElementalDodgeBoon`, and
+`ElementalHealthBoon`. While Proper Upbringing guarantees Rare and any eligible
+Rare-capable identity remains, those four cannot occupy that position. They may
+become possible after earlier positions exhaust the remaining Rare bucket.
+Infusions never add a Common count that disables Uncommon Grace, and Vow of
+Hubris continues to treat them through its elemental-trait rule rather than
+their hidden internal rarity.
+
+## Shop-aware NPC boon providers
+
+Artemis's field NPC, Athena, and Dionysus declare
+`TreatAsGodLootByShops = true`. `GetRarityChances` uses ordinary `BoonData` as
+the default provider table for each of them, and `GodLootOnly` contributions
+such as Proper Upbringing therefore apply to their offers. The planner's
+provider-kind label must not exclude these sources from the rarity ledger once
+their normalized giver declares the equivalent shop-aware god-trait fact.
+
+Their source-owned roll orders still constrain the buckets that can run.
+Artemis declares Common/Rare/Epic; Athena declares
+Common/Rare/Epic/Heroic; Dionysus uses the ordinary default order intersected
+with its traits' Common/Rare/Epic support. Hades also carries the shop-aware
+source flag, but its modeled traits are player-rarityless and therefore do not
+create a rarity-authoring surface.
+
+The practical chronology consequence is exact: a Common Dionysus Worry Free
+authored while Proper Upbringing is active is invalid at that Dionysus offer.
+If retained anyway, its Common rarity count can later make Hera's Uncommon
+Grace appear unavailable, but that later symptom must not replace the finding
+at the earlier invalid acquisition.
+
+## Gorgon Amulet's Athena source
+
+Gorgon Amulet does not assign one final rarity to all three Athena options.
+Its rank supplies `RarityLevelBonus = 1/2/3/4`; Athena presentation converts
+that level into a sparse source `BoonRaritiesOverride` at
+Common/Rare/Epic/Heroic respectively. The ordinary override rules then apply:
+a room override wins over this source override, missing keys fall back to the
+ordinary provider base, and permanent rarity contributions are added
+afterwards.
+
+Athena's roll order is Common -> Rare -> Epic -> Heroic. Therefore rank I
+retains ordinary Common/Rare/Epic possibilities, rank II guarantees at least
+Rare while still permitting Epic, rank III guarantees Epic, and rank IV
+guarantees Heroic. Each option is rolled separately, so a rank-I or rank-II
+three-option offer may contain different internal rarities.
+
+When `RarityLevelBonus > 1`, the source also sets
+`IgnoreTempRarityBonus = true`. Rank II through IV therefore ignore Yarn and
+other limited temporary contributions while retaining permanent Arcana and
+Proper Upbringing contributions. Rank I does not suppress temporary bonuses.
+The planner must carry these as source facts into the same offer-local ledger.
+
+The selected planner simplification keeps the authored Gorgon child as three
+trait identities rather than adding three hidden rarity choices to the editor.
+After composing the real source override and active contributions, the engine
+chooses the lowest reachable Athena rarity as one deterministic legal
+realization and applies it to the three forced rows. This deliberately omits
+other random rank-I/rank-II mixtures while preserving a game-legal screen,
+keeping the current Gorgon authoring surface stable, and allowing Proper
+Upbringing or a rank-I temporary bonus to raise the realized floor. The
+simplification belongs only to Gorgon realization; ordinary trait offers retain
+their exact authored rarities.
+
 ## Yarn of Ariadne
 
 Yarn of Ariadne is the Stygian Well item `TemporaryBoonRarityTrait`; the broader
@@ -322,19 +425,23 @@ or biome-name inference.
 
 ## Planner disposition
 
-The cohesive correction is implemented as one engine-owned rarity-chance ledger
-at an exact trait-offer frontier. Its inputs are:
+The cohesive model is one engine-owned rarity-chance ledger at an exact
+trait-offer frontier. Its inputs are:
 
-1. the provider base (`BoonData` or `HermesData`);
+1. the provider base (`BoonData` or `HermesData`) and provider roll order;
 2. the exact current room override, otherwise the exact reward/shop-item
    override;
 3. active additive effects, including the resolved ranks of Excellence, The
    Queen, Divinity, Proper Upbringing, and an unconsumed Yarn of Ariadne; and
-4. active multiplicative effects.
+4. active multiplicative effects; and
+5. the nonempty rarity buckets formed from the complete eligible trait pool at
+   each sequential offer position.
 
-The engine intersects that numeric ledger with the exact trait's declared
-rarity support and returns possible authored rarities. Candidate evaluation
-turns an impossible retained authored rarity into the generic
+For priority identities, the engine intersects that numeric ledger with the
+identity's declared rarity support. For the remaining offer positions, it
+derives the nonempty pool buckets, consumes authored identities in order, and
+returns the possible identity/rarity rows at that position. Candidate
+evaluation turns an impossible retained authored rarity into the generic
 `rarityRollUnavailable` finding while preserving the existing structural
 `freshRarityUnavailable` distinction. It does not simulate or persist RNG
 outcomes.
@@ -372,6 +479,11 @@ The implementation should preserve these exact contacts:
   consumption, and temporary-bonus exclusion;
 - ordinary versus boosted World Shop boon items and always-boosted
   second-half World Shop Hermes; and
+- Common-only and scalable Infusions under a guaranteed Rare check, including
+  later-position bucket exhaustion;
+- shop-aware Artemis, Athena, and Dionysus offers under Proper Upbringing;
+- Gorgon ranks I through IV, room/source precedence, and temporary-bonus
+  suppression; and
 - dynamic `EnteredBiomes` first-/second-half selection.
 
 Schema 59 implements Yarn's declaration, purchase, remaining-use state, and
