@@ -49,7 +49,7 @@ import {
   evaluateEchoPomTargetDomain,
   evaluateTraitOfferFocusedOptionCandidate,
 } from '../../src/simulation/candidates/trait-offer';
-import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import {
   assessTraitOption,
   attachTraitHistory,
@@ -487,19 +487,17 @@ describe('Echo Gate A direct choices', () => {
         emptyNoOpAllowed: true,
       },
     });
-    const findings = new Map();
-    const result = processEncounterTraitOffer(
+    const result = settleEncounterTraitOffer(
       catalog,
       baseBranch(),
       echoOwner.owner,
       value,
       10,
       'encounterCompleted',
-      findings,
     );
-    expect(result.traitHistory?.equippedTraits.EchoDoubleLevelBoon?.rarity).toBeUndefined();
-    expect(result.traitHistory?.events.map((event) => event.kind)).toEqual(['traitOffer']);
-    expect(findings.size).toBe(0);
+    expect(result.branch.traitHistory?.equippedTraits.EchoDoubleLevelBoon?.rarity).toBeUndefined();
+    expect(result.branch.traitHistory?.events.map((event) => event.kind)).toEqual(['traitOffer']);
+    expect(result.findingEntries).toHaveLength(0);
   });
 
   it('publishes the pending Gold use from canonical trait history in Run State', () => {
@@ -581,8 +579,7 @@ describe('Echo Gate A direct choices', () => {
       .slice(0, 2);
     if (siblingKeys[0] === undefined || siblingKeys[1] === undefined)
       throw new Error('Echo test offer requires two siblings');
-    const findings = new Map();
-    const result = processEncounterTraitOffer(
+    const result = settleEncounterTraitOffer(
       catalog,
       baseBranch(),
       echoOwner.owner,
@@ -593,24 +590,22 @@ describe('Echo Gate A direct choices', () => {
       ]),
       10,
       'encounterCompleted',
-      findings,
     );
-    expect(result.traitHistory?.equippedTraits[traitKey]).toMatchObject({
+    expect(result.branch.traitHistory?.equippedTraits[traitKey]).toMatchObject({
       traitKey,
       giverKey: 'Echo',
     });
-    expect(result.traitHistory?.equippedTraits[traitKey]?.rarity).toBeUndefined();
+    expect(result.branch.traitHistory?.equippedTraits[traitKey]?.rarity).toBeUndefined();
     if (traitKey === 'EchoDoubleShop') {
-      expect(result.traitHistory?.equippedTraits[traitKey]?.acquisitionIdentity).toBe(
+      expect(result.branch.traitHistory?.equippedTraits[traitKey]?.acquisitionIdentity).toBe(
         `${semanticAddressKey(echoOwner)}:10`,
       );
     }
-    expect(findings.size).toBe(0);
+    expect(result.findingEntries).toHaveLength(0);
   });
 
   it('acquires Survive without a source-local Death Defiance condition', () => {
-    const findings = new Map();
-    const result = processEncounterTraitOffer(
+    const result = settleEncounterTraitOffer(
       catalog,
       baseBranch(),
       echoOwner.owner,
@@ -621,10 +616,9 @@ describe('Echo Gate A direct choices', () => {
       ]),
       10,
       'encounterCompleted',
-      findings,
     );
-    expect(result.traitHistory?.equippedTraits.EchoDeathDefianceRefill).toBeDefined();
-    expect([...findings.values()].map((entry) => entry.finding.code)).not.toContain('offerContext');
+    expect(result.branch.traitHistory?.equippedTraits.EchoDeathDefianceRefill).toBeDefined();
+    expect(result.findingEntries.map((entry) => entry.finding.code)).not.toContain('offerContext');
   });
 
   it('offers only greatest-level Pom ties and doubles the selected current level', () => {
@@ -652,7 +646,7 @@ describe('Echo Gate A direct choices', () => {
       ['ApolloWeaponBoon', 'ZeusWeaponBoon'],
     ]);
 
-    const result = processEncounterTraitOffer(
+    const result = settleEncounterTraitOffer(
       catalog,
       baseBranch(history),
       echoOwner.owner,
@@ -660,11 +654,11 @@ describe('Echo Gate A direct choices', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.traitHistory?.equippedTraits.ZeusWeaponBoon?.level).toBe(6);
-    expect(result.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(3);
-    expect(result.traitHistory?.equippedTraits.HestiaWeaponBoon?.level).toBe(2);
-    expect(result.traitHistory?.equippedTraits.EchoDoubleLevelBoon).toBeDefined();
-    expect(result.traitHistory?.events.slice(-2).map((event) => event.kind)).toEqual([
+    expect(result.branch.traitHistory?.equippedTraits.ZeusWeaponBoon?.level).toBe(6);
+    expect(result.branch.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(3);
+    expect(result.branch.traitHistory?.equippedTraits.HestiaWeaponBoon?.level).toBe(2);
+    expect(result.branch.traitHistory?.equippedTraits.EchoDoubleLevelBoon).toBeDefined();
+    expect(result.branch.traitHistory?.events.slice(-2).map((event) => event.kind)).toEqual([
       'traitOffer',
       'levelMutation',
     ]);
@@ -676,12 +670,11 @@ describe('Echo Gate A direct choices', () => {
     ['lower-level target', 'HestiaWeaponBoon', 'echoPomTargetUnavailable'],
   ] as const)('retains the outer Pom acquisition for a %s child', (_label, target, code) => {
     const history = priorLeveledTraits();
-    const findings = new Map();
     const option = {
       traitKey: 'EchoDoubleLevelBoon',
       ...(target === undefined ? {} : { echoPomTarget: target }),
     };
-    const result = processEncounterTraitOffer(
+    const result = settleEncounterTraitOffer(
       catalog,
       baseBranch(history),
       echoOwner.owner,
@@ -692,11 +685,10 @@ describe('Echo Gate A direct choices', () => {
       ]),
       10,
       'encounterCompleted',
-      findings,
     );
-    expect(result.traitHistory?.equippedTraits.EchoDoubleLevelBoon).toBeDefined();
-    expect(result.traitHistory?.equippedTraits.HestiaWeaponBoon?.level).toBe(2);
-    expect([...findings.values()].map((entry) => entry.finding.code)).toContain(code);
+    expect(result.branch.traitHistory?.equippedTraits.EchoDoubleLevelBoon).toBeDefined();
+    expect(result.branch.traitHistory?.equippedTraits.HestiaWeaponBoon?.level).toBe(2);
+    expect(result.findingEntries.map((entry) => entry.finding.code)).toContain(code);
   });
 
   it('binds the real H Bridge offer, preserves its strict child through codec, and publishes Run State', () => {
@@ -923,7 +915,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
       }).legal,
     ).toBe(true);
 
-    const rejected = processEncounterTraitOffer(
+    const rejected = settleEncounterTraitOffer(
       catalog,
       baseBranch(),
       echoOwner.owner,
@@ -931,12 +923,12 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(rejected.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
-    expect(rejected.traitHistory?.equippedTraits.DeathDefianceRefillBoon).toMatchObject({
+    expect(rejected.branch.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
+    expect(rejected.branch.traitHistory?.equippedTraits.DeathDefianceRefillBoon).toMatchObject({
       giverKey: 'Athena',
       rarity: 'Common',
     });
-    const accepted = processEncounterTraitOffer(
+    const accepted = settleEncounterTraitOffer(
       catalog,
       baseBranch(),
       echoOwner.owner,
@@ -944,7 +936,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(accepted.traitHistory?.equippedTraits.DeathDefianceRefillBoon).toMatchObject({
+    expect(accepted.branch.traitHistory?.equippedTraits.DeathDefianceRefillBoon).toMatchObject({
       giverKey: 'Athena',
       rarity: 'Common',
     });
@@ -1188,8 +1180,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
   ] as const)(
     'directly equips one %s nested trait without its ordinary offer prerequisites',
     (_label, history, option) => {
-      const findings = new Map();
-      const result = processEncounterTraitOffer(
+      const result = settleEncounterTraitOffer(
         catalog,
         baseBranch(history),
         echoOwner.owner,
@@ -1198,20 +1189,19 @@ describe('Echo Gate B Boon Boon Boon', () => {
         ),
         10,
         'encounterCompleted',
-        findings,
       );
-      expect(result.traitHistory?.equippedTraits.EchoLastRunBoon).toMatchObject({
+      expect(result.branch.traitHistory?.equippedTraits.EchoLastRunBoon).toMatchObject({
         giverKey: 'Echo',
         traitKey: 'EchoLastRunBoon',
       });
-      expect(result.traitHistory?.equippedTraits.EchoLastRunBoon?.rarity).toBeUndefined();
-      expect(result.traitHistory?.equippedTraits[option.traitKey]).toMatchObject({
+      expect(result.branch.traitHistory?.equippedTraits.EchoLastRunBoon?.rarity).toBeUndefined();
+      expect(result.branch.traitHistory?.equippedTraits[option.traitKey]).toMatchObject({
         giverKey: option.giverKey,
         rarity: option.rarity,
         traitKey: option.traitKey,
       });
       expect(
-        result.traitHistory?.events
+        result.branch.traitHistory?.events
           .slice(-2)
           .map((event) =>
             event.kind === 'traitOffer'
@@ -1222,7 +1212,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
         ['Echo', 'EchoLastRunBoon'],
         [option.giverKey, option.traitKey],
       ]);
-      expect(findings.size).toBe(0);
+      expect(result.findingEntries).toHaveLength(0);
     },
   );
 
@@ -1317,24 +1307,22 @@ describe('Echo Gate B Boon Boon Boon', () => {
       assessment: { legal: true },
       targetTraitKeys: ['HephaestusWeaponBoon'],
     });
-    const findings = new Map();
-    const result = processEncounterTraitOffer(
+    const result = settleEncounterTraitOffer(
       catalog,
       baseBranch(history),
       echoOwner.owner,
       offer,
       10,
       'encounterCompleted',
-      findings,
     );
-    expect(result.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
-    expect(result.traitHistory?.equippedTraits.BoonDecayBoon).toBeUndefined();
-    expect(result.traitHistory?.equippedTraits.HephaestusWeaponBoon).toMatchObject({
+    expect(result.branch.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
+    expect(result.branch.traitHistory?.equippedTraits.BoonDecayBoon).toBeUndefined();
+    expect(result.branch.traitHistory?.equippedTraits.HephaestusWeaponBoon).toMatchObject({
       rarity: 'Common',
       level: 1,
     });
-    expect(result.history.lootTypeHistory).toEqual({});
-    expect([...findings.values()].map((entry) => entry.finding)).toContainEqual(
+    expect(result.branch.history.lootTypeHistory).toEqual({});
+    expect(result.findingEntries.map((entry) => entry.finding)).toContainEqual(
       expect.objectContaining({
         code: 'targetedAcquisitionTargetMissing',
         origin: createEchoLastRunBoonAddress(echoOwner, 'option1'),
@@ -1445,7 +1433,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     const history = historyFromTraits([
       { giverKey: 'Hephaestus', traitKey: 'HephaestusWeaponBoon', rarity: 'Common' },
     ]);
-    const result = processEncounterTraitOffer(
+    const result = settleEncounterTraitOffer(
       catalog,
       baseBranch(history),
       echoOwner.owner,
@@ -1464,22 +1452,22 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.traitHistory?.equippedTraits.BoonDecayBoon).toMatchObject({
+    expect(result.branch.traitHistory?.equippedTraits.BoonDecayBoon).toMatchObject({
       giverKey: 'Hera',
       rarity: 'Heroic',
     });
-    expect(result.traitHistory?.events.at(-2)).toMatchObject({
+    expect(result.branch.traitHistory?.events.at(-2)).toMatchObject({
       kind: 'traitOffer',
       targetedAcquisitionTransition: {
         kind: 'promoteGodTraitToHeroic',
         targetTraitKey: 'HephaestusWeaponBoon',
       },
     });
-    expect(result.traitHistory?.equippedTraits.HephaestusWeaponBoon).toMatchObject({
+    expect(result.branch.traitHistory?.equippedTraits.HephaestusWeaponBoon).toMatchObject({
       rarity: 'Heroic',
       level: 5,
     });
-    expect(result.history.lootTypeHistory.HeraUpgrade).toBe(1);
+    expect(result.branch.history.lootTypeHistory.HeraUpgrade).toBe(1);
   });
 
   it('reuses All Together direct grants for the selected Echo outcome', () => {
@@ -1494,7 +1482,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
       { giverKey: 'Hera', traitKey: 'CommonGlobalDamageBoon', rarity: 'Common' },
       { giverKey: 'Hera', traitKey: 'DamageSharePotencyBoon', rarity: 'Common' },
     ]);
-    const result = processEncounterTraitOffer(
+    const result = settleEncounterTraitOffer(
       catalog,
       baseBranch(history),
       echoOwner.owner,
@@ -1513,15 +1501,46 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.traitHistory?.equippedTraits.AllElementalBoon).toBeDefined();
+    expect(result.branch.traitHistory?.equippedTraits.AllElementalBoon).toBeDefined();
     for (const traitKey of Object.values(allTogetherResult))
-      expect(result.traitHistory?.equippedTraits[traitKey]).toBeDefined();
+      expect(result.branch.traitHistory?.equippedTraits[traitKey]).toBeDefined();
+  });
+
+  it('retains a nested All Together child finding at its exact repair checkpoint', () => {
+    const history = historyFromTraits([
+      { giverKey: 'Hera', traitKey: 'HeraWeaponBoon', rarity: 'Common' },
+      { giverKey: 'Hera', traitKey: 'CommonGlobalDamageBoon', rarity: 'Common' },
+      { giverKey: 'Hera', traitKey: 'DamageSharePotencyBoon', rarity: 'Common' },
+    ]);
+    const result = settleEncounterTraitOffer(
+      catalog,
+      baseBranch(history),
+      echoOwner.owner,
+      echoBoonOffer(
+        echoBoonChild(
+          Object.freeze([{ giverKey: 'Hera', traitKey: 'AllElementalBoon', rarity: 'Legendary' }]),
+        ),
+      ),
+      10,
+      'encounterCompleted',
+    );
+    if (result.blockedChild === undefined)
+      throw new Error('nested All Together checkpoint missing');
+    expect(result.blockedChild.address).toMatchObject({ kind: 'allTogetherSet', setKey: 'earth' });
+    expect(result.findingEntries).toContainEqual(
+      expect.objectContaining({
+        finding: expect.objectContaining({
+          code: 'allTogetherResultMissing',
+          origin: result.blockedChild.address,
+        }),
+      }),
+    );
   });
 
   it('reuses Natural Selection target order for the selected Echo outcome', () => {
     const target = 'ApolloWeaponBoon';
     const history = historyFromTraits([{ giverKey: 'Apollo', traitKey: target, rarity: 'Common' }]);
-    const result = processEncounterTraitOffer(
+    const result = settleEncounterTraitOffer(
       catalog,
       baseBranch(history),
       echoOwner.owner,
@@ -1549,16 +1568,15 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.traitHistory?.equippedTraits.GoodStuffBoon).toBeDefined();
-    expect(result.traitHistory?.equippedTraits[target]).toMatchObject({ level: 9 });
+    expect(result.branch.traitHistory?.equippedTraits.GoodStuffBoon).toBeDefined();
+    expect(result.branch.traitHistory?.equippedTraits[target]).toMatchObject({ level: 9 });
   });
 
   it('requires targeted detail only from the selected nested row', () => {
     const history = historyFromTraits([
       { giverKey: 'Hephaestus', traitKey: 'HephaestusWeaponBoon', rarity: 'Common' },
     ]);
-    const findings = new Map();
-    const result = processEncounterTraitOffer(
+    const result = settleEncounterTraitOffer(
       catalog,
       baseBranch(history),
       echoOwner.owner,
@@ -1572,12 +1590,11 @@ describe('Echo Gate B Boon Boon Boon', () => {
       ),
       10,
       'encounterCompleted',
-      findings,
     );
-    expect(result.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
-    expect(result.traitHistory?.equippedTraits.ApolloCastBoon).toBeDefined();
-    expect(result.traitHistory?.equippedTraits.BoonDecayBoon).toBeUndefined();
-    expect([...findings.values()].map((entry) => entry.finding)).not.toContainEqual(
+    expect(result.branch.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
+    expect(result.branch.traitHistory?.equippedTraits.ApolloCastBoon).toBeDefined();
+    expect(result.branch.traitHistory?.equippedTraits.BoonDecayBoon).toBeUndefined();
+    expect(result.findingEntries.map((entry) => entry.finding)).not.toContainEqual(
       expect.objectContaining({ code: 'targetedAcquisitionTargetMissing' }),
     );
   });
@@ -1589,7 +1606,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     ]);
     const initial = baseBranch(history);
     const keepsakes = createKeepsakeState(catalog, 'GoldifyKeepsake', initial.arcanaFear);
-    const result = processEncounterTraitOffer(
+    const result = settleEncounterTraitOffer(
       catalog,
       Object.freeze({ ...initial, keepsakes }),
       echoOwner.owner,
@@ -1601,13 +1618,13 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.traitHistory?.equippedTraits.KeepsakeLevelBoon).toMatchObject({
+    expect(result.branch.traitHistory?.equippedTraits.KeepsakeLevelBoon).toMatchObject({
       giverKey: 'Demeter',
       rarity: 'Duo',
     });
     expect(keepsakes.timePiece?.remainingCharges).toBe(4);
-    expect(result.keepsakes.timePiece?.remainingCharges).toBe(5);
-    expect(result.history.lootTypeHistory.DemeterUpgrade).toBe(1);
+    expect(result.branch.keepsakes.timePiece?.remainingCharges).toBe(5);
+    expect(result.branch.history.lootTypeHistory.DemeterUpgrade).toBe(1);
   });
 
   it('does not consume Calling Card or create Vow of Denial bans for the direct nested result', () => {
@@ -1619,7 +1636,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     const initialized = initializeTestRewardBranches()[0]!;
     const keepsakes = createKeepsakeState(catalog, 'RarifyKeepsake', arcanaFear);
     const branch = Object.freeze({ ...initialized, arcanaFear, keepsakes });
-    const result = processEncounterTraitOffer(
+    const result = settleEncounterTraitOffer(
       catalog,
       branch,
       echoOwner.owner,
@@ -1633,9 +1650,9 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.keepsakes.callingCard).toEqual(keepsakes.callingCard);
-    expect(result.traitHistory?.bannedTraitKeys).toEqual([]);
-    expect(result.traitHistory?.equippedTraits.AphroditeWeaponBoon).toBeDefined();
+    expect(result.branch.keepsakes.callingCard).toEqual(keepsakes.callingCard);
+    expect(result.branch.traitHistory?.bannedTraitKeys).toEqual([]);
+    expect(result.branch.traitHistory?.equippedTraits.AphroditeWeaponBoon).toBeDefined();
   });
 
   it('forbids ordinary slot replacement and makes an exhausted nested domain disable the outer row', () => {
@@ -1675,8 +1692,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     const history = historyFromTraits([
       { giverKey: 'Aphrodite', traitKey: 'HighHealthOffenseBoon', rarity: 'Common' },
     ]);
-    const findings = new Map();
-    const result = processEncounterTraitOffer(
+    const result = settleEncounterTraitOffer(
       catalog,
       baseBranch(history),
       echoOwner.owner,
@@ -1690,12 +1706,11 @@ describe('Echo Gate B Boon Boon Boon', () => {
       ),
       10,
       'encounterCompleted',
-      findings,
     );
-    expect(result.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
-    expect(result.traitHistory?.equippedTraits.ZeusRetaliateBoon).toBeUndefined();
-    expect(result.history.lootTypeHistory).toEqual({});
-    expect([...findings.values()].map((entry) => entry.finding)).toContainEqual(
+    expect(result.branch.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
+    expect(result.branch.traitHistory?.equippedTraits.ZeusRetaliateBoon).toBeUndefined();
+    expect(result.branch.history.lootTypeHistory).toEqual({});
+    expect(result.findingEntries.map((entry) => entry.finding)).toContainEqual(
       expect.objectContaining({
         code: 'echoLastRunBoonOptionUnavailable',
         origin: createEchoLastRunBoonAddress(echoOwner, 'option1'),
@@ -1707,8 +1722,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     const history = historyFromTraits([
       { giverKey: 'Aphrodite', traitKey: 'HighHealthOffenseBoon', rarity: 'Common' },
     ]);
-    const findings = new Map();
-    const result = processEncounterTraitOffer(
+    const result = settleEncounterTraitOffer(
       catalog,
       baseBranch(history),
       echoOwner.owner,
@@ -1722,12 +1736,11 @@ describe('Echo Gate B Boon Boon Boon', () => {
       ),
       10,
       'encounterCompleted',
-      findings,
     );
-    expect(result.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
-    expect(result.traitHistory?.equippedTraits.ZeusWeaponBoon).toBeUndefined();
-    expect(result.history.lootTypeHistory).toEqual({});
-    expect([...findings.values()].map((entry) => entry.finding)).toContainEqual(
+    expect(result.branch.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
+    expect(result.branch.traitHistory?.equippedTraits.ZeusWeaponBoon).toBeUndefined();
+    expect(result.branch.history.lootTypeHistory).toEqual({});
+    expect(result.findingEntries.map((entry) => entry.finding)).toContainEqual(
       expect.objectContaining({
         code: 'echoLastRunBoonOptionUnavailable',
         evidence: expect.objectContaining({
@@ -1739,20 +1752,18 @@ describe('Echo Gate B Boon Boon Boon', () => {
   });
 
   it('retains a missing child as an exact repair checkpoint after the outer acquisition', () => {
-    const findings = new Map();
-    const result = processEncounterTraitOffer(
+    const result = settleEncounterTraitOffer(
       catalog,
       baseBranch(),
       echoOwner.owner,
       echoBoonOffer(),
       10,
       'encounterCompleted',
-      findings,
     );
-    expect(result.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
-    expect(result.traitHistory?.events).toHaveLength(1);
-    expect(result.history.lootTypeHistory).toEqual({});
-    expect([...findings.values()].map((entry) => entry.finding)).toContainEqual(
+    expect(result.branch.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
+    expect(result.branch.traitHistory?.events).toHaveLength(1);
+    expect(result.branch.history.lootTypeHistory).toEqual({});
+    expect(result.findingEntries.map((entry) => entry.finding)).toContainEqual(
       expect.objectContaining({
         code: 'echoLastRunBoonMissing',
         origin: createEchoLastRunBoonAddress(echoOwner, 'option1'),
@@ -1768,7 +1779,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
       ] as const),
     );
     const cappedSources = ['AphroditeUpgrade', 'ApolloUpgrade', 'AresUpgrade', 'DemeterUpgrade'];
-    const expanded = processEncounterTraitOffer(
+    const expanded = settleEncounterTraitOffer(
       catalog,
       baseBranchWithSources(cappedSources),
       echoOwner.owner,
@@ -1776,14 +1787,14 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(expanded.history.lootTypeHistory).toMatchObject({
+    expect(expanded.branch.history.lootTypeHistory).toMatchObject({
       AphroditeUpgrade: 1,
       ApolloUpgrade: 1,
       AresUpgrade: 1,
       DemeterUpgrade: 1,
       ZeusUpgrade: 1,
     });
-    expect(ordinaryPoolFor(expanded.history)).toEqual([
+    expect(ordinaryPoolFor(expanded.branch.history)).toEqual([
       'AphroditeUpgrade',
       'ApolloUpgrade',
       'AresUpgrade',
@@ -1791,7 +1802,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
       'ZeusUpgrade',
     ]);
 
-    const present = processEncounterTraitOffer(
+    const present = settleEncounterTraitOffer(
       catalog,
       baseBranchWithSources(['ZeusUpgrade']),
       echoOwner.owner,
@@ -1799,8 +1810,8 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(present.history.lootTypeHistory).toEqual({ ZeusUpgrade: 2 });
-    expect(Object.keys(present.history.lootTypeHistory)).toEqual(['ZeusUpgrade']);
+    expect(present.branch.history.lootTypeHistory).toEqual({ ZeusUpgrade: 2 });
+    expect(Object.keys(present.branch.history.lootTypeHistory)).toEqual(['ZeusUpgrade']);
   });
 
   it.each([
@@ -1813,7 +1824,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
         { giverKey: 'Aphrodite', traitKey: 'AphroditeWeaponBoon', rarity: 'Common' },
         { giverKey: 'Zeus', traitKey: 'ZeusSpecialBoon', rarity: 'Common' },
       ]);
-      const result = processEncounterTraitOffer(
+      const result = settleEncounterTraitOffer(
         catalog,
         baseBranch(history),
         echoOwner.owner,
@@ -1823,13 +1834,13 @@ describe('Echo Gate B Boon Boon Boon', () => {
         10,
         'encounterCompleted',
       );
-      expect(result.traitHistory?.equippedTraits.SprintEchoBoon).toMatchObject({ giverKey });
-      expect(result.history.lootTypeHistory).toEqual({ [expectedSource]: 1 });
+      expect(result.branch.traitHistory?.equippedTraits.SprintEchoBoon).toMatchObject({ giverKey });
+      expect(result.branch.history.lootTypeHistory).toEqual({ [expectedSource]: 1 });
     },
   );
 
   it('applies source-specific non-ordinary history without entering the ordinary pool', () => {
-    const hermes = processEncounterTraitOffer(
+    const hermes = settleEncounterTraitOffer(
       catalog,
       baseBranch(),
       echoOwner.owner,
@@ -1841,10 +1852,10 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(hermes.history.lootTypeHistory).toEqual({ HermesUpgrade: 1 });
-    expect(ordinaryPoolFor(hermes.history)).not.toContain('HermesUpgrade');
+    expect(hermes.branch.history.lootTypeHistory).toEqual({ HermesUpgrade: 1 });
+    expect(ordinaryPoolFor(hermes.branch.history)).not.toContain('HermesUpgrade');
 
-    const artemis = processEncounterTraitOffer(
+    const artemis = settleEncounterTraitOffer(
       catalog,
       baseBranch(),
       echoOwner.owner,
@@ -1858,7 +1869,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(artemis.history.lootTypeHistory).toEqual({});
+    expect(artemis.branch.history.lootTypeHistory).toEqual({});
   });
 
   it('round-trips the strict child and rejects malformed cardinality, sources, rarities, and Duo duplicates', () => {

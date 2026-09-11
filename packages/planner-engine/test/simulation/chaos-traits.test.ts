@@ -27,7 +27,7 @@ import { boonRarityRollUnavailable } from '../../src/simulation/traits/rarity';
 import { createTestArcanaFearState } from '../support/arcana-fear';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { assessArtificerConversion } from '../../src/simulation/rewards/acquisition-settlement';
-import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { applyStygianWellPurchase } from '../../src/simulation/commerce/stygian-well';
@@ -549,20 +549,20 @@ describe('Chaos paired-trait history', () => {
       }),
     ]);
     const base = branchWithHistory(occupiedHistory);
-    const purchaseHymn = (branch: Parameters<typeof processEncounterTraitOffer>[1]) =>
+    const purchaseHymn = (branch: Parameters<typeof settleEncounterTraitOffer>[1]) =>
       Object.freeze({
         ...branch,
         stygianWell: applyStygianWellPurchase(catalog, branch.stygianWell, 'LimitedSwapTraitDrop'),
       });
-    const acquireOrdinary = (branch: Parameters<typeof processEncounterTraitOffer>[1]) =>
-      processEncounterTraitOffer(
+    const acquireOrdinary = (branch: Parameters<typeof settleEncounterTraitOffer>[1]) =>
+      settleEncounterTraitOffer(
         catalog,
         branch,
         rewardOwner,
         chaos('ChaosCommonCurse', 'ChaosElementalBlessing'),
         2,
         'reward',
-      );
+      ).branch;
     const hymnThenOrdinary = acquireOrdinary(purchaseHymn(base));
     const ordinaryThenHymn = purchaseHymn(acquireOrdinary(base));
     const replacement: AuthoredTraitOfferTraits = Object.freeze({
@@ -801,7 +801,7 @@ describe('Chaos paired-trait history', () => {
         { traitKey: 'HermesCastDiscountBoon', rarity: 'Common' },
       ]) as AuthoredTraitOfferTraits['options'],
     });
-    const settled = processEncounterTraitOffer(
+    const settled = settleEncounterTraitOffer(
       catalog,
       branchWithHistory(active),
       rewardOwner,
@@ -809,13 +809,15 @@ describe('Chaos paired-trait history', () => {
       3,
       'encounterCompleted',
     );
-    expect(settled.traitHistory?.activeChaosCurses.map((curse) => curse.remaining)).toEqual([1, 1]);
+    expect(settled.branch.traitHistory?.activeChaosCurses.map((curse) => curse.remaining)).toEqual([
+      1, 1,
+    ]);
 
     const exhausted = Object.freeze({
       ...active,
       bannedTraitKeys: Object.freeze([...catalog.traitGivers.byKey.Hermes!.traitKeys]),
     });
-    const fallback = processEncounterTraitOffer(
+    const fallback = settleEncounterTraitOffer(
       catalog,
       branchWithHistory(exhausted),
       rewardOwner,
@@ -823,13 +825,13 @@ describe('Chaos paired-trait history', () => {
       3,
       'encounterCompleted',
     );
-    expect(fallback.traitHistory?.activeChaosCurses.map((curse) => curse.remaining)).toEqual([
-      1, 1,
-    ]);
+    expect(fallback.branch.traitHistory?.activeChaosCurses.map((curse) => curse.remaining)).toEqual(
+      [1, 1],
+    );
   });
 
   it('settles a TrialUpgrade-shaped self child through the shared acquisition path and starts its clock there', () => {
-    const settled = processEncounterTraitOffer(
+    const settled = settleEncounterTraitOffer(
       catalog,
       branchWithHistory(createTraitHistoryState()),
       rewardOwner,
@@ -837,10 +839,9 @@ describe('Chaos paired-trait history', () => {
       7,
       'echoLastReward',
       undefined,
-      undefined,
       'self',
     );
-    expect(settled.traitHistory?.activeChaosCurses).toMatchObject([
+    expect(settled.branch.traitHistory?.activeChaosCurses).toMatchObject([
       { curseKey: 'ChaosNoMoneyCurse', remaining: 3 },
     ]);
   });

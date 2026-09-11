@@ -16,10 +16,7 @@ import { describe, expect, it } from 'vitest';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import { evaluateAllTogetherSetDomain } from '../../src/simulation/candidates/trait-offer';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition-settlement';
-import {
-  processEncounterTraitOffer,
-  settleEncounterTraitOffer,
-} from '../../src/simulation/rewards/trait-settlement';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import {
   attachTraitHistory,
   directTraitSetOutcomes,
@@ -142,17 +139,15 @@ function settle(
   result?: AuthoredAllTogetherResult,
   initial: RewardBranchState = branch(history),
 ) {
-  const findings = new Map();
-  const settled = processEncounterTraitOffer(
+  const settlementResult = settleEncounterTraitOffer(
     catalog,
     initial,
     owner.owner,
     offer(result),
     20,
     'encounterCompleted',
-    findings,
   );
-  return { settled, findings };
+  return { settled: settlementResult.branch, findings: settlementResult.findingEntries };
 }
 
 describe('All Together direct trait settlement', () => {
@@ -179,7 +174,7 @@ describe('All Together direct trait settlement', () => {
     const history = requiredHistory([], ['ElementalDamageBoon']);
     expect(history.elementCounts.Earth).toBe(1);
     const { settled, findings } = settle(history);
-    expect(findings.size).toBe(0);
+    expect(findings).toHaveLength(0);
     expect(settled.traitHistory?.equippedTraits.AllElementalBoon).toMatchObject({
       rarity: 'Legendary',
       giverKey: 'Hera',
@@ -374,22 +369,29 @@ describe('All Together direct trait settlement', () => {
     'keeps the outer and applies no partial map for a %s active child',
     (_label, result, code) => {
       const history = requiredHistory();
-      const findings = new Map();
-      const settled = processEncounterTraitOffer(
+      const settlementResult = settleEncounterTraitOffer(
         catalog,
         branch(history),
         owner.owner,
         offer(result, result !== undefined),
         20,
         'encounterCompleted',
-        findings,
       );
+      const settled = settlementResult.branch;
       expect(settled.traitHistory?.equippedTraits.AllElementalBoon?.rarity).toBe('Legendary');
       expect(
         settled.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
       ).toEqual([]);
-      expect([...findings.values()].map((entry) => entry.finding.code)).toContain(code);
-      if (result === undefined) expect(findings.size).toBe(1);
+      expect(settlementResult.findingEntries.map((entry) => entry.finding.code)).toContain(code);
+      if (result === undefined) {
+        expect(settlementResult.findingEntries).toEqual([
+          expect.objectContaining({
+            atomicRegion: `owner:${semanticAddressKey(owner)}`,
+            chronology: { kind: 'history', sequence: 20, boundary: 'at' },
+            finding: expect.objectContaining({ code: 'allTogetherResultMissing' }),
+          }),
+        ]);
+      }
     },
   );
 
@@ -398,18 +400,17 @@ describe('All Together direct trait settlement', () => {
       ...offer(undefined, false),
       selectedOptionKey: 'option2' as const,
     });
-    const findings = new Map();
-    const settled = processEncounterTraitOffer(
+    const result = settleEncounterTraitOffer(
       catalog,
       branch(requiredHistory()),
       owner.owner,
       unresolved,
       20,
       'encounterCompleted',
-      findings,
     );
+    const settled = result.branch;
     expect(
-      [...findings.values()].filter((entry) => entry.finding.origin.kind === 'allTogetherSet'),
+      result.findingEntries.filter((entry) => entry.finding.origin.kind === 'allTogetherSet'),
     ).toEqual([]);
     expect(
       settled.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
@@ -419,7 +420,6 @@ describe('All Together direct trait settlement', () => {
   it('withholds branch-divergent sets atomically after acquiring the outer trait', () => {
     const first = requiredHistory();
     const second = requiredHistory([acquired(4, 'Hephaestus', 'ElementalDamageBoon')]);
-    const findings = new Map();
     const result = settleEncounterTraitOffer(
       catalog,
       branch(first),
@@ -427,7 +427,6 @@ describe('All Together direct trait settlement', () => {
       offer(),
       20,
       'encounterCompleted',
-      findings,
       undefined,
       'selection',
       undefined,
@@ -441,8 +440,8 @@ describe('All Together direct trait settlement', () => {
     expect(result.blockedChild?.address).toMatchObject({ kind: 'allTogetherSet', setKey: 'earth' });
     expect(result.blockedChild?.candidateContext).toBeDefined();
     expect(
-      [...findings.values()].find((entry) => entry.finding.origin.kind === 'allTogetherSet')
-        ?.finding.evidence.detail,
+      result.findingEntries.find((entry) => entry.finding.origin.kind === 'allTogetherSet')?.finding
+        .evidence.detail,
     ).toBe('branchDivergence');
   });
 

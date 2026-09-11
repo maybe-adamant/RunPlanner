@@ -2,7 +2,7 @@
 
 ## Status and objective
 
-Status: locked; approved for implementation. Gate A is next.
+Status: locked; Gate A complete and independently reviewed. Gate B is next.
 Base: `7e0237f6` (clean production worktree when drafted).
 Evidence: `docs/investigations/TRAIT_OUTCOME_TRANSPORT_AND_SETTLEMENT.md`.
 
@@ -198,6 +198,19 @@ finding-owner, and checkpoint assertions only where the extraction exposes a
 coverage gap. Check representative execution assembly output remains equal.
 
 Review and commit this behavior-preserving engine slice before transport work.
+
+Delivered: the chronological coordinator consumes bounded selected-child,
+encounter-child, Hex, and frozen Stone products. Public acquisition and encounter
+settlements return finding entries; callers merge them explicitly. The branch-only
+production wrapper and interim test wrapper are removed. Review exposed one
+pre-existing nested Echo transport gap: its child checkpoint lacked the matching
+finding. The complete-result path now retains both, with a focused witness.
+
+Verification: 250 affected simulation tests and 117 additional settlement,
+compiler, and runtime-import tests passed; full workspace/fixture typechecking,
+changed-file ESLint/Prettier, and `git diff --check` passed. Independent review has
+no open findings. No JSON fixture, UI, catalog, schema, or protocol changes.
+The complete repository gate remains assigned to final closure in Gate D.
 
 ### B — End-to-end core carrier transport
 

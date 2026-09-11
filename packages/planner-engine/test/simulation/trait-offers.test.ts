@@ -871,7 +871,6 @@ describe('Sacrificial Hymn replacement composition', () => {
     if (replacementIndex < 0) throw new Error('expected a forced replacement option');
     const selectedOptionKey = `option${replacementIndex + 1}` as 'option1' | 'option2' | 'option3';
     const initial = initializeTestRewardBranches()[0]!;
-    const findings = new Map();
     const eligibleDraft: AuthoredTraitOffer = Object.freeze({
       ...draft,
       options: Object.freeze(
@@ -894,7 +893,6 @@ describe('Sacrificial Hymn replacement composition', () => {
       eligibleDraft,
       history.events.length + 1,
       'encounterCompleted',
-      findings,
     );
     expect(settlement.branch.stygianWell).toMatchObject({ yarnUses: 1, hymnUses: 1 });
     const equipped =
@@ -903,7 +901,7 @@ describe('Sacrificial Hymn replacement composition', () => {
       throw new Error(
         JSON.stringify({
           draft: eligibleDraft,
-          findings: [...findings.values()],
+          findings: settlement.findingEntries,
           events: settlement.branch.traitHistory?.events,
         }),
       );
