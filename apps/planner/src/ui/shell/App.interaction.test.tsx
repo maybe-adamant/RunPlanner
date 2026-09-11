@@ -476,7 +476,8 @@ function allTogetherFindingFixture() {
   if (target === undefined || optionKey === undefined)
     throw new Error('All Together target was not prepared');
   const set = createAllTogetherSetAddress(target, optionKey, 'earth');
-  return { application, project, set, target };
+  const occurrence = createOccurrenceAddress(goldenGBiome, goldenGOccurrenceId(7, 1));
+  return { application, occurrence, project, set, target };
 }
 
 describe('planner history interaction', () => {
@@ -1645,7 +1646,7 @@ describe('planner history interaction', () => {
     expect(actionRow?.getAttribute('aria-description')).toContain('Shop purchase is unavailable');
   });
 
-  it('opens and focuses the exact All Together set control from its finding', async () => {
+  it('routes an All Together finding through its visible Timeline trait action', async () => {
     const { application, project, set, target } = allTogetherFindingFixture();
     application.store.dispatch(authoredProjectReplaced(project));
     const finding = application.store
@@ -1656,6 +1657,11 @@ describe('planner history interaction', () => {
           semanticAddressKey(candidate.origin) === semanticAddressKey(set),
       );
     if (finding === undefined) throw new Error('All Together set finding is missing');
+    const destination = application
+      .selectStructuredWorkspace(application.store.getState())!
+      .focusByOwner.get(semanticAddressKey(set));
+    if (destination === undefined) throw new Error('All Together set destination is missing');
+    expect(destination).not.toHaveProperty('traitDialogTarget');
     const view = renderPlannerForInteraction({ application });
     const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
     if (findings === null) throw new Error('Findings panel is missing');
@@ -1663,11 +1669,29 @@ describe('planner history interaction', () => {
       within(findings).getByRole('button', { name: /All Together outcome unavailable/ }),
     );
 
+    const actionRow = document.getElementById(
+      semanticOwnerControlElementId(destination.focusAddress),
+    );
+    expect(actionRow?.getAttribute('data-has-findings')).toBe('true');
+    await waitFor(() => expect(document.activeElement).toBe(actionRow));
+    const traitLauncher = within(actionRow!).getByRole('button', { name: /Trait/ });
+    await view.user.click(traitLauncher);
+
     const dialog = await screen.findByRole('dialog');
-    const earth = within(dialog).getByRole('button', { name: /^Earth:/ });
-    await waitFor(() => expect(document.activeElement).toBe(earth));
+    expect(within(dialog).getByRole('button', { name: /^Earth:/ })).toBeTruthy();
     expect(application.store.getState().editorSession.traitDialogTarget).toEqual(target);
-    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(set);
+  });
+
+  it('keeps an invalid All Together offer visible on its occurrence Timeline before navigation', async () => {
+    const { application, occurrence, project } = allTogetherFindingFixture();
+    application.store.dispatch(authoredProjectReplaced(project));
+    application.store.dispatch(semanticOwnerNavigated(occurrence));
+    const view = renderPlannerForInteraction({ application });
+
+    await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+
+    const timeline = screen.getByRole('region', { name: 'Room Timeline' });
+    expect(within(timeline).getByRole('button', { name: /Trait/ })).toBeTruthy();
   });
 
   it('routes a targeted-acquisition finding through its pickup action', async () => {

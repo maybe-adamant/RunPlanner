@@ -8,6 +8,7 @@ import {
   type OccurrenceAddress,
   type SemanticAddress,
   type TargetAddress,
+  type TraitOfferAddress,
 } from '../../authored-project/addresses';
 import type { BiomeHistoryPrefix, EncounterHistoryBlock } from '../history';
 import type {
@@ -38,9 +39,47 @@ export interface BlockedAncestorChain {
   readonly target?: TargetAddress | undefined;
 }
 
+function traitOfferAncestor(address: SemanticAddress): TraitOfferAddress | undefined {
+  switch (address.kind) {
+    case 'traitOffer':
+      return address;
+    case 'traitAcquisitionTarget':
+    case 'naturalSelectionResult':
+    case 'circeResolution':
+    case 'echoPomTarget':
+    case 'echoLastRunBoon':
+    case 'echoLastReward':
+    case 'allTogetherSet':
+      return address.trait;
+    default:
+      return undefined;
+  }
+}
+
+function findingParentAddress(address: SemanticAddress): SemanticAddress | undefined {
+  const trait = traitOfferAncestor(address);
+  if (trait !== undefined) return trait.owner;
+  switch (address.kind) {
+    case 'levelResolution':
+    case 'acquisitionRole':
+    case 'steadyGrowthOutcome':
+    case 'transcendentEmbryoOutcome':
+    case 'acquisitionSite':
+      return address.owner;
+    case 'nemesisRandomEvent':
+      return address.encounter;
+    case 'acquisitionEntry':
+      return address.site;
+    default:
+      return undefined;
+  }
+}
+
 export function rewardOwnerAddress(
   address: SemanticAddress,
 ): RewardProducerOwnerAddress | undefined {
+  const trait = traitOfferAncestor(address);
+  if (trait !== undefined) return rewardOwnerAddress(trait.owner);
   switch (address.kind) {
     case 'incomingReward':
     case 'localReward':
@@ -48,15 +87,8 @@ export function rewardOwnerAddress(
     case 'shopOffer':
     case 'acquisitionEntry':
       return address;
-    case 'traitOffer':
     case 'levelResolution':
       return rewardOwnerAddress(address.owner);
-    case 'traitAcquisitionTarget':
-    case 'circeResolution':
-    case 'echoPomTarget':
-    case 'echoLastRunBoon':
-    case 'echoLastReward':
-      return rewardOwnerAddress(address.trait);
     default:
       return undefined;
   }
@@ -66,17 +98,7 @@ export function acquisitionRoleAncestor(
   address: SemanticAddress,
 ): AcquisitionRoleAddress | undefined {
   if (address.kind === 'acquisitionRole') return address;
-  const trait =
-    address.kind === 'traitOffer'
-      ? address
-      : address.kind === 'traitAcquisitionTarget' ||
-          address.kind === 'circeResolution' ||
-          address.kind === 'echoPomTarget' ||
-          address.kind === 'echoLastRunBoon' ||
-          address.kind === 'echoLastReward' ||
-          address.kind === 'allTogetherSet'
-        ? address.trait
-        : undefined;
+  const trait = traitOfferAncestor(address);
   if (trait !== undefined) return createAcquisitionRoleAddress(trait.owner, trait.acquisitionRole);
   return address.kind === 'levelResolution'
     ? createAcquisitionRoleAddress(address.owner, address.acquisitionRole)
@@ -110,35 +132,13 @@ export function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddr
       address.occurrenceId,
     );
   if (address.kind === 'fountainRarityOutcome') return occurrenceOwnerAddress(address.action);
-  if (address.kind === 'steadyGrowthOutcome' || address.kind === 'transcendentEmbryoOutcome') {
-    return address.owner.kind === 'occurrence' ? address.owner : undefined;
-  }
   // A room-exit settlement finding is addressed to its atomic entry, whose
   // occurrence owner is intentionally one layer further out through its
   // exact site. Keep that ancestry when a settlement itself is the first
   // blocking region so the already-prepared pre-settlement candidate context
   // remains available for repairing the authored order.
-  if (address.kind === 'acquisitionEntry') return occurrenceOwnerAddress(address.site);
-  if (address.kind === 'acquisitionRole') return occurrenceOwnerAddress(address.owner);
-  if (address.kind === 'acquisitionSite') return occurrenceOwnerAddress(address.owner);
-  if (
-    address.kind === 'traitOffer' ||
-    address.kind === 'levelResolution' ||
-    address.kind === 'traitAcquisitionTarget' ||
-    address.kind === 'circeResolution' ||
-    address.kind === 'echoPomTarget' ||
-    address.kind === 'echoLastRunBoon' ||
-    address.kind === 'echoLastReward'
-  )
-    return occurrenceOwnerAddress(
-      address.kind === 'traitAcquisitionTarget' ||
-        address.kind === 'circeResolution' ||
-        address.kind === 'echoPomTarget' ||
-        address.kind === 'echoLastRunBoon' ||
-        address.kind === 'echoLastReward'
-        ? address.trait
-        : address.owner,
-    );
+  const parent = findingParentAddress(address);
+  if (parent !== undefined) return occurrenceOwnerAddress(parent);
   if (address.kind === 'encounterPhase' && address.owner.kind === 'occurrence') {
     return createOccurrenceAddress(
       createBiomeAddress(address.routeKey, address.biomeKey),
@@ -244,43 +244,11 @@ export function mergedFindings(
 
 export function ownerOrigin(address: SemanticAddress): SemanticAddress {
   let origin = address;
-  while (
-    origin.kind === 'traitOffer' ||
-    origin.kind === 'naturalSelectionResult' ||
-    origin.kind === 'levelResolution' ||
-    origin.kind === 'acquisitionRole' ||
-    origin.kind === 'traitAcquisitionTarget' ||
-    origin.kind === 'circeResolution' ||
-    origin.kind === 'echoPomTarget' ||
-    origin.kind === 'echoLastRunBoon' ||
-    origin.kind === 'echoLastReward' ||
-    origin.kind === 'allTogetherSet' ||
-    origin.kind === 'nemesisRandomEvent' ||
-    origin.kind === 'steadyGrowthOutcome' ||
-    origin.kind === 'transcendentEmbryoOutcome' ||
-    origin.kind === 'acquisitionEntry' ||
-    origin.kind === 'acquisitionSite'
-  ) {
-    origin =
-      origin.kind === 'acquisitionRole'
-        ? origin.owner
-        : origin.kind === 'nemesisRandomEvent'
-          ? origin.encounter
-          : origin.kind === 'acquisitionEntry'
-            ? origin.site
-            : origin.kind === 'acquisitionSite'
-              ? origin.owner
-              : origin.kind === 'naturalSelectionResult' ||
-                  origin.kind === 'traitAcquisitionTarget' ||
-                  origin.kind === 'circeResolution' ||
-                  origin.kind === 'echoPomTarget' ||
-                  origin.kind === 'echoLastRunBoon' ||
-                  origin.kind === 'echoLastReward' ||
-                  origin.kind === 'allTogetherSet'
-                ? origin.trait
-                : origin.owner;
+  while (true) {
+    const parent = findingParentAddress(origin);
+    if (parent === undefined) return origin;
+    origin = parent;
   }
-  return origin;
 }
 
 export function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): boolean {
@@ -291,43 +259,8 @@ export function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): b
     origin.kind === 'localVisitOrder'
   )
     return origin.sourceOccurrenceId === occurrenceId;
-  if (
-    origin.kind === 'traitOffer' ||
-    origin.kind === 'naturalSelectionResult' ||
-    origin.kind === 'levelResolution' ||
-    origin.kind === 'acquisitionRole' ||
-    origin.kind === 'traitAcquisitionTarget' ||
-    origin.kind === 'circeResolution' ||
-    origin.kind === 'echoPomTarget' ||
-    origin.kind === 'echoLastRunBoon' ||
-    origin.kind === 'echoLastReward' ||
-    origin.kind === 'allTogetherSet' ||
-    origin.kind === 'nemesisRandomEvent' ||
-    origin.kind === 'steadyGrowthOutcome' ||
-    origin.kind === 'transcendentEmbryoOutcome' ||
-    origin.kind === 'acquisitionEntry' ||
-    origin.kind === 'acquisitionSite'
-  )
-    return ownsOccurrence(
-      origin.kind === 'acquisitionRole'
-        ? origin.owner
-        : origin.kind === 'nemesisRandomEvent'
-          ? origin.encounter
-          : origin.kind === 'acquisitionEntry'
-            ? origin.site
-            : origin.kind === 'acquisitionSite'
-              ? origin.owner
-              : origin.kind === 'naturalSelectionResult' ||
-                  origin.kind === 'traitAcquisitionTarget' ||
-                  origin.kind === 'circeResolution' ||
-                  origin.kind === 'echoPomTarget' ||
-                  origin.kind === 'echoLastRunBoon' ||
-                  origin.kind === 'echoLastReward' ||
-                  origin.kind === 'allTogetherSet'
-                ? origin.trait
-                : origin.owner,
-      occurrenceId,
-    );
+  const parent = findingParentAddress(origin);
+  if (parent !== undefined) return ownsOccurrence(parent, occurrenceId);
   if ('occurrenceId' in origin && origin.occurrenceId === occurrenceId) return true;
   return origin.kind === 'encounterPhase' && origin.owner.occurrenceId === occurrenceId;
 }
