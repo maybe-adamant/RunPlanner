@@ -4,7 +4,7 @@ import type {
   CanonicalBiome,
   MaterializedBiomePrefix,
 } from '../materialization';
-import { selectedBatchContinuation } from '../materialization';
+import { selectedBatchContinuation } from '../materialization/batch';
 
 export type EncounterStructuralSnapshot =
   CanonicalBiome | (MaterializedBiomePrefix & { readonly entryRoom: CanonicalAuthoredRoom });

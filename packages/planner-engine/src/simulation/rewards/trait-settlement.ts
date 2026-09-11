@@ -38,10 +38,9 @@ import {
   recordReachedLevelResolution,
   recordReachedTraitOffer,
   traitOfferCompositionDomains,
-  type EchoLastRunBoonOutcome,
   type TraitHistoryState,
-  type TraitOfferContext,
 } from '../traits';
+import type { EchoLastRunBoonOutcome, TraitOfferContext } from '../trait-offer-domain';
 import {
   optionIndex,
   traitGiverForAcquisitionRole,

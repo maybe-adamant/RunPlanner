@@ -2,8 +2,11 @@ import type { Catalog } from '../catalog-schema';
 import type { AuthoredTraitOption } from '../authored-project/traits';
 import type { KeepsakeState } from './keepsakes';
 import { isLevelBearingTrait, type TraitHistoryState } from './trait-history';
-import type { TraitAssessment, TraitOfferContext } from './trait-offers';
-import type { TraitAssessmentFinding } from './trait-offers';
+import type {
+  TraitAssessment,
+  TraitAssessmentFinding,
+  TraitOfferContext,
+} from './trait-offer-domain';
 
 export interface TraitOfferOptionLevelResolution {
   /** The active authored Persephone contribution domain, when applicable. */

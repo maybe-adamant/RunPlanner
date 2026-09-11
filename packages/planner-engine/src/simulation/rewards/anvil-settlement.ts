@@ -1,6 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import type { AuthoredAnvilResult } from '../../authored-project/model';
-import type { TraitOfferContext } from '../trait-offers';
+import type { TraitOfferContext } from '../trait-offer-domain';
 import { assessTraitOption } from '../trait-authoring-policies';
 import type { EquippedTrait } from '../../authored-project/traits';
 import {

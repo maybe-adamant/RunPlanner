@@ -17,8 +17,8 @@ import type {
 } from '../../authored-project/model';
 import type { Catalog, RoomDeclaration, RoomTemplateKey } from '../../catalog-schema';
 import { encounterEnvelopeSlots } from '../../authored-project/room-state/encounter-envelope';
-import { alwaysActiveEncounterSlotKeys, resolveEncounterPhases } from '../encounters';
-import type { ResolvedEncounterPhase } from '../encounters';
+import { alwaysActiveEncounterSlotKeys, resolveEncounterPhases } from '../encounters/resolve';
+import type { ResolvedEncounterPhase } from '../encounters/model';
 import type {
   CanonicalAuthoredRoom,
   CanonicalFieldsOptionalReward,
@@ -28,7 +28,7 @@ import type {
   CanonicalRewardWheel,
   CanonicalShopEntryState,
 } from './model';
-import type { TraitOfferContext } from '../trait-offers';
+import type { TraitOfferContext } from '../trait-offer-domain';
 import type { ResolvedRewardOffer, ShopOptionEntry } from '../../reward-kernel/model';
 import {
   echoLastRewardPickupEntryKeys,

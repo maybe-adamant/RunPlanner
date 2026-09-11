@@ -2,7 +2,16 @@
 
 ## Status and objective
 
-Status: **Locked; Gate A is next.**
+Status: **Locked; Gate A complete. Gate B is next.**
+
+Gate A verification: workspace typechecking passed; 11 focused files / 165
+tests passed, covering trait offers/candidates, Hermes/room actions, F/N/H
+materialization and O history/validation. Independent review passed, including
+an independent run of the two import-graph tests. Repository lint, formatting,
+and diff checks passed. All 45 pre-existing functions in the two trait modules
+retain identical executable bodies after movement (token comparison excluding
+comments/whitespace). No fixture, schema, or protocol changes. Full repository
+closure remains Gate F; it was not rerun for this slice.
 
 Planning base: `3639dca0034a7143adcd6ac7866b52c0648d788a`.
 The worktree was clean before this plan was written.
