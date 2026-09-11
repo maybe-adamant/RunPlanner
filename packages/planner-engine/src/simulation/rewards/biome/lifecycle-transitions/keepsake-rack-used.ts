@@ -24,10 +24,8 @@ import {
   createTraitHistoryState,
   foldTraitHistoryEvents,
 } from '../../../traits';
-import type {
-  KeepsakeEquipResultCandidateCapability,
-  KeepsakeSelectionCandidateCapability,
-} from '../../../candidate-artifacts';
+import { type KeepsakeEquipResultCandidateCapability } from '../../../keepsakes/candidate-artifacts';
+import { type KeepsakeSelectionCandidateCapability } from '../../../keepsakes/candidate-artifacts';
 import type { RewardBranchState } from '../../branch-primitives';
 import {
   applyExperimentalHammerEquipResult,

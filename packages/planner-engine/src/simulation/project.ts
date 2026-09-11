@@ -13,8 +13,8 @@ import { forcedChaosOccurrenceKeysForRoute } from '../authored-project/chaos-gat
 import {
   createProjectCandidateArtifacts,
   type BiomeCandidateArtifacts,
-  type KeepsakeSelectionCandidateCapability,
 } from './candidate-artifacts';
+import { type KeepsakeSelectionCandidateCapability } from './keepsakes/candidate-artifacts';
 import {
   assessExperimentalHammerEquipResult,
   assessJeweledPomEquipResult,
@@ -118,7 +118,7 @@ interface RouteProjectEvaluationAssembly {
   readonly routeStartKeepsakes: ReadonlyMap<string, KeepsakeSelectionCandidateCapability>;
   readonly routeStartKeepsakeEquipResults: ReadonlyMap<
     string,
-    import('./candidate-artifacts').KeepsakeEquipResultCandidateCapability
+    import('./keepsakes/candidate-artifacts').KeepsakeEquipResultCandidateCapability
   >;
   readonly authoringHorizon: AuthoringHorizon;
 }
@@ -153,7 +153,7 @@ function evaluateRouteAssembly(
   const routeStartKeepsakes = new Map<string, KeepsakeSelectionCandidateCapability>();
   const routeStartKeepsakeEquipResults = new Map<
     string,
-    import('./candidate-artifacts').KeepsakeEquipResultCandidateCapability
+    import('./keepsakes/candidate-artifacts').KeepsakeEquipResultCandidateCapability
   >();
   const resourceAuthoring = routeResourceAuthoring(catalog, route);
   const resourceFindingsByBiome = new Map<string, SemanticFinding[]>();

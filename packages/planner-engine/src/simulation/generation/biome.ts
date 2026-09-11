@@ -24,14 +24,14 @@ import {
   requireSource,
 } from './first-target-takeover';
 import { evaluateFieldsCageOutcome, fieldsCageOutcomeEvidence } from './fields-cage';
+import { createRoomTargetCandidateArtifacts } from './candidate-artifacts';
 import {
-  createRoomTargetCandidateArtifacts,
   createChaosCandidateArtifacts,
   createZagreusContractCandidateArtifacts,
   type RoomTargetCandidateArtifacts,
   type ChaosCandidateArtifacts,
   type ZagreusContractCandidateArtifacts,
-} from '../candidate-artifacts';
+} from './candidate-artifacts';
 import type { FindingRegionEntry } from '../finding-regions';
 import { findingRegion, ownerRegion } from '../finding-regions';
 import type {
@@ -75,11 +75,11 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
   const findingRegions: FindingRegionEntry[] = [];
   const chaosCapabilities = new Map<
     string,
-    import('../candidate-artifacts').ChaosCandidateCapability
+    import('./candidate-artifacts').ChaosCandidateCapability
   >();
   const zagreusContractCapabilities = new Map<
     string,
-    import('../candidate-artifacts').ZagreusContractCandidateCapability
+    import('./candidate-artifacts').ZagreusContractCandidateCapability
   >();
   const addFinding = (value: SemanticFinding, region = ownerRegion(value.origin)): void => {
     findings.push(value);

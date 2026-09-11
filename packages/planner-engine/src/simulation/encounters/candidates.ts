@@ -45,6 +45,17 @@ export interface EncounterCandidateArtifacts {
   readonly figLeafAt: (origin: EncounterPhaseAddress) => FigLeafPhaseCandidateSupport | undefined;
 }
 
+export function createEmptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
+  return Object.freeze({
+    at: () => undefined,
+    statusAt: () => undefined,
+    gorgonAt: () => undefined,
+    nemesisAt: () => undefined,
+    roomAt: () => undefined,
+    figLeafAt: () => undefined,
+  });
+}
+
 /**
  * Opaque room-local preparation capability from one exact simulation. The
  * caller supplies only a resolved replacement envelope; the captured room

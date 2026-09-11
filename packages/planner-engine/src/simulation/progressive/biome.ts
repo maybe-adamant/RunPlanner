@@ -14,18 +14,22 @@ import { evaluateBiomeRoomGenerationAssemblyInternal } from '../generation/biome
 import { evaluateHubDecisionGenerationInternal } from '../generation/hub';
 import {
   createBiomeCandidateArtifacts,
-  type AcquisitionConversionCandidateArtifacts,
   type BiomeCandidateArtifacts,
+} from '../candidate-artifacts';
+import {
+  type AcquisitionConversionCandidateArtifacts,
   type DerivedAcquisitionEntryCandidateArtifacts,
+} from '../rewards/acquisition-artifacts';
+import {
   type FigurineArcanaCandidateArtifacts,
-  type HermesShrineCandidateArtifacts,
-  type JudgmentArcanaCandidateArtifacts,
   type KeepsakeEquipResultCandidateArtifacts,
   type KeepsakeSelectionCandidateArtifacts,
-  type SteadyGrowthCandidateArtifacts,
-  type StygianWellCandidateArtifacts,
   type TranscendentEmbryoCandidateArtifacts,
-} from '../candidate-artifacts';
+} from '../keepsakes/candidate-artifacts';
+import { type HermesShrineCandidateArtifacts } from '../hermes-shrine';
+import { type JudgmentArcanaCandidateArtifacts } from '../arcana-fear';
+import { type SteadyGrowthCandidateArtifacts } from '../trait-history';
+import { type StygianWellCandidateArtifacts } from '../stygian-well';
 import {
   composeBiomeHistoryPrefixWithEncounterValidation,
   type BiomeHistoryPrefix,

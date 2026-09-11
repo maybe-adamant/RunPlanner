@@ -33,17 +33,19 @@ import type {
   RewardStoreSupportEntry,
   TargetRewardHistoryCheckpoint,
 } from '../model';
+import { createAcquisitionConversionCandidateArtifacts } from '../acquisition-artifacts';
 import {
-  createAcquisitionConversionCandidateArtifacts,
   createDerivedAcquisitionEntryCandidateArtifacts,
-  createSteadyGrowthCandidateArtifacts,
+  attestDerivedAcquisitionEntryCandidateCapability,
+} from '../acquisition-artifacts';
+import { createSteadyGrowthCandidateArtifacts } from '../../trait-history';
+import {
   createTranscendentEmbryoCandidateArtifacts,
   createFountainRarityCandidateArtifacts,
-  createPurgingPoolCandidateArtifacts,
-  createHermesShrineCandidateArtifacts,
-  createStygianWellCandidateArtifacts,
-  attestDerivedAcquisitionEntryCandidateCapability,
-} from '../../candidate-artifacts';
+} from '../../keepsakes/candidate-artifacts';
+import { createPurgingPoolCandidateArtifacts } from '../../purging-pool';
+import { createHermesShrineCandidateArtifacts } from '../../hermes-shrine';
+import { createStygianWellCandidateArtifacts } from '../../stygian-well';
 import {
   createLevelResolutionCandidateArtifacts,
   createTraitOfferCandidateArtifacts,
@@ -144,12 +146,12 @@ import {
 } from '../../keepsakes';
 import { createArcanaFearState } from '../../arcana-fear';
 import { createKeepsakeEquipResultAddress } from '../../../authored-project/addresses';
+import { createJudgmentArcanaCandidateArtifacts } from '../../arcana-fear';
 import {
-  createJudgmentArcanaCandidateArtifacts,
   createFigurineArcanaCandidateArtifacts,
   createKeepsakeSelectionCandidateArtifacts,
   createKeepsakeEquipResultCandidateArtifacts,
-} from '../../candidate-artifacts';
+} from '../../keepsakes/candidate-artifacts';
 
 type CanonicalRewardRoom = CanonicalAuthoredRoom;
 type CanonicalRewardSource = CanonicalRewardRoom | CanonicalHubRoom;
@@ -283,19 +285,19 @@ export function evaluateBiomeRewardChronology(
   const batchesByParent = prepared.batchesByParent;
   const judgmentArcanaContexts = new Map<
     string,
-    import('../../candidate-artifacts').JudgmentArcanaCandidateCapability
+    import('../../arcana-fear').JudgmentArcanaCandidateCapability
   >();
   const figurineArcanaContexts = new Map<
     string,
-    import('../../candidate-artifacts').FigurineArcanaCandidateCapability
+    import('../../keepsakes/candidate-artifacts').FigurineArcanaCandidateCapability
   >();
   const keepsakeSelectionContexts = new Map<
     string,
-    import('../../candidate-artifacts').KeepsakeSelectionCandidateCapability
+    import('../../keepsakes/candidate-artifacts').KeepsakeSelectionCandidateCapability
   >();
   const keepsakeEquipResultContexts = new Map<
     string,
-    import('../../candidate-artifacts').KeepsakeEquipResultCandidateCapability
+    import('../../keepsakes/candidate-artifacts').KeepsakeEquipResultCandidateCapability
   >();
   const acquisitionConversionContexts = new Map<string, readonly AcquisitionRoleFrontier[]>();
   const reachedTraitOfferCandidateContexts = new Map<string, TraitOfferCandidateContext[]>();
@@ -629,7 +631,7 @@ export function evaluateBiomeRewardChronology(
   const transcendentEmbryoOutcomeAddresses = new Map<string, TranscendentEmbryoOutcomeAddress>();
   const fountainRarityCandidateContexts = new Map<
     string,
-    import('../../candidate-artifacts').FountainRarityCandidateCapability
+    import('../../keepsakes/candidate-artifacts').FountainRarityCandidateCapability
   >();
   function recordTraitChildSettlements(
     checkpoints: readonly ReachedTraitChildCheckpoint[] | undefined,

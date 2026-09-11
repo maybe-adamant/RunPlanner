@@ -37,7 +37,7 @@ import {
   settlePickupAcquisitionSite,
 } from '../../src/simulation/rewards/acquisition-settlement';
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
-import { createAcquisitionConversionCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
+import { createAcquisitionConversionCandidateArtifacts } from '../../src/simulation/rewards/acquisition-artifacts';
 import { createTraitHistoryState } from '../../src/simulation/traits';
 import { installHexTree } from '../../src/simulation/hex-progress';
 

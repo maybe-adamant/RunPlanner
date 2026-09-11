@@ -39,7 +39,7 @@ import {
   echoShopDuplicateOffer,
 } from '../../src/authored-project/shop';
 import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms';
-import { createDerivedAcquisitionEntryCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
+import { createDerivedAcquisitionEntryCandidateArtifacts } from '../../src/simulation/rewards/acquisition-artifacts';
 import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import {
   processShopInventory,

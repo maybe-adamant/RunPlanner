@@ -1,7 +1,7 @@
 import type { KeepsakeSelectionAddress } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
-import type { KeepsakeSelectionCandidateArtifacts } from '../candidate-artifacts';
+import { type KeepsakeSelectionCandidateArtifacts } from '../keepsakes/candidate-artifacts';
 import type { ProjectEvaluation } from '../evaluation-products';
 import {
   keepsakeSelectionUnavailableReason,

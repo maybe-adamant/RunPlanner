@@ -1318,4 +1318,41 @@ export function nextRarity(
     : undefined;
 }
 
+/** Exact threshold frontiers retained at one automatic Steady Growth row. */
+export interface SteadyGrowthCandidateCapability {
+  readonly thresholds: readonly ReachedSteadyGrowthThreshold[];
+  readonly evaluate: (
+    targetTraitKey: string | null | undefined,
+  ) => readonly SteadyGrowthTargetAssessment[];
+}
+export interface SteadyGrowthCandidateArtifacts {
+  readonly at: (
+    address: import('../authored-project/addresses').SteadyGrowthOutcomeAddress,
+  ) => SteadyGrowthCandidateCapability | undefined;
+}
+export function createSteadyGrowthCandidateArtifacts(
+  catalog: Catalog,
+  contexts: ReadonlyMap<string, readonly ReachedSteadyGrowthThreshold[]>,
+): SteadyGrowthCandidateArtifacts {
+  const privateContexts = new Map(contexts);
+  return Object.freeze({
+    at: (address: import('../authored-project/addresses').SteadyGrowthOutcomeAddress) => {
+      const thresholds = privateContexts.get(semanticAddressKey(address));
+      if (thresholds === undefined) return undefined;
+      return Object.freeze({
+        thresholds,
+        evaluate: (targetTraitKey: string | null | undefined) =>
+          Object.freeze(
+            thresholds.map((threshold) =>
+              assessSteadyGrowthTarget(catalog, threshold, targetTraitKey),
+            ),
+          ),
+      });
+    },
+  });
+}
+export function createEmptySteadyGrowthCandidateArtifacts(): SteadyGrowthCandidateArtifacts {
+  return Object.freeze({ at: () => undefined });
+}
+
 import type { TraitAssessmentFinding } from './trait-offer-domain';

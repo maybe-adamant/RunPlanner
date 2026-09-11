@@ -736,7 +736,7 @@ describe('Pom level resolutions', () => {
       );
     const retainedCount = (findings: Parameters<typeof settleTestRoomReward>[4]) =>
       [...findings.values()].find((entry) => entry.finding.code === 'missingPomTarget')
-        ?.levelResolutionEvaluations.length;
+        ?.levelResolutionEvaluations?.length;
 
     const sameFoldFindings = new Map();
     settleMissingPom(

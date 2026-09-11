@@ -2,6 +2,7 @@ import type { PurgingPoolState } from '../authored-project/model';
 import type { Catalog } from '../catalog-schema';
 import type { EquippedTrait } from '../authored-project/traits';
 import type { FindingEvidence } from './model';
+import { semanticAddressKey, type OccurrenceAddress } from '../authored-project/addresses';
 
 export type PurgingPoolSlotKey = keyof PurgingPoolState['traitKeyBySlot'];
 
@@ -22,6 +23,44 @@ export interface PurgingPoolAssessment {
   readonly candidateTraitKeysBySlot: Readonly<Record<PurgingPoolSlotKey, readonly string[]>>;
   readonly complete: boolean;
   readonly findings: readonly PurgingPoolAssessmentFinding[];
+}
+
+export interface PurgingPoolCandidateCapability {
+  readonly assessments: readonly PurgingPoolAssessment[];
+  readonly candidateTraitKeysBySlot: Readonly<Record<PurgingPoolSlotKey, readonly string[]>>;
+}
+export interface PurgingPoolCandidateArtifacts {
+  readonly at: (occurrence: OccurrenceAddress) => PurgingPoolCandidateCapability | undefined;
+}
+export function createPurgingPoolCandidateArtifacts(
+  contexts: ReadonlyMap<string, readonly import('./purging-pool').PurgingPoolAssessment[]>,
+): PurgingPoolCandidateArtifacts {
+  const privateContexts = new Map(contexts);
+  return Object.freeze({
+    at: (occurrence: OccurrenceAddress) => {
+      const assessments = privateContexts.get(semanticAddressKey(occurrence));
+      if (assessments === undefined || assessments.length === 0) return undefined;
+      const first = assessments[0]!;
+      const candidateTraitKeysBySlot = Object.freeze(
+        Object.fromEntries(
+          (['left', 'middle', 'right'] as const).map((slotKey) => [
+            slotKey,
+            Object.freeze(
+              first.candidateTraitKeysBySlot[slotKey].filter((traitKey) =>
+                assessments.every((assessment) =>
+                  assessment.candidateTraitKeysBySlot[slotKey].includes(traitKey),
+                ),
+              ),
+            ),
+          ]),
+        ) as Record<import('./purging-pool').PurgingPoolSlotKey, readonly string[]>,
+      );
+      return Object.freeze({ assessments, candidateTraitKeysBySlot });
+    },
+  });
+}
+export function createEmptyPurgingPoolCandidateArtifacts(): PurgingPoolCandidateArtifacts {
+  return Object.freeze({ at: () => undefined });
 }
 
 const SLOT_KEYS = ['left', 'middle', 'right'] as const satisfies readonly PurgingPoolSlotKey[];

@@ -7,7 +7,7 @@ export {
   type PurgingPoolAssessmentFinding,
   type PurgingPoolSlotKey,
 } from './purging-pool';
-export type { PurgingPoolCandidateCapability } from './candidate-artifacts';
+export { type PurgingPoolCandidateCapability } from './purging-pool';
 export {
   assessStygianWell,
   assessStygianWellPlacement,
@@ -382,13 +382,13 @@ export {
   type SemanticFinding,
   type SimulationPhase,
 } from './model';
-export type {
-  AcquisitionConversionCandidateCapability,
-  HermesShrineCandidateCapability,
-  StygianWellCandidateCapability,
-  ChaosCandidateCapability,
-  ZagreusContractCandidateCapability,
-} from './candidate-artifacts';
+export { type AcquisitionConversionCandidateCapability } from './rewards/acquisition-artifacts';
+export { type HermesShrineCandidateCapability } from './hermes-shrine';
+export { type StygianWellCandidateCapability } from './stygian-well';
+export {
+  type ChaosCandidateCapability,
+  type ZagreusContractCandidateCapability,
+} from './generation/candidate-artifacts';
 export {
   assertExactProjectEvaluationAssembly,
   assertProjectEvaluationAssembly,

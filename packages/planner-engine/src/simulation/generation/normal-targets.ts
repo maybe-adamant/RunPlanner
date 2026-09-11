@@ -32,10 +32,8 @@ import type {
 } from '../materialization';
 import { assessHermesShrine, priorTwoSurfaceShopPresence } from '../hermes-shrine';
 import type { TargetRewardHistoryCheckpoint } from '../rewards';
-import type {
-  ChaosCandidateCapability,
-  ZagreusContractCandidateCapability,
-} from '../candidate-artifacts';
+import { type ChaosCandidateCapability } from './candidate-artifacts';
+import { type ZagreusContractCandidateCapability } from './candidate-artifacts';
 import type {
   RequirementEvaluationEvidence,
   RoomGenerationExclusionEvidence,
