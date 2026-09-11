@@ -30,6 +30,24 @@ function pomProject() {
 }
 
 describe('level-resolution commands', () => {
+  it('reports missing reward sources at the addressed level resolution', () => {
+    const missingOwner = createRewardWheelOfferAddress(
+      oBiome,
+      oOccurrenceIds.combat02,
+      'wheel1',
+      'missing',
+    );
+    expect(() =>
+      applyProjectCommand(pomProject(), catalog, {
+        kind: 'ReplaceLevelResolution',
+        levelResolution: createLevelResolutionAddress(missingOwner, 'self'),
+        value: { kind: 'choice', offeredTraitKeys: [], selectedTraitKey: null },
+      }),
+    ).toThrow(
+      /ReplaceLevelResolution at .*levelResolution.*missing reward wheel offer wheel1\/missing/,
+    );
+  });
+
   it('rejects a visible Pom random shape, duplicate offers, and selected keys outside its offer', () => {
     const project = pomProject();
     expect(() =>

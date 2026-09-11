@@ -357,9 +357,13 @@ export function decodeRoomOccurrence(input: {
         `${rawOccurrence.path}.keepsakeRack`,
       )
     : undefined;
+  const roomActions = decodeRoomActionState(
+    rawOccurrence.roomActions,
+    `${rawOccurrence.path}.roomActions`,
+  );
   assertStygianWellPurchaseActionClosure(
     stygianWell,
-    decodeRoomActionState(rawOccurrence.roomActions, `${rawOccurrence.path}.roomActions`),
+    roomActions,
     `${rawOccurrence.path}.roomActions.order`,
   );
   if (
@@ -706,10 +710,6 @@ export function decodeRoomOccurrence(input: {
         );
     }
   }
-  const roomActions = decodeRoomActionState(
-    rawOccurrence.roomActions,
-    `${rawOccurrence.path}.roomActions`,
-  );
   assertHermesShrineDeliveryActionClosure(
     hermesShrine,
     roomActions,
