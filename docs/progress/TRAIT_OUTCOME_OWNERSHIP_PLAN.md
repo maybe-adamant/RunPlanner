@@ -155,10 +155,11 @@ All Together's outer identity before direct grants; Echo's pre-choice domains;
 Calling Card's valid spend before a later child failure; Yarn/Hymn retention on
 incomplete screens; and Chaos screen accounting.
 
-"Post-outer" names the reached repair boundary, not permission to equip every
-parent trait before validating its child. In particular, retain Circe's existing
-rule that an invalid exact outcome does not equip the effect-backed trait.
-Do not impose All Together's acquire-then-grant sequence on other families.
+Circe's missing/invalid child retains a valid outer acquisition, leaves the
+Arcana/Fear effect unapplied, and stops at the child repair boundary. Preserve
+the baseline witnesses in `circe-traits.test.ts`; an invalid outer offer is a
+separate case and must not be treated as a valid acquisition. Do not impose
+one family's settlement sequence on all other families.
 
 Stone's secondary acquisition must retain the source row's frozen assessment
 and levels without a fresh screen evaluation. Replace ambiguous combinations
