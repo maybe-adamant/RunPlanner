@@ -308,6 +308,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     traitGivers: traitCatalog.givers,
     traitGiverByAcquisitionGameName,
     boonRarityBases: traitCatalog.boonRarityBases,
+    boonRarityRollOrder: traitCatalog.boonRarityRollOrder,
     boonReplacementChance: traitCatalog.boonReplacementChance,
     echoLastRunBoon: traitCatalog.echoLastRunBoon,
     hexes: traitCatalog.hexes,

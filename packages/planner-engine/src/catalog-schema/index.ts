@@ -13,6 +13,7 @@ export type {
   BoonRarityCheck,
   BoonRarityContribution,
   BoonRarityOverride,
+  BoonRarityRollOrder,
   BoonRarityValues,
   HammerCompatibility,
   TraitCatalog,
@@ -1053,6 +1054,7 @@ export interface Catalog {
   readonly boonRarityBases: Readonly<
     Record<'olympian' | 'hermes', import('./traits').BoonRarityValues>
   >;
+  readonly boonRarityRollOrder: import('./traits').BoonRarityRollOrder;
   readonly boonReplacementChance: number;
   readonly echoLastRunBoon: import('./traits').EchoLastRunBoonCatalog;
   /** Complete normalized frozen Hex layout declarations. */

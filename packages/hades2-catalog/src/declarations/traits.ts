@@ -69,6 +69,7 @@ export interface RawTraitGiverDeclaration {
     | { readonly kind: 'selectable'; readonly rarities: readonly TraitRarity[] }
     | { readonly kind: 'fixed'; readonly rarity: TraitRarity }
     | { readonly kind: 'none' };
+  readonly boonRarityRollOrder?: readonly TraitRarity[];
   readonly denialParticipates?: boolean;
   readonly selectedOptionPathPointBonuses?: readonly [0, 1, 2];
 }
@@ -109,6 +110,7 @@ export interface RawTraitCatalogInput {
   readonly boonRarityBases: Readonly<
     Record<'olympian' | 'hermes', import('@run-planner/engine/catalog-schema').BoonRarityValues>
   >;
+  readonly boonRarityRollOrder: readonly TraitRarity[];
   readonly boonReplacementChance: number;
   readonly echoLastRunBoon: {
     readonly sources: readonly {

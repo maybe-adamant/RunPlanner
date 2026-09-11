@@ -5,6 +5,7 @@ import {
   type NaturalSelectionResultAddress,
 } from '../../authored-project/addresses';
 import type {
+  BoonRarityRollOrder,
   BoonRarityValues,
   Catalog,
   TraitOrdinaryBoonSlot,
@@ -65,7 +66,11 @@ export interface ConcaveStoneCandidateBranch {
 
 export interface TraitOfferGenerationState {
   readonly rarity:
-    | { readonly kind: 'orderedChecks'; readonly values: BoonRarityValues }
+    | {
+        readonly kind: 'orderedChecks';
+        readonly values: BoonRarityValues;
+        readonly rollOrder: BoonRarityRollOrder;
+      }
     | { readonly kind: 'fixed'; readonly rarity: TraitRarity };
   readonly replacementRollChance: number;
   readonly eligibleReplacementCount: number;
@@ -326,7 +331,6 @@ export function createTraitOfferCandidateArtifacts(
                 context.context,
                 value,
               );
-              const giver = catalog.traitGivers.byKey[value.giverKey];
               const rarityFacts = boonRarityFactsForOffer(
                 catalog,
                 context.before,
@@ -338,6 +342,7 @@ export function createTraitOfferCandidateArtifacts(
                   ? Object.freeze({
                       kind: 'orderedChecks' as const,
                       values: deriveBoonRarityValues(rarityFacts),
+                      rollOrder: rarityFacts.rollOrder,
                     })
                   : resolvedContext.freshRarityOverride === undefined
                     ? undefined
@@ -346,9 +351,7 @@ export function createTraitOfferCandidateArtifacts(
                         rarity: resolvedContext.freshRarityOverride,
                       });
               const offerGenerationState =
-                value.kind !== 'traits' ||
-                (giver?.providerKind !== 'olympian' && giver?.providerKind !== 'hermes') ||
-                rarity === undefined
+                value.kind !== 'traits' || rarity === undefined
                   ? undefined
                   : Object.freeze({
                       rarity,

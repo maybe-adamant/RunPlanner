@@ -120,4 +120,5 @@ export const athenaGiver = {
     kind: 'selectable',
     rarities: ['Common', 'Rare', 'Epic'],
   },
+  boonRarityRollOrder: ['Common', 'Rare', 'Epic', 'Heroic'],
 } as const satisfies RawTraitGiverDeclaration;

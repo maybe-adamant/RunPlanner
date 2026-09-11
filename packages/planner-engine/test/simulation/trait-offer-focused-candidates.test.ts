@@ -205,6 +205,7 @@ describe('focused trait offer candidates', () => {
         resolvedProviderKey: 'Apollo',
         boonRarityFacts: {
           providerBase: catalog.boonRarityBases.olympian,
+          rollOrder: catalog.boonRarityRollOrder,
           roomOverride: qOverride,
           contributions: [],
         },
@@ -258,11 +259,19 @@ describe('focused trait offer candidates', () => {
 
     expect(result.result.branches.map((branch) => branch.offerGenerationState)).toEqual([
       expect.objectContaining({
-        rarity: { kind: 'orderedChecks', values: catalog.boonRarityBases.olympian },
+        rarity: {
+          kind: 'orderedChecks',
+          values: catalog.boonRarityBases.olympian,
+          rollOrder: catalog.boonRarityRollOrder,
+        },
         replacementRollChance: 0.1,
       }),
       expect.objectContaining({
-        rarity: { kind: 'orderedChecks', values: qOverride },
+        rarity: {
+          kind: 'orderedChecks',
+          values: { ...catalog.boonRarityBases.olympian, ...qOverride },
+          rollOrder: catalog.boonRarityRollOrder,
+        },
         replacementRollChance: 1,
         forcedRollRequiredReplacementCount: expect.any(Number),
       }),

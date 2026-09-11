@@ -51,18 +51,58 @@ describe('trait offer-catalog compiler owner', () => {
     expect(catalog.boonRarityBases.olympian).toEqual({
       Rare: 0.1,
       Epic: 0.05,
+      Heroic: 0,
       Duo: 0.12,
       Legendary: 0.1,
     });
     expect(catalog.boonRarityBases.hermes).toEqual({
       Rare: 0.06,
       Epic: 0.03,
+      Heroic: 0,
       Duo: 0,
       Legendary: 0.01,
     });
     expect(catalog.traitGivers.byKey.Apollo).not.toHaveProperty('boonRarityBase');
     expect(catalog.traitGivers.byKey.Hermes).not.toHaveProperty('boonRarityBase');
+    expect(catalog.boonRarityRollOrder).toEqual(['Common', 'Rare', 'Epic', 'Duo', 'Legendary']);
+    expect(catalog.traitGivers.byKey.Athena?.boonRarityRollOrder).toEqual([
+      'Common',
+      'Rare',
+      'Epic',
+      'Heroic',
+    ]);
+    expect(catalog.traitGivers.byKey.Artemis?.boonRarityRollOrder).toEqual([
+      'Common',
+      'Rare',
+      'Epic',
+    ]);
+    expect(catalog.traitGivers.byKey.Dionysus).not.toHaveProperty('boonRarityRollOrder');
     expect(catalog.boonReplacementChance).toBe(0.1);
+  });
+
+  it('rejects malformed default and custom boon rarity roll orders', () => {
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          boonRarityRollOrder: ['Rare', 'Epic'],
+        },
+      } as never),
+    ).toThrow(/must begin with Common/);
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          givers: declarations.traitCatalog.givers.map((giver) =>
+            giver.key === 'Athena'
+              ? { ...giver, boonRarityRollOrder: ['Common', 'Heroic', 'Heroic'] }
+              : giver,
+          ),
+        },
+      } as never),
+    ).toThrow(/duplicates Heroic/);
   });
 
   it('rejects an invalid ordinary replacement-roll chance', () => {

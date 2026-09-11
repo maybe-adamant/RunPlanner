@@ -386,20 +386,23 @@ describe('rarity-aware high-tier composition', () => {
   });
   const possibleContext = {
     boonRarityFacts: {
-      providerBase: { Rare: 0.06, Epic: 0.03, Duo: 0, Legendary: 0.01 },
+      providerBase: { Rare: 0.06, Epic: 0.03, Heroic: 0, Duo: 0, Legendary: 0.01 },
+      rollOrder: ['Common', 'Rare', 'Epic', 'Duo', 'Legendary'],
       contributions: [],
     },
   } as const;
   const impossibleContext = {
     boonRarityFacts: {
-      providerBase: { Rare: 0.06, Epic: 0.03, Duo: 0, Legendary: 0.01 },
+      providerBase: { Rare: 0.06, Epic: 0.03, Heroic: 0, Duo: 0, Legendary: 0.01 },
+      rollOrder: ['Common', 'Rare', 'Epic', 'Duo', 'Legendary'],
       roomOverride: { Legendary: 0 },
       contributions: [],
     },
   } as const;
   const duoContext = {
     boonRarityFacts: {
-      providerBase: { Rare: 0.06, Epic: 0.03, Duo: 0, Legendary: 0.01 },
+      providerBase: { Rare: 0.06, Epic: 0.03, Heroic: 0, Duo: 0, Legendary: 0.01 },
+      rollOrder: ['Common', 'Rare', 'Epic', 'Duo', 'Legendary'],
       roomOverride: { Duo: 0.2, Legendary: 0 },
       contributions: [],
     },
@@ -811,7 +814,8 @@ describe('rarity offer settlement contacts', () => {
       new Map(),
     )[0]!;
     expect(settled.traitEvaluations?.[0]?.context.boonRarityFacts).toMatchObject({
-      providerBase: { Rare: 0.06, Epic: 0.03, Duo: 0, Legendary: 0.01 },
+      providerBase: { Rare: 0.06, Epic: 0.03, Heroic: 0, Duo: 0, Legendary: 0.01 },
+      rollOrder: ['Common', 'Rare', 'Epic', 'Duo', 'Legendary'],
       roomOverride: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
     });
     expect(settled.traitEvaluations?.[0]?.assessments[0]?.findings).toContainEqual(

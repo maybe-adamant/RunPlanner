@@ -1,5 +1,6 @@
 import type {
   CatalogCollection,
+  BoonRarityRollOrder,
   EchoLastRunBoonCatalog,
   TraitCatalog,
   TraitDeclaration,
@@ -20,7 +21,7 @@ import type { RawTraitCatalogInput } from '../declarations/traits';
 const RARITIES = ['Common', 'Rare', 'Epic', 'Heroic', 'Legendary', 'Duo'] as const;
 const CONTEXTS = ['devotionNoDuo', 'blockGiftBoons', 'circeRemovableFearVow'] as const;
 const BOON_RARITY_PROVIDER_KINDS = ['olympian', 'hermes'] as const;
-const BOON_RARITY_CHECKS = ['Rare', 'Epic', 'Duo', 'Legendary'] as const;
+const BOON_RARITY_CHECKS = ['Rare', 'Epic', 'Heroic', 'Duo', 'Legendary'] as const;
 
 function closedValue<const Values extends readonly string[]>(
   value: unknown,
@@ -51,7 +52,7 @@ export function normalizeBoonRarityBases(
       )
         fail(
           `boonRarityBases.${providerKind}`,
-          'must declare exact Rare, Epic, Duo, and Legendary checks',
+          'must declare exact Rare, Epic, Heroic, Duo, and Legendary checks',
         );
       const checks = Object.fromEntries(
         BOON_RARITY_CHECKS.map((check) => {
@@ -65,6 +66,17 @@ export function normalizeBoonRarityBases(
     }),
   );
   return Object.freeze(normalized) as TraitCatalog['boonRarityBases'];
+}
+
+export function normalizeBoonRarityRollOrder(
+  raw: unknown,
+  path = 'boonRarityRollOrder',
+): BoonRarityRollOrder {
+  const order = freezeUniqueStrings(requireArray(raw, path) as readonly string[], path).map(
+    (rarity, index) => closedValue(rarity, RARITIES, `${path}[${index}]`),
+  );
+  if (order[0] !== 'Common') fail(path, 'must begin with Common');
+  return Object.freeze(order);
 }
 
 export function normalizeBoonReplacementChance(raw: unknown): number {

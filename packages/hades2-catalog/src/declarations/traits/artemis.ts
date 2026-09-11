@@ -146,4 +146,5 @@ export const artemisGiver = {
     kind: 'selectable',
     rarities: ['Common', 'Rare', 'Epic'],
   },
+  boonRarityRollOrder: ['Common', 'Rare', 'Epic'],
 } as const satisfies RawTraitGiverDeclaration;

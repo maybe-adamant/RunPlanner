@@ -585,20 +585,18 @@ describe('project profile operations', () => {
       ?.forTarget()
       .load()
       ?.picker.sections.flatMap((section) => section.items.map((item) => item.value));
-    expect(candidates).toHaveLength(9);
-    expect(candidates).toEqual(
-      expect.arrayContaining([
-        'AphroditeSpecialBoon',
-        'BoonDecayBoon',
-        'CastNovaBoon',
-        'DamageSharePotencyBoon',
-        'DoubleBoltBoon',
-        'FocusCritBoon',
-        'FocusLightningBoon',
-        'HeraCastBoon',
-        'SprintShieldBoon',
-      ]),
-    );
+    expect(candidates).toEqual([
+      'ZeusWeaponBoon',
+      'HeraCastBoon',
+      'AphroditeSpecialBoon',
+      'CastNovaBoon',
+      'FocusCritBoon',
+      'DoubleBoltBoon',
+      'DamageSharePotencyBoon',
+      'DamageShareRetaliateBoon',
+      'FocusLightningBoon',
+      'SprintShieldBoon',
+    ]);
 
     if (interaction === undefined) throw new Error('Steady Growth interaction is unavailable');
     application.store.dispatch(

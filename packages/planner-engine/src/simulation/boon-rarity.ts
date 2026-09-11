@@ -1,15 +1,17 @@
 import type {
   BoonRarityContribution,
   BoonRarityOverride,
+  BoonRarityRollOrder,
   BoonRarityValues,
   TraitRarity,
 } from '../catalog-schema';
 
-export const BOON_RARITY_CHECKS = ['Rare', 'Epic', 'Duo', 'Legendary'] as const;
+export const BOON_RARITY_CHECKS = ['Rare', 'Epic', 'Heroic', 'Duo', 'Legendary'] as const;
 type Check = (typeof BOON_RARITY_CHECKS)[number];
 
 export interface BoonRarityFacts {
   readonly providerBase: BoonRarityValues;
+  readonly rollOrder: BoonRarityRollOrder;
   readonly roomOverride?: BoonRarityOverride;
   readonly itemOverride?: BoonRarityOverride;
   readonly contributions: readonly BoonRarityContribution[];
@@ -20,7 +22,13 @@ export interface BoonRarityLedger {
   readonly possibleFreshRarities: readonly TraitRarity[];
 }
 
-const emptyValues = (): Record<Check, number> => ({ Rare: 0, Epic: 0, Duo: 0, Legendary: 0 });
+const emptyValues = (): Record<Check, number> => ({
+  Rare: 0,
+  Epic: 0,
+  Heroic: 0,
+  Duo: 0,
+  Legendary: 0,
+});
 
 /** Assembles the exact ordered check values without probability normalization. */
 export function deriveBoonRarityValues(facts: BoonRarityFacts): BoonRarityValues {
@@ -44,7 +52,9 @@ export function deriveBoonRarityLedger(
   supportedRarities: readonly TraitRarity[],
 ): BoonRarityLedger {
   const values = deriveBoonRarityValues(facts);
-  const supportedChecks = BOON_RARITY_CHECKS.filter((check) => supportedRarities.includes(check));
+  const supportedChecks = facts.rollOrder.filter(
+    (check): check is Check => check !== 'Common' && supportedRarities.includes(check),
+  );
   const possible = new Set<TraitRarity>();
   for (let index = 0; index < supportedChecks.length; index += 1) {
     const check = supportedChecks[index]!;
@@ -67,6 +77,5 @@ export function boonRarityRollUnavailable(
   rarity: TraitRarity,
   supportedRarities: readonly TraitRarity[],
 ): boolean {
-  if (rarity === 'Heroic') return false;
   return !deriveBoonRarityLedger(facts, supportedRarities).possibleFreshRarities.includes(rarity);
 }

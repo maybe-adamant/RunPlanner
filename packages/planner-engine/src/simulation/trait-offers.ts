@@ -33,6 +33,14 @@ export interface TraitOfferContext {
   readonly replacementRollChance?: number;
 }
 
+function boonRarityProviderForGiver(
+  giver: Catalog['traitGivers']['values'][number] | undefined,
+): 'olympian' | 'hermes' | undefined {
+  if (giver === undefined || giver.rarityPolicy.kind === 'none') return undefined;
+  if (giver.providerKind === 'hermes') return 'hermes';
+  return giver.providerKind === 'olympian' || giver.shopAwareGodTrait ? 'olympian' : undefined;
+}
+
 /** Resolves offer-generation overrides at one source-screen frontier.
  * Authored rows stay untouched: stale non-Common fresh rows are assessed as
  * invalid, while exact promoted replacement rows remain legal. */
@@ -42,8 +50,9 @@ export function offerGenerationAdjustedTraitGiverContext(
   giverKey: string,
   context: TraitOfferContext,
 ): TraitOfferContext {
-  const provider = catalog.traitGivers.byKey[giverKey]?.providerKind;
-  if (provider !== 'olympian' && provider !== 'hermes') return context;
+  const giver = catalog.traitGivers.byKey[giverKey];
+  const provider = boonRarityProviderForGiver(giver);
+  if (provider === undefined) return context;
   const ordinary = hasActiveChaosSemanticTag(history, 'Ordinary');
   const replacementRollChance =
     (context.limitedSwapUses ?? 0) > 0
@@ -81,11 +90,8 @@ export function boonRarityFactsForOffer(
     context.resolvedProviderKey === undefined
       ? undefined
       : catalog.traitGivers.byKey[context.resolvedProviderKey];
-  if (
-    giver === undefined ||
-    (giver.providerKind !== 'olympian' && giver.providerKind !== 'hermes') ||
-    context.freshRarityOverride !== undefined
-  )
+  const provider = boonRarityProviderForGiver(giver);
+  if (giver === undefined || provider === undefined || context.freshRarityOverride !== undefined)
     return undefined;
   const barrenActive = hasActiveChaosSemanticTag(history, 'Barren');
   const arcana =
@@ -121,7 +127,8 @@ export function boonRarityFactsForOffer(
       : [];
   });
   return Object.freeze({
-    providerBase: catalog.boonRarityBases[giver.providerKind],
+    providerBase: catalog.boonRarityBases[provider],
+    rollOrder: giver.boonRarityRollOrder ?? catalog.boonRarityRollOrder,
     ...(context.boonRarityRoomOverride === undefined
       ? {}
       : { roomOverride: context.boonRarityRoomOverride }),
