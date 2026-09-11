@@ -39,15 +39,13 @@ import {
   type AcquisitionEntryAddress,
   type TargetAddress,
   type TraitOfferAddress,
-  type CirceResolutionAddress,
-  type EchoPomTargetAddress,
-  type EchoLastRunBoonAddress,
   type EchoLastRewardAddress,
   type SteadyGrowthOutcomeAddress,
   type TranscendentEmbryoOutcomeAddress,
   type FountainRarityOutcomeAddress,
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredEchoLastRunBoonOption,
+  type AuthoredEchoLastRunBoonDraftRow,
   type AuthoredAllTogetherResult,
   type AuthoredCirceResolution,
   type LevelResolutionAddress,
@@ -377,29 +375,8 @@ export interface WorkspaceTraitOfferControl {
   readonly rewardOwner: SemanticAddress;
   /** Structurally discovered selected-outcome children. */
   readonly children: readonly WorkspaceTraitCarrierChildControl[];
-  /** Present only for this offer's currently selected Circe special option. */
-  readonly circeResolution?: WorkspaceCirceResolutionControl;
-  /** Present only for the currently selected Echo Pom row. */
-  readonly echoPomTarget?: WorkspaceEchoPomTargetControl;
-  readonly echoLastRunBoon?: WorkspaceEchoLastRunBoonControl;
-  readonly echoLastReward?: WorkspaceEchoLastRewardControl;
-  readonly concaveStone?: WorkspaceConcaveStoneControl;
-  /** Present only for the selected ordinary Spell Drop Hex. */
-  readonly hexTree?: WorkspaceHexTreeControl;
-}
-
-export interface WorkspaceHexTreeControl {
-  readonly address: TraitOfferAddress;
-  readonly marker: WorkspaceMarker;
-  readonly optionKey: TraitOptionKey;
-  readonly spellTraitKey: string;
-  readonly value?: AuthoredHexTreeConfiguration;
-}
-
-export interface WorkspaceConcaveStoneControl {
-  readonly address: TraitOfferAddress;
-  readonly marker: WorkspaceMarker;
-  readonly value?: AuthoredConcaveStoneResult;
+  /** Evaluated-only consequences; they never add an authored completion burden. */
+  readonly feedback: readonly WorkspaceTraitOfferFeedback[];
 }
 
 /** One exact Time Piece choice, independent of whether this role has a trait child. */
@@ -411,31 +388,9 @@ export interface WorkspaceAcquisitionConversionControl {
   readonly value: import('@run-planner/engine/authored-project').AcquisitionDisposition;
 }
 
-/** Exact selected Circe outcome owner; its domain is supplied by the candidate session. */
-export interface WorkspaceCirceResolutionControl {
-  readonly address: CirceResolutionAddress;
-  readonly marker: WorkspaceMarker;
-  readonly optionKey: TraitOptionKey;
-  readonly value?: AuthoredCirceResolution;
-}
-
 export type WorkspaceTraitCarrierChildControl = AuthoredTraitCarrierChild & {
   readonly marker: WorkspaceMarker;
 };
-
-export interface WorkspaceEchoPomTargetControl {
-  readonly address: EchoPomTargetAddress;
-  readonly marker: WorkspaceMarker;
-  readonly optionKey: TraitOptionKey;
-  readonly value?: string | null;
-}
-
-export interface WorkspaceEchoLastRunBoonControl {
-  readonly address: EchoLastRunBoonAddress;
-  readonly marker: WorkspaceMarker;
-  readonly optionKey: TraitOptionKey;
-  readonly value?: AuthoredEchoLastRunBoonOffer;
-}
 
 export interface WorkspaceEchoLastRewardControl {
   readonly address: EchoLastRewardAddress;
@@ -444,6 +399,10 @@ export interface WorkspaceEchoLastRewardControl {
   readonly optionKey: TraitOptionKey;
   readonly spawnLabel?: string;
 }
+
+export type WorkspaceTraitOfferFeedback =
+  | { readonly kind: 'echoLastReward'; readonly control: WorkspaceEchoLastRewardControl }
+  | { readonly kind: 'ransom'; readonly assessment: WorkspaceRansomAssessment };
 
 /** One exact declaration-owned Pom child beneath an active reward owner. */
 export interface WorkspaceLevelResolutionControl {
@@ -462,12 +421,6 @@ export interface WorkspaceLevelResolutionControl {
 export interface WorkspaceTraitOptionDomainInteraction {
   readonly children: readonly WorkspaceTraitCarrierChildInteraction[];
   readonly load: () => TraitOptionDomainProjection | Promise<TraitOptionDomainProjection>;
-  /** Candidate-backed exact outcome editor for a selected Circe option only. */
-  readonly circeResolution?: WorkspaceCirceResolutionInteraction;
-  readonly echoPomTarget?: WorkspaceEchoPomTargetInteraction;
-  readonly echoLastRunBoon?: WorkspaceEchoLastRunBoonInteraction;
-  readonly concaveStone?: WorkspaceConcaveStoneInteraction;
-  readonly hexTree?: WorkspaceHexTreeInteraction;
 }
 
 export interface WorkspaceHexTreeDomain {
@@ -485,17 +438,17 @@ export interface WorkspaceHexTreeDomain {
 }
 
 export interface WorkspaceHexTreeInteraction {
-  readonly control: WorkspaceHexTreeControl;
+  readonly child: Extract<WorkspaceTraitCarrierChildControl, { readonly kind: 'hexTree' }>;
+  readonly update: (
+    offer: AuthoredTraitOfferTraits,
+    value: AuthoredHexTreeConfiguration,
+  ) => AuthoredTraitOfferTraits;
   /** Complete declaration-owned default for the offer's currently selected spell. */
   readonly defaultFor: (offer: AuthoredTraitOfferTraits) => AuthoredHexTreeConfiguration;
   readonly transitionFor: (
     offer: AuthoredTraitOfferTraits,
     layoutKey: HexLayoutKey,
   ) => AuthoredHexTreeConfiguration;
-  readonly intentFor: (
-    offer: AuthoredTraitOfferTraits,
-    value: AuthoredHexTreeConfiguration,
-  ) => WorkspacePayloadEditIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
   readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
     readonly load: () => WorkspaceHexTreeDomain | undefined;
   };
@@ -566,7 +519,12 @@ export type WorkspaceTraitCarrierChildInteraction =
         targets: NonNullable<AuthoredTraitOption['naturalSelectionTargets']>,
       ) => AuthoredTraitOfferTraits;
       readonly traitLabel: (traitKey: string) => string;
-    };
+    }
+  | WorkspaceCirceResolutionInteraction
+  | WorkspaceEchoPomTargetInteraction
+  | WorkspaceEchoLastRunBoonInteraction
+  | WorkspaceConcaveStoneInteraction
+  | WorkspaceHexTreeInteraction;
 
 export interface WorkspaceTraitAcquisitionTargetDomain {
   readonly targetPicker: ContextualPickerModel<string>;
@@ -580,8 +538,12 @@ export interface WorkspaceConcaveStoneDomain {
 }
 
 export interface WorkspaceConcaveStoneInteraction {
-  readonly control: WorkspaceConcaveStoneControl;
-  /** True when this complete local draft has settled Stone's exact outcome. */
+  readonly child: Extract<WorkspaceTraitCarrierChildControl, { readonly kind: 'concaveStone' }>;
+  readonly update: (
+    offer: AuthoredTraitOfferTraits,
+    value: AuthoredConcaveStoneResult | null,
+  ) => AuthoredTraitOfferTraits;
+  /** Candidate-owned requiredness is distinct from the child's authored structure. */
   readonly completeFor: (offer: AuthoredTraitOfferTraits) => boolean;
   readonly intentFor: (
     offer: AuthoredTraitOfferTraits,
@@ -615,11 +577,11 @@ export interface WorkspaceCirceResolutionDomain {
 }
 
 export interface WorkspaceCirceResolutionInteraction {
-  readonly control: WorkspaceCirceResolutionControl;
-  readonly intentFor: (
+  readonly child: Extract<WorkspaceTraitCarrierChildControl, { readonly kind: 'circeResolution' }>;
+  readonly update: (
     offer: AuthoredTraitOfferTraits,
-    resolution: AuthoredCirceResolution,
-  ) => WorkspacePayloadEditIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
+    value: AuthoredCirceResolution,
+  ) => AuthoredTraitOfferTraits;
   /** Binds the current draft before handing its loader to the sole React adapter. */
   readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
     readonly load: () => WorkspaceCirceResolutionDomain | undefined;
@@ -632,11 +594,11 @@ export interface WorkspaceEchoPomTargetDomain {
 }
 
 export interface WorkspaceEchoPomTargetInteraction {
-  readonly control: WorkspaceEchoPomTargetControl;
-  readonly intentFor: (
+  readonly child: Extract<WorkspaceTraitCarrierChildControl, { readonly kind: 'echoPomTarget' }>;
+  readonly update: (
     offer: AuthoredTraitOfferTraits,
-    targetTraitKey: string | null,
-  ) => WorkspacePayloadEditIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
+    value: string | null,
+  ) => AuthoredTraitOfferTraits;
   readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
     readonly load: () => WorkspaceEchoPomTargetDomain | undefined;
   };
@@ -647,13 +609,12 @@ export interface WorkspaceEchoLastRunBoonTraitIdentity {
   readonly traitKey: string;
 }
 
-export interface WorkspaceEchoLastRunBoonDraftRow {
+export type WorkspaceEchoLastRunBoonDraftRow = Omit<
+  AuthoredEchoLastRunBoonDraftRow,
+  'giverKey' | 'traitKey'
+> & {
   readonly identity?: WorkspaceEchoLastRunBoonTraitIdentity;
-  readonly rarity?: TraitRarity;
-  readonly targetTraitKey?: string;
-  readonly allTogetherResult?: AuthoredAllTogetherResult;
-  readonly naturalSelectionTargets?: AuthoredEchoLastRunBoonOption['naturalSelectionTargets'];
-}
+};
 
 export type WorkspaceEchoLastRunBoonCarrierDomain =
   | {
@@ -682,6 +643,10 @@ export interface WorkspaceEchoLastRunBoonDraftSupport {
 }
 
 export interface WorkspaceEchoLastRunBoonDomain {
+  readonly completeDraft: (
+    rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
+    selectedIndex: number,
+  ) => AuthoredEchoLastRunBoonOffer | undefined;
   readonly draftSupportFor: (
     rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
     selectedIndex: number,
@@ -714,11 +679,11 @@ export interface WorkspaceEchoLastRunBoonDomain {
 }
 
 export interface WorkspaceEchoLastRunBoonInteraction {
-  readonly control: WorkspaceEchoLastRunBoonControl;
-  readonly intentFor: (
+  readonly child: Extract<WorkspaceTraitCarrierChildControl, { readonly kind: 'echoLastRunBoon' }>;
+  readonly update: (
     offer: AuthoredTraitOfferTraits,
     value: AuthoredEchoLastRunBoonOffer,
-  ) => WorkspacePayloadEditIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
+  ) => AuthoredTraitOfferTraits;
   readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
     readonly load: () => WorkspaceEchoLastRunBoonDomain | undefined;
   };
@@ -729,8 +694,8 @@ export interface WorkspaceTraitOfferInteraction {
   readonly choices: readonly WorkspaceInteractionChoice<string>[];
   /** Dedicated Chaos envelope interaction; ordinary trait choices remain above. */
   readonly chaos?: WorkspaceChaosOfferInteraction;
-  /** Read-only summary of the generated pickup owned by the Room Timeline. */
-  readonly echoLastReward?: WorkspaceEchoLastRewardControl;
+  /** Derived replay and settlement consequences, never authored outcomes. */
+  readonly feedbackFor: (value: AuthoredTraitOffer) => readonly WorkspaceTraitOfferFeedback[];
   readonly giver: TraitGiverDeclaration;
   readonly intentFor: (value: AuthoredTraitOffer) => WorkspacePayloadEditIntent<
     Extract<
@@ -760,7 +725,6 @@ export interface WorkspaceTraitOfferInteraction {
   readonly rejectedBlockDomain?: (
     rules: readonly WorkspaceRejectedBlockRule[],
   ) => WorkspaceRejectedBlockDomain | undefined;
-  readonly ransomAssessment: (value: AuthoredTraitOffer) => WorkspaceRansomAssessment | undefined;
   /** Application-owned labels for trait keys carried by engine evidence. */
   readonly traitLabel: (traitKey: string) => string;
   readonly selectedIntent: (

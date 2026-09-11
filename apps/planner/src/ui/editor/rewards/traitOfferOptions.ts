@@ -41,14 +41,17 @@ export function selectedTraitOutcomeDraftComplete(
   offer: AuthoredTraitOfferTraits,
   domain: WorkspaceTraitOptionDomainInteraction,
 ): boolean {
-  const option = offer.options[optionIndex(offer.selectedOptionKey)];
-  if (option === undefined) return false;
+  if (offer.options[optionIndex(offer.selectedOptionKey)] === undefined) return false;
+  const stone = domain.children.find(
+    (
+      child,
+    ): child is Extract<typeof child, { readonly child: { readonly kind: 'concaveStone' } }> =>
+      child.child.kind === 'concaveStone',
+  );
   return (
-    domain.children.every((child) => child.child.authoredComplete) &&
-    (domain.circeResolution === undefined || option.circeResolution !== undefined) &&
-    (domain.echoPomTarget === undefined || Object.hasOwn(option, 'echoPomTarget')) &&
-    (domain.echoLastRunBoon === undefined || option.echoLastRunBoon !== undefined) &&
-    (domain.hexTree === undefined || offer.hexTree !== undefined) &&
-    (domain.concaveStone === undefined || domain.concaveStone.completeFor(offer))
+    domain.children
+      .filter((child) => child.child.kind !== 'concaveStone')
+      .every((child) => child.child.authoredComplete) &&
+    (stone === undefined || stone.completeFor(offer))
   );
 }

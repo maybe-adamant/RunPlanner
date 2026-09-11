@@ -4,11 +4,7 @@ import {
   type EvaluatedTraitOfferFocusedOptionCandidate,
   type EvaluatedKeepsakeEquipResultCandidate,
   type EvaluatedAcquisitionConversionCandidate,
-  type CirceResolutionDomainEvaluation,
-  type EchoPomTargetDomainEvaluation,
-  type EchoLastRunBoonDomainEvaluation,
   type RansomAssessmentCandidateEvaluation,
-  type ConcaveStoneCandidateBranch,
   type EvaluatedSteadyGrowthOutcomeCandidate,
   type EvaluatedTranscendentEmbryoOutcomeCandidate,
   type EvaluatedFountainRarityOutcomeCandidate,
@@ -254,30 +250,10 @@ export interface CandidateProjectionSession {
     value: AuthoredTraitOffer,
     child: import('@run-planner/engine/authored-project').AuthoredTraitCarrierChild,
   ) => import('@run-planner/engine/simulation').TraitCarrierChildDomainEvaluation;
-  /** Typed exact Circe frontier from the prepared engine candidate session. */
-  readonly circeResolution: (
-    owner: TraitOfferAddress,
-    value: AuthoredTraitOffer,
-    optionKey: TraitOptionKey,
-  ) => CirceResolutionDomainEvaluation;
-  readonly echoPomTarget: (
-    owner: TraitOfferAddress,
-    value: AuthoredTraitOffer,
-    optionKey: TraitOptionKey,
-  ) => EchoPomTargetDomainEvaluation;
-  readonly echoLastRunBoon: (
-    owner: TraitOfferAddress,
-    value: AuthoredTraitOffer,
-    optionKey: TraitOptionKey,
-  ) => EchoLastRunBoonDomainEvaluation;
   readonly ransomAssessment: (
     owner: TraitOfferAddress,
     value: AuthoredTraitOffer,
   ) => RansomAssessmentCandidateEvaluation;
-  readonly concaveStone: (
-    owner: TraitOfferAddress,
-    value: AuthoredTraitOffer,
-  ) => readonly ConcaveStoneCandidateBranch[];
   /** Exact engine-backed Steady Growth threshold capability. */
   readonly steadyGrowthOutcome: (
     owner: SteadyGrowthOutcomeAddress,

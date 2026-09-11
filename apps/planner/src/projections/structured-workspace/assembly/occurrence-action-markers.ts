@@ -9,10 +9,9 @@ export function traitOfferMarkers(trait: WorkspaceTraitOfferControl): readonly W
   return Object.freeze([
     trait.marker,
     ...trait.children.map((child) => child.marker),
-    ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
-    ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
-    ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker]),
-    ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker]),
+    ...trait.feedback.flatMap((feedback) =>
+      feedback.kind === 'echoLastReward' ? [feedback.control.marker] : [],
+    ),
   ]);
 }
 

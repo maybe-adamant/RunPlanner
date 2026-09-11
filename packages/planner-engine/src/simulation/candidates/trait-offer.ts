@@ -30,6 +30,9 @@ import type { CandidateContextUnavailable } from './availability';
 import { unavailableForTraitOffer } from './trait-offer-availability';
 import {
   evaluateAllTogetherSetDomain,
+  evaluateCirceResolutionDomain,
+  evaluateEchoLastRunBoonDomain,
+  evaluateEchoPomTargetDomain,
   evaluateNaturalSelectionResultCandidate,
 } from './trait-offer-selected-effects';
 
@@ -494,7 +497,18 @@ export type TraitAcquisitionTargetDomainEvaluation =
 export type TraitCarrierChildDomainEvaluation =
   | TraitAcquisitionTargetDomainEvaluation
   | AllTogetherSetDomainEvaluation
-  | NaturalSelectionResultCandidateEvaluation;
+  | NaturalSelectionResultCandidateEvaluation
+  | CirceResolutionDomainEvaluation
+  | EchoPomTargetDomainEvaluation
+  | EchoLastRunBoonDomainEvaluation
+  | ConcaveStoneCarrierDomainEvaluation;
+
+export interface EvaluatedConcaveStoneCarrierDomain {
+  readonly kind: 'concaveStone';
+  readonly result: { readonly branches: readonly ConcaveStoneCandidateBranch[] };
+}
+export type ConcaveStoneCarrierDomainEvaluation =
+  CandidateContextUnavailable | EvaluatedConcaveStoneCarrierDomain;
 
 interface TraitOfferCandidateAssessment {
   readonly branches: readonly TraitOfferCandidateBranch[];
@@ -887,14 +901,18 @@ export function evaluateTraitCarrierChildDomain(
   candidateArtifacts: TraitOfferCandidateArtifacts | undefined,
   query: TraitCarrierChildDomainQuery,
 ): TraitCarrierChildDomainEvaluation {
-  if (semanticAddressKey(query.child.address.trait) !== semanticAddressKey(query.trait))
+  const childTrait =
+    query.child.kind === 'hexTree' || query.child.kind === 'concaveStone'
+      ? query.child.trait
+      : query.child.address.trait;
+  if (semanticAddressKey(childTrait) !== semanticAddressKey(query.trait))
     return unavailableForTraitOffer(evaluation, query.trait);
-  const selected =
-    query.value.kind === 'traits'
-      ? query.value.options[optionIndex(query.child.optionKey)]
-      : undefined;
   switch (query.child.kind) {
-    case 'traitAcquisitionTarget':
+    case 'traitAcquisitionTarget': {
+      const targeted =
+        query.value.kind === 'traits'
+          ? query.value.options[optionIndex(query.child.optionKey)]
+          : undefined;
       return evaluateTraitAcquisitionTargetDomain(
         catalog,
         project,
@@ -905,11 +923,12 @@ export function evaluateTraitCarrierChildDomain(
           trait: query.trait,
           value: query.value,
           optionKey: query.child.optionKey,
-          ...(selected?.targetTraitKey === undefined
+          ...(targeted?.targetTraitKey === undefined
             ? {}
-            : { retainedTargetTraitKey: selected.targetTraitKey }),
+            : { retainedTargetTraitKey: targeted.targetTraitKey }),
         },
       );
+    }
     case 'allTogetherSet':
       return evaluateAllTogetherSetDomain(catalog, project, evaluation, candidateArtifacts, {
         kind: 'allTogetherSetDomain',
@@ -918,7 +937,11 @@ export function evaluateTraitCarrierChildDomain(
         optionKey: query.child.optionKey,
         setKey: query.child.setKey,
       });
-    case 'naturalSelectionResult':
+    case 'naturalSelectionResult': {
+      const natural =
+        query.value.kind === 'traits'
+          ? query.value.options[optionIndex(query.child.optionKey)]
+          : undefined;
       return evaluateNaturalSelectionResultCandidate(
         catalog,
         project,
@@ -928,17 +951,47 @@ export function evaluateTraitCarrierChildDomain(
           kind: 'naturalSelectionResult',
           result: query.child.address,
           value: query.value,
-          targets: selected?.naturalSelectionTargets,
+          targets: natural?.naturalSelectionTargets,
         },
       );
+    }
+    case 'circeResolution':
+      return evaluateCirceResolutionDomain(catalog, project, evaluation, candidateArtifacts, {
+        kind: 'circeResolutionDomain',
+        trait: query.trait,
+        value: query.value,
+        optionKey: query.child.optionKey,
+      });
+    case 'echoPomTarget':
+      return evaluateEchoPomTargetDomain(catalog, project, evaluation, candidateArtifacts, {
+        kind: 'echoPomTargetDomain',
+        trait: query.trait,
+        value: query.value,
+        optionKey: query.child.optionKey,
+      });
+    case 'echoLastRunBoon':
+      return evaluateEchoLastRunBoonDomain(catalog, project, evaluation, candidateArtifacts, {
+        kind: 'echoLastRunBoonDomain',
+        trait: query.trait,
+        value: query.value,
+        optionKey: query.child.optionKey,
+      });
+    case 'concaveStone': {
+      const branches = candidateArtifacts?.at(query.trait)?.concaveStone(query.value);
+      if (branches === undefined) return unavailableForTraitOffer(evaluation, query.trait);
+      return Object.freeze({ kind: 'concaveStone', result: Object.freeze({ branches }) });
+    }
+    case 'hexTree':
+      return unavailableForTraitOffer(evaluation, query.trait);
   }
 }
 
 export { evaluateAllTogetherSetDomain, evaluateNaturalSelectionResultCandidate };
 
+export { evaluateRansomAssessmentCandidate } from './trait-offer-selected-effects';
+
 export {
   evaluateCirceResolutionDomain,
   evaluateEchoLastRunBoonDomain,
   evaluateEchoPomTargetDomain,
-  evaluateRansomAssessmentCandidate,
-} from './trait-offer-selected-effects';
+};

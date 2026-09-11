@@ -1,5 +1,4 @@
 import {
-  optionIndex,
   type AuthoredTraitOffer,
   type AuthoredConcaveStoneResult,
   type AuthoredTraitOfferTraits,
@@ -18,7 +17,7 @@ import { LoadedEchoLastRunBoonChoice } from './TraitOfferEchoLastRunBoon';
 import { TraitOfferOrdinaryOption } from './TraitOfferOrdinaryOption';
 import { TraitOfferSelectedOutcome } from './TraitOfferSelectedOutcome';
 import { TraitOfferStateInspector } from './TraitOfferStateInspector';
-import { replaceTraitOfferOption, selectedTraitOutcomeDraftComplete } from './traitOfferOptions';
+import { selectedTraitOutcomeDraftComplete } from './traitOfferOptions';
 import { ChaosTraitOfferEditor } from './ChaosTraitOfferEditor';
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
@@ -179,31 +178,38 @@ export function TraitOfferEditorShell({
     offer: AuthoredTraitOfferTraits,
     result: AuthoredConcaveStoneResult | null,
   ): void => {
-    const nextValue =
-      result === null
-        ? (() => {
-            const { concaveStoneResult: _result, ...withoutResult } = offer;
-            void _result;
-            return Object.freeze(withoutResult);
-          })()
-        : Object.freeze({ ...offer, concaveStoneResult: result });
+    const child = interaction
+      .optionDomain(offer, offer.selectedOptionKey)
+      .children.find(
+        (
+          entry,
+        ): entry is Extract<typeof entry, { readonly child: { readonly kind: 'concaveStone' } }> =>
+          entry.child.kind === 'concaveStone',
+      );
+    if (child === undefined) return;
+    const nextValue = child.update(offer, result);
     updateValue(nextValue);
     onStoneResult?.(nextValue, result);
   };
   if (view === 'echoLastRunBoon' && value.kind === 'traits') {
-    const selectedIndex = optionIndex(value.selectedOptionKey);
-    const selected = value.options[selectedIndex];
+    const child = interaction
+      .optionDomain(value, value.selectedOptionKey)
+      .children.find(
+        (
+          entry,
+        ): entry is Extract<
+          typeof entry,
+          { readonly child: { readonly kind: 'echoLastRunBoon' } }
+        > => entry.child.kind === 'echoLastRunBoon',
+      );
     return (
       <LoadedEchoLastRunBoonChoice
         interaction={interaction}
         offer={value}
         onBack={() => setView('outer')}
-        onComplete={(child) => {
-          if (selected === undefined) return;
-          const completed = replaceTraitOfferOption(value, selectedIndex, {
-            ...selected,
-            echoLastRunBoon: child,
-          });
+        onComplete={(outcome) => {
+          if (child === undefined) return;
+          const completed = child.update(value, outcome);
           updateValue(completed);
           onChildCommit?.(completed);
           setView('outer');

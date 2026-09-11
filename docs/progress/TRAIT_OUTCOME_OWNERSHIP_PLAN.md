@@ -2,7 +2,7 @@
 
 ## Status and objective
 
-Status: locked; Gates A and B complete and independently reviewed. Gate C is next.
+Status: locked; Gates A–C complete and independently reviewed. Gate D is next.
 Base: `7e0237f6` (clean production worktree when drafted).
 Evidence: `docs/investigations/TRAIT_OUTCOME_TRANSPORT_AND_SETTLEMENT.md`.
 
@@ -312,6 +312,23 @@ carrier, then complete and save it through the actual editor interaction.
 
 Review and commit the remaining complete transport slices. Do not leave a
 temporary old/new carrier bridge for closure to finish.
+
+Delivered: Circe, Echo Pom/Boon, Hex, and Stone use the typed child collection;
+derived Echo Reward and Ransom feedback travel separately from authorable
+children. Nested Echo rows retain their shared payload while incomplete, and
+engine-owned completion/update publishes the completed outcome. Removed the
+parallel workspace fields, application candidate forwarders, and temporary
+family-field bridge. Specialized evaluators and editors remain intact.
+
+Verification: 176 engine policy, structural, compiler, and import tests passed;
+affected application checks passed (41 interaction/specialized tests, 43 app
+interaction tests, 11 editor tests, 3 Echo resolution tests, 12 shell tests, and
+2 candidate-cache tests). The real Echo workflow covers a retained invalid target
+beside an incomplete sibling, repair, save, and reopen. Structural checks cover
+empty Circe, dormant payloads, and stale Stone removal. Independent review has
+no remaining findings. Workspace/fixture typechecking, changed-file ESLint and
+Prettier, and diff checks passed. No catalog, schema, protocol, JSON fixture, or
+executor changes. Complete repository verification remains assigned to Gate D.
 
 ### D — Holistic closure
 

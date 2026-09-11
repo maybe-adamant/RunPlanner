@@ -73,7 +73,12 @@ export function TraitOfferOrdinaryOption({
     if (!spellOffer || nextValue.selectedOptionKey !== optionKey) return nextValue;
     const { hexTree: _hexTree, ...withoutTree } = nextValue;
     void _hexTree;
-    const selectedDomain = interaction.optionDomain(withoutTree, optionKey).hexTree;
+    const selectedDomain = interaction
+      .optionDomain(withoutTree, optionKey)
+      .children.find(
+        (child): child is Extract<typeof child, { readonly child: { readonly kind: 'hexTree' } }> =>
+          child.child.kind === 'hexTree',
+      );
     return selectedDomain === undefined
       ? Object.freeze(withoutTree)
       : Object.freeze({ ...withoutTree, hexTree: selectedDomain.defaultFor(withoutTree) });

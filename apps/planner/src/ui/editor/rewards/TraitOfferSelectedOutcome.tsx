@@ -18,7 +18,6 @@ import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorks
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { TraitOfferCirceResolution } from './TraitOfferCirceResolution';
-import { replaceTraitOfferOption } from './traitOfferOptions';
 import { TraitOfferSelectedSpecialOutcomes } from './TraitOfferSelectedSpecialOutcomes';
 import { HexTreeEditor } from './HexTreeEditor';
 
@@ -65,50 +64,69 @@ export function TraitOfferSelectedOutcome({
       { readonly child: { readonly kind: 'traitAcquisitionTarget' } }
     > => child.child.kind === 'traitAcquisitionTarget',
   );
+  const circeChild = loadable.children.find(
+    (
+      child,
+    ): child is Extract<typeof child, { readonly child: { readonly kind: 'circeResolution' } }> =>
+      child.child.kind === 'circeResolution',
+  );
+  const echoPomChild = loadable.children.find(
+    (
+      child,
+    ): child is Extract<typeof child, { readonly child: { readonly kind: 'echoPomTarget' } }> =>
+      child.child.kind === 'echoPomTarget',
+  );
+  const echoLastRunChild = loadable.children.find(
+    (
+      child,
+    ): child is Extract<typeof child, { readonly child: { readonly kind: 'echoLastRunBoon' } }> =>
+      child.child.kind === 'echoLastRunBoon',
+  );
+  const concaveStoneChild = loadable.children.find(
+    (
+      child,
+    ): child is Extract<typeof child, { readonly child: { readonly kind: 'concaveStone' } }> =>
+      child.child.kind === 'concaveStone',
+  );
+  const hexTreeChild = loadable.children.find(
+    (child): child is Extract<typeof child, { readonly child: { readonly kind: 'hexTree' } }> =>
+      child.child.kind === 'hexTree',
+  );
   const targetLoadable = useMemo(() => targetChild?.forOffer(value), [targetChild, value]);
   const targetController = useWorkspaceInteractionController<
     WorkspaceTraitAcquisitionTargetDomain | undefined
   >();
   const targetDomain = targetController.observe(targetLoadable);
-  const circeLoadable = useMemo(
-    () => loadable.circeResolution?.forOffer(value),
-    [loadable.circeResolution, value],
-  );
+  const circeLoadable = useMemo(() => circeChild?.forOffer(value), [circeChild, value]);
   const circeController = useWorkspaceInteractionController<
     WorkspaceCirceResolutionDomain | undefined
   >();
   const circeDomain = circeController.observe(circeLoadable);
-  const echoPomLoadable = useMemo(
-    () => loadable.echoPomTarget?.forOffer(value),
-    [loadable.echoPomTarget, value],
-  );
+  const echoPomLoadable = useMemo(() => echoPomChild?.forOffer(value), [echoPomChild, value]);
   const echoPomController = useWorkspaceInteractionController<
     WorkspaceEchoPomTargetDomain | undefined
   >();
   const echoPomDomain = echoPomController.observe(echoPomLoadable);
   const echoLastRunLoadable = useMemo(
     () =>
-      loadable.echoLastRunBoon === undefined || option.echoLastRunBoon === undefined
+      echoLastRunChild === undefined || option.echoLastRunBoon === undefined
         ? undefined
-        : loadable.echoLastRunBoon.forOffer(value),
-    [loadable.echoLastRunBoon, option.echoLastRunBoon, value],
+        : echoLastRunChild.forOffer(value),
+    [echoLastRunChild, option.echoLastRunBoon, value],
   );
   const echoLastRunController = useWorkspaceInteractionController<
     WorkspaceEchoLastRunBoonDomain | undefined
   >();
   const echoLastRunDomain = echoLastRunController.observe(echoLastRunLoadable);
   const concaveStoneLoadable = useMemo(
-    () => loadable.concaveStone?.forOffer(value),
-    [loadable.concaveStone, value],
+    () => concaveStoneChild?.forOffer(value),
+    [concaveStoneChild, value],
   );
   const concaveStoneController = useWorkspaceInteractionController<
     WorkspaceConcaveStoneDomain | undefined
   >();
   const concaveStoneDomain = concaveStoneController.observe(concaveStoneLoadable);
-  const hexTreeLoadable = useMemo(
-    () => loadable.hexTree?.forOffer(value),
-    [loadable.hexTree, value],
-  );
+  const hexTreeLoadable = useMemo(() => hexTreeChild?.forOffer(value), [hexTreeChild, value]);
   const hexTreeController = useWorkspaceInteractionController<WorkspaceHexTreeDomain | undefined>();
   const hexTreeDomain = hexTreeController.observe(hexTreeLoadable);
   useEffect(() => {
@@ -135,28 +153,30 @@ export function TraitOfferSelectedOutcome({
   ]);
 
   const selectedTraitLabel = interaction.traitLabel(option.traitKey);
-  const isHexOutcome = loadable.hexTree !== undefined;
+  const isHexOutcome = hexTreeChild !== undefined;
+  const feedback = interaction.feedbackFor(value);
   const hasOutcome =
     targetChild !== undefined ||
-    loadable.circeResolution !== undefined ||
-    loadable.echoPomTarget !== undefined ||
-    loadable.echoLastRunBoon !== undefined ||
-    interaction.echoLastReward !== undefined ||
-    loadable.children.length > 0 ||
+    circeChild !== undefined ||
+    echoPomChild !== undefined ||
+    echoLastRunChild !== undefined ||
+    feedback.length > 0 ||
+    loadable.children.some(
+      (child) => child.child.kind !== 'concaveStone' || child.child.value !== undefined,
+    ) ||
     concaveStoneDomain.result !== undefined ||
-    hexTreeDomain.result !== undefined ||
-    interaction.ransomAssessment(value) !== undefined;
+    hexTreeDomain.result !== undefined;
   if (!hasOutcome) return null;
   return (
     <section aria-label="Selected trait outcome" className="trait-selected-outcome">
       <h3>{isHexOutcome ? `Customize Hex · ${selectedTraitLabel}` : 'Selected trait outcome'}</h3>
       {isHexOutcome ? null : <p className="trait-selected-outcome-name">{selectedTraitLabel}</p>}
-      {loadable.hexTree === undefined || hexTreeDomain.result === undefined ? null : (
+      {hexTreeChild === undefined || hexTreeDomain.result === undefined ? null : (
         <HexTreeEditor
           domain={hexTreeDomain.result}
-          address={loadable.hexTree.control.address}
-          transitionFor={(layoutKey) => loadable.hexTree!.transitionFor(value, layoutKey)}
-          onChange={(hexTree) => onUpdate({ ...value, hexTree })}
+          address={hexTreeChild.child.address}
+          transitionFor={(layoutKey) => hexTreeChild.transitionFor(value, layoutKey)}
+          onChange={(hexTree) => onUpdate(hexTreeChild.update(value, hexTree))}
         />
       )}
       {targetChild === undefined ? null : (
@@ -174,32 +194,23 @@ export function TraitOfferSelectedOutcome({
             : { triggerLabel: interaction.traitLabel(option.targetTraitKey) })}
         />
       )}
-      {loadable.circeResolution === undefined || circeDomain.result === undefined ? null : (
+      {circeChild === undefined || circeDomain.result === undefined ? null : (
         <TraitOfferCirceResolution
-          findingTarget={findingTarget(loadable.circeResolution.control.address)}
-          controlId={semanticOwnerControlElementId(loadable.circeResolution.control.address)}
+          findingTarget={findingTarget(circeChild.child.address)}
+          controlId={semanticOwnerControlElementId(circeChild.child.address)}
           domain={circeDomain.result}
           option={option}
-          onSelect={(resolution) =>
-            onUpdate(
-              replaceTraitOfferOption(value, selectedIndex, {
-                ...option,
-                circeResolution: resolution,
-              }),
-            )
-          }
+          onSelect={(resolution) => onUpdate(circeChild.update(value, resolution))}
         />
       )}
-      {loadable.echoPomTarget === undefined || echoPomDomain.result === undefined ? null : (
+      {echoPomChild === undefined || echoPomDomain.result === undefined ? null : (
         <ContextualPicker
-          findingTarget={findingTarget(loadable.echoPomTarget.control.address)}
+          findingTarget={findingTarget(echoPomChild.child.address)}
           ariaLabel="Pom Pom Pom target"
-          id={semanticOwnerControlElementId(loadable.echoPomTarget.control.address)}
+          id={semanticOwnerControlElementId(echoPomChild.child.address)}
           label="Greatest-level target"
           model={echoPomDomain.result.picker}
-          onSelect={(echoPomTarget) =>
-            onUpdate(replaceTraitOfferOption(value, selectedIndex, { ...option, echoPomTarget }))
-          }
+          onSelect={(echoPomTarget) => onUpdate(echoPomChild.update(value, echoPomTarget))}
           placeholder={
             echoPomDomain.result.emptyNoOpAllowed
               ? 'Choose target or no target'
@@ -214,7 +225,7 @@ export function TraitOfferSelectedOutcome({
             : {})}
         />
       )}
-      {loadable.echoLastRunBoon === undefined ? null : (
+      {echoLastRunChild === undefined ? null : (
         <div className="trait-dependent-choice-row">
           <div>
             <h4>Boon Boon Boon choice</h4>
@@ -228,7 +239,7 @@ export function TraitOfferSelectedOutcome({
             </p>
           </div>
           <button
-            {...findingTarget(loadable.echoLastRunBoon.control.address)}
+            {...findingTarget(echoLastRunChild.child.address)}
             className="quiet-action action-compact"
             onClick={onOpenEchoLastRunBoon}
             type="button"
@@ -237,38 +248,62 @@ export function TraitOfferSelectedOutcome({
           </button>
         </div>
       )}
-      {interaction.echoLastReward === undefined ? null : (
-        <fieldset className="trait-circe-resolution">
-          <legend>Reward Reward Reward replay</legend>
-          <p>Spawns: {interaction.echoLastReward.spawnLabel ?? 'Replay source unavailable'}</p>
-          <button
-            className="quiet-action"
-            onClick={() => {
-              const acquisitionEntry = interaction.echoLastReward!.acquisitionEntry;
-              dispatch(traitOfferDialogClosed());
-              window.setTimeout(() => {
-                document.getElementById(semanticOwnerControlElementId(acquisitionEntry))?.focus();
-              }, 0);
-            }}
-            type="button"
+      {feedback
+        .filter((entry) => entry.kind === 'echoLastReward')
+        .map(({ control }) => (
+          <fieldset
+            key={semanticOwnerControlElementId(control.address)}
+            className="trait-circe-resolution"
           >
-            Configure in Room Timeline
-          </button>
-        </fieldset>
-      )}
+            <legend>Reward Reward Reward replay</legend>
+            <p>Spawns: {control.spawnLabel ?? 'Replay source unavailable'}</p>
+            <button
+              className="quiet-action"
+              onClick={() => {
+                const acquisitionEntry = control.acquisitionEntry;
+                dispatch(traitOfferDialogClosed());
+                window.setTimeout(() => {
+                  document.getElementById(semanticOwnerControlElementId(acquisitionEntry))?.focus();
+                }, 0);
+              }}
+              type="button"
+            >
+              Configure in Room Timeline
+            </button>
+          </fieldset>
+        ))}
       <TraitOfferSelectedSpecialOutcomes
         carrierChildren={loadable.children}
+        feedback={feedback}
         interaction={interaction}
         offer={value}
         optionIndex={selectedIndex}
         onUpdate={onUpdate}
         concaveStone={
-          loadable.concaveStone === undefined || concaveStoneDomain.result === undefined
+          concaveStoneChild === undefined || concaveStoneDomain.result === undefined
             ? undefined
-            : { interaction: loadable.concaveStone, domain: concaveStoneDomain.result }
+            : { interaction: concaveStoneChild, domain: concaveStoneDomain.result }
         }
         {...(onConcaveStoneResult === undefined ? {} : { onConcaveStoneResult })}
       />
+      {concaveStoneChild === undefined ||
+      concaveStoneDomain.result !== undefined ||
+      concaveStoneChild.child.value === undefined ? null : (
+        <fieldset className="trait-selected-outcome-detail" aria-label="Concave Stone outcome">
+          <legend>Concave Stone</legend>
+          <p>This retained Stone outcome cannot be assessed in the current route context.</p>
+          <button
+            className="quiet-action action-compact"
+            onClick={() => {
+              onUpdate(concaveStoneChild.update(value, null));
+              onConcaveStoneResult?.(value, null);
+            }}
+            type="button"
+          >
+            Clear retained Concave Stone result
+          </button>
+        </fieldset>
+      )}
     </section>
   );
 }
