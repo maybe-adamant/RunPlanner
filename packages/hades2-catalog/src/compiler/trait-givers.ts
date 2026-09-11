@@ -3,6 +3,7 @@ import type {
   TraitDeclaration,
   TraitGiverDeclaration,
 } from '@run-planner/engine/catalog-schema';
+import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
 
 import {
   createCollection,
@@ -270,4 +271,39 @@ export function normalizeGivers(
       fail(`givers.${giver.key}.denialParticipates`, 'requires an Olympian or Hermes giver');
   }
   return createCollection(values, 'givers', (giver) => giver.key);
+}
+
+export function validateRewardAcquisitionRoleTraitGivers(
+  rewards: RewardKernelCatalog,
+  givers: CatalogCollection<TraitGiverDeclaration>,
+): void {
+  for (const reward of rewards.rewardTypes.values) {
+    for (const role of reward.acquisitionRoles.values) {
+      if (role.traitGiverKey !== undefined && givers.byKey[role.traitGiverKey] === undefined)
+        fail(
+          `rewards.rewardTypes.${reward.gameName}.${role.key}.traitGiverKey`,
+          'references an unknown trait giver',
+        );
+    }
+  }
+  const trialRole = rewards.rewardTypes.byKey.TrialUpgrade?.acquisitionRoles.byKey.self;
+  if (trialRole?.traitGiverKey !== 'Chaos')
+    fail('rewards.rewardTypes.TrialUpgrade.self.traitGiverKey', 'must bind explicitly to Chaos');
+}
+
+export function createTraitGiverByAcquisitionGameName(
+  bindings: RawTraitCatalogInput['traitAcquisitionProviders'],
+  givers: CatalogCollection<TraitGiverDeclaration>,
+): Readonly<Record<string, string>> {
+  if (new Set(bindings.map((binding) => binding.gameName)).size !== bindings.length)
+    fail('traitCatalog.traitAcquisitionProviders', 'contains duplicate game-name bindings');
+  return Object.freeze(
+    Object.fromEntries(
+      bindings.map(({ gameName, giverKey }) => {
+        if (givers.byKey[giverKey] === undefined)
+          fail(`traitCatalog.traitAcquisitionProviders.${gameName}`, 'references an unknown giver');
+        return [gameName, giverKey];
+      }),
+    ),
+  );
 }

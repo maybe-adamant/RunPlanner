@@ -1,4 +1,4 @@
-import type { CatalogCollection } from '@run-planner/engine/catalog-schema';
+import type { CatalogCollection, TraitDeclaration } from '@run-planner/engine/catalog-schema';
 import type {
   AcquisitionRoleDeclaration,
   AcquisitionRoleResolution,
@@ -343,6 +343,29 @@ export function normalizeAcquisitions(
     (acquisition) => acquisition.gameName,
     'gameName',
   );
+}
+
+export function validateFixedAcquisitionTraitGrants(
+  acquisitions: CatalogCollection<ConcreteAcquisitionDeclaration>,
+  traits: CatalogCollection<TraitDeclaration>,
+): void {
+  for (const acquisition of acquisitions.values) {
+    if (acquisition.gameName === 'InfernalContractBoon') {
+      if (
+        acquisition.grantedTraitKey !== 'InfernalContractBoon' ||
+        traits.byKey.InfernalContractBoon?.rarityDomain.kind !== 'none'
+      )
+        fail(
+          'rewards.acquisitions.InfernalContractBoon',
+          'must grant the rarityless contract trait',
+        );
+    } else if (acquisition.grantedTraitKey !== undefined) {
+      fail(
+        `rewards.acquisitions.${acquisition.gameName}.grantedTraitKey`,
+        'fixed acquisition trait grants are reserved for Infernal Contract',
+      );
+    }
+  }
 }
 
 export function normalizeRewardTypes(

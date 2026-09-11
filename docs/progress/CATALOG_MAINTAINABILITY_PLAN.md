@@ -2,7 +2,7 @@
 
 ## Status and base
 
-Status: **Draft for review; implementation has not started.**
+Status: **Locked; Gate A implemented and Gate B is next.**
 
 Planning base: `af4cc56b`
 

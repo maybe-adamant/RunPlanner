@@ -1,4 +1,8 @@
-import type { CatalogCollection, KeepsakeDeclaration } from '@run-planner/engine/catalog-schema';
+import type {
+  CatalogCollection,
+  KeepsakeDeclaration,
+  TraitDeclaration,
+} from '@run-planner/engine/catalog-schema';
 import type { RawKeepsakeDeclaration } from '../declarations';
 import { createCollection, requireNonEmpty } from './common';
 import { fail } from './errors';
@@ -480,4 +484,21 @@ export function normalizeKeepsakes(
   )
     fail('keepsakes', 'must declare the exact authoritative ordinary keepsake inventory');
   return collection;
+}
+
+export function validateEchoGiftBindings(
+  keepsakes: CatalogCollection<KeepsakeDeclaration>,
+  traits: CatalogCollection<TraitDeclaration>,
+): void {
+  const gift = traits.byKey.EchoRepeatKeepsakeBoon?.selectedDisposition;
+  if (gift?.kind !== 'echo' || gift.effect !== 'repeatKeepsake')
+    fail('traits.EchoRepeatKeepsakeBoon', 'must declare Echo keepsake replay');
+  const excluded = keepsakes.values
+    .filter((keepsake) => keepsake.echoGift.availability === 'excluded')
+    .map((keepsake) => keepsake.key);
+  if (
+    excluded.length !== gift.excludedKeepsakeKeys.length ||
+    excluded.some((key) => !gift.excludedKeepsakeKeys.includes(key))
+  )
+    fail('traits.EchoRepeatKeepsakeBoon.selectedDisposition', 'must match keepsake exclusions');
 }
