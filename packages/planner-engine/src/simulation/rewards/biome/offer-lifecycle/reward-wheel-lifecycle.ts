@@ -18,10 +18,10 @@ import {
 import { createRewardProducerCandidateResult } from '../../producer-frontiers';
 import { createBiomeRewardFacts } from '../../facts';
 import { addRewardFinding, rewardFinding } from '../../findings';
-import type { RewardHistoryState } from '../../../../reward-kernel';
+import type { ResolvedRewardOffer, RewardHistoryState } from '../../../../reward-kernel';
 import type { RewardBranchState } from '../../branch-primitives';
 import { processOfferGenerationCohort } from '../../processing';
-import { settleOwnedAcquisitionSite } from '../../acquisition-settlement';
+import { settleOwnedAcquisitionSite, type AcquisitionSource } from '../../acquisition-settlement';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { ShipLifecycleCandidateContext } from '../../lifecycle-artifacts';
 import type { RewardLifecycleReferences } from '../prepared-inputs';
@@ -31,6 +31,26 @@ export interface WheelLifecycleView {
   readonly generation: HistoryStateView;
   readonly acquisition: HistoryStateView;
   readonly acquisitionSequence: number;
+}
+
+/**
+ * A selected Ship wheel reward is materialized by the game's SpawnRoomReward
+ * path after combat. Keep that native contact explicit across canonical and
+ * candidate settlement so Vow of Forfeit cannot diverge between them.
+ */
+export function shipWheelRoomRewardSource(
+  wheel: CanonicalRewardWheel,
+  picked: CanonicalRewardWheel['offers'][number],
+  offer: ResolvedRewardOffer = picked.offer,
+): AcquisitionSource {
+  return Object.freeze({
+    ...picked,
+    offer,
+    producerLifecycleKey: wheel.producerLifecycleKey,
+    resolvedStoreKey: wheel.storeKey,
+    instanceProvenance: 'free',
+    roomRewardForfeitEligible: true,
+  });
 }
 
 export function rewardWheelBinding(
@@ -271,12 +291,7 @@ export function prepareShipLifecycleCandidateContext(
             pointKey: wheel.wheelKey,
             entryKey: 'picked',
             ...(timelineOwner === undefined ? {} : { timelineOwner }),
-            source: Object.freeze({
-              ...picked,
-              producerLifecycleKey: wheel.producerLifecycleKey,
-              resolvedStoreKey: wheel.storeKey,
-              instanceProvenance: 'free',
-            }),
+            source: shipWheelRoomRewardSource(wheel, picked),
             historySequence: lifecycleView.acquisitionSequence,
           },
           (branchHistory) =>

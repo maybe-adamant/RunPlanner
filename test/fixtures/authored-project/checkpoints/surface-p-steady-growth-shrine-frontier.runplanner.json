@@ -1714,7 +1714,26 @@
                         }
                       },
                       "traitOffersByAcquisitionRole": {
-                        "source": null
+                        "source": {
+                          "kind": "traits",
+                          "giverKey": "Hera",
+                          "options": [
+                            {
+                              "traitKey": "DamageShareRetaliateBoon",
+                              "rarity": "Common"
+                            },
+                            {
+                              "traitKey": "SpawnCastDamageBoon",
+                              "rarity": "Common"
+                            },
+                            {
+                              "traitKey": "OmegaHeraProjectileBoon",
+                              "rarity": "Common"
+                            }
+                          ],
+                          "selectedOptionKey": "option1",
+                          "rarificationActions": []
+                        }
                       },
                       "dispositionByAcquisitionRole": {
                         "source": {
@@ -1746,19 +1765,19 @@
                       "giverKey": "Zeus",
                       "options": [
                         {
-                          "traitKey": "LightningDebuffGeneratorBoon",
+                          "traitKey": "BoltRetaliateBoon",
                           "rarity": "Rare"
                         },
                         {
-                          "traitKey": "SpawnKillBoon",
-                          "rarity": "Legendary"
+                          "traitKey": "CastAnywhereBoon",
+                          "rarity": "Rare"
                         },
                         {
-                          "traitKey": "SprintEchoBoon",
-                          "rarity": "Duo"
+                          "traitKey": "FocusLightningBoon",
+                          "rarity": "Rare"
                         }
                       ],
-                      "selectedOptionKey": "option2",
+                      "selectedOptionKey": "option3",
                       "rarificationActions": []
                     }
                   },
@@ -2058,20 +2077,19 @@
                           "giverKey": "Hera",
                           "options": [
                             {
-                              "traitKey": "DamageShareRetaliateBoon",
+                              "traitKey": "ElementalRarityUpgradeBoon",
                               "rarity": "Common"
                             },
                             {
                               "traitKey": "BoonDecayBoon",
-                              "rarity": "Epic",
-                              "targetTraitKey": "ZeusWeaponBoon"
+                              "rarity": "Common"
                             },
                             {
-                              "traitKey": "SpawnCastDamageBoon",
-                              "rarity": "Common"
+                              "traitKey": "HeraWeaponBoon",
+                              "rarity": "Heroic"
                             }
                           ],
-                          "selectedOptionKey": "option2",
+                          "selectedOptionKey": "option1",
                           "rarificationActions": []
                         }
                       },

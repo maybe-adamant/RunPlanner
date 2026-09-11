@@ -24,7 +24,11 @@ import type { RewardProducerFrontier } from '../../producer-frontiers';
 import type { ShipLifecycleCandidateContext } from '../../lifecycle-artifacts';
 import type { RewardLifecycleReferences } from '../prepared-inputs';
 import { rewardStoreHistorySupport } from '../reward-store-support';
-import { prepareShipLifecycleCandidateContext, rewardWheelBinding } from './reward-wheel-lifecycle';
+import {
+  prepareShipLifecycleCandidateContext,
+  rewardWheelBinding,
+  shipWheelRoomRewardSource,
+} from './reward-wheel-lifecycle';
 import { createBiomeRewardFacts } from '../../facts';
 
 export interface RewardWheelOfferPointMaterializationInputs {
@@ -258,13 +262,7 @@ export function applyRewardWheelOfferPointMaterialization(
         acquisitionView !== undefined &&
         acquisitionEvent?.kind === 'offerPointAcquired'
       ) {
-        const source = Object.freeze({
-          ...selectedOffer,
-          offer,
-          producerLifecycleKey: wheel.producerLifecycleKey,
-          resolvedStoreKey: wheel.storeKey,
-          instanceProvenance: 'free',
-        });
+        const source = shipWheelRoomRewardSource(wheel, selectedOffer, offer);
         settleOwnedAcquisitionSite(
           catalog,
           candidateBranches,

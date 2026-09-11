@@ -18,6 +18,7 @@ import {
 import { preparedAcquisitionSiteOwner } from '../prepared-inputs';
 import type { ReachedTraitChildCheckpoint } from '../../trait-settlement';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
+import { shipWheelRoomRewardSource } from './reward-wheel-lifecycle';
 
 export interface ReachedOfferSettlement {
   readonly branches: readonly RewardBranchState[];
@@ -97,15 +98,7 @@ export function applyReachedOfferSettlement(
         siteOwner: wheel.origin,
         pointKey: wheel.wheelKey,
         entryKey: 'picked',
-        source: withStoredArtificerReplacements(
-          room,
-          Object.freeze({
-            ...picked,
-            producerLifecycleKey: wheel.producerLifecycleKey,
-            resolvedStoreKey: wheel.storeKey,
-            instanceProvenance: 'free',
-          }),
-        ),
+        source: withStoredArtificerReplacements(room, shipWheelRoomRewardSource(wheel, picked)),
         ...(timelineOwner === undefined ? {} : { timelineOwner }),
         historySequence: event.sequence,
         deferArtificerReplacement: true,

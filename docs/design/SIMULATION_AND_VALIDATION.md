@@ -1554,12 +1554,13 @@ each biome records a `rewardForfeited` event with the fixed
 `RoomRewardConsolationPrize` replacement, then settles that required Red Onion
 through the canonical concrete-acquisition path. The authored offer and bag
 consumption remain evidence, but no Boon/Hermes trait provider or child is
-settled. Artificer-generated RoomReward Boon/Hermes replacements use this same
-predicate after their Artificer and replacement-bag transitions; Artificer's
-source capability still controls Sea Star while Time Piece sees the realized
-Onion. Shop, Devotion, room-local rewards, and pickups do not enter this lane.
-Per-biome usage resets when carried reward branches initialize the next biome,
-while configured/effective Fear and Circe suppression remain route-wide.
+settled. Picked Thessaly Ship-wheel rewards and Artificer-generated RoomReward
+Boon/Hermes replacements use this same predicate. Artificer applies it after
+its replacement-bag transition; the source capability still controls Sea Star
+while Time Piece sees the realized Onion. Shop, Devotion, direct room-local
+rewards, and pickups do not enter this lane. Per-biome usage resets when
+carried reward branches initialize the next biome, while configured/effective
+Fear and Circe suppression remain route-wide.
 
 The same replay folds the normalized Proper Upbringing lifecycle. After each
 reached acquisition or replacement it derives the post-selection element
