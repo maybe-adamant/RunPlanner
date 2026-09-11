@@ -5,7 +5,6 @@ import {
   createCirceResolutionAddress,
   createEchoLastRunBoonAddress,
   createEchoPomTargetAddress,
-  createLevelResolutionAddress,
   createNaturalSelectionResultAddress,
   createTraitAcquisitionTargetAddress,
   createTraitOfferAddress,
@@ -30,12 +29,10 @@ import {
   echoLastRunBoonOutcomes,
   echoPomGreatestLevelTraitKeys,
   evaluateReachedEchoLastRunBoonOffer,
-  evaluateReachedLevelResolution,
   evaluateReachedTraitOffer,
   foldTraitHistoryEvents,
   isAspectSpellDropDormant,
   recordDirectTraitGrants,
-  recordReachedLevelResolution,
   recordReachedTraitOffer,
   traitOfferCompositionDomains,
   type TraitHistoryState,
@@ -47,7 +44,6 @@ import {
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
 } from '../../authored-project/traits';
-import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
 import {
   activateTemporaryArcana,
   circeResolutionDomain,
@@ -65,6 +61,7 @@ import type { RewardBranchState } from './branch-primitives';
 import type { TraitOfferOptionLevelResolution } from '../trait-offer-levels';
 import { bankPathPoints, installHexTree, maybeAddGodSent } from '../hex-progress';
 import { addRewardFinding } from './findings';
+import { settleReachedLevelResolution } from './level-resolution-settlement';
 import { isTraitOfferMutationEvent } from '../trait-history';
 
 export interface ReachedTraitChildCheckpoint {
@@ -252,113 +249,32 @@ function applyTraitOfferForAcquisitionInternal(
     callingCard === undefined || callingCard.state === branch.keepsakes
       ? branch
       : Object.freeze({ ...branch, keepsakes: callingCard.state });
-  {
-    const effect =
-      reward.offer === undefined || reward.producerLifecycleKey === undefined
-        ? undefined
-        : levelResolutionEffectFor(
-            catalog.rewards,
-            reward.offer,
-            {
-              kind: reward.producerKind === 'shop' ? 'shopProfile' : 'producerLifecycle',
-              key: reward.producerLifecycleKey,
-            },
-            role,
-          );
-    if (effect !== undefined) {
-      const owner = traitOwnerAddress(reward.origin);
-      if (owner === undefined) return Object.freeze({ branch });
-      const address = createLevelResolutionAddress(owner, role);
-      // A missing child is still a reached, incomplete declaration-owned Pom.
-      // Do not let malformed legacy/project state silently bypass the effect.
-      const levelResolution =
-        authoredLevelResolution ??
-        (effect.kind === 'visibleChoice'
-          ? { kind: 'choice' as const, offeredTraitKeys: Object.freeze([]), selectedTraitKey: null }
-          : { kind: 'random' as const, targetTraitKey: null });
-      const generationBefore = reward.levelResolutionGenerationHistory ?? before;
-      const evaluation = evaluateReachedLevelResolution(
-        catalog,
-        address,
-        levelResolution,
-        effect.levelCount,
-        generationBefore,
-        branch.levelResolutionEvaluations?.length ?? 0,
-        effect.kind === 'visibleChoice' ? 'choice' : 'random',
-        effect.kind === 'randomTargetIfAvailable',
-      );
-      const generated = recordReachedLevelResolution(
-        catalog,
-        address,
-        levelResolution,
-        effect.levelCount,
-        generationBefore,
-        sequence,
-        lifecyclePoint,
-        effect.kind === 'visibleChoice' ? 'choice' : 'random',
-        effect.kind === 'randomTargetIfAvailable',
-      );
-      const generatedEvent = generated.event;
-      const currentTarget =
-        levelResolution.kind === 'choice'
-          ? levelResolution.selectedTraitKey
-          : levelResolution.targetTraitKey;
-      const currentEquipped =
-        currentTarget === null ? undefined : before.equippedTraits[currentTarget];
-      const appliedHistory =
-        generatedEvent === undefined ||
-        currentTarget === null ||
-        currentEquipped?.level === undefined
-          ? before
-          : foldTraitHistoryEvents(catalog, [
-              ...before.events,
-              Object.freeze({
-                ...generatedEvent,
-                oldLevel: currentEquipped.level,
-                newLevel: currentEquipped.level + effect.levelCount,
-              }),
-            ]);
-      if (findings !== undefined && evaluation.findings.length > 0) {
-        const codeByFinding = {
-          missingTarget: 'missingPomTarget',
-          wrongOfferCount: 'pomWrongOfferCount',
-          duplicateTargets: 'pomWrongOfferCount',
-          selectedTargetNotOffered: 'pomSelectedTargetNotOffered',
-          targetUnavailable: 'pomTargetUnavailable',
-          kindMismatch: 'pomTargetUnavailable',
-        } as const;
-        for (const finding of evaluation.findings) {
+  const levelResolution = settleReachedLevelResolution({
+    catalog,
+    branch,
+    reward,
+    owner: traitOwnerAddress(reward.origin),
+    role,
+    authoredLevelResolution,
+    lifecyclePoint,
+    sequence,
+    ...(findingChronology === undefined ? {} : { findingChronology }),
+  });
+  if (levelResolution !== undefined) {
+    if (findings !== undefined) {
+      for (const entry of levelResolution.findingEntries) {
+        for (const evaluation of entry.levelResolutionEvaluations ?? [undefined]) {
           addRewardFinding(
             findings,
-            Object.freeze({
-              code: codeByFinding[finding],
-              severity: 'error',
-              phase: 'rewardGeneration',
-              origin: evaluation.address,
-              evidence: Object.freeze({
-                acquisitionRole: role,
-                lifecyclePoint,
-                levelCount: effect.levelCount,
-              }),
-            }),
-            ownerRegion(evaluation.address),
-            findingChronology ?? Object.freeze({ kind: 'history', sequence, boundary: 'at' }),
+            entry.finding,
+            entry.atomicRegion,
+            entry.chronology,
             evaluation,
           );
         }
       }
-      return Object.freeze({
-        branch: Object.freeze({
-          ...branch,
-          history: attachTraitHistory(branch.history, appliedHistory),
-          traitHistory: appliedHistory,
-          levelResolutionEvaluations: Object.freeze([
-            ...(branch.levelResolutionEvaluations ?? []),
-            evaluation,
-          ]),
-        }),
-      });
     }
+    return Object.freeze({ branch: levelResolution.branch });
   }
   if (effectiveAuthored === undefined) return Object.freeze({ branch: effectiveBranch });
   const evaluationContext = withBoonRarityFacts(
