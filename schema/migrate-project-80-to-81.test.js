@@ -70,6 +70,15 @@ test('preserves null inventory and leaves ambiguous Hammer identity unresolved',
   assert.equal(offers.Minor.reward, null);
 });
 
+test('preserves an unmaterialized Shop room', () => {
+  const source = shop('WorldShop', 'P', {});
+  source.route.biomes[0].topology.occurrences[0].state = { kind: 'shop' };
+
+  const result = migrateProjectDocument(source);
+
+  assert.deepEqual(result.route.biomes[0].topology.occurrences[0].state, { kind: 'shop' });
+});
+
 test('rejects stale input schema or catalog', () => {
   assert.throws(() => migrateProjectDocument({ schemaVersion: 81 }), /expects schema 80/);
   assert.throws(
