@@ -27,7 +27,6 @@ import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candida
 import { evaluateCirceResolutionDomain } from '../../src/simulation/candidates/trait-offer';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
-import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { createTraitHistoryState, evaluateReachedTraitOffer } from '../../src/simulation/traits';
 
@@ -106,7 +105,6 @@ describe('Circe selected trait acquisition', () => {
       }),
     });
     const branch = initializeTestRewardBranches(createArcanaFearState(catalog, loadout))[0]!;
-    const findings = new Map();
     const settlement = settleEncounterTraitOffer(
       catalog,
       branch,
@@ -114,7 +112,6 @@ describe('Circe selected trait acquisition', () => {
       null,
       1,
       'encounterCompleted',
-      findings,
       undefined,
       'selection',
       undefined,
@@ -124,7 +121,7 @@ describe('Circe selected trait acquisition', () => {
     );
     expect(settlement.branch).toBe(branch);
     expect(
-      [...findings.values()].filter(
+      settlement.findingEntries.filter(
         (entry) =>
           entry.finding.code === 'traitOfferMissing' &&
           semanticAddressKey(entry.finding.origin) === semanticAddressKey(circeOwner),
@@ -208,7 +205,7 @@ describe('Circe selected trait acquisition', () => {
       sequence: 1,
     });
     if (!heroic.legal) throw new Error('Heroic Lapis exclusion fixture must be legal');
-    const applied = processEncounterTraitOffer(
+    const applied = settleEncounterTraitOffer(
       catalog,
       initializeTestRewardBranches(heroic.state)[0]!,
       circeOwner.owner,
@@ -216,7 +213,7 @@ describe('Circe selected trait acquisition', () => {
       2,
       'encounterCompleted',
     );
-    const active = applied.arcanaFear.arcana.active;
+    const active = applied.branch.arcanaFear.arcana.active;
     expect(active.find((card) => card.key === 'CastCount')).toMatchObject({ rarity: 'Heroic' });
     expect(active.find((card) => card.key === 'ChanneledCast')).toMatchObject({
       origin: 'temporary',
@@ -234,7 +231,7 @@ describe('Circe selected trait acquisition', () => {
       throw new Error('exhausted Red fixture must use legal run-local Arcana activation');
     }
     const exhausted = exhaustedActivation.state;
-    const red = processEncounterTraitOffer(
+    const red = settleEncounterTraitOffer(
       catalog,
       initializeTestRewardBranches(exhausted)[0]!,
       circeOwner.owner,
@@ -249,7 +246,7 @@ describe('Circe selected trait acquisition', () => {
       1,
       'encounterCompleted',
     );
-    expect(red.arcanaFear).toBe(exhausted);
+    expect(red.branch.arcanaFear).toBe(exhausted);
   });
 
   it('gates Black Night from effective configured removable Vows, including Rivals and already-disabled state', () => {
@@ -286,18 +283,16 @@ describe('Circe selected trait acquisition', () => {
       sequence: 1,
     });
     if (!disabled.legal) throw new Error('disabled Black Night fixture must be legal');
-    const findings = new Map();
-    const repeated = processEncounterTraitOffer(
+    const repeated = settleEncounterTraitOffer(
       catalog,
       initializeTestRewardBranches(disabled.state)[0]!,
       circeOwner.owner,
       black,
       2,
       'encounterCompleted',
-      findings,
     );
-    expect(repeated.arcanaFear).toBe(disabled.state);
-    expect([...findings.values()].some((entry) => entry.finding.code === 'offerContext')).toBe(
+    expect(repeated.branch.arcanaFear).toBe(disabled.state);
+    expect(repeated.findingEntries.some((entry) => entry.finding.code === 'offerContext')).toBe(
       true,
     );
   });
@@ -336,7 +331,6 @@ describe('Circe selected trait acquisition', () => {
 
   it('retains an invalid authored Circe child after the outer acquisition without applying it', () => {
     const branch = initializeTestRewardBranches()[0]!;
-    const findings = new Map();
     const settlement = settleEncounterTraitOffer(
       catalog,
       branch,
@@ -354,7 +348,6 @@ describe('Circe selected trait acquisition', () => {
       ]),
       1,
       'encounterCompleted',
-      findings,
     );
     const child = createCirceResolutionAddress(circeOwner, 'option1');
     expect(settlement.branch.traitHistory?.equippedTraits.RandomArcanaTrait).toMatchObject({
@@ -363,7 +356,7 @@ describe('Circe selected trait acquisition', () => {
     });
     expect(settlement.branch.arcanaFear).toBe(branch.arcanaFear);
     expect(settlement.blockedChild).toEqual({ address: child, branch: settlement.branch });
-    expect([...findings.values()].map((entry) => entry.finding)).toContainEqual(
+    expect(settlement.findingEntries.map((entry) => entry.finding)).toContainEqual(
       expect.objectContaining({ code: 'circeResolutionTargetUnavailable', origin: child }),
     );
   });

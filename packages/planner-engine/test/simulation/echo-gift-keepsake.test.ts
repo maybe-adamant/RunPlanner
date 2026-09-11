@@ -50,7 +50,7 @@ import {
 } from '../../src/simulation/keepsakes/trait-effects';
 import { createKeepsakeState, type KeepsakeState } from '../../src/simulation/keepsakes/state';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
-import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import {
   assessTraitOption,
@@ -289,7 +289,7 @@ describe('Echo Gift Gift Gift', () => {
       ...base,
       keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', base.arcanaFear),
     });
-    const result = processEncounterTraitOffer(
+    const result = settleEncounterTraitOffer(
       catalog,
       branch,
       giftOwner,
@@ -307,23 +307,23 @@ describe('Echo Gift Gift Gift', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.traitHistory?.equippedTraits[giftTraitKey]).toMatchObject({
+    expect(result.branch.traitHistory?.equippedTraits[giftTraitKey]).toMatchObject({
       echoRepeatedKeepsakeKey: 'GoldifyKeepsake',
       echoKeepsakeReplayCount: 0,
     });
-    if (result.traitHistory === undefined)
+    if (result.branch.traitHistory === undefined)
       throw new Error('Gift acquisition did not publish history');
     const swapped = branchWithGift('GoldifyKeepsake', 'RarifyKeepsake', {
-      history: result.traitHistory,
+      history: result.branch.traitHistory,
       keepsakes: {
-        ...result.keepsakes,
+        ...result.branch.keepsakes,
         currentKey: 'RarifyKeepsake',
         history: Object.freeze([
-          ...result.keepsakes.history,
+          ...result.branch.keepsakes.history,
           {
             key: 'RarifyKeepsake',
             kind: 'replace' as const,
-            biomeNumber: (result.keepsakes.history.at(-1)?.biomeNumber ?? 0) + 1,
+            biomeNumber: (result.branch.keepsakes.history.at(-1)?.biomeNumber ?? 0) + 1,
           },
         ]),
       },

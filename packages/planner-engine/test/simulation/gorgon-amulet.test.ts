@@ -48,7 +48,6 @@ import {
   attestGorgonBranchState,
 } from '../../src/simulation/keepsakes/encounter-effects';
 import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
-import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { resolveGorgonCandidateRarity } from '../../src/simulation/rewards/biome/encounter-acquisition/gorgon-started';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 
@@ -289,7 +288,6 @@ describe('Gorgon Amulet lifecycle', () => {
         1,
         'encounterCompleted',
         undefined,
-        undefined,
         'gorgonAthena',
         undefined,
         {
@@ -476,7 +474,7 @@ describe('Gorgon Amulet lifecycle', () => {
         { kind: 'occurrence', occurrenceId: createOccurrenceId('gorgon-child') },
         'Combat',
       );
-      const evaluated = processEncounterTraitOffer(
+      const evaluated = settleEncounterTraitOffer(
         catalog,
         branch,
         phase,
@@ -484,14 +482,15 @@ describe('Gorgon Amulet lifecycle', () => {
         1,
         'encounterCompleted',
         undefined,
-        undefined,
         'gorgonAthena',
         rarity,
       );
-      expect(evaluated.traitEvaluations?.at(-1)?.context).not.toHaveProperty(
+      expect(evaluated.branch.traitEvaluations?.at(-1)?.context).not.toHaveProperty(
         'athenaTriggerConditionMet',
       );
-      expect(evaluated.traitHistory?.equippedTraits.InvulnerabilityDashBoon?.rarity).toBe(rarity);
+      expect(evaluated.branch.traitHistory?.equippedTraits.InvulnerabilityDashBoon?.rarity).toBe(
+        rarity,
+      );
     },
   );
 
@@ -572,7 +571,7 @@ describe('Gorgon Amulet lifecycle', () => {
       traitHistory: before,
     };
     const acquired = priorCherished
-      ? processEncounterTraitOffer(
+      ? settleEncounterTraitOffer(
           catalog,
           seeded,
           createEncounterPhaseAddress(
@@ -583,7 +582,7 @@ describe('Gorgon Amulet lifecycle', () => {
           cherishedOffer(),
           3,
           'encounterCompleted',
-        )
+        ).branch
       : seeded;
     if (priorCherished) {
       const unresolved = evaluateGWithGorgonSeed(project, acquired);

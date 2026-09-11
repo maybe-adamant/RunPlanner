@@ -31,7 +31,7 @@ import {
   initializeRewardBranches,
   publicRewardBranch,
 } from '../../src/simulation/rewards/branch-lifecycle';
-import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
 import type { RewardBranch } from '../../src/simulation/rewards/model';
@@ -77,7 +77,7 @@ function cherishedBranchState(startingKeepsakeKey = 'ManaOverTimeRefundKeepsake'
     history: attachTraitHistory(initialized.history, prior),
     traitHistory: prior,
   };
-  const acquired = processEncounterTraitOffer(
+  const acquired = settleEncounterTraitOffer(
     catalog,
     seeded,
     createEncounterPhaseAddress(
@@ -99,9 +99,9 @@ function cherishedBranchState(startingKeepsakeKey = 'ManaOverTimeRefundKeepsake'
     3,
     'encounterCompleted',
   );
-  if (acquired.traitHistory?.equippedTraits.KeepsakeLevelBoon === undefined)
+  if (acquired.branch.traitHistory?.equippedTraits.KeepsakeLevelBoon === undefined)
     throw new Error('ordinary Cherished acquisition did not enter canonical trait history');
-  return { ...acquired, traitHistory: acquired.traitHistory };
+  return { ...acquired.branch, traitHistory: acquired.branch.traitHistory };
 }
 
 function cherishedBranch(startingKeepsakeKey = 'ManaOverTimeRefundKeepsake'): RewardBranch {

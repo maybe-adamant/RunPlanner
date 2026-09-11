@@ -20,7 +20,7 @@ import {
 } from '../../src/simulation/keepsakes/state';
 import { attestGorgonBranchState } from '../../src/simulation/keepsakes/encounter-effects';
 import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
-import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { evaluateProgressiveBiomeAssembly } from '../../src/simulation/progressive/biome';
 import { simulateProject } from '../../src/simulation/project';
@@ -108,14 +108,14 @@ function acquireCherished(
   branch: RewardBranchState,
   giverKey: 'Demeter' | 'Hera' = 'Demeter',
 ): RewardBranchState {
-  return processEncounterTraitOffer(
+  return settleEncounterTraitOffer(
     catalog,
     branch,
     owner,
     cherishedOffer(giverKey),
     (branch.traitHistory?.events.length ?? 0) + 1,
     'encounterCompleted',
-  );
+  ).branch;
 }
 
 describe('Cherished Heirloom active keepsake advance', () => {
@@ -221,7 +221,7 @@ describe('Cherished Heirloom active keepsake advance', () => {
       ),
     ).toEqual([hadesEvent]);
 
-    const nextOffer = processEncounterTraitOffer(
+    const nextOffer = settleEncounterTraitOffer(
       catalog,
       acquired,
       owner,
@@ -239,9 +239,9 @@ describe('Cherished Heirloom active keepsake advance', () => {
       (acquired.traitHistory?.events.length ?? 0) + 1,
       'laterEncounterCompleted',
     );
-    expect(nextOffer.traitHistory?.equippedTraits.DemeterSpecialBoon?.level).toBe(5);
+    expect(nextOffer.branch.traitHistory?.equippedTraits.DemeterSpecialBoon?.level).toBe(5);
     expect(
-      nextOffer.traitHistory?.events.filter(
+      nextOffer.branch.traitHistory?.events.filter(
         (event) => event.kind === 'traitOffer' && event.giverKey === 'Hades',
       ),
     ).toEqual([hadesEvent]);
@@ -289,7 +289,7 @@ describe('Cherished Heirloom active keepsake advance', () => {
       callingCard: { remainingCharges: 3 },
     });
     const offer = cherishedOffer('Demeter');
-    const acquired = processEncounterTraitOffer(
+    const acquired = settleEncounterTraitOffer(
       catalog,
       initial,
       owner,
@@ -300,14 +300,14 @@ describe('Cherished Heirloom active keepsake advance', () => {
     const effect = catalog.keepsakes.byKey.RarifyKeepsake?.effect;
     expect(effect?.kind).toBe('callingCard');
     if (effect?.kind !== 'callingCard') return;
-    expect(acquired.traitEvaluations?.at(-1)?.offer).toMatchObject({
+    expect(acquired.branch.traitEvaluations?.at(-1)?.offer).toMatchObject({
       options: [
         { traitKey: 'KeepsakeLevelBoon', rarity: 'Duo' },
         { traitKey: 'DemeterSpecialBoon', rarity: 'Rare' },
         { traitKey: 'DemeterSprintBoon', rarity: 'Common' },
       ],
     });
-    expect(acquired.keepsakes.callingCard?.remainingCharges).toBe(
+    expect(acquired.branch.keepsakes.callingCard?.remainingCharges).toBe(
       3 - 1 + effect.rarificationChargesByRank.Heroic - effect.rarificationChargesByRank.Epic,
     );
   });
@@ -516,7 +516,7 @@ describe('Cherished Heirloom active keepsake advance', () => {
       timePiece: { remainingCharges: 2 },
     });
     const offer = cherishedOffer('Demeter');
-    const selectedAlternative = processEncounterTraitOffer(
+    const selectedAlternative = settleEncounterTraitOffer(
       catalog,
       initial,
       owner,
@@ -524,8 +524,12 @@ describe('Cherished Heirloom active keepsake advance', () => {
       3,
       'encounterCompleted',
     );
-    expect(selectedAlternative.traitHistory?.equippedTraits.DemeterSpecialBoon).toBeDefined();
-    expect(selectedAlternative.traitHistory?.equippedTraits.KeepsakeLevelBoon).toBeUndefined();
-    expect(selectedAlternative.keepsakes).toEqual(initial.keepsakes);
+    expect(
+      selectedAlternative.branch.traitHistory?.equippedTraits.DemeterSpecialBoon,
+    ).toBeDefined();
+    expect(
+      selectedAlternative.branch.traitHistory?.equippedTraits.KeepsakeLevelBoon,
+    ).toBeUndefined();
+    expect(selectedAlternative.branch.keepsakes).toEqual(initial.keepsakes);
   });
 });

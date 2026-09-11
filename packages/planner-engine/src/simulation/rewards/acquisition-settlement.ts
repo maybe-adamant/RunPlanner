@@ -1855,7 +1855,6 @@ export function applyProducerRoleHistory(
       resolution.role,
       resolution.lifecyclePoint,
       resolution.historySequence,
-      findingEmissions,
       findingChronology,
       {
         directTraitSetBranchHistories: (directTraitAgreementBranches ?? branches).map(
@@ -1863,6 +1862,7 @@ export function applyProducerRoleHistory(
         ),
       },
     );
+    accumulateProducerRoleFindingEmissions(findingEmissions, traitSettlement.findingEntries);
     if (traitSettlement.candidateContact !== undefined)
       traitOfferCandidateContacts.push(traitSettlement.candidateContact);
     for (const mutation of traitSettlement.priorTraitMutations ?? [])

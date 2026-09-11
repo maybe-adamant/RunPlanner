@@ -54,7 +54,7 @@ import {
   type ReachedTraitChildCheckpoint,
   type ReachedTraitOfferCandidateContact,
 } from '../../trait-settlement';
-import { rewardFinding } from '../../findings';
+import { addRewardFinding, rewardFinding } from '../../findings';
 import type { BossArcanaOutcome } from '../../model';
 import type { PlannerTimelineFacts } from '../../../timeline-facts';
 
@@ -145,6 +145,11 @@ export function applyEncounterSettlementTransition(inputs: {
   const room = inputs.room;
   const declaration = room === undefined ? undefined : catalog.rooms.byKey[room.gameName];
   const findings = new Map<string, FindingRegionEntry>();
+  const mergeTraitFindings = (entries: readonly FindingRegionEntry[]) => {
+    for (const entry of entries)
+      for (const evaluation of entry.levelResolutionEvaluations ?? [undefined])
+        addRewardFinding(findings, entry.finding, entry.atomicRegion, entry.chronology, evaluation);
+  };
   const roleFrontiers: AcquisitionRoleFrontier[] = [];
   const traitChildSettlements: {
     readonly checkpoint: ReachedTraitChildCheckpoint;
@@ -225,7 +230,6 @@ export function applyEncounterSettlementTransition(inputs: {
           null,
           event.sequence,
           'encounterCompleted',
-          findings,
           chronology(snapshot, room, event),
           'gorgonAthena',
           undefined,
@@ -233,6 +237,7 @@ export function applyEncounterSettlementTransition(inputs: {
           undefined,
           effect?.kind === 'gorgonAmulet' ? effect.providerKey : undefined,
         );
+        mergeTraitFindings(settled.findingEntries);
         recordChild(settled.blockedChild, room.origin);
         if (settled.candidateContact !== undefined)
           traitOfferCandidateContacts.push(settled.candidateContact);
@@ -255,7 +260,6 @@ export function applyEncounterSettlementTransition(inputs: {
           offered,
           event.sequence,
           'encounterCompleted',
-          findings,
           chronology(snapshot, room, event),
           'gorgonAthena',
           undefined,
@@ -263,6 +267,7 @@ export function applyEncounterSettlementTransition(inputs: {
         ),
       );
       for (const item of settled) {
+        mergeTraitFindings(item.findingEntries);
         if (item.candidateContact !== undefined)
           traitOfferCandidateContacts.push(item.candidateContact);
       }
@@ -906,7 +911,6 @@ export function applyEncounterSettlementTransition(inputs: {
         authored,
         event.sequence,
         'encounterCompleted',
-        findings,
         chronology(snapshot, room, event),
         'selection',
         undefined,
@@ -918,6 +922,7 @@ export function applyEncounterSettlementTransition(inputs: {
       ),
     );
     for (const item of settled) {
+      mergeTraitFindings(item.findingEntries);
       recordChild(item.blockedChild, room.origin);
       if (item.candidateContact !== undefined)
         traitOfferCandidateContacts.push(item.candidateContact);

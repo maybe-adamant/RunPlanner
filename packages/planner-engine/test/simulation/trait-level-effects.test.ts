@@ -286,7 +286,6 @@ describe('Supply Chain lifecycle', () => {
       offer,
       11,
       'encounterCompleted',
-      new Map(),
       undefined,
       'selection',
     );
@@ -297,7 +296,6 @@ describe('Supply Chain lifecycle', () => {
       offer,
       97,
       'encounterCompleted',
-      new Map(),
       undefined,
       'selection',
     );
@@ -325,7 +323,6 @@ describe('Supply Chain lifecycle', () => {
       selectedTraitOffer('Apollo', 'ApolloWeaponBoon'),
       1,
       'encounterCompleted',
-      new Map(),
       undefined,
       'selection',
     );
@@ -336,7 +333,6 @@ describe('Supply Chain lifecycle', () => {
       selectedTraitOffer('Icarus', 'SupplyDropBoon'),
       2,
       'encounterCompleted',
-      new Map(),
       undefined,
       'selection',
     );
@@ -347,7 +343,6 @@ describe('Supply Chain lifecycle', () => {
       selectedTraitOffer('Demeter', 'BoonGrowthBoon'),
       3,
       'encounterCompleted',
-      new Map(),
       undefined,
       'selection',
     );
@@ -520,7 +515,6 @@ describe('Supply Chain lifecycle', () => {
       }),
       0,
       'encounterCompleted',
-      new Map(),
       undefined,
       'selection',
     );
@@ -794,7 +788,6 @@ describe('targeted selected-trait child chronology', () => {
         selectedOptionKey: 'option1',
       });
       const initial = initializeTestRewardBranches()[0]!;
-      const findings = new Map();
       const settlement = settleEncounterTraitOffer(
         catalog,
         Object.freeze({ ...initial, traitHistory: before }),
@@ -802,7 +795,6 @@ describe('targeted selected-trait child chronology', () => {
         offer,
         before.events.length + 1,
         'encounterCompleted',
-        findings,
         undefined,
         'source',
       );
@@ -810,7 +802,7 @@ describe('targeted selected-trait child chronology', () => {
       expect(settlement.branch.traitHistory?.equippedTraits[selectedTraitKey]).toBeDefined();
       expect(settlement.blockedChild?.address).toEqual(expectedChild);
       expect(settlement.blockedChild?.branch).toBe(settlement.branch);
-      expect([...findings.values()].map((entry) => entry.finding)).toContainEqual(
+      expect(settlement.findingEntries.map((entry) => entry.finding)).toContainEqual(
         expect.objectContaining({ code: findingCode, origin: expectedChild }),
       );
       expect(settlement.branch.traitHistory?.events.at(-1)).not.toHaveProperty(

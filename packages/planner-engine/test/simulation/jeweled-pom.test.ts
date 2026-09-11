@@ -11,7 +11,7 @@ import {
 } from '@run-planner/engine/authored-project';
 
 import { applyJeweledPomEquipResult } from '../../src/simulation/keepsakes/branch-transitions';
-import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import {
   applyKeepsakeReplacement,
   createKeepsakeState,
@@ -66,7 +66,7 @@ describe('Jeweled Pom', () => {
       { kind: 'occurrence', occurrenceId: createOccurrenceId('jeweled-pom-later-trait') },
       'Combat',
     );
-    const boosted = processEncounterTraitOffer(
+    const boosted = settleEncounterTraitOffer(
       catalog,
       equipped,
       encounter,
@@ -74,9 +74,9 @@ describe('Jeweled Pom', () => {
       2,
       'encounterCompleted',
     );
-    expect(boosted.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(4);
+    expect(boosted.branch.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(4);
 
-    const sparseOrdinary = processEncounterTraitOffer(
+    const sparseOrdinary = settleEncounterTraitOffer(
       catalog,
       branch,
       encounter,
@@ -89,8 +89,10 @@ describe('Jeweled Pom', () => {
       2,
       'encounterCompleted',
     );
-    expect(sparseOrdinary.traitEvaluations?.at(-1)?.replacementComposition.legal).toBe(false);
-    expect(sparseOrdinary.traitHistory?.equippedTraits.ApolloWeaponBoon).toBeUndefined();
+    expect(sparseOrdinary.branch.traitEvaluations?.at(-1)?.replacementComposition.legal).toBe(
+      false,
+    );
+    expect(sparseOrdinary.branch.traitHistory?.equippedTraits.ApolloWeaponBoon).toBeUndefined();
   });
 
   it('retains its effect across neutral replacement and removes only its exact grant when Unfated', () => {
@@ -123,7 +125,7 @@ describe('Jeweled Pom', () => {
       { kind: 'occurrence', occurrenceId: createOccurrenceId('jeweled-pom-neutral-trait') },
       'Combat',
     );
-    const boosted = processEncounterTraitOffer(
+    const boosted = settleEncounterTraitOffer(
       catalog,
       Object.freeze({ ...equipped, keepsakes: neutral }),
       encounter,
@@ -131,7 +133,7 @@ describe('Jeweled Pom', () => {
       2,
       'encounterCompleted',
     );
-    expect(boosted.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(4);
+    expect(boosted.branch.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(4);
     const opposing = applyKeepsakeReplacement(
       catalog,
       neutral,
@@ -142,10 +144,10 @@ describe('Jeweled Pom', () => {
     expect(invalidateJeweledPom(opposing).jeweledPom?.active).toBe(false);
 
     const acquisitionIdentity = equipped.keepsakes.jeweledPom?.acquisitionIdentity;
-    if (acquisitionIdentity === undefined || boosted.traitHistory === undefined)
+    if (acquisitionIdentity === undefined || boosted.branch.traitHistory === undefined)
       throw new Error('expected exact Jeweled Pom acquisition identity');
     const cleaned = foldTraitHistoryEvents(catalog, [
-      ...boosted.traitHistory.events,
+      ...boosted.branch.traitHistory.events,
       Object.freeze({
         kind: 'traitRemoval' as const,
         owner: result,
