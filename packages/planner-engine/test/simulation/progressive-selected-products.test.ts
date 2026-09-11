@@ -11,6 +11,7 @@ import {
   createTraitAcquisitionTargetAddress,
 } from '@run-planner/engine/authored-project';
 import { authoringReadinessAt } from '@run-planner/engine/simulation';
+import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 
 const {
   EMPTY_RESOURCE_PLACEMENTS,
@@ -676,6 +677,55 @@ describe('progressive selected and blocked products', () => {
           }),
         ],
       },
+    });
+  });
+
+  it('retains a fresh three-option draft when an authored offer has mutually invalid rows', () => {
+    const trait = createTraitOfferAddress(
+      createIncomingRewardAddress(
+        oBiome,
+        createOccurrenceId('052399e3-429f-4f4b-aa50-c6a25fac0f60'),
+      ),
+      'source',
+    );
+    const project = applyProjectCommand(
+      loadSurfacePSteadyGrowthShrineFrontierCheckpoint(),
+      catalog,
+      {
+        kind: 'ReplaceTraitOffer',
+        trait,
+        value: Object.freeze({
+          kind: 'traits',
+          giverKey: 'Zeus',
+          options: Object.freeze([
+            Object.freeze({ traitKey: 'LightningDebuffGeneratorBoon', rarity: 'Rare' }),
+            Object.freeze({ traitKey: 'SpawnKillBoon', rarity: 'Legendary' }),
+            Object.freeze({ traitKey: 'SprintEchoBoon', rarity: 'Duo' }),
+          ] as const),
+          selectedOptionKey: 'option2',
+          rarificationActions: Object.freeze([]),
+        }),
+      },
+    );
+    const assembly = simulateProjectAssembly(catalog, project);
+    expect(assembly.evaluation.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'missingPrerequisite', origin: trait }),
+      ]),
+    );
+
+    const session = createPreparedProjectCandidateSession(catalog, assembly);
+    const draft = session.traitOfferStartingDraft(trait, 'Zeus');
+    expect(draft).toMatchObject({
+      kind: 'traits',
+      giverKey: 'Zeus',
+      options: expect.any(Array),
+    });
+    expect(draft?.options).toHaveLength(3);
+    if (draft === undefined) throw new Error('invalid offer has no recovery draft');
+    expect(session.evaluate({ kind: 'traitOffer', trait, value: draft })).toMatchObject({
+      kind: 'traitOffer',
+      result: { supported: true, findings: [] },
     });
   });
 

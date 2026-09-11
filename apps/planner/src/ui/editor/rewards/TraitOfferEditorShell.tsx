@@ -100,6 +100,14 @@ export function TraitOfferEditorShell({
     () => (value.kind === 'fallbackGold' ? interaction.traitsStartingDraft?.() : undefined),
     [interaction, value],
   );
+  const recoveryDraft =
+    support !== 'impossible'
+      ? undefined
+      : value.kind === 'traits'
+        ? interaction.traitsStartingDraft?.()
+        : value.kind === 'chaos'
+          ? interaction.chaos?.startingDraft()
+          : undefined;
   const nextTraitOfferDraft = useMemo(
     () => (value.kind === 'traits' ? interaction.nextOptionalHighTierDraft?.(value) : undefined),
     [interaction, value],
@@ -144,10 +152,7 @@ export function TraitOfferEditorShell({
   const fallbackGoldLoaded = fallbackGoldController.observe(fallbackGoldLoadable);
   const fallbackGoldSupport = candidateSupport(fallbackGoldLoaded.result?.[0]);
   useEffect(() => {
-    // Rarityless SpellDrop offers have a closed engine-owned shape. Their
-    // editor only needs the authored three rows, so opening it must not issue
-    // a speculative candidate query.
-    if (!spellOffer) controller.activate(loadable);
+    controller.activate(loadable);
     // Activation is deliberately tied to the opened dialog, not to render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadable]);
@@ -162,7 +167,7 @@ export function TraitOfferEditorShell({
     const nextLoadable = traitOfferLoadable(interaction, nextValue);
     setValue(nextValue);
     setLoadable(nextLoadable);
-    if (!spellOffer) controller.activate(nextLoadable);
+    controller.activate(nextLoadable);
   };
   const updateStoneResult = (
     offer: AuthoredTraitOfferTraits,
@@ -387,6 +392,11 @@ export function TraitOfferEditorShell({
           )}
           {offerMessage === undefined ? null : <p className="feedback-text">{offerMessage}</p>}
         </section>
+      )}
+      {recoveryDraft === undefined ? null : (
+        <button className="quiet-action" onClick={() => updateValue(recoveryDraft)} type="button">
+          Start over
+        </button>
       )}
       <button
         className="primary-action"
