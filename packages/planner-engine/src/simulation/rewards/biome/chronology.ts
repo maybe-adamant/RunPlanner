@@ -57,7 +57,7 @@ import {
   createTraitHistoryState,
   foldTraitHistoryEvents,
 } from '../../traits';
-import type { ReachedTranscendentEmbryoThreshold } from '../../keepsakes';
+import type { ReachedTranscendentEmbryoThreshold } from '../../keepsakes/trait-effects';
 import {
   createRunState,
   createRunStateDerivationCache,
@@ -137,15 +137,17 @@ import {
 import type { WellRefillRealization } from '../model';
 import {
   assessExperimentalHammerEquipResult,
-  applyEchoFigLeafReplay,
-  applyEchoCallingCardReplay,
-  applyEchoTimePieceReplay,
   applyEchoFigurineReplay,
   applyEchoConcaveStoneReplay,
-  applyEchoOlympianRewardPressureReplay,
-  applyTranscendentEmbryoEquipResult,
   assessTranscendentEmbryoBlessing,
-} from '../../keepsakes';
+} from '../../keepsakes/trait-effects';
+import { applyEchoFigLeafReplay } from '../../keepsakes/encounter-effects';
+import {
+  applyEchoCallingCardReplay,
+  applyEchoTimePieceReplay,
+  applyEchoOlympianRewardPressureReplay,
+} from '../../keepsakes/reward-effects';
+import { applyTranscendentEmbryoEquipResult } from '../../keepsakes/branch-transitions';
 import { createArcanaFearState } from '../../arcana-fear';
 import { createKeepsakeEquipResultAddress } from '../../../authored-project/addresses';
 import { createJudgmentArcanaCandidateArtifacts } from '../../arcana-fear';

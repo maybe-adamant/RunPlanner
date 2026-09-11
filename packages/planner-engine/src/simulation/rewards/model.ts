@@ -17,7 +17,7 @@ import type {
 } from '../traits';
 import type { RunStateAvailability, RunStateSnapshot } from './run-state';
 import type { ArcanaFearState } from '../arcana-fear';
-import type { KeepsakeState } from '../keepsakes';
+import type { KeepsakeState } from '../keepsakes/state';
 import type { EncounterPhaseAddress } from '../../authored-project/addresses';
 import type { TraitRarity } from '../../catalog-schema';
 import type { NemesisRandomEventAddress } from '../../authored-project/addresses';
@@ -59,7 +59,7 @@ export interface GorgonPhaseCandidateSupport {
   readonly origin: EncounterPhaseAddress;
   readonly supported: boolean;
   /** Encounter-start source level and one resolved deterministic Athena rarity. */
-  readonly rarityLevel?: import('../keepsakes').GorgonRarityLevel;
+  readonly rarityLevel?: import('../keepsakes/state').GorgonRarityLevel;
   readonly rarity?: TraitRarity;
   /** Sparse source override is lower precedence than a room override. */
   readonly boonRarityItemOverride?: import('../../catalog-schema').BoonRarityOverride;

@@ -16,12 +16,12 @@ import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import {
   applyKeepsakeReplacement,
-  attestGorgonBranchState,
   beginBiomeKeepsakeState,
   createKeepsakeState,
   keepsakeRankForEquip,
   keepsakeSelectionUnavailableReason,
-} from '../../src/simulation/keepsakes';
+} from '../../src/simulation/keepsakes/state';
+import { attestGorgonBranchState } from '../../src/simulation/keepsakes/encounter-effects';
 import { simulateProject } from '../../src/simulation/project';
 import {
   applyExperimentalHammerEquipResult,

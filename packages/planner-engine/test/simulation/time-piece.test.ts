@@ -13,11 +13,11 @@ import {
   type RewardKernelFacts,
 } from '@run-planner/engine/reward-kernel';
 
-import { createKeepsakeState } from '../../src/simulation/keepsakes';
+import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
 import {
   applyKeepsakeReplacement,
   refreshKeepsakeFatedStatus,
-} from '../../src/simulation/keepsakes';
+} from '../../src/simulation/keepsakes/state';
 import { createTestArcanaFearState } from '../support/arcana-fear';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';

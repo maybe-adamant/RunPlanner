@@ -41,7 +41,7 @@ import {
   publicRewardBranch,
 } from '../../src/simulation/rewards/branch-lifecycle';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
-import { createKeepsakeState } from '../../src/simulation/keepsakes';
+import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
 
 function route(project: ReturnType<typeof createCompleteFGProject>) {
   const value = project.route;

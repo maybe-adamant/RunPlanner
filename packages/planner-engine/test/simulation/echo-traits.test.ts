@@ -60,7 +60,7 @@ import {
   type TraitHistoryEvent,
 } from '../../src/simulation/traits';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
-import { createKeepsakeState } from '../../src/simulation/keepsakes';
+import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
 
 type JsonRecord = Record<string, unknown>;
 

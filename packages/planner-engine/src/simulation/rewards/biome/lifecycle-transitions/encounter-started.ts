@@ -8,7 +8,7 @@ import {
 import type { HistoryEvent } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { assessFigLeafSkip } from '../../../encounters';
-import { attestFigLeafBranchState, consumeFigLeafUse } from '../../../keepsakes';
+import { attestFigLeafBranchState, consumeFigLeafUse } from '../../../keepsakes/encounter-effects';
 import { advanceRewardBranches } from '../../branch-lifecycle';
 import type { RewardBranchState } from '../../branch-primitives';
 import { ownerRegion } from '../../../finding-regions';

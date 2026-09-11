@@ -15,14 +15,13 @@ import {
   type TraitOfferEvent,
 } from '../../src/simulation';
 import { applyTraitOfferForAcquisition } from '../../src/simulation/rewards/trait-settlement';
+import { advanceCurrentKeepsake, createKeepsakeState } from '../../src/simulation/keepsakes/state';
 import {
-  advanceCurrentKeepsake,
   applyEchoConcaveStoneReplay,
   concaveStoneProcSupport,
   concaveStoneResidualOptionKeys,
   consumeConcaveStone,
-  createKeepsakeState,
-} from '../../src/simulation/keepsakes';
+} from '../../src/simulation/keepsakes/trait-effects';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { describe, expect, it } from 'vitest';

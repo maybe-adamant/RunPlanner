@@ -2,7 +2,13 @@
 
 ## Status and objective
 
-Status: **Locked; Gates A-D complete. Gate E is next.**
+Status: **Locked; Gates A-D and E1 complete. E2 is next.**
+
+Gate E1 verification: full typecheck, 13 focused files / 269 tests, import
+graph guard, scoped lint and formatting passed. Independent review found no
+actionable findings. Main compared all 53 moved function bodies; only relative
+type-import paths differ. Shared state remains below effect families, and the
+old keepsakes module is removed. No fixtures changed.
 
 Gate D verification: full typecheck, 98 focused tests, and the engine lane
 (142 files / 1,836 tests) passed. Independent review found no actionable

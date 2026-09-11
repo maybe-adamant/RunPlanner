@@ -16,7 +16,10 @@ import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import type { CanonicalResolvedIncomingReward } from '../materialization';
 import { type FindingEvidence, type RewardGenerationFindingCode } from '../model';
 import { ownerRegion, type FindingChronology, type FindingRegionEntry } from '../finding-regions';
-import { olympianProviderForOffer, consumeOlympianProviderMaterialized } from '../keepsakes';
+import {
+  olympianProviderForOffer,
+  consumeOlympianProviderMaterialized,
+} from '../keepsakes/reward-effects';
 import {
   appendRewardEvent,
   freezeRecord,

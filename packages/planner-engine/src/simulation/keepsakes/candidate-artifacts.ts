@@ -7,14 +7,13 @@ import {
   type TranscendentEmbryoOutcomeAddress,
 } from '../../authored-project/addresses';
 import type { ArcanaFearState } from '../arcana-fear';
+import { type FatedStatus, type KeepsakeState } from './state';
 import {
   assessTranscendentEmbryoTransformation,
-  type FatedStatus,
-  type KeepsakeState,
   type PhialLifecycleStatus,
   type ReachedTranscendentEmbryoThreshold,
   type TranscendentEmbryoBlessingAssessment,
-} from '../keepsakes';
+} from './trait-effects';
 import type { TraitHistoryState } from '../traits';
 
 /** Exact rack frontier captured by the selected chronological reward walk. */

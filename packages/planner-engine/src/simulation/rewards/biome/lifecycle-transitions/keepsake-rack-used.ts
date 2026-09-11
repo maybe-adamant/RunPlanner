@@ -10,15 +10,17 @@ import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { ownerRegion } from '../../../finding-regions';
 import {
   applyKeepsakeReplacement,
+  jeweledPomEffectForKey,
+  keepsakeRankForEquip,
+  keepsakeSelectionUnavailableReason,
+} from '../../../keepsakes/state';
+import {
   assessExperimentalHammerEquipResult,
   assessJeweledPomEquipResult,
   invalidateJeweledPom,
-  jeweledPomEffectForKey,
-  applyTranscendentEmbryoEquipResult,
   assessTranscendentEmbryoBlessing,
-  keepsakeRankForEquip,
-  keepsakeSelectionUnavailableReason,
-} from '../../../keepsakes';
+} from '../../../keepsakes/trait-effects';
+import { applyTranscendentEmbryoEquipResult } from '../../../keepsakes/branch-transitions';
 import {
   attachTraitHistory,
   createTraitHistoryState,

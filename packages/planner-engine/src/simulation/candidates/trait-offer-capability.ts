@@ -45,12 +45,12 @@ import {
   boonRarityFactsForOffer,
 } from '../traits';
 import type { EchoLastRunBoonOutcome, TraitOfferContext } from '../trait-offer-domain';
+import { advanceCurrentKeepsake } from '../keepsakes/state';
 import {
-  advanceCurrentKeepsake,
   concaveStoneProcSupport,
   concaveStoneResidualOptionKeys,
-  evaluateCallingCardOffer,
-} from '../keepsakes';
+} from '../keepsakes/trait-effects';
+import { evaluateCallingCardOffer } from '../keepsakes/reward-effects';
 import type { AuthoredConcaveStoneResult } from '../../authored-project/traits';
 import { resolveTraitOfferOptionLevel } from '../trait-offer-levels';
 import { deriveBoonRarityValues } from '../boon-rarity';

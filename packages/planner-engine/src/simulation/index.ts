@@ -447,7 +447,7 @@ export {
   type ReachedTranscendentEmbryoThreshold,
   assessTranscendentEmbryoBlessing,
   assessTranscendentEmbryoTransformation,
-} from './keepsakes';
+} from './keepsakes/trait-effects';
 export {
   assessTraitOffer,
   assessTraitOfferComposition,

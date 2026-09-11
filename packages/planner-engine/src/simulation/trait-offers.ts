@@ -6,7 +6,7 @@ import type {
 } from '../authored-project/addresses';
 import type { AuthoredTraitOffer, AuthoredTraitOfferTraits } from '../authored-project/traits';
 import type { ArcanaFearState } from './arcana-fear';
-import type { KeepsakeState } from './keepsakes';
+import type { KeepsakeState } from './keepsakes/state';
 import type {
   EchoLastRunBoonOutcome,
   TraitAssessment,

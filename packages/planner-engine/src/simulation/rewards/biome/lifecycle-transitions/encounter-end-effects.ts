@@ -35,7 +35,7 @@ import {
   replaceTranscendentEmbryoBlessing,
   transcendentEmbryoBlessingKeys,
   type ReachedTranscendentEmbryoThreshold,
-} from '../../../keepsakes';
+} from '../../../keepsakes/trait-effects';
 import {
   createUnresolvedAcquisitionRewardState,
   type AuthoredTranscendentEmbryoOutcome,

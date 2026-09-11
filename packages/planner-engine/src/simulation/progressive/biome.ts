@@ -50,7 +50,7 @@ import {
 import type { BiomeRewardSimulation, RewardBranch } from '../rewards';
 import type { RewardProducerCandidateArtifacts } from '../rewards/producer-frontiers';
 import type { RoomLifecycleCandidateArtifacts } from '../rewards/lifecycle-artifacts';
-import { attestFigLeafBranchState, attestGorgonBranchState } from '../keepsakes';
+import { attestFigLeafBranchState, attestGorgonBranchState } from '../keepsakes/encounter-effects';
 import { attestPendingHermesSpellDrop } from '../hermes-shrine';
 import { attestTalentDropsClosed } from '../hex-progress';
 import {

@@ -2,11 +2,8 @@ import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
-import {
-  beginBiomeKeepsakeState,
-  consumeFigLeafUse,
-  createKeepsakeState,
-} from '../../src/simulation/keepsakes';
+import { beginBiomeKeepsakeState, createKeepsakeState } from '../../src/simulation/keepsakes/state';
+import { consumeFigLeafUse } from '../../src/simulation/keepsakes/encounter-effects';
 import {
   applyProjectCommand,
   createEncounterPhaseAddress,

@@ -12,13 +12,15 @@ import { describe, expect, it } from 'vitest';
 import { createTestArcanaFearState } from '../support/arcana-fear';
 import {
   applyEchoOlympianRewardPressureReplay,
-  applyKeepsakeReplacement,
-  advanceCurrentKeepsake,
   consumeOlympianProviderMaterialized,
-  createKeepsakeState,
   evaluateCallingCardOffer,
   olympianProviderForOffer,
-} from '../../src/simulation/keepsakes';
+} from '../../src/simulation/keepsakes/reward-effects';
+import {
+  applyKeepsakeReplacement,
+  advanceCurrentKeepsake,
+  createKeepsakeState,
+} from '../../src/simulation/keepsakes/state';
 import {
   consumeOlympianProviderForReachedOffer,
   processOfferGenerationCohort,

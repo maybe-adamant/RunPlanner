@@ -12,7 +12,7 @@ import {
   attestPendingGorgonRarityLevel,
   expirePendingGorgon,
   gorgonSourceRarityOverride,
-} from '../../../keepsakes';
+} from '../../../keepsakes/encounter-effects';
 import { deriveBoonRarityLedger } from '../../../boon-rarity';
 import { boonRarityFactsForOffer } from '../../../trait-offers';
 import { createTraitHistoryState } from '../../../traits';

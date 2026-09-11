@@ -26,9 +26,9 @@ import {
 import {
   assessGorgonChildSettlement,
   consumeGorgonAppearance,
-  refreshKeepsakeFatedStatus,
-  consumeFigurine,
-} from '../../../keepsakes';
+} from '../../../keepsakes/encounter-effects';
+import { refreshKeepsakeFatedStatus } from '../../../keepsakes/state';
+import { consumeFigurine } from '../../../keepsakes/trait-effects';
 import {
   attachTraitHistory,
   createTraitHistoryState,

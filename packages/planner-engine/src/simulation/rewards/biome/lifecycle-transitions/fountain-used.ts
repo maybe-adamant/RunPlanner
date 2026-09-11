@@ -5,7 +5,7 @@ import {
 } from '../../../../authored-project/addresses';
 import { ownerRegion } from '../../../finding-regions';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
-import { assessPhialTraitTargets, consumePhial } from '../../../keepsakes';
+import { assessPhialTraitTargets, consumePhial } from '../../../keepsakes/trait-effects';
 import {
   attachTraitHistory,
   createTraitHistoryState,

@@ -47,9 +47,8 @@ import {
   advanceExperimentalHammers,
   assessExperimentalHammerEquipResult,
   consumeFigurine,
-  createKeepsakeState,
-  type KeepsakeState,
-} from '../../src/simulation/keepsakes';
+} from '../../src/simulation/keepsakes/trait-effects';
+import { createKeepsakeState, type KeepsakeState } from '../../src/simulation/keepsakes/state';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';

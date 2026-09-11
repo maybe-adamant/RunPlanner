@@ -5,7 +5,7 @@ import {
 import type { CanonicalAuthoredRoom } from '../../simulation/materialization';
 import type { RunStateSnapshot } from '../../simulation/rewards/run-state';
 import type { TraitRarity } from '../../catalog-schema';
-import type { GorgonRarityLevel } from '../../simulation/keepsakes';
+import type { GorgonRarityLevel } from '../../simulation/keepsakes/state';
 import type {
   ExecutionOccurrence,
   ExecutionRunStateCount,

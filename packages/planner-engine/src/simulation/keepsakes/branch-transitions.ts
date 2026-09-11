@@ -9,15 +9,19 @@ import {
   attachTraitHistory,
   createTraitHistoryState,
   evaluateReachedTraitOffer,
+  foldTraitHistoryEvents,
   recordReachedTraitOffer,
 } from '../traits';
 import {
   assessExperimentalHammerEquipResult,
   assessJeweledPomEquipResult,
+  assessTranscendentEmbryoBlessing,
   equipExperimentalHammer,
   equipJeweledPom,
-  jeweledPomEffectForKey,
-} from '../keepsakes';
+  equipTranscendentEmbryo,
+  type TranscendentEmbryoBlessingContext,
+} from './trait-effects';
+import { jeweledPomEffectForKey } from './state';
 import { freezeRecord, type RewardBranchState } from '../rewards/branch-primitives';
 import { bankPathPoints, maybeAddGodSent } from '../hex-progress';
 
@@ -209,5 +213,52 @@ export function applyExperimentalHammerEquipResult(
       acquisitionIdentity,
     ),
     traitEvaluations: Object.freeze([...(branch.traitEvaluations ?? []), evaluation]),
+  });
+}
+
+export function applyTranscendentEmbryoEquipResult(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  equippedKeepsakeKey: string,
+  result: NonNullable<AuthoredKeepsakeEquipResults['transcendentEmbryo']>,
+  owner: SemanticAddress,
+  sequence: number,
+  origin: 'ordinary' | 'echo',
+  equippedRank: KeepsakeRank,
+  context: TranscendentEmbryoBlessingContext = {},
+): RewardBranchState {
+  const keepsake = catalog.keepsakes.byKey[equippedKeepsakeKey];
+  const effect = keepsake?.effect;
+  if (effect?.kind !== 'transcendentEmbryo') return branch;
+  const rarity = effect.blessingRarityByRank[equippedRank];
+  const before = branch.traitHistory ?? createTraitHistoryState();
+  if (!assessTranscendentEmbryoBlessing(catalog, result, before, rarity, context).legal)
+    return branch;
+  const acquisitionIdentity = `${semanticAddressKey(owner)}:${sequence}`;
+  const history = foldTraitHistoryEvents(catalog, [
+    ...before.events,
+    Object.freeze({
+      kind: 'directChaosBlessing' as const,
+      owner,
+      acquisitionRole: 'transcendentEmbryoEquip' as const,
+      sequence,
+      acquisitionPoint: origin === 'echo' ? 'biomeStart' : 'keepsakeEquip',
+      acquisitionIdentity,
+      blessingKey: result.blessingKey,
+      rarity,
+      blessingValues: result.blessingValues,
+    }),
+  ]);
+  return Object.freeze({
+    ...branch,
+    history: attachTraitHistory(branch.history, history),
+    traitHistory: history,
+    keepsakes: equipTranscendentEmbryo(
+      branch.keepsakes,
+      origin,
+      rarity,
+      result,
+      acquisitionIdentity,
+    ),
   });
 }

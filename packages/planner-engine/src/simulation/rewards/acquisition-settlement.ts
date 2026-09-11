@@ -58,7 +58,10 @@ import {
 import { assessAnvilResult, anvilTransformationEvent } from './anvil-settlement';
 
 import { artificerStatus, consumeRoomRewardForfeit, consumeArtificerUse } from '../arcana-fear';
-import { consumeOlympianProviderMaterialized, consumeTimePieceCharge } from '../keepsakes';
+import {
+  consumeOlympianProviderMaterialized,
+  consumeTimePieceCharge,
+} from '../keepsakes/reward-effects';
 import { bankPathPoints, settlePathScreen } from '../hex-progress';
 import {
   appendRewardEvent,

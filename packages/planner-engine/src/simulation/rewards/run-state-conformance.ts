@@ -4,7 +4,7 @@ import {
   type OccurrenceAddress,
 } from '../../authored-project/addresses';
 import type { RunStateSnapshot } from './run-state';
-import type { KeepsakeState } from '../keepsakes';
+import type { KeepsakeState } from '../keepsakes/state';
 
 export interface PendingKeepsakeEffects {
   readonly olympianSources: KeepsakeState['olympianSources'];

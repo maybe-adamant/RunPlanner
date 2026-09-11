@@ -47,7 +47,7 @@ import { createEncounterPhaseAddress } from '@run-planner/engine/authored-projec
 import {
   createKeepsakeState,
   keepsakeSelectionUnavailableReason,
-} from '../../src/simulation/keepsakes';
+} from '../../src/simulation/keepsakes/state';
 import { circeResolutionDomain } from '../../src/simulation/arcana-fear';
 
 type PostbossSelection = Extract<KeepsakeSelectionAddress, { readonly owner: object }>;

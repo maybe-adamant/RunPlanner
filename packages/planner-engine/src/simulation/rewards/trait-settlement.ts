@@ -1,5 +1,5 @@
 import type { Catalog } from '../../catalog-schema';
-import { evaluateCallingCardOffer } from '../keepsakes';
+import { evaluateCallingCardOffer } from '../keepsakes/reward-effects';
 import {
   createAllTogetherSetAddress,
   createCirceResolutionAddress,
@@ -55,13 +55,12 @@ import {
   promoteArcana,
   suppressFearVow,
 } from '../arcana-fear';
+import { advanceCurrentKeepsake, refreshKeepsakeFatedStatus } from '../keepsakes/state';
 import {
-  advanceCurrentKeepsake,
   concaveStoneProcSupport,
   concaveStoneResidualOptionKeys,
   consumeConcaveStone,
-  refreshKeepsakeFatedStatus,
-} from '../keepsakes';
+} from '../keepsakes/trait-effects';
 import type { RewardBranchState } from './branch-primitives';
 import type { TraitOfferOptionLevelResolution } from '../trait-offer-levels';
 import { bankPathPoints, installHexTree, maybeAddGodSent } from '../hex-progress';

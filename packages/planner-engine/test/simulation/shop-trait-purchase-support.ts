@@ -52,7 +52,7 @@ import {
   type TraitOfferEvent,
   type TraitHistoryState,
 } from '../../src/simulation/traits';
-import { createKeepsakeState } from '../../src/simulation/keepsakes';
+import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
 import { simulateProject } from '../../src/simulation';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures/underworld';
