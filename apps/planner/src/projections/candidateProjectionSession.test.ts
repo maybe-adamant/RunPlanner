@@ -1,10 +1,23 @@
 import { catalog } from '@run-planner/hades2-catalog';
-import { createBiomeAddress, createTargetAddress } from '@run-planner/engine/authored-project';
+import {
+  createBiomeAddress,
+  createTargetAddress,
+  createIncomingRewardAddress,
+  createTraitOfferAddress,
+  discoverAuthoredTraitCarrierChildren,
+  type AuthoredTraitOfferTraits,
+} from '@run-planner/engine/authored-project';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { describe, expect, it, vi } from 'vitest';
 
-import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
+import {
+  createGoldenFGHIProject,
+  goldenFBiome,
+  goldenFStartId,
+} from '@run-planner/test-fixtures/underworld';
 import { candidateSupport, createCandidateSessionFactory } from './candidateProjection';
+import { createCandidateProjectionCore } from './candidateProjectionSession';
+import { createTraitCandidateAdapters } from './candidateTraitAdapters';
 
 function fPlan(project: ReturnType<typeof createGoldenFGHIProject>) {
   const plan = project.route.biomes.find((biome) => biome.biomeKey === 'F');
@@ -13,6 +26,48 @@ function fPlan(project: ReturnType<typeof createGoldenFGHIProject>) {
 }
 
 describe('candidate projection session core', () => {
+  it('caches child domains by complete draft and child within the exact assembly', () => {
+    const project = createGoldenFGHIProject();
+    const assembly = simulateProjectAssembly(catalog, project);
+    const factory = createCandidateProjectionCore(catalog, {});
+    const core = { ...factory.bind(assembly) };
+    const evaluate = vi.spyOn(core, 'evaluate');
+    const session = createTraitCandidateAdapters(core);
+    const trait = createTraitOfferAddress(
+      createIncomingRewardAddress(goldenFBiome, goldenFStartId),
+      'source',
+    );
+    // Context-invalid drafts still own repairable children and use the same cache boundary.
+    const draft: AuthoredTraitOfferTraits = {
+      kind: 'traits',
+      giverKey: 'Hera',
+      options: [
+        { traitKey: 'AllElementalBoon', rarity: 'Legendary' },
+        { traitKey: 'HeraManaBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    };
+    const children = discoverAuthoredTraitCarrierChildren(catalog, trait, draft);
+    const earth = children[0]!;
+    const fire = children[1]!;
+    expect(evaluate).not.toHaveBeenCalled();
+    const first = session.traitCarrierChildDomain(trait, draft, earth);
+    expect(session.traitCarrierChildDomain(trait, draft, earth)).toBe(first);
+    expect(evaluate).toHaveBeenCalledTimes(1);
+    session.traitCarrierChildDomain(trait, draft, fire);
+    expect(evaluate).toHaveBeenCalledTimes(2);
+    const siblingEdit: AuthoredTraitOfferTraits = {
+      ...draft,
+      options: [draft.options[0], { traitKey: 'HeraSprintBoon', rarity: 'Common' }],
+    };
+    session.traitCarrierChildDomain(trait, siblingEdit, earth);
+    expect(evaluate).toHaveBeenCalledTimes(3);
+    const next = createTraitCandidateAdapters(
+      factory.bind(simulateProjectAssembly(catalog, project)),
+    );
+    expect(next.traitCarrierChildDomain(trait, draft, earth)).not.toBe(first);
+  });
+
   it('keeps one bound session and one cached query domain per assembly identity', () => {
     const project = createGoldenFGHIProject();
     const assembly = simulateProjectAssembly(catalog, project);

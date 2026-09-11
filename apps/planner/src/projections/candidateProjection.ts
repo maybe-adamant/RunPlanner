@@ -7,8 +7,6 @@ import {
   type CirceResolutionDomainEvaluation,
   type EchoPomTargetDomainEvaluation,
   type EchoLastRunBoonDomainEvaluation,
-  type AllTogetherSetDomainEvaluation,
-  type NaturalSelectionResultCandidateEvaluation,
   type RansomAssessmentCandidateEvaluation,
   type ConcaveStoneCandidateBranch,
   type EvaluatedSteadyGrowthOutcomeCandidate,
@@ -47,7 +45,6 @@ import {
   type SideRoomGeneration,
   type TraitOfferAddress,
   type LevelResolutionAddress,
-  type NaturalSelectionResultAddress,
   type SteadyGrowthOutcomeAddress,
   type TranscendentEmbryoOutcomeAddress,
   type FountainRarityOutcomeAddress,
@@ -252,12 +249,11 @@ export interface CandidateProjectionSession {
     optionKey: TraitOptionKey,
     variants: readonly AuthoredTraitOption[],
   ) => readonly CandidateOptionProjection<AuthoredTraitOption, CandidateProjectionEvaluation>[];
-  readonly traitAcquisitionTargets: (
+  readonly traitCarrierChildDomain: (
     owner: TraitOfferAddress,
     value: AuthoredTraitOffer,
-    optionKey: TraitOptionKey,
-    retainedTargetTraitKey?: string,
-  ) => readonly CandidateOptionProjection<string, CandidateProjectionEvaluation>[];
+    child: import('@run-planner/engine/authored-project').AuthoredTraitCarrierChild,
+  ) => import('@run-planner/engine/simulation').TraitCarrierChildDomainEvaluation;
   /** Typed exact Circe frontier from the prepared engine candidate session. */
   readonly circeResolution: (
     owner: TraitOfferAddress,
@@ -274,18 +270,6 @@ export interface CandidateProjectionSession {
     value: AuthoredTraitOffer,
     optionKey: TraitOptionKey,
   ) => EchoLastRunBoonDomainEvaluation;
-  readonly allTogetherSet: (
-    owner: TraitOfferAddress,
-    value: AuthoredTraitOffer,
-    optionKey: TraitOptionKey,
-    setKey: import('@run-planner/engine/catalog-schema').DirectTraitSetKey,
-  ) => AllTogetherSetDomainEvaluation;
-  /** Exact engine-backed Natural Selection child capability. */
-  readonly naturalSelectionResult: (
-    owner: NaturalSelectionResultAddress,
-    value: AuthoredTraitOffer,
-    targets: readonly string[] | undefined,
-  ) => NaturalSelectionResultCandidateEvaluation;
   readonly ransomAssessment: (
     owner: TraitOfferAddress,
     value: AuthoredTraitOffer,

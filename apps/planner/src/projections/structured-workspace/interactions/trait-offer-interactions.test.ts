@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import * as support from '@planner-test/support/structured-workspace/interaction-binding.test-support';
+import { candidateSupport } from '@planner/projections/candidateProjection';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import { optionIndex } from '@run-planner/engine/authored-project';
 import type {
@@ -463,7 +464,7 @@ describe('trait-offer-interactions', () => {
   });
 
   it('binds four active All Together children and keeps retained detail dormant off-selection', () => {
-    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
     const trait = createTraitOfferAddress(reward, 'source');
     const authored: AuthoredTraitOfferTraits = Object.freeze({
       kind: 'traits',
@@ -498,6 +499,45 @@ describe('trait-offer-interactions', () => {
     const baseSession = createCandidateSessionFactory(catalog).bind(
       simulateProjectAssembly(catalog, project),
     );
+    const real = bind(project, 'Underworld', 'F', undefined, baseSession);
+    const realInteraction = real.interactions.traitOffers.get(semanticAddressKey(trait));
+    if (realInteraction === undefined) throw new Error('real All Together interaction is missing');
+    const realOffer = realInteraction.load(authored)[0];
+    if (realOffer === undefined) throw new Error('real All Together outer candidate is missing');
+    expect(candidateSupport(realOffer)).toBe('impossible');
+    const realSets = realInteraction
+      .optionDomain(authored, 'option1')
+      .children.filter(
+        (
+          child,
+        ): child is Extract<
+          typeof child,
+          { readonly child: { readonly kind: 'allTogetherSet' } }
+        > => child.child.kind === 'allTogetherSet',
+      );
+    expect(realSets.map((set) => set.child.address)).toEqual([
+      createAllTogetherSetAddress(trait, 'option1', 'earth'),
+      createAllTogetherSetAddress(trait, 'option1', 'fire'),
+      createAllTogetherSetAddress(trait, 'option1', 'air'),
+      createAllTogetherSetAddress(trait, 'option1', 'water'),
+    ]);
+    const realEarth = realSets[0];
+    if (realEarth === undefined) throw new Error('real earth set is missing');
+    expect(realEarth.forOffer(authored).load()).toBeDefined();
+    const repaired = realEarth.update(authored, {
+      earth: 'ElementalOlympianDamageBoon',
+      fire: 'ElementalBaseDamageBoon',
+      air: 'ElementalDamageFloorBoon',
+      water: 'ElementalHealthBoon',
+    });
+    expect(repaired.options[0]?.allTogetherResult?.earth).toBe('ElementalOlympianDamageBoon');
+    expect(candidateSupport(realInteraction.load(repaired)[0])).toBe('impossible');
+    expect(
+      realInteraction
+        .optionDomain(repaired, 'option1')
+        .children.filter((child) => child.child.kind === 'allTogetherSet')
+        .map((child) => child.child.address),
+    ).toEqual(realSets.map((set) => set.child.address));
     const allTogetherSet = vi.fn(
       (
         _owner: unknown,
@@ -528,17 +568,38 @@ describe('trait-offer-interactions', () => {
         },
       }),
     );
-    const candidateSession = Object.freeze({ ...baseSession, allTogetherSet });
+    const candidateSession = Object.freeze({
+      ...baseSession,
+      traitCarrierChildDomain: (
+        _owner: unknown,
+        _value: unknown,
+        child: { readonly kind: string; readonly setKey?: 'earth' | 'fire' | 'air' | 'water' },
+      ) =>
+        child.kind === 'allTogetherSet' && child.setKey !== undefined
+          ? allTogetherSet(undefined, undefined, undefined, child.setKey)
+          : baseSession.traitCarrierChildDomain(_owner as never, _value as never, child as never),
+    });
     const active = bind(project, 'Underworld', 'F', undefined, candidateSession);
     const interaction = active.interactions.traitOffers.get(semanticAddressKey(trait));
     if (interaction === undefined) throw new Error('All Together interaction is missing');
-    const sets = interaction.optionDomain(authored, 'option1').allTogetherSets;
-    expect(sets?.map((set) => set.control.setKey)).toEqual(['earth', 'fire', 'air', 'water']);
+    const sets = interaction
+      .optionDomain(authored, 'option1')
+      .children.filter(
+        (
+          child,
+        ): child is Extract<
+          typeof child,
+          { readonly child: { readonly kind: 'allTogetherSet' } }
+        > => child.child.kind === 'allTogetherSet',
+      );
+    expect(sets.map((set) => set.child.setKey)).toEqual(['earth', 'fire', 'air', 'water']);
     const earth = sets?.[0];
-    expect(earth?.control.address).toEqual(createAllTogetherSetAddress(trait, 'option1', 'earth'));
+    if (earth === undefined || earth.child.kind !== 'allTogetherSet')
+      throw new Error('earth set missing');
+    expect(earth.child.address).toEqual(createAllTogetherSetAddress(trait, 'option1', 'earth'));
     expect(
       earth
-        ?.forOffer(authored)
+        .forOffer(authored)
         .load()
         ?.picker.sections.flatMap((section) => section.items),
     ).toEqual([
@@ -546,7 +607,7 @@ describe('trait-offer-interactions', () => {
       expect.objectContaining({ label: 'Rallying Cry', value: 'ElementalOlympianDamageBoon' }),
     ]);
     expect(
-      active.assembly.preliminaryFocusDestinations.has(semanticAddressKey(earth!.control.address)),
+      active.assembly.preliminaryFocusDestinations.has(semanticAddressKey(earth.child.address)),
     ).toBe(true);
 
     const dormantProject = applyProjectCommand(project, catalog, {
@@ -558,8 +619,10 @@ describe('trait-offer-interactions', () => {
     const dormantInteraction = dormant.interactions.traitOffers.get(semanticAddressKey(trait));
     if (dormantInteraction?.value?.kind !== 'traits') throw new Error('dormant offer is missing');
     expect(
-      dormantInteraction.optionDomain(dormantInteraction.value, 'option1').allTogetherSets,
-    ).toBeUndefined();
+      dormantInteraction
+        .optionDomain(dormantInteraction.value, 'option1')
+        .children.some((child) => child.child.kind === 'allTogetherSet'),
+    ).toBe(false);
     expect(dormantInteraction.value.options[0]?.allTogetherResult).toEqual(
       authored.options[0]?.allTogetherResult,
     );
@@ -598,7 +661,7 @@ describe('trait-offer-interactions', () => {
     );
     const candidateSession = Object.freeze({
       ...baseCandidateSession,
-      naturalSelectionResult: () =>
+      traitCarrierChildDomain: () =>
         Object.freeze({
           kind: 'naturalSelectionResult' as const,
           result: Object.freeze({
@@ -613,9 +676,18 @@ describe('trait-offer-interactions', () => {
     const bound = bind(project, 'Underworld', 'F', undefined, candidateSession);
     const interaction = bound.interactions.traitOffers.get(semanticAddressKey(trait));
     if (interaction === undefined) throw new Error('Natural Selection interaction is missing');
-    const natural = interaction.optionDomain(value, 'option1').naturalSelection;
+    const natural = interaction
+      .optionDomain(value, 'option1')
+      .children.find(
+        (
+          child,
+        ): child is Extract<
+          typeof child,
+          { readonly child: { readonly kind: 'naturalSelectionResult' } }
+        > => child.child.kind === 'naturalSelectionResult',
+      );
     if (natural === undefined) throw new Error('Natural Selection child is missing');
-    expect(natural.control.address).toEqual(createNaturalSelectionResultAddress(trait, 'option1'));
+    expect(natural.child.address).toEqual(createNaturalSelectionResultAddress(trait, 'option1'));
     const domain = natural.forOffer(value).load();
     expect(domain?.complete).toBe(false);
     const retained = natural.forOffer(value, 'HestiaWeaponBoon').load();
@@ -668,7 +740,11 @@ describe('trait-offer-interactions', () => {
       selectedOptionKey: 'option1',
       rarificationActions: Object.freeze([]),
     });
-    expect(interaction.optionDomain(draft, 'option1').naturalSelection?.control).toMatchObject({
+    expect(
+      interaction
+        .optionDomain(draft, 'option1')
+        .children.find((child) => child.child.kind === 'naturalSelectionResult')?.child,
+    ).toMatchObject({
       address: createNaturalSelectionResultAddress(trait, 'option1'),
       optionKey: 'option1',
       slotCount: 8,
@@ -946,18 +1022,28 @@ describe('trait-offer-interactions', () => {
     );
     const target = Object.freeze({
       evaluation: Object.freeze({
-        kind: 'traitAcquisitionTarget' as const,
+        kind: 'traitAcquisitionTargetDomain' as const,
         result: Object.freeze({
-          branchSupport: Object.freeze([true]),
-          findings: Object.freeze([]),
-          supported: true,
-          traitKey: 'ApolloCastBoon',
+          sourceTraitKey: 'BoonDecayBoon',
+          candidates: Object.freeze([
+            Object.freeze({
+              kind: 'traitAcquisitionTarget' as const,
+              result: Object.freeze({
+                branchSupport: Object.freeze([true]),
+                findings: Object.freeze([]),
+                supported: true,
+                traitKey: 'ApolloCastBoon',
+              }),
+            }),
+          ]),
         }),
       }),
-      value: 'ApolloCastBoon',
     });
-    const traitAcquisitionTargets = vi.fn(() => Object.freeze([target]));
-    const candidateSession = Object.freeze({ ...baseSession, traitAcquisitionTargets });
+    const traitCarrierChildDomain = vi.fn(() => target.evaluation);
+    const candidateSession = Object.freeze({
+      ...baseSession,
+      traitCarrierChildDomain,
+    }) as unknown as CandidateProjectionSession;
     const { interactions } = bind(project, 'Underworld', 'F', undefined, candidateSession);
     const interaction = [...interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind !== 'hammer',
@@ -975,29 +1061,34 @@ describe('trait-offer-interactions', () => {
     });
 
     const domain = interaction.optionDomain(draft, 'option1');
-    expect(domain.hasTargetPicker).toBe(true);
-    expect(domain.traitAcquisitionTarget?.address).toMatchObject({
+    const targetChild = domain.children.find(
+      (
+        child,
+      ): child is Extract<
+        typeof child,
+        { readonly child: { readonly kind: 'traitAcquisitionTarget' } }
+      > => child.child.kind === 'traitAcquisitionTarget',
+    );
+    if (targetChild === undefined) throw new Error('target child is missing');
+    expect(targetChild.child.address).toMatchObject({
       kind: 'traitAcquisitionTarget',
       trait: interaction.owner,
       optionKey: 'option1',
     });
-    expect(traitAcquisitionTargets).not.toHaveBeenCalled();
-    const projected = await domain.load();
-    expect(traitAcquisitionTargets).toHaveBeenCalledWith(
+    expect(traitCarrierChildDomain).not.toHaveBeenCalled();
+    const projected = await targetChild.forOffer(draft).load();
+    expect(traitCarrierChildDomain).toHaveBeenCalledWith(
       interaction.owner,
       draft,
-      'option1',
-      undefined,
+      targetChild.child,
     );
     expect(
-      projected.targetPicker?.sections.flatMap((section) =>
+      projected?.targetPicker.sections.flatMap((section) =>
         section.items.map((item) => item.value),
       ),
     ).toEqual(['ApolloCastBoon']);
-
     const dormant = interaction.optionDomain(draft, 'option2');
-    expect(dormant.hasTargetPicker).toBe(false);
-    expect(dormant.traitAcquisitionTarget).toBeUndefined();
+    expect(dormant.children).toEqual([]);
   });
 
   it('bounds the largest declared Hammer domain to one focused query batch', async () => {

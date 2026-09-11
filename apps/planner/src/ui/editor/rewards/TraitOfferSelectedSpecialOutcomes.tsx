@@ -11,11 +11,10 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
 import {
   type WorkspaceAllTogetherSetDomain,
-  type WorkspaceAllTogetherSetInteraction,
   type WorkspaceConcaveStoneDomain,
   type WorkspaceConcaveStoneInteraction,
   type WorkspaceNaturalSelectionDomain,
-  type WorkspaceNaturalSelectionInteraction,
+  type WorkspaceTraitCarrierChildInteraction,
   type WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
@@ -165,7 +164,10 @@ function AllTogetherSetPicker({
   onCancel,
   onSelect,
 }: {
-  readonly interaction: WorkspaceAllTogetherSetInteraction;
+  readonly interaction: Extract<
+    WorkspaceTraitCarrierChildInteraction,
+    { readonly child: { readonly kind: 'allTogetherSet' } }
+  >;
   readonly offer: AuthoredTraitOfferTraits;
   readonly onCancel: () => void;
   readonly onSelect: (value: string | null, label: string) => void;
@@ -179,9 +181,9 @@ function AllTogetherSetPicker({
   return (
     <ContextualPicker
       cancelLabel="Cancel"
-      choiceLabel={`${interaction.control.setKey[0]!.toUpperCase()}${interaction.control.setKey.slice(1)} grant`}
+      choiceLabel={`${interaction.child.setKey[0]!.toUpperCase()}${interaction.child.setKey.slice(1)} grant`}
       closeOnSelect={false}
-      id={`${semanticOwnerControlElementId(interaction.control.address)}-picker`}
+      id={`${semanticOwnerControlElementId(interaction.child.address)}-picker`}
       label="Grant"
       loading={loaded.pending}
       model={loaded.result?.picker ?? emptyPicker}
@@ -210,7 +212,10 @@ function AllTogetherOutcomeEditor({
   optionIndex,
   onSelect,
 }: {
-  readonly interactions: readonly WorkspaceAllTogetherSetInteraction[];
+  readonly interactions: readonly Extract<
+    WorkspaceTraitCarrierChildInteraction,
+    { readonly child: { readonly kind: 'allTogetherSet' } }
+  >[];
   readonly offer: AuthoredTraitOfferTraits;
   readonly optionIndex: number;
   readonly onSelect: (result: AuthoredAllTogetherResult) => void;
@@ -221,9 +226,16 @@ function AllTogetherOutcomeEditor({
     Object.freeze(
       Object.fromEntries(
         interactions.flatMap((interaction) =>
-          interaction.control.valueLabel === undefined
+          interaction.child.value === undefined
             ? []
-            : [[interaction.control.setKey, interaction.control.valueLabel]],
+            : [
+                [
+                  interaction.child.setKey,
+                  interaction.child.value === null
+                    ? 'No grant (set exhausted)'
+                    : interaction.child.value,
+                ],
+              ],
         ),
       ),
     ) as Partial<Record<DirectTraitSetKey, string>>;
@@ -233,11 +245,11 @@ function AllTogetherOutcomeEditor({
   const [draftLabels, setDraftLabels] = useState(labelsForControls);
   const [activeIndex, setActiveIndex] = useState<number>();
   const activeInteraction = activeIndex === undefined ? undefined : interactions[activeIndex];
-  const activeSetKey = activeInteraction?.control.setKey;
+  const activeSetKey = activeInteraction?.child.setKey;
   const complete =
     interactions.length > 0 &&
     interactions.every((interaction) =>
-      Object.prototype.hasOwnProperty.call(draft, interaction.control.setKey),
+      Object.prototype.hasOwnProperty.call(draft, interaction.child.setKey),
     );
   const begin = (setIndex = 0) => {
     setDraft(option?.allTogetherResult ?? Object.freeze({}));
@@ -255,7 +267,7 @@ function AllTogetherOutcomeEditor({
     setDraft(next);
     setDraftLabels((current) => Object.freeze({ ...current, [activeSetKey]: label }));
     const nextMissing = interactions.findIndex(
-      (interaction) => !Object.prototype.hasOwnProperty.call(next, interaction.control.setKey),
+      (interaction) => !Object.prototype.hasOwnProperty.call(next, interaction.child.setKey),
     );
     if (nextMissing < 0) {
       setActiveIndex(undefined);
@@ -271,7 +283,7 @@ function AllTogetherOutcomeEditor({
       legend="Elemental grants"
       onBegin={begin}
       rows={interactions.map((interaction) => {
-        const key = interaction.control.setKey;
+        const key = interaction.child.setKey;
         const value = draft[key];
         const label = Object.prototype.hasOwnProperty.call(draft, key)
           ? (draftLabels[key] ?? (value === null ? 'No grant' : 'Configured'))
@@ -279,8 +291,8 @@ function AllTogetherOutcomeEditor({
         return {
           key,
           label: `${key[0]!.toUpperCase() + key.slice(1)}: ${label}`,
-          controlId: semanticOwnerControlElementId(interaction.control.address),
-          findingTarget: findingTarget(interaction.control.address),
+          controlId: semanticOwnerControlElementId(interaction.child.address),
+          findingTarget: findingTarget(interaction.child.address),
         };
       })}
       startLabel="Choose all grants"
@@ -303,7 +315,10 @@ function NaturalSelectionOutcomeEditor({
   optionIndex,
   onSelect,
 }: {
-  readonly interaction: WorkspaceNaturalSelectionInteraction;
+  readonly interaction: Extract<
+    WorkspaceTraitCarrierChildInteraction,
+    { readonly child: { readonly kind: 'naturalSelectionResult' } }
+  >;
   readonly offer: AuthoredTraitOfferTraits;
   readonly optionIndex: number;
   readonly onSelect: (targets: readonly string[]) => void;
@@ -340,7 +355,7 @@ function NaturalSelectionOutcomeEditor({
     controller.activate(loadable);
   }, [controller, loadable]);
   const domain = loaded.result;
-  const slotCount = interaction.control.slotCount;
+  const slotCount = interaction.child.slotCount;
   const complete = domain?.complete === true;
   const begin = (slotIndex = draft.length) => {
     const authored = option?.naturalSelectionTargets ?? Object.freeze([]);
@@ -398,7 +413,7 @@ function NaturalSelectionOutcomeEditor({
         <p className="trait-selected-outcome-detail">Repeated targets: {repeated.join(', ')}</p>
       )}
       <CompoundOutcomeEditor
-        findingTarget={findingTarget(interaction.control.address)}
+        findingTarget={findingTarget(interaction.child.address)}
         activeIndex={activeIndex}
         complete={complete}
         legend="Natural Selection targets"
@@ -415,7 +430,7 @@ function NaturalSelectionOutcomeEditor({
             cancelLabel="Cancel"
             choiceLabel={`Target ${Math.min((activeIndex ?? 0) + 1, slotCount)} of ${slotCount}`}
             closeOnSelect={false}
-            id={`${semanticOwnerControlElementId(interaction.control.address)}-picker`}
+            id={`${semanticOwnerControlElementId(interaction.child.address)}-picker`}
             label="Trait"
             model={domain.picker}
             onOpenChange={(open) => {
@@ -435,25 +450,21 @@ export function TraitOfferSelectedSpecialOutcomes({
   interaction,
   offer,
   optionIndex,
-  option,
-  allTogetherSets,
+  carrierChildren,
   concaveStone,
-  naturalSelection,
   onUpdate,
   onConcaveStoneResult,
 }: {
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly offer: AuthoredTraitOfferTraits;
   readonly optionIndex: number;
-  readonly option: AuthoredTraitOfferTraits['options'][number];
-  readonly allTogetherSets: readonly WorkspaceAllTogetherSetInteraction[] | undefined;
+  readonly carrierChildren: readonly WorkspaceTraitCarrierChildInteraction[];
   readonly concaveStone:
     | {
         readonly interaction: WorkspaceConcaveStoneInteraction;
         readonly domain: WorkspaceConcaveStoneDomain;
       }
     | undefined;
-  readonly naturalSelection: WorkspaceNaturalSelectionInteraction | undefined;
   readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
   readonly onConcaveStoneResult?: (
     offer: AuthoredTraitOfferTraits,
@@ -461,15 +472,31 @@ export function TraitOfferSelectedSpecialOutcomes({
   ) => void;
 }) {
   const ransomAssessment = interaction.ransomAssessment(offer);
+  const allTogetherSets = carrierChildren.filter(
+    (
+      child,
+    ): child is Extract<
+      WorkspaceTraitCarrierChildInteraction,
+      { readonly child: { readonly kind: 'allTogetherSet' } }
+    > => child.child.kind === 'allTogetherSet',
+  );
+  const naturalSelection = carrierChildren.find(
+    (
+      child,
+    ): child is Extract<
+      WorkspaceTraitCarrierChildInteraction,
+      { readonly child: { readonly kind: 'naturalSelectionResult' } }
+    > => child.child.kind === 'naturalSelectionResult',
+  );
   return (
     <>
-      {allTogetherSets === undefined ? null : (
+      {allTogetherSets.length === 0 ? null : (
         <AllTogetherOutcomeEditor
           interactions={allTogetherSets}
           offer={offer}
           optionIndex={optionIndex}
           onSelect={(allTogetherResult) =>
-            onUpdate(replaceTraitOfferOption(offer, optionIndex, { ...option, allTogetherResult }))
+            onUpdate(allTogetherSets[0]!.update(offer, allTogetherResult))
           }
         />
       )}
@@ -480,10 +507,9 @@ export function TraitOfferSelectedSpecialOutcomes({
           optionIndex={optionIndex}
           onSelect={(targets) =>
             onUpdate(
-              replaceTraitOfferOption(
+              naturalSelection.update(
                 offer,
-                optionIndex,
-                naturalSelectionOptionWithTargets(option, targets),
+                targets as import('@run-planner/engine/authored-project').OneToEight<string>,
               ),
             )
           }

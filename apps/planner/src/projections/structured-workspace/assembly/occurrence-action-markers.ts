@@ -8,13 +8,11 @@ import type {
 export function traitOfferMarkers(trait: WorkspaceTraitOfferControl): readonly WorkspaceMarker[] {
   return Object.freeze([
     trait.marker,
-    ...(trait.traitAcquisitionTarget === undefined ? [] : [trait.traitAcquisitionTarget.marker]),
+    ...trait.children.map((child) => child.marker),
     ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
     ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
     ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker]),
     ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker]),
-    ...(trait.allTogetherSets ?? []).map((set) => set.marker),
-    ...(trait.naturalSelection === undefined ? [] : [trait.naturalSelection.marker]),
   ]);
 }
 

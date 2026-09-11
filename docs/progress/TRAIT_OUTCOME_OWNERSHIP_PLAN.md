@@ -2,7 +2,7 @@
 
 ## Status and objective
 
-Status: locked; Gate A complete and independently reviewed. Gate B is next.
+Status: locked; Gates A and B complete and independently reviewed. Gate C is next.
 Base: `7e0237f6` (clean production worktree when drafted).
 Evidence: `docs/investigations/TRAIT_OUTCOME_TRANSPORT_AND_SETTLEMENT.md`.
 
@@ -247,6 +247,24 @@ and reopen. Include All Together invalid-outer repair and a Natural Selection
 ordered-prefix witness. Retain existing focused-query work-count tests.
 
 Review and commit only when these families are complete vertical slices.
+
+Delivered: targeted acquisition, All Together, and Natural Selection now share
+engine-owned structural discovery/update and a lazy typed child query. Both
+persisted workspace and local drafts carry the same child collection through
+markers, bindings, completion, and specialized editors. The displaced parallel
+fields and application candidate forwarders are removed. Remaining families
+retain their existing transport until Gate C.
+
+Verification: real targeted repair/save/reopen and invalid-outer All Together
+repair witnesses pass, alongside Natural Selection prefix coverage. Final
+binding/editor/runtime-import checks passed (28 tests); structural ownership
+(4), candidate cache (2), and execution compiler (67) checks also passed.
+The other affected editor/navigation suites passed during implementation.
+Workspace and fixture typechecking, changed-file ESLint/Prettier, and diff
+checks passed. Review findings about cache identity, precise query overloads,
+and invalid-outer acceptance were addressed; the runtime import check also
+caught and verified removal of a new dispatcher cycle. No schema, protocol,
+catalog, or JSON fixture changes. Full repository closure remains Gate D.
 
 ### C — Nested and offer-owned outcomes; remove remaining parallel transport
 

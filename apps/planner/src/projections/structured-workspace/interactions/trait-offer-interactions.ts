@@ -1,15 +1,14 @@
 import {
-  createAllTogetherSetAddress,
   createCirceResolutionAddress,
   createEchoLastRunBoonAddress,
   createEchoPomTargetAddress,
-  createNaturalSelectionResultAddress,
-  createTraitAcquisitionTargetAddress,
   optionIndex,
   semanticAddressKey,
   createDefaultAuthoredHexTree,
   transitionAuthoredHexTreeLayout,
   chaosOperandAuthoringValues,
+  discoverAuthoredTraitCarrierChildren,
+  updateAuthoredTraitCarrierChild,
 } from '@run-planner/engine/authored-project';
 import type {
   AuthoredCirceResolution,
@@ -41,7 +40,6 @@ import {
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type {
   WorkspaceConcaveStoneInteraction,
-  WorkspaceNaturalSelectionInteraction,
   WorkspaceRewardControl,
   WorkspaceRejectedBlockRule,
   WorkspaceTraitOfferControl,
@@ -50,6 +48,7 @@ import type {
   WorkspaceChaosOfferInteraction,
   WorkspaceHexTreeInteraction,
   WorkspaceEchoLastRunBoonDraftRow,
+  WorkspaceTraitCarrierChildInteraction,
 } from '../contract';
 
 function chaosDomainFromCandidate(
@@ -391,18 +390,17 @@ export function bindTraitOfferInteractions(input: {
       if (existing !== undefined) return existing;
       const option = value.options[optionIndex(optionKey)];
       const declaration = option === undefined ? undefined : catalog.traits.byKey[option.traitKey];
-      const hasTargetPicker =
-        option !== undefined &&
-        value.selectedOptionKey === optionKey &&
-        declaration?.targetedAcquisition !== undefined;
-      const traitAcquisitionTargetControl = hasTargetPicker
-        ? Object.freeze({
-            address: createTraitAcquisitionTargetAddress(control.address, optionKey),
-            marker: control.traitAcquisitionTarget?.marker ?? control.marker,
-            optionKey,
-            ...(option?.targetTraitKey === undefined ? {} : { value: option.targetTraitKey }),
-          })
-        : undefined;
+      const carrierChildren = Object.freeze(
+        discoverAuthoredTraitCarrierChildren(catalog, control.address, value)
+          .filter((child) => child.optionKey === optionKey)
+          .map((child) => {
+            const persisted = control.children.find(
+              (candidate) =>
+                semanticAddressKey(candidate.address) === semanticAddressKey(child.address),
+            );
+            return Object.freeze({ ...child, marker: persisted?.marker ?? control.marker });
+          }),
+      );
       const circeControl =
         value.selectedOptionKey === optionKey && declaration?.selectedDisposition.kind === 'circe'
           ? Object.freeze({
@@ -439,51 +437,9 @@ export function bindTraitOfferInteractions(input: {
               ...(option?.echoLastRunBoon === undefined ? {} : { value: option.echoLastRunBoon }),
             })
           : undefined;
-      const allTogetherSetControls =
-        value.selectedOptionKey === optionKey &&
-        declaration?.selectedDisposition.kind === 'directTraitSets'
-          ? Object.freeze(
-              declaration.selectedDisposition.sets.map((set) => {
-                const address = createAllTogetherSetAddress(control.address, optionKey, set.key);
-                const persisted = control.allTogetherSets?.find(
-                  (candidate) => candidate.setKey === set.key,
-                );
-                return Object.freeze({
-                  address,
-                  marker: persisted?.marker ?? control.marker,
-                  optionKey,
-                  setKey: set.key,
-                  ...(option?.allTogetherResult === undefined
-                    ? {}
-                    : {
-                        value: option.allTogetherResult[set.key],
-                        valueLabel:
-                          option.allTogetherResult[set.key] === null
-                            ? 'No grant (set exhausted)'
-                            : (catalog.traits.byKey[option.allTogetherResult[set.key]!]?.label ??
-                              option.allTogetherResult[set.key]!),
-                      }),
-                });
-              }),
-            )
-          : undefined;
-      const naturalSelectionControl =
-        value.selectedOptionKey === optionKey &&
-        declaration?.selectedDisposition.kind === 'naturalSelection'
-          ? Object.freeze({
-              address: createNaturalSelectionResultAddress(control.address, optionKey),
-              marker: control.naturalSelection?.marker ?? control.marker,
-              optionKey,
-              slotCount: declaration.selectedDisposition.levelCount,
-            })
-          : undefined;
       let projected: ReturnType<typeof traitDomain.project> | undefined;
       const hexTree = hexTreeInteraction(value, optionKey);
       const bound = Object.freeze({
-        hasTargetPicker,
-        ...(traitAcquisitionTargetControl === undefined
-          ? {}
-          : { traitAcquisitionTarget: traitAcquisitionTargetControl }),
         ...(circeControl === undefined
           ? {}
           : {
@@ -865,86 +821,144 @@ export function bindTraitOfferInteractions(input: {
                   }),
               }),
             }),
-        ...(allTogetherSetControls === undefined
-          ? {}
-          : {
-              allTogetherSets: Object.freeze(
-                allTogetherSetControls.map((setControl) =>
-                  Object.freeze({
-                    control: setControl,
-                    forOffer: (offer: AuthoredTraitOfferTraits) =>
-                      Object.freeze({
-                        load: () => {
-                          const evaluated = candidates.allTogetherSet(
-                            control.address,
-                            offer,
-                            optionKey,
-                            setControl.setKey,
-                          );
-                          if (evaluated.kind !== 'allTogetherSetDomain') return undefined;
-                          return Object.freeze({
-                            picker: projectDirectTraitOutcomePicker(
-                              evaluated.result.candidates,
-                              (value) =>
-                                value === null
-                                  ? 'No grant (set exhausted)'
-                                  : (catalog.traits.byKey[value]?.label ?? value),
-                              (value) => value ?? '__none__',
+        children: Object.freeze(
+          carrierChildren.map((child): WorkspaceTraitCarrierChildInteraction => {
+            switch (child.kind) {
+              case 'traitAcquisitionTarget':
+                return Object.freeze({
+                  child,
+                  forOffer: (offer: AuthoredTraitOfferTraits) =>
+                    Object.freeze({
+                      load: () => {
+                        const evaluated = candidates.traitCarrierChildDomain(
+                          control.address,
+                          offer,
+                          child,
+                        );
+                        if (evaluated.kind !== 'traitAcquisitionTargetDomain') return undefined;
+                        return Object.freeze({
+                          targetPicker: projectDirectTraitOutcomePicker(
+                            evaluated.result.candidates.map((candidate) =>
+                              Object.freeze({
+                                value: candidate.result.traitKey,
+                                support: candidate.result.supported
+                                  ? ('possible' as const)
+                                  : ('impossible' as const),
+                                branchSupport: candidate.result.branchSupport,
+                                selected:
+                                  candidate.result.traitKey ===
+                                  offer.options[optionIndex(optionKey)]?.targetTraitKey,
+                              }),
                             ),
-                          });
-                        },
-                      }),
-                  }),
-                ),
-              ),
-            }),
-        ...(naturalSelectionControl === undefined
-          ? {}
-          : {
-              naturalSelection: Object.freeze({
-                control: naturalSelectionControl,
-                forOffer: (offer: AuthoredTraitOfferTraits, retainedTargetKey?: string) =>
-                  Object.freeze({
-                    load: () => {
-                      const evaluated = candidates.naturalSelectionResult(
-                        naturalSelectionControl.address,
-                        offer,
-                        offer.options[optionIndex(optionKey)]?.naturalSelectionTargets,
-                      );
-                      if (evaluated.kind !== 'naturalSelectionResult') return undefined;
-                      const currentTargets: readonly string[] = [
-                        ...(offer.options[optionIndex(optionKey)]?.naturalSelectionTargets ?? []),
-                        ...(retainedTargetKey === undefined ? [] : [retainedTargetKey]),
-                      ];
-                      const available = new Set(evaluated.result.nextTargetTraitKeys);
-                      const targetCandidates = Object.freeze(
-                        [
-                          ...new Set([...evaluated.result.nextTargetTraitKeys, ...currentTargets]),
-                        ].map((traitKey) =>
-                          Object.freeze({
-                            value: traitKey,
-                            support: available.has(traitKey)
-                              ? ('possible' as const)
-                              : ('impossible' as const),
-                            branchSupport: evaluated.result.branchSupport,
-                            selected: traitKey === retainedTargetKey,
-                            ...(available.has(traitKey) ? {} : { reason: 'unavailable' as const }),
-                          }),
-                        ),
-                      );
-                      return Object.freeze({
-                        complete: evaluated.result.complete,
-                        picker: projectDirectTraitOutcomePicker(
-                          targetCandidates,
-                          (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
-                          (traitKey) => traitKey,
-                        ),
-                      });
-                    },
-                  }),
-                traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
-              } satisfies WorkspaceNaturalSelectionInteraction),
-            }),
+                            (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
+                            (traitKey) => traitKey,
+                          ),
+                        });
+                      },
+                    }),
+                  update: (offer: AuthoredTraitOfferTraits, targetTraitKey: string) =>
+                    updateAuthoredTraitCarrierChild(offer, {
+                      kind: 'traitAcquisitionTarget',
+                      child,
+                      targetTraitKey,
+                    }),
+                });
+              case 'allTogetherSet':
+                return Object.freeze({
+                  child,
+                  forOffer: (offer: AuthoredTraitOfferTraits) =>
+                    Object.freeze({
+                      load: () => {
+                        const evaluated = candidates.traitCarrierChildDomain(
+                          control.address,
+                          offer,
+                          child,
+                        );
+                        if (evaluated.kind !== 'allTogetherSetDomain') return undefined;
+                        return Object.freeze({
+                          picker: projectDirectTraitOutcomePicker(
+                            evaluated.result.candidates,
+                            (result) =>
+                              result === null
+                                ? 'No grant (set exhausted)'
+                                : (catalog.traits.byKey[result]?.label ?? result),
+                            (result) => result ?? '__none__',
+                          ),
+                        });
+                      },
+                    }),
+                  update: (
+                    offer: AuthoredTraitOfferTraits,
+                    allTogetherResult: import('@run-planner/engine/authored-project').AuthoredAllTogetherResult,
+                  ) =>
+                    updateAuthoredTraitCarrierChild(offer, {
+                      kind: 'allTogetherSet',
+                      child,
+                      allTogetherResult,
+                    }),
+                });
+              case 'naturalSelectionResult':
+                return Object.freeze({
+                  child,
+                  forOffer: (offer: AuthoredTraitOfferTraits, retainedTargetKey?: string) =>
+                    Object.freeze({
+                      load: () => {
+                        const evaluated = candidates.traitCarrierChildDomain(
+                          control.address,
+                          offer,
+                          child,
+                        );
+                        if (evaluated.kind !== 'naturalSelectionResult') return undefined;
+                        const currentTargets = [
+                          ...(offer.options[optionIndex(optionKey)]?.naturalSelectionTargets ?? []),
+                          ...(retainedTargetKey === undefined ? [] : [retainedTargetKey]),
+                        ];
+                        const available = new Set(evaluated.result.nextTargetTraitKeys);
+                        return Object.freeze({
+                          complete: evaluated.result.complete,
+                          picker: projectDirectTraitOutcomePicker(
+                            Object.freeze(
+                              [
+                                ...new Set([
+                                  ...evaluated.result.nextTargetTraitKeys,
+                                  ...currentTargets,
+                                ]),
+                              ].map((traitKey) =>
+                                Object.freeze({
+                                  value: traitKey,
+                                  support: available.has(traitKey)
+                                    ? ('possible' as const)
+                                    : ('impossible' as const),
+                                  branchSupport: evaluated.result.branchSupport,
+                                  selected: traitKey === retainedTargetKey,
+                                  ...(available.has(traitKey)
+                                    ? {}
+                                    : { reason: 'unavailable' as const }),
+                                }),
+                              ),
+                            ),
+                            (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
+                            (traitKey) => traitKey,
+                          ),
+                        });
+                      },
+                    }),
+                  update: (
+                    offer: AuthoredTraitOfferTraits,
+                    targets: NonNullable<
+                      import('@run-planner/engine/authored-project').AuthoredTraitOption['naturalSelectionTargets']
+                    >,
+                  ) =>
+                    updateAuthoredTraitCarrierChild(offer, {
+                      kind: 'naturalSelectionResult',
+                      child,
+                      targets,
+                    }),
+                  traitLabel: (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
+                });
+            }
+          }),
+        ),
         ...(concaveStoneInteraction === undefined ? {} : { concaveStone: concaveStoneInteraction }),
         ...(hexTree === undefined ? {} : { hexTree }),
         load() {
@@ -955,16 +969,7 @@ export function bindTraitOfferInteractions(input: {
             optionKey,
             prepared.variants,
           );
-          const targets =
-            hasTargetPicker && option !== undefined
-              ? candidates.traitAcquisitionTargets(
-                  control.address,
-                  value,
-                  optionKey,
-                  option.targetTraitKey,
-                )
-              : undefined;
-          projected = traitDomain.project(control.giver, value, prepared, focused, targets);
+          projected = traitDomain.project(control.giver, value, prepared, focused);
           return projected;
         },
       });

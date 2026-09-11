@@ -1,13 +1,15 @@
 import type { Catalog } from '../../catalog-schema';
-import type {
-  NaturalSelectionResultAddress,
-  TraitOfferAddress,
+import {
+  semanticAddressKey,
+  type NaturalSelectionResultAddress,
+  type TraitOfferAddress,
 } from '../../authored-project/addresses';
 import {
   optionIndex,
   type AuthoredTraitOffer,
   type TraitOptionKey,
 } from '../../authored-project/traits';
+import type { AuthoredTraitCarrierChild } from '../../authored-project/trait-carrier-children';
 import type { ProjectDocument } from '../../authored-project/model';
 import type {
   ConcaveStoneCandidateBranch,
@@ -26,6 +28,10 @@ import type {
 } from '../traits/offer-domain';
 import type { CandidateContextUnavailable } from './availability';
 import { unavailableForTraitOffer } from './trait-offer-availability';
+import {
+  evaluateAllTogetherSetDomain,
+  evaluateNaturalSelectionResultCandidate,
+} from './trait-offer-selected-effects';
 
 export type TraitOfferCandidateFindingCode = TraitFindingCode | 'duplicateOfferedTrait';
 
@@ -71,6 +77,14 @@ export interface TraitAcquisitionTargetDomainQuery {
   readonly value: AuthoredTraitOffer;
   readonly optionKey: TraitOptionKey;
   readonly retainedTargetTraitKey?: string;
+}
+
+/** One exact structurally discovered selected-outcome child and its full draft. */
+export interface TraitCarrierChildDomainQuery {
+  readonly kind: 'traitCarrierChildDomain';
+  readonly trait: TraitOfferAddress;
+  readonly value: AuthoredTraitOffer;
+  readonly child: AuthoredTraitCarrierChild;
 }
 
 /** One selected Circe option's atomic exact-outcome frontier. */
@@ -477,6 +491,11 @@ export type TraitOfferFocusedOptionCandidateEvaluation =
 export type TraitAcquisitionTargetDomainEvaluation =
   CandidateContextUnavailable | EvaluatedTraitAcquisitionTargetDomain;
 
+export type TraitCarrierChildDomainEvaluation =
+  | TraitAcquisitionTargetDomainEvaluation
+  | AllTogetherSetDomainEvaluation
+  | NaturalSelectionResultCandidateEvaluation;
+
 interface TraitOfferCandidateAssessment {
   readonly branches: readonly TraitOfferCandidateBranch[];
   readonly assessments: readonly TraitAssessment[];
@@ -857,11 +876,69 @@ export function evaluateTraitAcquisitionTargetDomain(
   });
 }
 
+/**
+ * A lazy typed child contact. It delegates to the existing evaluator
+ * vocabulary so the retained capability remains owner of private histories.
+ */
+export function evaluateTraitCarrierChildDomain(
+  catalog: Catalog,
+  project: ProjectDocument,
+  evaluation: ProjectEvaluation,
+  candidateArtifacts: TraitOfferCandidateArtifacts | undefined,
+  query: TraitCarrierChildDomainQuery,
+): TraitCarrierChildDomainEvaluation {
+  if (semanticAddressKey(query.child.address.trait) !== semanticAddressKey(query.trait))
+    return unavailableForTraitOffer(evaluation, query.trait);
+  const selected =
+    query.value.kind === 'traits'
+      ? query.value.options[optionIndex(query.child.optionKey)]
+      : undefined;
+  switch (query.child.kind) {
+    case 'traitAcquisitionTarget':
+      return evaluateTraitAcquisitionTargetDomain(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts,
+        {
+          kind: 'traitAcquisitionTargetDomain',
+          trait: query.trait,
+          value: query.value,
+          optionKey: query.child.optionKey,
+          ...(selected?.targetTraitKey === undefined
+            ? {}
+            : { retainedTargetTraitKey: selected.targetTraitKey }),
+        },
+      );
+    case 'allTogetherSet':
+      return evaluateAllTogetherSetDomain(catalog, project, evaluation, candidateArtifacts, {
+        kind: 'allTogetherSetDomain',
+        trait: query.trait,
+        value: query.value,
+        optionKey: query.child.optionKey,
+        setKey: query.child.setKey,
+      });
+    case 'naturalSelectionResult':
+      return evaluateNaturalSelectionResultCandidate(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts,
+        {
+          kind: 'naturalSelectionResult',
+          result: query.child.address,
+          value: query.value,
+          targets: selected?.naturalSelectionTargets,
+        },
+      );
+  }
+}
+
+export { evaluateAllTogetherSetDomain, evaluateNaturalSelectionResultCandidate };
+
 export {
-  evaluateAllTogetherSetDomain,
   evaluateCirceResolutionDomain,
   evaluateEchoLastRunBoonDomain,
   evaluateEchoPomTargetDomain,
-  evaluateNaturalSelectionResultCandidate,
   evaluateRansomAssessmentCandidate,
 } from './trait-offer-selected-effects';

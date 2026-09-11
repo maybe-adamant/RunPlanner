@@ -3,6 +3,7 @@ import {
   type AcquisitionSiteAddress,
   type AcquisitionRoleAddress,
   type AuthoredTraitOffer,
+  type AuthoredTraitOption,
   type AuthoredChaosTraitOffer,
   type AuthoredTranscendentEmbryoOutcome,
   type AuthoredTraitOfferTraits,
@@ -38,13 +39,10 @@ import {
   type AcquisitionEntryAddress,
   type TargetAddress,
   type TraitOfferAddress,
-  type TraitAcquisitionTargetAddress,
   type CirceResolutionAddress,
   type EchoPomTargetAddress,
   type EchoLastRunBoonAddress,
   type EchoLastRewardAddress,
-  type AllTogetherSetAddress,
-  type NaturalSelectionResultAddress,
   type SteadyGrowthOutcomeAddress,
   type TranscendentEmbryoOutcomeAddress,
   type FountainRarityOutcomeAddress,
@@ -61,6 +59,7 @@ import {
   type AuthoredNemesisRandomEventOutcome,
   type FieldsSpatialAddress,
   type FieldsSpatialTarget,
+  type AuthoredTraitCarrierChild,
 } from '@run-planner/engine/authored-project';
 import type {
   RoomDeclaration,
@@ -376,16 +375,14 @@ export interface WorkspaceTraitOfferControl {
   /** False for a declaration/chronology-resolved rarity such as Gorgon Athena. */
   readonly rarityEditable?: boolean;
   readonly rewardOwner: SemanticAddress;
-  /** Present only for this offer's currently selected targeted acquisition. */
-  readonly traitAcquisitionTarget?: WorkspaceTraitAcquisitionTargetControl;
+  /** Structurally discovered selected-outcome children. */
+  readonly children: readonly WorkspaceTraitCarrierChildControl[];
   /** Present only for this offer's currently selected Circe special option. */
   readonly circeResolution?: WorkspaceCirceResolutionControl;
   /** Present only for the currently selected Echo Pom row. */
   readonly echoPomTarget?: WorkspaceEchoPomTargetControl;
   readonly echoLastRunBoon?: WorkspaceEchoLastRunBoonControl;
   readonly echoLastReward?: WorkspaceEchoLastRewardControl;
-  readonly allTogetherSets?: readonly WorkspaceAllTogetherSetControl[];
-  readonly naturalSelection?: WorkspaceNaturalSelectionControl;
   readonly concaveStone?: WorkspaceConcaveStoneControl;
   /** Present only for the selected ordinary Spell Drop Hex. */
   readonly hexTree?: WorkspaceHexTreeControl;
@@ -422,12 +419,9 @@ export interface WorkspaceCirceResolutionControl {
   readonly value?: AuthoredCirceResolution;
 }
 
-export interface WorkspaceTraitAcquisitionTargetControl {
-  readonly address: TraitAcquisitionTargetAddress;
+export type WorkspaceTraitCarrierChildControl = AuthoredTraitCarrierChild & {
   readonly marker: WorkspaceMarker;
-  readonly optionKey: TraitOptionKey;
-  readonly value?: string | null;
-}
+};
 
 export interface WorkspaceEchoPomTargetControl {
   readonly address: EchoPomTargetAddress;
@@ -451,23 +445,6 @@ export interface WorkspaceEchoLastRewardControl {
   readonly spawnLabel?: string;
 }
 
-export interface WorkspaceAllTogetherSetControl {
-  readonly address: AllTogetherSetAddress;
-  readonly marker: WorkspaceMarker;
-  readonly optionKey: TraitOptionKey;
-  readonly setKey: import('@run-planner/engine/catalog-schema').DirectTraitSetKey;
-  readonly value?: string | null;
-  readonly valueLabel?: string;
-}
-
-/** Exact selected Natural Selection child beneath one trait option. */
-export interface WorkspaceNaturalSelectionControl {
-  readonly address: NaturalSelectionResultAddress;
-  readonly marker: WorkspaceMarker;
-  readonly optionKey: TraitOptionKey;
-  readonly slotCount: number;
-}
-
 /** One exact declaration-owned Pom child beneath an active reward owner. */
 export interface WorkspaceLevelResolutionControl {
   readonly acquisitionRoleLabel: string;
@@ -483,16 +460,12 @@ export interface WorkspaceLevelResolutionControl {
 
 /** One lazy focused-option domain bound to a complete local trait-offer draft. */
 export interface WorkspaceTraitOptionDomainInteraction {
-  /** Whether this exact selected option owns a downstream acquisition-target step. */
-  readonly hasTargetPicker: boolean;
-  readonly traitAcquisitionTarget?: WorkspaceTraitAcquisitionTargetControl;
+  readonly children: readonly WorkspaceTraitCarrierChildInteraction[];
   readonly load: () => TraitOptionDomainProjection | Promise<TraitOptionDomainProjection>;
   /** Candidate-backed exact outcome editor for a selected Circe option only. */
   readonly circeResolution?: WorkspaceCirceResolutionInteraction;
   readonly echoPomTarget?: WorkspaceEchoPomTargetInteraction;
   readonly echoLastRunBoon?: WorkspaceEchoLastRunBoonInteraction;
-  readonly allTogetherSets?: readonly WorkspaceAllTogetherSetInteraction[];
-  readonly naturalSelection?: WorkspaceNaturalSelectionInteraction;
   readonly concaveStone?: WorkspaceConcaveStoneInteraction;
   readonly hexTree?: WorkspaceHexTreeInteraction;
 }
@@ -545,27 +518,58 @@ export interface WorkspaceAllTogetherSetDomain {
   readonly picker: ContextualPickerModel<string | null>;
 }
 
-export interface WorkspaceAllTogetherSetInteraction {
-  readonly control: WorkspaceAllTogetherSetControl;
-  readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
-    readonly load: () => WorkspaceAllTogetherSetDomain | undefined;
-  };
-}
-
 export interface WorkspaceNaturalSelectionDomain {
   readonly complete: boolean;
   readonly picker: ContextualPickerModel<string>;
 }
 
-export interface WorkspaceNaturalSelectionInteraction {
-  readonly control: WorkspaceNaturalSelectionControl;
-  readonly forOffer: (
-    offer: AuthoredTraitOfferTraits,
-    retainedTargetKey?: string,
-  ) => {
-    readonly load: () => WorkspaceNaturalSelectionDomain | undefined;
-  };
-  readonly traitLabel: (traitKey: string) => string;
+export type WorkspaceTraitCarrierChildInteraction =
+  | {
+      readonly child: Extract<
+        WorkspaceTraitCarrierChildControl,
+        { readonly kind: 'traitAcquisitionTarget' }
+      >;
+      readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
+        readonly load: () => WorkspaceTraitAcquisitionTargetDomain | undefined;
+      };
+      readonly update: (
+        offer: AuthoredTraitOfferTraits,
+        targetTraitKey: string,
+      ) => AuthoredTraitOfferTraits;
+    }
+  | {
+      readonly child: Extract<
+        WorkspaceTraitCarrierChildControl,
+        { readonly kind: 'allTogetherSet' }
+      >;
+      readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
+        readonly load: () => WorkspaceAllTogetherSetDomain | undefined;
+      };
+      readonly update: (
+        offer: AuthoredTraitOfferTraits,
+        result: AuthoredAllTogetherResult,
+      ) => AuthoredTraitOfferTraits;
+    }
+  | {
+      readonly child: Extract<
+        WorkspaceTraitCarrierChildControl,
+        { readonly kind: 'naturalSelectionResult' }
+      >;
+      readonly forOffer: (
+        offer: AuthoredTraitOfferTraits,
+        retainedTargetKey?: string,
+      ) => {
+        readonly load: () => WorkspaceNaturalSelectionDomain | undefined;
+      };
+      readonly update: (
+        offer: AuthoredTraitOfferTraits,
+        targets: NonNullable<AuthoredTraitOption['naturalSelectionTargets']>,
+      ) => AuthoredTraitOfferTraits;
+      readonly traitLabel: (traitKey: string) => string;
+    };
+
+export interface WorkspaceTraitAcquisitionTargetDomain {
+  readonly targetPicker: ContextualPickerModel<string>;
 }
 
 export interface WorkspaceConcaveStoneDomain {

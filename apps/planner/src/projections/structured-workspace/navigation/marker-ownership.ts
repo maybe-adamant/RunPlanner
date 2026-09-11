@@ -109,9 +109,7 @@ export function workspaceOccurrenceOwnedMarkers(
         ? []
         : [
             phase.traitOffer.marker,
-            ...(phase.traitOffer.traitAcquisitionTarget === undefined
-              ? []
-              : [phase.traitOffer.traitAcquisitionTarget.marker]),
+            ...phase.traitOffer.children.map((child) => child.marker),
             ...(phase.traitOffer.circeResolution === undefined
               ? []
               : [phase.traitOffer.circeResolution.marker]),
@@ -124,10 +122,6 @@ export function workspaceOccurrenceOwnedMarkers(
             ...(phase.traitOffer.echoLastReward === undefined
               ? []
               : [phase.traitOffer.echoLastReward.marker]),
-            ...(phase.traitOffer.allTogetherSets ?? []).map((set) => set.marker),
-            ...(phase.traitOffer.naturalSelection === undefined
-              ? []
-              : [phase.traitOffer.naturalSelection.marker]),
           ]),
       ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker]),
     ]),
@@ -135,15 +129,11 @@ export function workspaceOccurrenceOwnedMarkers(
       control.marker,
       ...(control.traitOffers ?? []).flatMap((trait) => [
         trait.marker,
-        ...(trait.traitAcquisitionTarget === undefined
-          ? []
-          : [trait.traitAcquisitionTarget.marker]),
+        ...trait.children.map((child) => child.marker),
         ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
         ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
         ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker]),
         ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker]),
-        ...(trait.allTogetherSets ?? []).map((set) => set.marker),
-        ...(trait.naturalSelection === undefined ? [] : [trait.naturalSelection.marker]),
       ]),
       ...(control.levelResolutions ?? []).map((resolution) => resolution.marker),
     ]),

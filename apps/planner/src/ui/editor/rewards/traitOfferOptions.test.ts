@@ -3,11 +3,45 @@ import type {
   AuthoredTraitOfferTraits,
   AuthoredTraitOption,
 } from '@run-planner/engine/authored-project';
-import type { WorkspaceTraitOptionDomainInteraction } from '@planner/projections/structured-workspace';
+import {
+  createIncomingRewardAddress,
+  createTraitAcquisitionTargetAddress,
+  createTraitOfferAddress,
+} from '@run-planner/engine/authored-project';
+import type {
+  WorkspaceTraitCarrierChildInteraction,
+  WorkspaceTraitOptionDomainInteraction,
+} from '@planner/projections/structured-workspace';
+import { goldenFBiome, goldenFStartId } from '@run-planner/test-fixtures/underworld';
 
 import { selectedTraitOutcomeDraftComplete } from './traitOfferOptions';
 
 const baseOption = Object.freeze({ traitKey: 'TestTrait', rarity: 'Common' as const });
+const carrierOwner = createTraitOfferAddress(
+  createIncomingRewardAddress(goldenFBiome, goldenFStartId),
+  'source',
+);
+
+function carrierBinding(authoredComplete: boolean): WorkspaceTraitCarrierChildInteraction {
+  const child = Object.freeze({
+    kind: 'traitAcquisitionTarget' as const,
+    address: createTraitAcquisitionTargetAddress(carrierOwner, 'option1'),
+    marker: Object.freeze({
+      address: createTraitAcquisitionTargetAddress(carrierOwner, 'option1'),
+      assessment: 'assessed' as const,
+      findingCount: 0,
+      focusKey: 'test-carrier-child',
+    }),
+    optionKey: 'option1' as const,
+    traitKey: 'TestTrait',
+    authoredComplete,
+  });
+  return Object.freeze({
+    child,
+    forOffer: () => Object.freeze({ load: () => undefined }),
+    update: (value: AuthoredTraitOfferTraits) => value,
+  });
+}
 
 function offer(
   selected: AuthoredTraitOption = baseOption,
@@ -27,7 +61,7 @@ function domain(
   child: Partial<WorkspaceTraitOptionDomainInteraction> = {},
 ): WorkspaceTraitOptionDomainInteraction {
   return {
-    hasTargetPicker: false,
+    children: Object.freeze([]),
     load: () => {
       throw new Error('draft completeness must not load candidate UI products');
     },
@@ -39,7 +73,7 @@ describe('selected trait outcome draft completeness', () => {
   it.each([
     [
       'targeted acquisition',
-      domain({ traitAcquisitionTarget: {} as never }),
+      domain({ children: Object.freeze([carrierBinding(false)]) }),
       offer(),
       offer({ ...baseOption, targetTraitKey: 'TargetTrait' }),
     ],
@@ -74,7 +108,7 @@ describe('selected trait outcome draft completeness', () => {
     ],
     [
       'All Together grants',
-      domain({ allTogetherSets: Object.freeze([{} as never]) }),
+      domain({ children: Object.freeze([carrierBinding(false)]) }),
       offer(),
       offer({
         ...baseOption,
@@ -83,7 +117,7 @@ describe('selected trait outcome draft completeness', () => {
     ],
     [
       'Natural Selection targets',
-      domain({ naturalSelection: {} as never }),
+      domain({ children: Object.freeze([carrierBinding(false)]) }),
       offer(),
       offer({ ...baseOption, naturalSelectionTargets: Object.freeze(['ApolloWeaponBoon']) }),
     ],
@@ -101,7 +135,18 @@ describe('selected trait outcome draft completeness', () => {
     ],
   ] as const)('requires the selected %s child', (_label, activeDomain, missing, complete) => {
     expect(selectedTraitOutcomeDraftComplete(missing, activeDomain)).toBe(false);
-    expect(selectedTraitOutcomeDraftComplete(complete, activeDomain)).toBe(true);
+    expect(
+      selectedTraitOutcomeDraftComplete(
+        complete,
+        Object.freeze({
+          ...activeDomain,
+          children:
+            activeDomain.children.length === 0
+              ? activeDomain.children
+              : Object.freeze([carrierBinding(true)]),
+        }),
+      ),
+    ).toBe(true);
   });
 
   it('uses the candidate-backed Concave Stone completion contact', () => {

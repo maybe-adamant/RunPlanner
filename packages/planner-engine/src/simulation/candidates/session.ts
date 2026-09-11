@@ -88,6 +88,7 @@ import {
 } from './figurine-arcana';
 import {
   evaluateTraitAcquisitionTargetDomain,
+  evaluateTraitCarrierChildDomain,
   evaluateCirceResolutionDomain,
   evaluateEchoPomTargetDomain,
   evaluateNaturalSelectionResultCandidate,
@@ -119,6 +120,8 @@ import {
   type EvaluatedTraitOfferFocusedOptionCandidate,
   type TraitAcquisitionTargetDomainEvaluation,
   type TraitAcquisitionTargetDomainQuery,
+  type TraitCarrierChildDomainEvaluation,
+  type TraitCarrierChildDomainQuery,
   type TraitOfferCandidateQuery,
   type TraitOfferFocusedOptionCandidateEvaluation,
   type TraitOfferFocusedOptionCandidateQuery,
@@ -197,6 +200,7 @@ export type ProjectCandidateSessionQuery =
   | TraitOfferFocusedOptionCandidateQuery
   | RansomAssessmentCandidateQuery
   | TraitAcquisitionTargetDomainQuery
+  | TraitCarrierChildDomainQuery
   | CirceResolutionDomainQuery
   | EchoPomTargetDomainQuery
   | NaturalSelectionResultCandidateQuery
@@ -278,6 +282,10 @@ export interface ProjectCandidateSession {
     (
       queries: readonly TraitAcquisitionTargetDomainQuery[],
     ): readonly TraitAcquisitionTargetDomainEvaluation[];
+    (query: TraitCarrierChildDomainQuery): TraitCarrierChildDomainEvaluation;
+    (
+      queries: readonly TraitCarrierChildDomainQuery[],
+    ): readonly TraitCarrierChildDomainEvaluation[];
     (query: CirceResolutionDomainQuery): CirceResolutionDomainEvaluation;
     (queries: readonly CirceResolutionDomainQuery[]): readonly CirceResolutionDomainEvaluation[];
     (query: EchoPomTargetDomainQuery): EchoPomTargetDomainEvaluation;
@@ -559,6 +567,15 @@ function evaluateCandidateQuery(
           ?.traitOffers,
         query,
       );
+    case 'traitCarrierChildDomain':
+      return evaluateTraitCarrierChildDomain(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts.biomeAt(createBiomeAddress(query.trait.routeKey, query.trait.biomeKey))
+          ?.traitOffers,
+        query,
+      );
     case 'circeResolutionDomain':
       return evaluateCirceResolutionDomain(
         catalog,
@@ -636,6 +653,10 @@ export function createPreparedProjectCandidateSession(
   function evaluate(
     queries: readonly TraitAcquisitionTargetDomainQuery[],
   ): readonly TraitAcquisitionTargetDomainEvaluation[];
+  function evaluate(query: TraitCarrierChildDomainQuery): TraitCarrierChildDomainEvaluation;
+  function evaluate(
+    queries: readonly TraitCarrierChildDomainQuery[],
+  ): readonly TraitCarrierChildDomainEvaluation[];
   function evaluate(query: CirceResolutionDomainQuery): CirceResolutionDomainEvaluation;
   function evaluate(
     queries: readonly CirceResolutionDomainQuery[],

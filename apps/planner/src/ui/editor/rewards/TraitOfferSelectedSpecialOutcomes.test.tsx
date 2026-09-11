@@ -69,7 +69,8 @@ describe('selected outcomes', () => {
     const allTogetherSets = (Object.keys(domains) as (keyof typeof domains)[]).map((setKey) => {
       const address = createAllTogetherSetAddress(base.owner, 'option1', setKey);
       return Object.freeze({
-        control: Object.freeze({
+        child: Object.freeze({
+          kind: 'allTogetherSet' as const,
           address,
           marker: Object.freeze({
             address,
@@ -78,7 +79,9 @@ describe('selected outcomes', () => {
             focusKey: `test-all-together-${setKey}`,
           }),
           optionKey: 'option1' as const,
+          traitKey: 'AllElementalBoon',
           setKey,
+          authoredComplete: false,
         }),
         forOffer: () =>
           Object.freeze({
@@ -94,6 +97,16 @@ describe('selected outcomes', () => {
                 ),
               }),
           }),
+        update: (
+          draft: AuthoredTraitOfferTraits,
+          result: import('@run-planner/engine/authored-project').AuthoredAllTogetherResult,
+        ) => ({
+          ...draft,
+          options: Object.freeze([
+            { ...draft.options[0]!, allTogetherResult: result },
+            ...draft.options.slice(1),
+          ]) as AuthoredTraitOfferTraits['options'],
+        }),
       });
     });
     const interaction = Object.freeze({
@@ -127,7 +140,7 @@ describe('selected outcomes', () => {
         ]),
       optionDomain: (draft: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') =>
         Object.freeze({
-          hasTargetPicker: false,
+          children: Object.freeze([]),
           load: () =>
             Object.freeze({
               candidates: Object.freeze([]),
@@ -138,7 +151,19 @@ describe('selected outcomes', () => {
           ...(draft.kind === 'traits' &&
           draft.selectedOptionKey === optionKey &&
           optionKey === 'option1'
-            ? { allTogetherSets: Object.freeze(allTogetherSets) }
+            ? {
+                children: Object.freeze(
+                  allTogetherSets.map((child) =>
+                    Object.freeze({
+                      ...child,
+                      child: Object.freeze({
+                        ...child.child,
+                        authoredComplete: draft.options[0]?.allTogetherResult !== undefined,
+                      }),
+                    }),
+                  ),
+                ),
+              }
             : {}),
         }),
     });
@@ -223,7 +248,8 @@ describe('selected outcomes', () => {
     const result = createNaturalSelectionResultAddress(base.owner, 'option1');
     const seenPrefixes: string[][] = [];
     const natural = {
-      control: Object.freeze({
+      child: Object.freeze({
+        kind: 'naturalSelectionResult' as const,
         address: result,
         marker: Object.freeze({
           address: result,
@@ -232,7 +258,9 @@ describe('selected outcomes', () => {
           focusKey: 'test-natural-selection',
         }),
         optionKey: 'option1' as const,
+        traitKey: 'GoodStuffBoon',
         slotCount: 8,
+        authoredComplete: false,
       }),
       forOffer: (draft: AuthoredTraitOfferTraits) => ({
         load: () => {
@@ -249,6 +277,18 @@ describe('selected outcomes', () => {
       }),
       intentFor: (offer: AuthoredTraitOffer) => base.intentFor(offer),
       traitLabel: (traitKey: string) => traitKey,
+      update: (
+        draft: AuthoredTraitOfferTraits,
+        targets: NonNullable<
+          import('@run-planner/engine/authored-project').AuthoredEchoLastRunBoonOption['naturalSelectionTargets']
+        >,
+      ) => ({
+        ...draft,
+        options: Object.freeze([
+          { ...draft.options[0]!, naturalSelectionTargets: targets },
+          ...draft.options.slice(1),
+        ]) as AuthoredTraitOfferTraits['options'],
+      }),
     };
     const interaction = Object.freeze({
       ...base,
@@ -272,7 +312,7 @@ describe('selected outcomes', () => {
         ]),
       optionDomain: (draft: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') =>
         Object.freeze({
-          hasTargetPicker: false,
+          children: Object.freeze([]),
           load: () =>
             Object.freeze({
               candidates: Object.freeze([]),
@@ -281,7 +321,17 @@ describe('selected outcomes', () => {
               traitPicker: Object.freeze({ sections: Object.freeze([]) }),
             }),
           ...(draft.kind === 'traits' && optionKey === 'option1'
-            ? { naturalSelection: natural }
+            ? {
+                children: Object.freeze([
+                  Object.freeze({
+                    ...natural,
+                    child: Object.freeze({
+                      ...natural.child,
+                      authoredComplete: draft.options[0]?.naturalSelectionTargets !== undefined,
+                    }),
+                  }),
+                ]),
+              }
             : {}),
         }),
     });
@@ -346,7 +396,8 @@ describe('selected outcomes', () => {
     });
     const result = createNaturalSelectionResultAddress(base.owner, 'option1');
     const natural = {
-      control: Object.freeze({
+      child: Object.freeze({
+        kind: 'naturalSelectionResult' as const,
         address: result,
         marker: Object.freeze({
           address: result,
@@ -355,7 +406,9 @@ describe('selected outcomes', () => {
           focusKey: 'test-natural-selection-early',
         }),
         optionKey: 'option1' as const,
+        traitKey: 'GoodStuffBoon',
         slotCount: 8,
+        authoredComplete: false,
       }),
       forOffer: (draft: AuthoredTraitOfferTraits) => ({
         load: () => {
@@ -368,6 +421,18 @@ describe('selected outcomes', () => {
         },
       }),
       traitLabel: (traitKey: string) => traitKey,
+      update: (
+        draft: AuthoredTraitOfferTraits,
+        targets: NonNullable<
+          import('@run-planner/engine/authored-project').AuthoredEchoLastRunBoonOption['naturalSelectionTargets']
+        >,
+      ) => ({
+        ...draft,
+        options: Object.freeze([
+          { ...draft.options[0]!, naturalSelectionTargets: targets },
+          ...draft.options.slice(1),
+        ]) as AuthoredTraitOfferTraits['options'],
+      }),
     };
     const interaction = Object.freeze({
       ...base,
@@ -391,7 +456,7 @@ describe('selected outcomes', () => {
         ]),
       optionDomain: (draft: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') =>
         Object.freeze({
-          hasTargetPicker: false,
+          children: Object.freeze([]),
           load: () =>
             Object.freeze({
               candidates: Object.freeze([]),
@@ -400,7 +465,17 @@ describe('selected outcomes', () => {
               traitPicker: Object.freeze({ sections: Object.freeze([]) }),
             }),
           ...(draft.kind === 'traits' && optionKey === 'option1'
-            ? { naturalSelection: natural }
+            ? {
+                children: Object.freeze([
+                  Object.freeze({
+                    ...natural,
+                    child: Object.freeze({
+                      ...natural.child,
+                      authoredComplete: draft.options[0]?.naturalSelectionTargets !== undefined,
+                    }),
+                  }),
+                ]),
+              }
             : {}),
         }),
     });
@@ -504,7 +579,8 @@ describe('selected outcomes', () => {
       ]),
     });
     const natural = {
-      control: Object.freeze({
+      child: Object.freeze({
+        kind: 'naturalSelectionResult' as const,
         address: result,
         marker: Object.freeze({
           address: result,
@@ -513,7 +589,9 @@ describe('selected outcomes', () => {
           focusKey: 'test-natural-selection-retained',
         }),
         optionKey: 'option1' as const,
+        traitKey: 'GoodStuffBoon',
         slotCount: 8,
+        authoredComplete: false,
       }),
       forOffer: (draft: AuthoredTraitOfferTraits, retainedTargetKey?: string) => ({
         load: () => {
@@ -532,6 +610,18 @@ describe('selected outcomes', () => {
           ApolloWeaponBoon: 'Apollo Attack',
           PoseidonWeaponBoon: 'Poseidon Attack',
         })[traitKey] ?? traitKey,
+      update: (
+        draft: AuthoredTraitOfferTraits,
+        targets: NonNullable<
+          import('@run-planner/engine/authored-project').AuthoredEchoLastRunBoonOption['naturalSelectionTargets']
+        >,
+      ) => ({
+        ...draft,
+        options: Object.freeze([
+          { ...draft.options[0]!, naturalSelectionTargets: targets },
+          ...draft.options.slice(1),
+        ]) as AuthoredTraitOfferTraits['options'],
+      }),
     };
     const interaction = Object.freeze({
       ...base,
@@ -555,7 +645,7 @@ describe('selected outcomes', () => {
         ]),
       optionDomain: (draft: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') =>
         Object.freeze({
-          hasTargetPicker: false,
+          children: Object.freeze([]),
           load: () =>
             Object.freeze({
               candidates: Object.freeze([]),
@@ -564,7 +654,17 @@ describe('selected outcomes', () => {
               traitPicker: Object.freeze({ sections: Object.freeze([]) }),
             }),
           ...(draft.kind === 'traits' && optionKey === 'option1'
-            ? { naturalSelection: natural }
+            ? {
+                children: Object.freeze([
+                  Object.freeze({
+                    ...natural,
+                    child: Object.freeze({
+                      ...natural.child,
+                      authoredComplete: draft.options[0]?.naturalSelectionTargets !== undefined,
+                    }),
+                  }),
+                ]),
+              }
             : {}),
         }),
     });
@@ -784,7 +884,7 @@ describe('selected outcomes', () => {
         ...base,
         optionDomain: (value: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') =>
           Object.freeze({
-            hasTargetPicker: false,
+            children: Object.freeze([]),
             load: () =>
               Object.freeze({
                 candidates: Object.freeze([]),
@@ -966,7 +1066,7 @@ describe('selected outcomes', () => {
         value,
         optionDomain: (draft: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') =>
           Object.freeze({
-            hasTargetPicker: false,
+            children: Object.freeze([]),
             load: () =>
               Object.freeze({
                 candidates: Object.freeze([]),

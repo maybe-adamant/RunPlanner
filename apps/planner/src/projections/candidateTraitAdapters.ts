@@ -2,7 +2,6 @@ import {
   levelResolutionCandidateForProjectEvaluationAssembly,
   type ProjectCandidateSessionQuery,
 } from '@run-planner/engine/simulation';
-import type { DirectTraitSetKey } from '@run-planner/engine/catalog-schema';
 import {
   semanticAddressKey,
   type AuthoredTraitOffer,
@@ -12,20 +11,18 @@ import {
 
 import type { AuthoredTraitOption } from '@run-planner/engine/authored-project';
 import type {
-  AllTogetherSetDomainEvaluation,
   CirceResolutionDomainEvaluation,
   EchoLastRunBoonDomainEvaluation,
   EchoPomTargetDomainEvaluation,
   EvaluatedAcquisitionConversionCandidate,
   EvaluatedSteadyGrowthOutcomeCandidate,
   EvaluatedTranscendentEmbryoOutcomeCandidate,
-  NaturalSelectionResultCandidateEvaluation,
   CandidateContextUnavailable,
   ConcaveStoneCandidateBranch,
+  TraitCarrierChildDomainEvaluation,
 } from '@run-planner/engine/simulation';
 
 import type {
-  CandidateOptionProjection,
   CandidateProjectionEvaluation,
   CandidateProjectionSession,
   KeepsakeEquipResultOptionProjection,
@@ -68,12 +65,10 @@ export type TraitCandidateAdapters = Pick<
   | 'previousOptionalHighTierTraitOfferDraft'
   | 'chaosOfferDomain'
   | 'traitOfferFocusedOptions'
-  | 'traitAcquisitionTargets'
+  | 'traitCarrierChildDomain'
   | 'circeResolution'
   | 'echoPomTarget'
   | 'echoLastRunBoon'
-  | 'allTogetherSet'
-  | 'naturalSelectionResult'
   | 'ransomAssessment'
   | 'concaveStone'
   | 'steadyGrowthOutcome'
@@ -94,6 +89,7 @@ function aggregateEvaluation(core: CandidateProjectionCore, query: ProjectCandid
 export function createTraitCandidateAdapters(
   core: CandidateProjectionCore,
 ): TraitCandidateAdapters {
+  const childDomains = new Map<string, TraitCarrierChildDomainEvaluation>();
   return {
     traitOffer: (owner, value) =>
       core.projectOptions(
@@ -123,26 +119,18 @@ export function createTraitCandidateAdapters(
           value: offerWithFocusedOption(value, optionKey, option),
         })),
       ),
-    traitAcquisitionTargets: (owner, value, optionKey, retainedTargetTraitKey) => {
-      const key = `trait-acquisition-targets:${semanticAddressKey(owner)}:${JSON.stringify(value)}:${optionKey}:${retainedTargetTraitKey ?? ''}`;
-      return core.memoizeOptions<string, CandidateProjectionEvaluation>(key, () => {
-        const evaluation = core.evaluate({
-          kind: 'traitAcquisitionTargetDomain',
-          trait: owner,
-          value,
-          optionKey,
-          ...(retainedTargetTraitKey === undefined ? {} : { retainedTargetTraitKey }),
-        });
-        return Object.freeze(
-          evaluation.kind === 'unavailable'
-            ? retainedTargetTraitKey === undefined
-              ? []
-              : [Object.freeze({ value: retainedTargetTraitKey, evaluation })]
-            : evaluation.result.candidates.map((candidate) =>
-                Object.freeze({ value: candidate.result.traitKey, evaluation: candidate }),
-              ),
-        ) as readonly CandidateOptionProjection<string, CandidateProjectionEvaluation>[];
+    traitCarrierChildDomain: (owner, value, child) => {
+      const key = `trait-carrier-child:${semanticAddressKey(owner)}:${JSON.stringify(value)}:${JSON.stringify(child)}`;
+      const cached = childDomains.get(key);
+      if (cached !== undefined) return cached;
+      const evaluated = core.evaluate({
+        kind: 'traitCarrierChildDomain',
+        trait: owner,
+        value,
+        child,
       });
+      childDomains.set(key, evaluated);
+      return evaluated;
     },
     circeResolution: (owner, value, optionKey) =>
       aggregateEvaluation(core, {
@@ -165,21 +153,6 @@ export function createTraitCandidateAdapters(
         value,
         optionKey,
       }) as EchoLastRunBoonDomainEvaluation,
-    allTogetherSet: (owner, value, optionKey, setKey: DirectTraitSetKey) =>
-      aggregateEvaluation(core, {
-        kind: 'allTogetherSetDomain',
-        trait: owner,
-        value,
-        optionKey,
-        setKey,
-      }) as AllTogetherSetDomainEvaluation,
-    naturalSelectionResult: (result, value, targets) =>
-      aggregateEvaluation(core, {
-        kind: 'naturalSelectionResult',
-        result,
-        value,
-        targets,
-      }) as NaturalSelectionResultCandidateEvaluation,
     ransomAssessment: (trait, value) =>
       aggregateEvaluation(core, {
         kind: 'ransomAssessment',

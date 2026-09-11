@@ -176,6 +176,8 @@ export {
   type TraitOfferCandidateQuery,
   type TraitAcquisitionTargetDomainEvaluation,
   type TraitAcquisitionTargetDomainQuery,
+  type TraitCarrierChildDomainEvaluation,
+  type TraitCarrierChildDomainQuery,
   type TraitOfferFocusedOptionCandidateEvaluation,
   type TraitOfferFocusedOptionCandidateQuery,
   type TraitOfferFocusedOptionEvidence,

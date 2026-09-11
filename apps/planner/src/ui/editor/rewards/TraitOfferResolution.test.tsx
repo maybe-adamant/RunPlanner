@@ -79,7 +79,7 @@ describe('resolution outcomes', () => {
       value,
       optionDomain: (draft: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') =>
         Object.freeze({
-          hasTargetPicker: false,
+          children: Object.freeze([]),
           load: () =>
             Object.freeze({
               candidates: Object.freeze([]),
@@ -184,7 +184,7 @@ describe('resolution outcomes', () => {
       value,
       optionDomain: (draft: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') =>
         Object.freeze({
-          hasTargetPicker: false,
+          children: Object.freeze([]),
           load: () =>
             Object.freeze({
               candidates: Object.freeze([]),
@@ -677,7 +677,7 @@ describe('resolution outcomes', () => {
       echoLastReward: control,
       optionDomain: () =>
         Object.freeze({
-          hasTargetPicker: false,
+          children: Object.freeze([]),
           load: () =>
             Object.freeze({
               candidates: Object.freeze([]),

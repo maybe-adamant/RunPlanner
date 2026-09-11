@@ -2,13 +2,13 @@ import { optionIndex, type AuthoredTraitOfferTraits } from '@run-planner/engine/
 import { useEffect, useMemo } from 'react';
 
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
-import type { TraitOptionDomainProjection } from '@planner/projections/traitDomainProjection';
 import type {
   WorkspaceCirceResolutionDomain,
   WorkspaceEchoLastRunBoonDomain,
   WorkspaceEchoPomTargetDomain,
   WorkspaceConcaveStoneDomain,
   WorkspaceHexTreeDomain,
+  WorkspaceTraitAcquisitionTargetDomain,
   WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace';
 import { traitOfferDialogClosed } from '@planner/state/editorSessionSlice';
@@ -57,8 +57,19 @@ export function TraitOfferSelectedOutcome({
     () => interaction.optionDomain(value, value.selectedOptionKey),
     [interaction, value],
   );
-  const optionController = useWorkspaceInteractionController<TraitOptionDomainProjection>();
-  const optionDomain = optionController.observe(loadable);
+  const targetChild = loadable.children.find(
+    (
+      child,
+    ): child is Extract<
+      typeof child,
+      { readonly child: { readonly kind: 'traitAcquisitionTarget' } }
+    > => child.child.kind === 'traitAcquisitionTarget',
+  );
+  const targetLoadable = useMemo(() => targetChild?.forOffer(value), [targetChild, value]);
+  const targetController = useWorkspaceInteractionController<
+    WorkspaceTraitAcquisitionTargetDomain | undefined
+  >();
+  const targetDomain = targetController.observe(targetLoadable);
   const circeLoadable = useMemo(
     () => loadable.circeResolution?.forOffer(value),
     [loadable.circeResolution, value],
@@ -101,7 +112,7 @@ export function TraitOfferSelectedOutcome({
   const hexTreeController = useWorkspaceInteractionController<WorkspaceHexTreeDomain | undefined>();
   const hexTreeDomain = hexTreeController.observe(hexTreeLoadable);
   useEffect(() => {
-    if (loadable.hasTargetPicker) optionController.activate(loadable);
+    if (targetLoadable !== undefined) targetController.activate(targetLoadable);
     if (circeLoadable !== undefined) circeController.activate(circeLoadable);
     if (echoPomLoadable !== undefined) echoPomController.activate(echoPomLoadable);
     if (echoLastRunLoadable !== undefined) echoLastRunController.activate(echoLastRunLoadable);
@@ -119,20 +130,19 @@ export function TraitOfferSelectedOutcome({
     hexTreeController,
     hexTreeLoadable,
     loadable,
-    optionController,
+    targetController,
+    targetLoadable,
   ]);
 
-  const targetDomain = optionDomain.result;
   const selectedTraitLabel = interaction.traitLabel(option.traitKey);
   const isHexOutcome = loadable.hexTree !== undefined;
   const hasOutcome =
-    loadable.hasTargetPicker ||
+    targetChild !== undefined ||
     loadable.circeResolution !== undefined ||
     loadable.echoPomTarget !== undefined ||
     loadable.echoLastRunBoon !== undefined ||
     interaction.echoLastReward !== undefined ||
-    loadable.allTogetherSets !== undefined ||
-    loadable.naturalSelection !== undefined ||
+    loadable.children.length > 0 ||
     concaveStoneDomain.result !== undefined ||
     hexTreeDomain.result !== undefined ||
     interaction.ransomAssessment(value) !== undefined;
@@ -149,17 +159,15 @@ export function TraitOfferSelectedOutcome({
           onChange={(hexTree) => onUpdate({ ...value, hexTree })}
         />
       )}
-      {loadable.traitAcquisitionTarget === undefined ? null : (
+      {targetChild === undefined ? null : (
         <ContextualPicker
-          findingTarget={findingTarget(loadable.traitAcquisitionTarget.address)}
+          findingTarget={findingTarget(targetChild.child.address)}
           ariaLabel={`${value.selectedOptionKey} acquisition target`}
-          id={semanticOwnerControlElementId(loadable.traitAcquisitionTarget.address)}
+          id={semanticOwnerControlElementId(targetChild.child.address)}
           label="Target"
-          loading={optionDomain.pending}
-          model={targetDomain?.targetPicker ?? emptyTargetPicker}
-          onSelect={(targetTraitKey) =>
-            onUpdate(replaceTraitOfferOption(value, selectedIndex, { ...option, targetTraitKey }))
-          }
+          loading={targetDomain.pending}
+          model={targetDomain.result?.targetPicker ?? emptyTargetPicker}
+          onSelect={(targetTraitKey) => onUpdate(targetChild.update(value, targetTraitKey))}
           placeholder="Choose an equipped trait"
           {...(option.targetTraitKey === undefined
             ? {}
@@ -249,11 +257,9 @@ export function TraitOfferSelectedOutcome({
         </fieldset>
       )}
       <TraitOfferSelectedSpecialOutcomes
-        allTogetherSets={loadable.allTogetherSets}
+        carrierChildren={loadable.children}
         interaction={interaction}
-        naturalSelection={loadable.naturalSelection}
         offer={value}
-        option={option}
         optionIndex={selectedIndex}
         onUpdate={onUpdate}
         concaveStone={
