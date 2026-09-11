@@ -20,6 +20,15 @@ function evaluation(
 }
 
 describe('relational reward domain projection', () => {
+  it('keeps a selected deferred-source Mystery Boon type-only at its offer point', () => {
+    const selected = { rewardType: 'BlindBoxLoot' };
+    const prepared = prepareRewardDomain(catalog, ['BlindBoxLoot', 'MaxHealthDrop'], selected);
+
+    expect(prepared.types.find((option) => option.key === 'BlindBoxLoot')?.offer).toEqual(selected);
+    expect(prepared.payload).toEqual({ kind: 'none' });
+    expect(rewardDomainOffers(prepared)).toContainEqual(selected);
+  });
+
   it.each(['Boon', 'BlindBoxLoot'])(
     'keeps %s possible when an acquisition entry has a legal God besides its stale selection',
     (rewardType) => {
