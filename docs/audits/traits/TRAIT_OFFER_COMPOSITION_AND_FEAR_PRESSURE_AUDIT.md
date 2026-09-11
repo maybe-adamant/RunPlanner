@@ -38,6 +38,10 @@ Primary executable evidence:
   `CheckBoonSkipShrineUpgrade`;
 - `MetaUpgradeData.lua`: `BoonSkipShrineUpgrade` and
   `BanUnpickedBoonsShrineUpgrade`;
+- `RoomLogic.lua`: `UseShipWheel`, which installs the picked Ship reward as the
+  active encounter's room-reward override;
+- `EncounterSets.lua`: `EncounterEventsShipsCombat`, which materializes that
+  picked reward through `SpawnRoomReward` after combat;
 - `StoreLogic.lua` and `EncounterLogic.lua` for Shop and Devotion acquisition
   paths; and
 - English `TraitText.en.sjson` for the player-facing Vow descriptions.
@@ -283,14 +287,19 @@ The authored door or generated replacement remains a Boon or Hermes reward.
 At spawn time the Vow substitutes the consolation consumable, so no trait
 offer is opened and no trait is acquired from that reward.
 
-This spawn boundary is reached from two supported sources. Ordinary room
-completion calls `SpawnRoomReward` for its selected door reward. Artificer
-first destroys the eligible minor object, consumes one use, and chooses a
-`RunProgress` replacement while excluding Devotion and Spell Drop; it then
-calls `SpawnRoomReward` with that selected replacement as `RewardOverride`.
-An Artificer-selected Boon or Hermes reward therefore enters the same
-`CheckBoonSkipShrineUpgrade` branch, consumes the biome's Forfeit use, and
-spawns `RoomRewardConsolationPrize` instead.
+This spawn boundary is reached from three supported sources. Ordinary room
+completion calls `SpawnRoomReward` for its selected door reward. A selected
+Thessaly Ship wheel reward is stored as the active encounter's room-reward
+override, and `EncounterEventsShipsCombat` calls `SpawnRoomReward` after that
+encounter. A picked Ship-wheel Boon or Hermes reward therefore qualifies;
+unpicked wheel previews do not.
+
+Artificer first destroys the eligible minor object, consumes one use, and
+chooses a `RunProgress` replacement while excluding Devotion and Spell Drop;
+it then calls `SpawnRoomReward` with that selected replacement as
+`RewardOverride`. An Artificer-selected Boon or Hermes reward therefore enters
+the same `CheckBoonSkipShrineUpgrade` branch, consumes the biome's Forfeit use,
+and spawns `RoomRewardConsolationPrize` instead.
 
 `CheckBoonSkipShrineUpgrade` registers the consolation object in
 `MapState.RoomRequiredObjects`. Artificer's caller restores requiredness when
@@ -333,9 +342,9 @@ trait offer is restored retroactively.
 6. Denial records only actual displayed, unselected Olympian/Hermes traits and
    preserves prior bans if Circe later disables the Vow.
 7. Forfeit is one qualifying `SpawnRoomReward` Boon/Hermes substitution per
-   biome. This includes an Artificer-selected `RunProgress` replacement but
-   does not include Shop or Devotion offers merely because they use the same
-   giver.
+   biome. This includes the picked reward from a Thessaly Ship wheel and an
+   Artificer-selected `RunProgress` replacement, but not Shop or Devotion
+   offers merely because they use the same giver.
 8. Forfeit prevents the trait-offer lifecycle from starting; Denial acts only
    after a real trait option is selected.
 9. The Forfeit result is a required `RoomRewardConsolationPrize`; it retains
@@ -358,9 +367,10 @@ trait offer is restored retroactively.
    correction retains the original Boon/Hermes offer and bag evidence, records
    biome-local usage, and materializes the fixed
    `RoomRewardConsolationPrize` through ordinary acquisition settlement while
-   keeping the trait lifecycle dormant. The same transition applies to an
-   Artificer-generated Boon/Hermes replacement. It does not become a generic
-   trait-giver predicate or make the Red Onion an authorable door reward.
+   keeping the trait lifecycle dormant. The same transition applies to a
+   picked Thessaly Ship-wheel reward and an Artificer-generated Boon/Hermes
+   replacement. It does not become a generic trait-giver predicate or make the
+   Red Onion an authorable door reward.
 4. `CalcNumLootChoices` supports a separate acquired effect that reduces a god
    screen from three choices to two. No currently modeled trait supplies that
    effect, so it remains outside production rather than being conflated with

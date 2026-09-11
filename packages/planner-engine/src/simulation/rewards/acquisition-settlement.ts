@@ -251,7 +251,7 @@ export interface AcquisitionSource {
   readonly producerKind?: CanonicalResolvedIncomingReward['producerKind'];
   /** Instance fact supplied by the producer, never inferred from an owner label. */
   readonly instanceProvenance: 'free' | 'paid';
-  /** Set only by the two paths that enter the game's RoomReward spawn lane. */
+  /** Set only by sources that enter the game's SpawnRoomReward Forfeit lane. */
   readonly roomRewardForfeitEligible?: true;
   readonly traitOffersByAcquisitionRole?: CanonicalResolvedIncomingReward['traitOffersByAcquisitionRole'];
   readonly levelResolutionsByAcquisitionRole?: CanonicalResolvedIncomingReward['levelResolutionsByAcquisitionRole'];
