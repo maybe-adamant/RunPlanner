@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 80,
+  "schemaVersion": 81,
   "projectId": "golden-fg",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -957,6 +957,7 @@
                   "profileKey": "WorldShop",
                   "offers": {
                     "Boon": {
+                      "optionKey": "RandomLoot",
                       "reward": {
                         "offer": {
                           "rewardType": "RandomLoot",
@@ -976,6 +977,7 @@
                       }
                     },
                     "MajorNonBoon": {
+                      "optionKey": "RoomRewardHealDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "RoomRewardHealDrop"
@@ -989,6 +991,7 @@
                       }
                     },
                     "Minor": {
+                      "optionKey": "MaxManaDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "MaxManaDrop"
@@ -1825,6 +1828,7 @@
                   "profileKey": "WorldShop",
                   "offers": {
                     "Boon": {
+                      "optionKey": "RandomLoot",
                       "reward": {
                         "offer": {
                           "rewardType": "RandomLoot",
@@ -1844,6 +1848,7 @@
                       }
                     },
                     "MajorNonBoon": {
+                      "optionKey": "RoomRewardHealDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "RoomRewardHealDrop"
@@ -1857,6 +1862,7 @@
                       }
                     },
                     "Minor": {
+                      "optionKey": "MaxManaDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "MaxManaDrop"
@@ -2152,6 +2158,7 @@
                   "profileKey": "WorldShop",
                   "offers": {
                     "Boon": {
+                      "optionKey": "RandomLoot",
                       "reward": {
                         "offer": {
                           "rewardType": "RandomLoot",
@@ -2171,6 +2178,7 @@
                       }
                     },
                     "MajorNonBoon": {
+                      "optionKey": "RoomRewardHealDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "RoomRewardHealDrop"
@@ -2184,6 +2192,7 @@
                       }
                     },
                     "Minor": {
+                      "optionKey": "MaxManaDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "MaxManaDrop"
@@ -3480,6 +3489,7 @@
                   "profileKey": "WorldShop",
                   "offers": {
                     "Boon": {
+                      "optionKey": "RandomLoot",
                       "reward": {
                         "offer": {
                           "rewardType": "RandomLoot",
@@ -3499,6 +3509,7 @@
                       }
                     },
                     "MajorNonBoon": {
+                      "optionKey": "RoomRewardHealDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "RoomRewardHealDrop"
@@ -3512,6 +3523,7 @@
                       }
                     },
                     "Minor": {
+                      "optionKey": "MaxManaDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "MaxManaDrop"
@@ -4040,6 +4052,7 @@
                   "profileKey": "I_WorldShop",
                   "offers": {
                     "BoostedBoon": {
+                      "optionKey": "StackUpgradeBig",
                       "reward": {
                         "offer": {
                           "rewardType": "StackUpgradeBig"
@@ -4060,6 +4073,7 @@
                       }
                     },
                     "MixedProgress": {
+                      "optionKey": "MaxHealthDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "MaxHealthDrop"
@@ -4073,6 +4087,7 @@
                       }
                     },
                     "Survival": {
+                      "optionKey": "HealBigDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "HealBigDrop"
@@ -4086,6 +4101,7 @@
                       }
                     },
                     "PremiumProgress": {
+                      "optionKey": "MaxHealthDropBig",
                       "reward": {
                         "offer": {
                           "rewardType": "MaxHealthDropBig"
@@ -4099,6 +4115,7 @@
                       }
                     },
                     "MetaProgress": {
+                      "optionKey": "CardUpgradePointsDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "CardUpgradePointsDrop"

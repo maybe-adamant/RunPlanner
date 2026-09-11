@@ -1023,7 +1023,7 @@ type WorkspaceRewardCommandIntent = WorkspaceCommandIntent<
         | 'ReplaceIncomingReward'
         | 'ReplaceLocalReward'
         | 'ReplaceRewardWheelOffer'
-        | 'ReplaceShopOffer'
+        | 'ReplaceShopOfferOption'
         | 'ReplaceAcquisitionEntryOffer'
         | 'ReplaceAcquisitionDisposition'
         | 'EditDerivedShopEntry';
@@ -1190,6 +1190,7 @@ export interface WorkspaceInteractionCatalog {
     string,
     WorkspaceShopPurchaseParticipationInteraction
   >;
+  readonly shopOffers: ReadonlyMap<string, WorkspaceShopOfferInteraction>;
   readonly purgingPoolInteractions: ReadonlyMap<string, WorkspacePurgingPoolInteraction>;
   /** One declaration-keyed Pool slot, with engine-derived contextual candidates. */
   readonly purgingPoolSlots: ReadonlyMap<string, WorkspacePurgingPoolSlotInteraction>;
@@ -1251,6 +1252,19 @@ export interface WorkspaceShopPurchaseParticipationInteraction {
   ) => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'ReplaceShopPurchaseParticipation' }>
   >;
+}
+
+export interface WorkspaceShopOfferInteraction {
+  readonly key: string;
+  readonly owner: ShopOfferAddress;
+  readonly selected: import('@run-planner/engine/reward-kernel').ShopOptionSelection | null;
+  readonly load: () => Promise<
+    ContextualPickerModel<import('@run-planner/engine/reward-kernel').ShopOptionSelection>
+  >;
+  readonly summary: string;
+  readonly intentFor: (
+    value: import('@run-planner/engine/reward-kernel').ShopOptionSelection,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceShopOfferOption' }>>;
 }
 
 /** Complete occurrence command binding for one physical Pool offer slot. */
@@ -1528,6 +1542,15 @@ interface WorkspaceRewardControlBase {
   };
   /** Engine-attested retained identity disagreement requiring a visible repair path. */
   readonly retainedSourceMismatch: boolean;
+  /** Exact declaration-owned item identity for a materialized World Shop slot. */
+  readonly shopOption?: {
+    readonly selectedOptionKey: string | null;
+    readonly options: readonly {
+      readonly key: string;
+      readonly label: string;
+      readonly rewardType: string;
+    }[];
+  };
   readonly owner: RewardCandidateOwner;
   readonly traitOffers?: readonly WorkspaceTraitOfferControl[];
   readonly levelResolutions?: readonly WorkspaceLevelResolutionControl[];

@@ -38,6 +38,7 @@ export type {
   LocalRewardCandidateQuery,
   RewardWheelOfferCandidateQuery,
   ShopOfferCandidateQuery,
+  ShopOfferOptionCandidateQuery,
 } from './reward-producer';
 export type {
   EvaluatedRewardWheelOfferCountCandidate,

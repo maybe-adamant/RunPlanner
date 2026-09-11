@@ -416,12 +416,13 @@ therefore does not manufacture a boosted F Shop offer. The boost remains an
 exact property of a generated `BoostedRandomLoot` item or an item whose own
 `UpgradeChance` installed the same override.
 
-The catalog now normalizes the exact generated-item distinction: `RandomLoot`
-uses the provider base and `BoostedRandomLoot` carries the sparse boosted
-override. I/Q phase eligibility remains an option-entry requirement owned by
-the Shop phase slice; the rarity ledger consumes the resulting option witness
-at the offer frontier. This keeps the source fact separate from Shop profile
-or biome-name inference.
+The catalog normalizes the exact generated-item distinction: `RandomLoot` uses
+the provider base and `BoostedRandomLoot` carries the sparse boosted override.
+Authored I/Q Shop slots persist that exact option identity beside the resolved
+boon source, and the rarity ledger consumes the confirmed option witness at
+the offer frontier. Phase eligibility remains an option-entry requirement
+owned by the Shop phase slice; no Shop profile or biome-name inference supplies
+the rarity context.
 
 ## Planner disposition
 

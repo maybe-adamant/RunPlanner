@@ -66,32 +66,59 @@ export function applyShopOccurrenceCommand(
       ),
     );
   }
-  if (
+  const profile = catalog.rewards.shops.byKey[occurrence.state.shop.profileKey];
+  const slot = profile?.slots.byKey[command.offer.offerKey];
+  const group = slot === undefined ? undefined : profile?.groups.byKey[slot.groupKey];
+  if (group === undefined) failCommand(command, 'shop offer has no declaration-owned group');
+  const selectedOffer =
+    command.kind === 'ReplaceShopOfferOption' ? command.value.offer : command.value;
+  const retainedOption =
+    offer.optionKey === null ? undefined : group.options.byKey[offer.optionKey];
+  const compatibleOptions = group.options.values.filter(
+    (candidate) => candidate.rewardType === selectedOffer.rewardType,
+  );
+  const selectedOptionKey =
+    command.kind === 'ReplaceShopOfferOption'
+      ? command.value.optionKey
+      : retainedOption?.rewardType === selectedOffer.rewardType
+        ? retainedOption.key
+        : compatibleOptions.length === 1
+          ? compatibleOptions[0]!.key
+          : null;
+  const option = selectedOptionKey === null ? undefined : group.options.byKey[selectedOptionKey];
+  if (command.kind === 'ReplaceShopOfferOption' && option === undefined)
+    failCommand(command, `unknown shop option ${command.value.optionKey}`);
+  if (option !== undefined && option.rewardType !== selectedOffer.rewardType)
+    failCommand(command, `${option.key} does not produce ${selectedOffer.rewardType}`);
+  const resolvesAtAcquisition = rewardSourceResolvesAtAcquisition(catalog, selectedOffer);
+  const sameReward =
     offer.reward !== null &&
-    offer.reward.offer.rewardType === command.value.rewardType &&
-    ((rewardSourceResolvesAtAcquisition(catalog, command.value) &&
-      offer.reward.offer.payload === undefined) ||
-      sameOccurrenceValue(offer.reward.offer, command.value))
-  )
-    return document;
-  const resolvesAtAcquisition = rewardSourceResolvesAtAcquisition(catalog, command.value);
-  const reward = resolvesAtAcquisition
-    ? Object.freeze({
-        offer: Object.freeze({ rewardType: command.value.rewardType }),
-        traitOffersByAcquisitionRole: Object.freeze({}),
-        dispositionByAcquisitionRole: Object.freeze({}),
-      })
-    : createUnresolvedAcquisitionRewardState(catalog, command.value, {
-        kind: 'shopProfile',
-        key: occurrence.state.shop.profileKey,
-      });
-  const pickupEffect = resolvesAtAcquisition
-    ? undefined
-    : pickupEffectForOffer(catalog.rewards, command.value);
-  const replacement = Object.freeze({
-    reward,
-    ...(pickupEffect?.effect.kind === 'anvilOfFates' ? { anvilResult: null } : {}),
-  });
+    offer.reward.offer.rewardType === selectedOffer.rewardType &&
+    ((resolvesAtAcquisition && offer.reward.offer.payload === undefined) ||
+      sameOccurrenceValue(offer.reward.offer, selectedOffer));
+  if (sameReward && offer.optionKey === selectedOptionKey) return document;
+  const replacement = sameReward
+    ? Object.freeze({ ...offer, optionKey: selectedOptionKey })
+    : (() => {
+        const reward = resolvesAtAcquisition
+          ? Object.freeze({
+              offer: Object.freeze({ rewardType: selectedOffer.rewardType }),
+              traitOffersByAcquisitionRole: Object.freeze({}),
+              dispositionByAcquisitionRole: Object.freeze({}),
+            })
+          : createUnresolvedAcquisitionRewardState(catalog, selectedOffer, {
+              kind: 'shopProfile',
+              key: occurrence.state.shop.profileKey,
+            });
+        const pickupEffect = resolvesAtAcquisition
+          ? undefined
+          : pickupEffectForOffer(catalog.rewards, selectedOffer);
+        return Object.freeze({
+          optionKey: selectedOptionKey,
+          reward,
+          ...(pickupEffect?.effect.kind === 'anvilOfFates' ? { anvilResult: null } : {}),
+        });
+      })();
   const purchaseSelected = occurrence.roomActions.order.some(
     (reference) =>
       reference.kind === 'interactShopOffer' && reference.offerKey === command.offer.offerKey,
@@ -113,7 +140,7 @@ export function applyShopOccurrenceCommand(
     }),
     command.offer.offerKey,
     purchaseSelected,
-    reward,
+    replacement.reward,
   );
   return updateOccurrenceTopology(document, located, replaceOccurrence(current, nextOccurrence));
 }

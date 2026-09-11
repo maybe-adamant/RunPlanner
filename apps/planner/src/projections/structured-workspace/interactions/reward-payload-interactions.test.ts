@@ -29,7 +29,7 @@ const {
 } = support;
 
 describe('reward-payload-interactions', () => {
-  it('binds all four reward owners to their exact no-focus replacement intents', () => {
+  it('binds generic reward owners while reserving Shops for exact option interactions', () => {
     const project = loadSurfaceNOPQProject();
     const surfaceInteractions = {
       N: bind(project, 'Surface', 'N').interactions,
@@ -62,11 +62,8 @@ describe('reward-payload-interactions', () => {
     ).toEqual({
       command: { kind: 'ReplaceRewardWheelOffer', offer: wheel, value: replacement },
     });
-    expect(
-      surfaceInteractions.P.rewards.get(semanticAddressKey(shop))?.intentFor(replacement),
-    ).toEqual({
-      command: { kind: 'ReplaceShopOffer', offer: shop, value: replacement },
-    });
+    expect(surfaceInteractions.P.rewards.has(semanticAddressKey(shop))).toBe(false);
+    expect(surfaceInteractions.P.shopOffers.has(semanticAddressKey(shop))).toBe(true);
   });
 
   it('binds a picked Narcissus pickup payload to its entry replacement command', () => {

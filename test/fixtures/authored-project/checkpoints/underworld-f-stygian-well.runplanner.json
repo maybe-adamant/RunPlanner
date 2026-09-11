@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 80,
+  "schemaVersion": 81,
   "projectId": "golden-fg",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -976,6 +976,7 @@
                   "profileKey": "WorldShop",
                   "offers": {
                     "Boon": {
+                      "optionKey": "RandomLoot",
                       "reward": {
                         "offer": {
                           "rewardType": "RandomLoot",
@@ -995,6 +996,7 @@
                       }
                     },
                     "MajorNonBoon": {
+                      "optionKey": "RoomRewardHealDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "RoomRewardHealDrop"
@@ -1008,6 +1010,7 @@
                       }
                     },
                     "Minor": {
+                      "optionKey": "MaxManaDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "MaxManaDrop"

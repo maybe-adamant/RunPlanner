@@ -35,6 +35,9 @@ function optionSupportsOffer(
       ? authored.offer.payload.source
       : undefined;
   return (
+    (authored.optionKey === undefined ||
+      authored.optionKey === null ||
+      authored.optionKey === option.key) &&
     !excluded?.has(option.rewardType) &&
     (resolvedSource === undefined || !excluded?.has(resolvedSource)) &&
     option.rewardType === authored.offer.rewardType &&
@@ -63,6 +66,9 @@ function optionSupportsOfferWithPeers(
       ? authored.offer.payload.source
       : undefined;
   return (
+    (authored.optionKey === undefined ||
+      authored.optionKey === null ||
+      authored.optionKey === option.key) &&
     !excluded?.has(option.rewardType) &&
     (resolvedSource === undefined || !excluded?.has(resolvedSource)) &&
     option.rewardType === authored.offer.rewardType &&
@@ -204,7 +210,7 @@ function existentialGroupAssignments(
   catalog: RewardKernelCatalog,
   options: readonly ShopOptionEntry[],
   offerCount: number,
-  fixedOffers: readonly (import('./model').ResolvedRewardOffer | null)[],
+  fixedOffers: readonly (AuthoredShopOffer | null)[],
   facts: RewardKernelFacts,
   additionalOptionRequirements: Readonly<Record<string, RequirementExpression>>,
   constraints: ShopGenerationConstraints,
@@ -218,14 +224,16 @@ function existentialGroupAssignments(
     const fixedOffer = fixedOffers[position];
     const offers =
       fixedOffer === undefined || fixedOffer === null
-        ? locallyValidRewardOffers(catalog, option.rewardType)
+        ? locallyValidRewardOffers(catalog, option.rewardType).map((offer) =>
+            Object.freeze({ offer }),
+          )
         : Object.freeze([fixedOffer]);
-    return offers.flatMap((offer) => {
+    return offers.flatMap((authored) => {
       if (
         !optionSupportsOfferWithPeers(
           catalog,
           option,
-          Object.freeze({ offer }),
+          authored,
           facts,
           additionalOptionRequirements,
           constraints,
@@ -245,7 +253,7 @@ function existentialGroupAssignments(
         constraints,
         position + 1,
         nextUsed,
-        Object.freeze([...priorOffers, offer]),
+        Object.freeze([...priorOffers, authored.offer]),
       ).map((tail) => Object.freeze([option.key, ...tail]));
     });
   });
@@ -287,6 +295,28 @@ export function findShopPartialGenerationWitnesses(
   catalog: RewardKernelCatalog,
   profile: ShopProfileDeclaration,
   fixedOffers: readonly (import('./model').ResolvedRewardOffer | null)[],
+  facts: RewardKernelFacts,
+  additionalOptionRequirements: Readonly<Record<string, RequirementExpression>> = {},
+  constraints: ShopGenerationConstraints = {},
+): readonly ShopGenerationWitness[] {
+  return findShopPartialAuthoredGenerationWitnesses(
+    catalog,
+    profile,
+    Object.freeze(
+      fixedOffers.map((offer) =>
+        offer === null ? null : Object.freeze({ optionKey: null, offer }),
+      ),
+    ),
+    facts,
+    additionalOptionRequirements,
+    constraints,
+  );
+}
+
+export function findShopPartialAuthoredGenerationWitnesses(
+  catalog: RewardKernelCatalog,
+  profile: ShopProfileDeclaration,
+  fixedOffers: readonly (AuthoredShopOffer | null)[],
   facts: RewardKernelFacts,
   additionalOptionRequirements: Readonly<Record<string, RequirementExpression>> = {},
   constraints: ShopGenerationConstraints = {},

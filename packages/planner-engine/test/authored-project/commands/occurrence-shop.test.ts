@@ -21,6 +21,55 @@ import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
 import { loadSurfaceNOPQProject, qBiome, qOccurrenceIds } from '@run-planner/test-fixtures/surface';
 
 describe('authored-project Shop occurrence commands', () => {
+  it('persists exact ordinary and Boosted Boon identities with the same reward shape', () => {
+    const offer = createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'MixedProgress1');
+    const boon = {
+      rewardType: 'RandomLoot' as const,
+      payload: { kind: 'BoonSource' as const, source: 'HeraUpgrade' },
+    };
+    const ordinary = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceShopOfferOption',
+      offer,
+      value: { optionKey: 'RandomLoot', offer: boon },
+    });
+    const ordinaryState = ordinary.route.biomes
+      .find((candidate) => candidate.biomeKey === 'Q')
+      ?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === qOccurrenceIds.preboss,
+      )?.state;
+    const ordinaryReward =
+      ordinaryState?.kind === 'shop'
+        ? ordinaryState.shop?.offers.MixedProgress1?.reward
+        : undefined;
+    const boosted = applyProjectCommand(ordinary, catalog, {
+      kind: 'ReplaceShopOfferOption',
+      offer,
+      value: { optionKey: 'BoostedRandomLoot', offer: boon },
+    });
+    const state = boosted.route.biomes
+      .find((candidate) => candidate.biomeKey === 'Q')
+      ?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === qOccurrenceIds.preboss,
+      )?.state;
+    expect(state?.kind === 'shop' ? state.shop?.offers.MixedProgress1 : undefined).toMatchObject({
+      optionKey: 'BoostedRandomLoot',
+      reward: { offer: boon },
+    });
+    expect(state?.kind === 'shop' ? state.shop?.offers.MixedProgress1?.reward : undefined).toEqual(
+      ordinaryReward,
+    );
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(boosted)), catalog)).toEqual(
+      boosted,
+    );
+    expect(() =>
+      applyProjectCommand(boosted, catalog, {
+        kind: 'ReplaceShopOfferOption',
+        offer,
+        value: { optionKey: 'StackUpgradeBig', offer: boon },
+      }),
+    ).toThrow('StackUpgradeBig does not produce RandomLoot');
+  });
+
   it('stores the Anvil result only on its World Shop offer and clears it with the offer', () => {
     const offer = createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'PremiumProgress');
     let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {

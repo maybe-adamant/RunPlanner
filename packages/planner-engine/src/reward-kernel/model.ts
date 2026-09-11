@@ -260,6 +260,13 @@ export interface ConcreteAcquisitionEvent {
 }
 
 export interface AuthoredShopOffer {
+  /** Null/omitted retains an existential legacy identity; persisted plans provide an exact key. */
+  readonly optionKey?: string | null;
+  readonly offer: ResolvedRewardOffer;
+}
+
+export interface ShopOptionSelection {
+  readonly optionKey: string;
   readonly offer: ResolvedRewardOffer;
 }
 

@@ -309,6 +309,7 @@ function settle(options: {
           Object.keys(state.shop.offers).map((key) => [
             key,
             Object.freeze({
+              optionKey: null,
               reward:
                 options.shopOfferOverrides?.[key] ??
                 authoredShopReward(

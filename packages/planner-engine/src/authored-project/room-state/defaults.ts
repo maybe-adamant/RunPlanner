@@ -59,7 +59,7 @@ function defaultShopState(catalog: Catalog, binding: ShopRewardBinding, path: st
   }
   const offers: Record<string, ShopOfferState> = {};
   for (const slot of profile.slots.values) {
-    offers[slot.key] = Object.freeze({ reward: null });
+    offers[slot.key] = Object.freeze({ optionKey: null, reward: null });
   }
   return Object.freeze({
     profileKey: profile.key,

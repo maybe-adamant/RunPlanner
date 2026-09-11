@@ -119,6 +119,7 @@ export function processShopInventory(
   }
   const requirements = shopRequirements(declaration, entry.profileKey, fail);
   const authored: readonly AuthoredShopOffer[] = entry.offers.map((offer) => ({
+    optionKey: offer.optionKey,
     offer: offer.offer,
   }));
   const next: RewardBranchState[] = [];
@@ -807,6 +808,7 @@ export function settleShopAcquisitionSite(
           const refillOffer = Object.freeze({
             offerKey: entryKey,
             offerOrigin: createAcquisitionEntryAddress(site, entryKey),
+            optionKey: optionKey ?? null,
             offer: child.offer,
             traitOffersByAcquisitionRole: child.traitOffersByAcquisitionRole,
             ...(child.levelResolutionsByAcquisitionRole === undefined

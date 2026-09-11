@@ -7,7 +7,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 80 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 81 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -23,6 +23,8 @@ export type OccurrenceId = string & {
 };
 
 export interface ShopOfferState {
+  /** Exact declaration-owned Shop item; null retains an ambiguous migrated selection for repair. */
+  readonly optionKey: string | null;
   readonly reward: AuthoredRewardState | null;
   /** Exact result of a purchased Anvil of Fates. */
   readonly anvilResult?: AuthoredAnvilResult | null;

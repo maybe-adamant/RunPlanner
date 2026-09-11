@@ -16,6 +16,8 @@ export function bindRewardPayloadInteractions(input: {
 }): ReadonlyMap<string, WorkspaceRewardInteraction> {
   const rewards = new Map<string, WorkspaceRewardInteraction>();
   for (const [key, control] of input.rewardControls) {
+    if (control.owner.kind === 'shopOffer') continue;
+    const owner = control.owner;
     const artificerOptions = input.artificerOptionsByReplacement.get(
       input.semanticAddressKey(control.owner.address),
     );
@@ -38,12 +40,12 @@ export function bindRewardPayloadInteractions(input: {
         authoredRewardTypes: rewardTypes,
         choiceLabel: input.rewardPicker.choiceLabel,
         intentFor: (offer: ResolvedRewardOffer) =>
-          rewardIntentFor(control.owner, offer, control.derivedShopEntryEdit),
+          rewardIntentFor(owner, offer, control.derivedShopEntryEdit),
         key,
         load: () =>
           input.candidates.rewardDomain(control.owner, rewardTypes, control.offer ?? undefined),
         model: input.rewardPicker.project,
-        owner: control.owner.address,
+        owner: owner.address,
         resolvesAtAcquisition: input.rewardPicker.resolvesAtAcquisition,
         selected: control.offer,
         summary: input.rewardPicker.summary,

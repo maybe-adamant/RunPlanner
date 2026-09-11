@@ -31,6 +31,7 @@ export {
   findShopGenerationWitnesses,
   findShopIndexedGenerationWitnesses,
   findShopPartialGenerationWitnesses,
+  findShopPartialAuthoredGenerationWitnesses,
   purchaseInteractionName,
   simulateShopPurchases,
 } from './shop';
@@ -76,6 +77,7 @@ export type {
   ShopGenerationConstraints,
   ShopGroupDeclaration,
   ShopOptionEntry,
+  ShopOptionSelection,
   ShopProfileDeclaration,
   ShopSlotDeclaration,
   ShopPurchaseResult,

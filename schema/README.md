@@ -1,6 +1,19 @@
 # Project schema boundary
 
-Schema 80 is the current Run Planner document baseline. It replaces the
+Schema 81 preserves the exact declaration-owned option selected in each World
+Shop slot. This distinguishes ordinary Boons from the boosted Boons declared
+by the I and Q World Shops without inventing a second reward type.
+
+```bash
+npm run schema:migrate-80-to-81 -- path/to/schema-80-project.runplanner.json
+```
+
+Unambiguous inventory entries receive their exact option key. A legacy Q mixed
+slot containing `RandomLoot` remains unresolved because either the ordinary or
+boosted option could have produced it; reopen that item in the planner to
+repair it. The command never overwrites the source.
+
+Schema 80 replaced the
 sequence-bearing source portion of generated clocked-pickup entry keys with
 the stable semantic acquisition identity and updates matching Room Action
 references. Migrate the immediately preceding single-route schema with:
@@ -50,7 +63,7 @@ output. It has no route-selection, in-place, or target-version mode.
 
 The schema-72 splitter's pure transformation is exported from
 `schema/split-project-72-to-73.js` for checkpoint conversion. The source value
-is never mutated. The production decoder accepts schema 80 only; stale
+is never mutated. The production decoder accepts schema 81 only; stale
 documents are not migrated implicitly in the application.
 
 Migrate a schema-74 document with:

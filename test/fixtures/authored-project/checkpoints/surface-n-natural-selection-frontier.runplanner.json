@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 80,
+  "schemaVersion": 81,
   "projectId": "surface-1",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -1148,6 +1148,7 @@
                   "profileKey": "WorldShop",
                   "offers": {
                     "Boon": {
+                      "optionKey": "RandomLoot",
                       "reward": {
                         "offer": {
                           "rewardType": "RandomLoot",
@@ -1167,6 +1168,7 @@
                       }
                     },
                     "MajorNonBoon": {
+                      "optionKey": "MaxHealthDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "MaxHealthDrop"
@@ -1180,6 +1182,7 @@
                       }
                     },
                     "Minor": {
+                      "optionKey": "MaxManaDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "MaxManaDrop"

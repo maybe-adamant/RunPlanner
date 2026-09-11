@@ -7,6 +7,7 @@ import {
   type ShopOfferAddress,
 } from '../../authored-project/addresses';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
+import type { ShopOptionSelection } from '../../reward-kernel';
 import type { SemanticFinding } from '../model';
 import type { FindingRegionEntry } from '../finding-regions';
 
@@ -42,6 +43,10 @@ export interface RewardProducerCandidateCapability {
   readonly evaluateOffer: (
     owner: RewardProducerOwnerAddress,
     offer: ResolvedRewardOffer,
+  ) => RewardProducerCandidateResult;
+  readonly evaluateShopOption?: (
+    owner: ShopOfferAddress,
+    selection: ShopOptionSelection,
   ) => RewardProducerCandidateResult;
 }
 
@@ -86,6 +91,9 @@ export function createRewardProducerCandidateArtifacts(
       Object.freeze({
         acquisitionHorizon: frontier.acquisitionHorizon,
         evaluateOffer: frontier.evaluateOffer,
+        ...(frontier.evaluateShopOption === undefined
+          ? {}
+          : { evaluateShopOption: frontier.evaluateShopOption }),
         ...(frontier.resolvedStoreKey === undefined
           ? {}
           : { resolvedStoreKey: frontier.resolvedStoreKey }),

@@ -538,6 +538,7 @@ export function echoGoldShop(
         Object.entries(resolvedShopRewards).map(([key, reward]) => [
           key,
           Object.freeze({
+            optionKey: null,
             reward:
               catalog.rewards.rewardTypes.byKey[reward.offer.rewardType]?.sourceResolution?.kind ===
               'acquisitionRole'

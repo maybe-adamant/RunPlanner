@@ -344,6 +344,7 @@ export const shops = [
           }),
           phaseOption(inRunSecondHalf, {
             key: 'BoostedRandomLoot',
+            label: 'Boosted Boon',
             rewardType: 'RandomLoot',
             boonRarityOverride: boostedBoonRarity,
             purchaseInteraction: { kind: 'resolvedOfferSource' },
@@ -451,6 +452,7 @@ export const shops = [
           }),
           phaseOption(inRunSecondHalf, {
             key: 'BoostedRandomLoot',
+            label: 'Boosted Boon',
             rewardType: 'RandomLoot',
             boonRarityOverride: boostedBoonRarity,
             purchaseInteraction: { kind: 'resolvedOfferSource' },
@@ -522,6 +524,7 @@ export const shops = [
           }),
           phaseOption(inRunSecondHalf, {
             key: 'BoostedRandomLoot',
+            label: 'Boosted Boon',
             rewardType: 'RandomLoot',
             boonRarityOverride: boostedBoonRarity,
             purchaseInteraction: { kind: 'resolvedOfferSource' },
@@ -616,6 +619,7 @@ export const shops = [
           }),
           phaseOption(inRunSecondHalf, {
             key: 'BoostedRandomLoot',
+            label: 'Boosted Boon',
             rewardType: 'RandomLoot',
             boonRarityOverride: boostedBoonRarity,
             purchaseInteraction: { kind: 'resolvedOfferSource' },

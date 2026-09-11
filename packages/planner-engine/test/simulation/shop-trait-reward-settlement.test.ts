@@ -202,6 +202,7 @@ describe('Shop trait acquisition processing', () => {
             offers: Object.freeze({
               ...pomState.shop!.offers,
               MajorNonBoon: Object.freeze({
+                optionKey: null,
                 reward: Object.freeze({
                   offer: Object.freeze({ rewardType: 'GiftDrop' }),
                   dispositionByAcquisitionRole: createNormalDispositionByAcquisitionRole(catalog, {
