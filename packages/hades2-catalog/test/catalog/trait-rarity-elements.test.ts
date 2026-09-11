@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { createCatalog } from '../../src';
 import { declarations } from '../../src/declarations';
 import type { ProperUpbringingEffect } from '@run-planner/engine/catalog-schema';
-import type { RawTraitDeclaration, RawTraitGiverDeclaration } from '../../src/declarations/traits';
+import type {
+  RawTraitDeclaration,
+  RawTraitGiverDeclaration,
+} from '../../src/declarations/traits/types';
 
 describe('trait rarity and elements', () => {
   it('rejects malformed declaration-owned rarity floors at catalog construction', () => {

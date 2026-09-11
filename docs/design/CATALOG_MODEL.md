@@ -160,6 +160,12 @@ delegating complete local products to their owning normalizers. Exact source
 tables remain in declarations with focused test attestation; production closure
 repeats only supported-shape and relational invariants needed by consumers.
 
+Compiler modules are grouped into rooms, layouts, encounters, traits, and
+rewards directories. The compiler root holds catalog composition, shared
+boundary utilities, and the remaining single-module families. Declaration
+subfamilies such as Ephyra rooms and weapon-specific Hammer inventories keep
+their local files and ordered assembly together in one directory.
+
 Compact helpers may remove syntax repetition only when the complete room
 surface remains readable at its declaration point. Avoid metaprogramming that
 requires executing several layers of builders to discover a room's exits,

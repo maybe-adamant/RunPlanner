@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog, createCatalog } from '../../src';
 import { declarations } from '../../src/declarations';
-import type { RawTraitDeclaration } from '../../src/declarations/traits';
+import type { RawTraitDeclaration } from '../../src/declarations/traits/types';
 
 const traits = {
   weapons: catalog.weapons,

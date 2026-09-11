@@ -1,4 +1,4 @@
-import type { RawTraitDeclaration, RawTraitGiverDeclaration } from '../traits';
+import type { RawTraitDeclaration, RawTraitGiverDeclaration } from './types';
 
 /** Source-closed trait declarations. Giver membership remains separate below. */
 export const heraTraits = [

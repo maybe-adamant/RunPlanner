@@ -10,7 +10,7 @@ import { fRooms } from './rooms/f';
 import { gRooms } from './rooms/g';
 import { hRooms } from './rooms/h';
 import { iRooms } from './rooms/i';
-import { nRooms } from './rooms/n';
+import { nRooms } from './rooms/n/index';
 import { oRooms } from './rooms/o';
 import { pRooms } from './rooms/p';
 import { qRooms } from './rooms/q';
@@ -83,5 +83,5 @@ export type {
   RawRewardProducerBinding,
   RawShopRewardBinding,
 } from './rewards/types';
-export type { RawTraitCatalogInput } from './traits';
-export type { RawHexDeclaration } from './traits';
+export type { RawTraitCatalogInput } from './traits/types';
+export type { RawHexDeclaration } from './traits/types';

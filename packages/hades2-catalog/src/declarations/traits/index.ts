@@ -1,4 +1,4 @@
-import type { RawTraitCatalogInput } from '../traits';
+import type { RawTraitCatalogInput } from './types';
 import { aphroditeGiver, aphroditeTraits } from './aphrodite';
 import { arachneGiver, arachneTraits } from './arachne';
 import { apolloGiver, apolloTraits } from './apollo';
@@ -17,7 +17,7 @@ import { zeusGiver, zeusTraits } from './zeus';
 import { hermesGiver, hermesTraits } from './hermes';
 import { medeaGiver, medeaTraits } from './medea';
 import { narcissusGiver, narcissusTraits } from './narcissus';
-import { weaponUpgradeGiver, weaponUpgradeTraits } from './weapon-upgrade';
+import { weaponUpgradeGiver, weaponUpgradeTraits } from './weapon-upgrade/index';
 import { arcanaTraits } from './arcana';
 import { circeGiver, circeTraits } from './circe';
 import { echoGiver, echoTraits } from './echo';

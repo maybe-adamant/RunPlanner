@@ -1,4 +1,4 @@
-import type { RawTraitDeclaration, RawTraitGiverDeclaration } from '../traits';
+import type { RawTraitDeclaration, RawTraitGiverDeclaration } from './types';
 
 /** Artemis' field-NPC pool and its source-owned default offer. */
 export const artemisTraits = [
