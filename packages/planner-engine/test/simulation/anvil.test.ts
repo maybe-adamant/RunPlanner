@@ -14,7 +14,10 @@ import { factsWithHistory, resolveAcquisitionRole } from '@run-planner/engine/re
 
 import { createTestArcanaFearState, initializeTestRewardBranches } from '../support/arcana-fear';
 import { baseFacts } from './shop-trait-purchase-support';
-import { applyProducerRoleHistory } from '../../src/simulation/rewards/acquisition-settlement';
+import {
+  accumulateProducerRoleFindingEmissions,
+  applyProducerRoleHistory,
+} from '../../src/simulation/rewards/acquisition-settlement';
 import { createAnvilCandidateCapability } from '../../src/simulation/rewards/anvil-settlement';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
 
@@ -133,19 +136,19 @@ describe('Anvil of Fates acquisition settlement', () => {
       }),
       Object.freeze({ ...role, historySequence: 2 }),
       (history) => factsWithHistory(baseFacts(), history, new Set()),
-      findings,
       undefined,
       undefined,
       Object.freeze({ site, entry }),
     );
+    accumulateProducerRoleFindingEmissions(findings, result.findingEmissions);
 
     expect(findings.size).toBe(0);
-    expect(result).toHaveLength(1);
-    expect(result[0]?.traitHistory?.equippedTraits).toMatchObject({
+    expect(result.branches).toHaveLength(1);
+    expect(result.branches[0]?.traitHistory?.equippedTraits).toMatchObject({
       StaffLongAttackTrait: { hammerRank: 'RankI' },
       StaffJumpSpecialTrait: { hammerRank: 'RankI' },
     });
-    expect(result[0]?.traitHistory?.equippedTraits.StaffDoubleAttackTrait).toBeUndefined();
+    expect(result.branches[0]?.traitHistory?.equippedTraits.StaffDoubleAttackTrait).toBeUndefined();
   });
 
   it('leaves the acquisition unresolved when the authored result is absent', () => {
@@ -171,13 +174,13 @@ describe('Anvil of Fates acquisition settlement', () => {
       }),
       Object.freeze({ ...role, historySequence: 2 }),
       (history) => factsWithHistory(baseFacts(), history, new Set()),
-      findings,
       undefined,
       undefined,
       Object.freeze({ site, entry }),
     );
+    accumulateProducerRoleFindingEmissions(findings, result.findingEmissions);
 
-    expect(result).toHaveLength(0);
+    expect(result.branches).toHaveLength(0);
     expect(findings.size).toBeGreaterThan(0);
   });
 

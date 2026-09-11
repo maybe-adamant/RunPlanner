@@ -701,39 +701,53 @@ describe('Pom level resolutions', () => {
     }
   });
 
-  it('retains every divergent Pom surface when identical findings eliminate all carrying branches', () => {
+  it('retains every divergent Pom surface within and across eliminated fold cohorts', () => {
     const oneTarget = equippedHistory();
     const twoTargets = twoTargetHistory();
     const base = initializeTestRewardBranches()[0];
     if (base === undefined) throw new Error('divergent Pom fixture has no initial branch');
-    const branches = Object.freeze(
-      [oneTarget, twoTargets].map((history) =>
+    const branchesFor = (history: ReturnType<typeof equippedHistory>) =>
+      Object.freeze([
         Object.freeze({
           ...base,
           history: attachTraitHistory(base.history, history),
           traitHistory: history,
         }),
-      ),
-    );
-    const findings = new Map();
-    settleTestRoomReward(
-      branches,
-      {
-        origin: levelAddress.owner,
-        offer: { rewardType: 'StackUpgrade' },
-        producerLifecycleKey: 'RoomReward',
-        instanceProvenance: 'free',
-        levelResolutionsByAcquisitionRole: {
-          self: { kind: 'choice', offeredTraitKeys: [], selectedTraitKey: null },
-        },
+      ]);
+    const source = {
+      origin: levelAddress.owner,
+      offer: { rewardType: 'StackUpgrade' as const },
+      producerLifecycleKey: 'RoomReward',
+      instanceProvenance: 'free' as const,
+      levelResolutionsByAcquisitionRole: {
+        self: { kind: 'choice' as const, offeredTraitKeys: [], selectedTraitKey: null },
       },
-      1,
-      (history) => factsWithHistory(rewardFacts(), history, new Set()),
-      findings,
+    };
+    const settleMissingPom = (
+      branches: ReturnType<typeof branchesFor>,
+      findings: Parameters<typeof settleTestRoomReward>[4],
+    ) =>
+      settleTestRoomReward(
+        branches,
+        source,
+        1,
+        (history) => factsWithHistory(rewardFacts(), history, new Set()),
+        findings,
+      );
+    const retainedCount = (findings: Parameters<typeof settleTestRoomReward>[4]) =>
+      [...findings.values()].find((entry) => entry.finding.code === 'missingPomTarget')
+        ?.levelResolutionEvaluations.length;
+
+    const sameFoldFindings = new Map();
+    settleMissingPom(
+      Object.freeze([...branchesFor(oneTarget), ...branchesFor(twoTargets)]),
+      sameFoldFindings,
     );
-    const retained = [...findings.values()].find(
-      (entry) => entry.finding.code === 'missingPomTarget',
-    )?.levelResolutionEvaluations;
-    expect(retained).toHaveLength(2);
+    expect(retainedCount(sameFoldFindings)).toBe(2);
+
+    const sequentialProductFindings = new Map();
+    settleMissingPom(branchesFor(oneTarget), sequentialProductFindings);
+    settleMissingPom(branchesFor(twoTargets), sequentialProductFindings);
+    expect(retainedCount(sequentialProductFindings)).toBe(2);
   });
 });
