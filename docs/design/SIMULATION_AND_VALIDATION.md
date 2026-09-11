@@ -293,6 +293,19 @@ passing the coordinator's mutable ordered state through a wrapper or remerging
 partial branches, findings, and artifacts. Otherwise the chronological
 coordinator remains the coherent authority.
 
+Producer-role settlement returns branches, ordered finding emissions, role
+frontiers, and trait-child checkpoints together. Its caller accumulates that
+complete product through the existing finding merge rules. Level settlement
+likewise returns its branch and findings, keeping source-time target generation
+distinct from application against the current trait history.
+
+Candidate families own their artifact construction and assessment; the
+aggregate owns composition of the complete matching evaluation. Branch
+initialization, handoff, and projection are separate from offer generation.
+Keepsake state construction, replacement, and advancement remain atomic below
+encounter, trait, and reward effects; branch-level equip transitions compose
+those effects with history rather than creating another state owner.
+
 ### Completion and Coverage Axes
 
 Biome authoring completion and evaluation coverage are separate facts:

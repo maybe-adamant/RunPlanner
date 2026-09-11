@@ -54,7 +54,7 @@ import {
   withBiome,
   type LocatedBiome,
 } from './contract';
-import type { RouteDetourCommand, TopologyCommand } from './types';
+import type { TopologyCommand } from './types';
 import { reconcileNormalTargetEntryStates } from './selection-state';
 import {
   exitKeysForTopologySource,
