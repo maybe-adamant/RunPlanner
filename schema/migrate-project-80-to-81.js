@@ -37,6 +37,7 @@ function inferOptionKey(profileKey, offerKey, rewardType) {
 function migrateOccurrence(occurrence, profilePath) {
   const state = occurrence?.state;
   if (state?.kind !== 'shop') return;
+  if (state.shop === undefined) return;
   const shop = expectRecord(state.shop, `${profilePath}.state.shop`);
   const profileKey = shop.profileKey;
   if (typeof profileKey !== 'string')
