@@ -64,6 +64,7 @@ import { EMPTY_PLANNER_TIMELINE_FACTS } from '../timeline-facts';
 export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalVisitRoom;
 
 import {
+  accumulateProducerRoleFindingEmissions,
   applyProducerRoleHistory,
   withStoredArtificerReplacements,
   historyChronology,
@@ -555,23 +556,22 @@ export function settleShopAcquisitionSite(
       const settlement = Object.freeze({ site, entry: address });
       let candidateBranches: readonly RewardBranchState[] = branchesBeforeEntry;
       for (const binding of roleBindings) {
-        candidateBranches = applyProducerRoleHistory(
+        const settled = applyProducerRoleHistory(
           catalog,
           candidateBranches,
           source,
           Object.freeze({ ...binding, historySequence }),
           context.facts,
-          new Map(),
           ownerRegion(room.origin),
           context.findingChronology,
           settlement,
-          derivedRoleFrontiers,
-          undefined,
           branchesBeforeEntry,
           true,
           false,
           context.authoredSeaStarDuplicateSiteKeys,
         );
+        candidateBranches = settled.branches;
+        derivedRoleFrontiers.push(...settled.roleFrontiers);
       }
     }
     derivedEntryFrontiers.push(
@@ -635,23 +635,24 @@ export function settleShopAcquisitionSite(
     });
     for (const binding of roleBindings) {
       recordRoles(offer.offerKey, [binding]);
-      current = applyProducerRoleHistory(
+      const settled = applyProducerRoleHistory(
         catalog,
         current,
         source,
         Object.freeze({ ...binding, historySequence }),
         context.facts,
-        findings,
         ownerRegion(room.origin),
         context.findingChronology,
         settlement,
-        roleFrontiers,
-        traitChildSettlements,
         agreementBranches,
         true,
         false,
         context.authoredSeaStarDuplicateSiteKeys,
       );
+      current = settled.branches;
+      accumulateProducerRoleFindingEmissions(findings, settled.findingEmissions);
+      roleFrontiers.push(...settled.roleFrontiers);
+      traitChildSettlements.push(...settled.traitChildSettlements);
     }
     if (current.length !== 1) return false;
     execution.candidate = current[0]!;

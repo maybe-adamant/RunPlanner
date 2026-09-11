@@ -136,6 +136,44 @@ export interface AcquisitionSettlementProduct {
   readonly timelineFacts?: import('../timeline-facts').PlannerTimelineFacts;
 }
 
+/** Complete output of one ordered producer-role fold. */
+export interface ProducerRoleSettlementProduct {
+  readonly branches: readonly RewardBranchState[];
+  /**
+   * Ordered, deduplicated finding entries emitted by this fold, including
+   * recursive Artificer replacement settlement.
+   */
+  readonly findingEmissions: readonly FindingRegionEntry[];
+  readonly roleFrontiers: readonly AcquisitionRoleFrontier[];
+  readonly traitChildSettlements: readonly ReachedTraitChildCheckpoint[];
+}
+
+/**
+ * Replays a returned producer-role finding product through the sole finding
+ * writer so same-identity Pom evaluations retain their existing merge and
+ * deduplication semantics.
+ */
+export function accumulateProducerRoleFindingEmissions(
+  findings: Map<string, FindingRegionEntry>,
+  emissions: readonly FindingRegionEntry[],
+): void {
+  for (const emission of emissions) {
+    if (emission.levelResolutionEvaluations === undefined) {
+      addRewardFinding(findings, emission.finding, emission.atomicRegion, emission.chronology);
+      continue;
+    }
+    for (const evaluation of emission.levelResolutionEvaluations) {
+      addRewardFinding(
+        findings,
+        emission.finding,
+        emission.atomicRegion,
+        emission.chronology,
+        evaluation,
+      );
+    }
+  }
+}
+
 export interface DerivedAcquisitionEntryFrontier {
   readonly address: AcquisitionEntryAddress;
   readonly kind:
@@ -485,8 +523,6 @@ export function settleProducerAcquisitionSite(
   ]?.rewardTypes.byKey[incoming.offer.rewardType]?.acquisitionLifecycle.find(
     (binding) => binding.role === event.role,
   );
-  const roleFrontiers: AcquisitionRoleFrontier[] = [];
-  const traitChildSettlements: ReachedTraitChildCheckpoint[] = [];
   const entry = Object.freeze({
     address: createAcquisitionEntryAddress(site, event.role),
     source: incoming.origin,
@@ -514,23 +550,21 @@ export function settleProducerAcquisitionSite(
         : {}),
     },
     facts,
-    findings,
     atomicRegion,
     findingChronology,
     Object.freeze({ site, entry: entry.address }),
-    roleFrontiers,
-    traitChildSettlements,
     undefined,
     true,
     false,
     authoredSeaStarDuplicateSiteKeys,
   );
+  accumulateProducerRoleFindingEmissions(findings, settled.findingEmissions);
   return Object.freeze({
     site,
     entries: Object.freeze([entry]),
-    branches: settled,
-    roleFrontiers: Object.freeze(roleFrontiers),
-    traitChildSettlements: Object.freeze(traitChildSettlements),
+    branches: settled.branches,
+    roleFrontiers: settled.roleFrontiers,
+    traitChildSettlements: settled.traitChildSettlements,
   });
 }
 
@@ -583,27 +617,27 @@ export function settleOwnedAcquisitionSite(
         }),
     dispositionByAcquisitionRole: source.dispositionByAcquisitionRole ?? Object.freeze({}),
   });
-  let current = roleBindings.reduce(
-    (next, binding) =>
-      applyProducerRoleHistory(
-        catalog,
-        next,
-        source,
-        binding,
-        facts,
-        findings,
-        atomicRegion,
-        findingChronology,
-        Object.freeze({ site, entry: entry.address }),
-        roleFrontiers,
-        traitChildSettlements,
-        request.directTraitAgreementBranches,
-        true,
-        false,
-        request.authoredSeaStarDuplicateSiteKeys,
-      ),
-    branches,
-  );
+  let current: readonly RewardBranchState[] = branches;
+  for (const binding of roleBindings) {
+    const settled = applyProducerRoleHistory(
+      catalog,
+      current,
+      source,
+      binding,
+      facts,
+      atomicRegion,
+      findingChronology,
+      Object.freeze({ site, entry: entry.address }),
+      request.directTraitAgreementBranches,
+      true,
+      false,
+      request.authoredSeaStarDuplicateSiteKeys,
+    );
+    current = settled.branches;
+    accumulateProducerRoleFindingEmissions(findings, settled.findingEmissions);
+    roleFrontiers.push(...settled.roleFrontiers);
+    traitChildSettlements.push(...settled.traitChildSettlements);
+  }
   const entries: AcquisitionSettlementEntry[] = [entry];
   if (request.deferArtificerReplacement !== true) {
     for (const binding of roleBindings) {
@@ -871,7 +905,7 @@ export function settleArtificerReplacementAcquisition(
     true;
   let current: readonly RewardBranchState[] = reached;
   for (const binding of lifecycle.acquisitionLifecycle) {
-    current = applyProducerRoleHistory(
+    const settled = applyProducerRoleHistory(
       catalog,
       current,
       Object.freeze({
@@ -901,17 +935,18 @@ export function settleArtificerReplacementAcquisition(
       }),
       Object.freeze({ ...binding, historySequence: request.historySequence }),
       request.facts,
-      findings,
       request.atomicRegion,
       request.findingChronology,
       Object.freeze({ site, entry: address }),
-      roleFrontiers,
-      traitChildSettlements,
       undefined,
       false,
       true,
       request.authoredSeaStarDuplicateSiteKeys,
     );
+    current = settled.branches;
+    accumulateProducerRoleFindingEmissions(findings, settled.findingEmissions);
+    roleFrontiers.push(...settled.roleFrontiers);
+    traitChildSettlements.push(...settled.traitChildSettlements);
   }
   return Object.freeze({
     site,
@@ -1062,7 +1097,7 @@ export function settlePickupAcquisitionSite(
         request.timelineOwnerByEntryKey?.[key] ?? request.timelineOwner;
       let candidateOnly = current;
       for (const binding of lifecycle.acquisitionLifecycle) {
-        candidateOnly = applyProducerRoleHistory(
+        const settled = applyProducerRoleHistory(
           catalog,
           candidateOnly,
           Object.freeze({
@@ -1109,17 +1144,18 @@ export function settlePickupAcquisitionSite(
           }),
           Object.freeze({ ...binding, historySequence: request.historySequence }),
           request.facts,
-          findings,
           request.atomicRegion,
           request.findingChronology,
           Object.freeze({ site, entry }),
-          roleFrontiers,
-          traitChildSettlements,
           undefined,
           true,
           false,
           request.authoredSeaStarDuplicateSiteKeys,
         );
+        candidateOnly = settled.branches;
+        accumulateProducerRoleFindingEmissions(findings, settled.findingEmissions);
+        roleFrontiers.push(...settled.roleFrontiers);
+        traitChildSettlements.push(...settled.traitChildSettlements);
       }
     }
   }
@@ -1200,7 +1236,7 @@ export function settlePickupAcquisitionSite(
       ]!;
     const entryTimelineOwner = request.timelineOwnerByEntryKey?.[key] ?? request.timelineOwner;
     for (const binding of lifecycle.acquisitionLifecycle) {
-      current = applyProducerRoleHistory(
+      const settled = applyProducerRoleHistory(
         catalog,
         current,
         Object.freeze({
@@ -1243,17 +1279,18 @@ export function settlePickupAcquisitionSite(
         }),
         Object.freeze({ ...binding, historySequence: request.historySequence }),
         request.facts,
-        findings,
         request.atomicRegion,
         request.findingChronology,
         Object.freeze({ site, entry }),
-        roleFrontiers,
-        traitChildSettlements,
         undefined,
         true,
         false,
         request.authoredSeaStarDuplicateSiteKeys,
       );
+      current = settled.branches;
+      accumulateProducerRoleFindingEmissions(findings, settled.findingEmissions);
+      roleFrontiers.push(...settled.roleFrontiers);
+      traitChildSettlements.push(...settled.traitChildSettlements);
     }
   }
   return Object.freeze({
@@ -1272,17 +1309,14 @@ export function applyProducerRoleHistory(
   incoming: AcquisitionSource,
   resolution: AcquisitionRoleResolution,
   facts: RewardFactsFactory,
-  findings: Map<string, FindingRegionEntry>,
   atomicRegion: string | undefined,
   findingChronology: FindingChronology | undefined,
   settlement: { readonly site: AcquisitionSiteAddress; readonly entry: AcquisitionEntryAddress },
-  roleFrontiers?: AcquisitionRoleFrontier[],
-  traitChildSettlements?: ReachedTraitChildCheckpoint[],
   directTraitAgreementBranches?: readonly RewardBranchState[],
   deferArtificerReplacement = false,
   offerAlreadyGenerated = false,
   authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string>,
-): readonly RewardBranchState[] {
+): ProducerRoleSettlementProduct {
   const artificerReplacementRewardTypes = Object.freeze(
     [
       ...new Set(
@@ -1313,6 +1347,9 @@ export function applyProducerRoleHistory(
       : artificerReplacementEntryKey(incoming.origin, resolution.role),
   );
   const next: RewardBranchState[] = [];
+  const findingEmissions = new Map<string, FindingRegionEntry>();
+  const roleFrontiers: AcquisitionRoleFrontier[] = [];
+  const traitChildSettlements: ReachedTraitChildCheckpoint[] = [];
   const realizedAcquisitionByBranch: (ConcreteAcquisitionEvent | undefined)[] = [];
   const priorTraitMutations = new Map<string, PriorTraitMutation>();
   const traitOfferCandidateContacts: ReachedTraitOfferCandidateContact[] = [];
@@ -1449,7 +1486,7 @@ export function applyProducerRoleHistory(
     }
     if (disposition.kind === 'timePiece') {
       addRewardFinding(
-        findings,
+        findingEmissions,
         rewardFinding(
           'timePieceConversionUnavailable',
           createAcquisitionRoleAddress(incoming.origin, resolution.role),
@@ -1488,7 +1525,7 @@ export function applyProducerRoleHistory(
       if (artificerReplacement === null) {
         unresolvedArtificerReplacement = true;
         addRewardFinding(
-          findings,
+          findingEmissions,
           rewardFinding('rewardMissing', artificerReplacementAddress, {
             acquisitionRole: resolution.role,
             lifecyclePoint: resolution.lifecyclePoint,
@@ -1576,7 +1613,7 @@ export function applyProducerRoleHistory(
           });
           if (arcanaFear === undefined) {
             addRewardFinding(
-              findings,
+              findingEmissions,
               rewardFinding(
                 'artificerConversionUnavailable',
                 createAcquisitionRoleAddress(incoming.origin, resolution.role),
@@ -1625,7 +1662,7 @@ export function applyProducerRoleHistory(
             catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]?.canDuplicate ===
             true;
           for (const binding of replacementLifecycle.acquisitionLifecycle) {
-            replacementBranches = applyProducerRoleHistory(
+            const replacementSettlement = applyProducerRoleHistory(
               catalog,
               replacementBranches,
               Object.freeze({
@@ -1660,17 +1697,21 @@ export function applyProducerRoleHistory(
               }),
               Object.freeze({ ...binding, historySequence: resolution.historySequence }),
               facts,
-              findings,
               atomicRegion,
               findingChronology,
               Object.freeze({ site: replacementAddress.site, entry: replacementAddress }),
-              roleFrontiers,
-              traitChildSettlements,
               undefined,
               false,
               true,
               authoredSeaStarDuplicateSiteKeys,
             );
+            replacementBranches = replacementSettlement.branches;
+            accumulateProducerRoleFindingEmissions(
+              findingEmissions,
+              replacementSettlement.findingEmissions,
+            );
+            roleFrontiers.push(...replacementSettlement.roleFrontiers);
+            traitChildSettlements.push(...replacementSettlement.traitChildSettlements);
           }
           next.push(...replacementBranches);
           continue;
@@ -1678,7 +1719,7 @@ export function applyProducerRoleHistory(
         if (generationBags.length > 0) continue;
       }
       addRewardFinding(
-        findings,
+        findingEmissions,
         rewardFinding(
           artificer.supported
             ? 'artificerReplacementUnavailable'
@@ -1697,7 +1738,7 @@ export function applyProducerRoleHistory(
     if (pickupEffect !== undefined && disposition.kind === 'normal') {
       if (authoredAnvilResult === undefined || authoredAnvilResult === null) {
         addRewardFinding(
-          findings,
+          findingEmissions,
           rewardFinding(
             'rewardMissing',
             createAcquisitionRoleAddress(incoming.origin, resolution.role),
@@ -1726,7 +1767,7 @@ export function applyProducerRoleHistory(
         );
         if (!assessment.legal) {
           addRewardFinding(
-            findings,
+            findingEmissions,
             rewardFinding(
               'rewardAcquisitionUnavailable',
               createAcquisitionRoleAddress(incoming.origin, resolution.role),
@@ -1827,7 +1868,7 @@ export function applyProducerRoleHistory(
       resolution.role,
       resolution.lifecyclePoint,
       resolution.historySequence,
-      findings,
+      findingEmissions,
       findingChronology,
       {
         directTraitSetBranchHistories: (directTraitAgreementBranches ?? branches).map(
@@ -1874,14 +1915,14 @@ export function applyProducerRoleHistory(
     });
     if (traitSettlement.blockedChild !== undefined) {
       unresolvedTraitOffer = true;
-      traitChildSettlements?.push(
+      traitChildSettlements.push(
         Object.freeze({ ...traitSettlement.blockedChild, branch: withEvent }),
       );
     } else next.push(withEvent);
   }
   if (next.length === 0 && !unresolvedArtificerReplacement && !unresolvedTraitOffer) {
     addRewardFinding(
-      findings,
+      findingEmissions,
       rewardFinding('rewardAcquisitionUnavailable', incoming.origin, {
         ...offerEvidence(incoming.offer),
         role: resolution.role,
@@ -1891,7 +1932,7 @@ export function applyProducerRoleHistory(
       findingChronology ?? historyChronology(resolution.historySequence),
     );
   }
-  roleFrontiers?.push(
+  roleFrontiers.push(
     Object.freeze({
       address: createAcquisitionRoleAddress(incoming.origin, resolution.role),
       ...(incoming.timelineOwner === undefined ? {} : { timelineOwner: incoming.timelineOwner }),
@@ -1951,5 +1992,10 @@ export function applyProducerRoleHistory(
         : {}),
     }),
   );
-  return Object.freeze(next);
+  return Object.freeze({
+    branches: Object.freeze(next),
+    findingEmissions: Object.freeze([...findingEmissions.values()]),
+    roleFrontiers: Object.freeze(roleFrontiers),
+    traitChildSettlements: Object.freeze(traitChildSettlements),
+  });
 }

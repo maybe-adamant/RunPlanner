@@ -2,7 +2,13 @@
 
 ## Status and objective
 
-Status: **Locked; Gate A complete. Gate B is next.**
+Status: **Locked; Gates A-B complete. Gate C1 is next.**
+
+Gate B verification: full typechecking and five focused files / 55 tests
+passed. Independent review found only lost single-fold Pom cohort coverage;
+bounded remediation retains both that case and sequential-product merging,
+with all 11 Pom tests passing. No production findings remained. Formatting
+and diff checks passed; no fixtures changed.
 
 Gate A verification: workspace typechecking passed; 11 focused files / 165
 tests passed, covering trait offers/candidates, Hermes/room actions, F/N/H
