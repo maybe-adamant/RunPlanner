@@ -1,4 +1,4 @@
-import type { Catalog, InRunTraitRarity, KeepsakeRank, TraitRarity } from '../catalog-schema';
+import type { Catalog, InRunTraitRarity, KeepsakeRank } from '../catalog-schema';
 import { semanticAddressKey, type SemanticAddress } from '../authored-project/addresses';
 import type { AuthoredKeepsakeEquipResults } from '../authored-project/model';
 import type { ArcanaFearState } from './arcana-fear';
@@ -60,7 +60,7 @@ export interface KeepsakeState {
   /** Fig Leaf total uses and its one-success-per-biome guard. */
   readonly figLeaf?: { readonly remainingUses: number; readonly activatedThisBiome: boolean };
   readonly gorgon?:
-    | { readonly status: 'pending'; readonly rarity: TraitRarity }
+    | { readonly status: 'pending'; readonly rarityLevel: GorgonRarityLevel }
     | { readonly status: 'consumed' | 'expired' };
   /** Aromatic Phial's one live source use; absent after ordinary replacement. */
   readonly phial?: { readonly status: 'pending' | 'consumed' };
@@ -103,6 +103,7 @@ export interface FigLeafStateValue {
 }
 
 export type GorgonLifecycleStatus = 'pending' | 'consumed' | 'expired';
+export type GorgonRarityLevel = 1 | 2 | 3 | 4;
 
 /** Declaration-owned rank bonus derived only from canonical equipped-trait history. */
 export function activeKeepsakeRankBonus(catalog: Catalog, traitHistory: TraitHistoryState): 0 | 1 {
@@ -175,7 +176,7 @@ export function advanceCurrentKeepsake(
             ...state,
             gorgon: Object.freeze({
               status: 'pending' as const,
-              rarity: gorgonRarityForRank(catalog, effect, advancedRank),
+              rarityLevel: gorgonRarityLevelForRank(effect, advancedRank),
             }),
           })
         : state;
@@ -266,17 +267,30 @@ export function advanceCurrentKeepsake(
   }
 }
 
-function gorgonRarityForRank(
-  catalog: Catalog,
+export function gorgonRarityLevelForRank(
   effect: Extract<
     NonNullable<import('../catalog-schema').KeepsakeDeclaration['effect']>,
     { readonly kind: 'gorgonAmulet' }
   >,
   rank: KeepsakeRank,
-): TraitRarity {
-  const rarity = catalog.traitRarityOrder[effect.rarityLevelByRank[rank] - 1];
-  if (rarity === undefined) throw new Error(`Gorgon rank ${rank} has no declared rarity`);
-  return rarity;
+): GorgonRarityLevel {
+  return effect.rarityLevelByRank[rank];
+}
+
+/** Athena's source-local sparse chance override derived from Gorgon's captured level. */
+export function gorgonSourceRarityOverride(
+  rarityLevel: GorgonRarityLevel,
+): import('../catalog-schema').BoonRarityOverride {
+  switch (rarityLevel) {
+    case 1:
+      return Object.freeze({});
+    case 2:
+      return Object.freeze({ Rare: 1 });
+    case 3:
+      return Object.freeze({ Epic: 1 });
+    case 4:
+      return Object.freeze({ Heroic: 1 });
+  }
 }
 
 export function figurineRarityForRank(
@@ -362,23 +376,25 @@ export function attestGorgonBranchState(
   const states = branches.map((branch) => branch.keepsakes.gorgon);
   const values = states.map((state) => state?.status);
   const first = values[0];
-  const firstRarity = states[0]?.status === 'pending' ? states[0].rarity : undefined;
+  const firstRarityLevel = states[0]?.status === 'pending' ? states[0].rarityLevel : undefined;
   if (
     values.some((value) => value !== first) ||
     states.some((state) =>
-      state?.status === 'pending' ? state.rarity !== firstRarity : firstRarity !== undefined,
+      state?.status === 'pending'
+        ? state.rarityLevel !== firstRarityLevel
+        : firstRarityLevel !== undefined,
     )
   )
     throw new Error('Gorgon branch frontier is divergent');
   return first;
 }
 
-export function attestPendingGorgonRarity(
+export function attestPendingGorgonRarityLevel(
   branches: readonly { readonly keepsakes: KeepsakeState }[],
-): TraitRarity | undefined {
+): GorgonRarityLevel | undefined {
   const status = attestGorgonBranchState(branches);
   const first = branches[0]?.keepsakes.gorgon;
-  return status === 'pending' && first?.status === 'pending' ? first.rarity : undefined;
+  return status === 'pending' && first?.status === 'pending' ? first.rarityLevel : undefined;
 }
 
 /** Attest the branch frontier before lifecycle composition can consume it. */
@@ -939,7 +955,7 @@ export function createKeepsakeState(
       ? {
           gorgon: Object.freeze({
             status: 'pending' as const,
-            rarity: gorgonRarityForRank(catalog, effect, keepsake.rank),
+            rarityLevel: gorgonRarityLevelForRank(effect, keepsake.rank),
           }),
         }
       : {}),
@@ -1058,7 +1074,7 @@ export function applyKeepsakeReplacement(
       ? {
           gorgon: Object.freeze({
             status: 'pending' as const,
-            rarity: gorgonRarityForRank(catalog, selected.effect, rank),
+            rarityLevel: gorgonRarityLevelForRank(selected.effect, rank),
           }),
         }
       : {}),

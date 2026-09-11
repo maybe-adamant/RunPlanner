@@ -2184,6 +2184,34 @@ describe('execution-plan compiler and codec', () => {
     expect(decodeExecutionPlan(wire)).toEqual(plan);
   });
 
+  it('keeps pending Gorgon diagnostics on the protocol-36 source-rarity wire shape', () => {
+    const wire = JSON.parse(JSON.stringify(fOpeningFixture)) as {
+      occurrences: Array<{
+        diagnostics?: {
+          roomEntered?: {
+            replace?: {
+              retainedEffects?: {
+                keepsakes?: { gorgon?: unknown };
+              };
+            };
+          };
+        };
+      }>;
+    };
+    const keepsakes =
+      wire.occurrences[0]?.diagnostics?.roomEntered?.replace?.retainedEffects?.keepsakes;
+    if (keepsakes === undefined) throw new Error('fixture lacks entry keepsake diagnostics');
+    keepsakes.gorgon = { status: 'pending', rarity: 'Epic' };
+    refreshWireFingerprint(wire as unknown as Record<string, unknown>);
+
+    const decoded = decodeExecutionPlan(wire);
+    const encoded = JSON.parse(encodeExecutionPlan(decoded)) as typeof wire;
+    const encodedGorgon =
+      encoded.occurrences[0]?.diagnostics?.roomEntered?.replace?.retainedEffects?.keepsakes?.gorgon;
+    expect(encodedGorgon).toEqual({ status: 'pending', rarity: 'Epic' });
+    expect(encodedGorgon).not.toHaveProperty('rarityLevel');
+  });
+
   it.each(['echoShopDuplicate', 'hermesShrineDeliveries'])(
     'rejects diagnostic-only %s state as an active room-exit fact',
     (kind) => {

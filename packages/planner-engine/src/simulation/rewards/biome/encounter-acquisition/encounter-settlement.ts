@@ -197,6 +197,21 @@ export function applyEncounterSettlementTransition(inputs: {
       phase?.blocksGorgon !== true &&
       declaration.blocksGorgon !== true &&
       !inputs.gorgonPhaseBlocked;
+    const gorgonTraitContext = Object.freeze({
+      ...inputs.routeLoadout,
+      ...(declaration.boonRarityOverride === undefined
+        ? {}
+        : { boonRarityRoomOverride: declaration.boonRarityOverride }),
+      ...(inputs.gorgonCandidate?.boonRarityItemOverride === undefined
+        ? {}
+        : { boonRarityItemOverride: inputs.gorgonCandidate.boonRarityItemOverride }),
+      ...(inputs.gorgonCandidate?.rarity === undefined
+        ? {}
+        : { gorgonResolvedRarity: inputs.gorgonCandidate.rarity }),
+      ...(inputs.gorgonCandidate?.suppressTemporaryBoonRarity === true
+        ? { suppressTemporaryBoonRarity: true }
+        : {}),
+    });
     if (eligible && result?.athenaTriggerConditionMet === true && result.athenaOffer === null) {
       const effect = catalog.keepsakes.values.find(
         (keepsake) => keepsake.effect?.kind === 'gorgonAmulet',
@@ -212,13 +227,8 @@ export function applyEncounterSettlementTransition(inputs: {
           findings,
           chronology(snapshot, room, event),
           'gorgonAthena',
-          inputs.gorgonCandidate?.rarity,
-          Object.freeze({
-            ...inputs.routeLoadout,
-            ...(declaration.boonRarityOverride === undefined
-              ? {}
-              : { boonRarityRoomOverride: declaration.boonRarityOverride }),
-          }),
+          undefined,
+          gorgonTraitContext,
           undefined,
           effect?.kind === 'gorgonAmulet' ? effect.providerKey : undefined,
         );
@@ -247,7 +257,8 @@ export function applyEncounterSettlementTransition(inputs: {
           findings,
           chronology(snapshot, room, event),
           'gorgonAthena',
-          inputs.gorgonCandidate?.rarity,
+          undefined,
+          gorgonTraitContext,
         ),
       );
       for (const item of settled) {

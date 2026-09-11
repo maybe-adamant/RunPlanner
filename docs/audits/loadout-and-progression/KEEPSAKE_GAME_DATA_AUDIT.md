@@ -1028,7 +1028,8 @@ selection remains fixed at rank III.
 Cherished Heirloom is complete for those six effects: acquisition advances the
 current supported effect according to its exact reconstruction rule, and a
 later supported equip uses rank IV while the Duo remains active. Gorgon uses the
-schema-30 phase child and a chronologically snapped Epic or Heroic rarity. The
+schema-30 phase child and a chronologically snapped source rarity level; its
+reached Athena offer resolves through the shared boon-rarity ledger. The
 remaining 27 identities create no individual simulated gameplay effect, but
 their ordinary equip, Cherished contact, and Gift replay behavior is now fully
 source-audited. They still participate fully in identity history, no-return,

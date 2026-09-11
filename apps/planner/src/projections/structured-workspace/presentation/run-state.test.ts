@@ -166,7 +166,7 @@ describe('Run State presentation', () => {
           },
         ],
         figLeaf: { remainingUses: 2, activatedThisBiome: true },
-        gorgon: { status: 'pending' as const, rarity: 'Epic' as const },
+        gorgon: { status: 'pending' as const, rarityLevel: 3 as const },
         phial: { status: 'pending' as const },
         stone: { status: 'pending' as const, origin: 'echo' as const, rank: 'Common' as const },
         transcendentEmbryo: {
@@ -300,7 +300,7 @@ describe('Run State presentation', () => {
       figLeafRemainingUses: 2,
       figLeafActivatedThisBiome: true,
       gorgonStatus: 'pending',
-      gorgonRarity: 'Epic',
+      gorgonRarityLevel: 3,
       phialStatus: 'pending',
       stoneStatus: 'pending',
       stoneOrigin: 'echo',
@@ -374,11 +374,11 @@ describe('Run State presentation', () => {
         ...snapshot,
         keepsakes: {
           ...snapshot.keepsakes,
-          gorgon: status === 'pending' ? { status, rarity: 'Epic' } : { status },
+          gorgon: status === 'pending' ? { status, rarityLevel: 3 } : { status },
         },
       });
       expect(projected.keepsakes.gorgonStatus).toBe(status);
-      expect(projected.keepsakes.gorgonRarity).toBe(status === 'pending' ? 'Epic' : undefined);
+      expect(projected.keepsakes.gorgonRarityLevel).toBe(status === 'pending' ? 3 : undefined);
     }
     expect(
       presentRunState(catalog, {

@@ -1,4 +1,4 @@
-import type { Catalog } from '../../../../catalog-schema';
+import type { BoonRarityOverride, Catalog, TraitRarity } from '../../../../catalog-schema';
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
@@ -9,9 +9,13 @@ import type { CanonicalAuthoredRoom } from '../../../materialization';
 import {
   assessGorgonEligibility,
   attestGorgonBranchState,
-  attestPendingGorgonRarity,
+  attestPendingGorgonRarityLevel,
   expirePendingGorgon,
+  gorgonSourceRarityOverride,
 } from '../../../keepsakes';
+import { deriveBoonRarityLedger } from '../../../boon-rarity';
+import { boonRarityFactsForOffer } from '../../../trait-offers';
+import { createTraitHistoryState } from '../../../traits';
 import { selectedEncounterAuthoringProfileKey } from '../../../../authored-project/room-state/encounter-envelope';
 import type { RewardBranchState } from '../../branch-primitives';
 import type { GorgonPhaseCandidateSupport } from '../../model';
@@ -21,6 +25,44 @@ export interface GorgonStartedTransition {
   readonly candidate:
     { readonly key: string; readonly value: GorgonPhaseCandidateSupport } | undefined;
   readonly eligiblePhaseKey: string | undefined;
+}
+
+export function resolveGorgonCandidateRarity(inputs: {
+  readonly catalog: Catalog;
+  readonly branches: readonly RewardBranchState[];
+  readonly providerKey: string;
+  readonly rarityLevel: NonNullable<GorgonPhaseCandidateSupport['rarityLevel']>;
+  readonly roomOverride: BoonRarityOverride | undefined;
+}): TraitRarity | undefined {
+  const sourceOverride = gorgonSourceRarityOverride(inputs.rarityLevel);
+  const suppressTemporaryBoonRarity = inputs.rarityLevel > 1;
+  const rarities = inputs.branches.map((branch) => {
+    const facts = boonRarityFactsForOffer(
+      inputs.catalog,
+      branch.traitHistory ?? createTraitHistoryState(),
+      {
+        resolvedProviderKey: inputs.providerKey,
+        boonRarityItemOverride: sourceOverride,
+        ...(inputs.roomOverride === undefined
+          ? {}
+          : { boonRarityRoomOverride: inputs.roomOverride }),
+        ...(suppressTemporaryBoonRarity
+          ? { suppressTemporaryBoonRarity: true }
+          : branch.stygianWell.yarnUses === 0
+            ? {}
+            : { temporaryBoonRarityUses: branch.stygianWell.yarnUses }),
+      },
+      branch.arcanaFear,
+    );
+    return facts === undefined
+      ? undefined
+      : deriveBoonRarityLedger(facts, ['Common', 'Rare', 'Epic', 'Heroic'])
+          .possibleFreshRarities[0];
+  });
+  const first = rarities[0];
+  if (rarities.some((rarity) => rarity !== first))
+    throw new Error('Gorgon rarity frontier is divergent');
+  return first;
 }
 
 /** Evaluates the additive Gorgon appearance after Fig Leaf has settled. */
@@ -42,7 +84,7 @@ export function applyGorgonStartedTransition(inputs: {
       eligiblePhaseKey: undefined,
     });
   const status = attestGorgonBranchState(inputs.branches);
-  const rarity = attestPendingGorgonRarity(inputs.branches);
+  const rarityLevel = attestPendingGorgonRarityLevel(inputs.branches);
   const selectedEncounterKey = selectedEncounterAuthoringProfileKey(
     catalog,
     declaration,
@@ -68,12 +110,29 @@ export function applyGorgonStartedTransition(inputs: {
     selectedEncounterKey !== undefined &&
     catalog.encounterDefinitions.byKey[selectedEncounterKey]?.hostsGorgon === true &&
     event.execution === 'normal';
+  const sourceOverride =
+    rarityLevel === undefined ? undefined : gorgonSourceRarityOverride(rarityLevel);
+  const rarity =
+    effect?.kind !== 'gorgonAmulet' || rarityLevel === undefined
+      ? undefined
+      : resolveGorgonCandidateRarity({
+          catalog,
+          branches: inputs.branches,
+          providerKey: effect.providerKey,
+          rarityLevel,
+          roomOverride: declaration.boonRarityOverride,
+        });
   const candidate = Object.freeze({
     key: semanticAddressKey(origin),
     value: Object.freeze({
       origin,
       supported,
+      ...(rarityLevel === undefined ? {} : { rarityLevel }),
       ...(rarity === undefined ? {} : { rarity }),
+      ...(sourceOverride === undefined ? {} : { boonRarityItemOverride: sourceOverride }),
+      ...(rarityLevel !== undefined && rarityLevel > 1
+        ? { suppressTemporaryBoonRarity: true }
+        : {}),
     }),
   });
   if (

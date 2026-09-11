@@ -186,7 +186,7 @@ describe('Cherished Heirloom later keepsake equips', () => {
   it('derives the full six-result rank-IV matrix from canonical trait history', () => {
     const gorgon = directLaterEquip('AthenaEncounterKeepsake');
     expect(gorgon.rank).toBe('Heroic');
-    expect(gorgon.keepsakes.gorgon).toEqual({ status: 'pending', rarity: 'Heroic' });
+    expect(gorgon.keepsakes.gorgon).toEqual({ status: 'pending', rarityLevel: 4 });
 
     const figLeaf = directLaterEquip('SkipEncounterKeepsake');
     expect(figLeaf.rank).toBe('Heroic');
@@ -286,7 +286,7 @@ describe('Cherished Heirloom later keepsake equips', () => {
       replayBiome(gorgonProject, 'F', [cherishedBranch()]).branches[0]?.keepsakes,
     ).toMatchObject({
       currentKey: 'AthenaEncounterKeepsake',
-      gorgon: { status: 'pending', rarity: 'Heroic' },
+      gorgon: { status: 'pending', rarityLevel: 4 },
     });
 
     let pomProject = applyProjectCommand(createGoldenFGHProject(), catalog, {
@@ -392,7 +392,7 @@ describe('Cherished Heirloom later keepsake equips', () => {
     expect(opposing).toMatchObject({
       currentKey: 'AthenaEncounterKeepsake',
       fatedStatus: 'Unfated',
-      gorgon: { status: 'pending', rarity: 'Heroic' },
+      gorgon: { status: 'pending', rarityLevel: 4 },
     });
     expect(keepsakeSelectionUnavailableReason(catalog, opposing, 'GoldifyKeepsake')).toBe(
       'unfatedEnabling',
@@ -406,10 +406,10 @@ describe('Cherished Heirloom later keepsake equips', () => {
     );
     expect(rejected).toBe(opposing);
     expect(rejected.timePiece).toBeUndefined();
-    expect(rejected.gorgon).toEqual({ status: 'pending', rarity: 'Heroic' });
+    expect(rejected.gorgon).toEqual({ status: 'pending', rarityLevel: 4 });
   });
 
-  it('attests both status and effective pending Gorgon rarity across branches', () => {
+  it('attests both status and captured pending Gorgon source level across branches', () => {
     const heroic = directLaterEquip('AthenaEncounterKeepsake').keepsakes;
     expect(attestGorgonBranchState([{ keepsakes: heroic }, { keepsakes: heroic }])).toBe('pending');
     const epic = createKeepsakeState(catalog, 'AthenaEncounterKeepsake', arcanaFear);

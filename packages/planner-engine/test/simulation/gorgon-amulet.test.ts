@@ -6,6 +6,7 @@ import {
   consumeGorgonAppearance,
   createKeepsakeState,
   expirePendingGorgon,
+  gorgonSourceRarityOverride,
 } from '../../src/simulation/keepsakes';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
@@ -46,8 +47,14 @@ import {
 } from '../../src/simulation/keepsakes';
 import { initializeRewardBranches } from '../../src/simulation/rewards/processing';
 import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import { resolveGorgonCandidateRarity } from '../../src/simulation/rewards/biome/encounter-acquisition/gorgon-started';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 
-import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
+import {
+  attachTraitHistory,
+  createTraitHistoryState,
+  foldTraitHistoryEvents,
+} from '../../src/simulation/traits';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import {
   createBiomeAddress,
@@ -186,11 +193,111 @@ describe('Gorgon Amulet lifecycle', () => {
 
   it('starts pending, consumes once, and never reactivates', () => {
     const pending = createKeepsakeState(catalog, 'AthenaEncounterKeepsake', fear);
-    expect(pending.gorgon).toEqual({ status: 'pending', rarity: 'Epic' });
+    expect(pending.gorgon).toEqual({ status: 'pending', rarityLevel: 3 });
     expect(consumeGorgonAppearance(pending).gorgon).toEqual({ status: 'consumed' });
     expect(consumeGorgonAppearance(consumeGorgonAppearance(pending)).gorgon).toEqual({
       status: 'consumed',
     });
+  });
+
+  it.each([
+    [1, 0, 'Common'],
+    [1, 1, 'Rare'],
+    [2, 1, 'Rare'],
+    [3, 1, 'Epic'],
+    [4, 1, 'Heroic'],
+  ] as const)(
+    'resolves source level %s with %s Yarn use(s) through the Athena ledger as %s',
+    (rarityLevel, yarnUses, expected) => {
+      const branch = initializeTestRewardBranches()[0]!;
+      expect(
+        resolveGorgonCandidateRarity({
+          catalog,
+          branches: [
+            {
+              ...branch,
+              stygianWell: { ...branch.stygianWell, yarnUses },
+            },
+          ],
+          providerKey: 'Athena',
+          rarityLevel,
+          roomOverride: undefined,
+        }),
+      ).toBe(expected);
+    },
+  );
+
+  it('lets room precedence replace the Gorgon source while permanent rarity still raises rank I', () => {
+    const branch = initializeTestRewardBranches()[0]!;
+    const history = branch.traitHistory ?? createTraitHistoryState();
+    const properHistory = {
+      ...history,
+      equippedTraits: {
+        ...history.equippedTraits,
+        ElementalRarityUpgradeBoon: {
+          traitKey: 'ElementalRarityUpgradeBoon',
+          giverKey: 'Hera',
+          providerKind: 'olympian' as const,
+          rarity: 'Common' as const,
+          level: 1,
+          sourceRole: 'source',
+        },
+      },
+      properUpbringingActive: true as const,
+    };
+    expect(
+      resolveGorgonCandidateRarity({
+        catalog,
+        branches: [{ ...branch, traitHistory: properHistory }],
+        providerKey: 'Athena',
+        rarityLevel: 1,
+        roomOverride: undefined,
+      }),
+    ).toBe('Rare');
+    expect(
+      resolveGorgonCandidateRarity({
+        catalog,
+        branches: [branch],
+        providerKey: 'Athena',
+        rarityLevel: 4,
+        roomOverride: { Rare: 1 },
+      }),
+    ).toBe('Rare');
+  });
+
+  it('consumes Yarn at source level I but retains it when source level II suppresses temporary bonuses', () => {
+    const phase = createEncounterPhaseAddress(
+      createBiomeAddress('Underworld', 'G'),
+      { kind: 'occurrence', occurrenceId: createOccurrenceId('gorgon-yarn') },
+      'Combat',
+    );
+    const source = initializeTestRewardBranches()[0]!;
+    const withYarn = { ...source, stygianWell: { ...source.stygianWell, yarnUses: 1 } };
+    for (const [rarityLevel, rarity, expectedYarnUses] of [
+      [1, 'Rare', 0],
+      [2, 'Rare', 1],
+    ] as const) {
+      const offer = materializeGorgonAthenaOffer(catalog, athenaOffer(), rarity);
+      if (offer === undefined) throw new Error('Gorgon Athena offer did not materialize');
+      const settled = settleEncounterTraitOffer(
+        catalog,
+        withYarn,
+        phase,
+        offer,
+        1,
+        'encounterCompleted',
+        undefined,
+        undefined,
+        'gorgonAthena',
+        undefined,
+        {
+          boonRarityItemOverride: gorgonSourceRarityOverride(rarityLevel),
+          gorgonResolvedRarity: rarity,
+          ...(rarityLevel > 1 ? { suppressTemporaryBoonRarity: true } : {}),
+        },
+      );
+      expect(settled.branch.stygianWell.yarnUses).toBe(expectedYarnUses);
+    }
   });
 
   it.each([
@@ -1023,7 +1130,7 @@ describe('Gorgon Amulet lifecycle', () => {
         ...branch,
         keepsakes: Object.freeze({
           ...branch.keepsakes,
-          gorgon: { status: 'pending' as const, rarity: 'Epic' as const },
+          gorgon: { status: 'pending' as const, rarityLevel: 3 as const },
           figLeaf: { remainingUses: 3, activatedThisBiome: false },
         }),
       }),

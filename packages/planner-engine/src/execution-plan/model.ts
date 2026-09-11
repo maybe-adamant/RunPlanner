@@ -1,6 +1,6 @@
 import type { ProjectEvaluationAssembly } from '../simulation/evaluation-products';
 import type { ResourceExecutionPolicy, ResourcePointDisposition } from '../simulation/resources';
-import type { TraitElement } from '../catalog-schema';
+import type { TraitElement, TraitRarity } from '../catalog-schema';
 import type {
   PendingKeepsakeEffects,
   RoomExitConformanceFactKind,
@@ -41,6 +41,13 @@ export type ExecutionLifecycleWindow =
   | { readonly kind: 'shipPreCombat'; readonly wheelKey: string }
   | { readonly kind: 'shipPostCombat'; readonly wheelKey: string }
   | { readonly kind: 'postOutgoing' };
+
+type ExecutionPendingKeepsakeEffects = Omit<PendingKeepsakeEffects, 'gorgon'> & {
+  readonly gorgon:
+    | { readonly status: 'pending'; readonly rarity: TraitRarity }
+    | { readonly status: 'consumed' | 'expired' }
+    | null;
+};
 
 /** Diagnostic evidence only. It is never a lifecycle or transaction cursor. */
 export interface ExecutionRunStateDiagnostic {
@@ -115,7 +122,7 @@ export interface ExecutionRunStateDiagnostic {
   readonly artificer: { readonly usedCount: number; readonly remainingCount: number } | null;
   readonly retainedEffects: {
     readonly echoShopDuplicateStatus: 'pending' | 'consumed' | null;
-    readonly keepsakes: PendingKeepsakeEffects;
+    readonly keepsakes: ExecutionPendingKeepsakeEffects;
     readonly steadyGrowth: readonly {
       readonly traitKey: string;
       readonly progress: number;

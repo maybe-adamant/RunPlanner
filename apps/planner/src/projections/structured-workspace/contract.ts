@@ -2642,7 +2642,7 @@ export interface WorkspaceRunStatePresentation {
     readonly figLeafRemainingUses?: number;
     readonly figLeafActivatedThisBiome?: boolean;
     readonly gorgonStatus?: 'pending' | 'consumed' | 'expired';
-    readonly gorgonRarity?: import('@run-planner/engine/catalog-schema').TraitRarity;
+    readonly gorgonRarityLevel?: 1 | 2 | 3 | 4;
     readonly phialStatus?: 'pending' | 'consumed';
     readonly figurineStatus?: 'pending' | 'consumed';
     readonly figurineOrigin?: 'ordinary' | 'echo';
