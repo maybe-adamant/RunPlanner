@@ -59,9 +59,10 @@ describe('summarizeCatalog', () => {
       traitGivers: emptyCollection(),
       traitGiverByAcquisitionGameName: {},
       boonRarityBases: {
-        olympian: { Rare: 0.1, Epic: 0.05, Duo: 0.12, Legendary: 0.1 },
-        hermes: { Rare: 0.06, Epic: 0.03, Duo: 0, Legendary: 0.01 },
+        olympian: { Rare: 0.1, Epic: 0.05, Heroic: 0, Duo: 0.12, Legendary: 0.1 },
+        hermes: { Rare: 0.06, Epic: 0.03, Heroic: 0, Duo: 0, Legendary: 0.01 },
       },
+      boonRarityRollOrder: ['Common', 'Rare', 'Epic', 'Duo', 'Legendary'],
       boonReplacementChance: 0.1,
       echoLastRunBoon: { variants: emptyCollection() },
       hexes: emptyCollection(),

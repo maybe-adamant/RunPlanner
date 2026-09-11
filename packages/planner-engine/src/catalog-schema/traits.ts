@@ -99,10 +99,11 @@ export interface ChaosTraitCatalog {
 export type TraitRarity = 'Common' | 'Rare' | 'Epic' | 'Heroic' | 'Legendary' | 'Duo';
 export type InRunTraitRarity = Extract<TraitRarity, 'Common' | 'Rare' | 'Epic' | 'Heroic'>;
 
-/** Ordered checks used only for fresh Olympian and Hermes boon rolls. */
-export type BoonRarityCheck = 'Rare' | 'Epic' | 'Duo' | 'Legendary';
+/** Ordered non-Common checks used by fresh god-trait boon rolls. */
+export type BoonRarityCheck = 'Rare' | 'Epic' | 'Heroic' | 'Duo' | 'Legendary';
 export type BoonRarityValues = Readonly<Record<BoonRarityCheck, number>>;
 export type BoonRarityOverride = Readonly<Partial<BoonRarityValues>>;
+export type BoonRarityRollOrder = readonly TraitRarity[];
 export interface BoonRarityContribution {
   readonly additive?: BoonRarityOverride;
   readonly multiplicative?: BoonRarityOverride;
@@ -406,6 +407,8 @@ export interface TraitGiverDeclaration {
   /** Source-declared priority/core traits used by first Olympian offers. */
   readonly priorityTraitKeys: readonly string[];
   readonly rarityPolicy: TraitGiverRarityPolicy;
+  /** Source `RarityRollOrder`; absent means the catalog-wide boon default. */
+  readonly boonRarityRollOrder?: BoonRarityRollOrder;
   /** Closed source-menu participation normalized for Calling Card. */
   readonly callingCardMenu: boolean;
   readonly denialParticipates?: boolean;
@@ -443,6 +446,8 @@ export interface TraitCatalog {
   readonly aspects: CatalogCollection<AspectDeclaration>;
   readonly traits: CatalogCollection<TraitDeclaration>;
   readonly givers: CatalogCollection<TraitGiverDeclaration>;
+  /** Source `TraitRarityData.BoonRarityRollOrder`. */
+  readonly boonRarityRollOrder: BoonRarityRollOrder;
   /** Complete source base ledgers for the only fresh-roll providers this slice supports. */
   readonly boonRarityBases: Readonly<Record<'olympian' | 'hermes', BoonRarityValues>>;
   /** Source `HeroData.BoonData.ReplaceChance` for ordinary replacement rolls. */

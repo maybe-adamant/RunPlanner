@@ -168,7 +168,8 @@ describe('Vow of Denial trait history', () => {
       createTraitHistoryState(),
       {
         boonRarityFacts: {
-          providerBase: { Rare: 0.1, Epic: 0.05, Duo: 0.12, Legendary: 0.1 },
+          providerBase: { Rare: 0.1, Epic: 0.05, Heroic: 0, Duo: 0.12, Legendary: 0.1 },
+          rollOrder: ['Common', 'Rare', 'Epic', 'Duo', 'Legendary'],
           roomOverride: { Rare: 1 },
           contributions: [],
         },

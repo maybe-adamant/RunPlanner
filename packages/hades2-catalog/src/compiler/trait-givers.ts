@@ -13,6 +13,7 @@ import {
   requireObject,
 } from './common';
 import { fail } from './errors';
+import { normalizeBoonRarityRollOrder } from './trait-offer-catalog';
 import type { RawTraitCatalogInput, RawTraitGiverDeclaration } from '../declarations/traits';
 
 const CALLING_CARD_GIVERS = new Set([
@@ -60,6 +61,7 @@ export function normalizeGivers(
       'traitKeys',
       'priorityTraitKeys',
       'rarityPolicy',
+      'boonRarityRollOrder',
       'denialParticipates',
       'selectedOptionPathPointBonuses',
     ]);
@@ -217,6 +219,14 @@ export function normalizeGivers(
       traitKeys,
       priorityTraitKeys,
       rarityPolicy: frozenRarityPolicy,
+      ...(giver.boonRarityRollOrder === undefined
+        ? {}
+        : {
+            boonRarityRollOrder: normalizeBoonRarityRollOrder(
+              giver.boonRarityRollOrder,
+              `${path}.boonRarityRollOrder`,
+            ),
+          }),
       ...(giver.denialParticipates === true ? { denialParticipates: true } : {}),
       ...(giver.selectedOptionPathPointBonuses === undefined
         ? {}

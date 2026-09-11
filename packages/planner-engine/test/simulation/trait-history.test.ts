@@ -576,6 +576,34 @@ describe('Proper Upbringing rarity lifecycle', () => {
     ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
   });
 
+  it('uses source-aware rarity ledgers for shop-aware NPC trait offers', () => {
+    const history = activeHistory();
+    const factsFor = (giverKey: string) =>
+      boonRarityFactsForOffer(catalog, history, { resolvedProviderKey: giverKey });
+
+    expect(factsFor('Artemis')).toMatchObject({
+      providerBase: catalog.boonRarityBases.olympian,
+      rollOrder: ['Common', 'Rare', 'Epic'],
+      contributions: [{ additive: { Rare: 1 } }],
+    });
+    expect(factsFor('Athena')).toMatchObject({
+      providerBase: catalog.boonRarityBases.olympian,
+      rollOrder: ['Common', 'Rare', 'Epic', 'Heroic'],
+      contributions: [{ additive: { Rare: 1 } }],
+    });
+    expect(factsFor('Dionysus')).toMatchObject({
+      providerBase: catalog.boonRarityBases.olympian,
+      rollOrder: catalog.boonRarityRollOrder,
+      contributions: [{ additive: { Rare: 1 } }],
+    });
+    expect(factsFor('Hermes')).toMatchObject({
+      providerBase: catalog.boonRarityBases.hermes,
+      rollOrder: catalog.boonRarityRollOrder,
+      contributions: [{ additive: { Rare: 1 } }],
+    });
+    expect(factsFor('Hades')).toBeUndefined();
+  });
+
   it('applies a Q-style guaranteed Rare check to Proper Upbringing before it activates', () => {
     const history = twoEachHistory();
     const context = {

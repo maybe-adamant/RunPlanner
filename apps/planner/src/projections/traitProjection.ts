@@ -92,8 +92,15 @@ export function projectTraitOfferState(
                 : Object.freeze({
                     kind: 'orderedChecks' as const,
                     checks: Object.freeze(
-                      (['Rare', 'Epic', 'Duo', 'Legendary'] as const).map((label) =>
-                        Object.freeze({ label, value: formatCheckValue(rarity.values[label]) }),
+                      rarity.rollOrder.flatMap((label) =>
+                        label === 'Common'
+                          ? []
+                          : [
+                              Object.freeze({
+                                label,
+                                value: formatCheckValue(rarity.values[label]),
+                              }),
+                            ],
                       ),
                     ),
                   }),

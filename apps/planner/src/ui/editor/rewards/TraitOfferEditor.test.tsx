@@ -548,7 +548,20 @@ describe('trait offer editor entry and dialog', () => {
                     offerGenerationState: Object.freeze({
                       rarity: Object.freeze({
                         kind: 'orderedChecks' as const,
-                        values: Object.freeze({ Rare: 0.2, Epic: 0.05, Duo: 0, Legendary: 0 }),
+                        values: Object.freeze({
+                          Rare: 0.2,
+                          Epic: 0.05,
+                          Heroic: 0,
+                          Duo: 0,
+                          Legendary: 0,
+                        }),
+                        rollOrder: Object.freeze([
+                          'Common',
+                          'Rare',
+                          'Epic',
+                          'Duo',
+                          'Legendary',
+                        ] as const),
                       }),
                       replacementRollChance: forced ? 1 : 0.1,
                       eligibleReplacementCount: 1,

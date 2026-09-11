@@ -69,7 +69,14 @@ describe('route trait projection', () => {
     const baseState: TraitOfferGenerationState = Object.freeze({
       rarity: Object.freeze({
         kind: 'orderedChecks' as const,
-        values: Object.freeze({ Rare: 0.3, Epic: 0.05, Duo: 0.12, Legendary: 0.1 }),
+        values: Object.freeze({
+          Rare: 0.3,
+          Epic: 0.05,
+          Heroic: 0,
+          Duo: 0.12,
+          Legendary: 0.1,
+        }),
+        rollOrder: Object.freeze(['Common', 'Rare', 'Epic', 'Duo', 'Legendary'] as const),
       }),
       replacementRollChance: 0.1,
       eligibleReplacementCount: 2,
