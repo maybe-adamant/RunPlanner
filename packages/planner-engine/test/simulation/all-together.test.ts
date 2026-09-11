@@ -439,6 +439,7 @@ describe('All Together direct trait settlement', () => {
       result.branch.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
     ).toEqual([]);
     expect(result.blockedChild?.address).toMatchObject({ kind: 'allTogetherSet', setKey: 'earth' });
+    expect(result.blockedChild?.candidateContext).toBeDefined();
     expect(
       [...findings.values()].find((entry) => entry.finding.origin.kind === 'allTogetherSet')
         ?.finding.evidence.detail,

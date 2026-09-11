@@ -18,7 +18,7 @@ import { LoadedEchoLastRunBoonChoice } from './TraitOfferEchoLastRunBoon';
 import { TraitOfferOrdinaryOption } from './TraitOfferOrdinaryOption';
 import { TraitOfferSelectedOutcome } from './TraitOfferSelectedOutcome';
 import { TraitOfferStateInspector } from './TraitOfferStateInspector';
-import { replaceTraitOfferOption } from './traitOfferOptions';
+import { replaceTraitOfferOption, selectedTraitOutcomeDraftComplete } from './traitOfferOptions';
 import { ChaosTraitOfferEditor } from './ChaosTraitOfferEditor';
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
@@ -60,6 +60,12 @@ export function TraitOfferEditorShell({
   const support = candidateSupport(candidate);
   const feedback = projectTraitOfferFeedback(value, candidate, interaction.traitLabel);
   const offerState = value.kind === 'traits' ? projectTraitOfferState(candidate) : undefined;
+  const selectedOutcomeDomain =
+    value.kind === 'traits' ? interaction.optionDomain(value, value.selectedOptionKey) : undefined;
+  const selectedOutcomeComplete =
+    value.kind !== 'traits' ||
+    (selectedOutcomeDomain !== undefined &&
+      selectedTraitOutcomeDraftComplete(value, selectedOutcomeDomain));
   const offerMessage =
     feedback.contextMessage ??
     (support === 'impossible'
@@ -400,7 +406,7 @@ export function TraitOfferEditorShell({
       )}
       <button
         className="primary-action"
-        disabled={support === 'impossible'}
+        disabled={support === 'impossible' || !selectedOutcomeComplete}
         onClick={() => {
           onCommit?.(value);
         }}

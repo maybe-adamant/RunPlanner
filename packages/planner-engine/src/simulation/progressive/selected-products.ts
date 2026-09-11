@@ -65,13 +65,15 @@ export function retainBlockedRegionProducts(
       ? blockedAt
       : blockedAt.kind === 'naturalSelectionResult'
         ? blockedAt.trait
-        : blockedAt.kind === 'traitAcquisitionTarget' ||
-            blockedAt.kind === 'circeResolution' ||
-            blockedAt.kind === 'echoPomTarget' ||
-            blockedAt.kind === 'echoLastRunBoon' ||
-            blockedAt.kind === 'echoLastReward'
+        : blockedAt.kind === 'allTogetherSet'
           ? blockedAt.trait
-          : undefined;
+          : blockedAt.kind === 'traitAcquisitionTarget' ||
+              blockedAt.kind === 'circeResolution' ||
+              blockedAt.kind === 'echoPomTarget' ||
+              blockedAt.kind === 'echoLastRunBoon' ||
+              blockedAt.kind === 'echoLastReward'
+            ? blockedAt.trait
+            : undefined;
   const blockedLevelAt: LevelResolutionAddress | undefined =
     blockedAt.kind === 'levelResolution' ? blockedAt : undefined;
   const blockedJudgmentAt: JudgmentArcanaAddress | undefined =

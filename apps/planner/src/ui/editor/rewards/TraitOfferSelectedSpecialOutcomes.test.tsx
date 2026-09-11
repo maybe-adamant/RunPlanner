@@ -158,14 +158,25 @@ describe('selected outcomes', () => {
       </Provider>,
     );
 
-    expect(screen.getByRole('button', { name: 'Save trait offer' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
+      'disabled',
+      true,
+    );
     await user.click(screen.getByRole('button', { name: 'Choose all grants' }));
     await user.click(await screen.findByText('Rallying Cry'));
+    expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
+      'disabled',
+      true,
+    );
     await user.click(await screen.findByText('Slow Cooker'));
     await user.click(await screen.findByText('Air Quality'));
     await user.click(await screen.findByText('Water Fitness'));
     expect(commit).not.toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: 'Apply complete outcome' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
+      'disabled',
+      false,
+    );
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
     expect(commit).toHaveBeenCalledTimes(1);
     expect(
@@ -290,12 +301,20 @@ describe('selected outcomes', () => {
     await waitFor(() =>
       expect(document.activeElement?.id).toBe(semanticOwnerControlElementId(result)),
     );
+    expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
+      'disabled',
+      true,
+    );
     await user.click(screen.getByRole('button', { name: 'Choose all targets' }));
     const authoredTargets = Array.from({ length: 8 }, (_, index) => targetKeys[index % 4]!);
     for (const targetKey of authoredTargets) {
       await user.click(screen.getByRole('option', { name: targetKey }));
     }
     expect(screen.getAllByRole('button', { name: /Position \d+:/ })).toHaveLength(8);
+    expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
+      'disabled',
+      false,
+    );
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
     expect(seenPrefixes).toContainEqual(authoredTargets.slice(0, 7));
     expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(
@@ -807,6 +826,10 @@ describe('selected outcomes', () => {
         </Provider>,
       );
 
+      expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
+        'disabled',
+        true,
+      );
       if (effect === 'disableFear') {
         await user.click(screen.getByLabelText(label));
         await user.click(await screen.findByText('Vow of Rivals'));
@@ -819,6 +842,10 @@ describe('selected outcomes', () => {
         await user.click(await screen.findByText('The Titan'));
         await user.click(screen.getByRole('button', { name: 'Apply Lapis outcome' }));
       }
+      expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
+        'disabled',
+        false,
+      );
       await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
       const saved = commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits;
       const resolution = saved.options[0]?.circeResolution;

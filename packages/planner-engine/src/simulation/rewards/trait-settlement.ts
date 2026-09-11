@@ -692,6 +692,19 @@ function applyTraitOfferForAcquisitionInternal(
     let invalid = owner === undefined;
     if (owner !== undefined) {
       const traitAddress = createTraitOfferAddress(owner, role);
+      const childCandidateContext = Object.freeze({
+        before: evaluation.before,
+        context: withBoonRarityFacts(
+          catalog,
+          branch,
+          Object.freeze({
+            ...sourceTraitContext,
+            resolvedProviderKey: evaluation.offer.giverKey,
+          }),
+        ),
+        arcanaFear: branch.arcanaFear,
+        keepsakes: branch.keepsakes,
+      });
       if (result === undefined) {
         const firstSet = selectedDisposition.sets[0];
         if (firstSet !== undefined) {
@@ -702,6 +715,7 @@ function applyTraitOfferForAcquisitionInternal(
           );
           invalid = true;
           blockedChildAddress = address;
+          blockedChildCandidateContext = childCandidateContext;
           if (findings !== undefined)
             addTraitChildFinding(
               findings,
@@ -734,6 +748,7 @@ function applyTraitOfferForAcquisitionInternal(
         if (!legal) {
           invalid = true;
           blockedChildAddress ??= address;
+          blockedChildCandidateContext ??= childCandidateContext;
           if (findings !== undefined)
             addTraitChildFinding(
               findings,

@@ -645,6 +645,36 @@ describe('trait-offer-interactions', () => {
     });
   });
 
+  it('projects Natural Selection targets from an unsaved selected draft', () => {
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
+    const trait = createTraitOfferAddress(reward, 'source');
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+    });
+    const interaction = bind(project, 'Underworld', 'F').interactions.traitOffers.get(
+      semanticAddressKey(trait),
+    );
+    if (interaction === undefined) throw new Error('Demeter interaction is missing');
+    const draft: AuthoredTraitOfferTraits = Object.freeze({
+      kind: 'traits',
+      giverKey: 'Demeter',
+      options: Object.freeze([
+        Object.freeze({ traitKey: 'GoodStuffBoon', rarity: 'Duo' as const }),
+        Object.freeze({ traitKey: 'DemeterSpecialBoon', rarity: 'Epic' as const }),
+        Object.freeze({ traitKey: 'ReserveManaHitShieldBoon', rarity: 'Epic' as const }),
+      ]) as AuthoredTraitOfferTraits['options'],
+      selectedOptionKey: 'option1',
+      rarificationActions: Object.freeze([]),
+    });
+    expect(interaction.optionDomain(draft, 'option1').naturalSelection?.control).toMatchObject({
+      address: createNaturalSelectionResultAddress(trait, 'option1'),
+      optionKey: 'option1',
+      slotCount: 8,
+    });
+  });
+
   it('adapts engine-owned Echo Boon distinctness into contextual row domains', () => {
     const bridgeId = createOccurrenceId('golden-h-bridge01');
     let project = reachedEchoProject();
