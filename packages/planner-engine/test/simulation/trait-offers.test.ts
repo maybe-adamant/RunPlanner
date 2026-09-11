@@ -25,6 +25,7 @@ import {
   boonRarityFactsForOffer,
   traitOfferCompositionDomains,
   traitOfferStartingDraft,
+  nextTraitOfferDraft,
   type ProjectEvaluation,
   type SelectedTraitOfferAssessment,
   type TraitOfferEvent,
@@ -442,6 +443,261 @@ describe('rarity-aware high-tier composition', () => {
         fallbackGold: false,
         replacementRollChance: 0.1,
       }).legal,
+    ).toBe(true);
+  });
+});
+
+describe('prefix-aware ordinary rarity composition', () => {
+  const commonOnly = catalog.traits.byKey.HiddenMaxHealthBoon;
+  const scalableOne = catalog.traits.byKey.FirstHangoverBoon;
+  const scalableTwo = catalog.traits.byKey.CombatEncounterHealBoon;
+  const dionysus = catalog.traitGivers.byKey.Dionysus;
+  if (
+    commonOnly === undefined ||
+    scalableOne === undefined ||
+    scalableTwo === undefined ||
+    dionysus === undefined
+  )
+    throw new Error('missing mixed-rarity Dionysus fixture');
+  const commonOnlyDeclaration = Object.freeze({
+    ...commonOnly,
+    rarityDomain: Object.freeze({
+      ...commonOnly.rarityDomain,
+      freshOfferRarities: Object.freeze(['Common'] as const),
+    }),
+  });
+  const giver = Object.freeze({
+    ...dionysus,
+    traitKeys: Object.freeze([commonOnly.key, scalableOne.key, scalableTwo.key]),
+  });
+  const mixedCatalog = Object.freeze({
+    ...catalog,
+    traits: Object.freeze({
+      ...catalog.traits,
+      values: Object.freeze(
+        catalog.traits.values.map((trait) =>
+          trait.key === commonOnly.key ? commonOnlyDeclaration : trait,
+        ),
+      ),
+      byKey: Object.freeze({
+        ...catalog.traits.byKey,
+        [commonOnly.key]: commonOnlyDeclaration,
+      }),
+    }),
+    traitGivers: Object.freeze({
+      ...catalog.traitGivers,
+      values: Object.freeze(
+        catalog.traitGivers.values.map((candidate) =>
+          candidate.key === giver.key ? giver : candidate,
+        ),
+      ),
+      byKey: Object.freeze({ ...catalog.traitGivers.byKey, [giver.key]: giver }),
+    }),
+  });
+  const apollo = catalog.traitGivers.byKey.Apollo;
+  if (apollo === undefined) throw new Error('missing Apollo priority fixture');
+  const priorityGiver = Object.freeze({
+    ...apollo,
+    traitKeys: giver.traitKeys,
+    priorityTraitKeys: giver.traitKeys,
+  });
+  const priorityCatalog = Object.freeze({
+    ...mixedCatalog,
+    traitGivers: Object.freeze({
+      ...mixedCatalog.traitGivers,
+      values: Object.freeze(
+        mixedCatalog.traitGivers.values.map((candidate) =>
+          candidate.key === priorityGiver.key ? priorityGiver : candidate,
+        ),
+      ),
+      byKey: Object.freeze({
+        ...mixedCatalog.traitGivers.byKey,
+        [priorityGiver.key]: priorityGiver,
+      }),
+    }),
+  });
+  const legendary = catalog.traits.byKey.TimeStopLastStandBoon;
+  if (legendary === undefined) throw new Error('missing Legendary composition fixture');
+  const eligibleLegendary = Object.freeze({
+    ...legendary,
+    offerRequirements: Object.freeze([]),
+  });
+  const highTierGiver = Object.freeze({
+    ...giver,
+    traitKeys: Object.freeze([...giver.traitKeys, eligibleLegendary.key]),
+  });
+  const highTierMixedCatalog = Object.freeze({
+    ...mixedCatalog,
+    traits: Object.freeze({
+      ...mixedCatalog.traits,
+      values: Object.freeze(
+        mixedCatalog.traits.values.map((trait) =>
+          trait.key === eligibleLegendary.key ? eligibleLegendary : trait,
+        ),
+      ),
+      byKey: Object.freeze({
+        ...mixedCatalog.traits.byKey,
+        [eligibleLegendary.key]: eligibleLegendary,
+      }),
+    }),
+    traitGivers: Object.freeze({
+      ...mixedCatalog.traitGivers,
+      values: Object.freeze(
+        mixedCatalog.traitGivers.values.map((candidate) =>
+          candidate.key === highTierGiver.key ? highTierGiver : candidate,
+        ),
+      ),
+      byKey: Object.freeze({
+        ...mixedCatalog.traitGivers.byKey,
+        [highTierGiver.key]: highTierGiver,
+      }),
+    }),
+  });
+  const guaranteedRareContext = {
+    boonRarityFacts: {
+      providerBase: catalog.boonRarityBases.olympian,
+      rollOrder: catalog.boonRarityRollOrder,
+      contributions: [{ additive: { Rare: 1 } }],
+    },
+  } as const;
+  const guaranteedLegendaryContext = {
+    boonRarityFacts: {
+      providerBase: { Rare: 0, Epic: 0, Heroic: 0, Duo: 0, Legendary: 1 },
+      rollOrder: catalog.boonRarityRollOrder,
+      contributions: [],
+    },
+  } as const;
+  const history = createTraitHistoryState();
+
+  it('keeps each first-Olympian priority row on its own rarity domain', () => {
+    const offer = {
+      kind: 'traits',
+      giverKey: priorityGiver.key,
+      options: [
+        { traitKey: commonOnly.key, rarity: 'Common' },
+        { traitKey: scalableOne.key, rarity: 'Rare' },
+        { traitKey: scalableTwo.key, rarity: 'Rare' },
+      ],
+      selectedOptionKey: 'option1',
+    } as const;
+    expect(
+      assessTraitOffer(priorityCatalog, offer, history, guaranteedRareContext).every(
+        (assessment) => assessment.legal,
+      ),
+    ).toBe(true);
+  });
+
+  it('removes selected identities from pooled rarity buckets between rows', () => {
+    const accepted = {
+      kind: 'traits',
+      giverKey: giver.key,
+      options: [
+        { traitKey: scalableOne.key, rarity: 'Rare' },
+        { traitKey: scalableTwo.key, rarity: 'Rare' },
+        { traitKey: commonOnly.key, rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    } as const;
+    expect(
+      assessTraitOffer(mixedCatalog, accepted, history, guaranteedRareContext).every(
+        (assessment) => assessment.legal,
+      ),
+    ).toBe(true);
+
+    const stale = {
+      ...accepted,
+      options: [
+        { traitKey: commonOnly.key, rarity: 'Common' },
+        { traitKey: scalableOne.key, rarity: 'Rare' },
+        { traitKey: scalableTwo.key, rarity: 'Rare' },
+      ],
+    } as const;
+    expect(assessTraitOffer(mixedCatalog, stale, history, guaranteedRareContext)[0]).toMatchObject({
+      legal: false,
+      findings: [{ code: 'rarityRollUnavailable', traitKey: commonOnly.key, detail: 'Common' }],
+    });
+  });
+
+  it('builds initial and incremental drafts that complete through the changing pool', () => {
+    const initial = traitOfferStartingDraft(
+      mixedCatalog,
+      giver.key,
+      history,
+      guaranteedRareContext,
+    );
+    expect(initial).toBeDefined();
+    expect(initial?.options.map(({ traitKey, rarity }) => [traitKey, rarity])).toEqual([
+      [scalableOne.key, 'Rare'],
+      [scalableTwo.key, 'Rare'],
+      [commonOnly.key, 'Common'],
+    ]);
+    expect(
+      initial !== undefined &&
+        assessTraitOffer(mixedCatalog, initial, history, guaranteedRareContext).every(
+          (assessment) => assessment.legal,
+        ),
+    ).toBe(true);
+
+    const one = {
+      kind: 'traits',
+      giverKey: giver.key,
+      options: [{ traitKey: scalableTwo.key, rarity: 'Rare' }],
+      selectedOptionKey: 'option1',
+    } as const;
+    const two = nextTraitOfferDraft(mixedCatalog, one, history, guaranteedRareContext);
+    const three = two && nextTraitOfferDraft(mixedCatalog, two, history, guaranteedRareContext);
+    expect(three?.options.at(-1)).toEqual({ traitKey: commonOnly.key, rarity: 'Common' });
+    expect(
+      three !== undefined &&
+        assessTraitOffer(mixedCatalog, three, history, guaranteedRareContext).every(
+          (assessment) => assessment.legal,
+        ),
+    ).toBe(true);
+  });
+
+  it('keeps a guaranteed optional high tier outside the ordinary bucket pass', () => {
+    const mixedOffer = {
+      kind: 'traits',
+      giverKey: highTierGiver.key,
+      options: [
+        { traitKey: scalableOne.key, rarity: 'Common' },
+        { traitKey: commonOnly.key, rarity: 'Common' },
+        { traitKey: eligibleLegendary.key, rarity: 'Legendary' },
+      ],
+      selectedOptionKey: 'option1',
+    } as const;
+    expect(
+      assessTraitOffer(highTierMixedCatalog, mixedOffer, history, guaranteedLegendaryContext).every(
+        (assessment) => assessment.legal,
+      ),
+    ).toBe(true);
+
+    const initial = traitOfferStartingDraft(
+      highTierMixedCatalog,
+      highTierGiver.key,
+      history,
+      guaranteedLegendaryContext,
+    );
+    expect(initial).toBeDefined();
+    expect(initial?.options.every((option) => option.rarity === 'Common')).toBe(true);
+
+    const one = {
+      kind: 'traits',
+      giverKey: highTierGiver.key,
+      options: [{ traitKey: scalableOne.key, rarity: 'Common' }],
+      selectedOptionKey: 'option1',
+    } as const;
+    const two = nextTraitOfferDraft(highTierMixedCatalog, one, history, guaranteedLegendaryContext);
+    const three =
+      two === undefined
+        ? undefined
+        : nextTraitOfferDraft(highTierMixedCatalog, two, history, guaranteedLegendaryContext);
+    expect(three).toBeDefined();
+    expect(
+      three !== undefined &&
+        assessTraitOffer(highTierMixedCatalog, three, history, guaranteedLegendaryContext).every(
+          (assessment) => assessment.legal,
+        ),
     ).toBe(true);
   });
 });
