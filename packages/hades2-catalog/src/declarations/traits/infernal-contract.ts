@@ -1,4 +1,4 @@
-import type { RawTraitDeclaration } from '../traits';
+import type { RawTraitDeclaration } from './types';
 
 export const infernalContractTraits = [
   {

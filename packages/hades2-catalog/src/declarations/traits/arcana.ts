@@ -1,5 +1,5 @@
 import { arcanaCards } from '../arcana-fear';
-import type { RawTraitDeclaration } from '../traits';
+import type { RawTraitDeclaration } from './types';
 
 /**
  * Arcana installs these traits from the route loadout rather than a giver

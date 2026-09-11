@@ -8,29 +8,29 @@ import {
   validateEncounterDefinitionClosure,
   validateEncounterSetClosure,
   validateNemesisRandomEventContract,
-} from './encounter-closure';
-import { normalizeEncounterDefinitions } from './encounter-definitions';
-import { normalizeEncounterEnvelopes } from './encounter-envelopes';
-import { normalizeEncounterSets } from './encounter-sets';
+} from './encounters/closure';
+import { normalizeEncounterDefinitions } from './encounters/definitions';
+import { normalizeEncounterEnvelopes } from './encounters/envelopes';
+import { normalizeEncounterSets } from './encounters/sets';
 import { normalizeExitCompatibilityPolicies, normalizeExitTypes } from './exits';
-import { validateHexBindings } from './hexes';
+import { validateHexBindings } from './traits/hexes';
 import {
   normalizeKeepsakes,
   validateEchoGiftBindings,
   validateKeepsakeReferences,
 } from './keepsakes';
-import { normalizeBiomeLayouts } from './layouts';
+import { normalizeBiomeLayouts } from './layouts/normalize';
 import { normalizeRoomLifecycleProfiles, validateLifecycleBindings } from './lifecycles';
-import { validateRoomLayoutClosure } from './room-layout-closure';
-import { normalizeRooms } from './rooms';
+import { validateRoomLayoutClosure } from './rooms/layout-closure';
+import { normalizeRooms } from './rooms/normalize';
 import { validateFixedAcquisitionTraitGrants } from './rewards/declarations';
 import { createRewardKernelCatalog } from './rewards/normalize';
 import { normalizeRoutes } from './routes';
 import {
   createTraitGiverByAcquisitionGameName,
   validateRewardAcquisitionRoleTraitGivers,
-} from './trait-givers';
-import { createTraitCatalog } from './traits';
+} from './traits/givers';
+import { createTraitCatalog } from './traits/normalize';
 
 export { CatalogContractError } from './errors';
 

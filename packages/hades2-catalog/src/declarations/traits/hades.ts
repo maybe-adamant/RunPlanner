@@ -1,4 +1,4 @@
-import type { RawTraitDeclaration, RawTraitGiverDeclaration } from '../traits';
+import type { RawTraitDeclaration, RawTraitGiverDeclaration } from './types';
 
 const raritylessHadesTrait = {
   rarityDomain: 'none',

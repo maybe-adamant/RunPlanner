@@ -1,4 +1,4 @@
-import type { RawHexDeclaration } from '../traits';
+import type { RawHexDeclaration } from './types';
 
 const layouts = [
   { key: 'Lung', label: 'Lung', baseCapacity: 16, rareCount: 2, epicCount: 1 },

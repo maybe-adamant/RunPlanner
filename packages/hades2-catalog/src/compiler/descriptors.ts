@@ -5,7 +5,7 @@ import type {
 } from '@run-planner/engine/catalog-schema';
 import type { CountedRewardBinding } from '@run-planner/engine/reward-kernel';
 
-import type { RawCountedRewardBinding, RawLocalChildDescriptor } from '../declarations';
+import type { RawCountedRewardBinding, RawLocalChildDescriptor } from '../declarations/index';
 
 import {
   freezeUniqueStrings,

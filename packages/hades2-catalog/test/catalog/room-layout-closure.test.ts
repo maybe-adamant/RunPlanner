@@ -5,7 +5,7 @@ import { declarations } from '@run-planner/hades2-catalog/test-support';
 import { cloneCatalogInput } from './support/catalog-input';
 
 import { createCollection } from '../../src/compiler/common';
-import { validateRoomLayoutClosure } from '../../src/compiler/room-layout-closure';
+import { validateRoomLayoutClosure } from '../../src/compiler/rooms/layout-closure';
 
 const input = cloneCatalogInput;
 
