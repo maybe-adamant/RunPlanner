@@ -2,7 +2,13 @@
 
 ## Status and objective
 
-Status: **Locked; Gates A-C complete. Gate D is next.**
+Status: **Locked; Gates A-D complete. Gate E is next.**
+
+Gate D verification: full typecheck, 98 focused tests, and the engine lane
+(142 files / 1,836 tests) passed. Independent review found no actionable
+findings and independently passed 50 codec/command tests. Structural decoding
+retains first-error order, and capacity reconciliation remains atomic. No
+fixtures changed.
 
 Gate C2 verification: full typecheck, 12 focused files / 95 tests, narrow lint,
 formatting and diff checks passed. Independent diff review found no actionable

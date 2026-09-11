@@ -18,6 +18,7 @@ import type {
   OccurrenceId,
   RoomOccurrence,
 } from '../model';
+import { sameExitDecisionSource } from './source-identity';
 
 /** The selected spine resolves occurrence-owned additional continuations. */
 type AdditionalExitTopology = {
@@ -442,14 +443,6 @@ export function uncommittedOrdinaryTargetAuthoringEligibility(
   return ordinaryTargetAuthoringEligibility(catalog, layout, provisionalTopology, target, gameName);
 }
 
-function sameSource(left: ExitDecisionSource, right: ExitDecisionSource): boolean {
-  return left.kind === 'occurrence' && right.kind === 'occurrence'
-    ? left.occurrenceId === right.occurrenceId
-    : left.kind === 'hubDecision' &&
-        right.kind === 'hubDecision' &&
-        left.decisionKey === right.decisionKey;
-}
-
 /** Returns the optional authored exit decision owned by one exact source. */
 export function exitDecisionForSource(
   topology: Pick<BiomeTopology, 'decisions'>,
@@ -457,7 +450,7 @@ export function exitDecisionForSource(
 ): ExitDecision | undefined {
   return topology.decisions.find(
     (decision): decision is ExitDecision =>
-      decision.kind === 'exit' && sameSource(decision.source, source),
+      decision.kind === 'exit' && sameExitDecisionSource(decision.source, source),
   );
 }
 

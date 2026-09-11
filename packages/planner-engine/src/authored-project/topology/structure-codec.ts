@@ -35,6 +35,7 @@ import {
   selectedExitKey,
   selectedOrdinaryBatchIndex,
 } from './query';
+import { exitDecisionSourceKey } from './source-identity';
 import {
   expectArray,
   expectExactKeys,
@@ -132,12 +133,6 @@ function decodeSource(value: unknown, path: string): ExitDecisionSource {
     });
   }
   failProjectDocument(`${path}.kind`, `unknown exit decision source ${kind}`);
-}
-
-function sourceKey(source: ExitDecisionSource): string {
-  return source.kind === 'occurrence'
-    ? `occurrence:${source.occurrenceId}`
-    : `hubDecision:${source.decisionKey}`;
 }
 
 function decodeSelection(
@@ -289,6 +284,11 @@ function decodeAdditionalExits(
   return Object.freeze(additional);
 }
 
+type AdditionalExitsFor = (
+  occurrenceId: OccurrenceId,
+  diagnosticPath: string,
+) => readonly AuthoredAdditionalExit[];
+
 function decodeAnomalyReplacementProvenance(
   occurrence: RawOccurrence,
 ): AnomalyReplacementProvenance {
@@ -411,12 +411,12 @@ function isTakeoverBatch(
 function selectedContinuationForDecision(
   decision: ExitDecision,
   occurrences: ReadonlyMap<OccurrenceId, RawOccurrence>,
+  additionalExitsFor: AdditionalExitsFor,
 ): ReturnType<typeof selectedExitContinuation> {
   const additional =
     decision.source.kind === 'occurrence'
-      ? decodeAdditionalExits(
-          occurrences.get(decision.source.occurrenceId)?.additionalExits,
-          occurrences,
+      ? additionalExitsFor(
+          decision.source.occurrenceId,
           `${occurrences.get(decision.source.occurrenceId)?.path ?? '$'}.additionalExits`,
         )
       : Object.freeze([]);
@@ -426,6 +426,7 @@ function selectedContinuationForDecision(
 function validateSelectedDecisionCycles(
   decisions: readonly NextRoomDecision[],
   occurrences: ReadonlyMap<OccurrenceId, RawOccurrence>,
+  additionalExitsFor: AdditionalExitsFor,
   startOccurrenceId: OccurrenceId,
   path: string,
 ): void {
@@ -445,7 +446,11 @@ function validateSelectedDecisionCycles(
     visiting.add(occurrenceId);
     const decision = decisionsBySource.get(occurrenceId);
     if (decision !== undefined) {
-      const continuation = selectedContinuationForDecision(decision, occurrences);
+      const continuation = selectedContinuationForDecision(
+        decision,
+        occurrences,
+        additionalExitsFor,
+      );
       const targetOccurrenceId =
         continuation?.kind === 'normal'
           ? continuation.target.occurrenceId
@@ -463,6 +468,7 @@ function validateSelectedDecisionCycles(
 function validateStagedSelections(
   decisions: readonly NextRoomDecision[],
   occurrences: ReadonlyMap<OccurrenceId, RawOccurrence>,
+  additionalExitsFor: AdditionalExitsFor,
   catalog: Catalog,
   layout: BiomeLayout,
   startOccurrenceId: OccurrenceId,
@@ -488,7 +494,7 @@ function validateStagedSelections(
     traversedSources.add(sourceOccurrenceId);
     const decision = decisionsBySource.get(sourceOccurrenceId);
     if (decision === undefined) return;
-    const continuation = selectedContinuationForDecision(decision, occurrences);
+    const continuation = selectedContinuationForDecision(decision, occurrences, additionalExitsFor);
     if (isTakeoverBatch(decision, occurrences, catalog)) return;
     // An empty decision is an authored envelope, not an ordinary stage. It
     // remains the active frontier until its first ordinary target exists (or a
@@ -523,6 +529,7 @@ function validateStagedSelections(
 function validateNormalDecisionProgressionBounds(
   decisions: readonly NextRoomDecision[],
   occurrences: ReadonlyMap<OccurrenceId, RawOccurrence>,
+  additionalExitsFor: AdditionalExitsFor,
   catalog: Catalog,
   layout: BiomeLayout,
   startOccurrenceId: OccurrenceId,
@@ -538,9 +545,8 @@ function validateNormalDecisionProgressionBounds(
       [...occurrences.values()].map((occurrence) =>
         Object.freeze({
           occurrenceId: occurrence.occurrenceId,
-          additionalExits: decodeAdditionalExits(
-            occurrence.additionalExits,
-            occurrences,
+          additionalExits: additionalExitsFor(
+            occurrence.occurrenceId,
             `${occurrence.path}.additionalExits`,
           ),
         }),
@@ -675,6 +681,7 @@ function decodeExitDecision(
   layout: BiomeLayout,
   catalog: Catalog,
   occurrences: ReadonlyMap<OccurrenceId, RawOccurrence>,
+  additionalExitsFor: AdditionalExitsFor,
   startOccurrenceId: OccurrenceId,
 ): ExitDecision {
   const value = raw.value;
@@ -770,11 +777,7 @@ function decodeExitDecision(
   }
   const additional =
     source.kind === 'occurrence'
-      ? decodeAdditionalExits(
-          occurrences.get(source.occurrenceId)?.additionalExits,
-          occurrences,
-          `${raw.path}.source.occurrenceId.additionalExits`,
-        )
+      ? additionalExitsFor(source.occurrenceId, `${raw.path}.source.occurrenceId.additionalExits`)
       : Object.freeze([]);
   const selection = decodeSelection(
     value.selection,
@@ -1122,6 +1125,7 @@ function validateDetourAutomaticContinuationDecision(
   decision: ExitDecision,
   decisionPath: string,
   occurrences: ReadonlyMap<OccurrenceId, RawOccurrence>,
+  additionalExitsFor: AdditionalExitsFor,
   catalog: Catalog,
   layout: BiomeLayout,
 ): void {
@@ -1140,8 +1144,7 @@ function validateDetourAutomaticContinuationDecision(
   }
   if (
     decision.normal.targets.length === 0 &&
-    decodeAdditionalExits(source.additionalExits, occurrences, `${source.path}.additionalExits`)
-      .length === 0 &&
+    additionalExitsFor(source.occurrenceId, `${source.path}.additionalExits`).length === 0 &&
     decision.selection.kind === 'unresolved'
   ) {
     // The automatic return uses the same intentionally incomplete envelope
@@ -1153,8 +1156,7 @@ function validateDetourAutomaticContinuationDecision(
   if (
     decision.normal.targets.length !== 1 ||
     target?.exitKey !== continuation.exitKey ||
-    decodeAdditionalExits(source.additionalExits, occurrences, `${source.path}.additionalExits`)
-      .length !== 0 ||
+    additionalExitsFor(source.occurrenceId, `${source.path}.additionalExits`).length !== 0 ||
     decision.selection.kind !== 'derived'
   ) {
     failProjectDocument(
@@ -1263,6 +1265,18 @@ export function decodeTopologyStructure(
       }),
     );
   }
+  const decodedAdditionalExits = new Map<OccurrenceId, readonly AuthoredAdditionalExit[]>();
+  const additionalExitsFor: AdditionalExitsFor = (occurrenceId, diagnosticPath) => {
+    const decoded = decodedAdditionalExits.get(occurrenceId);
+    if (decoded !== undefined) return decoded;
+    const decodedForOccurrence = decodeAdditionalExits(
+      occurrences.get(occurrenceId)?.additionalExits,
+      occurrences,
+      diagnosticPath,
+    );
+    decodedAdditionalExits.set(occurrenceId, decodedForOccurrence);
+    return decodedForOccurrence;
+  };
   const rawFixedLinks = expectArray(topology.fixedRoomLinks, `${path}.fixedRoomLinks`);
   const fixedRoomLinks = rawFixedLinks.map((value, index): FixedRoomLink => {
     const linkPath = `${path}.fixedRoomLinks[${index}]`;
@@ -1337,7 +1351,14 @@ export function decodeTopologyStructure(
     const kind = expectString(raw.value.kind, `${raw.path}.kind`);
     const decision =
       kind === 'exit'
-        ? decodeExitDecision(raw, layout, catalog, occurrences, startOccurrenceId)
+        ? decodeExitDecision(
+            raw,
+            layout,
+            catalog,
+            occurrences,
+            additionalExitsFor,
+            startOccurrenceId,
+          )
         : kind === 'hub'
           ? decodeHubDecision(raw, layout, catalog, occurrences)
           : kind === 'localVisit'
@@ -1345,7 +1366,7 @@ export function decodeTopologyStructure(
             : failProjectDocument(`${raw.path}.kind`, `unknown decision ${kind}`);
     const identity =
       decision.kind === 'exit'
-        ? `exit:${sourceKey(decision.source)}`
+        ? `exit:${exitDecisionSourceKey(decision.source)}`
         : decision.kind === 'hub'
           ? `hubDecision:${decision.hubKey}`
           : `localVisit:${decision.sourceOccurrenceId}:${decision.groupKey}`;
@@ -1357,13 +1378,28 @@ export function decodeTopologyStructure(
   validateNormalDecisionProgressionBounds(
     decisions,
     occurrences,
+    additionalExitsFor,
     catalog,
     layout,
     startOccurrenceId,
     path,
   );
-  validateStagedSelections(decisions, occurrences, catalog, layout, startOccurrenceId, path);
-  validateSelectedDecisionCycles(decisions, occurrences, startOccurrenceId, path);
+  validateStagedSelections(
+    decisions,
+    occurrences,
+    additionalExitsFor,
+    catalog,
+    layout,
+    startOccurrenceId,
+    path,
+  );
+  validateSelectedDecisionCycles(
+    decisions,
+    occurrences,
+    additionalExitsFor,
+    startOccurrenceId,
+    path,
+  );
 
   const hubDecision = decisions.find(
     (decision): decision is HubDecision => decision.kind === 'hub',
@@ -1375,7 +1411,11 @@ export function decodeTopologyStructure(
     for (const decision of decisions) {
       if (decision.kind !== 'exit' || decision.source.kind !== 'occurrence') continue;
       if (!selectedSources.has(decision.source.occurrenceId)) continue;
-      const continuation = selectedContinuationForDecision(decision, occurrences);
+      const continuation = selectedContinuationForDecision(
+        decision,
+        occurrences,
+        additionalExitsFor,
+      );
       const targetOccurrenceId =
         continuation?.kind === 'normal'
           ? continuation.target.occurrenceId
@@ -1396,7 +1436,11 @@ export function decodeTopologyStructure(
           candidate.source.decisionKey === decision.hubKey,
       );
       if (handoff === undefined) continue;
-      const continuation = selectedContinuationForDecision(handoff, occurrences);
+      const continuation = selectedContinuationForDecision(
+        handoff,
+        occurrences,
+        additionalExitsFor,
+      );
       const targetOccurrenceId =
         continuation?.kind === 'normal'
           ? continuation.target.occurrenceId
@@ -1480,9 +1524,8 @@ export function decodeTopologyStructure(
       [...occurrences.values()].map((occurrence) =>
         Object.freeze({
           occurrenceId: occurrence.occurrenceId,
-          additionalExits: decodeAdditionalExits(
-            occurrence.additionalExits,
-            occurrences,
+          additionalExits: additionalExitsFor(
+            occurrence.occurrenceId,
             `${occurrence.path}.additionalExits`,
           ),
         }),
@@ -1606,9 +1649,8 @@ export function decodeTopologyStructure(
     path: start.path,
   });
   for (const rawOccurrence of occurrences.values()) {
-    const additional = decodeAdditionalExits(
-      rawOccurrence.additionalExits,
-      occurrences,
+    const additional = additionalExitsFor(
+      rawOccurrence.occurrenceId,
       `${rawOccurrence.path}.additionalExits`,
     );
     for (const [additionalIndex, exit] of additional.entries()) {
@@ -1715,6 +1757,7 @@ export function decodeTopologyStructure(
       decision,
       rawDecisions[index]?.path ?? path,
       occurrences,
+      additionalExitsFor,
       catalog,
       layout,
     );
@@ -1735,11 +1778,7 @@ export function decodeTopologyStructure(
         return Object.freeze({
           raw,
           owner,
-          additionalExits: decodeAdditionalExits(
-            raw.additionalExits,
-            occurrences,
-            `${raw.path}.additionalExits`,
-          ),
+          additionalExits: additionalExitsFor(raw.occurrenceId, `${raw.path}.additionalExits`),
         });
       }),
     ),
