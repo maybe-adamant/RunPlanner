@@ -1,4 +1,5 @@
 import type { ChaosNumericOperand, TraitRarity } from '@run-planner/engine/catalog-schema';
+import { ChaosValueSlider } from './ChaosValueSlider';
 import { effectiveChaosOperand, reconcileChaosOperandValues } from './chaos-blessing-values';
 
 type ChaosBlessingRarity = Exclude<TraitRarity, 'Duo'>;
@@ -21,21 +22,16 @@ export function ChaosBlessingValueFields({
     return (
       <label className="field-control" key={operand.key}>
         <span>{effective.label}</span>
-        <input
-          aria-label={effective.label}
-          max={effective.maximum}
-          min={effective.minimum}
-          onChange={(event) =>
+        <ChaosValueSlider
+          ariaLabel={effective.label}
+          maximum={effective.maximum}
+          minimum={effective.minimum}
+          onChange={(value) =>
             onChange(
-              reconcileChaosOperandValues(
-                operands,
-                { ...values, [operand.key]: Number(event.currentTarget.value) },
-                rarity,
-              ),
+              reconcileChaosOperandValues(operands, { ...values, [operand.key]: value }, rarity),
             )
           }
           step={effective.step}
-          type="number"
           value={current}
         />
       </label>
