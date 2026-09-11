@@ -1,12 +1,12 @@
-import type { Catalog, TraitRarity } from '../catalog-schema';
+import type { Catalog, TraitRarity } from '../../catalog-schema';
 import type {
   EchoLastRunBoonAddress,
   SemanticAddress,
   TraitOfferAddress,
-} from '../authored-project/addresses';
-import type { AuthoredTraitOffer, AuthoredTraitOfferTraits } from '../authored-project/traits';
-import type { ArcanaFearState } from './arcana-fear';
-import type { KeepsakeState } from './keepsakes/state';
+} from '../../authored-project/addresses';
+import type { AuthoredTraitOffer, AuthoredTraitOfferTraits } from '../../authored-project/traits';
+import type { ArcanaFearState } from '../arcana-fear';
+import type { KeepsakeState } from '../keepsakes/state';
 import type {
   EchoLastRunBoonOutcome,
   TraitAssessment,
@@ -14,21 +14,18 @@ import type {
   TraitOfferCompositionFinding,
   TraitOfferContext,
   TraitReplacementCompositionAssessment,
-} from './trait-offer-domain';
-import { assessTraitOfferComposition } from './trait-offer-domain';
-import { type BoonRarityFacts } from './boon-rarity';
-import { optionIndex } from '../authored-project/traits';
-import { assessRansom, foldTraitHistoryEvents, isPomUpgradeTarget } from './trait-history';
+} from './offer-domain';
+import { assessTraitOfferComposition } from './offer-domain';
+import { type BoonRarityFacts } from './rarity';
+import { optionIndex } from '../../authored-project/traits';
+import { assessRansom, foldTraitHistoryEvents, isPomUpgradeTarget } from './history';
 import {
   assessNaturalSelectionTargets,
   assessSelectedTargetedAcquisition,
   assessTraitOffer,
   assessTraitReplacementComposition,
-} from './trait-authoring-policies';
-import {
-  resolveTraitOfferOptionLevel,
-  type TraitOfferOptionLevelResolution,
-} from './trait-offer-levels';
+} from './authoring-policies';
+import { resolveTraitOfferOptionLevel, type TraitOfferOptionLevelResolution } from './offer-levels';
 import type {
   TraitTargetedAcquisitionAssessment,
   TraitHistoryState,
@@ -38,7 +35,7 @@ import type {
   TraitHistoryEvent,
   DirectTraitGrantEvent,
   RansomAssessment,
-} from './trait-history';
+} from './history';
 
 function boonRarityProviderForGiver(
   giver: Catalog['traitGivers']['values'][number] | undefined,
@@ -162,7 +159,7 @@ export function boonRarityFactsForOffer(
 /** Exact derived fact; active Chaos state is history-owned and never persisted. */
 export function hasActiveChaosSemanticTag(
   history: TraitHistoryState,
-  tag: import('../catalog-schema').ChaosSemanticTag,
+  tag: import('../../catalog-schema').ChaosSemanticTag,
 ): boolean {
   return history.activeChaosCurses.some((curse) => curse.semanticTag === tag);
 }
@@ -216,11 +213,11 @@ export interface SelectedTraitOfferBranchAssessment extends TraitOfferBranchAsse
   readonly baseRarities: readonly (TraitRarity | undefined)[];
   /** Echo's exact nested menu after chronology-owned rarity floors are applied. */
   readonly effectiveEchoLastRunBoon?: {
-    readonly options: readonly (import('../authored-project/traits').AuthoredEchoLastRunBoonOption & {
+    readonly options: readonly (import('../../authored-project/traits').AuthoredEchoLastRunBoonOption & {
       /** Declaration-owned source used by native Echo loot-history attribution. */
       readonly lootHistorySource?: string;
     })[];
-    readonly selectedOptionKey: import('../authored-project/traits').TraitOptionKey;
+    readonly selectedOptionKey: import('../../authored-project/traits').TraitOptionKey;
   };
 }
 
@@ -297,7 +294,7 @@ function evaluateReachedTraitOfferWithAssessments(
     : (() => {
         if (offer.kind === 'chaos') {
           const requirementUnavailable = (
-            requirement: import('../catalog-schema').ChaosOfferRequirement,
+            requirement: import('../../catalog-schema').ChaosOfferRequirement,
           ) => {
             switch (requirement.kind) {
               case 'matureChaosBlessing':
@@ -562,7 +559,7 @@ export function recordReachedTraitOffer(
   eventKind: 'traitOffer' | 'concaveStoneSecondary' = 'traitOffer',
 ): {
   readonly history: TraitHistoryState;
-  readonly event?: TraitOfferEvent | import('./trait-history').ConcaveStoneSecondaryEvent;
+  readonly event?: TraitOfferEvent | import('./history').ConcaveStoneSecondaryEvent;
   readonly ransomAssessment?: RansomAssessment;
 } {
   if (evaluation.offer.kind === 'chaos') {
@@ -643,7 +640,7 @@ export function recordReachedTraitOffer(
       ? {}
       : { targetedAcquisitionTransition: evaluation.targetedAcquisition.transition }),
     ...(selectedLevel === undefined ? {} : { selectedEffectiveLevel: selectedLevel }),
-  }) as TraitOfferEvent | import('./trait-history').ConcaveStoneSecondaryEvent;
+  }) as TraitOfferEvent | import('./history').ConcaveStoneSecondaryEvent;
   const transition = evaluation.targetedAcquisition.transition;
   const mutation: TraitLevelMutationEvent | undefined =
     transition?.kind === 'promoteGodTraitToHeroic'

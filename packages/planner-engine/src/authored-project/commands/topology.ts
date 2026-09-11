@@ -7,7 +7,7 @@ import {
   describeHubDecisionRemovalImpact,
   describeHubSlotClosureImpact,
   describeTopologyRemovalImpact,
-} from '../topologyImpact';
+} from '../topology/impact';
 import type { ExitDecisionSourceAddress } from '../addresses';
 import type {
   BatchRewardStoreState,
@@ -44,7 +44,7 @@ import {
 import { sameExitDecisionSource } from '../topology/source-identity';
 import { fieldsDefaultActiveCageCount } from '../fields';
 import { createInfernalContractEntries } from '../shop';
-import { createDefaultRoomActionState } from '../room-actions';
+import { createDefaultRoomActionState } from '../room-actions/state';
 import {
   failCommand,
   locateBiome,

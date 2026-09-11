@@ -2,7 +2,7 @@ export function directTraitSetOutcomes(
   catalog: Catalog,
   history: TraitHistoryState,
   sourceTraitKey: string,
-  setKey: import('../catalog-schema').DirectTraitSetKey,
+  setKey: import('../../catalog-schema').DirectTraitSetKey,
 ): readonly (string | null)[] {
   const disposition = catalog.traits.byKey[sourceTraitKey]?.selectedDisposition;
   if (disposition?.kind !== 'directTraitSets') return Object.freeze([]);
@@ -333,10 +333,10 @@ import type {
   TraitDeclaration,
   TraitRarity,
   TraitRequirementExpression,
-} from '../catalog-schema';
-import type { LevelResolutionAddress } from '../authored-project/addresses';
-import type { AuthoredLevelResolution } from '../authored-project/traits';
-export type { TraitFindingCode } from './model';
+} from '../../catalog-schema';
+import type { LevelResolutionAddress } from '../../authored-project/addresses';
+import type { AuthoredLevelResolution } from '../../authored-project/traits';
+export type { TraitFindingCode } from '../model';
 import {
   isPomUpgradeTarget,
   foldTraitHistoryEvents,
@@ -345,5 +345,5 @@ import {
   hasEffectiveInRunUpgrade,
   type TraitHistoryState,
   type TraitLevelMutationEvent,
-} from './trait-history';
-import type { TraitAssessmentFinding, TraitOfferContext } from './trait-offer-domain';
+} from './history';
+import type { TraitAssessmentFinding, TraitOfferContext } from './offer-domain';

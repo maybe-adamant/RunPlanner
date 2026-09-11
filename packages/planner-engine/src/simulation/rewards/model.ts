@@ -22,7 +22,7 @@ import type { EncounterPhaseAddress } from '../../authored-project/addresses';
 import type { TraitRarity } from '../../catalog-schema';
 import type { NemesisRandomEventAddress } from '../../authored-project/addresses';
 import type { PlannerTimelineFacts } from '../timeline-facts';
-import type { StygianWellEffect } from '../stygian-well';
+import type { StygianWellEffect } from '../commerce/stygian-well';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 
 /** Exact planner-owned realization of a Travel Deal Stygian Well refill. */
@@ -200,7 +200,7 @@ export interface RewardBranch {
   readonly pendingHermesShrineDeliveries?: Readonly<
     Record<string, import('./branch-primitives').PendingHermesShrineDelivery>
   >;
-  readonly stygianWell?: import('../stygian-well').StygianWellRunState;
+  readonly stygianWell?: import('../commerce/stygian-well').StygianWellRunState;
 }
 
 export interface TargetRewardHistoryCheckpoint {
@@ -248,20 +248,20 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   /** Exact room-entry Pool generation assessments, before any sale action. */
   readonly purgingPoolAssessments: readonly {
     readonly origin: import('../../authored-project/addresses').OccurrenceAddress;
-    readonly assessments: readonly import('../purging-pool').PurgingPoolAssessment[];
+    readonly assessments: readonly import('../commerce/purging-pool').PurgingPoolAssessment[];
   }[];
   /** Exact room-entry Shrine placement and inventory assessments. */
   readonly hermesShrineAssessments: readonly {
     readonly origin: import('../../authored-project/addresses').OccurrenceAddress;
-    readonly assessments: readonly import('../hermes-shrine').HermesShrineCandidateContext[];
+    readonly assessments: readonly import('../commerce/hermes-shrine').HermesShrineCandidateContext[];
   }[];
   /** Exact room-entry Well placement and inventory assessments. */
   readonly stygianWellAssessments: readonly {
     readonly origin: import('../../authored-project/addresses').OccurrenceAddress;
-    readonly assessments: readonly import('../stygian-well').StygianWellCandidateContext[];
+    readonly assessments: readonly import('../commerce/stygian-well').StygianWellCandidateContext[];
   }[];
   /** Derived source-to-host delivery state; no pending object is persisted. */
-  readonly hermesShrineDeliveries: readonly import('../hermes-shrine').DerivedHermesShrineDelivery[];
+  readonly hermesShrineDeliveries: readonly import('../commerce/hermes-shrine').DerivedHermesShrineDelivery[];
   readonly selectedTraitOffers: readonly SelectedTraitOfferAssessment[];
   readonly selectedLevelResolutions: readonly SelectedLevelResolutionAssessment[];
   readonly figLeafPhaseCandidates: readonly FigLeafPhaseCandidateSupport[];

@@ -8,7 +8,7 @@ import type {
   CanonicalLocalReward,
   CanonicalTarget,
 } from '../../../materialization';
-import type { HermesShrineCandidateContext } from '../../../hermes-shrine';
+import type { HermesShrineCandidateContext } from '../../../commerce/hermes-shrine';
 import { countedBinding } from '../../offer-generation';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import { visibleStoreOptionNames } from '../../facts';

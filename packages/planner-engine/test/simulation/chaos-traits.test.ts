@@ -23,14 +23,14 @@ import {
 import { simulateProject } from '../../src/simulation';
 import { evaluateCallingCardOffer } from '../../src/simulation/keepsakes/reward-effects';
 import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
-import { boonRarityRollUnavailable } from '../../src/simulation/boon-rarity';
+import { boonRarityRollUnavailable } from '../../src/simulation/traits/rarity';
 import { createTestArcanaFearState } from '../support/arcana-fear';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { assessArtificerConversion } from '../../src/simulation/rewards/acquisition-settlement';
 import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
-import { applyStygianWellPurchase } from '../../src/simulation/stygian-well';
+import { applyStygianWellPurchase } from '../../src/simulation/commerce/stygian-well';
 import type {
   AuthoredChaosTraitOffer,
   AuthoredTraitOfferTraits,

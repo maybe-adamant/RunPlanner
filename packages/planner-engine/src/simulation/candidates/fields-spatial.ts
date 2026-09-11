@@ -16,7 +16,7 @@ import {
 } from './evaluated-biome';
 import type { CandidateContextUnavailable } from './availability';
 import { unavailableForBiome, unreachableTarget } from './availability';
-import { assessFieldsSpatialPoint } from '../fields-spatial';
+import { assessFieldsSpatialPoint } from '../fields/spatial';
 
 /** One exact physical point assignment in an occurrence-owned Fields layout. */
 export interface FieldsSpatialPointCandidateQuery {

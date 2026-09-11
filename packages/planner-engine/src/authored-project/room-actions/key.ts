@@ -1,4 +1,4 @@
-import type { RoomActionReference } from './model';
+import type { RoomActionReference } from '../model';
 
 /** Stable collision-safe identity for one closed room-action reference. */
 export function roomActionKey(reference: RoomActionReference): string {

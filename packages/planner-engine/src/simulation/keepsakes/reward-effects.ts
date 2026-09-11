@@ -1,6 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import { optionIndex, type AuthoredTraitOffer } from '../../authored-project/traits';
-import { nextRarity } from '../trait-history';
+import { nextRarity } from '../traits/history';
 import type { KeepsakeState } from './state';
 
 export function applyEchoCallingCardReplay(state: KeepsakeState, charges: number): KeepsakeState {

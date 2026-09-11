@@ -1,7 +1,7 @@
 import type { SemanticAddress } from '../../../authored-project/addresses';
 import { type AcquisitionConversionCandidateArtifacts } from '../acquisition-artifacts';
 import { type DerivedAcquisitionEntryCandidateArtifacts } from '../acquisition-artifacts';
-import { type HermesShrineCandidateArtifacts } from '../../hermes-shrine';
+import { type HermesShrineCandidateArtifacts } from '../../commerce/hermes-shrine';
 import { type JudgmentArcanaCandidateArtifacts } from '../../arcana-fear';
 import {
   type FigurineArcanaCandidateArtifacts,
@@ -10,9 +10,9 @@ import {
   type TranscendentEmbryoCandidateArtifacts,
   type FountainRarityCandidateArtifacts,
 } from '../../keepsakes/candidate-artifacts';
-import { type PurgingPoolCandidateArtifacts } from '../../purging-pool';
-import { type SteadyGrowthCandidateArtifacts } from '../../trait-history';
-import { type StygianWellCandidateArtifacts } from '../../stygian-well';
+import { type PurgingPoolCandidateArtifacts } from '../../commerce/purging-pool';
+import { type SteadyGrowthCandidateArtifacts } from '../../traits/history';
+import { type StygianWellCandidateArtifacts } from '../../commerce/stygian-well';
 import type {
   LevelResolutionCandidateArtifacts,
   TraitOfferCandidateArtifacts,

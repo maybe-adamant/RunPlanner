@@ -5,7 +5,7 @@ import type {
   RoomActionState,
   RoomOccurrence,
 } from '../model';
-import { activeRoomActionReferences, roomActionKey } from '../room-actions';
+import { activeRoomActionReferences, roomActionKey } from '../room-actions/state';
 import { decodeRoomActionState } from './room-action-codec';
 import { assertStygianWellPurchaseActionClosure, decodeStygianWellState } from './well-codec';
 import { decodeRoomState } from '../room-state/codec';

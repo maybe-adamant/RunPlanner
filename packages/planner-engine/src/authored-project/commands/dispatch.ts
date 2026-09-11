@@ -30,7 +30,7 @@ import {
   semanticAddressKey,
 } from '../addresses';
 import { applyRoomActionCommand } from './room-actions';
-import { reconcileNewRequiredRoomActions } from '../room-action-defaults';
+import { reconcileNewRequiredRoomActions } from '../room-actions/defaults';
 import {
   reconcileSelectedPickupProducerState,
   retractInactiveClockedTraitPickupActions,

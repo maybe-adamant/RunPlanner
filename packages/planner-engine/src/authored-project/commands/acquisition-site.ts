@@ -33,9 +33,9 @@ import { rewardSourceResolvesAtAcquisition } from '../reward-state';
 import {
   roomActionDomainForOccurrence,
   scheduleRequiredRoomActions,
-} from '../room-action-defaults';
-import { roomActionKey } from '../room-actions';
-import { roomLifecycleWindowOrdinal } from '../room-lifecycle-structure';
+} from '../room-actions/defaults';
+import { roomActionKey } from '../room-actions/state';
+import { roomLifecycleWindowOrdinal } from '../room-actions/lifecycle-structure';
 
 function shrineDeliverySource(
   document: ProjectDocument,

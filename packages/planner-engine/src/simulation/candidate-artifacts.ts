@@ -48,7 +48,7 @@ import {
 import {
   createEmptySteadyGrowthCandidateArtifacts,
   type SteadyGrowthCandidateArtifacts,
-} from './trait-history';
+} from './traits/history';
 import {
   createJudgmentArcanaCandidateArtifacts,
   type JudgmentArcanaCandidateArtifacts,
@@ -56,15 +56,15 @@ import {
 import {
   createEmptyPurgingPoolCandidateArtifacts,
   type PurgingPoolCandidateArtifacts,
-} from './purging-pool';
+} from './commerce/purging-pool';
 import {
   createEmptyHermesShrineCandidateArtifacts,
   type HermesShrineCandidateArtifacts,
-} from './hermes-shrine';
+} from './commerce/hermes-shrine';
 import {
   createEmptyStygianWellCandidateArtifacts,
   type StygianWellCandidateArtifacts,
-} from './stygian-well';
+} from './commerce/stygian-well';
 
 export interface BiomeCandidateArtifacts {
   readonly origin: BiomeAddress;

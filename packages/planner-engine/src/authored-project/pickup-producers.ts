@@ -24,7 +24,7 @@ import {
   type TraitOfferOwnerAddress,
 } from './addresses';
 import { acquisitionSiteFromStorageKey } from './artificer';
-import { roomActionKey } from './room-action-key';
+import { roomActionKey } from './room-actions/key';
 import {
   createSelectedPickupEntries,
   materializeGorgonAthenaOffer,

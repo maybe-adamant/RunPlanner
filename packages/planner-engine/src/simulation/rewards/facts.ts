@@ -9,7 +9,7 @@ import {
 import type { HistoryStateView, RoomCreationSource } from '../history';
 import { projectRecentEncounterEnvelopeSlots } from '../history';
 import type { CanonicalLifecycleRoom } from '../history/lifecycleInput';
-import type { HermesShrineCandidateContext } from '../hermes-shrine';
+import type { HermesShrineCandidateContext } from '../commerce/hermes-shrine';
 import type { RewardBranchState } from './branch-primitives';
 import { BiomeRewardSimulationContractError } from './biome/biome-contract';
 

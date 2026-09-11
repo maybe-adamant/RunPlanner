@@ -10,7 +10,7 @@ import {
   semanticAddressKey,
 } from './addresses';
 import { acquisitionSiteFromStorageKey } from './artificer';
-import { roomActionKey } from './room-action-key';
+import { roomActionKey } from './room-actions/key';
 import type { AuthoredRewardState, RoomActionReference, RoomOccurrence } from './model';
 
 /** One concrete authored acquisition and the exact action which can settle it. */

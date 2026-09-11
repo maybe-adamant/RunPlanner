@@ -9,8 +9,8 @@ import type { ResolvedEncounterPhase } from '../encounters';
 import type { RoomHistoryFragment, RoomLifecycleEvent, RoomLifecycleExecutionInput } from './model';
 import { createBiomeAddress, createRoomActionAddress } from '../../authored-project/addresses';
 import type { RoomActionReference } from '../../authored-project/model';
-import { roomActionKey } from '../../authored-project/room-actions';
-import { roomLifecycleWindowOrdinal } from '../../authored-project/room-lifecycle-structure';
+import { roomActionKey } from '../../authored-project/room-actions/state';
+import { roomLifecycleWindowOrdinal } from '../../authored-project/room-actions/lifecycle-structure';
 import type { RoomActionRow } from '../room-actions';
 
 type RoomLifecycleOperationKind = RoomLifecycleOperation['kind'];

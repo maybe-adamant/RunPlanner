@@ -1,6 +1,6 @@
 import type { Catalog, InRunTraitRarity, KeepsakeRank } from '../../catalog-schema';
 import type { ArcanaFearState } from '../arcana-fear';
-import type { TraitHistoryState } from '../trait-history';
+import type { TraitHistoryState } from '../traits/history';
 
 export type FatedStatus = 'Unknown' | 'Fated' | 'Unfated';
 export interface KeepsakeHistoryEntry {

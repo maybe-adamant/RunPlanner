@@ -1,13 +1,16 @@
-import { semanticAddressKey, type OccurrenceAddress } from '../authored-project/addresses';
-import type { Catalog } from '../catalog-schema';
-import type { HermesShrineState } from '../authored-project/model';
-import { evaluateRequirement, type RequirementEvaluationContext } from '../requirements/evaluator';
+import { semanticAddressKey, type OccurrenceAddress } from '../../authored-project/addresses';
+import type { Catalog } from '../../catalog-schema';
+import type { HermesShrineState } from '../../authored-project/model';
+import {
+  evaluateRequirement,
+  type RequirementEvaluationContext,
+} from '../../requirements/evaluator';
 export {
   HERMES_SHRINE_DELIVERY_SITE_KEY,
   hermesShrineDeliveryEntryKey,
   parseHermesShrineDeliveryEntryKey,
-} from '../authored-project/hermes-shrine-delivery';
-type HermesShrineSlotKey = import('../authored-project/model').HermesShrineSlotKey;
+} from '../../authored-project/hermes-shrine-delivery';
+type HermesShrineSlotKey = import('../../authored-project/model').HermesShrineSlotKey;
 const SLOT_KEYS = [
   'first',
   'secondLeft',
@@ -23,7 +26,7 @@ const SLOT_KEYS = [
 export interface HermesShrinePurchaseScheduleInput {
   readonly sourceKey: string;
   readonly sourceSequence: number;
-  readonly sourceOrigin: import('../authored-project/addresses').OccurrenceAddress;
+  readonly sourceOrigin: import('../../authored-project/addresses').OccurrenceAddress;
   readonly rewardType: string;
   readonly delay: 2 | 3 | 4 | 5 | 6 | 7 | 8;
   readonly rushed: boolean;
@@ -31,18 +34,18 @@ export interface HermesShrinePurchaseScheduleInput {
 
 export interface HermesShrineDeliveryLifecycleEvent {
   readonly sequence: number;
-  readonly origin: import('../authored-project/addresses').OccurrenceAddress;
+  readonly origin: import('../../authored-project/addresses').OccurrenceAddress;
   readonly kind: 'encounterEndEffectsApplied' | 'finalPrebossCompletion';
   readonly encounterPhaseKey?: string;
 }
 
 export interface DerivedHermesShrineDelivery {
   readonly sourceKey: string;
-  readonly sourceOrigin: import('../authored-project/addresses').OccurrenceAddress;
+  readonly sourceOrigin: import('../../authored-project/addresses').OccurrenceAddress;
   readonly rewardType: string;
   /** Rush resolves at the source action; ordinary countdowns resolve later. */
   readonly deliveryKind: 'rush' | 'countdown' | 'finalPrebossCompletion' | 'pending';
-  readonly hostOrigin?: import('../authored-project/addresses').OccurrenceAddress;
+  readonly hostOrigin?: import('../../authored-project/addresses').OccurrenceAddress;
   readonly hostSequence?: number;
   /** Exact encounter phase whose end effects matured this delayed item. */
   readonly encounterPhaseKey?: string;
@@ -154,16 +157,16 @@ export function attestPendingHermesSpellDrop(
 export type HermesShrineInventoryIssue =
   | {
       readonly kind: 'missing';
-      readonly slotKey: import('../authored-project/model').HermesShrineSlotKey;
+      readonly slotKey: import('../../authored-project/model').HermesShrineSlotKey;
     }
   | {
       readonly kind: 'wrongGroup';
-      readonly slotKey: import('../authored-project/model').HermesShrineSlotKey;
+      readonly slotKey: import('../../authored-project/model').HermesShrineSlotKey;
     }
   | { readonly kind: 'duplicateSecondGroup' }
   | {
       readonly kind: 'requirement';
-      readonly slotKey: import('../authored-project/model').HermesShrineSlotKey;
+      readonly slotKey: import('../../authored-project/model').HermesShrineSlotKey;
     };
 
 export interface HermesShrinePlacementAssessment {
@@ -199,7 +202,7 @@ export interface HermesShrineCandidateContext {
  * visible entry identities remain immutable evidence for the action prefix.
  */
 export interface HermesShrineTravelDealRefillAssessment {
-  readonly sourceGenerationKey: import('../authored-project/model').HermesShrineGenerationKey;
+  readonly sourceGenerationKey: import('../../authored-project/model').HermesShrineGenerationKey;
   readonly candidateRewardTypes: readonly string[];
   /** Catalog-owned native StoreData option identity for each candidate reward. */
   readonly candidateOptionKeysByRewardType: Readonly<Record<string, string>>;
@@ -208,7 +211,7 @@ export interface HermesShrineTravelDealRefillAssessment {
 export function assessHermesShrineTravelDealRefill(
   catalog: Catalog,
   shrine: HermesShrineState,
-  sourceGenerationKey: import('../authored-project/model').HermesShrineGenerationKey,
+  sourceGenerationKey: import('../../authored-project/model').HermesShrineGenerationKey,
   requirements: readonly RequirementEvaluationContext[],
 ): HermesShrineTravelDealRefillAssessment | undefined {
   const slotKey = sourceGenerationKey.startsWith('initial:')
@@ -256,7 +259,7 @@ export function priorTwoSurfaceShopPresence(
 }
 
 export function assessHermesShrinePlacement(
-  declaration: import('../catalog-schema').RoomDeclaration | undefined,
+  declaration: import('../../catalog-schema').RoomDeclaration | undefined,
   priorEnteredShrineFlags: readonly boolean[],
 ): HermesShrinePlacementAssessment {
   const surfaceShop = declaration?.surfaceShop;
@@ -282,7 +285,7 @@ export function assessHermesShrinePlacement(
  */
 export function assessHermesShrine(
   catalog: Catalog,
-  declaration: import('../catalog-schema').RoomDeclaration | undefined,
+  declaration: import('../../catalog-schema').RoomDeclaration | undefined,
   shrine: HermesShrineState,
   requirements: RequirementEvaluationContext,
   priorEnteredShrineFlags: readonly boolean[],
@@ -384,11 +387,11 @@ export interface HermesShrineCandidateCapability {
   readonly required: boolean;
   readonly present: boolean;
   readonly candidateRewardTypesBySlot: Readonly<
-    Record<import('../authored-project/model').HermesShrineSlotKey, readonly string[]>
+    Record<import('../../authored-project/model').HermesShrineSlotKey, readonly string[]>
   >;
   /** Exact first-rush Travel Deal domain, absent until that prefix is reached. */
   readonly travelDealRefill?: {
-    readonly sourceGenerationKey: import('../authored-project/model').HermesShrineGenerationKey;
+    readonly sourceGenerationKey: import('../../authored-project/model').HermesShrineGenerationKey;
     readonly candidateRewardTypes: readonly string[];
   };
 }
@@ -424,7 +427,10 @@ export function createHermesShrineCandidateArtifacts(
                 ),
               ),
             ]),
-          ) as Record<import('../authored-project/model').HermesShrineSlotKey, readonly string[]>,
+          ) as Record<
+            import('../../authored-project/model').HermesShrineSlotKey,
+            readonly string[]
+          >,
         ),
         ...(travelDealRefill === undefined
           ? {}

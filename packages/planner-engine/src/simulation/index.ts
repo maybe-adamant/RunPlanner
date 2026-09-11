@@ -6,8 +6,8 @@ export {
   type PurgingPoolAssessment,
   type PurgingPoolAssessmentFinding,
   type PurgingPoolSlotKey,
-} from './purging-pool';
-export { type PurgingPoolCandidateCapability } from './purging-pool';
+} from './commerce/purging-pool';
+export { type PurgingPoolCandidateCapability } from './commerce/purging-pool';
 export {
   assessStygianWell,
   assessStygianWellPlacement,
@@ -21,7 +21,7 @@ export {
   type StygianWellAssessmentIssue,
   type StygianWellCandidateContext,
   type StygianWellRunState,
-} from './stygian-well';
+} from './commerce/stygian-well';
 export {
   assessResourcePlacement,
   deriveResourceExecutionPolicy,
@@ -35,7 +35,7 @@ export {
 export {
   fieldsOptionalRewardCountSupport,
   type FieldsOptionalRewardCountSupport,
-} from './fields-optional-count';
+} from './fields/optional-count';
 export {
   deriveBoonRarityLedger,
   deriveBoonRarityValues,
@@ -43,7 +43,7 @@ export {
   BOON_RARITY_CHECKS,
   type BoonRarityFacts,
   type BoonRarityLedger,
-} from './boon-rarity';
+} from './traits/rarity';
 export {
   createArcanaFearState,
   activateTemporaryArcana,
@@ -383,8 +383,8 @@ export {
   type SimulationPhase,
 } from './model';
 export { type AcquisitionConversionCandidateCapability } from './rewards/acquisition-artifacts';
-export { type HermesShrineCandidateCapability } from './hermes-shrine';
-export { type StygianWellCandidateCapability } from './stygian-well';
+export { type HermesShrineCandidateCapability } from './commerce/hermes-shrine';
+export { type StygianWellCandidateCapability } from './commerce/stygian-well';
 export {
   type ChaosCandidateCapability,
   type ZagreusContractCandidateCapability,
@@ -513,4 +513,4 @@ export {
   resolveTraitOfferOptionLevel,
   type TraitOfferOptionLevelResolution,
   type TraitOfferOptionLevelResolutionInput,
-} from './trait-offer-levels';
+} from './traits/offer-levels';

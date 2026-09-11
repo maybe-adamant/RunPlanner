@@ -32,7 +32,7 @@ import {
   assessStygianWell,
   extendedWellItemKeys,
   twistResultItemKeys,
-} from '../../src/simulation/stygian-well';
+} from '../../src/simulation/commerce/stygian-well';
 
 const empty = () => ({
   sparkUses: 0,

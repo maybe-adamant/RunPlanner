@@ -2,12 +2,12 @@ import {
   isCombatBearingEncounterPhaseKind,
   type Catalog,
   type RoomDeclaration,
-} from '../catalog-schema';
-import type { RoomOccurrence } from './model';
+} from '../../catalog-schema';
+import type { RoomOccurrence } from '../model';
 import {
   encounterEnvelopeSlots,
   selectedEncounterAuthoringProfileKey,
-} from './room-state/encounter-envelope';
+} from '../room-state/encounter-envelope';
 
 export type RoomActionWindow =
   | { readonly kind: 'standard'; readonly phase: 'beforeCombat' | 'afterCombat' }

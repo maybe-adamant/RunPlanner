@@ -44,7 +44,7 @@ import {
   type RansomAssessment,
   boonRarityFactsForOffer,
 } from '../traits';
-import type { EchoLastRunBoonOutcome, TraitOfferContext } from '../trait-offer-domain';
+import type { EchoLastRunBoonOutcome, TraitOfferContext } from '../traits/offer-domain';
 import { advanceCurrentKeepsake } from '../keepsakes/state';
 import {
   concaveStoneProcSupport,
@@ -52,8 +52,8 @@ import {
 } from '../keepsakes/trait-effects';
 import { evaluateCallingCardOffer } from '../keepsakes/reward-effects';
 import type { AuthoredConcaveStoneResult } from '../../authored-project/traits';
-import { resolveTraitOfferOptionLevel } from '../trait-offer-levels';
-import { deriveBoonRarityValues } from '../boon-rarity';
+import { resolveTraitOfferOptionLevel } from '../traits/offer-levels';
+import { deriveBoonRarityValues } from '../traits/rarity';
 
 export interface ConcaveStoneCandidateBranch {
   readonly procSupport: number;

@@ -1,14 +1,14 @@
-import type { Catalog, TraitRarity } from '../catalog-schema';
-import type { AuthoredTraitOffer, TraitOptionKey } from '../authored-project/traits';
-import type { RewardHistoryState } from '../reward-kernel/model';
-import type { BoonRarityFacts } from './boon-rarity';
-import type { TraitFindingCode } from './model';
-import type { TraitHistoryState, TraitReplacementTransition } from './trait-history';
-import { optionIndex } from '../authored-project/traits';
-import { targetedAcquisitionTargetKeys } from './trait-level-effects';
-import { ordinaryEquippedSlots } from './trait-history';
+import type { Catalog, TraitRarity } from '../../catalog-schema';
+import type { AuthoredTraitOffer, TraitOptionKey } from '../../authored-project/traits';
+import type { RewardHistoryState } from '../../reward-kernel/model';
+import type { BoonRarityFacts } from './rarity';
+import type { TraitFindingCode } from '../model';
+import type { TraitHistoryState, TraitReplacementTransition } from './history';
+import { optionIndex } from '../../authored-project/traits';
+import { targetedAcquisitionTargetKeys } from './level-effects';
+import { ordinaryEquippedSlots } from './history';
 
-export type { TraitFindingCode } from './model';
+export type { TraitFindingCode } from '../model';
 
 export interface TraitOfferContext {
   readonly weaponKey?: string;
@@ -37,8 +37,8 @@ export interface TraitOfferContext {
   readonly settledSpellDrop?: boolean;
   /** Derived, offer-local numeric rarity facts for fresh Olympian/Hermes rolls. */
   readonly boonRarityFacts?: BoonRarityFacts;
-  readonly boonRarityRoomOverride?: import('../catalog-schema').BoonRarityOverride;
-  readonly boonRarityItemOverride?: import('../catalog-schema').BoonRarityOverride;
+  readonly boonRarityRoomOverride?: import('../../catalog-schema').BoonRarityOverride;
+  readonly boonRarityItemOverride?: import('../../catalog-schema').BoonRarityOverride;
   /** One-use Yarn contributions carried by the real Well purchase branch. */
   readonly temporaryBoonRarityUses?: number;
   /** Source-local `IgnoreTempRarityBonus`; permanent contributions remain active. */
@@ -50,7 +50,7 @@ export interface TraitOfferContext {
 }
 
 export interface EchoLastRunBoonOutcome {
-  readonly option: import('../authored-project/traits').AuthoredEchoLastRunBoonOption;
+  readonly option: import('../../authored-project/traits').AuthoredEchoLastRunBoonOption;
   readonly effectiveRarity: TraitRarity;
   readonly assessment: TraitAssessment;
   readonly targetTraitKeys: readonly string[];

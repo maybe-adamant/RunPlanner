@@ -22,7 +22,7 @@ import {
 } from './keepsakes/trait-effects';
 import { createKeepsakeState } from './keepsakes/state';
 import { createArcanaFearState } from './arcana-fear';
-import { createTraitHistoryState } from './trait-history';
+import { createTraitHistoryState } from './traits/history';
 import type { BiomeHistoryPrefix } from './history';
 import type { MaterializedBiomePrefix } from './materialization';
 import type { SemanticFinding } from './model';

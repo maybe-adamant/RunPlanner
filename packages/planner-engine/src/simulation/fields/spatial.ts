@@ -2,11 +2,11 @@ import {
   createFieldsSpatialAddress,
   createRoomFeatureAddress,
   type FieldsSpatialTarget,
-} from '../authored-project/addresses';
-import type { Catalog, FieldsSpatialDeclaration } from '../catalog-schema';
-import { fieldsOptionalRewardCountSupport } from './fields-optional-count';
-import type { CanonicalAuthoredRoom } from './materialization';
-import type { SemanticFinding } from './model';
+} from '../../authored-project/addresses';
+import type { Catalog, FieldsSpatialDeclaration } from '../../catalog-schema';
+import { fieldsOptionalRewardCountSupport } from './optional-count';
+import type { CanonicalAuthoredRoom } from '../materialization';
+import type { SemanticFinding } from '../model';
 
 interface FieldsSpatialPointAssessment {
   readonly active: boolean;

@@ -15,14 +15,14 @@ import {
   assessStygianWellPlacement,
   priorThreeRoomShopPresence,
   type StygianWellCandidateContext,
-} from '../../../stygian-well';
+} from '../../../commerce/stygian-well';
 import {
   assessHermesShrine,
   assessHermesShrinePlacement,
   priorTwoSurfaceShopPresence,
   type HermesShrineCandidateContext,
-} from '../../../hermes-shrine';
-import { assessPurgingPool, type PurgingPoolAssessment } from '../../../purging-pool';
+} from '../../../commerce/hermes-shrine';
+import { assessPurgingPool, type PurgingPoolAssessment } from '../../../commerce/purging-pool';
 import { createRewardFacts, createdPeerGameNames } from '../../facts';
 import type { RewardBranchState } from '../../branch-primitives';
 import { advanceRewardBranches } from '../../branch-lifecycle';

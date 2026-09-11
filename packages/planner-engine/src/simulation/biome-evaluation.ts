@@ -16,7 +16,7 @@ import {
   type BiomeCandidateArtifacts,
 } from './candidate-artifacts';
 import { attestFigLeafBranchState, attestGorgonBranchState } from './keepsakes/encounter-effects';
-import { attestPendingHermesSpellDrop } from './hermes-shrine';
+import { attestPendingHermesSpellDrop } from './commerce/hermes-shrine';
 import { attestTalentDropsClosed } from './hex-progress';
 import { authoringRegion } from './finding-regions';
 import {

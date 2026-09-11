@@ -43,7 +43,7 @@ import type { SemanticFinding } from '../model';
 import { normalDecisionProgressionForLayout } from '../../authored-project/topology/query';
 import { semanticAddressKey } from '../../authored-project/addresses';
 import type { CanonicalBatch } from '../materialization';
-import { fieldsSpatialFindings } from '../fields-spatial';
+import { fieldsSpatialFindings } from '../fields/spatial';
 
 interface BiomeRoomGenerationAssembly {
   readonly validation: GeneratedRoomGenerationValidation;
