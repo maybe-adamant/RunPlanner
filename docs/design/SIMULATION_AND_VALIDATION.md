@@ -515,9 +515,10 @@ Black Night Banishment apply through the ordinary selected trait-acquisition
 fold: Red activates its selected inactive card (or a valid empty result),
 Lapis promotes its selected active non-Heroic cards up to the declaration-owned
 cardinality, and Black Night suppresses its selected effectively active,
-Circe-removable Vow. An invalid exact outcome blocks at its child address,
-does not equip the effect-backed trait, and retains its pre-effect candidate
-context for repair.
+Circe-removable Vow. A missing or invalid exact child outcome retains a valid
+outer acquisition, leaves its Arcana/Fear effect unapplied, and blocks at the
+child address with the pre-effect context available for repair. An invalid
+outer offer does not gain a valid acquisition through this child-repair path.
 
 Run-impacting trait effects use the same chronological trait fold. Natural
 Selection equips its selected identity and appends the authored one-to-eight
