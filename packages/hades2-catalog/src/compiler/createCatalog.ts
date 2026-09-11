@@ -5,11 +5,13 @@ import { normalizeArcanaCards, normalizeFearVows } from './arcana-fear';
 import { normalizeBiomes } from './biomes';
 import { requireNonEmpty } from './common';
 import {
-  normalizeEncounterDefinitions,
-  normalizeEncounterEnvelopes,
-  normalizeEncounterSets,
+  validateEncounterDefinitionClosure,
+  validateEncounterSetClosure,
   validateNemesisRandomEventContract,
-} from './encounters';
+} from './encounter-closure';
+import { normalizeEncounterDefinitions } from './encounter-definitions';
+import { normalizeEncounterEnvelopes } from './encounter-envelopes';
+import { normalizeEncounterSets } from './encounter-sets';
 import { normalizeExitCompatibilityPolicies, normalizeExitTypes } from './exits';
 import { validateHexBindings } from './hexes';
 import {
@@ -50,19 +52,21 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   });
   validateEchoGiftBindings(keepsakes, traitCatalog.traits);
   const encounterEnvelopes = normalizeEncounterEnvelopes(input.encounterEnvelopes, rewards);
-  const encounterDefinitions = normalizeEncounterDefinitions(
-    input.encounterDefinitions,
+  const encounterDefinitions = normalizeEncounterDefinitions(input.encounterDefinitions);
+  validateEncounterDefinitionClosure({
+    definitions: encounterDefinitions,
     rewards,
-    traitCatalog,
+    traits: traitCatalog,
     keepsakes,
-  );
+  });
   validateKeepsakeReferences({
     keepsakes,
     givers: traitCatalog.givers,
     rewards,
     encounters: encounterDefinitions,
   });
-  const encounterSets = normalizeEncounterSets(input.encounterSets, encounterDefinitions);
+  const encounterSets = normalizeEncounterSets(input.encounterSets);
+  validateEncounterSetClosure(encounterSets, encounterDefinitions);
   validateNemesisRandomEventContract(encounterDefinitions, encounterSets, rewards);
   const roomLifecycleProfiles = normalizeRoomLifecycleProfiles(
     input.roomLifecycleProfiles,

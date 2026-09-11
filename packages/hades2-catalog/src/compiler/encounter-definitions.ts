@@ -2,36 +2,18 @@ import { isCombatBearingEncounterPhaseKind } from '@run-planner/engine/catalog-s
 import type {
   CatalogCollection,
   EncounterDefinition,
-  EncounterEnvelope,
-  EncounterEnvelopeSlot,
   EncounterPhaseKind,
-  EncounterSet,
-  KeepsakeDeclaration,
-  EncounterSlotRewardAttachment,
 } from '@run-planner/engine/catalog-schema';
-import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
-import type { TraitCatalog } from '@run-planner/engine/catalog-schema';
 
-import type {
-  RawEncounterDefinitionDeclaration,
-  RawEncounterEnvelopeDeclaration,
-  RawEncounterEnvelopeSlotDeclaration,
-  RawEncounterSetDeclaration,
-} from '../declarations';
+import type { RawEncounterDefinitionDeclaration } from '../declarations';
 import {
   createCollection,
   freezeUniqueStrings,
   requireNonEmpty,
   requirePositiveInteger,
 } from './common';
-import { CatalogContractError, fail } from './errors';
-import {
-  normalizeRequirement,
-  rejectEncounterHistoryRequirements,
-  validateEncounterRequirementReferences,
-  validateRequirementReferences,
-} from './requirements';
-import { normalizeRewardBinding } from './rewardBindings';
+import { fail } from './errors';
+import { normalizeRequirement } from './requirements';
 
 const encounterPhaseKinds = new Set<EncounterPhaseKind>([
   'boss',
@@ -41,140 +23,8 @@ const encounterPhaseKinds = new Set<EncounterPhaseKind>([
   'story',
 ]);
 
-function normalizeRewardAttachment(
-  raw: NonNullable<RawEncounterEnvelopeSlotDeclaration['rewardAttachment']>,
-  rewards: RewardKernelCatalog,
-  path: string,
-): EncounterSlotRewardAttachment {
-  const receivedKind: unknown = (raw as { readonly kind?: unknown }).kind;
-  if (raw.kind === 'localReward') {
-    return Object.freeze({
-      kind: 'localReward',
-      groupKey: requireNonEmpty(raw.groupKey, `${path}.groupKey`),
-      slotKey: requireNonEmpty(raw.slotKey, `${path}.slotKey`),
-    });
-  }
-  if (raw.kind === 'rewardWheel') {
-    const key = requireNonEmpty(raw.key, `${path}.key`);
-    const reward = normalizeRewardBinding(raw.reward, rewards, `${path}.reward`);
-    if (reward.kind !== 'countedChoice') {
-      fail(`${path}.reward.kind`, 'reward wheels require countedChoice');
-    }
-    if (!reward.storeKeys.includes(raw.defaultStoreKey)) {
-      fail(`${path}.defaultStoreKey`, 'must belong to the wheel reward store domain');
-    }
-    const offerKeys = freezeUniqueStrings(raw.offerKeys, `${path}.offerKeys`);
-    if (offerKeys.length === 0) {
-      fail(`${path}.offerKeys`, 'must not be empty');
-    }
-    const min = requirePositiveInteger(raw.offerCount.min, `${path}.offerCount.min`);
-    const max = requirePositiveInteger(raw.offerCount.max, `${path}.offerCount.max`);
-    const defaultValue = requirePositiveInteger(
-      raw.offerCount.defaultValue,
-      `${path}.offerCount.defaultValue`,
-    );
-    if (max < min || max !== offerKeys.length) {
-      fail(`${path}.offerCount.max`, 'must equal offer slot capacity and be at least min');
-    }
-    if (defaultValue < min || defaultValue > max) {
-      fail(`${path}.offerCount.defaultValue`, 'must be within the offer-count range');
-    }
-    if (raw.picked !== 'exactlyOne') {
-      fail(`${path}.picked`, `unknown wheel pick policy ${String(raw.picked)}`);
-    }
-    return Object.freeze({
-      kind: 'rewardWheel',
-      key,
-      reward,
-      defaultStoreKey: raw.defaultStoreKey,
-      offerKeys,
-      offerCount: Object.freeze({ min, max, defaultValue }),
-      picked: 'exactlyOne',
-    });
-  }
-  fail(`${path}.kind`, `unknown encounter reward attachment ${String(receivedKind)}`);
-}
-
-function normalizeEnvelopeSlot(
-  raw: RawEncounterEnvelopeSlotDeclaration,
-  rewards: RewardKernelCatalog,
-  path: string,
-): EncounterEnvelopeSlot {
-  const key = requireNonEmpty(raw.key, `${path}.key`);
-  if (raw.activation !== 'always' && raw.activation !== 'templateControlled') {
-    fail(`${path}.activation`, `unknown slot activation ${String(raw.activation)}`);
-  }
-  const activationRequirement =
-    raw.activationRequirement === undefined
-      ? undefined
-      : normalizeRequirement(raw.activationRequirement, `${path}.activationRequirement`);
-  if (activationRequirement !== undefined) {
-    if (raw.activation !== 'templateControlled') {
-      fail(`${path}.activationRequirement`, 'requires templateControlled activation');
-    }
-    validateRequirementReferences(
-      activationRequirement,
-      rewards.rewardTypes,
-      `${path}.activationRequirement`,
-    );
-    rejectEncounterHistoryRequirements(activationRequirement, `${path}.activationRequirement`);
-  }
-  return Object.freeze({
-    key,
-    activation: raw.activation,
-    ...(activationRequirement === undefined ? {} : { activationRequirement }),
-    ...(raw.rewardAttachment === undefined
-      ? {}
-      : {
-          rewardAttachment: normalizeRewardAttachment(
-            raw.rewardAttachment,
-            rewards,
-            `${path}.rewardAttachment`,
-          ),
-        }),
-  });
-}
-
-export function normalizeEncounterEnvelopes(
-  rawEnvelopes: readonly RawEncounterEnvelopeDeclaration[],
-  rewards: RewardKernelCatalog,
-): CatalogCollection<EncounterEnvelope> {
-  return createCollection(
-    rawEnvelopes.map((raw, envelopeIndex): EncounterEnvelope => {
-      const path = `encounterEnvelopes[${envelopeIndex}]`;
-      const key = requireNonEmpty(raw.key, `${path}.key`);
-      const slots = raw.slots.map((slot, slotIndex) =>
-        normalizeEnvelopeSlot(slot, rewards, `${path}.slots[${slotIndex}]`),
-      );
-      const seenSlotKeys = new Set<string>();
-      const seenWheelKeys = new Set<string>();
-      for (const [slotIndex, slot] of slots.entries()) {
-        if (seenSlotKeys.has(slot.key)) {
-          fail(`${path}.slots[${slotIndex}].key`, `duplicates slot ${slot.key}`);
-        }
-        seenSlotKeys.add(slot.key);
-        if (slot.rewardAttachment?.kind === 'rewardWheel') {
-          if (seenWheelKeys.has(slot.rewardAttachment.key)) {
-            fail(
-              `${path}.slots[${slotIndex}].rewardAttachment.key`,
-              `duplicates wheel ${slot.rewardAttachment.key}`,
-            );
-          }
-          seenWheelKeys.add(slot.rewardAttachment.key);
-        }
-      }
-      return Object.freeze({ key, slots: Object.freeze(slots) });
-    }),
-    'encounterEnvelopes',
-    (envelope) => envelope.key,
-  );
-}
-
 export function normalizeEncounterDefinitions(
   rawDefinitions: readonly RawEncounterDefinitionDeclaration[],
-  rewards: RewardKernelCatalog,
-  traits: TraitCatalog,
-  keepsakes: CatalogCollection<KeepsakeDeclaration>,
 ): CatalogCollection<EncounterDefinition> {
   const definitions = createCollection(
     rawDefinitions.map((raw, definitionIndex): EncounterDefinition => {
@@ -223,17 +73,10 @@ export function normalizeEncounterDefinitions(
               ),
               `${path}.blocksKeepsakeSelectionKeys`,
             );
-      for (const keepsakeKey of blocksKeepsakeSelectionKeys ?? []) {
-        if (keepsakes.byKey[keepsakeKey] === undefined)
-          fail(`${path}.blocksKeepsakeSelectionKeys`, `unknown keepsake ${keepsakeKey}`);
-      }
       const requirements =
         raw.requirements === undefined
           ? undefined
           : normalizeRequirement(raw.requirements, `${path}.requirements`);
-      if (requirements !== undefined) {
-        validateRequirementReferences(requirements, rewards.rewardTypes, `${path}.requirements`);
-      }
       if (raw.sequenceEffect !== undefined && raw.sequenceEffect.kind !== 'terminateSuffix') {
         fail(
           `${path}.sequenceEffect.kind`,
@@ -258,9 +101,6 @@ export function normalizeEncounterDefinitions(
                 raw.traitOfferProducer.giverKey,
                 `${path}.traitOfferProducer.giverKey`,
               );
-              if (traits.givers.byKey[giverKey] === undefined) {
-                fail(`${path}.traitOfferProducer.giverKey`, `unknown trait giver ${giverKey}`);
-              }
               return Object.freeze({ kind: 'traitOffer' as const, giverKey });
             })();
       if (raw.requiresInteraction !== undefined && typeof raw.requiresInteraction !== 'boolean')
@@ -363,8 +203,6 @@ export function normalizeEncounterDefinitions(
                       variant.rewardType,
                       `${variantPath}.rewardType`,
                     );
-                    if (rewards.rewardTypes.byKey[rewardType] === undefined)
-                      fail(`${variantPath}.rewardType`, `unknown reward type ${rewardType}`);
                     if (!['none', 'pomLegal', 'hammerEarlyOrLate'].includes(variant.requirement))
                       fail(`${variantPath}.requirement`, 'has an unknown result requirement');
                     return Object.freeze({
@@ -393,8 +231,6 @@ export function normalizeEncounterDefinitions(
                       variant.rewardType,
                       `${variantPath}.rewardType`,
                     );
-                    if (rewards.rewardTypes.byKey[rewardType] === undefined)
-                      fail(`${variantPath}.rewardType`, `unknown reward type ${rewardType}`);
                     if (!['none', 'pomLegal', 'talentLegal'].includes(variant.requirement))
                       fail(`${variantPath}.requirement`, 'has an unknown result requirement');
                     return Object.freeze({
@@ -421,12 +257,6 @@ export function normalizeEncounterDefinitions(
                 free.resultRewardTypes,
                 `${path}.nemesisRandomEvent.freeItem.resultRewardTypes`,
               );
-              for (const rewardType of freeResults)
-                if (rewards.rewardTypes.byKey[rewardType] === undefined)
-                  fail(
-                    `${path}.nemesisRandomEvent.freeItem.resultRewardTypes`,
-                    `unknown reward type ${rewardType}`,
-                  );
               if (
                 policy.goldTrade.response.length !== 2 ||
                 policy.goldTrade.response[0] !== 'accept' ||
@@ -453,11 +283,6 @@ export function normalizeEncounterDefinitions(
                   `${path}.nemesisRandomEvent.traitTrade`,
                   'must retain its closed response, Triple Gold, requiredness, and Common-priority policy',
                 );
-              if (rewards.rewardTypes.byKey[policy.traitTrade.fixedResultRewardType] === undefined)
-                fail(
-                  `${path}.nemesisRandomEvent.traitTrade.fixedResultRewardType`,
-                  'unknown reward type',
-                );
               const contest = policy.damageContest;
               if (
                 contest.response !== 'none' ||
@@ -472,12 +297,6 @@ export function normalizeEncounterDefinitions(
                 contest.successResultRewardTypes,
                 `${path}.nemesisRandomEvent.damageContest.successResultRewardTypes`,
               );
-              for (const rewardType of [...contestResults, contest.failureResultRewardType])
-                if (rewards.rewardTypes.byKey[rewardType] === undefined)
-                  fail(
-                    `${path}.nemesisRandomEvent.damageContest`,
-                    `unknown reward type ${rewardType}`,
-                  );
               if (raw.nemesisRandomEvent.hOptionalCapacityReservation !== 1)
                 fail(`${path}.nemesisRandomEvent.hOptionalCapacityReservation`, 'must be 1');
               if (
@@ -556,215 +375,5 @@ export function normalizeEncounterDefinitions(
     'encounterDefinitions',
     (definition) => definition.key,
   );
-  definitions.values.forEach((definition, index) => {
-    if (definition.requirements !== undefined) {
-      validateEncounterRequirementReferences(
-        definition.requirements,
-        definitions,
-        `encounterDefinitions[${index}].requirements`,
-      );
-    }
-  });
   return definitions;
-}
-
-export function normalizeEncounterSets(
-  rawSets: readonly RawEncounterSetDeclaration[],
-  definitions: CatalogCollection<EncounterDefinition>,
-): CatalogCollection<EncounterSet> {
-  return createCollection(
-    rawSets.map((raw, setIndex): EncounterSet => {
-      const path = `encounterSets[${setIndex}]`;
-      const key = requireNonEmpty(raw.key, `${path}.key`);
-      const encounterDefinitionKeys = freezeUniqueStrings(
-        raw.encounterDefinitionKeys,
-        `${path}.encounterDefinitionKeys`,
-      );
-      if (encounterDefinitionKeys.length === 0) {
-        fail(`${path}.encounterDefinitionKeys`, 'must not be empty');
-      }
-      for (const [definitionIndex, definitionKey] of encounterDefinitionKeys.entries()) {
-        if (definitions.byKey[definitionKey] === undefined) {
-          fail(
-            `${path}.encounterDefinitionKeys[${definitionIndex}]`,
-            `unknown encounter definition ${definitionKey}`,
-          );
-        }
-      }
-      const defaultAuthoringProfileKey = requireNonEmpty(
-        raw.defaultAuthoringProfileKey,
-        `${path}.defaultAuthoringProfileKey`,
-      );
-      if (!encounterDefinitionKeys.includes(defaultAuthoringProfileKey)) {
-        fail(`${path}.defaultAuthoringProfileKey`, 'must be a member of the encounter set');
-      }
-      const authoringProfiles =
-        raw.authoringProfiles === undefined
-          ? undefined
-          : Object.freeze(
-              raw.authoringProfiles.map((rawProfile, profileIndex) => {
-                const profilePath = `${path}.authoringProfiles[${profileIndex}]`;
-                const profileKey = requireNonEmpty(rawProfile.key, `${profilePath}.key`);
-                const profileDefinitionKeys = freezeUniqueStrings(
-                  rawProfile.encounterDefinitionKeys,
-                  `${profilePath}.encounterDefinitionKeys`,
-                );
-                if (profileDefinitionKeys.length === 0) {
-                  fail(`${profilePath}.encounterDefinitionKeys`, 'must not be empty');
-                }
-                if (!profileDefinitionKeys.includes(profileKey)) {
-                  fail(`${profilePath}.key`, 'must identify one exact definition in the profile');
-                }
-                for (const definitionKey of profileDefinitionKeys) {
-                  if (!encounterDefinitionKeys.includes(definitionKey)) {
-                    fail(
-                      `${profilePath}.encounterDefinitionKeys`,
-                      `${definitionKey} is not a member of ${key}`,
-                    );
-                  }
-                }
-                return Object.freeze({
-                  key: profileKey,
-                  encounterDefinitionKeys: profileDefinitionKeys,
-                });
-              }),
-            );
-      if (authoringProfiles !== undefined) {
-        const profileKeys = authoringProfiles.map((profile) => profile.key);
-        if (new Set(profileKeys).size !== profileKeys.length) {
-          fail(`${path}.authoringProfiles`, 'must have unique authored keys');
-        }
-        const profiledDefinitionKeys = authoringProfiles.flatMap(
-          (profile) => profile.encounterDefinitionKeys,
-        );
-        if (
-          profiledDefinitionKeys.length !== encounterDefinitionKeys.length ||
-          new Set(profiledDefinitionKeys).size !== encounterDefinitionKeys.length ||
-          encounterDefinitionKeys.some(
-            (definitionKey) => !profiledDefinitionKeys.includes(definitionKey),
-          )
-        ) {
-          fail(`${path}.authoringProfiles`, 'must partition every exact encounter definition once');
-        }
-        if (!profileKeys.includes(defaultAuthoringProfileKey)) {
-          fail(`${path}.defaultAuthoringProfileKey`, 'must identify an authored profile');
-        }
-      }
-      return Object.freeze({
-        key,
-        encounterDefinitionKeys,
-        defaultAuthoringProfileKey,
-        ...(authoringProfiles === undefined ? {} : { authoringProfiles }),
-      });
-    }),
-    'encounterSets',
-    (set) => set.key,
-  );
-}
-
-export function validateNemesisRandomEventContract(
-  definitions: CatalogCollection<EncounterDefinition>,
-  sets: CatalogCollection<EncounterSet>,
-  rewards: RewardKernelCatalog,
-): void {
-  const event = definitions.byKey.NemesisRandomEvent;
-  if (event === undefined || event.nemesisRandomEvent === undefined) {
-    throw new CatalogContractError(
-      'encounterDefinitions',
-      'must declare the one NemesisRandomEvent descriptor',
-    );
-  }
-  if (
-    definitions.values.filter((definition) => definition.nemesisRandomEvent !== undefined)
-      .length !== 1
-  )
-    throw new CatalogContractError(
-      'encounterDefinitions',
-      'must assign the Nemesis event policy to its sole identity',
-    );
-  if (definitions.values.filter((definition) => definition.suppressesIncomingReward).length !== 1)
-    throw new CatalogContractError(
-      'encounterDefinitions',
-      'must assign incoming-reward suppression to its sole Nemesis identity',
-    );
-  const descriptor = event.nemesisRandomEvent;
-  const eventResultTypes = [
-    ...new Set([
-      ...descriptor.freeItem.resultRewardTypes,
-      ...descriptor.goldTrade.variants.map((variant) => variant.rewardType),
-      ...descriptor.damageTrade.variants.map((variant) => variant.rewardType),
-      descriptor.traitTrade.fixedResultRewardType,
-      ...descriptor.damageContest.successResultRewardTypes,
-      descriptor.damageContest.failureResultRewardType,
-    ]),
-  ].sort();
-  if (
-    event.kind !== 'nonCombat' ||
-    event.countsEncounterDepth !== false ||
-    event.npcPresentationKey !== 'Nemesis' ||
-    event.requiresInteraction !== true ||
-    event.canEncounterSkip !== false ||
-    event.hostsGorgon !== false ||
-    event.skipEndEncounterEffects !== false ||
-    event.traitOfferProducer !== undefined ||
-    event.sequenceEffect !== undefined ||
-    event.suppressesIncomingReward !== true ||
-    event.blocksGorgon !== true
-  ) {
-    throw new CatalogContractError(
-      'encounterDefinitions.NemesisRandomEvent',
-      'must retain its exact noncombat Nemesis interaction and suppression facts',
-    );
-  }
-  const expectedSets = new Set([
-    'FEncountersDefault',
-    'GEncountersDefault',
-    'HEncountersPassive',
-    'HEncountersPassiveSmall',
-  ]);
-  for (const set of sets.values) {
-    const contains = set.encounterDefinitionKeys.includes('NemesisRandomEvent');
-    if (contains !== expectedSets.has(set.key)) {
-      throw new CatalogContractError(
-        `encounterSets.${set.key}`,
-        'has invalid NemesisRandomEvent placement',
-      );
-    }
-  }
-  for (const [gameName, expected] of [
-    ['EmptyMaxHealthDrop', { canDuplicate: true, goldConversionEligible: true }],
-    ['HealDrop', { canDuplicate: true, goldConversionEligible: false }],
-    ['RoomRewardConsolationPrize', { canDuplicate: true, goldConversionEligible: true }],
-  ] as const) {
-    const acquisition = rewards.acquisitions.byKey[gameName];
-    if (
-      acquisition === undefined ||
-      acquisition.canDuplicate !== expected.canDuplicate ||
-      (acquisition.goldConversionEligible === true) !== expected.goldConversionEligible ||
-      acquisition.artificerConversionEligible === true ||
-      acquisition.lastRewardRecreation !== undefined
-    )
-      throw new CatalogContractError(
-        `rewards.acquisitions.${gameName}`,
-        'must retain its audited Nemesis Sea Star, Time Piece, Artificer, and Echo capabilities',
-      );
-  }
-  const lifecycle = rewards.producerLifecycles.byKey.NemesisEventPickup;
-  if (
-    lifecycle === undefined ||
-    lifecycle.rewardTypes.values
-      .map((reward) => reward.rewardType)
-      .sort()
-      .join('\u0000') !== eventResultTypes.join('\u0000') ||
-    eventResultTypes.some(
-      (rewardType) =>
-        lifecycle.rewardTypes.byKey[rewardType]?.acquisitionLifecycle.some(
-          (binding) => binding.blocksArtificerConversion !== true,
-        ) !== false,
-    )
-  )
-    throw new CatalogContractError(
-      'rewards.producerLifecycles.NemesisEventPickup',
-      'must block Artificer for every Nemesis result',
-    );
 }

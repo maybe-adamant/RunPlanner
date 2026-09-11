@@ -1,5 +1,4 @@
 import type {
-  AspectDeclaration,
   CatalogCollection,
   HammerCompatibility,
   ProperUpbringingEffect,
@@ -8,9 +7,9 @@ import type {
   TraitElement,
   TraitRarity,
   TraitRequirementExpression,
-  WeaponDeclaration,
 } from '@run-planner/engine/catalog-schema';
 
+import type { RawTraitCatalogInput, RawTraitDeclaration } from '../declarations/traits';
 import {
   createCollection,
   freezeUniqueStrings,
@@ -18,18 +17,10 @@ import {
   requireBoolean,
   requireNonEmpty,
   requireObject,
-  requireNonNegativeInteger,
   requirePositiveInteger,
 } from './common';
 import { fail } from './errors';
 import { normalizeRequirement, normalizeSelectedDisposition } from './trait-dispositions';
-import type {
-  RawAspectDeclaration,
-  RawTraitCatalogInput,
-  RawTraitDeclaration,
-  RawTraitGiverDeclaration,
-  RawWeaponDeclaration,
-} from '../declarations/traits';
 
 const RARITIES = ['Common', 'Rare', 'Epic', 'Heroic', 'Legendary', 'Duo'] as const;
 const IN_RUN_RARITIES = ['Common', 'Rare', 'Epic', 'Heroic'] as const;
@@ -57,131 +48,8 @@ function closedValue<const Values extends readonly string[]>(
   }
   return value as Values[number];
 }
-
-export function normalizeWeapons(
-  raw: RawTraitCatalogInput['weapons'],
-): CatalogCollection<WeaponDeclaration> {
-  const declarations = requireArray(raw, 'weapons').map(
-    (value, index) => requireObject(value, `weapons[${index}]`) as unknown as RawWeaponDeclaration,
-  );
-  const values = declarations.map((weapon, index) => {
-    const path = `weapons[${index}]`;
-    const aspectKeys = freezeUniqueStrings(
-      requireArray(weapon.aspectKeys, `${path}.aspectKeys`) as readonly string[],
-      `${path}.aspectKeys`,
-    );
-    if (aspectKeys.length !== 4) fail(`${path}.aspectKeys`, 'must declare four aspects');
-    const defaultAspectKey = requireNonEmpty(weapon.defaultAspectKey, `${path}.defaultAspectKey`);
-    if (!aspectKeys.includes(defaultAspectKey))
-      fail(`${path}.defaultAspectKey`, 'must belong to aspectKeys');
-    return Object.freeze({
-      key: requireNonEmpty(weapon.key, `${path}.key`),
-      label: requireNonEmpty(weapon.label, `${path}.label`),
-      aspectKeys,
-      defaultAspectKey,
-    });
-  });
-  return createCollection(values, 'weapons', (weapon) => weapon.key);
-}
-
-export function normalizeAspects(
-  raw: RawTraitCatalogInput['aspects'],
-  weapons: CatalogCollection<WeaponDeclaration>,
-): CatalogCollection<AspectDeclaration> {
-  const declarations = requireArray(raw, 'aspects').map(
-    (value, index) => requireObject(value, `aspects[${index}]`) as unknown as RawAspectDeclaration,
-  );
-  const values = declarations.map((aspect, index) => {
-    const path = `aspects[${index}]`;
-    const weaponKey = requireNonEmpty(aspect.weaponKey, `${path}.weaponKey`);
-    if (weapons.byKey[weaponKey] === undefined)
-      fail(`${path}.weaponKey`, `unknown weapon ${weaponKey}`);
-    const startingTrait =
-      aspect.startingTrait === undefined
-        ? undefined
-        : normalizeAspectStartingTrait(aspect.startingTrait, `${path}.startingTrait`);
-    const traitOfferLevelBonus =
-      aspect.traitOfferLevelBonus === undefined
-        ? undefined
-        : normalizeAspectTraitOfferLevelBonus(
-            aspect.traitOfferLevelBonus,
-            `${path}.traitOfferLevelBonus`,
-          );
-    return Object.freeze({
-      key: requireNonEmpty(aspect.key, `${path}.key`),
-      label: requireNonEmpty(aspect.label, `${path}.label`),
-      weaponKey,
-      ...(startingTrait === undefined ? {} : { startingTrait }),
-      ...(traitOfferLevelBonus === undefined ? {} : { traitOfferLevelBonus }),
-    });
-  });
-  const collection = createCollection(values, 'aspects', (aspect) => aspect.key);
-  for (const weapon of weapons.values) {
-    for (const aspectKey of weapon.aspectKeys) {
-      const aspect = collection.byKey[aspectKey];
-      if (aspect === undefined)
-        fail(`weapons.${weapon.key}.aspectKeys`, `unknown aspect ${aspectKey}`);
-      if (aspect.weaponKey !== weapon.key)
-        fail(`weapons.${weapon.key}.aspectKeys`, `cross-weapon aspect ${aspectKey}`);
-    }
-  }
-  const referencedAspectKeys = new Set(weapons.values.flatMap((weapon) => weapon.aspectKeys));
-  for (const aspect of collection.values) {
-    if (!referencedAspectKeys.has(aspect.key))
-      fail(`aspects.${aspect.key}`, 'is not declared by a weapon');
-  }
-  return collection;
-}
-
-function normalizeAspectTraitOfferLevelBonus(
-  raw: unknown,
-  path: string,
-): NonNullable<AspectDeclaration['traitOfferLevelBonus']> {
-  const value = requireObject(raw, path);
-  const keys = Object.keys(value);
-  if (
-    keys.length !== 3 ||
-    !Object.hasOwn(value, 'maximumBonus') ||
-    !Object.hasOwn(value, 'upgradedMaximumBonus') ||
-    !Object.hasOwn(value, 'upgradeTraitKey')
-  )
-    fail(path, 'must contain exactly maximumBonus, upgradedMaximumBonus, and upgradeTraitKey');
-  const maximumBonus = requireNonNegativeInteger(
-    value.maximumBonus as number,
-    `${path}.maximumBonus`,
-  );
-  const upgradedMaximumBonus = requireNonNegativeInteger(
-    value.upgradedMaximumBonus as number,
-    `${path}.upgradedMaximumBonus`,
-  );
-  if (upgradedMaximumBonus <= maximumBonus)
-    fail(`${path}.upgradedMaximumBonus`, 'must exceed maximumBonus');
-  return Object.freeze({
-    maximumBonus,
-    upgradedMaximumBonus,
-    upgradeTraitKey: requireNonEmpty(value.upgradeTraitKey as string, `${path}.upgradeTraitKey`),
-  });
-}
-
-function normalizeAspectStartingTrait(
-  raw: unknown,
-  path: string,
-): NonNullable<AspectDeclaration['startingTrait']> {
-  const value = requireObject(raw, path);
-  const keys = Object.keys(value);
-  if (keys.length !== 2 || !Object.hasOwn(value, 'traitKey') || !Object.hasOwn(value, 'giverKey')) {
-    fail(path, 'must contain exactly traitKey and giverKey');
-  }
-  return Object.freeze({
-    traitKey: requireNonEmpty(value.traitKey as string, `${path}.traitKey`),
-    giverKey: requireNonEmpty(value.giverKey as string, `${path}.giverKey`),
-  });
-}
-
 export function normalizeTraits(
   raw: RawTraitCatalogInput['traits'],
-  weapons: CatalogCollection<WeaponDeclaration>,
-  aspects: CatalogCollection<AspectDeclaration>,
   deferred: ReadonlySet<string>,
   coreGodTraitKeys: ReadonlySet<string>,
 ): CatalogCollection<TraitDeclaration> {
@@ -269,9 +137,6 @@ export function normalizeTraits(
         hammerDeclaration.weaponKey,
         `${path}.hammerCompatibility.weaponKey`,
       );
-      const weapon = weapons.byKey[weaponKey];
-      if (weapon === undefined)
-        fail(`${path}.hammerCompatibility.weaponKey`, `unknown weapon ${weaponKey}`);
       const aspectKeys = freezeUniqueStrings(
         requireArray(
           hammerDeclaration.aspectKeys,
@@ -281,13 +146,6 @@ export function normalizeTraits(
       );
       if (aspectKeys.length === 0)
         fail(`${path}.hammerCompatibility.aspectKeys`, 'must not be empty');
-      for (const aspectKey of aspectKeys) {
-        const aspect = aspects.byKey[aspectKey];
-        if (aspect === undefined)
-          fail(`${path}.hammerCompatibility.aspectKeys`, `unknown aspect ${aspectKey}`);
-        if (aspect.weaponKey !== weaponKey)
-          fail(`${path}.hammerCompatibility.aspectKeys`, `cross-weapon aspect ${aspectKey}`);
-      }
       hammerCompatibility = Object.freeze({
         weaponKey,
         aspectKeys,
@@ -610,24 +468,4 @@ export function normalizeTraits(
     );
   }
   return collection;
-}
-
-export function collectCoreGodTraitKeys(raw: RawTraitCatalogInput['givers']): ReadonlySet<string> {
-  const keys = new Set<string>();
-  requireArray(raw, 'givers').forEach((value, index) => {
-    const path = `givers[${index}]`;
-    const giver = requireObject(value, path) as unknown as RawTraitGiverDeclaration;
-    const providerKind = closedValue(
-      giver.providerKind,
-      ['olympian', 'hermes', 'hammer', 'npc', 'spell', 'chaos'] as const,
-      `${path}.providerKind`,
-    );
-    if (providerKind !== 'olympian') return;
-    (requireArray(giver.traitKeys, `${path}.traitKeys`) as readonly string[]).forEach(
-      (traitKey, traitIndex) => {
-        keys.add(requireNonEmpty(traitKey, `${path}.traitKeys[${traitIndex}]`));
-      },
-    );
-  });
-  return keys;
 }
