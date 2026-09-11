@@ -44,8 +44,8 @@ import {
   deriveHermesShrineDeliveries,
   hasPendingHermesSpellDrop,
   priorTwoSurfaceShopPresence,
-} from '../../src/simulation/hermes-shrine';
-import { createHermesShrineCandidateArtifacts } from '../../src/simulation/hermes-shrine';
+} from '../../src/simulation/commerce/hermes-shrine';
+import { createHermesShrineCandidateArtifacts } from '../../src/simulation/commerce/hermes-shrine';
 import { prefixAuthoredRooms } from '../../src/simulation/candidates/evaluated-biome';
 import { composeBiomeHistoryPrefix } from '../../src/simulation/history';
 import { prepareRoomEncounterPhases } from '../../src/simulation/encounters/preparation';

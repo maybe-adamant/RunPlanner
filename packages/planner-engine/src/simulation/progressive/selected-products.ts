@@ -27,7 +27,7 @@ import {
   type TranscendentEmbryoCandidateArtifacts,
 } from '../keepsakes/candidate-artifacts';
 import { type DerivedAcquisitionEntryCandidateArtifacts } from '../rewards/acquisition-artifacts';
-import { type SteadyGrowthCandidateArtifacts } from '../trait-history';
+import { type SteadyGrowthCandidateArtifacts } from '../traits/history';
 import type { TraitOfferCandidateArtifacts } from '../candidates/trait-offer-capability';
 import type { TraitChildSettlementCheckpoints } from '../rewards/biome';
 import { findingIdentityKey, type FindingRegionEntry } from '../finding-regions';
@@ -38,7 +38,7 @@ import type {
   RewardProducerCandidateArtifacts,
   RewardProducerOwnerAddress,
 } from '../rewards/producer-frontiers';
-import type { SelectedTraitOfferAssessment } from '../trait-offers';
+import type { SelectedTraitOfferAssessment } from '../traits/offers';
 import {
   acquisitionRoleAncestor,
   derivedAcquisitionEntryAncestor,

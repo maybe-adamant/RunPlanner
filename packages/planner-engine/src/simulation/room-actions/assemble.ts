@@ -3,13 +3,13 @@ import {
   createRoomActionAddress,
   type OccurrenceAddress,
 } from '../../authored-project/addresses';
-import { roomActionKey } from '../../authored-project/room-actions';
+import { roomActionKey } from '../../authored-project/room-actions/state';
 import type { RoomActionReference } from '../../authored-project/model';
 import {
   roomLifecycleWindowOrdinal,
   scopeRoomLifecycleStructure,
   type RoomLifecycleStructure,
-} from '../../authored-project/room-lifecycle-structure';
+} from '../../authored-project/room-actions/lifecycle-structure';
 import type {
   RoomActionCheckpoint,
   RoomActionCheckpointContribution,

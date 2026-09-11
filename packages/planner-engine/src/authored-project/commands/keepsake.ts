@@ -2,9 +2,9 @@ import type { Catalog } from '../../catalog-schema';
 import type { AuthoredKeepsakeEquipResults, ProjectDocument } from '../model';
 import { failCommand, locateBiome, requireOccurrence, requireRoom } from './contract';
 import { updateOccurrence } from './occurrence-mutation';
-import { roomActionKey } from '../room-action-key';
+import { roomActionKey } from '../room-actions/key';
 import { createBiomeAddress } from '../addresses';
-import { assembleRoomActionDomain } from '../room-action-domain';
+import { assembleRoomActionDomain } from '../room-actions/domain';
 import { encounterBindingsBySlot } from '../room-state/encounter-envelope';
 import { normalizeAuthoredTranscendentEmbryoOutcome } from '../traits';
 import type {

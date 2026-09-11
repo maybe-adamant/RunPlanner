@@ -1,5 +1,5 @@
-import type { Catalog } from '../catalog-schema';
-import { createBiomeAddress, type BiomeAddress } from './addresses';
+import type { Catalog } from '../../catalog-schema';
+import { createBiomeAddress, type BiomeAddress } from '../addresses';
 import type {
   AuthoredBiomePlan,
   BiomeTopology,
@@ -7,20 +7,17 @@ import type {
   ProjectDocument,
   RoomActionReference,
   RoomOccurrence,
-} from './model';
+} from '../model';
 import {
   assembleRoomActionDomain,
   type RoomActionContribution,
   type RoomActionDomain,
-} from './room-action-domain';
-import {
-  authoredRoomLifecycleProfileKey,
-  roomLifecycleWindowOrdinal,
-} from './room-lifecycle-structure';
-import { fieldsDefaultActiveCageCount } from './fields';
-import { roomActionKey } from './room-actions';
-import { additionalExitsForDecision, selectedExitContinuation } from './topology/query';
-import { encounterEnvelopeSlots } from './room-state/encounter-envelope';
+} from './domain';
+import { authoredRoomLifecycleProfileKey, roomLifecycleWindowOrdinal } from './lifecycle-structure';
+import { fieldsDefaultActiveCageCount } from '../fields';
+import { roomActionKey } from './state';
+import { additionalExitsForDecision, selectedExitContinuation } from '../topology/query';
+import { encounterEnvelopeSlots } from '../room-state/encounter-envelope';
 
 function frozen<T>(value: T): T {
   return Object.freeze(value);

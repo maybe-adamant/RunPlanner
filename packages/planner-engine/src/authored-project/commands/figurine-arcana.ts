@@ -1,6 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import { createBiomeAddress } from '../addresses';
-import { assembleRoomActionDomain } from '../room-action-domain';
+import { assembleRoomActionDomain } from '../room-actions/domain';
 import type { ProjectDocument } from '../model';
 import type { FigurineArcanaCommand } from './types';
 import { failCommand, requireOccurrence, type LocatedBiome } from './contract';

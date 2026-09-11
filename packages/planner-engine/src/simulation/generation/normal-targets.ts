@@ -30,7 +30,7 @@ import type {
   CanonicalPhysicalExit,
   MaterializedBiomePrefix,
 } from '../materialization';
-import { assessHermesShrine, priorTwoSurfaceShopPresence } from '../hermes-shrine';
+import { assessHermesShrine, priorTwoSurfaceShopPresence } from '../commerce/hermes-shrine';
 import type { TargetRewardHistoryCheckpoint } from '../rewards';
 import { type ChaosCandidateCapability } from './candidate-artifacts';
 import { type ZagreusContractCandidateCapability } from './candidate-artifacts';

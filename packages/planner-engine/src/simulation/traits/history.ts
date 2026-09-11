@@ -1,15 +1,15 @@
-import type { Catalog, TraitElement, TraitRarity } from '../catalog-schema';
-import type { EchoKeepsakeReplayAddress } from '../authored-project/addresses';
-import { semanticAddressKey, type SemanticAddress } from '../authored-project/addresses';
+import type { Catalog, TraitElement, TraitRarity } from '../../catalog-schema';
+import type { EchoKeepsakeReplayAddress } from '../../authored-project/addresses';
+import { semanticAddressKey, type SemanticAddress } from '../../authored-project/addresses';
 import type {
   AuthoredTraitOfferTraits,
   AuthoredChaosTraitOffer,
   EquippedTrait,
   TraitOptionKey,
-} from '../authored-project/traits';
-import type { RewardHistoryState } from '../reward-kernel/model';
-export type { TraitFindingCode } from './model';
-import { optionIndex } from '../authored-project/traits';
+} from '../../authored-project/traits';
+import type { RewardHistoryState } from '../../reward-kernel/model';
+export type { TraitFindingCode } from '../model';
+import { optionIndex } from '../../authored-project/traits';
 
 export interface TraitOfferEvent {
   readonly kind: 'traitOffer';
@@ -170,8 +170,8 @@ export interface ChaosCurseInstance {
   readonly curseKey: string;
   readonly duration: number;
   readonly remaining: number;
-  readonly clock: import('../catalog-schema').ChaosClockKind;
-  readonly semanticTag?: import('../catalog-schema').ChaosSemanticTag;
+  readonly clock: import('../../catalog-schema').ChaosClockKind;
+  readonly semanticTag?: import('../../catalog-schema').ChaosSemanticTag;
   readonly curseValues: Readonly<Record<string, number>>;
   readonly blessingKey: string;
   readonly rarity: AuthoredChaosTraitOffer['rarity'];
@@ -224,7 +224,7 @@ export interface DirectChaosBlessingRemovalEvent {
 export interface ChaosClockEvent {
   readonly kind: 'chaosClock';
   readonly sequence: number;
-  readonly clock: import('../catalog-schema').ChaosClockKind;
+  readonly clock: import('../../catalog-schema').ChaosClockKind;
   /** The originating selected pair provides stable chronology ownership. */
   readonly owner: SemanticAddress;
   readonly acquisitionRole: 'chaosClock';
@@ -1016,7 +1016,7 @@ export function advanceChaosClock(
   catalog: Catalog,
   before: TraitHistoryState,
   sequence: number,
-  clock: import('../catalog-schema').ChaosClockKind,
+  clock: import('../../catalog-schema').ChaosClockKind,
 ): TraitHistoryState {
   const owner = before.activeChaosCurses.find((active) => active.clock === clock)?.owner;
   if (owner === undefined) return before;
@@ -1222,7 +1222,7 @@ export interface ReachedPickupProducerMaturity {
   readonly traitKey: string;
   readonly acquisitionIdentity: string;
   readonly producerLifecycleKey: string;
-  readonly pickups: readonly import('../catalog-schema').TraitPickupDeclaration[];
+  readonly pickups: readonly import('../../catalog-schema').TraitPickupDeclaration[];
 }
 
 /** Advances every declaration-clocked pickup producer at one qualifying end-effects checkpoint. */
@@ -1327,7 +1327,7 @@ export interface SteadyGrowthCandidateCapability {
 }
 export interface SteadyGrowthCandidateArtifacts {
   readonly at: (
-    address: import('../authored-project/addresses').SteadyGrowthOutcomeAddress,
+    address: import('../../authored-project/addresses').SteadyGrowthOutcomeAddress,
   ) => SteadyGrowthCandidateCapability | undefined;
 }
 export function createSteadyGrowthCandidateArtifacts(
@@ -1336,7 +1336,7 @@ export function createSteadyGrowthCandidateArtifacts(
 ): SteadyGrowthCandidateArtifacts {
   const privateContexts = new Map(contexts);
   return Object.freeze({
-    at: (address: import('../authored-project/addresses').SteadyGrowthOutcomeAddress) => {
+    at: (address: import('../../authored-project/addresses').SteadyGrowthOutcomeAddress) => {
       const thresholds = privateContexts.get(semanticAddressKey(address));
       if (thresholds === undefined) return undefined;
       return Object.freeze({
@@ -1355,4 +1355,4 @@ export function createEmptySteadyGrowthCandidateArtifacts(): SteadyGrowthCandida
   return Object.freeze({ at: () => undefined });
 }
 
-import type { TraitAssessmentFinding } from './trait-offer-domain';
+import type { TraitAssessmentFinding } from './offer-domain';

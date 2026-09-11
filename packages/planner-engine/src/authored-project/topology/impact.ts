@@ -4,8 +4,8 @@ import type {
   ExitDecisionSource,
   HubDecision,
   OccurrenceId,
-} from './model';
-import { exitDecisionSourceKey } from './topology/source-identity';
+} from '../model';
+import { exitDecisionSourceKey } from './source-identity';
 
 /**
  * The command authority owns the structural consequences of removing one or

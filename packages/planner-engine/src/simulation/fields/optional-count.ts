@@ -1,6 +1,6 @@
-import type { Catalog } from '../catalog-schema';
-import type { OccurrenceAddress } from '../authored-project/addresses';
-import type { RoomOccurrence } from '../authored-project/model';
+import type { Catalog } from '../../catalog-schema';
+import type { OccurrenceAddress } from '../../authored-project/addresses';
+import type { RoomOccurrence } from '../../authored-project/model';
 
 /**
  * Declaration-owned Fields count bounds for an occurrence. The physical bound

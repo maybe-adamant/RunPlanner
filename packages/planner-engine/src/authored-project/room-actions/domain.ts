@@ -2,7 +2,7 @@ import {
   isCombatBearingEncounterPhaseKind,
   type Catalog,
   type RoomDeclaration,
-} from '../catalog-schema';
+} from '../../catalog-schema';
 import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
@@ -19,33 +19,33 @@ import {
   semanticAddressKey,
   type BiomeAddress,
   type SemanticAddress,
-} from './addresses';
-import { acquisitionSiteFromStorageKey, parseArtificerReplacementEntryKey } from './artificer';
-import { parseHermesShrineDeliveryEntryKey } from './hermes-shrine-delivery';
-import { authoredAcquisitionSources } from './acquisition-sources';
+} from '../addresses';
+import { acquisitionSiteFromStorageKey, parseArtificerReplacementEntryKey } from '../artificer';
+import { parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
+import { authoredAcquisitionSources } from '../acquisition-sources';
 import {
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   parseSeaStarDuplicateSiteKey,
   seaStarDuplicateUsesFreshObject,
-} from './sea-star';
-import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from './shop';
-import { rewardSourceResolvesAtAcquisition } from './reward-state';
-import type { RoomActionReference, RoomOccurrence } from './model';
+} from '../sea-star';
+import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
+import { rewardSourceResolvesAtAcquisition } from '../reward-state';
+import type { RoomActionReference, RoomOccurrence } from '../model';
 import {
   encounterEnvelopeSlots,
   selectedEncounterAuthoringProfileKey,
-} from './room-state/encounter-envelope';
-import { activeRoomActionReferences, roomActionKey } from './room-actions';
+} from '../room-state/encounter-envelope';
+import { activeRoomActionReferences, roomActionKey } from './state';
 import {
   parseClockedTraitGeneratedPickupEntryKey,
   selectedPickupProducerForEntry,
-} from './pickup-producers';
+} from '../pickup-producers';
 import {
   assembleRoomLifecycleStructure,
   authoredRoomLifecycleProfileKey,
   type RoomActionWindow,
   type RoomLifecycleStructure,
-} from './room-lifecycle-structure';
+} from './lifecycle-structure';
 
 export type RoomActionParticipation = 'required' | 'optional';
 

@@ -6,7 +6,7 @@ import {
   type SemanticAddress,
 } from '../../../../authored-project/addresses';
 import type { RouteLoadout } from '../../../../authored-project/model';
-import { roomActionKey } from '../../../../authored-project/room-action-key';
+import { roomActionKey } from '../../../../authored-project/room-actions/key';
 import {
   acquisitionSiteStorageKey,
   artificerAcquisitionSite,

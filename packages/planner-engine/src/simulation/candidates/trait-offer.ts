@@ -15,7 +15,7 @@ import type {
   TraitOfferCandidateArtifacts,
 } from './trait-offer-capability';
 import type { ProjectEvaluation } from '../evaluation-products';
-import type { TraitTargetedAcquisitionAssessment } from '../trait-history';
+import type { TraitTargetedAcquisitionAssessment } from '../traits/history';
 import type {
   TraitAssessment,
   TraitAssessmentFinding,
@@ -23,7 +23,7 @@ import type {
   TraitOfferCompositionAssessment,
   TraitOfferCompositionFinding,
   TraitReplacementCompositionAssessment,
-} from '../trait-offer-domain';
+} from '../traits/offer-domain';
 import type { CandidateContextUnavailable } from './availability';
 import { unavailableForTraitOffer } from './trait-offer-availability';
 

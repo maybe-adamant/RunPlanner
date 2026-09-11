@@ -12,7 +12,7 @@ import {
   type OccurrenceAddress,
 } from '../../src/authored-project/addresses';
 import type { RoomLifecycleStructure } from '../../src/authored-project';
-import { roomActionKey } from '../../src/authored-project/room-actions';
+import { roomActionKey } from '../../src/authored-project/room-actions/state';
 import type { RoomActionReference } from '../../src/authored-project/model';
 import type { ResolvedEncounterPhase } from '../../src/simulation/encounters';
 import type { RoomActionRow, RoomActionWindow } from '../../src/simulation/room-actions';

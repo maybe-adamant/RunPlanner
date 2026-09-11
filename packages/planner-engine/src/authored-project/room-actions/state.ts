@@ -1,19 +1,19 @@
-import type { RoomActionReference, RoomActionState } from './model';
-import type { Catalog, RoomDeclaration } from '../catalog-schema';
-import type { RoomOccurrence } from './model';
+import type { RoomActionReference, RoomActionState } from '../model';
+import type { Catalog, RoomDeclaration } from '../../catalog-schema';
+import type { RoomOccurrence } from '../model';
 import {
   encounterEnvelopeSlots,
   selectedEncounterAuthoringProfileKey,
-} from './room-state/encounter-envelope';
-import { semanticAddressKey } from './addresses';
-import { parseArtificerReplacementEntryKey } from './artificer';
-import { parseHermesShrineDeliveryEntryKey } from './hermes-shrine-delivery';
-import { authoredAcquisitionSources } from './acquisition-sources';
-import { echoLastRewardPickupEntryKeys, activeSelectedPickupProducers } from './pickup-producers';
-import { seaStarDuplicateSourceIsActive } from './sea-star';
-import { rewardSourceResolvesAtAcquisition } from './reward-state';
-export { roomActionKey } from './room-action-key';
-import { roomActionKey } from './room-action-key';
+} from '../room-state/encounter-envelope';
+import { semanticAddressKey } from '../addresses';
+import { parseArtificerReplacementEntryKey } from '../artificer';
+import { parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
+import { authoredAcquisitionSources } from '../acquisition-sources';
+import { echoLastRewardPickupEntryKeys, activeSelectedPickupProducers } from '../pickup-producers';
+import { seaStarDuplicateSourceIsActive } from '../sea-star';
+import { rewardSourceResolvesAtAcquisition } from '../reward-state';
+export { roomActionKey } from './key';
+import { roomActionKey } from './key';
 
 export function createEmptyRoomActionState(): RoomActionState {
   return Object.freeze({ order: Object.freeze([]) });
@@ -35,7 +35,7 @@ export function createDefaultRoomActionState(room: RoomDeclaration): RoomActionS
 /** Complete structural action domain for one authored occurrence. */
 export function activeRoomActionReferences(
   catalog: Catalog,
-  biome: import('./addresses').BiomeAddress,
+  biome: import('../addresses').BiomeAddress,
   occurrence: RoomOccurrence,
   scope?: {
     readonly activeEncounterSlotKeys?: readonly string[];
@@ -163,7 +163,7 @@ export function activeRoomActionReferences(
   if (occurrence.stygianWell?.interacted === true) {
     const purchased = new Set(occurrence.stygianWell.purchasedGenerationKeys ?? []);
     for (const slotKey of ['healing', 'secondLeft', 'secondRight'] as const) {
-      const generationKey = `initial:${slotKey}` as import('./model').StygianWellGenerationKey;
+      const generationKey = `initial:${slotKey}` as import('../model').StygianWellGenerationKey;
       // Purchase participation and rank survive an invalidating source edit.
       // The active action then reaches the missing source finding and remains
       // directly repairable by restoring this generation's offer.
@@ -272,7 +272,7 @@ export function activeRoomActionReferences(
           const slotKey = shrineDelivery.generationKey.startsWith('initial:')
             ? (shrineDelivery.generationKey.slice(
                 'initial:'.length,
-              ) as import('./model').HermesShrineSlotKey)
+              ) as import('../model').HermesShrineSlotKey)
             : undefined;
           if (
             slotKey === undefined ||

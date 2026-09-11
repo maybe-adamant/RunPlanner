@@ -16,7 +16,7 @@ import { selectedEncounterAuthoringProfileKey } from '../../../../authored-proje
 import type { RouteLoadout } from '../../../../authored-project/model';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../../materialization';
-import { advanceStygianWellBossUses } from '../../../stygian-well';
+import { advanceStygianWellBossUses } from '../../../commerce/stygian-well';
 import {
   activateTemporaryArcana,
   judgmentRequiredCount,

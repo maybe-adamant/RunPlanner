@@ -1,11 +1,11 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ProjectDocument, RoomActionReference } from '../model';
-import { roomActionKey } from '../room-actions';
+import { roomActionKey } from '../room-actions/state';
 import {
   roomActionDomainForOccurrence,
   scheduleRequiredRoomActions,
   structurallyActiveOccurrenceIds,
-} from '../room-action-defaults';
+} from '../room-actions/defaults';
 import { createBiomeAddress } from '../addresses';
 import { reconcileAcquisitionResolvedRewardEntry } from '../acquisition-entry';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';

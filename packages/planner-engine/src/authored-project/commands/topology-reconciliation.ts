@@ -7,7 +7,7 @@ import {
   selectedExitKey,
 } from '../topology/query';
 import { sameExitDecisionSource } from '../topology/source-identity';
-import { applyTopologyRemovalImpact, describeTopologyRemovalImpact } from '../topologyImpact';
+import { applyTopologyRemovalImpact, describeTopologyRemovalImpact } from '../topology/impact';
 import { failCommand, type LocatedBiome } from './contract';
 import { reconcileNormalTargetEntryStates } from './selection-state';
 import type { RouteDetourCommand, TopologyCommand } from './types';

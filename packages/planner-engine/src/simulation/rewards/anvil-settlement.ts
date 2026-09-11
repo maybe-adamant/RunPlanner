@@ -1,13 +1,13 @@
 import type { Catalog } from '../../catalog-schema';
 import type { AuthoredAnvilResult } from '../../authored-project/model';
-import type { TraitOfferContext } from '../trait-offer-domain';
-import { assessTraitOption } from '../trait-authoring-policies';
+import type { TraitOfferContext } from '../traits/offer-domain';
+import { assessTraitOption } from '../traits/authoring-policies';
 import type { EquippedTrait } from '../../authored-project/traits';
 import {
   createTraitHistoryState,
   type TraitHistoryState,
   type TraitHistoryEvent,
-} from '../trait-history';
+} from '../traits/history';
 import type { AcquisitionRoleAddress } from '../../authored-project/addresses';
 import type { RewardBranchState } from './branch-primitives';
 import { pickupEffectForOffer, type ResolvedRewardOffer } from '../../reward-kernel';

@@ -37,7 +37,7 @@ import {
   traitOfferCompositionDomains,
   type TraitHistoryState,
 } from '../traits';
-import type { EchoLastRunBoonOutcome, TraitOfferContext } from '../trait-offer-domain';
+import type { EchoLastRunBoonOutcome, TraitOfferContext } from '../traits/offer-domain';
 import {
   optionIndex,
   traitGiverForAcquisitionRole,
@@ -58,11 +58,11 @@ import {
   consumeConcaveStone,
 } from '../keepsakes/trait-effects';
 import type { RewardBranchState } from './branch-primitives';
-import type { TraitOfferOptionLevelResolution } from '../trait-offer-levels';
+import type { TraitOfferOptionLevelResolution } from '../traits/offer-levels';
 import { bankPathPoints, installHexTree, maybeAddGodSent } from '../hex-progress';
 import { addRewardFinding } from './findings';
 import { settleReachedLevelResolution } from './level-resolution-settlement';
-import { isTraitOfferMutationEvent } from '../trait-history';
+import { isTraitOfferMutationEvent } from '../traits/history';
 
 export interface ReachedTraitChildCheckpoint {
   readonly address: SemanticAddress;

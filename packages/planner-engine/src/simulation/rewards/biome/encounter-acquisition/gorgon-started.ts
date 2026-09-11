@@ -13,8 +13,8 @@ import {
   expirePendingGorgon,
   gorgonSourceRarityOverride,
 } from '../../../keepsakes/encounter-effects';
-import { deriveBoonRarityLedger } from '../../../boon-rarity';
-import { boonRarityFactsForOffer } from '../../../trait-offers';
+import { deriveBoonRarityLedger } from '../../../traits/rarity';
+import { boonRarityFactsForOffer } from '../../../traits/offers';
 import { createTraitHistoryState } from '../../../traits';
 import { selectedEncounterAuthoringProfileKey } from '../../../../authored-project/room-state/encounter-envelope';
 import type { RewardBranchState } from '../../branch-primitives';

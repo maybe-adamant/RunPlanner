@@ -1,6 +1,6 @@
-import { semanticAddressKey, type OccurrenceAddress } from '../authored-project/addresses';
-import type { StygianWellState } from '../authored-project/model';
-import type { Catalog, RoomDeclaration } from '../catalog-schema';
+import { semanticAddressKey, type OccurrenceAddress } from '../../authored-project/addresses';
+import type { StygianWellState } from '../../authored-project/model';
+import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 
 export const STYGIAN_WELL_SLOT_KEYS = ['healing', 'secondLeft', 'secondRight'] as const;
 /** Closed planner payload for one declaration-owned Well effect. */
@@ -40,14 +40,16 @@ export interface StygianWellAssessment {
   readonly eligible: boolean;
   readonly complete: boolean;
   readonly candidateItemKeysBySlot: Readonly<
-    Record<import('../authored-project/model').StygianWellSlotKey, readonly string[]>
+    Record<import('../../authored-project/model').StygianWellSlotKey, readonly string[]>
   >;
   readonly travelDealRefill?: {
-    readonly sourceGenerationKey: import('../authored-project/model').StygianWellGenerationKey;
+    readonly sourceGenerationKey: import('../../authored-project/model').StygianWellGenerationKey;
     readonly candidateItemKeys: readonly string[];
   };
   readonly twistCandidateItemKeysByGeneration: Readonly<
-    Partial<Record<import('../authored-project/model').StygianWellGenerationKey, readonly string[]>>
+    Partial<
+      Record<import('../../authored-project/model').StygianWellGenerationKey, readonly string[]>
+    >
   >;
   readonly issues: readonly StygianWellAssessmentIssue[];
 }
@@ -55,7 +57,7 @@ export interface StygianWellAssessment {
 export type StygianWellAssessmentIssue =
   | {
       readonly kind: 'missing' | 'wrongGroup';
-      readonly generationKey: import('../authored-project/model').StygianWellGenerationKey;
+      readonly generationKey: import('../../authored-project/model').StygianWellGenerationKey;
     }
   | { readonly kind: 'duplicate' }
   | {
@@ -64,7 +66,7 @@ export type StygianWellAssessmentIssue =
     }
   | {
       readonly kind: 'twistMissing' | 'twistInvalid' | 'twistOrphan';
-      readonly generationKey: import('../authored-project/model').StygianWellGenerationKey;
+      readonly generationKey: import('../../authored-project/model').StygianWellGenerationKey;
     };
 
 export interface StygianWellPlacementAssessment {
@@ -115,9 +117,9 @@ export function assessStygianWell(
   room: RoomDeclaration | undefined,
   well: StygianWellState,
   state?: Pick<StygianWellRunState, 'discountUses' | 'emptySlotUses'>,
-  traitHistory?: import('./traits').TraitHistoryState,
+  traitHistory?: import('../traits').TraitHistoryState,
   priorEnteredWellFlags: readonly boolean[] = Object.freeze([]),
-  firstPurchaseGenerationKey?: import('../authored-project/model').StygianWellGenerationKey,
+  firstPurchaseGenerationKey?: import('../../authored-project/model').StygianWellGenerationKey,
   hasTravelDeal = false,
 ): StygianWellAssessment {
   const declaration = room?.roomShop;
@@ -159,17 +161,19 @@ export function assessStygianWell(
     }),
   );
   const itemForGeneration = (
-    generation: import('../authored-project/model').StygianWellGenerationKey,
+    generation: import('../../authored-project/model').StygianWellGenerationKey,
   ) => {
     if (generation === 'travelDealRefill') return well.travelDealRefillKey;
     return well.offerKeyBySlot[
-      generation.slice('initial:'.length) as import('../authored-project/model').StygianWellSlotKey
+      generation.slice(
+        'initial:'.length,
+      ) as import('../../authored-project/model').StygianWellSlotKey
     ];
   };
   const sourceSlot = firstPurchaseGenerationKey?.startsWith('initial:')
     ? (firstPurchaseGenerationKey.slice(
         'initial:'.length,
-      ) as import('../authored-project/model').StygianWellSlotKey)
+      ) as import('../../authored-project/model').StygianWellSlotKey)
     : undefined;
   const excluded = new Set(
     Object.values(well.offerKeyBySlot).filter((key): key is string => key !== null),
@@ -252,7 +256,7 @@ export function assessStygianWell(
           ? 'travelDealRefill'
           : (generation.slice(
               'initial:'.length,
-            ) as import('../authored-project/model').StygianWellSlotKey)
+            ) as import('../../authored-project/model').StygianWellSlotKey)
       ];
     const isPurchasedTwist =
       purchased.has(generation) && itemForGeneration(generation) === 'RandomStoreItem';
@@ -350,14 +354,16 @@ export interface StygianWellCandidateCapability {
   readonly present: boolean;
   readonly interacted: boolean;
   readonly candidateItemKeysBySlot: Readonly<
-    Record<import('../authored-project/model').StygianWellSlotKey, readonly string[]>
+    Record<import('../../authored-project/model').StygianWellSlotKey, readonly string[]>
   >;
   readonly travelDealRefill?: {
-    readonly sourceGenerationKey: import('../authored-project/model').StygianWellGenerationKey;
+    readonly sourceGenerationKey: import('../../authored-project/model').StygianWellGenerationKey;
     readonly candidateItemKeys: readonly string[];
   };
   readonly twistCandidateItemKeysByGeneration: Readonly<
-    Partial<Record<import('../authored-project/model').StygianWellGenerationKey, readonly string[]>>
+    Partial<
+      Record<import('../../authored-project/model').StygianWellGenerationKey, readonly string[]>
+    >
   >;
 }
 
@@ -395,7 +401,7 @@ export function createStygianWellCandidateArtifacts(
                 ),
               ),
             ]),
-          ) as Record<import('../authored-project/model').StygianWellSlotKey, readonly string[]>,
+          ) as Record<import('../../authored-project/model').StygianWellSlotKey, readonly string[]>,
         ),
         ...(travelDealRefill === undefined
           ? {}
@@ -424,7 +430,7 @@ export function createStygianWellCandidateArtifacts(
                     assessments.every(
                       (assessment) =>
                         assessment.inventory?.twistCandidateItemKeysByGeneration[
-                          generationKey as import('../authored-project/model').StygianWellGenerationKey
+                          generationKey as import('../../authored-project/model').StygianWellGenerationKey
                         ]?.includes(itemKey) === true,
                     ),
                   ),

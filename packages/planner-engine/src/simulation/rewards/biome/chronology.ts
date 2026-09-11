@@ -1,6 +1,6 @@
 import type { Catalog } from '../../../catalog-schema';
-import type { PurgingPoolAssessment } from '../../purging-pool';
-import type { HermesShrineCandidateContext } from '../../hermes-shrine';
+import type { PurgingPoolAssessment } from '../../commerce/purging-pool';
+import type { HermesShrineCandidateContext } from '../../commerce/hermes-shrine';
 import {
   createAcquisitionRoleAddress,
   createAcquisitionEntryAddress,
@@ -19,7 +19,7 @@ import {
 } from '../../../authored-project/addresses';
 import type { ResourcePlacements, RouteLoadout } from '../../../authored-project/model';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../../authored-project/defaults';
-import type { StygianWellCandidateContext } from '../../stygian-well';
+import type { StygianWellCandidateContext } from '../../commerce/stygian-well';
 import { parseSeaStarDuplicateSiteKey } from '../../../authored-project/sea-star';
 import { parseHermesShrineDeliveryEntryKey } from '../../../authored-project/hermes-shrine-delivery';
 import type { ResolvedRewardOffer } from '../../../reward-kernel';
@@ -38,14 +38,14 @@ import {
   createDerivedAcquisitionEntryCandidateArtifacts,
   attestDerivedAcquisitionEntryCandidateCapability,
 } from '../acquisition-artifacts';
-import { createSteadyGrowthCandidateArtifacts } from '../../trait-history';
+import { createSteadyGrowthCandidateArtifacts } from '../../traits/history';
 import {
   createTranscendentEmbryoCandidateArtifacts,
   createFountainRarityCandidateArtifacts,
 } from '../../keepsakes/candidate-artifacts';
-import { createPurgingPoolCandidateArtifacts } from '../../purging-pool';
-import { createHermesShrineCandidateArtifacts } from '../../hermes-shrine';
-import { createStygianWellCandidateArtifacts } from '../../stygian-well';
+import { createPurgingPoolCandidateArtifacts } from '../../commerce/purging-pool';
+import { createHermesShrineCandidateArtifacts } from '../../commerce/hermes-shrine';
+import { createStygianWellCandidateArtifacts } from '../../commerce/stygian-well';
 import {
   createLevelResolutionCandidateArtifacts,
   createTraitOfferCandidateArtifacts,
@@ -606,7 +606,7 @@ export function evaluateBiomeRewardChronology(
   >();
   const hermesShrineTravelDealRefills = new Map<
     string,
-    readonly import('../../hermes-shrine').HermesShrineTravelDealRefillAssessment[]
+    readonly import('../../commerce/hermes-shrine').HermesShrineTravelDealRefillAssessment[]
   >();
   const hermesShrineTravelDealRefillValid = new Map<string, boolean>();
   // The handler's FirstSpeedUpPurchase guard belongs to the Shrine room, not

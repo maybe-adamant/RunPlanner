@@ -28,19 +28,19 @@ import type {
   CanonicalRewardWheel,
   CanonicalShopEntryState,
 } from './model';
-import type { TraitOfferContext } from '../trait-offer-domain';
+import type { TraitOfferContext } from '../traits/offer-domain';
 import type { ResolvedRewardOffer, ShopOptionEntry } from '../../reward-kernel/model';
 import {
   echoLastRewardPickupEntryKeys,
   activeSelectedPickupProducers,
 } from '../../authored-project/pickup-producers';
-import { assembleRoomActionDomain } from '../../authored-project/room-action-domain';
-import { scheduleRequiredRoomActions } from '../../authored-project/room-action-defaults';
-import { roomActionKey } from '../../authored-project/room-actions';
+import { assembleRoomActionDomain } from '../../authored-project/room-actions/domain';
+import { scheduleRequiredRoomActions } from '../../authored-project/room-actions/defaults';
+import { roomActionKey } from '../../authored-project/room-actions/state';
 import { acquisitionSiteFromStorageKey } from '../../authored-project/artificer';
 import { seaStarDuplicateSourceIsActive } from '../../authored-project/sea-star';
 import { assembleRoomActionRoster, assembleRoomLifecycleTimeline } from '../room-actions';
-import { extendedWellItemKeys } from '../stygian-well';
+import { extendedWellItemKeys } from '../commerce/stygian-well';
 
 type StygianWellEffect = NonNullable<ShopOptionEntry['stygianWell']>['effect'];
 

@@ -9,8 +9,8 @@ import {
   type AuthoredTraitOfferTraits,
   type TraitOptionKey,
 } from '../../authored-project/traits';
-import { hasEffectiveInRunUpgrade, type TraitHistoryState } from '../trait-history';
-import { assessTraitOption } from '../trait-authoring-policies';
+import { hasEffectiveInRunUpgrade, type TraitHistoryState } from '../traits/history';
+import { assessTraitOption } from '../traits/authoring-policies';
 import {
   figurineRarityForRank,
   keepsakeEffectByKind,

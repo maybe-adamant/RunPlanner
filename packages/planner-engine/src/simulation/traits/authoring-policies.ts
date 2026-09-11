@@ -1,17 +1,17 @@
-import type { Catalog, TraitOrdinaryBoonSlot, TraitRarity } from '../catalog-schema';
+import type { Catalog, TraitOrdinaryBoonSlot, TraitRarity } from '../../catalog-schema';
 import type {
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
   AuthoredTraitOption,
   EquippedTrait,
-} from '../authored-project/traits';
-import { boonRarityRollUnavailable } from './boon-rarity';
+} from '../../authored-project/traits';
+import { boonRarityRollUnavailable } from './rarity';
 import {
   optionIndex,
   TRAIT_OPTION_KEYS,
   traitOfferSupportsExhaustion,
-} from '../authored-project/traits';
-import { createDefaultAuthoredHexTree } from '../authored-project/hex-tree';
+} from '../../authored-project/traits';
+import { createDefaultAuthoredHexTree } from '../../authored-project/hex-tree';
 import {
   isPomUpgradeTarget,
   nextRarity,
@@ -20,12 +20,12 @@ import {
   type TraitReplacementTransition,
   type TraitTargetedAcquisitionAssessment,
   type TraitTargetedAcquisitionTransition,
-} from './trait-history';
+} from './history';
 import {
   targetedAcquisitionTargetKeys,
   checkRequirement,
   bridalGlowAddedLevels,
-} from './trait-level-effects';
+} from './level-effects';
 import {
   assessTraitOfferComposition,
   assessTraitOfferDomainComposition,
@@ -41,9 +41,9 @@ import {
   type TraitOfferDomainCompositionResult,
   type TraitOfferDomainOptionKind,
   type TraitReplacementCompositionAssessment,
-} from './trait-offer-domain';
+} from './offer-domain';
 
-export type { TraitFindingCode } from './model';
+export type { TraitFindingCode } from '../model';
 
 export interface NaturalSelectionStep {
   readonly targetTraitKey: string;

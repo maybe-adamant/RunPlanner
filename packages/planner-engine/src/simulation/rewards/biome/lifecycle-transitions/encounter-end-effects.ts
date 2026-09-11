@@ -27,7 +27,7 @@ import {
   type ReachedSteadyGrowthThreshold,
   type ReachedPickupProducerMaturity,
 } from '../../../traits';
-import { advanceStygianWellEncounterUses } from '../../../stygian-well';
+import { advanceStygianWellEncounterUses } from '../../../commerce/stygian-well';
 import {
   advanceExperimentalHammers,
   assessTranscendentEmbryoTransformation,

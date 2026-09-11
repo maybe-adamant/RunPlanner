@@ -26,10 +26,10 @@ import {
   type KeepsakeSelectionCandidateArtifacts,
   type TranscendentEmbryoCandidateArtifacts,
 } from '../keepsakes/candidate-artifacts';
-import { type HermesShrineCandidateArtifacts } from '../hermes-shrine';
+import { type HermesShrineCandidateArtifacts } from '../commerce/hermes-shrine';
 import { type JudgmentArcanaCandidateArtifacts } from '../arcana-fear';
-import { type SteadyGrowthCandidateArtifacts } from '../trait-history';
-import { type StygianWellCandidateArtifacts } from '../stygian-well';
+import { type SteadyGrowthCandidateArtifacts } from '../traits/history';
+import { type StygianWellCandidateArtifacts } from '../commerce/stygian-well';
 import {
   composeBiomeHistoryPrefixWithEncounterValidation,
   type BiomeHistoryPrefix,
@@ -51,7 +51,7 @@ import type { BiomeRewardSimulation, RewardBranch } from '../rewards';
 import type { RewardProducerCandidateArtifacts } from '../rewards/producer-frontiers';
 import type { RoomLifecycleCandidateArtifacts } from '../rewards/lifecycle-artifacts';
 import { attestFigLeafBranchState, attestGorgonBranchState } from '../keepsakes/encounter-effects';
-import { attestPendingHermesSpellDrop } from '../hermes-shrine';
+import { attestPendingHermesSpellDrop } from '../commerce/hermes-shrine';
 import { attestTalentDropsClosed } from '../hex-progress';
 import {
   compareLocatedFindings,

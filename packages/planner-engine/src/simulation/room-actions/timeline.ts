@@ -8,9 +8,9 @@ import type {
   RoomLifecycleStructure,
   RoomLifecycleStructurePhase,
   RoomLifecycleStructurePoint,
-} from '../../authored-project/room-lifecycle-structure';
-import { scopeRoomLifecycleStructure } from '../../authored-project/room-lifecycle-structure';
-import { roomActionKey } from '../../authored-project/room-actions';
+} from '../../authored-project/room-actions/lifecycle-structure';
+import { scopeRoomLifecycleStructure } from '../../authored-project/room-actions/lifecycle-structure';
+import { roomActionKey } from '../../authored-project/room-actions/state';
 import { semanticAddressKey } from '../../authored-project/addresses';
 import type { RoomActionRoster, RoomActionRow } from './model';
 

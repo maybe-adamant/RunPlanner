@@ -267,6 +267,15 @@ The planner engine must not depend on:
 Planner-engine operations receive their inputs explicitly and return new
 values or typed results.
 
+Within the engine, related authorities share directories rather than a flat
+collection of prefixed filenames. `simulation/traits/` groups trait history,
+offers, levels, and rarity; `simulation/commerce/` groups store assessments;
+`simulation/fields/` groups Fields spatial facts. Authored action state,
+contributions, defaults, and lifecycle structure live in
+`authored-project/room-actions/`, separate from simulation's action scheduling.
+Topology impact analysis lives with authored topology. These neighborhoods do
+not introduce new processing stages or change the package's supported exports.
+
 ### Catalog
 
 Catalog owns raw explicit declarations and declaration normalization. It may

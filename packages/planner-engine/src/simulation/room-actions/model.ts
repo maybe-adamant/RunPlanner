@@ -3,13 +3,13 @@ import type { RoomActionReference } from '../../authored-project/model';
 import type {
   RoomActionWindow,
   RoomLifecycleStructure,
-} from '../../authored-project/room-lifecycle-structure';
+} from '../../authored-project/room-actions/lifecycle-structure';
 import type {
   RoomActionCheckpointContribution,
   RoomActionContribution,
   RoomActionDependency,
   RoomActionParticipation,
-} from '../../authored-project/room-action-domain';
+} from '../../authored-project/room-actions/domain';
 import type { PlannerTimelineFacts } from '../timeline-facts';
 
 export type {
@@ -17,8 +17,8 @@ export type {
   RoomActionContribution,
   RoomActionDependency,
   RoomActionParticipation,
-} from '../../authored-project/room-action-domain';
-export type { RoomActionWindow } from '../../authored-project/room-lifecycle-structure';
+} from '../../authored-project/room-actions/domain';
+export type { RoomActionWindow } from '../../authored-project/room-actions/lifecycle-structure';
 
 export type RoomActionRosterContribution =
   RoomActionContribution | RoomActionCheckpointContribution;

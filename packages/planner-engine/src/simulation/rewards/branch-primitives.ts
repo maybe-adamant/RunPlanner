@@ -84,7 +84,7 @@ export interface RewardBranchState {
   /** Delayed Shrine purchases survive biome boundaries until delivery or pickup. */
   readonly pendingHermesShrineDeliveries: Readonly<Record<string, PendingHermesShrineDelivery>>;
   /** Consequential RoomShop state only; neutral paid items deliberately add no ledger. */
-  readonly stygianWell: import('../stygian-well').StygianWellRunState;
+  readonly stygianWell: import('../commerce/stygian-well').StygianWellRunState;
   readonly processedThroughHistorySequence: number;
   readonly traitHistory?: TraitHistoryState;
   readonly traitEvaluations?: readonly ReachedTraitOfferEvaluation[];

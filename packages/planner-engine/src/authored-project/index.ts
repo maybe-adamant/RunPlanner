@@ -26,7 +26,7 @@ export {
   parseSeaStarDuplicateSiteKey,
   seaStarDuplicateSourceIsActive,
 } from './sea-star';
-export { activeRoomActionReferences } from './room-actions';
+export { activeRoomActionReferences } from './room-actions/state';
 export { authoredAcquisitionSources, authoredAcquisitionSourceAt } from './acquisition-sources';
 export {
   assembleRoomLifecycleStructure,
@@ -36,7 +36,7 @@ export {
   type RoomLifecycleStructure,
   type RoomLifecycleStructurePhase,
   type RoomLifecycleStructurePoint,
-} from './room-lifecycle-structure';
+} from './room-actions/lifecycle-structure';
 export {
   assembleRoomActionDomain,
   type RoomActionCheckpointContribution,
@@ -45,13 +45,13 @@ export {
   type RoomActionDomain,
   type RoomActionDomainContribution,
   type RoomActionParticipation,
-} from './room-action-domain';
+} from './room-actions/domain';
 export {
   reconcileNewRequiredRoomActions,
   roomActionDomainForOccurrence,
   scheduleRequiredRoomActions,
   structurallyActiveOccurrenceIds,
-} from './room-action-defaults';
+} from './room-actions/defaults';
 export { deriveFieldsActiveCageCount, fieldsDefaultActiveCageCount } from './fields';
 export {
   decodeProjectDocument,
@@ -276,7 +276,7 @@ export {
   describeHubSlotClosureImpact,
   describeTopologyRemovalImpact,
   type TopologyRemovalImpact,
-} from './topologyImpact';
+} from './topology/impact';
 export {
   applyProjectHistoryCommand,
   applyProjectHistoryCommands,
@@ -345,7 +345,7 @@ export {
   createDefaultRoomActionState,
   createEmptyRoomActionState,
   roomActionKey,
-} from './room-actions';
+} from './room-actions/state';
 export {
   createInitialBatchRewardStore,
   createInitialBatchState,

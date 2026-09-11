@@ -24,7 +24,7 @@ import {
   activeRoomActionReferences,
   createDefaultRoomActionState,
   roomActionKey,
-} from '../room-actions';
+} from '../room-actions/state';
 import { reconcileReplacementRoomState } from '../room-state/replacement';
 import {
   normalDecisionProgressionForLayout,

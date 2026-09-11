@@ -1,5 +1,5 @@
 import type { RoomActionReference, RoomActionState } from '../model';
-import { roomActionKey } from '../room-actions';
+import { roomActionKey } from '../room-actions/state';
 import {
   expectArray,
   expectExactKeys,

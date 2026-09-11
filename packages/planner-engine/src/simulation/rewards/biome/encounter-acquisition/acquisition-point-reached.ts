@@ -24,11 +24,14 @@ import { createUnresolvedPickupRewardState } from '../../../../authored-project/
 import type { ResolvedRewardOffer } from '../../../../reward-kernel';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
-import { isPurgingPoolEligibleTrait, type PurgingPoolAssessment } from '../../../purging-pool';
+import {
+  isPurgingPoolEligibleTrait,
+  type PurgingPoolAssessment,
+} from '../../../commerce/purging-pool';
 import {
   assessHermesShrineTravelDealRefill,
   type HermesShrineTravelDealRefillAssessment,
-} from '../../../hermes-shrine';
+} from '../../../commerce/hermes-shrine';
 import {
   attachTraitHistory,
   createTraitHistoryState,
