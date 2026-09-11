@@ -168,10 +168,7 @@ export interface KeepsakeDeclaration {
         readonly availability: 'eligible';
         readonly effect:
           | { readonly kind: 'figLeaf'; readonly schedule: 'oneShot' }
-          | {
-              readonly kind: 'experimentalHammer';
-              readonly schedule: 'oneShotAfterUnequipped';
-            }
+          | { readonly kind: 'experimentalHammer'; readonly schedule: 'oneShotAfterUnequipped' }
           | { readonly kind: 'crystalFigurine'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'concaveStone'; readonly schedule: 'oneShot' }
           | { readonly kind: 'transcendentEmbryo'; readonly schedule: 'oneShot' }
@@ -186,53 +183,68 @@ export interface KeepsakeDeclaration {
     | {
         readonly kind: 'jeweledPom';
         readonly giverKey: string;
-        readonly subsequentEligibleTraitLevelsByRank: KeepsakeRankProfile<1, 2, 3, 4>;
+        readonly subsequentEligibleTraitLevelsByRank: KeepsakeRankProfile<
+          number,
+          number,
+          number,
+          number
+        >;
       }
     | {
         readonly kind: 'experimentalHammer';
         readonly giverKey: string;
-        readonly qualifyingEncounterUsesByRank: KeepsakeRankProfile<10, 15, 20, 30>;
+        readonly qualifyingEncounterUsesByRank: KeepsakeRankProfile<number, number, number, number>;
       }
     | {
         readonly kind: 'callingCard';
-        readonly rarificationChargesByRank: KeepsakeRankProfile<2, 4, 6, 8>;
+        readonly rarificationChargesByRank: KeepsakeRankProfile<number, number, number, number>;
       }
     | {
         readonly kind: 'timePiece';
-        readonly conversionChargesByRank: KeepsakeRankProfile<2, 3, 4, 5>;
+        readonly conversionChargesByRank: KeepsakeRankProfile<number, number, number, number>;
       }
     | {
         readonly kind: 'figLeaf';
-        readonly biomeUsesByRank: KeepsakeRankProfile<1, 2, 3, 4>;
+        readonly biomeUsesByRank: KeepsakeRankProfile<number, number, number, number>;
       }
     | {
         readonly kind: 'gorgonAmulet';
         readonly uses: 1;
-        readonly minimumBiomeDepth: 2;
-        readonly providerKey: 'Athena';
-        readonly rarityLevelByRank: KeepsakeRankProfile<1, 2, 3, 4>;
+        readonly minimumBiomeDepth: number;
+        readonly providerKey: string;
+        readonly rarityLevelByRank: KeepsakeRankProfile<
+          1 | 2 | 3 | 4,
+          1 | 2 | 3 | 4,
+          1 | 2 | 3 | 4,
+          1 | 2 | 3 | 4
+        >;
         readonly naturalEncounterKey: string;
       }
     | {
         readonly kind: 'fountainRarity';
         readonly uses: 1;
         readonly targetRarityLevelByRank: Readonly<{
-          readonly Common: 2;
-          readonly Rare: 3;
-          readonly Epic: 4;
+          readonly Common: 1 | 2 | 3 | 4;
+          readonly Rare: 1 | 2 | 3 | 4;
+          readonly Epic: 1 | 2 | 3 | 4;
         }>;
         readonly sourceMaxRarityLevel: 1;
       }
     | {
         readonly kind: 'crystalFigurine';
         readonly uses: 1;
-        readonly requestedCards: 2;
-        readonly rarityLevelByRank: KeepsakeRankProfile<1, 2, 3, 4>;
+        readonly requestedCards: number;
+        readonly rarityLevelByRank: KeepsakeRankProfile<
+          1 | 2 | 3 | 4,
+          1 | 2 | 3 | 4,
+          1 | 2 | 3 | 4,
+          1 | 2 | 3 | 4
+        >;
       }
     | {
         readonly kind: 'concaveStone';
         readonly uses: 1;
-        readonly procSupportByRank: KeepsakeRankProfile<25, 50, 75, 100>;
+        readonly procSupportByRank: KeepsakeRankProfile<number, number, number, number>;
       }
     | {
         readonly kind: 'transcendentEmbryo';
@@ -243,17 +255,21 @@ export interface KeepsakeDeclaration {
     | {
         /** The nine provider keepsakes share one exact reward-pressure contract. */
         readonly kind: 'olympianRewardPressure';
-        readonly priorityRewardType: 'Boon';
+        readonly priorityRewardType: string;
         readonly providerKey: string;
         readonly providerForceUses: 1;
         readonly providerRarificationUses: 1;
         /** These declarations intentionally have no Heroic source row. */
-        readonly maximumSourceRarityLevelByRank: Readonly<{ Common: 1; Rare: 2; Epic: 3 }>;
+        readonly maximumSourceRarityLevelByRank: Readonly<{
+          Common: 1 | 2 | 3;
+          Rare: 1 | 2 | 3;
+          Epic: 1 | 2 | 3;
+        }>;
       }
     | {
         readonly kind: 'moonBeam';
-        readonly pathPointsByRank: KeepsakeRankProfile<3, 4, 5, 7>;
-        readonly priorityRewardTypes: readonly ['SpellDrop', 'TalentDrop', 'TalentBigDrop'];
+        readonly pathPointsByRank: KeepsakeRankProfile<number, number, number, number>;
+        readonly priorityRewardTypes: readonly [string, string, string];
       };
 }
 

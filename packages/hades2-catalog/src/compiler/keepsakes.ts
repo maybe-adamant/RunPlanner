@@ -1,76 +1,30 @@
 import type {
   CatalogCollection,
+  EncounterDefinition,
   KeepsakeDeclaration,
   TraitDeclaration,
+  TraitGiverDeclaration,
 } from '@run-planner/engine/catalog-schema';
+import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
+
 import type { RawKeepsakeDeclaration } from '../declarations';
 import { createCollection, requireNonEmpty } from './common';
 import { fail } from './errors';
 
-const enabling = new Set(['HadesAndPersephoneKeepsake', 'RarifyKeepsake', 'GoldifyKeepsake']);
-const opposing = new Set([
-  'ForceZeusBoonKeepsake',
-  'ForceHeraBoonKeepsake',
-  'ForcePoseidonBoonKeepsake',
-  'ForceDemeterBoonKeepsake',
-  'ForceApolloBoonKeepsake',
-  'ForceAphroditeBoonKeepsake',
-  'ForceHephaestusBoonKeepsake',
-  'ForceHestiaBoonKeepsake',
-  'ForceAresBoonKeepsake',
-  'AthenaEncounterKeepsake',
-]);
-
-const authoritativeKeys = new Set([
-  'ManaOverTimeRefundKeepsake',
-  'BossPreDamageKeepsake',
-  'ReincarnationKeepsake',
-  'DoorHealReserveKeepsake',
-  'DeathVengeanceKeepsake',
-  'BonusMoneyKeepsake',
-  'BlockDeathKeepsake',
-  'EscalatingKeepsake',
-  'TimedBuffKeepsake',
-  'LowHealthCritKeepsake',
-  'SpellTalentKeepsake',
-  'ForceZeusBoonKeepsake',
-  'ForceHeraBoonKeepsake',
-  'ForcePoseidonBoonKeepsake',
-  'ForceDemeterBoonKeepsake',
-  'ForceApolloBoonKeepsake',
-  'ForceAphroditeBoonKeepsake',
-  'ForceHephaestusBoonKeepsake',
-  'ForceHestiaBoonKeepsake',
-  'ForceAresBoonKeepsake',
-  'AthenaEncounterKeepsake',
-  'SkipEncounterKeepsake',
-  'ArmorGainKeepsake',
-  'FountainRarityKeepsake',
-  'UnpickedBoonKeepsake',
-  'DecayingBoostKeepsake',
-  'DamagedDamageBoostKeepsake',
-  'BossMetaUpgradeKeepsake',
-  'TempHammerKeepsake',
-  'HadesAndPersephoneKeepsake',
-  'RarifyKeepsake',
-  'GoldifyKeepsake',
-  'RandomBlessingKeepsake',
-]);
-
 const keepsakeRanks = ['Common', 'Rare', 'Epic', 'Heroic'] as const;
-const olympianProviderByKeepsake = Object.freeze({
-  ForceZeusBoonKeepsake: 'Zeus',
-  ForceHeraBoonKeepsake: 'Hera',
-  ForcePoseidonBoonKeepsake: 'Poseidon',
-  ForceDemeterBoonKeepsake: 'Demeter',
-  ForceApolloBoonKeepsake: 'Apollo',
-  ForceAphroditeBoonKeepsake: 'Aphrodite',
-  ForceHephaestusBoonKeepsake: 'Hephaestus',
-  ForceHestiaBoonKeepsake: 'Hestia',
-  ForceAresBoonKeepsake: 'Ares',
-} as const);
-type KeepsakeRank = (typeof keepsakeRanks)[number];
-type NumericRankProfile = Readonly<Record<KeepsakeRank, number>>;
+const giftSchedulesByKind = {
+  figLeaf: 'oneShot',
+  experimentalHammer: 'oneShotAfterUnequipped',
+  crystalFigurine: 'everyBiome',
+  concaveStone: 'oneShot',
+  transcendentEmbryo: 'oneShot',
+  callingCard: 'everyBiome',
+  timePiece: 'everyBiome',
+  olympianRewardPressure: 'everyBiome',
+  moonBeam: 'oneShotAfterUnequipped',
+  modeledNeutral: 'noModeledEffect',
+} as const;
+const inRunTraitRarities = ['Common', 'Rare', 'Epic', 'Heroic'] as const;
 
 function requireExactObjectKeys(
   value: unknown,
@@ -86,173 +40,245 @@ function requireExactObjectKeys(
   if (extra !== undefined) fail(`${path}.${extra}`, 'is not supported');
 }
 
-function normalizeRankProfile<const T extends NumericRankProfile>(
+function requireClosedValue<const Values extends readonly string[]>(
   value: unknown,
+  values: Values,
   path: string,
-  expected: T,
-): T {
-  requireExactObjectKeys(value, path, keepsakeRanks);
-  for (const rank of keepsakeRanks) {
-    if (typeof value[rank] !== 'number' || !Number.isFinite(value[rank]))
-      fail(`${path}.${rank}`, 'must be numeric');
-    if (value[rank] !== expected[rank]) fail(`${path}.${rank}`, `must equal ${expected[rank]}`);
-  }
-  return Object.freeze({
-    Common: expected.Common,
-    Rare: expected.Rare,
-    Epic: expected.Epic,
-    Heroic: expected.Heroic,
-  }) as T;
+): Values[number] {
+  if (typeof value !== 'string' || !(values as readonly string[]).includes(value))
+    fail(path, `must be one of ${values.join(', ')}`);
+  return value as Values[number];
 }
 
-export function normalizeKeepsakes(
-  raw: readonly RawKeepsakeDeclaration[],
-): CatalogCollection<KeepsakeDeclaration> {
-  if (raw.length !== 33) fail('keepsakes', 'must declare exactly 33 ordinary keepsakes');
-  const values = raw.map((keepsake, index) => {
-    const path = `keepsakes[${index}]`;
-    requireNonEmpty(keepsake.key, `${path}.key`);
-    requireNonEmpty(keepsake.label, `${path}.label`);
-    if (keepsake.rank !== 'Epic') fail(`${path}.rank`, 'must be fixed rank III (Epic)');
-    const expected = enabling.has(keepsake.key)
-      ? 'enabling'
-      : opposing.has(keepsake.key)
-        ? 'opposing'
-        : 'neutral';
-    if (keepsake.fatedDisposition !== expected)
-      fail(`${path}.fatedDisposition`, `expected ${expected}`);
-    const excludedFromGift = new Set([
-      'AthenaEncounterKeepsake',
-      'HadesAndPersephoneKeepsake',
-      'EscalatingKeepsake',
-      'FountainRarityKeepsake',
-    ]).has(keepsake.key);
-    let echoGift: KeepsakeDeclaration['echoGift'];
-    if (excludedFromGift) {
-      requireExactObjectKeys(keepsake.echoGift, `${path}.echoGift`, ['availability']);
-      if (keepsake.echoGift.availability !== 'excluded')
-        fail(`${path}.echoGift.availability`, 'must be excluded');
-      echoGift = Object.freeze({ availability: 'excluded' as const });
-    } else {
-      requireExactObjectKeys(keepsake.echoGift, `${path}.echoGift`, ['availability', 'effect']);
-      if (keepsake.echoGift.availability !== 'eligible')
-        fail(`${path}.echoGift.availability`, 'must be eligible');
-      const expectedEffect =
-        keepsake.key === 'SkipEncounterKeepsake'
-          ? ({ kind: 'figLeaf', schedule: 'oneShot' } as const)
-          : keepsake.key === 'TempHammerKeepsake'
-            ? ({ kind: 'experimentalHammer', schedule: 'oneShotAfterUnequipped' } as const)
-            : keepsake.key === 'BossMetaUpgradeKeepsake'
-              ? ({ kind: 'crystalFigurine', schedule: 'everyBiome' } as const)
-              : keepsake.key === 'UnpickedBoonKeepsake'
-                ? ({ kind: 'concaveStone', schedule: 'oneShot' } as const)
-                : keepsake.key === 'RandomBlessingKeepsake'
-                  ? ({ kind: 'transcendentEmbryo', schedule: 'oneShot' } as const)
-                  : keepsake.key === 'RarifyKeepsake'
-                    ? ({ kind: 'callingCard', schedule: 'everyBiome' } as const)
-                    : keepsake.key === 'GoldifyKeepsake'
-                      ? ({ kind: 'timePiece', schedule: 'everyBiome' } as const)
-                      : keepsake.key in olympianProviderByKeepsake
-                        ? ({ kind: 'olympianRewardPressure', schedule: 'everyBiome' } as const)
-                        : keepsake.key === 'SpellTalentKeepsake'
-                          ? ({ kind: 'moonBeam', schedule: 'oneShotAfterUnequipped' } as const)
-                          : ({ kind: 'modeledNeutral', schedule: 'noModeledEffect' } as const);
-      requireExactObjectKeys(keepsake.echoGift.effect, `${path}.echoGift.effect`, [
-        'kind',
-        'schedule',
-      ]);
-      if (
-        keepsake.echoGift.effect.kind !== expectedEffect.kind ||
-        keepsake.echoGift.effect.schedule !== expectedEffect.schedule
-      )
-        fail(
-          `${path}.echoGift.effect`,
-          `must declare ${expectedEffect.kind}/${expectedEffect.schedule}`,
-        );
-      echoGift = Object.freeze({ availability: 'eligible' as const, effect: expectedEffect });
-    }
-    let effect: KeepsakeDeclaration['effect'];
-    if (keepsake.key === 'HadesAndPersephoneKeepsake') {
-      requireExactObjectKeys(keepsake.effect, `${path}.effect`, [
+function requirePositiveInteger(value: unknown, path: string): number {
+  if (
+    typeof value !== 'number' ||
+    !Number.isFinite(value) ||
+    !Number.isInteger(value) ||
+    value <= 0
+  )
+    fail(path, 'must be a positive integer');
+  return value;
+}
+
+function requireNonNegativeInteger(value: unknown, path: string): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || !Number.isInteger(value) || value < 0)
+    fail(path, 'must be a non-negative integer');
+  return value;
+}
+
+function requireExactOne(value: unknown, path: string): 1 {
+  if (value !== 1) fail(path, 'must be 1');
+  return 1;
+}
+
+function requireExactEight(value: unknown, path: string): 8 {
+  if (value !== 8) fail(path, 'must be 8');
+  return 8;
+}
+
+function normalizeNumericRankProfile(
+  value: unknown,
+  path: string,
+): Readonly<Record<(typeof keepsakeRanks)[number], number>> {
+  requireExactObjectKeys(value, path, keepsakeRanks);
+  return Object.freeze(
+    Object.fromEntries(
+      keepsakeRanks.map((rank) => [rank, requirePositiveInteger(value[rank], `${path}.${rank}`)]),
+    ),
+  ) as Readonly<Record<(typeof keepsakeRanks)[number], number>>;
+}
+
+function normalizeRarityLevelProfile(
+  value: unknown,
+  path: string,
+): Readonly<Record<(typeof keepsakeRanks)[number], 1 | 2 | 3 | 4>> {
+  requireExactObjectKeys(value, path, keepsakeRanks);
+  const profile = Object.fromEntries(
+    keepsakeRanks.map((rank) => {
+      const level = requirePositiveInteger(value[rank], `${path}.${rank}`);
+      if (level > 4) fail(`${path}.${rank}`, 'must be a supported trait rarity level');
+      return [rank, level as 1 | 2 | 3 | 4];
+    }),
+  );
+  return Object.freeze(profile) as Readonly<Record<(typeof keepsakeRanks)[number], 1 | 2 | 3 | 4>>;
+}
+
+function normalizeInRunRarityProfile(
+  value: unknown,
+  path: string,
+): Readonly<Record<(typeof keepsakeRanks)[number], (typeof inRunTraitRarities)[number]>> {
+  requireExactObjectKeys(value, path, keepsakeRanks);
+  return Object.freeze(
+    Object.fromEntries(
+      keepsakeRanks.map((rank) => [
+        rank,
+        requireClosedValue(value[rank], inRunTraitRarities, `${path}.${rank}`),
+      ]),
+    ),
+  ) as Readonly<Record<(typeof keepsakeRanks)[number], (typeof inRunTraitRarities)[number]>>;
+}
+
+function normalizeOlympianRarityProfile(
+  value: unknown,
+  path: string,
+): Readonly<Record<'Common' | 'Rare' | 'Epic', 1 | 2 | 3>> {
+  const ranks = ['Common', 'Rare', 'Epic'] as const;
+  requireExactObjectKeys(value, path, ranks);
+  const profile = Object.fromEntries(
+    ranks.map((rank) => {
+      const level = requirePositiveInteger(value[rank], `${path}.${rank}`);
+      if (level > 3) fail(`${path}.${rank}`, 'must be a supported Olympian source rarity level');
+      return [rank, level as 1 | 2 | 3];
+    }),
+  );
+  return Object.freeze(profile) as Readonly<Record<'Common' | 'Rare' | 'Epic', 1 | 2 | 3>>;
+}
+
+function normalizeFountainRarityProfile(
+  value: unknown,
+  path: string,
+): Readonly<Record<'Common' | 'Rare' | 'Epic', 1 | 2 | 3 | 4>> {
+  const ranks = ['Common', 'Rare', 'Epic'] as const;
+  requireExactObjectKeys(value, path, ranks);
+  return Object.freeze(
+    Object.fromEntries(
+      ranks.map((rank) => {
+        const level = requirePositiveInteger(value[rank], `${path}.${rank}`);
+        if (level > 4) fail(`${path}.${rank}`, 'must be a supported trait rarity level');
+        return [rank, level as 1 | 2 | 3 | 4];
+      }),
+    ),
+  ) as Readonly<Record<'Common' | 'Rare' | 'Epic', 1 | 2 | 3 | 4>>;
+}
+
+function normalizePercentageRankProfile(
+  value: unknown,
+  path: string,
+): Readonly<Record<string, number>> {
+  requireExactObjectKeys(value, path, keepsakeRanks);
+  const profile = Object.fromEntries(
+    keepsakeRanks.map((rank) => {
+      const percentage = requireNonNegativeInteger(value[rank], `${path}.${rank}`);
+      if (percentage > 100) fail(`${path}.${rank}`, 'must be at most 100');
+      return [rank, percentage];
+    }),
+  );
+  return Object.freeze(profile);
+}
+
+function validateGiftEffectAgreement(
+  gift: KeepsakeDeclaration['echoGift'],
+  effect: KeepsakeDeclaration['effect'],
+  path: string,
+): void {
+  if (gift.availability === 'excluded') return;
+  if (gift.effect.kind === 'modeledNeutral') {
+    if (effect !== undefined)
+      fail(`${path}.effect.kind`, 'modeledNeutral requires no effect descriptor');
+    return;
+  }
+  if (effect?.kind !== gift.effect.kind)
+    fail(`${path}.effect.kind`, 'must match the keepsake effect descriptor');
+}
+
+function normalizeGift(
+  raw: RawKeepsakeDeclaration['echoGift'],
+  path: string,
+): KeepsakeDeclaration['echoGift'] {
+  requireExactObjectKeys(
+    raw,
+    path,
+    raw.availability === 'excluded' ? ['availability'] : ['availability', 'effect'],
+  );
+  if (raw.availability === 'excluded') return Object.freeze({ availability: 'excluded' });
+  if (raw.availability !== 'eligible') fail(`${path}.availability`, 'must be excluded or eligible');
+  requireExactObjectKeys(raw.effect, `${path}.effect`, ['kind', 'schedule']);
+  const kind = requireClosedValue(
+    raw.effect.kind,
+    Object.keys(giftSchedulesByKind),
+    `${path}.effect.kind`,
+  ) as keyof typeof giftSchedulesByKind;
+  const schedule = requireClosedValue(
+    raw.effect.schedule,
+    [...new Set(Object.values(giftSchedulesByKind))],
+    `${path}.effect.schedule`,
+  );
+  if (schedule !== giftSchedulesByKind[kind])
+    fail(`${path}.effect.schedule`, `must be ${giftSchedulesByKind[kind]} for ${kind}`);
+  return Object.freeze({
+    availability: 'eligible',
+    effect: Object.freeze({
+      kind,
+      schedule,
+    }),
+  }) as KeepsakeDeclaration['echoGift'];
+}
+
+function normalizeEffect(
+  raw: RawKeepsakeDeclaration['effect'],
+  path: string,
+): KeepsakeDeclaration['effect'] {
+  if (raw === undefined) return undefined;
+  switch (raw.kind) {
+    case 'jeweledPom': {
+      requireExactObjectKeys(raw, path, [
         'kind',
         'giverKey',
         'subsequentEligibleTraitLevelsByRank',
       ]);
-      if (keepsake.effect.kind !== 'jeweledPom' || keepsake.effect.giverKey !== 'Hades')
-        fail(`${path}.effect`, 'must declare the Jeweled Pom rank profile and Hades giver');
-      effect = Object.freeze({
-        kind: 'jeweledPom',
-        giverKey: 'Hades',
-        subsequentEligibleTraitLevelsByRank: normalizeRankProfile(
-          keepsake.effect.subsequentEligibleTraitLevelsByRank,
-          `${path}.effect.subsequentEligibleTraitLevelsByRank`,
-          { Common: 1, Rare: 2, Epic: 3, Heroic: 4 } as const,
+      return Object.freeze({
+        kind: raw.kind,
+        giverKey: requireNonEmpty(raw.giverKey, `${path}.giverKey`),
+        subsequentEligibleTraitLevelsByRank: normalizeNumericRankProfile(
+          raw.subsequentEligibleTraitLevelsByRank,
+          `${path}.subsequentEligibleTraitLevelsByRank`,
         ),
-      });
-    } else if (keepsake.key === 'TempHammerKeepsake') {
-      requireExactObjectKeys(keepsake.effect, `${path}.effect`, [
-        'kind',
-        'giverKey',
-        'qualifyingEncounterUsesByRank',
-      ]);
-      if (
-        keepsake.effect.kind !== 'experimentalHammer' ||
-        keepsake.effect.giverKey !== 'WeaponUpgrade'
-      )
-        fail(`${path}.effect`, 'must declare the Experimental Hammer rank profile and giver');
-      effect = Object.freeze({
-        kind: 'experimentalHammer',
-        giverKey: 'WeaponUpgrade',
-        qualifyingEncounterUsesByRank: normalizeRankProfile(
-          keepsake.effect.qualifyingEncounterUsesByRank,
-          `${path}.effect.qualifyingEncounterUsesByRank`,
-          { Common: 10, Rare: 15, Epic: 20, Heroic: 30 } as const,
+      }) as KeepsakeDeclaration['effect'];
+    }
+    case 'experimentalHammer': {
+      requireExactObjectKeys(raw, path, ['kind', 'giverKey', 'qualifyingEncounterUsesByRank']);
+      return Object.freeze({
+        kind: raw.kind,
+        giverKey: requireNonEmpty(raw.giverKey, `${path}.giverKey`),
+        qualifyingEncounterUsesByRank: normalizeNumericRankProfile(
+          raw.qualifyingEncounterUsesByRank,
+          `${path}.qualifyingEncounterUsesByRank`,
         ),
-      });
-    } else if (keepsake.key === 'RarifyKeepsake') {
-      requireExactObjectKeys(keepsake.effect, `${path}.effect`, [
-        'kind',
-        'rarificationChargesByRank',
-      ]);
-      if (keepsake.effect.kind !== 'callingCard')
-        fail(`${path}.effect`, 'must declare the Calling Card rank profile');
-      effect = Object.freeze({
-        kind: 'callingCard',
-        rarificationChargesByRank: normalizeRankProfile(
-          keepsake.effect.rarificationChargesByRank,
-          `${path}.effect.rarificationChargesByRank`,
-          { Common: 2, Rare: 4, Epic: 6, Heroic: 8 } as const,
+      }) as KeepsakeDeclaration['effect'];
+    }
+    case 'callingCard': {
+      requireExactObjectKeys(raw, path, ['kind', 'rarificationChargesByRank']);
+      return Object.freeze({
+        kind: raw.kind,
+        rarificationChargesByRank: normalizeNumericRankProfile(
+          raw.rarificationChargesByRank,
+          `${path}.rarificationChargesByRank`,
         ),
-      });
-    } else if (keepsake.key === 'GoldifyKeepsake') {
-      requireExactObjectKeys(keepsake.effect, `${path}.effect`, [
-        'kind',
-        'conversionChargesByRank',
-      ]);
-      if (keepsake.effect.kind !== 'timePiece')
-        fail(`${path}.effect`, 'must declare the Time Piece rank profile');
-      effect = Object.freeze({
-        kind: 'timePiece',
-        conversionChargesByRank: normalizeRankProfile(
-          keepsake.effect.conversionChargesByRank,
-          `${path}.effect.conversionChargesByRank`,
-          { Common: 2, Rare: 3, Epic: 4, Heroic: 5 } as const,
+      }) as KeepsakeDeclaration['effect'];
+    }
+    case 'timePiece': {
+      requireExactObjectKeys(raw, path, ['kind', 'conversionChargesByRank']);
+      return Object.freeze({
+        kind: raw.kind,
+        conversionChargesByRank: normalizeNumericRankProfile(
+          raw.conversionChargesByRank,
+          `${path}.conversionChargesByRank`,
         ),
-      });
-    } else if (keepsake.key === 'SkipEncounterKeepsake') {
-      requireExactObjectKeys(keepsake.effect, `${path}.effect`, ['kind', 'biomeUsesByRank']);
-      if (keepsake.effect.kind !== 'figLeaf')
-        fail(`${path}.effect`, 'must declare the Fig Leaf rank profile');
-      effect = Object.freeze({
-        kind: 'figLeaf',
-        biomeUsesByRank: normalizeRankProfile(
-          keepsake.effect.biomeUsesByRank,
-          `${path}.effect.biomeUsesByRank`,
-          { Common: 1, Rare: 2, Epic: 3, Heroic: 4 } as const,
+      }) as KeepsakeDeclaration['effect'];
+    }
+    case 'figLeaf': {
+      requireExactObjectKeys(raw, path, ['kind', 'biomeUsesByRank']);
+      return Object.freeze({
+        kind: raw.kind,
+        biomeUsesByRank: normalizeNumericRankProfile(
+          raw.biomeUsesByRank,
+          `${path}.biomeUsesByRank`,
         ),
-      });
-    } else if (keepsake.key === 'AthenaEncounterKeepsake') {
-      requireExactObjectKeys(keepsake.effect, `${path}.effect`, [
+      }) as KeepsakeDeclaration['effect'];
+    }
+    case 'gorgonAmulet': {
+      requireExactObjectKeys(raw, path, [
         'kind',
         'uses',
         'minimumBiomeDepth',
@@ -260,137 +286,82 @@ export function normalizeKeepsakes(
         'rarityLevelByRank',
         'naturalEncounterKey',
       ]);
-      if (
-        keepsake.effect.kind !== 'gorgonAmulet' ||
-        keepsake.effect.uses !== 1 ||
-        keepsake.effect.minimumBiomeDepth !== 2 ||
-        keepsake.effect.providerKey !== 'Athena' ||
-        keepsake.effect.naturalEncounterKey !== 'AthenaCombatP'
-      )
-        fail(
-          `${path}.effect`,
-          'must declare Gorgon Amulet one use, depth two, Athena provider, and natural encounter',
-        );
-      effect = Object.freeze({
-        kind: 'gorgonAmulet',
-        uses: 1,
-        minimumBiomeDepth: 2,
-        providerKey: 'Athena',
-        rarityLevelByRank: normalizeRankProfile(
-          keepsake.effect.rarityLevelByRank,
-          `${path}.effect.rarityLevelByRank`,
-          { Common: 1, Rare: 2, Epic: 3, Heroic: 4 } as const,
+      return Object.freeze({
+        kind: raw.kind,
+        uses: requireExactOne(raw.uses, `${path}.uses`),
+        minimumBiomeDepth: requireNonNegativeInteger(
+          raw.minimumBiomeDepth,
+          `${path}.minimumBiomeDepth`,
         ),
-        naturalEncounterKey: 'AthenaCombatP',
-      });
-    } else if (keepsake.key === 'FountainRarityKeepsake') {
-      requireExactObjectKeys(keepsake.effect, `${path}.effect`, [
+        providerKey: requireNonEmpty(raw.providerKey, `${path}.providerKey`),
+        rarityLevelByRank: normalizeRarityLevelProfile(
+          raw.rarityLevelByRank,
+          `${path}.rarityLevelByRank`,
+        ),
+        naturalEncounterKey: requireNonEmpty(
+          raw.naturalEncounterKey,
+          `${path}.naturalEncounterKey`,
+        ),
+      }) as KeepsakeDeclaration['effect'];
+    }
+    case 'fountainRarity': {
+      requireExactObjectKeys(raw, path, [
         'kind',
         'uses',
         'targetRarityLevelByRank',
         'sourceMaxRarityLevel',
       ]);
-      if (
-        keepsake.effect.kind !== 'fountainRarity' ||
-        keepsake.effect.uses !== 1 ||
-        keepsake.effect.sourceMaxRarityLevel !== 1
-      )
-        fail(`${path}.effect`, 'must declare Aromatic Phial one use and source MaxRarity one');
-      requireExactObjectKeys(
-        keepsake.effect.targetRarityLevelByRank,
-        `${path}.effect.targetRarityLevelByRank`,
-        ['Common', 'Rare', 'Epic'],
-      );
-      for (const [rank, expected] of [
-        ['Common', 2],
-        ['Rare', 3],
-        ['Epic', 4],
-      ] as const) {
-        if (typeof keepsake.effect.targetRarityLevelByRank[rank] !== 'number')
-          fail(`${path}.effect.targetRarityLevelByRank.${rank}`, 'must be numeric');
-        if (keepsake.effect.targetRarityLevelByRank[rank] !== expected)
-          fail(`${path}.effect.targetRarityLevelByRank.${rank}`, `must equal ${expected}`);
-      }
-      effect = Object.freeze({
-        kind: 'fountainRarity',
-        uses: 1,
-        targetRarityLevelByRank: Object.freeze({ Common: 2, Rare: 3, Epic: 4 }),
-        sourceMaxRarityLevel: 1,
-      });
-    } else if (keepsake.key === 'BossMetaUpgradeKeepsake') {
-      requireExactObjectKeys(keepsake.effect, `${path}.effect`, [
-        'kind',
-        'uses',
-        'requestedCards',
-        'rarityLevelByRank',
-      ]);
-      if (
-        keepsake.effect.kind !== 'crystalFigurine' ||
-        keepsake.effect.uses !== 1 ||
-        keepsake.effect.requestedCards !== 2
-      )
-        fail(`${path}.effect`, 'must declare Crystal Figurine one use and two requested cards');
-      effect = Object.freeze({
-        kind: 'crystalFigurine',
-        uses: 1,
-        requestedCards: 2,
-        rarityLevelByRank: normalizeRankProfile(
-          keepsake.effect.rarityLevelByRank,
-          `${path}.effect.rarityLevelByRank`,
-          { Common: 1, Rare: 2, Epic: 3, Heroic: 4 } as const,
+      return Object.freeze({
+        kind: raw.kind,
+        uses: requireExactOne(raw.uses, `${path}.uses`),
+        targetRarityLevelByRank: normalizeFountainRarityProfile(
+          raw.targetRarityLevelByRank,
+          `${path}.targetRarityLevelByRank`,
         ),
-      });
-    } else if (keepsake.key === 'UnpickedBoonKeepsake') {
-      requireExactObjectKeys(keepsake.effect, `${path}.effect`, [
-        'kind',
-        'uses',
-        'procSupportByRank',
-      ]);
-      if (keepsake.effect.kind !== 'concaveStone' || keepsake.effect.uses !== 1)
-        fail(`${path}.effect`, 'must declare Concave Stone one use and proc support profile');
-      effect = Object.freeze({
-        kind: 'concaveStone',
-        uses: 1,
-        procSupportByRank: normalizeRankProfile(
-          keepsake.effect.procSupportByRank,
-          `${path}.effect.procSupportByRank`,
-          { Common: 25, Rare: 50, Epic: 75, Heroic: 100 } as const,
+        sourceMaxRarityLevel: requireExactOne(
+          raw.sourceMaxRarityLevel,
+          `${path}.sourceMaxRarityLevel`,
         ),
-      });
-    } else if (keepsake.key === 'RandomBlessingKeepsake') {
-      requireExactObjectKeys(keepsake.effect, `${path}.effect`, [
-        'kind',
-        'source',
-        'interval',
-        'blessingRarityByRank',
-      ]);
-      if (
-        keepsake.effect.kind !== 'transcendentEmbryo' ||
-        keepsake.effect.source !== 'Chaos' ||
-        keepsake.effect.interval !== 8
-      )
-        fail(`${path}.effect`, 'must declare Transcendent Embryo Chaos interval eight');
-      requireExactObjectKeys(
-        keepsake.effect.blessingRarityByRank,
-        `${path}.effect.blessingRarityByRank`,
-        keepsakeRanks,
-      );
-      for (const rank of keepsakeRanks)
-        if (keepsake.effect.blessingRarityByRank[rank] !== rank)
-          fail(`${path}.effect.blessingRarityByRank.${rank}`, `must equal ${rank}`);
-      effect = Object.freeze({
-        kind: 'transcendentEmbryo',
+      }) as KeepsakeDeclaration['effect'];
+    }
+    case 'crystalFigurine': {
+      requireExactObjectKeys(raw, path, ['kind', 'uses', 'requestedCards', 'rarityLevelByRank']);
+      return Object.freeze({
+        kind: raw.kind,
+        uses: requireExactOne(raw.uses, `${path}.uses`),
+        requestedCards: requirePositiveInteger(raw.requestedCards, `${path}.requestedCards`),
+        rarityLevelByRank: normalizeRarityLevelProfile(
+          raw.rarityLevelByRank,
+          `${path}.rarityLevelByRank`,
+        ),
+      }) as KeepsakeDeclaration['effect'];
+    }
+    case 'concaveStone': {
+      requireExactObjectKeys(raw, path, ['kind', 'uses', 'procSupportByRank']);
+      return Object.freeze({
+        kind: raw.kind,
+        uses: requireExactOne(raw.uses, `${path}.uses`),
+        procSupportByRank: normalizePercentageRankProfile(
+          raw.procSupportByRank,
+          `${path}.procSupportByRank`,
+        ),
+      }) as KeepsakeDeclaration['effect'];
+    }
+    case 'transcendentEmbryo': {
+      requireExactObjectKeys(raw, path, ['kind', 'source', 'interval', 'blessingRarityByRank']);
+      if (raw.source !== 'Chaos') fail(`${path}.source`, 'must be Chaos');
+      return Object.freeze({
+        kind: raw.kind,
         source: 'Chaos',
-        interval: 8,
-        blessingRarityByRank: Object.freeze({
-          Common: 'Common',
-          Rare: 'Rare',
-          Epic: 'Epic',
-          Heroic: 'Heroic',
-        }),
-      });
-    } else if (keepsake.key in olympianProviderByKeepsake) {
-      requireExactObjectKeys(keepsake.effect, `${path}.effect`, [
+        interval: requireExactEight(raw.interval, `${path}.interval`),
+        blessingRarityByRank: normalizeInRunRarityProfile(
+          raw.blessingRarityByRank,
+          `${path}.blessingRarityByRank`,
+        ),
+      }) as KeepsakeDeclaration['effect'];
+    }
+    case 'olympianRewardPressure': {
+      requireExactObjectKeys(raw, path, [
         'kind',
         'priorityRewardType',
         'providerKey',
@@ -398,92 +369,114 @@ export function normalizeKeepsakes(
         'providerRarificationUses',
         'maximumSourceRarityLevelByRank',
       ]);
-      const providerKey =
-        olympianProviderByKeepsake[keepsake.key as keyof typeof olympianProviderByKeepsake];
-      if (
-        keepsake.effect.kind !== 'olympianRewardPressure' ||
-        keepsake.effect.priorityRewardType !== 'Boon' ||
-        keepsake.effect.providerKey !== providerKey ||
-        keepsake.effect.providerForceUses !== 1 ||
-        keepsake.effect.providerRarificationUses !== 1
-      )
-        fail(`${path}.effect`, 'must declare exact Olympian Boon priority, provider, and one uses');
-      requireExactObjectKeys(
-        keepsake.effect.maximumSourceRarityLevelByRank,
-        `${path}.effect.maximumSourceRarityLevelByRank`,
-        ['Common', 'Rare', 'Epic'],
-      );
-      for (const [rank, expected] of [
-        ['Common', 1],
-        ['Rare', 2],
-        ['Epic', 3],
-      ] as const)
-        if (keepsake.effect.maximumSourceRarityLevelByRank[rank] !== expected)
-          fail(`${path}.effect.maximumSourceRarityLevelByRank.${rank}`, `must equal ${expected}`);
-      effect = Object.freeze({
-        kind: 'olympianRewardPressure',
-        priorityRewardType: 'Boon',
-        providerKey,
+      if (raw.providerForceUses !== 1 || raw.providerRarificationUses !== 1)
+        fail(path, 'requires one force use and one rarification use');
+      return Object.freeze({
+        kind: raw.kind,
+        priorityRewardType: requireNonEmpty(raw.priorityRewardType, `${path}.priorityRewardType`),
+        providerKey: requireNonEmpty(raw.providerKey, `${path}.providerKey`),
         providerForceUses: 1,
         providerRarificationUses: 1,
-        maximumSourceRarityLevelByRank: Object.freeze({ Common: 1, Rare: 2, Epic: 3 }),
-      });
-    } else if (keepsake.key === 'SpellTalentKeepsake') {
-      requireExactObjectKeys(keepsake.effect, `${path}.effect`, [
-        'kind',
-        'pathPointsByRank',
-        'priorityRewardTypes',
-      ]);
-      if (keepsake.effect.kind !== 'moonBeam')
-        fail(`${path}.effect.kind`, 'must declare Moon Beam point and priority effect');
-      requireExactObjectKeys(
-        keepsake.effect.pathPointsByRank,
-        `${path}.effect.pathPointsByRank`,
-        keepsakeRanks,
+        maximumSourceRarityLevelByRank: normalizeOlympianRarityProfile(
+          raw.maximumSourceRarityLevelByRank,
+          `${path}.maximumSourceRarityLevelByRank`,
+        ),
+      }) as KeepsakeDeclaration['effect'];
+    }
+    case 'moonBeam': {
+      requireExactObjectKeys(raw, path, ['kind', 'pathPointsByRank', 'priorityRewardTypes']);
+      if (!Array.isArray(raw.priorityRewardTypes) || raw.priorityRewardTypes.length !== 3)
+        fail(`${path}.priorityRewardTypes`, 'must contain exactly three reward types');
+      const priorityRewardTypes = raw.priorityRewardTypes.map((rewardType, index) =>
+        requireNonEmpty(rewardType, `${path}.priorityRewardTypes[${index}]`),
+      ) as [string, string, string];
+      if (new Set(priorityRewardTypes).size !== priorityRewardTypes.length)
+        fail(`${path}.priorityRewardTypes`, 'must be unique');
+      return Object.freeze({
+        kind: raw.kind,
+        pathPointsByRank: normalizeNumericRankProfile(
+          raw.pathPointsByRank,
+          `${path}.pathPointsByRank`,
+        ),
+        priorityRewardTypes: Object.freeze(priorityRewardTypes),
+      }) as KeepsakeDeclaration['effect'];
+    }
+    default:
+      fail(
+        `${path}.kind`,
+        `unknown keepsake effect ${String((raw as { readonly kind?: unknown }).kind)}`,
       );
-      for (const [rank, expected] of [
-        ['Common', 3],
-        ['Rare', 4],
-        ['Epic', 5],
-        ['Heroic', 7],
-      ] as const)
-        if (keepsake.effect.pathPointsByRank[rank] !== expected)
-          fail(`${path}.effect.pathPointsByRank.${rank}`, `must equal ${expected}`);
-      if (
-        keepsake.effect.priorityRewardTypes.length !== 3 ||
-        keepsake.effect.priorityRewardTypes[0] !== 'SpellDrop' ||
-        keepsake.effect.priorityRewardTypes[1] !== 'TalentDrop' ||
-        keepsake.effect.priorityRewardTypes[2] !== 'TalentBigDrop'
-      )
-        fail(
-          `${path}.effect.priorityRewardTypes`,
-          'must equal [SpellDrop, TalentDrop, TalentBigDrop]',
-        );
-      effect = Object.freeze({
-        kind: 'moonBeam' as const,
-        pathPointsByRank: Object.freeze({ Common: 3, Rare: 4, Epic: 5, Heroic: 7 }),
-        priorityRewardTypes: Object.freeze(['SpellDrop', 'TalentDrop', 'TalentBigDrop'] as const),
-      });
-    } else if (keepsake.effect !== undefined)
-      fail(`${path}.effect`, 'is not supported by this keepsake');
+  }
+}
+
+export function normalizeKeepsakes(
+  raw: readonly RawKeepsakeDeclaration[],
+): CatalogCollection<KeepsakeDeclaration> {
+  const values = raw.map((keepsake, index): KeepsakeDeclaration => {
+    const path = `keepsakes[${index}]`;
+    const key = requireNonEmpty(keepsake.key, `${path}.key`);
+    const label = requireNonEmpty(keepsake.label, `${path}.label`);
+    if (keepsake.rank !== 'Epic') fail(`${path}.rank`, 'must be fixed rank III (Epic)');
+    const fatedDisposition = requireClosedValue(
+      keepsake.fatedDisposition,
+      ['neutral', 'enabling', 'opposing'] as const,
+      `${path}.fatedDisposition`,
+    );
+    const echoGift = normalizeGift(keepsake.echoGift, `${path}.echoGift`);
+    const effect = normalizeEffect(keepsake.effect, `${path}.effect`);
+    validateGiftEffectAgreement(echoGift, effect, `${path}.echoGift`);
     return Object.freeze({
-      key: keepsake.key,
-      label: keepsake.label,
-      rank: keepsake.rank,
-      fatedDisposition: keepsake.fatedDisposition,
+      key,
+      label,
+      rank: 'Epic',
+      fatedDisposition,
       echoGift,
       ...(effect === undefined ? {} : { effect }),
     });
   });
-  const collection = createCollection(values, 'keepsakes', (keepsake) => keepsake.key);
-  const declaredKeys = new Set(values.map((keepsake) => keepsake.key));
-  if (
-    declaredKeys.size !== authoritativeKeys.size ||
-    [...authoritativeKeys].some((key) => !declaredKeys.has(key)) ||
-    [...declaredKeys].some((key) => !authoritativeKeys.has(key))
-  )
-    fail('keepsakes', 'must declare the exact authoritative ordinary keepsake inventory');
-  return collection;
+  return createCollection(values, 'keepsakes', (keepsake) => keepsake.key);
+}
+
+export function validateKeepsakeReferences(input: {
+  readonly keepsakes: CatalogCollection<KeepsakeDeclaration>;
+  readonly givers: CatalogCollection<TraitGiverDeclaration>;
+  readonly rewards: RewardKernelCatalog;
+  readonly encounters: CatalogCollection<EncounterDefinition>;
+}): void {
+  for (const keepsake of input.keepsakes.values) {
+    const effect = keepsake.effect;
+    if (effect === undefined) continue;
+    const path = `keepsakes.${keepsake.key}.effect`;
+    switch (effect.kind) {
+      case 'jeweledPom':
+        if (input.givers.byKey[effect.giverKey] === undefined)
+          fail(`${path}.giverKey`, 'references an unknown trait giver');
+        break;
+      case 'experimentalHammer':
+        if (input.givers.byKey[effect.giverKey]?.providerKind !== 'hammer')
+          fail(`${path}.giverKey`, 'must reference a Hammer trait giver');
+        break;
+      case 'gorgonAmulet':
+        if (input.givers.byKey[effect.providerKey] === undefined)
+          fail(`${path}.providerKey`, 'references an unknown trait giver');
+        if (input.encounters.byKey[effect.naturalEncounterKey] === undefined)
+          fail(`${path}.naturalEncounterKey`, 'references an unknown encounter');
+        break;
+      case 'olympianRewardPressure':
+        if (input.givers.byKey[effect.providerKey]?.providerKind !== 'olympian')
+          fail(`${path}.providerKey`, 'must reference an Olympian trait giver');
+        if (input.rewards.rewardTypes.byKey[effect.priorityRewardType] === undefined)
+          fail(`${path}.priorityRewardType`, 'references an unknown reward type');
+        break;
+      case 'moonBeam':
+        for (const rewardType of effect.priorityRewardTypes)
+          if (input.rewards.rewardTypes.byKey[rewardType] === undefined)
+            fail(`${path}.priorityRewardTypes`, `references an unknown reward type ${rewardType}`);
+        break;
+      default:
+        break;
+    }
+  }
 }
 
 export function validateEchoGiftBindings(

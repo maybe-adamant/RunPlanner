@@ -12,7 +12,11 @@ import {
 } from './encounters';
 import { normalizeExitCompatibilityPolicies, normalizeExitTypes } from './exits';
 import { validateHexBindings } from './hexes';
-import { normalizeKeepsakes, validateEchoGiftBindings } from './keepsakes';
+import {
+  normalizeKeepsakes,
+  validateEchoGiftBindings,
+  validateKeepsakeReferences,
+} from './keepsakes';
 import { normalizeBiomeLayouts } from './layouts';
 import { normalizeRoomLifecycleProfiles, validateLifecycleBindings } from './lifecycles';
 import { validateRoomLayoutClosure } from './room-layout-closure';
@@ -52,6 +56,12 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     traitCatalog,
     keepsakes,
   );
+  validateKeepsakeReferences({
+    keepsakes,
+    givers: traitCatalog.givers,
+    rewards,
+    encounters: encounterDefinitions,
+  });
   const encounterSets = normalizeEncounterSets(input.encounterSets, encounterDefinitions);
   validateNemesisRandomEventContract(encounterDefinitions, encounterSets, rewards);
   const roomLifecycleProfiles = normalizeRoomLifecycleProfiles(
