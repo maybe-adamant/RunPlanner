@@ -1318,4 +1318,4 @@ export function nextRarity(
     : undefined;
 }
 
-import type { TraitAssessmentFinding } from './trait-offers';
+import type { TraitAssessmentFinding } from './trait-offer-domain';

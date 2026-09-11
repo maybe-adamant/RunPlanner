@@ -30,7 +30,7 @@ import type {
   FieldsSpatialState,
 } from '../../authored-project/model';
 import type { AuthoredLevelResolution, AuthoredTraitOffer } from '../../authored-project/traits';
-import type { TraitOfferContext } from '../trait-offers';
+import type { TraitOfferContext } from '../trait-offer-domain';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { ShopOptionEntry } from '../../reward-kernel/model';
 import type { ResolvedEncounterPhase } from '../encounters';

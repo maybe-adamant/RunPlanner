@@ -4,6 +4,7 @@
  * engine vocabulary.
  */
 export * from './trait-history';
+export * from './trait-offer-domain';
 export * from './trait-offers';
 export * from './trait-level-effects';
 export * from './trait-authoring-policies';

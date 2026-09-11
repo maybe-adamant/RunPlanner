@@ -1,3 +1,50 @@
+import type { Catalog, TraitOrdinaryBoonSlot, TraitRarity } from '../catalog-schema';
+import type {
+  AuthoredTraitOffer,
+  AuthoredTraitOfferTraits,
+  AuthoredTraitOption,
+  EquippedTrait,
+} from '../authored-project/traits';
+import { boonRarityRollUnavailable } from './boon-rarity';
+import {
+  optionIndex,
+  TRAIT_OPTION_KEYS,
+  traitOfferSupportsExhaustion,
+} from '../authored-project/traits';
+import { createDefaultAuthoredHexTree } from '../authored-project/hex-tree';
+import {
+  isPomUpgradeTarget,
+  nextRarity,
+  ordinaryEquippedSlots,
+  type TraitHistoryState,
+  type TraitReplacementTransition,
+  type TraitTargetedAcquisitionAssessment,
+  type TraitTargetedAcquisitionTransition,
+} from './trait-history';
+import {
+  targetedAcquisitionTargetKeys,
+  checkRequirement,
+  bridalGlowAddedLevels,
+} from './trait-level-effects';
+import {
+  assessTraitOfferComposition,
+  assessTraitOfferDomainComposition,
+  compositionDomainCache,
+  compositionDomainCacheKey,
+  echoLastRunBoonOutcomes,
+  type TraitAssessment,
+  type TraitAssessmentFinding,
+  type TraitCandidateAssessment,
+  type TraitOfferCompositionAssessment,
+  type TraitOfferCompositionDomains,
+  type TraitOfferContext,
+  type TraitOfferDomainCompositionResult,
+  type TraitOfferDomainOptionKind,
+  type TraitReplacementCompositionAssessment,
+} from './trait-offer-domain';
+
+export type { TraitFindingCode } from './model';
+
 export interface NaturalSelectionStep {
   readonly targetTraitKey: string;
   readonly oldLevel: number;
@@ -525,13 +572,6 @@ export function assessSelectedTargetedAcquisition(
   });
 }
 
-export interface TraitCandidateAssessment {
-  readonly traitKey: string;
-  readonly rarity?: TraitRarity;
-  readonly available: boolean;
-  readonly assessment: TraitAssessment;
-}
-
 export function traitCandidates(
   catalog: Catalog,
   giverKey: string,
@@ -758,6 +798,98 @@ export function traitOfferCompositionDomains(
   });
   cached.set(key, domains);
   return domains;
+}
+
+export function assessTraitReplacementComposition(
+  catalog: Catalog,
+  offer: AuthoredTraitOffer,
+  before: TraitHistoryState,
+  context: TraitOfferContext = {},
+): TraitReplacementCompositionAssessment {
+  const giver = catalog.traitGivers.byKey[offer.giverKey];
+  const applies = giver?.providerKind === 'olympian' || giver?.providerKind === 'hermes';
+  const domains = applies
+    ? traitOfferCompositionDomains(catalog, offer.giverKey, before, context)
+    : undefined;
+  if (offer.kind === 'fallbackGold') {
+    const result = assessTraitOfferDomainComposition({
+      ordinaryKeys: Object.freeze(domains?.ordinary.map((candidate) => candidate.traitKey) ?? []),
+      highTierKeys: Object.freeze(domains?.highTier.map((candidate) => candidate.traitKey) ?? []),
+      replacementKeys: Object.freeze(
+        domains?.replacements.map((candidate) => candidate.traitKey) ?? [],
+      ),
+      authored: Object.freeze([]),
+      fallbackGold: true,
+      replacementRollChance: context.replacementRollChance ?? catalog.boonReplacementChance,
+    });
+    return Object.freeze({
+      applies,
+      ...result,
+      legal: applies && result.legal,
+    });
+  }
+  if (offer.kind !== 'traits')
+    return Object.freeze({
+      applies: false,
+      legal: true,
+      ordinaryCandidateCount: 0,
+      eligibleReplacementCount: 0,
+      maximumReplacementCount: 0,
+      requiredReplacementCount: 0,
+      shortageRequiredReplacementCount: 0,
+      forcedRollRequiredReplacementCount: 0,
+      replacementCount: 0,
+      findings: Object.freeze([]),
+    });
+  if (!applies || giver === undefined) {
+    const sparse = offer.kind === 'traits' && offer.options.length !== 3;
+    return Object.freeze({
+      applies: false,
+      legal: !sparse,
+      ordinaryCandidateCount: 0,
+      eligibleReplacementCount: 0,
+      maximumReplacementCount: 0,
+      requiredReplacementCount: 0,
+      shortageRequiredReplacementCount: 0,
+      forcedRollRequiredReplacementCount: 0,
+      replacementCount: 0,
+      findings: sparse
+        ? Object.freeze([Object.freeze({ code: 'unsupportedSparseTraitOffer' as const })])
+        : Object.freeze([]),
+    });
+  }
+
+  const ordinaryKeys = new Set(domains!.ordinary.map((candidate) => candidate.traitKey));
+  const highTierKeys = new Set(domains!.highTier.map((candidate) => candidate.traitKey));
+  const replacementKeys = new Set(domains!.replacements.map((candidate) => candidate.traitKey));
+  const authored = offer.options.map((option) => {
+    const assessment = assessTraitOption(
+      catalog,
+      option.traitKey,
+      before,
+      { ...context, resolvedProviderKey: offer.giverKey },
+      option.rarity,
+    );
+    const kind: TraitOfferDomainOptionKind =
+      assessment.replacementTransition !== undefined
+        ? 'replacement'
+        : highTierKeys.has(option.traitKey)
+          ? 'highTier'
+          : 'ordinary';
+    return Object.freeze({ traitKey: option.traitKey, kind });
+  });
+  const result = assessTraitOfferDomainComposition({
+    ordinaryKeys: Object.freeze([...ordinaryKeys]),
+    highTierKeys: Object.freeze([...highTierKeys]),
+    replacementKeys: Object.freeze([...replacementKeys]),
+    authored: Object.freeze(authored),
+    fallbackGold: false,
+    replacementRollChance: context.replacementRollChance ?? catalog.boonReplacementChance,
+  });
+  return Object.freeze({
+    applies: true,
+    ...result,
+  });
 }
 
 /**
@@ -1100,48 +1232,3 @@ function selfContainedDraftCandidates(
     }),
   );
 }
-
-import type { Catalog, TraitOrdinaryBoonSlot, TraitRarity } from '../catalog-schema';
-import type {
-  AuthoredTraitOffer,
-  AuthoredTraitOfferTraits,
-  AuthoredTraitOption,
-  EquippedTrait,
-} from '../authored-project/traits';
-import { boonRarityRollUnavailable } from './boon-rarity';
-export type { TraitFindingCode } from './model';
-import {
-  optionIndex,
-  TRAIT_OPTION_KEYS,
-  traitOfferSupportsExhaustion,
-} from '../authored-project/traits';
-import { createDefaultAuthoredHexTree } from '../authored-project/hex-tree';
-import {
-  isPomUpgradeTarget,
-  nextRarity,
-  ordinaryEquippedSlots,
-  type TraitHistoryState,
-  type TraitReplacementTransition,
-  type TraitTargetedAcquisitionAssessment,
-  type TraitTargetedAcquisitionTransition,
-} from './trait-history';
-import {
-  targetedAcquisitionTargetKeys,
-  checkRequirement,
-  bridalGlowAddedLevels,
-} from './trait-level-effects';
-import {
-  echoLastRunBoonOutcomes,
-  assessTraitOfferComposition,
-  assessTraitReplacementComposition,
-  assessTraitOfferDomainComposition,
-  compositionDomainCacheKey,
-  compositionDomainCache,
-  type TraitOfferContext,
-  type TraitAssessment,
-  type TraitAssessmentFinding,
-  type TraitOfferCompositionAssessment,
-  type TraitReplacementCompositionAssessment,
-  type TraitOfferCompositionDomains,
-  type TraitOfferDomainCompositionResult,
-} from './trait-offers';

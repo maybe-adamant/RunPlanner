@@ -8,7 +8,7 @@ import type {
   ProjectDocument,
   RoomOccurrence,
 } from './model';
-import { roomActionKey } from './room-actions';
+import { roomActionKey } from './room-action-key';
 import { createUnresolvedAcquisitionRewardState } from './traits';
 
 const GENERATION_KEYS = [

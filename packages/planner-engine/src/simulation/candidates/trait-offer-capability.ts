@@ -29,7 +29,6 @@ import {
   targetedAcquisitionTargetKeys,
   type TraitOfferBranchAssessment,
   type TraitOfferCandidateContext,
-  type TraitOfferContext,
   evaluateReachedLevelResolution,
   pomEligibleTargetKeys,
   type TraitHistoryState,
@@ -45,6 +44,7 @@ import {
   type RansomAssessment,
   boonRarityFactsForOffer,
 } from '../traits';
+import type { EchoLastRunBoonOutcome, TraitOfferContext } from '../trait-offer-domain';
 import {
   advanceCurrentKeepsake,
   concaveStoneProcSupport,
@@ -146,7 +146,7 @@ export interface TraitOfferCandidateCapability {
   readonly echoLastRunBoon: (
     value: AuthoredTraitOffer,
     optionKey: TraitOptionKey,
-  ) => readonly (readonly import('../traits').EchoLastRunBoonOutcome[])[];
+  ) => readonly (readonly EchoLastRunBoonOutcome[])[];
   /** Exact ownership-only All Together set domains for surviving branches. */
   readonly allTogetherSet: (
     value: AuthoredTraitOffer,

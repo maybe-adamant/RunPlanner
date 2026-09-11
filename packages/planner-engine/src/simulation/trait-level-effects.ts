@@ -346,4 +346,4 @@ import {
   type TraitHistoryState,
   type TraitLevelMutationEvent,
 } from './trait-history';
-import type { TraitOfferContext, TraitAssessmentFinding } from './trait-offers';
+import type { TraitAssessmentFinding, TraitOfferContext } from './trait-offer-domain';
