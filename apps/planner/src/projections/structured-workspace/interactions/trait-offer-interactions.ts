@@ -3,6 +3,7 @@ import {
   createCirceResolutionAddress,
   createEchoLastRunBoonAddress,
   createEchoPomTargetAddress,
+  createNaturalSelectionResultAddress,
   createTraitAcquisitionTargetAddress,
   optionIndex,
   semanticAddressKey,
@@ -272,6 +273,10 @@ export function bindTraitOfferInteractions(input: {
         ? undefined
         : Object.freeze({
             control: control.concaveStone,
+            completeFor: (offer: AuthoredTraitOfferTraits) => {
+              const branches = candidates.concaveStone(control.address, offer);
+              return branches.length === 0 || offer.concaveStoneResult !== undefined;
+            },
             intentFor: (
               _offer: AuthoredTraitOfferTraits,
               result:
@@ -463,8 +468,14 @@ export function bindTraitOfferInteractions(input: {
             )
           : undefined;
       const naturalSelectionControl =
-        value.selectedOptionKey === optionKey && control.naturalSelection?.optionKey === optionKey
-          ? control.naturalSelection
+        value.selectedOptionKey === optionKey &&
+        declaration?.selectedDisposition.kind === 'naturalSelection'
+          ? Object.freeze({
+              address: createNaturalSelectionResultAddress(control.address, optionKey),
+              marker: control.naturalSelection?.marker ?? control.marker,
+              optionKey,
+              slotCount: declaration.selectedDisposition.levelCount,
+            })
           : undefined;
       let projected: ReturnType<typeof traitDomain.project> | undefined;
       const hexTree = hexTreeInteraction(value, optionKey);

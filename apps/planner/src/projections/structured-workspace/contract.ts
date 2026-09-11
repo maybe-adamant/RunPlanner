@@ -577,6 +577,8 @@ export interface WorkspaceConcaveStoneDomain {
 
 export interface WorkspaceConcaveStoneInteraction {
   readonly control: WorkspaceConcaveStoneControl;
+  /** True when this complete local draft has settled Stone's exact outcome. */
+  readonly completeFor: (offer: AuthoredTraitOfferTraits) => boolean;
   readonly intentFor: (
     offer: AuthoredTraitOfferTraits,
     result: AuthoredConcaveStoneResult | null,

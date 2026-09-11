@@ -1815,7 +1815,8 @@ export function evaluateBiomeRewardChronology(
   for (const [childKey, checkpoint] of traitChildSettlementBuilders) {
     if (checkpoint.candidateContexts.length === 0) continue;
     const key =
-      checkpoint.address.kind === 'traitAcquisitionTarget'
+      checkpoint.address.kind === 'traitAcquisitionTarget' ||
+      checkpoint.address.kind === 'allTogetherSet'
         ? semanticAddressKey(checkpoint.address.trait)
         : childKey;
     traitCandidateContexts.set(
