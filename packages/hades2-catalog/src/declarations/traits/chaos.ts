@@ -14,10 +14,10 @@ const duration = (
   label:
     labelOverride ??
     (clock === 'locations'
-      ? 'locations / departures'
+      ? 'Locations'
       : clock === 'godBoonScreens'
-        ? 'god-offer resolutions'
-        : 'encounters'),
+        ? 'God-offer resolutions'
+        : 'Encounters'),
   minimum,
   maximum,
   step: 1,
@@ -162,7 +162,7 @@ export const chaosCurses = [
     [],
     'Ordinary',
     undefined,
-    'Forced common boons',
+    'Common Boons',
   ),
   curse(
     'ChaosRestrictBoonCurse',
@@ -173,7 +173,7 @@ export const chaosCurses = [
     [],
     'Rejected',
     undefined,
-    'Fewer offer boons',
+    'Limited Offers',
   ),
 ] as const;
 const blessing = (

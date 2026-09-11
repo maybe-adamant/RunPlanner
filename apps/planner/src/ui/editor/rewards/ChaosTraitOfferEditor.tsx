@@ -4,6 +4,7 @@ import type { WorkspaceChaosOfferInteraction } from '@planner/projections/struct
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { ChaosBlessingValueFields } from './ChaosBlessingValueFields';
+import { ChaosValueSlider } from './ChaosValueSlider';
 import { reconcileChaosOperandValues } from './chaos-blessing-values';
 
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
@@ -95,13 +96,13 @@ export function ChaosTraitOfferEditor({
   };
   const selectedOperands = domain.selectedCurseOperands;
   const blessingOperands = domain.blessingOperands[value.blessingKey] ?? [];
-  const updateSelectedCurseValue = (operand: ChaosNumericOperand, raw: string): void => {
+  const updateSelectedCurseValue = (operand: ChaosNumericOperand, nextValue: number): void => {
     onUpdate(
       Object.freeze({
         ...value,
         selectedCurseValues: reconcileChaosOperandValues(selectedOperands, {
           ...value.selectedCurseValues,
-          [operand.key]: Number(raw),
+          [operand.key]: nextValue,
         }),
       }),
     );
@@ -152,21 +153,15 @@ export function ChaosTraitOfferEditor({
                   triggerLabel={interaction.curseLabel(option.curseKey)}
                 />
                 <label className="field-control">
-                  <span>Requirement</span>
-                  <span className="chaos-option-requirement-control">
-                    <input
-                      aria-label={`${optionKey} requirement`}
-                      max={requirement?.maximum}
-                      min={requirement?.minimum}
-                      onChange={(event) =>
-                        updateRequirement(index, Number(event.currentTarget.value))
-                      }
-                      step={requirement?.step}
-                      type="number"
-                      value={option.requirementCount}
-                    />
-                    <span>{requirement?.unit ?? 'requirement'}</span>
-                  </span>
+                  <span>{requirement?.unit}</span>
+                  <ChaosValueSlider
+                    ariaLabel={`${optionKey} requirement`}
+                    maximum={requirement?.maximum ?? option.requirementCount}
+                    minimum={requirement?.minimum ?? option.requirementCount}
+                    onChange={(requirementCount) => updateRequirement(index, requirementCount)}
+                    step={requirement?.step ?? 1}
+                    value={option.requirementCount}
+                  />
                 </label>
                 <label className="trait-option-selected">
                   <input
@@ -196,15 +191,12 @@ export function ChaosTraitOfferEditor({
               return (
                 <label className="field-control" key={operand.key}>
                   <span>{operand.label}</span>
-                  <input
-                    aria-label={operand.label}
-                    max={operand.maximum}
-                    min={operand.minimum}
-                    onChange={(event) =>
-                      updateSelectedCurseValue(operand, event.currentTarget.value)
-                    }
+                  <ChaosValueSlider
+                    ariaLabel={operand.label}
+                    maximum={operand.maximum}
+                    minimum={operand.minimum}
+                    onChange={(nextValue) => updateSelectedCurseValue(operand, nextValue)}
                     step={operand.step}
-                    type="number"
                     value={current}
                   />
                 </label>

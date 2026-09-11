@@ -12,14 +12,14 @@ describe('Chaos compiler owner', () => {
     for (const curse of catalog.chaos.curses.values) {
       expect(curse.duration.label).toBe(
         curse.semanticTag === 'Ordinary'
-          ? 'Forced common boons'
+          ? 'Common Boons'
           : curse.semanticTag === 'Rejected'
-            ? 'Fewer offer boons'
+            ? 'Limited Offers'
             : curse.clock === 'encounters'
-              ? 'encounters'
+              ? 'Encounters'
               : curse.clock === 'locations'
-                ? 'locations / departures'
-                : 'god-offer resolutions',
+                ? 'Locations'
+                : 'God-offer resolutions',
       );
       expect(curse.duration.authoringDefault).toBe(
         snap(curse.duration.minimum, curse.duration.maximum, curse.duration.step),
@@ -58,10 +58,10 @@ describe('Chaos compiler owner', () => {
       label: 'Ordinary',
       clock: 'godBoonScreens',
       semanticTag: 'Ordinary',
-      duration: { minimum: 2, maximum: 3, label: 'Forced common boons' },
+      duration: { minimum: 2, maximum: 3, label: 'Common Boons' },
     });
     expect(catalog.chaos.curses.byKey.ChaosRestrictBoonCurse?.duration.label).toBe(
-      'Fewer offer boons',
+      'Limited Offers',
     );
     expect(catalog.chaos.curses.byKey.ChaosHiddenRoomRewardCurse).toMatchObject({
       label: 'Enshrouded',

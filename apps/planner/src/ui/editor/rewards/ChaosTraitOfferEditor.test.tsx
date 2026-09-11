@@ -152,6 +152,11 @@ describe('ChaosTraitOfferEditor', () => {
     expect((screen.getByLabelText('Damage bonus') as HTMLInputElement).value).toBe(
       String(catalog.chaos.blessings.byKey.ChaosWeaponBlessing!.operands[0]!.authoringDefault),
     );
+    expect((screen.getByLabelText('Damage bonus') as HTMLInputElement).type).toBe('range');
+    expect(screen.getByLabelText('Damage bonus value').textContent).toBe('0.35');
+    expect((screen.getByLabelText('option1 requirement') as HTMLInputElement).type).toBe('range');
+    expect(screen.getByLabelText('option1 requirement value').textContent).toBe('3');
+    expect(screen.getAllByText('Encounters')).toHaveLength(3);
     expect(
       screen
         .getByRole('group', { name: 'Chaos curse options' })
@@ -162,8 +167,6 @@ describe('ChaosTraitOfferEditor', () => {
         .getByRole('region', { name: 'Selected Chaos outcome' })
         .classList.contains('trait-selected-outcome'),
     ).toBe(true);
-    expect(screen.getAllByText('encounters')).toHaveLength(3);
-
     await user.click(screen.getByRole('button', { name: 'option3 curse' }));
     await user.click(screen.getByRole('option', { name: 'ChaosTimeCurse' }));
     expect(current.curseOptions[0]?.curseKey).toBe('ChaosNoMoneyCurse');

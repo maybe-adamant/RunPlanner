@@ -79,6 +79,8 @@ describe('KeepsakeEquipResultPicker', () => {
     expect(screen.getByText('Target')).toBeTruthy();
     expect(screen.getByText('Rarity:').textContent).toBe('Rarity: Epic');
     expect(propertySpeed.closest('.transcendent-embryo-outcome-row')).toBeTruthy();
+    expect((propertySpeed as HTMLInputElement).type).toBe('range');
+    expect(screen.getByLabelText('Property speed value').textContent).toBe('0.76');
     fireEvent.change(propertySpeed, { target: { value: '0.77' } });
     await waitFor(() => expect(intentFor).toHaveBeenCalled());
     expect(intentFor).toHaveBeenLastCalledWith({
