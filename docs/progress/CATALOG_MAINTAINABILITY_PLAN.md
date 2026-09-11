@@ -2,7 +2,7 @@
 
 ## Status and base
 
-Status: **Locked; Gate A implemented and Gate B is next.**
+Status: **Locked; Gates A-B implemented and Gate C is next.**
 
 Planning base: `af4cc56b`
 
@@ -50,16 +50,16 @@ At the planning base:
 
 Size is diagnostic rather than an acceptance target:
 
-| Neighborhood | Approximate lines | Observed concern |
-| --- | ---: | --- |
-| `src/declarations` | 23,677 | Mostly legitimate explicit game data; a few oversized change neighborhoods |
-| `src/compiler` | 9,614 | Several mixed-responsibility normalization and closure hubs |
-| `test/catalog` | 9,727 | Strong coverage, but two catch-all owners and repeated mutation setup |
-| `compiler/room-normalization.ts` | 1,097 | One function coordinates and implements most room fact families |
-| `compiler/layouts.ts` | 1,018 | Generated, Hub, start, and completion variants share one implementation file |
-| `test/catalog/traits.test.ts` | 2,047 | Several independent trait policy matrices share one suite |
-| `declarations/rooms/n.ts` | 1,741 | Fixed, Hub-main, side-room, and completion declarations share one file |
-| `declarations/traits/weapon-upgrade.ts` | 1,684 | Six independent weapon inventories share one file |
+| Neighborhood                            | Approximate lines | Observed concern                                                             |
+| --------------------------------------- | ----------------: | ---------------------------------------------------------------------------- |
+| `src/declarations`                      |            23,677 | Mostly legitimate explicit game data; a few oversized change neighborhoods   |
+| `src/compiler`                          |             9,614 | Several mixed-responsibility normalization and closure hubs                  |
+| `test/catalog`                          |             9,727 | Strong coverage, but two catch-all owners and repeated mutation setup        |
+| `compiler/room-normalization.ts`        |             1,097 | One function coordinates and implements most room fact families              |
+| `compiler/layouts.ts`                   |             1,018 | Generated, Hub, start, and completion variants share one implementation file |
+| `test/catalog/traits.test.ts`           |             2,047 | Several independent trait policy matrices share one suite                    |
+| `declarations/rooms/n.ts`               |             1,741 | Fixed, Hub-main, side-room, and completion declarations share one file       |
+| `declarations/traits/weapon-upgrade.ts` |             1,684 | Six independent weapon inventories share one file                            |
 
 Historical change concentration supports the same diagnosis:
 `declarations/types.ts`, the generic regression suite, route-detour tests,
@@ -367,17 +367,17 @@ Primary verification:
 
 ## Acceptance matrix
 
-| Concern | Required evidence |
-| --- | --- |
-| Dependency direction | Catalog imports only supported engine contracts; no application or engine implementation reversal |
-| Runtime behavior | Production normalized catalog is value-equivalent to the base product |
-| Construction | One readable root order; local normalization precedes explicit relational closure |
-| Source authority | No unexplained production table repeats a declaration's exact keys or values |
-| Room compiler | One room assembler delegates complete fact products without hidden state |
-| Declaration readability | Room exits, rewards, eligibility, and exceptional capabilities remain visible at declaration sites |
-| Tests | One primary owner per policy matrix; snapshot hashes remain secondary tripwires |
-| Compatibility | No catalog-version, authored-schema, protocol, or migration churn for unchanged runtime output |
-| Cleanup | Superseded paths are deleted in the same gate; no compatibility wrappers or empty directories remain |
+| Concern                 | Required evidence                                                                                    |
+| ----------------------- | ---------------------------------------------------------------------------------------------------- |
+| Dependency direction    | Catalog imports only supported engine contracts; no application or engine implementation reversal    |
+| Runtime behavior        | Production normalized catalog is value-equivalent to the base product                                |
+| Construction            | One readable root order; local normalization precedes explicit relational closure                    |
+| Source authority        | No unexplained production table repeats a declaration's exact keys or values                         |
+| Room compiler           | One room assembler delegates complete fact products without hidden state                             |
+| Declaration readability | Room exits, rewards, eligibility, and exceptional capabilities remain visible at declaration sites   |
+| Tests                   | One primary owner per policy matrix; snapshot hashes remain secondary tripwires                      |
+| Compatibility           | No catalog-version, authored-schema, protocol, or migration churn for unchanged runtime output       |
+| Cleanup                 | Superseded paths are deleted in the same gate; no compatibility wrappers or empty directories remain |
 
 ## Explicit non-goals
 

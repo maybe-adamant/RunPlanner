@@ -111,6 +111,78 @@ const supportedEffects = [
   },
 ] as const;
 
+const ordinaryKeepsakeFacts = [
+  ['ManaOverTimeRefundKeepsake', 'Silver Wheel', 'neutral', 'modeledNeutral', 'noModeledEffect'],
+  ['BossPreDamageKeepsake', 'Knuckle Bones', 'neutral', 'modeledNeutral', 'noModeledEffect'],
+  ['ReincarnationKeepsake', 'Luckier Tooth', 'neutral', 'modeledNeutral', 'noModeledEffect'],
+  ['DoorHealReserveKeepsake', 'Ghost Onion', 'neutral', 'modeledNeutral', 'noModeledEffect'],
+  ['DeathVengeanceKeepsake', 'Evil Eye', 'neutral', 'modeledNeutral', 'noModeledEffect'],
+  ['BonusMoneyKeepsake', 'Gold Purse', 'neutral', 'modeledNeutral', 'noModeledEffect'],
+  ['BlockDeathKeepsake', 'Engraved Pin', 'neutral', 'modeledNeutral', 'noModeledEffect'],
+  ['EscalatingKeepsake', 'Discordant Bell', 'neutral', 'excluded', undefined],
+  ['TimedBuffKeepsake', 'Metallic Droplet', 'neutral', 'modeledNeutral', 'noModeledEffect'],
+  ['LowHealthCritKeepsake', 'White Antler', 'neutral', 'modeledNeutral', 'noModeledEffect'],
+  ['SpellTalentKeepsake', 'Moon Beam', 'neutral', 'moonBeam', 'oneShotAfterUnequipped'],
+  ['ForceZeusBoonKeepsake', 'Cloud Bangle', 'opposing', 'olympianRewardPressure', 'everyBiome'],
+  ['ForceHeraBoonKeepsake', 'Iridescent Fan', 'opposing', 'olympianRewardPressure', 'everyBiome'],
+  ['ForcePoseidonBoonKeepsake', 'Vivid Sea', 'opposing', 'olympianRewardPressure', 'everyBiome'],
+  ['ForceDemeterBoonKeepsake', 'Barley Sheaf', 'opposing', 'olympianRewardPressure', 'everyBiome'],
+  [
+    'ForceApolloBoonKeepsake',
+    'Harmonic Photon',
+    'opposing',
+    'olympianRewardPressure',
+    'everyBiome',
+  ],
+  [
+    'ForceAphroditeBoonKeepsake',
+    'Beautiful Mirror',
+    'opposing',
+    'olympianRewardPressure',
+    'everyBiome',
+  ],
+  [
+    'ForceHephaestusBoonKeepsake',
+    'Adamant Shard',
+    'opposing',
+    'olympianRewardPressure',
+    'everyBiome',
+  ],
+  [
+    'ForceHestiaBoonKeepsake',
+    'Everlasting Ember',
+    'opposing',
+    'olympianRewardPressure',
+    'everyBiome',
+  ],
+  ['ForceAresBoonKeepsake', 'Sword Hilt', 'opposing', 'olympianRewardPressure', 'everyBiome'],
+  ['AthenaEncounterKeepsake', 'Gorgon Amulet', 'opposing', 'excluded', undefined],
+  ['SkipEncounterKeepsake', 'Fig Leaf', 'neutral', 'figLeaf', 'oneShot'],
+  ['ArmorGainKeepsake', 'Silken Sash', 'neutral', 'modeledNeutral', 'noModeledEffect'],
+  ['FountainRarityKeepsake', 'Aromatic Phial', 'neutral', 'excluded', undefined],
+  ['UnpickedBoonKeepsake', 'Concave Stone', 'neutral', 'concaveStone', 'oneShot'],
+  ['DecayingBoostKeepsake', 'Lion Fang', 'neutral', 'modeledNeutral', 'noModeledEffect'],
+  [
+    'DamagedDamageBoostKeepsake',
+    'Blackened Fleece',
+    'neutral',
+    'modeledNeutral',
+    'noModeledEffect',
+  ],
+  ['BossMetaUpgradeKeepsake', 'Crystal Figurine', 'neutral', 'crystalFigurine', 'everyBiome'],
+  [
+    'TempHammerKeepsake',
+    'Experimental Hammer',
+    'neutral',
+    'experimentalHammer',
+    'oneShotAfterUnequipped',
+  ],
+  ['HadesAndPersephoneKeepsake', 'Jeweled Pom', 'enabling', 'excluded', undefined],
+  ['RarifyKeepsake', 'Calling Card', 'enabling', 'callingCard', 'everyBiome'],
+  ['GoldifyKeepsake', 'Time Piece', 'enabling', 'timePiece', 'everyBiome'],
+  ['RandomBlessingKeepsake', 'Transcendent Embryo', 'neutral', 'transcendentEmbryo', 'oneShot'],
+] as const;
+
 function replaceSupportedEffect(
   key: string,
   replace: (effect: Record<string, unknown>) => unknown,
@@ -123,6 +195,20 @@ function replaceSupportedEffect(
 }
 
 describe('keepsake normalization', () => {
+  it('declares the exact ordinary inventory, Fated dispositions, and Gift schedules', () => {
+    expect(
+      keepsakes.map((keepsake) => [
+        keepsake.key,
+        keepsake.label,
+        keepsake.fatedDisposition,
+        keepsake.echoGift.availability === 'excluded' ? 'excluded' : keepsake.echoGift.effect.kind,
+        keepsake.echoGift.availability === 'excluded'
+          ? undefined
+          : keepsake.echoGift.effect.schedule,
+      ]),
+    ).toEqual(ordinaryKeepsakeFacts);
+  });
+
   it('normalizes Gift Gift Gift exclusions and supported replay schedules exactly', () => {
     const normalized = normalizeKeepsakes(keepsakes);
     expect(
@@ -171,7 +257,7 @@ describe('keepsake normalization', () => {
           }
         : keepsake,
     );
-    expect(() => normalizeKeepsakes(malformed)).toThrow('must declare figLeaf/oneShot');
+    expect(() => normalizeKeepsakes(malformed)).toThrow('must be oneShot for figLeaf');
   });
   it('normalizes Calling Card only for the exact admitted trait-provider set', () => {
     const admitted = [
@@ -208,24 +294,24 @@ describe('keepsake normalization', () => {
     }
   });
 
-  it('rejects malformed rank and Fated inventory facts before catalog construction', () => {
+  it('rejects supported-shape rank and duplicate identity failures', () => {
     const wrongRank = keepsakes.map((keepsake) => ({ ...keepsake }));
     wrongRank[0] = { ...wrongRank[0]!, rank: 'Rare' as never };
     expect(() => normalizeKeepsakes(wrongRank)).toThrow('must be fixed rank III (Epic)');
 
     const wrongDisposition = keepsakes.map((keepsake) => ({ ...keepsake }));
     wrongDisposition[29] = { ...wrongDisposition[29]!, fatedDisposition: 'neutral' };
-    expect(() => normalizeKeepsakes(wrongDisposition)).toThrow('expected enabling');
+    expect(
+      normalizeKeepsakes(wrongDisposition).byKey.HadesAndPersephoneKeepsake?.fatedDisposition,
+    ).toBe('neutral');
 
     expect(
       normalizeKeepsakes([...keepsakes].reverse()).values.map((keepsake) => keepsake.key),
     ).toEqual([...keepsakes].reverse().map((keepsake) => keepsake.key));
 
-    const replaced = keepsakes.map((keepsake) => ({ ...keepsake }));
-    replaced[0] = { ...replaced[0]!, key: 'UnknownKeepsake' };
-    expect(() => normalizeKeepsakes(replaced)).toThrow(
-      'must declare the exact authoritative ordinary keepsake inventory',
-    );
+    const duplicate = keepsakes.map((keepsake) => ({ ...keepsake }));
+    duplicate[0] = { ...duplicate[0]!, key: duplicate[1]!.key };
+    expect(() => normalizeKeepsakes(duplicate)).toThrow('duplicates BossPreDamageKeepsake');
   });
 
   it('normalizes the exact immutable supported rank matrix at fixed Epic selection', () => {
@@ -312,25 +398,15 @@ describe('keepsake normalization', () => {
     }
   });
 
-  it('rejects every wrong supported rank cell', () => {
-    for (const row of supportedEffects) {
-      const ranks =
-        row.key === 'FountainRarityKeepsake'
-          ? (['Common', 'Rare', 'Epic'] as const)
-          : (['Common', 'Rare', 'Epic', 'Heroic'] as const);
-      for (const rank of ranks) {
-        const malformed = replaceSupportedEffect(row.key, (effect) => ({
-          ...effect,
-          [row.profileKey]: {
-            ...(effect[row.profileKey] as Record<string, unknown>),
-            [rank]: 999,
-          },
-        }));
-        expect(() => normalizeKeepsakes(malformed), `${row.key}.${row.profileKey}.${rank}`).toThrow(
-          'must equal',
-        );
-      }
-    }
+  it('accepts alternate valid source values without maintaining a second source table', () => {
+    const modified = replaceSupportedEffect('GoldifyKeepsake', (effect) => ({
+      ...effect,
+      conversionChargesByRank: { Common: 1, Rare: 3, Epic: 9, Heroic: 12 },
+    }));
+    expect(normalizeKeepsakes(modified).byKey.GoldifyKeepsake?.effect).toMatchObject({
+      kind: 'timePiece',
+      conversionChargesByRank: { Common: 1, Rare: 3, Epic: 9, Heroic: 12 },
+    });
   });
 
   it('rejects missing, extra, malformed, and non-numeric supported rank data', () => {
@@ -367,21 +443,22 @@ describe('keepsake normalization', () => {
         },
       }));
       expect(() => normalizeKeepsakes(nonNumeric), `${row.key} non-numeric rank`).toThrow(
-        row.key === 'RandomBlessingKeepsake' ? 'must equal Rare' : 'must be numeric',
+        row.key === 'RandomBlessingKeepsake'
+          ? 'must be one of'
+          : row.key === 'UnpickedBoonKeepsake'
+            ? 'must be a non-negative integer'
+            : 'must be a positive integer',
       );
     }
   });
 
-  it('enforces the exact supported descriptors and their effect-specific shape', () => {
+  it('rejects malformed closed effect unions and Gift/effect disagreements', () => {
     for (const row of supportedEffects) {
-      expect(() => normalizeKeepsakes(replaceSupportedEffect(row.key, () => undefined))).toThrow(
-        'must be an object',
-      );
       expect(() =>
         normalizeKeepsakes(
           replaceSupportedEffect(row.key, (effect) => ({ ...effect, kind: 'unknownEffect' })),
         ),
-      ).toThrow(/must declare/);
+      ).toThrow(/unknown keepsake effect/);
       expect(() =>
         normalizeKeepsakes(
           replaceSupportedEffect(row.key, (effect) => ({
@@ -397,47 +474,102 @@ describe('keepsake normalization', () => {
     expect(() =>
       normalizeKeepsakes(
         keepsakes.map((keepsake) =>
+          keepsake.key === 'SkipEncounterKeepsake'
+            ? {
+                ...keepsake,
+                echoGift: {
+                  availability: 'eligible',
+                  effect: { kind: 'callingCard', schedule: 'everyBiome' },
+                },
+              }
+            : keepsake,
+        ),
+      ),
+    ).toThrow('must match the keepsake effect descriptor');
+
+    expect(() =>
+      normalizeKeepsakes(
+        keepsakes.map((keepsake) =>
           keepsake.key === neutral.key
             ? { ...keepsake, effect: supportedEffects[1].effect as never }
             : keepsake,
         ),
       ),
-    ).toThrow('is not supported by this keepsake');
+    ).toThrow('modeledNeutral requires no effect descriptor');
+  });
 
-    expect(() =>
-      normalizeKeepsakes(
-        replaceSupportedEffect('HadesAndPersephoneKeepsake', (effect) => ({
-          ...effect,
-          giverKey: 'Apollo',
-        })),
-      ),
-    ).toThrow('must declare the Jeweled Pom rank profile and Hades giver');
-    expect(() =>
-      normalizeKeepsakes(
-        replaceSupportedEffect('TempHammerKeepsake', (effect) => ({
-          ...effect,
-          giverKey: 'Apollo',
-        })),
-      ),
-    ).toThrow('must declare the Experimental Hammer rank profile and giver');
-
-    for (const [field, value] of [
-      ['uses', 2],
-      ['minimumBiomeDepth', 3],
-      ['providerKey', 'Apollo'],
-      ['naturalEncounterKey', 'GeneratedF'],
+  it('rejects consumed fixed values, rarity bounds, Moon Beam arity, and percentage overflow', () => {
+    for (const [key, field, value, message] of [
+      ['AthenaEncounterKeepsake', 'uses', 2, 'must be 1'],
+      ['FountainRarityKeepsake', 'uses', 2, 'must be 1'],
+      ['FountainRarityKeepsake', 'sourceMaxRarityLevel', 2, 'must be 1'],
+      ['BossMetaUpgradeKeepsake', 'uses', 2, 'must be 1'],
+      ['UnpickedBoonKeepsake', 'uses', 2, 'must be 1'],
+      ['RandomBlessingKeepsake', 'interval', 7, 'must be 8'],
     ] as const) {
       expect(() =>
         normalizeKeepsakes(
-          replaceSupportedEffect('AthenaEncounterKeepsake', (effect) => ({
-            ...effect,
-            [field]: value,
-          })),
+          replaceSupportedEffect(key, (effect) => ({ ...effect, [field]: value })),
         ),
-      ).toThrow(
-        'must declare Gorgon Amulet one use, depth two, Athena provider, and natural encounter',
-      );
+      ).toThrow(message);
     }
+
+    expect(() =>
+      normalizeKeepsakes(
+        replaceSupportedEffect('FountainRarityKeepsake', (effect) => ({
+          ...effect,
+          targetRarityLevelByRank: { Common: 1, Rare: 2, Epic: 5 },
+        })),
+      ),
+    ).toThrow('must be a supported trait rarity level');
+    expect(() =>
+      normalizeKeepsakes(
+        replaceSupportedEffect('UnpickedBoonKeepsake', (effect) => ({
+          ...effect,
+          procSupportByRank: { Common: 0, Rare: 50, Epic: 75, Heroic: 101 },
+        })),
+      ),
+    ).toThrow('must be at most 100');
+    expect(() =>
+      normalizeKeepsakes(
+        keepsakes.map((keepsake) =>
+          keepsake.key === 'SpellTalentKeepsake'
+            ? {
+                ...keepsake,
+                effect: {
+                  ...keepsake.effect!,
+                  priorityRewardTypes: ['SpellDrop', 'TalentDrop'] as never,
+                },
+              }
+            : keepsake,
+        ),
+      ),
+    ).toThrow('must contain exactly three reward types');
+  });
+
+  it('closes effect references against the published catalog families', () => {
+    const input = JSON.parse(JSON.stringify(declarations));
+    const pom = input.keepsakes.find(
+      (keepsake: { key: string }) => keepsake.key === 'HadesAndPersephoneKeepsake',
+    );
+    pom.effect.giverKey = 'MissingGiver';
+    expect(() => createCatalog(input)).toThrow('references an unknown trait giver');
+
+    const moonBeam = JSON.parse(JSON.stringify(declarations));
+    const moon = moonBeam.keepsakes.find(
+      (keepsake: { key: string }) => keepsake.key === 'SpellTalentKeepsake',
+    );
+    moon.effect.priorityRewardTypes[0] = 'MissingReward';
+    expect(() => createCatalog(moonBeam)).toThrow(
+      'references an unknown reward type MissingReward',
+    );
+
+    const hammer = JSON.parse(JSON.stringify(declarations));
+    const experimentalHammer = hammer.keepsakes.find(
+      (keepsake: { key: string }) => keepsake.key === 'TempHammerKeepsake',
+    );
+    experimentalHammer.effect.giverKey = 'Apollo';
+    expect(() => createCatalog(hammer)).toThrow('must reference a Hammer trait giver');
   });
 
   it('normalizes Time Piece’s fixed four charges and the closed concrete acquisition matrix', () => {

@@ -191,7 +191,8 @@ kind; it does not contain callbacks.
 The normalized catalog contains the complete declared ordinary rack inventory.
 Each entry owns its stable game key, player-facing label, fixed planner rank III
 (`Epic`), and Fated disposition (`neutral`, `enabling`, or `opposing`). Catalog
-normalization rejects missing, duplicate, unknown, or misclassified entries.
+normalization rejects malformed supported shapes and duplicate keys; the focused
+catalog test attests the complete source inventory and its Fated dispositions.
 The planner assumes the inventory is unlocked and does not represent profile
 progression or authored rank choice.
 
