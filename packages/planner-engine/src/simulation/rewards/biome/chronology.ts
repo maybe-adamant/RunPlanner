@@ -120,7 +120,10 @@ import {
 import type { AcquisitionRoleFrontier } from '../acquisition-settlement';
 import { addRewardFinding } from '../findings';
 import { mergeEquivalentRewardBranches, type RewardBranchState } from '../branch-primitives';
-import type { ReachedTraitChildCheckpoint } from '../trait-settlement';
+import type {
+  ReachedTraitChildCheckpoint,
+  ReachedTraitOfferCandidateContact,
+} from '../trait-settlement';
 import { rewardFinding } from '../findings';
 import {
   EMPTY_PLANNER_TIMELINE_FACTS,
@@ -295,6 +298,8 @@ export function evaluateBiomeRewardChronology(
     import('../../candidate-artifacts').KeepsakeEquipResultCandidateCapability
   >();
   const acquisitionConversionContexts = new Map<string, readonly AcquisitionRoleFrontier[]>();
+  const reachedTraitOfferCandidateContexts = new Map<string, TraitOfferCandidateContext[]>();
+  const reachedTraitOfferCandidateFingerprints = new Map<string, Set<string>>();
   const derivedAcquisitionEntryContexts = new Map<
     string,
     readonly import('../acquisition-settlement').DerivedAcquisitionEntryFrontier[]
@@ -308,6 +313,26 @@ export function evaluateBiomeRewardChronology(
   const blockedGorgonPhases = new Set<string>();
   let gorgonEvaluationBlocked = false;
   const eligibleGorgonPhases = new Set<string>();
+  function recordTraitOfferCandidateContacts(
+    contacts: readonly ReachedTraitOfferCandidateContact[] | undefined,
+  ): void {
+    for (const contact of contacts ?? []) {
+      const key = semanticAddressKey(contact.address);
+      const fingerprint = JSON.stringify([
+        contact.context.before,
+        contact.context.context,
+        contact.context.arcanaFear,
+        contact.context.keepsakes,
+      ]);
+      const fingerprints = reachedTraitOfferCandidateFingerprints.get(key) ?? new Set<string>();
+      if (fingerprints.has(fingerprint)) continue;
+      fingerprints.add(fingerprint);
+      reachedTraitOfferCandidateFingerprints.set(key, fingerprints);
+      const current = reachedTraitOfferCandidateContexts.get(key) ?? [];
+      current.push(contact.context);
+      reachedTraitOfferCandidateContexts.set(key, current);
+    }
+  }
   function recordAcquisitionRoleFrontiers(
     frontiers: readonly AcquisitionRoleFrontier[] | undefined,
   ): void {
@@ -317,6 +342,7 @@ export function evaluateBiomeRewardChronology(
         key,
         Object.freeze([...(acquisitionConversionContexts.get(key) ?? []), frontier]),
       );
+      recordTraitOfferCandidateContacts(frontier.traitOfferCandidateContacts);
       const replacement = frontier.artificerReplacementCandidate;
       const replacementKey = semanticAddressKey(frontier.artificerReplacementAddress);
       if (replacement !== undefined && !producerFrontiers.has(replacementKey))
@@ -1526,6 +1552,7 @@ export function evaluateBiomeRewardChronology(
         for (const entry of transition.findings)
           findings.set(findingIdentityKey(entry.finding), entry);
         recordAcquisitionRoleFrontiers(transition.roleFrontiers);
+        recordTraitOfferCandidateContacts(transition.traitOfferCandidateContacts);
         for (const settlement of transition.traitChildSettlements)
           recordTraitChildSettlements(
             Object.freeze([settlement.checkpoint]),
@@ -1781,6 +1808,10 @@ export function evaluateBiomeRewardChronology(
     catalog,
   );
   const traitCandidateContexts = new Map(traitProducts.candidateContexts);
+  for (const [key, contexts] of reachedTraitOfferCandidateContexts) {
+    if (!traitCandidateContexts.has(key))
+      traitCandidateContexts.set(key, Object.freeze([...contexts]));
+  }
   for (const [childKey, checkpoint] of traitChildSettlementBuilders) {
     if (checkpoint.candidateContexts.length === 0) continue;
     const key =

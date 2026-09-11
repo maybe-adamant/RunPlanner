@@ -766,7 +766,7 @@ export interface WorkspaceTraitOfferInteraction {
     >
   >;
   readonly value: AuthoredTraitOffer | null;
-  /** Exact engine-backed traits draft for returning from Fallback Gold. */
+  /** Exact engine-backed fresh traits draft for initial authoring or stale-offer recovery. */
   readonly traitsStartingDraft?: () => AuthoredTraitOfferTraits | undefined;
   readonly nextOptionalHighTierDraft?: (
     value: AuthoredTraitOfferTraits,

@@ -12,6 +12,7 @@ import {
   semanticAddressKey,
   type EchoLastRunBoonAddress,
   type SemanticAddress,
+  type TraitOfferAddress,
   type TraitOfferOwnerAddress,
 } from '../../authored-project/addresses';
 import { recordLootTypeHistorySource } from '../../reward-kernel';
@@ -72,6 +73,11 @@ export interface ReachedTraitChildCheckpoint {
   readonly address: SemanticAddress;
   readonly branch: RewardBranchState;
   readonly candidateContext?: import('../traits').TraitOfferCandidateContext;
+}
+
+export interface ReachedTraitOfferCandidateContact {
+  readonly address: TraitOfferAddress;
+  readonly context: import('../traits').TraitOfferCandidateContext;
 }
 
 interface ApplyTraitOfferOptions {
@@ -149,6 +155,7 @@ function applyTraitOfferForAcquisitionInternal(
 ): {
   readonly branch: RewardBranchState;
   readonly blockedChild?: ReachedTraitChildCheckpoint;
+  readonly candidateContact?: ReachedTraitOfferCandidateContact;
 } {
   // Aspect of Selene routes a later Spell Drop directly to Path settlement.
   // The concrete acquisition retains its history identity; its base-spell child
@@ -536,6 +543,19 @@ function applyTraitOfferForAcquisitionInternal(
   // selected-only acquisition failure must not roll that already-valid spend
   // back, while an invalid base offer leaves `effectiveBranch` unchanged.
   if (applied.event === undefined) {
+    const candidateOwner = traitOwnerAddress(reward.origin);
+    const candidateContact =
+      candidateOwner === undefined
+        ? undefined
+        : Object.freeze({
+            address: createTraitOfferAddress(candidateOwner, role),
+            context: Object.freeze({
+              before,
+              context: evaluationContext,
+              arcanaFear: branch.arcanaFear,
+              keepsakes: branch.keepsakes,
+            }),
+          });
     const branchAfterOffer =
       effectiveAuthored.kind === 'chaos' && applied.history !== before
         ? Object.freeze({
@@ -557,6 +577,7 @@ function applyTraitOfferForAcquisitionInternal(
           ? effectiveAuthored
           : undefined,
       ),
+      ...(candidateContact === undefined ? {} : { candidateContact }),
     });
   }
   const selected = applied.event.options[optionIndex(applied.event.selectedOptionKey)];
@@ -1115,6 +1136,8 @@ export interface EncounterTraitOfferSettlement {
   readonly branch: RewardBranchState;
   /** Exact post-outer/pre-effect branch retained when an authored child blocks settlement. */
   readonly blockedChild?: ReachedTraitChildCheckpoint;
+  /** Exact invalid outer-offer contact retained independently of later branch survival. */
+  readonly candidateContact?: ReachedTraitOfferCandidateContact;
 }
 
 function encounterTraitContext(
@@ -1200,9 +1223,10 @@ export function settleEncounterTraitOffer(
     );
   }
   let blockedChild: EncounterTraitOfferSettlement['blockedChild'];
+  let candidateContact: EncounterTraitOfferSettlement['candidateContact'];
   const settledBranch = ((): RewardBranchState => {
     if (offer.kind !== 'traits') {
-      return applyTraitOfferForAcquisition(
+      const settlement = applyTraitOfferForAcquisition(
         catalog,
         branch,
         {
@@ -1215,7 +1239,9 @@ export function settleEncounterTraitOffer(
         sequence,
         findings,
         findingChronology,
-      ).branch;
+      );
+      candidateContact = settlement.candidateContact;
+      return settlement.branch;
     }
     const selected = offer.options[optionIndex(offer.selectedOptionKey)];
     const disposition =
@@ -1257,6 +1283,7 @@ export function settleEncounterTraitOffer(
       findingChronology,
       directTraitSetBranchHistories === undefined ? {} : { directTraitSetBranchHistories },
     );
+    candidateContact = appliedSettlement.candidateContact;
     const applied = appliedSettlement.branch;
     blockedChild ??= appliedSettlement.blockedChild;
     const rejectCirce = (code: TraitFindingCode, detail?: string): RewardBranchState => {
@@ -1546,6 +1573,7 @@ export function settleEncounterTraitOffer(
   return Object.freeze({
     branch: settledBranch,
     ...(blockedChild === undefined ? {} : { blockedChild }),
+    ...(candidateContact === undefined ? {} : { candidateContact }),
   });
 }
 

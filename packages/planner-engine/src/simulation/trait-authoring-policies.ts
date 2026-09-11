@@ -634,8 +634,8 @@ export function traitOfferCompositionDomains(
 }
 
 /**
- * Returns one engine-validated traits outcome for changing a Fallback Gold
- * draft back to traits.  Consumers must not derive exhaustion fill rules.
+ * Returns one engine-validated fresh traits outcome for initial authoring or
+ * replacing a stale offer. Consumers must not derive exhaustion fill rules.
  */
 export function traitOfferStartingDraft(
   catalog: Catalog,

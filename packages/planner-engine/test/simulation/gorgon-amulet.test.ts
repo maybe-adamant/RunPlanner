@@ -699,10 +699,11 @@ describe('Gorgon Amulet lifecycle', () => {
         ),
       ),
     });
-    const evaluation = simulateProjectAssembly(catalog, {
+    const contextInvalidAssembly = simulateProjectAssembly(catalog, {
       ...project,
       route: contextInvalid,
-    }).evaluation;
+    });
+    const evaluation = contextInvalidAssembly.evaluation;
     const g = evaluation.route.biomes.find((biome) => biome.biomeKey === 'G');
     expect(g).toBeDefined();
     if (g === undefined || !('rewards' in g)) return;
@@ -715,6 +716,13 @@ describe('Gorgon Amulet lifecycle', () => {
         origin: expect.objectContaining({ acquisitionRole: 'gorgonAthena' }),
       }),
     );
+    const trait = createTraitOfferAddress(createGorgonPhaseAddress(phase), 'gorgonAthena');
+    expect(
+      createPreparedProjectCandidateSession(
+        catalog,
+        contextInvalidAssembly,
+      ).traitOfferStartingDraft(trait, 'Athena'),
+    ).toMatchObject({ kind: 'traits', giverKey: 'Athena' });
 
     const missing = Object.freeze({
       ...project.route,

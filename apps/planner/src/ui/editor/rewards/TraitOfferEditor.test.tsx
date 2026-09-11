@@ -6,13 +6,16 @@ import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   applyProjectCommand,
+  createBiomeAddress,
   createIncomingRewardAddress,
+  createOccurrenceId,
   createExitSelectionAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   semanticAddressKey,
+  type AuthoredChaosTraitOffer,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
@@ -21,6 +24,7 @@ import {
   createApplication,
   type ApplicationEvaluationEvent,
 } from '@planner/composition/createApplication';
+import { candidateSupport } from '@planner/projections/candidateProjection';
 import {
   authoredProjectUndoRequested,
   authoredProjectReplaced,
@@ -40,6 +44,8 @@ import {
   goldenFOccurrenceId,
   goldenFStartId,
 } from '@run-planner/test-fixtures/underworld';
+import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import { createReachableNaturalChaosProject } from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 
 afterEach(cleanup);
 
@@ -67,7 +73,64 @@ function findTraitOfferControl(
 }
 
 describe('trait offer editor entry and dialog', () => {
-  it('edits the real reached SpellDrop once, without new project evaluation, and supports Undo', async () => {
+  it('starts an invalid offer over from a fresh legal draft before saving', async () => {
+    const application = createApplication();
+    const trait = createTraitOfferAddress(
+      createIncomingRewardAddress(
+        createBiomeAddress('Surface', 'O'),
+        createOccurrenceId('052399e3-429f-4f4b-aa50-c6a25fac0f60'),
+      ),
+      'source',
+    );
+    const invalid: AuthoredTraitOfferTraits = Object.freeze({
+      kind: 'traits' as const,
+      giverKey: 'Zeus',
+      options: Object.freeze([
+        Object.freeze({ traitKey: 'LightningDebuffGeneratorBoon', rarity: 'Rare' as const }),
+        Object.freeze({ traitKey: 'SpawnKillBoon', rarity: 'Legendary' as const }),
+        Object.freeze({ traitKey: 'SprintEchoBoon', rarity: 'Duo' as const }),
+      ] as const),
+      selectedOptionKey: 'option2' as const,
+      rarificationActions: Object.freeze([]),
+    });
+    const project = applyProjectCommand(
+      loadSurfacePSteadyGrowthShrineFrontierCheckpoint(),
+      application.catalog,
+      { kind: 'ReplaceTraitOffer', trait, value: invalid },
+    );
+    application.store.dispatch(authoredProjectReplaced(project));
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const commit = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor address={trait} interactions={workspace.interactions} onCommit={commit} />
+      </Provider>,
+    );
+
+    const startOver = await screen.findByRole('button', { name: 'Start over' });
+    expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    await user.click(startOver);
+    expect(commit).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
+        'disabled',
+        false,
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+    expect(commit).toHaveBeenCalledTimes(1);
+    const saved = commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits | undefined;
+    expect(saved).toMatchObject({ kind: 'traits', giverKey: 'Zeus' });
+    expect(saved?.options).toHaveLength(3);
+    expect(saved).not.toEqual(invalid);
+    application.dispose();
+  });
+
+  it('edits the real reached SpellDrop with one focused candidate query and supports Undo', async () => {
     const events: ApplicationEvaluationEvent[] = [];
     const application = createApplication({ observeEvaluationWork: (event) => events.push(event) });
     const occurrenceId = goldenFOccurrenceId(10, 2);
@@ -108,7 +171,7 @@ describe('trait offer editor entry and dialog', () => {
         <TraitOfferDialog interactions={workspace.interactions} target={address} />
       </Provider>,
     );
-    expect(events).toEqual([]);
+    expect(events).toEqual([{ kind: 'queryBatch', queryCount: 1 }]);
     expect(screen.getByText('Spell 1 · Crescent Moonglow')).toBeTruthy();
     expect(screen.getByText('+0 Path of Stars')).toBeTruthy();
     expect(screen.getByText('Spell 2 · Half Moonglow')).toBeTruthy();
@@ -133,6 +196,7 @@ describe('trait offer editor entry and dialog', () => {
     expect(screen.queryByRole('status', { name: 'Offer feedback' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Add option' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Select Fallback Gold' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Start over' })).toBeNull();
     expect(screen.queryByText('Offer State')).toBeNull();
 
     const historyDepth = application.store.getState().projectWorkspace.history!.past.length;
@@ -206,6 +270,80 @@ describe('trait offer editor entry and dialog', () => {
         ? restoredOccurrence.state.reward.traitOffersByAcquisitionRole?.self
         : undefined;
     expect(restored).toMatchObject({ selectedOptionKey: 'option1' });
+    application.dispose();
+  });
+
+  it('starts an invalid Chaos offer over with its specialized pair draft', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createReachableNaturalChaosProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (candidate) => candidate.giver.providerKind === 'chaos',
+    );
+    if (base === undefined || base.chaos === undefined)
+      throw new Error('Chaos trait interaction is missing');
+    const startingDraft = base.chaos.startingDraft();
+    if (startingDraft === undefined) throw new Error('Chaos starting draft is missing');
+    const invalid: AuthoredChaosTraitOffer = Object.freeze({
+      ...startingDraft,
+      curseOptions: Object.freeze([
+        Object.freeze({ curseKey: 'ChaosMetaUpgradeCurse', requirementCount: 3 }),
+        startingDraft.curseOptions[1],
+        startingDraft.curseOptions[2],
+      ]) as AuthoredChaosTraitOffer['curseOptions'],
+      selectedOptionKey: 'option1',
+      selectedCurseValues: Object.freeze({}),
+    });
+    const seed = base.load(startingDraft)[0];
+    if (seed?.evaluation.kind !== 'traitOffer')
+      throw new Error('Chaos candidate evaluation is missing');
+    const impossible = Object.freeze({
+      ...seed,
+      value: invalid,
+      evaluation: Object.freeze({
+        ...seed.evaluation,
+        result: Object.freeze({ ...seed.evaluation.result, supported: false }),
+      }),
+    });
+    const interaction: WorkspaceTraitOfferInteraction = Object.freeze({
+      ...base,
+      value: invalid,
+      load: (value: AuthoredTraitOffer = invalid) =>
+        value === invalid ? Object.freeze([impossible]) : base.load(value),
+    });
+    expect(candidateSupport(interaction.load(invalid)[0])).toBe('impossible');
+    const interactions = Object.freeze({
+      ...workspace.interactions,
+      traitOffers: new Map([[interaction.key, interaction]]),
+    }) as WorkspaceInteractionCatalog;
+    const commit = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor
+          address={interaction.owner}
+          interactions={interactions}
+          onCommit={commit}
+        />
+      </Provider>,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Start over' }));
+    expect(commit).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Save Chaos outcome' })).toHaveProperty(
+        'disabled',
+        false,
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: 'Save Chaos outcome' }));
+    expect(commit).toHaveBeenCalledTimes(1);
+    const saved = commit.mock.calls[0]?.[0] as AuthoredChaosTraitOffer | undefined;
+    expect(saved?.kind).toBe('chaos');
+    expect(saved?.curseOptions).toHaveLength(3);
+    expect(saved).not.toEqual(invalid);
+    if (saved === undefined) throw new Error('fresh Chaos draft was not saved');
+    expect(candidateSupport(base.load(saved)[0])).not.toBe('impossible');
     application.dispose();
   });
 

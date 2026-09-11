@@ -49,9 +49,9 @@ import {
   type AcquisitionRoleFrontier,
 } from '../../acquisition-settlement';
 import {
-  processEncounterTraitOffer,
   settleEncounterTraitOffer,
   type ReachedTraitChildCheckpoint,
+  type ReachedTraitOfferCandidateContact,
 } from '../../trait-settlement';
 import { rewardFinding } from '../../findings';
 import type { BossArcanaOutcome } from '../../model';
@@ -70,6 +70,7 @@ export interface EncounterSettlementTransition {
     readonly checkpoint: ReachedTraitChildCheckpoint;
     readonly occurrenceOwner: SemanticAddress;
   }[];
+  readonly traitOfferCandidateContacts: readonly ReachedTraitOfferCandidateContact[];
   /** Exact successful Boss mutations, separate from their candidate domains. */
   readonly bossArcanaOutcomes?: readonly BossArcanaOutcome[];
   /** Boss mutation owners and their planner-resolved same-seam order. */
@@ -148,6 +149,7 @@ export function applyEncounterSettlementTransition(inputs: {
     readonly checkpoint: ReachedTraitChildCheckpoint;
     readonly occurrenceOwner: SemanticAddress;
   }[] = [];
+  const traitOfferCandidateContacts: ReachedTraitOfferCandidateContact[] = [];
   const recordChild = (
     checkpoint: ReachedTraitChildCheckpoint | undefined,
     owner: SemanticAddress,
@@ -221,6 +223,8 @@ export function applyEncounterSettlementTransition(inputs: {
           effect?.kind === 'gorgonAmulet' ? effect.providerKey : undefined,
         );
         recordChild(settled.blockedChild, room.origin);
+        if (settled.candidateContact !== undefined)
+          traitOfferCandidateContacts.push(settled.candidateContact);
       }
       blockGorgonPhaseKey = phaseKey;
       gorgonEvaluationBlocked = true;
@@ -232,8 +236,8 @@ export function applyEncounterSettlementTransition(inputs: {
       assessGorgonChildSettlement(catalog, result.athenaOffer)
     ) {
       const before = branches.map((branch) => branch.traitEvaluations?.length ?? 0);
-      const processed = branches.map((branch) =>
-        processEncounterTraitOffer(
+      const settled = branches.map((branch) =>
+        settleEncounterTraitOffer(
           catalog,
           branch,
           owner,
@@ -246,6 +250,11 @@ export function applyEncounterSettlementTransition(inputs: {
           inputs.gorgonCandidate?.rarity,
         ),
       );
+      for (const item of settled) {
+        if (item.candidateContact !== undefined)
+          traitOfferCandidateContacts.push(item.candidateContact);
+      }
+      const processed = settled.map((item) => item.branch);
       const valid = processed.every((branch, index) => {
         const evaluations = branch.traitEvaluations ?? [];
         const evaluation = evaluations.at(-1);
@@ -561,6 +570,7 @@ export function applyEncounterSettlementTransition(inputs: {
       findings: Object.freeze([...findings.values()]),
       roleFrontiers: Object.freeze(roleFrontiers),
       traitChildSettlements: Object.freeze(traitChildSettlements),
+      traitOfferCandidateContacts: Object.freeze(traitOfferCandidateContacts),
       ...(judgmentCandidate === undefined ? {} : { judgmentCandidate }),
       ...(figurineCandidate === undefined ? {} : { figurineCandidate }),
       bossArcanaOutcomes,
@@ -582,6 +592,7 @@ export function applyEncounterSettlementTransition(inputs: {
       findings: Object.freeze([...findings.values()]),
       roleFrontiers: Object.freeze(roleFrontiers),
       traitChildSettlements: Object.freeze(traitChildSettlements),
+      traitOfferCandidateContacts: Object.freeze(traitOfferCandidateContacts),
       gorgonEvaluationBlocked,
       ...(blockGorgonPhaseKey === undefined ? {} : { blockGorgonPhaseKey }),
     });
@@ -594,6 +605,7 @@ export function applyEncounterSettlementTransition(inputs: {
         findings: Object.freeze([...findings.values()]),
         roleFrontiers: Object.freeze(roleFrontiers),
         traitChildSettlements: Object.freeze(traitChildSettlements),
+        traitOfferCandidateContacts: Object.freeze(traitOfferCandidateContacts),
         gorgonEvaluationBlocked,
         ...(blockGorgonPhaseKey === undefined ? {} : { blockGorgonPhaseKey }),
       });
@@ -651,6 +663,7 @@ export function applyEncounterSettlementTransition(inputs: {
       findings: Object.freeze([...findings.values()]),
       roleFrontiers: Object.freeze(roleFrontiers),
       traitChildSettlements: Object.freeze(traitChildSettlements),
+      traitOfferCandidateContacts: Object.freeze(traitOfferCandidateContacts),
       gorgonEvaluationBlocked,
       ...(blockGorgonPhaseKey === undefined ? {} : { blockGorgonPhaseKey }),
     });
@@ -661,6 +674,7 @@ export function applyEncounterSettlementTransition(inputs: {
       findings: Object.freeze([...findings.values()]),
       roleFrontiers: Object.freeze(roleFrontiers),
       traitChildSettlements: Object.freeze(traitChildSettlements),
+      traitOfferCandidateContacts: Object.freeze(traitOfferCandidateContacts),
       gorgonEvaluationBlocked,
       ...(blockGorgonPhaseKey === undefined ? {} : { blockGorgonPhaseKey }),
     });
@@ -891,7 +905,11 @@ export function applyEncounterSettlementTransition(inputs: {
         provider,
       ),
     );
-    for (const item of settled) recordChild(item.blockedChild, room.origin);
+    for (const item of settled) {
+      recordChild(item.blockedChild, room.origin);
+      if (item.candidateContact !== undefined)
+        traitOfferCandidateContacts.push(item.candidateContact);
+    }
     if (authored !== null) branches = Object.freeze(settled.map((item) => item.branch));
   }
   return Object.freeze({
@@ -899,6 +917,7 @@ export function applyEncounterSettlementTransition(inputs: {
     findings: Object.freeze([...findings.values()]),
     roleFrontiers: Object.freeze(roleFrontiers),
     traitChildSettlements: Object.freeze(traitChildSettlements),
+    traitOfferCandidateContacts: Object.freeze(traitOfferCandidateContacts),
     ...(nemesisCandidate === undefined ? {} : { nemesisCandidate }),
     gorgonEvaluationBlocked,
     ...(blockGorgonPhaseKey === undefined ? {} : { blockGorgonPhaseKey }),

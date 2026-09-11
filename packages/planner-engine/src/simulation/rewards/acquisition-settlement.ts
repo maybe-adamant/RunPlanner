@@ -72,6 +72,7 @@ import {
   applyTraitOfferForAcquisition,
   type PriorTraitMutation,
   type ReachedTraitChildCheckpoint,
+  type ReachedTraitOfferCandidateContact,
 } from './trait-settlement';
 import { addRewardFinding, rewardFinding } from './findings';
 import type { ResolvedAcquisitionSource } from './model';
@@ -200,6 +201,8 @@ export interface AcquisitionRoleFrontier {
   readonly blocksArtificerConversion?: true;
   /** Immediate same-occurrence mutation prefix supplied by trait settlement. */
   readonly priorTraitMutations?: readonly PriorTraitMutation[];
+  /** Exact pre-offer contacts reached while this acquisition role was settled. */
+  readonly traitOfferCandidateContacts?: readonly ReachedTraitOfferCandidateContact[];
 }
 
 export interface PickupAcquisitionEntryFrontier {
@@ -1312,6 +1315,7 @@ export function applyProducerRoleHistory(
   const next: RewardBranchState[] = [];
   const realizedAcquisitionByBranch: (ConcreteAcquisitionEvent | undefined)[] = [];
   const priorTraitMutations = new Map<string, PriorTraitMutation>();
+  const traitOfferCandidateContacts: ReachedTraitOfferCandidateContact[] = [];
   let unresolvedArtificerReplacement = false;
   let unresolvedTraitOffer = false;
   const seaStarSourceKey = semanticAddressKey(
@@ -1831,6 +1835,8 @@ export function applyProducerRoleHistory(
         ),
       },
     );
+    if (traitSettlement.candidateContact !== undefined)
+      traitOfferCandidateContacts.push(traitSettlement.candidateContact);
     for (const mutation of traitSettlement.priorTraitMutations ?? [])
       priorTraitMutations.set(
         `${semanticAddressKey(mutation.owner)}\u0000${mutation.acquisitionRole}`,
@@ -1901,6 +1907,9 @@ export function applyProducerRoleHistory(
       ...(priorTraitMutations.size === 0
         ? {}
         : { priorTraitMutations: Object.freeze([...priorTraitMutations.values()]) }),
+      ...(traitOfferCandidateContacts.length === 0
+        ? {}
+        : { traitOfferCandidateContacts: Object.freeze(traitOfferCandidateContacts) }),
       ...(artificerReplacementOptions === undefined ? {} : { artificerReplacementOptions }),
       ...(artificerReplacementRewardTypes.length === 0
         ? {}
