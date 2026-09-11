@@ -1471,6 +1471,11 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Mystery Boon'));
     expect(screen.queryByText('Eventual God')).toBeNull();
 
+    await view.user.click(screen.getByRole('button', { name: 'Offer 1 Item' }));
+    expect(await screen.findByText('Reward type')).toBeTruthy();
+    expect(screen.queryByText('Eventual God')).toBeNull();
+    await view.user.keyboard('{Escape}');
+
     await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Offer 1' }));
     openRoomTab('Room Timeline');
     const timeline = screen.getByRole('region', { name: 'Room Timeline' });

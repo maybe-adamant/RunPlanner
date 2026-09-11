@@ -204,9 +204,15 @@ export function prepareRewardDomain(
   if (selectedType === undefined) {
     throw new Error(`Selected reward ${selected.rewardType} has no domain`);
   }
+  const selectedSourceResolvesAtAcquisition =
+    selected.payload === undefined &&
+    catalog.rewards.rewardTypes.byKey[selected.rewardType]?.sourceResolution?.kind ===
+      'acquisitionRole';
   return Object.freeze({
     types: Object.freeze(types),
-    payload: payloadDomain(selected, selectedType.witnesses),
+    payload: selectedSourceResolvesAtAcquisition
+      ? Object.freeze({ kind: 'none' })
+      : payloadDomain(selected, selectedType.witnesses),
   });
 }
 
