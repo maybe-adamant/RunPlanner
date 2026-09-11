@@ -62,7 +62,11 @@ import type {
   AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
 import { type Catalog, type RoomDeclaration } from '@run-planner/engine/catalog-schema';
-import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import type {
+  CountedRewardBinding,
+  ResolvedRewardOffer,
+  ShopOptionSelection,
+} from '@run-planner/engine/reward-kernel';
 
 import type { PreparedRewardDomain, ProjectedRewardDomain } from './rewardDomainProjection';
 import { createCandidateProjectionCore } from './candidateProjectionSession';
@@ -152,6 +156,10 @@ export interface CandidateProjectionSession {
     rewardTypes: readonly string[],
     selected?: ResolvedRewardOffer,
   ) => Promise<ProjectedRewardDomain>;
+  readonly shopOfferOptions: (
+    owner: ShopOfferAddress,
+    values: readonly ShopOptionSelection[],
+  ) => Promise<readonly CandidateOptionProjection<ShopOptionSelection>[]>;
   readonly startRooms: (
     owner: BiomeAddress | OccurrenceAddress,
     rooms: readonly RoomDeclaration[],

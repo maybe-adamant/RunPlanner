@@ -131,6 +131,7 @@ export {
   type HubVisitOrderCandidateSupport,
   type RoomTargetCandidateQuery,
   type ShopOfferCandidateQuery,
+  type ShopOfferOptionCandidateQuery,
   type SideRoomEntryOrderCandidateQuery,
   type SideRoomEntryOrderCandidateSupport,
   type SideRoomGenerationCandidateQuery,

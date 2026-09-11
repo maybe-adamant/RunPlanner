@@ -1,4 +1,4 @@
-import type { ResolvedRewardOffer } from '../../reward-kernel/model';
+import type { ResolvedRewardOffer, ShopOptionSelection } from '../../reward-kernel/model';
 import type {
   AcquisitionSiteAddress,
   AcquisitionEntryAddress,
@@ -388,6 +388,11 @@ export type ShopOccurrenceCommand =
       readonly kind: 'ReplaceShopOffer';
       readonly offer: ShopOfferAddress;
       readonly value: ResolvedRewardOffer;
+    }
+  | {
+      readonly kind: 'ReplaceShopOfferOption';
+      readonly offer: ShopOfferAddress;
+      readonly value: ShopOptionSelection;
     }
   | {
       readonly kind: 'ReplaceAnvilResult';

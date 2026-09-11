@@ -200,16 +200,15 @@ React-side filter.
 
 ## Planner disposition
 
-The Gate-A correction makes the complete phase-sensitive I/Q option matrices
-consume the existing chronological `enteredBiomes` requirement fact. The
-exact generated option remains the sole authored Shop identity and keeps all
-existing option-specific requirements, purchase interaction, acquisition
-lifecycle, and without-replacement behavior. Catalog version
-`0.29.0-world-shop-phase` records the normalized-fact change while the
-authored document schema remains 50.
+The complete phase-sensitive I/Q option matrices consume the chronological
+`enteredBiomes` requirement fact. The exact generated option is persisted as
+the authored Shop identity beside its resolved reward and keeps all existing
+option-specific requirements, purchase interaction, acquisition lifecycle,
+and without-replacement behavior. This is necessary because ordinary and
+boosted Boons intentionally resolve to the same `RandomLoot` reward shape.
 
-Current standard routes retain the same second-half inventories. Gate-A
-order-independence evidence establishes:
+Current standard routes retain the same second-half inventories. Order-independence
+evidence establishes:
 
 - an I/Q Shop reached at count one or two exposes only its first-half entries
   plus phase-independent entries;
@@ -223,8 +222,8 @@ order-independence evidence establishes:
 - no ordinary `WorldShop` option changes merely because F, G, N, or P is
   reached later.
 
-The landed catalog `0.30.0-boon-rarity-ledger` and its engine-owned rarity
-ledger consume the exact `RandomLoot`, `BoostedRandomLoot`, or boosted Hermes
+The engine-owned rarity ledger consumes the exact `RandomLoot`,
+`BoostedRandomLoot`, or boosted Hermes
 item produced by this Shop authority at the trait-offer frontier. The ledger
 does not reevaluate Shop phase eligibility or infer the item context from the
 Shop profile, biome key, or count; the option witness remains the source of
@@ -236,10 +235,10 @@ supported fixed-order routes. A future Dream Dive implementation must change
 that fact producer to supply the actual reordered reached count through the
 existing engine input; it must not change the I/Q Shop declarations.
 
-The earlier phase correction made no planner-engine or application production
-change. The existing engine candidate, finding, structural decode, and repair
-paths remain the authorities for retained phase-ineligible offers and joint Q
-unavailability.
+Engine candidates, findings, structural decode, and repair paths remain the
+authorities for retained phase-ineligible options and joint Q unavailability.
+The application presents exact option identities but does not reproduce their
+eligibility or rarity policy.
 
 ## Explicit non-goals
 

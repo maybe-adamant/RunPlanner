@@ -631,6 +631,7 @@ function materializeShopEntry(
           : [
               Object.freeze({
                 ...base,
+                optionKey: authored.optionKey,
                 offer: authored.reward.offer,
                 traitOffersByAcquisitionRole: authored.reward.traitOffersByAcquisitionRole,
                 levelResolutionsByAcquisitionRole:

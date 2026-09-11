@@ -24,10 +24,11 @@ type RewardPayloadCommand = Extract<
       | 'ReplaceIncomingReward'
       | 'ReplaceLocalReward'
       | 'ReplaceRewardWheelOffer'
-      | 'ReplaceShopOffer'
       | 'ReplaceAcquisitionEntryOffer';
   }
 >;
+
+type RewardPayloadOwner = Exclude<WorkspaceRewardControl['owner'], { readonly kind: 'shopOffer' }>;
 
 export function derivedShopPayloadIntent<Command extends ProjectCommand>(
   materialization: WorkspaceRewardControl['derivedShopEntryEdit'],
@@ -60,7 +61,7 @@ export function derivedShopPayloadIntent<Command extends ProjectCommand>(
 }
 
 function rewardCommandFor(
-  owner: WorkspaceRewardControl['owner'],
+  owner: RewardPayloadOwner,
   value: Parameters<WorkspaceRewardInteraction['intentFor']>[0],
 ): RewardPayloadCommand {
   switch (owner.kind) {
@@ -70,15 +71,13 @@ function rewardCommandFor(
       return Object.freeze({ kind: 'ReplaceLocalReward', reward: owner.address, value });
     case 'rewardWheelOffer':
       return Object.freeze({ kind: 'ReplaceRewardWheelOffer', offer: owner.address, value });
-    case 'shopOffer':
-      return Object.freeze({ kind: 'ReplaceShopOffer', offer: owner.address, value });
     case 'acquisitionEntry':
       return Object.freeze({ kind: 'ReplaceAcquisitionEntryOffer', entry: owner.address, value });
   }
 }
 
 export function rewardIntentFor(
-  owner: WorkspaceRewardControl['owner'],
+  owner: RewardPayloadOwner,
   value: Parameters<WorkspaceRewardInteraction['intentFor']>[0],
   materialization: WorkspaceRewardControl['derivedShopEntryEdit'],
 ): WorkspaceCommandIntent<

@@ -1585,14 +1585,26 @@ describe('engine-owned F/G execution semantic product', () => {
     const normal = createShopOfferAddress(qBiome, shopId, 'MixedProgress1');
     const boosted = createShopOfferAddress(qBiome, shopId, 'MixedProgress2');
     let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
-      kind: 'ReplaceShopOffer',
+      kind: 'ReplaceShopOfferOption',
       offer: normal,
-      value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+      value: {
+        optionKey: 'RandomLoot',
+        offer: {
+          rewardType: 'RandomLoot',
+          payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+        },
+      },
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceShopOffer',
+      kind: 'ReplaceShopOfferOption',
       offer: boosted,
-      value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+      value: {
+        optionKey: 'BoostedRandomLoot',
+        offer: {
+          rewardType: 'RandomLoot',
+          payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+        },
+      },
     });
     project = replaceTestShopOfferActions(project, catalog, shop, [
       'MixedProgress1',

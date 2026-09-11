@@ -9,7 +9,9 @@ import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { CountedRewardEditor, RewardValueEditor } from './RewardEditors';
 import { TraitOfferLauncher } from './TraitOfferEditor';
 import { PomResolutionLauncher } from './PomResolutionEditor';
+import { ShopOfferEditor } from './ShopOfferEditor';
 import type { RewardPickerStep } from '@planner/projections/rewardPicker';
+import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 
 /** Complete intent-bound editor for every authored reward leaf. */
 export function RewardControlEditor({
@@ -42,15 +44,22 @@ export function RewardControlEditor({
 }) {
   const executeIntent = useCommandIntent();
   const findingTarget = useFindingTarget();
-  const interaction = requireWorkspaceInteraction(
-    interactions.rewards,
-    workspaceInteractionKey(control.owner.address),
-  );
-  const onReplace = (value: Parameters<typeof interaction.intentFor>[0]): void =>
+  const interaction =
+    control.shopOption === undefined
+      ? requireWorkspaceInteraction(
+          interactions.rewards,
+          workspaceInteractionKey(control.owner.address),
+        )
+      : undefined;
+  const onReplace = (value: ResolvedRewardOffer): void => {
+    if (interaction === undefined) throw new Error('Shop offers require an exact option edit');
     executeIntent(interaction.intentFor(value));
+  };
   return (
     <>
-      {!showOffer ? null : control.fixedOfferEdit !== undefined ? (
+      {!showOffer ? null : control.shopOption !== undefined ? (
+        <ShopOfferEditor control={control} interactions={interactions} label={label} />
+      ) : control.fixedOfferEdit !== undefined ? (
         <button
           className="quiet-action action-compact"
           {...findingTarget(control.owner.address)}

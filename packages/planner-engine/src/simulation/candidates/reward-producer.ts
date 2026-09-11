@@ -7,7 +7,7 @@ import {
   type ShopOfferAddress,
 } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
-import type { ResolvedRewardOffer } from '../../reward-kernel';
+import type { ResolvedRewardOffer, ShopOptionSelection } from '../../reward-kernel';
 import type { ProjectEvaluation } from '../evaluation-products';
 import type {
   RewardProducerCandidateArtifacts,
@@ -48,6 +48,12 @@ export interface ShopOfferCandidateQuery {
   readonly value: ResolvedRewardOffer;
 }
 
+export interface ShopOfferOptionCandidateQuery {
+  readonly kind: 'shopOfferOption';
+  readonly offer: ShopOfferAddress;
+  readonly value: ShopOptionSelection;
+}
+
 export interface AcquisitionEntryOfferCandidateQuery {
   readonly kind: 'acquisitionEntryOffer';
   readonly entry: AcquisitionEntryAddress;
@@ -59,6 +65,7 @@ export type RewardProducerCandidateQuery =
   | LocalRewardCandidateQuery
   | RewardWheelOfferCandidateQuery
   | ShopOfferCandidateQuery
+  | ShopOfferOptionCandidateQuery
   | AcquisitionEntryOfferCandidateQuery;
 
 export interface EvaluatedIncomingRewardCandidate {
@@ -149,6 +156,11 @@ export function evaluateRewardProducerCandidate(
     return selected.evaluation.coverage.kind === 'prefix'
       ? coverageUnavailable(evaluation, owner, checkpointFor(query))
       : producerUnavailable(owner);
+  }
+  if (query.kind === 'shopOfferOption') {
+    const evaluate = capability.evaluateShopOption;
+    if (evaluate === undefined) return producerUnavailable(owner);
+    return Object.freeze({ kind: 'shopOffer', result: evaluate(query.offer, query.value) });
   }
   const result = capability.evaluateOffer(owner, query.value);
   switch (query.kind) {

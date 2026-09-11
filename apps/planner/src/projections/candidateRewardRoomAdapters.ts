@@ -12,7 +12,11 @@ import {
   type OccurrenceAddress,
   type TargetAddress,
 } from '@run-planner/engine/authored-project';
-import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import type {
+  CountedRewardBinding,
+  ResolvedRewardOffer,
+  ShopOptionSelection,
+} from '@run-planner/engine/reward-kernel';
 
 import type {
   CandidateOptionProjection,
@@ -209,6 +213,7 @@ export type RewardRoomCandidateAdapters = Pick<
   | 'prepareRewardDomain'
   | 'countedRewardTypes'
   | 'rewardDomain'
+  | 'shopOfferOptions'
   | 'startRooms'
   | 'roomTargets'
   | 'encounterPhases'
@@ -237,6 +242,12 @@ export function createRewardRoomCandidateAdapters(
       countedRewardTypesFor(core, cache, owner, binding, selectedRewardType),
     rewardDomain: (owner, rewardTypes, selected) =>
       rewardDomainFor(core, cache, owner, rewardTypes, selected),
+    shopOfferOptions: (owner, values: readonly ShopOptionSelection[]) =>
+      core.projectOptionsCooperatively(
+        `shop-options:${semanticAddressKey(owner)}:${domainKey(values.map(offerKey))}`,
+        values,
+        values.map((value) => ({ kind: 'shopOfferOption', offer: owner, value })),
+      ),
     startRooms: (owner, rooms) => startRoomsFor(core, owner, rooms),
     roomTargets: (target, rooms) => roomTargetsFor(core, target, rooms),
     encounterPhases: (phase, encounterKeys) => encounterPhasesFor(core, phase, encounterKeys),

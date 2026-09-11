@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 80,
+  "schemaVersion": 81,
   "projectId": "run-plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -1054,6 +1054,7 @@
                   "profileKey": "WorldShop",
                   "offers": {
                     "Boon": {
+                      "optionKey": "BlindBoxLoot",
                       "reward": {
                         "offer": {
                           "rewardType": "BlindBoxLoot"
@@ -1063,6 +1064,7 @@
                       }
                     },
                     "MajorNonBoon": {
+                      "optionKey": "ArmorBoost",
                       "reward": {
                         "offer": {
                           "rewardType": "ArmorBoost"
@@ -1076,6 +1078,7 @@
                       }
                     },
                     "Minor": {
+                      "optionKey": "MaxManaDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "MaxManaDrop"
@@ -2007,6 +2010,7 @@
                   "profileKey": "WorldShop",
                   "offers": {
                     "Boon": {
+                      "optionKey": "BlindBoxLoot",
                       "reward": {
                         "offer": {
                           "rewardType": "BlindBoxLoot"
@@ -2016,6 +2020,7 @@
                       }
                     },
                     "MajorNonBoon": {
+                      "optionKey": "ArmorBoost",
                       "reward": {
                         "offer": {
                           "rewardType": "ArmorBoost"
@@ -2029,6 +2034,7 @@
                       }
                     },
                     "Minor": {
+                      "optionKey": "MaxManaDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "MaxManaDrop"

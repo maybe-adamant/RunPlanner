@@ -14,6 +14,7 @@ import { bindRewardPayloadInteractions } from './reward-payload-interactions';
 import { bindAcquisitionConversionInteractions } from './acquisition-conversion-interactions';
 import { bindTraitOfferInteractions } from './trait-offer-interactions';
 import { bindResolutionInteractions } from './resolution-interactions';
+import { bindShopOfferInteractions } from './shop-offer-interactions';
 
 import { workspaceInteractionKey } from '../contract';
 import type {
@@ -34,10 +35,12 @@ import type {
   WorkspaceFountainRarityControl,
   WorkspaceFountainRarityInteraction,
   WorkspaceAcquisitionConversionInteraction,
+  WorkspaceShopOfferInteraction,
 } from '../contract';
 
 export interface WorkspaceRewardChildInteractionCatalog {
   readonly rewards: ReadonlyMap<string, WorkspaceRewardInteraction>;
+  readonly shopOffers: ReadonlyMap<string, WorkspaceShopOfferInteraction>;
   readonly acquisitionConversions: ReadonlyMap<string, WorkspaceAcquisitionConversionInteraction>;
   readonly traitOffers: ReadonlyMap<string, WorkspaceTraitOfferInteraction>;
   readonly levelResolutions: ReadonlyMap<string, WorkspaceLevelResolutionInteraction>;
@@ -158,6 +161,13 @@ export function bindRewardChildInteractions(input: {
     rewardPicker,
     semanticAddressKey,
   });
+  const shopOffers = bindShopOfferInteractions({
+    candidates,
+    catalog,
+    contextualPicker,
+    rewardPicker,
+    rewardControls,
+  });
 
   const acquisitionConversions = bindAcquisitionConversionInteractions({
     catalog,
@@ -200,6 +210,7 @@ export function bindRewardChildInteractions(input: {
 
   return Object.freeze({
     rewards,
+    shopOffers,
     acquisitionConversions,
     traitOffers,
     levelResolutions,

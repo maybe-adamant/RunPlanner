@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 80,
+  "schemaVersion": 81,
   "projectId": "surface-4",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -1139,6 +1139,7 @@
                   "profileKey": "WorldShop",
                   "offers": {
                     "Boon": {
+                      "optionKey": "RandomLoot",
                       "reward": {
                         "offer": {
                           "rewardType": "RandomLoot",
@@ -1158,6 +1159,7 @@
                       }
                     },
                     "MajorNonBoon": {
+                      "optionKey": "MaxHealthDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "MaxHealthDrop"
@@ -1171,6 +1173,7 @@
                       }
                     },
                     "Minor": {
+                      "optionKey": "MaxManaDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "MaxManaDrop"
@@ -1966,6 +1969,7 @@
                   "profileKey": "WorldShop",
                   "offers": {
                     "Boon": {
+                      "optionKey": "RandomLoot",
                       "reward": {
                         "offer": {
                           "rewardType": "RandomLoot",
@@ -1985,6 +1989,7 @@
                       }
                     },
                     "MajorNonBoon": {
+                      "optionKey": "MaxHealthDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "MaxHealthDrop"
@@ -1998,6 +2003,7 @@
                       }
                     },
                     "Minor": {
+                      "optionKey": "MaxManaDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "MaxManaDrop"
@@ -3061,6 +3067,7 @@
                   "profileKey": "WorldShop",
                   "offers": {
                     "Boon": {
+                      "optionKey": "RandomLoot",
                       "reward": {
                         "offer": {
                           "rewardType": "RandomLoot",
@@ -3080,6 +3087,7 @@
                       }
                     },
                     "MajorNonBoon": {
+                      "optionKey": "MaxHealthDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "MaxHealthDrop"
@@ -3093,6 +3101,7 @@
                       }
                     },
                     "Minor": {
+                      "optionKey": "MaxManaDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "MaxManaDrop"
@@ -3810,6 +3819,7 @@
                   "profileKey": "Q_WorldShop",
                   "offers": {
                     "MixedProgress1": {
+                      "optionKey": "MaxHealthDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "MaxHealthDrop"
@@ -3823,6 +3833,7 @@
                       }
                     },
                     "MixedProgress2": {
+                      "optionKey": "MaxManaDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "MaxManaDrop"
@@ -3836,6 +3847,7 @@
                       }
                     },
                     "LargeSurvival": {
+                      "optionKey": "HealBigDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "HealBigDrop"
@@ -3849,6 +3861,7 @@
                       }
                     },
                     "Survival": {
+                      "optionKey": "ArmorBigBoost",
                       "reward": {
                         "offer": {
                           "rewardType": "ArmorBigBoost"
@@ -3862,6 +3875,7 @@
                       }
                     },
                     "PremiumProgress": {
+                      "optionKey": "MaxHealthDropBig",
                       "reward": {
                         "offer": {
                           "rewardType": "MaxHealthDropBig"
@@ -3875,6 +3889,7 @@
                       }
                     },
                     "MetaProgress": {
+                      "optionKey": "WeaponPointsRareDrop",
                       "reward": {
                         "offer": {
                           "rewardType": "WeaponPointsRareDrop"

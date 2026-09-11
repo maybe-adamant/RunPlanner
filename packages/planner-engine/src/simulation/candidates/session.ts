@@ -41,6 +41,7 @@ import {
   type LocalRewardCandidateQuery,
   type RewardWheelOfferCandidateQuery,
   type ShopOfferCandidateQuery,
+  type ShopOfferOptionCandidateQuery,
 } from './reward-producer';
 import {
   evaluateRewardWheelLifecycleCandidate,
@@ -172,6 +173,7 @@ export type ProjectCandidateQuery =
   | RoomTargetCandidateQuery
   | ShipEncounterCountCandidateQuery
   | ShopOfferCandidateQuery
+  | ShopOfferOptionCandidateQuery
   | AcquisitionEntryOfferCandidateQuery
   | SideRoomEntryOrderCandidateQuery
   | SideRoomGenerationCandidateQuery
@@ -463,6 +465,7 @@ function evaluateCandidateQuery(
         query,
       );
     case 'shopOffer':
+    case 'shopOfferOption':
       return evaluateRewardProducerCandidate(
         catalog,
         project,

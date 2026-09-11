@@ -1136,16 +1136,18 @@ describe('ordered shop transitions', () => {
     ).toEqual([]);
   });
 
-  it('enforces without-replacement assignment for the two-offer Q group', () => {
+  it('enforces exact ordinary and Boosted Boon identities for the two-offer Q group', () => {
     const profile = rewardKernelCatalog.shops.byKey.Q_WorldShop!;
     const authored: readonly AuthoredShopOffer[] = [
       {
+        optionKey: 'RandomLoot',
         offer: {
           rewardType: 'RandomLoot',
           payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
         },
       },
       {
+        optionKey: 'BoostedRandomLoot',
         offer: {
           rewardType: 'RandomLoot',
           payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
@@ -1162,10 +1164,9 @@ describe('ordered shop transitions', () => {
       authored,
       shopFacts(4),
     );
-    expect(witnesses).toHaveLength(2);
+    expect(witnesses).toHaveLength(1);
     expect(witnesses.map((witness) => witness.optionKeys.slice(0, 2))).toEqual([
       ['RandomLoot', 'BoostedRandomLoot'],
-      ['BoostedRandomLoot', 'RandomLoot'],
     ]);
   });
 

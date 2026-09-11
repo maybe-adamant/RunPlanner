@@ -1,6 +1,10 @@
 import type { Catalog, RoomDeclaration } from '../../../../catalog-schema';
 import { semanticAddressKey, type SemanticAddress } from '../../../../authored-project/addresses';
-import { findShopPartialGenerationWitnesses } from '../../../../reward-kernel';
+import {
+  findShopPartialAuthoredGenerationWitnesses,
+  type AuthoredShopOffer,
+  type ShopOptionSelection,
+} from '../../../../reward-kernel';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type {
   CanonicalAuthoredRoom,
@@ -94,6 +98,59 @@ export function applyShopOfferPointMaterialization(
 
   const producerFrontiers: RewardProducerFrontier[] = [];
   if (owners.length > 0) {
+    const candidateContext = (owner: SemanticAddress) => {
+      if (shopEntry === undefined)
+        throw new BiomeRewardSimulationContractError(
+          `${room.gameName} lost its shop candidate state`,
+        );
+      const ownerKey = semanticAddressKey(owner);
+      if (!ownerKeys.has(ownerKey))
+        throw new BiomeRewardSimulationContractError(
+          'shop reward frontier received a foreign owner',
+        );
+      const profile = catalog.rewards.shops.byKey[shopEntry.profileKey];
+      if (profile === undefined)
+        throw new BiomeRewardSimulationContractError(
+          `unknown shop profile ${shopEntry.profileKey}`,
+        );
+      const focused = [...shopEntry.offers, ...shopEntry.unresolvedOffers].find(
+        (entry) => semanticAddressKey(entry.offerOrigin) === ownerKey,
+      );
+      if (focused === undefined)
+        throw new BiomeRewardSimulationContractError('shop reward frontier lost its owner');
+      return Object.freeze({
+        profile,
+        focused,
+        concreteByKey: new Map<string, AuthoredShopOffer>(
+          shopEntry.offers.map((entry) => [
+            entry.offerKey,
+            Object.freeze({ optionKey: entry.optionKey, offer: entry.offer }),
+          ]),
+        ),
+        requirements:
+          declaration.incomingReward.kind === 'shop'
+            ? declaration.incomingReward.additionalOptionRequirements
+            : undefined,
+      });
+    };
+    const supportsSelection = (owner: SemanticAddress, selection: AuthoredShopOffer): boolean => {
+      const context = candidateContext(owner);
+      const fixedOffers = context.profile.slots.values.map((slot) =>
+        slot.key === context.focused.offerKey
+          ? selection
+          : (context.concreteByKey.get(slot.key) ?? null),
+      );
+      return frontierBranches.some(
+        (branch) =>
+          findShopPartialAuthoredGenerationWitnesses(
+            catalog.rewards,
+            context.profile,
+            fixedOffers,
+            facts(branch.history, new Set(), branch),
+            context.requirements,
+          ).length > 0,
+      );
+    };
     producerFrontiers.push(
       Object.freeze({
         generationPolicy: 'jointShopInventory',
@@ -105,46 +162,22 @@ export function applyShopOfferPointMaterialization(
           owner: SemanticAddress,
           offer: CanonicalResolvedIncomingReward['offer'],
         ) => {
-          if (shopEntry === undefined)
-            throw new BiomeRewardSimulationContractError(
-              `${room.gameName} lost its shop candidate state`,
-            );
-          const ownerKey = semanticAddressKey(owner);
-          if (!ownerKeys.has(ownerKey))
-            throw new BiomeRewardSimulationContractError(
-              'shop reward frontier received a foreign owner',
-            );
-          const profile = catalog.rewards.shops.byKey[shopEntry.profileKey];
-          if (profile === undefined)
-            throw new BiomeRewardSimulationContractError(
-              `unknown shop profile ${shopEntry.profileKey}`,
-            );
-          const concreteByKey = new Map(
-            shopEntry.offers.map((entry) => [entry.offerKey, entry.offer] as const),
-          );
-          const focused = [...shopEntry.offers, ...shopEntry.unresolvedOffers].find(
-            (entry) => semanticAddressKey(entry.offerOrigin) === ownerKey,
-          );
-          if (focused === undefined)
-            throw new BiomeRewardSimulationContractError('shop reward frontier lost its owner');
-          const fixedOffers = profile.slots.values.map((slot) =>
-            slot.key === focused.offerKey ? offer : (concreteByKey.get(slot.key) ?? null),
-          );
-          const requirements =
-            declaration.incomingReward.kind === 'shop'
-              ? declaration.incomingReward.additionalOptionRequirements
-              : undefined;
-          const supported = frontierBranches.some(
-            (branch) =>
-              findShopPartialGenerationWitnesses(
-                catalog.rewards,
-                profile,
-                fixedOffers,
-                facts(branch.history, new Set(), branch),
-                requirements,
-              ).length > 0,
-          );
-          return Object.freeze({ findings: Object.freeze([]), supported });
+          const context = candidateContext(owner);
+          const current = context.concreteByKey.get(context.focused.offerKey);
+          return Object.freeze({
+            findings: Object.freeze([]),
+            supported: supportsSelection(owner, {
+              optionKey:
+                current?.offer.rewardType === offer.rewardType ? (current.optionKey ?? null) : null,
+              offer,
+            }),
+          });
+        },
+        evaluateShopOption: (owner: SemanticAddress, selection: ShopOptionSelection) => {
+          return Object.freeze({
+            findings: Object.freeze([]),
+            supported: supportsSelection(owner, selection),
+          });
         },
       }),
     );

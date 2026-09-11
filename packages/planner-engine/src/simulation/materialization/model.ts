@@ -63,6 +63,7 @@ export interface CanonicalResolvedIncomingReward {
 export interface CanonicalShopOffer {
   readonly offerKey: string;
   readonly offerOrigin: ShopOfferAddress;
+  readonly optionKey: string | null;
   readonly offer: ResolvedRewardOffer;
   readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer | null>>;
   readonly levelResolutionsByAcquisitionRole?:

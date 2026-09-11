@@ -153,6 +153,7 @@ function commandContractAddress(
     case 'ReplaceRewardWheelOffer':
       return command.offer;
     case 'ReplaceShopOffer':
+    case 'ReplaceShopOfferOption':
     case 'ReplaceAnvilResult':
       return command.offer;
     case 'SelectDerivedShopEntry':

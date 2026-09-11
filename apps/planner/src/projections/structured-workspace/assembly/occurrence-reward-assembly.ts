@@ -715,15 +715,30 @@ export function controlsForOccurrence(
           );
         }
         const address = createShopOfferAddress(input.biome, occurrence.occurrenceId, offerKey);
+        const control = rewardControl(
+          input,
+          { kind: 'shopOffer', address },
+          undefined,
+          shopOffer.reward?.offer ?? null,
+          shopOffer.reward,
+          group.rewardTypes,
+        );
         controls.push(
-          rewardControl(
-            input,
-            { kind: 'shopOffer', address },
-            undefined,
-            shopOffer.reward?.offer ?? null,
-            shopOffer.reward,
-            group.rewardTypes,
-          ),
+          Object.freeze({
+            ...control,
+            shopOption: Object.freeze({
+              selectedOptionKey: shopOffer.optionKey,
+              options: Object.freeze(
+                group.options.values.map((option) =>
+                  Object.freeze({
+                    key: option.key,
+                    label: option.label,
+                    rewardType: option.rewardType,
+                  }),
+                ),
+              ),
+            }),
+          }),
         );
       }
       break;

@@ -142,7 +142,11 @@ function decodeShopOffers(
     }
     const offerPath = `${path}.offers.${slot.key}`;
     const rawOffer = expectRecord(rawOffers[slot.key], offerPath);
-    expectExactKeys(rawOffer, ['reward', 'anvilResult'], offerPath);
+    expectExactKeys(rawOffer, ['optionKey', 'reward', 'anvilResult'], offerPath);
+    const optionKey =
+      rawOffer.optionKey === null
+        ? null
+        : expectString(rawOffer.optionKey, `${offerPath}.optionKey`);
     const reward = decodeShopInventoryReward(
       rawOffer.reward,
       catalog,
@@ -152,13 +156,25 @@ function decodeShopOffers(
     if (reward === null) {
       if (rawOffer.anvilResult !== undefined)
         failProjectDocument(`${offerPath}.anvilResult`, 'requires a selected Anvil reward');
-      offers[slot.key] = Object.freeze({ reward: null });
+      if (optionKey !== null)
+        failProjectDocument(`${offerPath}.optionKey`, 'requires a selected reward');
+      offers[slot.key] = Object.freeze({ optionKey: null, reward: null });
       continue;
     }
     const offer = reward.offer;
     const group = profile.groups.byKey[slot.groupKey];
     if (group === undefined) {
       failProjectDocument(offerPath, `unknown shop group ${slot.groupKey}`);
+    }
+    const option = optionKey === null ? undefined : group.options.byKey[optionKey];
+    if (optionKey !== null && option === undefined) {
+      failProjectDocument(`${offerPath}.optionKey`, `unknown shop option ${optionKey}`);
+    }
+    if (option !== undefined && option.rewardType !== offer.rewardType) {
+      failProjectDocument(
+        `${offerPath}.optionKey`,
+        `${optionKey} does not produce ${offer.rewardType}`,
+      );
     }
     if (!group.options.values.some((option) => option.rewardType === offer.rewardType)) {
       failProjectDocument(
@@ -173,6 +189,7 @@ function decodeShopOffers(
       `${offerPath}.anvilResult`,
     );
     offers[slot.key] = Object.freeze({
+      optionKey,
       reward,
       ...(anvilResult === undefined ? {} : { anvilResult }),
     });

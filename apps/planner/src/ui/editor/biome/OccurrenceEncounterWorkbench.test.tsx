@@ -53,6 +53,7 @@ import {
   pBiome,
   pOccurrenceId,
   pOccurrenceIds,
+  qOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import {
   renderOccurrenceWorkbench,
@@ -1459,6 +1460,31 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(within(timeline).queryByRole('region', { name: 'Timeline repairs' })).toBeNull();
   });
 
+  it('exposes Boosted Boons as exact I and Q World Shop items', async () => {
+    const underworld = renderOccurrenceWorkbench(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'I',
+      occurrenceById(createOccurrenceId('golden-i-preboss')),
+    );
+    await underworld.user.click(screen.getByRole('button', { name: 'Offer 1 Item' }));
+    expect(
+      within(await screen.findByRole('listbox')).getByRole('group', { name: 'Boosted Boon' }),
+    ).toBeTruthy();
+    cleanup();
+
+    const surface = renderOccurrenceWorkbench(
+      loadSurfaceNOPQProject(),
+      'Surface',
+      'Q',
+      occurrenceById(qOccurrenceIds.preboss),
+    );
+    await surface.user.click(screen.getByRole('button', { name: 'Offer 1 Item' }));
+    const inventory = await screen.findByRole('listbox');
+    expect(within(inventory).getByRole('group', { name: 'Boon' })).toBeTruthy();
+    expect(within(inventory).getByRole('group', { name: 'Boosted Boon' })).toBeTruthy();
+  });
+
   it('authors a World Shop Mystery Boon source only after purchasing it', async () => {
     const view = renderOccurrenceWorkbench(
       loadSurfaceNOPQProject(),
@@ -1468,11 +1494,15 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
 
     await view.user.click(screen.getByRole('button', { name: 'Offer 1 Item' }));
-    await view.user.click(within(await screen.findByRole('listbox')).getByText('Mystery Boon'));
+    await view.user.click(
+      within(await screen.findByRole('listbox')).getByRole('option', { name: 'Mystery Boon' }),
+    );
     expect(screen.queryByText('Eventual God')).toBeNull();
 
-    await view.user.click(screen.getByRole('button', { name: 'Offer 1 Item' }));
-    expect(await screen.findByText('Reward type')).toBeTruthy();
+    const reopenedShopOffer = screen.getByRole('button', { name: 'Offer 1 Item' });
+    expect(reopenedShopOffer.getAttribute('aria-disabled')).toBeNull();
+    await view.user.click(reopenedShopOffer);
+    expect(await screen.findByRole('listbox')).toBeTruthy();
     expect(screen.queryByText('Eventual God')).toBeNull();
     await view.user.keyboard('{Escape}');
 

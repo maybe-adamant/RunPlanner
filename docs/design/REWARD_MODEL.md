@@ -674,7 +674,8 @@ one explicit default. Its authored value is:
 
 ```ts
 interface ShopOfferState {
-  offer: ResolvedRewardOffer;
+  optionKey: string | null;
+  reward: AuthoredRewardState | null;
 }
 
 interface ShopState {
@@ -716,18 +717,19 @@ entries. The normalized slot retains the resolved default offer beside the
 option key that authoritatively selected it.
 
 Entry keys remain distinct when the same reward type appears with different
-requirements. Authored state stores the complete resolved offer in each emitted
-slot, not the randomly selected entry key; simulation validates that at least
-one eligible without-replacement entry assignment explains the authored
-offers.
+requirements or effects. Authored state stores both the exact option key and
+the complete resolved reward in each emitted slot. A null option key is a
+repairable migration state, not a second way to author inventory. Simulation
+validates the exact options jointly against eligibility and without-replacement
+selection.
 
 `RandomLoot` and `BoostedRandomLoot` remain distinct shop-option entries. Both
 resolve the same authored `RandomLoot` plus source shape, but only the boosted
-entry carries its sparse item-owned boon-rarity override. The supporting entry
-stays in the derived `ShopGenerationWitness` so two-offer groups enforce
-without-replacement selection and later trait offers consume the exact item
-context. The reward model does not infer that context from a Shop profile,
-biome name, slot, or entered-biome count.
+entry carries its sparse item-owned boon-rarity override. The authored option
+key selects that identity, the derived `ShopGenerationWitness` confirms it,
+and later trait offers consume the exact item context. The reward model does
+not infer that context from a Shop profile, biome name, slot, or entered-biome
+count.
 
 An empty occurrence `roomActions.order` is complete authored state for an
 optional Shop. Exact `interactShopOffer` references identify the participating
