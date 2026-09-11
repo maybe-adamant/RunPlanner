@@ -12,27 +12,9 @@ export function validateDirectTraitSets(
   traits: CatalogCollection<TraitDeclaration>,
   givers: CatalogCollection<TraitGiverDeclaration>,
 ): void {
-  const expected = [
-    ['earth', 'ElementalDamageBoon', 'ElementalOlympianDamageBoon'],
-    ['fire', 'ElementalBaseDamageBoon', 'ElementalRallyBoon'],
-    ['air', 'ElementalDamageFloorBoon', 'ElementalDodgeBoon'],
-    ['water', 'ElementalHealthBoon', 'ElementalDamageCapBoon'],
-  ] as const;
   for (const trait of traits.values) {
-    if (trait.key === 'AllElementalBoon') {
-      if (trait.selectedDisposition.kind !== 'directTraitSets')
-        fail(`traits.${trait.key}.selectedDisposition`, 'must declare the fixed direct trait sets');
+    if (trait.selectedDisposition.kind === 'directTraitSets') {
       const sets = trait.selectedDisposition.sets;
-      if (
-        sets.length !== expected.length ||
-        expected.some(
-          ([key, first, second], index) =>
-            sets[index]?.key !== key ||
-            sets[index]?.traitKeys[0] !== first ||
-            sets[index]?.traitKeys[1] !== second,
-        )
-      )
-        fail(`traits.${trait.key}.selectedDisposition.sets`, 'must match the source pair matrix');
       for (const set of sets) {
         for (const member of set.traitKeys) {
           const declaration = traits.byKey[member];
@@ -49,35 +31,6 @@ export function validateDirectTraitSets(
             );
         }
       }
-    } else if (trait.selectedDisposition.kind === 'directTraitSets') {
-      fail(
-        `traits.${trait.key}.selectedDisposition`,
-        'direct trait sets are reserved for All Together',
-      );
-    }
-  }
-}
-
-export function validateTravelDeal(traits: CatalogCollection<TraitDeclaration>): void {
-  const expected = { Common: 0.05, Rare: 0.1, Epic: 0.15, Heroic: 0.2 } as const;
-  for (const trait of traits.values) {
-    if (trait.key === 'RestockBoon') {
-      const disposition = trait.selectedDisposition;
-      if (
-        disposition.kind !== 'worldShopRestock' ||
-        disposition.refillCount !== 1 ||
-        Object.entries(expected).some(
-          ([rarity, value]) =>
-            disposition.kind !== 'worldShopRestock' ||
-            disposition.discountByRarity[rarity as keyof typeof expected] !== value,
-        )
-      )
-        fail('traits.RestockBoon.selectedDisposition', 'must match Travel Deal source values');
-    } else if (trait.selectedDisposition.kind === 'worldShopRestock') {
-      fail(
-        `traits.${trait.key}.selectedDisposition`,
-        'worldShopRestock is reserved for RestockBoon',
-      );
     }
   }
 }
@@ -198,5 +151,4 @@ export function validateTraitCatalogClosure(input: {
   readonly givers: CatalogCollection<TraitGiverDeclaration>;
 }): void {
   validateDirectTraitSets(input.traits, input.givers);
-  validateTravelDeal(input.traits);
 }

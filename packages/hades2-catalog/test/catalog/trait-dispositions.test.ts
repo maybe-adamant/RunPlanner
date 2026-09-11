@@ -163,20 +163,6 @@ describe('trait dispositions and requirements compiler owner', () => {
         },
       }),
     ).toThrow(/must declare earth, fire, air, and water in source order/);
-
-    expect(() =>
-      createCatalog({
-        ...declarations,
-        traitCatalog: {
-          ...declarations.traitCatalog,
-          traits: declarations.traitCatalog.traits.map((trait) =>
-            trait.key === 'HeraWeaponBoon'
-              ? ({ ...trait, selectedDisposition: expected } as RawTraitDeclaration)
-              : trait,
-          ),
-        },
-      }),
-    ).toThrow(/direct trait sets are reserved for All Together/);
   });
 
   it('compiler-closes Gold Gold Gold to excluding exactly SpellDrop', () => {

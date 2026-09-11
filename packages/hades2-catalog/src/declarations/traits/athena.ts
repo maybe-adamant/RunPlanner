@@ -105,6 +105,7 @@ export const athenaGiver = {
   label: 'Athena',
   providerKind: 'npc',
   shopAwareGodTrait: true,
+  callingCardMenu: true,
   priorityTraitKeys: [],
   traitKeys: [
     'InvulnerabilityDashBoon',

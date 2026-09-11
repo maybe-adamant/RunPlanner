@@ -153,6 +153,13 @@ construction owns the explicit stage order and returns only the fully closed
 catalog. A local normalizer does not discover cross-collection policy through
 registration, and relational closure does not reconstruct raw declarations.
 
+Raw declaration contracts live beside the declaration family that owns them;
+the root catalog input only aggregates those family products. Catalog, room,
+layout, encounter, and trait assemblers keep construction order visible while
+delegating complete local products to their owning normalizers. Exact source
+tables remain in declarations with focused test attestation; production closure
+repeats only supported-shape and relational invariants needed by consumers.
+
 Compact helpers may remove syntax repetition only when the complete room
 surface remains readable at its declaration point. Avoid metaprogramming that
 requires executing several layers of builders to discover a room's exits,

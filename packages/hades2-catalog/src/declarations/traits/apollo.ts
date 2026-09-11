@@ -522,6 +522,7 @@ export const apolloGiver = {
   label: 'Apollo',
   providerKind: 'olympian',
   shopAwareGodTrait: true,
+  callingCardMenu: true,
   denialParticipates: true,
   priorityTraitKeys: [
     'ApolloWeaponBoon',

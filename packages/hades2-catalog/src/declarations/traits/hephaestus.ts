@@ -389,6 +389,7 @@ export const hephaestusGiver = {
   label: 'Hephaestus',
   providerKind: 'olympian',
   shopAwareGodTrait: true,
+  callingCardMenu: true,
   denialParticipates: true,
   priorityTraitKeys: [
     'HephaestusWeaponBoon',

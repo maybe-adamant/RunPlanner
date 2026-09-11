@@ -441,6 +441,7 @@ export const heraGiver = {
   label: 'Hera',
   providerKind: 'olympian',
   shopAwareGodTrait: true,
+  callingCardMenu: true,
   denialParticipates: true,
   priorityTraitKeys: [
     'HeraWeaponBoon',
