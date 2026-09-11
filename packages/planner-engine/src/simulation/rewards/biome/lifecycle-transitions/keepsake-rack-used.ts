@@ -32,7 +32,7 @@ import {
   applyJeweledPomEquipResult,
   applyOlympianRewardPressureEquip,
   applyMoonBeamEquip,
-} from '../../processing';
+} from '../../../keepsakes/branch-transitions';
 import { rewardFinding } from '../../findings';
 import type { LifecycleFinding } from './types';
 import type { PlannerTimelineFacts } from '../../../timeline-facts';

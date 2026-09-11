@@ -21,7 +21,7 @@ import { createBiomeRewardFacts } from '../../facts';
 import { historyFindingChronology, rewardFindingChronologyForRoom } from '../finding-chronology';
 import { addRewardFinding, rewardFinding } from '../../findings';
 import type { RewardLifecycleReferences } from '../prepared-inputs';
-import { processRewardOffer } from '../../processing';
+import { processRewardOffer } from '../../offer-generation';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
 import { localRewardBinding } from '../room-reward-bindings';
 

@@ -20,7 +20,7 @@ import { createBiomeRewardFacts } from '../../facts';
 import { addRewardFinding, rewardFinding } from '../../findings';
 import type { ResolvedRewardOffer, RewardHistoryState } from '../../../../reward-kernel';
 import type { RewardBranchState } from '../../branch-primitives';
-import { processOfferGenerationCohort } from '../../processing';
+import { processOfferGenerationCohort } from '../../offer-generation';
 import { settleOwnedAcquisitionSite, type AcquisitionSource } from '../../acquisition-settlement';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { ShipLifecycleCandidateContext } from '../../lifecycle-artifacts';

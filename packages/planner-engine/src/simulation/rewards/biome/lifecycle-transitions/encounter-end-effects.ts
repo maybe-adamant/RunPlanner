@@ -43,7 +43,7 @@ import {
 import { clockedTraitGeneratedPickupEntryKey } from '../../../../authored-project/pickup-producers';
 import type { DerivedAcquisitionEntryFrontier } from '../../acquisition-settlement';
 import type { RewardBranchState } from '../../branch-primitives';
-import { advanceRewardBranches } from '../../processing';
+import { advanceRewardBranches } from '../../branch-lifecycle';
 import { rewardFinding } from '../../findings';
 import type { ReachedTraitChildCheckpoint } from '../../trait-settlement';
 import type { LifecycleFinding } from './types';

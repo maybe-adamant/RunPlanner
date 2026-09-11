@@ -8,7 +8,7 @@ import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import {
   initializeRewardBranches,
   publicRewardBranch,
-} from '../../src/simulation/rewards/processing';
+} from '../../src/simulation/rewards/branch-lifecycle';
 
 function predecessorBranch() {
   const loadout = createDefaultRouteLoadout(catalog);

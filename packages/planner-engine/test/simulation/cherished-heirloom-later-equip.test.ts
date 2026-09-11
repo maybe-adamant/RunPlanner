@@ -26,9 +26,11 @@ import { simulateProject } from '../../src/simulation/project';
 import {
   applyExperimentalHammerEquipResult,
   applyJeweledPomEquipResult,
+} from '../../src/simulation/keepsakes/branch-transitions';
+import {
   initializeRewardBranches,
   publicRewardBranch,
-} from '../../src/simulation/rewards/processing';
+} from '../../src/simulation/rewards/branch-lifecycle';
 import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';

@@ -17,7 +17,7 @@ import {
 } from '../../src/simulation/traits';
 import { createTestArcanaFearState } from '../support/arcana-fear';
 import { maybeAddGodSent } from '../../src/simulation/hex-progress';
-import { initializeRewardBranches } from '../../src/simulation/rewards/processing';
+import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 
 describe('selected trait products', () => {

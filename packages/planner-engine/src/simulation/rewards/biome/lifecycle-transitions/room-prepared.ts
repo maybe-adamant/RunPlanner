@@ -1,5 +1,5 @@
 import type { HistoryEvent } from '../../../history';
-import { beginRewardRoom } from '../../processing';
+import { beginRewardRoom } from '../../branch-lifecycle';
 import type { RewardBranchState } from '../../branch-primitives';
 
 /** The room-preparation lifecycle transition has no emitted artifacts. */

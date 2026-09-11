@@ -21,12 +21,14 @@ import {
 } from '../../src/simulation/keepsakes';
 import {
   consumeOlympianProviderForReachedOffer,
-  initializeRewardBranches,
-  applyOlympianRewardPressureEquip,
   processOfferGenerationCohort,
   processRewardOffer,
+} from '../../src/simulation/rewards/offer-generation';
+import { applyOlympianRewardPressureEquip } from '../../src/simulation/keepsakes/branch-transitions';
+import {
+  initializeRewardBranches,
   publicRewardBranch,
-} from '../../src/simulation/rewards/processing';
+} from '../../src/simulation/rewards/branch-lifecycle';
 import { appendRewardEvent } from '../../src/simulation/rewards/branch-primitives';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition-settlement';
 

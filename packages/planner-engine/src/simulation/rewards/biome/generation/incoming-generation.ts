@@ -15,7 +15,7 @@ import {
   processRewardOffer,
   type OfferProcessingContext,
   type OfferProcessingPeer,
-} from '../../processing';
+} from '../../offer-generation';
 import { settleProducerAcquisitionSite } from '../../acquisition-settlement';
 import {
   createRewardProducerCandidateResult,

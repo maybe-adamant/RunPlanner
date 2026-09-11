@@ -54,7 +54,7 @@ import {
   replaceTestRoomActionOrder,
 } from '@run-planner/test-fixtures/shared';
 import { createGoldenFGHProject, goldenHStartId } from '@run-planner/test-fixtures/underworld';
-import { initializeRewardBranches } from '../../../../src/simulation/rewards/processing';
+import { initializeRewardBranches } from '../../../../src/simulation/rewards/branch-lifecycle';
 
 const biome = createBiomeAddress('Underworld', 'H');
 

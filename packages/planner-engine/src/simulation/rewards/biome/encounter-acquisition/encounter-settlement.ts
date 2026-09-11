@@ -42,7 +42,8 @@ import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { GorgonPhaseCandidateSupport, NemesisRandomEventCandidateSupport } from '../../model';
 import type { RewardBranchState } from '../../branch-primitives';
-import { advanceRewardBranches, consumeOlympianProviderForReachedOffer } from '../../processing';
+import { advanceRewardBranches } from '../../branch-lifecycle';
+import { consumeOlympianProviderForReachedOffer } from '../../offer-generation';
 import {
   settleOwnedAcquisitionSite,
   withStoredArtificerReplacements,

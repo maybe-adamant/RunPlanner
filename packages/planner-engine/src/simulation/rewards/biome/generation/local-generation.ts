@@ -15,7 +15,7 @@ import {
   consumeOlympianProviderForReachedOffer,
   processRewardOffer,
   type OfferProcessingPeer,
-} from '../../processing';
+} from '../../offer-generation';
 import { localRewardBinding } from '../room-reward-bindings';
 import {
   createRewardProducerCandidateResult,

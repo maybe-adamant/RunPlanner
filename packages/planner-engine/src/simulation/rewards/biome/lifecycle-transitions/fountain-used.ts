@@ -11,7 +11,7 @@ import {
   createTraitHistoryState,
   settleFountainRarityMutation,
 } from '../../../traits';
-import { advanceRewardBranches } from '../../processing';
+import { advanceRewardBranches } from '../../branch-lifecycle';
 import type { RewardBranchState } from '../../branch-primitives';
 import { rewardFinding } from '../../findings';
 import { type FountainRarityCandidateCapability } from '../../../keepsakes/candidate-artifacts';

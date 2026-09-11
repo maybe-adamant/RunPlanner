@@ -19,7 +19,7 @@ import {
   keepsakeRankForEquip,
   type KeepsakeState,
 } from '../../src/simulation/keepsakes';
-import { initializeRewardBranches } from '../../src/simulation/rewards/processing';
+import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
 import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { evaluateProgressiveBiomeAssembly } from '../../src/simulation/progressive/biome';

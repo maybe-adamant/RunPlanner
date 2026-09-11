@@ -35,11 +35,11 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { evaluateKeepsakeEquipResultCandidate } from '../../src/simulation/candidates/keepsake-equip-result';
+import { applyExperimentalHammerEquipResult } from '../../src/simulation/keepsakes/branch-transitions';
 import {
-  applyExperimentalHammerEquipResult,
   initializeRewardBranches,
   publicRewardBranch,
-} from '../../src/simulation/rewards/processing';
+} from '../../src/simulation/rewards/branch-lifecycle';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createKeepsakeState } from '../../src/simulation/keepsakes';
 
