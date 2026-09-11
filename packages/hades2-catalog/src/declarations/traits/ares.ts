@@ -485,6 +485,7 @@ export const aresGiver = {
   label: 'Ares',
   providerKind: 'olympian',
   shopAwareGodTrait: true,
+  callingCardMenu: true,
   denialParticipates: true,
   priorityTraitKeys: [
     'AresWeaponBoon',

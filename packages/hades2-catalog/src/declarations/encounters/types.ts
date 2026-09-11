@@ -3,7 +3,7 @@ import type {
   EncounterPhaseKind,
 } from '@run-planner/engine/catalog-schema';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
-import type { RawCountedRewardBinding } from '../rooms/types';
+import type { RawCountedRewardBinding } from '../rewards/types';
 
 export interface RawEncounterRewardWheelAttachment {
   readonly kind: 'rewardWheel';

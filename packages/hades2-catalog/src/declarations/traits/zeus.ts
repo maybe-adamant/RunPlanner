@@ -325,6 +325,7 @@ export const zeusGiver = {
   label: 'Zeus',
   providerKind: 'olympian',
   shopAwareGodTrait: true,
+  callingCardMenu: true,
   denialParticipates: true,
   priorityTraitKeys: [
     'ZeusWeaponBoon',

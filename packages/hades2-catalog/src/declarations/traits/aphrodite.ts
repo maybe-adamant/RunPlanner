@@ -518,6 +518,7 @@ export const aphroditeGiver = {
   label: 'Aphrodite',
   providerKind: 'olympian',
   shopAwareGodTrait: true,
+  callingCardMenu: true,
   denialParticipates: true,
   priorityTraitKeys: [
     'AphroditeWeaponBoon',

@@ -17,22 +17,6 @@ import { fail } from './errors';
 import { normalizeBoonRarityRollOrder } from './trait-offer-catalog';
 import type { RawTraitCatalogInput, RawTraitGiverDeclaration } from '../declarations/traits';
 
-const CALLING_CARD_GIVERS = new Set([
-  'Zeus',
-  'Hera',
-  'Poseidon',
-  'Demeter',
-  'Apollo',
-  'Aphrodite',
-  'Hephaestus',
-  'Hestia',
-  'Ares',
-  'Hermes',
-  'Artemis',
-  'Athena',
-  'Dionysus',
-]);
-
 function closedValue<const Values extends readonly string[]>(
   value: unknown,
   values: Values,
@@ -59,6 +43,7 @@ export function normalizeGivers(
       'label',
       'providerKind',
       'shopAwareGodTrait',
+      'callingCardMenu',
       'traitKeys',
       'priorityTraitKeys',
       'rarityPolicy',
@@ -72,6 +57,8 @@ export function normalizeGivers(
       requireBoolean(giver.denialParticipates, `${path}.denialParticipates`);
     if (giver.shopAwareGodTrait !== undefined)
       requireBoolean(giver.shopAwareGodTrait, `${path}.shopAwareGodTrait`);
+    if (giver.callingCardMenu !== undefined)
+      requireBoolean(giver.callingCardMenu, `${path}.callingCardMenu`);
     if (giver.selectedOptionPathPointBonuses !== undefined) {
       if (
         giver.key !== 'SpellDrop' ||
@@ -216,7 +203,7 @@ export function normalizeGivers(
       label: requireNonEmpty(giver.label, `${path}.label`),
       providerKind,
       shopAwareGodTrait: giver.shopAwareGodTrait === true,
-      callingCardMenu: CALLING_CARD_GIVERS.has(requireNonEmpty(giver.key, `${path}.key`)),
+      callingCardMenu: giver.callingCardMenu === true,
       traitKeys,
       priorityTraitKeys,
       rarityPolicy: frozenRarityPolicy,
@@ -236,32 +223,6 @@ export function normalizeGivers(
           }),
     });
   });
-  const denialKeys = values.filter((giver) => giver.denialParticipates).map((giver) => giver.key);
-  const expectedDenialKeys = [
-    'Aphrodite',
-    'Apollo',
-    'Ares',
-    'Demeter',
-    'Hephaestus',
-    'Hera',
-    'Hestia',
-    'Poseidon',
-    'Zeus',
-    'Hermes',
-  ];
-  const expectedDenialKeySet = new Set(expectedDenialKeys);
-  const actualDenialKeySet = new Set(denialKeys);
-  const missingDenialKeys = expectedDenialKeys.filter((key) => !actualDenialKeySet.has(key));
-  const unexpectedDenialKeys = denialKeys.filter((key) => !expectedDenialKeySet.has(key));
-  if (
-    denialKeys.length !== expectedDenialKeys.length ||
-    missingDenialKeys.length > 0 ||
-    unexpectedDenialKeys.length > 0
-  )
-    fail(
-      'givers',
-      `Denial participants must be exactly the nine Olympians and Hermes (missing: ${missingDenialKeys.join(',') || 'none'}; unexpected: ${unexpectedDenialKeys.join(',') || 'none'})`,
-    );
   for (const giver of values) {
     if (
       giver.denialParticipates &&

@@ -470,6 +470,7 @@ export const demeterGiver = {
   label: 'Demeter',
   providerKind: 'olympian',
   shopAwareGodTrait: true,
+  callingCardMenu: true,
   denialParticipates: true,
   priorityTraitKeys: [
     'DemeterWeaponBoon',

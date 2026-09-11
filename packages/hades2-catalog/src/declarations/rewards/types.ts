@@ -15,6 +15,35 @@ import type {
 
 export type RawPayloadDomainDeclaration = PayloadDomainDeclaration;
 
+export interface RawCountedRewardBinding {
+  readonly kind: 'countedChoice';
+  readonly storeKeys: readonly string[];
+  readonly eligibleRewardTypes: readonly string[];
+  readonly ineligibleRewardTypes: readonly string[];
+  readonly producerLifecycleKey: string;
+}
+
+export interface RawFixedRewardBinding {
+  readonly kind: 'fixed';
+  readonly rewardType: string;
+  readonly producerLifecycleKey: string;
+}
+
+export interface RawNoneRewardBinding {
+  readonly kind: 'none';
+}
+
+export interface RawShopRewardBinding {
+  readonly kind: 'shop';
+  readonly rewardType: 'Shop';
+  readonly shopProfileKey: string;
+  readonly producerLifecycleKey: string;
+  readonly additionalOptionRequirements?: Readonly<Record<string, RequirementExpression>>;
+}
+
+export type RawRewardProducerBinding =
+  RawCountedRewardBinding | RawFixedRewardBinding | RawNoneRewardBinding | RawShopRewardBinding;
+
 export interface RawConcreteAcquisitionDeclaration {
   readonly gameName: string;
   readonly kind: AcquisitionKind;

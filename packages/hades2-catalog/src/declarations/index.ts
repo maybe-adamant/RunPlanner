@@ -70,16 +70,18 @@ export type { RawBiomeLayoutDeclaration, RawProgressionDeclaration } from './lay
 export type { RawRoomLifecycleProfileDeclaration } from './lifecycles/types';
 export type {
   RawAdditionalExitDeclaration,
-  RawCountedRewardBinding,
-  RawFixedRewardBinding,
   RawLocalChildDescriptor,
-  RawNoneRewardBinding,
   RawPrebossBatchPolicy,
-  RawRewardProducerBinding,
   RawRoomDeclaration,
   RawRoomOfferRewardBinding,
-  RawShopRewardBinding,
   RawZagreusContractAdditionalExitDeclaration,
 } from './rooms/types';
+export type {
+  RawCountedRewardBinding,
+  RawFixedRewardBinding,
+  RawNoneRewardBinding,
+  RawRewardProducerBinding,
+  RawShopRewardBinding,
+} from './rewards/types';
 export type { RawTraitCatalogInput } from './traits';
 export type { RawHexDeclaration } from './traits';

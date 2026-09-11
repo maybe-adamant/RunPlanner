@@ -13,41 +13,13 @@ import type {
 import type { EnteredRewardStoreHistoryPolicy } from '@run-planner/engine/reward-kernel';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type { RawEncounterSlotBinding } from '../encounters/types';
-
-export interface RawCountedRewardBinding {
-  readonly kind: 'countedChoice';
-  readonly storeKeys: readonly string[];
-  readonly eligibleRewardTypes: readonly string[];
-  readonly ineligibleRewardTypes: readonly string[];
-  readonly producerLifecycleKey: string;
-}
-
-export interface RawFixedRewardBinding {
-  readonly kind: 'fixed';
-  readonly rewardType: string;
-  readonly producerLifecycleKey: string;
-}
-
-export interface RawNoneRewardBinding {
-  readonly kind: 'none';
-}
-
-export interface RawShopRewardBinding {
-  readonly kind: 'shop';
-  readonly rewardType: 'Shop';
-  readonly shopProfileKey: string;
-  readonly producerLifecycleKey: string;
-  readonly additionalOptionRequirements?: Readonly<Record<string, RequirementExpression>>;
-}
+import type { RawCountedRewardBinding, RawRewardProducerBinding } from '../rewards/types';
 
 /** Raw declaration override for a room-owned non-incoming reward group. */
 export interface RawRoomOfferRewardBinding {
   readonly kind: 'localRewardGroup';
   readonly groupKey: string;
 }
-
-export type RawRewardProducerBinding =
-  RawCountedRewardBinding | RawFixedRewardBinding | RawNoneRewardBinding | RawShopRewardBinding;
 
 export type RawPrebossBatchPolicy =
   | {

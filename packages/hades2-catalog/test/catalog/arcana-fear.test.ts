@@ -148,22 +148,11 @@ describe('Arcana and Fear catalog', () => {
         traitCatalog: {
           ...declarations.traitCatalog,
           givers: declarations.traitCatalog.givers.map((giver) =>
-            giver.key === 'Hermes' ? { ...giver, denialParticipates: false } : giver,
-          ),
-        },
-      }),
-    ).toThrow(/missing: Hermes/);
-    expect(() =>
-      createCatalog({
-        ...declarations,
-        traitCatalog: {
-          ...declarations.traitCatalog,
-          givers: declarations.traitCatalog.givers.map((giver) =>
             giver.key === 'Medea' ? { ...giver, denialParticipates: true } : giver,
           ),
         },
       }),
-    ).toThrow(/unexpected: Medea/);
+    ).toThrow(/requires an Olympian or Hermes giver/);
     expect(() =>
       createCatalog({
         ...declarations,

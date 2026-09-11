@@ -315,6 +315,7 @@ export const hestiaGiver = {
   label: 'Hestia',
   providerKind: 'olympian',
   shopAwareGodTrait: true,
+  callingCardMenu: true,
   denialParticipates: true,
   priorityTraitKeys: [
     'HestiaWeaponBoon',

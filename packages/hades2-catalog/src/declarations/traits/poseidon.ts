@@ -312,6 +312,7 @@ export const poseidonGiver = {
   label: 'Poseidon',
   providerKind: 'olympian',
   shopAwareGodTrait: true,
+  callingCardMenu: true,
   denialParticipates: true,
   priorityTraitKeys: [
     'PoseidonWeaponBoon',

@@ -130,6 +130,7 @@ export const artemisGiver = {
   label: 'Artemis',
   providerKind: 'npc',
   shopAwareGodTrait: true,
+  callingCardMenu: true,
   priorityTraitKeys: [],
   traitKeys: [
     'SupportingFireBoon',
