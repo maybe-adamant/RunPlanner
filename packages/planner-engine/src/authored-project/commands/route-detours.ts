@@ -1,6 +1,5 @@
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import { createInitialExitDecision } from '../batchState';
-import type { ExitDecisionSourceAddress } from '../addresses';
 import type {
   AnomalyReplacementProvenance,
   AnomalyRoomState,
@@ -8,7 +7,6 @@ import type {
   BiomeTopology,
   IxionGeneratedChaosOrigin,
   ExitDecision,
-  ExitDecisionSource,
   ExitSelection,
   OccurrenceId,
   ProjectDocument,
@@ -23,6 +21,7 @@ import {
   selectedExitKey,
   selectedOrdinaryBatchIndex,
 } from '../topology/query';
+import { sameExitDecisionSource } from '../topology/source-identity';
 import { applyTopologyRemovalImpact, describeTopologyRemovalImpact } from '../topologyImpact';
 import { createDefaultRoomActionState } from '../room-actions';
 import {
@@ -35,26 +34,15 @@ import {
 } from './contract';
 import { replaceOccurrence } from './occurrence-mutation';
 import { reconcileNormalTargetEntryStates } from './selection-state';
-import { reconcileExitDecisionToDeclaredCapacity } from './topology';
+import { reconcileExitDecisionToDeclaredCapacity } from './topology-reconciliation';
 import type { RouteDetourCommand } from './types';
-
-function sourceEquals(left: ExitDecisionSource, right: ExitDecisionSourceAddress): boolean {
-  if (left.kind === 'occurrence' && right.kind === 'occurrence') {
-    return left.occurrenceId === right.occurrenceId;
-  }
-  return (
-    left.kind === 'hubDecision' &&
-    right.kind === 'hubDecision' &&
-    left.decisionKey === right.decisionKey
-  );
-}
 
 function replaceDecision(topology: BiomeTopology, replacement: ExitDecision): BiomeTopology {
   return Object.freeze({
     ...topology,
     decisions: Object.freeze(
       topology.decisions.map((decision) =>
-        decision.kind === 'exit' && sourceEquals(decision.source, replacement.source)
+        decision.kind === 'exit' && sameExitDecisionSource(decision.source, replacement.source)
           ? replacement
           : decision,
       ),

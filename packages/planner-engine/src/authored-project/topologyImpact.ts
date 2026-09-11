@@ -5,6 +5,7 @@ import type {
   HubDecision,
   OccurrenceId,
 } from './model';
+import { exitDecisionSourceKey } from './topology/source-identity';
 
 /**
  * The command authority owns the structural consequences of removing one or
@@ -15,12 +16,6 @@ export interface TopologyRemovalImpact {
   readonly removedExitDecisionSources: readonly ExitDecisionSource[];
   readonly removedHubDecisionKeys: readonly string[];
   readonly removedOccurrenceIds: readonly OccurrenceId[];
-}
-
-function sourceKey(source: ExitDecisionSource): string {
-  return source.kind === 'occurrence'
-    ? `occurrence:${source.occurrenceId}`
-    : `hubDecision:${source.decisionKey}`;
 }
 
 function targetsForDecision(
@@ -51,7 +46,7 @@ function exitSourceIsRemoved(
   removedHubDecisionKeys: ReadonlySet<string>,
 ): boolean {
   return (
-    removedSourceKeys.has(sourceKey(source)) ||
+    removedSourceKeys.has(exitDecisionSourceKey(source)) ||
     (source.kind === 'occurrence' && removedOccurrences.has(source.occurrenceId)) ||
     (source.kind === 'hubDecision' && removedHubDecisionKeys.has(source.decisionKey))
   );
@@ -109,8 +104,8 @@ function collectTopologyRemovalClosure(
       ) {
         continue;
       }
-      if (!removedSourceKeys.has(sourceKey(decision.source))) {
-        removedSourceKeys.add(sourceKey(decision.source));
+      if (!removedSourceKeys.has(exitDecisionSourceKey(decision.source))) {
+        removedSourceKeys.add(exitDecisionSourceKey(decision.source));
         changed = true;
       }
       for (const occurrenceId of targetsForDecision(topology, decision)) {
@@ -181,7 +176,7 @@ function impactFor(
     removedExitDecisionSources: Object.freeze(
       topology.decisions.flatMap((decision) =>
         decision.kind === 'exit' &&
-        (removedSourceKeys.has(sourceKey(decision.source)) ||
+        (removedSourceKeys.has(exitDecisionSourceKey(decision.source)) ||
           (decision.source.kind === 'hubDecision' &&
             removedHubDecisionKeys.has(decision.source.decisionKey)))
           ? [decision.source]
@@ -253,7 +248,7 @@ export function describeHubSlotClosureImpact(
         decision.source.decisionKey === hubKey,
     );
     if (handoff !== undefined) {
-      removedExitDecisionSources.add(sourceKey(handoff.source));
+      removedExitDecisionSources.add(exitDecisionSourceKey(handoff.source));
     }
   }
   const closure = collectTopologyRemovalClosure(topology, {
@@ -280,7 +275,7 @@ export function describeClearTopologyImpact(topology: BiomeTopology): TopologyRe
     new Set(topology.occurrences.map((occurrence) => occurrence.occurrenceId)),
     new Set(
       topology.decisions.flatMap((decision) =>
-        decision.kind === 'exit' ? [sourceKey(decision.source)] : [],
+        decision.kind === 'exit' ? [exitDecisionSourceKey(decision.source)] : [],
       ),
     ),
     new Set(
@@ -302,12 +297,13 @@ export function describeExitDecisionRemovalImpact(
 ): TopologyRemovalImpact | undefined {
   const root = topology.decisions.find(
     (decision): decision is ExitDecision =>
-      decision.kind === 'exit' && sourceKey(decision.source) === sourceKey(source),
+      decision.kind === 'exit' &&
+      exitDecisionSourceKey(decision.source) === exitDecisionSourceKey(source),
   );
   if (root === undefined) return undefined;
 
   const closure = collectTopologyRemovalClosure(topology, {
-    exitDecisionSources: new Set([sourceKey(root.source)]),
+    exitDecisionSources: new Set([exitDecisionSourceKey(root.source)]),
   });
   return impactFor(
     topology,
@@ -347,7 +343,7 @@ export function describeHubDecisionRemovalImpact(
 export function topologyRemovalSourceKeys(
   sources: readonly ExitDecisionSource[],
 ): ReadonlySet<string> {
-  return new Set(sources.map(sourceKey));
+  return new Set(sources.map(exitDecisionSourceKey));
 }
 
 /** Applies an already-described topology removal without rediscovering its scope. */
@@ -382,7 +378,7 @@ export function applyTopologyRemovalImpact(
           );
         }
         return (
-          !removedSources.has(sourceKey(decision.source)) &&
+          !removedSources.has(exitDecisionSourceKey(decision.source)) &&
           !(
             decision.source.kind === 'hubDecision' &&
             removedHubDecisionKeys.has(decision.source.decisionKey)

@@ -153,6 +153,52 @@ describe('topology structural codec', () => {
     });
   });
 
+  it('reports the exit-decision attachment contact before a later malformed attachment', () => {
+    const encoded = encodedTopology(incompleteZagreusEnvelopeProject(), 'Underworld', 'F');
+    const decisionIndex = encoded.topology.decisions.findIndex(
+      (decision) =>
+        decision.kind === 'exit' &&
+        (decision.source as { occurrenceId?: string }).occurrenceId === 'zagreus-shop',
+    );
+    const shop = encoded.topology.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === 'zagreus-shop',
+    );
+    const contract = encoded.topology.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === 'zagreus-contract',
+    );
+    if (decisionIndex < 0 || shop === undefined || contract === undefined) {
+      throw new Error('missing Zagreus attachment witnesses');
+    }
+    shop.additionalExits = [{ kind: 'unknown', key: 'chaos', occurrenceId: 'zagreus-contract' }];
+    contract.additionalExits = [{ kind: 'unknown', key: 'chaos', occurrenceId: 'zagreus-shop' }];
+
+    expectDocumentError(encoded.document, {
+      path: `${encoded.path}.decisions[${decisionIndex}].source.occurrenceId.additionalExits[0].kind`,
+      detail: 'unknown additional exit unknown',
+    });
+  });
+
+  it('does not eagerly decode attachments before rejecting an invalid start', () => {
+    const encoded = encodedTopology(incompleteZagreusEnvelopeProject(), 'Underworld', 'F');
+    const start = encoded.topology.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === encoded.topology.startOccurrenceId,
+    );
+    const shop = encoded.topology.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === 'zagreus-shop',
+    );
+    if (start === undefined || shop === undefined) {
+      throw new Error('missing Zagreus start witnesses');
+    }
+    const startIndex = encoded.topology.occurrences.indexOf(start);
+    start.gameName = 'Unknown_Start';
+    shop.additionalExits = [{ kind: 'unknown', key: 'chaos', occurrenceId: 'zagreus-contract' }];
+
+    expectDocumentError(encoded.document, {
+      path: `${encoded.path}.occurrences[${startIndex}].gameName`,
+      detail: 'unknown room Unknown_Start',
+    });
+  });
+
   it.each([
     ['H', completeHProject, 5, 9],
     ['O', completeOProject, 7, 7],
