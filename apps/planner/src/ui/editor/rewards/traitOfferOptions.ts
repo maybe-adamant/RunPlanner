@@ -44,12 +44,10 @@ export function selectedTraitOutcomeDraftComplete(
   const option = offer.options[optionIndex(offer.selectedOptionKey)];
   if (option === undefined) return false;
   return (
-    (domain.traitAcquisitionTarget === undefined || option.targetTraitKey !== undefined) &&
+    domain.children.every((child) => child.child.authoredComplete) &&
     (domain.circeResolution === undefined || option.circeResolution !== undefined) &&
     (domain.echoPomTarget === undefined || Object.hasOwn(option, 'echoPomTarget')) &&
     (domain.echoLastRunBoon === undefined || option.echoLastRunBoon !== undefined) &&
-    (domain.allTogetherSets === undefined || option.allTogetherResult !== undefined) &&
-    (domain.naturalSelection === undefined || option.naturalSelectionTargets !== undefined) &&
     (domain.hexTree === undefined || offer.hexTree !== undefined) &&
     (domain.concaveStone === undefined || domain.concaveStone.completeFor(offer))
   );

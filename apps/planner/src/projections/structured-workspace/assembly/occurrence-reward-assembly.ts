@@ -2,7 +2,6 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
-  createAllTogetherSetAddress,
   createCirceResolutionAddress,
   createEchoLastRewardAddress,
   createEchoLastRunBoonAddress,
@@ -11,18 +10,17 @@ import {
   createIncomingRewardAddress,
   createLevelResolutionAddress,
   createLocalRewardAddress,
-  createNaturalSelectionResultAddress,
   createNemesisRandomEventAddress,
   createOccurrenceAddress,
   createRewardWheelOfferAddress,
   createShopOfferAddress,
-  createTraitAcquisitionTargetAddress,
   createTraitOfferAddress,
   echoLastRewardPickupEntryKey,
   materializeGorgonAthenaOffer,
   nemesisGeneratedPickupSiteKey,
   semanticAddressKey,
   traitOfferOption,
+  discoverAuthoredTraitCarrierChildren,
   type AcquisitionEntryAddress,
   type AcquisitionSiteAddress,
   type AuthoredRewardState,
@@ -69,7 +67,7 @@ import {
   type WorkspaceAcquisitionConversionControl,
   type WorkspaceLevelResolutionControl,
   type WorkspaceMarker,
-  type WorkspaceNaturalSelectionControl,
+  type WorkspaceTraitCarrierChildControl,
   type WorkspaceRewardControl,
   type WorkspaceTraitOfferControl,
   type WorkspaceTraitOfferStatus,
@@ -86,6 +84,19 @@ export interface WorkspaceOccurrenceProjectionFacts {
   readonly chaosPlacement?: ChaosCandidateCapability;
   readonly chaosGateForced: boolean;
   readonly zagreusContractPlacement?: ZagreusContractCandidateCapability;
+}
+
+function traitCarrierChildren(
+  catalog: Catalog,
+  address: TraitOfferAddress,
+  offer: AuthoredTraitOffer,
+  markerDestinations: WorkspaceMarkerDestinationEmitter,
+): readonly WorkspaceTraitCarrierChildControl[] {
+  return Object.freeze(
+    discoverAuthoredTraitCarrierChildren(catalog, address, offer).map((child) =>
+      Object.freeze({ ...child, marker: markerDestinations.marker(child.address) }),
+    ),
+  );
 }
 
 export type WorkspaceDerivedAcquisitionEntry = {
@@ -202,6 +213,7 @@ function traitOfferControls(
           giver,
           marker,
           offer: null,
+          children: Object.freeze([]),
           rewardOwner: owner.address,
           status: traitOfferStatus(marker, null),
         }),
@@ -219,23 +231,6 @@ function traitOfferControls(
       selected === undefined
         ? undefined
         : input.catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
-    const traitAcquisitionTarget =
-      offer.kind !== 'traits' ||
-      selected === undefined ||
-      input.catalog.traits.byKey[selected.traitKey]?.targetedAcquisition === undefined
-        ? undefined
-        : (() => {
-            const targetAddress = createTraitAcquisitionTargetAddress(
-              address,
-              offer.selectedOptionKey,
-            );
-            return Object.freeze({
-              address: targetAddress,
-              marker: input.markerDestinations.marker(targetAddress),
-              optionKey: offer.selectedOptionKey,
-              ...(selected.targetTraitKey === undefined ? {} : { value: selected.targetTraitKey }),
-            });
-          })();
     const circeResolution =
       offer.kind !== 'traits' || selectedDisposition?.kind !== 'circe'
         ? undefined
@@ -247,42 +242,6 @@ function traitOfferControls(
             optionKey: offer.selectedOptionKey,
             ...(selected?.circeResolution === undefined ? {} : { value: selected.circeResolution }),
           });
-    const allTogetherSets =
-      offer.kind !== 'traits' || selectedDisposition?.kind !== 'directTraitSets'
-        ? undefined
-        : Object.freeze(
-            selectedDisposition.sets.map((set) => {
-              const setAddress = createAllTogetherSetAddress(
-                address,
-                offer.selectedOptionKey,
-                set.key,
-              );
-              return Object.freeze({
-                address: setAddress,
-                marker: input.markerDestinations.marker(setAddress),
-                optionKey: offer.selectedOptionKey,
-                setKey: set.key,
-                ...(selected?.allTogetherResult === undefined
-                  ? {}
-                  : { value: selected.allTogetherResult[set.key] }),
-              });
-            }),
-          );
-    const naturalSelection =
-      offer.kind !== 'traits' || selectedDisposition?.kind !== 'naturalSelection'
-        ? undefined
-        : (() => {
-            const naturalAddress = createNaturalSelectionResultAddress(
-              address,
-              offer.selectedOptionKey,
-            );
-            return Object.freeze({
-              address: naturalAddress,
-              marker: input.markerDestinations.marker(naturalAddress),
-              optionKey: offer.selectedOptionKey,
-              slotCount: selectedDisposition.levelCount,
-            }) satisfies WorkspaceNaturalSelectionControl;
-          })();
     const concaveStone =
       offer.kind !== 'traits' ||
       input.catalog.traitGivers.byKey[giverKey]?.shopAwareGodTrait !== true
@@ -313,12 +272,10 @@ function traitOfferControls(
         giver,
         marker,
         offer,
+        children: traitCarrierChildren(input.catalog, address, offer, input.markerDestinations),
         rewardOwner: owner.address,
         status: traitOfferStatus(marker, offer),
-        ...(traitAcquisitionTarget === undefined ? {} : { traitAcquisitionTarget }),
         ...(circeResolution === undefined ? {} : { circeResolution }),
-        ...(allTogetherSets === undefined ? {} : { allTogetherSets }),
-        ...(naturalSelection === undefined ? {} : { naturalSelection }),
         ...(concaveStone === undefined ? {} : { concaveStone }),
         ...(hexTree === undefined ? {} : { hexTree }),
       }),
@@ -946,6 +903,15 @@ export function activeEncounterPhasesForOwner(
             giver: gorgonGiver,
             marker: gorgonTraitMarker,
             offer: gorgonResult.athenaOffer === null ? null : gorgonAthenaOffer!,
+            children:
+              gorgonResult.athenaOffer === null
+                ? Object.freeze([])
+                : traitCarrierChildren(
+                    input.catalog,
+                    gorgonTraitAddress,
+                    gorgonAthenaOffer!,
+                    input.markerDestinations,
+                  ),
             rarityEditable: false,
             rewardOwner: gorgonPhaseAddress,
             status: traitOfferStatus(
@@ -970,6 +936,7 @@ export function activeEncounterPhasesForOwner(
                 giver,
                 marker,
                 offer: null,
+                children: Object.freeze([]),
                 rewardOwner: address,
                 status: traitOfferStatus(marker, null),
               });
@@ -982,25 +949,6 @@ export function activeEncounterPhasesForOwner(
               selected === undefined
                 ? undefined
                 : input.catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
-            const traitAcquisitionTarget =
-              authoredTraitOffer.kind !== 'traits' ||
-              selected === undefined ||
-              input.catalog.traits.byKey[selected.traitKey]?.targetedAcquisition === undefined
-                ? undefined
-                : (() => {
-                    const targetAddress = createTraitAcquisitionTargetAddress(
-                      traitAddress,
-                      authoredTraitOffer.selectedOptionKey,
-                    );
-                    return Object.freeze({
-                      address: targetAddress,
-                      marker: input.markerDestinations.marker(targetAddress),
-                      optionKey: authoredTraitOffer.selectedOptionKey,
-                      ...(selected.targetTraitKey === undefined
-                        ? {}
-                        : { value: selected.targetTraitKey }),
-                    });
-                  })();
             const circeResolution =
               authoredTraitOffer.kind !== 'traits' || selectedDisposition?.kind !== 'circe'
                 ? undefined
@@ -1117,9 +1065,14 @@ export function activeEncounterPhasesForOwner(
               giver,
               marker,
               offer: authoredTraitOffer,
+              children: traitCarrierChildren(
+                input.catalog,
+                traitAddress,
+                authoredTraitOffer,
+                input.markerDestinations,
+              ),
               rewardOwner: address,
               status: traitOfferStatus(marker, authoredTraitOffer),
-              ...(traitAcquisitionTarget === undefined ? {} : { traitAcquisitionTarget }),
               ...(circeResolution === undefined ? {} : { circeResolution }),
               ...(echoPomTarget === undefined ? {} : { echoPomTarget }),
               ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),

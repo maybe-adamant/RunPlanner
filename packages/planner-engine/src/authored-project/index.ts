@@ -211,6 +211,13 @@ export {
   traitOfferOption,
 } from './traits';
 export type { AuthoredHexTreeConfiguration } from './traits';
+export type { OneToEight } from './traits';
+export {
+  discoverAuthoredTraitCarrierChildren,
+  updateAuthoredTraitCarrierChild,
+  type AuthoredTraitCarrierChild,
+  type AuthoredTraitCarrierChildUpdate,
+} from './trait-carrier-children';
 export {
   createDefaultAuthoredHexTree,
   normalizeAuthoredHexTree,

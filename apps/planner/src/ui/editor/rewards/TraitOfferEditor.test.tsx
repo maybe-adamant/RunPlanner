@@ -44,6 +44,11 @@ import {
   goldenFOccurrenceId,
   goldenFStartId,
 } from '@run-planner/test-fixtures/underworld';
+import {
+  loadSurfaceNQueensRansomProject,
+  nBiome,
+  nOccurrenceIds,
+} from '@run-planner/test-fixtures/surface';
 import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { createReachableNaturalChaosProject } from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 
@@ -73,6 +78,88 @@ function findTraitOfferControl(
 }
 
 describe('trait offer editor entry and dialog', () => {
+  it('repairs and persists a real missing targeted outcome through the prepared Hera interaction', async () => {
+    const application = createApplication();
+    const trait = createTraitOfferAddress(
+      createIncomingRewardAddress(nBiome, nOccurrenceIds.preHub),
+      'source',
+    );
+    const baseline = loadSurfaceNQueensRansomProject();
+    application.store.dispatch(authoredProjectReplaced(baseline));
+    const baselineInteraction = application
+      .selectStructuredWorkspace(application.store.getState())!
+      .interactions.traitOffers.get(semanticAddressKey(trait));
+    if (baselineInteraction?.value?.kind !== 'traits') throw new Error('Hera offer is missing');
+    const project = applyProjectCommand(baseline, application.catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: {
+        kind: 'traits',
+        giverKey: 'Hera',
+        options: [
+          { traitKey: 'BoonDecayBoon', rarity: 'Common' },
+          baselineInteraction.value.options[1]!,
+          baselineInteraction.value.options[2]!,
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    });
+    application.store.dispatch(authoredProjectReplaced(project));
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const interaction = workspace.interactions.traitOffers.get(semanticAddressKey(trait));
+    if (interaction === undefined) throw new Error('Hera interaction is missing');
+    const user = userEvent.setup();
+    const view = render(
+      <Provider store={application.store}>
+        <TraitOfferDialog interactions={workspace.interactions} target={trait} />
+      </Provider>,
+    );
+    expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    await user.click(screen.getByRole('button', { name: 'option1 acquisition target' }));
+    const target = screen
+      .getAllByRole('option')
+      .find(
+        (option) =>
+          !(option as HTMLOptionElement).disabled &&
+          option.getAttribute('aria-disabled') !== 'true',
+      );
+    if (target === undefined) throw new Error('prepared targeted domain has no repair candidate');
+    await user.click(target);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
+        'disabled',
+        false,
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+    const saved = findTraitOfferControl(
+      application.selectStructuredWorkspace(application.store.getState())!,
+      trait,
+    );
+    expect(saved.children).toHaveLength(1);
+    expect(saved.children[0]?.kind).toBe('traitAcquisitionTarget');
+    expect(saved.children[0]?.authoredComplete).toBe(true);
+    expect(saved.children[0]).toMatchObject({ targetTraitKey: 'ZeusWeaponBoon' });
+    view.unmount();
+    const reopened = application.selectStructuredWorkspace(application.store.getState())!;
+    const reopenedControl = findTraitOfferControl(reopened, trait);
+    render(
+      <Provider store={application.store}>
+        <TraitOfferLauncher control={reopenedControl} interactions={reopened.interactions} />
+        <TraitOfferDialog interactions={reopened.interactions} target={trait} />
+      </Provider>,
+    );
+    await user.click(screen.getByRole('button', { name: /Edit Trait/ }));
+    expect(
+      screen.getByRole('button', { name: 'option1 acquisition target' }).textContent,
+    ).not.toContain('Choose an equipped trait');
+    application.dispose();
+  });
+
   it('starts an invalid offer over from a fresh legal draft before saving', async () => {
     const application = createApplication();
     const trait = createTraitOfferAddress(

@@ -225,7 +225,7 @@ describe('ordinary offer shell', () => {
                         value.kind === 'traits' && value.selectedOptionKey === 'option1'
                           ? staleResult
                           : currentResult,
-                      hasTargetPicker: false,
+                      children: Object.freeze([]),
                     }),
                 }),
               ],
@@ -320,51 +320,66 @@ describe('ordinary offer shell', () => {
         const ownsTarget = optionKey === 'option1' && option.traitKey === 'BoonDecayBoon';
         const targetAddress = createTraitAcquisitionTargetAddress(base.owner, optionKey);
         return Object.freeze({
-          hasTargetPicker: ownsTarget,
-          ...(ownsTarget
-            ? {
-                traitAcquisitionTarget: Object.freeze({
-                  address: targetAddress,
-                  marker: Object.freeze({
+          children: ownsTarget
+            ? Object.freeze([
+                Object.freeze({
+                  child: Object.freeze({
+                    kind: 'traitAcquisitionTarget' as const,
                     address: targetAddress,
-                    assessment: 'blocked' as const,
-                    findingCount: 1,
-                    focusKey: semanticAddressKey(targetAddress),
+                    marker: Object.freeze({
+                      address: targetAddress,
+                      assessment: 'blocked' as const,
+                      findingCount: 1,
+                      focusKey: semanticAddressKey(targetAddress),
+                    }),
+                    optionKey,
+                    traitKey: option.traitKey,
+                    authoredComplete: option.targetTraitKey !== undefined,
+                    ...(option.targetTraitKey === undefined
+                      ? {}
+                      : { targetTraitKey: option.targetTraitKey }),
                   }),
-                  optionKey,
-                  ...(option.targetTraitKey === undefined ? {} : { value: option.targetTraitKey }),
+                  forOffer: () =>
+                    Object.freeze({
+                      load: () =>
+                        Object.freeze({
+                          targetPicker: Object.freeze({
+                            sections: Object.freeze([
+                              Object.freeze({
+                                collapsible: false,
+                                items: Object.freeze([
+                                  Object.freeze({
+                                    disabled: false,
+                                    key: 'ApolloCastBoon',
+                                    label: targetLabel,
+                                    selected: option.targetTraitKey === 'ApolloCastBoon',
+                                    state: 'possible' as const,
+                                    value: 'ApolloCastBoon',
+                                  }),
+                                ]),
+                                key: 'category:available',
+                                kind: 'category' as const,
+                                label: 'Available',
+                              }),
+                            ]),
+                          }),
+                        }),
+                    }),
+                  update: (draft: AuthoredTraitOfferTraits, targetTraitKey: string) => ({
+                    ...draft,
+                    options: Object.freeze([
+                      { ...draft.options[0]!, targetTraitKey },
+                      ...draft.options.slice(1),
+                    ]) as AuthoredTraitOfferTraits['options'],
+                  }),
                 }),
-              }
-            : {}),
+              ])
+            : Object.freeze([]),
           load: () =>
             Object.freeze({
               candidates: Object.freeze([]),
               preferredOptionFor: () => undefined,
               rarityPickerFor: () => undefined,
-              ...(ownsTarget
-                ? {
-                    targetPicker: Object.freeze({
-                      sections: Object.freeze([
-                        Object.freeze({
-                          collapsible: false,
-                          items: Object.freeze([
-                            Object.freeze({
-                              disabled: false,
-                              key: 'ApolloCastBoon',
-                              label: targetLabel,
-                              selected: option.targetTraitKey === 'ApolloCastBoon',
-                              state: 'possible' as const,
-                              value: 'ApolloCastBoon',
-                            }),
-                          ]),
-                          key: 'category:available',
-                          kind: 'category' as const,
-                          label: 'Available',
-                        }),
-                      ]),
-                    }),
-                  }
-                : {}),
               traitPicker: Object.freeze({ sections: Object.freeze([]) }),
             }),
         });
@@ -464,7 +479,7 @@ describe('ordinary offer shell', () => {
         ]),
       optionDomain: () =>
         Object.freeze({
-          hasTargetPicker: false,
+          children: Object.freeze([]),
           load: () =>
             Object.freeze({
               candidates: Object.freeze([]),
@@ -534,7 +549,7 @@ describe('ordinary offer shell', () => {
         ]),
       optionDomain: () =>
         Object.freeze({
-          hasTargetPicker: false,
+          children: Object.freeze([]),
           load: () =>
             Object.freeze({
               candidates: Object.freeze([]),
@@ -845,7 +860,7 @@ describe('ordinary offer shell', () => {
         });
         const choices = optionKey === 'option1' ? [original, alternative] : [];
         return Object.freeze({
-          hasTargetPicker: false,
+          children: Object.freeze([]),
           load: () =>
             Object.freeze({
               candidates: Object.freeze([]),
