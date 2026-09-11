@@ -2,12 +2,10 @@ import type { TraitCatalog } from '@run-planner/engine/catalog-schema';
 
 import { freezeUniqueStrings, requireArray } from './common';
 import { normalizeChaos } from './trait-chaos';
-import {
-  collectCoreGodTraitKeys,
-  normalizeAspects,
-  normalizeTraits,
-  normalizeWeapons,
-} from './trait-declarations';
+import { normalizeAspects } from './trait-aspects';
+import { collectCoreGodTraitKeys } from './trait-core-god-keys';
+import { normalizeTraits } from './trait-normalization';
+import { normalizeWeapons } from './trait-weapons';
 import { normalizeGivers } from './trait-givers';
 import {
   normalizeBoonRarityBases,
@@ -19,8 +17,10 @@ import {
 import {
   validateAspectStartingTraits,
   validateAspectTraitOfferLevelBonuses,
+  validateHammerCompatibilityClosure,
   validateProperUpbringingAndDeferred,
   validateTraitCatalogClosure,
+  validateWeaponAspectClosure,
 } from './trait-catalog-assembly';
 import type { RawTraitCatalogInput } from '../declarations/traits';
 import { normalizeHexes } from './hexes';
@@ -35,9 +35,11 @@ export function createTraitCatalog(input: RawTraitCatalogInput): TraitCatalog {
   );
   const deferred = new Set(declaredDeferred);
   const weapons = normalizeWeapons(input.weapons);
-  const aspects = normalizeAspects(input.aspects, weapons);
+  const aspects = normalizeAspects(input.aspects);
+  validateWeaponAspectClosure({ weapons, aspects });
   const coreGodTraitKeys = collectCoreGodTraitKeys(input.givers);
-  const traits = normalizeTraits(input.traits, weapons, aspects, deferred, coreGodTraitKeys);
+  const traits = normalizeTraits(input.traits, deferred, coreGodTraitKeys);
+  validateHammerCompatibilityClosure({ traits, weapons, aspects });
   validateProperUpbringingAndDeferred({ declaredDeferred, traits });
   const givers = normalizeGivers(input.givers, traits);
   const hexes = normalizeHexes(input.hexes);

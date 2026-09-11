@@ -3,6 +3,7 @@ import type {
   CatalogCollection,
   TraitDeclaration,
   TraitGiverDeclaration,
+  WeaponDeclaration,
 } from '@run-planner/engine/catalog-schema';
 
 import { fail } from './errors';
@@ -143,6 +144,52 @@ export function validateAspectTraitOfferLevelBonuses(input: {
       );
     if (input.traits.byKey[effect.upgradeTraitKey] === undefined)
       fail(`aspects.${aspect.key}.traitOfferLevelBonus.upgradeTraitKey`, 'unknown trait');
+  }
+}
+
+export function validateWeaponAspectClosure(input: {
+  readonly weapons: CatalogCollection<WeaponDeclaration>;
+  readonly aspects: CatalogCollection<AspectDeclaration>;
+}): void {
+  for (const weapon of input.weapons.values) {
+    for (const aspectKey of weapon.aspectKeys) {
+      const aspect = input.aspects.byKey[aspectKey];
+      if (aspect === undefined)
+        fail(`weapons.${weapon.key}.aspectKeys`, `unknown aspect ${aspectKey}`);
+      if (aspect.weaponKey !== weapon.key)
+        fail(`weapons.${weapon.key}.aspectKeys`, `cross-weapon aspect ${aspectKey}`);
+    }
+  }
+  const referencedAspectKeys = new Set(input.weapons.values.flatMap((weapon) => weapon.aspectKeys));
+  for (const aspect of input.aspects.values) {
+    if (!referencedAspectKeys.has(aspect.key))
+      fail(`aspects.${aspect.key}`, 'is not declared by a weapon');
+  }
+}
+
+export function validateHammerCompatibilityClosure(input: {
+  readonly traits: CatalogCollection<TraitDeclaration>;
+  readonly weapons: CatalogCollection<WeaponDeclaration>;
+  readonly aspects: CatalogCollection<AspectDeclaration>;
+}): void {
+  for (const trait of input.traits.values) {
+    const compatibility = trait.hammerCompatibility;
+    if (compatibility === undefined) continue;
+    if (input.weapons.byKey[compatibility.weaponKey] === undefined)
+      fail(
+        `traits.${trait.key}.hammerCompatibility.weaponKey`,
+        `unknown weapon ${compatibility.weaponKey}`,
+      );
+    for (const aspectKey of compatibility.aspectKeys) {
+      const aspect = input.aspects.byKey[aspectKey];
+      if (aspect === undefined)
+        fail(`traits.${trait.key}.hammerCompatibility.aspectKeys`, `unknown aspect ${aspectKey}`);
+      if (aspect.weaponKey !== compatibility.weaponKey)
+        fail(
+          `traits.${trait.key}.hammerCompatibility.aspectKeys`,
+          `cross-weapon aspect ${aspectKey}`,
+        );
+    }
   }
 }
 
