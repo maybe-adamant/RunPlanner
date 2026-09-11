@@ -1,3 +1,4 @@
+import { semanticAddressKey, type OccurrenceAddress } from '../authored-project/addresses';
 import type { StygianWellState } from '../authored-project/model';
 import type { Catalog, RoomDeclaration } from '../catalog-schema';
 
@@ -340,4 +341,103 @@ export function applyStygianWellPurchase(
     default:
       return base;
   }
+}
+
+export interface StygianWellCandidateCapability {
+  readonly assessments: readonly StygianWellCandidateContext[];
+  readonly placementEligible: boolean;
+  readonly required: boolean;
+  readonly present: boolean;
+  readonly interacted: boolean;
+  readonly candidateItemKeysBySlot: Readonly<
+    Record<import('../authored-project/model').StygianWellSlotKey, readonly string[]>
+  >;
+  readonly travelDealRefill?: {
+    readonly sourceGenerationKey: import('../authored-project/model').StygianWellGenerationKey;
+    readonly candidateItemKeys: readonly string[];
+  };
+  readonly twistCandidateItemKeysByGeneration: Readonly<
+    Partial<Record<import('../authored-project/model').StygianWellGenerationKey, readonly string[]>>
+  >;
+}
+
+export interface StygianWellCandidateArtifacts {
+  readonly at: (occurrence: OccurrenceAddress) => StygianWellCandidateCapability | undefined;
+}
+
+export function createStygianWellCandidateArtifacts(
+  contexts: ReadonlyMap<string, readonly StygianWellCandidateContext[]>,
+): StygianWellCandidateArtifacts {
+  const privateContexts = new Map(contexts);
+  return Object.freeze({
+    at: (occurrence: OccurrenceAddress) => {
+      const assessments = privateContexts.get(semanticAddressKey(occurrence));
+      if (assessments === undefined || assessments.length === 0) return undefined;
+      const first = assessments[0]!;
+      const travelDealRefill = first.inventory?.travelDealRefill;
+      return Object.freeze({
+        assessments,
+        placementEligible: assessments.every((assessment) => assessment.placement.eligible),
+        required: assessments.every((assessment) => assessment.placement.forced),
+        present: assessments.every((assessment) => assessment.inventory !== undefined),
+        interacted: assessments.every((assessment) => assessment.inventory?.interacted === true),
+        candidateItemKeysBySlot: Object.freeze(
+          Object.fromEntries(
+            (['healing', 'secondLeft', 'secondRight'] as const).map((slotKey) => [
+              slotKey,
+              Object.freeze(
+                (first.inventory?.candidateItemKeysBySlot[slotKey] ?? []).filter((itemKey) =>
+                  assessments.every(
+                    (assessment) =>
+                      assessment.inventory?.candidateItemKeysBySlot[slotKey].includes(itemKey) ===
+                      true,
+                  ),
+                ),
+              ),
+            ]),
+          ) as Record<import('../authored-project/model').StygianWellSlotKey, readonly string[]>,
+        ),
+        ...(travelDealRefill === undefined
+          ? {}
+          : {
+              travelDealRefill: Object.freeze({
+                sourceGenerationKey: travelDealRefill.sourceGenerationKey,
+                candidateItemKeys: Object.freeze(
+                  travelDealRefill.candidateItemKeys.filter((itemKey) =>
+                    assessments.every(
+                      (assessment) =>
+                        assessment.inventory?.travelDealRefill?.sourceGenerationKey ===
+                          travelDealRefill.sourceGenerationKey &&
+                        assessment.inventory.travelDealRefill.candidateItemKeys.includes(itemKey),
+                    ),
+                  ),
+                ),
+              }),
+            }),
+        twistCandidateItemKeysByGeneration: Object.freeze(
+          Object.fromEntries(
+            Object.entries(first.inventory?.twistCandidateItemKeysByGeneration ?? {}).map(
+              ([generationKey, itemKeys]) => [
+                generationKey,
+                Object.freeze(
+                  (itemKeys ?? []).filter((itemKey) =>
+                    assessments.every(
+                      (assessment) =>
+                        assessment.inventory?.twistCandidateItemKeysByGeneration[
+                          generationKey as import('../authored-project/model').StygianWellGenerationKey
+                        ]?.includes(itemKey) === true,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      });
+    },
+  });
+}
+
+export function createEmptyStygianWellCandidateArtifacts(): StygianWellCandidateArtifacts {
+  return Object.freeze({ at: () => undefined });
 }

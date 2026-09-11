@@ -29,7 +29,7 @@ import {
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
 import { createKeepsakeState } from '../../src/simulation/keepsakes';
-import { createDerivedAcquisitionEntryCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
+import { createDerivedAcquisitionEntryCandidateArtifacts } from '../../src/simulation/rewards/acquisition-artifacts';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 
 const biome = createBiomeAddress('Underworld', 'F');

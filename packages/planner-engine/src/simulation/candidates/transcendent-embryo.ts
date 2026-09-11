@@ -2,7 +2,7 @@ import type { TranscendentEmbryoOutcomeAddress } from '../../authored-project/ad
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
 import type { ProjectDocument } from '../../authored-project/model';
-import type { TranscendentEmbryoCandidateArtifacts } from '../candidate-artifacts';
+import { type TranscendentEmbryoCandidateArtifacts } from '../keepsakes/candidate-artifacts';
 import type { ProjectEvaluation } from '../evaluation-products';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 

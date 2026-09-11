@@ -5,7 +5,7 @@ import {
 } from '../../../../authored-project/addresses';
 import type { HistoryEvent, HistoryStateView } from '../../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../../materialization';
-import type { KeepsakeSelectionCandidateCapability } from '../../../candidate-artifacts';
+import { type KeepsakeSelectionCandidateCapability } from '../../../keepsakes/candidate-artifacts';
 import type { RewardBranchState } from '../../branch-primitives';
 import type { RunStateOwner } from '../../run-state';
 

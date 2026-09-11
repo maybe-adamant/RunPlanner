@@ -1,7 +1,11 @@
 import type { Catalog, InRunTraitRarity } from '../catalog-schema';
 import { deriveRouteLoadout } from '../authored-project/loadout';
 import type { RouteLoadout } from '../authored-project/model';
-import type { SemanticAddress } from '../authored-project/addresses';
+import {
+  semanticAddressKey,
+  type JudgmentArcanaAddress,
+  type SemanticAddress,
+} from '../authored-project/addresses';
 
 export type ArcanaActivationOrigin = 'manual' | 'automatic' | 'temporary';
 export interface ActiveArcanaState {
@@ -520,5 +524,23 @@ export function suppressFearVow(
         Object.freeze({ kind: 'fearVowSuppressed' as const, vowKey, ...evidence }),
       ]),
     }),
+  });
+}
+
+/** Atomic exact-set support captured immediately before Judgment at one Boss effect. */
+export interface JudgmentArcanaCandidateCapability {
+  readonly activeArcanaKeys: readonly string[];
+  readonly inactiveArcanaKeys: readonly string[];
+  readonly requiredCount: number;
+}
+export interface JudgmentArcanaCandidateArtifacts {
+  readonly at: (address: JudgmentArcanaAddress) => JudgmentArcanaCandidateCapability | undefined;
+}
+export function createJudgmentArcanaCandidateArtifacts(
+  contexts: ReadonlyMap<string, JudgmentArcanaCandidateCapability>,
+): JudgmentArcanaCandidateArtifacts {
+  const privateContexts = new Map(contexts);
+  return Object.freeze({
+    at: (address: JudgmentArcanaAddress) => privateContexts.get(semanticAddressKey(address)),
   });
 }

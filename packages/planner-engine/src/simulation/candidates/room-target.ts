@@ -13,7 +13,7 @@ import {
   declaredPhysicalExits,
   exitDecisionForSource,
 } from '../../authored-project/topology/query';
-import type { RoomTargetCandidateArtifacts } from '../candidate-artifacts';
+import { type RoomTargetCandidateArtifacts } from '../generation/candidate-artifacts';
 import {
   normalTargetCandidateHistory,
   roomTargetCandidateContextAtFrontier,

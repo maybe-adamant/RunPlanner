@@ -95,7 +95,7 @@ export interface AcquisitionPointReachedInputs {
   readonly purgingPoolAssessment:
     { readonly assessments: readonly PurgingPoolAssessment[] } | undefined;
   readonly hermesShrineRefillState: HermesShrineRefillState | undefined;
-  readonly derivedAcquisitionEntryCapability?: import('../../../candidate-artifacts').DerivedAcquisitionEntryCandidateCapability;
+  readonly derivedAcquisitionEntryCapability?: import('../../acquisition-artifacts').DerivedAcquisitionEntryCandidateCapability;
 }
 
 function transitionResult(input: {

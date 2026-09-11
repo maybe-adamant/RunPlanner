@@ -1,7 +1,7 @@
 import type { FountainRarityOutcomeAddress } from '../../authored-project/addresses';
 import type { AuthoredFountainRarityResult, ProjectDocument } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
-import type { FountainRarityCandidateArtifacts } from '../candidate-artifacts';
+import { type FountainRarityCandidateArtifacts } from '../keepsakes/candidate-artifacts';
 import type { ProjectEvaluation } from '../evaluation-products';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 

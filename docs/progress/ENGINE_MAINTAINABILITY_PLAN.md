@@ -2,7 +2,13 @@
 
 ## Status and objective
 
-Status: **Locked; Gates A-B complete. Gate C1 is next.**
+Status: **Locked; Gates A-B and C1 complete. Gate C2 is next.**
+
+Gate C1 verification: full typecheck, 11 focused files / 104 tests, and lint
+passed. Main restored unnecessary function-body rewrites during movement;
+post-restoration Artificer/Pool/session tests (34) and engine typecheck passed.
+Independent review's stale private type/import finding was removed and focused
+lint passed. Candidate assembly remains explicit; no fixtures changed.
 
 Gate B verification: full typechecking and five focused files / 55 tests
 passed. Independent review found only lost single-fold Pom cohort coverage;

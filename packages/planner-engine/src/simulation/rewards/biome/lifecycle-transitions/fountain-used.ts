@@ -14,7 +14,7 @@ import {
 import { advanceRewardBranches } from '../../processing';
 import type { RewardBranchState } from '../../branch-primitives';
 import { rewardFinding } from '../../findings';
-import type { FountainRarityCandidateCapability } from '../../../candidate-artifacts';
+import { type FountainRarityCandidateCapability } from '../../../keepsakes/candidate-artifacts';
 import type { LifecycleFinding } from './types';
 import type { PlannerTimelineFacts } from '../../../timeline-facts';
 

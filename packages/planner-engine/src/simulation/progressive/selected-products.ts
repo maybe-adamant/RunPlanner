@@ -19,13 +19,15 @@ import {
 import type { OrdinaryBatchGenerationAssessment } from '../generation';
 import {
   createBiomeCandidateArtifacts,
+  type BiomeCandidateArtifacts,
+} from '../candidate-artifacts';
+import {
   createKeepsakeEquipResultCandidateArtifacts,
   createKeepsakeSelectionCandidateArtifacts,
-  type BiomeCandidateArtifacts,
-  type DerivedAcquisitionEntryCandidateArtifacts,
-  type SteadyGrowthCandidateArtifacts,
   type TranscendentEmbryoCandidateArtifacts,
-} from '../candidate-artifacts';
+} from '../keepsakes/candidate-artifacts';
+import { type DerivedAcquisitionEntryCandidateArtifacts } from '../rewards/acquisition-artifacts';
+import { type SteadyGrowthCandidateArtifacts } from '../trait-history';
 import type { TraitOfferCandidateArtifacts } from '../candidates/trait-offer-capability';
 import type { TraitChildSettlementCheckpoints } from '../rewards/biome';
 import { findingIdentityKey, type FindingRegionEntry } from '../finding-regions';

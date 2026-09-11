@@ -16,7 +16,7 @@ import {
 import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
 import { describe, expect, it } from 'vitest';
 import type { PurgingPoolState } from '../../src/authored-project/model';
-import { createPurgingPoolCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
+import { createPurgingPoolCandidateArtifacts } from '../../src/simulation/purging-pool';
 
 function pool(
   left: string | null = null,

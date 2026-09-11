@@ -11,10 +11,8 @@ import { createCompleteFGProject, goldenFBiome } from '@run-planner/test-fixture
 import { describe, expect, it } from 'vitest';
 
 import type { ProjectEvaluation } from '../../src/simulation/evaluation-products';
-import {
-  createFountainRarityCandidateArtifacts,
-  type FountainRarityCandidateCapability,
-} from '../../src/simulation/candidate-artifacts';
+import { createFountainRarityCandidateArtifacts } from '../../src/simulation/keepsakes/candidate-artifacts';
+import { type FountainRarityCandidateCapability } from '../../src/simulation/keepsakes/candidate-artifacts';
 import {
   evaluateFountainRarityOutcomeCandidate,
   type FountainRarityOutcomeCandidateQuery,

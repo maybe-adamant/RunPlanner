@@ -1,7 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import type { JudgmentArcanaAddress } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
-import type { JudgmentArcanaCandidateArtifacts } from '../candidate-artifacts';
+import { type JudgmentArcanaCandidateArtifacts } from '../arcana-fear';
 import type { ProjectEvaluation } from '../evaluation-products';
 import type { SemanticFinding } from '../model';
 import { unsatisfiedRandomArcanaRequirementKeys } from '../arcana-fear';
