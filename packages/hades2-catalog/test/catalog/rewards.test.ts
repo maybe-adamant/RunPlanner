@@ -7,7 +7,7 @@ import {
   rewardKernelDeclarations,
 } from './support/reward-kernel';
 import { describe, expect, it } from 'vitest';
-import type { RawRewardKernelInput } from '@run-planner/hades2-catalog/test-support';
+import type { RawRewardKernelInput } from '../../src/declarations/rewards';
 
 describe('reward-kernel compiler closure', () => {
   it('keeps the assembled reward kernel as one immutable compiler product', () => {

@@ -1,4 +1,4 @@
-import type { RawBiomeLayoutDeclaration } from '../types';
+import type { RawBiomeLayoutDeclaration } from './types';
 
 export const iBiomeLayout = {
   biomeKey: 'I',

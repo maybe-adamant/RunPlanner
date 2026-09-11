@@ -4,6 +4,7 @@ import { keepsakes } from '../../src/declarations/keepsakes';
 import { normalizeKeepsakes } from '../../src/compiler/keepsakes';
 import { catalog, createCatalog } from '../../src';
 import { declarations } from '../../src/declarations';
+import { cloneCatalogInput } from './support/catalog-input';
 
 const supportedEffects = [
   {
@@ -548,27 +549,33 @@ describe('keepsake normalization', () => {
   });
 
   it('closes effect references against the published catalog families', () => {
-    const input = JSON.parse(JSON.stringify(declarations));
+    const input = cloneCatalogInput();
     const pom = input.keepsakes.find(
       (keepsake: { key: string }) => keepsake.key === 'HadesAndPersephoneKeepsake',
     );
-    pom.effect.giverKey = 'MissingGiver';
+    if (pom?.effect?.kind !== 'jeweledPom') throw new Error('missing Jeweled Pom fixture');
+    (pom.effect as { giverKey: string }).giverKey = 'MissingGiver';
     expect(() => createCatalog(input)).toThrow('references an unknown trait giver');
 
-    const moonBeam = JSON.parse(JSON.stringify(declarations));
+    const moonBeam = cloneCatalogInput();
     const moon = moonBeam.keepsakes.find(
       (keepsake: { key: string }) => keepsake.key === 'SpellTalentKeepsake',
     );
-    moon.effect.priorityRewardTypes[0] = 'MissingReward';
+    if (moon?.effect?.kind !== 'moonBeam') throw new Error('missing Moon Beam fixture');
+    (moon.effect as unknown as { priorityRewardTypes: string[] }).priorityRewardTypes[0] =
+      'MissingReward';
     expect(() => createCatalog(moonBeam)).toThrow(
       'references an unknown reward type MissingReward',
     );
 
-    const hammer = JSON.parse(JSON.stringify(declarations));
+    const hammer = cloneCatalogInput();
     const experimentalHammer = hammer.keepsakes.find(
       (keepsake: { key: string }) => keepsake.key === 'TempHammerKeepsake',
     );
-    experimentalHammer.effect.giverKey = 'Apollo';
+    if (experimentalHammer?.effect?.kind !== 'experimentalHammer') {
+      throw new Error('missing Experimental Hammer fixture');
+    }
+    (experimentalHammer.effect as { giverKey: string }).giverKey = 'Apollo';
     expect(() => createCatalog(hammer)).toThrow('must reference a Hammer trait giver');
   });
 

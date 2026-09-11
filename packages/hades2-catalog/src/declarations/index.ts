@@ -19,7 +19,8 @@ import { routes } from './routes';
 import { traitCatalogInput } from './traits/index';
 import { arcanaCards, fearVows } from './arcana-fear';
 import { keepsakes } from './keepsakes';
-import type { RawCatalogInput, RawRoomDeclaration } from './types';
+import type { RawCatalogInput } from './input';
+import type { RawRoomDeclaration } from './rooms/types';
 
 const rooms: readonly RawRoomDeclaration[] = [
   ...anomalyRooms,
@@ -54,31 +55,31 @@ export const declarations = {
   traitCatalog: traitCatalogInput,
 } as const satisfies RawCatalogInput;
 
+export type { RawCatalogInput } from './input';
+export type { RawArcanaCardDeclaration, RawFearVowDeclaration } from './arcana-fear-types';
 export type {
-  RawCatalogInput,
-  RawArcanaCardDeclaration,
-  RawFearVowDeclaration,
-  RawKeepsakeDeclaration,
-  RawAdditionalExitDeclaration,
-  RawCountedRewardBinding,
   RawEncounterDefinitionDeclaration,
   RawEncounterEnvelopeDeclaration,
   RawEncounterEnvelopeSlotDeclaration,
   RawEncounterSetDeclaration,
   RawEncounterSlotBinding,
+} from './encounters/types';
+export type { RawExitTypeDeclaration } from './exits-types';
+export type { RawKeepsakeDeclaration } from './keepsakes-types';
+export type { RawBiomeLayoutDeclaration, RawProgressionDeclaration } from './layouts/types';
+export type { RawRoomLifecycleProfileDeclaration } from './lifecycles/types';
+export type {
+  RawAdditionalExitDeclaration,
+  RawCountedRewardBinding,
   RawFixedRewardBinding,
-  RawExitTypeDeclaration,
-  RawBiomeLayoutDeclaration,
   RawLocalChildDescriptor,
   RawNoneRewardBinding,
   RawPrebossBatchPolicy,
-  RawProgressionDeclaration,
   RawRewardProducerBinding,
-  RawRoomOfferRewardBinding,
   RawRoomDeclaration,
-  RawRoomLifecycleProfileDeclaration,
+  RawRoomOfferRewardBinding,
   RawShopRewardBinding,
   RawZagreusContractAdditionalExitDeclaration,
-  RawTraitCatalogInput,
-} from './types';
+} from './rooms/types';
+export type { RawTraitCatalogInput } from './traits';
 export type { RawHexDeclaration } from './traits';

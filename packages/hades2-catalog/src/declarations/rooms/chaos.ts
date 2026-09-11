@@ -1,4 +1,4 @@
-import type { RawRoomDeclaration } from '../types';
+import type { RawRoomDeclaration } from './types';
 import { chaosResourcePointSupport } from '../resources';
 
 const chaosMaps = [

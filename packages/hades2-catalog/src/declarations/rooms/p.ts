@@ -1,4 +1,4 @@
-import type { RawRoomDeclaration } from '../types';
+import type { RawRoomDeclaration } from './types';
 import { normalResourcePointSupport } from '../resources';
 
 const surfaceShopHost = (spawnChance: number, forced = false, challengeSwitchAnchorCount = 1) => ({

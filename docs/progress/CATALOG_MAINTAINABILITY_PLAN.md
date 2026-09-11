@@ -2,7 +2,7 @@
 
 ## Status and base
 
-Status: **Locked; Gates A-D implemented and Gate E is next.**
+Status: **Locked; Gates A-E implemented and Gate F is next.**
 
 Planning base: `af4cc56b`
 

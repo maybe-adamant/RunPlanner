@@ -1,4 +1,4 @@
-import type { RawRoomDeclaration } from '../types';
+import type { RawRoomDeclaration } from './types';
 import { hResourcePointSupport } from '../resources';
 import { hFieldsSpatial } from './h-spatial';
 

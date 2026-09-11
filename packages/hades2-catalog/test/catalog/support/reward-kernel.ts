@@ -1,9 +1,6 @@
-import {
-  createRewardKernelCatalog,
-  ordinarySources,
-  rewardKernelDeclarations,
-  type RawRewardKernelInput,
-} from '@run-planner/hades2-catalog/test-support';
+import { ordinarySources, rewardKernelDeclarations } from '../../../src/declarations/rewards';
+import type { RawRewardKernelInput } from '../../../src/declarations/rewards';
+import { createRewardKernelCatalog } from '../../../src/compiler/rewards/normalize';
 
 export { createRewardKernelCatalog, ordinarySources, rewardKernelDeclarations };
 export const rewardKernelCatalog = createRewardKernelCatalog(rewardKernelDeclarations);

@@ -6,7 +6,7 @@ import {
   rewardKernelDeclarations,
 } from './support/reward-kernel';
 import { describe, expect, it } from 'vitest';
-import type { RawRewardKernelInput } from '@run-planner/hades2-catalog/test-support';
+import type { RawRewardKernelInput } from '../../src/declarations/rewards';
 
 describe('reward compiler acquisition and producer lifecycle normalizers', () => {
   it('declares the exact Echo last-reward replay matrix and recreation lifecycle', () => {

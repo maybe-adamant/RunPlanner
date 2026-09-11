@@ -1,4 +1,4 @@
-import type { RawEncounterDefinitionDeclaration } from '../types';
+import type { RawEncounterDefinitionDeclaration } from './types';
 
 export const anomalyEncounterDefinitions = [
   {

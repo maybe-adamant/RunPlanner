@@ -1,14 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { CatalogContractError, createCatalog } from '@run-planner/hades2-catalog';
-import { declarations, type RawCatalogInput } from '@run-planner/hades2-catalog/test-support';
+import { declarations } from '@run-planner/hades2-catalog/test-support';
+import { cloneCatalogInput } from './support/catalog-input';
 
 import { createCollection } from '../../src/compiler/common';
 import { validateRoomLayoutClosure } from '../../src/compiler/room-layout-closure';
 
-function input(): RawCatalogInput {
-  return JSON.parse(JSON.stringify(declarations)) as RawCatalogInput;
-}
+const input = cloneCatalogInput;
 
 describe('room-layout compiler closure', () => {
   it('closes Preboss policies against complete layout, room, and exit-policy collections', () => {

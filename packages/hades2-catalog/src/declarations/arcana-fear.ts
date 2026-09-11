@@ -1,4 +1,4 @@
-import type { RawArcanaCardDeclaration, RawFearVowDeclaration } from './types';
+import type { RawArcanaCardDeclaration, RawFearVowDeclaration } from './arcana-fear-types';
 
 const card = (
   key: string,

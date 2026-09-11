@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { CatalogContractError, createCatalog } from '@run-planner/hades2-catalog';
-import { declarations, type RawCatalogInput } from '@run-planner/hades2-catalog/test-support';
+import { declarations } from '@run-planner/hades2-catalog/test-support';
+import { cloneCatalogInput, requireRoom } from './support/catalog-input';
 
-function input(): RawCatalogInput {
-  return JSON.parse(JSON.stringify(declarations)) as RawCatalogInput;
-}
+const input = cloneCatalogInput;
 
 describe('room common normalization', () => {
   it('freezes normalized common room fields', () => {
@@ -18,8 +17,7 @@ describe('room common normalization', () => {
 
   it('rejects unsupported structural tags before collection closure', () => {
     const raw = input();
-    const room = raw.rooms.find((candidate) => candidate.gameName === 'F_Combat01');
-    if (room === undefined) throw new Error('missing F_Combat01 fixture');
+    const room = requireRoom(raw, 'F_Combat01');
     (room as { structuralTags: unknown }).structuralTags = ['Unknown'];
     expect(() => createCatalog(raw)).toThrow(CatalogContractError);
   });
@@ -48,8 +46,7 @@ describe('room common normalization', () => {
 
   it('rejects missing, non-reward, and optional local group overrides', () => {
     const missing = input();
-    const missingRoom = missing.rooms.find((candidate) => candidate.gameName === 'H_Combat01');
-    if (missingRoom === undefined) throw new Error('missing H_Combat01 fixture');
+    const missingRoom = requireRoom(missing, 'H_Combat01');
     (missingRoom as { offerRewardBinding: unknown }).offerRewardBinding = {
       kind: 'localRewardGroup',
       groupKey: 'missing',
@@ -57,8 +54,7 @@ describe('room common normalization', () => {
     expect(() => createCatalog(missing)).toThrow(CatalogContractError);
 
     const nonReward = input();
-    const nonRewardRoom = nonReward.rooms.find((candidate) => candidate.gameName === 'N_Combat01');
-    if (nonRewardRoom === undefined) throw new Error('missing N_Combat01 fixture');
+    const nonRewardRoom = requireRoom(nonReward, 'N_Combat01');
     (nonRewardRoom as { offerRewardBinding: unknown }).offerRewardBinding = {
       kind: 'localRewardGroup',
       groupKey: 'sideRooms',
@@ -66,8 +62,7 @@ describe('room common normalization', () => {
     expect(() => createCatalog(nonReward)).toThrow(CatalogContractError);
 
     const optional = input();
-    const optionalRoom = optional.rooms.find((candidate) => candidate.gameName === 'H_Combat01');
-    if (optionalRoom === undefined) throw new Error('missing H_Combat01 fixture');
+    const optionalRoom = requireRoom(optional, 'H_Combat01');
     (optionalRoom as { offerRewardBinding: unknown }).offerRewardBinding = {
       kind: 'localRewardGroup',
       groupKey: 'optionalRewards',
@@ -77,10 +72,10 @@ describe('room common normalization', () => {
 
   it('rejects an explicit offer binding whose bounded group lacks its capability', () => {
     const raw = input();
-    const fields = raw.rooms.find((candidate) => candidate.gameName === 'H_Combat01');
-    const nonFields = raw.rooms.find((candidate) => candidate.gameName === 'N_Combat01');
+    const fields = requireRoom(raw, 'H_Combat01');
+    const nonFields = requireRoom(raw, 'N_Combat01');
     const sourceGroup = fields?.localChildren?.find((child) => child.key === 'cages');
-    if (sourceGroup?.kind !== 'boundedRewardSlots' || nonFields === undefined) {
+    if (sourceGroup?.kind !== 'boundedRewardSlots') {
       throw new Error('bounded-group mutation fixture is missing');
     }
     const copiedGroup = JSON.parse(JSON.stringify(sourceGroup)) as Record<string, unknown>;

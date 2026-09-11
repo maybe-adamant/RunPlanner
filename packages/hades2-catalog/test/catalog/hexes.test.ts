@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { catalog, createCatalog } from '../../src';
-import { declarations, type RawCatalogInput } from '../../src/declarations';
+import type { RawCatalogInput } from '../../src/declarations';
+import { cloneCatalogInput } from './support/catalog-input';
 
 type MutableHexDeclaration = {
   epicCandidates: { key: string }[];
@@ -9,9 +10,7 @@ type MutableHexDeclaration = {
   godSent: { forceKeepsakeKey: string };
 };
 
-function cloneDeclarations(): RawCatalogInput {
-  return JSON.parse(JSON.stringify(declarations)) as RawCatalogInput;
-}
+const cloneDeclarations = cloneCatalogInput;
 
 function mutableFirstHex(input: RawCatalogInput): MutableHexDeclaration {
   const hex = input.traitCatalog.hexes[0];
