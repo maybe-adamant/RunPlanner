@@ -2,7 +2,14 @@
 
 ## Status and objective
 
-Status: **Locked; Gates A-D and E1 complete. E2 is next.**
+Status: **Locked; Gates A-D and E1-E2 complete. E3 is next.**
+
+Gate E2 verification: full typecheck, three focused files / 60 tests, scoped
+lint/formatting and diff checks passed. Independent review found no actionable
+findings; main preserved the public export surface and verified identical
+moved function bodies. The authored lifecycle structure is one lower owner;
+action contributions and dependency assembly remain centralized. No fixtures
+or tests changed.
 
 Gate E1 verification: full typecheck, 13 focused files / 269 tests, import
 graph guard, scoped lint and formatting passed. Independent review found no

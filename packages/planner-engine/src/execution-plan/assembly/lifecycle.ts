@@ -1,4 +1,4 @@
-import type { RoomActionWindow } from '../../authored-project/room-action-domain';
+import type { RoomActionWindow } from '../../authored-project/room-lifecycle-structure';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import type { ExecutionLifecycleWindow } from '../model';
 

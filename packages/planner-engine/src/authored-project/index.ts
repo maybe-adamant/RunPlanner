@@ -30,19 +30,21 @@ export { activeRoomActionReferences } from './room-actions';
 export { authoredAcquisitionSources, authoredAcquisitionSourceAt } from './acquisition-sources';
 export {
   assembleRoomLifecycleStructure,
-  assembleRoomActionDomain,
   roomLifecycleWindowOrdinal,
   scopeRoomLifecycleStructure,
+  type RoomActionWindow,
+  type RoomLifecycleStructure,
+  type RoomLifecycleStructurePhase,
+  type RoomLifecycleStructurePoint,
+} from './room-lifecycle-structure';
+export {
+  assembleRoomActionDomain,
   type RoomActionCheckpointContribution,
   type RoomActionContribution,
   type RoomActionDependency,
   type RoomActionDomain,
   type RoomActionDomainContribution,
   type RoomActionParticipation,
-  type RoomActionWindow,
-  type RoomLifecycleStructure,
-  type RoomLifecycleStructurePhase,
-  type RoomLifecycleStructurePoint,
 } from './room-action-domain';
 export {
   reconcileNewRequiredRoomActions,
