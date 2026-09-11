@@ -2,7 +2,7 @@ import type {
   RawEncounterDefinitionDeclaration,
   RawEncounterEnvelopeDeclaration,
   RawEncounterSetDeclaration,
-} from '../types';
+} from './types';
 
 const roomReward = {
   kind: 'countedChoice',

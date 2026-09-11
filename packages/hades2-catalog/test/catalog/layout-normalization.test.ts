@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { CatalogContractError, createCatalog } from '@run-planner/hades2-catalog';
-import { declarations, type RawCatalogInput } from '@run-planner/hades2-catalog/test-support';
+import { declarations } from '@run-planner/hades2-catalog/test-support';
+import { cloneCatalogInput } from './support/catalog-input';
 
-function input(): RawCatalogInput {
-  return JSON.parse(JSON.stringify(declarations)) as RawCatalogInput;
-}
+const input = cloneCatalogInput;
 
 describe('biome layout declaration normalization', () => {
   it('normalizes local start, progression, batch, Hub, completion, and store declarations', () => {

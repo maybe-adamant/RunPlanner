@@ -1,4 +1,4 @@
-import type { RawRoomLifecycleProfileDeclaration } from '../types';
+import type { RawRoomLifecycleProfileDeclaration } from './types';
 
 /**
  * Preboss takeover rooms and their fixed Boss/Postboss successors share the

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { CatalogContractError, catalog, createCatalog } from '@run-planner/hades2-catalog';
-import { declarations, type RawCatalogInput } from '@run-planner/hades2-catalog/test-support';
+import { cloneCatalogInput } from './support/catalog-input';
 
 const families = ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const;
 const chaosFamilies = ['Pickaxe', 'Shovel', 'Fishing'] as const;
@@ -99,9 +99,7 @@ const roomsIgnoringBiomeLimit = [
   ...chaosRooms,
 ] as const;
 
-function input(): RawCatalogInput {
-  return JSON.parse(JSON.stringify(declarations)) as RawCatalogInput;
-}
+const input = cloneCatalogInput;
 
 describe('selected resource-success catalog facts', () => {
   it('owns the exact family-to-hidden-trait and element mapping', () => {

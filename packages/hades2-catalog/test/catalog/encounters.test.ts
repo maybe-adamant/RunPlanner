@@ -1,10 +1,9 @@
 import { CatalogContractError, createCatalog } from '@run-planner/hades2-catalog';
-import { declarations, type RawCatalogInput } from '@run-planner/hades2-catalog/test-support';
+import { declarations } from '@run-planner/hades2-catalog/test-support';
+import { cloneCatalogInput } from './support/catalog-input';
 import { describe, expect, it } from 'vitest';
 
-function input(): RawCatalogInput {
-  return JSON.parse(JSON.stringify(declarations)) as RawCatalogInput;
-}
+const input = cloneCatalogInput;
 
 describe('encounter envelope catalog', () => {
   it('binds the H Bridge Echo story to its provider and NPC presentation', () => {

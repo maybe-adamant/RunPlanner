@@ -1,4 +1,4 @@
-import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from '../types';
+import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from './types';
 import {
   artemisEncounterKeys,
   artemisIncomingRewardExclusions,

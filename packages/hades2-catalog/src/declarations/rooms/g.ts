@@ -1,4 +1,4 @@
-import type { RawRoomDeclaration } from '../types';
+import type { RawRoomDeclaration } from './types';
 import { normalResourcePointSupport } from '../resources';
 
 const wellHost = (challengeSwitchAnchorCount: number) => ({

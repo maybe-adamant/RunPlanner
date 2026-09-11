@@ -1,5 +1,5 @@
 import { catalog, CatalogContractError, createCatalog } from '@run-planner/hades2-catalog';
-import { declarations, type RawCatalogInput } from '@run-planner/hades2-catalog/test-support';
+import { declarations, type RawCatalogInput } from '../../src/declarations';
 import { describe, expect, it } from 'vitest';
 
 function malformedCatalog(value: unknown): RawCatalogInput {

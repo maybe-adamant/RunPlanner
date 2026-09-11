@@ -1,4 +1,4 @@
-import type { RawKeepsakeDeclaration } from './types';
+import type { RawKeepsakeDeclaration } from './keepsakes-types';
 
 /** Ordinary rack inventory; player selection remains fixed at rank III. */
 export const keepsakes: readonly RawKeepsakeDeclaration[] = [

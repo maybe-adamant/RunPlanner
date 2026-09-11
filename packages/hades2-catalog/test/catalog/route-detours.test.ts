@@ -1,5 +1,6 @@
 import { CatalogContractError, createCatalog } from '@run-planner/hades2-catalog';
-import { declarations, type RawCatalogInput } from '@run-planner/hades2-catalog/test-support';
+import { declarations, type RawCatalogInput } from '../../src/declarations';
+import { cloneCatalogInput } from './support/catalog-input';
 import { describe, expect, it } from 'vitest';
 
 const anomalyRoomGameNames = [
@@ -139,9 +140,7 @@ const chaosHostOnlySources = [
   ],
 ] as const;
 
-function input(): RawCatalogInput {
-  return JSON.parse(JSON.stringify(declarations)) as RawCatalogInput;
-}
+const input = cloneCatalogInput;
 
 function roomIndex(raw: RawCatalogInput, gameName: string): number {
   const index = raw.rooms.findIndex((room) => room.gameName === gameName);

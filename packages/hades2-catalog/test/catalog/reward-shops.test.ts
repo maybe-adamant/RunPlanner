@@ -5,7 +5,7 @@ import {
   rewardKernelCatalog,
 } from './support/reward-kernel';
 import { describe, expect, it } from 'vitest';
-import type { RawRewardKernelInput } from '@run-planner/hades2-catalog/test-support';
+import type { RawRewardKernelInput } from '../../src/declarations/rewards';
 
 describe('reward compiler Shop normalizer', () => {
   it('normalizes World, Surface, I, and Q shop pools with their declared slot groups', () => {

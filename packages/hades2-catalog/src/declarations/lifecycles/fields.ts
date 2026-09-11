@@ -1,4 +1,4 @@
-import type { RawRoomLifecycleProfileDeclaration } from '../types';
+import type { RawRoomLifecycleProfileDeclaration } from './types';
 
 export const fieldsRoomLifecycleProfiles = [
   {
