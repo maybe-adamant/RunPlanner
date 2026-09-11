@@ -1,11 +1,14 @@
 import type {
   CatalogCollection,
   EncounterEnvelope,
+  RoomDeclaration,
   RoomLifecycleEffectKind,
   RoomLifecycleOperation,
   RoomLifecycleProfile,
   RoomLifecycleProducerPolicy,
+  TraitDeclaration,
 } from '@run-planner/engine/catalog-schema';
+import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
 import type {
   ProducerLifecyclePointKey,
   ProducerLifecycleProfileDeclaration,
@@ -403,4 +406,66 @@ export function normalizeRoomLifecycleProfiles(
     'roomLifecycleProfiles',
     (profile) => profile.key,
   );
+}
+
+export function validateLifecycleBindings(input: {
+  readonly rooms: CatalogCollection<RoomDeclaration>;
+  readonly profiles: CatalogCollection<RoomLifecycleProfile>;
+  readonly traits: CatalogCollection<TraitDeclaration>;
+  readonly rewards: RewardKernelCatalog;
+}): void {
+  for (const room of input.rooms.values) {
+    if (room.lifecycleProfileKey === undefined) continue;
+    const profile = input.profiles.byKey[room.lifecycleProfileKey];
+    if (profile === undefined)
+      fail(`rooms.${room.gameName}.lifecycleProfileKey`, 'unknown room lifecycle profile');
+    if (!profile.encounterEnvelopeKeys.includes(room.encounterEnvelopeKey))
+      fail(
+        `rooms.${room.gameName}.lifecycleProfileKey`,
+        'does not support the room encounter envelope',
+      );
+    if (profile.producer.kind === 'none') {
+      if (room.incomingReward.kind !== 'none')
+        fail(`rooms.${room.gameName}.lifecycleProfileKey`, 'requires no incoming reward producer');
+    } else {
+      if (room.incomingReward.kind === 'none')
+        fail(`rooms.${room.gameName}.lifecycleProfileKey`, 'requires an incoming reward producer');
+      if (!profile.producer.lifecycleProfileKeys.includes(room.incomingReward.producerLifecycleKey))
+        fail(
+          `rooms.${room.gameName}.lifecycleProfileKey`,
+          'does not admit the incoming producer lifecycle',
+        );
+    }
+  }
+  for (const trait of input.traits.values) {
+    const disposition = trait.selectedDisposition;
+    if (disposition.kind === 'echo' && disposition.effect === 'doubleShop') {
+      for (const rewardType of disposition.excludedRewardTypes)
+        if (input.rewards.rewardTypes.byKey[rewardType] === undefined)
+          fail(
+            `traits.${trait.key}.selectedDisposition.excludedRewardTypes`,
+            `unknown reward type ${rewardType}`,
+          );
+      continue;
+    }
+    if (disposition.kind !== 'producePickups') continue;
+    const lifecycle = input.rewards.producerLifecycles.byKey[disposition.producerLifecycleKey];
+    if (lifecycle === undefined)
+      fail(
+        `traits.${trait.key}.selectedDisposition.producerLifecycleKey`,
+        'unknown producer lifecycle',
+      );
+    for (const pickup of disposition.pickups) {
+      if (input.rewards.rewardTypes.byKey[pickup.rewardType] === undefined)
+        fail(
+          `traits.${trait.key}.selectedDisposition.pickups.${pickup.key}`,
+          'unknown reward type',
+        );
+      if (lifecycle.rewardTypes.byKey[pickup.rewardType] === undefined)
+        fail(
+          `traits.${trait.key}.selectedDisposition.pickups.${pickup.key}`,
+          'is not supported by producer lifecycle',
+        );
+    }
+  }
 }

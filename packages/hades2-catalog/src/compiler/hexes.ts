@@ -2,6 +2,9 @@ import type {
   CatalogCollection,
   HexDeclaration,
   HexLayoutKey,
+  KeepsakeDeclaration,
+  TraitDeclaration,
+  TraitGiverDeclaration,
 } from '@run-planner/engine/catalog-schema';
 
 import {
@@ -133,4 +136,88 @@ export function normalizeHexes(
     });
   });
   return createCollection(values, 'hexes', (hex) => hex.spellTraitKey, 'spellTraitKey');
+}
+
+export function validateHexBindings(input: {
+  readonly hexes: CatalogCollection<HexDeclaration>;
+  readonly traits: CatalogCollection<TraitDeclaration>;
+  readonly givers: CatalogCollection<TraitGiverDeclaration>;
+  readonly keepsakes: CatalogCollection<KeepsakeDeclaration>;
+}): void {
+  const spellGiver = input.givers.byKey.SpellDrop;
+  const expectedBindings = {
+    SpellPolymorphTrait: ['Zeus', 'ForceZeusBoonKeepsake', 'PolymorphZeusTalent'],
+    SpellMeteorTrait: ['Hestia', 'ForceHestiaBoonKeepsake', 'MeteorHestiaTalent'],
+    SpellTransformTrait: ['Aphrodite', 'ForceAphroditeBoonKeepsake', 'TransformAphroditeTalent'],
+    SpellLeapTrait: ['Hephaestus', 'ForceHephaestusBoonKeepsake', 'LeapHephaestusTalent'],
+    SpellLaserTrait: ['Apollo', 'ForceApolloBoonKeepsake', 'LaserApolloTalent'],
+    SpellSummonTrait: ['Hera', 'ForceHeraBoonKeepsake', 'SummonHeraTalent'],
+    SpellTimeSlowTrait: ['Demeter', 'ForceDemeterBoonKeepsake', 'TimeSlowDemeterTalent'],
+    SpellPotionTrait: ['Poseidon', 'ForcePoseidonBoonKeepsake', 'PotionPoseidonTalent'],
+    SpellMoonBeamTrait: ['Ares', 'ForceAresBoonKeepsake', 'MoonBeamAresTalent'],
+  } as const;
+  const expectedSpellKeys = Object.keys(expectedBindings);
+  if (
+    input.hexes.values.length !== expectedSpellKeys.length ||
+    expectedSpellKeys.some((key) => input.hexes.byKey[key] === undefined)
+  )
+    fail('traitCatalog.hexes', 'must declare exactly one Hex for each of the nine spell traits');
+  for (const hex of input.hexes.values) {
+    const trait = input.traits.byKey[hex.spellTraitKey];
+    if (trait?.equipmentSlot !== 'Spell')
+      fail(`traitCatalog.hexes.${hex.spellTraitKey}.spellTraitKey`, 'must reference a Spell trait');
+    if (
+      spellGiver === undefined ||
+      (hex.spellTraitKey !== 'SpellMoonBeamTrait' &&
+        !spellGiver.traitKeys.includes(hex.spellTraitKey))
+    )
+      fail(
+        `traitCatalog.hexes.${hex.spellTraitKey}.spellTraitKey`,
+        'must belong to the normal SpellDrop pool unless it is Aspect of Selene Sky Fall',
+      );
+    const expectedBinding = expectedBindings[hex.spellTraitKey as keyof typeof expectedBindings];
+    if (expectedBinding === undefined)
+      fail(`traitCatalog.hexes.${hex.spellTraitKey}`, 'has no audited God Sent binding');
+    if (hex.godSent.providerKey !== expectedBinding[0])
+      fail(
+        `traitCatalog.hexes.${hex.spellTraitKey}.godSent.providerKey`,
+        `must be ${expectedBinding[0]}`,
+      );
+    if (hex.godSent.forceKeepsakeKey !== expectedBinding[1])
+      fail(
+        `traitCatalog.hexes.${hex.spellTraitKey}.godSent.forceKeepsakeKey`,
+        `must be ${expectedBinding[1]}`,
+      );
+    const provider = input.givers.byKey[hex.godSent.providerKey];
+    if (provider?.providerKind !== 'olympian')
+      fail(
+        `traitCatalog.hexes.${hex.spellTraitKey}.godSent.providerKey`,
+        'must be an Olympian giver',
+      );
+    const forceKeepsake = input.keepsakes.byKey[hex.godSent.forceKeepsakeKey];
+    if (forceKeepsake === undefined)
+      fail(
+        `traitCatalog.hexes.${hex.spellTraitKey}.godSent.forceKeepsakeKey`,
+        'must reference a declared force-boon keepsake',
+      );
+    if (
+      forceKeepsake.effect?.kind !== 'olympianRewardPressure' ||
+      forceKeepsake.effect.providerKey !== hex.godSent.providerKey
+    )
+      fail(
+        `traitCatalog.hexes.${hex.spellTraitKey}.godSent.forceKeepsakeKey`,
+        'must reference the matching provider force-keepsake',
+      );
+    if (hex.godSent.olympianTalentKey !== expectedBinding[2])
+      fail(
+        `traitCatalog.hexes.${hex.spellTraitKey}.godSent.olympianTalentKey`,
+        `must be ${expectedBinding[2]}`,
+      );
+    const nodeKeys = [
+      ...hex.rareCandidates.values.map((candidate) => candidate.key),
+      ...hex.epicCandidates.values.map((candidate) => candidate.key),
+    ];
+    if (new Set(nodeKeys).size !== nodeKeys.length)
+      fail(`traitCatalog.hexes.${hex.spellTraitKey}`, 'Rare and Epic node keys must be unique');
+  }
 }
