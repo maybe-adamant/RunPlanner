@@ -6,7 +6,7 @@ import {
   processOfferGenerationCohort,
   type OfferProcessingContext,
   type OfferProcessingPeer,
-} from '../../processing';
+} from '../../offer-generation';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
 import { rewardFinding } from '../../findings';
 import { addRewardFinding } from '../../findings';

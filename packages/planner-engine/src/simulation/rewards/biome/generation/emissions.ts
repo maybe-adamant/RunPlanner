@@ -9,7 +9,7 @@ import type {
   CanonicalResolvedIncomingReward,
 } from '../../../materialization';
 import type { RoomDeclaration } from '../../../../catalog-schema';
-import type { OfferProcessingContext, OfferProcessingPeer } from '../../processing';
+import type { OfferProcessingContext, OfferProcessingPeer } from '../../offer-generation';
 import type { RewardBranchState } from '../../branch-primitives';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
 import type {

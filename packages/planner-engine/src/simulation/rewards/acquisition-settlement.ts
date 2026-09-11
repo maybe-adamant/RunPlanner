@@ -23,7 +23,6 @@ import { seaStarDuplicateSiteKey } from '../../authored-project/sea-star';
 
 import {
   applyConcreteAcquisition,
-  createRewardBagState,
   applyOfferProjection,
   consumeCountedOffer,
   isOfferSupportedAtResolutionPoint,
@@ -66,6 +65,7 @@ import {
   freezeRecord,
   mergeEquivalentRewardBranches,
   offerEvidence,
+  withBag,
   type RewardBranchState,
 } from './branch-primitives';
 import {
@@ -93,22 +93,6 @@ function hasArtificerUse(
       semanticAddressKey(use.owner) === semanticAddressKey(owner) &&
       use.acquisitionRole === acquisitionRole,
   );
-}
-
-function withBag(
-  catalog: Catalog,
-  branch: RewardBranchState,
-  storeKey: string,
-): { readonly branch: RewardBranchState; readonly bag: RewardBagState } | undefined {
-  const store = catalog.rewards.stores.byKey[storeKey];
-  if (store === undefined) return undefined;
-  const current = branch.bags[storeKey];
-  if (current !== undefined) return { branch, bag: current };
-  const bag = createRewardBagState(store);
-  return {
-    branch: Object.freeze({ ...branch, bags: freezeRecord({ ...branch.bags, [storeKey]: bag }) }),
-    bag,
-  };
 }
 
 /**

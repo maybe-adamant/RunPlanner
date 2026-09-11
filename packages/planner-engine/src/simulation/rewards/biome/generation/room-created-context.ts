@@ -9,7 +9,7 @@ import type {
   CanonicalTarget,
 } from '../../../materialization';
 import type { HermesShrineCandidateContext } from '../../../hermes-shrine';
-import { countedBinding } from '../../processing';
+import { countedBinding } from '../../offer-generation';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import { visibleStoreOptionNames } from '../../facts';
 import { ImmutableSetView } from '../prepared-inputs';

@@ -34,11 +34,11 @@ import {
   foldTraitHistoryEvents,
   type TraitHistoryEvent,
 } from '../../src/simulation/traits';
+import { applyMoonBeamEquip } from '../../src/simulation/keepsakes/branch-transitions';
 import {
-  applyMoonBeamEquip,
   initializeRewardBranches,
   publicRewardBranch,
-} from '../../src/simulation/rewards/processing';
+} from '../../src/simulation/rewards/branch-lifecycle';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 
 describe('finite Hex progress', () => {

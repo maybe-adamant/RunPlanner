@@ -2,7 +2,13 @@
 
 ## Status and objective
 
-Status: **Locked; Gates A-B and C1 complete. Gate C2 is next.**
+Status: **Locked; Gates A-C complete. Gate D is next.**
+
+Gate C2 verification: full typecheck, 12 focused files / 95 tests, narrow lint,
+formatting and diff checks passed. Independent diff review found no actionable
+issues; all 27 moved functions retain behavior, with one shared lazy bag
+operation. Main checked the slice against ordered-state ownership. The old
+processing module and its imports are removed; no fixtures changed.
 
 Gate C1 verification: full typecheck, 11 focused files / 104 tests, and lint
 passed. Main restored unnecessary function-body rewrites during movement;

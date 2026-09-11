@@ -30,7 +30,7 @@ import {
   foldTraitHistoryEvents,
 } from '../../src/simulation/traits';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
-import { initializeRewardBranches } from '../../src/simulation/rewards/processing';
+import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
 import { applyEncounterEndEffectsTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/encounter-end-effects';
 import { applyKeepsakeRackUsedTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/keepsake-rack-used';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';

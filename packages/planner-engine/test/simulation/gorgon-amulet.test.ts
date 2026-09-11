@@ -45,7 +45,7 @@ import {
   assessGorgonEligibility,
   attestGorgonBranchState,
 } from '../../src/simulation/keepsakes';
-import { initializeRewardBranches } from '../../src/simulation/rewards/processing';
+import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
 import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { resolveGorgonCandidateRarity } from '../../src/simulation/rewards/biome/encounter-acquisition/gorgon-started';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';

@@ -11,7 +11,7 @@ import {
 } from '../../../traits';
 import { completePendingShopAcquisitionSite } from '../../shop-settlement';
 import type { RewardBranchState } from '../../branch-primitives';
-import { advanceRewardBranches } from '../../processing';
+import { advanceRewardBranches } from '../../branch-lifecycle';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 
 export interface RoomExitedTransition {

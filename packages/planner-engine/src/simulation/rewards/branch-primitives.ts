@@ -1,5 +1,7 @@
+import type { Catalog } from '../../catalog-schema';
 import { semanticAddressKey, type TraitOfferOwnerAddress } from '../../authored-project/addresses';
 import {
+  createRewardBagState,
   type ResolvedRewardOffer,
   type RewardBagState,
   type RewardHistoryState,
@@ -105,6 +107,23 @@ export type RewardEventData<Event extends RewardEvent = RewardEvent> = Event ext
 
 export function freezeRecord<T>(value: Readonly<Record<string, T>>): Readonly<Record<string, T>> {
   return Object.freeze({ ...value });
+}
+
+/** Lazily creates one counted bag while retaining every other branch product. */
+export function withBag(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  storeKey: string,
+): { readonly branch: RewardBranchState; readonly bag: RewardBagState } | undefined {
+  const store = catalog.rewards.stores.byKey[storeKey];
+  if (store === undefined) return undefined;
+  const current = branch.bags[storeKey];
+  if (current !== undefined) return { branch, bag: current };
+  const bag = createRewardBagState(store);
+  return {
+    branch: Object.freeze({ ...branch, bags: freezeRecord({ ...branch.bags, [storeKey]: bag }) }),
+    bag,
+  };
 }
 
 function orderedRecord<T>(value: Readonly<Record<string, T>>): readonly (readonly [string, T])[] {

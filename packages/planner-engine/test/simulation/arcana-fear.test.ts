@@ -17,7 +17,7 @@ import { circeResolutionDomain, judgmentRequiredCount } from '../../src/simulati
 import {
   initializeRewardBranches,
   publicRewardBranch,
-} from '../../src/simulation/rewards/processing';
+} from '../../src/simulation/rewards/branch-lifecycle';
 import { mergeEquivalentRewardBranches } from '../../src/simulation/rewards/branch-primitives';
 import { forfeitStatus } from '../../src/simulation/rewards/run-state';
 

@@ -10,7 +10,7 @@ import {
   type AuthoredTraitOffer,
 } from '@run-planner/engine/authored-project';
 
-import { applyJeweledPomEquipResult } from '../../src/simulation/rewards/processing';
+import { applyJeweledPomEquipResult } from '../../src/simulation/keepsakes/branch-transitions';
 import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import {
   applyKeepsakeReplacement,

@@ -11,7 +11,8 @@ import type {
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import type { RewardStoreSupportEntry } from '../../model';
 import type { RewardBranchState } from '../../branch-primitives';
-import { advanceRewardBranches, type OfferProcessingPeer } from '../../processing';
+import { advanceRewardBranches } from '../../branch-lifecycle';
+import type { OfferProcessingPeer } from '../../offer-generation';
 import { assessAuthoredBatchRewardStore } from '../reward-store-support';
 import { addRewardFinding, rewardFinding } from '../../findings';
 import { BiomeRewardSimulationContractError } from '../biome-contract';

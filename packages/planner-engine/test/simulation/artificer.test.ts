@@ -27,7 +27,7 @@ import {
   createArcanaFearState,
   promoteArcana,
 } from '../../src/simulation/arcana-fear';
-import { initializeRewardBranches } from '../../src/simulation/rewards/processing';
+import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
 import {
   assessArtificerConversion,
   assessSeaStarDuplication,

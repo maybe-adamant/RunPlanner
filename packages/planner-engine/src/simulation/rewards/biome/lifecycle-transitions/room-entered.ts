@@ -25,7 +25,7 @@ import {
 import { assessPurgingPool, type PurgingPoolAssessment } from '../../../purging-pool';
 import { createRewardFacts, createdPeerGameNames } from '../../facts';
 import type { RewardBranchState } from '../../branch-primitives';
-import { advanceRewardBranches } from '../../processing';
+import { advanceRewardBranches } from '../../branch-lifecycle';
 import { rewardFinding } from '../../findings';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { LifecycleFinding } from './types';

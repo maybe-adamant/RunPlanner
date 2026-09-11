@@ -114,11 +114,13 @@ import {
   advanceRewardBranches,
   initializeRewardBranches,
   publicRewardBranch,
+} from '../branch-lifecycle';
+import {
   applyExperimentalHammerEquipResult,
   applyOlympianRewardPressureEquip,
   applyMoonBeamEquip,
-  type OfferProcessingPeer,
-} from '../processing';
+} from '../../keepsakes/branch-transitions';
+import type { OfferProcessingPeer } from '../offer-generation';
 import type { AcquisitionRoleFrontier } from '../acquisition-settlement';
 import { addRewardFinding } from '../findings';
 import { mergeEquivalentRewardBranches, type RewardBranchState } from '../branch-primitives';
