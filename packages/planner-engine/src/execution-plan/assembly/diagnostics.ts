@@ -4,6 +4,8 @@ import {
 } from '../../authored-project/addresses';
 import type { CanonicalAuthoredRoom } from '../../simulation/materialization';
 import type { RunStateSnapshot } from '../../simulation/rewards/run-state';
+import type { TraitRarity } from '../../catalog-schema';
+import type { GorgonRarityLevel } from '../../simulation/keepsakes';
 import type {
   ExecutionOccurrence,
   ExecutionRunStateCount,
@@ -15,6 +17,27 @@ function executionCount(value: ExecutionRunStateCount): ExecutionRunStateCount {
   return value.kind === 'exact'
     ? Object.freeze({ kind: 'exact', count: value.count })
     : Object.freeze({ kind: 'range', min: value.min, max: value.max });
+}
+
+const GORGON_SOURCE_RARITY_BY_LEVEL: Readonly<Record<GorgonRarityLevel, TraitRarity>> =
+  Object.freeze({ 1: 'Common', 2: 'Rare', 3: 'Epic', 4: 'Heroic' });
+
+function executionPendingKeepsakeEffects(
+  snapshot: RunStateSnapshot,
+): ExecutionRunStateDiagnostic['retainedEffects']['keepsakes'] {
+  const effects = pendingKeepsakeEffects(snapshot.keepsakes);
+  const { gorgon: pendingGorgon, ...rest } = effects;
+  const gorgon = pendingGorgon ?? null;
+  return Object.freeze({
+    ...rest,
+    gorgon:
+      gorgon === null || gorgon.status !== 'pending'
+        ? gorgon
+        : Object.freeze({
+            status: 'pending' as const,
+            rarity: GORGON_SOURCE_RARITY_BY_LEVEL[gorgon.rarityLevel],
+          }),
+  });
 }
 
 function assembleRunStateDiagnostic(
@@ -122,7 +145,7 @@ function assembleRunStateDiagnostic(
     artificer: snapshot.artificer === undefined ? null : Object.freeze({ ...snapshot.artificer }),
     retainedEffects: Object.freeze({
       echoShopDuplicateStatus: snapshot.traits.echoShopDuplicateStatus ?? null,
-      keepsakes: pendingKeepsakeEffects(snapshot.keepsakes),
+      keepsakes: executionPendingKeepsakeEffects(snapshot),
       steadyGrowth: Object.freeze(
         Object.entries(snapshot.traits.steadyGrowth ?? {})
           .sort(([left], [right]) => left.localeCompare(right))

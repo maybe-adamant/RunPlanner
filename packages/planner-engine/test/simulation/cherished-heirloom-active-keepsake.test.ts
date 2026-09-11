@@ -120,7 +120,7 @@ function acquireCherished(
 
 describe('Cherished Heirloom active keepsake advance', () => {
   it.each([
-    ['pending', { status: 'pending', rarity: 'Epic' }, { status: 'pending', rarity: 'Heroic' }],
+    ['pending', { status: 'pending', rarityLevel: 3 }, { status: 'pending', rarityLevel: 4 }],
     ['consumed', { status: 'consumed' }, { status: 'consumed' }],
     ['expired', { status: 'expired' }, { status: 'expired' }],
   ] as const)('advances only a %s current Gorgon appearance', (_label, before, after) => {

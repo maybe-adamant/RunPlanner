@@ -961,7 +961,7 @@ export function applyTraitOfferForAcquisition(
 ): TraitOfferAcquisitionSettlement {
   const traitContext = Object.freeze({
     ...(reward.traitContext ?? {}),
-    ...(branch.stygianWell.yarnUses === 0
+    ...(branch.stygianWell.yarnUses === 0 || reward.traitContext?.suppressTemporaryBoonRarity
       ? {}
       : { temporaryBoonRarityUses: branch.stygianWell.yarnUses }),
     ...(branch.stygianWell.hymnUses === 0 ? {} : { limitedSwapUses: branch.stygianWell.hymnUses }),
@@ -1145,7 +1145,16 @@ function encounterTraitContext(
   branch: RewardBranchState,
   providerKey: string,
   loadout:
-    Pick<TraitOfferContext, 'weaponKey' | 'aspectKey' | 'boonRarityRoomOverride'> | undefined,
+    | Pick<
+        TraitOfferContext,
+        | 'weaponKey'
+        | 'aspectKey'
+        | 'boonRarityRoomOverride'
+        | 'boonRarityItemOverride'
+        | 'gorgonResolvedRarity'
+        | 'suppressTemporaryBoonRarity'
+      >
+    | undefined,
   freshRarityOverride: import('../../catalog-schema').TraitRarity | undefined,
 ): TraitOfferContext {
   const recreation = branch.history.lastRewardRecreation;
@@ -1192,7 +1201,15 @@ export function settleEncounterTraitOffer(
   findingChronology?: FindingChronology,
   acquisitionRole = 'selection',
   freshRarityOverride?: import('../../catalog-schema').TraitRarity,
-  loadout?: Pick<TraitOfferContext, 'weaponKey' | 'aspectKey' | 'boonRarityRoomOverride'>,
+  loadout?: Pick<
+    TraitOfferContext,
+    | 'weaponKey'
+    | 'aspectKey'
+    | 'boonRarityRoomOverride'
+    | 'boonRarityItemOverride'
+    | 'gorgonResolvedRarity'
+    | 'suppressTemporaryBoonRarity'
+  >,
   directTraitSetBranchHistories?: readonly TraitHistoryState[],
   unresolvedProviderKey?: string,
 ): EncounterTraitOfferSettlement {

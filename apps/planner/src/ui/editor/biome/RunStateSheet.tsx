@@ -180,7 +180,9 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
         {state.keepsakes.gorgonStatus === undefined ? null : (
           <p>
             Gorgon Amulet: {state.keepsakes.gorgonStatus}
-            {state.keepsakes.gorgonRarity === undefined ? '' : ` (${state.keepsakes.gorgonRarity})`}
+            {state.keepsakes.gorgonRarityLevel === undefined
+              ? ''
+              : ` (source level ${state.keepsakes.gorgonRarityLevel})`}
           </p>
         )}
         {state.keepsakes.phialStatus === undefined ? null : (

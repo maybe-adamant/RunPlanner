@@ -299,7 +299,7 @@ export function presentRunState(
         : {
             gorgonStatus: snapshot.keepsakes.gorgon.status,
             ...(snapshot.keepsakes.gorgon.status === 'pending'
-              ? { gorgonRarity: snapshot.keepsakes.gorgon.rarity }
+              ? { gorgonRarityLevel: snapshot.keepsakes.gorgon.rarityLevel }
               : {}),
           }),
       ...(snapshot.keepsakes.phial === undefined

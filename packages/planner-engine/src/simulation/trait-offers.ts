@@ -8,6 +8,8 @@ export interface TraitOfferContext {
   readonly echoLastRewardRecreation?: NonNullable<RewardHistoryState['lastRewardRecreation']>;
   /** Source-resolved appearance rarity that may exceed the ordinary fresh-offer domain. */
   readonly freshRarityOverride?: TraitRarity;
+  /** Gorgon's reached ledger realization, retained separately from a fixed source result. */
+  readonly gorgonResolvedRarity?: TraitRarity;
   /** Exact pre-acquisition Fear frontier for catalog-owned Circe availability. */
   readonly circeRemovableFearVow?: boolean;
   /** The declaration-resolved provider for the addressed acquisition role. */
@@ -27,6 +29,8 @@ export interface TraitOfferContext {
   readonly boonRarityItemOverride?: import('../catalog-schema').BoonRarityOverride;
   /** One-use Yarn contributions carried by the real Well purchase branch. */
   readonly temporaryBoonRarityUses?: number;
+  /** Source-local `IgnoreTempRarityBonus`; permanent contributions remain active. */
+  readonly suppressTemporaryBoonRarity?: boolean;
   /** One-use forced replacement state carried by Sacrificial Hymn. */
   readonly limitedSwapUses?: number;
   /** Effective ordinary replacement roll after source overrides. */
@@ -139,10 +143,14 @@ export function boonRarityFactsForOffer(
       ...arcana,
       ...traits,
       ...favor,
-      ...Array.from({ length: context.temporaryBoonRarityUses ?? 0 }, () =>
-        Object.freeze({
-          additive: Object.freeze({ Rare: 1, Epic: 0.25, Duo: 0.1, Legendary: 0.1 }),
-        }),
+      ...Array.from(
+        {
+          length: context.suppressTemporaryBoonRarity ? 0 : (context.temporaryBoonRarityUses ?? 0),
+        },
+        () =>
+          Object.freeze({
+            additive: Object.freeze({ Rare: 1, Epic: 0.25, Duo: 0.1, Legendary: 0.1 }),
+          }),
       ),
     ]),
   });
@@ -307,11 +315,13 @@ export function compositionDomainCacheKey(giverKey: string, context: TraitOfferC
     context.echoLastRewardAvailable,
     context.echoLastRewardRecreation,
     context.freshRarityOverride,
+    context.gorgonResolvedRarity,
     context.circeRemovableFearVow,
     context.manualArcanaGraspCost,
     context.currentKeepsakeKey,
     context.stackBoostsSuppressed,
     context.boonRarityFacts,
+    context.suppressTemporaryBoonRarity,
   ]);
 }
 

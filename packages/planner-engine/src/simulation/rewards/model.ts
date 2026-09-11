@@ -58,8 +58,13 @@ export interface FigLeafPhaseCandidateSupport {
 export interface GorgonPhaseCandidateSupport {
   readonly origin: EncounterPhaseAddress;
   readonly supported: boolean;
-  /** Encounter-start snapshot; absent when no pending appearance reached this phase. */
+  /** Encounter-start source level and one resolved deterministic Athena rarity. */
+  readonly rarityLevel?: import('../keepsakes').GorgonRarityLevel;
   readonly rarity?: TraitRarity;
+  /** Sparse source override is lower precedence than a room override. */
+  readonly boonRarityItemOverride?: import('../../catalog-schema').BoonRarityOverride;
+  /** Gorgon rank II-IV ignores Yarn and other temporary rarity contributions. */
+  readonly suppressTemporaryBoonRarity?: boolean;
 }
 
 /** Exact pre-interaction domain for the one selected Nemesis random event. */

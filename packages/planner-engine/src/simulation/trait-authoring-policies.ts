@@ -310,9 +310,9 @@ function assessTraitOptionAgainstRarityDomain(
   if (
     trait.rarityDomain.kind === 'ranked' &&
     rarity !== undefined &&
-    (context.freshRarityOverride === undefined
+    (context.freshRarityOverride === undefined && context.gorgonResolvedRarity === undefined
       ? !trait.rarityDomain.freshOfferRarities.includes(rarity)
-      : rarity !== context.freshRarityOverride) &&
+      : rarity !== (context.freshRarityOverride ?? context.gorgonResolvedRarity)) &&
     replacementTransition === undefined
   ) {
     findings.push({
@@ -568,14 +568,13 @@ export function traitCandidates(
       candidates.push(Object.freeze({ traitKey, available: assessment.legal, assessment }));
       continue;
     }
+    const sourceRarity = context.freshRarityOverride ?? context.gorgonResolvedRarity;
     const freshRarities =
-      context.freshRarityOverride === undefined
-        ? trait.rarityDomain.freshOfferRarities
-        : [context.freshRarityOverride];
+      sourceRarity === undefined ? trait.rarityDomain.freshOfferRarities : [sourceRarity];
     for (const rarity of freshRarities) {
       // Ordinary fresh generation never admits Heroic. A chronological source
-      // override such as progressed Gorgon rarity is already the exact result.
-      if (rarity === 'Heroic' && context.freshRarityOverride !== 'Heroic') continue;
+      // result such as Gorgon is already the exact reached realization.
+      if (rarity === 'Heroic' && sourceRarity !== 'Heroic') continue;
       const rarityAssessment = addCompositionContext(
         traitKey,
         assessTraitOption(
