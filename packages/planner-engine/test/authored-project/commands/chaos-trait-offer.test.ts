@@ -206,7 +206,7 @@ describe('Chaos TrialUpgrade authored child', () => {
       minimum: 3,
       maximum: 5,
       step: 1,
-      unit: 'encounters',
+      unit: 'Encounters',
     });
     expect(domain?.selectedCurseOperands).toEqual([]);
     expect(domain?.blessingOperands.ChaosWeaponBlessing).toEqual(

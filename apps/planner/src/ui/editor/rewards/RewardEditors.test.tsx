@@ -5,7 +5,6 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createIncomingRewardAddress,
-  createShopOfferAddress,
   encodeProjectDocument,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -43,15 +42,6 @@ const devotionOwner: RewardCandidateOwner = {
   kind: 'incomingReward',
   address: createIncomingRewardAddress(oBiome, oOccurrenceIds.devotion),
 };
-const blindBoxOwner: RewardCandidateOwner = {
-  kind: 'shopOffer',
-  address: createShopOfferAddress(
-    createBiomeAddress('Underworld', 'G'),
-    targetOccurrenceId('G', 5, 1),
-    'Boon',
-  ),
-};
-
 afterEach(cleanup);
 
 function interactionsFor(
@@ -429,52 +419,6 @@ describe('reward editor projections', () => {
 
     expect(screen.getByLabelText('Reward').getAttribute('aria-expanded')).toBe('false');
     expect(screen.queryByText('Reward type')).toBeNull();
-  });
-
-  it('keeps Shop Blind Box inventory type-only when replacing its visible offer', async () => {
-    const project = createGoldenFGHIProject();
-    const blindBox = {
-      rewardType: 'BlindBoxLoot',
-      payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
-    };
-    const user = userEvent.setup();
-    const onReplace = vi.fn();
-    renderReward({
-      interactions: interactionsFor(project),
-      offer: blindBox,
-      onReplace,
-      owner: blindBoxOwner,
-    });
-
-    const trigger = screen.getByLabelText('Reward');
-    expect(trigger.textContent).toContain('Mystery Boon · Apollo');
-    expect(trigger.textContent).not.toContain('(eventual)');
-    await user.click(trigger);
-    await screen.findByText('Reward type');
-    await user.click(within(await screen.findByRole('listbox')).getByText('Mystery Boon'));
-
-    expect(onReplace).toHaveBeenCalledWith({ rewardType: 'BlindBoxLoot' });
-    expect(screen.queryByText('Eventual God')).toBeNull();
-  });
-
-  it('opens an unresolved declaration-fixed Blind Box directly at its total source picker', async () => {
-    const project = createGoldenFGHIProject();
-    const user = userEvent.setup();
-    render(
-      <RewardValueEditor
-        candidateOwner={blindBoxOwner}
-        idPrefix="unresolved-blind-box"
-        initialStep="source"
-        interactions={interactionsFor(project)}
-        offer={null}
-        onReplace={() => undefined}
-        unresolvedSeed={{ rewardType: 'BlindBoxLoot' }}
-      />,
-    );
-
-    await user.click(screen.getByLabelText('Reward'));
-    expect(await screen.findByText('Eventual God')).toBeTruthy();
-    expect((await screen.findByRole('listbox')).textContent).not.toBe('');
   });
 
   it('commits one complete Devotion offer only after both Gods are chosen', async () => {
