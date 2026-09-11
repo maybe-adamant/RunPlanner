@@ -1,13 +1,13 @@
 import {
-  createCirceResolutionAddress,
-  createEchoLastRunBoonAddress,
-  createEchoPomTargetAddress,
   optionIndex,
   semanticAddressKey,
   createDefaultAuthoredHexTree,
   transitionAuthoredHexTreeLayout,
   chaosOperandAuthoringValues,
+  completeAuthoredEchoLastRunBoonDraft,
+  discoverAuthoredEchoLastRunBoonDraftChildren,
   discoverAuthoredTraitCarrierChildren,
+  prepareEchoLastRunBoonDraft,
   updateAuthoredTraitCarrierChild,
 } from '@run-planner/engine/authored-project';
 import type {
@@ -18,6 +18,7 @@ import type {
   AuthoredTraitOfferTraits,
   TraitOptionKey,
   AuthoredHexTreeConfiguration,
+  AuthoredEchoLastRunBoonDraftRow,
 } from '@run-planner/engine/authored-project';
 import type { Catalog, TraitRarity } from '@run-planner/engine/catalog-schema';
 import {
@@ -32,11 +33,7 @@ import {
   withoutDirectTraitOutcomeValues,
 } from '@planner/projections/directTraitOutcomeProjection';
 
-import {
-  ordinaryTraitOfferCommandFor,
-  traitOfferCommandFor,
-  derivedShopPayloadIntent,
-} from './reward-child-command-binding';
+import { traitOfferCommandFor, derivedShopPayloadIntent } from './reward-child-command-binding';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type {
   WorkspaceConcaveStoneInteraction,
@@ -102,6 +99,18 @@ function chaosDomainFromCandidate(
     rarities: candidate.rarities as readonly Exclude<TraitRarity, 'Duo'>[],
     blessingOperands: candidate.blessingOperands,
   });
+}
+
+function echoRowsForEngine(
+  rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
+): readonly AuthoredEchoLastRunBoonDraftRow[] {
+  return Object.freeze(
+    rows.map(({ identity, ...outcome }): AuthoredEchoLastRunBoonDraftRow =>
+      identity === undefined
+        ? outcome
+        : Object.freeze({ ...outcome, giverKey: identity.giverKey, traitKey: identity.traitKey }),
+    ),
+  );
 }
 
 /** Projects one complete authored Hex tree into the shared editor product. */
@@ -267,14 +276,36 @@ export function bindTraitOfferInteractions(input: {
       string,
       ReturnType<WorkspaceTraitOfferInteraction['optionDomain']>
     >();
-    const concaveStoneInteraction: WorkspaceConcaveStoneInteraction | undefined =
-      control.concaveStone === undefined
+    const concaveStoneInteraction = (
+      child:
+        | Extract<
+            import('../contract').WorkspaceTraitCarrierChildControl,
+            { readonly kind: 'concaveStone' }
+          >
+        | undefined,
+    ): WorkspaceConcaveStoneInteraction | undefined =>
+      child === undefined
         ? undefined
         : Object.freeze({
-            control: control.concaveStone,
+            child,
+            update: (
+              offer: AuthoredTraitOfferTraits,
+              value:
+                import('@run-planner/engine/authored-project').AuthoredConcaveStoneResult | null,
+            ) =>
+              updateAuthoredTraitCarrierChild(offer, {
+                kind: 'concaveStone',
+                child,
+                value,
+              }),
             completeFor: (offer: AuthoredTraitOfferTraits) => {
-              const branches = candidates.concaveStone(control.address, offer);
-              return branches.length === 0 || offer.concaveStoneResult !== undefined;
+              const evaluated = candidates.traitCarrierChildDomain(control.address, offer, child);
+              if (evaluated.kind !== 'concaveStone') return false;
+              const branches = evaluated.result.branches;
+              const first = branches[0];
+              if (first === undefined) return true;
+              if (!branches.every((branch) => branch.required === first.required)) return false;
+              return !first.required || offer.concaveStoneResult !== undefined;
             },
             intentFor: (
               _offer: AuthoredTraitOfferTraits,
@@ -292,7 +323,13 @@ export function bindTraitOfferInteractions(input: {
             forOffer: (offer: AuthoredTraitOfferTraits) =>
               Object.freeze({
                 load: () => {
-                  const branches = candidates.concaveStone(control.address, offer);
+                  const evaluated = candidates.traitCarrierChildDomain(
+                    control.address,
+                    offer,
+                    child,
+                  );
+                  if (evaluated.kind !== 'concaveStone') return undefined;
+                  const branches = evaluated.result.branches;
                   const first = branches[0];
                   if (first === undefined) return undefined;
                   const sameDomain = branches.every(
@@ -313,27 +350,27 @@ export function bindTraitOfferInteractions(input: {
                 },
               }),
           });
-    const hexTreeInteraction = (value: AuthoredTraitOfferTraits, optionKey: TraitOptionKey) => {
+    const hexTreeInteraction = (
+      value: AuthoredTraitOfferTraits,
+      optionKey: TraitOptionKey,
+      child:
+        | Extract<
+            import('../contract').WorkspaceTraitCarrierChildControl,
+            { readonly kind: 'hexTree' }
+          >
+        | undefined,
+    ) => {
       if (value.selectedOptionKey !== optionKey) return undefined;
+      if (child === undefined) return undefined;
       const selected = value.options[optionIndex(optionKey)];
       if (selected === undefined) return undefined;
+      if (child.optionKey !== optionKey || child.traitKey !== selected.traitKey) return undefined;
       const hex = catalog.hexes.byKey[selected.traitKey];
       if (hex === undefined) return undefined;
-      const persistedControl =
-        control.hexTree?.optionKey === optionKey &&
-        control.hexTree.spellTraitKey === selected.traitKey
-          ? control.hexTree
-          : undefined;
-      const activeControl =
-        persistedControl ??
-        Object.freeze({
-          address: control.address,
-          marker: control.marker,
-          optionKey,
-          spellTraitKey: selected.traitKey,
-        });
       const interaction: WorkspaceHexTreeInteraction = {
-        control: activeControl,
+        child,
+        update: (offer, tree) =>
+          updateAuthoredTraitCarrierChild(offer, { kind: 'hexTree', child, value: tree }),
         defaultFor: (offer) => {
           const selectedOption = offer.options[optionIndex(offer.selectedOptionKey)];
           if (selectedOption === undefined)
@@ -355,25 +392,17 @@ export function bindTraitOfferInteractions(input: {
             layoutKey,
           );
         },
-        intentFor: (offer, tree) =>
-          derivedShopPayloadIntent(
-            derivedShopEntryEdit,
-            ordinaryTraitOfferCommandFor(
-              control.address,
-              Object.freeze({ ...offer, hexTree: tree }),
-            ),
-          ),
         forOffer: (offer) => ({
           load: () => {
             const option = offer.options[optionIndex(offer.selectedOptionKey)];
             const tree =
               offer.hexTree ??
-              persistedControl?.value ??
+              child.value ??
               createDefaultAuthoredHexTree(catalog, option!.traitKey);
             return projectHexTreeDomain(catalog, option!.traitKey, tree);
           },
         }),
-      } as WorkspaceHexTreeInteraction;
+      };
       return interaction;
     };
     const optionDomain = (value: AuthoredTraitOffer, optionKey: TraitOptionKey) => {
@@ -388,93 +417,70 @@ export function bindTraitOfferInteractions(input: {
         .join(',')}`;
       const existing = optionDomains.get(domainKey);
       if (existing !== undefined) return existing;
-      const option = value.options[optionIndex(optionKey)];
-      const declaration = option === undefined ? undefined : catalog.traits.byKey[option.traitKey];
-      const carrierChildren = Object.freeze(
-        discoverAuthoredTraitCarrierChildren(catalog, control.address, value)
-          .filter((child) => child.optionKey === optionKey)
-          .map((child) => {
-            const persisted = control.children.find(
-              (candidate) =>
-                semanticAddressKey(candidate.address) === semanticAddressKey(child.address),
-            );
-            return Object.freeze({ ...child, marker: persisted?.marker ?? control.marker });
-          }),
+      const discoveredChildren = Object.freeze(
+        discoverAuthoredTraitCarrierChildren(catalog, control.address, value).map((child) => {
+          const persisted = control.children.find(
+            (candidate) =>
+              semanticAddressKey(candidate.address) === semanticAddressKey(child.address),
+          );
+          return Object.freeze({ ...child, marker: persisted?.marker ?? control.marker });
+        }),
       );
-      const circeControl =
-        value.selectedOptionKey === optionKey && declaration?.selectedDisposition.kind === 'circe'
-          ? Object.freeze({
-              // The draft selection owns this exact child even before a save
-              // republishes workspace controls. Retain the persisted marker
-              // only as presentation fallback; the semantic address is exact.
-              address: createCirceResolutionAddress(control.address, optionKey),
-              marker: control.circeResolution?.marker ?? control.marker,
-              optionKey,
-              ...(option?.circeResolution === undefined ? {} : { value: option.circeResolution }),
-            })
-          : undefined;
-      const echoPomControl =
-        value.selectedOptionKey === optionKey &&
-        declaration?.selectedDisposition.kind === 'echo' &&
-        declaration.selectedDisposition.effect === 'doubleLevel'
-          ? Object.freeze({
-              address: createEchoPomTargetAddress(control.address, optionKey),
-              marker: control.echoPomTarget?.marker ?? control.marker,
-              optionKey,
-              ...(option === undefined || !('echoPomTarget' in option)
-                ? {}
-                : { value: option.echoPomTarget }),
-            })
-          : undefined;
-      const echoLastRunBoonControl =
-        value.selectedOptionKey === optionKey &&
-        declaration?.selectedDisposition.kind === 'echo' &&
-        declaration.selectedDisposition.effect === 'lastRunBoon'
-          ? Object.freeze({
-              address: createEchoLastRunBoonAddress(control.address, optionKey),
-              marker: control.echoLastRunBoon?.marker ?? control.marker,
-              optionKey,
-              ...(option?.echoLastRunBoon === undefined ? {} : { value: option.echoLastRunBoon }),
-            })
-          : undefined;
+      const carrierChildren = Object.freeze(
+        discoveredChildren
+          .filter(
+            (child) =>
+              (child.kind === 'traitAcquisitionTarget' ||
+                child.kind === 'allTogetherSet' ||
+                child.kind === 'naturalSelectionResult') &&
+              child.optionKey === optionKey,
+          )
+          .map((child) => child),
+      );
+      const circeControl = discoveredChildren.find(
+        (child): child is Extract<typeof child, { readonly kind: 'circeResolution' }> =>
+          child.kind === 'circeResolution',
+      );
+      const echoPomControl = discoveredChildren.find(
+        (child): child is Extract<typeof child, { readonly kind: 'echoPomTarget' }> =>
+          child.kind === 'echoPomTarget',
+      );
+      const echoLastRunBoonControl = discoveredChildren.find(
+        (child): child is Extract<typeof child, { readonly kind: 'echoLastRunBoon' }> =>
+          child.kind === 'echoLastRunBoon',
+      );
+      const concaveStoneControl = discoveredChildren.find(
+        (child): child is Extract<typeof child, { readonly kind: 'concaveStone' }> =>
+          child.kind === 'concaveStone',
+      );
+      const hexTreeControl = discoveredChildren.find(
+        (child): child is Extract<typeof child, { readonly kind: 'hexTree' }> =>
+          child.kind === 'hexTree',
+      );
       let projected: ReturnType<typeof traitDomain.project> | undefined;
-      const hexTree = hexTreeInteraction(value, optionKey);
-      const bound = Object.freeze({
+      const concaveStone = concaveStoneInteraction(
+        value.selectedOptionKey === optionKey ? concaveStoneControl : undefined,
+      );
+      const hexTree = hexTreeInteraction(value, optionKey, hexTreeControl);
+      const specialChildren: WorkspaceTraitCarrierChildInteraction[] = [
         ...(circeControl === undefined
-          ? {}
-          : {
-              circeResolution: Object.freeze({
-                control: circeControl,
-                intentFor: (
-                  offer: AuthoredTraitOfferTraits,
-                  resolution: AuthoredCirceResolution,
-                ) => {
-                  const index = optionIndex(optionKey);
-                  const existing = offer.options[index];
-                  if (existing === undefined)
-                    throw new StructuredWorkspaceProjectionContractError(
-                      `${semanticAddressKey(control.address)} is missing ${optionKey}`,
-                    );
-                  const options = [...offer.options];
-                  options[index] = Object.freeze({ ...existing, circeResolution: resolution });
-                  return derivedShopPayloadIntent(
-                    derivedShopEntryEdit,
-                    ordinaryTraitOfferCommandFor(
-                      control.address,
-                      Object.freeze({
-                        ...offer,
-                        options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
-                      }),
-                    ),
-                  );
-                },
+          ? []
+          : [
+              Object.freeze({
+                child: circeControl,
+                update: (offer: AuthoredTraitOfferTraits, resolution: AuthoredCirceResolution) =>
+                  updateAuthoredTraitCarrierChild(offer, {
+                    kind: 'circeResolution',
+                    child: circeControl,
+                    value: resolution,
+                  }),
                 forOffer: (offer: AuthoredTraitOfferTraits) =>
                   Object.freeze({
                     load: () => {
-                      const evaluated = candidates.circeResolution(
+                      const evaluated = candidates.traitCarrierChildDomain(
                         control.address,
                         offer,
-                        optionKey,
+                        circeControl,
                       );
                       if (evaluated.kind !== 'circeResolutionDomain') return undefined;
                       const result = evaluated.result;
@@ -512,36 +518,26 @@ export function bindTraitOfferInteractions(input: {
                     },
                   }),
               }),
-            }),
+            ]),
         ...(echoPomControl === undefined
-          ? {}
-          : {
-              echoPomTarget: Object.freeze({
-                control: echoPomControl,
-                intentFor: (offer: AuthoredTraitOfferTraits, targetTraitKey: string | null) => {
-                  const index = optionIndex(optionKey);
-                  const existing = offer.options[index];
-                  if (existing === undefined)
-                    throw new StructuredWorkspaceProjectionContractError(
-                      `${semanticAddressKey(control.address)} is missing ${optionKey}`,
-                    );
-                  const options = [...offer.options];
-                  options[index] = Object.freeze({ ...existing, echoPomTarget: targetTraitKey });
-                  return derivedShopPayloadIntent(
-                    derivedShopEntryEdit,
-                    ordinaryTraitOfferCommandFor(
-                      control.address,
-                      Object.freeze({
-                        ...offer,
-                        options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
-                      }),
-                    ),
-                  );
-                },
+          ? []
+          : [
+              Object.freeze({
+                child: echoPomControl,
+                update: (offer: AuthoredTraitOfferTraits, targetTraitKey: string | null) =>
+                  updateAuthoredTraitCarrierChild(offer, {
+                    kind: 'echoPomTarget',
+                    child: echoPomControl,
+                    value: targetTraitKey,
+                  }),
                 forOffer: (offer: AuthoredTraitOfferTraits) =>
                   Object.freeze({
                     load: () => {
-                      const evaluated = candidates.echoPomTarget(control.address, offer, optionKey);
+                      const evaluated = candidates.traitCarrierChildDomain(
+                        control.address,
+                        offer,
+                        echoPomControl,
+                      );
                       if (evaluated.kind !== 'echoPomTargetDomain') return undefined;
                       return Object.freeze({
                         picker: projectDirectTraitOutcomePicker(
@@ -557,42 +553,25 @@ export function bindTraitOfferInteractions(input: {
                     },
                   }),
               }),
-            }),
+            ]),
         ...(echoLastRunBoonControl === undefined
-          ? {}
-          : {
-              echoLastRunBoon: Object.freeze({
-                control: echoLastRunBoonControl,
-                intentFor: (
-                  offer: AuthoredTraitOfferTraits,
-                  child: AuthoredEchoLastRunBoonOffer,
-                ) => {
-                  const index = optionIndex(optionKey);
-                  const existing = offer.options[index];
-                  if (existing === undefined)
-                    throw new StructuredWorkspaceProjectionContractError(
-                      `${semanticAddressKey(control.address)} is missing ${optionKey}`,
-                    );
-                  const options = [...offer.options];
-                  options[index] = Object.freeze({ ...existing, echoLastRunBoon: child });
-                  return derivedShopPayloadIntent(
-                    derivedShopEntryEdit,
-                    ordinaryTraitOfferCommandFor(
-                      control.address,
-                      Object.freeze({
-                        ...offer,
-                        options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
-                      }),
-                    ),
-                  );
-                },
+          ? []
+          : [
+              Object.freeze({
+                child: echoLastRunBoonControl,
+                update: (offer: AuthoredTraitOfferTraits, child: AuthoredEchoLastRunBoonOffer) =>
+                  updateAuthoredTraitCarrierChild(offer, {
+                    kind: 'echoLastRunBoon',
+                    child: echoLastRunBoonControl,
+                    value: child,
+                  }),
                 forOffer: (offer: AuthoredTraitOfferTraits) =>
                   Object.freeze({
                     load: () => {
-                      const evaluated = candidates.echoLastRunBoon(
+                      const evaluated = candidates.traitCarrierChildDomain(
                         control.address,
                         offer,
-                        optionKey,
+                        echoLastRunBoonControl,
                       );
                       if (evaluated.kind !== 'echoLastRunBoonDomain') return undefined;
                       const domainCandidates = evaluated.result.candidates;
@@ -606,6 +585,14 @@ export function bindTraitOfferInteractions(input: {
                       }) =>
                         `${catalog.traitGivers.byKey[identity.giverKey]?.label ?? identity.giverKey} · ${catalog.traits.byKey[identity.traitKey]?.label ?? identity.traitKey}`;
                       return Object.freeze({
+                        completeDraft: (
+                          rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
+                          selectedIndex: number,
+                        ) =>
+                          completeAuthoredEchoLastRunBoonDraft(
+                            echoRowsForEngine(rows),
+                            selectedIndex,
+                          ),
                         draftSupportFor: (
                           rows: readonly {
                             readonly identity?: {
@@ -619,20 +606,7 @@ export function bindTraitOfferInteractions(input: {
                         ) =>
                           evaluateEchoLastRunBoonDraftSupport(
                             domainCandidates,
-                            rows.map((row) =>
-                              Object.freeze({
-                                ...(row.identity === undefined
-                                  ? {}
-                                  : {
-                                      giverKey: row.identity.giverKey,
-                                      traitKey: row.identity.traitKey,
-                                    }),
-                                ...(row.rarity === undefined ? {} : { rarity: row.rarity }),
-                                ...(row.targetTraitKey === undefined
-                                  ? {}
-                                  : { targetTraitKey: row.targetTraitKey }),
-                              }),
-                            ),
+                            echoRowsForEngine(rows),
                             selectedIndex,
                           ),
                         effectiveRarityFor: (
@@ -692,17 +666,20 @@ export function bindTraitOfferInteractions(input: {
                           readonly giverKey: string;
                           readonly traitKey: string;
                         }) =>
-                          catalog.traits.byKey[identity.traitKey]?.targetedAcquisition !==
-                          undefined,
+                          discoverAuthoredEchoLastRunBoonDraftChildren(catalog, [identity], 0)[0]
+                            ?.kind === 'traitAcquisitionTarget',
                         carrierKindFor: (identity: {
                           readonly giverKey: string;
                           readonly traitKey: string;
                         }) => {
-                          const disposition =
-                            catalog.traits.byKey[identity.traitKey]?.selectedDisposition;
-                          return disposition?.kind === 'directTraitSets'
+                          const child = discoverAuthoredEchoLastRunBoonDraftChildren(
+                            catalog,
+                            [identity],
+                            0,
+                          )[0];
+                          return child?.kind === 'allTogetherSet'
                             ? ('allTogether' as const)
-                            : disposition?.kind === 'naturalSelection'
+                            : child?.kind === 'naturalSelectionResult'
                               ? ('naturalSelection' as const)
                               : undefined;
                         },
@@ -712,52 +689,18 @@ export function bindTraitOfferInteractions(input: {
                         ) =>
                           Object.freeze({
                             load: () => {
-                              if (
-                                rows.some(
-                                  (row) => row.identity === undefined || row.rarity === undefined,
-                                )
-                              )
+                              const prepared = prepareEchoLastRunBoonDraft(
+                                offer,
+                                echoLastRunBoonControl,
+                                echoRowsForEngine(rows),
+                                selectedIndex,
+                              );
+                              if (!prepared.complete || prepared.value === undefined)
                                 return undefined;
-                              const nestedOptions = rows.map((row) =>
-                                Object.freeze({
-                                  giverKey: row.identity!.giverKey,
-                                  traitKey: row.identity!.traitKey,
-                                  rarity: row.rarity!,
-                                  ...(row.targetTraitKey === undefined
-                                    ? {}
-                                    : { targetTraitKey: row.targetTraitKey }),
-                                  ...(row.allTogetherResult === undefined
-                                    ? {}
-                                    : { allTogetherResult: row.allTogetherResult }),
-                                  ...(row.naturalSelectionTargets === undefined
-                                    ? {}
-                                    : {
-                                        naturalSelectionTargets:
-                                          row.naturalSelectionTargets as import('@run-planner/engine/authored-project').AuthoredEchoLastRunBoonOption['naturalSelectionTargets'],
-                                      }),
-                                }),
-                              ) as unknown as AuthoredEchoLastRunBoonOffer['options'];
-                              const outerIndex = optionIndex(optionKey);
-                              const outerOption = offer.options[outerIndex];
-                              if (outerOption === undefined) return undefined;
-                              const outerOptions = [...offer.options];
-                              outerOptions[outerIndex] = Object.freeze({
-                                ...outerOption,
-                                echoLastRunBoon: Object.freeze({
-                                  options: Object.freeze(nestedOptions),
-                                  selectedOptionKey:
-                                    `option${selectedIndex + 1}` as import('@run-planner/engine/authored-project').TraitOptionKey,
-                                }),
-                              });
-                              const evaluated = candidates.echoLastRunBoon(
+                              const evaluated = candidates.traitCarrierChildDomain(
                                 control.address,
-                                Object.freeze({
-                                  ...offer,
-                                  options: Object.freeze(
-                                    outerOptions,
-                                  ) as AuthoredTraitOfferTraits['options'],
-                                }),
-                                optionKey,
+                                prepared.value,
+                                echoLastRunBoonControl,
                               );
                               if (
                                 evaluated.kind !== 'echoLastRunBoonDomain' ||
@@ -820,9 +763,11 @@ export function bindTraitOfferInteractions(input: {
                     },
                   }),
               }),
-            }),
-        children: Object.freeze(
-          carrierChildren.map((child): WorkspaceTraitCarrierChildInteraction => {
+            ]),
+      ];
+      const bound = Object.freeze({
+        children: Object.freeze([
+          ...carrierChildren.map((child): WorkspaceTraitCarrierChildInteraction => {
             switch (child.kind) {
               case 'traitAcquisitionTarget':
                 return Object.freeze({
@@ -954,13 +899,19 @@ export function bindTraitOfferInteractions(input: {
                       child,
                       targets,
                     }),
-                  traitLabel: (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
+                  traitLabel: (traitKey: string) =>
+                    catalog.traits.byKey[traitKey]?.label ?? traitKey,
                 });
+              default:
+                throw new StructuredWorkspaceProjectionContractError(
+                  `${semanticAddressKey(control.address)} has an unsupported option carrier`,
+                );
             }
           }),
-        ),
-        ...(concaveStoneInteraction === undefined ? {} : { concaveStone: concaveStoneInteraction }),
-        ...(hexTree === undefined ? {} : { hexTree }),
+          ...specialChildren,
+          ...(concaveStone === undefined ? [] : [concaveStone]),
+          ...(hexTree === undefined ? [] : [hexTree]),
+        ]),
         load() {
           if (projected !== undefined) return projected;
           const focused = candidates.traitOfferFocusedOptions(
@@ -973,8 +924,9 @@ export function bindTraitOfferInteractions(input: {
           return projected;
         },
       });
-      optionDomains.set(domainKey, bound);
-      return bound;
+      const domain = Object.freeze({ children: bound.children, load: bound.load });
+      optionDomains.set(domainKey, domain);
+      return domain;
     };
     traitOffers.set(
       key,
@@ -989,7 +941,33 @@ export function bindTraitOfferInteractions(input: {
             traitOfferCommandFor(control.address, value),
           ),
         key,
-        ...(control.echoLastReward === undefined ? {} : { echoLastReward: control.echoLastReward }),
+        feedbackFor: (value: AuthoredTraitOffer) => {
+          const feedback = [...control.feedback];
+          if (value.kind === 'traits') {
+            const evaluated = candidates.ransomAssessment(control.address, value);
+            if (evaluated.kind === 'ransomAssessment') {
+              const first = evaluated.result.assessments[0];
+              feedback.push(
+                !evaluated.result.branchAgreement || first === undefined
+                  ? Object.freeze({
+                      kind: 'ransom' as const,
+                      assessment: Object.freeze({ branchAgreement: false as const }),
+                    })
+                  : Object.freeze({
+                      kind: 'ransom' as const,
+                      assessment: Object.freeze({
+                        branchAgreement: true as const,
+                        buffedTraitKeys: first.buffedTraitKeys,
+                        levelBonus: first.levelBonus,
+                        removedCount: first.removedCount,
+                        removedTraitKeys: first.removedTraitKeys,
+                      }),
+                    }),
+              );
+            }
+          }
+          return Object.freeze(feedback);
+        },
         load,
         owner: control.address,
         rarityEditable: control.rarityEditable !== false,
@@ -1014,21 +992,6 @@ export function bindTraitOfferInteractions(input: {
           : {}),
         optionDomain,
         rejectedBlockDomain,
-        ransomAssessment: (value: AuthoredTraitOffer) => {
-          if (value.kind !== 'traits') return undefined;
-          const evaluated = candidates.ransomAssessment(control.address, value);
-          if (evaluated.kind !== 'ransomAssessment') return undefined;
-          const first = evaluated.result.assessments[0];
-          if (!evaluated.result.branchAgreement || first === undefined)
-            return Object.freeze({ branchAgreement: false });
-          return Object.freeze({
-            branchAgreement: evaluated.result.branchAgreement,
-            buffedTraitKeys: first.buffedTraitKeys,
-            levelBonus: first.levelBonus,
-            removedCount: first.removedCount,
-            removedTraitKeys: first.removedTraitKeys,
-          });
-        },
         traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
         selectedIntent: (selectedOptionKey: AuthoredTraitOfferTraits['selectedOptionKey']) =>
           derivedShopPayloadIntent(

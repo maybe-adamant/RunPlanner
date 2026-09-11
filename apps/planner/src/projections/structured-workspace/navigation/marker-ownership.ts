@@ -110,18 +110,9 @@ export function workspaceOccurrenceOwnedMarkers(
         : [
             phase.traitOffer.marker,
             ...phase.traitOffer.children.map((child) => child.marker),
-            ...(phase.traitOffer.circeResolution === undefined
-              ? []
-              : [phase.traitOffer.circeResolution.marker]),
-            ...(phase.traitOffer.echoPomTarget === undefined
-              ? []
-              : [phase.traitOffer.echoPomTarget.marker]),
-            ...(phase.traitOffer.echoLastRunBoon === undefined
-              ? []
-              : [phase.traitOffer.echoLastRunBoon.marker]),
-            ...(phase.traitOffer.echoLastReward === undefined
-              ? []
-              : [phase.traitOffer.echoLastReward.marker]),
+            ...phase.traitOffer.feedback.flatMap((feedback) =>
+              feedback.kind === 'echoLastReward' ? [feedback.control.marker] : [],
+            ),
           ]),
       ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker]),
     ]),
@@ -130,10 +121,9 @@ export function workspaceOccurrenceOwnedMarkers(
       ...(control.traitOffers ?? []).flatMap((trait) => [
         trait.marker,
         ...trait.children.map((child) => child.marker),
-        ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
-        ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
-        ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker]),
-        ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker]),
+        ...trait.feedback.flatMap((feedback) =>
+          feedback.kind === 'echoLastReward' ? [feedback.control.marker] : [],
+        ),
       ]),
       ...(control.levelResolutions ?? []).map((resolution) => resolution.marker),
     ]),

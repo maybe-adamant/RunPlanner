@@ -79,7 +79,7 @@ describe('selected trait outcome draft completeness', () => {
     ],
     [
       'Circe resolution',
-      domain({ circeResolution: {} as never }),
+      domain({ children: Object.freeze([carrierBinding(false)]) }),
       offer(),
       offer({
         ...baseOption,
@@ -88,13 +88,13 @@ describe('selected trait outcome draft completeness', () => {
     ],
     [
       'Echo Pom target',
-      domain({ echoPomTarget: {} as never }),
+      domain({ children: Object.freeze([carrierBinding(false)]) }),
       offer(),
       offer({ ...baseOption, echoPomTarget: null }),
     ],
     [
       'Echo previous-run boon',
-      domain({ echoLastRunBoon: {} as never }),
+      domain({ children: Object.freeze([carrierBinding(false)]) }),
       offer(),
       offer({
         ...baseOption,
@@ -123,7 +123,7 @@ describe('selected trait outcome draft completeness', () => {
     ],
     [
       'Hex layout',
-      domain({ hexTree: {} as never }),
+      domain({ children: Object.freeze([carrierBinding(false)]) }),
       offer(),
       offer(baseOption, {
         hexTree: {
@@ -152,13 +152,14 @@ describe('selected trait outcome draft completeness', () => {
   it('uses the candidate-backed Concave Stone completion contact', () => {
     const missing = offer();
     const complete = offer(baseOption, { concaveStoneResult: { kind: 'noProc' } });
-    const activeDomain = domain({
-      concaveStone: {
-        completeFor: (value: AuthoredTraitOfferTraits) => value.concaveStoneResult !== undefined,
-      } as never,
-    });
+    const activeDomain = domain({ children: Object.freeze([carrierBinding(false)]) });
     expect(selectedTraitOutcomeDraftComplete(missing, activeDomain)).toBe(false);
-    expect(selectedTraitOutcomeDraftComplete(complete, activeDomain)).toBe(true);
+    expect(
+      selectedTraitOutcomeDraftComplete(
+        complete,
+        domain({ children: Object.freeze([carrierBinding(true)]) }),
+      ),
+    ).toBe(true);
   });
 
   it('accepts an ordinary selected trait with no child outcome', () => {

@@ -13,7 +13,7 @@ import type { ContextualPickerModel } from '@planner/projections/contextualPicke
 import type {
   WorkspaceEchoLastRunBoonDomain,
   WorkspaceEchoLastRunBoonCarrierDomain,
-  WorkspaceEchoLastRunBoonTraitIdentity,
+  WorkspaceEchoLastRunBoonDraftRow,
   WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace';
 import { useAppSelector } from '@planner/state/store';
@@ -24,13 +24,7 @@ import { useFindingTarget, type FindingTargetProps } from '@planner/ui/feedback/
 
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
-interface EchoLastRunBoonDraftRow {
-  readonly identity?: WorkspaceEchoLastRunBoonTraitIdentity;
-  readonly rarity?: TraitRarity;
-  readonly targetTraitKey?: string;
-  readonly allTogetherResult?: AuthoredAllTogetherResult;
-  readonly naturalSelectionTargets?: AuthoredEchoLastRunBoonOption['naturalSelectionTargets'];
-}
+type EchoLastRunBoonDraftRow = WorkspaceEchoLastRunBoonDraftRow;
 
 function rarityLabel(rarity: TraitRarity): string {
   return rarity;
@@ -398,6 +392,16 @@ function EchoLastRunBoonChoiceEditor({
           }
         />
       ) : null}
+      {selectedCarrierKind === 'allTogether' && carrierLoaded.result === undefined ? (
+        <fieldset className="trait-selected-outcome-detail" aria-label="All Together outcome">
+          <legend>All Together outcome</legend>
+          <p>
+            {selectedRow?.allTogetherResult === undefined
+              ? 'Complete the other Echo rows before choosing this grouped outcome.'
+              : 'This grouped outcome is retained while the remaining Echo rows are incomplete.'}
+          </p>
+        </fieldset>
+      ) : null}
       {selectedCarrierKind === 'naturalSelection' &&
       carrierLoaded.result?.kind === 'naturalSelection' &&
       selectedRow !== undefined ? (
@@ -417,12 +421,23 @@ function EchoLastRunBoonChoiceEditor({
                 selectedIndex,
                 Object.freeze({
                   ...selectedRow,
-                  naturalSelectionTargets:
-                    targets as AuthoredEchoLastRunBoonOption['naturalSelectionTargets'],
+                  naturalSelectionTargets: targets as NonNullable<
+                    AuthoredEchoLastRunBoonOption['naturalSelectionTargets']
+                  >,
                 }),
               );
           }}
         />
+      ) : null}
+      {selectedCarrierKind === 'naturalSelection' && carrierLoaded.result === undefined ? (
+        <fieldset className="trait-selected-outcome-detail" aria-label="Natural Selection outcome">
+          <legend>Natural Selection outcome</legend>
+          <p>
+            {selectedRow?.naturalSelectionTargets === undefined
+              ? 'Complete the other Echo rows before choosing these targets.'
+              : 'These targets are retained while the remaining Echo rows are incomplete.'}
+          </p>
+        </fieldset>
       ) : null}
       {!draftSupport.canAppend || !rows.every((row) => row.identity && row.rarity) ? null : (
         <button
@@ -439,26 +454,8 @@ function EchoLastRunBoonChoiceEditor({
           disabled={!draftSupport.complete || !carrierComplete}
           onClick={() => {
             if (!draftSupport.complete) return;
-            const options = rows.map((row) =>
-              Object.freeze({
-                giverKey: row.identity!.giverKey,
-                traitKey: row.identity!.traitKey,
-                rarity: row.rarity!,
-                ...(row.targetTraitKey === undefined ? {} : { targetTraitKey: row.targetTraitKey }),
-                ...(row.allTogetherResult === undefined
-                  ? {}
-                  : { allTogetherResult: row.allTogetherResult }),
-                ...(row.naturalSelectionTargets === undefined
-                  ? {}
-                  : { naturalSelectionTargets: row.naturalSelectionTargets }),
-              }),
-            ) as unknown as AuthoredEchoLastRunBoonOffer['options'];
-            onComplete(
-              Object.freeze({
-                options: Object.freeze(options),
-                selectedOptionKey: OPTION_KEYS[selectedIndex]!,
-              }),
-            );
+            const completed = domain.completeDraft(rows, selectedIndex);
+            if (completed !== undefined) onComplete(completed);
           }}
           type="button"
         >
@@ -488,7 +485,17 @@ export function LoadedEchoLastRunBoonChoice({
   const optionKey = offer.selectedOptionKey;
   const option = offer.options[optionIndex(optionKey)];
   const child = useMemo(
-    () => interaction.optionDomain(offer, optionKey).echoLastRunBoon,
+    () =>
+      interaction
+        .optionDomain(offer, optionKey)
+        .children.find(
+          (
+            entry,
+          ): entry is Extract<
+            typeof entry,
+            { readonly child: { readonly kind: 'echoLastRunBoon' } }
+          > => entry.child.kind === 'echoLastRunBoon',
+        ),
     [interaction, offer, optionKey],
   );
   const loadable = useMemo(() => child?.forOffer(offer), [child, offer]);
@@ -504,10 +511,10 @@ export function LoadedEchoLastRunBoonChoice({
       loaded.result === undefined ||
       child === undefined ||
       focusedSemanticOwner?.kind !== 'echoLastRunBoon' ||
-      semanticAddressKey(focusedSemanticOwner) !== semanticAddressKey(child.control.address)
+      semanticAddressKey(focusedSemanticOwner) !== semanticAddressKey(child.child.address)
     )
       return;
-    document.getElementById(semanticOwnerControlElementId(child.control.address))?.focus();
+    document.getElementById(semanticOwnerControlElementId(child.child.address))?.focus();
   }, [child, focusedSemanticOwner, loaded.result]);
   if (child === undefined || option === undefined) {
     return (
@@ -531,8 +538,8 @@ export function LoadedEchoLastRunBoonChoice({
   }
   return (
     <EchoLastRunBoonChoiceEditor
-      findingTarget={findingTarget(child.control.address)}
-      controlId={semanticOwnerControlElementId(child.control.address)}
+      findingTarget={findingTarget(child.child.address)}
+      controlId={semanticOwnerControlElementId(child.child.address)}
       domain={loaded.result}
       {...(option.echoLastRunBoon === undefined ? {} : { value: option.echoLastRunBoon })}
       onBack={onBack}

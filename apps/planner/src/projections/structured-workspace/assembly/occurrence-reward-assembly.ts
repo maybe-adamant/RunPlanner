@@ -2,10 +2,7 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
-  createCirceResolutionAddress,
   createEchoLastRewardAddress,
-  createEchoLastRunBoonAddress,
-  createEchoPomTargetAddress,
   createGorgonPhaseAddress,
   createIncomingRewardAddress,
   createLevelResolutionAddress,
@@ -214,6 +211,7 @@ function traitOfferControls(
           marker,
           offer: null,
           children: Object.freeze([]),
+          feedback: Object.freeze([]),
           rewardOwner: owner.address,
           status: traitOfferStatus(marker, null),
         }),
@@ -225,45 +223,6 @@ function traitOfferControls(
         `${semanticAddressKey(owner.address)} trait role ${acquisitionRole} has giver ${offer.giverKey}, expected ${giverKey}`,
       );
     }
-    const selected =
-      offer.kind === 'traits' ? traitOfferOption(offer, offer.selectedOptionKey) : undefined;
-    const selectedDisposition =
-      selected === undefined
-        ? undefined
-        : input.catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
-    const circeResolution =
-      offer.kind !== 'traits' || selectedDisposition?.kind !== 'circe'
-        ? undefined
-        : Object.freeze({
-            address: createCirceResolutionAddress(address, offer.selectedOptionKey),
-            marker: input.markerDestinations.marker(
-              createCirceResolutionAddress(address, offer.selectedOptionKey),
-            ),
-            optionKey: offer.selectedOptionKey,
-            ...(selected?.circeResolution === undefined ? {} : { value: selected.circeResolution }),
-          });
-    const concaveStone =
-      offer.kind !== 'traits' ||
-      input.catalog.traitGivers.byKey[giverKey]?.shopAwareGodTrait !== true
-        ? undefined
-        : Object.freeze({
-            address,
-            marker: input.markerDestinations.marker(address),
-            ...(offer.concaveStoneResult === undefined ? {} : { value: offer.concaveStoneResult }),
-          });
-    const hexTree =
-      offer.kind !== 'traits' ||
-      giver.providerKind !== 'spell' ||
-      selected === undefined ||
-      input.catalog.hexes.byKey[selected.traitKey] === undefined
-        ? undefined
-        : Object.freeze({
-            address,
-            marker: input.markerDestinations.marker(address),
-            optionKey: offer.selectedOptionKey,
-            spellTraitKey: selected.traitKey,
-            ...(offer.hexTree === undefined ? {} : { value: offer.hexTree }),
-          });
     const marker = input.markerDestinations.marker(address);
     controls.push(
       Object.freeze({
@@ -273,11 +232,9 @@ function traitOfferControls(
         marker,
         offer,
         children: traitCarrierChildren(input.catalog, address, offer, input.markerDestinations),
+        feedback: Object.freeze([]),
         rewardOwner: owner.address,
         status: traitOfferStatus(marker, offer),
-        ...(circeResolution === undefined ? {} : { circeResolution }),
-        ...(concaveStone === undefined ? {} : { concaveStone }),
-        ...(hexTree === undefined ? {} : { hexTree }),
       }),
     );
   }
@@ -912,6 +869,7 @@ export function activeEncounterPhasesForOwner(
                     gorgonAthenaOffer!,
                     input.markerDestinations,
                   ),
+            feedback: Object.freeze([]),
             rarityEditable: false,
             rewardOwner: gorgonPhaseAddress,
             status: traitOfferStatus(
@@ -937,6 +895,7 @@ export function activeEncounterPhasesForOwner(
                 marker,
                 offer: null,
                 children: Object.freeze([]),
+                feedback: Object.freeze([]),
                 rewardOwner: address,
                 status: traitOfferStatus(marker, null),
               });
@@ -949,67 +908,6 @@ export function activeEncounterPhasesForOwner(
               selected === undefined
                 ? undefined
                 : input.catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
-            const circeResolution =
-              authoredTraitOffer.kind !== 'traits' || selectedDisposition?.kind !== 'circe'
-                ? undefined
-                : Object.freeze({
-                    address: createCirceResolutionAddress(
-                      traitAddress,
-                      authoredTraitOffer.selectedOptionKey,
-                    ),
-                    marker: input.markerDestinations.marker(
-                      createCirceResolutionAddress(
-                        traitAddress,
-                        authoredTraitOffer.selectedOptionKey,
-                      ),
-                    ),
-                    optionKey: authoredTraitOffer.selectedOptionKey,
-                    ...(selected?.circeResolution === undefined
-                      ? {}
-                      : { value: selected.circeResolution }),
-                  });
-            const echoPomTarget =
-              authoredTraitOffer.kind !== 'traits' ||
-              selectedDisposition?.kind !== 'echo' ||
-              selectedDisposition.effect !== 'doubleLevel'
-                ? undefined
-                : Object.freeze({
-                    address: createEchoPomTargetAddress(
-                      traitAddress,
-                      authoredTraitOffer.selectedOptionKey,
-                    ),
-                    marker: input.markerDestinations.marker(
-                      createEchoPomTargetAddress(
-                        traitAddress,
-                        authoredTraitOffer.selectedOptionKey,
-                      ),
-                    ),
-                    optionKey: authoredTraitOffer.selectedOptionKey,
-                    ...(selected === undefined || !('echoPomTarget' in selected)
-                      ? {}
-                      : { value: selected.echoPomTarget }),
-                  });
-            const echoLastRunBoon =
-              authoredTraitOffer.kind !== 'traits' ||
-              selectedDisposition?.kind !== 'echo' ||
-              selectedDisposition.effect !== 'lastRunBoon'
-                ? undefined
-                : Object.freeze({
-                    address: createEchoLastRunBoonAddress(
-                      traitAddress,
-                      authoredTraitOffer.selectedOptionKey,
-                    ),
-                    marker: input.markerDestinations.marker(
-                      createEchoLastRunBoonAddress(
-                        traitAddress,
-                        authoredTraitOffer.selectedOptionKey,
-                      ),
-                    ),
-                    optionKey: authoredTraitOffer.selectedOptionKey,
-                    ...(selected?.echoLastRunBoon === undefined
-                      ? {}
-                      : { value: selected.echoLastRunBoon }),
-                  });
             const echoLastReward =
               authoredTraitOffer.kind !== 'traits' ||
               selectedDisposition?.kind !== 'echo' ||
@@ -1071,12 +969,13 @@ export function activeEncounterPhasesForOwner(
                 authoredTraitOffer,
                 input.markerDestinations,
               ),
+              feedback: Object.freeze(
+                echoLastReward === undefined
+                  ? []
+                  : [{ kind: 'echoLastReward' as const, control: echoLastReward }],
+              ),
               rewardOwner: address,
               status: traitOfferStatus(marker, authoredTraitOffer),
-              ...(circeResolution === undefined ? {} : { circeResolution }),
-              ...(echoPomTarget === undefined ? {} : { echoPomTarget }),
-              ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
-              ...(echoLastReward === undefined ? {} : { echoLastReward }),
             });
           })()
         : undefined;

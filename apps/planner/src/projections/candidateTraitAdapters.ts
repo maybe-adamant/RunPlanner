@@ -11,14 +11,10 @@ import {
 
 import type { AuthoredTraitOption } from '@run-planner/engine/authored-project';
 import type {
-  CirceResolutionDomainEvaluation,
-  EchoLastRunBoonDomainEvaluation,
-  EchoPomTargetDomainEvaluation,
   EvaluatedAcquisitionConversionCandidate,
   EvaluatedSteadyGrowthOutcomeCandidate,
   EvaluatedTranscendentEmbryoOutcomeCandidate,
   CandidateContextUnavailable,
-  ConcaveStoneCandidateBranch,
   TraitCarrierChildDomainEvaluation,
 } from '@run-planner/engine/simulation';
 
@@ -66,11 +62,7 @@ export type TraitCandidateAdapters = Pick<
   | 'chaosOfferDomain'
   | 'traitOfferFocusedOptions'
   | 'traitCarrierChildDomain'
-  | 'circeResolution'
-  | 'echoPomTarget'
-  | 'echoLastRunBoon'
   | 'ransomAssessment'
-  | 'concaveStone'
   | 'steadyGrowthOutcome'
   | 'transcendentEmbryoOutcome'
   | 'fountainRarityOutcome'
@@ -132,39 +124,12 @@ export function createTraitCandidateAdapters(
       childDomains.set(key, evaluated);
       return evaluated;
     },
-    circeResolution: (owner, value, optionKey) =>
-      aggregateEvaluation(core, {
-        kind: 'circeResolutionDomain',
-        trait: owner,
-        value,
-        optionKey,
-      }) as CirceResolutionDomainEvaluation,
-    echoPomTarget: (owner, value, optionKey) =>
-      aggregateEvaluation(core, {
-        kind: 'echoPomTargetDomain',
-        trait: owner,
-        value,
-        optionKey,
-      }) as EchoPomTargetDomainEvaluation,
-    echoLastRunBoon: (owner, value, optionKey) =>
-      aggregateEvaluation(core, {
-        kind: 'echoLastRunBoonDomain',
-        trait: owner,
-        value,
-        optionKey,
-      }) as EchoLastRunBoonDomainEvaluation,
     ransomAssessment: (trait, value) =>
       aggregateEvaluation(core, {
         kind: 'ransomAssessment',
         trait,
         value,
       }) as import('@run-planner/engine/simulation').RansomAssessmentCandidateEvaluation,
-    concaveStone: (owner, value) => {
-      const evaluation = core.evaluate({ kind: 'traitOffer', trait: owner, value });
-      return evaluation.kind === 'traitOffer'
-        ? (evaluation.result.concaveStone ?? Object.freeze([]))
-        : Object.freeze([] as ConcaveStoneCandidateBranch[]);
-    },
     steadyGrowthOutcome: (outcome, targetTraitKey) =>
       aggregateEvaluation(core, {
         kind: 'steadyGrowthOutcome',

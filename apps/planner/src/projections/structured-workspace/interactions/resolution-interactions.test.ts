@@ -72,8 +72,15 @@ describe('resolution-interactions', () => {
     const interaction = bound.interactions.traitOffers.get(semanticAddressKey(trait));
     if (interaction === undefined) throw new Error('Echo interaction is missing');
     const child = createEchoPomTargetAddress(trait, 'option3');
-    const pom = interaction.optionDomain(pomOffer, 'option3').echoPomTarget;
-    expect(pom?.control.address).toEqual(child);
+    const pom = interaction
+      .optionDomain(pomOffer, 'option3')
+      .children.find(
+        (
+          entry,
+        ): entry is Extract<typeof entry, { readonly child: { readonly kind: 'echoPomTarget' } }> =>
+          entry.child.kind === 'echoPomTarget',
+      );
+    expect(pom?.child.address).toEqual(child);
     const pomDomain = pom?.forOffer(pomOffer).load();
     expect(pomDomain?.emptyNoOpAllowed).toBe(false);
     expect(pomDomain?.picker.sections.flatMap((section) => section.items)).toEqual(
@@ -82,14 +89,12 @@ describe('resolution-interactions', () => {
         expect.objectContaining({ value: 'ZeusWeaponBoon', disabled: true, selected: true }),
       ]),
     );
-    expect(pom?.control.marker.findingCount).toBeGreaterThan(0);
+    expect(pom?.child.marker.findingCount).toBeGreaterThan(0);
     expect(bound.assembly.preliminaryFocusDestinations.has(semanticAddressKey(child))).toBe(true);
-    const pomCommand = pom?.intentFor(pomOffer, 'ApolloWeaponBoon').command;
-    expect(
-      pomCommand?.kind === 'ReplaceTraitOffer' && pomCommand.value.kind === 'traits'
-        ? pomCommand.value.options[2]
-        : undefined,
-    ).toMatchObject({ traitKey: 'EchoDoubleLevelBoon', echoPomTarget: 'ApolloWeaponBoon' });
+    expect(pom?.update(pomOffer, 'ApolloWeaponBoon').options[2]).toMatchObject({
+      traitKey: 'EchoDoubleLevelBoon',
+      echoPomTarget: 'ApolloWeaponBoon',
+    });
   });
 
   it('binds Steady Growth to its phase-owned candidate and exact target command', () => {

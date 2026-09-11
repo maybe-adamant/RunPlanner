@@ -214,9 +214,17 @@ export type { AuthoredHexTreeConfiguration } from './traits';
 export type { OneToEight } from './traits';
 export {
   discoverAuthoredTraitCarrierChildren,
+  completeAuthoredEchoLastRunBoonDraft,
+  discoverAuthoredEchoLastRunBoonDraftChildren,
+  discoverAuthoredTraitCarrierPayloads,
+  prepareEchoLastRunBoonDraft,
   updateAuthoredTraitCarrierChild,
+  type AuthoredEchoLastRunBoonDraftRow,
+  type AuthoredEchoLastRunBoonDraftChild,
   type AuthoredTraitCarrierChild,
+  type AuthoredTraitCarrierPayload,
   type AuthoredTraitCarrierChildUpdate,
+  type PreparedEchoLastRunBoonDraft,
 } from './trait-carrier-children';
 export {
   createDefaultAuthoredHexTree,

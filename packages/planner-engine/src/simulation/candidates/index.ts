@@ -111,6 +111,7 @@ export type {
   AllTogetherSetDomainEvaluation,
   AllTogetherSetDomainQuery,
   EvaluatedTraitAcquisitionTargetDomain,
+  EvaluatedConcaveStoneCarrierDomain,
   EvaluatedTraitOfferCandidate,
   EvaluatedTraitOfferFocusedOptionCandidate,
   TraitOfferCandidateFinding,

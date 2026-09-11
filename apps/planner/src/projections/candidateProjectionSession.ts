@@ -79,7 +79,8 @@ export function candidateOptionEvaluation(
     evaluation.kind === 'steadyGrowthOutcome' ||
     evaluation.kind === 'transcendentEmbryoOutcome' ||
     evaluation.kind === 'echoLastRunBoonDomain' ||
-    evaluation.kind === 'allTogetherSetDomain'
+    evaluation.kind === 'allTogetherSetDomain' ||
+    evaluation.kind === 'concaveStone'
   ) {
     throw new Error('a target-domain aggregate cannot be projected as one candidate option');
   }

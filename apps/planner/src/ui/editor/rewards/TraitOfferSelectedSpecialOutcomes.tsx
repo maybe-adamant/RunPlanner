@@ -114,7 +114,7 @@ function ConcaveStoneOutcomeEditor({
   };
   return (
     <fieldset
-      {...findingTarget(interaction.control.address)}
+      {...findingTarget(interaction.child.address)}
       tabIndex={-1}
       className="trait-selected-outcome-detail"
       aria-label="Concave Stone outcome"
@@ -146,7 +146,7 @@ function ConcaveStoneOutcomeEditor({
       {!procced && !domain.required ? null : (
         <ContextualPicker
           ariaLabel="Concave Stone residual trait"
-          id={`${semanticOwnerControlElementId(interaction.control.address)}-picker`}
+          id={`${semanticOwnerControlElementId(interaction.child.address)}-picker`}
           label="Frozen residual row"
           model={picker}
           onSelect={(optionKey) => onSelect({ kind: 'proc', optionKey })}
@@ -451,6 +451,7 @@ export function TraitOfferSelectedSpecialOutcomes({
   offer,
   optionIndex,
   carrierChildren,
+  feedback,
   concaveStone,
   onUpdate,
   onConcaveStoneResult,
@@ -459,6 +460,7 @@ export function TraitOfferSelectedSpecialOutcomes({
   readonly offer: AuthoredTraitOfferTraits;
   readonly optionIndex: number;
   readonly carrierChildren: readonly WorkspaceTraitCarrierChildInteraction[];
+  readonly feedback: readonly import('@planner/projections/structured-workspace').WorkspaceTraitOfferFeedback[];
   readonly concaveStone:
     | {
         readonly interaction: WorkspaceConcaveStoneInteraction;
@@ -471,7 +473,7 @@ export function TraitOfferSelectedSpecialOutcomes({
     result: AuthoredConcaveStoneResult | null,
   ) => void;
 }) {
-  const ransomAssessment = interaction.ransomAssessment(offer);
+  const ransomAssessment = feedback.find((entry) => entry.kind === 'ransom')?.assessment;
   const allTogetherSets = carrierChildren.filter(
     (
       child,
@@ -522,11 +524,7 @@ export function TraitOfferSelectedSpecialOutcomes({
           offer={offer}
           traitLabel={interaction.traitLabel}
           onSelect={(result) => {
-            if (result === null) {
-              const { concaveStoneResult: _result, ...withoutResult } = offer;
-              void _result;
-              onUpdate(Object.freeze(withoutResult));
-            } else onUpdate({ ...offer, concaveStoneResult: result });
+            onUpdate(concaveStone.interaction.update(offer, result));
             onConcaveStoneResult?.(offer, result);
           }}
         />

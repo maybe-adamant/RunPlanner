@@ -113,6 +113,7 @@ import {
   type AllTogetherSetDomainQuery,
   type AllTogetherSetDomainEvaluation,
   type EvaluatedAllTogetherSetDomain,
+  type EvaluatedConcaveStoneCarrierDomain,
   evaluateTraitOfferCandidate,
   evaluateTraitOfferFocusedOptionCandidate,
   type EvaluatedTraitAcquisitionTargetDomain,
@@ -250,7 +251,8 @@ export type ProjectCandidateSessionEvaluation =
   | EvaluatedEchoPomTargetDomain
   | EvaluatedNaturalSelectionResultCandidate
   | EvaluatedEchoLastRunBoonDomain
-  | EvaluatedAllTogetherSetDomain;
+  | EvaluatedAllTogetherSetDomain
+  | EvaluatedConcaveStoneCarrierDomain;
 
 export type CandidateEvaluationEvent =
   | {

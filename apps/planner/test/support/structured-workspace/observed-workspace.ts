@@ -42,7 +42,9 @@ function appendRewardControlMarkers(
   appendMarker(markers, control.marker);
   for (const trait of control.traitOffers ?? []) {
     appendMarker(markers, trait.marker);
-    appendMarker(markers, trait.circeResolution?.marker);
+    for (const child of trait.children) appendMarker(markers, child.marker);
+    for (const feedback of trait.feedback)
+      if (feedback.kind === 'echoLastReward') appendMarker(markers, feedback.control.marker);
   }
   for (const resolution of control.levelResolutions ?? []) {
     appendMarker(markers, resolution.marker);
@@ -108,7 +110,10 @@ function hubMainRewardMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMar
         local.marker,
         ...(local.control?.traitOffers ?? []).flatMap((trait) => [
           trait.marker,
-          ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
+          ...trait.children.map((child) => child.marker),
+          ...trait.feedback.flatMap((feedback) =>
+            feedback.kind === 'echoLastReward' ? [feedback.control.marker] : [],
+          ),
         ]),
         ...(local.control?.levelResolutions ?? []).map((resolution) => resolution.marker),
       ]);
@@ -117,7 +122,10 @@ function hubMainRewardMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMar
         local.control.marker,
         ...(local.control.traitOffers ?? []).flatMap((trait) => [
           trait.marker,
-          ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
+          ...trait.children.map((child) => child.marker),
+          ...trait.feedback.flatMap((feedback) =>
+            feedback.kind === 'echoLastReward' ? [feedback.control.marker] : [],
+          ),
         ]),
         ...(local.control.levelResolutions ?? []).map((resolution) => resolution.marker),
       ]);

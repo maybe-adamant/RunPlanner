@@ -165,6 +165,7 @@ export {
   type AllTogetherSetDomainEvaluation,
   type AllTogetherSetDomainQuery,
   type EvaluatedTraitAcquisitionTargetDomain,
+  type EvaluatedConcaveStoneCarrierDomain,
   type EvaluatedTraitOfferCandidate,
   type ConcaveStoneCandidateBranch,
   type TraitOfferGenerationState,

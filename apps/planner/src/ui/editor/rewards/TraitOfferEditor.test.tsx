@@ -10,6 +10,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceId,
   createExitSelectionAddress,
+  createEncounterPhaseAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
   decodeProjectDocument,
@@ -43,6 +44,7 @@ import {
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
+  goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNQueensRansomProject,
@@ -50,7 +52,10 @@ import {
   nOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
-import { createReachableNaturalChaosProject } from '@planner-test/support/structured-workspace/interaction-binding.test-support';
+import {
+  createReachableNaturalChaosProject,
+  reachedEchoProject,
+} from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 
 afterEach(cleanup);
 
@@ -78,6 +83,117 @@ function findTraitOfferControl(
 }
 
 describe('trait offer editor entry and dialog', () => {
+  it('repairs a retained Echo target beside an incomplete row, saves, and reopens the nested choice', async () => {
+    const application = createApplication();
+    const trait = createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        goldenHBiome,
+        { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-h-bridge01') },
+        'Encounter',
+      ),
+      'selection',
+    );
+    const project = applyProjectCommand(reachedEchoProject(), application.catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: {
+        kind: 'traits',
+        giverKey: 'Echo',
+        selectedOptionKey: 'option1',
+        options: [
+          {
+            traitKey: 'EchoLastRunBoon',
+            echoLastRunBoon: {
+              selectedOptionKey: 'option1',
+              options: [
+                {
+                  giverKey: 'Hera',
+                  traitKey: 'BoonDecayBoon',
+                  rarity: 'Common',
+                  targetTraitKey: 'DiminishingDodgeBoon',
+                },
+              ],
+            },
+          },
+          { traitKey: 'DiminishingDodgeBoon' },
+          { traitKey: 'DiminishingHealthAndManaBoon' },
+        ],
+      },
+    });
+    application.store.dispatch(authoredProjectReplaced(project));
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const user = userEvent.setup();
+    const view = render(
+      <Provider store={application.store}>
+        <TraitOfferDialog interactions={workspace.interactions} target={trait} />
+      </Provider>,
+    );
+    await user.click(await screen.findByRole('button', { name: 'Edit choice' }));
+    const targetName = 'Boon Boon Boon selected trait target';
+    expect(screen.getByRole('button', { name: targetName })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Add outcome' }));
+    expect(screen.getByRole('button', { name: 'Save Boon Boon Boon choice' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    await user.click(screen.getByRole('button', { name: targetName }));
+    const retainedLabel = application.catalog.traits.byKey.DiminishingDodgeBoon!.label;
+    const retained = screen
+      .getAllByRole('option')
+      .find((item) => item.textContent?.includes(retainedLabel));
+    expect(retained?.getAttribute('aria-disabled')).toBe('true');
+    const chooseEnabled = async () => {
+      const enabled = screen
+        .getAllByRole('option')
+        .find(
+          (item) =>
+            item.getAttribute('aria-disabled') !== 'true' && !(item as HTMLOptionElement).disabled,
+        );
+      if (enabled === undefined) throw new Error('real Echo domain has no enabled repair choice');
+      await user.click(enabled);
+    };
+    await chooseEnabled();
+    const repairedLabel = screen.getByRole('button', { name: targetName }).textContent;
+    await user.click(screen.getByRole('button', { name: 'Boon Boon Boon outcome 2' }));
+    await chooseEnabled();
+    const rarity = screen.queryByRole('button', { name: 'Boon Boon Boon outcome 2 rarity' });
+    if (rarity !== null) {
+      await user.click(rarity);
+      await chooseEnabled();
+    }
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Save Boon Boon Boon choice' })).toHaveProperty(
+        'disabled',
+        false,
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: 'Save Boon Boon Boon choice' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
+        'disabled',
+        false,
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+    const reopened = application.selectStructuredWorkspace(application.store.getState())!;
+    const saved = reopened.interactions.traitOffers.get(semanticAddressKey(trait))?.value;
+    if (saved?.kind !== 'traits') throw new Error('saved Echo offer missing');
+    expect(saved.options[0]?.echoLastRunBoon?.options).toHaveLength(2);
+    expect(saved.options[0]?.echoLastRunBoon?.options[0]?.targetTraitKey).not.toBe(
+      'DiminishingDodgeBoon',
+    );
+    view.unmount();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferDialog interactions={reopened.interactions} target={trait} />
+      </Provider>,
+    );
+    await user.click(await screen.findByRole('button', { name: 'Edit choice' }));
+    expect(screen.getByRole('button', { name: targetName }).textContent).toBe(repairedLabel);
+    expect(screen.getByRole('button', { name: 'Boon Boon Boon outcome 2' })).toBeTruthy();
+    application.dispose();
+  });
+
   it('repairs and persists a real missing targeted outcome through the prepared Hera interaction', async () => {
     const application = createApplication();
     const trait = createTraitOfferAddress(
@@ -140,10 +256,9 @@ describe('trait offer editor entry and dialog', () => {
       application.selectStructuredWorkspace(application.store.getState())!,
       trait,
     );
-    expect(saved.children).toHaveLength(1);
-    expect(saved.children[0]?.kind).toBe('traitAcquisitionTarget');
-    expect(saved.children[0]?.authoredComplete).toBe(true);
-    expect(saved.children[0]).toMatchObject({ targetTraitKey: 'ZeusWeaponBoon' });
+    const targets = saved.children.filter((child) => child.kind === 'traitAcquisitionTarget');
+    expect(targets).toHaveLength(1);
+    expect(targets[0]).toMatchObject({ authoredComplete: true, targetTraitKey: 'ZeusWeaponBoon' });
     view.unmount();
     const reopened = application.selectStructuredWorkspace(application.store.getState())!;
     const reopenedControl = findTraitOfferControl(reopened, trait);

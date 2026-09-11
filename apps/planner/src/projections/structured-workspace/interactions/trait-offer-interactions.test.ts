@@ -5,10 +5,13 @@ import { candidateSupport } from '@planner/projections/candidateProjection';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import { optionIndex } from '@run-planner/engine/authored-project';
 import type {
+  WorkspaceTraitCarrierChildInteraction,
+  WorkspaceTraitOptionDomainInteraction,
+} from '../contract';
+import type {
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
   TraitOfferAddress,
-  TraitOptionKey,
   CandidateProjectionSession,
   CandidateEvaluationEvent,
 } from '@planner-test/support/structured-workspace/interaction-binding.test-support';
@@ -48,6 +51,22 @@ const {
   createCandidateSessionFactory,
   createReachableNaturalChaosProject,
 } = support;
+
+function childFor<K extends WorkspaceTraitCarrierChildInteraction['child']['kind']>(
+  domain: WorkspaceTraitOptionDomainInteraction,
+  kind: K,
+):
+  | Extract<WorkspaceTraitCarrierChildInteraction, { readonly child: { readonly kind: K } }>
+  | undefined {
+  return domain.children.find(
+    (
+      entry,
+    ): entry is Extract<
+      WorkspaceTraitCarrierChildInteraction,
+      { readonly child: { readonly kind: K } }
+    > => entry.child.kind === kind,
+  );
+}
 
 describe('trait-offer-interactions', () => {
   it('binds the Chaos editor to the real typed domain and one complete save intent', () => {
@@ -166,7 +185,7 @@ describe('trait-offer-interactions', () => {
       interaction.value,
       interaction.value.selectedOptionKey,
     );
-    const hex = optionDomain.hexTree;
+    const hex = childFor(optionDomain, 'hexTree');
     if (hex === undefined) throw new Error('selected Spell Hex editor is missing');
     const declaration =
       catalog.hexes.byKey[
@@ -235,7 +254,11 @@ describe('trait-offer-interactions', () => {
     const saved = applyProjectCommand(
       authored,
       catalog,
-      hex.intentFor(interaction.value, transitioned).command,
+      Object.freeze({
+        kind: 'ReplaceTraitOffer' as const,
+        trait,
+        value: hex.update(interaction.value, transitioned),
+      }),
     );
     const reloaded = bind(saved, 'Underworld', 'F').interactions.traitOffers.get(interaction.key);
     expect(reloaded?.value?.kind === 'traits' ? reloaded.value.hexTree?.layoutKey : undefined).toBe(
@@ -413,27 +436,23 @@ describe('trait-offer-interactions', () => {
     if (interaction === undefined) throw new Error('Circe interaction is missing');
 
     const redDraft = Object.freeze({ ...directOffer, selectedOptionKey: 'option2' as const });
-    const red = interaction.optionDomain(redDraft, 'option2').circeResolution;
-    expect(red?.control.address).toEqual(createCirceResolutionAddress(trait, 'option2'));
+    const red = childFor(interaction.optionDomain(redDraft, 'option2'), 'circeResolution');
+    expect(red?.child.address).toEqual(createCirceResolutionAddress(trait, 'option2'));
     expect(red?.forOffer(redDraft).load()).toMatchObject({
       effect: 'activateArcana',
       requiredCount: 1,
     });
-    const redIntent = red?.intentFor(redDraft, {
+    const redValue = red?.update(redDraft, {
       kind: 'activateArcana',
       arcanaKeys: ['ChanneledCast'],
     });
-    const redCommand = redIntent?.command;
     expect(
-      (redCommand?.kind === 'ReplaceTraitOffer' && redCommand.value.kind === 'traits'
-        ? redCommand.value.options[2]
-        : undefined
-      )?.circeResolution,
+      (redValue?.kind === 'traits' ? redValue.options[2] : undefined)?.circeResolution,
     ).toEqual(directOffer.options[2]?.circeResolution);
 
     const blackDraft = Object.freeze({ ...directOffer, selectedOptionKey: 'option3' as const });
-    const black = interaction.optionDomain(blackDraft, 'option3').circeResolution;
-    expect(black?.control.address).toEqual(createCirceResolutionAddress(trait, 'option3'));
+    const black = childFor(interaction.optionDomain(blackDraft, 'option3'), 'circeResolution');
+    expect(black?.child.address).toEqual(createCirceResolutionAddress(trait, 'option3'));
     expect(black?.forOffer(blackDraft).load()).toMatchObject({
       effect: 'disableFear',
       requiredCount: 1,
@@ -456,10 +475,12 @@ describe('trait-offer-interactions', () => {
     const invalid = bind(invalidProject, 'Surface', 'O');
     const child = createCirceResolutionAddress(trait, 'option2');
     expect(invalid.assembly.preliminaryFocusDestinations.has(semanticAddressKey(child))).toBe(true);
+    const invalidInteraction = invalid.interactions.traitOffers.get(semanticAddressKey(trait));
     expect(
-      invalid.interactions.traitOffers
-        .get(semanticAddressKey(trait))
-        ?.optionDomain(invalidOffer, 'option2').circeResolution?.control.marker.findingCount,
+      invalidInteraction === undefined
+        ? undefined
+        : childFor(invalidInteraction.optionDomain(invalidOffer, 'option2'), 'circeResolution')
+            ?.child.marker.findingCount,
     ).toBeGreaterThan(0);
   });
 
@@ -800,8 +821,11 @@ describe('trait-offer-interactions', () => {
     const interaction = bind(project, 'Underworld', 'H').interactions.traitOffers.get(
       semanticAddressKey(trait),
     );
-    const boon = interaction?.optionDomain(boonOffer, 'option1').echoLastRunBoon;
-    expect(boon?.control.address).toEqual(createEchoLastRunBoonAddress(trait, 'option1'));
+    const boon =
+      interaction === undefined
+        ? undefined
+        : childFor(interaction.optionDomain(boonOffer, 'option1'), 'echoLastRunBoon');
+    expect(boon?.child.address).toEqual(createEchoLastRunBoonAddress(trait, 'option1'));
     const domain = boon?.forOffer(boonOffer).load();
     const firstRow = domain?.traitPickerFor(
       ['ApolloWeaponBoon'],
@@ -874,9 +898,13 @@ describe('trait-offer-interactions', () => {
     const baseSession = createCandidateSessionFactory(catalog).bind(
       simulateProjectAssembly(catalog, project),
     );
-    const echoLastRunBoon = vi.fn(
-      (owner: TraitOfferAddress, value: AuthoredTraitOffer, optionKey: TraitOptionKey) => {
-        const evaluated = baseSession.echoLastRunBoon(owner, value, optionKey);
+    const traitCarrierChildDomain = vi.fn(
+      (
+        owner: TraitOfferAddress,
+        value: AuthoredTraitOffer,
+        carrier: Parameters<typeof baseSession.traitCarrierChildDomain>[2],
+      ) => {
+        const evaluated = baseSession.traitCarrierChildDomain(owner, value, carrier);
         if (evaluated.kind !== 'echoLastRunBoonDomain') return evaluated;
         return Object.freeze({
           ...evaluated,
@@ -894,7 +922,7 @@ describe('trait-offer-interactions', () => {
         });
       },
     );
-    const candidateSession = Object.freeze({ ...baseSession, echoLastRunBoon });
+    const candidateSession = Object.freeze({ ...baseSession, traitCarrierChildDomain });
     const interaction = bind(
       project,
       'Underworld',
@@ -902,13 +930,16 @@ describe('trait-offer-interactions', () => {
       undefined,
       candidateSession,
     ).interactions.traitOffers.get(semanticAddressKey(trait));
-    const boon = interaction?.optionDomain(boonOffer, 'option1').echoLastRunBoon;
-    expect(echoLastRunBoon).not.toHaveBeenCalled();
+    const boon =
+      interaction === undefined
+        ? undefined
+        : childFor(interaction.optionDomain(boonOffer, 'option1'), 'echoLastRunBoon');
+    expect(traitCarrierChildDomain).not.toHaveBeenCalled();
     const loadable = boon?.forOffer(boonOffer);
     const domain = loadable?.load();
-    expect(echoLastRunBoon).toHaveBeenCalledTimes(1);
+    expect(traitCarrierChildDomain).toHaveBeenCalledTimes(1);
     expect(domain?.summaryFor(child)).toBe('Aphrodite · Flutter Strike · Common → Rare');
-    expect(echoLastRunBoon).toHaveBeenCalledTimes(1);
+    expect(traitCarrierChildDomain).toHaveBeenCalledTimes(1);
   });
 
   it('binds the exact Echo replay owner to existing acquisition candidate products', () => {
@@ -944,7 +975,9 @@ describe('trait-offer-interactions', () => {
 
     const bound = bind(project, 'Underworld', 'H');
     const interaction = bound.interactions.traitOffers.get(semanticAddressKey(trait));
-    const replay = interaction?.echoLastReward;
+    const replay = interaction
+      ?.feedbackFor(interaction.value!)
+      .find((entry) => entry.kind === 'echoLastReward')?.control;
     const replayOwner = createEchoLastRewardAddress(trait, 'option1');
     expect(replay?.address).toEqual(replayOwner);
     expect(replay?.acquisitionEntry).toMatchObject({

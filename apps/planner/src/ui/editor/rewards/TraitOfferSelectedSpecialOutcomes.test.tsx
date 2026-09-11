@@ -17,6 +17,7 @@ import {
   createNaturalSelectionResultAddress,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
+  type AuthoredCirceResolution,
 } from '@run-planner/engine/authored-project';
 
 import { createApplication } from '@planner/composition/createApplication';
@@ -734,16 +735,21 @@ describe('selected outcomes', () => {
             }),
           }),
         ]),
-      ransomAssessment: (draft: AuthoredTraitOffer) =>
+      feedbackFor: (draft: AuthoredTraitOffer) =>
         draft.kind !== 'traits' || draft.selectedOptionKey !== 'option1'
-          ? undefined
-          : Object.freeze({
-              branchAgreement: true,
-              buffedTraitKeys: Object.freeze(['ZeusWeaponBoon']),
-              levelBonus: 4,
-              removedCount: 1,
-              removedTraitKeys: Object.freeze(['HeraWeaponBoon']),
-            }),
+          ? Object.freeze([])
+          : Object.freeze([
+              Object.freeze({
+                kind: 'ransom' as const,
+                assessment: Object.freeze({
+                  branchAgreement: true as const,
+                  buffedTraitKeys: Object.freeze(['ZeusWeaponBoon']),
+                  levelBonus: 4,
+                  removedCount: 1,
+                  removedTraitKeys: Object.freeze(['HeraWeaponBoon']),
+                }),
+              }),
+            ]),
       traitLabel: (traitKey: string) =>
         ({ HeraWeaponBoon: 'Hera Attack', ZeusWeaponBoon: 'Zeus Attack' })[traitKey] ?? traitKey,
     });
@@ -814,7 +820,13 @@ describe('selected outcomes', () => {
             }),
           }),
         ]),
-      ransomAssessment: () => Object.freeze({ branchAgreement: false as const }),
+      feedbackFor: () =>
+        Object.freeze([
+          Object.freeze({
+            kind: 'ransom' as const,
+            assessment: Object.freeze({ branchAgreement: false as const }),
+          }),
+        ]),
       traitLabel: (traitKey: string) => traitKey,
     });
     render(
@@ -880,11 +892,39 @@ describe('selected outcomes', () => {
         requiredCount: effect === 'promoteArcana' ? 2 : 1,
         vowPicker: pickerModel([Object.freeze({ label: 'Vow of Rivals', value: 'VowRivals' })]),
       });
+      const circeChild = Object.freeze({
+        ...control,
+        kind: 'circeResolution' as const,
+        traitKey: 'CirceTest',
+        authoredComplete: true,
+      });
       const interaction = Object.freeze({
         ...base,
         optionDomain: (value: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') =>
           Object.freeze({
-            children: Object.freeze([]),
+            children:
+              value.kind !== 'traits' || value.selectedOptionKey !== optionKey
+                ? Object.freeze([])
+                : Object.freeze([
+                    Object.freeze({
+                      child: Object.freeze({
+                        ...circeChild,
+                        authoredComplete: value.options[0]?.circeResolution !== undefined,
+                      }),
+                      update: (
+                        offer: AuthoredTraitOfferTraits,
+                        resolution: AuthoredCirceResolution,
+                      ) =>
+                        Object.freeze({
+                          ...offer,
+                          options: Object.freeze([
+                            Object.freeze({ ...offer.options[0]!, circeResolution: resolution }),
+                            ...offer.options.slice(1),
+                          ]) as AuthoredTraitOfferTraits['options'],
+                        }),
+                      forOffer: () => Object.freeze({ load: () => domain }),
+                    }),
+                  ]),
             load: () =>
               Object.freeze({
                 candidates: Object.freeze([]),
@@ -892,22 +932,6 @@ describe('selected outcomes', () => {
                 rarityPickerFor: () => undefined,
                 traitPicker: Object.freeze({ sections: Object.freeze([]) }),
               }),
-            ...(value.kind !== 'traits' || value.selectedOptionKey !== optionKey
-              ? {}
-              : {
-                  circeResolution: Object.freeze({
-                    control,
-                    intentFor: () =>
-                      Object.freeze({
-                        command: Object.freeze({
-                          kind: 'ReplaceTraitOffer' as const,
-                          trait: base.owner,
-                          value,
-                        }),
-                      }),
-                    forOffer: () => Object.freeze({ load: () => domain }),
-                  }),
-                }),
           }),
       });
       const interactions = Object.freeze({
@@ -1061,12 +1085,40 @@ describe('selected outcomes', () => {
         requiredCount,
         vowPicker: unavailablePickerModel('Vow of Rivals', 'VowRivals'),
       });
+      const circeChild = Object.freeze({
+        ...control,
+        kind: 'circeResolution' as const,
+        traitKey: 'CirceTest',
+        authoredComplete: true,
+      });
       const interaction = Object.freeze({
         ...base,
         value,
         optionDomain: (draft: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') =>
           Object.freeze({
-            children: Object.freeze([]),
+            children:
+              draft.kind !== 'traits' || draft.selectedOptionKey !== optionKey
+                ? Object.freeze([])
+                : Object.freeze([
+                    Object.freeze({
+                      child: Object.freeze({
+                        ...circeChild,
+                        authoredComplete: draft.options[0]?.circeResolution !== undefined,
+                      }),
+                      update: (
+                        offer: AuthoredTraitOfferTraits,
+                        selected: AuthoredCirceResolution,
+                      ) =>
+                        Object.freeze({
+                          ...offer,
+                          options: Object.freeze([
+                            Object.freeze({ ...offer.options[0]!, circeResolution: selected }),
+                            ...offer.options.slice(1),
+                          ]) as AuthoredTraitOfferTraits['options'],
+                        }),
+                      forOffer: () => Object.freeze({ load: () => domain }),
+                    }),
+                  ]),
             load: () =>
               Object.freeze({
                 candidates: Object.freeze([]),
@@ -1074,22 +1126,6 @@ describe('selected outcomes', () => {
                 rarityPickerFor: () => undefined,
                 traitPicker: Object.freeze({ sections: Object.freeze([]) }),
               }),
-            ...(draft.kind !== 'traits' || draft.selectedOptionKey !== optionKey
-              ? {}
-              : {
-                  circeResolution: Object.freeze({
-                    control,
-                    intentFor: () =>
-                      Object.freeze({
-                        command: Object.freeze({
-                          kind: 'ReplaceTraitOffer' as const,
-                          trait: base.owner,
-                          value: draft,
-                        }),
-                      }),
-                    forOffer: () => Object.freeze({ load: () => domain }),
-                  }),
-                }),
           }),
       });
       const interactions = Object.freeze({

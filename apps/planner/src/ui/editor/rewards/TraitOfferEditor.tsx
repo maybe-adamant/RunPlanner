@@ -299,9 +299,18 @@ export function TraitOfferDialog({
             dispatch(traitOfferDialogOpened(target));
           }}
           onStoneResult={(offer, result) => {
-            const optionDomain = interaction.optionDomain(offer, offer.selectedOptionKey);
-            if (optionDomain.concaveStone === undefined) return;
-            executeIntent(optionDomain.concaveStone.intentFor(offer, result));
+            const child = interaction
+              .optionDomain(offer, offer.selectedOptionKey)
+              .children.find(
+                (
+                  entry,
+                ): entry is Extract<
+                  typeof entry,
+                  { readonly child: { readonly kind: 'concaveStone' } }
+                > => entry.child.kind === 'concaveStone',
+              );
+            if (child === undefined) return;
+            executeIntent(child.intentFor(offer, result));
           }}
           {...(interaction.resetIntent === undefined
             ? {}

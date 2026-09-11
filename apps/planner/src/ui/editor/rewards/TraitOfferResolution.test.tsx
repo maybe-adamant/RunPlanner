@@ -16,6 +16,8 @@ import {
   createEchoLastRewardAddress,
   createEchoPomTargetAddress,
   createOccurrenceAddress,
+  completeAuthoredEchoLastRunBoonDraft,
+  updateAuthoredTraitCarrierChild,
   optionIndex,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
@@ -64,6 +66,9 @@ describe('resolution outcomes', () => {
       rarificationActions: Object.freeze([]),
     });
     const control = Object.freeze({
+      kind: 'echoPomTarget' as const,
+      traitKey: 'EchoDoubleLevelBoon',
+      authoredComplete: true,
       address: createEchoPomTargetAddress(base.owner, 'option1'),
       marker: Object.freeze({
         address: createEchoPomTargetAddress(base.owner, 'option1'),
@@ -79,7 +84,6 @@ describe('resolution outcomes', () => {
       value,
       optionDomain: (draft: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') =>
         Object.freeze({
-          children: Object.freeze([]),
           load: () =>
             Object.freeze({
               candidates: Object.freeze([]),
@@ -87,32 +91,40 @@ describe('resolution outcomes', () => {
               rarityPickerFor: () => undefined,
               traitPicker: Object.freeze({ sections: Object.freeze([]) }),
             }),
-          ...(draft.kind !== 'traits' || draft.selectedOptionKey !== optionKey
-            ? {}
-            : {
-                echoPomTarget: Object.freeze({
-                  control,
-                  intentFor: () =>
-                    Object.freeze({
-                      command: Object.freeze({
-                        kind: 'ReplaceTraitOffer' as const,
-                        trait: base.owner,
-                        value: draft,
+          children: Object.freeze(
+            draft.kind !== 'traits' || draft.selectedOptionKey !== optionKey
+              ? []
+              : [
+                  Object.freeze({
+                    child: control,
+                    update: (offer: AuthoredTraitOfferTraits, value: string | null) =>
+                      updateAuthoredTraitCarrierChild(offer, {
+                        kind: 'echoPomTarget',
+                        child: control,
+                        value,
                       }),
-                    }),
-                  forOffer: () =>
-                    Object.freeze({
-                      load: () =>
-                        Object.freeze({
-                          picker: pickerModel([
-                            Object.freeze({ label: 'Nova Strike', value: 'ApolloWeaponBoon' }),
-                            Object.freeze({ label: 'Heaven Strike', value: 'ZeusWeaponBoon' }),
-                          ]),
-                          emptyNoOpAllowed: false,
+                    intentFor: () =>
+                      Object.freeze({
+                        command: Object.freeze({
+                          kind: 'ReplaceTraitOffer' as const,
+                          trait: base.owner,
+                          value: draft,
                         }),
-                    }),
-                }),
-              }),
+                      }),
+                    forOffer: () =>
+                      Object.freeze({
+                        load: () =>
+                          Object.freeze({
+                            picker: pickerModel([
+                              Object.freeze({ label: 'Nova Strike', value: 'ApolloWeaponBoon' }),
+                              Object.freeze({ label: 'Heaven Strike', value: 'ZeusWeaponBoon' }),
+                            ]),
+                            emptyNoOpAllowed: false,
+                          }),
+                      }),
+                  }),
+                ],
+          ),
         }),
     });
     const interactions = Object.freeze({
@@ -163,6 +175,9 @@ describe('resolution outcomes', () => {
     });
     const childAddress = createEchoLastRunBoonAddress(base.owner, 'option1');
     const control = Object.freeze({
+      kind: 'echoLastRunBoon' as const,
+      traitKey: 'EchoLastRunBoon',
+      authoredComplete: false,
       address: childAddress,
       marker: Object.freeze({
         address: childAddress,
@@ -184,7 +199,6 @@ describe('resolution outcomes', () => {
       value,
       optionDomain: (draft: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') =>
         Object.freeze({
-          children: Object.freeze([]),
           load: () =>
             Object.freeze({
               candidates: Object.freeze([]),
@@ -192,218 +206,242 @@ describe('resolution outcomes', () => {
               rarityPickerFor: () => undefined,
               traitPicker: Object.freeze({ sections: Object.freeze([]) }),
             }),
-          ...(draft.kind !== 'traits' || draft.selectedOptionKey !== optionKey
-            ? {}
-            : {
-                echoLastRunBoon: Object.freeze({
-                  control,
-                  intentFor: () =>
-                    Object.freeze({
-                      command: Object.freeze({
-                        kind: 'ReplaceTraitOffer' as const,
-                        trait: base.owner,
-                        value: draft,
+          children: Object.freeze(
+            draft.kind !== 'traits' || draft.selectedOptionKey !== optionKey
+              ? []
+              : [
+                  Object.freeze({
+                    child: control,
+                    update: (
+                      offer: AuthoredTraitOfferTraits,
+                      value: AuthoredEchoLastRunBoonOffer,
+                    ) =>
+                      updateAuthoredTraitCarrierChild(offer, {
+                        kind: 'echoLastRunBoon',
+                        child: control,
+                        value,
                       }),
-                    }),
-                  forOffer: () => ({
-                    load: () => {
-                      echoDomainLoads();
-                      return {
-                        draftSupportFor: (
-                          rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
-                          selectedIndex: number,
-                        ) => {
-                          const rowSupport = rows.map(
-                            (row) =>
-                              row.identity !== undefined &&
-                              row.rarity !== undefined &&
-                              !(
-                                row.identity.traitKey === 'HighHealthOffenseBoon' &&
-                                row.rarity === 'Rare'
-                              ),
-                          );
-                          const selected = rows[selectedIndex];
-                          const selectedTargetSupported =
-                            selected?.identity?.traitKey !== 'BoonDecayBoon' ||
-                            selected.targetTraitKey !== undefined;
-                          const occupied = rows.flatMap((row) =>
-                            row.identity === undefined ? [] : [row.identity.traitKey],
-                          );
-                          const remainingTraitIdentities = identities.filter(
-                            (identity) => !occupied.includes(identity.traitKey),
-                          );
-                          return Object.freeze({
-                            rowSupport: Object.freeze(rowSupport),
-                            selectedTargetSupported,
-                            complete: rowSupport.every(Boolean) && selectedTargetSupported,
-                            remainingTraitIdentities,
-                            canAppend: rows.length < 3 && remainingTraitIdentities.length > 0,
-                          });
-                        },
-                        effectiveRarityFor: (option: AuthoredEchoLastRunBoonOption) =>
-                          option.rarity,
-                        labelFor: (identity: {
-                          readonly giverKey: string;
-                          readonly traitKey: string;
-                        }) =>
-                          identity.traitKey === 'HighHealthOffenseBoon'
-                            ? 'Aphrodite · Heart Breaker'
-                            : identity.traitKey === 'BoonDecayBoon'
-                              ? 'Hera · Bridal Glow'
-                              : identity.traitKey === 'AllElementalBoon'
-                                ? 'Hera · All Together'
-                                : identity.traitKey === 'GoodStuffBoon'
-                                  ? 'Demeter · Natural Selection'
-                                  : 'Aphrodite · Romantic Spark',
-                        summaryFor: (nested: AuthoredEchoLastRunBoonOffer) => {
-                          const selected = nested.options[optionIndex(nested.selectedOptionKey)];
-                          return selected?.traitKey === 'BoonDecayBoon'
-                            ? 'Hera · Bridal Glow · Heroic'
-                            : selected?.traitKey === 'AllElementalBoon'
-                              ? 'Hera · All Together · Legendary'
-                              : selected?.traitKey === 'GoodStuffBoon'
-                                ? 'Demeter · Natural Selection · Duo'
-                                : `Aphrodite · Heart Breaker · ${selected?.rarity ?? 'unknown'}`;
-                        },
-                        rarityPickerFor: (
-                          identity: {
+                    intentFor: () =>
+                      Object.freeze({
+                        command: Object.freeze({
+                          kind: 'ReplaceTraitOffer' as const,
+                          trait: base.owner,
+                          value: draft,
+                        }),
+                      }),
+                    forOffer: () => ({
+                      load: () => {
+                        echoDomainLoads();
+                        return {
+                          completeDraft: (
+                            rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
+                            selectedIndex: number,
+                          ) =>
+                            completeAuthoredEchoLastRunBoonDraft(
+                              rows.map(({ identity, ...payload }) => ({ ...payload, ...identity })),
+                              selectedIndex,
+                            ),
+                          draftSupportFor: (
+                            rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
+                            selectedIndex: number,
+                          ) => {
+                            const rowSupport = rows.map(
+                              (row) =>
+                                row.identity !== undefined &&
+                                row.rarity !== undefined &&
+                                !(
+                                  row.identity.traitKey === 'HighHealthOffenseBoon' &&
+                                  row.rarity === 'Rare'
+                                ),
+                            );
+                            const selected = rows[selectedIndex];
+                            const selectedTargetSupported =
+                              selected?.identity?.traitKey !== 'BoonDecayBoon' ||
+                              selected.targetTraitKey !== undefined;
+                            const occupied = rows.flatMap((row) =>
+                              row.identity === undefined ? [] : [row.identity.traitKey],
+                            );
+                            const remainingTraitIdentities = identities.filter(
+                              (identity) => !occupied.includes(identity.traitKey),
+                            );
+                            return Object.freeze({
+                              rowSupport: Object.freeze(rowSupport),
+                              selectedTargetSupported,
+                              complete: rowSupport.every(Boolean) && selectedTargetSupported,
+                              remainingTraitIdentities,
+                              canAppend: rows.length < 3 && remainingTraitIdentities.length > 0,
+                            });
+                          },
+                          effectiveRarityFor: (option: AuthoredEchoLastRunBoonOption) =>
+                            option.rarity,
+                          labelFor: (identity: {
                             readonly giverKey: string;
                             readonly traitKey: string;
-                          },
-                          selected?: TraitRarity,
-                        ) => {
-                          if (
-                            identity.traitKey === 'HighHealthOffenseBoon' &&
-                            selected === 'Rare'
-                          ) {
-                            const invalid = unavailablePickerModel('Rare', 'Rare' as const);
-                            const available = pickerModel([
-                              Object.freeze({ label: 'Common', value: 'Common' as const }),
-                            ]);
-                            return Object.freeze({
-                              selected: invalid.selected,
-                              sections: Object.freeze([...invalid.sections, ...available.sections]),
-                            });
-                          }
-                          return pickerModel(
+                          }) =>
                             identity.traitKey === 'HighHealthOffenseBoon'
-                              ? [
-                                  Object.freeze({ label: 'Common', value: 'Common' as const }),
-                                  Object.freeze({ label: 'Rare', value: 'Rare' as const }),
-                                ]
-                              : identity.traitKey === 'AllElementalBoon'
+                              ? 'Aphrodite · Heart Breaker'
+                              : identity.traitKey === 'BoonDecayBoon'
+                                ? 'Hera · Bridal Glow'
+                                : identity.traitKey === 'AllElementalBoon'
+                                  ? 'Hera · All Together'
+                                  : identity.traitKey === 'GoodStuffBoon'
+                                    ? 'Demeter · Natural Selection'
+                                    : 'Aphrodite · Romantic Spark',
+                          summaryFor: (nested: AuthoredEchoLastRunBoonOffer) => {
+                            const selected = nested.options[optionIndex(nested.selectedOptionKey)];
+                            return selected?.traitKey === 'BoonDecayBoon'
+                              ? 'Hera · Bridal Glow · Heroic'
+                              : selected?.traitKey === 'AllElementalBoon'
+                                ? 'Hera · All Together · Legendary'
+                                : selected?.traitKey === 'GoodStuffBoon'
+                                  ? 'Demeter · Natural Selection · Duo'
+                                  : `Aphrodite · Heart Breaker · ${selected?.rarity ?? 'unknown'}`;
+                          },
+                          rarityPickerFor: (
+                            identity: {
+                              readonly giverKey: string;
+                              readonly traitKey: string;
+                            },
+                            selected?: TraitRarity,
+                          ) => {
+                            if (
+                              identity.traitKey === 'HighHealthOffenseBoon' &&
+                              selected === 'Rare'
+                            ) {
+                              const invalid = unavailablePickerModel('Rare', 'Rare' as const);
+                              const available = pickerModel([
+                                Object.freeze({ label: 'Common', value: 'Common' as const }),
+                              ]);
+                              return Object.freeze({
+                                selected: invalid.selected,
+                                sections: Object.freeze([
+                                  ...invalid.sections,
+                                  ...available.sections,
+                                ]),
+                              });
+                            }
+                            return pickerModel(
+                              identity.traitKey === 'HighHealthOffenseBoon'
                                 ? [
-                                    Object.freeze({
-                                      label: 'Legendary',
-                                      value: 'Legendary' as const,
-                                    }),
+                                    Object.freeze({ label: 'Common', value: 'Common' as const }),
+                                    Object.freeze({ label: 'Rare', value: 'Rare' as const }),
                                   ]
-                                : identity.traitKey === 'GoodStuffBoon'
+                                : identity.traitKey === 'AllElementalBoon'
                                   ? [
                                       Object.freeze({
-                                        label: 'Duo',
-                                        value: 'Duo' as const,
+                                        label: 'Legendary',
+                                        value: 'Legendary' as const,
                                       }),
                                     ]
-                                  : [
-                                      Object.freeze({
-                                        label:
-                                          identity.traitKey === 'SprintEchoBoon' ? 'Duo' : 'Heroic',
-                                        value:
-                                          identity.traitKey === 'SprintEchoBoon'
-                                            ? ('Duo' as const)
-                                            : ('Heroic' as const),
-                                      }),
-                                    ],
-                          );
-                        },
-                        targetPickerFor: () =>
-                          pickerModel([
-                            Object.freeze({
-                              label: 'Melting Point',
-                              value: 'HephaestusWeaponBoon',
-                            }),
-                          ]),
-                        targetRequiredFor: (identity: {
-                          readonly giverKey: string;
-                          readonly traitKey: string;
-                        }) => identity.traitKey === 'BoonDecayBoon',
-                        carrierKindFor: (identity: {
-                          readonly giverKey: string;
-                          readonly traitKey: string;
-                        }) =>
-                          identity.traitKey === 'AllElementalBoon'
-                            ? ('allTogether' as const)
-                            : identity.traitKey === 'GoodStuffBoon'
-                              ? ('naturalSelection' as const)
-                              : undefined,
-                        carrierForDraft: (
-                          rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
-                          selectedIndex: number,
-                        ) => ({
-                          load: () => {
-                            const selectedRow = rows[selectedIndex];
-                            if (selectedRow?.identity?.traitKey === 'GoodStuffBoon') {
-                              const targets = selectedRow.naturalSelectionTargets ?? [];
-                              return {
-                                kind: 'naturalSelection' as const,
-                                slotCount: 2,
-                                complete: targets.length === 2,
-                                supported: true,
-                                picker: pickerModel([
-                                  Object.freeze({
-                                    label: 'Nova Strike',
-                                    value: 'ApolloWeaponBoon',
-                                  }),
-                                ]),
-                                traitLabel: (traitKey: string) =>
-                                  traitKey === 'ApolloWeaponBoon' ? 'Nova Strike' : traitKey,
-                              };
-                            }
-                            const result = selectedRow?.allTogetherResult;
-                            const sets = [
-                              ['earth', 'Earth Grant'],
-                              ['fire', 'Fire Grant'],
-                              ['air', 'Air Grant'],
-                              ['water', 'Water Grant'],
-                            ] as const;
-                            return {
-                              kind: 'allTogether' as const,
-                              complete: sets.every(([setKey]) =>
-                                Object.hasOwn(result ?? {}, setKey),
-                              ),
-                              sets: sets.map(([setKey, label]) => ({
-                                setKey,
-                                picker: pickerModel([
-                                  Object.freeze({ label, value: `${setKey}Trait` }),
-                                ]),
-                              })),
-                            };
+                                  : identity.traitKey === 'GoodStuffBoon'
+                                    ? [
+                                        Object.freeze({
+                                          label: 'Duo',
+                                          value: 'Duo' as const,
+                                        }),
+                                      ]
+                                    : [
+                                        Object.freeze({
+                                          label:
+                                            identity.traitKey === 'SprintEchoBoon'
+                                              ? 'Duo'
+                                              : 'Heroic',
+                                          value:
+                                            identity.traitKey === 'SprintEchoBoon'
+                                              ? ('Duo' as const)
+                                              : ('Heroic' as const),
+                                        }),
+                                      ],
+                            );
                           },
-                        }),
-                        traitPickerFor: () =>
-                          pickerModel(
-                            identities.map((identity) =>
+                          targetPickerFor: () =>
+                            pickerModel([
                               Object.freeze({
-                                label:
-                                  identity.traitKey === 'HighHealthOffenseBoon'
-                                    ? 'Aphrodite · Heart Breaker'
-                                    : identity.traitKey === 'BoonDecayBoon'
-                                      ? 'Hera · Bridal Glow'
-                                      : identity.traitKey === 'AllElementalBoon'
-                                        ? 'Hera · All Together'
-                                        : identity.traitKey === 'GoodStuffBoon'
-                                          ? 'Demeter · Natural Selection'
-                                          : 'Aphrodite · Romantic Spark',
-                                value: identity,
+                                label: 'Melting Point',
+                                value: 'HephaestusWeaponBoon',
                               }),
+                            ]),
+                          targetRequiredFor: (identity: {
+                            readonly giverKey: string;
+                            readonly traitKey: string;
+                          }) => identity.traitKey === 'BoonDecayBoon',
+                          carrierKindFor: (identity: {
+                            readonly giverKey: string;
+                            readonly traitKey: string;
+                          }) =>
+                            identity.traitKey === 'AllElementalBoon'
+                              ? ('allTogether' as const)
+                              : identity.traitKey === 'GoodStuffBoon'
+                                ? ('naturalSelection' as const)
+                                : undefined,
+                          carrierForDraft: (
+                            rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
+                            selectedIndex: number,
+                          ) => ({
+                            load: () => {
+                              const selectedRow = rows[selectedIndex];
+                              if (selectedRow?.identity?.traitKey === 'GoodStuffBoon') {
+                                const targets = selectedRow.naturalSelectionTargets ?? [];
+                                return {
+                                  kind: 'naturalSelection' as const,
+                                  slotCount: 2,
+                                  complete: targets.length === 2,
+                                  supported: true,
+                                  picker: pickerModel([
+                                    Object.freeze({
+                                      label: 'Nova Strike',
+                                      value: 'ApolloWeaponBoon',
+                                    }),
+                                  ]),
+                                  traitLabel: (traitKey: string) =>
+                                    traitKey === 'ApolloWeaponBoon' ? 'Nova Strike' : traitKey,
+                                };
+                              }
+                              const result = selectedRow?.allTogetherResult;
+                              const sets = [
+                                ['earth', 'Earth Grant'],
+                                ['fire', 'Fire Grant'],
+                                ['air', 'Air Grant'],
+                                ['water', 'Water Grant'],
+                              ] as const;
+                              return {
+                                kind: 'allTogether' as const,
+                                complete: sets.every(([setKey]) =>
+                                  Object.hasOwn(result ?? {}, setKey),
+                                ),
+                                sets: sets.map(([setKey, label]) => ({
+                                  setKey,
+                                  picker: pickerModel([
+                                    Object.freeze({ label, value: `${setKey}Trait` }),
+                                  ]),
+                                })),
+                              };
+                            },
+                          }),
+                          traitPickerFor: () =>
+                            pickerModel(
+                              identities.map((identity) =>
+                                Object.freeze({
+                                  label:
+                                    identity.traitKey === 'HighHealthOffenseBoon'
+                                      ? 'Aphrodite · Heart Breaker'
+                                      : identity.traitKey === 'BoonDecayBoon'
+                                        ? 'Hera · Bridal Glow'
+                                        : identity.traitKey === 'AllElementalBoon'
+                                          ? 'Hera · All Together'
+                                          : identity.traitKey === 'GoodStuffBoon'
+                                            ? 'Demeter · Natural Selection'
+                                            : 'Aphrodite · Romantic Spark',
+                                  value: identity,
+                                }),
+                              ),
                             ),
-                          ),
-                      };
-                    },
+                        };
+                      },
+                    }),
                   }),
-                }),
-              }),
+                ],
+          ),
         }),
     }) satisfies WorkspaceTraitOfferInteraction;
     const interactions: WorkspaceInteractionCatalog = Object.freeze({
@@ -674,7 +712,7 @@ describe('resolution outcomes', () => {
             }),
           }),
         ]),
-      echoLastReward: control,
+      feedbackFor: () => Object.freeze([{ kind: 'echoLastReward' as const, control }]),
       optionDomain: () =>
         Object.freeze({
           children: Object.freeze([]),

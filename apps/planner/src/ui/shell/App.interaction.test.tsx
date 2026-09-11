@@ -1083,13 +1083,22 @@ describe('planner history interaction', () => {
           {
             interaction,
             value,
-            stone: interaction.optionDomain(value, value.selectedOptionKey).concaveStone,
+            stone: interaction
+              .optionDomain(value, value.selectedOptionKey)
+              .children.find(
+                (
+                  child,
+                ): child is Extract<
+                  typeof child,
+                  { readonly child: { readonly kind: 'concaveStone' } }
+                > => child.child.kind === 'concaveStone',
+              ),
           },
         ];
       })
       .find(({ stone, value }) => stone?.forOffer(value).load() !== undefined);
     if (beforeOpen === undefined) throw new Error('Concave Stone domain is absent');
-    const target = beforeOpen.stone!.control.address;
+    const target = beforeOpen.stone!.child.address;
     application.store.dispatch(traitOfferDialogOpened(target));
     const view = renderPlannerForInteraction({ application });
 
@@ -1206,7 +1215,13 @@ describe('planner history interaction', () => {
     if (interaction?.value?.kind !== 'traits') throw new Error('Heroic Stone offer is absent');
     const domain = interaction
       .optionDomain(interaction.value, interaction.value.selectedOptionKey)
-      .concaveStone?.forOffer(interaction.value)
+      .children.find(
+        (
+          child,
+        ): child is Extract<typeof child, { readonly child: { readonly kind: 'concaveStone' } }> =>
+          child.child.kind === 'concaveStone',
+      )
+      ?.forOffer(interaction.value)
       .load();
     expect(domain).toMatchObject({ required: true, procSupport: 100 });
     application.store.dispatch(traitOfferDialogOpened(target));
