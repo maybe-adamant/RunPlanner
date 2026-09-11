@@ -249,15 +249,18 @@ late restore position.
 
 ### Lifecycle structure and derived authoring timeline
 
-The pure action domain publishes one closed `RoomLifecycleStructure` from the
-resolved lifecycle profile and its active declaration-owned phase scope. Its
+The authored lifecycle-structure module constructs one closed
+`RoomLifecycleStructure` from the resolved lifecycle profile and its active
+declaration-owned phase scope. Its
 ordered points are the rigid room skeleton: `roomEntered`, each exact
 `encounterStart` then `encounterEnd`, Ship `nextPhase` seams, internal
 outgoing-generation, and final `cleanup`. The same frozen structure is carried
 by the `RoomActionRoster` and consumed by required-action scheduling,
 lifecycle execution, checkpoint assembly, and `RoomLifecycleTimeline`.
 None of those consumers may reconstruct phase membership or boundary order
-from authored action ranks.
+from authored action ranks. Structure construction, active-phase scoping, and
+window ordering share that owner; the action domain retains action
+contributions, required participation, and dependency assembly.
 
 When encounter preparation assesses a suffix as dormant, the engine scopes
 that same structure and roster to the assessed active phase prefix for both

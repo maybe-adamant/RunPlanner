@@ -1,5 +1,4 @@
-import type { Catalog, InRunTraitRarity, KeepsakeRank } from '../../catalog-schema';
-import { semanticAddressKey, type SemanticAddress } from '../../authored-project/addresses';
+import type { Catalog, InRunTraitRarity } from '../../catalog-schema';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 import {
   chaosOperandAuthoringValues,
@@ -7,7 +6,6 @@ import {
   normalizeChaosValues,
   optionIndex,
   type AuthoredTranscendentEmbryoOutcome,
-  type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
   type TraitOptionKey,
 } from '../../authored-project/traits';

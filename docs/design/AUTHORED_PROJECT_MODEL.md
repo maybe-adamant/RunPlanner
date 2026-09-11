@@ -718,6 +718,11 @@ Commands are semantic immutable transitions. Every successful proposal passes
 through the project decoder before publication. A structural failure reports
 its semantic owner and never leaves partial topology.
 
+Ordinary and detour commands share command-owned exit-capacity reconciliation:
+target pruning, descendant removal, selection retention, and selected-entry
+state reconciliation form one atomic transition. Structural source identity
+is separate from public semantic-address serialization.
+
 `applyProjectCommand(document, catalog, command)` accepts every transition that
 is structurally representable. Command handlers may enforce exact semantic
 ownership and address contact, catalog membership and declaration-owned static
@@ -766,6 +771,11 @@ unauthorized cross-biome rooms, invalid leaf state, and malformed structural
 ownership fail at decode contact. The codec preserves structurally
 representable incomplete and context-invalid authored choices; simulation
 findings, not fallback, describe context invalidity.
+
+Structural topology decoding resolves each occurrence's additional-exit
+attachments once per invocation and carries the decoded arrays into its
+complete result. An invocation-local memo preserves first-demand validation
+order and diagnostic paths; it does not escape as a consumer dependency.
 
 Persistence excludes filenames, Redux state, editor tabs, graph positions,
 candidate sets, findings, simulation output, save baselines, autosave status,
