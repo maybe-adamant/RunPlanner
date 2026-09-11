@@ -272,8 +272,7 @@ export interface RoomEncounterState {
     Record<string, AuthoredTranscendentEmbryoOutcome>
   >;
   /** Complete declaration-owned Gorgon condition/result for each phase. */
-  /** Schema-29 documents always encode this map; optional keeps hand-built legacy fixtures decodable. */
-  readonly gorgonResultByPhase?: Readonly<Record<string, AuthoredGorgonPhaseResult>>;
+  readonly gorgonResultByPhase: Readonly<Record<string, AuthoredGorgonPhaseResult>>;
   /** Sparse authored offers keyed by stable phase and concrete encounter. */
   readonly traitOffersByPhase?: Readonly<
     Record<string, Readonly<Record<string, AuthoredTraitOffer | null>>>

@@ -1,14 +1,10 @@
 import type { Catalog } from '../../catalog-schema';
-import type { ProjectDocument } from '../model';
+import type { ProjectDocument, AuthoredRewardState } from '../model';
 import type { AuthoredLevelResolution } from '../traits';
 import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
-import {
-  locateTraitReward,
-  updateLevelResolutionReward,
-  updateTraitRewardState,
-} from './trait-offer';
-import type { LevelResolutionCommand, TraitOfferCommand } from './types';
+import { locateReward, updateRewardState } from './reward-source';
+import type { LevelResolutionCommand } from './types';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import {
   authoredAcquisitionEntry,
@@ -16,6 +12,20 @@ import {
   replaceAuthoredAcquisitionEntry,
   replaceAuthoredAcquisitionEntryAtSite,
 } from '../shop';
+
+function updateLevelResolutionReward(
+  reward: AuthoredRewardState,
+  role: string,
+  value: AuthoredLevelResolution,
+): AuthoredRewardState {
+  return Object.freeze({
+    ...reward,
+    levelResolutionsByAcquisitionRole: Object.freeze({
+      ...(reward.levelResolutionsByAcquisitionRole ?? {}),
+      [role]: value,
+    }),
+  });
+}
 
 function validate(
   catalog: Catalog,
@@ -71,11 +81,7 @@ export function applyLevelResolutionCommand(
         : failCommand(command, 'acquisition entry is not occurrence-owned')
       : owner.occurrenceId;
   const occurrence = requireOccurrence(located.plan, occurrenceId, command);
-  const shim = {
-    kind: 'ReplaceTraitOffer',
-    trait: { ...command.levelResolution, kind: 'traitOffer' },
-  } as unknown as TraitOfferCommand;
-  const locatedReward = locateTraitReward(catalog, located, occurrence, occurrence.state, shim);
+  const locatedReward = locateReward(catalog, occurrence, occurrence.state, owner, command);
   if (locatedReward === undefined)
     failCommand(command, `no reward at role ${command.levelResolution.acquisitionRole}`);
   const effect = levelResolutionEffectFor(
@@ -123,14 +129,8 @@ export function applyLevelResolutionCommand(
       ),
     );
   }
-  const state = updateTraitRewardState(
-    catalog,
-    located,
-    occurrence,
-    occurrence.state,
-    shim,
-    value as never,
-    updateLevelResolutionReward as never,
+  const state = updateRewardState(catalog, occurrence, occurrence.state, owner, command, (reward) =>
+    updateLevelResolutionReward(reward, command.levelResolution.acquisitionRole, value),
   );
   return updateOccurrenceTopology(
     document,

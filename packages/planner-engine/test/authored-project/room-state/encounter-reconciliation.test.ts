@@ -17,6 +17,7 @@ describe('encounter reconciliation', () => {
         Combat: 'GeneratedP_Large',
       }),
       figLeafSkipByPhase: previousDefault.figLeafSkipByPhase,
+      gorgonResultByPhase: previousDefault.gorgonResultByPhase,
     });
 
     expect(
@@ -42,6 +43,7 @@ describe('encounter reconciliation', () => {
         Intro: false,
         Combat: false,
       },
+      gorgonResultByPhase: replacementDefault.gorgonResultByPhase,
     });
   });
 });

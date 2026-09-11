@@ -1,3 +1,4 @@
+import { locateReward, updateRewardState } from './reward-source';
 import type { Catalog } from '../../catalog-schema';
 import {
   traitGiverForAcquisitionRole,
@@ -13,28 +14,14 @@ import {
   type AuthoredTraitOfferTraits,
 } from '../traits';
 import { createDefaultAuthoredHexTree, normalizeAuthoredHexTree } from '../hex-tree';
-import {
-  parseClockedTraitGeneratedPickupEntryKey,
-  reconcileSelectedPickupProducerState,
-  selectedPickupProducerForEntry,
-} from '../pickup-producers';
-import {
-  createBiomeAddress,
-  type AcquisitionEntryAddress,
-  type TraitOfferAddress,
-} from '../addresses';
+import { reconcileSelectedPickupProducerState } from '../pickup-producers';
+import { createBiomeAddress, type TraitOfferAddress } from '../addresses';
 import type { ProjectDocument, RoomOccurrence, AuthoredRewardState } from '../model';
-import type { AuthoredLevelResolution } from '../traits';
 import { selectedEncounterAuthoringProfileKey } from '../room-state/encounter-envelope';
-import { requireShipCombatWheels } from '../room-state/declaration';
-import { incomingLevelEffectSource } from '../room-state/level-effects';
-import { parseArtificerReplacementEntryKey } from '../artificer';
-import { parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import type { TraitOfferCommand } from './types';
-import type { LevelResolutionEffectSource } from '../../reward-kernel/level-effects';
 import {
   authoredAcquisitionEntry,
   authoredAcquisitionEntryAtSite,
@@ -123,76 +110,6 @@ function validateGorgonAthenaOffer(
   return Object.freeze({
     traitKeys: Object.freeze([...value.traitKeys]) as readonly [string, string, string],
     selectedOptionKey: value.selectedOptionKey,
-  });
-}
-
-export interface LocatedTraitReward {
-  readonly reward: AuthoredRewardState;
-  readonly levelEffectSource: LevelResolutionEffectSource;
-}
-
-function requireAuthoredReward(
-  reward: AuthoredRewardState | null | undefined,
-  command: TraitOfferCommand,
-  detail: string,
-): AuthoredRewardState {
-  if (reward === undefined || reward === null) failCommand(command, detail);
-  return reward;
-}
-
-function pickupEntrySource(
-  catalog: Catalog,
-  located: LocatedBiome,
-  occurrence: RoomOccurrence,
-  owner: AcquisitionEntryAddress,
-  command: TraitOfferCommand,
-): LocatedTraitReward {
-  const entry = authoredAcquisitionEntryAtSite(occurrence, owner.site, owner.entryKey);
-  if (entry === undefined || entry === null)
-    failCommand(command, `missing or unresolved pickup entry ${owner.entryKey}`);
-  if (occurrence.state.kind === 'shop' && occurrence.state.shop !== undefined)
-    return Object.freeze({
-      reward: entry,
-      levelEffectSource: {
-        kind: 'shopProfile' as const,
-        key: occurrence.state.shop.profileKey,
-      },
-    });
-  if (parseArtificerReplacementEntryKey(owner.entryKey) !== undefined)
-    return Object.freeze({
-      reward: entry,
-      levelEffectSource: { kind: 'producerLifecycle' as const, key: 'RoomReward' },
-    });
-  if (
-    owner.site.pointKey === 'hermesShrineDelivery' &&
-    parseHermesShrineDeliveryEntryKey(owner.entryKey) !== undefined
-  )
-    return Object.freeze({
-      reward: entry,
-      levelEffectSource: { kind: 'producerLifecycle' as const, key: 'HermesShrineDelivery' },
-    });
-  if (
-    owner.site.pointKey === 'roomExit' &&
-    parseClockedTraitGeneratedPickupEntryKey(owner.entryKey) !== undefined
-  )
-    return Object.freeze({
-      reward: entry,
-      levelEffectSource: { kind: 'producerLifecycle' as const, key: 'GeneratedTraitPickup' },
-    });
-  const producer = selectedPickupProducerForEntry(
-    catalog,
-    createBiomeAddress(owner.routeKey, owner.biomeKey),
-    occurrence,
-    owner.site.pointKey,
-    owner.entryKey,
-  );
-  if (producer === undefined) failCommand(command, 'pickup entry has no unique selected producer');
-  return Object.freeze({
-    reward: entry,
-    levelEffectSource: {
-      kind: 'producerLifecycle' as const,
-      key: producer.producerLifecycleKey,
-    },
   });
 }
 
@@ -417,20 +334,6 @@ function validateOffer(
   });
 }
 
-export function updateLevelResolutionReward(
-  reward: AuthoredRewardState,
-  role: string,
-  value: AuthoredLevelResolution,
-): AuthoredRewardState {
-  return Object.freeze({
-    ...reward,
-    levelResolutionsByAcquisitionRole: Object.freeze({
-      ...(reward.levelResolutionsByAcquisitionRole ?? {}),
-      [role]: value,
-    }),
-  });
-}
-
 function updateReward(
   reward: AuthoredRewardState,
   role: string,
@@ -443,326 +346,6 @@ function updateReward(
       [role]: value,
     }),
   });
-}
-
-export function locateTraitReward(
-  catalog: Catalog,
-  located: LocatedBiome,
-  occurrence: RoomOccurrence,
-  state: RoomOccurrence['state'],
-  command: TraitOfferCommand,
-): LocatedTraitReward | undefined {
-  const trait = commandTraitAddress(command);
-  const owner = trait.owner;
-  switch (owner.kind) {
-    case 'acquisitionEntry':
-      return pickupEntrySource(catalog, located, occurrence, owner, command);
-    case 'incomingReward':
-      switch (state.kind) {
-        case 'counted':
-        case 'fixed':
-        case 'ephyraCombat': {
-          const room = catalog.rooms.byKey[occurrence.gameName];
-          const binding = room?.incomingReward;
-          if (binding === undefined || binding.kind === 'none')
-            failCommand(command, `${occurrence.gameName} has no incoming reward binding`);
-          return Object.freeze({
-            reward: requireAuthoredReward(
-              state.reward,
-              command,
-              'cannot edit trait offer before reward authorship',
-            ),
-            levelEffectSource: {
-              kind: 'producerLifecycle',
-              key: binding.producerLifecycleKey,
-            } as const,
-          });
-        }
-        case 'anomaly':
-        case 'freeReward': {
-          const levelEffectSource = incomingLevelEffectSource(catalog, occurrence);
-          if (levelEffectSource === undefined)
-            failCommand(command, `${occurrence.gameName} has no declared incoming reward binding`);
-          return Object.freeze({
-            reward: requireAuthoredReward(
-              state.reward,
-              command,
-              'cannot edit trait offer before reward authorship',
-            ),
-            levelEffectSource,
-          });
-        }
-        case 'none':
-        case 'fieldsCombat':
-        case 'shipCombat':
-        case 'shop':
-          failCommand(command, `incoming reward is not owned by ${occurrence.gameName}`);
-      }
-      break;
-    case 'localReward':
-      if (state.kind === 'fieldsCombat') {
-        const room = catalog.rooms.byKey[occurrence.gameName];
-        const cageGroup = room?.localChildren.find((child) => child.key === owner.groupKey);
-        const binding =
-          cageGroup?.kind === 'boundedRewardSlots'
-            ? cageGroup.reward
-            : room?.fieldsOptionalRewards?.key === owner.groupKey
-              ? room.fieldsOptionalRewards.reward
-              : undefined;
-        const slotKeys =
-          cageGroup?.kind === 'boundedRewardSlots'
-            ? cageGroup.slotKeys
-            : room?.fieldsOptionalRewards?.key === owner.groupKey
-              ? room.fieldsOptionalRewards.slotKeys
-              : [];
-        if (binding === undefined) {
-          failCommand(
-            command,
-            `${occurrence.gameName} has no Fields reward group ${owner.groupKey}`,
-          );
-        }
-        if (!slotKeys.includes(owner.slotKey)) {
-          failCommand(command, `${occurrence.gameName} has no Fields reward slot ${owner.slotKey}`);
-        }
-        const reward =
-          owner.groupKey === 'cages'
-            ? state.cages[owner.slotKey]
-            : state.optionalRewards[owner.slotKey];
-        if (reward === undefined) failCommand(command, `missing Fields reward ${owner.slotKey}`);
-        return Object.freeze({
-          reward: requireAuthoredReward(
-            reward,
-            command,
-            'cannot edit trait offer before reward authorship',
-          ),
-          levelEffectSource: {
-            kind: 'producerLifecycle',
-            key: binding.producerLifecycleKey,
-          } as const,
-        });
-      }
-      return failCommand(
-        command,
-        `${occurrence.gameName} has no local reward ${owner.groupKey}/${owner.slotKey}`,
-      );
-    case 'rewardWheelOffer':
-      if (state.kind !== 'shipCombat') {
-        failCommand(command, `${occurrence.gameName} has no reward wheel ${owner.wheelKey}`);
-      }
-      {
-        const wheel = state.wheels[owner.wheelKey];
-        const reward = wheel?.offers[owner.offerKey];
-        if (wheel === undefined || reward === undefined) {
-          failCommand(command, `missing reward wheel offer ${owner.wheelKey}/${owner.offerKey}`);
-        }
-        const room = catalog.rooms.byKey[occurrence.gameName];
-        if (room === undefined) failCommand(command, `unknown room ${occurrence.gameName}`);
-        const descriptor = requireShipCombatWheels(catalog, room, occurrence.gameName).find(
-          (candidate) => candidate.key === owner.wheelKey,
-        );
-        if (descriptor === undefined)
-          failCommand(command, `unknown reward wheel ${owner.wheelKey}`);
-        return Object.freeze({
-          reward: requireAuthoredReward(
-            reward,
-            command,
-            'cannot edit trait offer before reward authorship',
-          ),
-          levelEffectSource: {
-            kind: 'producerLifecycle',
-            key: descriptor.reward.producerLifecycleKey,
-          } as const,
-        });
-      }
-    case 'shopOffer':
-      if (state.kind !== 'shop' || state.shop === undefined) {
-        failCommand(command, `${occurrence.gameName} has no materialized Shop offers`);
-      }
-      {
-        const reward = state.shop.offers[owner.offerKey]?.reward;
-        if (reward === undefined) failCommand(command, `missing Shop offer ${owner.offerKey}`);
-        return Object.freeze({
-          reward: requireAuthoredReward(
-            reward,
-            command,
-            'cannot edit trait offer before reward authorship',
-          ),
-          levelEffectSource: { kind: 'shopProfile', key: state.shop.profileKey } as const,
-        });
-      }
-  }
-}
-
-export function updateTraitRewardState(
-  catalog: Catalog,
-  located: LocatedBiome,
-  occurrence: RoomOccurrence,
-  state: RoomOccurrence['state'],
-  command: TraitOfferCommand,
-  value: AuthoredTraitOffer,
-  update: (
-    reward: AuthoredRewardState,
-    role: string,
-    value: AuthoredTraitOffer,
-  ) => AuthoredRewardState = updateReward,
-): RoomOccurrence['state'] {
-  const trait = commandTraitAddress(command);
-  const owner = trait.owner;
-  switch (owner.kind) {
-    case 'acquisitionEntry':
-      return failCommand(command, 'site pickup entries are updated on their occurrence overlay');
-    case 'incomingReward':
-      switch (state.kind) {
-        case 'counted':
-        case 'fixed':
-        case 'anomaly':
-        case 'ephyraCombat':
-        case 'freeReward':
-          return Object.freeze({
-            ...state,
-            reward: update(
-              requireAuthoredReward(
-                state.reward,
-                command,
-                'cannot edit trait offer before reward authorship',
-              ),
-              trait.acquisitionRole,
-              value,
-            ),
-          });
-        case 'none':
-        case 'fieldsCombat':
-        case 'shipCombat':
-        case 'shop':
-          failCommand(command, `incoming reward is not owned by ${occurrence.gameName}`);
-      }
-      break;
-    case 'localReward':
-      if (state.kind === 'fieldsCombat') {
-        const room = catalog.rooms.byKey[occurrence.gameName];
-        const cageGroup = room?.localChildren.find((child) => child.key === owner.groupKey);
-        const slotKeys =
-          cageGroup?.kind === 'boundedRewardSlots'
-            ? cageGroup.slotKeys
-            : room?.fieldsOptionalRewards?.key === owner.groupKey
-              ? room.fieldsOptionalRewards.slotKeys
-              : [];
-        if (slotKeys.length === 0) {
-          failCommand(
-            command,
-            `${occurrence.gameName} has no Fields reward group ${owner.groupKey}`,
-          );
-        }
-        if (!slotKeys.includes(owner.slotKey)) {
-          failCommand(command, `${occurrence.gameName} has no Fields reward slot ${owner.slotKey}`);
-        }
-        const reward =
-          owner.groupKey === 'cages'
-            ? state.cages[owner.slotKey]
-            : state.optionalRewards[owner.slotKey];
-        if (reward === undefined) failCommand(command, `missing Fields reward ${owner.slotKey}`);
-        return Object.freeze({
-          ...state,
-          ...(owner.groupKey === 'cages'
-            ? {
-                cages: Object.freeze({
-                  ...state.cages,
-                  [owner.slotKey]: update(
-                    requireAuthoredReward(
-                      reward,
-                      command,
-                      'cannot edit trait offer before reward authorship',
-                    ),
-                    trait.acquisitionRole,
-                    value,
-                  ),
-                }),
-              }
-            : {
-                optionalRewards: Object.freeze({
-                  ...state.optionalRewards,
-                  [owner.slotKey]: update(
-                    requireAuthoredReward(
-                      reward,
-                      command,
-                      'cannot edit trait offer before reward authorship',
-                    ),
-                    trait.acquisitionRole,
-                    value,
-                  ),
-                }),
-              }),
-        });
-      }
-      return failCommand(
-        command,
-        `${occurrence.gameName} has no local reward ${owner.groupKey}/${owner.slotKey}`,
-      );
-    case 'rewardWheelOffer':
-      if (state.kind !== 'shipCombat') {
-        failCommand(command, `${occurrence.gameName} has no reward wheel ${owner.wheelKey}`);
-      }
-      {
-        const wheel = state.wheels[owner.wheelKey];
-        const reward = wheel?.offers[owner.offerKey];
-        if (wheel === undefined || reward === undefined) {
-          failCommand(command, `missing reward wheel offer ${owner.wheelKey}/${owner.offerKey}`);
-        }
-        return Object.freeze({
-          ...state,
-          wheels: Object.freeze({
-            ...state.wheels,
-            [owner.wheelKey]: Object.freeze({
-              ...wheel,
-              offers: Object.freeze({
-                ...wheel.offers,
-                [owner.offerKey]: update(
-                  requireAuthoredReward(
-                    reward,
-                    command,
-                    'cannot edit trait offer before reward authorship',
-                  ),
-                  trait.acquisitionRole,
-                  value,
-                ),
-              }),
-            }),
-          }),
-        });
-      }
-    case 'shopOffer':
-      if (state.kind !== 'shop' || state.shop === undefined) {
-        failCommand(command, `${occurrence.gameName} has no materialized Shop offers`);
-      }
-      {
-        const entry = state.shop.offers[owner.offerKey];
-        if (entry === undefined) failCommand(command, `missing Shop offer ${owner.offerKey}`);
-        return Object.freeze({
-          ...state,
-          shop: Object.freeze({
-            ...state.shop,
-            offers: Object.freeze({
-              ...state.shop.offers,
-              [owner.offerKey]: Object.freeze({
-                ...entry,
-                reward: update(
-                  requireAuthoredReward(
-                    entry.reward,
-                    command,
-                    'cannot edit trait offer before reward authorship',
-                  ),
-                  trait.acquisitionRole,
-                  value,
-                ),
-              }),
-            }),
-          }),
-        });
-      }
-    case 'encounterPhase':
-      return failCommand(command, 'encounter trait offers are updated by the encounter owner path');
-  }
-  return failCommand(command, `unsupported trait offer owner ${owner.kind}`);
 }
 
 export function applyTraitOfferCommand(
@@ -877,7 +460,7 @@ export function applyTraitOfferCommand(
     );
     return updateOccurrenceTopology(document, located, replaceOccurrence(topology, reconciled));
   }
-  const reward = locateTraitReward(catalog, located, occurrence, occurrence.state, command);
+  const reward = locateReward(catalog, occurrence, occurrence.state, owner, command);
   if (command.kind === 'ResetEncounterTraitOffer')
     failCommand(command, 'only encounter-owned trait offers can be reset');
   if (reward === undefined) failCommand(command, `no trait offer at role ${trait.acquisitionRole}`);
@@ -940,13 +523,8 @@ export function applyTraitOfferCommand(
       ),
     );
   }
-  const state = updateTraitRewardState(
-    catalog,
-    located,
-    occurrence,
-    occurrence.state,
-    command,
-    value,
+  const state = updateRewardState(catalog, occurrence, occurrence.state, owner, command, (reward) =>
+    updateReward(reward, trait.acquisitionRole, value),
   );
   const nextOccurrence = Object.freeze({ ...occurrence, state });
   return updateOccurrenceTopology(

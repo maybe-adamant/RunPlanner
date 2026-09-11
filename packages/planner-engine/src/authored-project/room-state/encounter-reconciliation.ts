@@ -64,7 +64,7 @@ export function reconcileRoomEncounterState(
             (key) => catalog.encounterDefinitions.byKey[key]?.hostsGorgon === true,
           );
     if (!hostsGorgon) continue;
-    const priorGorgon = previous.gorgonResultByPhase?.[binding.slotKey];
+    const priorGorgon = previous.gorgonResultByPhase[binding.slotKey];
     gorgonResultByPhase[binding.slotKey] =
       priorGorgon === undefined
         ? Object.freeze({ athenaTriggerConditionMet: false })
@@ -113,9 +113,7 @@ export function reconcileRoomEncounterState(
   return Object.freeze({
     encounterKeyByPhase: Object.freeze(selections),
     figLeafSkipByPhase: Object.freeze(figLeafSkipByPhase),
-    ...(previous.gorgonResultByPhase === undefined
-      ? {}
-      : { gorgonResultByPhase: Object.freeze(gorgonResultByPhase) }),
+    gorgonResultByPhase: Object.freeze(gorgonResultByPhase),
     ...(Object.keys(traitOffersByPhase).length === 0
       ? {}
       : { traitOffersByPhase: Object.freeze(traitOffersByPhase) }),
