@@ -19,8 +19,8 @@ import {
   assessExperimentalHammerEquipResult,
   assessJeweledPomEquipResult,
   assessTranscendentEmbryoBlessing,
-  createKeepsakeState,
-} from './keepsakes';
+} from './keepsakes/trait-effects';
+import { createKeepsakeState } from './keepsakes/state';
 import { createArcanaFearState } from './arcana-fear';
 import { createTraitHistoryState } from './trait-history';
 import type { BiomeHistoryPrefix } from './history';

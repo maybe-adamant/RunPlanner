@@ -15,7 +15,7 @@ import {
   createEmptyBiomeCandidateArtifacts,
   type BiomeCandidateArtifacts,
 } from './candidate-artifacts';
-import { attestFigLeafBranchState, attestGorgonBranchState } from './keepsakes';
+import { attestFigLeafBranchState, attestGorgonBranchState } from './keepsakes/encounter-effects';
 import { attestPendingHermesSpellDrop } from './hermes-shrine';
 import { attestTalentDropsClosed } from './hex-progress';
 import { authoringRegion } from './finding-regions';

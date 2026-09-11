@@ -28,7 +28,7 @@ import {
 } from '../../src/simulation/rewards/shop-settlement';
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
-import { createKeepsakeState } from '../../src/simulation/keepsakes';
+import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
 import { createDerivedAcquisitionEntryCandidateArtifacts } from '../../src/simulation/rewards/acquisition-artifacts';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 

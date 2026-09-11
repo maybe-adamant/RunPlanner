@@ -7,9 +7,9 @@ import {
   assessExperimentalHammerEquipResult,
   assessJeweledPomEquipResult,
   assessTranscendentEmbryoBlessing,
-  keepsakeEffectByKind,
   transcendentEmbryoBlessingValues,
-} from '../keepsakes';
+} from '../keepsakes/trait-effects';
+import { keepsakeEffectByKind } from '../keepsakes/state';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 
 export interface KeepsakeEquipResultCandidateQuery {

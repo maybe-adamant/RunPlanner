@@ -13,12 +13,12 @@ import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import {
   applyKeepsakeReplacement,
-  attestGorgonBranchState,
   beginBiomeKeepsakeState,
   createKeepsakeState,
   keepsakeRankForEquip,
   type KeepsakeState,
-} from '../../src/simulation/keepsakes';
+} from '../../src/simulation/keepsakes/state';
+import { attestGorgonBranchState } from '../../src/simulation/keepsakes/encounter-effects';
 import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
 import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';

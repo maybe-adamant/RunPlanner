@@ -6,10 +6,10 @@ import type { ProjectEvaluation } from '../evaluation-products';
 import {
   keepsakeSelectionUnavailableReason,
   type KeepsakeSelectionUnavailableReason,
-} from '../keepsakes';
+} from '../keepsakes/state';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 
-export type { KeepsakeSelectionUnavailableReason } from '../keepsakes';
+export type { KeepsakeSelectionUnavailableReason } from '../keepsakes/state';
 
 export interface KeepsakeSelectionCandidateQuery {
   readonly kind: 'keepsakeSelection';

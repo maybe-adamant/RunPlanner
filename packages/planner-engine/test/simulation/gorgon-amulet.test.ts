@@ -3,11 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyKeepsakeReplacement,
-  consumeGorgonAppearance,
   createKeepsakeState,
+} from '../../src/simulation/keepsakes/state';
+import {
+  consumeGorgonAppearance,
   expirePendingGorgon,
   gorgonSourceRarityOverride,
-} from '../../src/simulation/keepsakes';
+} from '../../src/simulation/keepsakes/encounter-effects';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
@@ -44,7 +46,7 @@ import {
   assessGorgonChildSettlement,
   assessGorgonEligibility,
   attestGorgonBranchState,
-} from '../../src/simulation/keepsakes';
+} from '../../src/simulation/keepsakes/encounter-effects';
 import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
 import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { resolveGorgonCandidateRarity } from '../../src/simulation/rewards/biome/encounter-acquisition/gorgon-started';

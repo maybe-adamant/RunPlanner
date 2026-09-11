@@ -34,7 +34,7 @@ import {
   advanceCurrentKeepsake,
   createKeepsakeState,
   type KeepsakeState,
-} from '../../src/simulation/keepsakes';
+} from '../../src/simulation/keepsakes/state';
 
 const biome = createBiomeAddress('Underworld', 'F');
 const boss = createOccurrenceAddress(biome, createOccurrenceId('golden-f-preboss-shop:boss'));

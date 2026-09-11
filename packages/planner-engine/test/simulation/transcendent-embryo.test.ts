@@ -12,17 +12,19 @@ import {
 } from '../../src/authored-project';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
+import { applyTranscendentEmbryoEquipResult } from '../../src/simulation/keepsakes/branch-transitions';
 import {
-  applyTranscendentEmbryoEquipResult,
   applyKeepsakeReplacement,
   advanceCurrentKeepsake,
+  createKeepsakeState,
+} from '../../src/simulation/keepsakes/state';
+import {
   advanceTranscendentEmbryoProgress,
   assessTranscendentEmbryoTransformation,
-  createKeepsakeState,
   transcendentEmbryoBlessingKeys,
   transcendentEmbryoBlessingValues,
   type ReachedTranscendentEmbryoThreshold,
-} from '../../src/simulation/keepsakes';
+} from '../../src/simulation/keepsakes/trait-effects';
 import {
   attachTraitHistory,
   boonRarityFactsForOffer,

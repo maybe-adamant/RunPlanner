@@ -20,7 +20,8 @@ import { createCompleteFGProject, goldenFStartId } from '@run-planner/test-fixtu
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
-import { createKeepsakeState, evaluateCallingCardOffer } from '../../src/simulation/keepsakes';
+import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
+import { evaluateCallingCardOffer } from '../../src/simulation/keepsakes/reward-effects';
 import { simulateProject } from '../../src/simulation';
 
 const biome = createBiomeAddress('Underworld', 'F');

@@ -14,11 +14,8 @@ import {
 
 import type { ArcanaFearState } from '../arcana-fear';
 import { beginBiomeArcanaFearState } from '../arcana-fear';
-import {
-  beginBiomeKeepsakeState,
-  createKeepsakeState,
-  applyTranscendentEmbryoEquipResult,
-} from '../keepsakes';
+import { beginBiomeKeepsakeState, createKeepsakeState } from '../keepsakes/state';
+import { applyTranscendentEmbryoEquipResult } from '../keepsakes/branch-transitions';
 import { attachTraitHistory, createTraitHistoryState, recordAspectStartingTrait } from '../traits';
 import { mergeEquivalentRewardBranches, type RewardBranchState } from './branch-primitives';
 import type { RewardBranch } from './model';

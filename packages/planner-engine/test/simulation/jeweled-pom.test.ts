@@ -15,8 +15,8 @@ import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-s
 import {
   applyKeepsakeReplacement,
   createKeepsakeState,
-  invalidateJeweledPom,
-} from '../../src/simulation/keepsakes';
+} from '../../src/simulation/keepsakes/state';
+import { invalidateJeweledPom } from '../../src/simulation/keepsakes/trait-effects';
 import { foldTraitHistoryEvents } from '../../src/simulation/traits';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 

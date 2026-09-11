@@ -23,7 +23,8 @@ import {
 import type { ResolvedEncounterPhase } from './model';
 import type { Catalog } from '../../catalog-schema';
 import type { FigLeafPhaseCandidateSupport } from '../rewards/model';
-import { assessGorgonCandidate, type GorgonLifecycleStatus } from '../keepsakes';
+import { assessGorgonCandidate } from '../keepsakes/encounter-effects';
+import { type GorgonLifecycleStatus } from '../keepsakes/state';
 import type { GorgonPhaseCandidateSupport } from '../rewards/model';
 import type { NemesisRandomEventCandidateSupport } from '../rewards/model';
 

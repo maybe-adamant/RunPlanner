@@ -18,7 +18,7 @@ import {
   type TraitHistoryState,
 } from '../traits';
 import type { ArcanaFearState } from '../arcana-fear';
-import type { KeepsakeState } from '../keepsakes';
+import type { KeepsakeState } from '../keepsakes/state';
 import type { HexProgressState } from '../hex-progress';
 
 export interface PendingShopTravelRefill {

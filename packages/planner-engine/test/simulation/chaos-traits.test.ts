@@ -21,8 +21,8 @@ import {
   attachTraitHistory,
 } from '../../src/simulation/traits';
 import { simulateProject } from '../../src/simulation';
-import { evaluateCallingCardOffer } from '../../src/simulation/keepsakes';
-import { createKeepsakeState } from '../../src/simulation/keepsakes';
+import { evaluateCallingCardOffer } from '../../src/simulation/keepsakes/reward-effects';
+import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
 import { boonRarityRollUnavailable } from '../../src/simulation/boon-rarity';
 import { createTestArcanaFearState } from '../support/arcana-fear';
 import { initializeTestRewardBranches } from '../support/arcana-fear';

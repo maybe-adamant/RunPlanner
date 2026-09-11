@@ -14,11 +14,13 @@ import { describe, expect, it } from 'vitest';
 import {
   advanceCurrentKeepsake,
   applyKeepsakeReplacement,
-  assessPhialTraitTargets,
-  consumePhial,
   createKeepsakeState,
   keepsakeRankForEquip,
-} from '../../src/simulation/keepsakes';
+} from '../../src/simulation/keepsakes/state';
+import {
+  assessPhialTraitTargets,
+  consumePhial,
+} from '../../src/simulation/keepsakes/trait-effects';
 import {
   attachTraitHistory,
   createTraitHistoryState,
