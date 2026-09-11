@@ -10,11 +10,13 @@ import type {
 } from './model';
 import {
   assembleRoomActionDomain,
-  authoredRoomLifecycleProfileKey,
-  roomLifecycleWindowOrdinal,
   type RoomActionContribution,
   type RoomActionDomain,
 } from './room-action-domain';
+import {
+  authoredRoomLifecycleProfileKey,
+  roomLifecycleWindowOrdinal,
+} from './room-lifecycle-structure';
 import { fieldsDefaultActiveCageCount } from './fields';
 import { roomActionKey } from './room-actions';
 import { additionalExitsForDecision, selectedExitContinuation } from './topology/query';

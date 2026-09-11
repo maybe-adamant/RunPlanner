@@ -8,8 +8,8 @@ import type {
   RoomLifecycleStructure,
   RoomLifecycleStructurePhase,
   RoomLifecycleStructurePoint,
-} from '../../authored-project/room-action-domain';
-import { scopeRoomLifecycleStructure } from '../../authored-project/room-action-domain';
+} from '../../authored-project/room-lifecycle-structure';
+import { scopeRoomLifecycleStructure } from '../../authored-project/room-lifecycle-structure';
 import { roomActionKey } from '../../authored-project/room-actions';
 import { semanticAddressKey } from '../../authored-project/addresses';
 import type { RoomActionRoster, RoomActionRow } from './model';

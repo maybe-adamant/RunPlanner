@@ -1,12 +1,14 @@
 import type { SemanticAddress } from '../../authored-project/addresses';
 import type { RoomActionReference } from '../../authored-project/model';
 import type {
+  RoomActionWindow,
+  RoomLifecycleStructure,
+} from '../../authored-project/room-lifecycle-structure';
+import type {
   RoomActionCheckpointContribution,
   RoomActionContribution,
   RoomActionDependency,
   RoomActionParticipation,
-  RoomActionWindow,
-  RoomLifecycleStructure,
 } from '../../authored-project/room-action-domain';
 import type { PlannerTimelineFacts } from '../timeline-facts';
 
@@ -15,8 +17,8 @@ export type {
   RoomActionContribution,
   RoomActionDependency,
   RoomActionParticipation,
-  RoomActionWindow,
 } from '../../authored-project/room-action-domain';
+export type { RoomActionWindow } from '../../authored-project/room-lifecycle-structure';
 
 export type RoomActionRosterContribution =
   RoomActionContribution | RoomActionCheckpointContribution;

@@ -35,7 +35,7 @@ import {
   scheduleRequiredRoomActions,
 } from '../room-action-defaults';
 import { roomActionKey } from '../room-actions';
-import { roomLifecycleWindowOrdinal } from '../room-action-domain';
+import { roomLifecycleWindowOrdinal } from '../room-lifecycle-structure';
 
 function shrineDeliverySource(
   document: ProjectDocument,

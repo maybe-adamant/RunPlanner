@@ -9,7 +9,7 @@ import {
   roomLifecycleWindowOrdinal,
   scopeRoomLifecycleStructure,
   type RoomLifecycleStructure,
-} from '../../authored-project/room-action-domain';
+} from '../../authored-project/room-lifecycle-structure';
 import type {
   RoomActionCheckpoint,
   RoomActionCheckpointContribution,
