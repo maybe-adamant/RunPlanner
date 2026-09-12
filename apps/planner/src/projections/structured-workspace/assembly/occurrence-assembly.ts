@@ -40,11 +40,11 @@ import { summarizeRewardOffer } from '@planner/projections/rewards/rewardPicker'
 import { requireWorkspaceRoom as requireRoom } from './catalog-room';
 import {
   StructuredWorkspaceProjectionContractError,
-  type WorkspaceRewardControl,
-  type WorkspaceRoomLocal,
   type WorkspaceRoomPickerControl,
   type WorkspaceRoomSummary,
 } from '../contract';
+import type { WorkspaceRewardControl } from '../contracts/rewards';
+import type { WorkspaceRoomLocal } from '../contracts/locals';
 import type { WorkspaceOccurrenceInteractionRequirement } from '../interactions/interaction-requirements';
 import {
   workspaceLocalDetailMarkers,

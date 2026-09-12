@@ -65,11 +65,9 @@ import type {
 } from '@planner/projections/candidates/candidateProjection';
 import { summarizeRewardOffer } from '@planner/projections/rewards/rewardPicker';
 import { resolveWorkspaceFixedRewardOffer } from './catalog-room';
-import {
-  StructuredWorkspaceProjectionContractError,
-  type WorkspaceEncounterPhase,
-  type WorkspaceRewardControl,
-} from '../contract';
+import { StructuredWorkspaceProjectionContractError } from '../contract';
+import type { WorkspaceEncounterPhase } from '../contracts/locals';
+import type { WorkspaceRewardControl } from '../contracts/rewards';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import type { WorkspaceMarker } from '../contracts/navigation';
 

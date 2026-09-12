@@ -23,12 +23,9 @@ import {
   type FieldsSpatialTarget,
 } from '@run-planner/engine/authored-project';
 
-import type {
-  WorkspaceLocalVisitOrderControl,
-  WorkspaceRoomActionProposal,
-  WorkspaceInteractionChoice,
-  WorkspaceFeatureAssessment,
-} from '../contract';
+import type { WorkspaceInteractionChoice, WorkspaceFeatureAssessment } from '../contract';
+import type { WorkspaceLocalVisitOrderControl } from '../contracts/locals';
+import type { WorkspaceRoomActionProposal } from '../contracts/timeline';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 
 /**

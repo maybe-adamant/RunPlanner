@@ -7,7 +7,8 @@ import type {
   WorkspaceOccurrenceActionsInput,
   WorkspaceOccurrenceActionAssembly,
 } from './occurrence-action-row-projection';
-import type { WorkspaceRoomActions, WorkspaceRoomLocal } from '../contract';
+import type { WorkspaceRoomActions } from '../contracts/timeline';
+import type { WorkspaceRoomLocal } from '../contracts/locals';
 import { presentRunState } from '../presentation/run-state';
 import type { WorkspaceRoomTab } from '../contracts/navigation';
 import type { WorkspaceRunStateLauncher } from '../contracts/run-state';

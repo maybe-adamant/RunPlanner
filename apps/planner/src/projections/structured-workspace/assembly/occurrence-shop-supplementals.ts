@@ -6,12 +6,12 @@ import {
   type AcquisitionSiteAddress,
   type AuthoredRewardState,
 } from '@run-planner/engine/authored-project';
-import {
-  StructuredWorkspaceProjectionContractError,
-  type WorkspaceExplicitRewardControl,
-  type WorkspaceShopSupplementalDescriptor,
-  type WorkspaceShopSupplementalPurchaseDescriptor,
-} from '../contract';
+import { StructuredWorkspaceProjectionContractError } from '../contract';
+import type { WorkspaceExplicitRewardControl } from '../contracts/rewards';
+import type {
+  WorkspaceShopSupplementalDescriptor,
+  WorkspaceShopSupplementalPurchaseDescriptor,
+} from '../contracts/commerce';
 import {
   rewardControl,
   type WorkspaceDerivedAcquisitionEntry,

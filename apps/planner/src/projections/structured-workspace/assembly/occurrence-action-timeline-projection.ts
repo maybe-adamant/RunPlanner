@@ -6,18 +6,17 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { RoomLifecycleTimeline } from '@run-planner/engine/simulation';
 import { requireWorkspaceRoom as requireRoom } from './catalog-room';
-import {
-  StructuredWorkspaceProjectionContractError,
-  type WorkspaceEncounterPhase,
-  type WorkspaceRoomActionProposal,
-  type WorkspaceRoomLifecycleBoundary,
-  type WorkspaceRoomLifecycleTimeline,
-  type WorkspaceRoomLifecycleTimelineEntry,
-  type WorkspaceRoomLocal,
-  type WorkspaceRoomActionRow,
-  type WorkspaceSteadyGrowthControl,
-  type WorkspaceTranscendentEmbryoControl,
-} from '../contract';
+import { StructuredWorkspaceProjectionContractError } from '../contract';
+import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
+import type {
+  WorkspaceRoomActionProposal,
+  WorkspaceRoomLifecycleBoundary,
+  WorkspaceRoomLifecycleTimeline,
+  WorkspaceRoomLifecycleTimelineEntry,
+  WorkspaceRoomActionRow,
+  WorkspaceSteadyGrowthControl,
+  WorkspaceTranscendentEmbryoControl,
+} from '../contracts/timeline';
 import { runStateLauncher } from './occurrence-action-run-state';
 import type { WorkspaceOccurrenceActionsInput } from './occurrence-action-row-projection';
 import type { WorkspaceRunStateLauncher } from '../contracts/run-state';

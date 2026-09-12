@@ -1,16 +1,20 @@
 import {
   StructuredWorkspaceProjectionContractError,
-  type WorkspaceEncounterPhase,
-  type WorkspaceRoomActionRow,
-  type WorkspaceRoomActions,
-  type WorkspaceRoomFeature,
-  type WorkspaceRoomLifecycleBoundary,
-  type WorkspaceRoomLifecycleTimelineEntry,
-  type WorkspaceRoomLocal,
   type WorkspaceRoomWorkbenchPresentation,
   type WorkspaceShipPhasePresentation,
-  type WorkspaceRewardWheelDescriptor,
 } from '../contract';
+import type {
+  WorkspaceEncounterPhase,
+  WorkspaceRoomLocal,
+  WorkspaceRewardWheelDescriptor,
+} from '../contracts/locals';
+import type {
+  WorkspaceRoomActionRow,
+  WorkspaceRoomActions,
+  WorkspaceRoomLifecycleBoundary,
+  WorkspaceRoomLifecycleTimelineEntry,
+} from '../contracts/timeline';
+import type { WorkspaceRoomFeature } from '../contracts/features';
 
 function presentedEncounterPhases(
   encounterPhases: readonly WorkspaceEncounterPhase[],

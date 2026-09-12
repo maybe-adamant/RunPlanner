@@ -5,10 +5,12 @@ import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type {
   WorkspaceBatchRewardStoreInteraction,
   WorkspaceExitSelectionInteraction,
-  WorkspaceFieldsCageOutcomeInteraction,
+} from '../contracts/structure';
+import type { WorkspaceFieldsCageOutcomeInteraction } from '../contracts/locals';
+import type {
   WorkspaceZagreusContractInteraction,
   WorkspaceChaosExitInteraction,
-} from '../contract';
+} from '../contracts/features';
 import type { WorkspaceBatchInteractionRequirement } from './interaction-requirements';
 import { candidateInteraction } from './interaction-binding-primitives';
 

@@ -1,81 +1,113 @@
-import type { WorkspaceRewardInteraction } from './contracts/rewards';
-import type {
-  WorkspaceAcquisitionConversionControl,
-  WorkspaceLevelResolutionControl,
-  WorkspaceLevelResolutionInteraction,
-  WorkspaceTraitOfferControl,
-  WorkspaceTraitOfferInteraction,
-} from './contracts/traits';
+export type {
+  WorkspaceShopOfferDescriptor,
+  WorkspaceShopPurchaseDescriptor,
+  WorkspaceShopSupplementalDescriptor,
+  WorkspaceShopSupplementalPurchaseDescriptor,
+} from './contracts/commerce';
+export type {
+  WorkspaceChaosExitControl,
+  WorkspaceChaosSpawnControl,
+  WorkspaceRoomFeature,
+  WorkspaceZagreusContractControl,
+  WorkspaceZagreusSpawnControl,
+} from './contracts/features';
+export type {
+  WorkspaceEncounterInteraction,
+  WorkspaceEncounterPhase,
+  WorkspaceFieldsCageDescriptor,
+  WorkspaceFieldsCageOutcomeInteraction,
+  WorkspaceFieldsOptionalRewardDescriptor,
+  WorkspaceFieldsSpatialControl,
+  WorkspaceFieldsSpatialPointInteraction,
+  WorkspaceFigLeafInteraction,
+  WorkspaceGorgonConditionInteraction,
+  WorkspaceLocalVisitDecision,
+  WorkspaceLocalVisitGenerationInteraction,
+  WorkspaceLocalVisitOrderControl,
+  WorkspaceLocalVisitOrderInteraction,
+  WorkspaceLocalVisitOrderOption,
+  WorkspaceLocalVisitSlot,
+  WorkspaceNemesisEventDomain,
+  WorkspaceNemesisEventInteraction,
+  WorkspaceNemesisFeatureInteraction,
+  WorkspaceRewardWheelDescriptor,
+  WorkspaceRewardWheelOfferDescriptor,
+  WorkspaceRoomLocal,
+} from './contracts/locals';
+export type {
+  WorkspaceCountedRewardControl,
+  WorkspaceExplicitRewardControl,
+  WorkspaceRewardControl,
+} from './contracts/rewards';
+export type {
+  WorkspaceBatchRewardStoreInteraction,
+  WorkspaceCompletedHubHandoffInteraction,
+  WorkspaceExitSelectionInteraction,
+  WorkspaceHubSlotCloseInteraction,
+  WorkspaceHubSlotInteraction,
+  WorkspaceHubSlotOpeningAttempt,
+  WorkspaceHubVisitOrderInteraction,
+  WorkspaceHubVisitOrderProposal,
+  WorkspaceStageDecisionRemoval,
+  WorkspaceStartInteraction,
+  WorkspaceTakeoverBatchInteraction,
+  WorkspaceTakeoverRepairInteraction,
+  WorkspaceTopologyRemovalInteraction,
+} from './contracts/structure';
+export type {
+  WorkspaceFieldsCageSlotControl,
+  WorkspaceFigurineArcanaInteraction,
+  WorkspaceFountainRarityControl,
+  WorkspaceFountainRarityDomain,
+  WorkspaceFountainRarityInteraction,
+  WorkspaceJudgmentArcanaInteraction,
+  WorkspaceRoomActionInteraction,
+  WorkspaceRoomActionProposal,
+  WorkspaceRoomActionRow,
+  WorkspaceRoomActions,
+  WorkspaceRoomLifecycleBoundary,
+  WorkspaceRoomLifecycleTimeline,
+  WorkspaceRoomLifecycleTimelineEntry,
+  WorkspaceSteadyGrowthControl,
+  WorkspaceSteadyGrowthDomain,
+  WorkspaceSteadyGrowthInteraction,
+  WorkspaceTranscendentEmbryoControl,
+  WorkspaceTranscendentEmbryoDomain,
+  WorkspaceTranscendentEmbryoInteraction,
+} from './contracts/timeline';
 import {
   semanticAddressKey,
-  type AcquisitionSiteAddress,
-  type AuthoredTranscendentEmbryoOutcome,
-  type AdditionalExitAddress,
-  type BiomeAddress,
-  type EncounterPhaseAddress,
-  type NemesisRandomEventAddress,
   type ExitDecisionAddress,
-  type HubDecisionAddress,
-  type HubSlotAddress,
-  type LocalVisitDecisionAddress,
-  type LocalVisitOrderAddress,
+  type FigurineArcanaAddress,
+  type JudgmentArcanaAddress,
+  type KeepsakeEquipResultAddress,
+  type KeepsakeSelectionAddress,
   type LocalVisitSlotAddress,
-  type RoomActionAddress,
-  type RoomFeatureAddress,
-  type RoomActionReference,
-  type ShopOfferAddress,
   type OccurrenceAddress,
   type OccurrenceId,
   type ProjectCommand,
-  type RewardWheelAddress,
+  type RoomFeatureAddress,
   type SemanticAddress,
-  type SideRoomGeneration,
-  type AcquisitionEntryAddress,
   type TargetAddress,
-  type SteadyGrowthOutcomeAddress,
-  type TranscendentEmbryoOutcomeAddress,
-  type FountainRarityOutcomeAddress,
-  type JudgmentArcanaAddress,
-  type FigurineArcanaAddress,
-  type KeepsakeSelectionAddress,
-  type KeepsakeEquipResultAddress,
-  type AuthoredNemesisRandomEventOutcome,
-  type FieldsSpatialAddress,
-  type FieldsSpatialTarget,
 } from '@run-planner/engine/authored-project';
-import type {
-  RoomDeclaration,
-  TraitRarity,
-  ChaosNumericOperand,
-} from '@run-planner/engine/catalog-schema';
-import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import type { RoomActionWindow } from '@run-planner/engine/simulation';
+import type { RoomDeclaration, TraitRarity } from '@run-planner/engine/catalog-schema';
 import type {
   CandidateOptionProjection,
   CandidateProjectionEvaluation,
   CandidateSessionFactory,
-  CountedRewardCandidateOwner,
-  RewardCandidateOwner,
 } from '../candidates/candidateProjection';
 import type {
   ContextualPickerModel,
   ContextualPickerProjectionService,
 } from '../contextual/contextualPicker';
-import type { RewardPickerProjectionService, RewardPickerStep } from '../rewards/rewardPicker';
+import type { RewardPickerProjectionService } from '../rewards/rewardPicker';
 import type { TraitDomainProjectionService } from '../rewards/traitDomainProjection';
-import type { TakeoverBatchCommand } from '@planner/workspace/takeoverBatchInteraction';
-import type { WorkspaceMarker, WorkspaceRoomTab } from './contracts/navigation';
-import type { WorkspaceRunStateLauncher } from './contracts/run-state';
 import type {
-  WorkspaceAcquisitionConversionInteraction,
-  WorkspaceChaosExitInteraction,
-  WorkspaceChaosSpawnInteraction,
   WorkspaceHermesShrineOfferInteraction,
   WorkspaceHermesShrinePresenceInteraction,
   WorkspaceHermesShrinePurchaseInteraction,
   WorkspacePurgingPoolInteraction,
   WorkspacePurgingPoolSlotInteraction,
-  WorkspaceResourcePlacementInteraction,
   WorkspaceShopOfferInteraction,
   WorkspaceShopPurchaseParticipationInteraction,
   WorkspaceStygianWellInteraction,
@@ -83,20 +115,91 @@ import type {
   WorkspaceStygianWellPresenceInteraction,
   WorkspaceStygianWellPurchaseInteraction,
   WorkspaceStygianWellTwistResultInteraction,
-  WorkspaceZagreusContractInteraction,
-  WorkspaceZagreusSpawnInteraction,
 } from './contracts/commerce';
+import type {
+  WorkspaceChaosExitInteraction,
+  WorkspaceChaosSpawnControl,
+  WorkspaceChaosSpawnInteraction,
+  WorkspaceResourcePlacementInteraction,
+  WorkspaceRoomFeature,
+  WorkspaceZagreusContractInteraction,
+  WorkspaceZagreusSpawnControl,
+  WorkspaceZagreusSpawnInteraction,
+} from './contracts/features';
+import type {
+  WorkspaceEncounterInteraction,
+  WorkspaceEncounterPhase,
+  WorkspaceFieldsCageOutcomeInteraction,
+  WorkspaceFieldsSpatialPointInteraction,
+  WorkspaceFigLeafInteraction,
+  WorkspaceGorgonConditionInteraction,
+  WorkspaceLocalVisitGenerationInteraction,
+  WorkspaceLocalVisitOrderInteraction,
+  WorkspaceNemesisEventInteraction,
+  WorkspaceNemesisFeatureInteraction,
+  WorkspaceRewardWheelDescriptor,
+  WorkspaceRoomLocal,
+} from './contracts/locals';
+import type { WorkspaceMarker, WorkspaceRoomTab } from './contracts/navigation';
+import type { WorkspaceRewardControl, WorkspaceRewardInteraction } from './contracts/rewards';
+import type { WorkspaceRunStateLauncher } from './contracts/run-state';
+import type {
+  WorkspaceBatchRewardStoreInteraction,
+  WorkspaceExitSelectionInteraction,
+  WorkspaceHubSlotInteraction,
+  WorkspaceHubVisitOrderInteraction,
+  WorkspaceStartInteraction,
+  WorkspaceTakeoverBatchInteraction,
+  WorkspaceTopologyRemovalInteraction,
+} from './contracts/structure';
+import type {
+  WorkspaceFigurineArcanaInteraction,
+  WorkspaceFountainRarityInteraction,
+  WorkspaceJudgmentArcanaInteraction,
+  WorkspaceRoomActionInteraction,
+  WorkspaceRoomActionRow,
+  WorkspaceRoomActions,
+  WorkspaceRoomLifecycleTimelineEntry,
+  WorkspaceSteadyGrowthInteraction,
+  WorkspaceTranscendentEmbryoInteraction,
+} from './contracts/timeline';
+import type {
+  WorkspaceAcquisitionConversionInteraction,
+  WorkspaceLevelResolutionInteraction,
+  WorkspaceTraitOfferInteraction,
+} from './contracts/traits';
+
 import type {
   WorkspaceKeepsakeEquipResultInteraction,
   WorkspaceKeepsakeSelectionInteraction,
 } from './contracts/keepsake';
 import type {
   WorkspaceAnomalyControl,
-  WorkspaceDoorContract,
   WorkspaceDoorReward,
   WorkspaceMissingTargetAuthoring,
 } from './contracts/structure';
 
+export type {
+  WorkspaceHermesShrineOfferInteraction,
+  WorkspaceHermesShrinePresenceInteraction,
+  WorkspaceHermesShrinePurchaseInteraction,
+  WorkspacePurgingPoolInteraction,
+  WorkspacePurgingPoolSlotInteraction,
+  WorkspaceShopOfferInteraction,
+  WorkspaceShopPurchaseParticipationInteraction,
+  WorkspaceStygianWellInteraction,
+  WorkspaceStygianWellOfferInteraction,
+  WorkspaceStygianWellPresenceInteraction,
+  WorkspaceStygianWellPurchaseInteraction,
+  WorkspaceStygianWellTwistResultInteraction,
+} from './contracts/commerce';
+export type {
+  WorkspaceChaosExitInteraction,
+  WorkspaceChaosSpawnInteraction,
+  WorkspaceResourcePlacementInteraction,
+  WorkspaceZagreusContractInteraction,
+  WorkspaceZagreusSpawnInteraction,
+} from './contracts/features';
 export type {
   WorkspaceExperimentalHammerEquipResultInteraction,
   WorkspaceJeweledPomEquipResultInteraction,
@@ -105,26 +208,8 @@ export type {
   WorkspaceKeepsakeSelectionInteraction,
   WorkspaceTranscendentEmbryoEquipResultInteraction,
 } from './contracts/keepsake';
-export type {
-  WorkspaceAcquisitionConversionInteraction,
-  WorkspaceChaosExitInteraction,
-  WorkspaceChaosSpawnInteraction,
-  WorkspaceHermesShrineOfferInteraction,
-  WorkspaceHermesShrinePresenceInteraction,
-  WorkspaceHermesShrinePurchaseInteraction,
-  WorkspacePurgingPoolInteraction,
-  WorkspacePurgingPoolSlotInteraction,
-  WorkspaceResourcePlacementInteraction,
-  WorkspaceShopOfferInteraction,
-  WorkspaceShopPurchaseParticipationInteraction,
-  WorkspaceStygianWellInteraction,
-  WorkspaceStygianWellOfferInteraction,
-  WorkspaceStygianWellPresenceInteraction,
-  WorkspaceStygianWellPurchaseInteraction,
-  WorkspaceStygianWellTwistResultInteraction,
-  WorkspaceZagreusContractInteraction,
-  WorkspaceZagreusSpawnInteraction,
-} from './contracts/commerce';
+export type { WorkspaceRewardInteraction } from './contracts/rewards';
+export type { WorkspaceAcquisitionConversionInteraction } from './contracts/traits';
 
 /**
  * Public structured-workspace vocabulary. The projector constructs these
@@ -162,161 +247,6 @@ export interface WorkspaceCandidateInteraction<T> {
   readonly load: () => readonly CandidateOptionProjection<T, CandidateProjectionEvaluation>[];
   readonly owner: SemanticAddress;
   readonly selected?: T;
-}
-
-export interface WorkspaceBatchRewardStoreInteraction extends WorkspaceCandidateInteraction<string> {
-  readonly intentFor: (
-    storeKey: string,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceBatchRewardStore' | 'InitializeExitDecision' }>
-  >;
-}
-
-export interface WorkspaceFieldsCageOutcomeInteraction extends WorkspaceCandidateInteraction<
-  'min' | 'max'
-> {
-  readonly intentFor: (
-    cageOutcome: 'min' | 'max',
-  ) => WorkspaceCommandIntent<
-    Extract<
-      ProjectCommand,
-      { readonly kind: 'ReplaceFieldsCageOutcome' | 'InitializeExitDecision' }
-    >
-  >;
-}
-
-export interface WorkspaceLocalVisitGenerationInteraction extends WorkspaceCandidateInteraction<SideRoomGeneration> {
-  readonly intentFor: (
-    generation: SideRoomGeneration,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'SetLocalVisitGeneration' }>
-  >;
-  readonly owner: LocalVisitSlotAddress;
-}
-
-export interface WorkspaceLocalVisitOrderInteraction extends WorkspaceCandidateInteraction<
-  readonly OccurrenceId[]
-> {
-  readonly intentFor: (
-    occurrenceIds: readonly OccurrenceId[],
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceLocalVisitOrder' }>>;
-  readonly owner: LocalVisitOrderAddress;
-}
-
-/**
- * One exact, pool-backed encounter phase. The interaction owns the complete
- * semantic mutation because the phase address—not a rendered ordinal or room
- * name—identifies the persisted selection.
- */
-export interface WorkspaceEncounterInteraction {
-  readonly intentFor: (
-    encounterKey: string,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'SelectEncounter' }>>;
-  readonly key: string;
-  /**
-   * The one lazy candidate contact returns the application-owned contextual
-   * picker model rather than exposing raw encounter evidence to React.
-   */
-  readonly load: () => ContextualPickerModel<string>;
-  readonly owner: EncounterPhaseAddress;
-  readonly resetIntent: WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ResetEncounter' }>
-  >;
-  readonly selected: string;
-}
-export interface WorkspaceNemesisEventInteraction {
-  readonly intentFor: (
-    value: AuthoredNemesisRandomEventOutcome | null,
-    reward: ResolvedRewardOffer | null,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceNemesisRandomEventOutcome' }>
-  >;
-  readonly key: string;
-  readonly owner: NemesisRandomEventAddress;
-  readonly load: () => WorkspaceNemesisEventDomain | undefined;
-  readonly reward: ResolvedRewardOffer | null;
-  /** Player-facing catalog label for a persisted or candidate result identity. */
-  readonly rewardLabelFor: (rewardType: string) => string;
-  readonly value: AuthoredNemesisRandomEventOutcome | null;
-}
-
-/** Application adaptation of the engine's branch-correlated Nemesis capability. */
-export interface WorkspaceNemesisEventDomain {
-  readonly familyKeys: readonly AuthoredNemesisRandomEventOutcome['kind'][];
-  readonly goldTradeResponses: readonly ('accept' | 'decline')[];
-  readonly damageTradeResponses: readonly ('accept' | 'decline')[];
-  readonly traitTradeResponses: readonly ('accept' | 'decline')[];
-  readonly damageContestResults: readonly ('success' | 'failure')[];
-  readonly freeItemRewardTypes: readonly string[];
-  readonly goldTradeRewardTypes: readonly string[];
-  readonly damageTradeRewardTypes: readonly string[];
-  readonly traitTradeTraitKeys: readonly string[];
-  /** Application-owned identity model for the trait-trade target. */
-  readonly traitTradePicker: (selected?: string) => ContextualPickerModel<string>;
-  readonly damageContestSuccessRewardTypes: readonly string[];
-  readonly traitTradeRewardType: string;
-  readonly damageContestFailureRewardType: string;
-}
-
-/** Complete application-owned mapping for H's binary Passive-slot feature. */
-export interface WorkspaceNemesisFeatureInteraction {
-  readonly key: string;
-  readonly owner: EncounterPhaseAddress;
-  readonly intent: WorkspaceCommandIntent<
-    Extract<
-      ProjectCommand,
-      {
-        readonly kind: 'SelectEncounter' | 'ResetEncounter';
-      }
-    >
-  >;
-}
-
-/** Phase-local Fig Leaf choice; eligibility is supplied by the engine. */
-export interface WorkspaceFigLeafInteraction {
-  readonly intentFor: (
-    value: boolean,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceFigLeafSkip' }>>;
-  readonly key: string;
-  readonly owner: EncounterPhaseAddress;
-  readonly selected: boolean;
-  readonly supported: boolean;
-}
-
-export interface WorkspaceGorgonConditionInteraction {
-  readonly intentFor: (
-    value: boolean,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceGorgonDeathDefianceCondition' }>
-  >;
-  readonly key: string;
-  readonly owner: EncounterPhaseAddress;
-  readonly selected: boolean;
-  readonly supported: boolean;
-}
-
-/** Atomic exact-set authoring at one reached Boss-defeated occurrence seam. */
-export interface WorkspaceJudgmentArcanaInteraction {
-  readonly choices: readonly WorkspaceInteractionChoice<string>[];
-  readonly intentFor: (
-    arcanaKeys: readonly string[],
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceJudgmentArcana' }>>;
-  readonly key: string;
-  readonly load: (arcanaKeys?: readonly string[]) => CandidateProjectionEvaluation;
-  readonly owner: JudgmentArcanaAddress;
-  readonly value: readonly string[];
-}
-
-/** Atomic exact-set authoring for Crystal Figurine after Judgment at one Boss seam. */
-export interface WorkspaceFigurineArcanaInteraction {
-  readonly choices: readonly WorkspaceInteractionChoice<string>[];
-  readonly intentFor: (
-    arcanaKeys: readonly string[],
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceFigurineArcana' }>>;
-  readonly key: string;
-  readonly load: (arcanaKeys?: readonly string[]) => CandidateProjectionEvaluation;
-  readonly owner: FigurineArcanaAddress;
-  readonly value: readonly string[];
 }
 
 /** One exact route-start or Postboss rack selection, with engine-backed option support. */
@@ -367,10 +297,6 @@ export interface WorkspaceCommandIntent<Command extends ProjectCommand = Project
   };
 }
 
-type WorkspaceCreateStartIntent = WorkspaceCommandIntent<
-  Extract<ProjectCommand, { readonly kind: 'CreateStart' }>
->;
-
 type WorkspaceTargetRoomCommandIntent = WorkspaceCommandIntent<
   Extract<ProjectCommand, { readonly kind: 'CreateTarget' | 'ReplaceOccurrenceRoom' }>
 >;
@@ -388,109 +314,6 @@ type WorkspaceDecisionEntryRoomCommandIntent = WorkspaceCommandIntent<
     }
   >
 >;
-
-/** Generic topology creation; the resulting occurrence owns all room authoring. */
-export interface WorkspaceStartInteraction {
-  readonly intent: () => WorkspaceCreateStartIntent;
-  readonly key: string;
-  readonly owner: BiomeAddress;
-}
-
-export interface WorkspaceTopologyRemovalInteraction {
-  readonly intent: WorkspaceCommandIntent<
-    Extract<
-      ProjectCommand,
-      { readonly kind: 'ClearTopology' | 'RemoveExitDecision' | 'RemoveHubDecision' }
-    >
-  >;
-  readonly key: string;
-  readonly owner: BiomeAddress | ExitDecisionAddress | HubDecisionAddress;
-}
-
-/** A visible stage can carry removal for its hidden source decision. */
-export interface WorkspaceStageDecisionRemoval {
-  readonly interactionKey: string;
-  readonly label: string;
-}
-
-export interface WorkspaceExitSelectionInteraction {
-  readonly key: string;
-  readonly owner: ExitDecisionAddress;
-  readonly selectedExitKey?: string;
-  readonly targets: readonly WorkspaceInteractionChoice<string>[];
-}
-
-/** One explicitly activated opening attempt owns its provisional occurrence identity. */
-export interface WorkspaceHubSlotOpeningAttempt extends WorkspaceCandidateInteraction<boolean> {
-  readonly intentFor: (
-    open: true,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'OpenHubSlot' }>>;
-}
-
-export interface WorkspaceHubSlotCloseInteraction extends WorkspaceCandidateInteraction<boolean> {
-  readonly intentFor: (
-    open: false,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'CloseHubSlot' }>>;
-}
-
-export type WorkspaceHubSlotInteraction =
-  | {
-      readonly beginOpeningAttempt: () => WorkspaceHubSlotOpeningAttempt;
-      readonly key: string;
-      readonly owner: HubSlotAddress;
-      readonly selected: false;
-    }
-  | {
-      readonly close?: WorkspaceHubSlotCloseInteraction;
-      readonly key: string;
-      readonly owner: HubSlotAddress;
-      readonly selected: true;
-    };
-
-/** One lazily-evaluated complete Hub traversal proposal. */
-export interface WorkspaceHubVisitOrderProposal extends WorkspaceCandidateInteraction<
-  readonly string[]
-> {
-  readonly intent: () => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceHubVisitOrder' }>
-  >;
-}
-
-/**
- * The Hub decision owns one aggregate traversal interaction. Room cards may
- * request a complete proposed prefix, but individual rendered positions never
- * become command owners.
- */
-export interface WorkspaceHubVisitOrderInteraction {
-  readonly key: string;
-  readonly owner: HubDecisionAddress;
-  readonly proposalFor: (hubSlotKeys: readonly string[]) => WorkspaceHubVisitOrderProposal;
-  readonly selectedHubSlotKeys: readonly string[];
-}
-
-interface WorkspaceTakeoverBatchInteractionBase {
-  readonly key: string;
-  readonly owner: ExitDecisionAddress;
-}
-
-export interface WorkspaceCompletedHubHandoffInteraction extends WorkspaceTakeoverBatchInteractionBase {
-  readonly action: 'create';
-  readonly intent: () => WorkspaceTakeoverCommandIntent;
-  readonly label: string;
-  readonly presentation: 'completedHubHandoff';
-}
-
-export interface WorkspaceTakeoverRepairInteraction extends WorkspaceTakeoverBatchInteractionBase {
-  readonly action: 'reconcile';
-  readonly intent: () => WorkspaceTakeoverCommandIntent;
-  readonly label: string;
-  readonly presentation: 'repair';
-}
-
-export type WorkspaceTakeoverBatchInteraction =
-  WorkspaceCompletedHubHandoffInteraction | WorkspaceTakeoverRepairInteraction;
-
-type WorkspaceTakeoverCommandIntent = WorkspaceCommandIntent<TakeoverBatchCommand>;
 
 export interface WorkspaceInteractionCatalog {
   readonly chaosExits: ReadonlyMap<string, WorkspaceChaosExitInteraction>;
@@ -623,699 +446,6 @@ export type WorkspaceRoomPickerControl =
       readonly selectedGameName: string;
     };
 
-interface WorkspaceRewardControlBase {
-  /** Evaluated concrete acquisition replacing the authored RoomReward offer. */
-  readonly realizedAcquisition?: {
-    readonly rewardType: string;
-    readonly label: string;
-  };
-  /** Direct payload authoring for a declaration-fixed type whose payload remains unresolved. */
-  readonly authoringStartStep?: Exclude<RewardPickerStep, 'type' | 'spurned'>;
-  /** Transient factual type seed for that unresolved payload; never persisted independently. */
-  readonly authoringSeed?: ResolvedRewardOffer;
-  readonly marker: WorkspaceMarker;
-  readonly offer: ResolvedRewardOffer | null;
-  /** Application-owned picker entry point for this exact visible edit surface. */
-  readonly offerEditStartStep?: RewardPickerStep;
-  /** Application-owned presentation fact; React does not infer identity authoring from offer shape. */
-  readonly offerEditVisibility: 'hidden' | 'visible';
-  /** One exact engine-derived offer repair that replaces a misleading open-ended picker. */
-  readonly fixedOfferEdit?: {
-    readonly actionLabel: string;
-    readonly offer: ResolvedRewardOffer;
-  };
-  /** Engine-attested retained identity disagreement requiring a visible repair path. */
-  readonly retainedSourceMismatch: boolean;
-  /** Exact declaration-owned item identity for a materialized World Shop slot. */
-  readonly shopOption?: {
-    readonly selectedOptionKey: string | null;
-    readonly options: readonly {
-      readonly key: string;
-      readonly label: string;
-      readonly rewardType: string;
-    }[];
-  };
-  readonly owner: RewardCandidateOwner;
-  readonly traitOffers?: readonly WorkspaceTraitOfferControl[];
-  readonly levelResolutions?: readonly WorkspaceLevelResolutionControl[];
-  readonly conversions?: readonly WorkspaceAcquisitionConversionControl[];
-  readonly derivedShopEntryEdit?: {
-    readonly site: AcquisitionSiteAddress;
-    readonly entryKey: 'travelDealRefill' | 'echoDoubleShopReward';
-    readonly sourceOfferKey: string;
-  };
-}
-
-export interface WorkspaceCountedRewardControl extends WorkspaceRewardControlBase {
-  readonly binding: CountedRewardBinding;
-  readonly kind: 'countedReward';
-  readonly owner: CountedRewardCandidateOwner;
-}
-
-export interface WorkspaceExplicitRewardControl extends WorkspaceRewardControlBase {
-  readonly kind: 'explicitReward';
-  readonly rewardTypes: readonly string[];
-}
-
-export type WorkspaceRewardControl = WorkspaceCountedRewardControl | WorkspaceExplicitRewardControl;
-
-export interface WorkspaceFieldsCageDescriptor {
-  readonly control: WorkspaceCountedRewardControl;
-  readonly key: string;
-  readonly label: string;
-  readonly summary: string;
-}
-
-export interface WorkspaceFieldsOptionalRewardDescriptor {
-  readonly control: WorkspaceCountedRewardControl;
-  readonly key: string;
-  readonly label: string;
-  readonly summary: string;
-}
-
-/** One occurrence-owned physical placement row for an H Fields combat room. */
-export interface WorkspaceFieldsSpatialControl {
-  readonly address: FieldsSpatialAddress;
-  readonly interactionKey: string;
-  readonly label: string;
-  readonly marker: WorkspaceMarker;
-  readonly pointId: number | null;
-  readonly pointChoices: readonly { readonly label: string; readonly value: number | null }[];
-  readonly target: FieldsSpatialTarget;
-}
-
-export interface WorkspaceFieldsSpatialPointInteraction {
-  readonly key: string;
-  readonly owner: FieldsSpatialAddress;
-  readonly selected: number | null;
-  readonly choices: readonly { readonly label: string; readonly value: number | null }[];
-  readonly load: () => readonly CandidateOptionProjection<number | null>[];
-  readonly intentFor: (
-    pointId: number | null,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceFieldsSpatialPoint' }>
-  >;
-}
-
-export interface WorkspaceRoomActionProposal {
-  readonly kind: 'insert' | 'move' | 'remove';
-  readonly key: string;
-  readonly label: string;
-  readonly reference: RoomActionReference;
-  readonly structurallyAuthorable: boolean;
-  readonly toIndex?: number;
-}
-
-export interface WorkspaceRoomActionRow {
-  readonly address: import('@run-planner/engine/authored-project').RoomActionSemanticAddress;
-  /** Engine-owned dependency/window evidence adapted into concise row copy. */
-  readonly issues: readonly string[];
-  readonly key: string;
-  readonly label: string;
-  readonly marker: WorkspaceMarker;
-  readonly proposalKeys: readonly string[];
-  readonly reference: RoomActionReference;
-  readonly participation: 'required' | 'optional';
-  /** Participation is authored by a room Overview control; Timeline owns ordering only. */
-  readonly participationOwnedByOverview: boolean;
-  /** Engine-published exact materialization command for one derived acquisition entry. */
-  readonly placement?: WorkspaceCommandIntent<
-    Extract<
-      ProjectCommand,
-      { readonly kind: 'PlaceHermesShrineDelivery' | 'PlaceClockedTraitPickup' }
-    >
-  >;
-  readonly rank: number | null;
-  /** Artificer output identity authored at this source transformation checkpoint. */
-  readonly artificerOutput?: {
-    readonly control: WorkspaceRewardControl;
-    readonly label: 'Artificer item';
-  };
-  /** Exact action-owned reward payload, never rediscovered from a rendered key. */
-  readonly rewardPayload?: {
-    readonly control: WorkspaceRewardControl;
-    /** Trait/Pom editing shown beside the action only while this role is actually acquired. */
-    readonly inlineLevelResolutions: readonly WorkspaceLevelResolutionControl[];
-    readonly inlineTraitOffers: readonly WorkspaceTraitOfferControl[];
-    readonly showOffer: boolean;
-  };
-  readonly stale: boolean;
-  /** Specialized removal authority for a retained stale base Shop purchase. */
-  readonly shopParticipation?: {
-    readonly interactionKey: string;
-    readonly owner: ShopOfferAddress;
-  };
-  /** Engine-owned lifecycle window used by closed presentation groupings. */
-  readonly window: RoomActionWindow;
-  /** Exact encounter/Gorgon payload settled by this action. */
-  readonly traitOffer?: WorkspaceTraitOfferControl;
-  /** Exact Phial target control nested under this occurrence-owned fountain action. */
-  readonly fountainRarity?: WorkspaceFountainRarityControl;
-  readonly executable: boolean;
-}
-
-export interface WorkspaceRoomActions {
-  readonly timeline: WorkspaceRoomLifecycleTimeline;
-  readonly checkpoints: readonly {
-    readonly key: string;
-    readonly label: string;
-    readonly afterRank: number;
-    /** Engine-owned lifecycle window used by closed presentation groupings. */
-    readonly window: RoomActionWindow;
-  }[];
-  readonly interactionKey: string;
-  readonly owner: OccurrenceAddress;
-  readonly proposals: readonly WorkspaceRoomActionProposal[];
-  readonly rows: readonly WorkspaceRoomActionRow[];
-  /** Active optional actions that have not been inserted into the lifecycle order. */
-  readonly optionalRows: readonly WorkspaceRoomActionRow[];
-  /** Missing required or retained stale rows rendered once outside active lifecycle order. */
-  readonly repairRows: readonly WorkspaceRoomActionRow[];
-  readonly steadyGrowth?: readonly WorkspaceSteadyGrowthControl[];
-  readonly transcendentEmbryo?: readonly WorkspaceTranscendentEmbryoControl[];
-}
-
-export type WorkspaceRoomLifecycleBoundary =
-  | { readonly kind: 'roomEntered'; readonly key: 'roomEntered' }
-  | { readonly kind: 'encounterStart'; readonly key: string; readonly phaseKey: string }
-  | { readonly kind: 'bossDefeated'; readonly key: string; readonly phaseKey: string }
-  | { readonly kind: 'encounterEnd'; readonly key: string; readonly phaseKey: string }
-  | { readonly kind: 'nextPhase'; readonly key: string; readonly wheelKey: string }
-  | { readonly kind: 'cleanup'; readonly key: 'cleanup' };
-
-export type WorkspaceRoomLifecycleTimelineEntry =
-  | {
-      readonly kind: 'boundary';
-      readonly boundary: WorkspaceRoomLifecycleBoundary;
-      /** Projection-owned text; React does not reconstruct boundary wording. */
-      readonly label: string;
-      /** Projection-owned lifecycle checkpoint identity for suppression and placement. */
-      readonly checkpointKey: string;
-      /** Projection-owned insertion position immediately adjacent to this boundary. */
-      readonly dropIndex: number;
-      readonly rank: number;
-      readonly placement: 'before' | 'after';
-      readonly runState?: WorkspaceRunStateLauncher;
-      /** Exact projected child placed at this lifecycle seam. */
-      readonly supplement?:
-        | { readonly kind: 'encounter'; readonly phase: WorkspaceEncounterPhase }
-        | { readonly kind: 'rewardWheel'; readonly wheel: WorkspaceRewardWheelDescriptor };
-      /** Fields-only assignment of one hidden cage-completion anchor to this rigid cycle. */
-      readonly fieldsCageSlot?: WorkspaceFieldsCageSlotControl;
-    }
-  | {
-      readonly kind: 'action';
-      readonly actionKey: string;
-      readonly rank: number;
-      /** Closed application presentation for rows represented by a lifecycle-boundary control. */
-      readonly presentation: 'row' | 'fieldsCageAnchor';
-      /** Engine-owned phase grouping for multi-encounter room workbenches. */
-      readonly phaseKey?: string;
-      /** Exact projected encounter child placed on this action row. */
-      readonly supplement?: { readonly kind: 'encounter'; readonly phase: WorkspaceEncounterPhase };
-    }
-  | {
-      readonly kind: 'automaticEffect';
-      readonly effect: 'steadyGrowth' | 'transcendentEmbryo';
-      readonly address: SteadyGrowthOutcomeAddress | TranscendentEmbryoOutcomeAddress;
-      readonly rank: number;
-      readonly phaseKey: string;
-    };
-
-export interface WorkspaceSteadyGrowthControl {
-  readonly address: SteadyGrowthOutcomeAddress;
-  readonly marker: WorkspaceMarker;
-  readonly phaseKey: string;
-  readonly targetTraitKey?: string;
-}
-
-export interface WorkspaceSteadyGrowthDomain {
-  readonly emptyNoOp: boolean;
-  readonly picker: ContextualPickerModel<string>;
-  readonly selectedPossible: boolean;
-}
-
-export interface WorkspaceSteadyGrowthInteraction {
-  readonly key: string;
-  readonly owner: SteadyGrowthOutcomeAddress;
-  readonly intentFor: (
-    targetTraitKey: string | null,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceSteadyGrowthTarget' }>
-  >;
-  readonly forTarget: (targetTraitKey?: string | null) => {
-    readonly load: () => WorkspaceSteadyGrowthDomain | undefined;
-  };
-  readonly traitLabel: (traitKey: string) => string;
-}
-
-export interface WorkspaceTranscendentEmbryoControl {
-  readonly address: TranscendentEmbryoOutcomeAddress;
-  readonly marker: WorkspaceMarker;
-  readonly phaseKey: string;
-  readonly value?: AuthoredTranscendentEmbryoOutcome | undefined;
-}
-
-export interface WorkspaceTranscendentEmbryoDomain {
-  readonly emptyNoOp: boolean;
-  readonly picker: ContextualPickerModel<string>;
-  readonly selectedPossible: boolean;
-  readonly rarity?: import('@run-planner/engine/catalog-schema').InRunTraitRarity;
-  readonly operands?: readonly ChaosNumericOperand[];
-}
-
-export interface WorkspaceTranscendentEmbryoInteraction {
-  readonly key: string;
-  readonly owner: TranscendentEmbryoOutcomeAddress;
-  readonly intentFor: (
-    value: AuthoredTranscendentEmbryoOutcome | null,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceTranscendentEmbryoTransformation' }>
-  >;
-  readonly forBlessing: (value?: AuthoredTranscendentEmbryoOutcome | null) => {
-    readonly load: () => WorkspaceTranscendentEmbryoDomain | undefined;
-  };
-  readonly outcomeFor: (blessingKey: string) => AuthoredTranscendentEmbryoOutcome;
-  readonly blessingLabel: (blessingKey: string) => string;
-}
-
-export interface WorkspaceFountainRarityControl {
-  readonly address: FountainRarityOutcomeAddress;
-  readonly marker: WorkspaceMarker;
-  readonly targetTraitKey?: string;
-}
-
-export interface WorkspaceFountainRarityDomain {
-  readonly picker: ContextualPickerModel<string>;
-  readonly selectedPossible: boolean;
-  readonly targetRequired: boolean;
-}
-
-export interface WorkspaceFountainRarityInteraction {
-  readonly key: string;
-  readonly owner: FountainRarityOutcomeAddress;
-  readonly intentFor: (
-    targetTraitKey: string | null,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceFountainRarityTarget' }>
-  >;
-  readonly forTarget: (targetTraitKey?: string | null) => {
-    readonly load: () => WorkspaceFountainRarityDomain | undefined;
-  };
-  readonly traitLabel: (traitKey: string) => string;
-}
-
-export interface WorkspaceFieldsCageSlotControl {
-  readonly choices: readonly {
-    readonly label: string;
-    /** Absent for the selected no-op choice. */
-    readonly proposalKey?: string;
-    readonly value: string;
-  }[];
-  readonly marker: WorkspaceMarker;
-  readonly owner: RoomActionAddress;
-  readonly selected: string;
-  readonly slotOrdinal: number;
-}
-
-export interface WorkspaceRoomLifecycleTimeline {
-  readonly entries: readonly WorkspaceRoomLifecycleTimelineEntry[];
-  readonly boundaries: readonly WorkspaceRoomLifecycleBoundary[];
-  /** Checkpoints represented by lifecycle boundary rows rather than duplicate list items. */
-  readonly suppressedCheckpointKeys: readonly string[];
-}
-
-export interface WorkspaceRoomActionInteraction {
-  readonly intentFor: (
-    proposalKey: string,
-  ) => WorkspaceCommandIntent<
-    Extract<
-      ProjectCommand,
-      { readonly kind: 'InsertRoomAction' | 'RemoveRoomAction' | 'MoveRoomAction' }
-    >
-  >;
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-  readonly proposals: readonly WorkspaceRoomActionProposal[];
-}
-
-export interface WorkspaceRewardWheelOfferDescriptor {
-  readonly active: boolean;
-  readonly control: WorkspaceCountedRewardControl;
-  readonly key: string;
-  readonly label: string;
-}
-
-export interface WorkspaceRewardWheelDescriptor {
-  readonly active: boolean;
-  readonly address: RewardWheelAddress;
-  /** Declaration-owned combat phase whose completion settles this wheel. */
-  readonly encounterPhaseKey: string;
-  readonly key: string;
-  readonly label: string;
-  readonly marker: WorkspaceMarker;
-  readonly offerCount: number;
-  readonly offers: readonly WorkspaceRewardWheelOfferDescriptor[];
-  readonly pickedOfferIndex: number;
-  readonly storeKey: string;
-}
-
-export interface WorkspaceShopPurchaseDescriptor {
-  readonly address: AcquisitionEntryAddress;
-  readonly marker: WorkspaceMarker;
-}
-
-export interface WorkspaceShopSupplementalPurchaseDescriptor extends WorkspaceShopPurchaseDescriptor {
-  readonly purchased: boolean;
-  readonly reference: Extract<RoomActionReference, { readonly kind: 'interactAcquisitionEntry' }>;
-}
-
-export interface WorkspaceShopOfferDescriptor {
-  readonly key: string;
-  readonly label: string;
-  readonly purchase: WorkspaceShopPurchaseDescriptor;
-  readonly participation: {
-    readonly interactionKey: string;
-    readonly owner: ShopOfferAddress;
-    readonly purchased: boolean;
-  };
-  readonly rewardControl: WorkspaceExplicitRewardControl;
-}
-
-export type WorkspaceShopSupplementalDescriptor =
-  | {
-      readonly kind: 'travelDealPlaceholder' | 'echoDoubleShopPlaceholder';
-      readonly key: 'travelDealRefill' | 'echoDoubleShopReward';
-      readonly label: string;
-      readonly explanation: string;
-    }
-  | {
-      readonly kind: 'travelDealInvalid' | 'echoDoubleShopInvalid';
-      readonly key: 'travelDealRefill' | 'echoDoubleShopReward';
-      readonly label: string;
-      readonly explanation: string;
-      readonly purchase: WorkspaceShopSupplementalPurchaseDescriptor;
-    }
-  | {
-      readonly kind: 'infernalContractReward';
-      readonly key: string;
-      readonly label: string;
-      readonly purchase: WorkspaceShopSupplementalPurchaseDescriptor;
-      readonly rewardControl: WorkspaceExplicitRewardControl;
-      readonly materialized: boolean;
-    }
-  | {
-      readonly kind: 'travelDealRefill';
-      readonly key: string;
-      readonly label: string;
-      readonly purchase: WorkspaceShopSupplementalPurchaseDescriptor;
-      readonly rewardControl: WorkspaceExplicitRewardControl;
-      readonly materialized: boolean;
-      readonly sourceOfferKey: string;
-    }
-  | {
-      readonly kind: 'echoDoubleShopReward';
-      readonly key: 'echoDoubleShopReward';
-      readonly label: string;
-      readonly purchase: WorkspaceShopSupplementalPurchaseDescriptor;
-      readonly rewardControl: WorkspaceExplicitRewardControl;
-      readonly materialized: boolean;
-      readonly sourceOfferKey: string;
-      readonly eligibleSourceOfferKeys: readonly string[];
-    };
-
-export interface WorkspaceLocalVisitOrderOption {
-  readonly key: string;
-  readonly label: string;
-  readonly position: number | null;
-  readonly proposedOccurrenceIds: readonly OccurrenceId[];
-}
-
-export interface WorkspaceLocalVisitOrderControl {
-  readonly interactionKey: string;
-  readonly options: readonly WorkspaceLocalVisitOrderOption[];
-  readonly selectedKey: string;
-}
-
-/**
- * Render-ready data for one active, pool-backed phase. Catalog resolution and
- * candidate support happened before this product reaches React.
- */
-export interface WorkspaceEncounterPhase {
-  readonly address: EncounterPhaseAddress;
-  readonly candidateChoices: readonly WorkspaceInteractionChoice<string>[];
-  /**
-   * Declaration-owned selector affordance. Singleton pools remain semantic
-   * phase owners, but cannot create a meaningful encounter selection UI.
-   */
-  readonly customizable: boolean;
-  /** H Passive selection is presented by the room-feature control, not a second picker. */
-  readonly nemesisFeature?: {
-    readonly encounterKey: string;
-    readonly selected: boolean;
-  };
-  readonly label: string;
-  readonly marker: WorkspaceMarker;
-  /** Application-owned placement for the phase editor in the room timeline. */
-  readonly timelineAnchor: 'roomEntered' | 'encounterStart' | 'action';
-  readonly figLeaf?: {
-    readonly interactionKey: string;
-    readonly selected: boolean;
-    readonly supported: boolean;
-  };
-  /** Selected encounter-local trait offer, when this phase owns one. */
-  readonly traitOffer?: WorkspaceTraitOfferControl;
-  readonly gorgonCondition?: {
-    readonly interactionKey: string;
-    readonly selected: boolean;
-    readonly supported: boolean;
-  };
-  readonly gorgonAthena?: WorkspaceTraitOfferControl;
-  /** A reset is useful only after the authored selection diverges from its static default. */
-  readonly resettable: boolean;
-  readonly selectedEncounter: {
-    readonly key: string;
-    readonly label: string;
-  };
-  readonly nemesisEvent?: {
-    readonly marker: WorkspaceMarker;
-    readonly owner: NemesisRandomEventAddress;
-    readonly reward: ResolvedRewardOffer | null;
-    readonly value: AuthoredNemesisRandomEventOutcome | null;
-  };
-}
-
-interface WorkspaceLocalVisitSlotBase {
-  readonly address: LocalVisitSlotAddress;
-  /** Declared physical availability order for the parent-local pressure rule. */
-  readonly availabilityRank: number;
-  readonly entered: boolean;
-  readonly enteredOrdinal: number | null;
-  readonly occurrenceId: OccurrenceId;
-  readonly order: WorkspaceLocalVisitOrderControl;
-  readonly key: string;
-  readonly label: string;
-  readonly marker: WorkspaceMarker;
-  readonly physicalDoorId: number;
-}
-
-/** A generated local target publishes its retained ordinary occurrence workbench. */
-export type WorkspaceLocalVisitSlot =
-  | (WorkspaceLocalVisitSlotBase & {
-      readonly door: WorkspaceDoorContract;
-      readonly generation: 'generated';
-      readonly room: WorkspaceRoomSummary;
-    })
-  | (WorkspaceLocalVisitSlotBase & {
-      readonly generation: 'notGenerated';
-    });
-
-export interface WorkspaceLocalVisitDecision {
-  readonly address: LocalVisitDecisionAddress;
-  readonly marker: WorkspaceMarker;
-  readonly order: LocalVisitOrderAddress;
-  readonly orderMarker: WorkspaceMarker;
-  readonly slots: readonly WorkspaceLocalVisitSlot[];
-  readonly visitOrder: readonly OccurrenceId[];
-}
-
-export type WorkspaceRoomLocal =
-  | { readonly kind: 'none' }
-  | {
-      readonly kind: 'fixed';
-      readonly marker: WorkspaceMarker;
-      readonly offer: ResolvedRewardOffer | null;
-      readonly summary: string;
-      readonly control?: WorkspaceExplicitRewardControl;
-    }
-  | {
-      readonly kind: 'incomingReward';
-      readonly control: WorkspaceCountedRewardControl;
-      readonly clockworkReward?: 'goal' | 'nonGoal';
-      readonly summary: string;
-    }
-  | {
-      readonly kind: 'fields';
-      readonly cages: readonly WorkspaceFieldsCageDescriptor[];
-      readonly spatial: readonly WorkspaceFieldsSpatialControl[];
-      readonly optionalRewardCount: number;
-      readonly optionalRewardCapacity: number;
-      readonly optionalRewardCountValues: readonly number[];
-      readonly optionalRewardCountAddress: RoomFeatureAddress;
-      readonly optionalRewardCountMarker: WorkspaceMarker;
-      readonly optionalRewards: readonly WorkspaceFieldsOptionalRewardDescriptor[];
-      readonly owner: OccurrenceAddress;
-      readonly groupKey: string;
-    }
-  | {
-      readonly kind: 'ship';
-      /** Authored structural activation for Ship Combat2, distinct from encounter identity. */
-      readonly combatPhaseCount: 2 | 3;
-      /** Active declaration-owned encounter slots in their envelope order. */
-      readonly phases: readonly WorkspaceShipStructurePhase[];
-      readonly wheels: readonly WorkspaceRewardWheelDescriptor[];
-    }
-  | {
-      readonly kind: 'shop';
-      readonly materialized: boolean;
-      readonly offers: readonly WorkspaceShopOfferDescriptor[];
-      readonly supplementalOffers: readonly WorkspaceShopSupplementalDescriptor[];
-    };
-
-export type WorkspaceRoomFeature =
-  | {
-      readonly kind: 'nemesisEvent';
-      readonly action: 'add' | 'remove';
-      readonly interactionKey: string;
-    }
-  | {
-      readonly kind: 'zagreusContract';
-      readonly action: 'add';
-      readonly presence: Extract<WorkspaceFeaturePresence, { readonly kind: 'optionalAbsent' }>;
-      readonly control: WorkspaceZagreusSpawnControl;
-    }
-  | {
-      readonly kind: 'zagreusContract';
-      readonly action: 'remove';
-      readonly presence: Extract<WorkspaceFeaturePresence, { readonly kind: 'optionalPresent' }>;
-      readonly owner: AdditionalExitAddress;
-    }
-  | {
-      readonly kind: 'chaos';
-      readonly action: 'add';
-      readonly presence: Extract<WorkspaceFeaturePresence, { readonly kind: 'optionalAbsent' }>;
-      readonly control: WorkspaceChaosSpawnControl;
-    }
-  | {
-      readonly kind: 'chaos';
-      readonly action: 'remove';
-      readonly marker: WorkspaceMarker;
-      readonly presence:
-        | Extract<WorkspaceFeaturePresence, { readonly kind: 'optionalPresent' }>
-        | Extract<WorkspaceFeaturePresence, { readonly kind: 'forcedPresent' }>;
-      readonly owner: AdditionalExitAddress;
-    }
-  | {
-      /** Fixed Postboss inventory; candidates are produced by the engine assessment. */
-      readonly kind: 'purgingPool';
-      readonly assessment: WorkspaceFeatureAssessment;
-      readonly inventoryAddress: RoomFeatureAddress;
-      readonly inventoryMarker: WorkspaceMarker;
-      readonly interactionKey: string;
-      readonly interacted: boolean;
-      readonly slots: readonly {
-        readonly candidateTraitKeys: readonly string[];
-        readonly candidateTraits: readonly { readonly key: string; readonly label: string }[];
-        readonly interactionKey: string;
-        readonly key: 'left' | 'middle' | 'right';
-        readonly label: string;
-        readonly address: RoomFeatureAddress;
-        readonly marker: WorkspaceMarker;
-        readonly sale?: { readonly sold: boolean };
-        readonly traitLabel?: string;
-        readonly traitKey: string | null;
-      }[];
-    }
-  | {
-      /** Shrine inventory is always visible and authored once present. */
-      readonly kind: 'hermesShrine';
-      readonly assessment: WorkspaceFeatureAssessment;
-      readonly presence: WorkspaceFeaturePresence;
-      readonly presenceAddress: RoomFeatureAddress;
-      readonly presenceMarker: WorkspaceMarker;
-      readonly inventoryAddress?: RoomFeatureAddress;
-      readonly inventoryMarker?: WorkspaceMarker;
-      readonly presenceInteractionKey?: string;
-      readonly slots: readonly {
-        readonly key: import('@run-planner/engine/authored-project').HermesShrineSlotKey;
-        readonly address: RoomFeatureAddress;
-        readonly marker: WorkspaceMarker;
-        readonly label: string;
-        readonly rewardType: string | null;
-        readonly rewardLabel?: string;
-        readonly candidateRewardTypes: readonly string[];
-        readonly candidateRewards: readonly {
-          readonly rewardType: string;
-          readonly label: string;
-        }[];
-        readonly offerInteractionKey: string;
-        readonly purchaseInteractionKey: string;
-        readonly purchase:
-          import('@run-planner/engine/authored-project').HermesShrinePurchase | null;
-      }[];
-      readonly travelDealRefill?: {
-        readonly address: RoomFeatureAddress;
-        readonly marker: WorkspaceMarker;
-        readonly rewardType: string | null;
-        readonly rewardLabel?: string;
-        readonly candidateRewardTypes: readonly string[];
-        readonly candidateRewards: readonly {
-          readonly rewardType: string;
-          readonly label: string;
-        }[];
-        readonly offerInteractionKey: string;
-        readonly purchaseInteractionKey: string;
-        readonly purchase:
-          import('@run-planner/engine/authored-project').HermesShrinePurchase | null;
-      };
-    }
-  | {
-      readonly kind: 'stygianWell';
-      readonly assessment: WorkspaceFeatureAssessment;
-      readonly presence: WorkspaceFeaturePresence;
-      readonly presenceAddress: RoomFeatureAddress;
-      readonly presenceMarker: WorkspaceMarker;
-      readonly inventoryAddress?: RoomFeatureAddress;
-      readonly inventoryMarker?: WorkspaceMarker;
-      readonly presenceInteractionKey?: string;
-      readonly interactionKey?: string;
-      readonly interacted: boolean;
-      readonly slots: readonly {
-        readonly key:
-          import('@run-planner/engine/authored-project').StygianWellSlotKey | 'travelDealRefill';
-        readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
-        readonly address: RoomFeatureAddress;
-        readonly marker: WorkspaceMarker;
-        readonly label: string;
-        readonly itemKey: string | null;
-        readonly itemLabel?: string;
-        readonly candidateItemKeys: readonly string[];
-        readonly candidateItems: readonly { readonly key: string; readonly label: string }[];
-        readonly offerInteractionKey: string;
-        readonly purchaseInteractionKey: string;
-        readonly purchased: boolean;
-        readonly twist?: {
-          readonly address: RoomFeatureAddress;
-          readonly marker: WorkspaceMarker;
-          readonly itemKey: string | null;
-          readonly itemLabel?: string;
-          readonly candidateItemKeys: readonly string[];
-          readonly candidateItems: readonly { readonly key: string; readonly label: string }[];
-          readonly interactionKey: string;
-        };
-      }[];
-    };
-
 export interface WorkspaceShipStructurePhase {
   readonly key: string;
   readonly label: string;
@@ -1443,36 +573,6 @@ export interface WorkspaceRoomSummary {
     readonly marker: WorkspaceMarker;
     readonly selectedKeepsakeKey?: string;
   };
-}
-
-export interface WorkspaceZagreusContractControl {
-  readonly door: WorkspaceDoorContract;
-  readonly marker: WorkspaceMarker;
-  readonly owner: AdditionalExitAddress;
-  readonly selected: boolean;
-}
-
-/** Availability is source-room-local; the additional exit remains decision-owned. */
-export interface WorkspaceZagreusSpawnControl {
-  readonly marker: WorkspaceMarker;
-  readonly materialized: boolean;
-  readonly owner: AdditionalExitAddress;
-}
-
-export interface WorkspaceChaosExitControl {
-  readonly door: WorkspaceDoorContract;
-  readonly forced: boolean;
-  readonly kind: 'chaos';
-  readonly mapChoices: readonly WorkspaceInteractionChoice<string>[];
-  readonly marker: WorkspaceMarker;
-  readonly owner: AdditionalExitAddress;
-  readonly selected: boolean;
-}
-
-export interface WorkspaceChaosSpawnControl {
-  readonly authorable: boolean;
-  readonly marker: WorkspaceMarker;
-  readonly owner: AdditionalExitAddress;
 }
 
 export interface StructuredWorkspaceContextualServices {

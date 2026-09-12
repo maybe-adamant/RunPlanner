@@ -6,7 +6,8 @@ import type { CandidateProjectionSession } from '@planner/projections/candidates
 import type { ContextualPickerProjectionService } from '@planner/projections/contextual/contextualPicker';
 import type { RewardPickerProjectionService } from '@planner/projections/rewards/rewardPicker';
 
-import type { WorkspaceRewardControl, WorkspaceShopOfferInteraction } from '../contract';
+import type { WorkspaceRewardControl } from '../contracts/rewards';
+import type { WorkspaceShopOfferInteraction } from '../contracts/commerce';
 
 function selectionKey(selection: ShopOptionSelection): string {
   return JSON.stringify(selection);

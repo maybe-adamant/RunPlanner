@@ -7,10 +7,8 @@ import type { CandidateProjectionSession } from '@planner/projections/candidates
 
 import { derivedShopPayloadIntent } from './reward-child-command-binding';
 import { workspaceInteractionKey } from '../contract';
-import type {
-  WorkspaceAcquisitionConversionInteraction,
-  WorkspaceRewardControl,
-} from '../contract';
+import type { WorkspaceAcquisitionConversionInteraction } from '../contracts/traits';
+import type { WorkspaceRewardControl } from '../contracts/rewards';
 
 /** Binds generated-pickup conversion controls and preserves retained Sea Star repair state. */
 export function bindAcquisitionConversionInteractions(input: {

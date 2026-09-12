@@ -27,19 +27,21 @@ import {
   levelResolutionCommandFor,
 } from './reward-child-command-binding';
 import type {
-  WorkspaceJudgmentArcanaInteraction,
-  WorkspaceFigurineArcanaInteraction,
   WorkspaceKeepsakeEquipResultInteraction,
   WorkspaceKeepsakeEquipResultDomain,
   WorkspaceKeepsakeSelectionInteraction,
-  WorkspaceRewardControl,
+} from '../contract';
+import type {
+  WorkspaceJudgmentArcanaInteraction,
+  WorkspaceFigurineArcanaInteraction,
   WorkspaceSteadyGrowthControl,
   WorkspaceSteadyGrowthInteraction,
   WorkspaceTranscendentEmbryoControl,
   WorkspaceTranscendentEmbryoInteraction,
   WorkspaceFountainRarityControl,
   WorkspaceFountainRarityInteraction,
-} from '../contract';
+} from '../contracts/timeline';
+import type { WorkspaceRewardControl } from '../contracts/rewards';
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
 
 function projectKeepsakeSelectionPicker(

@@ -1,48 +1,78 @@
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
+import type { WorkspaceCommandIntent } from '@planner/projections/structured-workspace/contract';
 import type {
-  AcquisitionRoleAddress,
-  AdditionalExitAddress,
+  AcquisitionEntryAddress,
   OccurrenceAddress,
   ProjectCommand,
+  RoomActionReference,
   ShopOfferAddress,
 } from '@run-planner/engine/authored-project';
-import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
-import type {
-  WorkspaceCommandIntent,
-  WorkspacePayloadEditIntent,
-} from '@planner/projections/structured-workspace/contract';
+import type { WorkspaceMarker } from './navigation';
+import type { WorkspaceExplicitRewardControl } from './rewards';
 
-export interface WorkspaceAcquisitionConversionInteraction {
-  readonly visible: boolean;
-  /** Gold is enabled only when every reached engine branch supports it. */
-  readonly timePieceSupported: boolean;
-  readonly artificerSupported: boolean;
-  readonly seaStarSupported: boolean;
-  readonly seaStarProcced: boolean;
-  /** Exact acquisition-owned Anvil editor, present only on the purchased Anvil role. */
-  readonly anvil?: {
-    readonly value: import('@run-planner/engine/authored-project').AuthoredAnvilResult | null;
-    readonly removableTraitKeys: readonly string[];
-    readonly addedTraitKeysFor: (
-      removedTraitKey: string | null,
-      priorAddedTraitKeys: readonly string[],
-    ) => readonly string[];
-    readonly traitLabel: (traitKey: string) => string;
-    readonly intentFor: (
-      value: import('@run-planner/engine/authored-project').AuthoredAnvilResult,
-    ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceAnvilResult' }>>;
-  };
-  readonly intentFor: (
-    value: import('@run-planner/engine/authored-project').AcquisitionDisposition,
-  ) => WorkspacePayloadEditIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceAcquisitionDisposition' }>
-  >;
-  readonly seaStarIntentFor: (
-    procced: boolean,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceSeaStarResult' }>>;
-  readonly key: string;
-  readonly owner: AcquisitionRoleAddress;
-  readonly value: import('@run-planner/engine/authored-project').AcquisitionDisposition;
+export interface WorkspaceShopPurchaseDescriptor {
+  readonly address: AcquisitionEntryAddress;
+  readonly marker: WorkspaceMarker;
 }
+
+export interface WorkspaceShopSupplementalPurchaseDescriptor extends WorkspaceShopPurchaseDescriptor {
+  readonly purchased: boolean;
+  readonly reference: Extract<RoomActionReference, { readonly kind: 'interactAcquisitionEntry' }>;
+}
+
+export interface WorkspaceShopOfferDescriptor {
+  readonly key: string;
+  readonly label: string;
+  readonly purchase: WorkspaceShopPurchaseDescriptor;
+  readonly participation: {
+    readonly interactionKey: string;
+    readonly owner: ShopOfferAddress;
+    readonly purchased: boolean;
+  };
+  readonly rewardControl: WorkspaceExplicitRewardControl;
+}
+
+export type WorkspaceShopSupplementalDescriptor =
+  | {
+      readonly kind: 'travelDealPlaceholder' | 'echoDoubleShopPlaceholder';
+      readonly key: 'travelDealRefill' | 'echoDoubleShopReward';
+      readonly label: string;
+      readonly explanation: string;
+    }
+  | {
+      readonly kind: 'travelDealInvalid' | 'echoDoubleShopInvalid';
+      readonly key: 'travelDealRefill' | 'echoDoubleShopReward';
+      readonly label: string;
+      readonly explanation: string;
+      readonly purchase: WorkspaceShopSupplementalPurchaseDescriptor;
+    }
+  | {
+      readonly kind: 'infernalContractReward';
+      readonly key: string;
+      readonly label: string;
+      readonly purchase: WorkspaceShopSupplementalPurchaseDescriptor;
+      readonly rewardControl: WorkspaceExplicitRewardControl;
+      readonly materialized: boolean;
+    }
+  | {
+      readonly kind: 'travelDealRefill';
+      readonly key: string;
+      readonly label: string;
+      readonly purchase: WorkspaceShopSupplementalPurchaseDescriptor;
+      readonly rewardControl: WorkspaceExplicitRewardControl;
+      readonly materialized: boolean;
+      readonly sourceOfferKey: string;
+    }
+  | {
+      readonly kind: 'echoDoubleShopReward';
+      readonly key: 'echoDoubleShopReward';
+      readonly label: string;
+      readonly purchase: WorkspaceShopSupplementalPurchaseDescriptor;
+      readonly rewardControl: WorkspaceExplicitRewardControl;
+      readonly materialized: boolean;
+      readonly sourceOfferKey: string;
+      readonly eligibleSourceOfferKeys: readonly string[];
+    };
 
 export interface WorkspaceShopPurchaseParticipationInteraction {
   readonly key: string;
@@ -190,59 +220,5 @@ export interface WorkspaceStygianWellTwistResultInteraction {
     itemKey: string | null,
   ) => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'ReplaceStygianWellTwistResult' }>
-  >;
-}
-
-/** A complete route command bound to one resource-family control at its host room. */
-export interface WorkspaceResourcePlacementInteraction {
-  readonly intent: WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceResourcePlacement' }>
-  >;
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-}
-
-/** The Midshop workbench presents the declared additional door without making it a normal target. */
-export interface WorkspaceZagreusContractInteraction {
-  readonly key: string;
-  readonly owner: AdditionalExitAddress;
-  readonly removeIntent: WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'RemoveZagreusContract' }>
-  >;
-  readonly selectIntent: WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'SetExitSelection' }>
-  >;
-}
-
-/** Source-room availability binds only the creation command. */
-export interface WorkspaceZagreusSpawnInteraction {
-  readonly key: string;
-  readonly owner: AdditionalExitAddress;
-  readonly spawnIntent: () => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'AddZagreusContract' }>
-  >;
-}
-
-/** A Chaos gate is authored at its source and selected at its outgoing decision. */
-export interface WorkspaceChaosExitInteraction {
-  readonly key: string;
-  readonly owner: AdditionalExitAddress;
-  readonly mapIntent: (
-    gameName: string,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceChaosMap' }>>;
-  readonly removeIntent?: WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'RemoveChaos' }>
-  >;
-  readonly selectIntent: WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'SetExitSelection' }>
-  >;
-}
-
-/** Availability belongs to the active source room; the authored gate remains occurrence-owned. */
-export interface WorkspaceChaosSpawnInteraction {
-  readonly key: string;
-  readonly owner: AdditionalExitAddress;
-  readonly spawnIntent: () => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'AddChaos' }>
   >;
 }

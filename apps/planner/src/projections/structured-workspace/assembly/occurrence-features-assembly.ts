@@ -15,13 +15,12 @@ import type {
   ZagreusContractCandidateCapability,
 } from '@run-planner/engine/simulation';
 import {
-  type WorkspaceEncounterPhase,
   type WorkspaceFeatureAssessment,
-  type WorkspaceRoomFeature,
-  type WorkspaceRoomLocal,
   type WorkspaceRoomSummary,
   workspaceInteractionKey,
 } from '../contract';
+import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
+import type { WorkspaceRoomFeature } from '../contracts/features';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 
 export interface WorkspaceOccurrenceFeaturesInput {

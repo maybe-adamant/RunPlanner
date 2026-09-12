@@ -25,20 +25,22 @@ import { bindShopOfferInteractions } from './shop-offer-interactions';
 
 import { workspaceInteractionKey } from '../contract';
 import type {
-  WorkspaceRewardControl,
-  WorkspaceJudgmentArcanaInteraction,
-  WorkspaceFigurineArcanaInteraction,
   WorkspaceKeepsakeSelectionInteraction,
   WorkspaceKeepsakeEquipResultInteraction,
+} from '../contract';
+import type { WorkspaceRewardControl } from '../contracts/rewards';
+import type {
+  WorkspaceJudgmentArcanaInteraction,
+  WorkspaceFigurineArcanaInteraction,
   WorkspaceSteadyGrowthControl,
   WorkspaceSteadyGrowthInteraction,
   WorkspaceTranscendentEmbryoControl,
   WorkspaceTranscendentEmbryoInteraction,
   WorkspaceFountainRarityControl,
   WorkspaceFountainRarityInteraction,
-  WorkspaceAcquisitionConversionInteraction,
-  WorkspaceShopOfferInteraction,
-} from '../contract';
+} from '../contracts/timeline';
+import type { WorkspaceAcquisitionConversionInteraction } from '../contracts/traits';
+import type { WorkspaceShopOfferInteraction } from '../contracts/commerce';
 
 export interface WorkspaceRewardChildInteractionCatalog {
   readonly rewards: ReadonlyMap<string, WorkspaceRewardInteraction>;

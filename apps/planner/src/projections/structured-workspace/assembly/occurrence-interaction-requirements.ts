@@ -1,7 +1,8 @@
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { requireWorkspaceRoom as requireRoom } from './catalog-room';
 import { requireRewardWheelAttachment } from './occurrence-reward-assembly';
-import { type WorkspaceEncounterPhase, type WorkspaceRoomSummary } from '../contract';
+import { type WorkspaceRoomSummary } from '../contract';
+import type { WorkspaceEncounterPhase } from '../contracts/locals';
 import { workspaceRewardStoreLabel } from './reward-labels';
 import type { WorkspaceOccurrenceInteractionRequirement } from '../interactions/interaction-requirements';
 

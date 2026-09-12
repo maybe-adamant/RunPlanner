@@ -5,7 +5,7 @@ import type { CandidateProjectionSession } from '@planner/projections/candidates
 import type { RewardPickerProjectionService } from '@planner/projections/rewards/rewardPicker';
 
 import { rewardIntentFor } from './reward-child-command-binding';
-import type { WorkspaceRewardControl } from '../contract';
+import type { WorkspaceRewardControl } from '../contracts/rewards';
 
 /** Binds the authored reward payload controls, including replacement options created by Artificer. */
 export function bindRewardPayloadInteractions(input: {

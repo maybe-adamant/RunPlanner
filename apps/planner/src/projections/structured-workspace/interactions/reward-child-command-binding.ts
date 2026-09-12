@@ -12,7 +12,8 @@ import type {
 } from '@run-planner/engine/authored-project';
 
 import { StructuredWorkspaceProjectionContractError } from '../contract';
-import type { WorkspaceCommandIntent, WorkspaceRewardControl } from '../contract';
+import type { WorkspaceCommandIntent } from '../contract';
+import type { WorkspaceRewardControl } from '../contracts/rewards';
 
 type RewardPayloadCommand = Extract<
   ProjectCommand,

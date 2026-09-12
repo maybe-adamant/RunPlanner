@@ -11,7 +11,7 @@ import type {
   WorkspaceHubSlotInteraction,
   WorkspaceHubVisitOrderInteraction,
   WorkspaceHubVisitOrderProposal,
-} from '../contract';
+} from '../contracts/structure';
 import type { WorkspaceHubInteractionRequirement } from './interaction-requirements';
 
 export interface WorkspaceHubInteractionCatalog {

@@ -12,7 +12,8 @@ import {
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 import type { WorkspaceInspectorDestination } from '../contracts/navigation';
-import type { WorkspaceRewardControl, WorkspaceRoomPickerControl } from '../contract';
+import type { WorkspaceRoomPickerControl } from '../contract';
+import type { WorkspaceRewardControl } from '../contracts/rewards';
 import {
   appendUniqueFocusDestinations,
   appendUniqueRewardControls,

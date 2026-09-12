@@ -6,7 +6,7 @@ import {
   type WorkspaceRoomFeature,
   type WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
-import { RoomInventoryPanels } from '../commerce/RoomInventoryPanels';
+import { RoomInventoryPanel } from '../commerce/RoomInventoryPanel';
 import { ChaosSpawnWorkbench, ZagreusSpawnWorkbench } from './AdditionalExitControls';
 import { RoomResourceControls } from './ResourceControls';
 
@@ -88,17 +88,7 @@ export function RoomFeaturesWorkbench({
           <RoomResourceControls interactions={interactions} room={room} />,
         )),
     ...featureEntries('additional-exits', 'Additional Exits', additionalExits),
-    ...contentEntries(
-      'room-objects',
-      'Objects',
-      roomObjects.length === 0 ? undefined : (
-        <RoomInventoryPanels
-          features={roomObjects}
-          interactions={interactions}
-          {...(roomActions === undefined ? {} : { roomActions })}
-        />
-      ),
-    ),
+    ...featureEntries('room-objects', 'Objects', roomObjects),
   ]);
   if (entries.length === 0) return null;
   return (
@@ -138,6 +128,21 @@ export function RoomFeaturesWorkbench({
                 key={workspaceInteractionKey(
                   feature.action === 'add' ? feature.control.owner : feature.owner,
                 )}
+              />
+            );
+          case 'hermesShrine':
+          case 'purgingPool':
+          case 'stygianWell':
+            return (
+              <RoomInventoryPanel
+                feature={feature}
+                interactions={interactions}
+                key={workspaceInteractionKey(
+                  feature.kind === 'purgingPool'
+                    ? feature.inventoryAddress
+                    : (feature.inventoryAddress ?? feature.presenceAddress),
+                )}
+                {...(roomActions === undefined ? {} : { roomActions })}
               />
             );
           default:

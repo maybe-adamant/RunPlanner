@@ -37,6 +37,39 @@ import type { TraitOptionDomainProjection } from '@planner/projections/rewards/t
 import type { WorkspaceMarker } from './navigation';
 import type { WorkspaceCommandIntent, WorkspacePayloadEditIntent } from '../contract';
 
+export interface WorkspaceAcquisitionConversionInteraction {
+  readonly visible: boolean;
+  /** Gold is enabled only when every reached engine branch supports it. */
+  readonly timePieceSupported: boolean;
+  readonly artificerSupported: boolean;
+  readonly seaStarSupported: boolean;
+  readonly seaStarProcced: boolean;
+  /** Exact acquisition-owned Anvil editor, present only on the purchased Anvil role. */
+  readonly anvil?: {
+    readonly value: import('@run-planner/engine/authored-project').AuthoredAnvilResult | null;
+    readonly removableTraitKeys: readonly string[];
+    readonly addedTraitKeysFor: (
+      removedTraitKey: string | null,
+      priorAddedTraitKeys: readonly string[],
+    ) => readonly string[];
+    readonly traitLabel: (traitKey: string) => string;
+    readonly intentFor: (
+      value: import('@run-planner/engine/authored-project').AuthoredAnvilResult,
+    ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceAnvilResult' }>>;
+  };
+  readonly intentFor: (
+    value: import('@run-planner/engine/authored-project').AcquisitionDisposition,
+  ) => WorkspacePayloadEditIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceAcquisitionDisposition' }>
+  >;
+  readonly seaStarIntentFor: (
+    procced: boolean,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceSeaStarResult' }>>;
+  readonly key: string;
+  readonly owner: AcquisitionRoleAddress;
+  readonly value: import('@run-planner/engine/authored-project').AcquisitionDisposition;
+}
+
 /** One exact authored trait child beneath a reward owner. */
 export type WorkspaceTraitOfferStatus = 'unspecified' | 'invalid' | 'valid';
 
