@@ -47,8 +47,8 @@ import { consumeOlympianProviderForReachedOffer } from '../../offer-generation';
 import {
   settleOwnedAcquisitionSite,
   withStoredArtificerReplacements,
-  type AcquisitionRoleFrontier,
-} from '../../acquisition-settlement';
+} from '../../acquisition/site-settlement';
+import type { AcquisitionRoleFrontier } from '../../acquisition/contracts';
 import {
   settleEncounterTraitOffer,
   type ReachedTraitChildCheckpoint,

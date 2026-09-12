@@ -58,23 +58,30 @@ import {
   type RewardBranchState,
 } from './branch-primitives';
 import { type ReachedTraitChildCheckpoint } from './trait-settlement';
-import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from './findings';
+import {
+  addRewardFinding,
+  historyChronology,
+  mergeRewardFindingEmissions,
+  rewardFinding,
+} from './findings';
 import { EMPTY_PLANNER_TIMELINE_FACTS } from '../timeline-facts';
+
+import { applyProducerRoleHistory } from './acquisition/role-settlement';
+import {
+  withStoredArtificerReplacements,
+  settleAcquisitionResolvedReward,
+  settleOwnedAcquisitionSite,
+} from './acquisition/site-settlement';
+import type {
+  AcquisitionRoleFrontier,
+  AcquisitionSettlementProduct,
+  DerivedAcquisitionEntryFrontier,
+  RewardFactsFactory,
+} from './acquisition/contracts';
+import type { AcquisitionSource } from './acquisition/source';
 
 export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalVisitRoom;
 
-import {
-  applyProducerRoleHistory,
-  withStoredArtificerReplacements,
-  historyChronology,
-  settleAcquisitionResolvedReward,
-  settleOwnedAcquisitionSite,
-  type AcquisitionRoleFrontier,
-  type AcquisitionSettlementProduct,
-  type AcquisitionSource,
-  type DerivedAcquisitionEntryFrontier,
-  type RewardFactsFactory,
-} from './acquisition-settlement';
 function shopRequirements(
   declaration: RoomDeclaration,
   profileKey: string,

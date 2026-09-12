@@ -33,11 +33,11 @@ import type {
   RewardStoreSupportEntry,
   TargetRewardHistoryCheckpoint,
 } from '../model';
-import { createAcquisitionConversionCandidateArtifacts } from '../acquisition-artifacts';
+import { createAcquisitionConversionCandidateArtifacts } from '../acquisition/artifacts';
 import {
   createDerivedAcquisitionEntryCandidateArtifacts,
   attestDerivedAcquisitionEntryCandidateCapability,
-} from '../acquisition-artifacts';
+} from '../acquisition/artifacts';
 import { createSteadyGrowthCandidateArtifacts } from '../../traits/history';
 import {
   createTranscendentEmbryoCandidateArtifacts,
@@ -121,7 +121,7 @@ import {
   applyMoonBeamEquip,
 } from '../../keepsakes/branch-transitions';
 import type { OfferProcessingPeer } from '../offer-generation';
-import type { AcquisitionRoleFrontier } from '../acquisition-settlement';
+import type { AcquisitionRoleFrontier } from '../acquisition/contracts';
 import { addRewardFinding } from '../findings';
 import { mergeEquivalentRewardBranches, type RewardBranchState } from '../branch-primitives';
 import type {
@@ -308,7 +308,7 @@ export function evaluateBiomeRewardChronology(
   const reachedTraitOfferCandidateFingerprints = new Map<string, Set<string>>();
   const derivedAcquisitionEntryContexts = new Map<
     string,
-    readonly import('../acquisition-settlement').DerivedAcquisitionEntryFrontier[]
+    readonly import('../acquisition/contracts').DerivedAcquisitionEntryFrontier[]
   >();
   const figLeafPhaseCandidates = new Map<string, import('../model').FigLeafPhaseCandidateSupport>();
   const gorgonPhaseCandidates = new Map<string, import('../model').GorgonPhaseCandidateSupport>();
@@ -408,11 +408,11 @@ export function evaluateBiomeRewardChronology(
   }
   function recordDerivedAcquisitionEntryFrontiers(
     frontiers:
-      readonly import('../acquisition-settlement').DerivedAcquisitionEntryFrontier[] | undefined,
+      readonly import('../acquisition/contracts').DerivedAcquisitionEntryFrontier[] | undefined,
   ): void {
     const incomingByOwner = new Map<
       string,
-      import('../acquisition-settlement').DerivedAcquisitionEntryFrontier[]
+      import('../acquisition/contracts').DerivedAcquisitionEntryFrontier[]
     >();
     for (const frontier of frontiers ?? []) {
       const key = semanticAddressKey(frontier.address);

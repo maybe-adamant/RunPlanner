@@ -27,7 +27,7 @@ import { describe, expect, it } from 'vitest';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
-import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition-settlement';
+import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 
 const owner = { kind: 'project' } as SemanticAddress;

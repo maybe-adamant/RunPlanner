@@ -1,6 +1,6 @@
 import type { SemanticAddress } from '../../../authored-project/addresses';
-import { type AcquisitionConversionCandidateArtifacts } from '../acquisition-artifacts';
-import { type DerivedAcquisitionEntryCandidateArtifacts } from '../acquisition-artifacts';
+import { type AcquisitionConversionCandidateArtifacts } from '../acquisition/artifacts';
+import { type DerivedAcquisitionEntryCandidateArtifacts } from '../acquisition/artifacts';
 import { type HermesShrineCandidateArtifacts } from '../../commerce/hermes-shrine';
 import { type JudgmentArcanaCandidateArtifacts } from '../../arcana-fear';
 import {

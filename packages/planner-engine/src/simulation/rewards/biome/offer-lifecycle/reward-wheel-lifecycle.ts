@@ -21,7 +21,8 @@ import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '..
 import type { ResolvedRewardOffer, RewardHistoryState } from '../../../../reward-kernel';
 import type { RewardBranchState } from '../../branch-primitives';
 import { processOfferGenerationCohort } from '../../offer-generation';
-import { settleOwnedAcquisitionSite, type AcquisitionSource } from '../../acquisition-settlement';
+import { settleOwnedAcquisitionSite } from '../../acquisition/site-settlement';
+import type { AcquisitionSource } from '../../acquisition/source';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { ShipLifecycleCandidateContext } from '../../lifecycle-artifacts';
 import type { RewardLifecycleReferences } from '../prepared-inputs';

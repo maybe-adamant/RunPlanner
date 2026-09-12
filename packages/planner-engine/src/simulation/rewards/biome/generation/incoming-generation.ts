@@ -15,7 +15,7 @@ import {
   type OfferProcessingContext,
   type OfferProcessingPeer,
 } from '../../offer-generation';
-import { settleProducerAcquisitionSite } from '../../acquisition-settlement';
+import { settleProducerAcquisitionSite } from '../../acquisition/site-settlement';
 import {
   createRewardProducerCandidateResult,
   type RewardProducerFrontier,

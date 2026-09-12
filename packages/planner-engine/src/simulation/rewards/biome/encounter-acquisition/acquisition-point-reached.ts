@@ -44,8 +44,8 @@ import {
   settleOwnedAcquisitionSite,
   settlePickupAcquisitionSite,
   withStoredArtificerReplacements,
-  type AcquisitionRoleFrontier,
-} from '../../acquisition-settlement';
+} from '../../acquisition/site-settlement';
+import type { AcquisitionRoleFrontier } from '../../acquisition/contracts';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { RewardBranchState } from '../../branch-primitives';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
@@ -55,10 +55,7 @@ import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '..
 import type { AuthoredSiteSettlementResult } from '../generation/authored-site-settlement';
 import { settleAuthoredAcquisitionSite } from '../generation/authored-site-settlement';
 import type { ReachedTraitChildCheckpoint } from '../../trait-settlement';
-import {
-  type RewardProducerOwnerAddress,
-  type RewardProducerFrontier,
-} from '../../producer-frontiers';
+import type { RewardProducerOwnerAddress, RewardProducerFrontier } from '../../producer-frontiers';
 
 export interface HermesShrineRefillState {
   readonly firstRushedInitialGeneration: boolean;
@@ -97,7 +94,7 @@ export interface AcquisitionPointReachedInputs {
   readonly purgingPoolAssessment:
     { readonly assessments: readonly PurgingPoolAssessment[] } | undefined;
   readonly hermesShrineRefillState: HermesShrineRefillState | undefined;
-  readonly derivedAcquisitionEntryCapability?: import('../../acquisition-artifacts').DerivedAcquisitionEntryCandidateCapability;
+  readonly derivedAcquisitionEntryCapability?: import('../../acquisition/artifacts').DerivedAcquisitionEntryCandidateCapability;
 }
 
 function transitionResult(input: {
@@ -433,24 +430,20 @@ export function applyAcquisitionPointReachedTransition(
           candidate.reference.siteKey === event.siteKey &&
           candidate.reference.entryKey === event.entryKey,
       )?.owner;
-      const settled = settlePickupAcquisitionSite(
-        catalog,
-        inputs.sourceBranches,
-        {
-          siteOwner: room.origin,
-          site: site.address,
-          entries: Object.freeze({ [event.entryKey]: retained }),
-          order: Object.freeze([event.entryKey]),
-          ...(actionOwner === undefined ? {} : { timelineOwner: actionOwner }),
-          requiredEntryKeys: new Set(),
-          producerLifecycleKey: capability.producerLifecycleKey,
-          historySequence: event.sequence,
-          facts: (history, _names, branch) => factsAt(acquisitionView, history, branch),
-          findingChronology: chronology,
-          authoredSeaStarDuplicateSiteKeys,
-          traitContext: inputs.routeLoadout,
-        },
-      );
+      const settled = settlePickupAcquisitionSite(catalog, inputs.sourceBranches, {
+        siteOwner: room.origin,
+        site: site.address,
+        entries: Object.freeze({ [event.entryKey]: retained }),
+        order: Object.freeze([event.entryKey]),
+        ...(actionOwner === undefined ? {} : { timelineOwner: actionOwner }),
+        requiredEntryKeys: new Set(),
+        producerLifecycleKey: capability.producerLifecycleKey,
+        historySequence: event.sequence,
+        facts: (history, _names, branch) => factsAt(acquisitionView, history, branch),
+        findingChronology: chronology,
+        authoredSeaStarDuplicateSiteKeys,
+        traitContext: inputs.routeLoadout,
+      });
       mergeRewardFindingEmissions(findings, settled.findingEmissions);
       return transitionResult({
         branches: settled.branches,
@@ -575,23 +568,19 @@ export function applyAcquisitionPointReachedTransition(
           candidate.reference.siteKey === event.siteKey &&
           candidate.reference.entryKey === event.entryKey,
       )?.owner;
-      const settled = settlePickupAcquisitionSite(
-        catalog,
-        inputs.sourceBranches,
-        {
-          siteOwner: room.origin,
-          site: site.address,
-          entries: Object.freeze({ [event.entryKey]: retained }),
-          order: Object.freeze([event.entryKey]),
-          ...(deliveryActionOwner === undefined ? {} : { timelineOwner: deliveryActionOwner }),
-          requiredEntryKeys: new Set([event.entryKey]),
-          producerLifecycleKey: 'HermesShrineDelivery',
-          historySequence: event.sequence,
-          facts: (history, _names, branch) => factsAt(acquisitionView, history, branch),
-          findingChronology: chronology,
-          authoredSeaStarDuplicateSiteKeys,
-        },
-      );
+      const settled = settlePickupAcquisitionSite(catalog, inputs.sourceBranches, {
+        siteOwner: room.origin,
+        site: site.address,
+        entries: Object.freeze({ [event.entryKey]: retained }),
+        order: Object.freeze([event.entryKey]),
+        ...(deliveryActionOwner === undefined ? {} : { timelineOwner: deliveryActionOwner }),
+        requiredEntryKeys: new Set([event.entryKey]),
+        producerLifecycleKey: 'HermesShrineDelivery',
+        historySequence: event.sequence,
+        facts: (history, _names, branch) => factsAt(acquisitionView, history, branch),
+        findingChronology: chronology,
+        authoredSeaStarDuplicateSiteKeys,
+      });
       mergeRewardFindingEmissions(findings, settled.findingEmissions);
       const settledEntryKey = semanticAddressKey(entry);
       const branches = settled.branches.map((branch) => {
@@ -695,25 +684,21 @@ export function applyAcquisitionPointReachedTransition(
           candidate.reference.siteKey === event.siteKey &&
           candidate.reference.entryKey === event.entryKey,
       );
-      const settled = settleArtificerReplacementAcquisition(
-        catalog,
-        inputs.sourceBranches,
-        {
-          siteOwner: site.address.owner,
-          pointKey: site.address.pointKey,
-          sourceEntryKey: parsed.sourceKey,
-          sourceOrigin: source.owner,
-          sourceReward: source.reward,
-          replacement,
-          acquisitionRole: parsed.acquisitionRole,
-          participation: row?.participation === 'required' ? 'mandatory' : 'optional',
-          ...(row?.owner === undefined ? {} : { timelineOwner: row.owner }),
-          historySequence: event.sequence,
-          facts: (history, _names, branch) => factsAt(acquisitionView, history, branch),
-          findingChronology: chronology,
-          authoredSeaStarDuplicateSiteKeys,
-        },
-      );
+      const settled = settleArtificerReplacementAcquisition(catalog, inputs.sourceBranches, {
+        siteOwner: site.address.owner,
+        pointKey: site.address.pointKey,
+        sourceEntryKey: parsed.sourceKey,
+        sourceOrigin: source.owner,
+        sourceReward: source.reward,
+        replacement,
+        acquisitionRole: parsed.acquisitionRole,
+        participation: row?.participation === 'required' ? 'mandatory' : 'optional',
+        ...(row?.owner === undefined ? {} : { timelineOwner: row.owner }),
+        historySequence: event.sequence,
+        facts: (history, _names, branch) => factsAt(acquisitionView, history, branch),
+        findingChronology: chronology,
+        authoredSeaStarDuplicateSiteKeys,
+      });
       mergeRewardFindingEmissions(findings, settled.findingEmissions);
       return transitionResult({
         branches: settled.branches,

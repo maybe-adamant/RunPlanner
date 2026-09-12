@@ -30,7 +30,7 @@ import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findin
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
 import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
-import { createDerivedAcquisitionEntryCandidateArtifacts } from '../../src/simulation/rewards/acquisition-artifacts';
+import { createDerivedAcquisitionEntryCandidateArtifacts } from '../../src/simulation/rewards/acquisition/artifacts';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 
 const biome = createBiomeAddress('Underworld', 'F');
@@ -401,19 +401,16 @@ function settle(options: {
     },
     findings,
   );
-  const settlement = settleShopAcquisitionSite(
-    inventory,
-    {
-      catalog,
-      room: canonical,
-      declaration,
-      historySequence: 4,
-      facts,
-      fail: (detail) => {
-        throw new Error(detail);
-      },
+  const settlement = settleShopAcquisitionSite(inventory, {
+    catalog,
+    room: canonical,
+    declaration,
+    historySequence: 4,
+    facts,
+    fail: (detail) => {
+      throw new Error(detail);
     },
-  );
+  });
   mergeRewardFindingEmissions(findings, settlement.findingEmissions);
   return { canonical, findings, settlement };
 }

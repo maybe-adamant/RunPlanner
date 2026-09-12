@@ -32,7 +32,7 @@ import {
   publicRewardBranch,
 } from '../../src/simulation/rewards/branch-lifecycle';
 import { appendRewardEvent } from '../../src/simulation/rewards/branch-primitives';
-import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition-settlement';
+import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 
 const origin = createBiomeAddress('Underworld', 'F');
 

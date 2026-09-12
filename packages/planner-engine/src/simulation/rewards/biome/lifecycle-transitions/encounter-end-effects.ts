@@ -41,7 +41,7 @@ import {
   type AuthoredTranscendentEmbryoOutcome,
 } from '../../../../authored-project/traits';
 import { clockedTraitGeneratedPickupEntryKey } from '../../../../authored-project/pickup-producers';
-import type { DerivedAcquisitionEntryFrontier } from '../../acquisition-settlement';
+import type { DerivedAcquisitionEntryFrontier } from '../../acquisition/contracts';
 import type { RewardBranchState } from '../../branch-primitives';
 import { advanceRewardBranches } from '../../branch-lifecycle';
 import { rewardFinding } from '../../findings';

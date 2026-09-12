@@ -270,8 +270,10 @@ values or typed results.
 Within the engine, related authorities share directories rather than a flat
 collection of prefixed filenames. `simulation/traits/` groups trait history,
 offers, levels, and rarity; `simulation/commerce/` groups store assessments;
-`simulation/fields/` groups Fields spatial facts. Authored action state,
-contributions, defaults, and lifecycle structure live in
+`simulation/fields/` groups Fields spatial facts.
+`simulation/rewards/acquisition/` groups site traversal, conversion generation,
+ordered role settlement, source contracts, and acquisition candidate artifacts.
+Authored action state, contributions, defaults, and lifecycle structure live in
 `authored-project/room-actions/`, separate from simulation's action scheduling.
 Topology impact analysis lives with authored topology. These neighborhoods do
 not introduce new processing stages or change the package's supported exports.
