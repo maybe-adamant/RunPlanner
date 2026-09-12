@@ -58,13 +58,12 @@ import {
   type RewardBranchState,
 } from './branch-primitives';
 import { type ReachedTraitChildCheckpoint } from './trait-settlement';
-import { addRewardFinding, rewardFinding } from './findings';
+import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from './findings';
 import { EMPTY_PLANNER_TIMELINE_FACTS } from '../timeline-facts';
 
 export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalVisitRoom;
 
 import {
-  accumulateProducerRoleFindingEmissions,
   applyProducerRoleHistory,
   withStoredArtificerReplacements,
   historyChronology,
@@ -213,8 +212,8 @@ export function processShopInventory(
 export function settleShopAcquisitionSite(
   branches: readonly RewardBranchState[],
   context: ShopProcessingContext,
-  findings: Map<string, FindingRegionEntry>,
 ): AcquisitionSettlementProduct {
+  const findings = new Map<string, FindingRegionEntry>();
   const { catalog, room, declaration, historySequence, fail } = context;
   const entry = room.entryState;
   if (entry?.kind !== 'shop') return fail(`${room.gameName} applied missing shop purchases`);
@@ -233,7 +232,6 @@ export function settleShopAcquisitionSite(
     );
   if (new Set(order).size !== order.length)
     return fail(`${room.gameName} acquisition order contains a duplicate entry`);
-  const findingKeysBeforeSettlement = new Set(findings.keys());
   const site = createAcquisitionSiteAddress(room.origin, 'roomExit');
   const actionOwnerForOffer = (offerKey: string): SemanticAddress | undefined =>
     room.roomActionRoster.rows.find(
@@ -347,7 +345,6 @@ export function settleShopAcquisitionSite(
                 kind: 'producerLifecycle',
                 key: contractDescriptor.producerLifecycleKey,
               });
-              const candidateFindings = new Map<string, FindingRegionEntry>();
               const settled = settleOwnedAcquisitionSite(
                 catalog,
                 branchesBeforeEntry,
@@ -379,14 +376,11 @@ export function settleShopAcquisitionSite(
                       }),
                 },
                 context.facts,
-                candidateFindings,
                 ownerRegion(room.origin),
                 context.findingChronology,
               );
               return Object.freeze({
-                findings: Object.freeze(
-                  [...candidateFindings.values()].map((entry) => entry.finding),
-                ),
+                findings: Object.freeze(settled.findingEmissions.map((entry) => entry.finding)),
                 supported: settled.branches.length === branchesBeforeEntry.length,
               });
             },
@@ -650,7 +644,7 @@ export function settleShopAcquisitionSite(
         context.authoredSeaStarDuplicateSiteKeys,
       );
       current = settled.branches;
-      accumulateProducerRoleFindingEmissions(findings, settled.findingEmissions);
+      mergeRewardFindingEmissions(findings, settled.findingEmissions);
       roleFrontiers.push(...settled.roleFrontiers);
       traitChildSettlements.push(...settled.traitChildSettlements);
     }
@@ -723,10 +717,10 @@ export function settleShopAcquisitionSite(
                 }),
           },
           context.facts,
-          findings,
           ownerRegion(room.origin),
           context.findingChronology,
         );
+        mergeRewardFindingEmissions(findings, settled.findingEmissions);
         roleFrontiers.push(...(settled.roleFrontiers ?? []));
         traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
         if (settled.branches.length === 1) {
@@ -926,10 +920,10 @@ export function settleShopAcquisitionSite(
                 }),
           },
           context.facts,
-          findings,
           ownerRegion(room.origin),
           context.findingChronology,
         );
+        mergeRewardFindingEmissions(findings, settled.findingEmissions);
         roleFrontiers.push(...(settled.roleFrontiers ?? []));
         traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
         if (settled.branches.length === 1) {
@@ -1018,10 +1012,10 @@ export function settleShopAcquisitionSite(
                 }),
           },
           context.facts,
-          findings,
           ownerRegion(room.origin),
           context.findingChronology,
         );
+        mergeRewardFindingEmissions(findings, settled.findingEmissions);
         derivedEntryFrontiers.push(...(settled.derivedEntryFrontiers ?? []));
         roleFrontiers.push(...(settled.roleFrontiers ?? []));
         traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
@@ -1141,9 +1135,7 @@ export function settleShopAcquisitionSite(
       }),
     );
   }
-  const settlementFindings = [...findings].flatMap(([key, finding]) =>
-    findingKeysBeforeSettlement.has(key) ? [] : [finding.finding],
-  );
+  const settlementFindings = [...findings.values()].map((finding) => finding.finding);
   const stoppedOnlyForMissingAuthorship =
     settlementFindings.length > 0 &&
     settlementFindings.every(isAcquisitionAuthorshipMissingFinding);
@@ -1196,6 +1188,7 @@ export function settleShopAcquisitionSite(
       }),
     ),
     branches: mergeEquivalentRewardBranches(next),
+    findingEmissions: Object.freeze([...findings.values()]),
     roleFrontiers: Object.freeze(roleFrontiers),
     derivedEntryFrontiers: Object.freeze(derivedEntryFrontiers),
     traitChildSettlements: Object.freeze(traitChildSettlements),

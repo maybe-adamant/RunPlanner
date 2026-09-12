@@ -26,6 +26,7 @@ import {
   processShopInventory,
   settleShopAcquisitionSite,
 } from '../../src/simulation/rewards/shop-settlement';
+import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
 import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
@@ -412,12 +413,36 @@ function settle(options: {
         throw new Error(detail);
       },
     },
-    findings,
   );
+  mergeRewardFindingEmissions(findings, settlement.findingEmissions);
   return { canonical, findings, settlement };
 }
 
 describe('Infernal Contract and Travel Deal chronology', () => {
+  it('keeps repeated missing shop child settlement emissions local and deduplicated on merge', () => {
+    const missingBoon = Object.freeze({
+      ...authoredShopReward(
+        Object.freeze({
+          rewardType: 'RandomLoot' as const,
+          payload: Object.freeze({ kind: 'BoonSource' as const, source: 'ApolloUpgrade' }),
+        }),
+      ),
+      traitOffersByAcquisitionRole: Object.freeze({ source: null }),
+    });
+    const input = Object.freeze({
+      order: Object.freeze(['Boon']),
+      shopOfferOverrides: Object.freeze({ Boon: missingBoon }),
+    });
+    const first = settle(input);
+    const repeated = settle(input);
+
+    expect(first.settlement.findingEmissions).toEqual(repeated.settlement.findingEmissions);
+    const merged = new Map();
+    mergeRewardFindingEmissions(merged, first.settlement.findingEmissions);
+    mergeRewardFindingEmissions(merged, repeated.settlement.findingEmissions);
+    expect([...merged.values()].map((entry) => entry.finding.code)).toEqual(['traitOfferMissing']);
+  });
+
   it('publishes a stable placeholder before a normal purchase and excludes Contract as a trigger', () => {
     const empty = settle({ order: [], travel: true });
     expect(empty.settlement.derivedEntryFrontiers).toMatchObject([

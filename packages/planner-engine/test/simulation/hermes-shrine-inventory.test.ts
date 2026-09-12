@@ -1049,7 +1049,6 @@ describe('Hermes Shrine pickup settlement', () => {
         },
       },
       rewardFacts,
-      new Map(),
     );
     expect(delivery.branches[0]?.hexProgress).toMatchObject({
       investedPathPoints: 18,

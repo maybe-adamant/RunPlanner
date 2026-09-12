@@ -45,6 +45,7 @@ import {
   processShopInventory,
   settleShopAcquisitionSite,
 } from '../../src/simulation/rewards/shop-settlement';
+import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
 import {
   attachTraitHistory,
@@ -144,8 +145,12 @@ export const shopId = createOccurrenceId('stale-purchased-hammer-shop');
 export const settleShop = (
   branches: Parameters<typeof settleShopAcquisitionSite>[0],
   context: Parameters<typeof settleShopAcquisitionSite>[1],
-  findings: Parameters<typeof settleShopAcquisitionSite>[2],
-) => settleShopAcquisitionSite(branches, context, findings).branches;
+  findings: Map<string, import('../../src/simulation/finding-regions').FindingRegionEntry>,
+) => {
+  const settlement = settleShopAcquisitionSite(branches, context);
+  mergeRewardFindingEmissions(findings, settlement.findingEmissions);
+  return settlement.branches;
+};
 
 export function baseFacts(): RewardKernelFacts {
   return {
@@ -763,8 +768,8 @@ export function echoGoldShop(
         throw new Error(detail);
       },
     },
-    findings,
   );
+  mergeRewardFindingEmissions(findings, settlement.findingEmissions);
   return {
     canonical,
     duplicateKey,

@@ -16,6 +16,7 @@ import { describe, expect, it } from 'vitest';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import { evaluateAllTogetherSetDomain } from '../../src/simulation/candidates/trait-offer';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition-settlement';
+import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import {
   attachTraitHistory,
@@ -233,8 +234,8 @@ describe('All Together direct trait settlement', () => {
         historySequence: 20,
       },
       (rewardHistory) => factsWithHistory(rewardFacts(), rewardHistory, new Set()),
-      findings,
     );
+    mergeRewardFindingEmissions(findings, settled.findingEmissions);
     expect(settled.branches).toHaveLength(1);
     expect(findings.size).toBe(0);
     expect(
@@ -268,7 +269,6 @@ describe('All Together direct trait settlement', () => {
         historySequence: 20,
       },
       (rewardHistory) => factsWithHistory(rewardFacts(), rewardHistory, new Set()),
-      new Map(),
     );
     expect(nonmatching.branches[0]?.hexProgress.godSentAdded).toBe(false);
   });
@@ -300,8 +300,8 @@ describe('All Together direct trait settlement', () => {
         historySequence: 20,
       },
       (rewardHistory) => factsWithHistory(rewardFacts(), rewardHistory, new Set()),
-      findings,
     );
+    mergeRewardFindingEmissions(findings, settled.findingEmissions);
     const checkpoint = settled.traitChildSettlements?.[0];
     expect(checkpoint?.address).toMatchObject({ kind: 'allTogetherSet', setKey: 'earth' });
     expect(checkpoint?.branch.traitHistory?.equippedTraits.AllElementalBoon?.rarity).toBe(

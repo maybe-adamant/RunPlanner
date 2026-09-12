@@ -17,7 +17,7 @@ import {
 } from '../../../materialization';
 import { createRewardProducerCandidateResult } from '../../producer-frontiers';
 import { createBiomeRewardFacts } from '../../facts';
-import { addRewardFinding, rewardFinding } from '../../findings';
+import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import type { ResolvedRewardOffer, RewardHistoryState } from '../../../../reward-kernel';
 import type { RewardBranchState } from '../../branch-primitives';
 import { processOfferGenerationCohort } from '../../offer-generation';
@@ -283,7 +283,7 @@ export function prepareShipLifecycleCandidateContext(
             candidate.reference.kind === 'interactWheelReward' &&
             candidate.reference.wheelKey === wheel.wheelKey,
         )?.owner;
-        candidateBranches = settleOwnedAcquisitionSite(
+        const settlement = settleOwnedAcquisitionSite(
           catalog,
           candidateBranches,
           {
@@ -304,9 +304,10 @@ export function prepareShipLifecycleCandidateContext(
               branchHistory,
               enteredBiomeCount,
             ),
-          candidateFindings,
           ownerRegion(wheel.origin),
-        ).branches;
+        );
+        mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);
+        candidateBranches = settlement.branches;
       }
     }
     return createRewardProducerCandidateResult(candidateFindings, candidateBranches);

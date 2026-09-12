@@ -2,7 +2,7 @@
 
 ## Status and objective
 
-Status: locked; Slice A complete and independently reviewed. Slice B is next.
+Status: locked; Slices A and B complete and independently reviewed. Slice C is next.
 Production base: `088ee598`.
 Evidence: `docs/investigations/ACQUISITION_SETTLEMENT_BOUNDARIES.md`.
 The worktree also contains the requested retirement of older trait investigations;
@@ -117,6 +117,17 @@ to enumerate exact call sites before editing, not a broad application rewrite.
 Tests: existing Pom divergent-cohort/repair evidence tests, Artificer deferred
 replacement, and Hermes unresolved Mystery Boon contact. Add only missing
 complete-product/merge assertions. Review independently and commit.
+
+Delivered: all acquisition-site products, including Shop settlement's shared
+product, return their own finding emissions. Callers merge at the existing
+chronological seam through the relocated `mergeRewardFindingEmissions`; the old
+export and site output-map arguments are removed. Shop missing-authorship
+classification now uses only its own emissions, not preexisting caller-map keys.
+A repeated unresolved Shop witness checks stable output and idempotent merging;
+existing divergent Pom tests retain their evidence coverage.
+Validation: full engine 143 files / 1,857 tests, focused 5 files / 104 tests,
+workspace/fixture typechecks and diff checks passed. Independent review passed
+with its own 104-test run. No fixtures, schemas, UI, or game module changed.
 
 ### C — Decompose acquisition responsibilities
 

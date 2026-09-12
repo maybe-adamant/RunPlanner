@@ -387,7 +387,6 @@ describe('Olympian reward pressure', () => {
         },
       },
       (history) => factsFor(history),
-      new Map(),
     );
 
     expect(
@@ -442,7 +441,6 @@ describe('Olympian reward pressure', () => {
         },
       },
       (history) => factsFor(history),
-      new Map(),
     );
 
     expect(

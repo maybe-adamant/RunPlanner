@@ -38,6 +38,7 @@ import {
 } from '../../src/simulation/rewards/acquisition-settlement';
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { createAcquisitionConversionCandidateArtifacts } from '../../src/simulation/rewards/acquisition-artifacts';
+import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { createTraitHistoryState } from '../../src/simulation/traits';
 import { installHexTree } from '../../src/simulation/hex-progress';
 
@@ -154,8 +155,8 @@ function settleOrdinaryBoon(
       },
     },
     (history) => factsWithHistory(facts(), history, new Set()),
-    findings,
   );
+  mergeRewardFindingEmissions(findings, settled.findingEmissions);
   return Object.freeze({ settled, findings, origin });
 }
 
@@ -249,8 +250,8 @@ function convert(
       deferArtificerReplacement: true,
     },
     (history) => factsWithHistory(facts(enteredBiomes), history, new Set()),
-    findings,
   );
+  mergeRewardFindingEmissions(findings, generated.findingEmissions);
   const product = deferArtificerReplacement
     ? generated
     : settleArtificerReplacementAcquisition(
@@ -269,8 +270,8 @@ function convert(
           facts: (history) => factsWithHistory(facts(enteredBiomes), history, new Set()),
           traitContext: artificerLoadout,
         },
-        findings,
       );
+  if (!deferArtificerReplacement) mergeRewardFindingEmissions(findings, product.findingEmissions);
   return {
     authored,
     findings,
@@ -315,7 +316,6 @@ describe('The Artificer', () => {
             : {}),
         },
         (history) => factsWithHistory(facts(), history, new Set()),
-        new Map(),
       );
     expect(
       settle(false).branches[0]?.events.find((event) => event.kind === 'concreteAcquisition'),
@@ -442,7 +442,6 @@ describe('The Artificer', () => {
         historySequence: 1,
         facts: (history) => factsWithHistory(facts(), history, new Set()),
       },
-      new Map(),
     );
     expect(product.entries[0]?.participation).toBe('optional');
     expect(product.branches[0]?.history.consumableRecord.GiftDrop).toBe(1);
@@ -488,7 +487,6 @@ describe('The Artificer', () => {
         historySequence: 1,
         facts: (history) => factsWithHistory(facts(), history, new Set()),
       },
-      new Map(),
     );
     expect(product.entries[0]?.participation).toBe('optional');
     expect(product.branches[0]?.hexProgress).toMatchObject({
@@ -520,7 +518,6 @@ describe('The Artificer', () => {
         historySequence: 1,
         facts: (history) => factsWithHistory(facts(), history, new Set()),
       },
-      new Map(),
     );
     const frontier = product.roleFrontiers?.[0];
     if (frontier === undefined) throw new Error('missing retained Bones role frontier');
@@ -916,8 +913,8 @@ describe('The Artificer', () => {
         },
       },
       devotionFacts,
-      findings,
     );
+    mergeRewardFindingEmissions(findings, settled.findingEmissions);
     const branch = settled.branches[0];
     if (branch === undefined) throw new Error('Devotion Forfeit branch is missing');
     expect(branch.arcanaFear.fear.forfeitConsumed).toBe(false);
@@ -1050,8 +1047,8 @@ describe('The Artificer', () => {
         historySequence: 2,
         facts: (history) => factsWithHistory(facts(), history, new Set()),
       },
-      conversion.findings,
     );
+    mergeRewardFindingEmissions(conversion.findings, acquired.findingEmissions);
     expect(acquired.branches[0]?.history.consumableRecord.MaxHealthDrop).toBe(1);
     expect(acquired.entries[0]?.address).toEqual(
       createAcquisitionEntryAddress(

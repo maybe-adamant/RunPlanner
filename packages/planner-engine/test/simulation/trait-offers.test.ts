@@ -43,6 +43,7 @@ import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition-settlement';
+import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import {
   evaluateTraitOfferCandidate,
@@ -63,9 +64,9 @@ function settleTestRoomReward(
   source: Parameters<typeof settleOwnedAcquisitionSite>[2]['source'],
   sequence: number,
   facts: Parameters<typeof settleOwnedAcquisitionSite>[3],
-  findings: Parameters<typeof settleOwnedAcquisitionSite>[4],
+  findings: Map<string, import('../../src/simulation/finding-regions').FindingRegionEntry>,
 ) {
-  return settleOwnedAcquisitionSite(
+  const settlement = settleOwnedAcquisitionSite(
     catalog,
     branches,
     {
@@ -76,8 +77,9 @@ function settleTestRoomReward(
       historySequence: sequence,
     },
     facts,
-    findings,
-  ).branches;
+  );
+  mergeRewardFindingEmissions(findings, settlement.findingEmissions);
+  return settlement.branches;
 }
 
 function reachedTraitOffers(
@@ -998,7 +1000,6 @@ describe('Sacrificial Hymn replacement composition', () => {
         historySequence: history.events.length + 1,
       },
       (rewardHistory) => factsWithHistory(baseFacts(), rewardHistory, new Set()),
-      new Map(),
     );
     const blocked = product.traitChildSettlements?.[0];
     expect(blocked?.branch.stygianWell).toMatchObject({ yarnUses: 1, hymnUses: 1 });

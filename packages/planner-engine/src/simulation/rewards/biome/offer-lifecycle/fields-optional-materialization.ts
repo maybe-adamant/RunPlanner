@@ -19,7 +19,7 @@ import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import { createBiomeRewardFacts } from '../../facts';
 import { historyFindingChronology, rewardFindingChronologyForRoom } from '../finding-chronology';
-import { addRewardFinding, rewardFinding } from '../../findings';
+import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import type { RewardLifecycleReferences } from '../prepared-inputs';
 import { processRewardOffer } from '../../offer-generation';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
@@ -209,7 +209,7 @@ export function materializeFieldsOptionalOfferPoint(
       acquisitionEvent !== undefined &&
       acquisitionView !== undefined
     ) {
-      settleOwnedAcquisitionSite(
+      const settlement = settleOwnedAcquisitionSite(
         catalog,
         candidateBranches,
         {
@@ -235,7 +235,6 @@ export function materializeFieldsOptionalOfferPoint(
             branchHistory,
             enteredBiomeCount,
           ),
-        candidateFindings,
         ownerRegion(selectedReward.origin),
         rewardFindingChronologyForRoom(
           snapshot,
@@ -244,6 +243,7 @@ export function materializeFieldsOptionalOfferPoint(
           'localRoomLifecycle',
         ),
       );
+      mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);
     }
     return Object.freeze({
       findings: Object.freeze(

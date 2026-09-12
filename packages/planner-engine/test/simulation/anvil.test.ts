@@ -14,10 +14,8 @@ import { factsWithHistory, resolveAcquisitionRole } from '@run-planner/engine/re
 
 import { createTestArcanaFearState, initializeTestRewardBranches } from '../support/arcana-fear';
 import { baseFacts } from './shop-trait-purchase-support';
-import {
-  accumulateProducerRoleFindingEmissions,
-  applyProducerRoleHistory,
-} from '../../src/simulation/rewards/acquisition-settlement';
+import { applyProducerRoleHistory } from '../../src/simulation/rewards/acquisition-settlement';
+import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { createAnvilCandidateCapability } from '../../src/simulation/rewards/anvil-settlement';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
 
@@ -140,7 +138,7 @@ describe('Anvil of Fates acquisition settlement', () => {
       undefined,
       Object.freeze({ site, entry }),
     );
-    accumulateProducerRoleFindingEmissions(findings, result.findingEmissions);
+    mergeRewardFindingEmissions(findings, result.findingEmissions);
 
     expect(findings.size).toBe(0);
     expect(result.branches).toHaveLength(1);
@@ -178,7 +176,7 @@ describe('Anvil of Fates acquisition settlement', () => {
       undefined,
       Object.freeze({ site, entry }),
     );
-    accumulateProducerRoleFindingEmissions(findings, result.findingEmissions);
+    mergeRewardFindingEmissions(findings, result.findingEmissions);
 
     expect(result.branches).toHaveLength(0);
     expect(findings.size).toBeGreaterThan(0);

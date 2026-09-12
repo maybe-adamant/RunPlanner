@@ -9,8 +9,7 @@ import type { CanonicalLocalReward } from '../../../materialization';
 import { settleOwnedAcquisitionSite } from '../../acquisition-settlement';
 import type { RewardBranchState } from '../../branch-primitives';
 import { createBiomeRewardFacts } from '../../facts';
-import { rewardFinding } from '../../findings';
-import { addRewardFinding } from '../../findings';
+import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import {
   consumeOlympianProviderForReachedOffer,
   processRewardOffer,
@@ -166,7 +165,7 @@ export function generateLocalRewards(
             acquisition.event !== undefined &&
             acquisition.view !== undefined
           ) {
-            settleOwnedAcquisitionSite(
+            const settlement = settleOwnedAcquisitionSite(
               catalog,
               candidateBranches,
               {
@@ -190,7 +189,6 @@ export function generateLocalRewards(
                   history,
                   inputs.enteredBiomeCount,
                 ),
-              candidateFindings,
               ownerRegion(localReward.origin),
               rewardFindingChronologyForRoom(
                 snapshot,
@@ -199,6 +197,7 @@ export function generateLocalRewards(
                 'localRoomLifecycle',
               ),
             );
+            mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);
           }
           return createRewardProducerCandidateResult(candidateFindings, candidateBranches);
         },
@@ -300,8 +299,8 @@ export function generateLocalRewards(
             candidateBranches.length > 0 &&
             acquisition.event !== undefined &&
             acquisition.view !== undefined
-          )
-            settleOwnedAcquisitionSite(
+          ) {
+            const settlement = settleOwnedAcquisitionSite(
               catalog,
               candidateBranches,
               {
@@ -325,9 +324,10 @@ export function generateLocalRewards(
                   history,
                   inputs.enteredBiomeCount,
                 ),
-              candidateFindings,
               ownerRegion(candidate.origin),
             );
+            mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);
+          }
           return Object.freeze({
             findings: Object.freeze(
               [...candidateFindings.values()]

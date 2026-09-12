@@ -86,7 +86,6 @@ function settle(
       },
     },
     (history) => factsWithHistory(facts(), history, new Set()),
-    new Map(),
   );
 }
 

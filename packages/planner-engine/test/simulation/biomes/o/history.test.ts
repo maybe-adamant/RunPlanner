@@ -206,7 +206,6 @@ describe('O canonical materialization and lifecycle', () => {
       () => {
         throw new Error('empty settlement branches do not need reward facts');
       },
-      new Map(),
     );
 
     expect(settled.entries).toEqual([
