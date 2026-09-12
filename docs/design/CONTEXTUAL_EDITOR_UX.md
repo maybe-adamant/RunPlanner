@@ -534,6 +534,18 @@ Gold renders no option-local rarity, target, Circe, or Death Defiance control.
 The application never counts ordinary, high-tier, or replacement candidates to
 decide which control is available.
 
+Echo's Boon Boon Boon uses the same trait form, option rows and selected-payload
+editors with a distinct typed binding. Its provider-per-row identity and cached
+rarity remain separate from ordinary fresh offers; effective granted rarity is
+displayed without importing ordinary Rarify, Rejected or replacement controls.
+Its local draft may contain one to three rows, including incomplete rows. The
+engine supplies Add option and Remove last option transitions: addition requires
+another distinct identity, removal preserves the retained prefix and clamps a
+removed selection to the new final row. Completion still resolves through the
+nested Echo owner and the parent complete-offer boundary, not a synthetic
+standalone offer. Shared payload editors own prefix editing and cancellation;
+each binding supplies its exact domain, finding identity and completed update.
+
 A declaration-owned targeted option adds one target picker backed by the exact
 trait-offer capability. It uses the same lazy boundary and catalog labels as
 the trait picker; it does not inspect equipped history in the application or

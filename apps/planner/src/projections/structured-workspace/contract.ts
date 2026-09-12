@@ -645,6 +645,18 @@ export interface WorkspaceEchoLastRunBoonDomain {
     rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
     selectedIndex: number,
   ) => WorkspaceEchoLastRunBoonDraftSupport;
+  readonly nextDraft: (
+    rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
+    selectedIndex: number,
+  ) =>
+    | { readonly rows: readonly WorkspaceEchoLastRunBoonDraftRow[]; readonly selectedIndex: number }
+    | undefined;
+  readonly previousDraft: (
+    rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
+    selectedIndex: number,
+  ) =>
+    | { readonly rows: readonly WorkspaceEchoLastRunBoonDraftRow[]; readonly selectedIndex: number }
+    | undefined;
   readonly effectiveRarityFor: (option: AuthoredEchoLastRunBoonOption) => TraitRarity | undefined;
   readonly labelFor: (identity: WorkspaceEchoLastRunBoonTraitIdentity) => string;
   readonly summaryFor: (value: AuthoredEchoLastRunBoonOffer) => string;
@@ -662,9 +674,15 @@ export interface WorkspaceEchoLastRunBoonDomain {
   readonly carrierForDraft: (
     rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
     selectedIndex: number,
+    retainedTargetKey?: string,
   ) => {
     readonly load: () => WorkspaceEchoLastRunBoonCarrierDomain | undefined;
   };
+  readonly naturalSelectionForDraft: (
+    rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
+    selectedIndex: number,
+    retainedTargetKey?: string,
+  ) => { readonly load: () => WorkspaceNaturalSelectionDomain | undefined };
   /** Engine-owned trait distinctness for one transient compound-draft row. */
   readonly traitPickerFor: (
     occupiedTraitKeys: readonly string[],

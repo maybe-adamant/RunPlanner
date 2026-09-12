@@ -45,6 +45,8 @@ import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import {
   echoLastRunBoonTraitCandidatesForRow,
   evaluateEchoLastRunBoonDraftSupport,
+  nextEchoLastRunBoonDraft,
+  previousEchoLastRunBoonDraft,
   evaluateEchoLastRunBoonDomain,
   evaluateEchoPomTargetDomain,
   evaluateTraitOfferFocusedOptionCandidate,
@@ -1027,6 +1029,45 @@ describe('Echo Gate B Boon Boon Boon', () => {
       remainingTraitIdentities: [],
       canAppend: false,
     });
+    const prefix = Object.freeze({
+      giverKey: 'Hera',
+      traitKey: 'AllElementalBoon',
+      rarity: 'Legendary' as const,
+      allTogetherResult: Object.freeze({ earth: null, fire: null, air: null, water: null }),
+    });
+    const candidates = domain.result.candidates;
+    const first = nextEchoLastRunBoonDraft(candidates, [prefix], 0)!;
+    expect(first.rows).toEqual([prefix, {}]);
+    expect(first.rows[0]).toBe(prefix);
+    const full = nextEchoLastRunBoonDraft(candidates, first.rows, 1)!;
+    expect(full).toEqual({ rows: [prefix, {}, {}], selectedIndex: 1 });
+    expect(full.rows[0]?.allTogetherResult).toBe(prefix.allTogetherResult);
+    expect(nextEchoLastRunBoonDraft(candidates, full.rows, 1)).toBeUndefined();
+    expect(nextEchoLastRunBoonDraft([], first.rows, 0)).toBeUndefined();
+    expect(nextEchoLastRunBoonDraft(candidates, [], 0)).toBeUndefined();
+    expect(nextEchoLastRunBoonDraft(candidates, [{}, {}, {}, {}], 0)).toBeUndefined();
+    for (const selectedIndex of [0, 1, 2]) {
+      const removed = previousEchoLastRunBoonDraft(full.rows, selectedIndex)!;
+      expect(removed).toEqual({ rows: [prefix, {}], selectedIndex: Math.min(selectedIndex, 1) });
+      expect(removed.rows[0]).toBe(prefix);
+    }
+    const targeted = Object.freeze({
+      giverKey: 'Hera',
+      traitKey: 'BoonDecayBoon',
+      targetTraitKey: 'ZeusWeaponBoon',
+    });
+    const natural = Object.freeze({
+      giverKey: 'Demeter',
+      traitKey: 'GoodStuffBoon',
+      naturalSelectionTargets: ['ZeusWeaponBoon'] as const,
+    });
+    expect(previousEchoLastRunBoonDraft([targeted, natural, {}], 2)?.rows).toEqual([
+      targeted,
+      natural,
+    ]);
+    expect(previousEchoLastRunBoonDraft([{}], 0)).toBeUndefined();
+    expect(previousEchoLastRunBoonDraft([], 0)).toBeUndefined();
+    expect(previousEchoLastRunBoonDraft([{}, {}, {}, {}], 0)).toBeUndefined();
   });
 
   it('does not union BBB support across divergent pre-choice branches', () => {

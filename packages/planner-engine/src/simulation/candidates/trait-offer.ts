@@ -9,7 +9,10 @@ import {
   type AuthoredTraitOffer,
   type TraitOptionKey,
 } from '../../authored-project/traits';
-import type { AuthoredTraitCarrierChild } from '../../authored-project/trait-carrier-children';
+import type {
+  AuthoredEchoLastRunBoonDraftRow,
+  AuthoredTraitCarrierChild,
+} from '../../authored-project/trait-carrier-children';
 import type { ProjectDocument } from '../../authored-project/model';
 import type {
   ConcaveStoneCandidateBranch,
@@ -216,12 +219,7 @@ export interface EchoLastRunBoonTraitIdentity {
   readonly traitKey: string;
 }
 
-export interface EchoLastRunBoonDraftRow {
-  readonly giverKey?: string;
-  readonly traitKey?: string;
-  readonly rarity?: import('../../catalog-schema').TraitRarity;
-  readonly targetTraitKey?: string;
-}
+export type EchoLastRunBoonDraftRow = AuthoredEchoLastRunBoonDraftRow;
 
 export interface EchoLastRunBoonDraftSupport {
   readonly rowSupport: readonly boolean[];
@@ -229,6 +227,11 @@ export interface EchoLastRunBoonDraftSupport {
   readonly complete: boolean;
   readonly remainingTraitIdentities: readonly EchoLastRunBoonTraitIdentity[];
   readonly canAppend: boolean;
+}
+
+export interface EchoLastRunBoonDraftTransition {
+  readonly rows: readonly EchoLastRunBoonDraftRow[];
+  readonly selectedIndex: number;
 }
 
 /**
@@ -293,6 +296,31 @@ export function evaluateEchoLastRunBoonDraftSupport(
     complete,
     remainingTraitIdentities,
     canAppend: rows.length < 3 && remainingTraitIdentities.length > 0,
+  });
+}
+
+/** Appends one blank transient Echo row only when another distinct identity remains. */
+export function nextEchoLastRunBoonDraft(
+  candidates: readonly EvaluatedEchoLastRunBoonCandidate[],
+  rows: readonly EchoLastRunBoonDraftRow[],
+  selectedIndex: number,
+): EchoLastRunBoonDraftTransition | undefined {
+  if (rows.length < 1 || rows.length >= 3) return undefined;
+  if (!evaluateEchoLastRunBoonDraftSupport(candidates, rows, selectedIndex).canAppend)
+    return undefined;
+  return Object.freeze({ rows: Object.freeze([...rows, Object.freeze({})]), selectedIndex });
+}
+
+/** Drops only the final transient Echo row; incomplete retained rows remain untouched. */
+export function previousEchoLastRunBoonDraft(
+  rows: readonly EchoLastRunBoonDraftRow[],
+  selectedIndex: number,
+): EchoLastRunBoonDraftTransition | undefined {
+  if (rows.length <= 1 || rows.length > 3) return undefined;
+  const nextRows = Object.freeze(rows.slice(0, -1));
+  return Object.freeze({
+    rows: nextRows,
+    selectedIndex: Math.min(Math.max(selectedIndex, 0), nextRows.length - 1),
   });
 }
 

@@ -195,6 +195,8 @@ export {
   type FigurineArcanaCandidateQuery,
   type EvaluatedFigurineArcanaCandidate,
   evaluateEchoLastRunBoonDraftSupport,
+  nextEchoLastRunBoonDraft,
+  previousEchoLastRunBoonDraft,
   echoLastRunBoonRarityCandidates,
   echoLastRunBoonTraitCandidatesForRow,
 } from './candidates';

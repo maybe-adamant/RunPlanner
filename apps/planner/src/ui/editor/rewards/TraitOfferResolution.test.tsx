@@ -25,6 +25,10 @@ import {
   type AuthoredEchoLastRunBoonOffer,
 } from '@run-planner/engine/authored-project';
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
+import {
+  nextEchoLastRunBoonDraft,
+  previousEchoLastRunBoonDraft,
+} from '@run-planner/engine/simulation';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
@@ -232,7 +236,82 @@ describe('resolution outcomes', () => {
                     forOffer: () => ({
                       load: () => {
                         echoDomainLoads();
+                        const carrierForDraft = (
+                          rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
+                          selectedIndex: number,
+                        ) => ({
+                          load: () => {
+                            const selectedRow = rows[selectedIndex];
+                            if (selectedRow?.identity?.traitKey === 'GoodStuffBoon') {
+                              const targets = selectedRow.naturalSelectionTargets ?? [];
+                              return {
+                                kind: 'naturalSelection' as const,
+                                slotCount: 2,
+                                complete: targets.length === 2,
+                                supported: true,
+                                picker: pickerModel([
+                                  Object.freeze({
+                                    label: 'Nova Strike',
+                                    value: 'ApolloWeaponBoon',
+                                  }),
+                                ]),
+                                traitLabel: (traitKey: string) =>
+                                  traitKey === 'ApolloWeaponBoon' ? 'Nova Strike' : traitKey,
+                              };
+                            }
+                            const result = selectedRow?.allTogetherResult;
+                            const sets = [
+                              ['earth', 'Earth Grant'],
+                              ['fire', 'Fire Grant'],
+                              ['air', 'Air Grant'],
+                              ['water', 'Water Grant'],
+                            ] as const;
+                            return {
+                              kind: 'allTogether' as const,
+                              complete: sets.every(([setKey]) =>
+                                Object.hasOwn(result ?? {}, setKey),
+                              ),
+                              sets: sets.map(([setKey, label]) => ({
+                                setKey,
+                                picker: pickerModel([
+                                  Object.freeze({ label, value: `${setKey}Trait` }),
+                                ]),
+                              })),
+                            };
+                          },
+                        });
                         return {
+                          nextDraft: (
+                            rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
+                            selectedIndex: number,
+                          ) => {
+                            const next = nextEchoLastRunBoonDraft(
+                              identities.map((identity) => ({
+                                option: { ...identity, rarity: 'Common' as const },
+                                support: 'possible' as const,
+                                branchSupport: [true],
+                                targetRequired: false,
+                                targetCandidates: [],
+                              })),
+                              rows.map(({ identity, ...payload }) => ({ ...payload, ...identity })),
+                              selectedIndex,
+                            );
+                            return next === undefined
+                              ? undefined
+                              : { rows: [...rows, {}], selectedIndex: next.selectedIndex };
+                          },
+                          previousDraft: (
+                            rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
+                            selectedIndex: number,
+                          ) => {
+                            const previous = previousEchoLastRunBoonDraft(rows, selectedIndex);
+                            return previous === undefined
+                              ? undefined
+                              : {
+                                  rows: rows.slice(0, previous.rows.length),
+                                  selectedIndex: previous.selectedIndex,
+                                };
+                          },
                           completeDraft: (
                             rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
                             selectedIndex: number,
@@ -374,48 +453,14 @@ describe('resolution outcomes', () => {
                               : identity.traitKey === 'GoodStuffBoon'
                                 ? ('naturalSelection' as const)
                                 : undefined,
-                          carrierForDraft: (
+                          carrierForDraft,
+                          naturalSelectionForDraft: (
                             rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
                             selectedIndex: number,
                           ) => ({
                             load: () => {
-                              const selectedRow = rows[selectedIndex];
-                              if (selectedRow?.identity?.traitKey === 'GoodStuffBoon') {
-                                const targets = selectedRow.naturalSelectionTargets ?? [];
-                                return {
-                                  kind: 'naturalSelection' as const,
-                                  slotCount: 2,
-                                  complete: targets.length === 2,
-                                  supported: true,
-                                  picker: pickerModel([
-                                    Object.freeze({
-                                      label: 'Nova Strike',
-                                      value: 'ApolloWeaponBoon',
-                                    }),
-                                  ]),
-                                  traitLabel: (traitKey: string) =>
-                                    traitKey === 'ApolloWeaponBoon' ? 'Nova Strike' : traitKey,
-                                };
-                              }
-                              const result = selectedRow?.allTogetherResult;
-                              const sets = [
-                                ['earth', 'Earth Grant'],
-                                ['fire', 'Fire Grant'],
-                                ['air', 'Air Grant'],
-                                ['water', 'Water Grant'],
-                              ] as const;
-                              return {
-                                kind: 'allTogether' as const,
-                                complete: sets.every(([setKey]) =>
-                                  Object.hasOwn(result ?? {}, setKey),
-                                ),
-                                sets: sets.map(([setKey, label]) => ({
-                                  setKey,
-                                  picker: pickerModel([
-                                    Object.freeze({ label, value: `${setKey}Trait` }),
-                                  ]),
-                                })),
-                              };
+                              const carrier = carrierForDraft(rows, selectedIndex).load();
+                              return carrier.kind === 'naturalSelection' ? carrier : undefined;
                             },
                           }),
                           traitPickerFor: () =>
@@ -464,51 +509,38 @@ describe('resolution outcomes', () => {
     expect(
       screen.getByText('Choose the boon Echo grants before room chronology continues.'),
     ).toBeDefined();
-    expect(
-      rendered.container.querySelectorAll('input[name="echo-last-run-selected"]'),
-    ).toHaveLength(0);
+    expect(screen.queryByRole('region', { name: 'Boon Boon Boon choice' })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Choose' }));
     expect(screen.getByText('Echo offer > Boon Boon Boon choice')).toBeDefined();
-    expect(
-      rendered.container.querySelectorAll('input[name="echo-last-run-selected"]'),
-    ).toHaveLength(1);
+    expect(rendered.container.querySelectorAll('input[name$="-selected"]')).toHaveLength(1);
     await user.click(screen.getByLabelText('Boon Boon Boon outcome 1'));
     await user.click(await screen.findByText('Aphrodite · Heart Breaker'));
     await user.click(screen.getByRole('button', { name: 'Back to Echo offer' }));
     expect(commit).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Choose' }));
     expect(screen.getByLabelText('Boon Boon Boon outcome 1').textContent).toContain(
-      'Choose provider and trait',
+      'Choose a trait',
     );
     await user.click(screen.getByLabelText('Boon Boon Boon outcome 1'));
     await user.click(await screen.findByText('Aphrodite · Heart Breaker'));
     await user.click(screen.getByLabelText('Boon Boon Boon outcome 1 rarity'));
     await user.click(await screen.findByText('Common'));
-    await user.click(screen.getByRole('button', { name: 'Add outcome' }));
+    await user.click(screen.getByRole('button', { name: 'Add option' }));
     await user.click(screen.getByLabelText('Boon Boon Boon outcome 2'));
     await user.click(await screen.findByText('Hera · Bridal Glow'));
     expect(screen.queryByLabelText('Boon Boon Boon outcome 2 rarity')).toBeNull();
-    const nestedRadios = rendered.container.querySelectorAll(
-      'input[name="echo-last-run-selected"]',
-    );
+    const nestedRadios = rendered.container.querySelectorAll('input[name$="-selected"]');
     expect(nestedRadios).toHaveLength(2);
     await user.click(nestedRadios[1]!);
     await user.click(screen.getByLabelText('Boon Boon Boon selected trait target'));
     await user.click(await screen.findByText('Melting Point'));
-    await user.click(screen.getByRole('button', { name: 'Add outcome' }));
+    await user.click(screen.getByRole('button', { name: 'Add option' }));
     await user.click(screen.getByLabelText('Boon Boon Boon outcome 3'));
     await user.click(await screen.findByText('Hera · All Together'));
-    const selectedAfterAppend = rendered.container.querySelectorAll(
-      'input[name="echo-last-run-selected"]',
-    );
+    const selectedAfterAppend = rendered.container.querySelectorAll('input[name$="-selected"]');
     await user.click(selectedAfterAppend[2]!);
-    for (const [setKey, grant] of [
-      ['earth', 'Earth Grant'],
-      ['fire', 'Fire Grant'],
-      ['air', 'Air Grant'],
-      ['water', 'Water Grant'],
-    ] as const) {
-      await user.click(screen.getByLabelText(`Echo All Together ${setKey} grant`));
+    await user.click(screen.getByRole('button', { name: 'Choose all grants' }));
+    for (const grant of ['Earth Grant', 'Fire Grant', 'Air Grant', 'Water Grant']) {
       await user.click(await screen.findByText(grant));
     }
     await user.click(screen.getByRole('button', { name: 'Save Boon Boon Boon choice' }));

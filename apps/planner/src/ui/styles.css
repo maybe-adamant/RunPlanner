@@ -1360,8 +1360,7 @@ button:disabled {
 }
 
 .trait-dependent-choice-row,
-.echo-last-run-choice-header,
-.echo-last-run-choice-actions {
+.echo-last-run-choice-header {
   align-items: center;
   display: flex;
   gap: 0.75rem;
@@ -1385,25 +1384,10 @@ button:disabled {
   align-items: flex-start;
 }
 
-.echo-last-run-choice-header > div,
-.echo-last-run-option,
-.echo-last-run-target {
+.echo-last-run-choice-header > div {
   display: grid;
   gap: 0.55rem;
   min-width: 0;
-}
-
-.echo-last-run-options {
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.echo-last-run-option,
-.echo-last-run-target {
-  border: 1px solid var(--border, #ccd3df);
-  border-radius: 0.45rem;
-  padding: 0.75rem;
 }
 
 .trait-outcome-summary-list,
