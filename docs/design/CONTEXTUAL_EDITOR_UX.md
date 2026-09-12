@@ -561,6 +561,12 @@ one complete semantic replacement command. Escape dismisses an open nested
 picker before it dismisses the containing trait dialog, preserving the local
 draft and restoring focus at each boundary.
 
+Concave Stone follows the same local-draft boundary. Its optional proc checkbox
+starts unchecked: absent authored detail means no proc, including when an upstream
+edit makes Stone available to an existing offer. A required proc still needs its
+residual selection. Toggling or clearing Stone never
+dispatches a separate child command before the complete offer is saved.
+
 This is application/UI vocabulary. It must not replace the richer typed
 simulation assessment or enter persisted state.
 

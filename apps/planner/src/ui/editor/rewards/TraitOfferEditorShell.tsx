@@ -1,6 +1,5 @@
 import {
   type AuthoredTraitOffer,
-  type AuthoredConcaveStoneResult,
   type AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
@@ -35,7 +34,6 @@ export function TraitOfferEditorShell({
   interaction,
   onChildCommit,
   onCommit,
-  onStoneResult,
   onReset,
 }: {
   readonly initialValue: AuthoredTraitOffer;
@@ -43,10 +41,6 @@ export function TraitOfferEditorShell({
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly onChildCommit?: (value: AuthoredTraitOffer) => void;
   readonly onCommit?: (value: AuthoredTraitOffer) => void;
-  readonly onStoneResult?: (
-    offer: AuthoredTraitOfferTraits,
-    result: AuthoredConcaveStoneResult | null,
-  ) => void;
   readonly onReset?: () => void;
 }) {
   const [value, setValue] = useState<AuthoredTraitOffer>(initialValue);
@@ -173,23 +167,6 @@ export function TraitOfferEditorShell({
     setValue(nextValue);
     setLoadable(nextLoadable);
     controller.activate(nextLoadable);
-  };
-  const updateStoneResult = (
-    offer: AuthoredTraitOfferTraits,
-    result: AuthoredConcaveStoneResult | null,
-  ): void => {
-    const child = interaction
-      .optionDomain(offer, offer.selectedOptionKey)
-      .children.find(
-        (
-          entry,
-        ): entry is Extract<typeof entry, { readonly child: { readonly kind: 'concaveStone' } }> =>
-          entry.child.kind === 'concaveStone',
-      );
-    if (child === undefined) return;
-    const nextValue = child.update(offer, result);
-    updateValue(nextValue);
-    onStoneResult?.(nextValue, result);
   };
   if (view === 'echoLastRunBoon' && value.kind === 'traits') {
     const child = interaction
@@ -329,7 +306,6 @@ export function TraitOfferEditorShell({
             interaction={interaction}
             onOpenEchoLastRunBoon={() => setView('echoLastRunBoon')}
             onUpdate={updateValue}
-            onConcaveStoneResult={updateStoneResult}
             value={value}
           />
           {nextTraitOfferDraft === undefined &&

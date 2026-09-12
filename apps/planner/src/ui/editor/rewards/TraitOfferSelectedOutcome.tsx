@@ -9,6 +9,7 @@ import type {
   WorkspaceConcaveStoneDomain,
   WorkspaceHexTreeDomain,
   WorkspaceTraitAcquisitionTargetDomain,
+  WorkspaceTraitCarrierChildInteraction,
   WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace';
 import { traitOfferDialogClosed } from '@planner/state/editorSessionSlice';
@@ -31,21 +32,58 @@ function pickerValueLabel<T>(model: ContextualPickerModel<T>, value: T): string 
     .find((item) => Object.is(item.value, value))?.label;
 }
 
+function TraitAcquisitionOutcome({
+  child,
+  interaction,
+  value,
+  onUpdate,
+}: {
+  readonly child: Extract<
+    WorkspaceTraitCarrierChildInteraction,
+    { readonly child: { readonly kind: 'traitAcquisitionTarget' } }
+  >;
+  readonly interaction: WorkspaceTraitOfferInteraction;
+  readonly value: AuthoredTraitOfferTraits;
+  readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
+}) {
+  const findingTarget = useFindingTarget();
+  const option = value.options[optionIndex(child.child.optionKey)];
+  const loadable = useMemo(() => child.forOffer(value), [child, value]);
+  const controller = useWorkspaceInteractionController<
+    WorkspaceTraitAcquisitionTargetDomain | undefined
+  >();
+  const domain = controller.observe(loadable);
+  useEffect(() => {
+    controller.activate(loadable);
+  }, [controller, loadable]);
+  if (option === undefined) return null;
+  return (
+    <ContextualPicker
+      findingTarget={findingTarget(child.child.address)}
+      ariaLabel={`${child.child.optionKey} acquisition target`}
+      id={semanticOwnerControlElementId(child.child.address)}
+      label="Target"
+      loading={domain.pending}
+      model={domain.result?.targetPicker ?? emptyTargetPicker}
+      onSelect={(targetTraitKey) => onUpdate(child.update(value, targetTraitKey))}
+      placeholder="Choose an equipped trait"
+      {...(option.targetTraitKey === undefined
+        ? {}
+        : { triggerLabel: interaction.traitLabel(option.targetTraitKey) })}
+    />
+  );
+}
+
 export function TraitOfferSelectedOutcome({
   interaction,
   value,
   onOpenEchoLastRunBoon,
   onUpdate,
-  onConcaveStoneResult,
 }: {
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly value: AuthoredTraitOfferTraits;
   readonly onOpenEchoLastRunBoon: () => void;
   readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
-  readonly onConcaveStoneResult?: (
-    offer: AuthoredTraitOfferTraits,
-    result: import('@run-planner/engine/authored-project').AuthoredConcaveStoneResult | null,
-  ) => void;
 }) {
   const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
@@ -56,7 +94,7 @@ export function TraitOfferSelectedOutcome({
     () => interaction.optionDomain(value, value.selectedOptionKey),
     [interaction, value],
   );
-  const targetChild = loadable.children.find(
+  const targetChildren = loadable.children.filter(
     (
       child,
     ): child is Extract<
@@ -92,11 +130,6 @@ export function TraitOfferSelectedOutcome({
     (child): child is Extract<typeof child, { readonly child: { readonly kind: 'hexTree' } }> =>
       child.child.kind === 'hexTree',
   );
-  const targetLoadable = useMemo(() => targetChild?.forOffer(value), [targetChild, value]);
-  const targetController = useWorkspaceInteractionController<
-    WorkspaceTraitAcquisitionTargetDomain | undefined
-  >();
-  const targetDomain = targetController.observe(targetLoadable);
   const circeLoadable = useMemo(() => circeChild?.forOffer(value), [circeChild, value]);
   const circeController = useWorkspaceInteractionController<
     WorkspaceCirceResolutionDomain | undefined
@@ -130,7 +163,6 @@ export function TraitOfferSelectedOutcome({
   const hexTreeController = useWorkspaceInteractionController<WorkspaceHexTreeDomain | undefined>();
   const hexTreeDomain = hexTreeController.observe(hexTreeLoadable);
   useEffect(() => {
-    if (targetLoadable !== undefined) targetController.activate(targetLoadable);
     if (circeLoadable !== undefined) circeController.activate(circeLoadable);
     if (echoPomLoadable !== undefined) echoPomController.activate(echoPomLoadable);
     if (echoLastRunLoadable !== undefined) echoLastRunController.activate(echoLastRunLoadable);
@@ -148,15 +180,13 @@ export function TraitOfferSelectedOutcome({
     hexTreeController,
     hexTreeLoadable,
     loadable,
-    targetController,
-    targetLoadable,
   ]);
 
   const selectedTraitLabel = interaction.traitLabel(option.traitKey);
   const isHexOutcome = hexTreeChild !== undefined;
   const feedback = interaction.feedbackFor(value);
   const hasOutcome =
-    targetChild !== undefined ||
+    targetChildren.length > 0 ||
     circeChild !== undefined ||
     echoPomChild !== undefined ||
     echoLastRunChild !== undefined ||
@@ -179,21 +209,15 @@ export function TraitOfferSelectedOutcome({
           onChange={(hexTree) => onUpdate(hexTreeChild.update(value, hexTree))}
         />
       )}
-      {targetChild === undefined ? null : (
-        <ContextualPicker
-          findingTarget={findingTarget(targetChild.child.address)}
-          ariaLabel={`${value.selectedOptionKey} acquisition target`}
-          id={semanticOwnerControlElementId(targetChild.child.address)}
-          label="Target"
-          loading={targetDomain.pending}
-          model={targetDomain.result?.targetPicker ?? emptyTargetPicker}
-          onSelect={(targetTraitKey) => onUpdate(targetChild.update(value, targetTraitKey))}
-          placeholder="Choose an equipped trait"
-          {...(option.targetTraitKey === undefined
-            ? {}
-            : { triggerLabel: interaction.traitLabel(option.targetTraitKey) })}
+      {targetChildren.map((child) => (
+        <TraitAcquisitionOutcome
+          child={child}
+          interaction={interaction}
+          key={semanticOwnerControlElementId(child.child.address)}
+          onUpdate={onUpdate}
+          value={value}
         />
-      )}
+      ))}
       {circeChild === undefined || circeDomain.result === undefined ? null : (
         <TraitOfferCirceResolution
           findingTarget={findingTarget(circeChild.child.address)}
@@ -277,14 +301,12 @@ export function TraitOfferSelectedOutcome({
         feedback={feedback}
         interaction={interaction}
         offer={value}
-        optionIndex={selectedIndex}
         onUpdate={onUpdate}
         concaveStone={
           concaveStoneChild === undefined || concaveStoneDomain.result === undefined
             ? undefined
             : { interaction: concaveStoneChild, domain: concaveStoneDomain.result }
         }
-        {...(onConcaveStoneResult === undefined ? {} : { onConcaveStoneResult })}
       />
       {concaveStoneChild === undefined ||
       concaveStoneDomain.result !== undefined ||
@@ -296,7 +318,6 @@ export function TraitOfferSelectedOutcome({
             className="quiet-action action-compact"
             onClick={() => {
               onUpdate(concaveStoneChild.update(value, null));
-              onConcaveStoneResult?.(value, null);
             }}
             type="button"
           >

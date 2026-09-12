@@ -144,6 +144,8 @@ export function evaluateNaturalSelectionResultCandidate(
   if (disposition?.kind !== 'naturalSelection')
     return unavailableForTraitOffer(evaluation, query.result.trait);
   const assessments = capability.naturalSelectionTargets(
+    query.value,
+    query.result.optionKey,
     disposition.levelCount,
     disposition.slots,
     query.targets,
@@ -372,6 +374,8 @@ export function evaluateEchoLastRunBoonDomain(
     }
     if (selectedDisposition.kind === 'naturalSelection') {
       const assessments = capability.naturalSelectionTargets(
+        query.value,
+        query.optionKey,
         selectedDisposition.levelCount,
         selectedDisposition.slots,
         selectedChild.naturalSelectionTargets,

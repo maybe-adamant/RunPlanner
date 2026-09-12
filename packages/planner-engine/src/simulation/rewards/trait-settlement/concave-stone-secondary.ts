@@ -19,6 +19,7 @@ import {
 
 export interface FrozenConcaveStoneSecondary {
   readonly offer: AuthoredTraitOfferTraits;
+  readonly sourceOptionKey: AuthoredTraitOfferTraits['selectedOptionKey'];
   readonly levelResolution?: TraitOfferOptionLevelResolution;
 }
 
@@ -66,7 +67,8 @@ export function prepareConcaveStoneSecondary(
     return Object.freeze({ address: traitAddress, candidateContext });
   };
   if (support === undefined) {
-    const blockedChild = result === undefined ? undefined : reject('concaveStoneResultUnavailable');
+    const blockedChild =
+      result?.kind === 'proc' ? reject('concaveStoneResultUnavailable') : undefined;
     return Object.freeze({
       findings: Object.freeze(findings),
       ...(blockedChild === undefined ? {} : { blockedChild }),
@@ -87,7 +89,7 @@ export function prepareConcaveStoneSecondary(
     });
   }
   if (result === undefined) {
-    const blockedChild = reject('concaveStoneResultMissing');
+    const blockedChild = support >= 100 ? reject('concaveStoneResultMissing') : undefined;
     return Object.freeze({
       findings: Object.freeze(findings),
       ...(blockedChild === undefined ? {} : { blockedChild }),
@@ -118,6 +120,7 @@ export function prepareConcaveStoneSecondary(
   return Object.freeze({
     findings: Object.freeze(findings),
     secondary: Object.freeze({
+      sourceOptionKey: result.optionKey,
       offer: Object.freeze({
         kind: 'traits',
         giverKey: effectiveAuthored.giverKey,

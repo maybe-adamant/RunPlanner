@@ -623,9 +623,24 @@ round-robin allocation, not eight independent Pom choices. Bridal Glow likewise
 persists its exact promoted-trait target on the carrying option. Concave Stone's
 chosen residual option and Echo Boon Boon Boon's selected nested option reuse
 these same option-owned All Together, Natural Selection, and Bridal Glow
-outcomes. Dormant sibling options may retain authored detail for later editing,
+outcomes. An authored Stone proc makes the residual option's children active
+alongside the primary option's children, with their original option addresses.
+Their candidate state follows primary acquisition; neither editing nor querying
+the residual changes the primary selection. Dormant sibling options may retain authored detail for later editing,
 but only an option that is actually acquired exports its carrier consequence to
 execution. Ransom outcomes persist no removal set or level total.
+
+Echo's nested acquisition is repaired atomically through its `echoLastRunBoon`
+choice owner. Its internal settlement offer must not escape as an independently
+authored finding destination. A blocked Natural Selection child retains the
+pre-offer candidate capability for both prefix editing and the owning offer's
+complete-draft assessment.
+
+Concave Stone requires an active authored choice only to proc. Omitted results
+mean no proc, as do explicit `noProc` results; neither consumes its pending use.
+A guaranteed proc with eligible residual rows still requires a selection. An
+explicit proc with no available Stone remains invalid. Simulation publishes the
+resolved no-proc disposition for an available Stone without rewriting the save.
 
 Each trait option may retain one optional `persephoneLevelBonus`. When the
 active Aspect of Persephone row omits it, the authored result resolves as

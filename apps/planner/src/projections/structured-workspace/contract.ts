@@ -545,12 +545,6 @@ export interface WorkspaceConcaveStoneInteraction {
   ) => AuthoredTraitOfferTraits;
   /** Candidate-owned requiredness is distinct from the child's authored structure. */
   readonly completeFor: (offer: AuthoredTraitOfferTraits) => boolean;
-  readonly intentFor: (
-    offer: AuthoredTraitOfferTraits,
-    result: AuthoredConcaveStoneResult | null,
-  ) => WorkspacePayloadEditIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceConcaveStoneResult' }>
-  >;
   readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
     readonly load: () => WorkspaceConcaveStoneDomain | undefined;
   };

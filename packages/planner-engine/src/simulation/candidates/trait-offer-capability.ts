@@ -54,6 +54,7 @@ import { evaluateCallingCardOffer } from '../keepsakes/reward-effects';
 import type { AuthoredConcaveStoneResult } from '../../authored-project/traits';
 import { resolveTraitOfferOptionLevel } from '../traits/offer-levels';
 import { deriveBoonRarityValues } from '../traits/rarity';
+import { settleSelectedTraitChildren } from '../rewards/trait-settlement/selected-child-settlement';
 
 export interface ConcaveStoneCandidateBranch {
   readonly procSupport: number;
@@ -62,6 +63,11 @@ export interface ConcaveStoneCandidateBranch {
   readonly supported: boolean;
   readonly resultSupport: 'forced' | 'possible' | 'impossible';
   readonly result?: AuthoredConcaveStoneResult;
+}
+
+interface ConcaveStoneSecondaryCandidateContext {
+  readonly before: TraitHistoryState;
+  readonly option: AuthoredTraitOfferTraits['options'][number];
 }
 
 export interface TraitOfferGenerationState {
@@ -155,6 +161,8 @@ export interface TraitOfferCandidateCapability {
   ) => readonly (readonly (string | null)[])[];
   /** Exact selected Natural Selection result assessment at this child frontier. */
   readonly naturalSelectionTargets: (
+    value: AuthoredTraitOffer,
+    optionKey: TraitOptionKey,
     levelCount: number,
     slots: readonly TraitOrdinaryBoonSlot[],
     targets: readonly string[] | undefined,
@@ -315,6 +323,92 @@ export function createTraitOfferCandidateArtifacts(
     at: (address: TraitOfferAddress | NaturalSelectionResultAddress) => {
       const branchContexts = privateContexts.get(semanticAddressKey(address));
       if (branchContexts === undefined) return undefined;
+      const concaveStoneSecondaryContext = (
+        value: AuthoredTraitOffer,
+        optionKey: TraitOptionKey,
+        context: TraitOfferCandidateContext,
+      ): ConcaveStoneSecondaryCandidateContext | undefined => {
+        if (
+          value.kind !== 'traits' ||
+          value.concaveStoneResult?.kind !== 'proc' ||
+          value.concaveStoneResult.optionKey !== optionKey ||
+          value.selectedOptionKey === optionKey
+        )
+          return undefined;
+        const residual = value.options[optionIndex(optionKey)];
+        if (residual === undefined) return undefined;
+        const primaryOffer = value;
+        const base = assessTraitOfferBeforeRarification(
+          catalog,
+          primaryOffer,
+          context.before,
+          traitOfferCandidateContext(catalog, context.before, context.context, primaryOffer),
+        );
+        const callingCard =
+          context.keepsakes === undefined
+            ? undefined
+            : evaluateCallingCardOffer(catalog, context.keepsakes, primaryOffer, base.legal);
+        const effectiveOffer = callingCard?.offer ?? primaryOffer;
+        if (effectiveOffer.kind !== 'traits') return undefined;
+        const traitAddress = address.kind === 'traitOffer' ? address : address.trait;
+        const primary = evaluateReachedTraitOffer(
+          catalog,
+          traitAddress,
+          traitAddress.acquisitionRole,
+          effectiveOffer,
+          context.before,
+          traitOfferCandidateContext(catalog, context.before, context.context, effectiveOffer),
+          0,
+          context.arcanaFear,
+          false,
+          callingCard?.state ?? context.keepsakes,
+          callingCard === undefined ? undefined : primaryOffer,
+        );
+        const primarySupported =
+          primary.composition.legal &&
+          primary.replacementComposition.legal &&
+          primary.targetedAcquisition.legal &&
+          primary.assessments[optionIndex(effectiveOffer.selectedOptionKey)]?.legal === true;
+        if (!primarySupported) return undefined;
+        const applied = recordReachedTraitOffer(catalog, primary, 0, 'candidate');
+        const selected = effectiveOffer.options[optionIndex(effectiveOffer.selectedOptionKey)];
+        if (applied.event === undefined || selected === undefined) return undefined;
+        const selectedDisposition = catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
+        const settledChildren = settleSelectedTraitChildren({
+          catalog,
+          traitHistory: applied.history,
+          traitAddress,
+          selectedOptionKey: effectiveOffer.selectedOptionKey,
+          selected,
+          selectedDisposition,
+          targetedAcquisition: primary.targetedAcquisition,
+          before: primary.before,
+          candidateContext: Object.freeze({
+            before: primary.before,
+            context: traitOfferCandidateContext(
+              catalog,
+              context.before,
+              context.context,
+              effectiveOffer,
+            ),
+            ...(context.arcanaFear === undefined ? {} : { arcanaFear: context.arcanaFear }),
+            ...(context.keepsakes === undefined ? {} : { keepsakes: context.keepsakes }),
+          }),
+          directTraitSetBranchHistories: Object.freeze([context.before]),
+          lifecyclePoint: 'candidate',
+          sequence: 0,
+        });
+        if (settledChildren.blockedChild !== undefined) return undefined;
+        return Object.freeze({
+          before: settledChildren.traitHistory,
+          option: residual,
+        });
+      };
+      const isConcaveStoneSecondary = (value: AuthoredTraitOffer, optionKey: TraitOptionKey) =>
+        value.kind === 'traits' &&
+        value.concaveStoneResult?.kind === 'proc' &&
+        value.concaveStoneResult.optionKey === optionKey &&
+        value.selectedOptionKey !== optionKey;
       return Object.freeze({
         evaluateOffer: (value: AuthoredTraitOffer) =>
           Object.freeze(
@@ -528,7 +622,13 @@ export function createTraitOfferCandidateArtifacts(
                   sourceSupported: false,
                   targetTraitKeys: Object.freeze([]),
                 });
-              const option = value.options[optionIndex(optionKey)];
+              const secondary = concaveStoneSecondaryContext(value, optionKey, context);
+              if (isConcaveStoneSecondary(value, optionKey) && secondary === undefined)
+                return Object.freeze({
+                  sourceSupported: false,
+                  targetTraitKeys: Object.freeze([]),
+                });
+              const option = secondary?.option ?? value.options[optionIndex(optionKey)];
               if (option === undefined) {
                 return Object.freeze({
                   sourceSupported: false,
@@ -542,11 +642,11 @@ export function createTraitOfferCandidateArtifacts(
                 traitOfferCandidateContext(catalog, context.before, context.context, value),
               )[optionIndex(optionKey)];
               return Object.freeze({
-                sourceSupported: sourceAssessment?.legal ?? false,
+                sourceSupported: secondary !== undefined || (sourceAssessment?.legal ?? false),
                 targetTraitKeys: targetedAcquisitionTargetKeys(
                   catalog,
                   option.traitKey,
-                  context.before,
+                  secondary?.before ?? context.before,
                 ),
               });
             }),
@@ -607,22 +707,43 @@ export function createTraitOfferCandidateArtifacts(
           Object.freeze(
             branchContexts.flatMap((context) => {
               if (value.kind !== 'traits') return [];
-              const option = value.options[optionIndex(optionKey)];
+              const secondary = concaveStoneSecondaryContext(value, optionKey, context);
+              if (isConcaveStoneSecondary(value, optionKey) && secondary === undefined) return [];
+              const option = secondary?.option ?? value.options[optionIndex(optionKey)];
               if (option === undefined) return [];
               const disposition = catalog.traits.byKey[option.traitKey]?.selectedDisposition;
               if (disposition?.kind !== 'directTraitSets') return [];
-              return [directTraitSetOutcomes(catalog, context.before, option.traitKey, setKey)];
+              return [
+                directTraitSetOutcomes(
+                  catalog,
+                  secondary?.before ?? context.before,
+                  option.traitKey,
+                  setKey,
+                ),
+              ];
             }),
           ),
         naturalSelectionTargets: (
+          value: AuthoredTraitOffer,
+          optionKey: TraitOptionKey,
           levelCount: number,
           slots: readonly TraitOrdinaryBoonSlot[],
           targets: readonly string[] | undefined,
         ) =>
           Object.freeze(
-            branchContexts.map((context) =>
-              assessNaturalSelectionTargets(catalog, context.before, levelCount, slots, targets),
-            ),
+            branchContexts.flatMap((context) => {
+              const secondary = concaveStoneSecondaryContext(value, optionKey, context);
+              if (isConcaveStoneSecondary(value, optionKey) && secondary === undefined) return [];
+              return [
+                assessNaturalSelectionTargets(
+                  catalog,
+                  secondary?.before ?? context.before,
+                  levelCount,
+                  slots,
+                  targets,
+                ),
+              ];
+            }),
           ),
         concaveStone: (value: AuthoredTraitOffer) =>
           Object.freeze(
@@ -668,36 +789,30 @@ export function createTraitOfferCandidateArtifacts(
                     procSupport: 0,
                     residualOptionKeys: Object.freeze([]),
                     required: false,
-                    supported: false,
-                    resultSupport: 'impossible' as const,
+                    supported: result.kind === 'noProc',
+                    resultSupport:
+                      result.kind === 'noProc' ? ('possible' as const) : ('impossible' as const),
                     result,
                   }),
                 ];
               }
               if (residualOptionKeys.length === 0 && result === undefined) return [];
               const validResult =
-                result === undefined
-                  ? false
-                  : result.kind === 'noProc'
-                    ? procSupport < 100 || residualOptionKeys.length === 0
-                    : residualOptionKeys.includes(result.optionKey);
+                result === undefined || result.kind === 'noProc'
+                  ? procSupport < 100 || residualOptionKeys.length === 0
+                  : residualOptionKeys.includes(result.optionKey);
               const required = procSupport >= 100 && residualOptionKeys.length > 0;
               return [
                 Object.freeze({
                   procSupport,
                   residualOptionKeys,
                   required,
-                  supported: result === undefined ? false : validResult,
-                  resultSupport:
-                    result?.kind === 'proc' || result?.kind === 'noProc'
-                      ? result.kind === 'noProc' && required
-                        ? ('impossible' as const)
-                        : validResult
-                          ? required
-                            ? ('forced' as const)
-                            : ('possible' as const)
-                          : ('impossible' as const)
-                      : ('impossible' as const),
+                  supported: validResult,
+                  resultSupport: !validResult
+                    ? ('impossible' as const)
+                    : required
+                      ? ('forced' as const)
+                      : ('possible' as const),
                   ...(result === undefined ? {} : { result }),
                 }),
               ];
