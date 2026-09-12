@@ -1325,6 +1325,35 @@ button:disabled {
   min-width: 0;
 }
 
+.trait-stone-outcome {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0.65rem;
+  border: 1px solid var(--border, #ccd3df);
+  border-radius: 0.45rem;
+}
+
+.trait-stone-activation,
+.trait-stone-outcome > .contextual-picker {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.trait-stone-activation input {
+  margin: 0;
+}
+
+.trait-stone-target-outcome {
+  display: grid;
+  gap: 0.55rem;
+  min-width: 0;
+  padding-inline-start: 0.65rem;
+}
+
 .hex-god-sent {
   margin: 0;
   white-space: nowrap;

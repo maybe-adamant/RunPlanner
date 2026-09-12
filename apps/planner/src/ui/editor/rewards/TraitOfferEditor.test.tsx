@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { Provider } from 'react-redux';
@@ -116,8 +116,13 @@ describe('trait offer editor entry and dialog', () => {
           <TraitOfferDialog interactions={workspace.interactions} target={address} />
         </Provider>,
       );
-      const checkbox = await screen.findByRole('checkbox', { name: 'Concave Stone procced' });
+      const checkbox = await screen.findByRole('checkbox', { name: 'Concave Stone Activated' });
       expect(checkbox).toHaveProperty('checked', false);
+      expect(
+        screen.getByRole('group', { name: 'Concave Stone outcome' }).querySelector('legend')
+          ?.textContent,
+      ).toBe('Concave Stone · Chance: 75%');
+      expect(screen.queryByRole('button', { name: 'Concave Stone target' })).toBeNull();
       if (kind === 'proc') await user.click(checkbox);
       // Opening and editing the Stone child must not publish a partial command.
       expect(application.store.getState()).toBe(before);
@@ -135,10 +140,9 @@ describe('trait offer editor entry and dialog', () => {
           <TraitOfferDialog interactions={savedWorkspace.interactions} target={address} />
         </Provider>,
       );
-      expect(await screen.findByRole('checkbox', { name: 'Concave Stone procced' })).toHaveProperty(
-        'checked',
-        kind === 'proc',
-      );
+      expect(
+        await screen.findByRole('checkbox', { name: 'Concave Stone Activated' }),
+      ).toHaveProperty('checked', kind === 'proc');
       application.dispose();
     },
   );
@@ -189,7 +193,13 @@ describe('trait offer editor entry and dialog', () => {
       'disabled',
       true,
     );
-    await user.click(await screen.findByRole('button', { name: 'option2 acquisition target' }));
+    const stone = await screen.findByRole('group', { name: 'Concave Stone outcome' });
+    const stoneTarget = within(stone).getByRole('button', { name: 'Concave Stone target' });
+    const childTarget = within(stone).getByRole('button', { name: 'option2 acquisition target' });
+    expect(
+      stoneTarget.compareDocumentPosition(childTarget) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
+    await user.click(childTarget);
     const primaryLabel = application.catalog.traits.byKey.HeraSpecialBoon!.label;
     await user.click(await screen.findByRole('option', { name: new RegExp(primaryLabel) }));
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
@@ -628,7 +638,7 @@ describe('trait offer editor entry and dialog', () => {
         ),
       );
       // Clearing the proc must not delete retained residual detail or the primary.
-      await user.click(screen.getByRole('checkbox', { name: 'Concave Stone procced' }));
+      await user.click(screen.getByRole('checkbox', { name: 'Concave Stone Activated' }));
       await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
       const dormant = application
         .selectStructuredWorkspace(application.store.getState())!
