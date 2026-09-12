@@ -2,8 +2,11 @@
 
 ## Status and baseline
 
-Status: locked for implementation by user approval. Gate A1 is the first
-delivery unit; later units follow the priority and review boundaries below.
+Status: locked; A1 implementation is paused at user request pending the planner
+Fields Forfeit correction. Live testing confirmed the Onion is fixed during
+cage spawning, while the planner cage-acquisition path omitted that rule.
+Do not resume executor changes until the planner correction is settled, then
+reassess A1's physical-reward proof against the engine-owned result.
 
 - Planner baseline: `a400489d`.
 - Plan Executor baseline: `3252224`, in sibling repository

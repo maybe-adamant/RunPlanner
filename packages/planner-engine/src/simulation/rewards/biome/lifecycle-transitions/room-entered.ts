@@ -24,9 +24,14 @@ import {
 } from '../../../commerce/hermes-shrine';
 import { assessPurgingPool, type PurgingPoolAssessment } from '../../../commerce/purging-pool';
 import { createRewardFacts, createdPeerGameNames } from '../../facts';
-import type { RewardBranchState } from '../../branch-primitives';
+import { appendRewardEvent, type RewardBranchState } from '../../branch-primitives';
 import { advanceRewardBranches } from '../../branch-lifecycle';
 import { rewardFinding } from '../../findings';
+import {
+  consumeOlympianProviderForReachedOffer,
+  reachedOfferForOrigin,
+} from '../../offer-generation';
+import { consumeRoomRewardForfeit } from '../../../arcana-fear';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { LifecycleFinding } from './types';
 
@@ -70,6 +75,46 @@ export function applyRoomEnteredTransition(
 ): RoomEnteredTransition {
   let next = advanceRewardBranches(branches, event.sequence);
   const findings: LifecycleFinding[] = [];
+  if (room?.lifecycleProfileKey === 'FieldsCombatRoom') {
+    for (const localReward of room.localRewards ?? []) {
+      next = Object.freeze(
+        next.map((branch) => {
+          const offer = reachedOfferForOrigin(branch, localReward.origin);
+          const qualifyingRewardType =
+            offer?.rewardType === 'Boon' || offer?.rewardType === 'HermesUpgrade'
+              ? offer.rewardType
+              : undefined;
+          const forfeit =
+            qualifyingRewardType === undefined
+              ? Object.freeze({ consumed: false as const, state: branch.arcanaFear })
+              : consumeRoomRewardForfeit(catalog, branch.arcanaFear, qualifyingRewardType, {
+                  owner: localReward.origin,
+                  sequence: event.sequence,
+                });
+          const materialized = forfeit.consumed
+            ? appendRewardEvent(
+                Object.freeze({ ...branch, arcanaFear: forfeit.state }),
+                event.sequence,
+                Object.freeze({
+                  kind: 'rewardForfeited' as const,
+                  origin: localReward.origin,
+                  rewardType: qualifyingRewardType!,
+                  replacementRewardType: forfeit.replacementRewardType,
+                }),
+              )
+            : branch;
+          return forfeit.consumed
+            ? materialized
+            : consumeOlympianProviderForReachedOffer(
+                catalog,
+                materialized,
+                localReward.origin,
+                'free',
+              );
+        }),
+      );
+    }
+  }
   if (room !== undefined) {
     const declaration = catalog.rooms.byKey[room.gameName];
     const chaosDeclaration = declaration?.additionalExits.find(

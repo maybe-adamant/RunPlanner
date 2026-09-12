@@ -16,6 +16,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createRoomRunStateCheckpointAddress,
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTargetAddress,
@@ -714,7 +715,7 @@ describe('H Fields materialization', () => {
     });
   });
 
-  it('spends an Olympian provider when a Fields cage creates its matching Boon', () => {
+  it('spends an Olympian provider only when an entered Fields cage creates its matching Boon', () => {
     const occurrenceId = createOccurrenceId('golden-h-combat02');
     const cage = createLocalRewardAddress(biome, occurrenceId, 'cages', 'cage1');
     let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
@@ -737,7 +738,31 @@ describe('H Fields materialization', () => {
       },
     });
 
-    const branch = evaluateWithOlympianContactSeed(project, 'ForceZeusBoonKeepsake').branches[0];
+    const rewards = evaluateWithOlympianContactSeed(project, 'ForceZeusBoonKeepsake');
+    const branch = rewards.branches[0];
+    const providerUses = (snapshot: (typeof rewards.runStateSnapshots)[number] | undefined) =>
+      snapshot?.keepsakes.olympianSources.find((source) => source.providerKey === 'Zeus')
+        ?.remainingForceUses;
+    const beforeCageEntry = rewards.runStateSnapshots.find(
+      (snapshot) =>
+        semanticAddressKey(snapshot.owner) ===
+        semanticAddressKey(
+          createRoomRunStateCheckpointAddress(createOccurrenceAddress(biome, goldenHStartId), {
+            kind: 'beforeRoomExit',
+          }),
+        ),
+    );
+    const cageEntry = rewards.runStateSnapshots.find(
+      (snapshot) =>
+        semanticAddressKey(snapshot.owner) ===
+        semanticAddressKey(
+          createRoomRunStateCheckpointAddress(createOccurrenceAddress(biome, occurrenceId), {
+            kind: 'roomEntered',
+          }),
+        ),
+    );
+    expect(providerUses(beforeCageEntry)).toBe(1);
+    expect(providerUses(cageEntry)).toBe(0);
     expect(
       branch?.keepsakes.olympianSources.find((source) => source.providerKey === 'Zeus')
         ?.remainingForceUses,
@@ -745,6 +770,27 @@ describe('H Fields materialization', () => {
     expect(branch?.events).toContainEqual(
       expect.objectContaining({ kind: 'rewardOffered', origin: cage }),
     );
+
+    const forfeitedProject = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: createRouteAddress('Underworld'),
+      vowKey: 'BoonSkipShrineUpgrade',
+      rank: 1,
+    });
+    const forfeitedRewards = evaluateWithOlympianContactSeed(
+      forfeitedProject,
+      'ForceZeusBoonKeepsake',
+    );
+    const forfeitedCageEntry = forfeitedRewards.runStateSnapshots.find(
+      (snapshot) =>
+        semanticAddressKey(snapshot.owner) ===
+        semanticAddressKey(
+          createRoomRunStateCheckpointAddress(createOccurrenceAddress(biome, occurrenceId), {
+            kind: 'roomEntered',
+          }),
+        ),
+    );
+    expect(providerUses(forfeitedCageEntry)).toBe(1);
   });
 
   it('defaults a command-created Fields room with required pickups before doors-open Cleanup', () => {

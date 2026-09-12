@@ -68,6 +68,7 @@ import {
   generateArtificerReplacement,
 } from './conversions';
 import { resolvedAcquisitionSource, type AcquisitionSource } from './source';
+import type { RewardEvent } from '../model';
 
 export function applyProducerRoleHistory(
   catalog: Catalog,
@@ -149,13 +150,26 @@ export function applyProducerRoleHistory(
       incoming.offer.rewardType === 'Boon' || incoming.offer.rewardType === 'HermesUpgrade'
         ? incoming.offer.rewardType
         : undefined;
+    const fixedForfeit = branch.events.find(
+      (event): event is Extract<RewardEvent, { readonly kind: 'rewardForfeited' }> =>
+        event.kind === 'rewardForfeited' &&
+        qualifyingRewardType !== undefined &&
+        semanticAddressKey(event.origin) === semanticAddressKey(incoming.origin) &&
+        event.rewardType === qualifyingRewardType,
+    );
     const forfeit =
-      incoming.roomRewardForfeitEligible === true && qualifyingRewardType !== undefined
-        ? consumeRoomRewardForfeit(catalog, branch.arcanaFear, qualifyingRewardType, {
-            owner: incoming.origin,
-            sequence: resolution.historySequence,
+      fixedForfeit !== undefined
+        ? Object.freeze({
+            consumed: true as const,
+            state: branch.arcanaFear,
+            replacementRewardType: fixedForfeit.replacementRewardType,
           })
-        : Object.freeze({ consumed: false as const, state: branch.arcanaFear });
+        : incoming.roomRewardForfeitEligible === true && qualifyingRewardType !== undefined
+          ? consumeRoomRewardForfeit(catalog, branch.arcanaFear, qualifyingRewardType, {
+              owner: incoming.origin,
+              sequence: resolution.historySequence,
+            })
+          : Object.freeze({ consumed: false as const, state: branch.arcanaFear });
     const realizedAcquisition = forfeit.consumed
       ? Object.freeze({
           ...acquisition,
@@ -167,7 +181,7 @@ export function applyProducerRoleHistory(
       : acquisition;
     realizedAcquisitionByBranch.push(forfeit.consumed ? realizedAcquisition : undefined);
     const forfeitBranch =
-      forfeit.consumed && qualifyingRewardType !== undefined
+      forfeit.consumed && fixedForfeit === undefined && qualifyingRewardType !== undefined
         ? appendRewardEvent(
             Object.freeze({ ...branch, arcanaFear: forfeit.state }),
             resolution.historySequence,
