@@ -3,19 +3,21 @@ import type { TargetRewardHistoryCheckpoint } from '../rewards';
 import type { GeneratedRoomGenerationValidation } from './model';
 import {
   BiomeRoomGenerationContractError,
-  evaluateAdditionalContinuationEntries,
   finding,
   generationDecisions,
   generationFindingChronology,
   generationRooms,
   normalTargetCandidateHistory,
-  assessChaosPlacement,
-  assessZagreusContractPlacement,
   stagedCandidatePool,
   targetGenerationViews,
   targetRewardHistories,
-} from './normal-targets';
-import type { BiomeGenerationHistory, BiomeGenerationSnapshot } from './normal-targets';
+} from './target-policy';
+import type { BiomeGenerationHistory, BiomeGenerationSnapshot } from './target-policy';
+import {
+  assessChaosPlacement,
+  assessZagreusContractPlacement,
+  evaluateAdditionalContinuationEntries,
+} from './additional-exits';
 import type { ProgressiveRoomHistoryViews } from '../history';
 import {
   evaluateTargetSlots,

@@ -48,7 +48,7 @@ import {
   sourceGenerationSupport,
   stagedCandidatePool,
   targetRewardHistories,
-} from './normal-targets';
+} from './target-policy';
 import type {
   BiomeGenerationHistory,
   BiomeGenerationSnapshot,
@@ -59,7 +59,7 @@ import type {
   SourceGenerationSupport,
   TakeoverShapeEvaluation,
   TargetRewardRequirementFacts,
-} from './normal-targets';
+} from './target-policy';
 
 function selectedEvidence(entry: ForcePressureLedgerEntry): FindingEvidence {
   return {

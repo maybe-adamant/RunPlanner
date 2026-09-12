@@ -5,7 +5,7 @@ export {
   evaluateTakeoverPrebossBatchCandidate,
   evaluateTakeoverPrebossBatchCandidateAtFrontier,
 } from './first-target-takeover';
-export { BiomeRoomGenerationContractError, normalTargetCandidateHistory } from './normal-targets';
+export { BiomeRoomGenerationContractError, normalTargetCandidateHistory } from './target-policy';
 export { fieldsCageOutcomeCandidateSupport, supportedFieldsCageOutcomes } from './fields-cage';
 export {
   evaluateHubOpenSetConstraints,

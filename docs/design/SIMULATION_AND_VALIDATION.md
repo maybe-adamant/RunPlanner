@@ -126,6 +126,13 @@ evaluation, or a second history interpretation.
 
 ### Generated-batch assessment and progressive retention
 
+Shared generation context, candidate assessment, staged pools and reward
+checkpoints live in `simulation/generation/target-policy.ts`. Chaos and Zagreus
+additional-exit assessment consumes those policies from `additional-exits.ts`;
+it does not supply a second interpretation of ordinary target generation.
+Biome traversal and first-target/takeover sequencing remain the coordinators
+over those helpers, preserving physical target order and exact history inputs.
+
 Every ordinary outgoing decision whose source reaches outgoing generation
 publishes one decision-owned generation assessment. The assessment contains the source decision's Fields
 support, when that room exposes it, and the ordered target assessments created
