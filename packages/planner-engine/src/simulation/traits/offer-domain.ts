@@ -7,6 +7,7 @@ import type { TraitHistoryState, TraitReplacementTransition } from './history';
 import { optionIndex } from '../../authored-project/traits';
 import { targetedAcquisitionTargetKeys } from './level-effects';
 import { ordinaryEquippedSlots } from './history';
+import { resolveTraitOfferOptionLevel } from './offer-levels';
 
 export type { TraitFindingCode } from '../model';
 
@@ -52,6 +53,7 @@ export interface TraitOfferContext {
 export interface EchoLastRunBoonOutcome {
   readonly option: import('../../authored-project/traits').AuthoredEchoLastRunBoonOption;
   readonly effectiveRarity: TraitRarity;
+  readonly effectiveLevel?: number;
   readonly assessment: TraitAssessment;
   readonly targetTraitKeys: readonly string[];
 }
@@ -104,6 +106,12 @@ export function echoLastRunBoonOutcomes(
           rarity === 'Common' && history.properUpbringingActive === true
             ? ('Rare' as const)
             : rarity;
+        const { effectiveLevel } = resolveTraitOfferOptionLevel({
+          catalog,
+          before: history,
+          context: { stackBoostsSuppressed: true },
+          option: { traitKey: variant.traitKey, rarity },
+        });
         return Object.freeze({
           option: Object.freeze({
             giverKey: variant.giverKey,
@@ -111,6 +119,7 @@ export function echoLastRunBoonOutcomes(
             rarity,
           }),
           effectiveRarity,
+          ...(effectiveLevel === undefined ? {} : { effectiveLevel }),
           targetTraitKeys: targetedAcquisitionTargetKeys(catalog, variant.traitKey, history),
           assessment: assessEchoLastRunBoonOption(catalog, variant.traitKey, history),
         });

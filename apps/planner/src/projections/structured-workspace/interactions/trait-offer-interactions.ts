@@ -586,8 +586,7 @@ export function bindTraitOfferInteractions(input: {
                       const identityLabel = (identity: {
                         readonly giverKey: string;
                         readonly traitKey: string;
-                      }) =>
-                        `${catalog.traitGivers.byKey[identity.giverKey]?.label ?? identity.giverKey} · ${catalog.traits.byKey[identity.traitKey]?.label ?? identity.traitKey}`;
+                      }) => catalog.traits.byKey[identity.traitKey]?.label ?? identity.traitKey;
                       const carrierForDraft = (
                         rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
                         selectedIndex: number,
@@ -725,6 +724,15 @@ export function bindTraitOfferInteractions(input: {
                                 selectedIndex: previous.selectedIndex,
                               });
                         },
+                        effectiveLevelFor: (identity: {
+                          readonly giverKey: string;
+                          readonly traitKey: string;
+                        }) =>
+                          domainCandidates.find(
+                            (candidate) =>
+                              candidate.option.giverKey === identity.giverKey &&
+                              candidate.option.traitKey === identity.traitKey,
+                          )?.effectiveLevel,
                         effectiveRarityFor: (
                           option: AuthoredEchoLastRunBoonOffer['options'][number],
                         ) =>

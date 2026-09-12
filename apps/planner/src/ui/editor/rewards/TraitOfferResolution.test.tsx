@@ -351,6 +351,7 @@ describe('resolution outcomes', () => {
                               canAppend: rows.length < 3 && remainingTraitIdentities.length > 0,
                             });
                           },
+                          effectiveLevelFor: () => 1,
                           effectiveRarityFor: (option: AuthoredEchoLastRunBoonOption) =>
                             option.rarity,
                           labelFor: (identity: {
@@ -525,6 +526,9 @@ describe('resolution outcomes', () => {
     await user.click(await screen.findByText('Aphrodite · Heart Breaker'));
     await user.click(screen.getByLabelText('Boon Boon Boon outcome 1 rarity'));
     await user.click(await screen.findByText('Common'));
+    expect(screen.getByLabelText('Effective trait values').textContent).toBe(
+      'Effective rarityCommonEffective level1',
+    );
     await user.click(screen.getByRole('button', { name: 'Add option' }));
     await user.click(screen.getByLabelText('Boon Boon Boon outcome 2'));
     await user.click(await screen.findByText('Hera · Bridal Glow'));
