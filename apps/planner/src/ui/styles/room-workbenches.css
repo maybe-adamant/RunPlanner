@@ -842,6 +842,15 @@
   flex-wrap: nowrap;
 }
 
+.room-action-row
+  > .room-action-identity.scheduled-trait-effect-identity:has(> .transcendent-embryo-outcome-row) {
+  flex-wrap: wrap;
+}
+
+.scheduled-trait-effect-identity > .transcendent-embryo-outcome-row {
+  flex: 1 1 20rem;
+}
+
 .room-action-inline-editors {
   display: flex;
   align-items: center;
@@ -894,6 +903,10 @@
   grid-template-columns: auto minmax(0, 1fr);
 }
 
+.room-action-row[data-inline-layout='compact']:has(.transcendent-embryo-outcome-row) {
+  container-type: inline-size;
+}
+
 .room-action-row[data-inline-layout='compact'] > .room-action-controls {
   width: 100%;
   justify-content: flex-start;
@@ -907,6 +920,19 @@
   > .room-action-controls
   > .hub-rank-action:first-of-type {
   margin-inline-start: auto;
+}
+
+@container (max-width: 34rem) {
+  .room-action-row[data-inline-layout='compact']:has(.transcendent-embryo-outcome-row)
+    > .room-action-controls {
+    grid-column: 1 / -1;
+    flex-wrap: wrap;
+  }
+
+  .room-action-row[data-inline-layout='compact']:has(.transcendent-embryo-outcome-row)
+    .room-action-inline-editors {
+    flex: 1 0 100%;
+  }
 }
 
 .fountain-rarity-inline {

@@ -512,6 +512,15 @@
   white-space: nowrap;
 }
 
+.room-keepsake-action:has(> .transcendent-embryo-outcome-row) {
+  flex-wrap: wrap;
+  white-space: normal;
+}
+
+.room-keepsake-action > .transcendent-embryo-outcome-row {
+  flex: 1 1 20rem;
+}
+
 .room-keepsake-control > .field-control,
 .keepsake-equip-result-control > .field-control {
   min-width: 0;
@@ -547,7 +556,7 @@
   min-width: 0;
   align-items: center;
   gap: 10px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 
 .transcendent-embryo-outcome-row > .contextual-picker,
@@ -557,17 +566,33 @@
   column-gap: 6px;
 }
 
+.transcendent-embryo-outcome-row > .contextual-picker {
+  flex: 1 1 13rem;
+  min-width: min(100%, 13rem);
+}
+
 .transcendent-embryo-rarity {
+  flex: 0 0 auto;
   white-space: nowrap;
 }
 
 .transcendent-embryo-outcome-row > .field-control:not(.contextual-picker) {
-  display: grid;
-  min-width: 9rem;
+  display: flex;
+  flex: 1 1 max-content;
+  min-width: 0;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
-  grid-template-columns: auto minmax(4.5rem, 1fr);
+}
+
+.transcendent-embryo-outcome-row > .field-control:not(.contextual-picker) > :first-child {
+  flex: 0 0 auto;
   white-space: nowrap;
+}
+
+.transcendent-embryo-outcome-row > .field-control:not(.contextual-picker) > .chaos-value-slider {
+  flex: 1 1 10rem;
+  min-width: 0;
 }
 
 .room-timeline-effect-row > .field-control {
