@@ -5,24 +5,17 @@ import {
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
 import { useMemo } from 'react';
 
-import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
 import type { TraitOptionDomainProjection } from '@planner/projections/traitDomainProjection';
+import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
 import type { WorkspaceTraitOfferInteraction } from '@planner/projections/structured-workspace';
-import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { spellOfferSlotPresentation } from './spellOfferPresentation';
+import { TraitOfferOption } from './TraitOfferOption';
 import { replaceTraitOfferOption } from './traitOfferOptions';
 
 const emptyTraitPicker: ContextualPickerModel<string> = Object.freeze({
   sections: Object.freeze([]),
 });
-const emptyRarityPicker: ContextualPickerModel<TraitRarity> = Object.freeze({
-  sections: Object.freeze([]),
-});
-
-function rarityLabel(rarity: TraitRarity): string {
-  return rarity;
-}
 
 export function TraitOfferOrdinaryOption({
   index,
@@ -112,116 +105,63 @@ export function TraitOfferOrdinaryOption({
     onUpdate(replaceTraitOfferOption(value, index, nextOption));
   };
   return (
-    <fieldset className="trait-offer-option trait-offer-ordinary-option" key={optionKey}>
-      <legend>
-        {spellSlot === undefined ? (
-          optionKey.replace('option', 'Option ')
-        ) : (
-          <span className="spell-offer-slot-heading">
-            <span>
-              {optionKey.replace('option', 'Spell ')} · {spellSlot.moonglow}
-            </span>
-            <span className="spell-offer-path-points">+{spellSlot.bonus} Path of Stars</span>
-          </span>
-        )}
-      </legend>
-      <ContextualPicker
-        ariaLabel={`${spellOffer ? optionKey.replace('option', 'Spell ') : optionKey} trait`}
-        id={`${idPrefix}-trait`}
-        label="Trait"
-        loading={loaded.pending}
-        model={traitPicker}
-        onOpenChange={(open) => {
-          if (open) controller.activate(loadable);
-        }}
-        onSelect={selectTrait}
-        placeholder="Choose a trait"
-        triggerLabel={interaction.traitLabel(option.traitKey)}
-      />
-      {!hasEditableRarity ? (
-        option.rarity === undefined ? null : (
-          <div
-            aria-label={`${optionKey} fixed rarity`}
-            className="field-control trait-offer-fixed-rarity"
-          >
-            <span>Rarity</span>
-            <strong>{rarityLabel(option.rarity)}</strong>
-          </div>
-        )
-      ) : value.kind !== 'traits' ? null : (
-        <ContextualPicker
-          ariaLabel={`${optionKey} rarity`}
-          id={`${idPrefix}-rarity`}
-          label="Rarity"
-          loading={loaded.pending}
-          model={rarityPicker ?? emptyRarityPicker}
-          onOpenChange={(open) => {
-            if (open) controller.activate(loadable);
-          }}
-          onSelect={selectRarity}
-          placeholder="Choose a rarity"
-          {...(option.rarity === undefined ? {} : { triggerLabel: rarityLabel(option.rarity) })}
-        />
-      )}
-      {spellOffer ? null : (
-        <button
-          className="secondary-action action-compact"
-          disabled={rejected || !rarifySupported}
-          onClick={() =>
-            onUpdate(
-              Object.freeze({
-                ...value,
-                rarificationActions: Object.freeze([
-                  ...(value.rarificationActions ?? []),
-                  optionKey,
-                ]),
-              }),
-            )
-          }
-          type="button"
-        >
-          Rarify
-        </button>
-      )}
-      {effectiveRarity === undefined && effectiveLevel === undefined ? null : (
-        <dl aria-label="Effective trait values" className="trait-option-effective-summary">
-          <dt>Effective rarity</dt>
-          <dd>{effectiveRarity ?? <span aria-label="Not applicable">—</span>}</dd>
-          <dt>Effective level</dt>
-          <dd>{effectiveLevel ?? <span aria-label="Not applicable">—</span>}</dd>
-        </dl>
-      )}
-      {persephoneLevelBonusMaximum === undefined ? null : (
-        <label className="field-control field-control-inline">
-          <span>Persephone bonus</span>
-          <select
-            aria-label={`${optionKey} Persephone level bonus`}
-            id={`${idPrefix}-persephone-level-bonus`}
-            onChange={(event) => selectPersephoneBonus(Number(event.target.value))}
-            value={option.persephoneLevelBonus ?? 0}
-          >
-            {Array.from({ length: persephoneLevelBonusMaximum + 1 }, (_, bonus) => (
-              <option key={bonus} value={bonus}>
-                +{bonus}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      <label className="trait-option-selected">
-        <input
-          checked={value.selectedOptionKey === optionKey}
-          disabled={rejected}
-          name={`${semanticAddressKey(interaction.owner)}-selected`}
-          onChange={() =>
-            onUpdate(
-              withSelectedHexDefault(Object.freeze({ ...value, selectedOptionKey: optionKey })),
-            )
-          }
-          type="radio"
-        />
-        {rejected ? 'Blocked by Rejected' : 'Selected'}
-      </label>
-    </fieldset>
+    <TraitOfferOption
+      controlId={idPrefix}
+      {...(effectiveLevel === undefined ? {} : { effectiveLevel })}
+      {...(effectiveRarity === undefined ? {} : { effectiveRarity })}
+      {...(!hasEditableRarity && option.rarity !== undefined ? { fixedRarity: option.rarity } : {})}
+      {...(!hasEditableRarity && option.rarity !== undefined
+        ? { fixedRarityAriaLabel: `${optionKey} fixed rarity` }
+        : {})}
+      legend={optionKey.replace('option', spellOffer ? 'Spell ' : 'Option ')}
+      loading={loaded.pending}
+      {...(spellOffer
+        ? {}
+        : {
+            onRarify: () =>
+              onUpdate(
+                Object.freeze({
+                  ...value,
+                  rarificationActions: Object.freeze([
+                    ...(value.rarificationActions ?? []),
+                    optionKey,
+                  ]),
+                }),
+              ),
+          })}
+      {...(!hasEditableRarity
+        ? {}
+        : {
+            onSelectRarity: selectRarity,
+            ...(rarityPicker === undefined ? {} : { rarityPicker }),
+            ...(option.rarity === undefined ? {} : { rarityValue: option.rarity }),
+          })}
+      onPersephoneLevelBonusChange={selectPersephoneBonus}
+      onRarityOpenChange={(open) => {
+        if (open) controller.activate(loadable);
+      }}
+      onSelectTrait={selectTrait}
+      onSelectedChange={() =>
+        onUpdate(withSelectedHexDefault(Object.freeze({ ...value, selectedOptionKey: optionKey })))
+      }
+      onTraitOpenChange={(open) => {
+        if (open) controller.activate(loadable);
+      }}
+      persephoneAriaLabel={`${optionKey} Persephone level bonus`}
+      {...(option.persephoneLevelBonus === undefined
+        ? {}
+        : { persephoneLevelBonus: option.persephoneLevelBonus })}
+      {...(persephoneLevelBonusMaximum === undefined ? {} : { persephoneLevelBonusMaximum })}
+      selected={value.selectedOptionKey === optionKey}
+      selectedDisabled={rejected}
+      selectedLabel={rejected ? 'Blocked by Rejected' : 'Selected'}
+      selectedName={`${semanticAddressKey(interaction.owner)}-selected`}
+      {...(spellSlot === undefined ? {} : { spellSlot })}
+      traitAriaLabel={`${spellOffer ? optionKey.replace('option', 'Spell ') : optionKey} trait`}
+      traitLabel={interaction.traitLabel(option.traitKey)}
+      traitPicker={traitPicker}
+      rarityAriaLabel={`${optionKey} rarity`}
+      rarifyDisabled={rejected || !rarifySupported}
+    />
   );
 }

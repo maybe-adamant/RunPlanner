@@ -2,7 +2,7 @@
 
 ## Status and objective
 
-Status: locked and approved; slice A is next.
+Status: slice A delivered and reviewed; slice B is next.
 Base: `2b1f30b5`.
 Evidence: `docs/investigations/BBB_SHARED_TRAIT_EDITOR.md`.
 
@@ -118,6 +118,15 @@ parallel form, generic registry, or compatibility wrapper waiting for slice B.
 BBB can remain on its existing working UI until B. Independently review this
 behavior-preserving slice before its intended commit.
 
+Slice A verification: the six assigned ordinary-editor, payload, shell,
+resolution, option-helper and interaction suites passed (70 tests), as did
+planner typecheck, changed-file lint/format and diff checks. Independent review
+found unstable payload-loader identities. Remediation retained exact child/draft
+loader identities through parent partitions and strengthened existing target and
+compound rerender witnesses; the main review confirmed the full corrected path.
+The same focused validation passed after remediation. No schema, fixture,
+engine or BBB behavior changed in this slice.
+
 ### B — Bind BBB, delete its duplicate form, and close
 
 Starting contacts: `TraitOfferEchoLastRunBoon.tsx`, the Echo portions of
@@ -161,7 +170,8 @@ its BBB investigation. Other investigations/plans are not implicitly closed.
 
 During implementation run focused engine/UI/interaction tests and typecheck,
 lint, formatting and diff checks. The main session runs the complete repository
-`npm run check` and `npm run test` closure gates once after remediation is stable.
+`npm run check` closure gate once after remediation is stable; it already includes
+`npm run test`, so do not run that broad suite a second time.
 Record the truthful results at closure; do not refresh unrelated generated
 fixtures or create protocol churn for this UI change.
 

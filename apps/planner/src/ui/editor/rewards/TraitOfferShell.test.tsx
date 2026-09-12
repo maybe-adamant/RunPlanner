@@ -276,6 +276,7 @@ describe('ordinary offer shell', () => {
       ]) as AuthoredTraitOfferTraits['options'],
       selectedOptionKey: 'option1' as const,
     });
+    let targetLoadableCount = 0;
     const interaction = Object.freeze({
       ...base,
       choices: Object.freeze(
@@ -339,8 +340,9 @@ describe('ordinary offer shell', () => {
                       ? {}
                       : { targetTraitKey: option.targetTraitKey }),
                   }),
-                  forOffer: () =>
-                    Object.freeze({
+                  forOffer: () => {
+                    targetLoadableCount += 1;
+                    return Object.freeze({
                       load: () =>
                         Object.freeze({
                           targetPicker: Object.freeze({
@@ -364,7 +366,8 @@ describe('ordinary offer shell', () => {
                             ]),
                           }),
                         }),
-                    }),
+                    });
+                  },
                   update: (draft: AuthoredTraitOfferTraits, targetTraitKey: string) => ({
                     ...draft,
                     options: Object.freeze([
@@ -392,14 +395,13 @@ describe('ordinary offer shell', () => {
       ...workspace.interactions,
       traitOffers: new Map([[interaction.key, interaction]]),
     }) as WorkspaceInteractionCatalog;
-    const onCommit = vi.fn();
     const user = userEvent.setup();
-    render(
+    const { rerender } = render(
       <Provider store={application.store}>
         <TraitOfferEditor
           address={interaction.owner}
           interactions={interactions}
-          onCommit={onCommit}
+          onCommit={vi.fn()}
         />
       </Provider>,
     );
@@ -409,6 +411,18 @@ describe('ordinary offer shell', () => {
     expect(target.closest('[aria-label="Selected trait outcome"]')).not.toBeNull();
     expect(screen.getAllByRole('group', { name: /Option/ })).toHaveLength(3);
     expect(target.textContent).toContain('Choose an equipped trait');
+    expect(targetLoadableCount).toBe(1);
+    const rerenderCommit = vi.fn();
+    rerender(
+      <Provider store={application.store}>
+        <TraitOfferEditor
+          address={interaction.owner}
+          interactions={interactions}
+          onCommit={rerenderCommit}
+        />
+      </Provider>,
+    );
+    expect(targetLoadableCount).toBe(1);
     expect(
       (screen.getByRole('button', { name: 'Save trait offer' }) as HTMLButtonElement).disabled,
     ).toBe(true);
@@ -417,7 +431,7 @@ describe('ordinary offer shell', () => {
     const save = screen.getByRole('button', { name: 'Save trait offer' }) as HTMLButtonElement;
     expect(save.disabled).toBe(false);
     await user.click(save);
-    expect(onCommit).toHaveBeenCalledWith(
+    expect(rerenderCommit).toHaveBeenCalledWith(
       expect.objectContaining({
         options: expect.arrayContaining([
           expect.objectContaining({
