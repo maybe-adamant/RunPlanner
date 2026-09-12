@@ -66,6 +66,14 @@ they do not ask Lua to reproduce route legality or reward-bag simulation.
 | Phase `figLeafSkip`                                                                                                            | `HandleEncounterPreSpawns` / `HandleEnemySpawns` native skip `RandomChance`; `EncounterLogic.lua:355,482`                                  | **Select** the actual skip roll. A final skip Boolean is not the native encounter-skip implementation, so don't reproduce spawn suppression and charge handling.                                                                      | Native skip conditions, consumption, latch, spawning. Exact roll identity, not “first random call in spawning.”                                                     | Correct H03 before considering lifetime simplification.                                                                                                                                  |
 | O `rewardWheels`: offer count, store, exact reward rows and picked offer; `chooseRewardWheel` transaction                      | `ShipsEncounterSetup`, count roll, `ChooseNextRewardStore`, preview/reward generation, `UseShipWheel`                                      | **Insert** reward/store answers; **Select** the native count decision where required. Native wheel construction is not exported, so preserve it. Player selection is **Native**, not automatically forced.                            | Generation scope ends independently of the wheel's waiting/selection lifetime; retain wheel identity for the later contact.                                         | Keep result shape; investigate whole-wait selector scope and late readiness, not wheel reimplementation.                                                                                 |
 
+Fields H01/H07 disposition: retain native cage construction and exact planner
+inputs, but record the completed content/placement snapshot as diagnostic only.
+Include original cage offers and observed reward objects without interpreting
+Forfeit. Missing/displaced objects do not create a new mismatch boundary;
+existing room-exit conformance remains unchanged. Do not assert Nemesis exact
+coordinate equality or require absent restore metadata. This supersedes the
+initial A1 draft's completed-product mismatch proof.
+
 ## 2. Commerce and deliveries
 
 The distinction here is inventory versus acquisition, not paid versus free

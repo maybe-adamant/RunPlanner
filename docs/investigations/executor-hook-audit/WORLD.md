@@ -66,6 +66,13 @@ Test coverage means witnesses exist, not that this audit ran them or established
 
 ## Fields: eight registrations
 
+Accepted remediation: repair the coordinator shape and retain native steering.
+Completed cage/optional/Nemesis content and placement observations are diagnostic
+only, not mismatch conditions. Record planned inputs beside native observations;
+do not infer Onion from acquisitionEnabled or compare exact coordinates as a
+validity rule. The census below describes the audited baseline, not the amended
+implementation. Existing room-exit conformance remains authoritative.
+
 Production status for all eight: scope-arming is broken by the confirmed `room.current` shape mismatch below. Rows describe behavior within an armed scope, not claimed working live behavior.
 
 | #   | Executor registration; placement                                            | Exact planner payload/native behavior                                                          | Native timing evidence                                                                                                 | Dependencies/checkpoints/failure; tests/status                                                                                                                          | Mode   |

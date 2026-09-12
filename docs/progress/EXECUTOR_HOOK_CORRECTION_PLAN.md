@@ -2,19 +2,19 @@
 
 ## Status and baseline
 
-Status: locked; A1 implementation is paused at user request pending the planner
-Fields Forfeit correction. Live testing confirmed the Onion is fixed during
-cage spawning, while the planner cage-acquisition path omitted that rule.
-Do not resume executor changes until the planner correction is settled, then
-reassess A1's physical-reward proof against the engine-owned result.
+Status: locked; A1 resumes after planner Fields Forfeit correction `550a56a7`.
+The user-approved A1 amendment retains steering and records completed Fields
+contents/positions as diagnostics only. Native Forfeit creates the Onion;
+existing room-exit conformance remains unchanged.
 
 - Planner baseline: `a400489d`.
 - Plan Executor baseline: `3252224`, in sibling repository
   `../run-planner-modpack/Submodules/adamantRunPlanner-Plan_Executor`.
-- Executor worktree is clean. The previously inspected admission-logging edits
-  were committed separately as `3252224`; they are not pending plan work.
-  Inventory the live worktree again before implementation to preserve any
-  subsequent unrelated changes.
+- The paused executor A1 draft changes `room/features/fields.lua`,
+  `native_bindings.lua`, and `tests/room/test_fields_features.lua`. Amend it in
+  place: retain the coordinator fix, remove the new placement mismatch proof
+  and unsupported `acquisitionEnabled`-to-Onion inference. Admission logging
+  remains separately committed as `3252224`.
 - Evidence: [hook audit](../investigations/executor-hook-audit/README.md), its
   168 expanded registration rows, mode classifications, and thread-lifetime
   dispositions. Source findings are not claims of live reproduction.
@@ -75,13 +75,13 @@ directly without recreating native work.
 
 ### Gate A intervention contracts
 
-| Unit | Exported product                                                         | Fixed intervention direction                                                                                                                                                                   |
-| ---- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A1   | `overview.fields` entry/placement/optional rewards; target `cageRewards` | Use the real occurrence; retain native cage construction with exact published placement/reward inputs and scoped selectors. Verify completed structural facts, not each construction callback. |
-| A2   | Acquisition role `levelResolution.selectedTarget/levelCount`             | Supply native `AddStackToTraits` target/count arguments through the existing accepted direct-level carrier. No new random-target selector or purchase implementation.                          |
-| A3   | `encounterPhases[].figLeafSkip`                                          | Select the exact native skip roll; preserve native skip conditions, charge/latch handling and spawning.                                                                                        |
-| A4   | Nemesis trait-trade `traitKey/response`                                  | Insert the target into native sell selection. The player chooses the response; native trade/removal remains native.                                                                            |
-| A5   | Anvil/Twist transformation result; Shrine `purchase.roomDelay`           | Preserve existing native selectors; correct their admission and fault-cleanup scopes, not the outcome application mechanism.                                                                   |
+| Unit | Exported product                                                         | Fixed intervention direction                                                                                                                                                                |
+| ---- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A1   | `overview.fields` entry/placement/optional rewards; target `cageRewards` | Use the real occurrence; retain native cage construction and published inputs. Record planned/observed contents and placements as diagnostics only; existing exit conformance is unchanged. |
+| A2   | Acquisition role `levelResolution.selectedTarget/levelCount`             | Supply native `AddStackToTraits` target/count arguments through the existing accepted direct-level carrier. No new random-target selector or purchase implementation.                       |
+| A3   | `encounterPhases[].figLeafSkip`                                          | Select the exact native skip roll; preserve native skip conditions, charge/latch handling and spawning.                                                                                     |
+| A4   | Nemesis trait-trade `traitKey/response`                                  | Insert the target into native sell selection. The player chooses the response; native trade/removal remains native.                                                                         |
+| A5   | Anvil/Twist transformation result; Shrine `purchase.roomDelay`           | Preserve existing native selectors; correct their admission and fault-cleanup scopes, not the outcome application mechanism.                                                                |
 
 ## Gate A — Correctness at existing contacts
 
@@ -89,12 +89,10 @@ Deliver in the following bounded review units. Each can be a focused fix
 commit after independent review; do not combine six unrelated bugs into one
 large rewrite.
 
-### A1: Fields context and truthful structural verification — H01/H07
+### A1: Fields context and completed-content diagnostics — H01/H07
 
-A1 is independently reviewable and is the largest unresolved contact choice
-in Gate A. Keep its wiring correction and completed-product proof together;
-do not broaden it into a generic structural-check framework. If its evidence
-requires a user decision, hold this unit without blocking A2–A5.
+A1 is independently reviewable. Keep its wiring correction and bounded
+diagnostic snapshot together; do not build a structural-check framework.
 
 - Start: `src/mods/room/features/fields.lua`, `room/coordinator.lua`,
   `room/session.lua`, `room/features/structure.lua`; `tests/room/test_fields_features.lua`.
@@ -103,17 +101,27 @@ requires a user decision, hold this unit without blocking A2–A5.
 - Consume the real room-session occurrence instead of the erroneous raw-room
   shape. Prove existing layout, cage/optional rewards, and Nemesis placement
   can arm through actual coordinator composition.
-- Do not simply enable previously unreachable callback-local mismatches.
-  Apply the existing completed-product checkpoint policy to the published
-  Fields facts. Internal construction misses are diagnostic; a completed
-  structural discrepancy is checked at the appropriate existing boundary.
-- Acceptance: a representative published Fields occurrence through real
-  session shape realizes its authored content; a missing/wrong completed
-  result is detected without requiring every internal callback to occur in
-  a prescribed sequence. Native continuation is preserved.
-- If the completed result cannot be read at an existing boundary, stop A1 for
-  a bounded contact decision. Do not silently drop structural proof or add a
-  new wire conformance family.
+- Placement and completed-content observations are diagnostic, not mismatch
+  conditions. At the existing pre-presentation contact record planned entry
+  points, cage offers/points, optional rewards/points, and Nemesis point beside
+  the observed native objects, IDs, spawn points and available locations.
+  Report missing objects/data as observations; do not assert exact coordinate
+  equality or require metadata native restore records do not retain.
+- Preserve original cage reward inputs. The diagnostic may show an original
+  Boon/Hermes alongside an actual Onion, without interpreting Forfeit or
+  inferring substitution from `acquisitionEnabled`. No new wire field.
+- Existing acquisition steering, DAG and room-exit conformance remain intact.
+  Neither positional drift nor a content observation itself halts the session.
+  Required native API faults still propagate; diagnostics are not a catch-all
+  exception handler. Snapshot data must not remain live references to objects
+  that can subsequently move or mutate.
+- Acceptance: real coordinator-shaped session arms steering; a bounded native
+  product snapshot records correct, missing, displaced and Onion observations
+  without mismatch or lost native continuation. Use legal optional consumables,
+  distinct cage/reward IDs, and native object registries. No fabricated optional
+  boon or duplicated game-rule interpreter in tests. Remove the superseded
+  `fields.prove` path and the draft's Onion binding, not merely downgrade its
+  return value while retaining its assertions.
 
 ### A2: Direct random-level carrier — H02
 

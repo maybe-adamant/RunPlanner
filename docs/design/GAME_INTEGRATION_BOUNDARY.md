@@ -145,6 +145,13 @@ remains diagnostic until one of those boundaries proves divergence.
 
 The conformance surface is bounded to:
 
+Fields layout steering publishes planned versus observed entry points, cage
+rewards/points, optional rewards/points and Nemesis placement as diagnostics.
+Positional differences do not themselves invalidate the remaining simulation
+and are not mismatches. Record original reward inputs and actual spawned
+objects without reconstructing native substitutions such as Forfeit. Existing
+room-exit conformance remains responsible for the modeled resulting state.
+
 | Checkpoint                    | Compared product                                                                                                                                                   |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Room entered                  | occurrence/room identity, published Overview content, and any obligation due at `roomEntered`                                                                      |
