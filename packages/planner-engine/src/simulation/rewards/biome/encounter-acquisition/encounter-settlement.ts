@@ -11,7 +11,7 @@ import {
   semanticAddressKey,
   type SemanticAddress,
 } from '../../../../authored-project/addresses';
-import { materializeGorgonAthenaOffer } from '../../../../authored-project/traits';
+import { materializeGorgonAthenaOffer } from '../../../../authored-project/traits/state';
 import { selectedEncounterAuthoringProfileKey } from '../../../../authored-project/room-state/encounter-envelope';
 import type { RouteLoadout } from '../../../../authored-project/model';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';

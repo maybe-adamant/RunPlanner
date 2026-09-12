@@ -26,7 +26,7 @@ import {
   simulateProjectAssembly,
   simulateProject,
 } from '@run-planner/engine/simulation';
-import { createNormalDispositionByAcquisitionRole } from '../../../../src/authored-project/reward-state';
+import { createNormalDispositionByAcquisitionRole } from '../../../../src/authored-project/acquisition/reward-state';
 import {
   createTestArcanaFearState,
   initializeTestRewardBranches,

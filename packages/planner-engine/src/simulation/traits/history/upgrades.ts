@@ -1,5 +1,5 @@
 import type { Catalog, TraitRarity } from '../../../catalog-schema';
-import type { EquippedTrait } from '../../../authored-project/traits';
+import type { EquippedTrait } from '../../../authored-project/traits/state';
 
 export function isLevelBearingTrait(catalog: Catalog, traitKey: string): boolean {
   const declaration = catalog.traits.byKey[traitKey];

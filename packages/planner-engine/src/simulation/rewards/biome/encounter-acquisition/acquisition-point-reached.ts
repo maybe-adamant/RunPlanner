@@ -14,13 +14,13 @@ import {
   artificerAcquisitionSite,
   artificerReplacementEntryKey,
   parseArtificerReplacementEntryKey,
-} from '../../../../authored-project/artificer';
+} from '../../../../authored-project/acquisition/artificer';
 import {
   hermesShrineDeliveryEntryKey,
   parseHermesShrineDeliveryEntryKey,
 } from '../../../../authored-project/hermes-shrine-delivery';
-import { parseClockedTraitGeneratedPickupEntryKey } from '../../../../authored-project/pickup-producers';
-import { createUnresolvedPickupRewardState } from '../../../../authored-project/traits';
+import { parseClockedTraitGeneratedPickupEntryKey } from '../../../../authored-project/acquisition/pickup-producers';
+import { createUnresolvedPickupRewardState } from '../../../../authored-project/traits/state';
 import type { ResolvedRewardOffer } from '../../../../reward-kernel';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';

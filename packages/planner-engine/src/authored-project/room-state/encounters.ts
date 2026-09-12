@@ -4,7 +4,7 @@ import {
   normalizeAuthoredTranscendentEmbryoOutcome,
   type AuthoredTraitOffer,
   type AuthoredTranscendentEmbryoOutcome,
-} from '../traits';
+} from '../traits/state';
 import {
   expectArray,
   expectBoolean,
@@ -21,8 +21,8 @@ import {
   encounterSetForBinding,
 } from './encounter-envelope';
 import { decodeEncounterTraitOffer, legalTraitOfferEncounterKeys } from './encounter-trait-offers';
-import { decodeGorgonPhaseResults } from './gorgon-outcome-codec';
-import { decodeNemesisRandomEventOutcome } from './nemesis-outcome-codec';
+import { decodeGorgonPhaseResults } from './decoding/gorgon-outcome-codec';
+import { decodeNemesisRandomEventOutcome } from './decoding/nemesis-outcome-codec';
 
 export function decodeRoomEncounterState(
   value: unknown,

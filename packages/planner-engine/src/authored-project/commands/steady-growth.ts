@@ -1,7 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ProjectDocument } from '../model';
 import { failCommand, requireOccurrence, requireRoom, type LocatedBiome } from './contract';
-import { updateOccurrence } from './occurrence-mutation';
+import { updateOccurrence } from './occurrence/mutation';
 import type { SteadyGrowthCommand } from './types';
 import { encounterBindingsBySlot } from '../room-state/encounter-envelope';
 

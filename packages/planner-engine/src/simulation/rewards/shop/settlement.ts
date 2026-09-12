@@ -5,9 +5,9 @@ import {
   type SemanticAddress,
 } from '../../../authored-project/addresses';
 
-import { createUnresolvedAcquisitionRewardState } from '../../../authored-project/traits';
-import { parseArtificerReplacementEntryKey } from '../../../authored-project/artificer';
-import { rewardSourceResolvesAtAcquisition } from '../../../authored-project/reward-state';
+import { createUnresolvedAcquisitionRewardState } from '../../../authored-project/traits/state';
+import { parseArtificerReplacementEntryKey } from '../../../authored-project/acquisition/artificer';
+import { rewardSourceResolvesAtAcquisition } from '../../../authored-project/acquisition/reward-state';
 
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
@@ -132,7 +132,7 @@ export function settleShopAcquisitionSite(
     readonly witness: ShopGenerationWitness;
     remainingSlotIndexes: readonly number[];
     readonly travelActiveAtEntry: boolean;
-    readonly goldActiveAtEntry?: import('../../../authored-project/traits').EquippedTrait;
+    readonly goldActiveAtEntry?: import('../../../authored-project/traits/state').EquippedTrait;
     firstNormalPurchaseSeen: boolean;
     travelRefill?: TravelRefill;
     goldMaterialization?: GoldMaterialization;

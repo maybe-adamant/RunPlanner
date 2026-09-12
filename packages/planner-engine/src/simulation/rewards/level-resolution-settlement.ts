@@ -3,7 +3,7 @@ import {
   createLevelResolutionAddress,
   type TraitOfferOwnerAddress,
 } from '../../authored-project/addresses';
-import type { AuthoredLevelResolution } from '../../authored-project/traits';
+import type { AuthoredLevelResolution } from '../../authored-project/traits/state';
 import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
 import type { CanonicalResolvedIncomingReward } from '../materialization';
 import { ownerRegion, type FindingChronology, type FindingRegionEntry } from '../finding-regions';

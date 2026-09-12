@@ -9,7 +9,7 @@ import type {
 import type { CountedRewardBinding, ShopRewardBinding } from '../../reward-kernel/bindings';
 import { encounterEnvelopeSlots } from './encounter-envelope';
 import { failProjectDocument } from '../validation';
-import type { TraitOfferLoadoutContext } from '../traits';
+import type { TraitOfferLoadoutContext } from '../traits/state';
 
 export type RoomOccurrenceRole = 'ordinary' | 'prebossFreeReward' | 'prebossShop';
 

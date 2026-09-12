@@ -1,5 +1,5 @@
 import type { Catalog } from '../../catalog-schema';
-import type { AuthoredAllTogetherResult } from '../traits';
+import type { AuthoredAllTogetherResult } from '../traits/state';
 import { expectExactKeys, expectRecord, expectString, failProjectDocument } from '../validation';
 
 /** Strict structural decoder for the one declaration-owned All Together map. */

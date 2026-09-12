@@ -1,7 +1,7 @@
 import type { Catalog, TraitOrdinaryBoonSlot, TraitRarity } from '../../../catalog-schema';
-import type { AuthoredTraitOffer, EquippedTrait } from '../../../authored-project/traits';
+import type { AuthoredTraitOffer, EquippedTrait } from '../../../authored-project/traits/state';
 import { boonRarityRollUnavailable } from '../rarity';
-import { optionIndex } from '../../../authored-project/traits';
+import { optionIndex } from '../../../authored-project/traits/state';
 import { isPomUpgradeTarget, nextRarity } from '../history/upgrades';
 import { ordinaryEquippedSlots } from '../history/fold';
 import type {

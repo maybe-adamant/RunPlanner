@@ -20,7 +20,7 @@ import {
 import type { ResourcePlacements, RouteLoadout } from '../../../authored-project/model';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../../authored-project/defaults';
 import type { StygianWellCandidateContext } from '../../commerce/stygian-well';
-import { parseSeaStarDuplicateSiteKey } from '../../../authored-project/sea-star';
+import { parseSeaStarDuplicateSiteKey } from '../../../authored-project/acquisition/sea-star';
 import { parseHermesShrineDeliveryEntryKey } from '../../../authored-project/hermes-shrine-delivery';
 import type { ResolvedRewardOffer } from '../../../reward-kernel';
 import type { HistoryStateView } from '../../history';

@@ -8,7 +8,7 @@ import type {
   AuthoredChaosTraitOffer,
   EquippedTrait,
   TraitOptionKey,
-} from '../../../authored-project/traits';
+} from '../../../authored-project/traits/state';
 import type { TraitAssessmentFinding } from '../offer-domain';
 export type { TraitFindingCode } from '../../model';
 

@@ -20,7 +20,7 @@ import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { candidateArtifactsForProjectEvaluationAssembly } from '../../../src/simulation/project-evaluation-assembly';
 
 import naturalChaosRaw from '../../../../../test/fixtures/authored-project/checkpoints/natural-chaos-unresolved-trial.runplanner.json';
-import type { AuthoredChaosTraitOffer } from '../../../src/authored-project/traits';
+import type { AuthoredChaosTraitOffer } from '../../../src/authored-project/traits/state';
 
 const chaosReward = createIncomingRewardAddress(
   createBiomeAddress('Underworld', 'F'),

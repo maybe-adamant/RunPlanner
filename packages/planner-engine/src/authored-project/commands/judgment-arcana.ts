@@ -1,7 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ProjectDocument } from '../model';
 import { failCommand, requireOccurrence, type LocatedBiome } from './contract';
-import { updateOccurrence } from './occurrence-mutation';
+import { updateOccurrence } from './occurrence/mutation';
 import type { JudgmentArcanaCommand } from './types';
 import { assembleRoomActionDomain } from '../room-actions/domain';
 import { createBiomeAddress } from '../addresses';

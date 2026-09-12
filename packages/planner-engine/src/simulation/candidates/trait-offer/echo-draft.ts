@@ -1,5 +1,5 @@
 import type { TraitRarity } from '../../../catalog-schema';
-import type { AuthoredEchoLastRunBoonDraftRow } from '../../../authored-project/trait-carrier-children';
+import type { AuthoredEchoLastRunBoonDraftRow } from '../../../authored-project/traits/carrier-children';
 import type {
   EvaluatedDirectTraitOutcomeCandidate,
   EvaluatedEchoLastRunBoonCandidate,

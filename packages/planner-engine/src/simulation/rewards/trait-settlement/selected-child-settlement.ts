@@ -6,7 +6,7 @@ import {
   type SemanticAddress,
   type TraitOfferAddress,
 } from '../../../authored-project/addresses';
-import type { AuthoredTraitOfferTraits } from '../../../authored-project/traits';
+import type { AuthoredTraitOfferTraits } from '../../../authored-project/traits/state';
 import { ownerRegion, type FindingChronology } from '../../finding-regions';
 import type { SemanticFinding, TraitFindingCode } from '../../model';
 import {

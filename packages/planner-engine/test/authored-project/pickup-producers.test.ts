@@ -18,7 +18,7 @@ import {
   reconcileSelectedPickupProducerState,
   retractInactiveClockedTraitPickupActions,
   selectedPickupProducers,
-} from '../../src/authored-project/pickup-producers';
+} from '../../src/authored-project/acquisition/pickup-producers';
 
 const biome = createBiomeAddress('Surface', 'N');
 

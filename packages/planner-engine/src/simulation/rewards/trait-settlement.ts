@@ -35,7 +35,7 @@ import {
   traitGiverForAcquisitionRole,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
-} from '../../authored-project/traits';
+} from '../../authored-project/traits/state';
 import { circeResolutionDomain, manualArcanaGraspCost } from '../arcana-fear';
 import { advanceCurrentKeepsake } from '../keepsakes/state';
 import { consumeConcaveStone, concaveStoneProcSupport } from '../keepsakes/trait-effects';

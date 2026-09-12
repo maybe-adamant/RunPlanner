@@ -335,7 +335,7 @@ import type {
   TraitRequirementExpression,
 } from '../../catalog-schema';
 import type { LevelResolutionAddress } from '../../authored-project/addresses';
-import type { AuthoredLevelResolution } from '../../authored-project/traits';
+import type { AuthoredLevelResolution } from '../../authored-project/traits/state';
 export type { TraitFindingCode } from '../model';
 import {
   isPomUpgradeTarget,

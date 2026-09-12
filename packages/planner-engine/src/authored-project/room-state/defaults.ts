@@ -25,7 +25,7 @@ import {
   requireShopBinding,
   type RoomStateContext,
 } from './declaration';
-import { createUnresolvedAcquisitionRewardState, producerLevelEffectSource } from '../traits';
+import { createUnresolvedAcquisitionRewardState, producerLevelEffectSource } from '../traits/state';
 
 function requireCountedStore(
   binding: CountedRewardBinding,

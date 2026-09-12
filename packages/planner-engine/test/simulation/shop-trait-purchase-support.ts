@@ -32,8 +32,8 @@ import { createDefaultRoomState } from '../../src/authored-project/room-state/de
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createTestArcanaFearState, initializeTestRewardBranches } from '../support/arcana-fear';
 import { createDefaultRoomEncounterState } from '../../src/authored-project/room-state/encounter-envelope';
-import { createNormalDispositionByAcquisitionRole } from '../../src/authored-project/reward-state';
-import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits';
+import { createNormalDispositionByAcquisitionRole } from '../../src/authored-project/acquisition/reward-state';
+import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits/state';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   echoShopDuplicateOffer,

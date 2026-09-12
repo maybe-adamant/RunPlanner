@@ -32,7 +32,7 @@ import {
   withBiome,
   type LocatedBiome,
 } from './contract';
-import { replaceOccurrence } from './occurrence-mutation';
+import { replaceOccurrence } from './occurrence/mutation';
 import { reconcileNormalTargetEntryStates } from './selection-state';
 import { reconcileExitDecisionToDeclaredCapacity } from './topology-reconciliation';
 import type { RouteDetourCommand } from './types';

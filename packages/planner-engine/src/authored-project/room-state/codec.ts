@@ -21,10 +21,10 @@ import {
   decodeNullableRewardState,
   decodePayload,
   decodeRewardState,
-} from './reward-acquisition-codec';
-import { decodeEphyraCombatState, decodeShipCombatState } from './ship-ephyra-codec';
-import { decodeShopState } from './shop-codec';
-import { decodeFieldsSpatialState } from './fields-spatial-codec';
+} from './decoding/reward-acquisition-codec';
+import { decodeEphyraCombatState, decodeShipCombatState } from './decoding/ship-ephyra-codec';
+import { decodeShopState } from './decoding/shop-codec';
+import { decodeFieldsSpatialState } from './decoding/fields-spatial-codec';
 
 function expectedKind(value: unknown, expected: string, path: string): void {
   const kind = expectString(value, `${path}.kind`);

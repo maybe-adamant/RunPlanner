@@ -4,7 +4,7 @@ import {
   type HubDecisionAddress,
   type RoomRunStateCheckpointAddress,
 } from '../../authored-project/addresses';
-import { optionIndex } from '../../authored-project/traits';
+import { optionIndex } from '../../authored-project/traits/state';
 import type { Catalog, TraitElement } from '../../catalog-schema';
 import type { RequirementExpression } from '../../requirements/model';
 import { evaluateRequirement } from '../../requirements/evaluator';

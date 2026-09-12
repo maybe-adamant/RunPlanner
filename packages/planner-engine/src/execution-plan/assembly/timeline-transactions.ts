@@ -7,9 +7,9 @@ import {
   semanticAddressKey,
 } from '../../authored-project/addresses';
 import { parseHermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shrine-delivery';
-import { optionIndex } from '../../authored-project/traits';
+import { optionIndex } from '../../authored-project/traits/state';
 import type { TraitOfferOwnerAddress } from '../../authored-project/addresses';
-import { nemesisGeneratedPickupSiteKey } from '../../authored-project/pickup-producers';
+import { nemesisGeneratedPickupSiteKey } from '../../authored-project/acquisition/pickup-producers';
 import type { CanonicalAuthoredRoom } from '../../simulation/materialization';
 import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation-products';
 import type { RewardEvent } from '../../simulation/rewards/model';

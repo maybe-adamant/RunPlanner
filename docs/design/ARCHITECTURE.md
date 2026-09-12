@@ -278,6 +278,13 @@ and derived-reward transitions; it delegates acquisition effects to the shared
 acquisition authorities rather than implementing a separate purchase simulator.
 Authored action state, contributions, defaults, and lifecycle structure live in
 `authored-project/room-actions/`, separate from simulation's action scheduling.
+Authored acquisition identity, source participation and generated pickup
+structure live in `authored-project/acquisition/`; trait state and carrier-child
+editing live in `authored-project/traits/`. Their command handlers remain
+separate under `commands/acquisition/` and `commands/occurrence/`, beneath the
+single atomic project command dispatcher. Local feature decoders live under
+`room-state/decoding/`; the topology occurrence decoder retains attachment and
+whole-occurrence closure rather than delegating topology ownership to them.
 Topology impact analysis lives with authored topology.
 `authored-project/commands/topology/` groups ordinary, takeover/completion,
 Hub and local-visit command owners behind

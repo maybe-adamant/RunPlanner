@@ -5,7 +5,7 @@ import type {
   AuthoredHexTreeConfiguration,
   AuthoredTranscendentEmbryoOutcome,
   AuthoredTraitOffer,
-} from './traits';
+} from './traits/state';
 
 export const PROJECT_DOCUMENT_SCHEMA_VERSION = 81 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;

@@ -9,7 +9,7 @@ import type {
   RoomOccurrence,
 } from './model';
 import { roomActionKey } from './room-actions/key';
-import { createUnresolvedAcquisitionRewardState } from './traits';
+import { createUnresolvedAcquisitionRewardState } from './traits/state';
 
 const GENERATION_KEYS = [
   'initial:first',

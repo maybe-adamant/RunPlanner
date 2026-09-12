@@ -1,11 +1,11 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ProjectDocument, AuthoredRewardState } from '../model';
-import type { AuthoredLevelResolution } from '../traits';
+import type { AuthoredLevelResolution } from '../traits/state';
 import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
-import { locateReward, updateRewardState } from './reward-source';
+import { locateReward, updateRewardState } from './acquisition/reward-source';
 import type { LevelResolutionCommand } from './types';
-import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
+import { replaceOccurrence, updateOccurrenceTopology } from './occurrence/mutation';
 import {
   authoredAcquisitionEntry,
   authoredAcquisitionEntryAtSite,

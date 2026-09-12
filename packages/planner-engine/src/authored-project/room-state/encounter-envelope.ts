@@ -8,7 +8,7 @@ import type {
   RoomDeclaration,
 } from '../../catalog-schema';
 import type { RoomEncounterState } from '../model';
-import type { AuthoredTraitOffer } from '../traits';
+import type { AuthoredTraitOffer } from '../traits/state';
 import { failProjectDocument } from '../validation';
 
 function requireEnvelope(catalog: Catalog, room: RoomDeclaration, path: string) {

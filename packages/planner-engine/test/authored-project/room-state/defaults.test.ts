@@ -7,7 +7,7 @@ import { createTestDefaultRoomState as createDefaultRoomState } from '../support
 import {
   createUnresolvedLevelResolutions,
   producerLevelEffectSource,
-} from '../../../src/authored-project/traits';
+} from '../../../src/authored-project/traits/state';
 
 function room(gameName: string): RoomDeclaration {
   const declaration = catalog.rooms.byKey[gameName];

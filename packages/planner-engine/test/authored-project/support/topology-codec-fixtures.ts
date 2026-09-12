@@ -26,7 +26,7 @@ import {
 import { composeBiomeHistoryPrefix, materializeBiomePrefix } from '@run-planner/engine/simulation';
 import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 
-import { createNormalDispositionByAcquisitionRole } from '../../../src/authored-project/reward-state';
+import { createNormalDispositionByAcquisitionRole } from '../../../src/authored-project/acquisition/reward-state';
 import { createCompleteNProject } from '../support/complete-n-project';
 
 export const fBiome = createBiomeAddress('Underworld', 'F');

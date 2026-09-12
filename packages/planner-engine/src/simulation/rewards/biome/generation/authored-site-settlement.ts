@@ -11,16 +11,16 @@ import {
   acquisitionSiteStorageKey,
   artificerAcquisitionSite,
   artificerReplacementEntryKey,
-} from '../../../../authored-project/artificer';
+} from '../../../../authored-project/acquisition/artificer';
 import {
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   parseSeaStarDuplicateSiteKey,
   seaStarDuplicateUsesFreshObject,
-} from '../../../../authored-project/sea-star';
+} from '../../../../authored-project/acquisition/sea-star';
 import {
   createUnresolvedAcquisitionRewardState,
   createUnresolvedPickupRewardState,
-} from '../../../../authored-project/traits';
+} from '../../../../authored-project/traits/state';
 import type { ResolvedRewardOffer, RewardHistoryState } from '../../../../reward-kernel';
 import type { ProgressiveRoomHistoryViews } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';

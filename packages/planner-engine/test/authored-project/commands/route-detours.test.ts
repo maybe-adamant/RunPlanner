@@ -22,7 +22,7 @@ import {
   type ProjectCommand,
 } from '@run-planner/engine/authored-project';
 
-import { createNormalDispositionByAcquisitionRole } from '../../../src/authored-project/reward-state';
+import { createNormalDispositionByAcquisitionRole } from '../../../src/authored-project/acquisition/reward-state';
 
 import {
   fBiome,

@@ -4,7 +4,7 @@ export {
   artificerAcquisitionSite,
   artificerReplacementEntryKey,
   parseArtificerReplacementEntryKey,
-} from './artificer';
+} from './acquisition/artificer';
 export {
   HERMES_SHRINE_DELIVERY_SITE_KEY,
   defaultHermesShrineDeliveryReward,
@@ -25,9 +25,12 @@ export {
   seaStarDuplicateSiteKey,
   parseSeaStarDuplicateSiteKey,
   seaStarDuplicateSourceIsActive,
-} from './sea-star';
+} from './acquisition/sea-star';
 export { activeRoomActionReferences } from './room-actions/state';
-export { authoredAcquisitionSources, authoredAcquisitionSourceAt } from './acquisition-sources';
+export {
+  authoredAcquisitionSources,
+  authoredAcquisitionSourceAt,
+} from './acquisition/acquisition-sources';
 export {
   assembleRoomLifecycleStructure,
   roomLifecycleWindowOrdinal,
@@ -209,9 +212,9 @@ export {
   type EquippedTrait,
   type TraitOptionKey,
   traitOfferOption,
-} from './traits';
-export type { AuthoredHexTreeConfiguration } from './traits';
-export type { OneToEight } from './traits';
+} from './traits/state';
+export type { AuthoredHexTreeConfiguration } from './traits/state';
+export type { OneToEight } from './traits/state';
 export {
   discoverAuthoredTraitCarrierChildren,
   completeAuthoredEchoLastRunBoonDraft,
@@ -225,12 +228,12 @@ export {
   type AuthoredTraitCarrierPayload,
   type AuthoredTraitCarrierChildUpdate,
   type PreparedEchoLastRunBoonDraft,
-} from './trait-carrier-children';
+} from './traits/carrier-children';
 export {
   createDefaultAuthoredHexTree,
   normalizeAuthoredHexTree,
   transitionAuthoredHexTreeLayout,
-} from './hex-tree';
+} from './traits/hex-tree';
 export {
   echoLastRewardPickupEntryKey,
   parseEchoLastRewardPickupEntryKey,
@@ -242,7 +245,7 @@ export {
   selectedPickupProducers,
   activeSelectedPickupProducers,
   selectedPickupProducerForEntry,
-} from './pickup-producers';
+} from './acquisition/pickup-producers';
 export {
   createInfernalContractEntries,
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,

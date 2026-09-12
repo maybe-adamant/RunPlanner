@@ -29,7 +29,10 @@ import type {
   RoomEncounterState,
   FieldsSpatialState,
 } from '../../authored-project/model';
-import type { AuthoredLevelResolution, AuthoredTraitOffer } from '../../authored-project/traits';
+import type {
+  AuthoredLevelResolution,
+  AuthoredTraitOffer,
+} from '../../authored-project/traits/state';
 import type { TraitOfferContext } from '../traits/offer-domain';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { ShopOptionEntry } from '../../reward-kernel/model';
@@ -243,7 +246,7 @@ export interface CanonicalAuthoredRoom {
   readonly rewardWheels?: readonly CanonicalRewardWheel[];
   readonly entryState?: CanonicalShopEntryState;
   /** Active producer instances feeding the shared acquisition-site pipeline. */
-  readonly pickupProducers?: readonly import('../../authored-project/pickup-producers').SelectedPickupProducer[];
+  readonly pickupProducers?: readonly import('../../authored-project/acquisition/pickup-producers').SelectedPickupProducer[];
   /** Every exact persisted acquisition site; chronology addresses site and entry independently. */
   readonly acquisitionSites: Readonly<
     Record<

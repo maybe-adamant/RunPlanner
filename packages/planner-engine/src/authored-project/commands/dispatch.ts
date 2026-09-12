@@ -8,16 +8,19 @@ import {
   projectCommandAddress,
   ProjectCommandContractError,
 } from './contract';
-import { applyOccurrenceCommand } from './occurrence';
+import { applyOccurrenceCommand } from './occurrence/dispatch';
 import { applyProjectStateCommand } from './project-state';
 import { applyRoomReplacementCommand } from './room-replacement';
 import { applyRouteDetourCommand } from './route-detours';
 import { applyTopologyCommand } from './topology/dispatch';
 import { applyTraitOfferCommand } from './trait-offer';
 import { applyLevelResolutionCommand } from './level-resolution';
-import { applyAcquisitionSiteCommand, materializeDerivedShopEntry } from './acquisition-site';
-import { applyAcquisitionDispositionCommand } from './acquisition-conversion';
-import { applySeaStarResultCommand } from './sea-star';
+import {
+  applyAcquisitionSiteCommand,
+  materializeDerivedShopEntry,
+} from './acquisition/acquisition-site';
+import { applyAcquisitionDispositionCommand } from './acquisition/acquisition-conversion';
+import { applySeaStarResultCommand } from './acquisition/sea-star';
 import { applyJudgmentArcanaCommand } from './judgment-arcana';
 import { applyFigurineArcanaCommand } from './figurine-arcana';
 import { applySteadyGrowthCommand } from './steady-growth';
@@ -34,7 +37,7 @@ import { reconcileNewRequiredRoomActions } from '../room-actions/defaults';
 import {
   reconcileSelectedPickupProducerState,
   retractInactiveClockedTraitPickupActions,
-} from '../pickup-producers';
+} from '../acquisition/pickup-producers';
 import { reconcileChaosTopology } from '../chaos-gate-reconciliation';
 import { applyFieldsSpatialCommand } from './fields-spatial';
 import { retractMissingHermesShrineDeliveryActions } from '../hermes-shrine-delivery';

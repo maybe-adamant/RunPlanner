@@ -1,7 +1,7 @@
 import type { Catalog, RoomDeclaration } from '../../../../catalog-schema';
 import { semanticAddressKey, type SemanticAddress } from '../../../../authored-project/addresses';
 import type { RouteLoadout } from '../../../../authored-project/model';
-import { createUnresolvedAcquisitionRewardState } from '../../../../authored-project/traits';
+import { createUnresolvedAcquisitionRewardState } from '../../../../authored-project/traits/state';
 import {
   locallyValidRewardOffers,
   type ResolvedRewardOffer,

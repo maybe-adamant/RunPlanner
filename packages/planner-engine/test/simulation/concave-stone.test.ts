@@ -11,7 +11,7 @@ import {
   type AuthoredTraitOfferTraits,
   type OneToEight,
 } from '@run-planner/engine/authored-project';
-import { normalizeAuthoredChaosTraitOffer } from '../../src/authored-project/traits';
+import { normalizeAuthoredChaosTraitOffer } from '../../src/authored-project/traits/state';
 import {
   attachTraitHistory,
   createTraitHistoryState,

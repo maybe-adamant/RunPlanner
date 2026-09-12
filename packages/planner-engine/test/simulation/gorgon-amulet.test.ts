@@ -40,7 +40,7 @@ import {
   simulateProjectAssembly,
 } from '../../src/simulation';
 import { evaluateProgressiveBiomeAssembly } from '../../src/simulation/progressive/biome';
-import { materializeGorgonAthenaOffer } from '../../src/authored-project/traits';
+import { materializeGorgonAthenaOffer } from '../../src/authored-project/traits/state';
 import {
   assessGorgonCandidate,
   assessGorgonChildSettlement,

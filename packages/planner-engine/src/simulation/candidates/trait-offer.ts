@@ -8,8 +8,8 @@ import {
   optionIndex,
   type AuthoredTraitOffer,
   type TraitOptionKey,
-} from '../../authored-project/traits';
-import type { AuthoredTraitCarrierChild } from '../../authored-project/trait-carrier-children';
+} from '../../authored-project/traits/state';
+import type { AuthoredTraitCarrierChild } from '../../authored-project/traits/carrier-children';
 import type { ProjectDocument } from '../../authored-project/model';
 import type {
   ConcaveStoneCandidateBranch,
@@ -178,7 +178,7 @@ export interface EchoLastRunBoonDomainQuery {
   readonly optionKey: TraitOptionKey;
 }
 export interface EvaluatedEchoLastRunBoonCandidate {
-  readonly option: import('../../authored-project/traits').AuthoredEchoLastRunBoonOption;
+  readonly option: import('../../authored-project/traits/state').AuthoredEchoLastRunBoonOption;
   readonly effectiveRarity?: import('../../catalog-schema').TraitRarity;
   readonly effectiveLevel?: number;
   readonly support: DirectTraitOutcomeSupport;
