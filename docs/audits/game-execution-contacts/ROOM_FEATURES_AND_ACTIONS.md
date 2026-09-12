@@ -44,6 +44,30 @@ Presence and interaction are different. An uninteracted Well or Pool is a
 valid Overview fact with no purchase/sale transaction. A Shop or Shrine still
 requires full inventory authoring even when no offer is purchased.
 
+### Fields placement evidence
+
+The Fields adapter reads the coordinator's current room session through its
+`occurrence`, then steers published entry points, cage points, optional reward
+count/identities/points, and Nemesis's native spawn-point selection. Native
+`SpawnRewardCages` retains object construction and encounters; native Forfeit
+retains Boon/Hermes-to-Onion substitution. Original cage offers remain the
+navigation input, not a physical-object assertion.
+
+`RoomLogic.lua:1195–1198` runs room/encounter setup events before
+`StartRoomPresentation` at `:1285`, before input unblocks. The adapter captures
+a copied planned/observed snapshot at that presentation contact. It records
+cage and reward IDs/names/points, optional reward restore spawn points, entry
+points and Nemesis's available position. Native optional restore data at
+`:5730–5740` does not retain `LootName`; Nemesis's final coordinates are not
+asserted equal to the chosen point.
+
+These observations are logged once per snapshot even while synchronized.
+Missing or displaced objects and actual Onion names are diagnostic evidence,
+not new mismatch conditions or a second Forfeit implementation. Existing
+room-exit conformance remains unchanged. Required native API faults still
+propagate. Local coordinator-shaped and reporting tests cover the contact and
+snapshot isolation; in-game placement verification remains pending.
+
 ## Timeline transaction contacts
 
 | Transaction             | Native contact                                                                    | Current status                                                                                                                                                       |
