@@ -107,6 +107,10 @@ diagnostic snapshot together; do not build a structural-check framework.
   the observed native objects, IDs, spawn points and available locations.
   Report missing objects/data as observations; do not assert exact coordinate
   equality or require metadata native restore records do not retain.
+  Make this snapshot readable in the normal diagnostic log without requiring
+  a mismatch, once per emitted snapshot. The existing mismatch-only shallow
+  formatter is insufficient; use a bounded Fields reporting contact, not a
+  general logging redesign.
 - Preserve original cage reward inputs. The diagnostic may show an original
   Boon/Hermes alongside an actual Onion, without interpreting Forfeit or
   inferring substitution from `acquisitionEnabled`. No new wire field.
