@@ -8,7 +8,7 @@ import type {
   FieldsCageOutcomeSupportEntry,
 } from './model';
 import type { FindingEvidence } from '../model';
-import { BiomeRoomGenerationContractError } from './normal-targets';
+import { BiomeRoomGenerationContractError } from './target-policy';
 
 export function fieldsCageOutcomeEvidence(entry: FieldsCageOutcomeSupportEntry): FindingEvidence {
   return {
