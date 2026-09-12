@@ -19,7 +19,10 @@ import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorks
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { TraitOfferCirceResolution } from './TraitOfferCirceResolution';
-import { TraitOfferSelectedSpecialOutcomes } from './TraitOfferSelectedSpecialOutcomes';
+import {
+  ConcaveStoneOutcomeEditor,
+  TraitOfferSelectedSpecialOutcomes,
+} from './TraitOfferSelectedSpecialOutcomes';
 import { HexTreeEditor } from './HexTreeEditor';
 
 const emptyTargetPicker: ContextualPickerModel<string> = Object.freeze({
@@ -102,6 +105,10 @@ export function TraitOfferSelectedOutcome({
       { readonly child: { readonly kind: 'traitAcquisitionTarget' } }
     > => child.child.kind === 'traitAcquisitionTarget',
   );
+  const stoneChildren = loadable.children.filter(
+    ({ child }) => 'optionKey' in child && child.optionKey !== value.selectedOptionKey,
+  );
+  const primaryChildren = loadable.children.filter((child) => !stoneChildren.includes(child));
   const circeChild = loadable.children.find(
     (
       child,
@@ -209,15 +216,17 @@ export function TraitOfferSelectedOutcome({
           onChange={(hexTree) => onUpdate(hexTreeChild.update(value, hexTree))}
         />
       )}
-      {targetChildren.map((child) => (
-        <TraitAcquisitionOutcome
-          child={child}
-          interaction={interaction}
-          key={semanticOwnerControlElementId(child.child.address)}
-          onUpdate={onUpdate}
-          value={value}
-        />
-      ))}
+      {targetChildren
+        .filter((child) => primaryChildren.includes(child))
+        .map((child) => (
+          <TraitAcquisitionOutcome
+            child={child}
+            interaction={interaction}
+            key={semanticOwnerControlElementId(child.child.address)}
+            onUpdate={onUpdate}
+            value={value}
+          />
+        ))}
       {circeChild === undefined || circeDomain.result === undefined ? null : (
         <TraitOfferCirceResolution
           findingTarget={findingTarget(circeChild.child.address)}
@@ -297,17 +306,44 @@ export function TraitOfferSelectedOutcome({
           </fieldset>
         ))}
       <TraitOfferSelectedSpecialOutcomes
-        carrierChildren={loadable.children}
+        carrierChildren={primaryChildren}
         feedback={feedback}
         interaction={interaction}
         offer={value}
         onUpdate={onUpdate}
-        concaveStone={
-          concaveStoneChild === undefined || concaveStoneDomain.result === undefined
-            ? undefined
-            : { interaction: concaveStoneChild, domain: concaveStoneDomain.result }
-        }
       />
+      {concaveStoneChild === undefined || concaveStoneDomain.result === undefined ? null : (
+        <ConcaveStoneOutcomeEditor
+          domain={concaveStoneDomain.result}
+          interaction={concaveStoneChild}
+          offer={value}
+          traitLabel={interaction.traitLabel}
+          onSelect={(result) => onUpdate(concaveStoneChild.update(value, result))}
+        >
+          {stoneChildren.length === 0 ? null : (
+            <div className="trait-stone-target-outcome">
+              {targetChildren
+                .filter((child) => stoneChildren.includes(child))
+                .map((child) => (
+                  <TraitAcquisitionOutcome
+                    child={child}
+                    interaction={interaction}
+                    key={semanticOwnerControlElementId(child.child.address)}
+                    onUpdate={onUpdate}
+                    value={value}
+                  />
+                ))}
+              <TraitOfferSelectedSpecialOutcomes
+                carrierChildren={stoneChildren}
+                feedback={[]}
+                interaction={interaction}
+                offer={value}
+                onUpdate={onUpdate}
+              />
+            </div>
+          )}
+        </ConcaveStoneOutcomeEditor>
+      )}
       {concaveStoneChild === undefined ||
       concaveStoneDomain.result !== undefined ||
       concaveStoneChild.child.value === undefined ? null : (

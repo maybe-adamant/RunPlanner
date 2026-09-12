@@ -1102,7 +1102,7 @@ describe('planner history interaction', () => {
     application.store.dispatch(traitOfferDialogOpened(target));
     const view = renderPlannerForInteraction({ application });
 
-    const checkbox = await screen.findByRole('checkbox', { name: 'Concave Stone procced' });
+    const checkbox = await screen.findByRole('checkbox', { name: 'Concave Stone Activated' });
     expect(checkbox).toHaveProperty('checked', false);
     expect(checkbox).toHaveProperty('disabled', false);
     const historyBefore = application.store.getState().projectWorkspace.history!.past.length;
@@ -1110,6 +1110,9 @@ describe('planner history interaction', () => {
     await view.user.click(checkbox);
 
     await waitFor(() => expect(checkbox).toHaveProperty('checked', true));
+    expect(screen.getByRole('button', { name: 'Concave Stone target' }).textContent).toBeTruthy();
+    expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(historyBefore);
+    await view.user.click(screen.getByRole('button', { name: 'Save trait offer' }));
     const persisted = application
       .selectStructuredWorkspace(application.store.getState())!
       .interactions.traitOffers.get(semanticAddressKey(target))?.value;
@@ -1117,16 +1120,14 @@ describe('planner history interaction', () => {
       kind: 'traits',
       concaveStoneResult: { kind: 'proc', optionKey: 'option2' },
     });
-    expect(
-      screen.getByRole('button', { name: 'Concave Stone residual trait' }).textContent,
-    ).toBeTruthy();
     expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
 
+    application.store.dispatch(traitOfferDialogOpened(target));
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     await waitFor(() =>
-      expect(screen.getByRole('checkbox', { name: 'Concave Stone procced' })).toHaveProperty(
+      expect(screen.getByRole('checkbox', { name: 'Concave Stone Activated' })).toHaveProperty(
         'checked',
         false,
       ),
@@ -1139,7 +1140,7 @@ describe('planner history interaction', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'Redo' }));
     await waitFor(() =>
-      expect(screen.getByRole('checkbox', { name: 'Concave Stone procced' })).toHaveProperty(
+      expect(screen.getByRole('checkbox', { name: 'Concave Stone Activated' })).toHaveProperty(
         'checked',
         true,
       ),
@@ -1161,7 +1162,7 @@ describe('planner history interaction', () => {
     application.store.dispatch(traitOfferDialogOpened(target));
     const view = renderPlannerForInteraction({ application });
 
-    expect(await screen.findByRole('checkbox', { name: 'Concave Stone procced' })).toHaveProperty(
+    expect(await screen.findByRole('checkbox', { name: 'Concave Stone Activated' })).toHaveProperty(
       'checked',
       true,
     );
@@ -1177,6 +1178,7 @@ describe('planner history interaction', () => {
     await view.user.click(
       screen.getByRole('button', { name: 'Clear unavailable Concave Stone result' }),
     );
+    await view.user.click(screen.getByRole('button', { name: 'Save trait offer' }));
     await waitFor(() =>
       expect(
         application
@@ -1227,10 +1229,11 @@ describe('planner history interaction', () => {
     application.store.dispatch(traitOfferDialogOpened(target));
     renderPlannerForInteraction({ application });
 
-    const checkbox = await screen.findByRole('checkbox', { name: 'Concave Stone procced' });
+    const checkbox = await screen.findByRole('checkbox', { name: 'Concave Stone Activated' });
     expect(checkbox).toHaveProperty('checked', true);
     expect(checkbox).toHaveProperty('disabled', true);
-    expect(screen.getByRole('button', { name: 'Concave Stone residual trait' })).toBeTruthy();
+    expect(screen.getByText('Concave Stone · Chance: 100%')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Concave Stone target' })).toBeTruthy();
   });
 
   it('hands a route trait row through exact biome navigation and restores focus on Escape', async () => {

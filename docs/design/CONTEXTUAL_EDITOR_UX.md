@@ -566,6 +566,10 @@ starts unchecked: absent authored detail means no proc, including when an upstre
 edit makes Stone available to an existing offer. A required proc still needs its
 residual selection. Toggling or clearing Stone never
 dispatches a separate child command before the complete offer is saved.
+The Stone section presents its chance, activation checkbox, and unpicked-boon
+target in that order. Any target-owned controls appear beneath that picker,
+inside the Stone section rather than beside the primary acquisition's controls.
+Inactive Stone hides those controls without deleting retained payloads.
 
 This is application/UI vocabulary. It must not replace the richer typed
 simulation assessment or enter persisted state.

@@ -6,7 +6,7 @@ import {
   type TraitOptionKey,
 } from '@run-planner/engine/authored-project';
 import type { DirectTraitSetKey } from '@run-planner/engine/catalog-schema';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
 import {
@@ -32,18 +32,20 @@ function pickerValueLabel<T>(model: ContextualPickerModel<T>, value: T): string 
     .find((item) => Object.is(item.value, value))?.label;
 }
 
-function ConcaveStoneOutcomeEditor({
+export function ConcaveStoneOutcomeEditor({
   interaction,
   domain,
   offer,
   traitLabel,
   onSelect,
+  children,
 }: {
   readonly interaction: WorkspaceConcaveStoneInteraction;
   readonly domain: WorkspaceConcaveStoneDomain;
   readonly offer: AuthoredTraitOfferTraits;
   readonly traitLabel: (traitKey: string) => string;
   readonly onSelect: (result: AuthoredConcaveStoneResult | null) => void;
+  readonly children: ReactNode;
 }) {
   const findingTarget = useFindingTarget();
   const authoredResult = offer.concaveStoneResult;
@@ -94,7 +96,7 @@ function ConcaveStoneOutcomeEditor({
       Object.freeze({
         key: 'residual',
         kind: 'category' as const,
-        label: 'Original unpicked rows',
+        label: 'Unpicked boons',
         collapsible: false,
         items: Object.freeze(pickerItems),
       }),
@@ -116,24 +118,19 @@ function ConcaveStoneOutcomeEditor({
     <fieldset
       {...findingTarget(interaction.child.address)}
       tabIndex={-1}
-      className="trait-selected-outcome-detail"
+      className="trait-stone-outcome"
       aria-label="Concave Stone outcome"
     >
-      <legend>Concave Stone</legend>
-      <label>
+      <legend>Concave Stone · Chance: {domain.procSupport}%</legend>
+      <label className="trait-stone-activation">
         <input
           checked={procced || domain.required}
           disabled={domain.required}
           onChange={(event) => onToggle(event.target.checked)}
           type="checkbox"
         />{' '}
-        Concave Stone procced
+        Concave Stone Activated
       </label>
-      <p className="trait-selected-outcome-detail">
-        {domain.required
-          ? 'Heroic Stone must acquire one original unpicked row.'
-          : `Stone proc support: ${domain.procSupport}%.`}
-      </p>
       {authoredResult === undefined || domain.resultSupport !== 'impossible' ? null : (
         <button
           className="quiet-action action-compact"
@@ -144,15 +141,18 @@ function ConcaveStoneOutcomeEditor({
         </button>
       )}
       {!procced && !domain.required ? null : (
-        <ContextualPicker
-          ariaLabel="Concave Stone residual trait"
-          id={`${semanticOwnerControlElementId(interaction.child.address)}-picker`}
-          label="Frozen residual row"
-          model={picker}
-          onSelect={(optionKey) => onSelect({ kind: 'proc', optionKey })}
-          placeholder="Choose an original unpicked row"
-          {...(selectedLabel === undefined ? {} : { triggerLabel: selectedLabel })}
-        />
+        <>
+          <ContextualPicker
+            ariaLabel="Concave Stone target"
+            id={`${semanticOwnerControlElementId(interaction.child.address)}-picker`}
+            label="Target"
+            model={picker}
+            onSelect={(optionKey) => onSelect({ kind: 'proc', optionKey })}
+            placeholder="Choose an unpicked boon"
+            {...(selectedLabel === undefined ? {} : { triggerLabel: selectedLabel })}
+          />
+          {children}
+        </>
       )}
     </fieldset>
   );
@@ -451,19 +451,12 @@ export function TraitOfferSelectedSpecialOutcomes({
   offer,
   carrierChildren,
   feedback,
-  concaveStone,
   onUpdate,
 }: {
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly offer: AuthoredTraitOfferTraits;
   readonly carrierChildren: readonly WorkspaceTraitCarrierChildInteraction[];
   readonly feedback: readonly import('@planner/projections/structured-workspace').WorkspaceTraitOfferFeedback[];
-  readonly concaveStone:
-    | {
-        readonly interaction: WorkspaceConcaveStoneInteraction;
-        readonly domain: WorkspaceConcaveStoneDomain;
-      }
-    | undefined;
   readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
 }) {
   const ransomAssessment = feedback.find((entry) => entry.kind === 'ransom')?.assessment;
@@ -520,17 +513,6 @@ export function TraitOfferSelectedSpecialOutcomes({
           }
         />
       ))}
-      {concaveStone === undefined ? null : (
-        <ConcaveStoneOutcomeEditor
-          domain={concaveStone.domain}
-          interaction={concaveStone.interaction}
-          offer={offer}
-          traitLabel={interaction.traitLabel}
-          onSelect={(result) => {
-            onUpdate(concaveStone.interaction.update(offer, result));
-          }}
-        />
-      )}
       {ransomAssessment === undefined ? null : (
         <fieldset className="trait-selected-outcome-detail" aria-label="Ransom preview">
           <legend>Ransom preview</legend>
