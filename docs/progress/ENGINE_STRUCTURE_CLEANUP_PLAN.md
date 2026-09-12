@@ -52,7 +52,18 @@ change. Primary verification: authored-project tests, engine TypeScript and
 runtime-import architecture test. One-off import-resolved body comparison
 must establish that this slice changed paths, not implementation.
 
-## B — Simulation neighborhoods (mechanical commit)
+## B — Finish directory grouping (mechanical commit)
+
+The user-approved final directory review is recorded in
+`docs/investigations/ENGINE_SOURCE_DIRECTORY_MAP.md`. Finish five authored
+placements alongside the simulation moves, preserving complete file bodies:
+
+- Move room-state/all-together, echo-last-run, encounters and
+  encounter-trait-offers into room-state/decoding as all-together-codec,
+  echo-last-run-codec, encounter-state-codec and encounter-trait-offer-codec.
+  Keep encounter-envelope as shared binding policy. The trait-offer decoder's
+  legalTraitOfferEncounterKeys helper remains with its sole decoder consumer.
+- Move commands/fields-spatial into commands/occurrence/fields-spatial.
 
 - `simulation/evaluation/`: project, biome-evaluation,
   project-evaluation-assembly, evaluation-products, candidate-artifacts.
@@ -68,7 +79,8 @@ must establish that this slice changed paths, not implementation.
 
 Preserve the exact assembly token/attestation and complete candidate artifacts.
 No new evaluation stage. Verify engine TypeScript, candidate/progressive tests,
-representative project and execution assembly tests, and runtime-import graph.
+representative project and execution assembly tests, authored decoder and Fields
+command tests, and runtime-import graph.
 Use the same one-off mechanical comparison as A.
 
 ## C — Room materialization (extraction commit)
