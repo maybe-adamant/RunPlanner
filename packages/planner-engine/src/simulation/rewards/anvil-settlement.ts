@@ -1,7 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import type { AuthoredAnvilResult } from '../../authored-project/model';
 import type { TraitOfferContext } from '../traits/offer-domain';
-import { assessTraitOption } from '../traits/authoring-policies';
+import { assessTraitOption } from '../traits/authoring/assessment';
 import type { EquippedTrait } from '../../authored-project/traits';
 import {
   createTraitHistoryState,

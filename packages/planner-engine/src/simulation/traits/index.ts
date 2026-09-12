@@ -7,4 +7,24 @@ export * from './history';
 export * from './offer-domain';
 export * from './offers';
 export * from './level-effects';
-export * from './authoring-policies';
+export {
+  assessNaturalSelectionTargets,
+  assessSelectedTargetedAcquisition,
+  assessTraitOffer,
+  assessTraitOfferBeforeRarification,
+  assessTraitOption,
+  assessTraitReplacementComposition,
+  traitCandidates,
+  traitOfferCompositionDomains,
+} from './authoring/assessment';
+export type {
+  NaturalSelectionStep,
+  NaturalSelectionTargetAssessment,
+  TraitFindingCode,
+} from './authoring/assessment';
+export {
+  nextOptionalHighTierTraitOfferDraft,
+  nextTraitOfferDraft,
+  previousOptionalHighTierTraitOfferDraft,
+  traitOfferStartingDraft,
+} from './authoring/drafts';

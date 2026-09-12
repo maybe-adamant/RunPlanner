@@ -10,7 +10,7 @@ import {
   type TraitOptionKey,
 } from '../../authored-project/traits';
 import { hasEffectiveInRunUpgrade, type TraitHistoryState } from '../traits/history';
-import { assessTraitOption } from '../traits/authoring-policies';
+import { assessTraitOption } from '../traits/authoring/assessment';
 import {
   figurineRarityForRank,
   keepsakeEffectByKind,

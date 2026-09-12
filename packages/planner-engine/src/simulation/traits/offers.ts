@@ -24,7 +24,7 @@ import {
   assessSelectedTargetedAcquisition,
   assessTraitOffer,
   assessTraitReplacementComposition,
-} from './authoring-policies';
+} from './authoring/assessment';
 import { resolveTraitOfferOptionLevel, type TraitOfferOptionLevelResolution } from './offer-levels';
 import type {
   TraitTargetedAcquisitionAssessment,

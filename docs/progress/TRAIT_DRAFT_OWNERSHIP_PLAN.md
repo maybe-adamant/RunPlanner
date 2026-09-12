@@ -2,13 +2,20 @@
 
 ## Status and base
 
-Status: locked for implementation; Slice A is next.
+Status: Slice A complete and independently reviewed; Slice B is next.
 Production base: `31329058`. Commit this plan and
 `docs/investigations/TRAIT_AUTHORING_AND_CANDIDATE_BOUNDARIES.md` after the
 pre-plan challenge and before source edits.
 
 Independent pre-plan challenge completed; cache isolation, pooled-rarity input
 and BBB identity/payload constraints are incorporated below.
+
+Slice A verification: six assigned correctness suites passed (150 tests),
+engine TypeScript and touched-file lint/format checks passed. Independent
+review reported no findings and reran the 38-test trait-offers suite. One-off
+comparison confirmed all 25 original function bodies and the cache key are
+unchanged. Combined repository and performance closure remain assigned to
+Slice B.
 
 ## Objective and scope
 

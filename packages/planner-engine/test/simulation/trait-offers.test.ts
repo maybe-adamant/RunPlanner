@@ -447,6 +447,20 @@ describe('rarity-aware high-tier composition', () => {
       }).legal,
     ).toBe(true);
   });
+
+  it('memoizes one frozen composition domain for repeated explicit inputs', () => {
+    const history = createTraitHistoryState();
+    const first = traitOfferCompositionDomains(highTierCatalog, 'Hermes', history, possibleContext);
+    const second = traitOfferCompositionDomains(
+      highTierCatalog,
+      'Hermes',
+      history,
+      possibleContext,
+    );
+
+    expect(Object.isFrozen(first)).toBe(true);
+    expect(second).toBe(first);
+  });
 });
 
 describe('prefix-aware ordinary rarity composition', () => {

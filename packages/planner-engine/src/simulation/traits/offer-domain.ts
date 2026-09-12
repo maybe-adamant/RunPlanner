@@ -198,34 +198,6 @@ export interface TraitOfferCompositionDomains {
   readonly replacements: readonly TraitCandidateAssessment[];
 }
 
-// This is an identity cache of the complete, immutable domain product. It is
-// never a semantic input: callers can always derive the same product from the
-// explicit catalog, pre-offer history, giver, and context arguments.
-export const compositionDomainCache = new WeakMap<
-  Catalog,
-  WeakMap<TraitHistoryState, Map<string, TraitOfferCompositionDomains>>
->();
-
-export function compositionDomainCacheKey(giverKey: string, context: TraitOfferContext): string {
-  return JSON.stringify([
-    giverKey,
-    context.weaponKey,
-    context.aspectKey,
-    context.devotionNoDuo,
-    context.blockGiftBoons,
-    context.echoLastRewardAvailable,
-    context.echoLastRewardRecreation,
-    context.freshRarityOverride,
-    context.gorgonResolvedRarity,
-    context.circeRemovableFearVow,
-    context.manualArcanaGraspCost,
-    context.currentKeepsakeKey,
-    context.stackBoostsSuppressed,
-    context.boonRarityFacts,
-    context.suppressTemporaryBoonRarity,
-  ]);
-}
-
 export type TraitOfferDomainOptionKind = 'ordinary' | 'highTier' | 'replacement';
 
 export interface TraitOfferDomainCompositionInput {
