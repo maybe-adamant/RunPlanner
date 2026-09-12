@@ -7,6 +7,12 @@ The user-approved A1 amendment retains steering and records completed Fields
 contents/positions as diagnostics only. Native Forfeit creates the Onion;
 existing room-exit conformance remains unchanged.
 
+A1 implementation and independent review are complete locally, with no
+actionable review findings. Verification: `lua tests/all.lua` 434/434 passed;
+`luacheck src/` zero warnings/errors across 93 files; modpack smoke passed one
+module entrypoint and one coordinator pipeline. Live Fields placement remains
+pending user testing. A2–A5 and later gates have not been started by this slice.
+
 - Planner baseline: `a400489d`.
 - Plan Executor baseline: `3252224`, in sibling repository
   `../run-planner-modpack/Submodules/adamantRunPlanner-Plan_Executor`.
