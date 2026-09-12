@@ -792,6 +792,13 @@ attachments once per invocation and carries the decoded arrays into its
 complete result. An invocation-local memo preserves first-demand validation
 order and diagnostic paths; it does not escape as a consumer dependency.
 
+Decision-form decoding validates declaration-owned source, target, batch and
+visit constraints using the same invocation's attachment reader. The structural
+coordinator retains global selected-spine, fixed-link, cycle and ownership
+checks in their diagnostic order. It returns resolved occurrence roles and
+entry-active facts for leaf decoding. This validation path never invokes
+command repair or silently prunes representable authored state.
+
 Persistence excludes filenames, Redux state, editor tabs, graph positions,
 candidate sets, findings, simulation output, save baselines, autosave status,
 and an alternate profile wrapper. The application profile session remembers

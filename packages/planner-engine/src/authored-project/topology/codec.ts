@@ -1,7 +1,7 @@
 import type { BiomeLayout, Catalog } from '../../catalog-schema';
 import type { BiomeTopology } from '../model';
 import { decodeRoomOccurrence } from './occurrence-codec';
-import { decodeTopologyStructure } from './structure-codec';
+import { decodeTopologyStructure } from './decoding/coordinator';
 
 export function decodeBiomeTopology(
   value: unknown,
