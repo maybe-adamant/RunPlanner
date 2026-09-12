@@ -2,11 +2,11 @@ import { semanticAddressKey } from '@run-planner/engine/authored-project';
 
 import {
   StructuredWorkspaceProjectionContractError,
-  type WorkspaceInspectorDestination,
-  type WorkspaceNode,
   type WorkspaceRewardControl,
   type WorkspaceRoomPickerControl,
 } from '../contract';
+import type { WorkspaceInspectorDestination } from '../contracts/navigation';
+import type { WorkspaceNode } from '../contracts/structure';
 
 /** Composition rejects duplicate structural identities as each family returns nodes. */
 export function appendUniqueWorkspaceNodes(

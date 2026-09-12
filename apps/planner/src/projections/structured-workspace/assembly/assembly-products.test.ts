@@ -11,13 +11,8 @@ import {
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
-
-import type {
-  WorkspaceInspectorDestination,
-  WorkspaceNode,
-  WorkspaceRewardControl,
-  WorkspaceRoomPickerControl,
-} from '../contract';
+import type { WorkspaceInspectorDestination } from '../contracts/navigation';
+import type { WorkspaceRewardControl, WorkspaceRoomPickerControl } from '../contract';
 import {
   appendUniqueFocusDestinations,
   appendUniqueRewardControls,
@@ -40,6 +35,7 @@ import {
   appendUniqueTakeoverInteractionRequirements,
   appendUniqueTopologyRemovalInteractionRequirements,
 } from '../interactions/interaction-requirements';
+import type { WorkspaceNode } from '../contracts/structure';
 
 function explicitControl(occurrenceKey: string): WorkspaceRewardControl {
   const address = createIncomingRewardAddress(

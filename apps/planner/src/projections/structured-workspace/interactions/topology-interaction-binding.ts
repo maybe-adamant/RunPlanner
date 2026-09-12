@@ -24,7 +24,6 @@ import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 import { requireWorkspaceRoom } from '../assembly/catalog-room';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type {
-  StructuredWorkspaceContextualServices,
   WorkspaceRoomInteraction,
   WorkspaceRoomPickerControl,
   WorkspaceStartInteraction,
@@ -36,6 +35,7 @@ import type {
   WorkspaceTakeoverInteractionRequirement,
   WorkspaceTopologyRemovalInteractionRequirement,
 } from './interaction-requirements';
+import type { StructuredWorkspaceContextualServices } from '../contract';
 
 function bindTopologyRemovalInteractions(
   requirements: Iterable<WorkspaceTopologyRemovalInteractionRequirement>,

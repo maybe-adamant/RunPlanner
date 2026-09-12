@@ -1,14 +1,16 @@
 import { rewardChildMarkers } from '../assembly/occurrence-action-markers';
+import type { WorkspaceMarker } from '../contracts/navigation';
 import type {
-  WorkspaceMarker,
-  WorkspaceMixedBatchNode,
-  WorkspaceOrdinaryBatchNode,
   WorkspaceRewardControl,
   WorkspaceRoomFeature,
   WorkspaceRoomLocal,
   WorkspaceRoomSummary,
-  WorkspaceTakeoverBatchNode,
 } from '../contract';
+import type {
+  WorkspaceMixedBatchNode,
+  WorkspaceOrdinaryBatchNode,
+  WorkspaceTakeoverBatchNode,
+} from '../contracts/structure';
 
 /** Batch-owned markers share the decision package that contains their targets. */
 export type WorkspaceDecisionBatchNode =

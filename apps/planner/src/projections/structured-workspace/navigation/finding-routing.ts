@@ -5,11 +5,9 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { SemanticFinding } from '@run-planner/engine/simulation';
 
-import {
-  StructuredWorkspaceProjectionContractError,
-  type WorkspaceInspectorDestination,
-  type WorkspaceRoute,
-} from '../contract';
+import { StructuredWorkspaceProjectionContractError } from '../contract';
+import type { WorkspaceInspectorDestination } from '../contracts/navigation';
+import type { WorkspaceRoute } from '../contracts/structure';
 
 /**
  * Fine-grained findings identify an authored leaf or structural control. They

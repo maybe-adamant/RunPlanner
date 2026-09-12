@@ -53,12 +53,10 @@ import {
   createStructuredWorkspaceTestServices,
   requireWorkspaceBiome,
 } from '@planner-test/fixtures/structuredWorkspace';
-import type {
-  StructuredWorkspaceProjection,
-  WorkspaceBiome,
-  WorkspaceInspectorDestination,
-} from '../contract';
+import type { StructuredWorkspaceProjection } from '../contracts/structure';
 import { workspaceOccurrenceOwnedMarkers } from './marker-ownership';
+import type { WorkspaceInspectorDestination } from '../contracts/navigation';
+import type { WorkspaceBiome } from '../contracts/structure';
 
 const { structuredWorkspace } = createStructuredWorkspaceTestServices();
 

@@ -1,32 +1,30 @@
 import { semanticAddressKey, type OccurrenceId } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 
-import {
-  StructuredWorkspaceProjectionContractError,
-  type WorkspaceBiome,
-  type WorkspaceHubDecisionNode,
-  type WorkspaceHubRailEntry,
-  type WorkspaceHubVisitRailEntry,
-  type WorkspaceDoorContract,
-  type WorkspaceInspectorDestination,
-  type WorkspaceMarker,
-  type WorkspaceMixedBatchNode,
-  type WorkspaceNode,
-  type WorkspaceOccurrenceWorkbenchNode,
-  type WorkspaceOrdinaryBatchNode,
-  type WorkspaceRailEntry,
-  type WorkspaceRailReward,
-  type WorkspaceRailSelectedTarget,
-  type WorkspaceRoomSummary,
-  type WorkspaceRunStateLauncher,
-  type WorkspaceSelectedContinuationNavigation,
-  type WorkspaceTakeoverBatchNode,
-} from '../contract';
+import { StructuredWorkspaceProjectionContractError, type WorkspaceRoomSummary } from '../contract';
 import { bindWorkspaceInspectorDestinations } from '../navigation/inspector-destinations';
 import { defaultInspectorDestination } from '../navigation/inspector-defaults';
 import { workspaceDecisionOwnedMarkers } from '../navigation/marker-ownership';
 import type { WorkspaceBiomeSemanticAssembly } from '../assembly/biome-semantic-assembly';
 import { summarizeRewardOffer } from '@planner/projections/rewardPicker';
+import type {
+  WorkspaceBiome,
+  WorkspaceHubDecisionNode,
+  WorkspaceHubRailEntry,
+  WorkspaceHubVisitRailEntry,
+  WorkspaceDoorContract,
+  WorkspaceMixedBatchNode,
+  WorkspaceNode,
+  WorkspaceOccurrenceWorkbenchNode,
+  WorkspaceOrdinaryBatchNode,
+  WorkspaceRailEntry,
+  WorkspaceRailReward,
+  WorkspaceRailSelectedTarget,
+  WorkspaceSelectedContinuationNavigation,
+  WorkspaceTakeoverBatchNode,
+} from '../contracts/structure';
+import type { WorkspaceInspectorDestination, WorkspaceMarker } from '../contracts/navigation';
+import type { WorkspaceRunStateLauncher } from '../contracts/run-state';
 
 /** Final biome products derived from completed semantics and immutable catalog display metadata. */
 export interface WorkspaceBiomePresentation {

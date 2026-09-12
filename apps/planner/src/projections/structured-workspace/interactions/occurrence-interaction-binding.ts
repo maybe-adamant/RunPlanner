@@ -18,9 +18,12 @@ import type { ContextualPickerModel } from '@planner/projections/contextualPicke
 import { projectEncounterPicker } from '@planner/projections/encounterPickerProjection';
 import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 
-import { StructuredWorkspaceProjectionContractError, workspaceInteractionKey } from '../contract';
+import {
+  StructuredWorkspaceProjectionContractError,
+  workspaceInteractionKey,
+  type StructuredWorkspaceContextualServices,
+} from '../contract';
 import type {
-  StructuredWorkspaceContextualServices,
   WorkspaceEncounterInteraction,
   WorkspaceNemesisEventDomain,
   WorkspaceNemesisFeatureInteraction,

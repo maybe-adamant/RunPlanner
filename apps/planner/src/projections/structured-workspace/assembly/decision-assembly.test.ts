@@ -177,6 +177,7 @@ describe('structured workspace decision assembly', () => {
     const evaluated = source.evaluatedBatch(owner);
     const kit = decisionKit(source);
     const assembly = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision,
@@ -227,6 +228,7 @@ describe('structured workspace decision assembly', () => {
     const source = biomeSource(createGoldenFGHIProject(), 'Underworld', 'F');
     const kit = decisionKit(source);
     const assembly = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision: batchDecision(source),
@@ -272,6 +274,7 @@ describe('structured workspace decision assembly', () => {
     };
     const kit = decisionKit(source);
     const assembly = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision,
@@ -301,6 +304,7 @@ describe('structured workspace decision assembly', () => {
     if (decision?.normal.kind !== 'batch') throw new Error('H Fields decision is missing');
     const kit = decisionKit(source);
     const assembly = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision: decision as WorkspaceAuthoredBatchDecision,
@@ -350,6 +354,7 @@ describe('structured workspace decision assembly', () => {
     });
     const kit = decisionKit(source);
     const assembly = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision,
@@ -385,6 +390,7 @@ describe('structured workspace decision assembly', () => {
     });
     const kit = decisionKit(source);
     const assembly = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision,
@@ -428,6 +434,7 @@ describe('structured workspace decision assembly', () => {
     if (evaluated === undefined) throw new Error('H comparison batch evaluation is missing');
     const kit = decisionKit(source);
     const assembly = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision,
@@ -498,6 +505,7 @@ describe('structured workspace decision assembly', () => {
     if (evaluated === undefined) throw new Error('O Intro decision evaluation is missing');
     const kit = decisionKit(source);
     const assembly = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision,
@@ -531,6 +539,7 @@ describe('structured workspace decision assembly', () => {
       if (evaluated === undefined) throw new Error(`O ${occurrenceId} evaluation is missing`);
       const kit = decisionKit(source);
       const assembly = assembleWorkspaceDecision({
+        persistence: 'authored',
         assembleOccurrence: kit.assembleOccurrence,
         catalog,
         decision,
@@ -551,6 +560,7 @@ describe('structured workspace decision assembly', () => {
     const decision = batchDecisionAt(source, oOccurrenceIds.devotion);
     const kit = decisionKit(source);
     const assembly = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision,
@@ -576,6 +586,7 @@ describe('structured workspace decision assembly', () => {
       if (evaluated === undefined) throw new Error(`O ${sourceOccurrenceId} evaluation is missing`);
       const kit = decisionKit(source);
       const assembly = assembleWorkspaceDecision({
+        persistence: 'authored',
         assembleOccurrence: kit.assembleOccurrence,
         catalog,
         decision,
@@ -649,6 +660,7 @@ describe('structured workspace decision assembly', () => {
     const source = biomeSource(project, 'Underworld', 'H');
     const kit = decisionKit(source);
     const assembly = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision: batchDecisionAt(source, start),
@@ -709,6 +721,7 @@ describe('structured workspace decision assembly', () => {
       throw new Error('configured H bounded-target batch is missing');
     const kit = decisionKit(source);
     const assembly = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: kit.assembleOccurrence,
       catalog: catalogWithNonFieldsBoundedRoom('H_Combat09'),
       decision: decision as WorkspaceAuthoredBatchDecision,
@@ -764,6 +777,7 @@ describe('structured workspace decision assembly', () => {
     };
     const kit = decisionKit(mixedSource);
     const assembly = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision: decision as WorkspaceAuthoredBatchDecision,
@@ -795,6 +809,7 @@ describe('structured workspace decision assembly', () => {
     const owner = createExitDecisionAddress(goldenFBiome, decision.source);
     const kit = decisionKit(source);
     const assembly = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision,
@@ -849,6 +864,7 @@ describe('structured workspace decision assembly', () => {
     const kit = decisionKit(source);
     const evaluated = source.evaluatedBatch(owner);
     const assembly = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision: decision as WorkspaceAuthoredBatchDecision,
@@ -891,6 +907,7 @@ describe('structured workspace decision assembly', () => {
     const kit = decisionKit(source);
     const evaluated = source.evaluatedBatch(owner);
     const assembly = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision: decision as WorkspaceAuthoredBatchDecision,
@@ -943,6 +960,7 @@ describe('structured workspace decision assembly', () => {
       const kit = decisionKit(source);
       const evaluated = source.evaluatedBatch(owner);
       const assembly = assembleWorkspaceDecision({
+        persistence: 'authored',
         assembleOccurrence: kit.assembleOccurrence,
         catalog,
         decision: decision as WorkspaceAuthoredBatchDecision,
@@ -967,6 +985,7 @@ describe('structured workspace decision assembly', () => {
     const evaluated = source.evaluatedBatch(owner);
     const kit = decisionKit(source);
     const assembly = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision,
@@ -1001,6 +1020,7 @@ describe('structured workspace decision assembly', () => {
     if (fDecision?.normal.kind !== 'batch') throw new Error('F Preboss batch is missing');
     const fKit = decisionKit(fSource);
     const fAssembly = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: fKit.assembleOccurrence,
       catalog,
       decision: fDecision as WorkspaceAuthoredBatchDecision,
@@ -1037,6 +1057,7 @@ describe('structured workspace decision assembly', () => {
     const beforeSetup = biomeSource(project, 'Underworld', 'F');
     const beforeKit = decisionKit(beforeSetup);
     const before = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: beforeKit.assembleOccurrence,
       catalog,
       decision: batchDecisionAt(beforeSetup, startId),
@@ -1081,6 +1102,7 @@ describe('structured workspace decision assembly', () => {
     const afterSetup = biomeSource(project, 'Underworld', 'F');
     const afterKit = decisionKit(afterSetup);
     const after = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: afterKit.assembleOccurrence,
       catalog,
       decision: batchDecisionAt(afterSetup, startId),
@@ -1125,6 +1147,7 @@ describe('structured workspace decision assembly', () => {
     if (decision?.normal.kind !== 'batch') throw new Error('narrowed F batch is missing');
     const kit = decisionKit(source);
     const assembly = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision: decision as WorkspaceAuthoredBatchDecision,
@@ -1165,6 +1188,7 @@ describe('structured workspace decision assembly', () => {
     const fSource = biomeSource(fProject, 'Underworld', 'F');
     const fKit = decisionKit(fSource);
     const f = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: fKit.assembleOccurrence,
       catalog,
       decision: batchDecisionAt(fSource, goldenFOccurrenceId(1, 1)),
@@ -1218,6 +1242,7 @@ describe('structured workspace decision assembly', () => {
     if (gDecision?.normal.kind !== 'batch') throw new Error('blocked G takeover batch is missing');
     const gKit = decisionKit(gSource);
     const g = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: gKit.assembleOccurrence,
       catalog,
       decision: gDecision as WorkspaceAuthoredBatchDecision,
@@ -1262,6 +1287,7 @@ describe('structured workspace decision assembly', () => {
     if (decision?.normal.kind !== 'batch') throw new Error('F peer decision is missing');
     const kit = decisionKit(source);
     const assembly = assembleWorkspaceDecision({
+      persistence: 'authored',
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision: decision as WorkspaceAuthoredBatchDecision,

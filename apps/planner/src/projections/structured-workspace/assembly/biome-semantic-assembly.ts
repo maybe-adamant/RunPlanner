@@ -17,6 +17,15 @@ import {
   type RoomOccurrence,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
+import type { WorkspaceRunStateLauncher } from '../contracts/run-state';
+import type { WorkspaceInspectorDestination, WorkspaceMarker } from '../contracts/navigation';
+import type {
+  WorkspaceAuthoringFrontier,
+  WorkspaceBiomeField,
+  WorkspaceNode,
+  WorkspaceOccurrenceWorkbenchNode,
+  WorkspaceOccurrenceStageOutgoing,
+} from '../contracts/structure';
 import type {
   AuthoredFieldDescriptor,
   BiomeLayout,
@@ -32,17 +41,9 @@ import {
 import { requireWorkspaceRoom } from './catalog-room';
 import {
   StructuredWorkspaceProjectionContractError,
-  type WorkspaceAuthoringFrontier,
   type WorkspaceAssessment,
-  type WorkspaceBiomeField,
-  type WorkspaceInspectorDestination,
-  type WorkspaceMarker,
-  type WorkspaceNode,
-  type WorkspaceOccurrenceWorkbenchNode,
-  type WorkspaceOccurrenceStageOutgoing,
   type WorkspaceProjectionSource,
   type WorkspaceRewardControl,
-  type WorkspaceRunStateLauncher,
   type WorkspaceRoomPickerControl,
   type WorkspaceStatus,
 } from '../contract';
@@ -439,6 +440,7 @@ export function assembleWorkspaceBiomeSemantics(
   fountainRarityAssessment: import('./occurrence-action-row-projection').WorkspaceOccurrenceActionsInput['fountainRarityAssessment'] = undefined,
 ): WorkspaceBiomeSemanticAssembly {
   const { biome, evaluation, layout, plan } = source;
+
   const anomalyReplacementRoomGameNames =
     layout.progression.kind === 'generated'
       ? layout.progression.anomalyReplacement?.replacementRoomGameNames

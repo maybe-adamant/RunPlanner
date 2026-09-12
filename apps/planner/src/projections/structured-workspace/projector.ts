@@ -54,20 +54,22 @@ import {
 } from './interactions/interaction-requirements';
 import {
   type StructuredWorkspaceContextualServices,
-  type StructuredWorkspaceProjection,
-  type StructuredWorkspaceProjectionService,
-  type WorkspaceBiome,
-  type WorkspaceInspectorDestination,
   type WorkspaceRewardControl,
   type WorkspaceAspectHexTreeControl,
   type WorkspaceTraitOfferControl,
   type WorkspaceLevelResolutionControl,
   type WorkspaceRoomPickerControl,
-  type WorkspaceRunStateLauncher,
   type WorkspaceStatus,
 } from './contract';
 import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 import { projectHexTreeDomain } from './interactions/trait-offer-interactions';
+import type { WorkspaceInspectorDestination } from './contracts/navigation';
+import type { WorkspaceRunStateLauncher } from './contracts/run-state';
+import type {
+  StructuredWorkspaceProjection,
+  StructuredWorkspaceProjectionService,
+  WorkspaceBiome,
+} from './contracts/structure';
 
 function appendEncounterTraitControls(
   controls: Map<string, WorkspaceTraitOfferControl>,

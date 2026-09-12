@@ -63,13 +63,13 @@ import {
   type WorkspaceEncounterPhase,
   type WorkspaceAcquisitionConversionControl,
   type WorkspaceLevelResolutionControl,
-  type WorkspaceMarker,
   type WorkspaceTraitCarrierChildControl,
   type WorkspaceRewardControl,
   type WorkspaceTraitOfferControl,
   type WorkspaceTraitOfferStatus,
 } from '../contract';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
+import type { WorkspaceMarker } from '../contracts/navigation';
 
 /**
  * The occurrence assembler consumes only the lifecycle facts needed to project

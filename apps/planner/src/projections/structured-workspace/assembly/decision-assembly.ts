@@ -35,17 +35,9 @@ import { requireWorkspaceRoom } from './catalog-room';
 import {
   StructuredWorkspaceProjectionContractError,
   workspaceInteractionKey,
-  type WorkspaceBatchRepairIntent,
-  type WorkspaceEffectiveRewardStore,
-  type WorkspaceFieldsBatchContext,
-  type WorkspaceMissingPhysicalTarget,
-  type WorkspaceMissingTargetAuthoring,
-  type WorkspaceOccurrenceWorkbenchNode,
-  type WorkspacePhysicalTarget,
   type WorkspaceRewardControl,
   type WorkspaceRoomPickerControl,
   type WorkspaceStageDecisionRemoval,
-  type WorkspaceTargetRewardConsequence,
 } from '../contract';
 import type {
   WorkspaceBatchInteractionRequirement,
@@ -64,6 +56,16 @@ import { presentRunState } from '../presentation/run-state';
 import type { WorkspaceBiomeSource, WorkspaceEvaluatedBatchOverlay } from '../source-index';
 import { workspaceDeclaredPhysicalExits } from './topology-presentation';
 import { projectWorkspaceDoorContract } from './door-contract';
+import type {
+  WorkspaceBatchRepairIntent,
+  WorkspaceEffectiveRewardStore,
+  WorkspaceFieldsBatchContext,
+  WorkspaceMissingPhysicalTarget,
+  WorkspaceMissingTargetAuthoring,
+  WorkspaceOccurrenceWorkbenchNode,
+  WorkspacePhysicalTarget,
+  WorkspaceTargetRewardConsequence,
+} from '../contracts/structure';
 
 export type WorkspaceAuthoredBatchDecision = ExitDecision & {
   readonly normal: Extract<ExitDecision['normal'], { readonly kind: 'batch' }>;
@@ -109,8 +111,7 @@ interface WorkspaceDecisionAssemblyBaseInput {
   readonly assembleOccurrence: WorkspaceOccurrenceAssembler;
   readonly catalog: Catalog;
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
-  /** Tests and legacy direct callers default to authored; biome assembly is explicit. */
-  readonly persistence?: 'authored' | 'uncommitted';
+  readonly persistence: 'authored' | 'uncommitted';
   readonly source: WorkspaceBiomeSource;
 }
 
@@ -635,7 +636,7 @@ function roomControlsForBatch(
         kind: 'decisionEntryRoomPicker' as const,
         ordinaryTargetAuthoring: Object.freeze({ kind: 'ready' as const }),
         ordinaryTargetGameNames: Object.freeze([]),
-        persistence: input.persistence ?? 'authored',
+        persistence: input.persistence,
         takeoverGameNames: Object.freeze([]),
       }),
     );
@@ -653,12 +654,8 @@ function roomControlsForBatch(
           decisionOwner,
           kind: 'decisionEntryRoomPicker' as const,
           ordinaryTargetAuthoring: missing.authoring,
-          ordinaryTargetGameNames: ordinaryTargetGameNames(
-            input,
-            input.persistence ?? 'authored',
-            address,
-          ),
-          persistence: input.persistence ?? 'authored',
+          ordinaryTargetGameNames: ordinaryTargetGameNames(input, input.persistence, address),
+          persistence: input.persistence,
           takeoverGameNames:
             input.source.layout.progression.kind === 'generated'
               ? takeoverGameNames(input.catalog, input.source.plan.biomeKey)
@@ -687,7 +684,7 @@ function batchInteractionRequirements(
   batch: WorkspaceDecisionBatchNode,
 ): readonly WorkspaceBatchInteractionRequirement[] {
   const exitSelection =
-    ((input.persistence ?? 'authored') === 'uncommitted' && batch.targets.length === 0) ||
+    (input.persistence === 'uncommitted' && batch.targets.length === 0) ||
     (decision.selection.kind === 'derived' &&
       batch.zagreusContract === undefined &&
       batch.chaos === undefined)
@@ -769,7 +766,7 @@ function batchInteractionRequirements(
       ...(fieldsCageOutcome === undefined ? {} : { fieldsCageOutcome }),
       kind: 'batchControls' as const,
       owner: batch.owner,
-      persistence: input.persistence ?? 'authored',
+      persistence: input.persistence,
       ...(rewardStore === undefined ? {} : { rewardStore }),
       ...(zagreusContract === undefined ? {} : { zagreusContract }),
       ...(chaos === undefined ? {} : { chaos }),
@@ -1053,7 +1050,7 @@ function assembleBatchDecision(
           });
         })();
   const runState =
-    (input.persistence ?? 'authored') === 'authored' && owner.source.kind === 'hubDecision'
+    input.persistence === 'authored' && owner.source.kind === 'hubDecision'
       ? input.source.runState(owner)
       : undefined;
   const base = {
@@ -1091,7 +1088,7 @@ function assembleBatchDecision(
     marker: input.markerDestinations.marker(owner),
     missingTargets: visibleMissingTargets,
     owner,
-    persistence: input.persistence ?? 'authored',
+    persistence: input.persistence,
     ...(repairIntent === undefined ? {} : { repairIntent }),
     ...(hasEditableAuthoredRewardStore
       ? {

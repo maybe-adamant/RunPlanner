@@ -22,6 +22,9 @@ import {
   acquisitionSiteFromStorageKey,
   INFERNAL_CONTRACT_ENTRY_KEY,
 } from '@run-planner/engine/authored-project';
+import type { WorkspaceRunStateLauncher } from '../contracts/run-state';
+import type { WorkspaceOccurrenceWorkbenchNode, WorkspaceDoorReward } from '../contracts/structure';
+import type { WorkspaceRoomTab } from '../contracts/navigation';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type {
   CanonicalAuthoredRoom,
@@ -37,14 +40,10 @@ import { summarizeRewardOffer } from '@planner/projections/rewardPicker';
 import { requireWorkspaceRoom as requireRoom } from './catalog-room';
 import {
   StructuredWorkspaceProjectionContractError,
-  type WorkspaceOccurrenceWorkbenchNode,
   type WorkspaceRewardControl,
-  type WorkspaceDoorReward,
   type WorkspaceRoomLocal,
   type WorkspaceRoomPickerControl,
   type WorkspaceRoomSummary,
-  type WorkspaceRoomTab,
-  type WorkspaceRunStateLauncher,
 } from '../contract';
 import type { WorkspaceOccurrenceInteractionRequirement } from '../interactions/interaction-requirements';
 import {

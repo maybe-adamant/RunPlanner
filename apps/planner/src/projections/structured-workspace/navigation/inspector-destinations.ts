@@ -1,17 +1,14 @@
-import {
-  StructuredWorkspaceProjectionContractError,
-  type WorkspaceBiome,
-  type WorkspaceInspectorDestination,
-  type WorkspaceInspectorSubject,
-  type WorkspaceNode,
-  type WorkspaceRailEntry,
-  type WorkspaceRoomSummary,
-} from '../contract';
+import { StructuredWorkspaceProjectionContractError, type WorkspaceRoomSummary } from '../contract';
 import {
   workspaceHubMainRewardAcquisitionMarkers,
   workspaceHubMainRewardMarkers,
   workspaceOccurrenceOwnedMarkers,
 } from './marker-ownership';
+import type {
+  WorkspaceInspectorDestination,
+  WorkspaceInspectorSubject,
+} from '../contracts/navigation';
+import type { WorkspaceBiome, WorkspaceNode, WorkspaceRailEntry } from '../contracts/structure';
 
 /** Final workspace products needed to bind exact semantic focus for one biome. */
 export interface WorkspaceInspectorDestinationBindingInput {
