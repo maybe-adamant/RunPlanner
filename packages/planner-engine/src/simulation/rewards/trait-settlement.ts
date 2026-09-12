@@ -56,7 +56,7 @@ import {
 } from './trait-settlement/encounter-child-settlement';
 import { addRewardFinding } from './findings';
 import { settleReachedLevelResolution } from './level-resolution-settlement';
-import { isTraitOfferMutationEvent } from '../traits/history';
+import { isTraitOfferMutationEvent } from '../traits/history/fold';
 
 export interface ReachedTraitChildCheckpoint {
   readonly address: SemanticAddress;

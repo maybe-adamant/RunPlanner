@@ -3,7 +3,10 @@
  * import their nearest semantic owner; this entry preserves the published
  * engine vocabulary.
  */
-export * from './history';
+export * from './history/model';
+export * from './history/upgrades';
+export * from './history/fold';
+export * from './history/transitions';
 export * from './offer-domain';
 export * from './offers';
 export * from './level-effects';

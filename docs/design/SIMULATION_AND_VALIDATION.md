@@ -293,6 +293,16 @@ passing the coordinator's mutable ordered state through a wrapper or remerging
 partial branches, findings, and artifacts. Otherwise the chronological
 coordinator remains the coherent authority.
 
+Trait history keeps its event/state contracts, shared upgrade predicates,
+ordered fold, and event-producing transitions in `simulation/traits/history/`.
+Transitions append events and return complete folded histories and due-effect
+products; lifecycle callers still determine when they run. The fold retains
+stable within-sequence order and applies element derivation and newly activated
+rarity-floor promotion after the whole sequence group. Its local mutation and
+promotion helpers are not separate event handlers or scheduler services.
+Steady Growth's candidate family owns the address-bound artifact over captured
+thresholds and invokes the same transition assessor as selected settlement.
+
 Producer-role settlement returns branches, ordered finding emissions, role
 frontiers, and trait-child checkpoints together. Its caller accumulates that
 complete product through the existing finding merge rules. Acquisition sites,

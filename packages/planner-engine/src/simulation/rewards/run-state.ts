@@ -17,7 +17,7 @@ import {
   type RewardTypeDeclaration,
 } from '../../reward-kernel';
 import type { HistoryCounters, HistoryStateView } from '../history';
-import type { TraitHistoryState } from '../traits/history';
+import type { TraitHistoryState } from '../traits/history/model';
 import type { RewardBranchState } from './branch-primitives';
 import { artificerStatus } from '../arcana-fear';
 

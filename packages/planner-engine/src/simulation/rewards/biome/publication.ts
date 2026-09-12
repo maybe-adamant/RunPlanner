@@ -11,7 +11,7 @@ import {
   type FountainRarityCandidateArtifacts,
 } from '../../keepsakes/candidate-artifacts';
 import { type PurgingPoolCandidateArtifacts } from '../../commerce/purging-pool';
-import { type SteadyGrowthCandidateArtifacts } from '../../traits/history';
+import { type SteadyGrowthCandidateArtifacts } from '../../candidates/steady-growth';
 import { type StygianWellCandidateArtifacts } from '../../commerce/stygian-well';
 import type {
   LevelResolutionCandidateArtifacts,

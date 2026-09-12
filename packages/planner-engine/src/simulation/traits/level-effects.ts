@@ -339,11 +339,10 @@ import type { AuthoredLevelResolution } from '../../authored-project/traits';
 export type { TraitFindingCode } from '../model';
 import {
   isPomUpgradeTarget,
-  foldTraitHistoryEvents,
   nextRarity,
   isPomEligibleTrait,
   hasEffectiveInRunUpgrade,
-  type TraitHistoryState,
-  type TraitLevelMutationEvent,
-} from './history';
+} from './history/upgrades';
+import { foldTraitHistoryEvents } from './history/fold';
+import type { TraitHistoryState, TraitLevelMutationEvent } from './history/model';
 import type { TraitAssessmentFinding, TraitOfferContext } from './offer-domain';

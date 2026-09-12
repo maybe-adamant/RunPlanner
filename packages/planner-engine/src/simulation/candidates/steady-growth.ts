@@ -1,7 +1,14 @@
 import type { Catalog } from '../../catalog-schema';
-import type { SteadyGrowthOutcomeAddress } from '../../authored-project/addresses';
+import {
+  semanticAddressKey,
+  type SteadyGrowthOutcomeAddress,
+} from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
-import { type SteadyGrowthCandidateArtifacts } from '../traits/history';
+import {
+  assessSteadyGrowthTarget,
+  type ReachedSteadyGrowthThreshold,
+  type SteadyGrowthTargetAssessment,
+} from '../traits/history/transitions';
 import type { ProjectEvaluation } from '../evaluation-products';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 
@@ -20,6 +27,41 @@ export interface EvaluatedSteadyGrowthOutcomeCandidate {
     readonly selectedPossible: boolean;
     readonly emptyNoOp: boolean;
   };
+}
+
+/** Exact threshold frontiers retained at one automatic Steady Growth row. */
+export interface SteadyGrowthCandidateCapability {
+  readonly thresholds: readonly ReachedSteadyGrowthThreshold[];
+  readonly evaluate: (
+    targetTraitKey: string | null | undefined,
+  ) => readonly SteadyGrowthTargetAssessment[];
+}
+export interface SteadyGrowthCandidateArtifacts {
+  readonly at: (address: SteadyGrowthOutcomeAddress) => SteadyGrowthCandidateCapability | undefined;
+}
+export function createSteadyGrowthCandidateArtifacts(
+  catalog: Catalog,
+  contexts: ReadonlyMap<string, readonly ReachedSteadyGrowthThreshold[]>,
+): SteadyGrowthCandidateArtifacts {
+  const privateContexts = new Map(contexts);
+  return Object.freeze({
+    at: (address: SteadyGrowthOutcomeAddress) => {
+      const thresholds = privateContexts.get(semanticAddressKey(address));
+      if (thresholds === undefined) return undefined;
+      return Object.freeze({
+        thresholds,
+        evaluate: (targetTraitKey: string | null | undefined) =>
+          Object.freeze(
+            thresholds.map((threshold) =>
+              assessSteadyGrowthTarget(catalog, threshold, targetTraitKey),
+            ),
+          ),
+      });
+    },
+  });
+}
+export function createEmptySteadyGrowthCandidateArtifacts(): SteadyGrowthCandidateArtifacts {
+  return Object.freeze({ at: () => undefined });
 }
 
 export function evaluateSteadyGrowthOutcomeCandidate(

@@ -9,7 +9,8 @@ import {
   traitOfferSupportsExhaustion,
 } from '../../../authored-project/traits';
 import { createDefaultAuthoredHexTree } from '../../../authored-project/hex-tree';
-import { ordinaryEquippedSlots, type TraitHistoryState } from '../history';
+import { ordinaryEquippedSlots } from '../history/fold';
+import type { TraitHistoryState } from '../history/model';
 import { targetedAcquisitionTargetKeys } from '../level-effects';
 import {
   assessTraitOffer,

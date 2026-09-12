@@ -9,7 +9,8 @@ import {
   type AuthoredTraitOfferTraits,
   type TraitOptionKey,
 } from '../../authored-project/traits';
-import { hasEffectiveInRunUpgrade, type TraitHistoryState } from '../traits/history';
+import { hasEffectiveInRunUpgrade } from '../traits/history/upgrades';
+import type { TraitHistoryState } from '../traits/history/model';
 import { assessTraitOption } from '../traits/authoring/assessment';
 import {
   figurineRarityForRank,

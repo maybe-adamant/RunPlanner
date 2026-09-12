@@ -1,7 +1,8 @@
 import type { Catalog } from '../../catalog-schema';
 import type { AuthoredTraitOption } from '../../authored-project/traits';
 import type { KeepsakeState } from '../keepsakes/state';
-import { isLevelBearingTrait, type TraitHistoryState } from './history';
+import { isLevelBearingTrait } from './history/upgrades';
+import type { TraitHistoryState } from './history/model';
 import type { TraitAssessment, TraitAssessmentFinding, TraitOfferContext } from './offer-domain';
 
 export interface TraitOfferOptionLevelResolution {

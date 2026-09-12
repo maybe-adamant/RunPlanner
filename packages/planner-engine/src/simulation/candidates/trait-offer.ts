@@ -17,7 +17,7 @@ import type {
   TraitOfferCandidateArtifacts,
 } from './trait-offer-capability';
 import type { ProjectEvaluation } from '../evaluation-products';
-import type { TraitTargetedAcquisitionAssessment } from '../traits/history';
+import type { TraitTargetedAcquisitionAssessment } from '../traits/history/model';
 import type {
   TraitAssessment,
   TraitAssessmentFinding,
