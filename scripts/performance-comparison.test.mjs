@@ -2,7 +2,7 @@ import { mkdirSync, readdirSync, writeFileSync, existsSync, rmSync } from 'node:
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { afterEach, describe, it } from 'node:test';
+import { afterEach, beforeEach, describe, it } from 'node:test';
 import process from 'node:process';
 import assert from 'node:assert/strict';
 
@@ -20,8 +20,15 @@ import {
 } from './compare-performance-snapshot.mjs';
 
 const temporaryDirectories = [];
+const callerBaseRef = process.env.RUN_PLANNER_PERFORMANCE_BASE_REF;
+
+beforeEach(() => {
+  delete process.env.RUN_PLANNER_PERFORMANCE_BASE_REF;
+});
 
 afterEach(() => {
+  if (callerBaseRef === undefined) delete process.env.RUN_PLANNER_PERFORMANCE_BASE_REF;
+  else process.env.RUN_PLANNER_PERFORMANCE_BASE_REF = callerBaseRef;
   for (const directory of temporaryDirectories.splice(0)) {
     // The production comparator owns recursive cleanup; test fixtures are tiny and explicit.
     rmSync(directory, { recursive: true, force: true });
