@@ -1,3 +1,4 @@
+import type { WorkspaceRewardInteraction } from '../contracts/rewards';
 import {
   semanticAddressKey,
   type DerivedShopEntryEditCommand,
@@ -11,11 +12,7 @@ import type {
 } from '@run-planner/engine/authored-project';
 
 import { StructuredWorkspaceProjectionContractError } from '../contract';
-import type {
-  WorkspaceCommandIntent,
-  WorkspaceRewardControl,
-  WorkspaceRewardInteraction,
-} from '../contract';
+import type { WorkspaceCommandIntent, WorkspaceRewardControl } from '../contract';
 
 type RewardPayloadCommand = Extract<
   ProjectCommand,

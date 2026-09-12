@@ -1,3 +1,10 @@
+import type { WorkspaceRewardInteraction } from '../contracts/rewards';
+import type {
+  WorkspaceLevelResolutionControl,
+  WorkspaceLevelResolutionInteraction,
+  WorkspaceTraitOfferControl,
+  WorkspaceTraitOfferInteraction,
+} from '../contracts/traits';
 import {
   semanticAddressKey,
   type JudgmentArcanaAddress,
@@ -7,27 +14,22 @@ import {
   type AuthoredRewardState,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
-import type { CandidateProjectionSession } from '@planner/projections/candidateProjection';
-import type { RewardPickerProjectionService } from '@planner/projections/rewardPicker';
+import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
+import type { RewardPickerProjectionService } from '@planner/projections/rewards/rewardPicker';
 
 import { bindRewardPayloadInteractions } from './reward-payload-interactions';
 import { bindAcquisitionConversionInteractions } from './acquisition-conversion-interactions';
-import { bindTraitOfferInteractions } from './trait-offer-interactions';
+import { bindTraitOfferInteractions } from './trait-offers/bind';
 import { bindResolutionInteractions } from './resolution-interactions';
 import { bindShopOfferInteractions } from './shop-offer-interactions';
 
 import { workspaceInteractionKey } from '../contract';
 import type {
   WorkspaceRewardControl,
-  WorkspaceRewardInteraction,
-  WorkspaceTraitOfferControl,
-  WorkspaceLevelResolutionControl,
-  WorkspaceLevelResolutionInteraction,
   WorkspaceJudgmentArcanaInteraction,
   WorkspaceFigurineArcanaInteraction,
   WorkspaceKeepsakeSelectionInteraction,
   WorkspaceKeepsakeEquipResultInteraction,
-  WorkspaceTraitOfferInteraction,
   WorkspaceSteadyGrowthControl,
   WorkspaceSteadyGrowthInteraction,
   WorkspaceTranscendentEmbryoControl,
@@ -56,7 +58,7 @@ export interface WorkspaceRewardChildInteractionCatalog {
 export function bindRewardChildInteractions(input: {
   readonly catalog: Catalog;
   readonly candidates: CandidateProjectionSession;
-  readonly contextualPicker: import('@planner/projections/contextualPicker').ContextualPickerProjectionService;
+  readonly contextualPicker: import('@planner/projections/contextual/contextualPicker').ContextualPickerProjectionService;
   readonly project: import('@run-planner/engine/simulation').ProjectEvaluationAssembly['project'];
   readonly rewardControls: ReadonlyMap<string, WorkspaceRewardControl>;
   readonly traitControls?: ReadonlyMap<string, WorkspaceTraitOfferControl>;

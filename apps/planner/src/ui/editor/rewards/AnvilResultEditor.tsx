@@ -1,7 +1,7 @@
 import type { AuthoredAnvilResult } from '@run-planner/engine/authored-project';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { WorkspaceAcquisitionConversionInteraction } from '@planner/projections/structured-workspace';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';

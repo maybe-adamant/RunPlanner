@@ -1,7 +1,7 @@
 import type { AuthoredChaosTraitOffer, TraitOptionKey } from '@run-planner/engine/authored-project';
 import type { ChaosNumericOperand, TraitRarity } from '@run-planner/engine/catalog-schema';
 import type { WorkspaceChaosOfferInteraction } from '@planner/projections/structured-workspace';
-import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { ChaosBlessingValueFields } from './ChaosBlessingValueFields';
 import { ChaosValueSlider } from './ChaosValueSlider';

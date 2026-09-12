@@ -23,7 +23,7 @@ import {
 import type {
   LevelResolutionCandidateGroup,
   LevelResolutionCandidateProjection,
-} from '@planner/projections/candidateProjection';
+} from '@planner/projections/candidates/candidateProjection';
 import type { WorkspaceLevelResolutionInteraction } from '@planner/projections/structured-workspace';
 import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures/underworld';
 

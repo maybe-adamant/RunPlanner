@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 import type {
   CandidateOptionProjection,
   EncounterCandidateProjectionEvaluation,
-} from './candidateProjection';
-import { createContextualOptionResolver } from './contextualOptions';
-import { createContextualPickerProjection } from './contextualPicker';
+} from './candidates/candidateProjection';
+import { createContextualOptionResolver } from './contextual/contextualOptions';
+import { createContextualPickerProjection } from './contextual/contextualPicker';
 import { projectEncounterPicker } from './encounterPickerProjection';
 import { catalog } from '@run-planner/hades2-catalog';
 

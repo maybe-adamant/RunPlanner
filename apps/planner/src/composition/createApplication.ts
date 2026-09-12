@@ -6,11 +6,11 @@ import {
 import { summarizeCatalog } from '@run-planner/engine/catalog-schema';
 import { type ProjectDocument } from '@run-planner/engine/authored-project';
 
-import { createCandidateSessionFactory } from '../projections/candidateProjection';
-import { createContextualOptionResolver } from '../projections/contextualOptions';
-import { createContextualPickerProjection } from '../projections/contextualPicker';
-import { createRewardPickerProjection } from '../projections/rewardPicker';
-import { createTraitDomainProjection } from '../projections/traitDomainProjection';
+import { createCandidateSessionFactory } from '../projections/candidates/candidateProjection';
+import { createContextualOptionResolver } from '../projections/contextual/contextualOptions';
+import { createContextualPickerProjection } from '../projections/contextual/contextualPicker';
+import { createRewardPickerProjection } from '../projections/rewards/rewardPicker';
+import { createTraitDomainProjection } from '../projections/rewards/traitDomainProjection';
 import { createStructuredWorkspaceProjection } from '../projections/structured-workspace';
 import {
   createAutosaveCoordinator,

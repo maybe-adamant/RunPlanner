@@ -1,6 +1,9 @@
 import { type OccurrenceAddress } from '@run-planner/engine/authored-project';
 import type { ReactNode } from 'react';
-import { candidateSupport, presentCandidateLabel } from '@planner/projections/candidateProjection';
+import {
+  candidateSupport,
+  presentCandidateLabel,
+} from '@planner/projections/candidates/candidateProjection';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -26,7 +29,7 @@ import { CandidateSelect } from './CandidateSelect';
 import { DoorRewardEditor } from './DoorRewardEditor';
 import { NemesisEventEditor } from './NemesisEventEditor';
 
-const emptyEncounterPicker: import('@planner/projections/contextualPicker').ContextualPickerModel<string> =
+const emptyEncounterPicker: import('@planner/projections/contextual/contextualPicker').ContextualPickerModel<string> =
   Object.freeze({ sections: Object.freeze([]) });
 function LocalVisitOrderSelect({
   interactions,

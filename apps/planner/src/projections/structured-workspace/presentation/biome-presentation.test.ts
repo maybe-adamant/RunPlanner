@@ -34,7 +34,7 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import type { WorkspaceBiome } from '../contracts/structure';
 import { workspaceDecisionOwnedMarkers } from '../navigation/marker-ownership';
-import { summarizeRewardOffer } from '@planner/projections/rewardPicker';
+import { summarizeRewardOffer } from '@planner/projections/rewards/rewardPicker';
 import { presentWorkspaceBiome } from './biome-presentation';
 import { assembleWorkspaceBiomeSemantics } from '../assembly/biome-semantic-assembly';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from '../source-index';

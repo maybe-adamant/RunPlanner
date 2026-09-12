@@ -11,7 +11,7 @@ import type {
   WorkspaceChaosOfferDomain,
   WorkspaceChaosOfferInteraction,
 } from '@planner/projections/structured-workspace';
-import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { ChaosTraitOfferEditor } from './ChaosTraitOfferEditor';
 
 function pickerModel(keys: readonly string[], selectedKey: string): ContextualPickerModel<string> {

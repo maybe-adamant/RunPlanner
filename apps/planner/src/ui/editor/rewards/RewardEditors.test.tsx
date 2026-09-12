@@ -19,7 +19,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type {
   CandidateSessionFactoryOptions,
   RewardCandidateOwner,
-} from '@planner/projections/candidateProjection';
+} from '@planner/projections/candidates/candidateProjection';
 import type { WorkspaceInteractionCatalog } from '@planner/projections/structured-workspace';
 import type { StructuredWorkspaceProjectionService } from '@planner/projections/structured-workspace';
 import { createStructuredWorkspaceTestServices } from '@planner-test/fixtures/structuredWorkspace';

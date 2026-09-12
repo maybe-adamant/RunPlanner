@@ -2,9 +2,9 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { ShopOptionSelection } from '@run-planner/engine/reward-kernel';
 import { locallyValidRewardOffers } from '@run-planner/engine/reward-kernel';
 
-import type { CandidateProjectionSession } from '@planner/projections/candidateProjection';
-import type { ContextualPickerProjectionService } from '@planner/projections/contextualPicker';
-import type { RewardPickerProjectionService } from '@planner/projections/rewardPicker';
+import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
+import type { ContextualPickerProjectionService } from '@planner/projections/contextual/contextualPicker';
+import type { RewardPickerProjectionService } from '@planner/projections/rewards/rewardPicker';
 
 import type { WorkspaceRewardControl, WorkspaceShopOfferInteraction } from '../contract';
 

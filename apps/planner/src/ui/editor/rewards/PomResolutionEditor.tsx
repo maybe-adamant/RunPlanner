@@ -5,8 +5,8 @@ import {
 } from '@run-planner/engine/authored-project';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { LevelResolutionCandidateGroup } from '@planner/projections/candidateProjection';
-import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import type { LevelResolutionCandidateGroup } from '@planner/projections/candidates/candidateProjection';
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,

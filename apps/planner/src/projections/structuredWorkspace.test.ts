@@ -9,11 +9,11 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
-import { createCandidateSessionFactory } from './candidateProjection';
-import { createContextualOptionResolver } from './contextualOptions';
-import { createContextualPickerProjection } from './contextualPicker';
-import { createRewardPickerProjection } from './rewardPicker';
-import { createTraitDomainProjection } from './traitDomainProjection';
+import { createCandidateSessionFactory } from './candidates/candidateProjection';
+import { createContextualOptionResolver } from './contextual/contextualOptions';
+import { createContextualPickerProjection } from './contextual/contextualPicker';
+import { createRewardPickerProjection } from './rewards/rewardPicker';
+import { createTraitDomainProjection } from './rewards/traitDomainProjection';
 import {
   createStructuredWorkspaceProjection,
   type StructuredWorkspaceProjection,

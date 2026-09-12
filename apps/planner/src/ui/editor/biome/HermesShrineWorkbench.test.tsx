@@ -22,7 +22,7 @@ import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
-import { candidateSupport } from '@planner/projections/candidateProjection';
+import { candidateSupport } from '@planner/projections/candidates/candidateProjection';
 import { projectRouteHermesShrineIndex } from '@planner/projections/routeRoomFeatureIndex';
 import {
   authoredProjectCommandDispatched,

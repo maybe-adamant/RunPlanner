@@ -6,7 +6,7 @@ import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspac
 import { useAppDispatch } from '@planner/state/store';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
-import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { useLayoutEffect } from 'react';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { TranscendentEmbryoOutcomeFields } from './rewards/TranscendentEmbryoOutcomeFields';

@@ -1,8 +1,14 @@
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 
-import { candidateSupport, type CandidateOptionProjection } from './candidateProjection';
-import type { ContextualPickerModel, ContextualPickerProjectionService } from './contextualPicker';
+import {
+  candidateSupport,
+  type CandidateOptionProjection,
+} from '../candidates/candidateProjection';
+import type {
+  ContextualPickerModel,
+  ContextualPickerProjectionService,
+} from '../contextual/contextualPicker';
 import type { ProjectedRewardDomain, ProjectedRewardDomainOption } from './rewardDomainProjection';
 
 export type RewardPickerStep = 'type' | 'source' | 'chosen' | 'spurned';

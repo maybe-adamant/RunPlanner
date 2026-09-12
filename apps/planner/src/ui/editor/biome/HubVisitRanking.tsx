@@ -11,7 +11,7 @@ import {
   type WorkspaceHubSlot,
   type WorkspaceMarker,
 } from '@planner/projections/structured-workspace';
-import { candidateSupport } from '@planner/projections/candidateProjection';
+import { candidateSupport } from '@planner/projections/candidates/candidateProjection';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';

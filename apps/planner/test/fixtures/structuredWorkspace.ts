@@ -5,11 +5,11 @@ import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import {
   createCandidateSessionFactory,
   type CandidateSessionFactoryOptions,
-} from '@planner/projections/candidateProjection';
-import { createContextualOptionResolver } from '@planner/projections/contextualOptions';
-import { createContextualPickerProjection } from '@planner/projections/contextualPicker';
-import { createRewardPickerProjection } from '@planner/projections/rewardPicker';
-import { createTraitDomainProjection } from '@planner/projections/traitDomainProjection';
+} from '@planner/projections/candidates/candidateProjection';
+import { createContextualOptionResolver } from '@planner/projections/contextual/contextualOptions';
+import { createContextualPickerProjection } from '@planner/projections/contextual/contextualPicker';
+import { createRewardPickerProjection } from '@planner/projections/rewards/rewardPicker';
+import { createTraitDomainProjection } from '@planner/projections/rewards/traitDomainProjection';
 import {
   createStructuredWorkspaceProjection,
   type StructuredWorkspaceProjection,

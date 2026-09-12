@@ -3,7 +3,7 @@ import {
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   type AcquisitionDisposition,
 } from '@run-planner/engine/authored-project';
-import type { CandidateProjectionSession } from '@planner/projections/candidateProjection';
+import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
 
 import { derivedShopPayloadIntent } from './reward-child-command-binding';
 import { workspaceInteractionKey } from '../contract';

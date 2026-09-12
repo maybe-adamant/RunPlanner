@@ -32,7 +32,7 @@ import {
   rewardDomainOffers,
   type PreparedRewardDomain,
   type ProjectedRewardDomain,
-} from './rewardDomainProjection';
+} from '../rewards/rewardDomainProjection';
 export interface RewardDomainCache {
   readonly rewardTypeDomainCache: WeakMap<
     ProjectEvaluationAssembly,

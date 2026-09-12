@@ -1,8 +1,11 @@
 import type {
   CandidateOptionProjection,
   EncounterCandidateProjectionEvaluation,
-} from './candidateProjection';
-import type { ContextualPickerModel, ContextualPickerProjectionService } from './contextualPicker';
+} from './candidates/candidateProjection';
+import type {
+  ContextualPickerModel,
+  ContextualPickerProjectionService,
+} from './contextual/contextualPicker';
 
 export interface EncounterPickerChoice {
   readonly label: string;

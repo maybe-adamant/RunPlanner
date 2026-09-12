@@ -8,7 +8,7 @@ import {
 import type { DirectTraitSetKey } from '@run-planner/engine/catalog-schema';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
-import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import {
   type WorkspaceAllTogetherSetDomain,
   type WorkspaceConcaveStoneDomain,

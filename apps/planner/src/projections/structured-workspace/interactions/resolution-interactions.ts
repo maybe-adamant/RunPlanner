@@ -1,4 +1,8 @@
 import type {
+  WorkspaceLevelResolutionControl,
+  WorkspaceLevelResolutionInteraction,
+} from '../contracts/traits';
+import type {
   AuthoredLevelResolution,
   JudgmentArcanaAddress,
   FigurineArcanaAddress,
@@ -7,16 +11,16 @@ import type {
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { transcendentEmbryoBlessingValues } from '@run-planner/engine/simulation';
-import type { CandidateProjectionSession } from '@planner/projections/candidateProjection';
-import { projectDirectTraitOutcomePicker } from '@planner/projections/directTraitOutcomeProjection';
+import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
+import { projectDirectTraitOutcomePicker } from '@planner/projections/contextual/directTraitOutcomeProjection';
 import type {
   CandidateOptionProjection,
   KeepsakeEquipResultOptionProjection,
-} from '@planner/projections/candidateProjection';
+} from '@planner/projections/candidates/candidateProjection';
 import type {
   ContextualPickerModel,
   ContextualPickerProjectionService,
-} from '@planner/projections/contextualPicker';
+} from '@planner/projections/contextual/contextualPicker';
 
 import {
   derivedShopPayloadIntent,
@@ -28,8 +32,6 @@ import type {
   WorkspaceKeepsakeEquipResultInteraction,
   WorkspaceKeepsakeEquipResultDomain,
   WorkspaceKeepsakeSelectionInteraction,
-  WorkspaceLevelResolutionControl,
-  WorkspaceLevelResolutionInteraction,
   WorkspaceRewardControl,
   WorkspaceSteadyGrowthControl,
   WorkspaceSteadyGrowthInteraction,

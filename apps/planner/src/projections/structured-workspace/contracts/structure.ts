@@ -1,3 +1,4 @@
+import type { WorkspaceAspectHexTreeControl } from './traits';
 import type {
   AuthoredBatchState,
   BiomeAddress,
@@ -17,7 +18,6 @@ import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type { CanonicalBatch, ProjectEvaluationAssembly } from '@run-planner/engine/simulation';
 
 import type {
-  WorkspaceAspectHexTreeControl,
   WorkspaceChaosExitControl,
   WorkspaceCommandIntent,
   WorkspaceInteractionCatalog,

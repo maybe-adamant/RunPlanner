@@ -1,4 +1,4 @@
-import type { TraitOfferStatePresentation } from '@planner/projections/traitProjection';
+import type { TraitOfferStatePresentation } from '@planner/projections/rewards/traitProjection';
 
 export function TraitOfferStateInspector({
   presentation,

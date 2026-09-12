@@ -28,7 +28,7 @@ import {
   fieldsOptionalRewardCountSupport,
   type CanonicalAuthoredRoom,
 } from '@run-planner/engine/simulation';
-import { summarizeRewardOffer } from '@planner/projections/rewardPicker';
+import { summarizeRewardOffer } from '@planner/projections/rewards/rewardPicker';
 import { resolveWorkspaceFixedRewardOffer } from './catalog-room';
 import {
   requireEncounterEnvelope,

@@ -7,7 +7,7 @@ import type {
 import type {
   CandidateOptionProjection,
   CandidateProjectionEvaluation,
-} from './candidateProjection';
+} from '../candidates/candidateProjection';
 
 export type ContextualPickerSectionKind =
   'required' | 'selectedInvalid' | 'category' | 'unassessed' | 'unavailable';

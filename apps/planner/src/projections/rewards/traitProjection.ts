@@ -15,10 +15,10 @@ import type {
 import type {
   CandidateOptionProjection,
   CandidateProjectionEvaluation,
-} from './candidateProjection';
-import { candidateSupport } from './candidateProjection';
-import { presentTraitCandidateFinding } from './evaluationProjection';
-import type { WorkspaceInteractionCatalog } from './structured-workspace';
+} from '../candidates/candidateProjection';
+import { candidateSupport } from '../candidates/candidateProjection';
+import { presentTraitCandidateFinding } from '../evaluationProjection';
+import type { WorkspaceInteractionCatalog } from '../structured-workspace';
 
 export interface TraitOfferOptionFeedback {
   readonly legal: boolean;

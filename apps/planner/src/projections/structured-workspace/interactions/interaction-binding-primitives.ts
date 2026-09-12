@@ -1,7 +1,7 @@
 import type {
   CandidateOptionProjection,
   CandidateProjectionEvaluation,
-} from '@planner/projections/candidateProjection';
+} from '@planner/projections/candidates/candidateProjection';
 import type { SemanticAddress } from '@run-planner/engine/authored-project';
 import type { WorkspaceCandidateInteraction, WorkspaceInteractionChoice } from '../contract';
 import { workspaceInteractionKey } from '../contract';

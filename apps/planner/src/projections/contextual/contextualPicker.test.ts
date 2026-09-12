@@ -3,7 +3,7 @@ import { createBiomeAddress } from '@run-planner/engine/authored-project';
 import type { ProjectCandidateEvaluation } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import type { CandidateOptionProjection } from './candidateProjection';
+import type { CandidateOptionProjection } from '../candidates/candidateProjection';
 import { createContextualOptionResolver } from './contextualOptions';
 import { createContextualPickerProjection } from './contextualPicker';
 

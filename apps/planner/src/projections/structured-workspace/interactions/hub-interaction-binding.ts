@@ -3,7 +3,7 @@ import {
   candidateSupport,
   type CandidateOptionProjection,
   type CandidateProjectionSession,
-} from '@planner/projections/candidateProjection';
+} from '@planner/projections/candidates/candidateProjection';
 import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 
 import { StructuredWorkspaceProjectionContractError } from '../contract';

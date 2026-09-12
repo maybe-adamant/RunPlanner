@@ -2,7 +2,7 @@ import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import { useAppDispatch } from '@planner/state/store';
 import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import type { WorkspaceInteractionCatalog } from '@planner/projections/structured-workspace';
-import type { RouteTraitOfferProjection } from '@planner/projections/traitProjection';
+import type { RouteTraitOfferProjection } from '@planner/projections/rewards/traitProjection';
 
 export function RouteTraitsPanel({
   interactions,

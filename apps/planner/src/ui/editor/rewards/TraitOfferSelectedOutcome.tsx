@@ -1,7 +1,7 @@
 import { optionIndex, type AuthoredTraitOfferTraits } from '@run-planner/engine/authored-project';
 import { useEffect, useMemo } from 'react';
 
-import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type {
   WorkspaceCirceResolutionDomain,
   WorkspaceEchoLastRunBoonDomain,

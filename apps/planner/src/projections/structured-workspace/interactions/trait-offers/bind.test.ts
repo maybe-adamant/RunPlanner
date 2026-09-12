@@ -1,13 +1,13 @@
-import { describe, expect, it, vi } from 'vitest';
-
-import * as support from '@planner-test/support/structured-workspace/interaction-binding.test-support';
-import { candidateSupport } from '@planner/projections/candidateProjection';
-import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
-import { optionIndex } from '@run-planner/engine/authored-project';
 import type {
   WorkspaceTraitCarrierChildInteraction,
   WorkspaceTraitOptionDomainInteraction,
-} from '../contract';
+} from '@planner/projections/structured-workspace/contracts/traits';
+import { describe, expect, it, vi } from 'vitest';
+
+import * as support from '@planner-test/support/structured-workspace/interaction-binding.test-support';
+import { candidateSupport } from '@planner/projections/candidates/candidateProjection';
+import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
+import { optionIndex } from '@run-planner/engine/authored-project';
 import type {
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
@@ -68,7 +68,7 @@ function childFor<K extends WorkspaceTraitCarrierChildInteraction['child']['kind
   );
 }
 
-describe('trait-offer-interactions', () => {
+describe('trait-offers/bind', () => {
   it('binds the Chaos editor to the real typed domain and one complete save intent', () => {
     const project = createReachableNaturalChaosProject();
     const { interactions } = bind(project, 'Underworld', 'F');

@@ -16,7 +16,7 @@ import {
   projectRouteHermesShrineIndex,
   projectRouteStygianWellIndex,
 } from '@planner/projections/routeRoomFeatureIndex';
-import { projectRouteTraitOffers } from '@planner/projections/traitProjection';
+import { projectRouteTraitOffers } from '@planner/projections/rewards/traitProjection';
 import { routePanelSelected, semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import type {

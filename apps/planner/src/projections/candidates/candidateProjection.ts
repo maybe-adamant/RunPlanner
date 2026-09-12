@@ -61,7 +61,10 @@ import type {
   ShopOptionSelection,
 } from '@run-planner/engine/reward-kernel';
 
-import type { PreparedRewardDomain, ProjectedRewardDomain } from './rewardDomainProjection';
+import type {
+  PreparedRewardDomain,
+  ProjectedRewardDomain,
+} from '../rewards/rewardDomainProjection';
 import { createCandidateProjectionCore } from './candidateProjectionSession';
 import {
   createRewardRoomCandidateAdapters,

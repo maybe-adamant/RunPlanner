@@ -21,7 +21,7 @@ import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import {
   prepareTraitOptionDomain,
   type TraitOptionDomainProjection,
-} from '@planner/projections/traitDomainProjection';
+} from '@planner/projections/rewards/traitDomainProjection';
 import type {
   WorkspaceInteractionCatalog,
   WorkspaceTraitOfferInteraction,
