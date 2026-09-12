@@ -308,6 +308,15 @@ recursion, deferred-pickup separation, and blocked-child evidence; conversion
 generation does not call back into settlement or share its mutable accumulator.
 Candidate artifacts consume the captured frontiers rather than replaying sites.
 
+Shop inventory generation returns branches and finding emissions separately
+from acquisition settlement. The ordered Shop coordinator owns slot witnesses,
+purchase cohorts, branch survival, and pending-state continuation across
+interleaved room actions. Travel refill derivation and Gold materialization
+return complete products without sharing that coordinator's mutable builders.
+Gold retains its pre-source acquisition frontier; Travel retains its
+post-purchase generation facts. Resuming settlement must not replay inventory
+or regenerate those captured facts. Room exit closes remaining pending inventory.
+
 Level settlement likewise returns its branch and findings, keeping source-time
 target generation distinct from application against the current trait history.
 

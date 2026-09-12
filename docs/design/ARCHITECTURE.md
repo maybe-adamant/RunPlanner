@@ -273,6 +273,9 @@ offers, levels, and rarity; `simulation/commerce/` groups store assessments;
 `simulation/fields/` groups Fields spatial facts.
 `simulation/rewards/acquisition/` groups site traversal, conversion generation,
 ordered role settlement, source contracts, and acquisition candidate artifacts.
+`simulation/rewards/shop/` groups inventory generation, ordered Shop settlement,
+and derived-reward transitions; it delegates acquisition effects to the shared
+acquisition authorities rather than implementing a separate purchase simulator.
 Authored action state, contributions, defaults, and lifecycle structure live in
 `authored-project/room-actions/`, separate from simulation's action scheduling.
 Topology impact analysis lives with authored topology. These neighborhoods do
