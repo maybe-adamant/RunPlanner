@@ -15,7 +15,7 @@ import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorks
 import { LoadedEchoLastRunBoonChoice } from './TraitOfferEchoLastRunBoon';
 import { TraitOfferOrdinaryOption } from './TraitOfferOrdinaryOption';
 import { TraitOfferSelectedOutcome } from './TraitOfferSelectedOutcome';
-import { TraitOfferForm } from './TraitOfferForm';
+import { TraitOfferForm, TraitOfferShapeActions } from './TraitOfferForm';
 import { TraitOfferStateInspector } from './TraitOfferStateInspector';
 import { selectedTraitOutcomeDraftComplete } from './traitOfferOptions';
 import { ChaosTraitOfferEditor } from './ChaosTraitOfferEditor';
@@ -326,46 +326,18 @@ export function TraitOfferEditorShell({
           />
         }
         shapeActions={
-          nextTraitOfferDraft === undefined &&
-          !canRemoveOption &&
-          (fallbackGoldValue === undefined ||
-            (fallbackGoldSupport !== 'possible' &&
-              fallbackGoldSupport !== 'forced')) ? undefined : (
-            <div
-              aria-label="Offer shape actions"
-              className="trait-offer-shape-actions"
-              role="group"
-            >
-              {nextTraitOfferDraft === undefined ? null : (
-                <button
-                  className="quiet-action action-compact"
-                  onClick={() => updateValue(nextTraitOfferDraft)}
-                  type="button"
-                >
-                  Add option
-                </button>
-              )}
-              {!canRemoveOption || previousTraitOfferDraft === undefined ? null : (
-                <button
-                  className="quiet-action action-compact"
-                  onClick={() => updateValue(previousTraitOfferDraft)}
-                  type="button"
-                >
-                  Remove last option
-                </button>
-              )}
-              {fallbackGoldValue === undefined ||
-              (fallbackGoldSupport !== 'possible' && fallbackGoldSupport !== 'forced') ? null : (
-                <button
-                  className="quiet-action action-compact"
-                  onClick={() => updateValue(fallbackGoldValue)}
-                  type="button"
-                >
-                  Select Fallback Gold
-                </button>
-              )}
-            </div>
-          )
+          <TraitOfferShapeActions
+            {...(nextTraitOfferDraft === undefined
+              ? {}
+              : { onAdd: () => updateValue(nextTraitOfferDraft) })}
+            {...(!canRemoveOption || previousTraitOfferDraft === undefined
+              ? {}
+              : { onRemove: () => updateValue(previousTraitOfferDraft) })}
+            {...(fallbackGoldValue === undefined ||
+            (fallbackGoldSupport !== 'possible' && fallbackGoldSupport !== 'forced')
+              ? {}
+              : { onFallback: () => updateValue(fallbackGoldValue) })}
+          />
         }
         feedback={feedbackSection}
         recovery={recoveryAction}

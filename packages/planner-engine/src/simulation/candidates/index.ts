@@ -160,6 +160,8 @@ export type {
 } from './figurine-arcana';
 export {
   evaluateEchoLastRunBoonDraftSupport,
+  nextEchoLastRunBoonDraft,
+  previousEchoLastRunBoonDraft,
   echoLastRunBoonRarityCandidates,
   echoLastRunBoonTraitCandidatesForRow,
 } from './trait-offer';

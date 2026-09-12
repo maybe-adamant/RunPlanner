@@ -23,6 +23,8 @@ import type {
 import type { Catalog, TraitRarity } from '@run-planner/engine/catalog-schema';
 import {
   evaluateEchoLastRunBoonDraftSupport,
+  nextEchoLastRunBoonDraft,
+  previousEchoLastRunBoonDraft,
   echoLastRunBoonRarityCandidates,
   echoLastRunBoonTraitCandidatesForRow,
 } from '@run-planner/engine/simulation';
@@ -109,6 +111,18 @@ function echoRowsForEngine(
       identity === undefined
         ? outcome
         : Object.freeze({ ...outcome, giverKey: identity.giverKey, traitKey: identity.traitKey }),
+    ),
+  );
+}
+
+function echoRowsForWorkspace(
+  rows: readonly AuthoredEchoLastRunBoonDraftRow[],
+): readonly WorkspaceEchoLastRunBoonDraftRow[] {
+  return Object.freeze(
+    rows.map(({ giverKey, traitKey, ...outcome }) =>
+      giverKey === undefined || traitKey === undefined
+        ? Object.freeze(outcome)
+        : Object.freeze({ ...outcome, identity: Object.freeze({ giverKey, traitKey }) }),
     ),
   );
 }
@@ -574,6 +588,87 @@ export function bindTraitOfferInteractions(input: {
                         readonly traitKey: string;
                       }) =>
                         `${catalog.traitGivers.byKey[identity.giverKey]?.label ?? identity.giverKey} · ${catalog.traits.byKey[identity.traitKey]?.label ?? identity.traitKey}`;
+                      const carrierForDraft = (
+                        rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
+                        selectedIndex: number,
+                        retainedTargetKey?: string,
+                      ) =>
+                        Object.freeze({
+                          load: () => {
+                            const prepared = prepareEchoLastRunBoonDraft(
+                              offer,
+                              echoLastRunBoonControl,
+                              echoRowsForEngine(rows),
+                              selectedIndex,
+                            );
+                            if (!prepared.complete || prepared.value === undefined)
+                              return undefined;
+                            const evaluated = candidates.traitCarrierChildDomain(
+                              control.address,
+                              prepared.value,
+                              echoLastRunBoonControl,
+                            );
+                            if (
+                              evaluated.kind !== 'echoLastRunBoonDomain' ||
+                              evaluated.result.selectedCarrier === undefined
+                            )
+                              return undefined;
+                            const carrier = evaluated.result.selectedCarrier;
+                            if (carrier.kind === 'allTogether')
+                              return Object.freeze({
+                                kind: 'allTogether' as const,
+                                complete: carrier.complete,
+                                sets: Object.freeze(
+                                  carrier.sets.map((set) =>
+                                    Object.freeze({
+                                      setKey: set.setKey,
+                                      picker: projectDirectTraitOutcomePicker(
+                                        set.candidates,
+                                        (traitKey) =>
+                                          traitKey === null
+                                            ? 'No grant (set exhausted)'
+                                            : (catalog.traits.byKey[traitKey]?.label ?? traitKey),
+                                        (traitKey) => traitKey ?? '__none__',
+                                      ),
+                                    }),
+                                  ),
+                                ),
+                              });
+                            return Object.freeze({
+                              kind: 'naturalSelection' as const,
+                              slotCount: carrier.slotCount,
+                              complete: carrier.complete,
+                              supported: carrier.supported,
+                              picker: projectDirectTraitOutcomePicker(
+                                retainedTargetKey === undefined
+                                  ? carrier.nextTargetCandidates
+                                  : [
+                                      ...carrier.nextTargetCandidates.map((candidate) => ({
+                                        ...candidate,
+                                        selected: candidate.value === retainedTargetKey,
+                                      })),
+                                      ...(carrier.nextTargetCandidates.some(
+                                        (candidate) => candidate.value === retainedTargetKey,
+                                      )
+                                        ? []
+                                        : [
+                                            {
+                                              value: retainedTargetKey,
+                                              support: 'impossible' as const,
+                                              branchSupport: Object.freeze([]),
+                                              selected: true,
+                                              reason: 'unavailable' as const,
+                                            },
+                                          ]),
+                                    ],
+                                (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
+                                (traitKey) => traitKey,
+                              ),
+                              traitLabel: (traitKey: string) =>
+                                catalog.traits.byKey[traitKey]?.label ?? traitKey,
+                            });
+                          },
+                        });
                       return Object.freeze({
                         completeDraft: (
                           rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
@@ -599,6 +694,37 @@ export function bindTraitOfferInteractions(input: {
                             echoRowsForEngine(rows),
                             selectedIndex,
                           ),
+                        nextDraft: (
+                          rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
+                          selectedIndex: number,
+                        ) => {
+                          const next = nextEchoLastRunBoonDraft(
+                            domainCandidates,
+                            echoRowsForEngine(rows),
+                            selectedIndex,
+                          );
+                          return next === undefined
+                            ? undefined
+                            : Object.freeze({
+                                rows: echoRowsForWorkspace(next.rows),
+                                selectedIndex: next.selectedIndex,
+                              });
+                        },
+                        previousDraft: (
+                          rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
+                          selectedIndex: number,
+                        ) => {
+                          const previous = previousEchoLastRunBoonDraft(
+                            echoRowsForEngine(rows),
+                            selectedIndex,
+                          );
+                          return previous === undefined
+                            ? undefined
+                            : Object.freeze({
+                                rows: echoRowsForWorkspace(previous.rows),
+                                selectedIndex: previous.selectedIndex,
+                              });
+                        },
                         effectiveRarityFor: (
                           option: AuthoredEchoLastRunBoonOffer['options'][number],
                         ) =>
@@ -673,64 +799,20 @@ export function bindTraitOfferInteractions(input: {
                               ? ('naturalSelection' as const)
                               : undefined;
                         },
-                        carrierForDraft: (
+                        carrierForDraft,
+                        naturalSelectionForDraft: (
                           rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
                           selectedIndex: number,
+                          retainedTargetKey?: string,
                         ) =>
                           Object.freeze({
                             load: () => {
-                              const prepared = prepareEchoLastRunBoonDraft(
-                                offer,
-                                echoLastRunBoonControl,
-                                echoRowsForEngine(rows),
+                              const carrier = carrierForDraft(
+                                rows,
                                 selectedIndex,
-                              );
-                              if (!prepared.complete || prepared.value === undefined)
-                                return undefined;
-                              const evaluated = candidates.traitCarrierChildDomain(
-                                control.address,
-                                prepared.value,
-                                echoLastRunBoonControl,
-                              );
-                              if (
-                                evaluated.kind !== 'echoLastRunBoonDomain' ||
-                                evaluated.result.selectedCarrier === undefined
-                              )
-                                return undefined;
-                              const carrier = evaluated.result.selectedCarrier;
-                              if (carrier.kind === 'allTogether')
-                                return Object.freeze({
-                                  kind: 'allTogether' as const,
-                                  complete: carrier.complete,
-                                  sets: Object.freeze(
-                                    carrier.sets.map((set) =>
-                                      Object.freeze({
-                                        setKey: set.setKey,
-                                        picker: projectDirectTraitOutcomePicker(
-                                          set.candidates,
-                                          (traitKey) =>
-                                            traitKey === null
-                                              ? 'No grant (set exhausted)'
-                                              : (catalog.traits.byKey[traitKey]?.label ?? traitKey),
-                                          (traitKey) => traitKey ?? '__none__',
-                                        ),
-                                      }),
-                                    ),
-                                  ),
-                                });
-                              return Object.freeze({
-                                kind: 'naturalSelection' as const,
-                                slotCount: carrier.slotCount,
-                                complete: carrier.complete,
-                                supported: carrier.supported,
-                                picker: projectDirectTraitOutcomePicker(
-                                  carrier.nextTargetCandidates,
-                                  (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
-                                  (traitKey) => traitKey,
-                                ),
-                                traitLabel: (traitKey: string) =>
-                                  catalog.traits.byKey[traitKey]?.label ?? traitKey,
-                              });
+                                retainedTargetKey,
+                              ).load();
+                              return carrier?.kind === 'naturalSelection' ? carrier : undefined;
                             },
                           }),
                         traitPickerFor: (

@@ -1,13 +1,11 @@
 import {
   optionIndex,
   semanticAddressKey,
-  type AuthoredAllTogetherResult,
   type AuthoredEchoLastRunBoonOption,
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
-import type { TraitRarity } from '@run-planner/engine/catalog-schema';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
 import type {
@@ -17,131 +15,48 @@ import type {
   WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace';
 import { useAppSelector } from '@planner/state/store';
-import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useFindingTarget, type FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
+import { TraitOfferForm, TraitOfferShapeActions } from './TraitOfferForm';
+import { TraitOfferOption } from './TraitOfferOption';
+import { TraitAcquisitionTargetOutcome } from './TraitOfferSelectedOutcome';
+import {
+  AllTogetherOutcomeEditor,
+  NaturalSelectionOutcomeEditor,
+} from './TraitOfferSelectedSpecialOutcomes';
 
-const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
-
-type EchoLastRunBoonDraftRow = WorkspaceEchoLastRunBoonDraftRow;
-
-function rarityLabel(rarity: TraitRarity): string {
-  return rarity;
-}
-
-function pickerValueLabel<T>(model: ContextualPickerModel<T>, value: T): string | undefined {
-  return model.sections
-    .flatMap((section) => section.items)
-    .find((item) => Object.is(item.value, value))?.label;
-}
+type DraftRow = WorkspaceEchoLastRunBoonDraftRow;
 
 function pickerItems<T>(model: ContextualPickerModel<T>) {
   return model.sections.flatMap((section) => section.items);
 }
 
-function EchoAllTogetherOutcome({
-  controlId,
-  domain,
-  value,
-  onComplete,
-}: {
-  readonly controlId: string;
-  readonly domain: Extract<WorkspaceEchoLastRunBoonCarrierDomain, { readonly kind: 'allTogether' }>;
-  readonly value?: AuthoredAllTogetherResult;
-  readonly onComplete: (value: AuthoredAllTogetherResult) => void;
-}) {
-  const [draft, setDraft] = useState<Partial<AuthoredAllTogetherResult>>(value ?? {});
-  return (
-    <fieldset className="trait-selected-outcome-detail" aria-label="Echo All Together outcome">
-      <legend>Elemental grants</legend>
-      {domain.sets.map((set) => {
-        const selected = draft[set.setKey];
-        return (
-          <ContextualPicker
-            ariaLabel={`Echo All Together ${set.setKey} grant`}
-            id={`${controlId}-all-together-${set.setKey}`}
-            key={set.setKey}
-            label={`${set.setKey[0]!.toUpperCase()}${set.setKey.slice(1)}`}
-            model={set.picker}
-            onSelect={(traitKey) => {
-              const next = Object.freeze({ ...draft, [set.setKey]: traitKey });
-              setDraft(next);
-              if (domain.sets.every((candidate) => Object.hasOwn(next, candidate.setKey)))
-                onComplete(next as AuthoredAllTogetherResult);
-            }}
-            placeholder="Choose a grant"
-            {...(Object.hasOwn(draft, set.setKey)
-              ? {
-                  triggerLabel:
-                    pickerValueLabel(set.picker, selected ?? null) ??
-                    (selected === null ? 'No grant (set exhausted)' : String(selected)),
-                }
-              : {})}
-          />
-        );
-      })}
-    </fieldset>
-  );
+function rowFromOption({
+  giverKey,
+  traitKey,
+  ...payload
+}: AuthoredEchoLastRunBoonOption): DraftRow {
+  return Object.freeze({ ...payload, identity: Object.freeze({ giverKey, traitKey }) });
 }
 
-function EchoNaturalSelectionOutcome({
-  controlId,
-  domain,
-  editing,
-  targets,
-  onEditingChange,
-  onChange,
-}: {
-  readonly controlId: string;
-  readonly domain: Extract<
-    WorkspaceEchoLastRunBoonCarrierDomain,
-    { readonly kind: 'naturalSelection' }
-  >;
-  readonly editing: boolean;
-  readonly targets: readonly string[];
-  readonly onEditingChange: (editing: boolean) => void;
-  readonly onChange: (targets: readonly string[] | undefined) => void;
-}) {
-  useEffect(() => {
-    if (domain.complete && editing) onEditingChange(false);
-  }, [domain.complete, editing, onEditingChange]);
-  return (
-    <fieldset className="trait-selected-outcome-detail" aria-label="Echo Natural Selection outcome">
-      <legend>Natural Selection targets</legend>
-      <p>
-        {targets.length === 0
-          ? 'Targets unspecified'
-          : targets.map((target) => domain.traitLabel(target)).join(' → ')}
-      </p>
-      {!editing ? (
-        <button
-          className="quiet-action action-compact"
-          onClick={() => {
-            onEditingChange(true);
-            onChange(undefined);
-          }}
-          type="button"
-        >
-          Choose all targets
-        </button>
-      ) : (
-        <ContextualPicker
-          ariaLabel="Echo Natural Selection next target"
-          closeOnSelect={false}
-          id={`${controlId}-natural-selection`}
-          label={`Target ${Math.min(targets.length + 1, domain.slotCount)} of ${domain.slotCount}`}
-          model={domain.picker}
-          onOpenChange={(open) => {
-            if (!open) onEditingChange(false);
-          }}
-          onSelect={(target) => onChange(Object.freeze([...targets, target]))}
-          open={true}
-          placeholder="Choose an eligible core trait"
-        />
-      )}
-    </fieldset>
-  );
+function completeRow(row: DraftRow | undefined): AuthoredEchoLastRunBoonOption | undefined {
+  if (row?.identity === undefined || row.rarity === undefined) return undefined;
+  const { identity, ...payload } = row;
+  return Object.freeze({ ...payload, ...identity, rarity: row.rarity });
+}
+
+function withNaturalTargets(row: DraftRow, targets: readonly string[]): DraftRow {
+  const { naturalSelectionTargets: _previous, ...rest } = row;
+  void _previous;
+  return Object.freeze({
+    ...rest,
+    ...(targets.length === 0
+      ? {}
+      : {
+          naturalSelectionTargets: targets as NonNullable<DraftRow['naturalSelectionTargets']>,
+        }),
+  });
 }
 
 function EchoLastRunBoonChoiceEditor({
@@ -159,61 +74,27 @@ function EchoLastRunBoonChoiceEditor({
   readonly onBack: () => void;
   readonly onComplete: (value: AuthoredEchoLastRunBoonOffer) => void;
 }) {
-  const [rows, setRows] = useState<readonly EchoLastRunBoonDraftRow[]>(() =>
+  const [rows, setRows] = useState<readonly DraftRow[]>(() =>
     value === undefined
       ? Object.freeze([Object.freeze({})])
-      : Object.freeze(
-          value.options.map((option) =>
-            Object.freeze({
-              identity: Object.freeze({
-                giverKey: option.giverKey,
-                traitKey: option.traitKey,
-              }),
-              rarity: option.rarity,
-              ...(option.targetTraitKey === undefined
-                ? {}
-                : { targetTraitKey: option.targetTraitKey }),
-              ...(option.allTogetherResult === undefined
-                ? {}
-                : { allTogetherResult: option.allTogetherResult }),
-              ...(option.naturalSelectionTargets === undefined
-                ? {}
-                : { naturalSelectionTargets: option.naturalSelectionTargets }),
-            }),
-          ),
-        ),
+      : Object.freeze(value.options.map(rowFromOption)),
   );
   const [selectedIndex, setSelectedIndex] = useState<number>(() =>
     value === undefined ? 0 : optionIndex(value.selectedOptionKey),
   );
-  const [editingNaturalSelection, setEditingNaturalSelection] = useState(false);
   const selectedRow = rows[selectedIndex];
-  const selectedComplete =
-    selectedRow?.identity !== undefined && selectedRow.rarity !== undefined
-      ? Object.freeze({
-          giverKey: selectedRow.identity.giverKey,
-          traitKey: selectedRow.identity.traitKey,
-          rarity: selectedRow.rarity,
-          ...(selectedRow.targetTraitKey === undefined
-            ? {}
-            : { targetTraitKey: selectedRow.targetTraitKey }),
-          ...(selectedRow.allTogetherResult === undefined
-            ? {}
-            : { allTogetherResult: selectedRow.allTogetherResult }),
-          ...(selectedRow.naturalSelectionTargets === undefined
-            ? {}
-            : { naturalSelectionTargets: selectedRow.naturalSelectionTargets }),
-        })
-      : undefined;
-  const selectedNeedsTarget =
-    selectedRow?.identity !== undefined && domain.targetRequiredFor(selectedRow.identity);
+  const selectedComplete = useMemo(() => completeRow(selectedRow), [selectedRow]);
   const draftSupport = domain.draftSupportFor(rows, selectedIndex);
-  const selectedCarrierKind =
+  const nextDraft = domain.nextDraft(rows, selectedIndex);
+  const previousDraft = domain.previousDraft(rows, selectedIndex);
+  const selectedKind =
     selectedRow?.identity === undefined ? undefined : domain.carrierKindFor(selectedRow.identity);
-  const carrierReady = selectedComplete !== undefined && selectedCarrierKind !== undefined;
   const carrierLoadable = useMemo(
-    () => (carrierReady ? domain.carrierForDraft(rows, selectedIndex) : undefined),
-    [carrierReady, domain, rows, selectedIndex],
+    () =>
+      selectedComplete === undefined || selectedKind === undefined
+        ? undefined
+        : domain.carrierForDraft(rows, selectedIndex),
+    [domain, rows, selectedIndex, selectedComplete, selectedKind],
   );
   const carrierController = useWorkspaceInteractionController<
     WorkspaceEchoLastRunBoonCarrierDomain | undefined
@@ -222,14 +103,104 @@ function EchoLastRunBoonChoiceEditor({
   useEffect(() => {
     if (carrierLoadable !== undefined) carrierController.activate(carrierLoadable);
   }, [carrierController, carrierLoadable]);
-  const carrierComplete =
-    selectedCarrierKind === undefined || carrierLoaded.result?.complete === true;
+  const carrier = carrierLoaded.result;
+  const carrierComplete = selectedKind === undefined || carrier?.complete === true;
+  const targetLoadable = useMemo(
+    () =>
+      selectedComplete === undefined
+        ? undefined
+        : {
+            load: () => ({ targetPicker: domain.targetPickerFor(selectedComplete) }),
+          },
+    [domain, selectedComplete],
+  );
+  const allTogetherSets = useMemo(
+    () =>
+      carrier?.kind !== 'allTogether'
+        ? []
+        : carrier.sets.map((set) => ({
+            controlId: `${controlId}-all-together-${set.setKey}`,
+            setKey: set.setKey,
+            loadable: { load: () => ({ picker: set.picker }) },
+            ...(selectedRow?.allTogetherResult?.[set.setKey] === undefined
+              ? {}
+              : { value: selectedRow.allTogetherResult[set.setKey] }),
+          })),
+    [carrier, controlId, selectedRow],
+  );
+  const naturalLoadableFor = useCallback(
+    (targets: readonly string[], retainedTarget?: string) =>
+      domain.naturalSelectionForDraft(
+        Object.freeze(
+          rows.map((row, index) =>
+            index === selectedIndex ? withNaturalTargets(row, targets) : row,
+          ),
+        ),
+        selectedIndex,
+        retainedTarget,
+      ),
+    [domain, rows, selectedIndex],
+  );
 
-  const updateRow = (index: number, next: EchoLastRunBoonDraftRow): void => {
+  const updateRow = (index: number, next: DraftRow) =>
     setRows((current) =>
       Object.freeze(current.map((row, rowIndex) => (rowIndex === index ? next : row))),
     );
+  const applySize = (draft: NonNullable<typeof nextDraft>) => {
+    setRows(draft.rows);
+    setSelectedIndex(draft.selectedIndex);
   };
+  const selectedPayload = (
+    <>
+      {selectedComplete === undefined ||
+      selectedRow?.identity === undefined ||
+      !domain.targetRequiredFor(selectedRow.identity) ||
+      targetLoadable === undefined ? null : (
+        <TraitAcquisitionTargetOutcome
+          controlId={`${controlId}-target`}
+          ariaLabel="Boon Boon Boon selected trait target"
+          loadable={targetLoadable}
+          {...(selectedRow.targetTraitKey === undefined
+            ? {}
+            : { targetTraitKey: selectedRow.targetTraitKey })}
+          traitLabel={(key) =>
+            pickerItems(domain.targetPickerFor(selectedComplete)).find((item) => item.value === key)
+              ?.label ?? key
+          }
+          onSelect={(targetTraitKey) =>
+            updateRow(selectedIndex, Object.freeze({ ...selectedRow, targetTraitKey }))
+          }
+        />
+      )}
+      {selectedKind === 'allTogether' && carrier?.kind === 'allTogether' ? (
+        <AllTogetherOutcomeEditor
+          key={`${selectedIndex}:${selectedRow?.identity?.traitKey}`}
+          sets={allTogetherSets}
+          onSelect={(allTogetherResult) =>
+            updateRow(selectedIndex, Object.freeze({ ...selectedRow, allTogetherResult }))
+          }
+        />
+      ) : null}
+      {selectedKind === 'naturalSelection' &&
+      carrier?.kind === 'naturalSelection' &&
+      selectedRow !== undefined ? (
+        <NaturalSelectionOutcomeEditor
+          key={`${selectedIndex}:${selectedRow.identity?.traitKey}`}
+          controlId={`${controlId}-natural-selection`}
+          initial={selectedRow.naturalSelectionTargets ?? []}
+          slotCount={carrier.slotCount}
+          traitLabel={carrier.traitLabel}
+          loadableFor={naturalLoadableFor}
+          onSelect={(targets) => updateRow(selectedIndex, withNaturalTargets(selectedRow, targets))}
+        />
+      ) : null}
+      {selectedKind === undefined || carrier !== undefined ? null : (
+        <p className="feedback-text">
+          Complete the other Echo rows before editing this outcome. Existing targets are retained.
+        </p>
+      )}
+    </>
+  );
 
   return (
     <section
@@ -248,223 +219,89 @@ function EchoLastRunBoonChoiceEditor({
           Back to Echo offer
         </button>
       </header>
-      <div className="echo-last-run-options">
-        {rows.map((row, index) => {
-          const optionKey = OPTION_KEYS[index]!;
-          const occupiedTraitKeys = rows.flatMap((other, otherIndex) =>
-            otherIndex === index || other.identity === undefined ? [] : [other.identity.traitKey],
+      <TraitOfferForm
+        options={rows.map((row, index) => {
+          const traitPicker = domain.traitPickerFor(
+            rows.flatMap((other, otherIndex) =>
+              otherIndex === index || other.identity === undefined ? [] : [other.identity.traitKey],
+            ),
+            row.identity,
           );
-          const traitPicker = domain.traitPickerFor(occupiedTraitKeys, row.identity);
           const rarityPicker =
             row.identity === undefined
               ? undefined
               : domain.rarityPickerFor(row.identity, row.rarity);
-          const allRarityItems = rarityPicker === undefined ? [] : pickerItems(rarityPicker);
-          const rarityItems = allRarityItems.filter((item) => item.state !== 'impossible');
-          const selectedRarityUnavailable = allRarityItems.some(
-            (item) => item.value === row.rarity && item.state === 'impossible',
-          );
+          const rarityItems = rarityPicker === undefined ? [] : pickerItems(rarityPicker);
+          const supportedRarities = rarityItems.filter((item) => item.state !== 'impossible');
           const fixedRarity =
-            rarityItems.length === 1 && !selectedRarityUnavailable
-              ? rarityItems[0]!.value
+            supportedRarities.length === 1 &&
+            !rarityItems.some((item) => item.value === row.rarity && item.state === 'impossible')
+              ? supportedRarities[0]!.value
               : undefined;
+          const complete = completeRow(row);
           const effectiveRarity =
-            row.identity === undefined || row.rarity === undefined
-              ? undefined
-              : domain.effectiveRarityFor({
-                  giverKey: row.identity.giverKey,
-                  traitKey: row.identity.traitKey,
-                  rarity: row.rarity,
-                });
+            complete === undefined ? undefined : domain.effectiveRarityFor(complete);
           return (
-            <fieldset className="echo-last-run-option" key={optionKey}>
-              <legend>Outcome {index + 1}</legend>
-              <ContextualPicker
-                ariaLabel={`Boon Boon Boon outcome ${index + 1}`}
-                id={`${controlId}-${optionKey}`}
-                label="Trait"
-                model={traitPicker}
-                onSelect={(identity) => {
-                  setEditingNaturalSelection(false);
-                  const nextRarityPicker = domain.rarityPickerFor(identity);
-                  const availableRarities = pickerItems(nextRarityPicker).filter(
-                    (item) => item.state !== 'impossible',
-                  );
-                  updateRow(
-                    index,
-                    Object.freeze({
-                      identity,
-                      ...(availableRarities.length === 1
-                        ? { rarity: availableRarities[0]!.value }
-                        : {}),
-                    }),
-                  );
-                }}
-                placeholder="Choose provider and trait"
-                {...(row.identity === undefined
-                  ? {}
-                  : { triggerLabel: domain.labelFor(row.identity) })}
-              />
-              {row.identity === undefined || rarityPicker === undefined ? null : fixedRarity !==
-                undefined ? (
-                <p className="trait-selected-outcome-detail">Rarity: {fixedRarity}</p>
-              ) : (
-                <ContextualPicker
-                  ariaLabel={`Boon Boon Boon outcome ${index + 1} rarity`}
-                  id={`${controlId}-${optionKey}-rarity`}
-                  label="Rarity"
-                  model={rarityPicker}
-                  onSelect={(rarity) => updateRow(index, Object.freeze({ ...row, rarity }))}
-                  placeholder="Choose rarity"
-                  {...(row.rarity === undefined ? {} : { triggerLabel: rarityLabel(row.rarity) })}
-                />
-              )}
-              {effectiveRarity === undefined || effectiveRarity === row.rarity ? null : (
-                <p className="trait-selected-outcome-detail">Effective rarity: {effectiveRarity}</p>
-              )}
-              <label>
-                <input
-                  checked={selectedIndex === index}
-                  name="echo-last-run-selected"
-                  onChange={() => {
-                    setEditingNaturalSelection(false);
-                    setSelectedIndex(index);
-                  }}
-                  type="radio"
-                />
-                Echo grants this outcome
-              </label>
-              {rows.length === 1 ? null : (
-                <button
-                  className="quiet-action action-compact"
-                  onClick={() => {
-                    setEditingNaturalSelection(false);
-                    setRows((current) =>
-                      Object.freeze(current.filter((_, rowIndex) => rowIndex !== index)),
-                    );
-                    setSelectedIndex((current) =>
-                      current === index ? 0 : current > index ? current - 1 : current,
-                    );
-                  }}
-                  type="button"
-                >
-                  Remove outcome
-                </button>
-              )}
-            </fieldset>
+            <TraitOfferOption
+              key={index}
+              controlId={`${controlId}-option${index + 1}`}
+              legend={`Option ${index + 1}`}
+              loading={false}
+              traitAriaLabel={`Boon Boon Boon outcome ${index + 1}`}
+              traitPicker={traitPicker}
+              {...(row.identity === undefined ? {} : { traitLabel: domain.labelFor(row.identity) })}
+              onSelectTrait={(identity) => {
+                const rarities = pickerItems(domain.rarityPickerFor(identity)).filter(
+                  (item) => item.state !== 'impossible',
+                );
+                updateRow(
+                  index,
+                  Object.freeze({
+                    identity,
+                    ...(rarities.length === 1 ? { rarity: rarities[0]!.value } : {}),
+                  }),
+                );
+              }}
+              {...(fixedRarity === undefined ? {} : { fixedRarity })}
+              {...(rarityPicker === undefined
+                ? {}
+                : {
+                    rarityPicker,
+                    onSelectRarity: (rarity) => updateRow(index, Object.freeze({ ...row, rarity })),
+                  })}
+              rarityAriaLabel={`Boon Boon Boon outcome ${index + 1} rarity`}
+              {...(row.rarity === undefined ? {} : { rarityValue: row.rarity })}
+              {...(effectiveRarity === undefined ? {} : { effectiveRarity })}
+              selected={selectedIndex === index}
+              selectedDisabled={false}
+              selectedName={`${controlId}-selected`}
+              selectedLabel="Echo grants this outcome"
+              onSelectedChange={() => setSelectedIndex(index)}
+            />
           );
         })}
-      </div>
-      {selectedComplete === undefined || !selectedNeedsTarget ? null : (
-        <div className="echo-last-run-target">
-          <h4>Selected trait outcome</h4>
-          <ContextualPicker
-            ariaLabel="Boon Boon Boon selected trait target"
-            id={`${controlId}-target`}
-            label="Target"
-            model={domain.targetPickerFor(selectedComplete)}
-            onSelect={(targetTraitKey) =>
-              updateRow(selectedIndex, Object.freeze({ ...selectedRow, targetTraitKey }))
-            }
-            placeholder="Choose an equipped trait"
-            {...(selectedRow.targetTraitKey === undefined
-              ? {}
-              : {
-                  triggerLabel:
-                    pickerValueLabel(
-                      domain.targetPickerFor(selectedComplete),
-                      selectedRow.targetTraitKey,
-                    ) ?? selectedRow.targetTraitKey,
-                })}
+        selectedOutcome={selectedPayload}
+        shapeActions={
+          <TraitOfferShapeActions
+            {...(nextDraft === undefined ? {} : { onAdd: () => applySize(nextDraft) })}
+            {...(previousDraft === undefined ? {} : { onRemove: () => applySize(previousDraft) })}
           />
-        </div>
-      )}
-      {selectedCarrierKind === 'allTogether' && carrierLoaded.result?.kind === 'allTogether' ? (
-        <EchoAllTogetherOutcome
-          controlId={controlId}
-          domain={carrierLoaded.result}
-          key={`${selectedIndex}:${selectedRow?.identity?.traitKey ?? 'unselected'}`}
-          {...(selectedRow?.allTogetherResult === undefined
-            ? {}
-            : { value: selectedRow.allTogetherResult })}
-          onComplete={(allTogetherResult) =>
-            updateRow(selectedIndex, Object.freeze({ ...selectedRow, allTogetherResult }))
-          }
-        />
-      ) : null}
-      {selectedCarrierKind === 'allTogether' && carrierLoaded.result === undefined ? (
-        <fieldset className="trait-selected-outcome-detail" aria-label="All Together outcome">
-          <legend>All Together outcome</legend>
-          <p>
-            {selectedRow?.allTogetherResult === undefined
-              ? 'Complete the other Echo rows before choosing this grouped outcome.'
-              : 'This grouped outcome is retained while the remaining Echo rows are incomplete.'}
-          </p>
-        </fieldset>
-      ) : null}
-      {selectedCarrierKind === 'naturalSelection' &&
-      carrierLoaded.result?.kind === 'naturalSelection' &&
-      selectedRow !== undefined ? (
-        <EchoNaturalSelectionOutcome
-          controlId={controlId}
-          domain={carrierLoaded.result}
-          editing={editingNaturalSelection}
-          onEditingChange={setEditingNaturalSelection}
-          targets={selectedRow.naturalSelectionTargets ?? Object.freeze([])}
-          onChange={(targets) => {
-            if (targets === undefined) {
-              const { naturalSelectionTargets: _removed, ...remaining } = selectedRow;
-              void _removed;
-              updateRow(selectedIndex, Object.freeze(remaining));
-            } else
-              updateRow(
-                selectedIndex,
-                Object.freeze({
-                  ...selectedRow,
-                  naturalSelectionTargets: targets as NonNullable<
-                    AuthoredEchoLastRunBoonOption['naturalSelectionTargets']
-                  >,
-                }),
-              );
-          }}
-        />
-      ) : null}
-      {selectedCarrierKind === 'naturalSelection' && carrierLoaded.result === undefined ? (
-        <fieldset className="trait-selected-outcome-detail" aria-label="Natural Selection outcome">
-          <legend>Natural Selection outcome</legend>
-          <p>
-            {selectedRow?.naturalSelectionTargets === undefined
-              ? 'Complete the other Echo rows before choosing these targets.'
-              : 'These targets are retained while the remaining Echo rows are incomplete.'}
-          </p>
-        </fieldset>
-      ) : null}
-      {!draftSupport.canAppend || !rows.every((row) => row.identity && row.rarity) ? null : (
-        <button
-          className="quiet-action action-compact"
-          onClick={() => setRows((current) => Object.freeze([...current, Object.freeze({})]))}
-          type="button"
-        >
-          Add outcome
-        </button>
-      )}
-      <div className="echo-last-run-choice-actions">
-        <button
-          className="primary-action"
-          disabled={!draftSupport.complete || !carrierComplete}
-          onClick={() => {
-            if (!draftSupport.complete) return;
+        }
+        save={{
+          disabled: !draftSupport.complete || !carrierComplete,
+          label: 'Save Boon Boon Boon choice',
+          onClick: () => {
             const completed = domain.completeDraft(rows, selectedIndex);
-            if (completed !== undefined) onComplete(completed);
-          }}
-          type="button"
-        >
-          Save Boon Boon Boon choice
-        </button>
-        <button className="quiet-action" onClick={onBack} type="button">
-          Cancel
-        </button>
-      </div>
+            if (draftSupport.complete && carrierComplete && completed !== undefined)
+              onComplete(completed);
+          },
+        }}
+        reset={
+          <button className="quiet-action" onClick={onBack} type="button">
+            Cancel
+          </button>
+        }
+      />
     </section>
   );
 }

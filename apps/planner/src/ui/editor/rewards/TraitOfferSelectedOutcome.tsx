@@ -45,7 +45,7 @@ export function TraitAcquisitionTargetOutcome({
   traitLabel,
 }: {
   readonly controlId: string;
-  readonly findingTarget: FindingTargetProps;
+  readonly findingTarget?: FindingTargetProps;
   readonly ariaLabel: string;
   readonly loadable: { readonly load: () => WorkspaceTraitAcquisitionTargetDomain | undefined };
   readonly onSelect: (targetTraitKey: string) => void;
@@ -61,7 +61,7 @@ export function TraitAcquisitionTargetOutcome({
   }, [controller, loadable]);
   return (
     <ContextualPicker
-      findingTarget={findingTarget}
+      {...(findingTarget === undefined ? {} : { findingTarget })}
       ariaLabel={ariaLabel}
       id={controlId}
       label="Target"

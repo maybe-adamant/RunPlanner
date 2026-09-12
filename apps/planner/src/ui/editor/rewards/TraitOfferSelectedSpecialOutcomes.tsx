@@ -210,7 +210,7 @@ export function AllTogetherOutcomeEditor({
 }: {
   readonly sets: readonly {
     readonly controlId: string;
-    readonly findingTarget: FindingTargetProps;
+    readonly findingTarget?: FindingTargetProps;
     readonly loadable: { readonly load: () => WorkspaceAllTogetherSetDomain | undefined };
     readonly setKey: DirectTraitSetKey;
     readonly value?: string | null;
@@ -281,7 +281,7 @@ export function AllTogetherOutcomeEditor({
           key,
           label: `${key[0]!.toUpperCase() + key.slice(1)}: ${label}`,
           controlId: set.controlId,
-          findingTarget: set.findingTarget,
+          ...(set.findingTarget === undefined ? {} : { findingTarget: set.findingTarget }),
         };
       })}
       startLabel="Choose all grants"
@@ -309,7 +309,7 @@ export function NaturalSelectionOutcomeEditor({
   traitLabel,
 }: {
   readonly controlId: string;
-  readonly findingTarget: FindingTargetProps;
+  readonly findingTarget?: FindingTargetProps;
   readonly initial: readonly string[];
   readonly loadableFor: (
     targets: readonly string[],
@@ -385,7 +385,7 @@ export function NaturalSelectionOutcomeEditor({
         <p className="trait-selected-outcome-detail">Repeated targets: {repeated.join(', ')}</p>
       )}
       <CompoundOutcomeEditor
-        findingTarget={findingTarget}
+        {...(findingTarget === undefined ? {} : { findingTarget })}
         activeIndex={activeIndex}
         complete={complete}
         legend="Natural Selection targets"

@@ -272,7 +272,14 @@ describe('trait offer editor entry and dialog', () => {
     await user.click(await screen.findByRole('button', { name: 'Edit choice' }));
     const targetName = 'Boon Boon Boon selected trait target';
     expect(screen.getByRole('button', { name: targetName })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Add outcome' }));
+    await user.click(screen.getByRole('button', { name: 'Add option' }));
+    await user.click(screen.getByRole('button', { name: 'Add option' }));
+    await user.click(screen.getAllByRole('radio')[2]!);
+    await user.click(screen.getByRole('button', { name: 'Remove last option' }));
+    expect(screen.getAllByRole('radio')[1]).toHaveProperty('checked', true);
+    await user.click(screen.getByRole('button', { name: 'Remove last option' }));
+    expect(screen.getAllByRole('radio')[0]).toHaveProperty('checked', true);
+    await user.click(screen.getByRole('button', { name: 'Add option' }));
     expect(screen.getByRole('button', { name: 'Save Boon Boon Boon choice' })).toHaveProperty(
       'disabled',
       true,
@@ -394,12 +401,8 @@ describe('trait offer editor entry and dialog', () => {
         await user.click(enabled);
       };
       if (effect === 'All Together') {
-        for (const setKey of ['earth', 'fire', 'air', 'water'] as const) {
-          await user.click(
-            screen.getByRole('button', { name: `Echo All Together ${setKey} grant` }),
-          );
-          await chooseEnabled();
-        }
+        await user.click(screen.getByRole('button', { name: 'Choose all grants' }));
+        for (let index = 0; index < 4; index++) await chooseEnabled();
       } else {
         await user.click(screen.getByRole('button', { name: 'Choose all targets' }));
         for (let index = 1; index <= 8; index++) {
@@ -458,7 +461,15 @@ describe('trait offer editor entry and dialog', () => {
         </Provider>,
       );
       await user.click(await screen.findByRole('button', { name: 'Edit choice' }));
-      expect(await screen.findByRole('group', { name: `Echo ${effect} outcome` })).toBeTruthy();
+      expect(
+        await screen.findByRole('group', {
+          name: effect === 'All Together' ? 'Elemental grants' : 'Natural Selection targets',
+        }),
+      ).toBeTruthy();
+      const nestedOwner = screen.getByRole('region', { name: 'Boon Boon Boon choice' });
+      expect(
+        [...document.querySelectorAll('[id]')].filter((node) => node.id === nestedOwner.id),
+      ).toHaveLength(1);
       await waitFor(() =>
         expect(screen.getByRole('button', { name: 'Save Boon Boon Boon choice' })).toHaveProperty(
           'disabled',
