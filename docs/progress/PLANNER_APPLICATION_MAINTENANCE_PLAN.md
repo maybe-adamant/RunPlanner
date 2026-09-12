@@ -357,3 +357,17 @@ from the four named starting modules; preserve current boundaries unless a
 concrete defect appears. Inputs are semantic commands and exact assemblies;
 products are coherent workspace state and cleared stale UI targets. Primary
 tests are the four A suites; no displaced production path is currently justified.
+
+Gate A closed unchanged: 4 suites / 40 tests passed; independent review passed.
+Baseline snapshot passed both route witnesses: Underworld rebuild 119.08 ms,
+cold candidate 0.275 ms, edit 41.59 ms, cached Undo 0.030 ms; Surface rebuild
+91.55 ms, cold candidate 0.277 ms, edit 45.17 ms, cached Undo 0.029 ms. Final
+comparison remains against `fb1d0bfc` on the same host, not these absolute values.
+
+Gate B packet: extract structural/navigation/Run State contracts with source,
+assembly, presentation and interaction consumers using direct internal imports;
+leave unrelated trait/feature contracts for their gates. Keep the public workspace
+entry stable. Inputs and products retain exact existing types and runtime behavior.
+Inspect persistence-default callers before deleting that fallback. Primary tests
+are B's existing source/assembly/binding and contract suites. Displace original
+contract blocks and obsolete imports, not the authored-first traversal coordinator.
