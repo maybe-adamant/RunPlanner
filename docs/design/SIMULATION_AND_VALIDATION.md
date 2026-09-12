@@ -317,6 +317,15 @@ Gold retains its pre-source acquisition frontier; Travel retains its
 post-purchase generation facts. Resuming settlement must not replay inventory
 or regenerate those captured facts. Room exit closes remaining pending inventory.
 
+Trait settlement retains one explicit order for offer preparation, acquisition,
+selected children, and pending-effect consumption. Selected-child,
+encounter-child, Hex, and frozen Concave Stone operations return complete
+products to that coordinator. Acquisition and encounter callers receive
+findings alongside the resulting branch and exact child repair checkpoints;
+they do not recover findings from shared mutable side effects. Structural child
+discovery and alternative candidate queries do not replace selected settlement
+as the acquisition/history authority.
+
 Level settlement likewise returns its branch and findings, keeping source-time
 target generation distinct from application against the current trait history.
 

@@ -609,6 +609,15 @@ offer model. Under Aspect of Selene, the loadout instead requires one complete
 no trait-offer child—nullable, dormant, and retained children are all
 unsupported—and settles the three-point Path screen.
 
+Trait outcome discovery and updates belong to the authored engine boundary.
+`trait-carrier-children.ts` derives typed semantic children from the complete
+offer or supported partial Echo draft, including missing required values.
+These children are derived products, not a new persisted payload container.
+Structural completion, contextual support, and settlement remain distinct:
+discovery does not evaluate eligibility, and an unavailable candidate context
+does not erase a retained child's repair identity. Updates reconstruct the
+complete owning offer through the engine boundary.
+
 When the selected trait is All Together, that exact option additionally owns
 one complete result keyed by its four declaration-owned sets. Each value is one
 member of its pair or `null` for an exhausted pair. No generic direct-effect
