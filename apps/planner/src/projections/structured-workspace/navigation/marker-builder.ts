@@ -4,14 +4,13 @@ import {
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
 
-import {
-  StructuredWorkspaceProjectionContractError,
-  type WorkspaceAssessment,
-  type WorkspaceHubTab,
-  type WorkspaceInspectorDestination,
-  type WorkspaceMarker,
-  type WorkspaceRoomTab,
-} from '../contract';
+import { StructuredWorkspaceProjectionContractError, type WorkspaceAssessment } from '../contract';
+import type {
+  WorkspaceHubTab,
+  WorkspaceInspectorDestination,
+  WorkspaceMarker,
+  WorkspaceRoomTab,
+} from '../contracts/navigation';
 
 /**
  * Family assemblers may publish markers and redirect their own markers into a

@@ -17,12 +17,13 @@ import {
 import type { SemanticFinding } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import type { WorkspaceInspectorDestination, WorkspaceRoute } from '../contract';
+import type { WorkspaceInspectorDestination } from '../contracts/navigation';
 import {
   assertFineGrainedFindingDestination,
   isFineGrainedFindingOwner,
   registerWorkspaceFindingDestinations,
 } from './finding-routing';
+import type { WorkspaceRoute } from '../contracts/structure';
 
 const biome = createBiomeAddress('Surface', 'N');
 const owner = createLocalVisitSlotAddress(

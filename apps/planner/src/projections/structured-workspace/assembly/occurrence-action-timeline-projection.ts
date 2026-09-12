@@ -15,12 +15,12 @@ import {
   type WorkspaceRoomLifecycleTimelineEntry,
   type WorkspaceRoomLocal,
   type WorkspaceRoomActionRow,
-  type WorkspaceRunStateLauncher,
   type WorkspaceSteadyGrowthControl,
   type WorkspaceTranscendentEmbryoControl,
 } from '../contract';
 import { runStateLauncher } from './occurrence-action-run-state';
 import type { WorkspaceOccurrenceActionsInput } from './occurrence-action-row-projection';
+import type { WorkspaceRunStateLauncher } from '../contracts/run-state';
 
 function lifecycleBoundaryLabel(boundary: WorkspaceRoomLifecycleBoundary): string {
   switch (boundary.kind) {

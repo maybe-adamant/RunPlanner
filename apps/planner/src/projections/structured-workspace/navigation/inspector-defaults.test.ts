@@ -29,15 +29,13 @@ import {
   createStructuredWorkspaceTestServices,
   requireWorkspaceBiome,
 } from '@planner-test/fixtures/structuredWorkspace';
-import type {
-  WorkspaceBiome,
-  WorkspaceDefaultInspectorDestination,
-  WorkspaceNode,
-} from '../contract';
+import type { WorkspaceBiome } from '../contracts/structure';
 import {
   defaultInspectorDestination,
   type WorkspaceInspectorDefaultsInput,
 } from './inspector-defaults';
+import type { WorkspaceDefaultInspectorDestination } from '../contracts/navigation';
+import type { WorkspaceNode } from '../contracts/structure';
 
 const { structuredWorkspace } = createStructuredWorkspaceTestServices();
 

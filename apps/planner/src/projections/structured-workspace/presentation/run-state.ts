@@ -7,14 +7,14 @@ import {
   hexEffectiveCapacity,
 } from '@run-planner/engine/simulation';
 
+import { workspaceRewardStoreLabel } from '../assembly/reward-labels';
 import type {
   WorkspaceRunStateBagCondition,
   WorkspaceRunStateBagEntry,
   WorkspaceRunStateBagSection,
   WorkspaceRunStatePresentation,
   WorkspaceRunStateSource,
-} from '../contract';
-import { workspaceRewardStoreLabel } from '../assembly/reward-labels';
+} from '../contracts/run-state';
 
 const coreTraitSlots = Object.freeze([
   Object.freeze({ label: 'Attack', slotKey: 'Melee' }),

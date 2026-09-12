@@ -32,16 +32,13 @@ import {
   nOccurrenceIds,
   nVisitSlotKeys,
 } from '@run-planner/test-fixtures/surface';
-import type {
-  WorkspaceBiome,
-  WorkspaceOccurrenceWorkbenchNode,
-  WorkspaceRailEntry,
-} from '../contract';
+import type { WorkspaceBiome } from '../contracts/structure';
 import { workspaceDecisionOwnedMarkers } from '../navigation/marker-ownership';
 import { summarizeRewardOffer } from '@planner/projections/rewardPicker';
 import { presentWorkspaceBiome } from './biome-presentation';
 import { assembleWorkspaceBiomeSemantics } from '../assembly/biome-semantic-assembly';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from '../source-index';
+import type { WorkspaceOccurrenceWorkbenchNode, WorkspaceRailEntry } from '../contracts/structure';
 
 let goldenProject: ReturnType<typeof createGoldenFGHIProject>;
 let surfaceProject: ReturnType<typeof loadSurfaceNOPQProject>;

@@ -31,12 +31,8 @@ import { requireWorkspaceRoom } from './catalog-room';
 import {
   StructuredWorkspaceProjectionContractError,
   workspaceLocalVisitOrderKey,
-  type WorkspaceDoorContract,
-  type WorkspaceHubDecisionNode,
   type WorkspaceLocalVisitOrderControl,
   type WorkspaceLocalVisitOrderOption,
-  type WorkspaceMarker,
-  type WorkspaceOccurrenceWorkbenchNode,
   type WorkspaceRewardControl,
   type WorkspaceRoomPickerControl,
   type WorkspaceRoomSummary,
@@ -54,6 +50,12 @@ import type { WorkspaceOccurrenceAssembler } from './occurrence-assembly';
 import type { WorkspaceBiomeSource } from '../source-index';
 import { presentRunState } from '../presentation/run-state';
 import { projectWorkspaceDoorContract } from './door-contract';
+import type {
+  WorkspaceDoorContract,
+  WorkspaceHubDecisionNode,
+  WorkspaceOccurrenceWorkbenchNode,
+} from '../contracts/structure';
+import type { WorkspaceMarker } from '../contracts/navigation';
 
 /**
  * The Hub board owns its slots, visits, room-local workbenches, and the

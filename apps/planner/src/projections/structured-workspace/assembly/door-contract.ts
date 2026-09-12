@@ -1,4 +1,5 @@
-import type { WorkspaceDoorContract, WorkspaceRoomSummary } from '../contract';
+import type { WorkspaceRoomSummary } from '../contract';
+import type { WorkspaceDoorContract } from '../contracts/structure';
 
 /** Builds the one immutable door handoff consumed by cards and rail summaries. */
 export function projectWorkspaceDoorContract(

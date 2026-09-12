@@ -30,13 +30,13 @@ import {
   type WorkspaceRewardControl,
   type WorkspaceRoomActions,
   type WorkspaceRoomLocal,
-  type WorkspaceRoomTab,
-  type WorkspaceRunStateLauncher,
   type WorkspaceFountainRarityControl,
 } from '../contract';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import { occurrenceActionLabel } from './occurrence-action-label';
 import { projectRoomLifecycleTimeline } from './occurrence-action-timeline-projection';
+import type { WorkspaceRoomTab } from '../contracts/navigation';
+import type { WorkspaceRunStateLauncher } from '../contracts/run-state';
 
 export interface WorkspaceOccurrenceActionsInput {
   readonly biome: import('@run-planner/engine/authored-project').BiomeAddress;

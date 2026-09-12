@@ -371,3 +371,25 @@ entry stable. Inputs and products retain exact existing types and runtime behavi
 Inspect persistence-default callers before deleting that fallback. Primary tests
 are B's existing source/assembly/binding and contract suites. Displace original
 contract blocks and obsolete imports, not the authored-first traversal coordinator.
+
+Gate B delivered navigation, Run State and structural contracts with direct
+internal consumers; all 208 declaration bodies and the public export set are
+preserved. Removed the persistence fallback because every production caller
+already supplies its mode; direct tests now do so explicitly. Contract lane:
+12 files / 75 tests; source/assembly/binding lane: 25 files / 192 tests. The
+focused persistence cleanup additionally passed 30 decision tests. Independent
+review's accidental API-expansion finding was corrected; final parent cleanup
+review, typecheck, lint and formatting passed. Gate B closed.
+
+Gate C packet: first correct complete authored-offer refresh in TraitOfferEditor
+and exact-assembly candidate rebind in its existing shell/loader. Prove external
+Chaos magnitude edits and unchanged-persisted-value/changed-context drafts in
+the owning UI suite. Then extract Chaos/Hex/Echo/Stone/typed-child binders and
+trait/reward contracts with direct consumers, preserving the ordinary binder's
+single assembly loop. Candidate session and focused adapters remain the only
+engine-query bridge. Remove displaced field enumeration and family bodies; no
+new draft framework or policy. C's listed tests own the handoff evidence.
+
+Read-only preparation for D/F2 found no concrete defect: keep finding routing,
+shared repair highlights, root readiness and host/persistence coordination.
+Run acceptance after preceding source moves stabilize before closing either.

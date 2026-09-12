@@ -9,7 +9,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { SemanticFinding } from '@run-planner/engine/simulation';
 import { expect, it } from 'vitest';
-import type { WorkspaceInspectorDestination } from '../contract';
+import type { WorkspaceInspectorDestination } from '../contracts/navigation';
 import { indexFindingsByRepairTarget } from './finding-highlights';
 
 it('groups exact, redirected child, and aggregate findings by the same completed destination used for navigation', () => {

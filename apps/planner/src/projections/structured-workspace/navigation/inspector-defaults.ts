@@ -1,12 +1,12 @@
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
 
-import {
-  type WorkspaceAuthoringFrontier,
-  type WorkspaceDefaultInspectorDestination,
-  type WorkspaceNode,
-  type WorkspaceOccurrenceWorkbenchNode,
-  type WorkspaceRailEntry,
-} from '../contract';
+import type { WorkspaceAuthoringFrontier } from '../contracts/structure';
+import type {
+  WorkspaceNode,
+  WorkspaceOccurrenceWorkbenchNode,
+  WorkspaceRailEntry,
+} from '../contracts/structure';
+import type { WorkspaceDefaultInspectorDestination } from '../contracts/navigation';
 
 /** The completed products needed to select a no-focus inspector subject. */
 export interface WorkspaceInspectorDefaultsInput {

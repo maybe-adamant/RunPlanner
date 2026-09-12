@@ -1,6 +1,6 @@
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import type { SemanticFinding } from '@run-planner/engine/simulation';
-import type { WorkspaceInspectorDestination } from '../contract';
+import type { WorkspaceInspectorDestination } from '../contracts/navigation';
 
 /** Feedback consumes the completed navigation destination, never origin ancestry. */
 export function indexFindingsByRepairTarget(

@@ -1,8 +1,5 @@
-import type {
-  WorkspaceMarker,
-  WorkspaceRewardControl,
-  WorkspaceTraitOfferControl,
-} from '../contract';
+import type { WorkspaceRewardControl, WorkspaceTraitOfferControl } from '../contract';
+import type { WorkspaceMarker } from '../contracts/navigation';
 
 /** Exact finding owners edited through one trait launcher. */
 export function traitOfferMarkers(trait: WorkspaceTraitOfferControl): readonly WorkspaceMarker[] {
