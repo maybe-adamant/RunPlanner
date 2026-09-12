@@ -28,7 +28,7 @@ import {
   type HistoryFindingChronology,
 } from '../finding-regions';
 import type { BiomeRewardSimulation } from '../rewards';
-import type { BiomeCandidateArtifacts } from '../candidate-artifacts';
+import type { BiomeCandidateArtifacts } from '../evaluation/candidate-artifacts';
 import type { RewardProducerOwnerAddress } from '../rewards/producer-frontiers';
 import type { TraitChildSettlementCheckpoints } from '../rewards/biome';
 import type { BiomeGenerationValidation, ProgressiveBiomeEvaluation } from './products';

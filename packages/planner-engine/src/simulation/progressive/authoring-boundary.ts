@@ -6,20 +6,20 @@ import {
   semanticAddressKey,
   type BiomeAddress,
   type SemanticAddress,
-} from '../authored-project/addresses';
+} from '../../authored-project/addresses';
 import type {
   CanonicalBiome,
   CanonicalDecision,
   MaterializedBiomePrefix,
   MaterializedHubVisitFrontier,
-} from './materialization';
+} from '../materialization';
 import {
   compareOwnerLocations,
   locateOwner,
   ownerOrigin,
   occurrenceOwnerAddress,
   type OwnerLocation,
-} from './progressive/finding-location';
+} from './finding-location';
 
 type BiomeMaterialization = CanonicalBiome | MaterializedBiomePrefix;
 

@@ -1,62 +1,62 @@
-import type { Catalog } from '../catalog-schema';
+import type { Catalog } from '../../catalog-schema';
 import {
   createBiomeAddress,
   createRoomRunStateCheckpointAddress,
   semanticAddressKey,
   type BiomeAddress,
   type NemesisRandomEventAddress,
-} from '../authored-project/addresses';
-import type { AuthoredBiomePlan, ProjectDocument } from '../authored-project/model';
-import { evaluateBiomeCompleteness } from './completeness';
-import { evaluateBiomeRoomGenerationAssemblyInternal } from './generation/biome';
-import { evaluateHubDecisionGenerationInternal } from './generation/hub';
+} from '../../authored-project/addresses';
+import type { AuthoredBiomePlan, ProjectDocument } from '../../authored-project/model';
+import { evaluateBiomeCompleteness } from '../completeness';
+import { evaluateBiomeRoomGenerationAssemblyInternal } from '../generation/biome';
+import { evaluateHubDecisionGenerationInternal } from '../generation/hub';
 import {
   createBiomeCandidateArtifacts,
   createEmptyBiomeCandidateArtifacts,
   type BiomeCandidateArtifacts,
 } from './candidate-artifacts';
-import { attestFigLeafBranchState, attestGorgonBranchState } from './keepsakes/encounter-effects';
-import { attestPendingHermesSpellDrop } from './commerce/hermes-shrine';
-import { attestTalentDropsClosed } from './hex-progress';
-import { authoringRegion } from './finding-regions';
+import { attestFigLeafBranchState, attestGorgonBranchState } from '../keepsakes/encounter-effects';
+import { attestPendingHermesSpellDrop } from '../commerce/hermes-shrine';
+import { attestTalentDropsClosed } from '../hex-progress';
+import { authoringRegion } from '../finding-regions';
 import {
   composeBiomeHistoryWithEncounterValidation,
   type BiomeHistoryPrefix,
   type CanonicalBiomeHistory,
   type HistoryStateView,
   type FigLeafLifecycleState,
-} from './history';
+} from '../history';
 import {
   materializeBiome,
   type CanonicalAuthoredRoom,
   type CanonicalBiome,
   type MaterializedBiomePrefix,
-} from './materialization';
-import { evaluateEncounterCandidatesInternal } from './encounters/candidates';
-import { structurallyActiveEncounterRooms } from './encounters/structural';
-import type { EncounterCandidateBoundary } from './encounters/candidates';
-import type { FindingRegionEntry } from './finding-regions';
+} from '../materialization';
+import { evaluateEncounterCandidatesInternal } from '../encounters/candidates';
+import { structurallyActiveEncounterRooms } from '../encounters/structural';
+import type { EncounterCandidateBoundary } from '../encounters/candidates';
+import type { FindingRegionEntry } from '../finding-regions';
 import {
   evaluateProgressiveBiomeAssembly,
   evaluateProgressiveBiomeAssemblyFromSelectedProducts,
   type ProgressiveBiomeContext,
-} from './progressive/biome';
-import { locateOwner } from './progressive/finding-location';
-import type { BiomeGenerationValidation } from './progressive/products';
-import { effectiveRouteResourcePlacements } from './resources';
-import { evaluateBiomeRewardsAssemblyInternal } from './rewards/biome';
-import type { BiomeRewardSimulation } from './rewards/model';
+} from '../progressive/biome';
+import { locateOwner } from '../progressive/finding-location';
+import type { BiomeGenerationValidation } from '../progressive/products';
+import { effectiveRouteResourcePlacements } from '../resources';
+import { evaluateBiomeRewardsAssemblyInternal } from '../rewards/biome';
+import type { BiomeRewardSimulation } from '../rewards/model';
 import {
   publishRunStateThroughCoverage,
   type RunStateOwner,
   type RunStateSnapshot,
-} from './rewards/run-state';
-import type { RewardProducerCandidateArtifacts } from './rewards/producer-frontiers';
-import type { RoomLifecycleCandidateArtifacts } from './rewards/lifecycle-artifacts';
+} from '../rewards/run-state';
+import type { RewardProducerCandidateArtifacts } from '../rewards/producer-frontiers';
+import type { RoomLifecycleCandidateArtifacts } from '../rewards/lifecycle-artifacts';
 import type {
   LevelResolutionCandidateArtifacts,
   TraitOfferCandidateArtifacts,
-} from './candidates/trait-offer-capability';
+} from '../candidates/trait-offer/capability';
 import type {
   BiomeEvaluationPoint,
   ProjectBiomeEvaluation,

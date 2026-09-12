@@ -11,7 +11,7 @@ import {
 } from '@run-planner/engine/authored-project';
 
 import { applyJeweledPomEquipResult } from '../../src/simulation/keepsakes/branch-transitions';
-import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import {
   applyKeepsakeReplacement,
   createKeepsakeState,

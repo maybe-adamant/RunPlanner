@@ -5,9 +5,12 @@ import type {
   AuthoredTraitOfferTraits,
 } from '../../authored-project/traits/state';
 import type { ProjectDocument } from '../../authored-project/model';
-import type { ProjectCandidateArtifacts } from '../candidate-artifacts';
-import { candidateArtifactsForProjectEvaluationAssembly } from '../project-evaluation-assembly';
-import type { ProjectEvaluation, ProjectEvaluationAssembly } from '../evaluation-products';
+import type { ProjectCandidateArtifacts } from '../evaluation/candidate-artifacts';
+import { candidateArtifactsForProjectEvaluationAssembly } from '../evaluation/project-evaluation-assembly';
+import type {
+  ProjectEvaluation,
+  ProjectEvaluationAssembly,
+} from '../evaluation/evaluation-products';
 import {
   evaluateBatchRewardStoreCandidate,
   type BatchRewardStoreCandidateQuery,
@@ -129,7 +132,7 @@ import {
   type TraitOfferCandidateQuery,
   type TraitOfferFocusedOptionCandidateEvaluation,
   type TraitOfferFocusedOptionCandidateQuery,
-} from './trait-offer';
+} from './trait-offer/query';
 import {
   evaluateKeepsakeSelectionCandidate,
   type EvaluatedKeepsakeSelectionCandidate,
@@ -330,7 +333,7 @@ export interface ProjectCandidateSession {
   readonly chaosOfferDomain: (
     owner: TraitOfferAddress,
     value?: AuthoredTraitOffer,
-  ) => readonly import('./trait-offer-capability').ChaosOfferDomain[];
+  ) => readonly import('./trait-offer/capability').ChaosOfferDomain[];
 }
 
 function assertNever(value: never): never {

@@ -35,7 +35,7 @@ import type { RewardBranchState } from '../../src/simulation/rewards/branch-prim
 import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
 import { applyEncounterEndEffectsTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/encounter-end-effects';
 import { applyKeepsakeRackUsedTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/keepsake-rack-used';
-import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
+import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 

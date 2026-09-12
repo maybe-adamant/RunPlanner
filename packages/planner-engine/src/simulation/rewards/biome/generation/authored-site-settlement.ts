@@ -91,7 +91,8 @@ export function settleAuthoredAcquisitionSite(
     [];
   const derivedEntryFrontiers: import('../../acquisition/contracts').DerivedAcquisitionEntryFrontier[] =
     [];
-  const traitChildSettlements: import('../../trait-settlement').ReachedTraitChildCheckpoint[] = [];
+  const traitChildSettlements: import('../../trait-settlement/coordinator').ReachedTraitChildCheckpoint[] =
+    [];
   let timelineFacts: import('../../../timeline-facts').PlannerTimelineFacts | undefined;
   const producerFrontiers: RewardProducerFrontier[] = [];
 

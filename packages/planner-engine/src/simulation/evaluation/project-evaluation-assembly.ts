@@ -1,4 +1,4 @@
-import type { Catalog } from '../catalog-schema';
+import type { Catalog } from '../../catalog-schema';
 import {
   createBiomeAddress,
   semanticAddressKey,
@@ -10,28 +10,28 @@ import {
   type NemesisRandomEventAddress,
   type OccurrenceAddress,
   type TraitOfferAddress,
-} from '../authored-project/addresses';
-import { hermesShrineDeliveryEntryKey } from '../authored-project/hermes-shrine-delivery';
-import type { ProjectCommand } from '../authored-project/commands/types';
-import type { CountedRewardBinding } from '../reward-kernel';
-import type { ProjectDocument } from '../authored-project/model';
-import { prefixAuthoredRooms } from './candidates/evaluated-biome';
+} from '../../authored-project/addresses';
+import { hermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shrine-delivery';
+import type { ProjectCommand } from '../../authored-project/commands/types';
+import type { CountedRewardBinding } from '../../reward-kernel';
+import type { ProjectDocument } from '../../authored-project/model';
+import { prefixAuthoredRooms } from '../candidates/evaluated-biome';
 import type { ProjectCandidateArtifacts } from './candidate-artifacts';
 import type {
   EncounterPhaseCandidateSupport,
   EncounterPhaseSequenceStatus,
-} from './encounters/preparation';
+} from '../encounters/preparation';
 import type {
   FigLeafPhaseCandidateSupport,
   GorgonPhaseCandidateSupport,
   NemesisRandomEventCandidateSupport,
-} from './rewards/model';
+} from '../rewards/model';
 import {
   resolveCountedRewardTypeDomain,
   type CountedRewardOwnerAddress,
-} from './rewards/authoring-domain';
-import { occurrenceOwnerAddress } from './progressive/finding-location';
-import type { CanonicalAuthoredRoom } from './materialization';
+} from '../rewards/authoring-domain';
+import { occurrenceOwnerAddress } from '../progressive/finding-location';
+import type { CanonicalAuthoredRoom } from '../materialization';
 import type { ProjectEvaluation, ProjectEvaluationAssembly } from './evaluation-products';
 
 const evaluationSourceProjects = new WeakMap<ProjectEvaluation, ProjectDocument>();
@@ -214,7 +214,7 @@ export function traitOfferCandidateForProjectEvaluationAssembly(
 /** Exact Pool generation capability retained when progressive assessment clamps its reward view. */
 export function purgingPoolCandidateForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
-  occurrence: import('../authored-project/addresses').OccurrenceAddress,
+  occurrence: import('../../authored-project/addresses').OccurrenceAddress,
 ) {
   return candidateArtifactsForProjectEvaluationAssembly(assembly)
     .biomeAt(createBiomeAddress(occurrence.routeKey, occurrence.biomeKey))
@@ -224,7 +224,7 @@ export function purgingPoolCandidateForProjectEvaluationAssembly(
 /** Exact Shrine entry-frontier capability retained by project evaluation. */
 export function hermesShrineCandidateForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
-  occurrence: import('../authored-project/addresses').OccurrenceAddress,
+  occurrence: import('../../authored-project/addresses').OccurrenceAddress,
 ) {
   return candidateArtifactsForProjectEvaluationAssembly(assembly)
     .biomeAt(createBiomeAddress(occurrence.routeKey, occurrence.biomeKey))
@@ -234,7 +234,7 @@ export function hermesShrineCandidateForProjectEvaluationAssembly(
 /** Exact Well entry-frontier capability retained by project evaluation. */
 export function stygianWellCandidateForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
-  occurrence: import('../authored-project/addresses').OccurrenceAddress,
+  occurrence: import('../../authored-project/addresses').OccurrenceAddress,
 ) {
   return candidateArtifactsForProjectEvaluationAssembly(assembly)
     .biomeAt(createBiomeAddress(occurrence.routeKey, occurrence.biomeKey))
@@ -244,7 +244,7 @@ export function stygianWellCandidateForProjectEvaluationAssembly(
 /** Exact reached-source Chaos placement capability for ordinary authoring. */
 export function chaosCandidateForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
-  occurrence: import('../authored-project/addresses').OccurrenceAddress,
+  occurrence: import('../../authored-project/addresses').OccurrenceAddress,
 ) {
   return candidateArtifactsForProjectEvaluationAssembly(assembly)
     .biomeAt(createBiomeAddress(occurrence.routeKey, occurrence.biomeKey))
@@ -254,7 +254,7 @@ export function chaosCandidateForProjectEvaluationAssembly(
 /** Exact reached-source Contract entry-cap capability. */
 export function zagreusContractCandidateForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
-  occurrence: import('../authored-project/addresses').OccurrenceAddress,
+  occurrence: import('../../authored-project/addresses').OccurrenceAddress,
 ) {
   return candidateArtifactsForProjectEvaluationAssembly(assembly)
     .biomeAt(createBiomeAddress(occurrence.routeKey, occurrence.biomeKey))
@@ -334,7 +334,7 @@ export function derivedAcquisitionEntriesForProjectEvaluationAssembly(
 /** Exact placement intent for one optional clocked pickup exposed at this assembly. */
 export function clockedTraitPickupPlacementForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
-  entry: import('../authored-project/addresses').AcquisitionEntryAddress,
+  entry: import('../../authored-project/addresses').AcquisitionEntryAddress,
 ): Extract<ProjectCommand, { readonly kind: 'PlaceClockedTraitPickup' }> | undefined {
   requireExactProjectEvaluationAssembly(assembly);
   const capability = candidateArtifactsForProjectEvaluationAssembly(assembly)
@@ -374,7 +374,7 @@ export function attestClockedTraitPickupPlacementForProjectEvaluationAssembly(
 export function hermesShrineDeliveryPlacementForPurchaseReschedule(
   assembly: ProjectEvaluationAssembly,
   source: OccurrenceAddress,
-  generationKey: import('../authored-project/model').HermesShrineGenerationKey,
+  generationKey: import('../../authored-project/model').HermesShrineGenerationKey,
 ): Extract<ProjectCommand, { readonly kind: 'PlaceHermesShrineDelivery' }> | undefined {
   requireExactProjectEvaluationAssembly(assembly);
   const entryKey = hermesShrineDeliveryEntryKey(source, generationKey);
@@ -412,7 +412,7 @@ export function hermesShrineDeliveryPlacementForPurchaseReschedule(
  */
 export function blockedOccurrenceRoomForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
-  occurrence: import('../authored-project/addresses').OccurrenceAddress,
+  occurrence: import('../../authored-project/addresses').OccurrenceAddress,
 ): CanonicalAuthoredRoom | undefined {
   const exact = requireExactProjectEvaluationAssembly(assembly);
   const biome =

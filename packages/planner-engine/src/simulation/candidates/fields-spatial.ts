@@ -7,7 +7,7 @@ import {
 } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
 import type { SemanticFinding } from '../model';
-import type { ProjectEvaluation } from '../evaluation-products';
+import type { ProjectEvaluation } from '../evaluation/evaluation-products';
 import type { CanonicalAuthoredRoom, CanonicalBiome } from '../materialization';
 import {
   candidateBiome,

@@ -49,7 +49,7 @@ import { createStygianWellCandidateArtifacts } from '../../commerce/stygian-well
 import {
   createLevelResolutionCandidateArtifacts,
   createTraitOfferCandidateArtifacts,
-} from '../../candidates/trait-offer-capability';
+} from '../../candidates/trait-offer/capability';
 import type { TraitOfferCandidateContext } from '../../traits';
 import {
   attachTraitHistory,
@@ -127,7 +127,7 @@ import { mergeEquivalentRewardBranches, type RewardBranchState } from '../branch
 import type {
   ReachedTraitChildCheckpoint,
   ReachedTraitOfferCandidateContact,
-} from '../trait-settlement';
+} from '../trait-settlement/coordinator';
 import { rewardFinding } from '../findings';
 import {
   EMPTY_PLANNER_TIMELINE_FACTS,

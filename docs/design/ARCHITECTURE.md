@@ -291,6 +291,12 @@ Hub and local-visit command owners behind
 one exhaustive dispatcher. `authored-project/topology/decoding/` separates
 context-bound decision decoding from global structural validation and ownership
 assembly; occurrence codecs consume that complete structural product.
+`simulation/evaluation/` composes project and biome results with their exact
+candidate artifacts. Progressive coverage and authoring readiness stay together
+under `simulation/progressive/`; trait-offer queries and capabilities live under
+`simulation/candidates/trait-offer/`. Trait settlement's coordinator and child
+operations share `simulation/rewards/trait-settlement/`. Shared simulation facts
+remain outside those consumers rather than becoming composition-owned policy.
 These neighborhoods do not introduce new processing stages or change the
 package's supported exports.
 

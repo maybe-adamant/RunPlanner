@@ -1,6 +1,6 @@
 # Engine structure cleanup
 
-Status: A complete and independently reviewed; B–D pending.
+Status: A and B complete and independently reviewed; C–D pending.
 Production baseline: `85c7a875`.
 
 ## Objective and invariants
@@ -131,6 +131,13 @@ A one-off TypeScript comparison resolved module references to baseline
 identities and ignored formatting trivia/optional trailing commas: all 124
 changed files matched across the 31 moves. No assertions or fixtures changed.
 The complete phase gate and baseline performance comparison remain for D.
+
+B verification: repository typecheck, 143 engine test files (1,861 tests),
+2 runtime import-graph tests, touched ESLint/Prettier and diff checks passed.
+Independent review reported no findings. All 96 changed TypeScript files matched
+the baseline after module-identity normalization across the 17 moves; no
+assertions, public export names or fixtures changed. Directory grouping is done;
+the remaining slices are bounded ownership extractions, not more folder cleanup.
 
 Each slice is a complete reviewed commit; A/B never mix behavior changes with
 movement. Main owns docs, Git and broad verification; one executor owns source

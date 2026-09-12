@@ -37,7 +37,7 @@ import {
   type PendingShopTravelRefill,
   type RewardBranchState,
 } from '../branch-primitives';
-import { type ReachedTraitChildCheckpoint } from '../trait-settlement';
+import { type ReachedTraitChildCheckpoint } from '../trait-settlement/coordinator';
 import {
   addRewardFinding,
   historyChronology,

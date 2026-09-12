@@ -1,5 +1,5 @@
 export { hexBaseCapacity, hexEffectiveCapacity, attestTalentDropsClosed } from './hex-progress';
-export { authoringReadinessAt, type AuthoringReadiness } from './authoring-readiness';
+export { authoringReadinessAt, type AuthoringReadiness } from './progressive/authoring-readiness';
 export {
   assessPurgingPool,
   isPurgingPoolEligibleTrait,
@@ -419,9 +419,9 @@ export {
   nemesisRandomEventCandidateSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   ProjectSimulationContractError,
-} from './project-evaluation-assembly';
-export { evaluateBiome, materializedBiomePrefixCoveragePoint } from './biome-evaluation';
-export { simulateProject, simulateProjectAssembly } from './project';
+} from './evaluation/project-evaluation-assembly';
+export { evaluateBiome, materializedBiomePrefixCoveragePoint } from './evaluation/biome-evaluation';
+export { simulateProject, simulateProjectAssembly } from './evaluation/project';
 export type {
   ActiveRouteBiome,
   AuthoringHorizon,
@@ -443,7 +443,7 @@ export type {
   ProjectRouteEvaluation,
   RouteEvaluationSummary,
   RouteProcessingRegions,
-} from './evaluation-products';
+} from './evaluation/evaluation-products';
 export type { BiomeGenerationValidation } from './progressive/products';
 export {
   transcendentEmbryoBlessingValues,

@@ -34,7 +34,7 @@ import {
   rewardFinding,
 } from '../findings';
 import type { ResolvedAcquisitionSource } from '../model';
-import type { ReachedTraitChildCheckpoint } from '../trait-settlement';
+import type { ReachedTraitChildCheckpoint } from '../trait-settlement/coordinator';
 import type {
   AcquisitionRoleFrontier,
   AcquisitionRoleResolution,

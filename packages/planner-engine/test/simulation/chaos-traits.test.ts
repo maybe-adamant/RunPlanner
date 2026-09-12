@@ -27,7 +27,7 @@ import { boonRarityRollUnavailable } from '../../src/simulation/traits/rarity';
 import { createTestArcanaFearState } from '../support/arcana-fear';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { assessArtificerConversion } from '../../src/simulation/rewards/acquisition/conversions';
-import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { applyStygianWellPurchase } from '../../src/simulation/commerce/stygian-well';
@@ -36,7 +36,7 @@ import type {
   AuthoredTraitOfferTraits,
 } from '../../src/authored-project/traits/state';
 import { normalizeAuthoredChaosTraitOffer } from '../../src/authored-project/traits/state';
-import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
+import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { loadSurfaceNOPProject } from '@run-planner/test-fixtures/surface';
 

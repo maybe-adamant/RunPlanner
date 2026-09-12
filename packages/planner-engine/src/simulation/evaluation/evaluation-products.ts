@@ -1,11 +1,11 @@
-import type { BiomeAddress, SemanticAddress } from '../authored-project/addresses';
-import type { ProjectDocument } from '../authored-project/model';
-import type { CanonicalBiome, MaterializedBiomePrefix } from './materialization';
-import type { BiomeHistoryPrefix, CanonicalBiomeHistory } from './history';
-import type { BiomeGenerationValidation } from './progressive/products';
-import type { BiomeRewardSimulation } from './rewards/model';
-import type { SemanticFinding } from './model';
-import type { ResourceExecutionPolicy } from './resources';
+import type { BiomeAddress, SemanticAddress } from '../../authored-project/addresses';
+import type { ProjectDocument } from '../../authored-project/model';
+import type { CanonicalBiome, MaterializedBiomePrefix } from '../materialization';
+import type { BiomeHistoryPrefix, CanonicalBiomeHistory } from '../history';
+import type { BiomeGenerationValidation } from '../progressive/products';
+import type { BiomeRewardSimulation } from '../rewards/model';
+import type { SemanticFinding } from '../model';
+import type { ResourceExecutionPolicy } from '../resources';
 
 export interface BiomeEvaluationBase {
   readonly biomeKey: string;
@@ -16,7 +16,7 @@ export interface BiomeEvaluationBase {
   /** Present only when this biome owns the active required-input horizon. */
   readonly requiredInput?: SemanticAddress;
   readonly requiredInputRegion?: string;
-  readonly requiredInputLocation?: import('./progressive/finding-location').OwnerLocation;
+  readonly requiredInputLocation?: import('../progressive/finding-location').OwnerLocation;
 }
 
 interface IncompleteBiomeProjectEvaluationBase extends BiomeEvaluationBase {

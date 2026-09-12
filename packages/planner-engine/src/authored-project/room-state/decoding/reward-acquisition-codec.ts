@@ -30,8 +30,8 @@ import {
 } from '../../traits/state';
 import { normalizeAuthoredHexTree } from '../../traits/hex-tree';
 import { levelResolutionEffectFor } from '../../../reward-kernel/level-effects';
-import { decodeEchoLastRunBoon } from '../echo-last-run';
-import { decodeAllTogetherResult } from '../all-together';
+import { decodeEchoLastRunBoon } from './echo-last-run-codec';
+import { decodeAllTogetherResult } from './all-together-codec';
 
 export function decodePayload(
   value: unknown,

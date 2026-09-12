@@ -50,7 +50,7 @@ import {
 } from '../../src/simulation/keepsakes/trait-effects';
 import { createKeepsakeState, type KeepsakeState } from '../../src/simulation/keepsakes/state';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
-import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import {
   assessTraitOption,

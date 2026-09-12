@@ -39,7 +39,7 @@ import {
   retractInactiveClockedTraitPickupActions,
 } from '../acquisition/pickup-producers';
 import { reconcileChaosTopology } from '../chaos-gate-reconciliation';
-import { applyFieldsSpatialCommand } from './fields-spatial';
+import { applyFieldsSpatialCommand } from './occurrence/fields-spatial';
 import { retractMissingHermesShrineDeliveryActions } from '../hermes-shrine-delivery';
 
 /**

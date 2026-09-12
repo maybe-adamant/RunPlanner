@@ -1,11 +1,11 @@
-import type { Catalog, TraitRarity } from '../../catalog-schema';
+import type { Catalog, TraitRarity } from '../../../catalog-schema';
 import {
   normalizeAuthoredEchoLastRunBoon,
   TRAIT_OPTION_KEYS,
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredEchoLastRunBoonOption,
   type TraitOptionKey,
-} from '../traits/state';
+} from '../../traits/state';
 import {
   expectArray,
   expectExactKeys,
@@ -13,7 +13,7 @@ import {
   expectNonBlankString,
   expectString,
   failProjectDocument,
-} from '../validation';
+} from '../../validation';
 
 export function decodeEchoLastRunBoon(
   value: unknown,

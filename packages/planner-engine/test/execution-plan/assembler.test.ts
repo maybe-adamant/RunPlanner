@@ -60,7 +60,7 @@ import {
   semanticAddressKey,
 } from '../../src/authored-project';
 import { simulateProjectAssembly } from '../../src/simulation';
-import type { CompleteValidBiomeProjectEvaluation } from '../../src/simulation/evaluation-products';
+import type { CompleteValidBiomeProjectEvaluation } from '../../src/simulation/evaluation/evaluation-products';
 import {
   assembleExecutionProduct,
   compileExecutionPlan,

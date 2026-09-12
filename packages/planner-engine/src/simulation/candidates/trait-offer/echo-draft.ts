@@ -3,7 +3,7 @@ import type { AuthoredEchoLastRunBoonDraftRow } from '../../../authored-project/
 import type {
   EvaluatedDirectTraitOutcomeCandidate,
   EvaluatedEchoLastRunBoonCandidate,
-} from '../trait-offer';
+} from './query';
 
 export interface EchoLastRunBoonTraitIdentity {
   readonly giverKey: string;

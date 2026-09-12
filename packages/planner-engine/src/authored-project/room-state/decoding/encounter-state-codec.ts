@@ -1,10 +1,10 @@
-import type { Catalog, EncounterSlotBinding, RoomDeclaration } from '../../catalog-schema';
-import type { AuthoredNemesisRandomEventOutcome, RoomEncounterState } from '../model';
+import type { Catalog, EncounterSlotBinding, RoomDeclaration } from '../../../catalog-schema';
+import type { AuthoredNemesisRandomEventOutcome, RoomEncounterState } from '../../model';
 import {
   normalizeAuthoredTranscendentEmbryoOutcome,
   type AuthoredTraitOffer,
   type AuthoredTranscendentEmbryoOutcome,
-} from '../traits/state';
+} from '../../traits/state';
 import {
   expectArray,
   expectBoolean,
@@ -13,16 +13,19 @@ import {
   expectRecord,
   expectString,
   failProjectDocument,
-} from '../validation';
+} from '../../validation';
 import {
   encounterAuthoringProfileForKey,
   encounterBindingsBySlot,
   encounterDefinitionForKey,
   encounterSetForBinding,
-} from './encounter-envelope';
-import { decodeEncounterTraitOffer, legalTraitOfferEncounterKeys } from './encounter-trait-offers';
-import { decodeGorgonPhaseResults } from './decoding/gorgon-outcome-codec';
-import { decodeNemesisRandomEventOutcome } from './decoding/nemesis-outcome-codec';
+} from '../encounter-envelope';
+import {
+  decodeEncounterTraitOffer,
+  legalTraitOfferEncounterKeys,
+} from './encounter-trait-offer-codec';
+import { decodeGorgonPhaseResults } from './gorgon-outcome-codec';
+import { decodeNemesisRandomEventOutcome } from './nemesis-outcome-codec';
 
 export function decodeRoomEncounterState(
   value: unknown,

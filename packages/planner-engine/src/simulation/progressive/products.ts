@@ -7,7 +7,7 @@ import type { BiomeHistoryPrefix } from '../history';
 import type { MaterializedBiomePrefix } from '../materialization';
 import type { SemanticFinding } from '../model';
 import type { BiomeRewardSimulation } from '../rewards';
-import type { BiomeCandidateArtifacts } from '../candidate-artifacts';
+import type { BiomeCandidateArtifacts } from '../evaluation/candidate-artifacts';
 
 /** The complete generation result published by progressive biome evaluation. */
 export interface BiomeGenerationValidation {

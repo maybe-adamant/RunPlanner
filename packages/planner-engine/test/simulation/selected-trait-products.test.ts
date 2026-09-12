@@ -18,7 +18,7 @@ import {
 import { createTestArcanaFearState } from '../support/arcana-fear';
 import { maybeAddGodSent } from '../../src/simulation/hex-progress';
 import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
-import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 
 describe('selected trait products', () => {
   it('publishes Echo nested rarities after Proper Upbringing applies its floor', () => {

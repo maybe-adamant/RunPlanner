@@ -1,23 +1,23 @@
-import type { Catalog } from '../../catalog-schema';
+import type { Catalog } from '../../../catalog-schema';
 import {
   semanticAddressKey,
   type NaturalSelectionResultAddress,
   type TraitOfferAddress,
-} from '../../authored-project/addresses';
+} from '../../../authored-project/addresses';
 import {
   optionIndex,
   type AuthoredTraitOffer,
   type TraitOptionKey,
-} from '../../authored-project/traits/state';
-import type { AuthoredTraitCarrierChild } from '../../authored-project/traits/carrier-children';
-import type { ProjectDocument } from '../../authored-project/model';
+} from '../../../authored-project/traits/state';
+import type { AuthoredTraitCarrierChild } from '../../../authored-project/traits/carrier-children';
+import type { ProjectDocument } from '../../../authored-project/model';
 import type {
   ConcaveStoneCandidateBranch,
   TraitOfferGenerationState,
   TraitOfferCandidateArtifacts,
-} from './trait-offer-capability';
-import type { ProjectEvaluation } from '../evaluation-products';
-import type { TraitTargetedAcquisitionAssessment } from '../traits/history/model';
+} from './capability';
+import type { ProjectEvaluation } from '../../evaluation/evaluation-products';
+import type { TraitTargetedAcquisitionAssessment } from '../../traits/history/model';
 import type {
   TraitAssessment,
   TraitAssessmentFinding,
@@ -25,16 +25,16 @@ import type {
   TraitOfferCompositionAssessment,
   TraitOfferCompositionFinding,
   TraitReplacementCompositionAssessment,
-} from '../traits/offer-domain';
-import type { CandidateContextUnavailable } from './availability';
-import { unavailableForTraitOffer } from './trait-offer-availability';
+} from '../../traits/offer-domain';
+import type { CandidateContextUnavailable } from '../availability';
+import { unavailableForTraitOffer } from './availability';
 import {
   evaluateAllTogetherSetDomain,
   evaluateCirceResolutionDomain,
   evaluateEchoLastRunBoonDomain,
   evaluateEchoPomTargetDomain,
   evaluateNaturalSelectionResultCandidate,
-} from './trait-offer-selected-effects';
+} from './selected-effects';
 
 export type TraitOfferCandidateFindingCode = TraitFindingCode | 'duplicateOfferedTrait';
 
@@ -143,7 +143,7 @@ export interface RansomAssessmentCandidateQuery {
 export interface EvaluatedRansomAssessmentCandidate {
   readonly kind: 'ransomAssessment';
   readonly result: {
-    readonly assessments: readonly import('../traits').RansomAssessment[];
+    readonly assessments: readonly import('../../traits').RansomAssessment[];
     readonly branchAgreement: boolean;
   };
 }
@@ -178,8 +178,8 @@ export interface EchoLastRunBoonDomainQuery {
   readonly optionKey: TraitOptionKey;
 }
 export interface EvaluatedEchoLastRunBoonCandidate {
-  readonly option: import('../../authored-project/traits/state').AuthoredEchoLastRunBoonOption;
-  readonly effectiveRarity?: import('../../catalog-schema').TraitRarity;
+  readonly option: import('../../../authored-project/traits/state').AuthoredEchoLastRunBoonOption;
+  readonly effectiveRarity?: import('../../../catalog-schema').TraitRarity;
   readonly effectiveLevel?: number;
   readonly support: DirectTraitOutcomeSupport;
   readonly branchSupport: readonly boolean[];
@@ -196,7 +196,7 @@ export interface EvaluatedEchoLastRunBoonDomain {
           readonly kind: 'allTogether';
           readonly complete: boolean;
           readonly sets: readonly {
-            readonly setKey: import('../../catalog-schema').DirectTraitSetKey;
+            readonly setKey: import('../../../catalog-schema').DirectTraitSetKey;
             readonly candidates: readonly EvaluatedDirectTraitOutcomeCandidate<string | null>[];
           }[];
         }
@@ -217,12 +217,12 @@ export interface AllTogetherSetDomainQuery {
   readonly trait: TraitOfferAddress;
   readonly value: AuthoredTraitOffer;
   readonly optionKey: TraitOptionKey;
-  readonly setKey: import('../../catalog-schema').DirectTraitSetKey;
+  readonly setKey: import('../../../catalog-schema').DirectTraitSetKey;
 }
 export interface EvaluatedAllTogetherSetDomain {
   readonly kind: 'allTogetherSetDomain';
   readonly result: {
-    readonly setKey: import('../../catalog-schema').DirectTraitSetKey;
+    readonly setKey: import('../../../catalog-schema').DirectTraitSetKey;
     readonly candidates: readonly EvaluatedDirectTraitOutcomeCandidate<string | null>[];
   };
 }
@@ -259,7 +259,9 @@ export interface TraitOfferCandidateBranch {
 
 /** Exact Calling Card replay product for one surviving pre-offer branch. */
 export interface CallingCardOfferCandidateBranch {
-  readonly effectiveRarities: readonly (import('../../catalog-schema').TraitRarity | undefined)[];
+  readonly effectiveRarities: readonly (
+    import('../../../catalog-schema').TraitRarity | undefined
+  )[];
   readonly remainingCharges?: number;
   readonly invalidActionIndexes: readonly number[];
   readonly rarifiableOptionKeys: readonly TraitOptionKey[];
@@ -820,7 +822,7 @@ export function evaluateTraitCarrierChildDomain(
 
 export { evaluateAllTogetherSetDomain, evaluateNaturalSelectionResultCandidate };
 
-export { evaluateRansomAssessmentCandidate } from './trait-offer-selected-effects';
+export { evaluateRansomAssessmentCandidate } from './selected-effects';
 
 export {
   evaluateCirceResolutionDomain,

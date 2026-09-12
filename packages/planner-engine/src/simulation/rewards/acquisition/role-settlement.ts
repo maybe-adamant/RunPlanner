@@ -54,7 +54,7 @@ import {
   type PriorTraitMutation,
   type ReachedTraitChildCheckpoint,
   type ReachedTraitOfferCandidateContact,
-} from '../trait-settlement';
+} from '../trait-settlement/coordinator';
 import type {
   AcquisitionRoleFrontier,
   AcquisitionRoleResolution,

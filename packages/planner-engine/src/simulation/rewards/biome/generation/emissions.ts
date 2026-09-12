@@ -16,7 +16,7 @@ import type {
   AcquisitionRoleFrontier,
   DerivedAcquisitionEntryFrontier,
 } from '../../acquisition/contracts';
-import type { ReachedTraitChildCheckpoint } from '../../trait-settlement';
+import type { ReachedTraitChildCheckpoint } from '../../trait-settlement/coordinator';
 import type { HistoryStateView } from '../../../history';
 import type { CanonicalLifecycleRoom } from '../../../history/lifecycleInput';
 import type { RunStateOwner } from '../../run-state';

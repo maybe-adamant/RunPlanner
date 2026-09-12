@@ -1,7 +1,7 @@
 import {
   createBiomeCandidateArtifacts,
   type BiomeCandidateArtifacts,
-} from '../candidate-artifacts';
+} from '../evaluation/candidate-artifacts';
 import type { MaterializedBiomePrefix } from '../materialization';
 import type { FindingRegionEntry } from '../finding-regions';
 import { isRequiredMissingInputFinding } from '../model';

@@ -29,9 +29,9 @@ import {
   type TraitLevelMutationEvent,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
-import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
+import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { createSteadyGrowthCandidateArtifacts } from '../../src/simulation/candidates/steady-growth';
-import { evaluateNaturalSelectionResultCandidate } from '../../src/simulation/candidates/trait-offer';
+import { evaluateNaturalSelectionResultCandidate } from '../../src/simulation/candidates/trait-offer/query';
 
 const owner = { kind: 'project' } as SemanticAddress;
 const naturalSelectionSlots = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana'] as const;

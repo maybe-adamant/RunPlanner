@@ -13,11 +13,11 @@ import {
 import { factsWithHistory, type RewardKernelFacts } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
 
-import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
-import { evaluateAllTogetherSetDomain } from '../../src/simulation/candidates/trait-offer';
+import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
+import { evaluateAllTogetherSetDomain } from '../../src/simulation/candidates/trait-offer/query';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
-import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import {
   attachTraitHistory,
   directTraitSetOutcomes,

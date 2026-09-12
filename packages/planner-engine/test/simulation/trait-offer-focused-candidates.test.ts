@@ -23,14 +23,14 @@ import {
   goldenFStartId,
 } from '@run-planner/test-fixtures/underworld';
 
-import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
+import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import type { TraitOfferCandidateContext } from '../../src/simulation/traits';
 import {
   evaluateTraitAcquisitionTargetDomain,
   evaluateTraitOfferCandidate,
   evaluateTraitOfferFocusedOptionCandidate,
   type TraitOfferFocusedOptionCandidateQuery,
-} from '../../src/simulation/candidates/trait-offer';
+} from '../../src/simulation/candidates/trait-offer/query';
 
 const project = createGoldenFGHIProject();
 const evaluation = simulateProject(catalog, project);
