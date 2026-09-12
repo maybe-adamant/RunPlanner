@@ -44,11 +44,19 @@ export function TraitOfferEditorShell({
   readonly onCommit?: (value: AuthoredTraitOffer) => void;
   readonly onReset?: () => void;
 }) {
-  const [value, setValue] = useState<AuthoredTraitOffer>(initialValue);
   const [view, setView] = useState(initialView);
   type TraitOfferCandidates = ReturnType<WorkspaceTraitOfferInteraction['load']>;
   const controller = useWorkspaceInteractionController<TraitOfferCandidates>();
-  const [loadable, setLoadable] = useState(() => traitOfferLoadable(interaction, initialValue));
+  const [draft, setDraft] = useState(() => {
+    const loadable = traitOfferLoadable(interaction, initialValue);
+    return Object.freeze({ interaction, loadable, value: initialValue });
+  });
+  const value = draft.value;
+  const loadable = useMemo(
+    () =>
+      draft.interaction === interaction ? draft.loadable : traitOfferLoadable(interaction, value),
+    [draft, interaction, value],
+  );
   const loaded = controller.observe(loadable);
   const candidate = loaded.result?.[0];
   const support = candidateSupport(candidate);
@@ -165,8 +173,7 @@ export function TraitOfferEditorShell({
   }, [previousTraitOfferController, previousTraitOfferLoadable]);
   const updateValue = (nextValue: AuthoredTraitOffer): void => {
     const nextLoadable = traitOfferLoadable(interaction, nextValue);
-    setValue(nextValue);
-    setLoadable(nextLoadable);
+    setDraft(Object.freeze({ interaction, loadable: nextLoadable, value: nextValue }));
     controller.activate(nextLoadable);
   };
   if (view === 'echoLastRunBoon' && value.kind === 'traits') {
