@@ -27,7 +27,7 @@ import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import { assessSeaStarDuplication } from '../../acquisition/conversions';
 import { settlePickupAcquisitionSite } from '../../acquisition/site-settlement';
-import { settleShopAcquisitionSite } from '../../shop-settlement';
+import { settleShopAcquisitionSite } from '../../shop/settlement';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import type { RewardBranchState } from '../../branch-primitives';
 import type { RewardProducerFrontier } from '../../producer-frontiers';

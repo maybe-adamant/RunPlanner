@@ -33,10 +33,80 @@ import {
   shopPomReward,
   shopBoonReward,
   completeWorldShopOffers,
+  mergeRewardFindingEmissions,
 } from './shop-trait-purchase-support';
 import type { TraitOfferEvent } from './shop-trait-purchase-support';
+import { ownerRegion } from '../../src/simulation/finding-regions';
 
 describe('Shop trait acquisition processing', () => {
+  it('returns unsupported inventory findings for the caller to merge at its chronology seam', () => {
+    const room = catalog.rooms.byKey.F_Shop01;
+    if (room === undefined) throw new Error('missing F Shop declaration');
+    const loadout = { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' };
+    const active = createDefaultRoomState(catalog, room, {
+      role: 'ordinary',
+      entryActive: true,
+      loadout,
+    });
+    if (active.kind !== 'shop' || active.shop === undefined) throw new Error('missing active Shop');
+    const completeOffers = completeWorldShopOffers(active.shop, loadout);
+    const state = Object.freeze({
+      ...active,
+      shop: Object.freeze({
+        ...active.shop,
+        offers: Object.freeze({
+          ...completeOffers,
+          Minor: Object.freeze({
+            ...completeOffers.Minor!,
+            optionKey: 'StackUpgrade',
+          }),
+        }),
+      }),
+    });
+    const canonical = materializeAuthoredRoom({
+      catalog,
+      biome,
+      room,
+      occurrence: Object.freeze({
+        occurrenceId: createOccurrenceId('unsupported-inventory-emission'),
+        gameName: room.gameName,
+        state,
+        acquisitionSites: Object.freeze({}),
+        encounters: createDefaultRoomEncounterState(catalog, room, 'unsupported-inventory'),
+        additionalExits: Object.freeze([]),
+        roomActions: Object.freeze({ order: Object.freeze([]) }),
+      }),
+      role: 'ordinary',
+      entered: true,
+      lifecycleProfileKey: 'WorldShopRoom',
+      loadout,
+    });
+    const inventory = processShopInventory(initializeTestRewardBranches(), {
+      catalog,
+      room: canonical,
+      declaration: room,
+      historySequence: 1,
+      facts: (history) => factsWithHistory(baseFacts(), history, new Set()),
+      fail: (detail) => {
+        throw new Error(detail);
+      },
+    });
+    const findings = new Map();
+    mergeRewardFindingEmissions(findings, inventory.findingEmissions);
+
+    expect(inventory.branches).toEqual([]);
+    expect([...findings.values()]).toEqual([
+      expect.objectContaining({
+        finding: expect.objectContaining({
+          code: 'shopOfferUnavailable',
+          origin: createShopOfferAddress(biome, canonical.origin.occurrenceId, 'Minor'),
+        }),
+        atomicRegion: ownerRegion(canonical.origin),
+        chronology: { kind: 'history', sequence: 1, boundary: 'at' },
+      }),
+    ]);
+  });
+
   it('folds a purchased random Shop Pom only at purchase, while unpurchased and dormant inventory stay inert', () => {
     const room = catalog.rooms.byKey.F_Shop01;
     if (room === undefined) throw new Error('missing F Shop declaration');
@@ -108,20 +178,16 @@ describe('Shop trait acquisition processing', () => {
         traitHistory,
       }),
     );
-    const inventory = processShopInventory(
-      seeded,
-      {
-        catalog,
-        room: canonical,
-        declaration: room,
-        historySequence: 1,
-        facts,
-        fail: (detail) => {
-          throw new Error(detail);
-        },
+    const inventory = processShopInventory(seeded, {
+      catalog,
+      room: canonical,
+      declaration: room,
+      historySequence: 1,
+      facts,
+      fail: (detail) => {
+        throw new Error(detail);
       },
-      new Map(),
-    );
+    }).branches;
     const unpurchased = settleShop(
       inventory,
       {
@@ -159,20 +225,16 @@ describe('Shop trait acquisition processing', () => {
       lifecycleProfileKey: 'WorldShopRoom',
       loadout,
     });
-    const purchasedInventory = processShopInventory(
-      seeded,
-      {
-        catalog,
-        room: purchasedCanonical,
-        declaration: room,
-        historySequence: 1,
-        facts,
-        fail: (detail) => {
-          throw new Error(detail);
-        },
+    const purchasedInventory = processShopInventory(seeded, {
+      catalog,
+      room: purchasedCanonical,
+      declaration: room,
+      historySequence: 1,
+      facts,
+      fail: (detail) => {
+        throw new Error(detail);
       },
-      new Map(),
-    );
+    }).branches;
     const purchased = settleShop(
       purchasedInventory,
       {
@@ -224,20 +286,16 @@ describe('Shop trait acquisition processing', () => {
       loadout,
     });
     const giftPurchased = settleShop(
-      processShopInventory(
-        seeded,
-        {
-          catalog,
-          room: giftCanonical,
-          declaration: room,
-          historySequence: 1,
-          facts,
-          fail: (detail) => {
-            throw new Error(detail);
-          },
+      processShopInventory(seeded, {
+        catalog,
+        room: giftCanonical,
+        declaration: room,
+        historySequence: 1,
+        facts,
+        fail: (detail) => {
+          throw new Error(detail);
         },
-        new Map(),
-      ),
+      }).branches,
       {
         catalog,
         room: giftCanonical,
@@ -333,20 +391,16 @@ describe('Shop trait acquisition processing', () => {
         traitHistory,
       });
     });
-    const inventory = processShopInventory(
-      seeded,
-      {
-        catalog,
-        room: canonical,
-        declaration: room,
-        historySequence: 1,
-        facts,
-        fail: (detail) => {
-          throw new Error(detail);
-        },
+    const inventory = processShopInventory(seeded, {
+      catalog,
+      room: canonical,
+      declaration: room,
+      historySequence: 1,
+      facts,
+      fail: (detail) => {
+        throw new Error(detail);
       },
-      new Map(),
-    );
+    }).branches;
     const findings = new Map();
     const purchased = settleShop(
       inventory,
@@ -475,20 +529,16 @@ describe('Shop trait acquisition processing', () => {
           traitHistory,
         });
       });
-      const inventory = processShopInventory(
-        seeded,
-        {
-          catalog,
-          room: canonical,
-          declaration: room,
-          historySequence: 1,
-          facts,
-          fail: (detail) => {
-            throw new Error(detail);
-          },
+      const inventory = processShopInventory(seeded, {
+        catalog,
+        room: canonical,
+        declaration: room,
+        historySequence: 1,
+        facts,
+        fail: (detail) => {
+          throw new Error(detail);
         },
-        new Map(),
-      );
+      }).branches;
       const purchased = settleShop(
         inventory,
         {
@@ -658,26 +708,23 @@ describe('Shop trait acquisition processing', () => {
     const facts = (history: ReturnType<typeof createRewardHistoryState>) =>
       factsWithHistory(baseFacts(), history, new Set());
     const inventoryFindings = new Map();
-    const inventory = processShopInventory(
-      initializeTestRewardBranches(),
-      {
-        catalog,
-        room: canonical,
-        declaration: room,
-        historySequence: 1,
-        facts,
-        fail: (detail) => {
-          throw new Error(detail);
-        },
+    const inventory = processShopInventory(initializeTestRewardBranches(), {
+      catalog,
+      room: canonical,
+      declaration: room,
+      historySequence: 1,
+      facts,
+      fail: (detail) => {
+        throw new Error(detail);
       },
-      inventoryFindings,
-    );
+    });
+    mergeRewardFindingEmissions(inventoryFindings, inventory.findingEmissions);
     expect(inventoryFindings).toHaveLength(0);
-    expect(inventory).not.toHaveLength(0);
+    expect(inventory.branches).not.toHaveLength(0);
 
     const purchaseFindings = new Map();
     const purchased = settleShop(
-      inventory,
+      inventory.branches,
       {
         catalog,
         room: canonical,

@@ -9,7 +9,7 @@ import {
   createTraitHistoryState,
   foldTraitHistoryEvents,
 } from '../../../traits';
-import { completePendingShopAcquisitionSite } from '../../shop-settlement';
+import { completePendingShopAcquisitionSite } from '../../shop/settlement';
 import type { RewardBranchState } from '../../branch-primitives';
 import { advanceRewardBranches } from '../../branch-lifecycle';
 import { BiomeRewardSimulationContractError } from '../biome-contract';

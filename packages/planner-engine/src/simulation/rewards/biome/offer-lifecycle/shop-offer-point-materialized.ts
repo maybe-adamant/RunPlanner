@@ -14,12 +14,12 @@ import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import type { RewardHistoryState } from '../../../../reward-kernel';
 import { createBiomeRewardFacts } from '../../facts';
 import { rewardFindingChronologyForRoom } from '../finding-chronology';
-import { addRewardFinding, rewardFinding } from '../../findings';
+import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { RewardBranchState } from '../../branch-primitives';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
-import { processShopInventory } from '../../shop-settlement';
+import { processShopInventory } from '../../shop/inventory';
 
 export interface ShopOfferPointMaterializationInputs {
   readonly catalog: Catalog;
@@ -183,24 +183,22 @@ export function applyShopOfferPointMaterialization(
     );
   }
 
-  const nextBranches =
+  const inventory =
     (shopEntry?.unresolvedOffers.length ?? 0) > 0
-      ? Object.freeze([])
-      : processShopInventory(
-          branches,
-          {
-            catalog,
-            room,
-            declaration,
-            historySequence: event.sequence,
-            findingChronology,
-            facts,
-            fail: (detail) => {
-              throw new BiomeRewardSimulationContractError(detail);
-            },
+      ? undefined
+      : processShopInventory(branches, {
+          catalog,
+          room,
+          declaration,
+          historySequence: event.sequence,
+          findingChronology,
+          facts,
+          fail: (detail) => {
+            throw new BiomeRewardSimulationContractError(detail);
           },
-          findings,
-        );
+        });
+  if (inventory !== undefined) mergeRewardFindingEmissions(findings, inventory.findingEmissions);
+  const nextBranches = inventory?.branches ?? Object.freeze([]);
   if ((shopEntry?.unresolvedOffers.length ?? 0) > 0) {
     for (const unresolved of shopEntry!.unresolvedOffers) {
       addRewardFinding(

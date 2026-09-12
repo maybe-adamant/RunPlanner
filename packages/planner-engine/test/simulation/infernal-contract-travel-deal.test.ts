@@ -22,10 +22,8 @@ import {
   echoShopDuplicateOffer,
 } from '../../src/authored-project/shop';
 import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms';
-import {
-  processShopInventory,
-  settleShopAcquisitionSite,
-} from '../../src/simulation/rewards/shop-settlement';
+import { processShopInventory } from '../../src/simulation/rewards/shop/inventory';
+import { settleShopAcquisitionSite } from '../../src/simulation/rewards/shop/settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
@@ -387,21 +385,18 @@ function settle(options: {
         ])
       : seededBranches(options);
   const findings = new Map();
-  const inventory = processShopInventory(
-    sourceBranches,
-    {
-      catalog,
-      room: canonical,
-      declaration,
-      historySequence: 3,
-      facts,
-      fail: (detail) => {
-        throw new Error(detail);
-      },
+  const inventory = processShopInventory(sourceBranches, {
+    catalog,
+    room: canonical,
+    declaration,
+    historySequence: 3,
+    facts,
+    fail: (detail) => {
+      throw new Error(detail);
     },
-    findings,
-  );
-  const settlement = settleShopAcquisitionSite(inventory, {
+  });
+  mergeRewardFindingEmissions(findings, inventory.findingEmissions);
+  const settlement = settleShopAcquisitionSite(inventory.branches, {
     catalog,
     room: canonical,
     declaration,

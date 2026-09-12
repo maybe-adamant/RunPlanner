@@ -41,10 +41,8 @@ import {
 import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms';
 import { createDerivedAcquisitionEntryCandidateArtifacts } from '../../src/simulation/rewards/acquisition/artifacts';
 import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
-import {
-  processShopInventory,
-  settleShopAcquisitionSite,
-} from '../../src/simulation/rewards/shop-settlement';
+import { processShopInventory } from '../../src/simulation/rewards/shop/inventory';
+import { settleShopAcquisitionSite } from '../../src/simulation/rewards/shop/settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
 import {
@@ -103,6 +101,7 @@ export {
   createLevelResolutionCandidateArtifacts,
   processShopInventory,
   settleShopAcquisitionSite,
+  mergeRewardFindingEmissions,
   selectedTraitOfferProducts,
   attachTraitHistory,
   foldTraitHistoryEvents,
@@ -740,22 +739,19 @@ export function echoGoldShop(
       currentRoomShopOptionNames,
     );
   const inventoryFindings = new Map();
-  const inventory = processShopInventory(
-    seeded,
-    {
-      catalog,
-      room: canonical,
-      declaration: room,
-      historySequence: 2,
-      facts,
-      fail: (detail) => {
-        throw new Error(detail);
-      },
+  const inventory = processShopInventory(seeded, {
+    catalog,
+    room: canonical,
+    declaration: room,
+    historySequence: 2,
+    facts,
+    fail: (detail) => {
+      throw new Error(detail);
     },
-    inventoryFindings,
-  );
+  });
+  mergeRewardFindingEmissions(inventoryFindings, inventory.findingEmissions);
   const findings = new Map();
-  const settlement = settleShopAcquisitionSite(inventory, {
+  const settlement = settleShopAcquisitionSite(inventory.branches, {
     catalog,
     room: canonical,
     declaration: room,
@@ -772,7 +768,7 @@ export function echoGoldShop(
     duplicateKey,
     replacementKey,
     findings,
-    inventory,
+    inventory: inventory.branches,
     inventoryFindings,
     settlement,
   };
