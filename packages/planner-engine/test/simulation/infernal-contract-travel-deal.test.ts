@@ -20,10 +20,14 @@ import { createUnresolvedAcquisitionRewardState } from '../../src/authored-proje
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   echoShopDuplicateOffer,
+  INFERNAL_CONTRACT_ENTRY_KEY,
 } from '../../src/authored-project/shop';
 import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms';
 import { processShopInventory } from '../../src/simulation/rewards/shop/inventory';
-import { settleShopAcquisitionSite } from '../../src/simulation/rewards/shop/settlement';
+import {
+  completePendingShopAcquisitionSite,
+  settleShopAcquisitionSite,
+} from '../../src/simulation/rewards/shop/settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
@@ -258,6 +262,7 @@ function settle(options: {
   readonly shopOfferOverrides?: Readonly<Record<string, AuthoredRewardState>>;
   readonly roomGameName?: 'F_PreBoss01' | 'I_PreBoss02' | 'Q_PreBoss01';
   readonly enteredBiomes?: number;
+  readonly partial?: boolean;
 }) {
   const roomGameName = options.roomGameName ?? 'F_PreBoss01';
   const declaration = catalog.rooms.byKey[roomGameName];
@@ -401,6 +406,7 @@ function settle(options: {
     room: canonical,
     declaration,
     historySequence: 4,
+    ...(options.partial === true ? { order: options.order, completeAfterOrder: false } : {}),
     facts,
     fail: (detail) => {
       throw new Error(detail);
@@ -478,6 +484,71 @@ describe('Infernal Contract and Travel Deal chronology', () => {
         )?.source.instanceProvenance,
       ).toBe('paid');
     }
+  });
+
+  it('retains generated Shop source facts through a split settlement and interleaved Contract acquisition', () => {
+    const first = settle({
+      order: ['Minor'],
+      contract: true,
+      travel: true,
+      echo: true,
+      partial: true,
+    });
+    const declaration = catalog.rooms.byKey.F_PreBoss01;
+    if (declaration === undefined) throw new Error('missing F Preboss declaration');
+    const shopKey = semanticAddressKey(first.canonical.origin);
+    const firstPending = first.settlement.branches[0]?.pendingShops[shopKey];
+    const goldFrontier = first.settlement.derivedEntryFrontiers?.find(
+      (entry) => entry.kind === 'echoDoubleShopReward',
+    );
+    if (
+      firstPending?.goldMaterialization === undefined ||
+      firstPending.travelRefill === undefined ||
+      goldFrontier === undefined
+    )
+      throw new Error('first Shop purchase did not materialize Gold');
+    const sourceHistory = firstPending.goldMaterialization.sourceTraitHistory;
+    const travelGenerationFacts = firstPending.travelRefill.generationFacts;
+    expect(firstPending.travelRefill).toMatchObject({ sourceOfferKey: 'Minor', slotIndex: 2 });
+
+    const facts = (history: RewardBranchState['history']) =>
+      factsWithHistory(baseFacts(), history, new Set());
+    const interleaved = settleShopAcquisitionSite(first.settlement.branches, {
+      catalog,
+      room: first.canonical,
+      declaration,
+      historySequence: 5,
+      order: Object.freeze([INFERNAL_CONTRACT_ENTRY_KEY]),
+      completeAfterOrder: false,
+      facts,
+      fail: (detail) => {
+        throw new Error(detail);
+      },
+    });
+    const interleavedPending = interleaved.branches[0]?.pendingShops[shopKey];
+    expect(interleavedPending?.goldMaterialization?.sourceTraitHistory).toBe(sourceHistory);
+    expect(interleavedPending?.travelRefill?.generationFacts).toBe(travelGenerationFacts);
+    expect(goldFrontier.branchesBeforeEntry[0]?.traitHistory?.events).toContainEqual(
+      expect.objectContaining({
+        kind: 'traitRemoval',
+        acquisitionPoint: 'shopDuplicateMaterialized',
+      }),
+    );
+    expect(
+      interleaved.roleFrontiers?.some(
+        (frontier) => frontier.settlement.entry.entryKey === INFERNAL_CONTRACT_ENTRY_KEY,
+      ),
+    ).toBe(true);
+
+    const completed = completePendingShopAcquisitionSite(
+      interleaved.branches,
+      first.canonical.origin,
+      (detail) => {
+        throw new Error(detail);
+      },
+    );
+    expect(completed).toHaveLength(1);
+    expect(completed[0]?.pendingShops[shopKey]).toBeUndefined();
   });
 
   it('retains first-purchase legality without publishing purchase barriers', () => {

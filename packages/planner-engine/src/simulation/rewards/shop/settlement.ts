@@ -5,16 +5,12 @@ import {
   type SemanticAddress,
 } from '../../../authored-project/addresses';
 
-import {
-  createUnresolvedAcquisitionRewardState,
-  createUnresolvedShopAcquisitionRewardState,
-} from '../../../authored-project/traits';
+import { createUnresolvedAcquisitionRewardState } from '../../../authored-project/traits';
 import { parseArtificerReplacementEntryKey } from '../../../authored-project/artificer';
 import { rewardSourceResolvesAtAcquisition } from '../../../authored-project/reward-state';
 
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
-  echoShopDuplicateOffer,
   echoShopDuplicateOfferMatches,
   INFERNAL_CONTRACT_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
@@ -23,7 +19,6 @@ import {
   evaluateShopPurchaseGateAtSlot,
   findShopIndexedGenerationWitnesses,
   purchaseInteractionName,
-  locallyValidRewardOffers,
   type ResolvedRewardOffer,
   type ProducerLifecyclePointKey,
   type ShopGenerationWitness,
@@ -32,12 +27,7 @@ import {
 import { isAcquisitionAuthorshipMissingFinding } from '../../model';
 import { ownerRegion, type FindingRegionEntry } from '../../finding-regions';
 
-import {
-  attachTraitHistory,
-  createTraitHistoryState,
-  foldTraitHistoryEvents,
-  isPomUpgradeTarget,
-} from '../../traits';
+import { createTraitHistoryState } from '../../traits';
 
 import {
   freezeRecord,
@@ -69,6 +59,11 @@ import type {
 } from '../acquisition/contracts';
 import type { AcquisitionSource } from '../acquisition/source';
 import { shopRequirements, type ShopProcessingContext } from './context';
+import {
+  deriveTravelRefill,
+  eligibleShopGoldSourceOfferKeys,
+  materializeShopGold,
+} from './derived-rewards';
 
 /** Settles optional Shop offer entries at the exact post-outgoing roomExit site. */
 export function settleShopAcquisitionSite(
@@ -251,207 +246,16 @@ export function settleShopAcquisitionSite(
       }
     }
   }
-  const deriveTravelRefill = (
-    execution: ShopExecution,
-    sourceOffer: PaidOffer,
-    slotIndex: number,
-    excludedNames: ReadonlySet<string>,
-  ): TravelRefill | undefined => {
-    const slot = profile.slots.values[slotIndex];
-    const group = slot === undefined ? undefined : profile.groups.byKey[slot.groupKey];
-    if (slot === undefined || group === undefined) return undefined;
-    const generationFacts = context.facts(
-      execution.candidate.history,
-      new Set(),
-      execution.candidate,
-    );
-    const candidateOffers = group.options.values.flatMap((option) =>
-      locallyValidRewardOffers(catalog.rewards, option.rewardType),
-    );
-    const uniqueOffers = Object.freeze([
-      ...new Map(candidateOffers.map((offer) => [JSON.stringify(offer), offer] as const)).values(),
-    ]);
-    const supportedOffers = (excludedPurchaseInteractionNames: ReadonlySet<string>) =>
-      Object.freeze(
-        uniqueOffers.filter(
-          (offer) =>
-            findShopIndexedGenerationWitnesses(
-              catalog.rewards,
-              profile,
-              slotIndex,
-              offer,
-              generationFacts,
-              requirements,
-              excludedPurchaseInteractionNames.size === 0
-                ? {}
-                : { excludedPurchaseInteractionNames },
-            ).length > 0,
-        ),
-      );
-    const excludedDomain = supportedOffers(excludedNames);
-    const effectiveExcludedNames = excludedDomain.length > 0 ? excludedNames : new Set<string>();
-    const domain = excludedDomain.length > 0 ? excludedDomain : supportedOffers(new Set());
-    if (domain.length === 0) return undefined;
-    const evaluateOffer = (offer: ResolvedRewardOffer) =>
-      Object.freeze({
-        findings: Object.freeze([]),
-        supported:
-          findShopIndexedGenerationWitnesses(
-            catalog.rewards,
-            profile,
-            slotIndex,
-            offer,
-            generationFacts,
-            requirements,
-            effectiveExcludedNames.size === 0
-              ? {}
-              : { excludedPurchaseInteractionNames: effectiveExcludedNames },
-          ).length > 0,
-      });
-    return Object.freeze({
-      sourceOfferKey: sourceOffer.offerKey,
-      slotIndex,
-      rewardTypes: Object.freeze([...new Set(domain.map((offer) => offer.rewardType))]),
-      excludedNames: effectiveExcludedNames,
-      generationFacts,
-      evaluateOffer,
-    });
-  };
-  const goldDisposition = Object.values(catalog.traits.byKey).find(
-    (trait) =>
-      trait.selectedDisposition?.kind === 'echo' &&
-      trait.selectedDisposition.effect === 'doubleShop',
-  )?.selectedDisposition;
-  const goldSourceEligible = (offer: ResolvedRewardOffer): boolean =>
-    goldDisposition?.kind === 'echo' &&
-    goldDisposition.effect === 'doubleShop' &&
-    !goldDisposition.excludedRewardTypes.includes(offer.rewardType);
   const eligibleGoldSourceOfferKeys = (): readonly string[] => {
     const travel = room.acquisitionSites.roomExit?.entries[TRAVEL_DEAL_REFILL_ENTRY_KEY];
-    return Object.freeze([
-      ...entry.offers.flatMap((offer) => (goldSourceEligible(offer.offer) ? [offer.offerKey] : [])),
-      ...(travel !== undefined && travel !== null && goldSourceEligible(travel.offer)
-        ? [TRAVEL_DEAL_REFILL_ENTRY_KEY]
-        : []),
-    ]);
-  };
-  const materializeGold = (
-    execution: ShopExecution,
-    offer: PaidOffer,
-    roleBindings: GoldMaterialization['roleBindings'],
-  ): void => {
-    if (execution.goldMaterialization !== undefined) return;
-    const pending = execution.goldActiveAtEntry;
-    const disposition =
-      pending === undefined
-        ? undefined
-        : catalog.traits.byKey[pending.traitKey]?.selectedDisposition;
-    if (
-      pending === undefined ||
-      pending.acquisitionIdentity === undefined ||
-      disposition?.kind !== 'echo' ||
-      disposition.effect !== 'doubleShop' ||
-      disposition.excludedRewardTypes.includes(offer.offer.rewardType)
-    )
-      return;
-    const address = createAcquisitionEntryAddress(site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY);
-    const before = execution.candidate;
-    const beforeTraits = before.traitHistory ?? createTraitHistoryState();
-    const traitHistory = foldTraitHistoryEvents(catalog, [
-      ...beforeTraits.events,
-      Object.freeze({
-        kind: 'traitRemoval' as const,
-        owner: address,
-        acquisitionRole: 'echoShopDuplicateConsumed',
-        sequence: historySequence,
-        acquisitionPoint: 'shopDuplicateMaterialized',
-        traitKey: pending.traitKey,
-        acquisitionIdentity: pending.acquisitionIdentity,
-        match: 'acquisitionIdentity' as const,
-      }),
-    ]);
-    execution.candidate = Object.freeze({
-      ...before,
-      history: attachTraitHistory(before.history, traitHistory),
-      traitHistory,
-    });
-    execution.goldMaterialization = Object.freeze({
-      sourceOfferKey: offer.offerKey,
-      roleBindings,
-      sourceOffer: offer,
-      sourceTraitHistory: beforeTraits,
-      sourcePomEligibleTraitKeys: Object.freeze(
-        Object.values(beforeTraits.equippedTraits)
-          .filter((trait) => isPomUpgradeTarget(catalog, trait))
-          .map((trait) => trait.traitKey),
-      ),
-    });
-    const branchesBeforeEntry = Object.freeze([execution.candidate]);
-    const duplicateOffer = echoShopDuplicateOffer(catalog, offer.offer);
-    const fixedReward =
-      duplicateOffer === null
-        ? undefined
-        : createUnresolvedShopAcquisitionRewardState(catalog, duplicateOffer, profile.key);
-    const derivedRoleFrontiers: AcquisitionRoleFrontier[] = [];
-    if (fixedReward !== undefined) {
-      const duplicateActionOwner = actionOwnerForOffer(offer.offerKey);
-      const source = Object.freeze({
-        origin: address,
-        offer: fixedReward.offer,
-        producerLifecycleKey: profile.key,
-        producerKind: 'shop' as const,
-        instanceProvenance: 'free' as const,
-        traitOffersByAcquisitionRole: fixedReward.traitOffersByAcquisitionRole,
-        ...(fixedReward.levelResolutionsByAcquisitionRole === undefined
-          ? {}
-          : { levelResolutionsByAcquisitionRole: fixedReward.levelResolutionsByAcquisitionRole }),
-        dispositionByAcquisitionRole: fixedReward.dispositionByAcquisitionRole,
-        ...(offer.traitContext === undefined ? {} : { traitContext: offer.traitContext }),
-        ...(duplicateActionOwner === undefined ? {} : { timelineOwner: duplicateActionOwner }),
-      });
-      const settlement = Object.freeze({ site, entry: address });
-      let candidateBranches: readonly RewardBranchState[] = branchesBeforeEntry;
-      for (const binding of roleBindings) {
-        const settled = applyProducerRoleHistory(
-          catalog,
-          candidateBranches,
-          source,
-          Object.freeze({ ...binding, historySequence }),
-          context.facts,
-          ownerRegion(room.origin),
-          context.findingChronology,
-          settlement,
-          branchesBeforeEntry,
-          true,
-          false,
-          context.authoredSeaStarDuplicateSiteKeys,
-        );
-        candidateBranches = settled.branches;
-        derivedRoleFrontiers.push(...settled.roleFrontiers);
-      }
-    }
-    derivedEntryFrontiers.push(
-      Object.freeze({
-        address,
-        kind: 'echoDoubleShopReward' as const,
-        branchCohortSize,
-        sourceOfferKey: offer.offerKey,
-        rewardTypes: Object.freeze([offer.offer.rewardType]),
-        ...(fixedReward === undefined ? {} : { fixedReward }),
-        ...(derivedRoleFrontiers.length === 0
-          ? {}
-          : { roleFrontiers: Object.freeze(derivedRoleFrontiers) }),
-        eligibleSourceOfferKeys: eligibleGoldSourceOfferKeys(),
-        branchesBeforeEntry,
-        evaluateOffer: (candidateOffer: ResolvedRewardOffer) =>
-          Object.freeze({
-            findings: Object.freeze([]),
-            supported: echoShopDuplicateOfferMatches(catalog, offer.offer, candidateOffer),
-          }),
-      }),
+    return eligibleShopGoldSourceOfferKeys(
+      catalog,
+      entry.offers,
+      travel === undefined || travel === null
+        ? travel
+        : Object.freeze({ offerKey: TRAVEL_DEAL_REFILL_ENTRY_KEY, offer: travel.offer }),
     );
   };
-
   const settlePaid = (
     execution: ShopExecution,
     offer: PaidOffer,
@@ -682,7 +486,28 @@ export function settleShopAcquisitionSite(
           const bindings = option.acquisitionLifecycle.map((binding) =>
             Object.freeze({ role: binding.role, lifecyclePoint: binding.lifecyclePoint }),
           );
-          materializeGold(refillExecution, refillOffer, bindings);
+          const gold = materializeShopGold({
+            catalog,
+            branch: refillExecution.candidate,
+            pendingGold: refillExecution.goldActiveAtEntry,
+            existingMaterialization: refillExecution.goldMaterialization,
+            sourceOffer: refillOffer,
+            roleBindings: bindings,
+            profile,
+            site,
+            owner: room.origin,
+            actionOwner: actionOwnerForOffer(refillOffer.offerKey),
+            branchCohortSize,
+            historySequence,
+            facts: context.facts,
+            findingChronology: context.findingChronology,
+            authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys,
+            eligibleSourceOfferKeys: eligibleGoldSourceOfferKeys(),
+          });
+          refillExecution.candidate = gold.branch;
+          if (gold.materialization !== undefined)
+            refillExecution.goldMaterialization = gold.materialization;
+          derivedEntryFrontiers.push(...gold.derivedEntryFrontiers);
           if (settlePaid(refillExecution, refillOffer, bindings, agreementBranches)) {
             survivors.push(refillExecution);
           }
@@ -844,7 +669,27 @@ export function settleShopAcquisitionSite(
               }),
             });
       const prePurchaseTraits = execution.candidate.traitHistory;
-      materializeGold(execution, paidOffer, bindings);
+      const gold = materializeShopGold({
+        catalog,
+        branch: execution.candidate,
+        pendingGold: execution.goldActiveAtEntry,
+        existingMaterialization: execution.goldMaterialization,
+        sourceOffer: paidOffer,
+        roleBindings: bindings,
+        profile,
+        site,
+        owner: room.origin,
+        actionOwner: actionOwnerForOffer(paidOffer.offerKey),
+        branchCohortSize,
+        historySequence,
+        facts: context.facts,
+        findingChronology: context.findingChronology,
+        authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys,
+        eligibleSourceOfferKeys: eligibleGoldSourceOfferKeys(),
+      });
+      execution.candidate = gold.branch;
+      if (gold.materialization !== undefined) execution.goldMaterialization = gold.materialization;
+      derivedEntryFrontiers.push(...gold.derivedEntryFrontiers);
       if (acquisitionResolved) {
         const purchaseActionOwner = actionOwnerForOffer(entryKey);
         const settled = settleAcquisitionResolvedReward(
@@ -908,12 +753,16 @@ export function settleShopAcquisitionSite(
             excludedNames.add(interaction);
             excludedNames.add(`${interaction}Drop`);
           }
-          const travelRefill = deriveTravelRefill(
-            execution,
-            inventoryOffer,
+          const travelRefill = deriveTravelRefill({
+            catalog,
+            profile,
+            branch: execution.candidate,
+            sourceOffer: inventoryOffer,
             slotIndex,
             excludedNames,
-          );
+            requirements,
+            facts: context.facts,
+          });
           if (travelRefill !== undefined) {
             execution.travelRefill = travelRefill;
             const address = createAcquisitionEntryAddress(site, TRAVEL_DEAL_REFILL_ENTRY_KEY);
