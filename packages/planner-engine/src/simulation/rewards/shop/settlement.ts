@@ -1,18 +1,16 @@
-import type { Catalog, RoomDeclaration } from '../../catalog-schema';
-
 import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   semanticAddressKey,
   type SemanticAddress,
-} from '../../authored-project/addresses';
+} from '../../../authored-project/addresses';
 
 import {
   createUnresolvedAcquisitionRewardState,
   createUnresolvedShopAcquisitionRewardState,
-} from '../../authored-project/traits';
-import { parseArtificerReplacementEntryKey } from '../../authored-project/artificer';
-import { rewardSourceResolvesAtAcquisition } from '../../authored-project/reward-state';
+} from '../../../authored-project/traits';
+import { parseArtificerReplacementEntryKey } from '../../../authored-project/artificer';
+import { rewardSourceResolvesAtAcquisition } from '../../../authored-project/reward-state';
 
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
@@ -20,200 +18,57 @@ import {
   echoShopDuplicateOfferMatches,
   INFERNAL_CONTRACT_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
-} from '../../authored-project/shop';
+} from '../../../authored-project/shop';
 import {
-  applyOfferProjection,
-  evaluateShopGenerationSupport,
   evaluateShopPurchaseGateAtSlot,
   findShopIndexedGenerationWitnesses,
   purchaseInteractionName,
-  isPayloadLocallyValid,
   locallyValidRewardOffers,
-  type AuthoredShopOffer,
   type ResolvedRewardOffer,
-  type ShopGenerationSupport,
-  type ShopGenerationWitness,
   type ProducerLifecyclePointKey,
-} from '../../reward-kernel';
+  type ShopGenerationWitness,
+} from '../../../reward-kernel';
 
-import type { CanonicalAuthoredRoom, CanonicalLocalVisitRoom } from '../materialization';
-import { isAcquisitionAuthorshipMissingFinding, type RewardGenerationFindingCode } from '../model';
-import { ownerRegion, type FindingChronology, type FindingRegionEntry } from '../finding-regions';
+import { isAcquisitionAuthorshipMissingFinding } from '../../model';
+import { ownerRegion, type FindingRegionEntry } from '../../finding-regions';
 
 import {
   attachTraitHistory,
   createTraitHistoryState,
   foldTraitHistoryEvents,
   isPomUpgradeTarget,
-} from '../traits';
+} from '../../traits';
 
 import {
-  appendRewardEvent,
   freezeRecord,
   mergeEquivalentRewardBranches,
-  offerEvidence,
   type PendingShopGoldMaterialization,
   type PendingShopPaidOffer,
   type PendingShopTravelRefill,
   type RewardBranchState,
-} from './branch-primitives';
-import { type ReachedTraitChildCheckpoint } from './trait-settlement';
+} from '../branch-primitives';
+import { type ReachedTraitChildCheckpoint } from '../trait-settlement';
 import {
   addRewardFinding,
   historyChronology,
   mergeRewardFindingEmissions,
   rewardFinding,
-} from './findings';
-import { EMPTY_PLANNER_TIMELINE_FACTS } from '../timeline-facts';
+} from '../findings';
+import { EMPTY_PLANNER_TIMELINE_FACTS } from '../../timeline-facts';
 
-import { applyProducerRoleHistory } from './acquisition/role-settlement';
+import { applyProducerRoleHistory } from '../acquisition/role-settlement';
 import {
   withStoredArtificerReplacements,
   settleAcquisitionResolvedReward,
   settleOwnedAcquisitionSite,
-} from './acquisition/site-settlement';
+} from '../acquisition/site-settlement';
 import type {
   AcquisitionRoleFrontier,
   AcquisitionSettlementProduct,
   DerivedAcquisitionEntryFrontier,
-  RewardFactsFactory,
-} from './acquisition/contracts';
-import type { AcquisitionSource } from './acquisition/source';
-
-export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalVisitRoom;
-
-function shopRequirements(
-  declaration: RoomDeclaration,
-  profileKey: string,
-  fail: (detail: string) => never,
-) {
-  const binding = declaration.incomingReward;
-  if (binding.kind !== 'shop' || binding.shopProfileKey !== profileKey) {
-    return fail(`${declaration.gameName} has no ${profileKey} shop binding`);
-  }
-  return binding.additionalOptionRequirements ?? Object.freeze({});
-}
-
-export interface ShopProcessingContext {
-  readonly catalog: Catalog;
-  readonly room: CanonicalAuthoredRoom;
-  readonly declaration: RoomDeclaration;
-  readonly historySequence: number;
-  readonly findingChronology?: FindingChronology;
-  readonly facts: RewardFactsFactory;
-  readonly fail: (detail: string) => never;
-  /** Exact participating Shop actions for this settlement invocation. */
-  readonly order?: readonly string[];
-  /** The current action is the final Shop-owned chronology row in this room. */
-  readonly completeAfterOrder?: boolean;
-  /** Exact authored Sea Star result sites whose source frontier must be retained. */
-  readonly authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string>;
-}
-
-export function processShopInventory(
-  branches: readonly RewardBranchState[],
-  context: ShopProcessingContext,
-  findings: Map<string, FindingRegionEntry>,
-): readonly RewardBranchState[] {
-  const { catalog, room, declaration, historySequence, fail } = context;
-  const entry = room.entryState;
-  if (entry?.kind !== 'shop') {
-    return fail(`${room.gameName} materialized a missing shop state`);
-  }
-  const profile = catalog.rewards.shops.byKey[entry.profileKey];
-  if (profile === undefined) {
-    return fail(`unknown shop profile ${entry.profileKey}`);
-  }
-  const requirements = shopRequirements(declaration, entry.profileKey, fail);
-  const authored: readonly AuthoredShopOffer[] = entry.offers.map((offer) => ({
-    optionKey: offer.optionKey,
-    offer: offer.offer,
-  }));
-  const next: RewardBranchState[] = [];
-  const supportResults: ShopGenerationSupport[] = [];
-  for (const branch of branches) {
-    const support = evaluateShopGenerationSupport(
-      catalog.rewards,
-      profile,
-      authored,
-      context.facts(branch.history, new Set(), branch),
-      requirements,
-    );
-    supportResults.push(support);
-    for (const witness of support.witnesses) {
-      let candidate = branch;
-      for (const offer of entry.offers) {
-        const offerFacts = context.facts(candidate.history, new Set(), candidate);
-        const history = applyOfferProjection(
-          catalog.rewards,
-          candidate.history,
-          offer.offer,
-          offerFacts,
-        );
-        candidate = appendRewardEvent(Object.freeze({ ...candidate, history }), historySequence, {
-          kind: 'rewardOffered',
-          origin: offer.offerOrigin,
-          offer: offer.offer,
-        });
-      }
-      candidate = appendRewardEvent(candidate, historySequence, {
-        kind: 'shopInventorySupported',
-        origin: room.origin,
-        profileKey: profile.key,
-        optionKeys: witness.optionKeys,
-        slotGroupIndexes: profile.groups.values.flatMap((group, groupIndex) =>
-          Array.from({ length: group.offerCount }, () => groupIndex),
-        ),
-      });
-      next.push(
-        Object.freeze({
-          ...candidate,
-          pendingShops: freezeRecord({
-            ...candidate.pendingShops,
-            [semanticAddressKey(room.origin)]: Object.freeze({
-              profileKey: profile.key,
-              witness,
-            }),
-          }),
-        }),
-      );
-    }
-  }
-  if (next.length === 0) {
-    const unsupportedIndexes = entry.offers.flatMap((_, index) =>
-      supportResults.every((support) => support.unsupportedSlotIndexes.includes(index))
-        ? [index]
-        : [],
-    );
-    for (const index of unsupportedIndexes) {
-      const offer = entry.offers[index]!;
-      const rewardType = catalog.rewards.rewardTypes.byKey[offer.offer.rewardType];
-      const code: RewardGenerationFindingCode =
-        rewardType === undefined ||
-        !isPayloadLocallyValid(catalog.rewards, rewardType, offer.offer.payload)
-          ? 'rewardPayloadInvalid'
-          : 'shopOfferUnavailable';
-      addRewardFinding(
-        findings,
-        rewardFinding(code, offer.offerOrigin, offerEvidence(offer.offer)),
-        ownerRegion(room.origin),
-        context.findingChronology ?? historyChronology(historySequence),
-      );
-    }
-    if (unsupportedIndexes.length === 0) {
-      addRewardFinding(
-        findings,
-        rewardFinding('shopOfferUnavailable', room.origin, {
-          offerKeys: entry.offers.map((offer) => offer.offerKey),
-          kind: 'jointOfferSet',
-        }),
-        ownerRegion(room.origin),
-        context.findingChronology ?? historyChronology(historySequence),
-      );
-    }
-  }
-  return Object.freeze(next);
-}
+} from '../acquisition/contracts';
+import type { AcquisitionSource } from '../acquisition/source';
+import { shopRequirements, type ShopProcessingContext } from './context';
 
 /** Settles optional Shop offer entries at the exact post-outgoing roomExit site. */
 export function settleShopAcquisitionSite(
@@ -282,7 +137,7 @@ export function settleShopAcquisitionSite(
     readonly witness: ShopGenerationWitness;
     remainingSlotIndexes: readonly number[];
     readonly travelActiveAtEntry: boolean;
-    readonly goldActiveAtEntry?: import('../../authored-project/traits').EquippedTrait;
+    readonly goldActiveAtEntry?: import('../../../authored-project/traits').EquippedTrait;
     firstNormalPurchaseSeen: boolean;
     travelRefill?: TravelRefill;
     goldMaterialization?: GoldMaterialization;

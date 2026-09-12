@@ -2,7 +2,7 @@
 
 ## Status and objective
 
-Status: locked; approved for implementation. Slice A is next.
+Status: locked; Slice A complete and independently reviewed. Slice B is next.
 Production base: `89920fb4`.
 Evidence: `docs/investigations/SHOP_SETTLEMENT_BOUNDARIES.md`.
 
@@ -111,6 +111,14 @@ Primary tests: `shop-trait-reward-settlement.test.ts` and shared
 Add only a missing inventory local-emission/merge witness; retain the existing
 inventory-versus-purchase and unresolved-child cases. Review and commit this
 complete boundary change independently.
+
+Delivered: inventory returns branches and finding emissions; the production
+caller merges once at the existing seam. Inventory, context and unchanged ordered
+settlement now live in their final Shop directory; the old root module is removed.
+One focused witness preserves the exact inventory finding owner and chronology.
+Validation: engine 143 files / 1,858 tests, focused Shop 4 files / 61 tests,
+engine typecheck and diff checks passed. Independent review passed, including
+37 tests. Full repository closure remains deferred to Slice B.
 
 ### B — Complete derived-reward transitions and closure
 
