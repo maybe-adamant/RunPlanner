@@ -58,6 +58,38 @@ inventory generation only in the former, and constrain the latter.
 
 ## Execution ownership
 
+### Prefer the published answer
+
+The executor reuses the planner's completed decision work in this order:
+
+1. **Insert the published result directly** at a supported native boundary
+   when it accepts the answer cleanly: trait offers, inventory, room choices,
+   targets, and resolved operands. Do not reconstruct those results through
+   many RNG hooks merely to imitate the native generation path.
+2. **Steer the specific native random decision** when direct insertion is not
+   a clean fit. Identify the action and its exact decision, then select the
+   published candidate or yes/no result while preserving native application.
+3. **Recreate native behavior only as a justified last resort.** A native
+   clock, eligibility calculation, payment, consumption, or effect loop must
+   not be implemented again merely because the planner simulates it.
+
+Deciding an outcome is distinct from applying it. Copying an already-resolved
+trait screen is direct result insertion, not recreation of acquisition. The
+native game still owns player selection and application of that selection.
+Likewise, exact room-content realization may use a native generation input;
+this does not authorize manufacturing unrelated gameplay preconditions.
+Condition overrides must state which native branch they affect and why a
+published-result input or a specific RNG contact cannot suffice. A native
+eligibility function name alone neither justifies nor condemns the adapter.
+
+Scope/binding and checkpoint coordination support these interventions; they
+are not competing ways to implement the gameplay effect. For every scope
+retained across a thread, yield, or deferred callback, identify the information
+unavailable at a single intervention point, the exact consumer, and its
+retirement boundary. Prefer fewer lifetime assumptions, not fewer hooks at
+the cost of recreating native logic. Native threaded dispatch alone does not
+justify a thread-spanning executor scope.
+
 The planner workspace already separates the information the runtime consumes:
 
 | Planner surface | Execution meaning                                                      | Runtime responsibility                                                   |
@@ -81,7 +113,7 @@ Commands fall into three execution dispositions:
 | Verify      | Named changed traits, charges, clocks, and retained effects             | Compare only published room-exit conformance facts; never steer with them |
 
 Some timeline steps combine these responsibilities. An acquisition adapter
-claims a ready owner and steers its randomized native surface, but completing
+claims a ready owner and inserts or steers its published outcome, but completing
 that steering handle is not proof that the player chose or retained the
 authored result. The plan remains conditional on player cooperation;
 enforcement does not erase player agency.
