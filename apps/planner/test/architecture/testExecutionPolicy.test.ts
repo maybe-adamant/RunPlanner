@@ -166,6 +166,9 @@ function localTimeoutViolations(
 }
 
 describe('repository test execution policy', () => {
+  it('keeps application tests in the dedicated test tree', () => {
+    expect(testFilesUnder(`${repositoryRoot}apps/planner/src`)).toEqual([]);
+  });
   it('uses one correctness entry point and retires regular/heavy lane machinery', () => {
     const packageJson = JSON.parse(readFileSync(`${repositoryRoot}/package.json`, 'utf8')) as {
       scripts: Record<string, string>;
@@ -202,7 +205,6 @@ describe('repository test execution policy', () => {
     const fixtureConfig = readFileSync(`${repositoryRoot}/vitest.fixtures.config.ts`, 'utf8');
 
     expect(correctnessConfig).toContain("'packages/*/test/**/*.test.ts'");
-    expect(correctnessConfig).toContain("'apps/*/src/**/*.test.{ts,tsx}'");
     expect(correctnessConfig).toContain("'apps/*/test/**/*.test.{ts,tsx}'");
     expect(correctnessConfig).toContain('exclude: [performanceTestFile]');
     expect(correctnessConfig).not.toContain('vitest.test-lanes');

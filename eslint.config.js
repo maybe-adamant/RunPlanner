@@ -188,7 +188,6 @@ export default tseslint.config(
   },
   {
     files: ['apps/planner/src/**/*.{ts,tsx}'],
-    ignores: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}'],
     rules: {
       'no-restricted-syntax': [
         'error',
@@ -199,7 +198,11 @@ export default tseslint.config(
   },
   {
     files: ['apps/planner/src/**/*.{ts,tsx}', 'apps/planner/test/**/*.{ts,tsx}'],
-    ignores: ['apps/planner/src/projections/structured-workspace/**/*.{ts,tsx}'],
+    ignores: [
+      'apps/planner/src/projections/structured-workspace/**/*.{ts,tsx}',
+      'apps/planner/test/projections/structured-workspace/**/*.{ts,tsx}',
+      'apps/planner/test/projections/structuredWorkspace.contract.test.ts',
+    ],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -210,11 +213,7 @@ export default tseslint.config(
     },
   },
   {
-    files: [
-      'apps/planner/src/**/*.test.{ts,tsx}',
-      'apps/planner/src/**/*.spec.{ts,tsx}',
-      'apps/planner/test/**/*.{ts,tsx}',
-    ],
+    files: ['apps/planner/test/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-syntax': ['error', ...plannerDeepRelativeImportSyntaxRestrictions],
     },
@@ -373,14 +372,12 @@ export default tseslint.config(
   },
   {
     files: ['apps/planner/src/ui/**/*.{ts,tsx}'],
-    ignores: ['apps/planner/src/ui/**/*.test.{ts,tsx}'],
     rules: {
       'no-restricted-imports': ['error', uiRestrictedImportOptions],
     },
   },
   {
     files: ['apps/planner/src/ui/editor/**/*.{ts,tsx}'],
-    ignores: ['apps/planner/src/ui/editor/**/*.test.{ts,tsx}'],
     rules: {
       'no-restricted-imports': ['error', structuredEditorRestrictedImportOptions],
     },
@@ -390,7 +387,6 @@ export default tseslint.config(
       'apps/planner/src/ui/editor/rewards/**/*.{ts,tsx}',
       'apps/planner/src/ui/editor/biome/HubDecisionWorkbench.tsx',
     ],
-    ignores: ['apps/planner/src/ui/editor/**/*.test.{ts,tsx}'],
     rules: {
       'no-restricted-imports': ['error', intentBoundEditorRestrictedImportOptions],
     },

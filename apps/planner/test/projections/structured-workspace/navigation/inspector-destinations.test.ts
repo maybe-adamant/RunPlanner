@@ -1,0 +1,1254 @@
+import { catalog } from '@run-planner/hades2-catalog';
+import {
+  applyProjectCommand,
+  createEchoLastRewardAddress,
+  createAcquisitionEntryAddress,
+  createAcquisitionRoleAddress,
+  createAcquisitionSiteAddress,
+  createEncounterPhaseAddress,
+  createExitDecisionAddress,
+  createExitSelectionAddress,
+  createHubDecisionAddress,
+  createHubSlotAddress,
+  createHubVisitAddress,
+  createIncomingRewardAddress,
+  createLocalVisitSlotAddress,
+  createOccurrenceId,
+  createOccurrenceAddress,
+  createRoomActionAddress,
+  createProjectDocument,
+  createTargetAddress,
+  createTraitOfferAddress,
+  echoLastRewardPickupEntryKey,
+  roomActionKey,
+  semanticAddressKey,
+  type AuthoredTraitOfferTraits,
+  type ProjectDocument,
+  type SemanticAddress,
+} from '@run-planner/engine/authored-project';
+import { simulateProjectAssembly } from '@run-planner/engine/simulation';
+import { describe, expect, it } from 'vitest';
+
+import { editTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
+import {
+  createGoldenFGHProject,
+  createGoldenFGHIProject,
+  createCompleteFGProject,
+  goldenFBiome,
+  goldenGBiome,
+  goldenHBiome,
+} from '@run-planner/test-fixtures/underworld';
+import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import {
+  loadSurfaceNCompleteHubFrontierProject,
+  loadSurfaceNEntryFrontierProject,
+  loadSurfaceNOPQProject,
+  nBiome,
+  nLocalOccurrenceId,
+  nOccurrenceId,
+  nOccurrenceIds,
+  nVisitSlotKeys,
+} from '@run-planner/test-fixtures/surface';
+import {
+  createStructuredWorkspaceTestServices,
+  requireWorkspaceBiome,
+} from '@planner-test/fixtures/structuredWorkspace';
+import type { StructuredWorkspaceProjection } from '@planner/projections/structured-workspace/contracts/structure';
+import { workspaceOccurrenceOwnedMarkers } from '@planner/projections/structured-workspace/navigation/marker-ownership';
+import type { WorkspaceInspectorDestination } from '@planner/projections/structured-workspace/contracts/navigation';
+import type { WorkspaceBiome } from '@planner/projections/structured-workspace/contracts/structure';
+
+const { structuredWorkspace } = createStructuredWorkspaceTestServices();
+
+function assembly(projectDocument: ProjectDocument) {
+  return simulateProjectAssembly(catalog, projectDocument);
+}
+
+function project(projectDocument: ProjectDocument): StructuredWorkspaceProjection {
+  return structuredWorkspace.project(assembly(projectDocument));
+}
+
+function biome(workspace: StructuredWorkspaceProjection, biomeKey: string): WorkspaceBiome {
+  return requireWorkspaceBiome(workspace, biomeKey);
+}
+
+function destination(
+  workspace: StructuredWorkspaceProjection,
+  address: SemanticAddress,
+): WorkspaceInspectorDestination {
+  const key = semanticAddressKey(address);
+  const value = workspace.focusByOwner.get(key);
+  if (value === undefined) throw new Error(`${key} has no inspector destination`);
+  return value;
+}
+
+function defaultSubject(biome: WorkspaceBiome) {
+  const value = biome.defaultInspectorDestination;
+  if (value === null) throw new Error(`${biome.biomeKey} has no default inspector subject`);
+  return value.kind === 'node'
+    ? { kind: 'node' as const, nodeKey: value.nodeKey }
+    : { frontierFocusKey: value.frontierFocusKey, kind: 'frontier' as const };
+}
+
+function railKeyForNode(biome: WorkspaceBiome, nodeKey: string): string {
+  const entry = biome.rail.find(
+    (candidate): candidate is Extract<(typeof biome.rail)[number], { readonly kind: 'node' }> =>
+      candidate.kind === 'node' && candidate.node.key === nodeKey,
+  );
+  if (entry === undefined) throw new Error(`${nodeKey} has no rendered rail stop`);
+  return entry.marker.focusKey;
+}
+
+function occurrenceWorkbenchFor(
+  biome: WorkspaceBiome,
+  occurrenceId: string,
+): Extract<WorkspaceBiome['nodes'][number], { readonly kind: 'occurrenceWorkbench' }> {
+  const workbench = biome.nodes.find(
+    (
+      node,
+    ): node is Extract<WorkspaceBiome['nodes'][number], { readonly kind: 'occurrenceWorkbench' }> =>
+      node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
+  );
+  if (workbench === undefined) throw new Error(`${occurrenceId} occurrence workbench is missing`);
+  return workbench;
+}
+
+function expectNodeRailDestination(
+  workspace: StructuredWorkspaceProjection,
+  address: SemanticAddress,
+  nodeKey: string,
+  selectedRailKey: string,
+): void {
+  expect(destination(workspace, address)).toMatchObject({
+    inspectorSubject: { kind: 'node', nodeKey },
+    selectedRailKey,
+  });
+}
+
+function emptyProject(routeKey: 'Surface' | 'Underworld', count: number): ProjectDocument {
+  return createProjectDocument(catalog, {
+    projectId: `inspector-destinations-empty-${routeKey}-${count}`,
+    routeKey,
+    configuredBiomeCount: count,
+  });
+}
+
+function removeForcedShrineInventory(project: ProjectDocument): ProjectDocument {
+  return {
+    ...project,
+    route: {
+      ...project.route,
+      biomes: project.route.biomes.map((biome) =>
+        biome.biomeKey !== 'N' || biome.topology === null
+          ? biome
+          : {
+              ...biome,
+              topology: {
+                ...biome.topology,
+                occurrences: biome.topology.occurrences.map((occurrence) => {
+                  if (occurrence.occurrenceId !== 'surface-n-preboss:postboss') return occurrence;
+                  const { hermesShrine: _removed, ...withoutShrine } = occurrence;
+                  void _removed;
+                  return withoutShrine;
+                }),
+              },
+            },
+      ),
+    },
+  };
+}
+
+function echoReplayProject(child?: {
+  readonly disposition: { readonly kind: 'normal' | 'timePiece' };
+  readonly traitOffer?: AuthoredTraitOfferTraits;
+}): {
+  readonly document: ProjectDocument;
+  readonly entry: ReturnType<typeof createAcquisitionEntryAddress>;
+  readonly replay: ReturnType<typeof createEchoLastRewardAddress>;
+  readonly trait: ReturnType<typeof createTraitOfferAddress>;
+} {
+  const bridgeId = createOccurrenceId('golden-h-bridge01');
+  let document = editTestRoomActionOrder(
+    createGoldenFGHProject(),
+    catalog,
+    createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-combat09')),
+    () => [
+      { kind: 'completeFieldsCage', phaseKey: 'Cage01' },
+      { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage1' },
+      { kind: 'completeFieldsCage', phaseKey: 'Cage02' },
+      { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage2' },
+    ],
+  );
+  document = applyProjectCommand(document, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenHBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('golden-h-combat09'),
+    }),
+    value: { kind: 'normal', exitKey: 'exit2' },
+  });
+  const trait = createTraitOfferAddress(
+    createEncounterPhaseAddress(
+      goldenHBiome,
+      { kind: 'occurrence', occurrenceId: bridgeId },
+      'Encounter',
+    ),
+    'selection',
+  );
+  const value = Object.freeze({
+    kind: 'traits' as const,
+    giverKey: 'Echo',
+    options: Object.freeze([
+      Object.freeze({
+        traitKey: 'EchoLastReward',
+      }),
+      Object.freeze({ traitKey: 'DiminishingDodgeBoon' }),
+      Object.freeze({ traitKey: 'DiminishingHealthAndManaBoon' }),
+    ]) as AuthoredTraitOfferTraits['options'],
+    selectedOptionKey: 'option1' as const,
+  });
+  document = applyProjectCommand(document, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait,
+    value,
+  });
+  const entry = createAcquisitionEntryAddress(
+    createAcquisitionSiteAddress(createOccurrenceAddress(goldenHBiome, bridgeId), 'roomExit'),
+    echoLastRewardPickupEntryKey('Encounter', 'Story_Echo_01', 'option1'),
+  );
+  const pickupReference = {
+    kind: 'interactAcquisitionEntry' as const,
+    siteKey: 'roomExit',
+    entryKey: entry.entryKey,
+  };
+  const encounterReference = {
+    kind: 'interactEncounter' as const,
+    phaseKey: 'Encounter',
+  };
+  const bridge = document.route.biomes
+    .find((biome) => biome.biomeKey === 'H')
+    ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId);
+  if (bridge === undefined) throw new Error('Golden H Echo bridge is missing');
+  for (const reference of [encounterReference, pickupReference]) {
+    if (
+      !bridge.roomActions.order.some(
+        (candidate) => roomActionKey(candidate) === roomActionKey(reference),
+      )
+    ) {
+      throw new Error(`Echo activation did not rank ${roomActionKey(reference)}`);
+    }
+  }
+  if (child !== undefined) {
+    document = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry,
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    if (child.traitOffer !== undefined)
+      document = applyProjectCommand(document, catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait: createTraitOfferAddress(entry, 'self'),
+        value: child.traitOffer,
+      });
+    if (child.disposition.kind === 'timePiece')
+      document = applyProjectCommand(document, catalog, {
+        kind: 'ReplaceAcquisitionDisposition',
+        acquisition: createAcquisitionRoleAddress(entry, 'self'),
+        value: child.disposition,
+      });
+  }
+  return Object.freeze({
+    document,
+    entry,
+    replay: createEchoLastRewardAddress(trait, 'option1'),
+    trait,
+  });
+}
+
+function staleTravelDealShopProject(): {
+  readonly document: ProjectDocument;
+  readonly entry: ReturnType<typeof createAcquisitionEntryAddress>;
+} {
+  const sourceOccurrenceId = createOccurrenceId('golden-g-b1-e1');
+  const incoming = createIncomingRewardAddress(goldenGBiome, sourceOccurrenceId);
+  const shopId = createOccurrenceId('golden-g-preboss-shop');
+  const site = createAcquisitionSiteAddress(
+    createOccurrenceAddress(goldenGBiome, shopId),
+    'roomExit',
+  );
+  const entry = createAcquisitionEntryAddress(site, 'travelDealRefill');
+  let document = applyProjectCommand(createCompleteFGProject(), catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: incoming,
+    value: { rewardType: 'HermesUpgrade' },
+  });
+  document = editTestRoomActionOrder(
+    document,
+    catalog,
+    createOccurrenceAddress(goldenGBiome, sourceOccurrenceId),
+    (order) => [
+      ...order.filter((reference) => reference.kind !== 'interactIncomingReward'),
+      {
+        kind: 'interactIncomingReward' as const,
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'self',
+      },
+    ],
+  );
+  document = applyProjectCommand(document, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(incoming, 'self'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Hermes',
+      options: [
+        { traitKey: 'RestockBoon', rarity: 'Common' },
+        { traitKey: 'HermesWeaponBoon', rarity: 'Common' },
+        { traitKey: 'HermesSpecialBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  document = applyProjectCommand(document, catalog, {
+    kind: 'ReplaceAcquisitionEntryOffer',
+    entry,
+    value: {
+      rewardType: 'BlindBoxLoot',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    },
+  });
+  const reference = {
+    kind: 'interactAcquisitionEntry' as const,
+    siteKey: 'roomExit',
+    entryKey: 'travelDealRefill',
+  };
+  document = applyProjectCommand(document, catalog, {
+    kind: 'InsertRoomAction',
+    action: createRoomActionAddress(goldenGBiome, shopId, roomActionKey(reference)),
+    reference,
+    index: 0,
+  });
+  return { document, entry };
+}
+
+describe('workspace inspector destinations', () => {
+  it('keeps missing Fields reward definitions on Overview even when pickup rows exist', () => {
+    const original = createGoldenFGHProject();
+    const fields = original.route.biomes
+      .find((entry) => entry.biomeKey === 'H')
+      ?.topology?.occurrences.find(
+        (room) => room.state.kind === 'fieldsCombat' && room.state.optionalRewardCount > 0,
+      );
+    if (fields?.state.kind !== 'fieldsCombat') throw new Error('Fields optional fixture missing');
+    const document: ProjectDocument = {
+      ...original,
+      route: {
+        ...original.route,
+        biomes: original.route.biomes.map((entry) =>
+          entry.biomeKey !== 'H' || entry.topology === null
+            ? entry
+            : {
+                ...entry,
+                topology: {
+                  ...entry.topology,
+                  occurrences: entry.topology.occurrences.map((room) =>
+                    room.occurrenceId !== fields.occurrenceId || room.state.kind !== 'fieldsCombat'
+                      ? room
+                      : {
+                          ...room,
+                          state: {
+                            ...room.state,
+                            optionalRewards: { ...room.state.optionalRewards, optional1: null },
+                          },
+                        },
+                  ),
+                },
+              },
+        ),
+      },
+    };
+    const assembled = assembly(document);
+    const finding = assembled.evaluation.findings.find(
+      (entry) =>
+        entry.code === 'rewardMissing' &&
+        entry.origin.kind === 'localReward' &&
+        entry.origin.groupKey === 'optionalRewards',
+    );
+    if (finding === undefined) throw new Error('optional reward finding missing');
+    const workspace = structuredWorkspace.project(assembled);
+    const room = occurrenceWorkbenchFor(biome(workspace, 'H'), fields.occurrenceId);
+    expect(
+      room.room.roomActions?.rows.some(
+        (row) =>
+          row.reference.kind === 'interactLocalReward' && row.reference.slotKey === 'optional1',
+      ),
+    ).toBe(true);
+    expect(destination(workspace, finding.origin)).toMatchObject({
+      focusAddress: finding.origin,
+      roomTab: 'overview',
+      inspectorSubject: { kind: 'node', nodeKey: room.key },
+    });
+  });
+
+  it('keeps opening reward definitions on Overview while their trait outcomes stay on Timeline', () => {
+    const workspace = project(createCompleteFGProject());
+    const opening = occurrenceWorkbenchFor(biome(workspace, 'F'), 'golden-f-start');
+    const reward = createIncomingRewardAddress(goldenFBiome, createOccurrenceId('golden-f-start'));
+    expect(destination(workspace, reward)).toMatchObject({
+      focusAddress: reward,
+      roomTab: 'overview',
+    });
+    const trait = opening.room.rewardControls.flatMap((control) => control.traitOffers ?? [])[0];
+    if (trait === undefined) throw new Error('opening trait missing');
+    expect(destination(workspace, trait.address)).toMatchObject({
+      focusAddress: { kind: 'roomAction' },
+      roomTab: 'actions',
+    });
+  });
+
+  it('keeps an orphaned Well mystery result visible and clearable', () => {
+    const original = createGoldenFGHIProject();
+    const owner = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
+    const document: ProjectDocument = {
+      ...original,
+      route: {
+        ...original.route,
+        biomes: original.route.biomes.map((entry) =>
+          entry.biomeKey !== 'F' || entry.topology === null
+            ? entry
+            : {
+                ...entry,
+                topology: {
+                  ...entry.topology,
+                  occurrences: entry.topology.occurrences.map((room) =>
+                    room.occurrenceId !== owner.occurrenceId
+                      ? room
+                      : {
+                          ...room,
+                          stygianWell: {
+                            offerKeyBySlot: {
+                              healing: 'ArmorBoostStore',
+                              secondLeft: null,
+                              secondRight: null,
+                            },
+                            interacted: true,
+                            twistResultKeyBySlot: { healing: 'TemporaryBoonRarityTrait' },
+                          },
+                        },
+                  ),
+                },
+              },
+        ),
+      },
+    };
+    const assembled = assembly(document);
+    const finding = assembled.evaluation.findings.find(
+      (entry) => entry.code === 'stygianWellTwistInvalid',
+    );
+    if (finding === undefined) throw new Error('orphan finding missing');
+    const workspace = structuredWorkspace.project(assembled);
+    expect(destination(workspace, finding.origin)).toMatchObject({
+      focusAddress: finding.origin,
+      roomTab: 'overview',
+    });
+    const control = [...workspace.interactions.stygianWellTwistResults.values()].find(
+      (entry) => entry.generationKey === 'initial:healing',
+    );
+    if (control === undefined) throw new Error('orphan repair missing');
+    expect(control.candidateItemKeys).toEqual([]);
+    const repaired = applyProjectCommand(document, catalog, control.intentFor(null).command);
+    expect(
+      assembly(repaired).evaluation.findings.some(
+        (entry) => entry.code === 'stygianWellTwistInvalid',
+      ),
+    ).toBe(false);
+  });
+
+  it('keeps a resource retained at an unsupported room available for removal', () => {
+    const original = createGoldenFGHIProject();
+    const occurrenceId = createOccurrenceId('golden-f-preboss-shop:postboss');
+    const document: ProjectDocument = {
+      ...original,
+      route: {
+        ...original.route,
+        resourcePlacements: {
+          ...original.route.resourcePlacements,
+          Fishing: { biomeKey: 'F', occurrenceId },
+        },
+      },
+    };
+    const assembled = assembly(document);
+    const finding = assembled.evaluation.findings.find(
+      (entry) => entry.code === 'resourcePlacementUnavailable',
+    );
+    if (finding === undefined) throw new Error('resource finding missing');
+    const workspace = structuredWorkspace.project(assembled);
+    const room = occurrenceWorkbenchFor(biome(workspace, 'F'), occurrenceId);
+    expect(room.room.resources).toContainEqual(
+      expect.objectContaining({ family: 'Fishing', action: 'remove', legal: false }),
+    );
+    expect(destination(workspace, finding.origin)).toMatchObject({
+      focusAddress: finding.origin,
+      roomTab: 'overview',
+      inspectorSubject: { kind: 'node', nodeKey: room.key },
+    });
+  });
+
+  it('routes forced-missing Shrine inventory findings to repairable offer rows', () => {
+    const document = removeForcedShrineInventory(loadSurfaceNOCheckpoint());
+    const assembled = assembly(document);
+    const findings = assembled.evaluation.findings.filter(
+      (finding) => finding.code === 'hermesShrineInventoryMissing',
+    );
+    expect(findings).toHaveLength(3);
+    const workspace = project(document);
+    const n = biome(workspace, 'N');
+    const workbench = occurrenceWorkbenchFor(n, 'surface-n-preboss:postboss');
+    const shrine = workbench.room.workbench.features.find(
+      (feature) => feature.kind === 'hermesShrine',
+    );
+    if (shrine?.kind !== 'hermesShrine') throw new Error('forced Shrine feature is missing');
+    expect(shrine.slots).toHaveLength(3);
+    for (const finding of findings) {
+      expect(finding.origin.kind).toBe('roomFeature');
+      if (finding.origin.kind !== 'roomFeature') continue;
+      expect(finding.origin.target.kind).toBe('hermesShrineOffer');
+      expect(destination(workspace, finding.origin)).toMatchObject({
+        focusAddress: finding.origin,
+        inspectorSubject: { kind: 'node', nodeKey: workbench.key },
+        nodeKey: workbench.key,
+        roomTab: 'overview',
+      });
+    }
+    expect(
+      [...workspace.interactions.hermesShrineOffers.values()].filter((interaction) =>
+        interaction.key.startsWith(
+          `hermesShrineOffer:${semanticAddressKey(workbench.room.address)}`,
+        ),
+      ),
+    ).toHaveLength(3);
+
+    const repaired = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: workbench.room.address,
+      slotKey: 'first',
+      value: { rewardType: 'HealBigDrop' },
+    });
+    const repairedOccurrence = repaired.route.biomes
+      .find((candidate) => candidate.biomeKey === 'N')
+      ?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === 'surface-n-preboss:postboss',
+      );
+    expect(repairedOccurrence?.hermesShrine?.offerBySlot.first).toEqual({
+      rewardType: 'HealBigDrop',
+    });
+  });
+
+  it('routes Fields capacity findings to Overview from a non-Overview authoring surface', () => {
+    const occurrence = createOccurrenceAddress(
+      goldenHBiome,
+      createOccurrenceId('golden-h-combat09'),
+    );
+    const phase = createEncounterPhaseAddress(
+      goldenHBiome,
+      { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+      'Passive',
+    );
+    let document = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisRandomEvent',
+    });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceFieldsOptionalRewardCount',
+      occurrence,
+      optionalRewardCount: 2,
+    });
+    const assembled = assembly(document);
+    const finding = assembled.evaluation.findings.find(
+      (candidate) => candidate.code === 'fieldsOptionalCapacityUnavailable',
+    );
+    if (finding === undefined) throw new Error('Fields capacity finding is missing');
+    const workspace = project(document);
+    const h = biome(workspace, 'H');
+    const workbench = occurrenceWorkbenchFor(h, occurrence.occurrenceId);
+    const nemesis = workbench.room.encounterPhases.find(
+      (entry) => entry.nemesisEvent !== undefined,
+    )?.nemesisEvent;
+    if (nemesis === undefined) throw new Error('Nemesis editor missing');
+    expect(destination(workspace, nemesis.owner)).toMatchObject({
+      focusAddress: nemesis.owner,
+      inspectorSubject: { kind: 'node', nodeKey: workbench.key },
+    });
+    expect(destination(workspace, finding.origin)).toMatchObject({
+      focusAddress: finding.origin,
+      inspectorSubject: { kind: 'node', nodeKey: workbench.key },
+      nodeKey: workbench.key,
+      roomTab: 'overview',
+    });
+  });
+
+  it('keeps Well, Pool, and additional-exit markers on their occurrence Overview', () => {
+    const workspace = project(createGoldenFGHIProject());
+    const f = biome(workspace, 'F');
+    const workbench = occurrenceWorkbenchFor(f, 'golden-f-preboss-shop:postboss');
+    const well = workbench.room.workbench.features.find(
+      (feature) => feature.kind === 'stygianWell',
+    );
+    const pool = workbench.room.workbench.features.find(
+      (feature) => feature.kind === 'purgingPool',
+    );
+    if (well?.kind !== 'stygianWell' || pool?.kind !== 'purgingPool') {
+      throw new Error('forced Well and Pool features are missing');
+    }
+    if (well.inventoryAddress === undefined || pool.inventoryAddress === undefined) {
+      throw new Error('Well and Pool inventory markers are missing');
+    }
+    for (const address of [well.presenceAddress, well.inventoryAddress, pool.inventoryAddress]) {
+      expect(destination(workspace, address)).toMatchObject({
+        focusAddress: address,
+        inspectorSubject: { kind: 'node', nodeKey: workbench.key },
+        nodeKey: workbench.key,
+        roomTab: 'overview',
+      });
+    }
+    const chaosRoom = f.nodes.find(
+      (node): node is Extract<typeof node, { readonly kind: 'occurrenceWorkbench' }> =>
+        node.kind === 'occurrenceWorkbench' && node.room.chaosSpawn !== undefined,
+    );
+    if (chaosRoom?.room.chaosSpawn === undefined) throw new Error('Chaos marker is missing');
+    expect(destination(workspace, chaosRoom.room.chaosSpawn.owner)).toMatchObject({
+      focusAddress: chaosRoom.room.chaosSpawn.owner,
+      inspectorSubject: { kind: 'node', nodeKey: chaosRoom.key },
+      nodeKey: chaosRoom.key,
+      roomTab: 'overview',
+    });
+  });
+
+  it('routes an invalid Travel Deal refill finding to its containing Shop and remove-only action row', () => {
+    const configured = staleTravelDealShopProject();
+    const assembled = assembly(configured.document);
+    const finding = assembled.evaluation.findings.find(
+      (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(configured.entry),
+    );
+    if (finding === undefined)
+      throw new Error(
+        `stale Travel Deal finding is missing: ${JSON.stringify(assembled.evaluation.findings)}`,
+      );
+    const workspace = structuredWorkspace.project(assembled);
+    const target = destination(workspace, finding.origin);
+    const shop = biome(workspace, 'G').nodes.find(
+      (node) =>
+        (node.kind === 'ordinaryBatch' ||
+          node.kind === 'mixedBatch' ||
+          node.kind === 'takeoverBatch') &&
+        node.targets.some((target) => target.room.occurrenceId === 'golden-g-preboss-shop'),
+    );
+    if (
+      shop === undefined ||
+      (shop.kind !== 'ordinaryBatch' && shop.kind !== 'mixedBatch' && shop.kind !== 'takeoverBatch')
+    ) {
+      throw new Error('G Preboss Shop decision is missing');
+    }
+    const shopRoom = shop.targets.find(
+      (target) => target.room.occurrenceId === 'golden-g-preboss-shop',
+    )?.room;
+    if (shopRoom?.roomLocal.kind !== 'shop') throw new Error('G Preboss Shop is missing');
+    const shopWorkbench = occurrenceWorkbenchFor(biome(workspace, 'G'), 'golden-g-preboss-shop');
+    expect(target).toMatchObject({
+      ownerAddress: configured.entry,
+      focusAddress: configured.entry,
+      inspectorSubject: { kind: 'node', nodeKey: shopWorkbench.key },
+      nodeKey: shopWorkbench.key,
+    });
+    const invalidRow = shopRoom.roomActions?.rows.find(
+      (row) =>
+        row.reference.kind === 'interactAcquisitionEntry' &&
+        row.reference.entryKey === configured.entry.entryKey,
+    );
+    expect(invalidRow).toMatchObject({
+      participation: 'optional',
+      stale: false,
+    });
+    expect(invalidRow).not.toHaveProperty('rewardPayload');
+    expect(
+      shopRoom.roomLocal.supplementalOffers.some(
+        (offer) => offer.kind === 'travelDealInvalid' && offer.key === configured.entry.entryKey,
+      ),
+    ).toBe(true);
+    expect(
+      invalidRow?.proposalKeys.some(
+        (key) =>
+          shopRoom.roomActions?.proposals.find((proposal) => proposal.key === key)?.kind ===
+          'remove',
+      ),
+    ).toBe(true);
+  });
+
+  it('routes a missing generated Echo pickup to its exact Room Action row', () => {
+    const configured = echoReplayProject();
+    const assembled = assembly(configured.document);
+    const finding = assembled.evaluation.findings.find(
+      (candidate) =>
+        candidate.code === 'rewardMissing' &&
+        semanticAddressKey(candidate.origin) === semanticAddressKey(configured.entry),
+    );
+    expect(finding?.origin).toEqual(configured.entry);
+
+    const workspace = structuredWorkspace.project(assembled);
+    const replayDestination = destination(workspace, configured.entry);
+    expect(replayDestination).toMatchObject({
+      ownerAddress: configured.entry,
+      focusAddress: configured.entry,
+      inspectorSubject: { kind: 'node', nodeKey: replayDestination.nodeKey },
+    });
+    expect(replayDestination).not.toHaveProperty('traitDialogTarget');
+  });
+
+  it('routes generated Echo trait findings to their pickup action', () => {
+    const configured = echoReplayProject(
+      Object.freeze({
+        disposition: { kind: 'normal' as const },
+        traitOffer: Object.freeze({
+          kind: 'traits',
+          giverKey: 'WeaponUpgrade',
+          options: Object.freeze([
+            Object.freeze({ traitKey: 'AxeSpinSpeedTrait' }),
+            Object.freeze({ traitKey: 'AxeChargedSpecialTrait' }),
+            Object.freeze({ traitKey: 'AxeAttackRecoveryTrait' }),
+          ]) as AuthoredTraitOfferTraits['options'],
+          selectedOptionKey: 'option1',
+          rarificationActions: Object.freeze([]),
+        }),
+      }),
+    );
+    const assembled = assembly(configured.document);
+    const findings = assembled.evaluation.findings.filter(
+      (candidate) => candidate.code === 'wrongHammerLoadout',
+    );
+    expect(findings).toHaveLength(3);
+    expect(
+      findings.every(
+        (finding) =>
+          finding.origin.kind === 'traitOffer' &&
+          finding.origin.owner.kind === 'acquisitionEntry' &&
+          semanticAddressKey(finding.origin.owner) === semanticAddressKey(configured.entry),
+      ),
+    ).toBe(true);
+
+    const workspace = structuredWorkspace.project(assembled);
+    for (const finding of findings) {
+      const resolved = destination(workspace, finding.origin);
+      expect(resolved).toMatchObject({
+        ownerAddress: finding.origin,
+        focusAddress: { kind: 'roomAction' },
+        roomTab: 'actions',
+      });
+      expect(resolved).not.toHaveProperty('traitDialogTarget');
+    }
+  });
+
+  it('routes an invalid generated Echo conversion through the acquisition workbench', () => {
+    const configured = echoReplayProject(
+      Object.freeze({
+        disposition: { kind: 'timePiece' as const },
+        traitOffer: Object.freeze({
+          kind: 'traits',
+          giverKey: 'WeaponUpgrade',
+          options: Object.freeze([
+            Object.freeze({ traitKey: 'StaffAttackRecoveryTrait' }),
+            Object.freeze({ traitKey: 'StaffPowershotTrait' }),
+            Object.freeze({ traitKey: 'StaffDoubleAttackTrait' }),
+          ]) as AuthoredTraitOfferTraits['options'],
+          selectedOptionKey: 'option1',
+          rarificationActions: Object.freeze([]),
+        }),
+      }),
+    );
+    const assembled = assembly(configured.document);
+    const finding = assembled.evaluation.findings.find(
+      (candidate) => candidate.code === 'timePieceConversionUnavailable',
+    );
+    expect(finding?.origin).toMatchObject({
+      kind: 'acquisitionRole',
+      acquisitionRole: 'self',
+      owner: configured.entry,
+    });
+    if (finding === undefined) throw new Error('Echo replay conversion finding is missing');
+
+    const workspace = structuredWorkspace.project(assembled);
+    expect(destination(workspace, finding.origin)).toMatchObject({
+      ownerAddress: finding.origin,
+      inspectorSubject: { kind: 'node' },
+    });
+  });
+
+  it('routes nested trait owners to their containing Fields, Ephyra, Ship, and Shop workbenches', () => {
+    for (const document of [createGoldenFGHIProject(), loadSurfaceNOPQProject()]) {
+      const workspace = project(document);
+      for (const projectedBiome of workspace.route.biomes) {
+        for (const node of projectedBiome.nodes) {
+          if (node.kind === 'occurrenceWorkbench') {
+            for (const marker of node.room.localDetailMarkers) {
+              if (marker.address.kind !== 'traitOffer') continue;
+              expect(destination(workspace, marker.address)).toMatchObject({
+                ownerAddress: marker.address,
+                inspectorSubject: { kind: 'node', nodeKey: node.key },
+              });
+            }
+            continue;
+          }
+          if (
+            node.kind !== 'ordinaryBatch' &&
+            node.kind !== 'mixedBatch' &&
+            node.kind !== 'takeoverBatch'
+          ) {
+            continue;
+          }
+          for (const target of node.targets) {
+            for (const marker of target.room.localDetailMarkers) {
+              if (marker.address.kind !== 'traitOffer') continue;
+              expect(destination(workspace, marker.address)).toMatchObject({
+                ownerAddress: marker.address,
+                inspectorSubject: { kind: 'node' },
+              });
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it('publishes distinct Chosen God and Spurned God role labels for Devotion traits', () => {
+    const workspace = project(loadSurfaceNOPQProject());
+    const labels = new Set(
+      [...workspace.interactions.traitOffers.values()].map(
+        (interaction) => interaction.acquisitionRoleLabel,
+      ),
+    );
+    expect([...labels]).toEqual(expect.arrayContaining(['Chosen God', 'Spurned God']));
+  });
+
+  it('binds exact frontier and ordinary nested focus while leaving coarse fallback unselected', () => {
+    const empty = project(emptyProject('Underworld', 1));
+    const emptyF = biome(empty, 'F');
+    if (emptyF.frontier?.kind !== 'start') throw new Error('empty F start frontier is missing');
+    expect(destination(empty, emptyF.frontier.owner)).toMatchObject({
+      inspectorSubject: {
+        frontierFocusKey: emptyF.frontier.marker.focusKey,
+        kind: 'frontier',
+      },
+      selectedRailKey: emptyF.frontier.marker.focusKey,
+    });
+
+    const started = applyProjectCommand(emptyProject('Underworld', 1), catalog, {
+      kind: 'CreateStart',
+      biome: goldenFBiome,
+      occurrenceId: createOccurrenceId('inspector-destinations-f-start'),
+      gameName: 'F_Opening01',
+    });
+    const startedWorkspace = project(started);
+    const startedF = biome(startedWorkspace, 'F');
+    if (startedF.frontier?.kind !== 'exitDecision') {
+      throw new Error('start-only F exit frontier is missing');
+    }
+    expect(destination(startedWorkspace, startedF.frontier.owner)).toMatchObject({
+      inspectorSubject: {
+        kind: 'node',
+        nodeKey: startedF.entry?.key,
+      },
+      selectedRailKey: startedF.frontier.marker.focusKey,
+    });
+
+    const complete = project(createGoldenFGHIProject());
+    const f = biome(complete, 'F');
+    const decision = f.nodes.find(
+      (node): node is Extract<typeof node, { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch' &&
+        node.targets.some((target) => target.room.rewardControls.length > 0),
+    );
+    const reward = decision?.targets.find((target) => target.room.rewardControls.length > 0)?.room
+      .rewardControls[0];
+    if (decision === undefined || reward === undefined) {
+      throw new Error('F ordinary reward target is missing');
+    }
+    const decisionRail = f.rail.find(
+      (entry): entry is Extract<(typeof f.rail)[number], { readonly kind: 'node' }> =>
+        entry.kind === 'node' && entry.node.key === decision.key,
+    );
+    if (decisionRail === undefined) throw new Error('F ordinary decision rail stop is missing');
+    const target = decision.targets.find((candidate) => candidate.room.rewardControls.length > 0);
+    if (target === undefined) throw new Error('F ordinary reward target is missing');
+    for (const owner of [
+      decision.marker.address,
+      decision.selection.address,
+      ...(decision.rewardStore === undefined ? [] : [decision.rewardStore.address]),
+      target.marker.address,
+    ]) {
+      expectNodeRailDestination(complete, owner, decision.key, decisionRail.marker.focusKey);
+    }
+    const targetWorkbench = occurrenceWorkbenchFor(f, target.room.occurrenceId);
+    expect(destination(complete, target.room.marker.address)).toMatchObject({
+      inspectorSubject: { kind: 'node', nodeKey: targetWorkbench.key },
+    });
+    for (const owner of target.room.rewardControls.map((control) => control.marker.address)) {
+      expect(destination(complete, owner)).toMatchObject({
+        inspectorSubject: { kind: 'node', nodeKey: decision.key },
+      });
+    }
+    const selectedTarget = decision.targets.find((candidate) => candidate.selected);
+    if (selectedTarget === undefined) throw new Error('F selected target is missing');
+    const selectedWorkbench = occurrenceWorkbenchFor(f, selectedTarget.room.occurrenceId);
+    for (const owner of [
+      ...workspaceOccurrenceOwnedMarkers(selectedTarget.room),
+      ...selectedTarget.room.localDetailMarkers,
+    ].map((marker) => marker.address)) {
+      expect(destination(complete, owner).selectedRailKey).toBe(decisionRail.marker.focusKey);
+    }
+    for (const owner of [
+      selectedTarget.room.marker.address,
+      ...selectedTarget.room.localDetailMarkers.map((marker) => marker.address),
+    ]) {
+      expect(destination(complete, owner).inspectorSubject).toEqual({
+        kind: 'node',
+        nodeKey: selectedWorkbench.key,
+      });
+    }
+
+    const i = biome(complete, 'I');
+    const field = i.fields[0];
+    if (field === undefined) throw new Error('I biome field is missing');
+    for (const owner of [i.marker.address, field.marker.address]) {
+      const fallback = destination(complete, owner);
+      expect(fallback.inspectorSubject).toEqual(defaultSubject(i));
+      expect(fallback.selectedRailKey).toBeUndefined();
+    }
+  });
+
+  it('routes the terminal Hub owner to its persisted PreHub decision before the board exists', () => {
+    const terminal = project(loadSurfaceNEntryFrontierProject());
+    const n = biome(terminal, 'N');
+    const owner = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: nOccurrenceIds.preHub,
+    });
+    const batch = n.nodes.find(
+      (node): node is Extract<(typeof n.nodes)[number], { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch' &&
+        semanticAddressKey(node.owner) === semanticAddressKey(owner),
+    );
+    if (batch === undefined || batch.targets.length !== 0) {
+      throw new Error('terminal N Hub decision is missing');
+    }
+    expect(n.nodes.some((node) => node.kind === 'hubDecision')).toBe(false);
+    const hub = createHubDecisionAddress(nBiome, 'hub');
+    const hubDestination = destination(terminal, hub);
+    expect(hubDestination.inspectorSubject).toEqual({ kind: 'node', nodeKey: batch.key });
+    expect(hubDestination.selectedRailKey).toBeUndefined();
+  });
+
+  it('binds Hub board, visit, handoff, and fixed-stage presentation without React ownership scans', () => {
+    const complete = project(loadSurfaceNOPQProject());
+    const n = biome(complete, 'N');
+    const hub = n.nodes.find(
+      (node): node is Extract<(typeof n.nodes)[number], { readonly kind: 'hubDecision' }> =>
+        node.kind === 'hubDecision',
+    );
+    const hubRail = n.rail.find(
+      (entry): entry is Extract<(typeof n.rail)[number], { readonly kind: 'hubGroup' }> =>
+        entry.kind === 'hubGroup',
+    );
+    if (hub === undefined || hubRail === undefined) throw new Error('complete N Hub is missing');
+
+    const preHubDecision = n.nodes.find(
+      (
+        node,
+      ): node is Extract<
+        (typeof n.nodes)[number],
+        { readonly kind: 'ordinaryBatch' | 'mixedBatch' | 'takeoverBatch' }
+      > =>
+        (node.kind === 'ordinaryBatch' ||
+          node.kind === 'mixedBatch' ||
+          node.kind === 'takeoverBatch') &&
+        node.source.kind === 'occurrence' &&
+        node.source.occurrenceId === nOccurrenceIds.opening,
+    );
+    if (preHubDecision === undefined) throw new Error('complete N PreHub decision is missing');
+    const preHubTarget = preHubDecision.targets.find(
+      (target) => target.room.occurrenceId === nOccurrenceIds.preHub,
+    );
+    if (preHubTarget === undefined) throw new Error('complete N PreHub target is missing');
+    const preHubWorkbench = n.nodes.find(
+      (node): node is Extract<(typeof n.nodes)[number], { readonly kind: 'occurrenceWorkbench' }> =>
+        node.kind === 'occurrenceWorkbench' &&
+        node.room.occurrenceId === preHubTarget.room.occurrenceId,
+    );
+    if (preHubWorkbench === undefined) throw new Error('complete N PreHub workbench is missing');
+    const preHubSource = destination(complete, preHubDecision.marker.address);
+    const preHubRailKey = railKeyForNode(n, preHubDecision.key);
+    expect(preHubSource.inspectorSubject).toEqual({ kind: 'node', nodeKey: preHubDecision.key });
+    expect(preHubSource.selectedRailKey).toBe(preHubRailKey);
+    expectNodeRailDestination(
+      complete,
+      preHubTarget.marker.address,
+      preHubDecision.key,
+      preHubRailKey,
+    );
+    expect(destination(complete, preHubTarget.room.marker.address)).toMatchObject({
+      inspectorSubject: { kind: 'node', nodeKey: preHubWorkbench.key },
+    });
+    for (const owner of preHubTarget.room.rewardControls.map((control) => control.marker.address)) {
+      expect(destination(complete, owner)).toMatchObject({
+        inspectorSubject: { kind: 'node', nodeKey: preHubDecision.key },
+      });
+    }
+
+    const visit = hubRail.visits.find((candidate) => candidate.visitIndex === 3);
+    if (visit === undefined) throw new Error('N authored Hub visit 3 is missing');
+    expect(destination(complete, createHubVisitAddress(nBiome, 'hub', 3))).toMatchObject({
+      hubTab: 'timeline',
+      inspectorSubject: { kind: 'node', nodeKey: hub.key },
+      selectedRailKey: visit.marker.focusKey,
+    });
+    expect(destination(complete, createHubSlotAddress(nBiome, 'hub', 'combat02'))).toMatchObject({
+      hubTab: 'overview',
+      inspectorSubject: { kind: 'node', nodeKey: hub.key },
+      selectedRailKey: hubRail.marker.focusKey,
+    });
+    expect(
+      destination(complete, createIncomingRewardAddress(nBiome, nOccurrenceId('combat02'))),
+    ).toMatchObject({
+      hubTab: 'overview',
+      inspectorSubject: { kind: 'node', nodeKey: hub.key },
+      selectedRailKey: hubRail.marker.focusKey,
+    });
+    const hubTrait = hub.slots
+      .flatMap((slot) => slot.room?.rewardControls ?? [])
+      .flatMap((control) => control.traitOffers ?? [])
+      .find((trait) => trait.address.owner.kind === 'incomingReward');
+    if (hubTrait === undefined) throw new Error('Hub main-reward trait marker is missing');
+    const hubTraitOwner = hubTrait.address.owner;
+    if (hubTraitOwner.kind !== 'incomingReward') {
+      throw new Error('Hub main-reward trait has an unexpected owner');
+    }
+    const mainVisit = hubRail.visits.find(
+      (candidate) => candidate.node.room.occurrenceId === hubTraitOwner.occurrenceId,
+    );
+    if (mainVisit === undefined) throw new Error('Hub main-reward visit is missing');
+    expect(destination(complete, hubTrait.address)).toMatchObject({
+      focusAddress: { kind: 'roomAction' },
+      roomTab: 'actions',
+      inspectorSubject: { kind: 'node', nodeKey: mainVisit.node.key },
+      ownerAddress: hubTrait.address,
+      selectedRailKey: mainVisit.marker.focusKey,
+    });
+    expect(destination(complete, hubTrait.address)).not.toHaveProperty('traitDialogTarget');
+    if (mainVisit.node.room.roomLocal.kind !== 'incomingReward') {
+      throw new Error('Hub main-reward incoming control is missing');
+    }
+    const mainConversion = mainVisit.node.room.roomLocal.control.conversions?.[0];
+    if (mainConversion === undefined)
+      throw new Error('Hub main-reward conversion marker is missing');
+    expect(destination(complete, mainConversion.address)).toMatchObject({
+      roomTab: 'actions',
+      inspectorSubject: { kind: 'node', nodeKey: mainVisit.node.key },
+      ownerAddress: mainConversion.address,
+      selectedRailKey: mainVisit.marker.focusKey,
+    });
+
+    const sideRoom = createLocalVisitSlotAddress(
+      nBiome,
+      nOccurrenceId('combat05'),
+      'sideRooms',
+      'sideDoor1',
+    );
+    const sideVisit = hubRail.visits
+      .flatMap((candidate) => candidate.sideVisits)
+      .find(
+        (candidate) =>
+          candidate.node.room.occurrenceId === nLocalOccurrenceId('combat05', 'sideDoor1'),
+      );
+    if (sideVisit === undefined) throw new Error('N Combat 05 side visit is missing');
+    const sideParentVisit = hubRail.visits.find(
+      (candidate) => candidate.node.room.occurrenceId === nOccurrenceId('combat05'),
+    );
+    if (sideParentVisit === undefined) throw new Error('N Combat 05 Hub visit is missing');
+    expect(destination(complete, sideRoom)).toMatchObject({
+      roomTab: 'overview',
+      inspectorSubject: { kind: 'node', nodeKey: sideParentVisit.node.key },
+      selectedRailKey: sideParentVisit.marker.focusKey,
+    });
+    expect(destination(complete, sideVisit.node.room.marker.address)).toMatchObject({
+      roomTab: 'overview',
+      inspectorSubject: { kind: 'node', nodeKey: sideVisit.node.key },
+      selectedRailKey: sideVisit.marker.focusKey,
+    });
+
+    const sideReward = createIncomingRewardAddress(
+      nBiome,
+      nLocalOccurrenceId('combat05', 'sideDoor1'),
+    );
+    const sideProject = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: sideReward,
+      value: { rewardType: 'StackUpgrade' },
+    });
+    const sideWorkspace = project(sideProject);
+    const sideBiome = biome(sideWorkspace, 'N');
+    const sideRail = sideBiome.rail.find(
+      (entry): entry is Extract<(typeof sideBiome.rail)[number], { readonly kind: 'hubGroup' }> =>
+        entry.kind === 'hubGroup',
+    );
+    const sideRailEntry = sideRail?.visits
+      .flatMap((candidate) => candidate.sideVisits)
+      .find((candidate) => candidate.node.room.occurrenceId === sideReward.occurrenceId);
+    if (sideRailEntry === undefined) throw new Error('N side-reward rail entry is missing');
+    if (sideRailEntry.node.room.roomLocal.kind !== 'incomingReward') {
+      throw new Error('N side-reward incoming control is missing');
+    }
+    const sideLevel = sideRailEntry.node.room.roomLocal.control.levelResolutions?.[0];
+    if (sideLevel === undefined) throw new Error('N side-reward level resolution is missing');
+    expect(destination(sideWorkspace, sideLevel.address)).toMatchObject({
+      roomTab: 'actions',
+      inspectorSubject: { kind: 'node', nodeKey: sideRailEntry.node.key },
+      selectedRailKey: sideRailEntry.marker.focusKey,
+    });
+
+    const handoffOwner = createExitDecisionAddress(nBiome, {
+      kind: 'hubDecision',
+      decisionKey: 'hub',
+    });
+    const preboss = n.nodes.find(
+      (node): node is Extract<(typeof n.nodes)[number], { readonly kind: 'occurrenceWorkbench' }> =>
+        node.kind === 'occurrenceWorkbench' &&
+        node.room.occurrenceId === nOccurrenceIds.preboss &&
+        node.sourceDecisionRemoval !== undefined,
+    );
+    const prebossTarget = createTargetAddress(nBiome, handoffOwner.source, 'preboss');
+    if (preboss === undefined) throw new Error('N fixed Preboss workbench is missing');
+    expect(destination(complete, handoffOwner)).toMatchObject({
+      inspectorSubject: { kind: 'node', nodeKey: preboss.key },
+    });
+    expect(destination(complete, handoffOwner).selectedRailKey).toBeUndefined();
+    expect(destination(complete, prebossTarget)).toMatchObject({
+      inspectorSubject: { kind: 'node', nodeKey: preboss.key },
+      selectedRailKey: semanticAddressKey(prebossTarget),
+    });
+    if (preboss.room.roomLocal.kind !== 'shop' || !preboss.room.roomLocal.materialized) {
+      throw new Error('N fixed Preboss Shop surface is missing');
+    }
+    const prebossRailKey = railKeyForNode(n, preboss.key);
+    for (const offer of preboss.room.roomLocal.offers) {
+      expectNodeRailDestination(
+        complete,
+        offer.purchase.marker.address,
+        preboss.key,
+        prebossRailKey,
+      );
+      expectNodeRailDestination(
+        complete,
+        offer.rewardControl.marker.address,
+        preboss.key,
+        prebossRailKey,
+      );
+    }
+
+    const truncated = project(
+      applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+        hub: createHubDecisionAddress(nBiome, 'hub'),
+        hubSlotKeys: nVisitSlotKeys.slice(0, 3),
+        kind: 'ReplaceHubVisitOrder',
+      }),
+    );
+    const truncatedN = biome(truncated, 'N');
+    const truncatedHub = truncatedN.nodes.find(
+      (
+        node,
+      ): node is Extract<(typeof truncatedN.nodes)[number], { readonly kind: 'hubDecision' }> =>
+        node.kind === 'hubDecision',
+    );
+    if (truncatedHub === undefined) throw new Error('truncated N Hub is missing');
+    const unroomedVisit = destination(truncated, createHubVisitAddress(nBiome, 'hub', 4));
+    expect(unroomedVisit.hubTab).toBe('timeline');
+    expect(unroomedVisit.inspectorSubject).toEqual({ kind: 'node', nodeKey: truncatedHub.key });
+    expect(unroomedVisit.selectedRailKey).toBeUndefined();
+
+    const handoff = project(loadSurfaceNCompleteHubFrontierProject());
+    const handoffN = biome(handoff, 'N');
+    const handoffHub = handoffN.nodes.find(
+      (node): node is Extract<(typeof handoffN.nodes)[number], { readonly kind: 'hubDecision' }> =>
+        node.kind === 'hubDecision',
+    );
+    if (handoffHub === undefined) throw new Error('completed N Hub handoff board is missing');
+    const handoffDestination = destination(handoff, handoffOwner);
+    expect(handoffDestination.hubTab).toBe('exit');
+    expect(handoffDestination.inspectorSubject).toEqual({ kind: 'node', nodeKey: handoffHub.key });
+    expect(handoffDestination.selectedRailKey).toBeUndefined();
+  });
+
+  it('binds Fields and Ship local leaves to their containing decision rail', () => {
+    const underworld = project(createGoldenFGHIProject());
+    const h = biome(underworld, 'H');
+    const fieldsDecision = h.nodes.find(
+      (
+        node,
+      ): node is Extract<
+        (typeof h.nodes)[number],
+        { readonly kind: 'ordinaryBatch' | 'mixedBatch' | 'takeoverBatch' }
+      > =>
+        (node.kind === 'ordinaryBatch' ||
+          node.kind === 'mixedBatch' ||
+          node.kind === 'takeoverBatch') &&
+        node.targets.some((target) => target.room.roomLocal.kind === 'fields'),
+    );
+    const fieldsRoom = fieldsDecision?.targets.find(
+      (target) => target.room.roomLocal.kind === 'fields',
+    )?.room;
+    if (fieldsDecision === undefined || fieldsRoom?.roomLocal.kind !== 'fields') {
+      throw new Error('H Fields room-local surface is missing');
+    }
+    if (fieldsDecision.fieldsCageOutcome !== undefined) {
+      expect(destination(underworld, fieldsDecision.fieldsCageOutcome.address)).toMatchObject({
+        inspectorSubject: { kind: 'node', nodeKey: fieldsDecision.key },
+      });
+    }
+    for (const owner of fieldsRoom.roomLocal.cages.map((cage) => cage.control.marker.address)) {
+      expect(destination(underworld, owner)).toMatchObject({
+        inspectorSubject: { kind: 'node', nodeKey: fieldsDecision.key },
+      });
+    }
+
+    const surface = project(loadSurfaceNOPQProject());
+    const o = biome(surface, 'O');
+    const shipDecision = o.nodes.find(
+      (
+        node,
+      ): node is Extract<
+        (typeof o.nodes)[number],
+        { readonly kind: 'ordinaryBatch' | 'mixedBatch' | 'takeoverBatch' }
+      > =>
+        (node.kind === 'ordinaryBatch' ||
+          node.kind === 'mixedBatch' ||
+          node.kind === 'takeoverBatch') &&
+        node.targets.some((target) => target.room.roomLocal.kind === 'ship'),
+    );
+    const shipRoom = shipDecision?.targets.find(
+      (target) => target.room.roomLocal.kind === 'ship',
+    )?.room;
+    if (shipDecision === undefined || shipRoom?.roomLocal.kind !== 'ship') {
+      throw new Error('O Ship room-local surface is missing');
+    }
+    const shipWorkbench = occurrenceWorkbenchFor(o, shipRoom.occurrenceId);
+    for (const owner of shipRoom.roomLocal.wheels.flatMap((wheel) => [
+      wheel.marker.address,
+      ...wheel.offers.map((offer) => offer.control.marker.address),
+    ])) {
+      expect(destination(surface, owner)).toMatchObject({
+        inspectorSubject: { kind: 'node', nodeKey: shipWorkbench.key },
+      });
+    }
+  });
+});

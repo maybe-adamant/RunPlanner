@@ -283,6 +283,11 @@ comparisons.
 
 Keep tests near their authority:
 
+Use each package/application's `test/` tree rather than colocating tests in
+production `src/`. Mirror the owning source neighborhood for focused tests;
+keep architecture, product-loop, fixture and shared support neighborhoods
+separate under `test/`.
+
 - declaration normalization tests in the catalog package;
 - command and codec tests in the core project model;
 - lifecycle and game-rule fixtures in the simulator;
