@@ -1179,7 +1179,7 @@ describe('H Fields materialization', () => {
     ).toBe(false);
   });
 
-  it('generates three Fields Hammers before any replacement or later cage Hammer is picked up', () => {
+  it('retains the second Fields Hammer conversion for repair after its single eligible entry is consumed', () => {
     const occurrenceId = createOccurrenceId('golden-h-combat02');
     const sources = ['optional1', 'optional2', 'optional3'] as const;
     let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
@@ -1295,41 +1295,27 @@ describe('H Fields materialization', () => {
       ...order,
     ]);
     project = authorLegalTraitOffers(project);
-    const replacementAddresses = replacementReferences.map((reference) =>
-      createAcquisitionEntryAddress(
-        artificerAcquisitionSite(
-          occurrenceOwner,
-          createLocalRewardAddress(
-            biome,
-            occurrenceId,
-            'optionalRewards',
-            sources[replacementReferences.indexOf(reference)]!,
-          ),
-        ),
-        reference.entryKey,
-      ),
-    );
     const simulation = simulateProject(catalog, project);
     const evaluated = simulation.route.biomes.find((candidate) => candidate.biomeKey === 'H');
     expect(evaluated?.authoring).toBe('complete');
     if (evaluated === undefined || !('rewards' in evaluated))
       throw new Error('H reward evaluation is missing');
-    const branch = evaluated.rewards.branches[0]!;
-    const conversions = branch.events.filter((event) => event.kind === 'artificerConversion');
-    const hammers = branch.events.filter(
-      (event) =>
-        event.kind === 'concreteAcquisition' &&
-        event.acquisition.acquisition.gameName === 'WeaponUpgrade',
+    const secondSource = createAcquisitionRoleAddress(
+      createLocalRewardAddress(biome, occurrenceId, 'optionalRewards', 'optional2'),
+      'self',
     );
-    expect(conversions).toHaveLength(3);
-    expect(hammers).toHaveLength(4);
-    expect(hammers.slice(0, 3).map((event) => event.origin)).toEqual(replacementAddresses);
     expect(
       simulation.findings.filter((finding) => finding.code === 'artificerReplacementUnavailable'),
-    ).toEqual([]);
-    expect(Math.max(...conversions.map((event) => event.historySequence))).toBeLessThan(
-      Math.min(...hammers.map((event) => event.historySequence)),
-    );
+    ).toEqual([
+      expect.objectContaining({
+        origin: secondSource,
+        evidence: expect.objectContaining({
+          artificerSpent: 1,
+          artificerRemaining: 2,
+          replacement: { rewardType: 'WeaponUpgrade' },
+        }),
+      }),
+    ]);
   });
 
   it('keeps a cage-owned Artificer replacement as a required dependent action', () => {
