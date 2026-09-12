@@ -1460,4 +1460,171 @@ describe('trait offer editor entry and dialog', () => {
     ).toBe('5');
     application.dispose();
   });
+
+  it('refreshes an open Chaos editor when an external persisted magnitude changes', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createReachableNaturalChaosProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (candidate) => candidate.giver.providerKind === 'chaos',
+    );
+    const startingDraft = base?.chaos?.startingDraft();
+    if (base === undefined || base.chaos === undefined || startingDraft === undefined) {
+      throw new Error('Chaos trait interaction is missing');
+    }
+    const blessingEntry = Object.entries(
+      base.chaos.domainFor(startingDraft)?.blessingOperands ?? {},
+    ).find(([, operands]) => operands[0] !== undefined);
+    if (blessingEntry === undefined) throw new Error('Chaos blessing magnitude operand is missing');
+    const [blessingKey, [operand]] = blessingEntry;
+    if (operand === undefined) throw new Error('Chaos blessing magnitude operand is missing');
+    const initialValue = Object.freeze({
+      ...startingDraft,
+      blessingKey,
+      blessingValues: Object.freeze({ ...startingDraft.blessingValues }),
+    });
+    const interactionsFor = (value: AuthoredChaosTraitOffer): WorkspaceInteractionCatalog =>
+      Object.freeze({
+        ...workspace.interactions,
+        traitOffers: new Map([
+          [
+            base.key,
+            Object.freeze({
+              ...base,
+              value,
+              load: (draft: AuthoredTraitOffer = value) => base.load(draft),
+            }),
+          ],
+        ]),
+      }) as WorkspaceInteractionCatalog;
+    const view = render(
+      <Provider store={application.store}>
+        <TraitOfferEditor address={base.owner} interactions={interactionsFor(initialValue)} />
+      </Provider>,
+    );
+
+    const slider = screen.getByRole('slider', { name: operand.label }) as HTMLInputElement;
+    const initialMagnitude = Number(slider.value);
+    const updatedMagnitude =
+      initialMagnitude === Number(slider.max) ? Number(slider.min) : Number(slider.max);
+    const updatedValue = Object.freeze({
+      ...initialValue,
+      blessingValues: Object.freeze({
+        ...initialValue.blessingValues,
+        [operand.key]: updatedMagnitude,
+      }),
+    });
+
+    view.rerender(
+      <Provider store={application.store}>
+        <TraitOfferEditor address={base.owner} interactions={interactionsFor(updatedValue)} />
+      </Provider>,
+    );
+    expect((screen.getByRole('slider', { name: operand.label }) as HTMLInputElement).value).toBe(
+      String(updatedMagnitude),
+    );
+    application.dispose();
+  });
+
+  it('preserves an unsaved draft while candidate context refreshes through the current interaction', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (candidate) => candidate.value?.kind === 'traits',
+    );
+    if (base === undefined || base.value?.kind !== 'traits') {
+      throw new Error('traits interaction is missing');
+    }
+    const persistedValue = Object.freeze({
+      ...base.value,
+      options: Object.freeze([
+        Object.freeze({ ...base.value.options[0], persephoneLevelBonus: 1 }),
+        base.value.options[1],
+        base.value.options[2],
+      ]) as AuthoredTraitOfferTraits['options'],
+    });
+    const candidateFor = (draft: AuthoredTraitOffer, effectiveLevel: number) =>
+      Object.freeze([
+        Object.freeze({
+          value: draft,
+          evaluation: Object.freeze({
+            kind: 'traitOffer' as const,
+            result: Object.freeze({
+              assessments: Object.freeze([]),
+              branches: Object.freeze([]),
+              effectiveLevels: Object.freeze([effectiveLevel, 4, 2]),
+              findings: Object.freeze([]),
+              persephoneLevelBonusMaximums: Object.freeze([5, undefined, undefined]),
+              supported: true,
+            }),
+          }),
+        }),
+      ]);
+    const initialLoad = vi.fn((draft: AuthoredTraitOffer = persistedValue) =>
+      candidateFor(draft, 6),
+    );
+    const refreshedLoad = vi.fn((draft: AuthoredTraitOffer = persistedValue) =>
+      candidateFor(draft, 9),
+    );
+    const interactionsFor = (
+      load: (draft?: AuthoredTraitOffer) => ReturnType<typeof candidateFor>,
+      choices: readonly WorkspaceTraitOfferInteraction['choices'][number][],
+    ): WorkspaceInteractionCatalog =>
+      Object.freeze({
+        ...workspace.interactions,
+        traitOffers: new Map([
+          [
+            base.key,
+            Object.freeze({
+              ...base,
+              choices,
+              load,
+              value: persistedValue,
+            }),
+          ],
+        ]),
+      }) as WorkspaceInteractionCatalog;
+    const user = userEvent.setup();
+    const view = render(
+      <Provider store={application.store}>
+        <TraitOfferEditor
+          address={base.owner}
+          interactions={interactionsFor(initialLoad, base.choices)}
+        />
+      </Provider>,
+    );
+    const bonus = screen.getByRole('combobox', { name: 'option1 Persephone level bonus' });
+    await user.selectOptions(bonus, '2');
+    expect((bonus as HTMLSelectElement).value).toBe('2');
+
+    view.rerender(
+      <Provider store={application.store}>
+        <TraitOfferEditor
+          address={base.owner}
+          interactions={interactionsFor(refreshedLoad, Object.freeze([...base.choices].reverse()))}
+        />
+      </Provider>,
+    );
+    expect(
+      (
+        screen.getByRole('combobox', {
+          name: 'option1 Persephone level bonus',
+        }) as HTMLSelectElement
+      ).value,
+    ).toBe('2');
+    await waitFor(() =>
+      expect(refreshedLoad).toHaveBeenCalledWith(
+        expect.objectContaining({
+          options: expect.arrayContaining([expect.objectContaining({ persephoneLevelBonus: 2 })]),
+        }),
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.getAllByLabelText('Effective trait values')[0]?.textContent).toContain(
+        'Effective level9',
+      ),
+    );
+    application.dispose();
+  });
 });

@@ -26,31 +26,7 @@ function launcherId(address: TraitOfferAddress): string {
 }
 
 function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string {
-  if (interaction.value === null) return `${interaction.giver.key}|unresolved`;
-  if (interaction.value.kind === 'fallbackGold') {
-    return `${interaction.giver.key}|fallbackGold`;
-  }
-  if (interaction.value.kind === 'chaos') {
-    return `${interaction.giver.key}|chaos|${JSON.stringify(interaction.value.curseOptions)}|${interaction.value.selectedOptionKey}|${interaction.value.blessingKey}|${interaction.value.rarity}`;
-  }
-  return [
-    interaction.giver.key,
-    interaction.choices.map((choice) => choice.value).join(','),
-    interaction.value.options
-      .map(
-        (option) =>
-          `${option.traitKey}:${option.rarity ?? ''}:${option.targetTraitKey ?? ''}:${
-            'echoPomTarget' in option ? (option.echoPomTarget ?? 'none') : ''
-          }:${'echoLastRunBoon' in option ? JSON.stringify(option.echoLastRunBoon) : ''}:${
-            'allTogetherResult' in option ? JSON.stringify(option.allTogetherResult) : ''
-          }:${'naturalSelectionTargets' in option ? JSON.stringify(option.naturalSelectionTargets) : ''}:${'persephoneLevelBonus' in option ? (option.persephoneLevelBonus ?? '') : ''}`,
-      )
-      .join(','),
-    JSON.stringify(interaction.value.hexTree),
-    JSON.stringify(interaction.value.concaveStoneResult),
-    interaction.value.selectedOptionKey,
-    interaction.value.rejectedOptionKey ?? '',
-  ].join('|');
+  return `${interaction.giver.key}|${JSON.stringify(interaction.value)}`;
 }
 
 export function TraitOfferLauncher({

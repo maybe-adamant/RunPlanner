@@ -346,7 +346,7 @@ diagnostics: no target reduction or mandatory decomposition of coherent code.
 
 ## Delivery record
 
-All gates pending. User approved implementation on 2026-09-12. Independent plan review found no ownership/scope/coverage
+User approved implementation on 2026-09-12. Independent plan review found no ownership/scope/coverage
 blocker. Accepted its request for executable per-gate validation commands above.
 Its suggestion to create a durable verification document was not adopted: Git
 history is durable and the project deliberately retired the redundant progress
@@ -390,6 +390,37 @@ single assembly loop. Candidate session and focused adapters remain the only
 engine-query bridge. Remove displaced field enumeration and family bodies; no
 new draft framework or policy. C's listed tests own the handoff evidence.
 
+C1 closed: complete authored-value refresh replaces the partial fingerprint;
+one local draft carries its immediately activated candidate binding, while a
+new interaction rebinds that retained draft. A memo-only activation attempt
+exposed transient control removal and was corrected before delivery. Chaos
+magnitude refresh and unsaved-draft/current-effective-level witnesses passed
+alongside existing editor/control tests: 12 files / 98 tests. Typecheck,
+changed-path lint/format and independent review passed. No engine or wire change.
+
 Read-only preparation for D/F2 found no concrete defect: keep finding routing,
 shared repair highlights, root readiness and host/persistence coordination.
 Run acceptance after preceding source moves stabilize before closing either.
+
+F2 preparation verification passed 11 files / 105 tests across persistence,
+project operations, project controls and shell. No production change is justified.
+Native Tauri execution itself has not been exercised; adapter coverage is not
+a claim of a native runtime test. Browser visual baselines cover ten desktop and
+narrow-width surfaces for the later F1 comparison.
+
+Baseline visual inspection reproduced a separate existing layout defect:
+loadout Embryo Revelation's two magnitude controls overlap at desktop width and
+overflow at 600 px. Preserve the baseline during F1 movement; assess this as a
+focused responsive-layout follow-up after the maintenance closure, not a silent
+behavior change inside stylesheet relocation.
+
+D's retained navigation/readiness implementation passed 10 files / 113 tests
+after B. Recheck its representative contacts after C/E moves through the owning
+acceptance and final product lanes; no separate navigation rewrite is warranted.
+
+F1 preparation mapped contiguous stylesheet ranges to foundation/shell,
+project/route, trait feedback, biome layout, editor structure, room workbenches,
+shell metadata, responsive overrides and final finding overrides. Keep these
+layers in source order, including local media/container blocks and repeated
+selectors. Three existing CSS contract tests read the source entry directly;
+move their read target to the owning styles without adding a production manifest.
