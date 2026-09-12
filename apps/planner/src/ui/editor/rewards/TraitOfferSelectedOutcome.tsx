@@ -17,7 +17,7 @@ import { useAppDispatch } from '@planner/state/store';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingTarget, type FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 import { TraitOfferCirceResolution } from './TraitOfferCirceResolution';
 import {
   ConcaveStoneOutcomeEditor,
@@ -35,23 +35,23 @@ function pickerValueLabel<T>(model: ContextualPickerModel<T>, value: T): string 
     .find((item) => Object.is(item.value, value))?.label;
 }
 
-function TraitAcquisitionOutcome({
-  child,
-  interaction,
-  value,
-  onUpdate,
+export function TraitAcquisitionTargetOutcome({
+  controlId,
+  findingTarget,
+  ariaLabel,
+  loadable,
+  onSelect,
+  targetTraitKey,
+  traitLabel,
 }: {
-  readonly child: Extract<
-    WorkspaceTraitCarrierChildInteraction,
-    { readonly child: { readonly kind: 'traitAcquisitionTarget' } }
-  >;
-  readonly interaction: WorkspaceTraitOfferInteraction;
-  readonly value: AuthoredTraitOfferTraits;
-  readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
+  readonly controlId: string;
+  readonly findingTarget: FindingTargetProps;
+  readonly ariaLabel: string;
+  readonly loadable: { readonly load: () => WorkspaceTraitAcquisitionTargetDomain | undefined };
+  readonly onSelect: (targetTraitKey: string) => void;
+  readonly targetTraitKey?: string;
+  readonly traitLabel: (traitKey: string) => string;
 }) {
-  const findingTarget = useFindingTarget();
-  const option = value.options[optionIndex(child.child.optionKey)];
-  const loadable = useMemo(() => child.forOffer(value), [child, value]);
   const controller = useWorkspaceInteractionController<
     WorkspaceTraitAcquisitionTargetDomain | undefined
   >();
@@ -59,20 +59,48 @@ function TraitAcquisitionOutcome({
   useEffect(() => {
     controller.activate(loadable);
   }, [controller, loadable]);
-  if (option === undefined) return null;
   return (
     <ContextualPicker
-      findingTarget={findingTarget(child.child.address)}
-      ariaLabel={`${child.child.optionKey} acquisition target`}
-      id={semanticOwnerControlElementId(child.child.address)}
+      findingTarget={findingTarget}
+      ariaLabel={ariaLabel}
+      id={controlId}
       label="Target"
       loading={domain.pending}
       model={domain.result?.targetPicker ?? emptyTargetPicker}
-      onSelect={(targetTraitKey) => onUpdate(child.update(value, targetTraitKey))}
+      onSelect={onSelect}
       placeholder="Choose an equipped trait"
-      {...(option.targetTraitKey === undefined
-        ? {}
-        : { triggerLabel: interaction.traitLabel(option.targetTraitKey) })}
+      {...(targetTraitKey === undefined ? {} : { triggerLabel: traitLabel(targetTraitKey) })}
+    />
+  );
+}
+
+function BoundTraitAcquisitionTargetOutcome({
+  child,
+  findingTarget,
+  interaction,
+  onUpdate,
+  value,
+}: {
+  readonly child: Extract<
+    WorkspaceTraitCarrierChildInteraction,
+    { readonly child: { readonly kind: 'traitAcquisitionTarget' } }
+  >;
+  readonly findingTarget: FindingTargetProps;
+  readonly interaction: WorkspaceTraitOfferInteraction;
+  readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
+  readonly value: AuthoredTraitOfferTraits;
+}) {
+  const loadable = useMemo(() => child.forOffer(value), [child, value]);
+  const targetTraitKey = value.options[optionIndex(child.child.optionKey)]?.targetTraitKey;
+  return (
+    <TraitAcquisitionTargetOutcome
+      controlId={semanticOwnerControlElementId(child.child.address)}
+      findingTarget={findingTarget}
+      ariaLabel={`${child.child.optionKey} acquisition target`}
+      loadable={loadable}
+      onSelect={(nextTargetTraitKey) => onUpdate(child.update(value, nextTargetTraitKey))}
+      {...(targetTraitKey === undefined ? {} : { targetTraitKey })}
+      traitLabel={interaction.traitLabel}
     />
   );
 }
@@ -97,18 +125,24 @@ export function TraitOfferSelectedOutcome({
     () => interaction.optionDomain(value, value.selectedOptionKey),
     [interaction, value],
   );
-  const targetChildren = loadable.children.filter(
-    (
-      child,
-    ): child is Extract<
-      typeof child,
-      { readonly child: { readonly kind: 'traitAcquisitionTarget' } }
-    > => child.child.kind === 'traitAcquisitionTarget',
-  );
-  const stoneChildren = loadable.children.filter(
-    ({ child }) => 'optionKey' in child && child.optionKey !== value.selectedOptionKey,
-  );
-  const primaryChildren = loadable.children.filter((child) => !stoneChildren.includes(child));
+  const { primaryChildren, stoneChildren, targetChildren } = useMemo(() => {
+    const targets = loadable.children.filter(
+      (
+        child,
+      ): child is Extract<
+        typeof child,
+        { readonly child: { readonly kind: 'traitAcquisitionTarget' } }
+      > => child.child.kind === 'traitAcquisitionTarget',
+    );
+    const stone = loadable.children.filter(
+      ({ child }) => 'optionKey' in child && child.optionKey !== value.selectedOptionKey,
+    );
+    return Object.freeze({
+      primaryChildren: Object.freeze(loadable.children.filter((child) => !stone.includes(child))),
+      stoneChildren: Object.freeze(stone),
+      targetChildren: Object.freeze(targets),
+    });
+  }, [loadable, value.selectedOptionKey]);
   const circeChild = loadable.children.find(
     (
       child,
@@ -219,10 +253,11 @@ export function TraitOfferSelectedOutcome({
       {targetChildren
         .filter((child) => primaryChildren.includes(child))
         .map((child) => (
-          <TraitAcquisitionOutcome
+          <BoundTraitAcquisitionTargetOutcome
             child={child}
-            interaction={interaction}
+            findingTarget={findingTarget(child.child.address)}
             key={semanticOwnerControlElementId(child.child.address)}
+            interaction={interaction}
             onUpdate={onUpdate}
             value={value}
           />
@@ -325,10 +360,11 @@ export function TraitOfferSelectedOutcome({
               {targetChildren
                 .filter((child) => stoneChildren.includes(child))
                 .map((child) => (
-                  <TraitAcquisitionOutcome
+                  <BoundTraitAcquisitionTargetOutcome
                     child={child}
-                    interaction={interaction}
+                    findingTarget={findingTarget(child.child.address)}
                     key={semanticOwnerControlElementId(child.child.address)}
+                    interaction={interaction}
                     onUpdate={onUpdate}
                     value={value}
                   />

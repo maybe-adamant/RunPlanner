@@ -15,6 +15,7 @@ import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorks
 import { LoadedEchoLastRunBoonChoice } from './TraitOfferEchoLastRunBoon';
 import { TraitOfferOrdinaryOption } from './TraitOfferOrdinaryOption';
 import { TraitOfferSelectedOutcome } from './TraitOfferSelectedOutcome';
+import { TraitOfferForm } from './TraitOfferForm';
 import { TraitOfferStateInspector } from './TraitOfferStateInspector';
 import { selectedTraitOutcomeDraftComplete } from './traitOfferOptions';
 import { ChaosTraitOfferEditor } from './ChaosTraitOfferEditor';
@@ -194,32 +195,62 @@ export function TraitOfferEditorShell({
       />
     );
   }
-  return (
-    <div className="trait-offer-editor">
-      {value.kind === 'fallbackGold' ? (
-        <section className="trait-offer-fallback">
-          <p>Fallback Gold</p>
-          <button
-            className="quiet-action"
-            disabled={traitsStartingDraft === undefined}
-            onClick={() => {
-              if (traitsStartingDraft !== undefined) updateValue(traitsStartingDraft);
-            }}
-            type="button"
-          >
-            Return to traits
-          </button>
-        </section>
-      ) : value.kind === 'chaos' && interaction.chaos !== undefined ? (
-        <ChaosTraitOfferEditor
-          interaction={interaction.chaos}
-          onUpdate={updateValue}
-          value={value}
-        />
-      ) : value.kind !== 'traits' ? null : (
-        <>
-          {offerState === undefined ? null : <TraitOfferStateInspector presentation={offerState} />}
-          <div className="trait-offer-options">
+  const feedbackSection = spellOffer ? undefined : (
+    <section aria-label="Offer feedback" className="trait-offer-feedback" role="status">
+      <h3>Offer feedback</h3>
+      {!hasOptionFeedback && offerMessage === undefined ? (
+        <p className="trait-offer-feedback-empty">No current findings.</p>
+      ) : null}
+      {feedback.options.map((option, index) =>
+        option.reasons.length === 0 && option.replacement === undefined ? null : (
+          <div className="trait-offer-feedback-item" key={OPTION_KEYS[index]}>
+            <strong>Option {index + 1}</strong>
+            {option.reasons.length === 0 ? null : (
+              <ul className="trait-option-feedback" aria-label={`${OPTION_KEYS[index]} feedback`}>
+                {option.reasons.map((reason) => (
+                  <li key={reason}>{reason}</li>
+                ))}
+              </ul>
+            )}
+            {option.replacement === undefined ? null : (
+              <p className="trait-option-replacement">
+                Replaces {option.replacement.replacedTraitLabel} · {option.replacement.oldRarity} to{' '}
+                {option.replacement.requiredRarity}
+              </p>
+            )}
+          </div>
+        ),
+      )}
+      {offerMessage === undefined ? null : <p className="feedback-text">{offerMessage}</p>}
+    </section>
+  );
+  const recoveryAction =
+    recoveryDraft === undefined ? undefined : (
+      <button className="quiet-action" onClick={() => updateValue(recoveryDraft)} type="button">
+        Start over
+      </button>
+    );
+  const resetAction =
+    onReset === undefined ? undefined : (
+      <button className="quiet-action" onClick={onReset} type="button">
+        Reset to unresolved
+      </button>
+    );
+  const save = {
+    disabled: support === 'impossible' || !selectedOutcomeComplete,
+    label: value.kind === 'chaos' ? 'Save Chaos outcome' : 'Save trait offer',
+    onClick: () => onCommit?.(value),
+  };
+  if (value.kind === 'traits') {
+    return (
+      <TraitOfferForm
+        state={
+          offerState === undefined ? undefined : (
+            <TraitOfferStateInspector presentation={offerState} />
+          )
+        }
+        options={
+          <>
             {rejectedBlock === undefined ||
             (!rejectedBlock.required && !rejectedBlock.needsRepair) ? null : (
               <fieldset aria-label="Rejected blocked row" className="trait-offer-rejected-block">
@@ -262,56 +293,44 @@ export function TraitOfferEditorShell({
               const rowPersephoneLevelBonusMaximum = optionFeedback?.persephoneLevelBonusMaximum;
               return (
                 <div data-has-findings={(optionFeedback?.reasons.length ?? 0) > 0} key={optionKey}>
-                  {rowEffectiveRarity === undefined ? (
-                    <TraitOfferOrdinaryOption
-                      index={index}
-                      interaction={interaction}
-                      onUpdate={updateValue}
-                      optionKey={optionKey}
-                      rejected={value.rejectedOptionKey === optionKey}
-                      {...(rowEffectiveLevel === undefined
-                        ? {}
-                        : { effectiveLevel: rowEffectiveLevel })}
-                      {...(rowPersephoneLevelBonusMaximum === undefined
-                        ? {}
-                        : { persephoneLevelBonusMaximum: rowPersephoneLevelBonusMaximum })}
-                      rarifySupported={rarifySupported(optionKey)}
-                      spellOffer={spellOffer}
-                      value={value}
-                    />
-                  ) : (
-                    <TraitOfferOrdinaryOption
-                      effectiveRarity={rowEffectiveRarity}
-                      {...(rowEffectiveLevel === undefined
-                        ? {}
-                        : { effectiveLevel: rowEffectiveLevel })}
-                      index={index}
-                      interaction={interaction}
-                      onUpdate={updateValue}
-                      optionKey={optionKey}
-                      rejected={value.rejectedOptionKey === optionKey}
-                      {...(rowPersephoneLevelBonusMaximum === undefined
-                        ? {}
-                        : { persephoneLevelBonusMaximum: rowPersephoneLevelBonusMaximum })}
-                      rarifySupported={rarifySupported(optionKey)}
-                      spellOffer={spellOffer}
-                      value={value}
-                    />
-                  )}
+                  <TraitOfferOrdinaryOption
+                    {...(rowEffectiveRarity === undefined
+                      ? {}
+                      : { effectiveRarity: rowEffectiveRarity })}
+                    {...(rowEffectiveLevel === undefined
+                      ? {}
+                      : { effectiveLevel: rowEffectiveLevel })}
+                    index={index}
+                    interaction={interaction}
+                    onUpdate={updateValue}
+                    optionKey={optionKey}
+                    rejected={value.rejectedOptionKey === optionKey}
+                    {...(rowPersephoneLevelBonusMaximum === undefined
+                      ? {}
+                      : { persephoneLevelBonusMaximum: rowPersephoneLevelBonusMaximum })}
+                    rarifySupported={rarifySupported(optionKey)}
+                    spellOffer={spellOffer}
+                    value={value}
+                  />
                 </div>
               );
             })}
-          </div>
+          </>
+        }
+        selectedOutcome={
           <TraitOfferSelectedOutcome
             interaction={interaction}
             onOpenEchoLastRunBoon={() => setView('echoLastRunBoon')}
             onUpdate={updateValue}
             value={value}
           />
-          {nextTraitOfferDraft === undefined &&
+        }
+        shapeActions={
+          nextTraitOfferDraft === undefined &&
           !canRemoveOption &&
           (fallbackGoldValue === undefined ||
-            (fallbackGoldSupport !== 'possible' && fallbackGoldSupport !== 'forced')) ? null : (
+            (fallbackGoldSupport !== 'possible' &&
+              fallbackGoldSupport !== 'forced')) ? undefined : (
             <div
               aria-label="Offer shape actions"
               className="trait-offer-shape-actions"
@@ -346,61 +365,45 @@ export function TraitOfferEditorShell({
                 </button>
               )}
             </div>
-          )}
-        </>
-      )}
-      {spellOffer ? null : (
-        <section aria-label="Offer feedback" className="trait-offer-feedback" role="status">
-          <h3>Offer feedback</h3>
-          {!hasOptionFeedback && offerMessage === undefined ? (
-            <p className="trait-offer-feedback-empty">No current findings.</p>
-          ) : null}
-          {feedback.options.map((option, index) =>
-            option.reasons.length === 0 && option.replacement === undefined ? null : (
-              <div className="trait-offer-feedback-item" key={OPTION_KEYS[index]}>
-                <strong>Option {index + 1}</strong>
-                {option.reasons.length === 0 ? null : (
-                  <ul
-                    className="trait-option-feedback"
-                    aria-label={`${OPTION_KEYS[index]} feedback`}
-                  >
-                    {option.reasons.map((reason) => (
-                      <li key={reason}>{reason}</li>
-                    ))}
-                  </ul>
-                )}
-                {option.replacement === undefined ? null : (
-                  <p className="trait-option-replacement">
-                    Replaces {option.replacement.replacedTraitLabel} ·{' '}
-                    {option.replacement.oldRarity} to {option.replacement.requiredRarity}
-                  </p>
-                )}
-              </div>
-            ),
-          )}
-          {offerMessage === undefined ? null : <p className="feedback-text">{offerMessage}</p>}
-        </section>
-      )}
-      {recoveryDraft === undefined ? null : (
-        <button className="quiet-action" onClick={() => updateValue(recoveryDraft)} type="button">
-          Start over
-        </button>
-      )}
-      <button
-        className="primary-action"
-        disabled={support === 'impossible' || !selectedOutcomeComplete}
-        onClick={() => {
-          onCommit?.(value);
-        }}
-        type="button"
-      >
-        {value.kind === 'chaos' ? 'Save Chaos outcome' : 'Save trait offer'}
-      </button>
-      {onReset === undefined ? null : (
-        <button className="quiet-action" onClick={onReset} type="button">
-          Reset to unresolved
-        </button>
-      )}
-    </div>
+          )
+        }
+        feedback={feedbackSection}
+        recovery={recoveryAction}
+        reset={resetAction}
+        save={save}
+      />
+    );
+  }
+  return (
+    <TraitOfferForm
+      content={
+        value.kind === 'fallbackGold' ? (
+          <section className="trait-offer-fallback">
+            <p>Fallback Gold</p>
+            <button
+              className="quiet-action"
+              disabled={traitsStartingDraft === undefined}
+              onClick={() => {
+                if (traitsStartingDraft !== undefined) updateValue(traitsStartingDraft);
+              }}
+              type="button"
+            >
+              Return to traits
+            </button>
+          </section>
+        ) : value.kind === 'chaos' && interaction.chaos !== undefined ? (
+          <ChaosTraitOfferEditor
+            interaction={interaction.chaos}
+            onUpdate={updateValue}
+            value={value}
+          />
+        ) : null
+      }
+      feedback={feedbackSection}
+      options={null}
+      recovery={recoveryAction}
+      reset={resetAction}
+      save={save}
+    />
   );
 }

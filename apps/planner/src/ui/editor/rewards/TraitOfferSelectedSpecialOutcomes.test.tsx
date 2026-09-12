@@ -67,6 +67,7 @@ describe('selected outcomes', () => {
       air: ['ElementalDamageFloorBoon'],
       water: ['ElementalHealthBoon'],
     } as const;
+    let allTogetherLoadableCount = 0;
     const allTogetherSets = (Object.keys(domains) as (keyof typeof domains)[]).map((setKey) => {
       const address = createAllTogetherSetAddress(base.owner, 'option1', setKey);
       return Object.freeze({
@@ -84,8 +85,9 @@ describe('selected outcomes', () => {
           setKey,
           authoredComplete: false,
         }),
-        forOffer: () =>
-          Object.freeze({
+        forOffer: () => {
+          allTogetherLoadableCount += 1;
+          return Object.freeze({
             load: () =>
               Object.freeze({
                 picker: pickerModel(
@@ -97,7 +99,8 @@ describe('selected outcomes', () => {
                   ),
                 ),
               }),
-          }),
+          });
+        },
         update: (
           draft: AuthoredTraitOfferTraits,
           result: import('@run-planner/engine/authored-project').AuthoredAllTogetherResult,
@@ -172,14 +175,13 @@ describe('selected outcomes', () => {
       ...workspace.interactions,
       traitOffers: new Map([[base.key, interaction]]),
     }) as unknown as WorkspaceInteractionCatalog;
-    const commit = vi.fn();
     const user = userEvent.setup();
-    render(
+    const { rerender } = render(
       <Provider store={application.store}>
         <TraitOfferEditor
           address={base.owner}
           interactions={interactions as WorkspaceInteractionCatalog}
-          onCommit={commit}
+          onCommit={vi.fn()}
         />
       </Provider>,
     );
@@ -188,6 +190,18 @@ describe('selected outcomes', () => {
       'disabled',
       true,
     );
+    expect(allTogetherLoadableCount).toBe(4);
+    const rerenderCommit = vi.fn();
+    rerender(
+      <Provider store={application.store}>
+        <TraitOfferEditor
+          address={base.owner}
+          interactions={interactions as WorkspaceInteractionCatalog}
+          onCommit={rerenderCommit}
+        />
+      </Provider>,
+    );
+    expect(allTogetherLoadableCount).toBe(4);
     await user.click(screen.getByRole('button', { name: 'Choose all grants' }));
     await user.click(await screen.findByText('Rallying Cry'));
     expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
@@ -197,16 +211,16 @@ describe('selected outcomes', () => {
     await user.click(await screen.findByText('Slow Cooker'));
     await user.click(await screen.findByText('Air Quality'));
     await user.click(await screen.findByText('Water Fitness'));
-    expect(commit).not.toHaveBeenCalled();
+    expect(rerenderCommit).not.toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: 'Apply complete outcome' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
       'disabled',
       false,
     );
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
-    expect(commit).toHaveBeenCalledTimes(1);
+    expect(rerenderCommit).toHaveBeenCalledTimes(1);
     expect(
-      (commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits).options[0]?.allTogetherResult,
+      (rerenderCommit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits).options[0]?.allTogetherResult,
     ).toEqual({
       earth: 'ElementalOlympianDamageBoon',
       fire: 'ElementalBaseDamageBoon',
