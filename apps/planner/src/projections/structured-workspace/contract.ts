@@ -9,7 +9,6 @@ import type {
 import {
   semanticAddressKey,
   type AcquisitionSiteAddress,
-  type AcquisitionRoleAddress,
   type AuthoredTranscendentEmbryoOutcome,
   type AdditionalExitAddress,
   type BiomeAddress,
@@ -68,11 +67,64 @@ import type { TakeoverBatchCommand } from '@planner/workspace/takeoverBatchInter
 import type { WorkspaceMarker, WorkspaceRoomTab } from './contracts/navigation';
 import type { WorkspaceRunStateLauncher } from './contracts/run-state';
 import type {
+  WorkspaceAcquisitionConversionInteraction,
+  WorkspaceChaosExitInteraction,
+  WorkspaceChaosSpawnInteraction,
+  WorkspaceHermesShrineOfferInteraction,
+  WorkspaceHermesShrinePresenceInteraction,
+  WorkspaceHermesShrinePurchaseInteraction,
+  WorkspacePurgingPoolInteraction,
+  WorkspacePurgingPoolSlotInteraction,
+  WorkspaceResourcePlacementInteraction,
+  WorkspaceShopOfferInteraction,
+  WorkspaceShopPurchaseParticipationInteraction,
+  WorkspaceStygianWellInteraction,
+  WorkspaceStygianWellOfferInteraction,
+  WorkspaceStygianWellPresenceInteraction,
+  WorkspaceStygianWellPurchaseInteraction,
+  WorkspaceStygianWellTwistResultInteraction,
+  WorkspaceZagreusContractInteraction,
+  WorkspaceZagreusSpawnInteraction,
+} from './contracts/commerce';
+import type {
+  WorkspaceKeepsakeEquipResultInteraction,
+  WorkspaceKeepsakeSelectionInteraction,
+} from './contracts/keepsake';
+import type {
   WorkspaceAnomalyControl,
   WorkspaceDoorContract,
   WorkspaceDoorReward,
   WorkspaceMissingTargetAuthoring,
 } from './contracts/structure';
+
+export type {
+  WorkspaceExperimentalHammerEquipResultInteraction,
+  WorkspaceJeweledPomEquipResultInteraction,
+  WorkspaceKeepsakeEquipResultDomain,
+  WorkspaceKeepsakeEquipResultInteraction,
+  WorkspaceKeepsakeSelectionInteraction,
+  WorkspaceTranscendentEmbryoEquipResultInteraction,
+} from './contracts/keepsake';
+export type {
+  WorkspaceAcquisitionConversionInteraction,
+  WorkspaceChaosExitInteraction,
+  WorkspaceChaosSpawnInteraction,
+  WorkspaceHermesShrineOfferInteraction,
+  WorkspaceHermesShrinePresenceInteraction,
+  WorkspaceHermesShrinePurchaseInteraction,
+  WorkspacePurgingPoolInteraction,
+  WorkspacePurgingPoolSlotInteraction,
+  WorkspaceResourcePlacementInteraction,
+  WorkspaceShopOfferInteraction,
+  WorkspaceShopPurchaseParticipationInteraction,
+  WorkspaceStygianWellInteraction,
+  WorkspaceStygianWellOfferInteraction,
+  WorkspaceStygianWellPresenceInteraction,
+  WorkspaceStygianWellPurchaseInteraction,
+  WorkspaceStygianWellTwistResultInteraction,
+  WorkspaceZagreusContractInteraction,
+  WorkspaceZagreusSpawnInteraction,
+} from './contracts/commerce';
 
 /**
  * Public structured-workspace vocabulary. The projector constructs these
@@ -268,96 +320,6 @@ export interface WorkspaceFigurineArcanaInteraction {
 }
 
 /** One exact route-start or Postboss rack selection, with engine-backed option support. */
-export interface WorkspaceKeepsakeSelectionInteraction {
-  readonly key: string;
-  /** Candidate-backed identity model; evaluation starts when the picker opens. */
-  readonly load: () => ContextualPickerModel<string>;
-  readonly owner: KeepsakeSelectionAddress;
-  /** Label retained by the trigger before its candidate model is activated. */
-  readonly selectedLabel: string;
-  readonly selectedKeepsakeKey?: string;
-  readonly replaceIntent: (
-    keepsakeKey: string,
-  ) => WorkspaceCommandIntent<
-    Extract<
-      ProjectCommand,
-      { readonly kind: 'ReplaceStartingKeepsake' | 'ReplacePostbossKeepsake' }
-    >
-  >;
-  readonly removeIntent?: () => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'RemovePostbossKeepsake' }>
-  >;
-}
-
-/** Closed immediate acquisitions beneath their exact rack selection. */
-export type WorkspaceKeepsakeEquipResultInteraction =
-  | WorkspaceJeweledPomEquipResultInteraction
-  | WorkspaceExperimentalHammerEquipResultInteraction
-  | WorkspaceTranscendentEmbryoEquipResultInteraction;
-
-export interface WorkspaceKeepsakeEquipResultDomain {
-  readonly picker: ContextualPickerModel<string>;
-  readonly transcendentEmbryoSummary?: {
-    readonly rarity: import('@run-planner/engine/catalog-schema').InRunTraitRarity;
-    readonly operands: readonly ChaosNumericOperand[];
-  };
-}
-
-export interface WorkspaceJeweledPomEquipResultInteraction {
-  readonly key: string;
-  readonly owner: KeepsakeEquipResultAddress & { readonly resultKind: 'jeweledPom' };
-  readonly value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'];
-  readonly load: (
-    value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'],
-  ) => WorkspaceKeepsakeEquipResultDomain;
-  readonly selectedLabel: string;
-  readonly intentFor: (
-    value: NonNullable<
-      import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom']
-    >,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceJeweledPomEquipResult' }>
-  >;
-}
-
-export interface WorkspaceExperimentalHammerEquipResultInteraction {
-  readonly key: string;
-  readonly owner: KeepsakeEquipResultAddress & { readonly resultKind: 'experimentalHammer' };
-  readonly value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['experimentalHammer'];
-  readonly load: (
-    value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['experimentalHammer'],
-  ) => WorkspaceKeepsakeEquipResultDomain;
-  readonly selectedLabel: string;
-  readonly intentFor: (
-    value: NonNullable<
-      import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['experimentalHammer']
-    >,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceExperimentalHammerEquipResult' }>
-  >;
-}
-
-export interface WorkspaceTranscendentEmbryoEquipResultInteraction {
-  readonly key: string;
-  readonly owner: KeepsakeEquipResultAddress & { readonly resultKind: 'transcendentEmbryo' };
-  readonly value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo'];
-  readonly load: (
-    value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo'],
-  ) => WorkspaceKeepsakeEquipResultDomain;
-  readonly selectedLabel: string;
-  readonly outcomeFor: (
-    blessingKey: string,
-  ) => NonNullable<
-    import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo']
-  >;
-  readonly intentFor: (
-    value: NonNullable<
-      import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo']
-    >,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceTranscendentEmbryoEquipResult' }>
-  >;
-}
 
 interface WorkspaceRoomInteractionBase {
   readonly choices: readonly {
@@ -586,242 +548,6 @@ export interface WorkspaceInteractionCatalog {
   readonly starts: ReadonlyMap<string, WorkspaceStartInteraction>;
   readonly takeoverBatches: ReadonlyMap<string, WorkspaceTakeoverBatchInteraction>;
   readonly topologyRemovals: ReadonlyMap<string, WorkspaceTopologyRemovalInteraction>;
-}
-
-export interface WorkspaceAcquisitionConversionInteraction {
-  readonly visible: boolean;
-  /** Gold is enabled only when every reached engine branch supports it. */
-  readonly timePieceSupported: boolean;
-  readonly artificerSupported: boolean;
-  readonly seaStarSupported: boolean;
-  readonly seaStarProcced: boolean;
-  /** Exact acquisition-owned Anvil editor, present only on the purchased Anvil role. */
-  readonly anvil?: {
-    readonly value: import('@run-planner/engine/authored-project').AuthoredAnvilResult | null;
-    readonly removableTraitKeys: readonly string[];
-    readonly addedTraitKeysFor: (
-      removedTraitKey: string | null,
-      priorAddedTraitKeys: readonly string[],
-    ) => readonly string[];
-    readonly traitLabel: (traitKey: string) => string;
-    readonly intentFor: (
-      value: import('@run-planner/engine/authored-project').AuthoredAnvilResult,
-    ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceAnvilResult' }>>;
-  };
-  readonly intentFor: (
-    value: import('@run-planner/engine/authored-project').AcquisitionDisposition,
-  ) => WorkspacePayloadEditIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceAcquisitionDisposition' }>
-  >;
-  readonly seaStarIntentFor: (
-    procced: boolean,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceSeaStarResult' }>>;
-  readonly key: string;
-  readonly owner: AcquisitionRoleAddress;
-  readonly value: import('@run-planner/engine/authored-project').AcquisitionDisposition;
-}
-
-export interface WorkspaceShopPurchaseParticipationInteraction {
-  readonly key: string;
-  readonly owner: ShopOfferAddress;
-  readonly purchased: boolean;
-  readonly intentFor: (
-    purchased: boolean,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceShopPurchaseParticipation' }>
-  >;
-}
-
-export interface WorkspaceShopOfferInteraction {
-  readonly key: string;
-  readonly owner: ShopOfferAddress;
-  readonly selected: import('@run-planner/engine/reward-kernel').ShopOptionSelection | null;
-  readonly load: () => Promise<
-    ContextualPickerModel<import('@run-planner/engine/reward-kernel').ShopOptionSelection>
-  >;
-  readonly summary: string;
-  readonly intentFor: (
-    value: import('@run-planner/engine/reward-kernel').ShopOptionSelection,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceShopOfferOption' }>>;
-}
-
-/** Complete occurrence command binding for one physical Pool offer slot. */
-export interface WorkspacePurgingPoolSlotInteraction {
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-  readonly slotKey: 'left' | 'middle' | 'right';
-  readonly traitKey: string | null;
-  readonly load: () => ContextualPickerModel<string | null>;
-  readonly intentFor: (
-    traitKey: string | null,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplacePurgingPoolSlot' }>>;
-}
-
-/** Controls whether a fixed physical Pool has an authored exact inventory. */
-export interface WorkspacePurgingPoolInteraction {
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-  readonly interacted: boolean;
-  readonly intentFor: (
-    interacted: boolean,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'SetPurgingPoolInteraction' }>
-  >;
-}
-
-export interface WorkspaceHermesShrinePurchaseInteraction {
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-  readonly generationKey: import('@run-planner/engine/authored-project').HermesShrineGenerationKey;
-  readonly purchase: import('@run-planner/engine/authored-project').HermesShrinePurchase | null;
-  readonly intentFor: (
-    purchase: import('@run-planner/engine/authored-project').HermesShrinePurchase | null,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'SetHermesShrinePurchase' }>
-  >;
-}
-
-export interface WorkspaceHermesShrineOfferInteraction {
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-  readonly slotKey:
-    import('@run-planner/engine/authored-project').HermesShrineSlotKey | 'travelDealRefill';
-  readonly rewardType: string | null;
-  readonly candidateRewardTypes: readonly string[];
-  readonly load: () => ContextualPickerModel<string>;
-  readonly intentFor: (
-    rewardType: string,
-  ) => WorkspaceCommandIntent<
-    | Extract<ProjectCommand, { readonly kind: 'ReplaceHermesShrineOffer' }>
-    | Extract<ProjectCommand, { readonly kind: 'ReplaceHermesShrineTravelDealRefill' }>
-  >;
-}
-
-export interface WorkspaceHermesShrinePresenceInteraction {
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-  readonly present: boolean;
-  readonly intentFor: (
-    present: boolean,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'SetHermesShrinePresence' }>
-  >;
-}
-
-export interface WorkspaceStygianWellPresenceInteraction {
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-  readonly present: boolean;
-  readonly intentFor: (
-    present: boolean,
-  ) => WorkspaceCommandIntent<
-    | Extract<ProjectCommand, { readonly kind: 'AddStygianWell' }>
-    | Extract<ProjectCommand, { readonly kind: 'RemoveStygianWell' }>
-  >;
-}
-
-export interface WorkspaceStygianWellInteraction {
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-  readonly interacted: boolean;
-  readonly intentFor: (
-    interacted: boolean,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'SetStygianWellInteraction' }>
-  >;
-}
-
-export interface WorkspaceStygianWellOfferInteraction {
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-  readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
-  readonly itemKey: string | null;
-  readonly candidateItemKeys: readonly string[];
-  readonly load: () => ContextualPickerModel<string | null>;
-  readonly intentFor: (
-    itemKey: string | null,
-  ) => WorkspaceCommandIntent<
-    | Extract<ProjectCommand, { readonly kind: 'ReplaceStygianWellOffer' }>
-    | Extract<ProjectCommand, { readonly kind: 'ReplaceStygianWellTravelDealRefill' }>
-  >;
-}
-
-export interface WorkspaceStygianWellPurchaseInteraction {
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-  readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
-  readonly purchased: boolean;
-  readonly intentFor: (
-    purchased: boolean,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'SetStygianWellPurchase' }>>;
-}
-
-export interface WorkspaceStygianWellTwistResultInteraction {
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-  readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
-  readonly itemKey: string | null;
-  readonly candidateItemKeys: readonly string[];
-  readonly load: () => ContextualPickerModel<string | null>;
-  readonly intentFor: (
-    itemKey: string | null,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceStygianWellTwistResult' }>
-  >;
-}
-
-/** A complete route command bound to one resource-family control at its host room. */
-export interface WorkspaceResourcePlacementInteraction {
-  readonly intent: WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceResourcePlacement' }>
-  >;
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-}
-
-/** The Midshop workbench presents the declared additional door without making it a normal target. */
-export interface WorkspaceZagreusContractInteraction {
-  readonly key: string;
-  readonly owner: AdditionalExitAddress;
-  readonly removeIntent: WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'RemoveZagreusContract' }>
-  >;
-  readonly selectIntent: WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'SetExitSelection' }>
-  >;
-}
-
-/** Source-room availability binds only the creation command. */
-export interface WorkspaceZagreusSpawnInteraction {
-  readonly key: string;
-  readonly owner: AdditionalExitAddress;
-  readonly spawnIntent: () => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'AddZagreusContract' }>
-  >;
-}
-
-/** A Chaos gate is authored at its source and selected at its outgoing decision. */
-export interface WorkspaceChaosExitInteraction {
-  readonly key: string;
-  readonly owner: AdditionalExitAddress;
-  readonly mapIntent: (
-    gameName: string,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceChaosMap' }>>;
-  readonly removeIntent?: WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'RemoveChaos' }>
-  >;
-  readonly selectIntent: WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'SetExitSelection' }>
-  >;
-}
-
-/** Availability belongs to the active source room; the authored gate remains occurrence-owned. */
-export interface WorkspaceChaosSpawnInteraction {
-  readonly key: string;
-  readonly owner: AdditionalExitAddress;
-  readonly spawnIntent: () => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'AddChaos' }>
-  >;
 }
 
 export class StructuredWorkspaceProjectionContractError extends Error {

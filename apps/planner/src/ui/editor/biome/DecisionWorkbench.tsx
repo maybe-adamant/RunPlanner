@@ -22,11 +22,8 @@ import { useAppDispatch } from '@planner/state/store';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { CandidateSelect } from './CandidateSelect';
-import {
-  AnomalyRoomControl,
-  ChaosMapWorkbench,
-  RevertAnomalyAction,
-} from './OccurrenceRoomFeatures';
+import { AnomalyRoomControl, RevertAnomalyAction } from './room-features/AnomalyControls';
+import { ChaosMapWorkbench } from './room-features/AdditionalExitControls';
 import { RoomSelector } from './RoomSelector';
 import { RunStateLauncher } from './RunStateSheet';
 import { DoorRewardEditor } from './DoorRewardEditor';

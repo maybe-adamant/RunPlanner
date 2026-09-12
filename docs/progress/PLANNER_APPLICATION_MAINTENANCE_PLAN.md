@@ -435,3 +435,23 @@ shell metadata, responsive overrides and final finding overrides. Keep these
 layers in source order, including local media/container blocks and repeated
 selectors. Three existing CSS contract tests read the source entry directly;
 move their read target to the owning styles without adding a production manifest.
+
+Gate E packet: split the mixed React feature and encounter workbenches by
+resource/additional-exit, inventory, encounter, Fields layout, wheel and local
+visit responsibilities. Keep DirectRoomWorkbench and the timeline/decision
+composers intact. Extract shop supplemental assembly with its explicit input
+product; retain the atomic occurrence/local-reward traversal. Finish the related
+contract-family placement with direct consumers (room features, local surfaces,
+actions, keepsake/automatic controls and remaining structure/common types),
+leaving the root contract as composition rather than another mixed domain dump.
+No new behavior, generic form engine or compatibility exports. Existing E suites
+own inventory/repair, H layout, O wheel and N side-room contact witnesses.
+
+E closed: room feature controls, commerce inventories and local room surfaces
+now have focused owners; shop supplemental construction has an explicit assembly
+boundary. All 205 contract declarations and the public export set are preserved
+(four declarations merely replace inline import types with named imports).
+Independent review found no behavioral or ownership regressions. Focused tests:
+15 files / 108 tests, final move witnesses 4 files / 58 tests, contract lane
+12 files / 75 tests. Repository typecheck, all changed/new-file lint and format,
+and diff checks passed. No engine, wire, host or stylesheet changes.
