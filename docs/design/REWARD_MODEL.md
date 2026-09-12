@@ -1129,12 +1129,15 @@ selection, so a later reached Olympian can still satisfy the rule. Replacement
 is a sibling composition product: each legal replacement carries its exact
 slot, prior trait, old rarity, new trait, and promoted rarity, while ordinary
 availability counts distinct legal fresh trait keys from the same pre-offer
-branch. The maximum replacement count is one when at least two ordinary keys
-remain, otherwise `3 - ordinaryCandidateCount`. Replacement waives only
-occupied-slot failure; all other requirements remain authoritative. The 10
-percent roll, force flags, progression gates, counters, and
-`ExchangeLevelBonus` remain deferred. Replacement transfers the displaced
-trait's folded level, including into a non-Pom-eligible replacement.
+branch. Replacement waives only occupied-slot failure; all other requirements
+remain authoritative. The shared composition resolver combines shortage capacity
+with the effective replacement roll: zero removes the ordinary roll, positive
+support permits one ordinary replacement, and one requires an eligible
+replacement. Shortage filling remains independent of that roll. Sacrificial
+Hymn's pending use takes precedence over Ordinary's zero-roll override, without
+making acquisition order a second policy. Replacement transfers the displaced
+trait's folded level plus the transition's level bonus, including into a
+non-Pom-eligible replacement.
 
 For Olympian and Hermes offers, one engine-owned composition domain separates
 dependable ordinary/infusion candidates, optional Duo/Legendary candidates,

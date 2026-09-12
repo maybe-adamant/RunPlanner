@@ -1,984 +1,326 @@
 # Catalog Model
 
-## Purpose
+## Responsibility
 
-This document defines how verified Hades II facts enter the app as explicit
-declarations and become the immutable normalized catalog consumed by authored
-projects and simulation.
+The catalog answers two questions: what supported Hades II facts are declared,
+and how are those facts made complete for the engine to consume?
 
-It owns declaration families, provenance, normalization policy, requirement
-scope, labels, defaults, and catalog versioning. It does not own concrete
-authored choices or lifecycle simulation algorithms.
+`packages/hades2-catalog` owns source-backed declarations and compilation.
+The engine defines the normalized interfaces it needs; catalog construction
+implements those interfaces. The catalog owns no authored choices, simulation
+counters, candidate policy or application behavior. See
+[Architecture](ARCHITECTURE.md) for package direction and
+[Planner Engine](SIMULATION_AND_VALIDATION.md) for consumption.
 
-## Unified Biome Decisions and Encounter Composition
+## Evidence and Modeling Decisions
 
-The authored contract uses one `BiomeLayout` envelope and gives every Room
-Declaration one explicit room-local encounter composition. Concrete authored
-encounter choices are defined below rather than inferred from a room template
-or baseline profile:
+Explicit TypeScript declarations are the application's catalog authority.
+Game scripts, focused [audits](../audits/README.md) and targeted native probes
+provide evidence. Do not maintain a parallel Lua catalog.
 
-- `start` is either `authoredChoice` or declaration-fixed `fixedAuthored`;
-- `progression` is either ordinary `generated` normal-door batches or the N
-  `hub` decision; and
-- `completion` is represented by the selected Preboss's fixed room links: a
-  biome-owned Boss followed by the route-position Postboss when one exists.
+Local source inspection uses `../../1GameData/Scripts/`. When scripts leave a
+relevant engine behavior uncertain, retain a bounded audit question and probe
+it. Do not turn uncertainty into a permissive production default.
 
-There is no top-level completion-decision policy. A normal-door batch may
-contain a Preboss Room Declaration. Selecting that occurrence realizes the
-biome-owned Boss and the route-position Postboss through fixed topology links;
-offering it does not create either room.
+Each relevant source distinction has an explicit disposition:
 
-Every Preboss uses the authored `Preboss` template plus
-`prebossBatchPolicy`. Takeover policies make the first normal exit a Shop
-occurrence and, when declared, later exits counted-free occurrences. I retains
-normal peers; F/G/H/O/P/Q take over their normal doors; N's completed Hub emits
-the same width-one normal-door batch. N starts with fixed authored
-`N_Opening01`; its bounded width-one entry uses the stable `prehub` exit to
-reach `N_PreHub01`, and its required depth-2 terminal resolution replaces an
-exact empty envelope with the source-bearing Hub decision keyed by `hub`.
+| Disposition | Meaning                                                                                       |
+| ----------- | --------------------------------------------------------------------------------------------- |
+| Exact       | Preserve the distinction and every modeled consequence.                                       |
+| Simplified  | Collapse alternatives only while all current consumers observe equivalent results.            |
+| Deferred    | A relevant effect is not implemented; state the supported baseline or suppression explicitly. |
+| Excluded    | Outside the modeled inputs and outputs, such as external profile progression.                 |
 
-The generic `CreateStart` transition uses the fixed identity directly or the
-first declaration-ordered `authoredChoice` identity as its initial occurrence.
-That initial choice is not a separate authoring surface: authored-choice starts
-remain replaceable on the created occurrence.
+A simplification must name what new consumer would invalidate it. Different
+history, counters, rewards or eligibility are not equivalent merely because
+the current UI renders them alike. Unknown current-run behavior is not
+external-state exclusion.
 
-## Catalog Principle
+The production catalog represents the supported fully progressed, non-bounty
+baseline. Unlocks, prior-run narrative state and unrelated save inventory do
+not become predicates without deliberately modeled inputs. Loadout choices
+inside the project are different: their normalized facts remain explicit.
 
-The catalog describes possible supported game facts. The authored project
-chooses concrete values from those facts. The simulator derives the support
-set at each decision and determines whether the authored value is a member.
-Multiplicity and ratios are retained only where they affect support, forced
-outcomes, or later state; they are never converted into likelihood scores.
+## Compilation Pipeline
 
 ```text
-game data and verified audits
-  -> explicit raw declarations
-  -> strict normalization
-  -> immutable Catalog
-  -> authored project + simulator
+source evidence
+  → readable raw declarations
+  → local family normalization
+  → immutable family collections
+  → relational closure across completed collections
+  → immutable Catalog
 ```
 
-There is one application catalog authority. TypeScript declarations in this
-project are authoritative; game scripts and focused audits provide evidence.
-Do not maintain a parallel Lua catalog.
-
-## Modeling Dispositions
-
-Biome audits distinguish verified game behavior from the planner projection.
-Every behavior relevant to planner outputs receives one of four dispositions:
-
-`Exact`
-: The canonical model preserves the relevant game distinction and its effects.
-
-`Simplified`
-: The distinction exists in the game, but alternatives are intentionally
-collapsed because they produce the same modeled history, counters, rewards,
-eligibility, and validation result.
-
-`Deferred`
-: The distinction can change modeled facts, but the required authored or
-simulation feature is absent from the supported product. The active baseline
-must say how the behavior is suppressed or conditioned.
-
-`Excluded`
-: The behavior is deliberately outside the current product input and output
-surface, such as save-profile progression, dream-run variants, or room
-presentation. Exclusion is documented but does not create production
-`unsupported` state.
-
-A simplification is valid only while all collapsed alternatives are
-observationally equivalent to every current canonical consumer. Each
-simplification records the feature that would force reconsideration. If two
-alternatives differ on a currently modeled fact, they must be modeled exactly
-or marked deferred; they cannot be called simplified.
-
-These dispositions describe product intent, not delivery progress. Current
-coverage is recorded by the owning feature map and its focused tests.
-
-## Evidence Sources
-
-Declaration work uses:
-
-- game scripts under `../../1GameData/Scripts/` as primary behavioral evidence;
-- focused source audits in this repository as interpreted evidence;
-- targeted in-game probes when scripts are ambiguous or behavior depends on
-  engine implementation;
-- structured conformance reports from the external game-module auditor.
-
-Every surprising simplification or divergence from vanilla should be recorded
-near its declaration family or in a focused audit document. Straightforward
-copied facts do not need verbose provenance comments on every line.
-
-## Raw and Normalized Layers
-
-Raw declarations favor readability and game-data auditability. Normalized
-records favor complete typed consumption.
-
-```ts
-const F_Combat04 = {
-  gameName: 'F_Combat04',
-  label: 'Combat 04',
-  biomeKey: 'F',
-  kind: 'Combat',
-  mode: { kind: 'authored', templateKey: 'StandardCombat' },
-  structuralTags: [],
-  exits: [
-    { index: 1, type: 'ErebusExitDoor' },
-    { index: 2, type: 'ErebusExitDoor' },
-  ],
-  encounterEnvelopeKey: 'SingleEncounter',
-  encounterSlotBindings: [
-    { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
-  ],
-  incomingReward: {
-    kind: 'countedChoice',
-    stores: ['RunProgress', 'MetaProgress'],
-  },
-  caps: {
-    maxAppearancesThisBiome: 1,
-  },
-} satisfies RawRoomDeclaration;
-```
-
-Normalization resolves references, inherits shared verified facts where the
-raw declaration format permits it, installs explicit semantic defaults, and
-produces immutable indexed records. Consumers never need to interpret raw
-inheritance or optional shorthand.
-
-Local normalization and relational closure are distinct compilation stages.
-Room and layout declarations first become their own immutable collections;
-template contracts and rules spanning a completed room collection or both
-room and layout collections then validate those frozen products. Catalog
-construction owns the explicit stage order and returns only the fully closed
-catalog. A local normalizer does not discover cross-collection policy through
-registration, and relational closure does not reconstruct raw declarations.
-
-Raw declaration contracts live beside the declaration family that owns them;
-the root catalog input only aggregates those family products. Catalog, room,
-layout, encounter, and trait assemblers keep construction order visible while
-delegating complete local products to their owning normalizers. Exact source
-tables remain in declarations with focused test attestation; production closure
-repeats only supported-shape and relational invariants needed by consumers.
-
-Compiler modules are grouped into rooms, layouts, encounters, traits, and
-rewards directories. The compiler root holds catalog composition, shared
-boundary utilities, and the remaining single-module families. Declaration
-subfamilies such as Ephyra rooms and weapon-specific Hammer inventories keep
-their local files and ordered assembly together in one directory.
-
-Compact helpers may remove syntax repetition only when the complete room
-surface remains readable at its declaration point. Avoid metaprogramming that
-requires executing several layers of builders to discover a room's exits,
-reward binding, or eligibility.
-
-## Declaration Families
-
-The catalog contains at least:
-
-- route declarations and ordered biomes;
-- biome layout declarations;
-- physical exit-type declarations;
-- room declarations;
-- room-template descriptors;
-- encounter envelopes, concrete encounter definitions, and encounter sets;
-- reusable room lifecycle profiles, closed operations, and declaration-owned
-  effect references;
-- local child-slot descriptors;
-- reward types, payload domains, and offer projections;
-- reward source-support policies and semantic resolution points;
-- concrete acquisition declarations and history projections;
-- reward stores and counted bags;
-- reward producer bindings and filters;
-- shop profiles;
-- requirement expressions;
-- generated-batch, Preboss-batch, and Hub decision descriptors;
-- ordinary keepsakes and their closed supported-effect descriptors;
-- player-facing labels beside stable game identifiers.
-
-Implementations for materializers, evaluators, and projectors live in code
-registries outside declaration records. A declaration selects a known semantic
-kind; it does not contain callbacks.
-
-## Keepsake Declarations
-
-The normalized catalog contains the complete declared ordinary rack inventory.
-Each entry owns its stable game key, player-facing label, fixed planner rank III
-(`Epic`), and Fated disposition (`neutral`, `enabling`, or `opposing`). Catalog
-normalization rejects malformed supported shapes and duplicate keys; the focused
-catalog test attests the complete source inventory and its Fated dispositions.
-The planner assumes the inventory is unlocked and does not represent profile
-progression or authored rank choice.
-
-Effect coverage is deliberately narrower than identity coverage. Six
-declarations own closed data-only four-rank profiles (`Common`, `Rare`, `Epic`,
-`Heroic`): Jeweled Pom levels are `1/2/3/4`, Experimental Hammer encounter uses
-are `10/15/20/30`, Calling Card charges are `2/4/6/8`, Time Piece charges are
-`2/3/4/5`, Fig Leaf biome uses are `1/2/3/4`, and Gorgon Amulet rarity levels
-are `1/2/3/4`. Ordinary player selection remains fixed at `Epic`; the profiles
-are catalog facts, not authored rank choices.
-
-Cherished Heirloom declares one closed selected disposition that equips the Duo
-trait and advances the current supported keepsake by one rank. Keepsakes
-without an individual gameplay-effect descriptor remain legal selection,
-chronology, no-return, and Fated-history participants. Adding an effect means
-extending the closed supported union and its owning transitions; declarations
-never carry callbacks and no generic keepsake-effect registry is introduced.
-
-Every keepsake also owns one closed Gift Gift Gift disposition. Gorgon Amulet,
-Jeweled Pom, Discordant Bell, and Aromatic Phial are excluded. Fig Leaf and
-Experimental Hammer declare their one-shot replay schedules, Calling Card and
-Time Piece declare every-biome replay, and remaining eligible identities may
-declare an effect-neutral planner result. These are two independent data facts:
-whether Gift may capture an identity and what biome-start transition is
-supported. The catalog does not turn either axis into a callback.
-
-Keepsake-dependent capability facts stay with the declaration family that
-answers the engine's concrete question. Calling Card menu participation belongs
-to trait-giver declarations, Time Piece conversion support belongs to concrete
-acquisitions and their exact roles, and Fig Leaf/Gorgon/Experimental Hammer
-encounter behavior belongs to room and encounter declarations. The keepsake
-descriptor must not duplicate those matrices.
-
-## Route and Layout Declarations
-
-Global Biome Declarations own stable game-domain identity and player-facing
-labels. Route declarations own only ordered references to those biomes:
-
-```text
-Underworld: F -> G -> H -> I
-Surface:    N -> O -> P -> Q
-```
-
-A biome key is never route-qualified: rooms and layouts for Erebus reference
-`F`, not `Underworld_F`. The same Biome Declaration may appear in more than one
-route. The current route model rejects the same biome twice within one route;
-if that product case becomes real, a separate route-placement identity will be
-added without changing global biome identity.
-
-Biome layout declarations own one immutable common envelope:
-
-- exact biome-local counter baselines at biome entry; route-wide counters are
-  carried by route simulation rather than restated by each layout;
-- an `authoredChoice` or one-identity `fixedAuthored` start;
-- either generated normal-door progression or an N Hub decision progression;
-- generated progression policy: eligibility-driven or an ordered staged
-  candidate-pool sequence;
-- standard, Fields, or Clockwork generated-batch policy, including any
-  policy-owned authored fields and the Fields Min/Max support contract;
-- generated reward-store policy: authored base store, source offer point, or
-  explicit no-store, plus optional source-room-template overrides; O maps
-  `ShipCombat` sources to their active wheel and otherwise requires an
-  authored store;
-- structural bounds only for the N Hub's fixed one-step entry; generated biome
-  completion remains declaration-eligibility-driven;
-- persistent Hub structure where applicable: semantic Hub key, fixed physical
-  slots, open-set constraints, visit rules, restores, and its dedicated fixed
-  completed-Hub exit;
-- the biome-owned Boss declaration and transition effects; and
-- biome-global authored field descriptors.
-
-They do not copy room-local facts such as intrinsic exits, eligibility, caps,
-or incoming reward bindings.
-
-They also do not own the transition after completion. The containing route's
-ordered biome references determine whether history advances to another biome
-or completes the route.
-
-Every production biome has complete normalized structural declarations and
-focused fixtures. A biome is not supported merely because its letter appears
-in route order.
-
-N's layout owns the fixed mapping from semantic Hub slot to concrete Room
-Declaration. Authored state selects a supported open set and visit order; it
-does not replace the room assigned to a physical slot. N Opening and PreHub
-are real authored occurrences. Opening is the fixed start; a bounded normal
-entry descriptor owns the stable `prehub` exit, the one-stage PreHub pool, and
-its one-batch/one-target bounds. A separate required terminal descriptor owns
-the depth-2 Hub takeover. Neither declaration makes Hub slots or side rooms
-ordinary candidates.
-Room-local side-slot descriptors remain facts of the concrete parent Room
-Declaration. N side slots own an availability rank because generation pressure
-forces a prefix of physical setup order. Their rewards resolve as one jointly
-validated unordered batch before player entry; observed engine reward order is
-execution evidence, not catalog authority. Authored player entry order remains
-a separate trace axis.
-
-## Room Declarations
-
-Every supported concrete room declaration owns:
-
-- stable game room name;
-- explicit player-facing label;
-- kind and explicit authoring mode;
-- a room-template key when the room has authored leaf state, or a derived
-  classification when the layout materializes it without editor state;
-- structural game tags used by topology and target compatibility;
-- intrinsic physical exits and exit constraints;
-- eligibility requirements;
-- force behavior;
-- creation and appearance caps;
-- encounter-envelope key and exact per-slot definition or set bindings;
-- modeled incoming reward binding;
-- any declaration-selected derived realization policy and its complete dormant
-  leaf default;
-- any intrinsic forced or individual reward-store override used during
-  generated-batch resolution;
-- its entered-room reward-store history policy: use the resolved offer store,
-  record one fixed store, or record no store contribution;
-- explicit room-local child descriptors where applicable;
-- complete semantic leaf defaults required by its template.
-
-### Room-owned offer-reward binding
-
-Each Room Declaration also publishes the closed binding for the reward surface
-that appears when that room is selected as a start or physical door offer:
-
-```ts
-type RoomOfferRewardBinding =
-  | { readonly kind: 'none' }
-  | { readonly kind: 'incomingReward' }
-  | { readonly kind: 'localRewardGroup'; readonly groupKey: string };
-```
-
-The ordinary binding is derived from the same declaration's `incomingReward`:
-`none` and Shop producers normalize to `none`, while every other incoming
-producer normalizes to `incomingReward`. A declaration may instead name one of
-its own bounded local reward groups when that group is the offer surface; the
-current concrete case is the active `cages` prefix on H Fields combat rooms.
-This binding is room metadata, not a second reward owner: the occurrence still
-owns the authored leaves and entered-room chronology, and Fields optional
-rewards remain entered-room controls rather than becoming cage offer rewards.
-
-Catalog compilation validates an explicit group against that exact Room
-Declaration. The group must exist, be a bounded reward-slot group, and declare
-the closed `fieldsCages` offer capability. Encounter wheels, Shop inventory,
-fixed-room slots, and `FieldsOptionalRewards` cannot be selected as an offer
-group. Every normalized room therefore has one immutable, validated binding;
-consumers do not infer it from a biome, template, game name, or rendered room.
-
-Room declarations do not own:
-
-- topology links;
-- picked state;
-- generated peers;
-- current authored rewards;
-- UI grouping or component layout;
-- copied encounter phases;
-- runtime instructions.
-
-Miniboss declarations in F through Q additionally own their audited sparse
-boon-rarity overrides. This is a room fact, not a copied property on the
-room's incoming reward or on each trait giver; any eligible Olympian or Hermes
-offer materialized in that room consumes the room context at its offer
-frontier.
-
-A bounded reward-slot descriptor owns stable physical slot keys, the raw map
-capacity, the effective maximum clamped to the modeled slot surface, and one
-normalized counted-reward binding. The occurrence persists a complete value
-for every stable slot. Batch context may activate only a prefix; it never
-deletes or relocates the dormant values.
-
-Boss and Postboss are concrete Room Declarations rather than simulator
-constants. They retain their real game names, encounters, modeled reward
-surface, counters, exits, and store-history policy. Selecting a Preboss creates
-ordinary occurrences for the biome's Boss and, when the route-position table
-supplies one, its Postboss. `fixedRoomLinks` connect those occurrences in
-order; they have no room picker or editable link topology, while their ordinary
-local encounter, action, acquisition, and declared room-feature controls remain
-available. Q's canonical repeat-run projection ends after its Boss. The route
-declaration, not a completion room, remains the authority for biome order or
-route completion.
-
-The completion descriptor also owns an ordered closed transition-effect list.
-Every current biome explicitly resets `biomeDepthCache` followed by
-`biomeEncounterDepth` after its completion rooms. Route encounter depth and
-room-history ordinal are deliberately absent from that list and survive the
-transition. The simulator walks these declarations; it does not hide a generic
-reset inside room exit or route composition.
-
-Declarations include only game facts consumed by a canonical product surface.
-Automatic boss-specific and weapon-dependent drops are documented evidence but
-do not require reward types, concrete acquisition declarations, or history
-projections while no current validator, simulator rule, editor, or execution
-instruction consumes them.
-
-Reward-store history policy is explicit because visible reward kind is not
-enough to infer it. A generated fixed Story or Shop can record the store
-resolved for its offer, a G or P boss can record the store resolved for its
-linked outgoing-door offer, an F boss can ignore its forced reward for
-store-ratio history, and a postboss contributes no store. These distinctions
-must not become simulator room-name conditions.
-
-`gameName` and `label` are separate required values. The game name persists in
-semantic choices or translation data; the label is presentation. UI must not
-derive labels from internal identifiers.
-
-### Closed route-detour declarations
-
-`roomSetKey` records a room's game room-set identity. It is declaration data,
-not a route placement, normal-door eligibility rule, or lifecycle classifier.
-The host authored biome supplies placement; legal conditional insertion is
-expressed by closed generation declarations.
-
-G owns the one `oceanusAnomaly` replacement declaration: its source checkpoint
-requirements, replaceable ordinary G target names, seven Anomaly map names,
-and default map. A normal target may enter that room set only through this
-replacement. The four supported Midshops (`F_Shop01`, `G_Shop01`, `O_Shop01`,
-and `P_Shop01`) each declare the one `zagreusContract` additional exit to
-`C_Boss01`. Rooms that can physically host a Chaos gate declare one `chaos`
-additional exit with `canHost: true`; rooms where ordinary Chaos authoring is
-also legal set `canSpawn: true`. Host-only declarations, including H and I,
-keep `canSpawn: false`, while ordinary F/G/N/P declarations set both
-capabilities. This is one source-agnostic gate domain: Ixion-generated
-presence is derived by the engine and does not introduce another exit kind.
-Neither Anomaly maps nor `C_Boss01` belongs to a normal-door candidate domain.
-
-Anomaly maps and `C_Boss01` declare the same closed automatic exit facts:
-automatic traversal, hidden reward preview, and fresh host-normal target
-generation. The catalog also retains the intentional encounter asymmetry:
-`GeneratedAnomalyB` advances encounter depth; `BossZagreus01` does not.
-`C_Boss01` has a fixed `InfernalContractBoon` acquisition and deliberately
-does not model `GemPointsBigDrop` or `PauseBiomeState`. Every qualifying World
-Shop destination declares one free `infernalContractReward` supplemental entry
-with its exact five-member domain and Time Piece capability matrix. This does
-not change the declaration-owned initial Shop slot count.
-
-## Physical Exit Types
-
-Physical exit declarations retain the game exit type and reference a normalized
-exit-type policy. The policy may constrain candidate targets from both source
-and target facts. For example, P requires both of these declarative rules:
-
-- an Olympus Outdoor exit always requires an `Outdoor` target;
-- an Olympus Indoor exit requires an `Indoor` target only when its source room
-  is `Outdoor`.
-
-Candidate construction resolves that policy from the source Room Declaration
-and candidate Room Declaration. It must not duplicate the result as a fake
-room eligibility range or dispatch on door-name strings in the simulator.
-Unconstrained F/G exit types still receive explicit normalized policies rather
-than relying on a missing-policy fallback.
+The composition entry is
+`packages/hades2-catalog/src/compiler/createCatalog.ts`. Family normalizers
+live with rooms, layouts, encounters, traits, rewards and the other declaration
+families. Local normalization installs supported defaults and resolves raw
+shorthand. Relational closure validates references and policies that require
+a complete collection. Neither stage discovers missing facts through hidden
+registration or asks a consumer to finish normalization.
+
+Declarations select closed semantic kinds and data. Their materializers,
+evaluators and projectors are code owned by the corresponding consumer; a
+declaration contains no callback. Closed effect descriptors are not an
+extensible event bus or generic effect interpreter.
+
+Raw data must stay auditable. Shared helpers may reduce repetition only when
+the room's exits, binding or trait effect remain readable at its declaration
+site. Ordering is explicit whenever it affects semantics. Normalized maps,
+arrays and nested products are immutable.
+
+## Identity and Default Contracts
+
+Game identities and display labels are separate required fields. A label is
+not derived from an internal identifier. One unique Room Declaration per
+`gameName` may be referenced by many authored occurrences; the catalog does
+not allocate spare maps to simulate repetition.
+
+Global biome identity is not route-qualified. A route owns ordered biome
+references, while a biome owns its declarations. Current routes do not repeat
+the same biome within one route. Supporting that would require a placement
+identity, not renamed global biome keys.
+
+Defaults have an owner and a purpose:
+
+- deterministic active leaves have complete declaration-owned defaults;
+- unresolved player choices use the supported required initialization;
+- a set default is a structural default, not a promise of contextual legality;
+- optional or dormant data does not activate merely because a default exists;
+- declaration order alone is not a default unless that selection is explicitly
+  part of the contract.
+
+The [authored model](AUTHORED_PROJECT_MODEL.md) owns installation, retention and
+replacement. The catalog must not implement commands or select UI focus.
+
+## Routes, Layouts and Rooms
+
+### Layout facts
+
+A layout declares:
+
+- biome-entry counter baselines and completion transition effects;
+- an authored-choice or fixed-authored start;
+- generated or persistent-Hub progression;
+- eligibility-driven or staged target support;
+- standard, Fields or Clockwork batch policy and its required fields;
+- authored-base-store, source-offer-point or no-store reward policy;
+- fixed Boss and route-position Postboss resolution;
+- bounded Hub entry, board, visit, restore and handoff facts where applicable.
+
+Room-local exits, rewards, caps and eligibility do not move into layout merely
+because several rooms share them. The containing route determines the next
+biome. Completion resets are explicit ordered effects, not implicit simulator
+behavior.
+
+N's fixed Hub mapping, open-set rules and visit order are separate from ordinary
+room pools. Side-slot availability rank describes physical generation pressure;
+it is not player visit order or an ordered reward-bag draw. Concrete details
+belong to [biome authorities](../biomes/) and
+[Game Generation Rules](GAME_GENERATION_RULES.md).
+
+### Room facts
+
+A room declares its game identity and label, authoring mode/template,
+structural tags, physical exits, requirements, force/caps, encounter bindings,
+incoming producer, local slots, realization policy, dormant defaults and
+entered-store-history policy. It does not own occurrence IDs, selected state,
+topology links, authored rewards or UI grouping.
+
+The room's offer-reward binding is one closed choice:
+
+- `none`;
+- `incomingReward`; or
+- `localRewardGroup` naming a supported bounded group on that exact room.
+
+Ordinary bindings derive from the incoming producer; none and Shop producers
+have no incoming offer editor. Fields combat can expose its active cage group.
+Normalization verifies the named group and its `fieldsCages` capability.
+Wheels, Shop inventory, fixed-room slots and Fields optional rewards are not
+interchangeable offer groups. This is metadata describing existing leaves, not
+a second reward owner.
+
+Bounded reward groups retain stable slots and complete dormant values.
+Declaration capacity and effective capacity are distinct; activating a prefix
+does not delete the remainder. Miniboss rarity overrides likewise belong to the
+room, not copied incoming rewards or givers. They apply through the exact
+offer context.
+
+Boss and Postboss are real declarations with real encounters, rewards, exits
+and history policies. Commands create their fixed-linked occurrences;
+simulation does not synthesize them from constants. Route-position selection
+and Rivals variants remain declaration-backed, without extra player map choices.
+
+### Exits and detours
+
+Physical exit types select explicit source/target constraints. An unconstrained
+type still has a normalized policy; a missing policy is not permissive.
+Room-set identity is not route placement or ordinary candidate eligibility.
+
+Chaos uses one gate kind with distinct `canHost` and `canSpawn` facts.
+Ixion-generated presence does not add a second Chaos type. Anomaly is a closed
+G replacement; Zagreus Contract is a closed additional exit. Their automatic
+returns, preview behavior and encounter effects are declared independently.
+They do not enter ordinary room pools through a generic special-exit escape
+hatch. [Generation](GAME_GENERATION_RULES.md) and
+[lifecycle](ROOM_LIFECYCLE_MODEL.md) own their behavior.
 
 ## Encounter Composition
 
-Every Room Declaration binds exactly one `EncounterEnvelope`. An envelope is
-reusable room-local topology only: its ordered stable slots, any declarative
-structural-activation condition, and a slot's named local-reward or wheel
-attachment. It owns neither a concrete identity, eligibility, effective kind,
-counter effect, nor lifecycle timing.
-
-Every envelope slot has one exact Room Declaration binding:
-
-- a fixed binding names one `EncounterDefinition`; or
-- a set binding names one `EncounterSet`.
-
-An `EncounterDefinition` is one normalized game identity. It owns its label,
-effective kind, requirements, encounter-depth effect, optional sequence effect,
-and optional `npcPresentationKey`. The presentation key groups resolved NPC
-rows only; requirement and history operands always use exact definition keys.
-
-An `EncounterSet` owns a unique, ordered support of definition keys and one
-static declaration-owned default. Source list multiplicity and weighting are
-evidence for the audit, not planner state: an encounter set is not a consumed
-bag and contains no probability, count, weight, or ratio field. The default is
-complete deterministic authored state, not an eligibility promise.
-
-The normalized composition is deliberately explicit:
-
-```text
-Room Declaration
-  + Encounter Envelope
-  + exact slot -> fixed Encounter Definition | Encounter Set
-  -> complete room-local encounter contract
-```
-
-No consumer recovers a slot binding from an envelope name, room template,
-biome, game name, rendered order, or a baseline identity. Empty envelopes and
-fixed slots are part of the same universal contract, but have no redundant
-authored choice. Pool-backed slots are the only ones with a persisted selected
-definition.
-
-`RoomLifecycleProfile` remains the authority for operation order. It may
-declare which envelope shapes it can execute, but it cannot supply a concrete
-identity, kind, counter effect, set, or eligibility policy. A selected
-definition determines those facts when its structurally active slot resolves.
-This keeps O's `Intro`/`Combat1`/optional `Combat2`, P's `Intro`/`Combat`, and
-H's `Passive` plus cage prefix as explicit slot topology without reintroducing
-a parallel encounter-identity authority.
-
-The catalog is a fully progressed, non-bounty static projection. It excludes
-source identities whose only distinction is unmodeled save/profile progression,
-first-time narrative state, reweighting, or pre-run Shrine/difficulty choice.
-It retains supported concrete ordinary and field-NPC combat definitions, plus
-the one normalized `NemesisRandomEvent` identity in its declared F/G/H slots.
-That identity owns its closed event policy rather than expanding into five fake
-encounter identities. Other NPC random events and their interactions,
-Shop/Bridge appearances, Gold-wager outcomes, enemy waves, and other unmodeled
-room details are not silently represented by an `unsupported` identity or a
-runtime resolver branch.
-
-O's outgoing reward-store override is intentionally selected by
-`sourceRoomTemplateKey: 'ShipCombat'`, not by an encounter envelope or
-definition. The room template owns its wheel-bearing authored state; the
-envelope declares phase attachment points. These are related composition facts,
-not aliases for each other.
-
-## Reward Declarations
-
-Reward declarations compose bottom-up:
-
-```text
-payload domain
-  -> reward type
-  -> resolved reward offer
-  -> store entry / fixed source / shop option
-  -> counted bag / shop group
-  -> producer binding and filters
-  -> offer point or room template
-
-resolved reward offer + offer point
-  -> generic offer event + optional reward-type offer projection
-
-resolved reward offer + reward-type acquisition roles + producer lifecycle
-  -> concrete acquisition event
-  -> history projection
-
-biome store policy + room store override
-  -> generated-batch and target store resolution
-```
-
-A reward type owns its picker/offer identity, label, payload domain, complete
-offer default, optional offer projection, optional source-support policy and
-resolution point, and named acquisition roles. Each role uses the closed self,
-fixed, or typed-payload-source resolver vocabulary. A store entry separately
-owns multiplicity position, requirements, duplicate policy, and the reward type
-it can resolve. A resolved offer retains that reward type and its complete
-payload.
-
-Source support uses a closed registry rather than reward-name switches. The
-supported policies are `ordinaryBoonPeer`, `ordinaryNoPeer`, and
-`devotionAcquiredPair`. Their declared resolution point determines whether
-support is checked while materializing the offer or at one addressed
-acquisition role. Catalog normalization rejects a source-bearing payload with
-no policy or a policy paired with an incompatible resolution point.
-
-An offer projection owns reward-type-specific current-run writes caused by
-materializing an offer. The vocabulary contains only
-`devotionSpacing`; common offer history, counted-entry consumption, and peer
-constraints remain offer-point behavior rather than repeated declaration data.
-
-A concrete acquisition declaration owns one most-concrete game identity and
-its typed game-history projection. Producer and encounter declarations bind
-reward-type acquisition roles to explicit lifecycle points. Blind Box retains
-its authored source while validating and emitting it only after purchase.
-Acquisition history changes only when the corresponding concrete acquisition
-event occurs. No declaration uses a generic `acquiredAs` alias.
-
-Counted bags preserve declaration order, multiplicity, entry-level
-requirements, and entry-level duplicate policy. The shared picker owns any
-refill behavior. Shops use ordered shop groups with offer counts and per-option
-requirements rather than counted bags. Each shop profile also declares its
-ordered emitted slots with stable keys, labels, owning groups, and explicit
-default option entries; slots are not inferred from option order.
-
-Producer-lifecycle profiles remain separate from reward types. Each profile
-enumerates its supported reward types, supplies complete default role timing,
-and declares exact per-type overrides where timing differs. Normalization
-rejects unknown or duplicate supported types, overrides outside the profile,
-and any lifecycle that fails to bind every acquisition role exactly once.
-
-Producer bindings select stores, fixed sources, shop profiles, and positive or
-negative filters. A filtered variant does not automatically become a new named
-reward surface. Filters must reference concrete types exposed by their source,
-and positive/negative sets cannot overlap. If filtering removes a referenced
-store's ordinary default, the raw binding must explicitly select an allowed
-default reward type from that same store; normalization never guesses the
-first remaining option.
-
-Defaults follow semantic ownership. Option ordering is not a default. A
-producer binding describes the reward domain that a room can accept; it does
-not make the room leaf the authority for the generated batch's active store.
-Likewise, a declaration may provide a default only for a canonical fact.
-Random batch or biome outcomes use `required` initialization and begin
-unresolved.
-
-The exact producer vocabulary, F/G bindings, shop distinction, and
-offer/acquisition contract are defined in `REWARD_MODEL.md`. This document owns
-their declaration and normalization boundary rather than repeating those
-behavioral meanings.
-
-## Requirement Scope
-
-Production declarations include current-run facts that the authored project
-and simulator can evaluate:
-
-- room creation and appearance history;
-- biome and route depth counters;
-- room-history spacing;
-- encounter history;
-- generated peer and exit context;
-- reward offers and acquisitions;
-- loot, use, and biome-use ledgers;
-- force pressure;
-- shop intervals;
-- creation and appearance caps.
-
-Production declarations omit facts that depend only on external profile or
-save state unless the app later introduces an explicit modeled input:
-
-- story progression and prior-run completion;
-- unlocks and world upgrades;
-- active bounty overrides;
-- current traits, aspect, or familiar chosen outside the project;
-- unrelated save-file inventory.
-
-An unknown current-run predicate or missing evaluator is a catalog contract
-failure. External-state omission is not a fallback for unfinished current-run
-support.
-
-The current-run evaluator registry is total over the normalized requirement
-expression union. Catalog normalization rejects a kind absent from that
-registry, and extending the union without extending the registry is a compile
-failure. Evaluation context keeps counters, acquired-history records, current
-shop options, the current room reward, offered exits, current-batch room order,
-Clockwork progress, event spacing, and flags as distinct semantic inputs;
-evaluators do not reconstruct one axis from another. I uses generic current-
-batch count/room-count predicates for peer order and exclusion, plus typed
-Clockwork goal and non-goal-capacity predicates. Room-specific validation codes
-or instance-shaped predicate names are not part of the declaration language.
-Evaluating a Clockwork predicate without Clockwork facts is a contract failure,
-not an ordinary ineligible result.
-
-## Declaration and Occurrence Identity
-
-The catalog contains exactly one Room Declaration for each unique `gameName`.
-That uniqueness does not constrain authored room occurrences.
-
-The authored project may create several occurrences that reference the same
-Room Declaration. This models repeated generated offers directly, including
-an unpicked `F_Combat04` followed by a later picked `F_Combat04`. Each
-occurrence owns separate authored leaf state and receives a distinct semantic
-address.
-
-The catalog therefore does not provide spare compatible room allocation or a
-pool-capacity proof for canonical substitution. It provides the actual game
-facts needed for simulation:
-
-- creation and appearance caps;
-- eligibility and force;
-- physical exits;
-- reward binding;
-- template and room-internal behavior.
-
-The simulator applies those facts to occurrence history. Structural singleton
-roles remain layout rules rather than a global prohibition on repeated game
-names.
-
-## Normalization Obligations
-
-Catalog construction must verify:
-
-- every referenced key exists;
-- every semantic kind has a registered implementation;
-- every lifecycle profile uses registered operation kinds and every declared
-  lifecycle effect has a registered pure implementation;
-- every room template receives the fields it requires;
-- every room declares exactly one authored or derived mode; derived rooms are
-  referenced only from compatible layout roles;
-- every active leaf has a complete deterministic default;
-- every Room Declaration names one Encounter Envelope and each envelope slot
-  has exactly one fixed-definition or set binding;
-- envelope slots, local slots, and bindings have unique stable keys;
-- every Encounter Set contains unique existing definitions and its default is
-  a member of that set;
-- every fixed slot names one existing definition, while empty and fixed slots
-  have no selectable authored state;
-- requirement trees are typed and supported at their contacts;
-- reward sources, filters, payloads, and defaults agree;
-- every source-bearing payload selects a registered source-support policy and
-  compatible offer- or acquisition-role resolution point;
-- counted entries declare duplicate behavior and shops declare valid
-  without-replacement group cardinality;
-- shop slots exactly realize group offer counts, own unique stable keys and
-  labels, and select distinct valid defaults within a multi-offer group;
-- every offer projection selects a registered closed semantic kind;
-- concrete acquisition history projections reference valid ledgers;
-- every producer lifecycle binding references a role declared by the reward
-  type, and every role resolves a valid fixed, self, or typed payload-derived
-  concrete acquisition;
-- every producer-lifecycle profile enumerates its supported reward types and
-  expands to one complete lifecycle for every supported role;
-- every supported concrete acquisition selects exactly one audited
-  `lootAndUse` or `consumableAndUse` projection profile independently of its
-  acquisition kind;
-- every Room Declaration normalizes one room-owned offer-reward binding, derives
-  ordinary bindings from its incoming reward, and validates each explicit local
-  reward-group reference against that room's supported bounded group;
-- declaration order is explicit wherever simulation consumes order;
-- layout bounds can contain every supported authored structure;
-- every fixed room link resolves to two distinct ordinary occurrences in the
-  same biome, and the fixed-linked Boss/Postboss chain is ordered and unique;
-- labels and game identifiers are both present;
-- every game room name uniquely identifies one Room Declaration.
-
-Normalized maps and arrays are immutable. Stable declaration order must not
-depend on JavaScript object iteration when order changes game behavior.
-
-Leaf activation follows lifecycle rather than declaration presence. Incoming
-and free-reward leaves are active when their door offer exists; a shop leaf is
-active only when its occurrence is picked for entry. Catalog defaults must be
-complete for either activation point without forcing entry-only state onto an
-unpicked occurrence. Pool-backed encounter selections remain complete even
-while a potential slot is dormant, but they become an active room-local product
-only when their structural room and slot activation conditions hold.
-
-## Catalog Versioning
-
-The normalized catalog exposes a compatibility identity and changes it whenever
-declaration semantics change.
-
-Project loading distinguishes:
-
-- exact compatible catalog;
-- supported project migration;
-- incompatible catalog requiring explicit user action.
-
-Do not silently reinterpret an existing project after a declaration change
-that alters its semantic meaning.
-
-The execution artifact carries the exact catalog version admitted by its
-strict decoder. Compatibility is explicit; the executor never guesses across
-catalog boundaries.
-
-## Production Biome Contract
-
-Every biome placed in a production catalog route has a normalized layout and a
-complete authored, simulation, candidate, editor, profile, and recovery path.
-Project creation, loading, semantic commands, simulation dispatch, and editor
-navigation consume the same route declarations without a second application
-capability matrix.
-
-Incomplete biome work must remain outside the assembled production
-catalog until its complete vertical product loop is ready. Focused test
-catalogs may still exercise new declaration vocabulary before production
-assembly. Room, layout, and route declarations do not carry development-status
-flags.
-
-## Catalog Coverage and Declaration Freeze
-
-The catalog contains the shared foundations and concrete declarations needed
-for both complete routes:
-
-- global F/G/H/I and N/O/P/Q Biome Declarations and route references;
-- unified biome-layout and N Hub-decision metadata;
-- the room, encounter, reward, shop, local-slot, and Preboss templates used by
-  the supported biome projections;
-- required reward types, payloads, concrete acquisitions, stores, bags,
-  bindings, and shops;
-- required Encounter Envelopes, Encounter Definitions, Encounter Sets, and
-  exact Room Declaration slot bindings;
-- eligibility, force, and cap evaluators exercised by all eight biomes;
-- explicit labels and recursive defaults.
-
-Do not place future biomes or mechanics in production routes through
-placeholders. Catalog route placement is a supported-product contract, not a
-development-progress marker.
-
-F/G/H/I/N/O/P/Q extend normalized catalog vocabulary only where concrete game
-facts require it. Their documents under `docs/biomes/` own the corresponding
-route facts, while this design set owns the shared declaration vocabulary.
-
-`GAME_GENERATION_RULES.md` owns shared generation behavior.
-`ROOM_LIFECYCLE_MODEL.md` owns the ordered operations that turn an entered
-occurrence into one composable history fragment.
-Focused audits retain source evidence and explicit modeling dispositions.
-
-## Trait Offer Catalog
-
-The normalized catalog owns the supported trait-offer providers. It contains
-six weapon declarations, their 24 aspect declarations, 385 included trait
-declarations, and 22 giver declarations: the nine Olympians, Hermes,
-`WeaponUpgrade`, Artemis, Athena, Icarus, Arachne, Medea, Hades, Dionysus,
-Narcissus, Circe, Echo, and Selene's `SpellDrop`. Arcana card traits are declaration-backed run-state
-traits rather than a giver pool. Trait declarations are
-giver-neutral facts: fresh and equipped rarity domains, exact offer
-requirements, ordinary boon slot, element contributions, boon-rarity and
-core-god classification, stacking and in-run rarify flags, rarity-count exclusion,
-targeted acquisition, and Hammer weapon/aspect compatibility. Giver
-declarations own ordered pool membership, normalized `priorityTraitKeys`, one
-of the closed `selectable`/`fixed`/`none` rarity policies, and the complete
-default triple (one provider default for Olympian, Hermes, and field-NPC givers
-and one per weapon/aspect loadout for Hammers). The `none` policy covers every
-planner-rarityless provider, including Icarus and Hammers; Hammer Rank I/II and
-internal NPC scaling remain independent. `Heroic` remains in the normalized
-equipped rarity order but is never a fresh authored choice. The catalog also
-owns one complete provider-base table for Olympian and Hermes fresh boon checks
-(`Rare`, `Epic`, `Duo`, and `Legendary`), which the engine resolves before
-applying contextual overrides and active contributions. It does not copy those
-bases onto individual givers.
-
-Targeted acquisition is likewise a closed catalog fact, not a general effect
-registry. Bridal Glow declares promotion of one eligible equipped god trait to
-`Heroic`; Latest Model declares promotion of one eligible equipped Hammer from
-Rank I to Rank II. Hammer compatibility records the source-backed Rank-II
-capability independently of player-facing rarity; 65 of the 92 Hammer
-declarations support it. Icarus Attack and Special traits express their
-occupied-slot prerequisites through the ordinary slot vocabulary instead of
-naming other providers' traits.
-
-Four run-impacting selected dispositions are also closed declaration facts.
-Natural Selection owns the five ordinary boon slots and eight-level
-round-robin result; Queen's and King's Ransom own opposite Hera/Zeus provider
-indices and a `4`-level gain per removed identity; and Steady Growth owns its
-rarity-dependent qualifying-end-effect intervals (`6/5/4/3` for
-Common/Rare/Epic/Heroic). These declarations are normalized as explicit
-dispositions and are not a generic effect registry. The three source
-`BlockOfferIfPreviouslyPicked` identities—Bridal Glow, Buried Treasure, and
-Cherished Heirloom—carry a declaration-owned one-time-offer flag that the
-engine evaluates from selected-trait history, including after removal.
-
-The remaining three run-impacting trait dispositions are likewise closed.
-Quick Buck and Buried Treasure each declare one `producePickups` producer
-lifecycle and its exact named concrete pickup entries; the catalog validates
-their complete ordered lists, including Buried Treasure's Story exclusion for
-Bones and its producer-local Artificer override. Sea Star declares only that
-the selected trait enables duplication. Exact duplication remains a concrete
-acquisition fact: every supported acquisition explicitly declares
-`canDuplicate`, while producer lifecycle and instance provenance may narrow
-that base capability. These descriptors do not form a generic trait-effect or
-reward-copy language.
-
-The three cooldown-capped Hephaestus core traits additionally own complete
-maximum in-run upgrade levels by equipped rarity:
-
-| Trait                   | Common | Rare | Epic | Heroic |
-| ----------------------- | -----: | ---: | ---: | -----: |
-| `HephaestusWeaponBoon`  |      9 |    7 |    5 |      3 |
-| `HephaestusSpecialBoon` |     11 |    9 |    7 |      5 |
-| `HephaestusSprintBoon`  |      8 |    7 |    6 |      5 |
-
-One engine predicate consumes those declaration values for Pom-derived level
-targets, Natural Selection, Bridal Glow, and Steady Growth. Proper Upbringing's
-direct Common-to-Rare floor intentionally remains outside that in-run
-effectiveness predicate.
-
-Aspect declarations may also own the narrow `traitOfferLevelBonus` fact used by
-the reward-side Aspect of Persephone projection. The only current declaration
-is `LobImpulseAspect`, with an ordinary maximum contribution of `0..5`, an
-upgraded maximum of `0..8`, and `WeaponUpgradeBoon` as the acquisition that
-activates the upgraded range. This is a closed declaration product consumed by
-the trait-offer level resolver; it is not an aspect-rank ledger, callback, or
-general numeric effect registry.
-
-Field NPCs use the explicit `fieldNpc` provider kind. Character identity does
-not make Artemis or Athena ordinary Olympian providers: field-NPC offers do not
-participate in the first-Olympian composition rule, ordinary-slot replacement
-composition, god-pool source history, or reward-source support.
-
-The normalized catalog contains the complete declared membership set for every
-supported giver. Selene's `SpellDrop` giver is a rarityless `spell` provider
-with an ordered trait pool; its aspect-granted base trait, Sky
-Fall, is outside that pool and is linked only by `SuitHexAspect` as its
-starting trait. Every spell occupies the shared `Spell` equipment slot, which
-is distinct from the original five ordinary-boon slots. Echo contributes exactly eight
-player-rarityless identities: Reward, Boon, Survive, Pom, Evade, Fight, Gold,
-and Gift. Their selected dispositions close direct numeric/no-op behavior,
-greatest-level Pom targeting, the giver-preserving previous-run approximation,
-exact last-reward replay, World Shop duplication with `SpellDrop` excluded, and
-captured-keepsake replay with four exact source exclusions. Echo's ordinary
-internal Epic/Dream-Dive scaling tier is not a player-facing boon rarity and is
-therefore absent from authored and normalized rarity state.
-
-All Together remains an ordinary Legendary Hera member but alone declares the
-closed `directTraitSets` disposition: four named two-trait pairs whose selected
-children are granted without player-facing rarity. Travel Deal remains an
-ordinary ranked Hermes member and alone declares `worldShopRestock`, including
-one refill and its four source-backed discount values. Infernal Contract is a
-separate rarityless fixed acquisition. These declarations are closed facts,
-not a generic callback registry; normalization rejects either selected
-disposition on any other trait and validates every pair, pedestal member,
-destination, and supplemental key.
-
-The Artificer is an Arcana declaration rather than a giver member. Its
-normalized capacity profile is exact: Epic has three uses and Heroic has four.
-Concrete acquisition declarations independently own inherited Artificer
-eligibility, while producer lifecycle and instance provenance may block it.
-The supported source family is Nectar, ordinary and Big Bones, ordinary and
-Big Ashes, and producer-owned Psyche; Psyche is not inserted into a counted
-store. Room declarations separately own exact Fields optional capacities and
-the persistent `FieldsOptionalRewards` producer binding.
-
-Concrete acquisition declarations also own the exact history projection and
-base Time Piece, Artificer, Echo-last-reward, and Sea Star capability facts.
-The declaration fact is not enough to make a live interaction: a direct Shop
-purchase is an atomic paid instance and exposes none of the free-pickup
-alternative interactions. Conversely, a free acquisition-entry pickup created
-inside a Shop occurrence keeps its own producer lifecycle and is evaluated as
-a pickup rather than as a purchase.
-
-Arcana cards and Fear Vows are separate normalized catalog collections. Card
-declarations own their board location, permanent rank-III baseline, Grasp cost,
-and ordinary activation rule; the rarity cards Excellence, The Queen, and
-Divinity additionally own their complete rank-I through rank-IV additive or
-multiplicative boon-rarity contribution tables. Judgment additionally declares
-its Epic and Heroic post-Boss activation counts. Vows own bounded incremental Fear ranks
-and whether Circe may suppress them. Three modeled Vows own closed effect
-declarations: Denial bans up to two displayed unselected traits, Forfeit
-prevents one qualifying ordinary-room Boon or Hermes acquisition per biome,
-and Void declares the 30-Grasp baseline plus its exact 60/40/20/0 available
-percentages. Exactly the nine Olympian givers and Hermes declare Denial
-participation; normalization rejects missing or extra participants rather than
-inferring participation from provider names at runtime. Current banned keys,
-per-biome Forfeit usage, and effect timing remain simulation-owned. Circe's
-three effect-backed traits carry one closed selected-disposition descriptor
-only; their live target domains and effects remain simulation-owned.
-
-`ElementalRarityUpgradeBoon` also declares the narrow `rarityFloorEffect`
-product. Its activation minimums are the four base elements at `2`, its
-closed `Common`-to-`Rare` transition is validated and deep-frozen by the
-compiler, and its future-offer contribution is the exact `GodLootOnly`
-additive `Rare +1`. This declaration is the catalog fact consumed by the
-engine's chronological rarity lifecycle and offer-local ledger; it is not a
-generic trait-effect registry or an authored-state field.
-
-The nine Olympian priority sets each cover the five ordinary slots; Hermes,
-Hammer, and field-NPC givers normalize an explicitly empty set. Catalog
-construction rejects unknown,
-duplicate, out-of-pool, cross-slot, or malformed priority sets and rejects
-Olympian defaults that leave the set or lack both Melee and Secondary; at least one of
-Melee or Secondary is required. The empty-slot
-predicate and first-offer timing remain simulation-owned, not catalog state.
-
-Catalog construction is the source-to-catalog closure boundary. It rejects
-unknown requirement operands, duplicate or cross-provider pool members,
-invalid rarity policies or domains, incompatible defaults, unknown contexts,
-missing loadout defaults, malformed targeted acquisitions, and malformed
-Hammer compatibility. Requirement operands
-that name deferred NPC, Story, or Talent providers remain exact keys in
-the declaration but do not create placeholder offerable traits. The closed
-context vocabulary is `devotionNoDuo` and the room-owned `BlockGiftBoons`
-flag; room names and acquisition timing never enter trait declarations.
-
-The complete membership, prerequisite, element, rarity, stacking, rarify,
-aspect, and exclusion matrices are tested at the catalog boundary against
-[`TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md`](../audits/traits/TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md).
-The catalog is immutable after normalization and owns no authored choices,
-simulation counters, candidate policy, or React presentation.
-
-## Audit Workflow
-
-For each declaration family:
-
-1. inventory the supported game facts and current declarations;
-2. identify the relevant game-data source;
-3. resolve inconsistencies before authoring;
-4. record each relevant fact's Exact, Simplified, Deferred, or Excluded
-   disposition and reconsideration trigger;
-5. write explicit TypeScript declarations for the chosen projection;
-6. normalize and validate them;
-7. add readable focused fixtures;
-8. update implementation coverage separately from modeling disposition;
-9. review the complete declaration at its source location.
-
-Game-data audits answer behavior questions. They do not become production
-branches or permanent `unknown` fields.
+The four contracts must remain separate:
+
+| Product              | Owns                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------- |
+| Encounter Envelope   | Ordered stable slots, structural activation and reward/wheel attachments              |
+| Room slot binding    | Exactly one fixed definition or selectable set per slot                               |
+| Encounter Definition | Exact identity, kind, requirements, counter/sequence effects and NPC presentation key |
+| Encounter Set        | Ordered unique membership and one complete static default                             |
+
+An envelope does not supply encounter identity, counter effects or timing.
+A set is not a consumed bag; source weighting is evidence, not normalized
+probability state. Only selectable slots need persisted selections. Empty
+envelopes and fixed slots use the same contract without fake choices.
+
+Lifecycle profiles execute supported envelope shapes; they do not fill missing
+room bindings. H cage phases, O ship phases and P's two-phase composition remain
+explicit rather than inferred from a template name. NPC grouping keys are
+presentation metadata, never requirement or history identity.
+
+## Rewards and Acquisitions
+
+Reward declarations compose payload domains, reward types, concrete acquisition
+roles, stores/bags or Shop groups, producer bindings and producer lifecycles.
+[Reward Model](REWARD_MODEL.md) owns their behavioral distinctions.
+
+A reward type owns its identity, payload shape, complete offer default,
+optional offer projection, source-support policy/resolution point and named
+acquisition roles. Each role resolves self, fixed or typed-payload-source
+identity. Concrete acquisitions separately declare exact history projection
+(`lootAndUse` or `consumableAndUse`) and base capabilities.
+
+The source-support vocabulary is closed: `ordinaryBoonPeer`,
+`ordinaryNoPeer` and `devotionAcquiredPair`. A source-bearing payload needs
+a compatible policy and resolution point. Blind Box resolves at its
+`hiddenSource` acquisition role; its inventory identity is not an acquired
+god. Producer-specific authoring remains in Reward Model.
+
+Offer projections describe exact extra writes caused by an offer, such as
+Devotion spacing. Common offer history and bag depletion remain kernel
+behavior, not repeated per-reward declarations. Acquisition kind does not
+stand in for its history projection, and no generic `acquiredAs` alias
+replaces concrete identities.
+
+Counted entries own requirements, multiplicity and duplicate policy. Shop
+groups instead own counts and without-replacement membership; their emitted
+slots have explicit keys, labels, groups and distinct valid defaults. Neither
+slot identity nor default selection is inferred from option order.
+
+A producer lifecycle enumerates supported reward types and binds every role
+exactly once, with explicit per-type overrides. Producer bindings choose
+stores, fixed sources, Shop profiles and filters. Positive and negative filters
+must be compatible and disjoint; a filter that excludes the ordinary default
+requires an explicit allowed default, not the first surviving member.
+
+Concrete acquisition capability is only the base fact. Time Piece, Artificer,
+Sea Star and Echo replay may be narrowed by producer lifecycle and instance
+provenance. A paid purchase and a free pickup inside the same Shop are not
+equivalent instances.
+
+## Traits, Loadout and Supported Effects
+
+Trait declarations are giver-neutral facts: prerequisites, fresh/equipped
+rarity domains, slot, elements, core-god and boon-rarity classification,
+stacking/rarify flags, rarity-count exclusions, targeted effects and
+weapon/aspect compatibility.
+
+Givers own ordered membership, priority sets, rarity policy and complete
+defaults for their supported loadouts. Rarity policies are selectable, fixed
+or none. Player rarity and Hammer Rank I/II are different axes. Field NPCs are
+not Olympians merely because they offer ranked boons. Calling Card menu
+participation is also a separate fact, not an alias for ordinary god behavior.
+
+Provider bases, sparse room/item rarity overrides, additive/multiplicative
+contributions and supported fresh domains remain distinct data. The engine
+combines them at an exact offer frontier. Equipped Heroic is not a fresh roll;
+replacement and explicit promotion supply their own transitions.
+[The rarity audit](../audits/traits/BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md) and
+[trait-pool audit](../audits/traits/TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md)
+own source matrices.
+
+Targeted acquisitions and selected dispositions form closed unions.
+Examples include Bridal Glow's god-trait promotion, Latest Model's Hammer
+upgrade, Natural Selection's ordered levels, Ransoms' provider effects,
+All Together's direct pairs and Travel Deal's refill. Normalize each descriptor
+and its referenced domains; do not create callbacks or a generic effect
+registry to avoid an exhaustive case. Shared Hephaestus upgrade limits are
+declaration data consumed by a shared engine predicate, not copied into each
+target editor.
+
+Keepsake identity coverage is broader than effect coverage. The ordinary rack
+is complete under the unlocked baseline, with a fixed Epic starting rank and
+Fated disposition. Supported rank profiles, Cherished Heirloom advancement and
+Gift eligibility/replay descriptors are explicit data. Gift eligibility and
+its effect schedule are separate axes. Capability facts stay with the family
+that answers the question—trait giver, concrete acquisition or encounter—not
+duplicated on the keepsake. Exact values and exclusions live in the
+[keepsake audits](../audits/README.md#loadout-and-progression).
+
+Arcana and Fear are separate collections. Cards declare board location, Grasp,
+ordinary activation and supported rank/effect profiles; Vows declare bounded
+ranks and suppressibility. Live activation, bans, consumption and suppression
+are simulation state. Spell/Hex declarations similarly describe pools, slots,
+layout domains and aspect links, not live tree closure or delivery clocks.
+All such effects must be normalized before entering production; an identity
+alone does not justify an unsupported effect transition.
+
+## Requirement and Closure Obligations
+
+Requirements are typed current-run expressions. Unknown kinds and missing
+evaluators fail construction; a missing required evaluation context is a
+contract failure, not ineligibility. Boolean composition, counters, record
+counts, current options/reward, peer order and Clockwork facts remain explicit
+operands. No requirement reads application state or disguises an unmodeled
+external predicate as a depth bound.
+
+Normalization must establish the following before returning the catalog:
+
+| Family         | Closure required                                                                                                             |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Identity       | Unique keys/game names, required labels, valid referenced keys                                                               |
+| Rooms/layouts  | Complete template inputs/defaults, valid modes, compatible local groups and fixed links, sufficient structural bounds        |
+| Encounters     | Unique slots, exactly one binding per slot, valid set members/defaults, compatible envelope execution                        |
+| Rewards        | Compatible payload/source policies, concrete role resolution, exact role-complete lifecycle bindings, valid filters/defaults |
+| Bags/Shops     | Explicit ordering and duplicate policy, valid group cardinality, complete stable slots and distinct group defaults           |
+| Traits/loadout | Valid pool/priority membership, rarity domains, loadout defaults, target/disposition references and rank profiles            |
+| Operations     | Registered closed requirement, lifecycle and effect kinds; no missing implementation fallback                                |
+
+Exact declaration order and membership matrices are attested by catalog tests.
+Production closure validates supported shapes and relationships, not a second
+hand-maintained inventory manifest. Compiler type checks and exhaustive
+dispatch protect closed vocabularies.
+
+## Extending and Maintaining the Catalog
+
+Begin in the nearest declaration family. If an existing contract expresses the
+fact, add data and focused declaration/normalization tests. Do not add an engine
+kind or UI branch merely to identify another room or item.
+
+For a new semantic kind, establish the normalized contract and its consumer
+before production assembly admits the declaration. A production route implies
+a complete authored, simulation, candidate, editor and persistence path;
+development-status flags and placeholders are not catalog values.
+
+Local normalizers return complete family products. Put cross-family checks in
+relational closure after those products exist. Keep the full rejection matrix
+at the catalog boundary, with representative downstream consumption witnesses.
+
+Catalog compatibility identity changes when declaration semantics change.
+Strict loading either accepts the supported identity, uses an explicit supported
+migration, or requires user action. Never silently reinterpret an old plan.
+The execution artifact likewise carries its exact admitted catalog identity.
+
+Document surprising source/model differences in the owning audit and update
+the model owner when semantics change. Do not repeat exact counts and numeric
+profiles across architecture documents: declarations, audits and their tests
+are the place to inspect them.

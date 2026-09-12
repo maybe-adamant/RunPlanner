@@ -34,20 +34,28 @@ UI-session state never enters authored history.
 
 ## Documentation
 
-Use the smallest authority that answers the question:
+Start with [Architecture](docs/design/ARCHITECTURE.md) for dependency direction,
+ownership and how to add a feature. Then use the relevant lane entry:
 
-- [Architecture](docs/design/ARCHITECTURE.md), [catalog model](docs/design/CATALOG_MODEL.md),
-  [authored project](docs/design/AUTHORED_PROJECT_MODEL.md),
+- [Catalog Model](docs/design/CATALOG_MODEL.md): source-backed declarations and
+  normalization.
+- [Planner Engine](docs/design/SIMULATION_AND_VALIDATION.md): authored inputs,
+  evaluation products, chronology, candidates and findings.
+- [Planner Application and Editor](docs/design/EDITOR_MODEL.md): composition,
+  persistence, projections, interaction binding and presentation.
+
+For a specific contract, go directly to its specialist authority:
+
+- [Authored project](docs/design/AUTHORED_PROJECT_MODEL.md),
   [game generation](docs/design/GAME_GENERATION_RULES.md),
-  [reward model](docs/design/REWARD_MODEL.md),
-  [room lifecycle](docs/design/ROOM_LIFECYCLE_MODEL.md),
-  [simulation and validation](docs/design/SIMULATION_AND_VALIDATION.md), and
-  [candidate evaluation](docs/design/CANDIDATE_EVALUATION_MODEL.md) define the
-  planner's cross-cutting model.
+  [rewards](docs/design/REWARD_MODEL.md),
+  [room lifecycle](docs/design/ROOM_LIFECYCLE_MODEL.md), and
+  [candidate evaluation](docs/design/CANDIDATE_EVALUATION_MODEL.md) own the
+  detailed engine contracts.
+- [Structured workspace](docs/design/STRUCTURED_EDITOR_WORKSPACE.md) owns layout
+  and workbenches; [contextual UX](docs/design/CONTEXTUAL_EDITOR_UX.md) owns
+  picker and draft presentation.
 - [Biome rules](docs/biomes/) contain the route authorities.
-- [Editor ownership](docs/design/EDITOR_MODEL.md), [contextual UX](docs/design/CONTEXTUAL_EDITOR_UX.md),
-  and [structured workspace](docs/design/STRUCTURED_EDITOR_WORKSPACE.md) define
-  application/editor boundaries.
 - [Game integration](docs/design/GAME_INTEGRATION_BOUNDARY.md) defines the
   compiler/executor contract; [biome execution navigation](docs/design/BIOME_EXECUTION_NAVIGATION.md)
   defines only the biome-specific execution work beyond the shared F/G
