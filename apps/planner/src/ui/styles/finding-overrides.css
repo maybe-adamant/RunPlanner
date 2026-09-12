@@ -1,0 +1,11 @@
+/* Finding feedback wins over ordinary structural, selection, and drag-state shadows. */
+[data-semantic-owner][data-has-findings='true'] {
+  box-shadow: inset 0 0 0 2px #da7373;
+  scroll-margin-block: 35vh;
+}
+
+/* Route findings recolor the existing grouped surface instead of adding another stroke. */
+.route-overview[data-semantic-owner][data-has-findings='true'] {
+  box-shadow: none;
+  border-color: #da7373;
+}

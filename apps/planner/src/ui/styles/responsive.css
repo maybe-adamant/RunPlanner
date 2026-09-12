@@ -1,0 +1,218 @@
+@media (max-width: 700px) {
+  body {
+    overflow: auto;
+  }
+
+  .field-control-inline {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .app-shell {
+    display: block;
+    width: calc(100% - 24px);
+    height: auto;
+    min-height: 100dvh;
+    padding: 24px 0;
+    overflow: visible;
+  }
+
+  .app-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .app-header-actions {
+    display: flex;
+    width: 100%;
+    align-items: flex-start;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .app-header-actions > .project-file-controls {
+    flex-basis: 100%;
+  }
+
+  .project-profile-feedback {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+  }
+
+  .project-profile-feedback .project-operation-result {
+    text-align: left;
+  }
+
+  .game-publication-selection {
+    flex-basis: 100%;
+    min-width: 0;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .game-publication-selection legend {
+    grid-column: 1 / -1;
+  }
+
+  .game-publication-selection button {
+    grid-column: span 1;
+  }
+
+  .project-entry-panel {
+    margin-top: 28px;
+    padding: 22px;
+  }
+
+  .route-choice-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .project-entry-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .editor-workspace {
+    height: auto;
+    min-height: 380px;
+    grid-template-columns: 1fr;
+    margin-top: 20px;
+  }
+
+  .editor-panel {
+    display: block;
+    overflow: visible;
+  }
+
+  .editor-panel-content {
+    padding: 14px 0 0;
+    overflow-y: visible;
+    scrollbar-gutter: auto;
+  }
+
+  .editor-panel-content[data-editor-layout='biome'] {
+    display: block;
+    overflow: visible;
+  }
+
+  .editor-panel-content[data-editor-layout='biome'] > .biome-workspace {
+    grid-row: auto;
+  }
+
+  .biome-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .route-keepsake-controls,
+  .route-weapon-controls,
+  .fear-rank-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fear-rank-control[data-rival='true'] {
+    grid-column: 1 / -1;
+  }
+  .run-state-sheet {
+    position: fixed;
+    inset: 0;
+    width: auto;
+  }
+
+  .biome-structure-region {
+    height: auto;
+    max-height: none;
+    padding-right: 0;
+    padding-bottom: 18px;
+    border-right: 0;
+    border-bottom: 1px solid #30313a;
+    overflow-y: visible;
+    scrollbar-gutter: auto;
+  }
+
+  .biome-inspector {
+    height: auto;
+    max-height: none;
+    padding-right: 0;
+    overflow-y: visible;
+    scrollbar-gutter: auto;
+  }
+
+  .exit-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .panel-navigation {
+    position: static;
+    height: auto;
+    max-height: none;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 12px;
+    overflow-y: visible;
+    scrollbar-gutter: auto;
+  }
+
+  .panel-navigation-column {
+    border-right: 0;
+    border-bottom: 1px solid #30313a;
+  }
+
+  .project-findings {
+    position: static;
+    max-height: none;
+  }
+
+  .findings-list {
+    overflow-y: visible;
+    scrollbar-gutter: auto;
+  }
+
+  .navigation-label {
+    display: none;
+  }
+
+  .panel-navigation-item {
+    width: auto;
+  }
+
+  .empty-topology {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-heading,
+  .decision-heading,
+  .frontier-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .panel-heading-actions,
+  .frontier-buttons {
+    flex-wrap: wrap;
+  }
+
+  .workbench-action-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .workbench-action-row > .primary-action {
+    margin-inline-start: 0;
+  }
+
+  .workbench-action-row > button,
+  .workbench-action-row > .topology-removal-action,
+  .workbench-action-row > .topology-removal-action > .danger-action {
+    width: 100%;
+  }
+
+  .room-selector,
+  .fields-batch-editor,
+  .fields-batch-summary,
+  .reward-wheel-settings {
+    grid-template-columns: 1fr;
+  }
+
+  .biome-hub-rail-visits {
+    margin-left: 12px;
+  }
+}

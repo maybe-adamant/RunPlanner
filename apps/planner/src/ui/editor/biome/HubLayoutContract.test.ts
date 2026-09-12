@@ -2,7 +2,10 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-const styles = readFileSync(fileURLToPath(new URL('../../styles.css', import.meta.url)), 'utf8');
+const styles = readFileSync(
+  fileURLToPath(new URL('../../styles/room-workbenches.css', import.meta.url)),
+  'utf8',
+);
 
 function firstCssBlock(selector: string): string {
   const selectorStart = styles.indexOf(selector);

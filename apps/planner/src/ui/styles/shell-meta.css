@@ -1,0 +1,123 @@
+.catalog-summary {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.catalog-summary div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 0;
+  border-bottom: 1px solid #363741;
+}
+
+.catalog-summary dt {
+  color: #8e8c94;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.catalog-summary dd {
+  margin: 0;
+  color: #f3ede4;
+  font-variant-numeric: tabular-nums;
+}
+
+.about-popover {
+  z-index: 100;
+  width: min(480px, calc(100vw - 24px));
+  padding: 16px;
+  border: 1px solid #41424c;
+  border-radius: 10px;
+  color: #ede8df;
+  background: #202128;
+  box-shadow: 0 16px 44px rgb(0 0 0 / 38%);
+}
+
+.about-product-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  margin: 0;
+  gap: 8px 12px;
+}
+
+.about-product-summary div {
+  display: contents;
+}
+
+.about-product-summary dt,
+.about-shortcuts dt {
+  color: #8e8c94;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.about-product-summary dd,
+.about-shortcuts dd {
+  margin: 0;
+  color: #f3ede4;
+  font-variant-numeric: tabular-nums;
+}
+
+.about-product-summary dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.about-shortcuts {
+  padding-top: 14px;
+  border-top: 1px solid #363741;
+  margin-top: 14px;
+}
+
+.about-shortcuts h2 {
+  margin: 0 0 10px;
+  color: #c9c4cc;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.about-shortcuts dl {
+  display: grid;
+  margin: 0;
+  gap: 8px;
+}
+
+.about-shortcuts dl div {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 12px;
+}
+
+.about-shortcuts dd {
+  white-space: nowrap;
+}
+
+.about-shortcuts kbd {
+  padding: 2px 5px;
+  border: 1px solid #4b4c57;
+  border-radius: 4px;
+  color: #e8e2d8;
+  background: #292a32;
+  font-family: inherit;
+  font-size: 0.76rem;
+  box-shadow: 0 1px 0 #111216;
+}
+
+.shortcut-alternative {
+  margin: 0 7px;
+  color: #777580;
+  font-size: 0.76rem;
+}
+
+.about-popover-arrow {
+  fill: #41424c;
+}
