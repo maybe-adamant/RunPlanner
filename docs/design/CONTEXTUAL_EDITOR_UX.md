@@ -546,6 +546,14 @@ nested Echo owner and the parent complete-offer boundary, not a synthetic
 standalone offer. Shared payload editors own prefix editing and cancellation;
 each binding supplies its exact domain, finding identity and completed update.
 
+Persisted workspace assembly and unsaved offer drafts use the same engine-owned
+child discovery. Intermediate controls carry a typed child collection; marker
+traversal and aggregate structural completion consume that collection rather
+than enumerate each trait's payload fields. Specialized bindings still own
+presentation and lazy domain contact, including Stone's contextual completion.
+Child queries retain the outer offer's prepared capability and pass the exact
+child selector; a child address is not a substitute capability lookup owner.
+
 A declaration-owned targeted option adds one target picker backed by the exact
 trait-offer capability. It uses the same lazy boundary and catalog labels as
 the trait picker; it does not inspect equipped history in the application or
