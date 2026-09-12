@@ -36,7 +36,7 @@ import {
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '../shop';
 import { expectExactKeys, expectRecord, failProjectDocument } from '../validation';
-import type { DecodedTopologyStructure } from './structure-codec';
+import type { DecodedTopologyStructure } from './decoding/coordinator';
 import { decodeAcquisitionSites } from './acquisition-site-codec';
 import { decodeFountainRarityResult } from '../fountain-rarity-codec';
 import { decodeKeepsakeEquipResults } from '../keepsake-equip-codec';

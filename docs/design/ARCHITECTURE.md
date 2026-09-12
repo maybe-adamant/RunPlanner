@@ -278,8 +278,14 @@ and derived-reward transitions; it delegates acquisition effects to the shared
 acquisition authorities rather than implementing a separate purchase simulator.
 Authored action state, contributions, defaults, and lifecycle structure live in
 `authored-project/room-actions/`, separate from simulation's action scheduling.
-Topology impact analysis lives with authored topology. These neighborhoods do
-not introduce new processing stages or change the package's supported exports.
+Topology impact analysis lives with authored topology.
+`authored-project/commands/topology/` groups ordinary, takeover/completion,
+Hub and local-visit command owners behind
+one exhaustive dispatcher. `authored-project/topology/decoding/` separates
+context-bound decision decoding from global structural validation and ownership
+assembly; occurrence codecs consume that complete structural product.
+These neighborhoods do not introduce new processing stages or change the
+package's supported exports.
 
 ### Catalog
 

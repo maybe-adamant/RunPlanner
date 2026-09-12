@@ -178,6 +178,27 @@ describe('topology structural codec', () => {
     });
   });
 
+  it('decodes a requested additional-exit attachment once per structural decode', () => {
+    const encoded = encodedTopology(incompleteZagreusEnvelopeProject(), 'Underworld', 'F');
+    const shop = encoded.topology.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === 'zagreus-shop',
+    );
+    if (shop === undefined) throw new Error('missing Zagreus attachment witness');
+    if (!Array.isArray(shop.additionalExits)) throw new Error('missing Zagreus additional exits');
+    let attachmentMaps = 0;
+    shop.additionalExits = new Proxy(shop.additionalExits, {
+      get(target, property, receiver) {
+        if (property === 'map') attachmentMaps += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+
+    expect(decodeProjectDocument(encoded.document, catalog)).toEqual(
+      incompleteZagreusEnvelopeProject(),
+    );
+    expect(attachmentMaps).toBe(1);
+  });
+
   it('does not eagerly decode attachments before rejecting an invalid start', () => {
     const encoded = encodedTopology(incompleteZagreusEnvelopeProject(), 'Underworld', 'F');
     const start = encoded.topology.occurrences.find(
