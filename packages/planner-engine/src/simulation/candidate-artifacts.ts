@@ -48,7 +48,7 @@ import {
 import {
   createEmptySteadyGrowthCandidateArtifacts,
   type SteadyGrowthCandidateArtifacts,
-} from './traits/history';
+} from './candidates/steady-growth';
 import {
   createJudgmentArcanaCandidateArtifacts,
   type JudgmentArcanaCandidateArtifacts,

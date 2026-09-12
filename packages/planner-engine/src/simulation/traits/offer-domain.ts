@@ -3,10 +3,10 @@ import type { AuthoredTraitOffer, TraitOptionKey } from '../../authored-project/
 import type { RewardHistoryState } from '../../reward-kernel/model';
 import type { BoonRarityFacts } from './rarity';
 import type { TraitFindingCode } from '../model';
-import type { TraitHistoryState, TraitReplacementTransition } from './history';
+import type { TraitHistoryState, TraitReplacementTransition } from './history/model';
 import { optionIndex } from '../../authored-project/traits';
 import { targetedAcquisitionTargetKeys } from './level-effects';
-import { ordinaryEquippedSlots } from './history';
+import { ordinaryEquippedSlots } from './history/fold';
 import { resolveTraitOfferOptionLevel } from './offer-levels';
 
 export type { TraitFindingCode } from '../model';

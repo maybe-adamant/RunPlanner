@@ -38,7 +38,7 @@ import {
   createDerivedAcquisitionEntryCandidateArtifacts,
   attestDerivedAcquisitionEntryCandidateCapability,
 } from '../acquisition/artifacts';
-import { createSteadyGrowthCandidateArtifacts } from '../../traits/history';
+import { createSteadyGrowthCandidateArtifacts } from '../../candidates/steady-growth';
 import {
   createTranscendentEmbryoCandidateArtifacts,
   createFountainRarityCandidateArtifacts,
@@ -52,11 +52,11 @@ import {
 } from '../../candidates/trait-offer-capability';
 import type { TraitOfferCandidateContext } from '../../traits';
 import {
-  type ReachedSteadyGrowthThreshold,
   attachTraitHistory,
   createTraitHistoryState,
   foldTraitHistoryEvents,
-} from '../../traits';
+} from '../../traits/history/fold';
+import type { ReachedSteadyGrowthThreshold } from '../../traits/history/transitions';
 import type { ReachedTranscendentEmbryoThreshold } from '../../keepsakes/trait-effects';
 import {
   createRunState,

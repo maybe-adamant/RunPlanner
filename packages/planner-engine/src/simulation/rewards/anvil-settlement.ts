@@ -3,11 +3,8 @@ import type { AuthoredAnvilResult } from '../../authored-project/model';
 import type { TraitOfferContext } from '../traits/offer-domain';
 import { assessTraitOption } from '../traits/authoring/assessment';
 import type { EquippedTrait } from '../../authored-project/traits';
-import {
-  createTraitHistoryState,
-  type TraitHistoryState,
-  type TraitHistoryEvent,
-} from '../traits/history';
+import { createTraitHistoryState } from '../traits/history/fold';
+import type { TraitHistoryEvent, TraitHistoryState } from '../traits/history/model';
 import type { AcquisitionRoleAddress } from '../../authored-project/addresses';
 import type { RewardBranchState } from './branch-primitives';
 import { pickupEffectForOffer, type ResolvedRewardOffer } from '../../reward-kernel';

@@ -2,15 +2,14 @@ import type { Catalog, TraitOrdinaryBoonSlot, TraitRarity } from '../../../catal
 import type { AuthoredTraitOffer, EquippedTrait } from '../../../authored-project/traits';
 import { boonRarityRollUnavailable } from '../rarity';
 import { optionIndex } from '../../../authored-project/traits';
-import {
-  isPomUpgradeTarget,
-  nextRarity,
-  ordinaryEquippedSlots,
-  type TraitHistoryState,
-  type TraitReplacementTransition,
-  type TraitTargetedAcquisitionAssessment,
-  type TraitTargetedAcquisitionTransition,
-} from '../history';
+import { isPomUpgradeTarget, nextRarity } from '../history/upgrades';
+import { ordinaryEquippedSlots } from '../history/fold';
+import type {
+  TraitHistoryState,
+  TraitReplacementTransition,
+  TraitTargetedAcquisitionAssessment,
+  TraitTargetedAcquisitionTransition,
+} from '../history/model';
 import {
   targetedAcquisitionTargetKeys,
   checkRequirement,

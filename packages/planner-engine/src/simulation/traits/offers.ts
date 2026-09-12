@@ -18,7 +18,9 @@ import type {
 import { assessTraitOfferComposition } from './offer-domain';
 import { type BoonRarityFacts } from './rarity';
 import { optionIndex } from '../../authored-project/traits';
-import { assessRansom, foldTraitHistoryEvents, isPomUpgradeTarget } from './history';
+import { assessRansom } from './history/transitions';
+import { foldTraitHistoryEvents } from './history/fold';
+import { isPomUpgradeTarget } from './history/upgrades';
 import {
   assessNaturalSelectionTargets,
   assessSelectedTargetedAcquisition,
@@ -34,8 +36,8 @@ import type {
   TraitLevelMutationEvent,
   TraitHistoryEvent,
   DirectTraitGrantEvent,
-  RansomAssessment,
-} from './history';
+} from './history/model';
+import type { RansomAssessment } from './history/transitions';
 
 function boonRarityProviderForGiver(
   giver: Catalog['traitGivers']['values'][number] | undefined,
@@ -559,7 +561,7 @@ export function recordReachedTraitOffer(
   eventKind: 'traitOffer' | 'concaveStoneSecondary' = 'traitOffer',
 ): {
   readonly history: TraitHistoryState;
-  readonly event?: TraitOfferEvent | import('./history').ConcaveStoneSecondaryEvent;
+  readonly event?: TraitOfferEvent | import('./history/model').ConcaveStoneSecondaryEvent;
   readonly ransomAssessment?: RansomAssessment;
 } {
   if (evaluation.offer.kind === 'chaos') {
@@ -640,7 +642,7 @@ export function recordReachedTraitOffer(
       ? {}
       : { targetedAcquisitionTransition: evaluation.targetedAcquisition.transition }),
     ...(selectedLevel === undefined ? {} : { selectedEffectiveLevel: selectedLevel }),
-  }) as TraitOfferEvent | import('./history').ConcaveStoneSecondaryEvent;
+  }) as TraitOfferEvent | import('./history/model').ConcaveStoneSecondaryEvent;
   const transition = evaluation.targetedAcquisition.transition;
   const mutation: TraitLevelMutationEvent | undefined =
     transition?.kind === 'promoteGodTraitToHeroic'

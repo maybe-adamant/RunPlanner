@@ -143,6 +143,14 @@ export type {
   SteadyGrowthOutcomeCandidateQuery,
   EvaluatedSteadyGrowthOutcomeCandidate,
 } from './steady-growth';
+export {
+  createEmptySteadyGrowthCandidateArtifacts,
+  createSteadyGrowthCandidateArtifacts,
+} from './steady-growth';
+export type {
+  SteadyGrowthCandidateArtifacts,
+  SteadyGrowthCandidateCapability,
+} from './steady-growth';
 export type {
   TranscendentEmbryoOutcomeCandidateQuery,
   EvaluatedTranscendentEmbryoOutcomeCandidate,

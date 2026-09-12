@@ -28,7 +28,7 @@ import {
 } from '../keepsakes/candidate-artifacts';
 import { type HermesShrineCandidateArtifacts } from '../commerce/hermes-shrine';
 import { type JudgmentArcanaCandidateArtifacts } from '../arcana-fear';
-import { type SteadyGrowthCandidateArtifacts } from '../traits/history';
+import type { SteadyGrowthCandidateArtifacts } from '../candidates/steady-growth';
 import { type StygianWellCandidateArtifacts } from '../commerce/stygian-well';
 import {
   composeBiomeHistoryPrefixWithEncounterValidation,
