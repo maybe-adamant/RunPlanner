@@ -77,6 +77,13 @@ products. The final service composes those products rather than constructing
 another occurrence/decision/Hub model. Generic markers cannot substitute for
 typed semantic owners.
 
+Keep a workspace product family's descriptors, controls and interaction types
+together under `structured-workspace/contracts/`; internal consumers import the
+owning family directly. The public entry remains deliberate and stable. The
+root contract composes families and owns shared intent/lookup contracts, not a
+second set of family declarations. A complete occurrence summary or chronological
+assembly may remain large when its job is joining these products atomically.
+
 ### Authored-First Assembly
 
 Persisted topology determines which decisions, occurrences and offer-time
@@ -171,6 +178,11 @@ to fix it.
 
 Trait dialogs retain a complete local draft. Focused queries hold siblings
 fixed and use the exact outer prepared capability with the child selector.
+An externally changed authored offer replaces that draft using the complete
+authored value, not a handwritten subset of its payload fields. A changed
+evaluation context alone retains unsaved edits and rebinds their candidate
+capability to the new exact assembly. Keep the draft and its activated binding
+coherent so refreshing context does not temporarily remove repair controls.
 Sibling findings may prevent saving the complete outcome without disabling an
 unrelated focused repair. Supported Start Over and draft-shape transitions are
 engine-provided, not ad hoc UI-generated valid traits.

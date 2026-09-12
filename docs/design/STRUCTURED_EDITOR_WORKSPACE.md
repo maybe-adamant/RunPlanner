@@ -743,6 +743,14 @@ Dependency choice remains subordinate to the ownership contract. A component
 library must not hide semantic commands, make caller-owned option models mutable,
 or move presentation policy into generic wrappers.
 
+`ui/styles.css` is the ordered stylesheet entry. Its owned layers preserve the
+cascade: foundation/shell, project/route, trait feedback, biome layout, editor
+structure, room workbenches, shell metadata, responsive overrides and final
+finding overrides. Keep local container/media rules with their selectors and
+preserve the order of later refinements. A stylesheet relocation must not
+silently change layout or finding precedence; verify the expanded cascade and
+representative wide/narrow browser surfaces.
+
 ## Workspace Invariants
 
 The structured workspace must ensure:
