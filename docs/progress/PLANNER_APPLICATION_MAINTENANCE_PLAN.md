@@ -447,7 +447,7 @@ leaving the root contract as composition rather than another mixed domain dump.
 No new behavior, generic form engine or compatibility exports. Existing E suites
 own inventory/repair, H layout, O wheel and N side-room contact witnesses.
 
-E closed: room feature controls, commerce inventories and local room surfaces
+E implementation: room feature controls, commerce inventories and local room surfaces
 now have focused owners; shop supplemental construction has an explicit assembly
 boundary. All 205 contract declarations and the public export set are preserved
 (four declarations merely replace inline import types with named imports).
@@ -455,3 +455,16 @@ Independent review found no behavioral or ownership regressions. Focused tests:
 15 files / 108 tests, final move witnesses 4 files / 58 tests, contract lane
 12 files / 75 tests. Repository typecheck, all changed/new-file lint and format,
 and diff checks passed. No engine, wire, host or stylesheet changes.
+
+Parent closure review reopened E's contract placement: interaction halves moved
+but corresponding local, lifecycle and feature descriptors remain in the root.
+Complete those family moves with direct consumers before closure. Keep final
+occurrence/workspace composition in the root; do not split individual union
+members into new models. Also inspect the small inventory spacing change found
+by browser comparison and restore the prior DOM grouping if extraction caused it.
+
+F1 passed independent review and its three layout suites (4 tests). Flattened
+CSS retains exactly all 683 top-level nodes in identical order. Ten browser
+scenarios loaded without errors at desktop/narrow widths, including nested
+picker Escape behavior. Most screenshots are byte-identical; small E-related
+inventory/scroll differences are being reconciled separately before closure.
