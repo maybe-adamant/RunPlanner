@@ -1,8 +1,8 @@
 import type {
   CandidateOptionProjection,
   CandidateProjectionEvaluation,
-} from '@planner/projections/candidateProjection';
-import { candidateSupport } from '@planner/projections/candidateProjection';
+} from '@planner/projections/candidates/candidateProjection';
+import { candidateSupport } from '@planner/projections/candidates/candidateProjection';
 
 export function candidateSelectState(
   option: CandidateOptionProjection<unknown, CandidateProjectionEvaluation> | undefined,

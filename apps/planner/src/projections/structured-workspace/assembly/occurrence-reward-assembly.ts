@@ -1,3 +1,10 @@
+import type {
+  WorkspaceAcquisitionConversionControl,
+  WorkspaceLevelResolutionControl,
+  WorkspaceTraitCarrierChildControl,
+  WorkspaceTraitOfferControl,
+  WorkspaceTraitOfferStatus,
+} from '../contracts/traits';
 import {
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
@@ -55,18 +62,13 @@ import {
 import type {
   CountedRewardCandidateOwner,
   RewardCandidateOwner,
-} from '@planner/projections/candidateProjection';
-import { summarizeRewardOffer } from '@planner/projections/rewardPicker';
+} from '@planner/projections/candidates/candidateProjection';
+import { summarizeRewardOffer } from '@planner/projections/rewards/rewardPicker';
 import { resolveWorkspaceFixedRewardOffer } from './catalog-room';
 import {
   StructuredWorkspaceProjectionContractError,
   type WorkspaceEncounterPhase,
-  type WorkspaceAcquisitionConversionControl,
-  type WorkspaceLevelResolutionControl,
-  type WorkspaceTraitCarrierChildControl,
   type WorkspaceRewardControl,
-  type WorkspaceTraitOfferControl,
-  type WorkspaceTraitOfferStatus,
 } from '../contract';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import type { WorkspaceMarker } from '../contracts/navigation';

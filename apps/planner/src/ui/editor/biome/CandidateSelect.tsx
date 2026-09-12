@@ -1,4 +1,4 @@
-import { presentCandidateLabel } from '@planner/projections/candidateProjection';
+import { presentCandidateLabel } from '@planner/projections/candidates/candidateProjection';
 import type { WorkspaceCandidateInteraction } from '@planner/projections/structured-workspace';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import {

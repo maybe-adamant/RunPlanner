@@ -5,7 +5,7 @@ import {
   parseHermesShrineDeliveryEntryKey,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
-import { summarizeRewardOffer } from '@planner/projections/rewardPicker';
+import { summarizeRewardOffer } from '@planner/projections/rewards/rewardPicker';
 import { workspaceAcquisitionRoleLabel } from './occurrence-reward-assembly';
 import type {
   WorkspaceEncounterPhase,

@@ -10,7 +10,7 @@ import { CountedRewardEditor, RewardValueEditor } from './RewardEditors';
 import { TraitOfferLauncher } from './TraitOfferEditor';
 import { PomResolutionLauncher } from './PomResolutionEditor';
 import { ShopOfferEditor } from './ShopOfferEditor';
-import type { RewardPickerStep } from '@planner/projections/rewardPicker';
+import type { RewardPickerStep } from '@planner/projections/rewards/rewardPicker';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 
 /** Complete intent-bound editor for every authored reward leaf. */

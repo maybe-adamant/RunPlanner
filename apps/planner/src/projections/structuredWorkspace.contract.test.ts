@@ -84,12 +84,12 @@ import {
   echoGiftEmbryoReplayAddress,
   echoGiftHammerReplayAddress,
 } from '@planner-test/fixtures/echoGiftHammer';
-import { createCandidateSessionFactory } from './candidateProjection';
-import type { CandidateSessionFactory } from './candidateProjection';
-import { createContextualOptionResolver } from './contextualOptions';
-import { createContextualPickerProjection } from './contextualPicker';
-import { createRewardPickerProjection } from './rewardPicker';
-import { createTraitDomainProjection } from './traitDomainProjection';
+import { createCandidateSessionFactory } from './candidates/candidateProjection';
+import type { CandidateSessionFactory } from './candidates/candidateProjection';
+import { createContextualOptionResolver } from './contextual/contextualOptions';
+import { createContextualPickerProjection } from './contextual/contextualPicker';
+import { createRewardPickerProjection } from './rewards/rewardPicker';
+import { createTraitDomainProjection } from './rewards/traitDomainProjection';
 import { StructuredWorkspaceProjectionContractError } from './structured-workspace/contract';
 import {
   createStructuredWorkspaceProjection,

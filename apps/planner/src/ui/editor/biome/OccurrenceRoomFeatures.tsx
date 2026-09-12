@@ -11,7 +11,7 @@ import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspac
 import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
-import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import {

@@ -13,8 +13,8 @@ import {
   type NemesisRandomEventCandidateSupport,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
-import type { CandidateProjectionSession } from '@planner/projections/candidateProjection';
-import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { projectEncounterPicker } from '@planner/projections/encounterPickerProjection';
 import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 
@@ -219,7 +219,7 @@ export function bindOccurrenceLocalInteractions(
             );
           }
           let options:
-            | readonly import('@planner/projections/candidateProjection').CandidateOptionProjection<
+            | readonly import('@planner/projections/candidates/candidateProjection').CandidateOptionProjection<
                 number | null
               >[]
             | undefined;

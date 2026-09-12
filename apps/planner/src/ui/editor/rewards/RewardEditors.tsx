@@ -4,9 +4,9 @@ import { useMemo, useState } from 'react';
 import type {
   CountedRewardCandidateOwner,
   RewardCandidateOwner,
-} from '@planner/projections/candidateProjection';
-import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
-import type { RewardPickerStep } from '@planner/projections/rewardPicker';
+} from '@planner/projections/candidates/candidateProjection';
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
+import type { RewardPickerStep } from '@planner/projections/rewards/rewardPicker';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,

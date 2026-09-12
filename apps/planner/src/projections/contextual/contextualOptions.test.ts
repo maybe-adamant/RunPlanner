@@ -15,7 +15,7 @@ import type {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import type { CandidateOptionProjection } from './candidateProjection';
+import type { CandidateOptionProjection } from '../candidates/candidateProjection';
 import { createContextualOptionResolver, explainCandidateEvaluation } from './contextualOptions';
 
 const biome = createBiomeAddress('Underworld', 'F');

@@ -7,7 +7,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type {
   WorkspaceEchoLastRunBoonDomain,
   WorkspaceEchoLastRunBoonCarrierDomain,

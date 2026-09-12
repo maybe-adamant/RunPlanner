@@ -306,7 +306,7 @@ not a demand to rerun unrelated suites after every edit.
 
 - A: `npm run test:correctness -- apps/planner/src/state/projectWorkspaceSlice.test.ts apps/planner/src/workspace/editorSessionReconciliation.test.ts apps/planner/test/architecture/candidateBoundary.test.ts apps/planner/test/architecture/candidateRenderPurity.interaction.test.tsx`.
 - B: `npm run test:contract` and `npm run test:correctness -- apps/planner/src/projections/structured-workspace/source-index.test.ts apps/planner/src/projections/structured-workspace/assembly apps/planner/src/projections/structured-workspace/interactions`.
-- C: `npm run test:correctness -- apps/planner/src/ui/editor/rewards apps/planner/src/ui/controls apps/planner/src/projections/candidateProjectionSession.test.ts apps/planner/src/projections/candidateProjection.test.ts apps/planner/src/projections/structured-workspace/interactions/trait-offer-interactions.test.ts apps/planner/test/architecture/candidateRenderPurity.interaction.test.tsx`.
+- C: `npm run test:correctness -- apps/planner/src/ui/editor/rewards apps/planner/src/ui/controls apps/planner/src/projections/candidates/candidateProjectionSession.test.ts apps/planner/src/projections/candidates/candidateProjection.test.ts apps/planner/src/projections/structured-workspace/interactions/trait-offers/bind.test.ts apps/planner/test/architecture/candidateRenderPurity.interaction.test.tsx`.
 - D: `npm run test:correctness -- apps/planner/src/ui/feedback apps/planner/src/ui/editor/biome/BiomeWorkspace.test.tsx apps/planner/src/ui/editor/biome/BiomeInspectorControls.test.tsx apps/planner/src/state/editorSessionSlice.test.ts apps/planner/src/workspace/editorSessionReconciliation.test.ts apps/planner/src/projections/structured-workspace/navigation`.
 - E: `npm run test:correctness -- apps/planner/src/ui/editor/biome apps/planner/src/ui/editor/rewards apps/planner/src/projections/structured-workspace/assembly apps/planner/src/projections/structured-workspace/interactions`.
 - F: `npm run test:correctness -- apps/planner/src/persistence apps/planner/src/workspace/projectOperations.test.ts apps/planner/src/ui/project apps/planner/src/ui/shell`; affected layout tests from E plus the explicit visual checks above for F1.
@@ -397,6 +397,17 @@ exposed transient control removal and was corrected before delivery. Chaos
 magnitude refresh and unsaved-draft/current-effective-level witnesses passed
 alongside existing editor/control tests: 12 files / 98 tests. Typecheck,
 changed-path lint/format and independent review passed. No engine or wire change.
+
+C2 closed: candidate, contextual and reward projections now have owned
+neighborhoods; the offer binder delegates Chaos, Hex, Stone and Echo through
+explicit capabilities. Option discovery and its cache remain together.
+Trait/reward contract extraction preserved all 205 workspace declarations and
+the exact public export set. Independent behavioral review passed; parent
+narrowed three new helper inputs to their actual address dependency.
+Acceptance: 16 files / 132 tests, contract lane 12 files / 75 tests, contextual
+and domain lane 5 files / 27 tests; final focused binder rerun 16 tests.
+Typecheck, changed-path lint/format and diff checks passed. No schema, fixture,
+engine or presentation behavior changed in this movement slice.
 
 Read-only preparation for D/F2 found no concrete defect: keep finding routing,
 shared repair highlights, root readiness and host/persistence coordination.

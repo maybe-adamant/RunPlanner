@@ -27,7 +27,7 @@ import {
   createApplication,
   type ApplicationEvaluationEvent,
 } from '@planner/composition/createApplication';
-import { candidateSupport } from '@planner/projections/candidateProjection';
+import { candidateSupport } from '@planner/projections/candidates/candidateProjection';
 import {
   authoredProjectUndoRequested,
   authoredProjectReplaced,

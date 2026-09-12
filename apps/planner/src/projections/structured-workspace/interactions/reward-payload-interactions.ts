@@ -1,10 +1,11 @@
+import type { WorkspaceRewardInteraction } from '../contracts/rewards';
 import type { AuthoredRewardState } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import type { CandidateProjectionSession } from '@planner/projections/candidateProjection';
-import type { RewardPickerProjectionService } from '@planner/projections/rewardPicker';
+import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
+import type { RewardPickerProjectionService } from '@planner/projections/rewards/rewardPicker';
 
 import { rewardIntentFor } from './reward-child-command-binding';
-import type { WorkspaceRewardControl, WorkspaceRewardInteraction } from '../contract';
+import type { WorkspaceRewardControl } from '../contract';
 
 /** Binds the authored reward payload controls, including replacement options created by Artificer. */
 export function bindRewardPayloadInteractions(input: {

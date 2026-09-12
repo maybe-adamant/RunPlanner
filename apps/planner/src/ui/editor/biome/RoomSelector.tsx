@@ -1,6 +1,6 @@
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
 
-import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { WorkspaceRoomInteraction } from '@planner/projections/structured-workspace';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';

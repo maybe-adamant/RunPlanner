@@ -6,7 +6,7 @@ import { bindWorkspaceInspectorDestinations } from '../navigation/inspector-dest
 import { defaultInspectorDestination } from '../navigation/inspector-defaults';
 import { workspaceDecisionOwnedMarkers } from '../navigation/marker-ownership';
 import type { WorkspaceBiomeSemanticAssembly } from '../assembly/biome-semantic-assembly';
-import { summarizeRewardOffer } from '@planner/projections/rewardPicker';
+import { summarizeRewardOffer } from '@planner/projections/rewards/rewardPicker';
 import type {
   WorkspaceBiome,
   WorkspaceHubDecisionNode,

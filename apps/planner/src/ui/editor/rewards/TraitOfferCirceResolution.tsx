@@ -4,7 +4,7 @@ import type {
 } from '@run-planner/engine/authored-project';
 import { useState } from 'react';
 
-import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { WorkspaceCirceResolutionDomain } from '@planner/projections/structured-workspace';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import type { FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';

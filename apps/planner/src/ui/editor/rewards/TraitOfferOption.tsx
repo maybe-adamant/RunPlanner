@@ -1,6 +1,6 @@
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
 
-import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 
 const emptyRarityPicker: ContextualPickerModel<TraitRarity> = Object.freeze({

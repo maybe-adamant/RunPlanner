@@ -14,10 +14,16 @@ import {
   candidateSupport,
   type CandidateOptionProjection,
   type CandidateProjectionEvaluation,
-} from './candidateProjection';
-import type { ContextualPickerModel, ContextualPickerProjectionService } from './contextualPicker';
-import { explainCandidateEvaluation, type CandidateExplanation } from './contextualOptions';
-import { presentTraitCandidateFinding } from './evaluationProjection';
+} from '../candidates/candidateProjection';
+import type {
+  ContextualPickerModel,
+  ContextualPickerProjectionService,
+} from '../contextual/contextualPicker';
+import {
+  explainCandidateEvaluation,
+  type CandidateExplanation,
+} from '../contextual/contextualOptions';
+import { presentTraitCandidateFinding } from '../evaluationProjection';
 
 export interface PreparedTraitOptionDomain {
   readonly optionKey: TraitOptionKey;

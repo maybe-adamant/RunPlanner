@@ -10,8 +10,8 @@ import {
   candidateSupport,
   type CandidateOptionProjection,
   type CandidateProjectionSession,
-} from '@planner/projections/candidateProjection';
-import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+} from '@planner/projections/candidates/candidateProjection';
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import {
   roomCategoryForKind,
   roomPickerCandidateLabel,

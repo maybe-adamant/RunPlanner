@@ -1,5 +1,5 @@
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
-import type { CandidateProjectionSession } from '@planner/projections/candidateProjection';
+import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
 
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type {

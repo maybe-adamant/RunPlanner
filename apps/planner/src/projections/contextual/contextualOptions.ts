@@ -12,7 +12,7 @@ import {
   candidateSupport,
   type CandidateOptionProjection,
   type CandidateProjectionEvaluation,
-} from './candidateProjection';
+} from '../candidates/candidateProjection';
 
 export type ContextualOptionState = 'forced' | 'possible' | 'impossible' | 'unassessed';
 

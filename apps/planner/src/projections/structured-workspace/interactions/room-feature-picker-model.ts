@@ -1,7 +1,7 @@
 import type {
   ContextualPickerItem,
   ContextualPickerModel,
-} from '@planner/projections/contextualPicker';
+} from '@planner/projections/contextual/contextualPicker';
 
 import type { WorkspaceFeatureAssessment } from '../contract';
 

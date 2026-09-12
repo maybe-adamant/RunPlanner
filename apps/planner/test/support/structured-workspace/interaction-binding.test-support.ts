@@ -86,18 +86,18 @@ import {
   qOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import { underworldCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { createCandidateSessionFactory } from '@planner/projections/candidateProjection';
-import type { CandidateProjectionSession } from '@planner/projections/candidateProjection';
+import { createCandidateSessionFactory } from '@planner/projections/candidates/candidateProjection';
+import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
 import type {
   WorkspaceFountainRarityControl,
   WorkspaceSteadyGrowthControl,
   WorkspaceTranscendentEmbryoControl,
   WorkspaceTraitOfferControl,
 } from '@planner/projections/structured-workspace';
-import { createContextualOptionResolver } from '@planner/projections/contextualOptions';
-import { createContextualPickerProjection } from '@planner/projections/contextualPicker';
-import { createRewardPickerProjection } from '@planner/projections/rewardPicker';
-import { createTraitDomainProjection } from '@planner/projections/traitDomainProjection';
+import { createContextualOptionResolver } from '@planner/projections/contextual/contextualOptions';
+import { createContextualPickerProjection } from '@planner/projections/contextual/contextualPicker';
+import { createRewardPickerProjection } from '@planner/projections/rewards/rewardPicker';
+import { createTraitDomainProjection } from '@planner/projections/rewards/traitDomainProjection';
 /* eslint-disable no-restricted-imports */
 import { assembleWorkspaceBiomeSemantics } from '@planner/projections/structured-workspace/assembly/biome-semantic-assembly';
 import { createWorkspaceProjectSourceIndex } from '@planner/projections/structured-workspace/source-index';

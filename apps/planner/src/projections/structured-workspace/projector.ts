@@ -1,3 +1,8 @@
+import type {
+  WorkspaceAspectHexTreeControl,
+  WorkspaceLevelResolutionControl,
+  WorkspaceTraitOfferControl,
+} from './contracts/traits';
 import {
   createKeepsakeEquipResultAddress,
   createRouteStartKeepsakeSelectionAddress,
@@ -55,14 +60,11 @@ import {
 import {
   type StructuredWorkspaceContextualServices,
   type WorkspaceRewardControl,
-  type WorkspaceAspectHexTreeControl,
-  type WorkspaceTraitOfferControl,
-  type WorkspaceLevelResolutionControl,
   type WorkspaceRoomPickerControl,
   type WorkspaceStatus,
 } from './contract';
 import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
-import { projectHexTreeDomain } from './interactions/trait-offer-interactions';
+import { projectHexTreeDomain } from './interactions/trait-offers/hex';
 import type { WorkspaceInspectorDestination } from './contracts/navigation';
 import type { WorkspaceRunStateLauncher } from './contracts/run-state';
 import type {

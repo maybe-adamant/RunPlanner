@@ -5,11 +5,11 @@ import {
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
 import { useEffect, useMemo, useState } from 'react';
 
-import { candidateSupport } from '@planner/projections/candidateProjection';
+import { candidateSupport } from '@planner/projections/candidates/candidateProjection';
 import {
   projectTraitOfferFeedback,
   projectTraitOfferState,
-} from '@planner/projections/traitProjection';
+} from '@planner/projections/rewards/traitProjection';
 import { type WorkspaceTraitOfferInteraction } from '@planner/projections/structured-workspace';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { LoadedEchoLastRunBoonChoice } from './TraitOfferEchoLastRunBoon';

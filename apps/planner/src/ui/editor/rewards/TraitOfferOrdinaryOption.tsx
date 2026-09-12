@@ -5,8 +5,8 @@ import {
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
 import { useMemo } from 'react';
 
-import type { TraitOptionDomainProjection } from '@planner/projections/traitDomainProjection';
-import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import type { TraitOptionDomainProjection } from '@planner/projections/rewards/traitDomainProjection';
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { WorkspaceTraitOfferInteraction } from '@planner/projections/structured-workspace';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { spellOfferSlotPresentation } from './spellOfferPresentation';

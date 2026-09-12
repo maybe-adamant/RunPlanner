@@ -1,4 +1,5 @@
-import type { WorkspaceRewardControl, WorkspaceTraitOfferControl } from '../contract';
+import type { WorkspaceTraitOfferControl } from '../contracts/traits';
+import type { WorkspaceRewardControl } from '../contract';
 import type { WorkspaceMarker } from '../contracts/navigation';
 
 /** Exact finding owners edited through one trait launcher. */

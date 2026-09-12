@@ -1,4 +1,8 @@
 import type {
+  WorkspaceLevelResolutionControl,
+  WorkspaceTraitOfferControl,
+} from '../contracts/traits';
+import type {
   JudgmentArcanaAddress,
   FigurineArcanaAddress,
   KeepsakeSelectionAddress,
@@ -12,8 +16,6 @@ import type {
   StructuredWorkspaceContextualServices,
   WorkspaceRoomPickerControl,
   WorkspaceRewardControl,
-  WorkspaceTraitOfferControl,
-  WorkspaceLevelResolutionControl,
   WorkspaceInteractionCatalog,
 } from '../contract';
 import type {

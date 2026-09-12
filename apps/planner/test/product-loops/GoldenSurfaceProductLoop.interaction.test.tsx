@@ -21,7 +21,7 @@ import {
   type ApplicationEvaluationEvent,
   type PlannerApplication,
 } from '@planner/composition/createApplication';
-import { prepareTraitOptionDomain } from '@planner/projections/traitDomainProjection';
+import { prepareTraitOptionDomain } from '@planner/projections/rewards/traitDomainProjection';
 import type {
   AutosaveRecoveryAdapter,
   AutosaveScheduler,

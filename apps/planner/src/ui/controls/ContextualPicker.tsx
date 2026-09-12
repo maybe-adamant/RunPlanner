@@ -7,7 +7,7 @@ import type {
   ContextualPickerItem,
   ContextualPickerModel,
   ContextualPickerSection,
-} from '@planner/projections/contextualPicker';
+} from '@planner/projections/contextual/contextualPicker';
 
 interface ContextualPickerProps<T> {
   readonly findingTarget?: FindingTargetProps;
