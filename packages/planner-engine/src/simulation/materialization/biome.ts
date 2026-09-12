@@ -46,7 +46,7 @@ import {
   type ClockworkState,
 } from './batch';
 import { materializeHubDecision } from './hub';
-import { materializeAuthoredRoom } from './rooms';
+import { materializeAuthoredRoom } from './rooms/assemble';
 import type {
   CanonicalAuthoredRoom,
   CanonicalAdditionalContinuation,

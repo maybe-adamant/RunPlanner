@@ -32,7 +32,8 @@ import {
 } from '../../authored-project/topology/query';
 import { legalTopologyOccurrenceRoom } from '../../authored-project/topology/room-ownership';
 import { batchTakesOverNormalDoors, fieldsBatchFacts, targetContinuation } from './decision-facts';
-import { materializeAuthoredRoom, type AuthoredRoomRole } from './rooms';
+import { materializeAuthoredRoom } from './rooms/assemble';
+import type { AuthoredRoomRole } from './rooms/templates';
 import type {
   CanonicalAdditionalContinuation,
   CanonicalAuthoredRoom,
