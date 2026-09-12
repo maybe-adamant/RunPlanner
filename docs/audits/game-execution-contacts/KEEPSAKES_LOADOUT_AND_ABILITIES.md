@@ -161,6 +161,16 @@ ordinary encounters. The execution contact must be scoped to this exact
 keepsake decision across both paths and leave the surrounding native lifecycle
 intact.
 
+The identifying native sequence is `IsTraitActive` for
+`PersistentDionysusSkipKeepsake`, then `GetTotalHeroTraitValue("LuckMultiplier",
+{ IsMultiplier = true })`, then `RandomChance`. The executor retains only this
+one-shot contact within the current spawning coroutine. Native readiness and
+luck calculation remain unchanged; the roll is not armed by merely entering a
+spawn handler. This matters when pre-spawning has cleared `CanEncounterSkip`:
+the later Vow enemy-substitution roll must remain native. Native validation is
+evaluated before this sequence but its result is the final `and` operand after
+the roll; a false validation result must not change which RNG call is identified.
+
 ### Gorgon Amulet
 
 The keepsake's `UniqueEncounterArgs` eligibility and dispatch occur on two

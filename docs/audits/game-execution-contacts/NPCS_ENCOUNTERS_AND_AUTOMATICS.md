@@ -48,12 +48,21 @@ Nemesis uses a distinct event family rather than a trait provider menu.
 | Choose event family                 | `SpawnNemesisForRandomEvents` and `CheckAvailableTextLines`               | Covered.                                                  |
 | Free item                           | `NPCRewardDropPreProcess`, `NPCRewardDropPreProcessArgs`, `NPCRewardDrop` | Covered for the exact authored consumable identity.       |
 | Gold/damage trade accept or decline | `NemesisTradeChoice`                                                      | Covered; price and damage amounts are simulation-neutral. |
-| Trait trade                         | `NemesisTradeChoice` followed by `RemoveTrait`                            | Covered for exact trait and response.                     |
+| Trait trade                         | `NemesisTradeChoice` → native `GenerateSellTraitShop` / `SellOptions`     | Exact offer target; native response and removal retained. |
 | Damage contest                      | `NemesisDamageContestTimer`                                               | Covered for success/failure only.                         |
 
 Door theft and shop theft retain their documented planner simplifications and
 are not Timeline obligations. See the Nemesis disposition in the room/route
 audits.
+
+Native `NemesisGiveTraitForItemChoices` supplies `{ SellTrait = true }`, not a
+trait-named give option. `OpenTradeScreen` requests one common-prioritized sale
+candidate from `GenerateSellTraitShop` before rendering `SellOptions`. The
+executor selects the published trait from native `SellValues` or the already
+selected `SellOptions`, retaining native sale metadata; it does not replace the
+give descriptor or perform the exchange. Purging Pool inventory steering must
+not run for that single-trait trade request. A one-shot trade context is consumed
+at generation, not retained through player menu input to identify the offer.
 
 ## Encounter realization
 

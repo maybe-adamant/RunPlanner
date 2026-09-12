@@ -104,6 +104,14 @@ The primary source evidence for these effects remains in
 | Aspect of Persephone / Premium Service | additive effective-level contribution fixed when the offer is generated | ordinary trait option `effectiveLevel`                     | Covered; execution consumes the final value and does not recompute its sources.                        |
 | Natural Selection / Ransoms            | multiple level mutations                                                | trait-specific acquire functions                           | Natural Selection is covered by its exact nested target result; Ransoms remain native-authoritative.   |
 
+Direct random-level consumables (`GiftDrop` and `StoreRewardRandomStack`) share
+the accepted-use carrier. The native `UseStoreRewardRandomStack` dispatches
+`AddStackToTraits`, which may redispatch with `Thread=false`; the published
+target/count travel to that actual mutation contact. Acceptance is not the
+terminal, and the dispatch-only call must not retire the owner. Purchased and
+generated Pom Slices use this same path, without a purchase-specific level
+implementation.
+
 ## Trait removal contacts
 
 Purging Pool sales and Nemesis trait trades publish exact trait keys and use
