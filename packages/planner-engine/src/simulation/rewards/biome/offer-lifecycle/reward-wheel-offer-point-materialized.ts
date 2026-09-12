@@ -17,7 +17,7 @@ import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { RewardBranchState } from '../../branch-primitives';
 import { processOfferGenerationCohort } from '../../offer-generation';
-import { settleOwnedAcquisitionSite } from '../../acquisition-settlement';
+import { settleOwnedAcquisitionSite } from '../../acquisition/site-settlement';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import { historyFindingChronology } from '../finding-chronology';
 import type { RewardProducerFrontier } from '../../producer-frontiers';

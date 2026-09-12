@@ -42,7 +42,7 @@ import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
-import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition-settlement';
+import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import {

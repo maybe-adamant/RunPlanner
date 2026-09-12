@@ -14,8 +14,8 @@ import {
   settleOwnedAcquisitionSite,
   settleProducerAcquisitionSite,
   withStoredArtificerReplacements,
-  type AcquisitionRoleFrontier,
-} from '../../acquisition-settlement';
+} from '../../acquisition/site-settlement';
+import type { AcquisitionRoleFrontier } from '../../acquisition/contracts';
 import { preparedAcquisitionSiteOwner } from '../prepared-inputs';
 import type { ReachedTraitChildCheckpoint } from '../../trait-settlement';
 import { BiomeRewardSimulationContractError } from '../biome-contract';

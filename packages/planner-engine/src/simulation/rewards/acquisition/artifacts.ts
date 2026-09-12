@@ -3,20 +3,20 @@ import {
   type AcquisitionEntryAddress,
   type AcquisitionRoleAddress,
   type AcquisitionSiteAddress,
-} from '../../authored-project/addresses';
-import type { AuthoredRewardState } from '../../authored-project/model';
-import type { Catalog } from '../../catalog-schema';
-import type { ConcreteAcquisitionEvent } from '../../reward-kernel';
-import type { FindingEvidence } from '../model';
-import type { RewardBranchState } from './branch-primitives';
+} from '../../../authored-project/addresses';
+import type { AuthoredRewardState } from '../../../authored-project/model';
+import type { Catalog } from '../../../catalog-schema';
+import type { ConcreteAcquisitionEvent } from '../../../reward-kernel';
+import type { FindingEvidence } from '../../model';
+import type { RewardBranchState } from '../branch-primitives';
 import {
   assessArtificerConversion,
   assessSeaStarDuplication,
   assessTimePieceConversion,
-  type AcquisitionSource,
-  type DerivedAcquisitionEntryFrontier,
-} from './acquisition-settlement';
-import { createAnvilCandidateCapability, type AnvilCandidateCapability } from './anvil-settlement';
+} from './conversions';
+import type { AcquisitionSource } from './source';
+import type { DerivedAcquisitionEntryFrontier } from './contracts';
+import { createAnvilCandidateCapability, type AnvilCandidateCapability } from '../anvil-settlement';
 
 export interface DerivedAcquisitionEntryCandidateCapability {
   readonly kind: DerivedAcquisitionEntryFrontier['kind'];
@@ -154,13 +154,13 @@ export function createAcquisitionConversionCandidateArtifacts(
       readonly branchesBeforeRole: readonly RewardBranchState[];
       readonly realizedAcquisitionByBranch?: readonly (ConcreteAcquisitionEvent | undefined)[];
       readonly source: AcquisitionSource;
-      readonly lifecyclePoint: import('../../reward-kernel').ProducerLifecyclePointKey;
+      readonly lifecyclePoint: import('../../../reward-kernel').ProducerLifecyclePointKey;
       readonly blocksArtificerConversion?: true;
-      readonly artificerReplacementAddress: import('../../authored-project/addresses').AcquisitionEntryAddress;
+      readonly artificerReplacementAddress: import('../../../authored-project/addresses').AcquisitionEntryAddress;
       readonly artificerReplacementCandidate?: {
         readonly rewardTypes: readonly string[];
       };
-      readonly artificerReplacementOptions?: readonly import('../../authored-project/model').AuthoredRewardState[];
+      readonly artificerReplacementOptions?: readonly import('../../../authored-project/model').AuthoredRewardState[];
     }[]
   >,
 ): AcquisitionConversionCandidateArtifacts {
@@ -260,7 +260,7 @@ export function createAcquisitionConversionCandidateArtifacts(
   return Object.freeze({
     at,
     atReplacement: (
-      replacement: import('../../authored-project/addresses').AcquisitionEntryAddress,
+      replacement: import('../../../authored-project/addresses').AcquisitionEntryAddress,
     ) => {
       const replacementKey = semanticAddressKey(replacement);
       for (const entries of privateContexts.values()) {

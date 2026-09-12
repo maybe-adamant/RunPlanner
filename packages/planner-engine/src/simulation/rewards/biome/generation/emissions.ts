@@ -15,7 +15,7 @@ import type { RewardProducerFrontier } from '../../producer-frontiers';
 import type {
   AcquisitionRoleFrontier,
   DerivedAcquisitionEntryFrontier,
-} from '../../acquisition-settlement';
+} from '../../acquisition/contracts';
 import type { ReachedTraitChildCheckpoint } from '../../trait-settlement';
 import type { HistoryStateView } from '../../../history';
 import type { CanonicalLifecycleRoom } from '../../../history/lifecycleInput';

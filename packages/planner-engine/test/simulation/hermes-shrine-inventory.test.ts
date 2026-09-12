@@ -53,7 +53,7 @@ import { materializeBiomePrefix } from '../../src/simulation/materialization';
 import { evaluateBiomeRewards } from '../../src/simulation/rewards/biome';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
 import { installHexTree, settlePathScreen } from '../../src/simulation/hex-progress';
-import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition-settlement';
+import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
 import { createTestArcanaFearState, initializeTestRewardBranches } from '../support/arcana-fear';
 

@@ -285,7 +285,7 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   }[];
   readonly derivedAcquisitionEntries: readonly {
     readonly address: import('../../authored-project/addresses').AcquisitionEntryAddress;
-    readonly kind: import('./acquisition-settlement').DerivedAcquisitionEntryFrontier['kind'];
+    readonly kind: import('./acquisition/contracts').DerivedAcquisitionEntryFrontier['kind'];
     readonly sourceOfferKey?: string;
     readonly slotIndex?: number;
     readonly rewardTypes?: readonly string[];

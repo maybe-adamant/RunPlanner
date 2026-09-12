@@ -39,7 +39,7 @@ import {
   echoShopDuplicateOffer,
 } from '../../src/authored-project/shop';
 import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms';
-import { createDerivedAcquisitionEntryCandidateArtifacts } from '../../src/simulation/rewards/acquisition-artifacts';
+import { createDerivedAcquisitionEntryCandidateArtifacts } from '../../src/simulation/rewards/acquisition/artifacts';
 import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import {
   processShopInventory,
@@ -755,20 +755,17 @@ export function echoGoldShop(
     inventoryFindings,
   );
   const findings = new Map();
-  const settlement = settleShopAcquisitionSite(
-    inventory,
-    {
-      catalog,
-      room: canonical,
-      declaration: room,
-      historySequence: 3,
-      order: authoredOrder,
-      facts,
-      fail: (detail) => {
-        throw new Error(detail);
-      },
+  const settlement = settleShopAcquisitionSite(inventory, {
+    catalog,
+    room: canonical,
+    declaration: room,
+    historySequence: 3,
+    order: authoredOrder,
+    facts,
+    fail: (detail) => {
+      throw new Error(detail);
     },
-  );
+  });
   mergeRewardFindingEmissions(findings, settlement.findingEmissions);
   return {
     canonical,

@@ -100,3 +100,7 @@ export function offerEvidence(offer: ResolvedRewardOffer): FindingEvidence {
       : {}),
   };
 }
+
+export function historyChronology(sequence: number): FindingChronology {
+  return Object.freeze({ kind: 'history', sequence, boundary: 'at' });
+}

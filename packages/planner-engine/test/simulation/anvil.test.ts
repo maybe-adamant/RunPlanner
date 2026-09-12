@@ -14,7 +14,7 @@ import { factsWithHistory, resolveAcquisitionRole } from '@run-planner/engine/re
 
 import { createTestArcanaFearState, initializeTestRewardBranches } from '../support/arcana-fear';
 import { baseFacts } from './shop-trait-purchase-support';
-import { applyProducerRoleHistory } from '../../src/simulation/rewards/acquisition-settlement';
+import { applyProducerRoleHistory } from '../../src/simulation/rewards/acquisition/role-settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { createAnvilCandidateCapability } from '../../src/simulation/rewards/anvil-settlement';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';

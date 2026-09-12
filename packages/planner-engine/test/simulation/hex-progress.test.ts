@@ -28,7 +28,7 @@ import {
   maybeAddGodSent,
   settlePathScreen,
 } from '../../src/simulation/hex-progress';
-import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition-settlement';
+import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 import {
   attachTraitHistory,
   foldTraitHistoryEvents,

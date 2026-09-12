@@ -6,7 +6,7 @@ import type { ResolvedRewardOffer, RewardHistoryState } from '../../../../reward
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import type { CanonicalLocalReward } from '../../../materialization';
-import { settleOwnedAcquisitionSite } from '../../acquisition-settlement';
+import { settleOwnedAcquisitionSite } from '../../acquisition/site-settlement';
 import type { RewardBranchState } from '../../branch-primitives';
 import { createBiomeRewardFacts } from '../../facts';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';

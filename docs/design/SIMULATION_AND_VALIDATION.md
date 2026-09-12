@@ -295,9 +295,21 @@ coordinator remains the coherent authority.
 
 Producer-role settlement returns branches, ordered finding emissions, role
 frontiers, and trait-child checkpoints together. Its caller accumulates that
-complete product through the existing finding merge rules. Level settlement
-likewise returns its branch and findings, keeping source-time target generation
-distinct from application against the current trait history.
+complete product through the existing finding merge rules. Acquisition sites,
+including Shop sites, likewise return their own findings alongside branches and
+frontiers. Callers merge once at the chronological handoff; site classification
+does not depend on findings already accumulated by a caller. Finding merging
+preserves distinct level-resolution evidence from divergent branch cohorts.
+
+Within acquisition settlement, site traversal owns entry order and unpicked
+candidate probes. Conversion generation returns generated branches, replacement
+sources and roles, and findings. The role coordinator retains immediate child
+recursion, deferred-pickup separation, and blocked-child evidence; conversion
+generation does not call back into settlement or share its mutable accumulator.
+Candidate artifacts consume the captured frontiers rather than replaying sites.
+
+Level settlement likewise returns its branch and findings, keeping source-time
+target generation distinct from application against the current trait history.
 
 Candidate families own their artifact construction and assessment; the
 aggregate owns composition of the complete matching evaluation. Branch

@@ -19,7 +19,7 @@ import {
 import {
   type AcquisitionConversionCandidateArtifacts,
   type DerivedAcquisitionEntryCandidateArtifacts,
-} from '../rewards/acquisition-artifacts';
+} from '../rewards/acquisition/artifacts';
 import {
   type FigurineArcanaCandidateArtifacts,
   type KeepsakeEquipResultCandidateArtifacts,

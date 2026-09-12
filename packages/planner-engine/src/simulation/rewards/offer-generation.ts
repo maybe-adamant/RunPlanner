@@ -14,7 +14,7 @@ import {
 import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 
 import type { CanonicalResolvedIncomingReward } from '../materialization';
-import { type FindingEvidence, type RewardGenerationFindingCode } from '../model';
+import type { FindingEvidence, RewardGenerationFindingCode } from '../model';
 import { ownerRegion, type FindingChronology, type FindingRegionEntry } from '../finding-regions';
 import {
   olympianProviderForOffer,
@@ -27,7 +27,8 @@ import {
   offerEvidence,
   type RewardBranchState,
 } from './branch-primitives';
-import { historyChronology, type RewardFactsFactory } from './acquisition-settlement';
+import { historyChronology } from './findings';
+import type { RewardFactsFactory } from './acquisition/contracts';
 import { withBag } from './branch-primitives';
 
 import { addRewardFinding, rewardFinding } from './findings';

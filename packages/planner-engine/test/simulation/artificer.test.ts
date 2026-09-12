@@ -32,12 +32,14 @@ import {
   assessArtificerConversion,
   assessSeaStarDuplication,
   assessTimePieceConversion,
+} from '../../src/simulation/rewards/acquisition/conversions';
+import {
   settleArtificerReplacementAcquisition,
   settleOwnedAcquisitionSite,
   settlePickupAcquisitionSite,
-} from '../../src/simulation/rewards/acquisition-settlement';
-import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
-import { createAcquisitionConversionCandidateArtifacts } from '../../src/simulation/rewards/acquisition-artifacts';
+} from '../../src/simulation/rewards/acquisition/site-settlement';
+import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
+import { createAcquisitionConversionCandidateArtifacts } from '../../src/simulation/rewards/acquisition/artifacts';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { createTraitHistoryState } from '../../src/simulation/traits';
 import { installHexTree } from '../../src/simulation/hex-progress';
@@ -254,23 +256,19 @@ function convert(
   mergeRewardFindingEmissions(findings, generated.findingEmissions);
   const product = deferArtificerReplacement
     ? generated
-    : settleArtificerReplacementAcquisition(
-        catalog,
-        generated.branches,
-        {
-          siteOwner: replacementSite.owner,
-          pointKey: replacementSite.pointKey,
-          sourceEntryKey: semanticAddressKey(origin),
-          sourceOrigin: origin,
-          sourceReward: authored,
-          replacement: replacementReward,
-          acquisitionRole: 'self',
-          participation: 'mandatory',
-          historySequence: index + 1,
-          facts: (history) => factsWithHistory(facts(enteredBiomes), history, new Set()),
-          traitContext: artificerLoadout,
-        },
-      );
+    : settleArtificerReplacementAcquisition(catalog, generated.branches, {
+        siteOwner: replacementSite.owner,
+        pointKey: replacementSite.pointKey,
+        sourceEntryKey: semanticAddressKey(origin),
+        sourceOrigin: origin,
+        sourceReward: authored,
+        replacement: replacementReward,
+        acquisitionRole: 'self',
+        participation: 'mandatory',
+        historySequence: index + 1,
+        facts: (history) => factsWithHistory(facts(enteredBiomes), history, new Set()),
+        traitContext: artificerLoadout,
+      });
   if (!deferArtificerReplacement) mergeRewardFindingEmissions(findings, product.findingEmissions);
   return {
     authored,
@@ -421,28 +419,24 @@ describe('The Artificer', () => {
       { rewardType: 'GiftDrop' },
       { kind: 'producerLifecycle', key: 'RoomReward' },
     );
-    const product = settlePickupAcquisitionSite(
-      catalog,
-      initialBranches(),
-      {
-        siteOwner,
-        site,
-        entries: Object.freeze({ seaStarDuplicate: retained }),
-        order: Object.freeze(['seaStarDuplicate']),
-        producerLifecycleKey: 'RoomReward',
-        producerByEntryKey: Object.freeze({
-          seaStarDuplicate: Object.freeze({
-            kind: 'seaStarDuplicate',
-            sourceOwner,
-            sourceRole: 'self',
-          }),
+    const product = settlePickupAcquisitionSite(catalog, initialBranches(), {
+      siteOwner,
+      site,
+      entries: Object.freeze({ seaStarDuplicate: retained }),
+      order: Object.freeze(['seaStarDuplicate']),
+      producerLifecycleKey: 'RoomReward',
+      producerByEntryKey: Object.freeze({
+        seaStarDuplicate: Object.freeze({
+          kind: 'seaStarDuplicate',
+          sourceOwner,
+          sourceRole: 'self',
         }),
-        requiredEntryKeys: new Set(),
-        seaStarDuplicateEntryKeys: new Set(['seaStarDuplicate']),
-        historySequence: 1,
-        facts: (history) => factsWithHistory(facts(), history, new Set()),
-      },
-    );
+      }),
+      requiredEntryKeys: new Set(),
+      seaStarDuplicateEntryKeys: new Set(['seaStarDuplicate']),
+      historySequence: 1,
+      facts: (history) => factsWithHistory(facts(), history, new Set()),
+    });
     expect(product.entries[0]?.participation).toBe('optional');
     expect(product.branches[0]?.history.consumableRecord.GiftDrop).toBe(1);
     expect(product.roleFrontiers?.[0]?.source.blocksSeaStarDuplication).toBe(true);
@@ -504,21 +498,17 @@ describe('The Artificer', () => {
       { rewardType: 'MetaCurrencyDrop' },
       { kind: 'producerLifecycle', key: 'GeneratedTraitPickup' },
     );
-    const product = settlePickupAcquisitionSite(
-      catalog,
-      initialBranches(),
-      {
-        siteOwner,
-        site,
-        entries: Object.freeze({ seaStarDuplicate: retained }),
-        order: Object.freeze(['seaStarDuplicate']),
-        producerLifecycleKey: 'GeneratedTraitPickup',
-        requiredEntryKeys: new Set(),
-        seaStarDuplicateEntryKeys: new Set(['seaStarDuplicate']),
-        historySequence: 1,
-        facts: (history) => factsWithHistory(facts(), history, new Set()),
-      },
-    );
+    const product = settlePickupAcquisitionSite(catalog, initialBranches(), {
+      siteOwner,
+      site,
+      entries: Object.freeze({ seaStarDuplicate: retained }),
+      order: Object.freeze(['seaStarDuplicate']),
+      producerLifecycleKey: 'GeneratedTraitPickup',
+      requiredEntryKeys: new Set(),
+      seaStarDuplicateEntryKeys: new Set(['seaStarDuplicate']),
+      historySequence: 1,
+      facts: (history) => factsWithHistory(facts(), history, new Set()),
+    });
     const frontier = product.roleFrontiers?.[0];
     if (frontier === undefined) throw new Error('missing retained Bones role frontier');
     expect(frontier.source.producerLifecycleKey).toBe('GeneratedTraitPickup');
@@ -1032,22 +1022,18 @@ describe('The Artificer', () => {
     expect(generated.history.consumableRecord.MaxHealthDrop).toBeUndefined();
     expect(artificerStatus(catalog, generated.arcanaFear)?.spent).toBe(1);
 
-    const acquired = settleArtificerReplacementAcquisition(
-      catalog,
-      conversion.product.branches,
-      {
-        siteOwner: conversion.replacementSite.owner,
-        pointKey: conversion.replacementSite.pointKey,
-        sourceEntryKey: semanticAddressKey(conversion.origin),
-        sourceOrigin: conversion.origin,
-        sourceReward: conversion.authored,
-        replacement: conversion.replacement,
-        acquisitionRole: 'self',
-        participation: 'mandatory',
-        historySequence: 2,
-        facts: (history) => factsWithHistory(facts(), history, new Set()),
-      },
-    );
+    const acquired = settleArtificerReplacementAcquisition(catalog, conversion.product.branches, {
+      siteOwner: conversion.replacementSite.owner,
+      pointKey: conversion.replacementSite.pointKey,
+      sourceEntryKey: semanticAddressKey(conversion.origin),
+      sourceOrigin: conversion.origin,
+      sourceReward: conversion.authored,
+      replacement: conversion.replacement,
+      acquisitionRole: 'self',
+      participation: 'mandatory',
+      historySequence: 2,
+      facts: (history) => factsWithHistory(facts(), history, new Set()),
+    });
     mergeRewardFindingEmissions(conversion.findings, acquired.findingEmissions);
     expect(acquired.branches[0]?.history.consumableRecord.MaxHealthDrop).toBe(1);
     expect(acquired.entries[0]?.address).toEqual(

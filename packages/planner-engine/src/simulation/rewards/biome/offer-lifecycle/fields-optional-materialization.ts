@@ -13,7 +13,7 @@ import type {
   CanonicalFieldsOptionalReward,
 } from '../../../materialization';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
-import { settleOwnedAcquisitionSite } from '../../acquisition-settlement';
+import { settleOwnedAcquisitionSite } from '../../acquisition/site-settlement';
 import type { RewardBranchState } from '../../branch-primitives';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';

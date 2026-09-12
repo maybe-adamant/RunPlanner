@@ -44,7 +44,7 @@ import {
   createEmptyDerivedAcquisitionEntryCandidateArtifacts,
   type AcquisitionConversionCandidateArtifacts,
   type DerivedAcquisitionEntryCandidateArtifacts,
-} from './rewards/acquisition-artifacts';
+} from './rewards/acquisition/artifacts';
 import {
   createEmptySteadyGrowthCandidateArtifacts,
   type SteadyGrowthCandidateArtifacts,
