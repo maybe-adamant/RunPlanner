@@ -312,9 +312,9 @@ a now-inactive Ship phase is excluded from those active groups and rendered
 exactly once in the Ship repair surface, preserving its finding, semantic
 focus, and explicit removal proposal.
 
-Room features is a closed application product containing the currently
-supported Chaos-gate, Zagreus-contract, and Fields Nemesis-event Add/Remove
-controls. The resulting exit card owns only decision selection, room
+Room features consume closed application presence products for supported
+resources, exits and objects; room-inherent Fields/Nemesis and side-room setup
+retain their own sections. The resulting exit card owns only decision selection, room
 navigation, and its remaining door-specific identity controls; Anomaly
 identity/revert remains on its door. A selected F/G Nemesis event projects its
 contextual family/outcome editor beneath the encounter phase; H projects the
@@ -322,6 +322,36 @@ same editor at the required Passive event row and uses the engine-derived
 optional-count maximum. Incoming room identity and door-visible reward are
 read-only context in an entered occurrence; their editor remains the
 predecessor's outgoing door.
+
+### Feature presence and resource placement
+
+A feature that the room cannot structurally support has no control. A supported
+absent feature is unchecked and enabled only when the engine permits adding it;
+temporary unavailability keeps it visible but disabled. An optional authored
+feature remains checked and removable even when context-invalid. A forced
+feature is checked and locked. The application supplies this state; React does
+not derive spacing, support or force from room names.
+
+Resource labels name the successful outcome and declaration-owned element,
+such as Successful Mining — Fire. The Resources heading explains that each
+successful outcome may be placed once across the route. Moving an existing
+placement uses its ordinary semantic replacement command; the row's separate
+location column identifies and links to the current room. Removing or moving
+uses normal Undo, not an additional confirmation workflow. Neither the local
+control nor the Resources index displays the occurrence ID as its room label.
+
+### Wheel offer cards
+
+Active offers within one wheel use equal sibling cards, collapsing vertically
+in narrow space. Two offers use the shared exit-card selection shell and its
+radio treatment; one offer needs no false choice control. They remain rewards,
+not doors: no room selector, door number or topology interaction is introduced.
+Wheel 1 and Wheel 2 stay in their separate phase sections.
+
+The chronological Choose action does not duplicate card selection with another
+picker. Its engine-bound choice assesses the generated cohort without demanding
+that the newly selected pickup's trait child already be complete. Reducing
+offer or phase count hides dormant editors without deleting retained values.
 
 ### Fields and Artificer Products
 
@@ -392,200 +422,16 @@ future result publishes no marker, interaction, or finding destination.
 
 ## Application Projection Boundary
 
-The application projects a structured workspace from:
+[Editor Model](EDITOR_MODEL.md#workspace-projection) owns the supported
+workspace entry, authored-first construction, interaction binding, exact
+finding routing and independent projection closure tests. This document owns
+the concrete workbenches composed from that product.
 
-```text
-authored topology
-  + normalized layout
-  + room declarations
-  + progressive or canonical biome evaluation
-  + addressed findings and contextual options
-  -> WorkspaceBiome structured workspace view
-```
-
-The projection owns visual grouping, ordering, compact summaries, coverage
-markers, Preboss and completion-outline facts, and semantic focus destinations.
-React renders that projection and dispatches semantic commands.
-
-### Public Workspace Entry
-
-Application composition and React consume the structured workspace only through
-the `projections/structured-workspace` public entry. Its exported vocabulary,
-service, and deliberate interaction helpers are the stable projection contract.
-Independent closure helpers are test support, not a production public seam.
-Contract declarations and projector assembly are private modules: the projector
-may consume the contract, but neither module may depend on the public entry or
-become an alternate consumer import path. This keeps workspace construction
-replaceable without making React or application composition depend on its
-internal assembly order.
-
-### Internal Projection Production Line
-
-The private workspace implementation preserves one directed production line:
-
-```text
-WorkspaceBiomeSource
-  -> WorkspaceBiomeSemanticAssembly
-       ├-> biome presentation (rail, default inspector, exact destinations)
-       └-> project-wide interaction binding
-biome presentation + evaluated findings
-  -> exact finding routing
-semantic assembly + presentation + exact finding routing + bound interactions
-  -> cached structured-workspace service (with local construction invariants)
-
-test support: catalog + persisted authored state
-  -> independent expected owners, leaves, and structural controls
-production workspace products + expectations
-  -> test-time closure
-```
-
-The semantic assembly owns complete biome facts: authored structural nodes,
-room-local products, controls, preliminary destinations, and interaction
-requirements. Biome presentation and interaction binding are sibling consumers
-of that immutable product. Presentation may also read immutable catalog display
-metadata for an already-resolved reward token; it never revisits authored source
-or interaction binding. Presentation owns the selective rail, Hub visit
-grouping, default inspector, and final inspector/rail destinations; interaction
-binding owns executable command adapters and does not consume presentation.
-Occurrence assembly composes complete reward/local-room, room-workbench,
-room-action, and room-feature products before final node and summary assembly.
-Interaction binding binds one candidate session and joins complete
-occurrence-local, batch, Hub, topology, and reward-child interaction maps. The
-React occurrence workbench remains the shell over encounter, action, feature,
-direct-room, and Ship presentation owners; those children render supported
-products and never reconstruct semantic policy.
-For the policy-bearing families it binds, it returns complete command intents;
-the shared React adapter dispatches only that intent and, when declared, its
-focus timing. React does not allocate occurrence identities or reconstruct
-creation focus. Simple declaration-projected fields and intentionally retained fixed
-owner-plus-value controls remain direct semantic mappings rather than being
-wrapped merely for uniformity. `WorkspaceBiome` carries its typed biome owner
-only because React needs it to scope global semantic focus; generic markers do
-not become a route back to typed control owners.
-Independently derived authored-owner expectations live in test support and
-derive identity and visibility from catalog plus persisted state without
-importing assembly, marker ownership, presentation, binding, or facade
-products. The cached service composes the returned products, project and route
-markers, legitimate coarse finding fallbacks, and the final immutable workspace;
-it does not construct occurrence, decision, Hub, rail, or test-closure
-families itself.
-
-Creation establishes explicit transient semantic focus through the existing
-semantic-owner action. Every authored start selects its created Room Occurrence.
-An ordinary target selects its target owner while remaining in the owning
-decision workbench. The direct predecessor of a generated continuation exposes
-the ordinary empty door workbench inline. That workbench is a pure projection,
-not an authored node. Its first reward-pool, Fields, ordinary-room, or takeover
-edit is already bound to one atomic engine command; React never chains
-structural creation with a second edit. Focus resolves through the source room
-stage, and undo restores the provisional workbench directly.
-
-An empty generated decision publishes one Door 1 room control inside its own
-workbench. The control is target-addressed, but its picker can contain both
-target-owned ordinary candidates and decision-owned takeover Preboss evidence.
-Binding returns the chosen complete atomic initialization or takeover-creation
-intent lazily, allocating occurrence IDs only on activation. Once an authored
-empty envelope exists, the same control returns the ordinary target or takeover
-replacement intent. Both the target route and the decision-owned takeover route
-resolve independently to the same containing decision inspector. Later doors
-remain ordinary sequential target controls; a populated ordinary decision
-never publishes a retroactive takeover control.
-
-The rail may retain a truthful continuation marker without stealing inspector
-focus, but generated continuation has no navigation-only `Go to next step`
-action or separate `Add Preboss doors` control. A completed-Hub handoff and
-repair of an already-authored takeover remain distinct declared interactions.
-
-Every non-complete-valid biome is an authored-topology projection, optionally
-enriched by reached progressive evaluation when coverage exists. It must not
-be described as canonical topology.
-
-### Authored-First Assembly
-
-Persisted authored topology determines workspace membership and order.
-Evaluation is an optional overlay indexed by semantic owner; it may add
-assessment, availability, Goal state, simulated entry, and derived lifecycle
-facts. Evaluation must not create, remove, or replace a persisted decision,
-target, occurrence, or editable offer-time leaf.
-
-`WorkspaceBiomeSource` acquires the context-free completeness product once for
-semantic and interaction assembly. For a blocked result it builds evaluated
-overlays from the clamped assessment prefix, never from the larger retained
-authored materialization. The full document remains the source of downstream
-decisions and controls. Those retained owners stay visible and unassessed;
-they receive no canonical entered state, evaluator-derived physical-state
-overlay, Clockwork reward, or room-local evaluation fact. The readiness overlay
-keeps them visible and disables only owners after an incomplete horizon;
-invalidity alone leaves their repair interactions usable.
-
-The projector walks the authored start and then authored exit decisions or the
-Hub in selected-topology order. A selected target subtree precedes retained
-physical peers. Peers follow the current physical-exit order with a stable
-semantic tie-breaker. Disconnected or malformed but structurally representable
-state remains reachable through the same deterministic ordering; the codec and
-semantic commands, not projection, remain responsible for structural validity.
-Simulation order never substitutes for authored topology order.
-
-The physical exits for a decision are those resolved from its current authored
-batch and layout state. A current exit without an authored target is projected
-as a missing offer. A retained authored target outside that current set remains
-visible as an unavailable offer; projection does not discard it or promise
-blank rows for merely potential or policy-gated exits.
-
-Room-local activation follows the hierarchy and source rules in
-[`EDITOR_MODEL.md`](EDITOR_MODEL.md#decision-and-room-data-hierarchy).
-Mandatory room and reward leaves do not depend on activation, findings,
-candidate support, or evaluation coverage. Optional picked-room details may
-depend on authored `detailsActive`, while evaluated `entered` remains a
-separate fact.
-
-Occurrence assembly consumes narrow authored activation facts.
-`FieldsBatchFacts` is one shared engine-derived input for both occurrence and
-decision assembly, rather than a room-local lifecycle table or duplicated
-calculation. Persisted room-state schema coherence belongs to engine codec,
-default, and semantic-command boundaries; the workspace projector deliberately
-does not preflight a complete document. It retains only exact declaration and
-product-contact assertions needed to publish a concrete control, including
-dormant optional detail.
-
-### Projection Integrity and Independent Test Closure
-
-Production enforces invariants where products are constructed: exact
-project/evaluation provenance, declaration lookup, impossible evaluated-overlay
-rejection, duplicate semantic-key rejection, and required exact lookups. A
-live finding must publish an exact owner destination; a coarse finding may
-inherit its biome shell, while a fine-grained finding must resolve to an
-existing exact inspector subject and may not be converted into a default-
-inspector or biome-shell fallback. These are local production contracts, not a
-second traversal that reconstructs an expected workspace after the product is
-built.
-
-The completed destination's resolved repair target is also the sole inline
-highlight owner. Navigation selects its route, biome, rail stop, inspector,
-tab, and dialog; redirected focus only scrolls or focuses the same repair
-target. Current findings mark that existing control or smallest truthful
-container with the shared red finding border without inserting numbered badge
-rows. Aggregate counts remain on navigation and the Findings panel.
-
-Test support independently enumerates the semantic owners, declaration-required
-editable leaves, and structural controls implied by catalog plus persisted
-authored state. It verifies that:
-
-- every decision, target, occurrence, Hub slot/visit, and active
-  declaration-owned leaf has one reachable projection;
-- every exact semantic address resolves to its containing inspector, marker,
-  and exact interaction;
-- advertised structural controls and frontier capabilities have the expected
-  kind, key, owner, and bound interaction;
-- fine-grained findings resolve to their exact owner rather than a biome-level
-  fallback.
-
-A target's room and reward may be nested inside its decision workbench. Test
-closure therefore validates semantic-owner reachability, not a count or shape
-of standalone UI nodes. Candidate support and findings decorate reachable
-controls; they never decide whether a mandatory authored control exists. React
-renders projected facts and does not recreate topology, containment, lifecycle,
-or interaction policy.
+The workspace renders authored structure with only reached evaluator overlays.
+Missing or invalid values remain at their semantic owners; candidate support
+never decides whether a mandatory control exists. Readiness disables controls
+beyond the engine's incomplete horizon without hiding them. A rendered position
+or tab is neither domain identity nor chronological authority.
 
 ## Ordinary Decision Workspace
 

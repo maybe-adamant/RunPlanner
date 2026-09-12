@@ -764,6 +764,35 @@ invoke simulation or materialization. It may seed several newly active
 occurrences or one Fields/Ship cohort atomically, but it neither repairs
 pre-existing omissions nor removes rows made dormant by the command.
 
+### Ordered reconciliation
+
+The single dispatcher in `authored-project/commands/dispatch.ts` closes a
+successful proposal before decoding it. Source action closure precedes generated
+pickup reconciliation; newly active generated actions are then scheduled.
+Resource topology cleanup, missing Shrine-delivery retraction, inactive clocked
+pickup retraction and Chaos topology reconciliation remain in that explicit
+command-local order.
+
+The two required-action contacts serve different inputs. The first closes
+newly active source actions; the second compares the generated-pickup result
+against its immediate predecessor and closes newly generated actions. Combining
+them into one early pass can miss a generated pickup; running an unrestricted
+repair loop can overwrite retained user choices or repair unrelated omissions.
+
+For example, changing a producer must not retain an action whose generated
+entry no longer exists. Reconcile source-owned site, entry and action together,
+preserving compatible authored children when their source survives. A later
+application projection must not repair the document or synthesize a missing
+site to make it renderable.
+
+An extension must identify which source or generated product it changes and
+join this ordered closure. Command tests own atomic insertion, retraction,
+compatible retention and Undo; lifecycle simulation separately owns when an
+effect matures. Do not add a second scheduler or replay candidate evaluation
+inside command handling.
+
+### Command families
+
 The command language includes project and route commands; start, batch, target,
 takeover, selection, removal, and clear-topology commands; terminal Hub
 replacement, Hub board and visit commands; and occurrence-local state

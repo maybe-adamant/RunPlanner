@@ -606,6 +606,43 @@ The common component must support:
 - cached stable option projections rather than rebuilding domains during
   every draw.
 
+### Trait dialog presentation
+
+The shared trait dialog keeps effective rarity and effective level in a stable
+summary for ordinary options. An inapplicable value uses an em dash rather than
+changing card geometry. These are engine-derived values, not UI-calculated
+levels or rarity. Echo's shared rows likewise display their engine-derived
+granted values rather than assuming that a shared component implies ordinary
+fresh-offer bonuses. Its large mixed-giver picker uses trait labels without
+redundant god prefixes.
+
+Selectable rarity uses its contextual picker; fixed Duo/Legendary rarity is
+read-only. Rarityless NPC and Hammer rows do not acquire a rarity control or
+label. Engine-supported replacement annotations show the exact prior trait,
+slot and promoted rarity without React deriving the transition. Rarity checks
+and replacement chance may appear in a read-only Offer State disclosure as
+branch-correlated engine facts, not normalized outcome probabilities or a
+global rarity ledger.
+
+Selected child controls follow the live draft immediately. Targeted traits use
+the shared target picker; Natural Selection uses one ordered compound result;
+Circe uses the engine-provided Arcana or Vow domain. Ransom effects have a
+read-only preview, not invented authored targets. A missing or stale selected
+child remains repairable and prevents saving the incomplete outcome.
+
+A normal Spell Drop uses the shared three-row rarityless editor as Edit Spell.
+The launcher names the selected spell. Position-owned Moonglow/Path bonuses
+remain per-row metadata, and the selected spell's Hex layout and Rare/Epic
+node groups are editable from the initial live draft. Saving and reopening is
+not a prerequisite. Aspect of Selene instead edits its fixed starting tree in
+loadout; a later Path acquisition does not expose a false replacement spell
+editor.
+
+Automatic Steady Growth and Embryo outcomes use their fixed timeline points
+and bound target controls, not draggable author-created effects. Immediate
+keepsake targets stay at their exact equip owner. Progress, rarity and magnitude
+come from engine products; React does not advance clocks or infer those values.
+
 ## Ownership Seams
 
 ### Simulation and Core

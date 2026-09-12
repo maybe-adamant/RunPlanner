@@ -52,6 +52,11 @@ the result.
 
 ### Planner Engine — `packages/planner-engine`
 
+- Before any engine work, read `docs/design/SIMULATION_AND_VALIDATION.md` in
+  full. It is the engine ownership and extension guide, including settlement
+  handoffs, exact candidate context, chronology, findings, and authoring
+  readiness. Then read the relevant specialist sections it links for the
+  boundary being changed; the entry guide does not replace those authorities.
 - Owns the pure authored model, addresses, codecs, defaults, semantic commands,
   history, requirements, reward kernel, materialization, simulation, candidates,
   validation, findings, engine-owned authoring queries, and execution-plan

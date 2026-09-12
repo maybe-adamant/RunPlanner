@@ -1,772 +1,230 @@
 # Architecture
 
-## Purpose
+## Purpose and Reading Map
 
-This document defines the standalone app's product boundary, layer ownership,
-dependency direction, lifecycle, and technology responsibilities.
+Run Planner is an authoring and simulation application. Its three ownership
+lanes are the Hades II catalog, the pure planner engine, and the planner
+application. This document explains their relationship and how to extend them
+without creating parallel policy.
 
-It does not define biome rules, concrete persisted topology, validator
-algorithms, or UI layout details. Those belong to the adjacent authorities.
+Start with the lane that owns the question:
 
-## Product Boundary
+| Question                                                   | Entry document                                    |
+| ---------------------------------------------------------- | ------------------------------------------------- |
+| What does the game declare, and how is it normalized?      | [Catalog Model](CATALOG_MODEL.md)                 |
+| What does authored state mean, and what follows from it?   | [Planner Engine](SIMULATION_AND_VALIDATION.md)    |
+| How is that result edited, displayed, navigated and saved? | [Planner Application and Editor](EDITOR_MODEL.md) |
 
-Run Planner is primarily an authoring and simulation application.
+The engine guide routes deeper authored-state, generation, lifecycle, reward
+and candidate contracts. The application guide routes workspace layout and
+contextual-picker behavior. [Biome documents](../biomes/) own concrete route
+rules; [audits](../audits/README.md) own source evidence and bounded unknowns.
+[Game Integration Boundary](GAME_INTEGRATION_BOUNDARY.md) owns the downstream
+execution contract.
 
-The app owns:
+## Product Contract
 
-- game-data declarations used by the supported planning domain;
-- project creation, loading, saving, and migration;
-- route and biome topology authoring;
-- room-local and reward-local authored state;
-- materialization into canonical simulated facts;
-- game-language lifecycle history and ledgers;
-- completeness, legality, candidate evaluation, and feedback;
-- undo/redo and all rich editor interactions;
-- compilation of a declarative execution-plan document.
+The application models possible supported outcomes, not their likelihood.
+An authored choice selects one concrete outcome. Validation checks whether
+the exact history and declarations support it. Positive weight is not a reason
+to reject an unlikely choice. Zero and forced boundaries matter; route
+likelihoods, seeded RNG replay and Monte Carlo search do not belong here.
 
-The external game module owns only:
+Persisted choices and derived truth are separate. Structurally representable
+incomplete and context-invalid plans remain editable documents. Evaluation
+does not silently repair them, choose replacement values or delete suffixes.
+Semantic commands own explicit changes; Undo/Redo restores authored snapshots.
 
-- parsing and contact validation of an exported plan;
-- translation through fixed, known runtime adapters;
-- synchronization with live game events;
-- conformance auditing and mismatch reporting.
+A project contains one route. Catalog Room Declarations have unique game
+names, while authored Room Occurrences have stable IDs and may repeat a game
+name. Rendered rows, tabs and component identities are not domain identities.
 
-The game module does not become a second simulator, validator, planner, or
-editor.
+The external game module consumes a declarative execution plan. It realizes
+supported outcomes and checks conformance under the integration contract. It
+is not another planner or simulator, and its Lua/UI constraints must not shape
+the application's authored model or React editor.
 
-## Possibility, Not Probability
-
-Run Planner models the support of game decisions: which concrete outcomes can
-or must occur from the current simulated state. It does not model how likely a
-possible outcome is.
-
-For every random decision, the catalog and current history determine a set of
-possible concrete outcomes. The authored project chooses one outcome from that
-set, and validation proves membership. A positive-probability outcome remains
-valid even when its probability is extremely small. A zero-probability outcome
-is impossible, and a singleton support set is forced.
-
-This is a cross-cutting semantic contract, not merely a UI simplification. It
-applies to room selection, reward-store selection, counted bags, encounters,
-Boon sources, and later random game decisions. Weights and ratios may still be
-read when they change the support set at a boundary, but the app does not
-compute route likelihoods, expose "unlikely" warnings, consume RNG seeds, run
-Monte Carlo search, or optimize for probability.
-
-## Layered System
+## Dependency Direction
 
 ```text
-raw declarations
-  -> catalog construction
-      -> normalized immutable catalog
-
-project file
-  -> authored project decoder
-      -> authored project state
-
-normalized catalog + authored project
-  -> pure simulator
-      -> execute catalog-selected room lifecycle profiles
-      -> apply declaration-selected typed lifecycle effects
-      -> compose occurrence-addressed room history fragments
-      -> one exact project-evaluation assembly
-          -> data-only evaluation, coverage, history, and findings
-          -> private candidate artifacts from the same execution
-
-authored state + matching evaluation assembly
-  -> presentation projectors
-      -> React editor
-
-validated derived result
-  -> execution-plan compiler
-      -> JSON document for the game module
+catalog construction → pure core ← application composition → React UI
 ```
 
-Every arrow points from an authority to a consumer. A downstream layer must
-not write back into an upstream authority as a side effect.
-
-## Repository Shape
-
-The workspace is organized by current ownership:
+This is a code-dependency map, not the runtime processing order. At runtime:
 
 ```text
-RunPlanner/
-  apps/
-    planner/
-      src/
-        composition/
-        persistence/
-        projections/
-        state/
-        ui/
-        workspace/
-      test/
-
-  packages/
-    hades2-catalog/
-      src/
-        declarations/
-        compiler/
-      test/
-
-    planner-engine/
-      src/
-        normalized/
-        catalog-schema/
-        authored-project/
-        requirements/
-        reward-kernel/
-        simulation/
-      test/
-
-  docs/
-    design/
-    biomes/
-    audits/
-    investigations/
-    progress/
+source-backed declarations → immutable catalog
+profile / semantic commands → immutable authored project
+catalog + project → exact engine evaluation assembly
+project + matching assembly → application projections and bound interactions
+bound interaction → command → replacement project
+validated engine product → execution document → external game module
 ```
 
-`packages/planner-engine` defines pure semantic types and operations. Its
-`normalized/` primitives sit below catalog-schema and reward-kernel; they do
-not import either higher-level product. Catalog-schema re-exports the supported
-collection contract for catalog construction, while reward-kernel consumes the
-neutral contract directly. The engine defines the normalized catalog interface
-required by simulation, but its production code cannot import the catalog
-package. `packages/hades2-catalog` constructs that interface from explicit
-declarations. The planner app is the composition root that constructs the
-catalog, creates application state, invokes the simulator, and binds results to
-React. Tests live beside the authority they exercise; cross-layer browser
-fixtures live under `apps/planner/test/`.
-
-This avoids a catalog/engine dependency cycle:
-
-```text
-planner-engine declares Catalog interface
-hades2-catalog implements Catalog construction
-planner composes hades2-catalog with planner-engine
-```
-
-## Code Placement and Module Boundaries
-
-Source placement follows semantic ownership rather than the location of the
-first or most visible caller. A new module must have a named owner, explicit
-inputs, a returned product or transition, identifiable consumers, and tests at
-that authority boundary. Put it in the nearest existing feature neighborhood.
-Generic `common`, `shared`, `helpers`, and `services` areas are not default
-homes; a lower-level shared module is justified only when it owns a coherent
-contract used by several higher-level owners.
-
-An `index.ts` defines a deliberate supported module surface. It does not exist
-merely to shorten import paths or hide an internal dependency graph. An
-assembly or composition module wires products owned one level below it; wiring
-does not make that module the owner of their semantic policies. Production
-modules live under the owning package or application `src/`, while test-only
-fixtures, render harnesses, builders, expected manifests, and observers live
-under test support and are never imported by production.
-
-### Import Conventions
-
-Cross-package consumers use the package's declared exports. Within the planner,
-imports that cross the stable `composition`, `persistence`, `projections`,
-`state`, `ui`, or `workspace` roots use `@planner/*`; planner fixtures and test
-support use `@planner-test/*`; and repository-wide authored-project fixtures
-use `@run-planner/test-fixtures`. Relative `./` and `../` imports remain the
-right choice inside one immediate feature neighborhood, but planner modules do
-not climb two or more parent directories.
-
-Aliases name an ownership root; they do not create a public API or dependency
-injection boundary. An `index.ts` exists only for a deliberate supported module
-surface, while an assembly or composition module owns wiring. The engine keeps
-its direct internal relative imports unless a separate boundary change justifies
-an internal API; it must not route internal dependencies through public barrels
-merely to shorten a path. Planner aliases are scoped to the planner compiler
-configuration and are forbidden from pure package source. Pure packages use
-static imports so their dependency boundaries remain enforceable.
-
-Mechanically observable import and placement rules belong in TypeScript,
-ESLint, or focused architecture checks as well as this document. Tests should
-not encode incidental filenames or source tokens when the real contract is not
-statically observable.
-
-### Product Construction
-
-Every transformation receives explicit inputs and returns every semantic
-product required by a later consumer. A producer cannot publish an apparent
-result while storing required facts or callable capabilities only in a
-module-level registry, initialization side effect, or sidecar map keyed by that
-result. A cache or identity attestation may memoize or verify an already
-complete explicit product, but correctness cannot depend on discovering
-otherwise absent semantic data from it.
-
-Application-wide collaborators are constructed at the composition root and
-passed as narrow capabilities. Per-project work receives the exact authored
-project and matching evaluation together. Parameter objects, interfaces, and
-factories represent real construction or product boundaries; they are not
-introduced solely to shorten signatures or stage future movement. Catch-all
-contexts, dependency bags, service locators, mutable service tables, and
-dependency-injection containers are rejected.
-
-A stage may use a private mutable builder when that makes ordered construction
-clear. The builder cannot cross the stage boundary: the stage freezes and
-returns its complete product. Closed command, event, and query vocabularies
-retain visible exhaustive dispatch. A chronological coordinator or atomic
-transition aggregate may remain long when keeping the invariant in one place
-is more coherent than distributing it across handlers.
-
-Catalog compilation follows the same boundary: local declaration normalization
-returns immutable collections, while rules that require a complete collection
-or several declaration families run in an explicit later closure stage. Engine
-evaluation likewise composes a complete per-biome product into route and
-project results; private exact-assembly artifacts remain attached to that one
-evaluation rather than being recovered by a later consumer. These stages may
-compose focused products, but neither compilation nor evaluation gains an
-ambient registry or a parallel semantic path.
-
-### Reorganization Contract
-
-Before a broad structural refactor, record the current authority-to-consumer
-flow, hidden state, import direction, test ownership, expected deletion, and
-relevant work-count baselines. Delivery then proceeds in complete vertical
-slices. One slice moves an authority with its consumer handoff and primary
-tests and removes the superseded path in the same commit. Context-only,
-interface-only, state-wrapper-only, forwarding, and compatibility commits are
-not complete refactor boundaries.
-
-Behavior-preserving movement and behavior changes are separate review units.
-Production contact validation and invariant checks remain production concerns,
-but production must not acquire a shadow semantic model, exhaustive self-audit,
-or test manifest merely to prove a refactor. Independent omission, reachability,
-and closure evidence belongs in tests.
-
-Each policy and edge-case matrix has one primary assertion owner. Facade,
-integration, React parent, and product-loop suites retain representative
-boundary witnesses rather than duplicate the complete matrix. Line, file,
-directory, and test counts are diagnostic evidence—not acceptance quotas. A
-successful reorganization narrows the change neighborhood, leaves no parallel
-path, and explains any net production growth as a necessary enforceable
-boundary.
-
-## Dependency Rules
-
-### Planner Engine
-
-The planner engine may depend on TypeScript and small pure utility libraries
-whose behavior is deterministic and platform-independent.
-
-The planner engine must not depend on:
-
-- React or JSX;
-- Redux or React Redux;
-- Tauri;
-- DOM, browser, or filesystem APIs;
-- shadcn/ui, Tailwind, or graph libraries;
-- game-module Lua structures;
-- mutable application singletons.
-
-Planner-engine operations receive their inputs explicitly and return new
-values or typed results.
-
-Within the engine, related authorities share directories rather than a flat
-collection of prefixed filenames. `simulation/traits/` groups trait history,
-offers, levels, and rarity; `simulation/commerce/` groups store assessments;
-`simulation/fields/` groups Fields spatial facts.
-`simulation/rewards/acquisition/` groups site traversal, conversion generation,
-ordered role settlement, source contracts, and acquisition candidate artifacts.
-`simulation/rewards/shop/` groups inventory generation, ordered Shop settlement,
-and derived-reward transitions; it delegates acquisition effects to the shared
-acquisition authorities rather than implementing a separate purchase simulator.
-Authored action state, contributions, defaults, and lifecycle structure live in
-`authored-project/room-actions/`, separate from simulation's action scheduling.
-Authored acquisition identity, source participation and generated pickup
-structure live in `authored-project/acquisition/`; trait state and carrier-child
-editing live in `authored-project/traits/`. Their command handlers remain
-separate under `commands/acquisition/` and `commands/occurrence/`, beneath the
-single atomic project command dispatcher. Local feature decoders live under
-`room-state/decoding/`; the topology occurrence decoder retains attachment and
-whole-occurrence closure rather than delegating topology ownership to them.
-Topology impact analysis lives with authored topology.
-`authored-project/commands/topology/` groups ordinary, takeover/completion,
-Hub and local-visit command owners behind
-one exhaustive dispatcher. `authored-project/topology/decoding/` separates
-context-bound decision decoding from global structural validation and ownership
-assembly; occurrence codecs consume that complete structural product.
-`simulation/evaluation/` composes project and biome results with their exact
-candidate artifacts. Progressive coverage and authoring readiness stay together
-under `simulation/progressive/`; trait-offer queries and capabilities live under
-`simulation/candidates/trait-offer/`. Trait settlement's coordinator and child
-operations share `simulation/rewards/trait-settlement/`. Shared simulation facts
-remain outside those consumers rather than becoming composition-owned policy.
-These neighborhoods do not introduce new processing stages or change the
-package's supported exports.
-
-### Catalog
-
-Catalog owns raw explicit declarations and declaration normalization. It may
-use the planner engine's public declaration and normalized interfaces. It must fail catalog
-construction for malformed, unknown, or unsupported current-run facts rather
-than inserting permissive fallback values.
-
-### Application
-
-The application layer owns composition and orchestration:
-
-- Redux store construction;
-- project lifecycle commands;
-- simulation scheduling;
-- derived-result publication;
-- portable profile-file and autosave-recovery adapters;
-- Tauri desktop integration;
-- error boundaries and developer diagnostics.
-
-It does not own biome or reward rules.
-
-### UI
-
-The React UI consumes authored state and a coherent derived result. It
-dispatches semantic commands. It may own transient navigation and interaction
-state, but it cannot directly modify topology tables or room payload records.
-The authored-project command layer determines topology-removal closure when it
-applies an explicit semantic command. UI-facing removal and repair interactions
-carry only the complete command-intent capability, declared focus behavior,
-availability, and presentation facts their controls consume; they do not
-publish deletion-closure identities for application observability.
-Every effective semantic command, whether it adds, changes, or removes
-authored state, uses the same history transition and Undo/Redo recovery.
-Removal controls may use a red danger affordance to communicate their
-subtractive effect, but it does not create a distinct command, confirmation,
-or recovery path. React dispatches commands without deriving or persistently
-displaying deletion scope. React never walks authored descendants to infer
-removal, and the planner engine never carries labels, layout order, or other
-presentation/session state.
-For policy-bearing structured-editor controls, React invokes complete bound
-intents and does not choose command variants, reconstruct creation focus, or
-allocate occurrence identities. Simple project-shell and declaration-projected
-biome-field mappings, along with intentionally retained fixed owner-plus-value
-controls, remain direct semantic dispatches. Scoped import restrictions enforce
-only the completed intent-bound feature neighborhoods; the application does not
-claim a project-wide zero-command-literal boundary.
-The selected route and its panel are catalog-driven UI-session state; they do
-not introduce route-specific reducers or authored fields. A project document
-contains one route, so the shell presents its route overview, biome panels, and
-nonempty route indexes rather than switchable sibling authored runs. A fresh
-session has no project until the user chooses a catalog route, and the
-no-project state has no evaluation, history, Save, Undo, or Redo product to
-publish.
-
-## Technology Responsibilities
-
-### TypeScript
-
-TypeScript is the common implementation language for catalog, planner engine,
-and UI.
-Discriminated unions should represent layout variants, room state variants,
-reward bindings, commands, lifecycle events, and findings.
-
-Static types do not replace contact validation. Project files, imported
-catalog assets, and future game artifacts are untrusted data until decoded.
-
-### React
-
-React renders projections and binds user interactions to semantic commands.
-React component identity is not domain identity. Component keys derive from
-stable semantic addresses.
-
-### Redux Toolkit
-
-Redux Toolkit owns application-coordinated state:
-
-- the current authored project;
-- undo and redo history;
-- project dirty/save state;
-- transient editor session state;
-- the latest atomically published simulation result;
-- application-level errors.
-
-Domain mutations remain explicit commands. Reducers may use Immer-backed
-updates, but command handlers must preserve the authored model invariants.
-
-The simulation result is not persisted and is not edited. Undo/redo changes
-authored state and triggers a fresh simulation.
-
-### Vite and Vitest
-
-Vite hosts the browser application and builds the React SPA used by both web
-and desktop hosts. Vitest
-runs pure package tests and focused UI-adapter tests. Type checking remains a
-separate required command because test transformation alone is not a type
-proof.
-
-Test-only authored-project checkpoints are strict, current-schema
-`ProjectDocument` inputs under `test/fixtures/authored-project/checkpoints/`.
-Static route-scoped imports feed lazy loaders that decode and freeze each
-checkpoint through the production codec; tests never load serialized
-simulation, validation, workspace, Redux, or rendered output. Reusable full
-route states have no permanent command-replay builder or writer beside the
-saved JSON. Route support may retain semantic IDs and focused one-to-few-command
-deltas from a checkpoint. A test that owns command, codec,
-progressive-repair, history, or undo/redo semantics remains command-driven;
-other layers retain representative boundary contacts without copying the
-owning matrix.
-
-The checkpoint manifest records stable identity, scenario intent, artifact
-provenance, route prefix, schema/catalog versions, and the SHA-256 of exact
-canonical bytes. `npm run test:fixtures:check`, also called by the root
-`npm run check`, proves manifest/registry/file closure, strict decode,
-canonical encoding, hashes, stable frozen loader identity, retained incomplete
-and context-invalid states, and non-mutating focused deltas. Static JSON import
-edges remain explicit so changed-file selection reaches normal consumers.
-
-Schema and catalog changes review this bounded saved-state corpus explicitly.
-A shape-only schema bump may use a temporary raw JSON transformer in that same
-schema commit: parse the prior documents as unknown, transform the exact shape,
-strict-decode with the new codec and catalog, canonical-encode the replacements,
-update manifest metadata and hashes, run fixture integrity and the complete
-gate, then delete the transformer. A one-to-many migration must emit every
-complete document without choosing or discarding a sibling. Semantic changes
-require a per-checkpoint intent decision; production compatibility decoding and
-a permanent fixture migration framework remain out of scope.
-
-Correctness and performance are separate test products. Correctness tests use
-shared non-termination watchdogs and no retry-based masking. Performance tests
-measure representative full rebuild, candidate, edit, and cached-Undo work in
-an isolated lane and compare revisions on the same host. Exact commands,
-worker counts, watchdog values, metric sets, and regression thresholds belong
-to repository test configuration and contributor instructions rather than this
-architecture authority.
-
-### Tauri
-
-Tauri is a permission-minimal host around the same Vite application used by
-browser development. Its current responsibility is native window creation,
-no-install platform packaging, and native project-file persistence. Platform
-packaging remains a host concern and does not alter application or domain
-semantics.
-
-The desktop host's responsibilities remain narrow:
-
-- native window and packaging;
-- open/save dialogs;
-- scoped project-file access and one machine-local active-file reference;
-- clipboard integration;
-- application preferences and update plumbing if later required.
-
-No simulator rule moves into Rust merely because Tauri is present. The host
-enables native Open/Save dialogs and text reads/writes only for paths granted
-through those dialogs. It may persist the last accepted profile path in its
-machine-local application-data directory and reconstruct that one scoped
-reference on restart; Rust does not parse or validate planner JSON. Tauri's
-native file-drop interception remains disabled so ordinary HTML pointer and
-drag interactions retain browser parity.
-
-## Application Lifecycle
-
-The application lifecycle is:
-
-```text
-choose a catalog route, or load a profile
-  -> create/load one project
-  -> decode and normalize authored state
-  -> run full pure simulation
-  -> atomically publish authored project + exact evaluation assembly
-
-semantic edit
-  -> apply one authored command
-  -> push undo history when appropriate
-  -> run full pure simulation
-  -> atomically publish replacement exact evaluation assembly
-
-undo/redo
-  -> replace authored state
-  -> run full pure simulation
-  -> atomically publish replacement exact evaluation assembly
-```
-
-Before route choice or a successful load, the application publishes a
-no-project workspace. It has no authored history, evaluation assembly, or
-autosave publication. New route selection creates one route document; it does
-not create a placeholder or retain another route in the same project.
-
-There is no source revision, rebuild revision, incremental invalidation graph,
-or background worker. The complete route model favors correctness and
-explicitness. Performance optimization is driven by measurement and must
-preserve the same pure simulation input/output contract.
-
-## Atomic Derived Publication
-
-One simulation attempt produces one coherent immutable assembly. Its public
-surface carries the exact authored identity and data-only evaluation; its
-implementation privately retains the candidate artifacts produced by that
-same execution:
-
-```ts
-interface ProjectEvaluationAssembly {
-  readonly project: ProjectDocument;
-  readonly evaluation: ProjectEvaluation;
-  // Candidate artifacts remain opaque outside the prepared-session boundary.
-}
-```
-
-`simulateProject` is the data-only facade over this assembly. It does not run a
-second evaluation to obtain public data, and candidate-session construction
-rejects an assembly that was not produced by the exact simulator execution.
-The public evaluation remains:
-
-```ts
-interface ProjectEvaluation {
-  status: 'empty' | 'valid' | 'incomplete' | 'invalid';
-  projectId: string;
-  catalogVersion: string;
-  route: ProjectRouteEvaluation;
-  findings: readonly SemanticFinding[];
-  summary: RouteEvaluationSummary;
-}
-```
-
-One route evaluation publishes explicit `completeValidPrefix`, `active`, and
-`blockedSuffix` processing regions. Only a complete and valid biome enters the
-prefix and seeds the next biome. Every biome result separately reports
-authoring state and evaluation coverage.
-
-- An unevaluated incomplete biome publishes its semantic authoring frontier
-  and no materialized or canonical snapshot.
-- A reached valid incomplete biome publishes its maximum structurally
-  materializable authored prefix and the assessment products reached through
-  that prefix.
-- A contextually blocked complete or incomplete biome publishes that maximum
-  structurally materializable prefix separately from an optional clamped
-  `assessmentPrefix`. Coverage, findings, Run State, and candidate artifacts
-  stop at the first blocking atomic region. The `ProjectDocument` alone retains
-  any remaining authored suffix; neither retained prefix nor suffix becomes
-  assessed truth merely because it is authored.
-- Only a complete-valid biome publishes `CanonicalBiome`, final biome history,
-  completion transition, and a route seed for the next biome.
-
-The first blocking region is located from existing materialization,
-generation, reward, encounter, and lifecycle chronology rather than finding
-array order. Aggregate authorities attach an internal atomic-region key when
-they produce findings. Every co-owned error finding at the first region is
-retained; later findings and capabilities are withheld. Hub open-board and
-other jointly unordered products remain atomic and never claim a false
-rendered-child prefix.
-
-Run State observes the same coverage. A snapshot remains available through the
-outer decision containing the blocked value and is explicitly unavailable
-afterward. There is no canonical-only repair clamp or candidate-only selected
-evaluation path. The UI must never combine prefix or final history from one
-authored snapshot with findings, Run State, or candidate decoration from
-another.
-
-`empty` identifies a project with no configured biome prefix and no invented
-finding. Ordinary incomplete and invalid plans remain first-class editor states.
-Malformed project documents, impossible catalog construction, and violated
-internal invariants throw at their contact boundary and do not masquerade as
-user feedback.
-
-### Authored-first workspace assembly
-
-The planner application composes one structured-workspace source index from
-the full `ProjectDocument` and its matching data-only evaluation:
-
-```text
-ProjectDocument + matching ProjectEvaluation
-  -> WorkspaceProjectSourceIndex
-      -> one WorkspaceBiomeSource per authored biome
-          -> full authored plan and topology
-          -> one context-free BiomeCompletenessResult
-          -> explicit assessed-owner coverage and findings
-          -> reached evaluator overlays only
-  -> semantic assembly + topology-interaction assembly
-  -> bound interaction catalog + React presentation
-```
-
-`WorkspaceBiomeSource` is the only planner production boundary that acquires
-biome completeness. Semantic frontier assembly and topology-interaction
-assembly consume that immutable product; React and Redux neither recompute it
-nor infer coverage.
-
-Authored topology is always the structural base. A complete-valid biome may
-overlay its canonical snapshot. A progressive or complete-blocked biome
-overlays `assessmentPrefix` when present, otherwise its reached materialized
-prefix; it never overlays the larger retained materialization past a clamp.
-Assessed-owner indexing and source-contact validation reject evaluator products
-that extend beyond declared coverage. Findings remain separately indexed so
-the first blocked owner stays navigable even when its value is the boundary
-rather than an assessed downstream product.
-
-Rooms and decisions after that boundary remain visible, editable, and marked
-unassessed from authored structure. They do not receive canonical `entered`,
-Clockwork, physical-exit, or room-local evaluator facts. Declaration-owned
-availability and authored local controls remain intact, and lazy candidate
-contact reports unavailable until evaluation reaches their exact owner.
-
-## Composition and Dependency Injection
-
-The planner app owns one composition root. It constructs concrete systems and
-passes explicit collaborators downward:
-
-```text
-build catalog
-build codecs
-build simulator registries
-build profile-file adapter
-build autosave-recovery adapter
-build Redux store and evaluation coordinator
-render React application
-```
-
-Do not use mutable service tables that acquire properties during composition.
-Construct complete named collaborators and return new system objects. Tests
-can compose the same planner engine with fixture catalogs and in-memory project
-repositories.
-
-## Application Persistence Boundary
-
-The app persists an authored project document, not Redux state and not a
-simulation cache. The document contains only durable semantic choices and its
-schema version.
-
-The normalized current-schema `ProjectDocument` is also the portable
-profile-file format. It contains exactly one selected route and its authored
-state. One profile is one saved planning workspace; it is not a container for
-sibling runs. A filename and native path belong to the application and host
-file session, not the authored document. A separate wrapper is justified only if
-one profile must own durable data that is not part of one authored project,
-such as several projects or application preferences.
-
-Manual profile persistence and automatic recovery are separate application
-authorities:
-
-```ts
-interface ProfileFileAdapter {
-  readonly supportsSaveAs: boolean;
-  clearActive(): Promise<void>;
-  saveAs(suggestedFileName: string, json: string): Promise<ProfileFileReference | null>;
-  load(): Promise<{ readonly file: ProfileFileReference; readonly json: string } | null>;
-  restoreActive(): Promise<ProfileFileRestoreResult>;
-}
-
-interface ProfileFileReference {
-  readonly fileName: string;
-  activate(): Promise<void>;
-  write(json: string): Promise<void>;
-}
-
-interface AutosaveRecoveryAdapter {
-  read(): string | null;
-  write(json: string): void;
-  clear(): void;
-}
-```
-
-`ProfileFileAdapter` owns explicit user-directed Load, Save, and Save As
-operations. A successful Load, first Save, or Save As returns one host-owned
-file reference. Project operations retain that reference outside Redux,
-authored JSON, and undo/redo; later Save calls write through it, while New
-clears it before publishing the new project. A selected reference is activated
-only after its document has been accepted or its snapshot has been written.
-Cancellation, invalid content, preparation failure, and write failure leave
-the prior active reference and baseline unchanged.
-
-The browser adapter deliberately keeps one portable behavior: references write
-through ordinary downloads and Load uses an HTML file input. Save As would be
-identical to Save there, so the browser menu omits it. The Tauri adapter uses
-native dialogs and persists one accepted path through narrow native commands;
-later Save overwrites that file after a restart, while Save As writes and
-activates another file. The native host stores only path metadata and raw
-bytes. Project decoding, canonical comparison, recovery precedence, and dirty
-state remain application responsibilities. `AutosaveRecoveryAdapter` owns a
-separate browser-local recovery key and never substitutes for an explicit
-profile file. Browser and native globals remain confined to their own adapters
-and application composition.
-
-The application keeps the fingerprint of the last successfully saved snapshot
-or explicitly loaded profile as session state. Dirty state is derived by
-comparing that fingerprint with the current normalized project fingerprint.
-If the user edits while an asynchronous save is pending, success establishes
-the serialized snapshot as the baseline and the newer current project remains
-dirty. Autosave writes do not establish a clean baseline. Undoing back to the
-explicit baseline is therefore clean even without another save. Anonymous or
-different-content autosave recovery is reported as recovered and unsaved;
-canonically equivalent desktop recovery is recognized as the clean disk
-snapshot.
-
-Desktop startup reconciles the remembered disk document with autosave before
-constructing the synchronous application. A missing autosave opens the disk
-document clean; canonically equivalent recovery also opens clean. Different
-valid recovery opens as recovered work, retains the disk snapshot as its
-baseline, and keeps Save bound to that file. A missing, unreadable, or invalid
-remembered file falls back to valid recovery anonymously and clears the stale
-association. Corrupt recovery remains blocked and exportable without erasing a
-valid remembered file. Browser startup retains anonymous recovery behavior.
-
-Autosave observes only effective authored-project replacements, including
-semantic edits, undo/redo, route selection through New, and successful profile
-load. It is debounced and ignores navigation, findings, and derived simulation
-publication. A corrupt recovery value is preserved for diagnosis or explicit
-discard: startup remains in the no-project state, presents the route chooser
-and failure, and suspends further autosave so the raw value cannot be
-overwritten accidentally. Successful profile load or explicit Discard Autosave
-clears that recovery blockade; selecting a route while blocked does not.
-
-Authored room identity is occurrence-based: each persisted occurrence has an
-opaque stable ID, selected game room name, and local state. The catalog keeps
-game declarations unique, while topology may contain several occurrences of
-the same game name.
-
-These remain transient:
-
-- active route, biome, and inspector tab;
-- expanded panels and tree nodes;
-- search and selector text;
-- hover, focus, and selection rectangles;
-- simulation history and findings;
-- candidate colors and messages;
-- undo/redo history;
-- graph viewport and node positions unless explicitly introduced as
-  user presentation preferences in a separate settings document.
-
-## Performance Policy
-
-Correctness comes first, but the editor should remain responsive:
-
-- normalize declarations once at app startup;
-- use immutable catalog arrays and maps;
-- keep simulation pure and deterministic;
-- memoize only measured expensive projections;
-- avoid storing duplicate derived facts in Redux;
-- virtualize genuinely large lists if needed;
-- keep React component subscriptions narrow;
-- benchmark full-project simulation before designing incremental caches.
-
-Ordinary React render allocation is not a domain constraint. Performance work
-targets observed latency rather than imposing game-module draw-path
-restrictions on the editor.
-
-## Feature Ownership
-
-Cross-layer features follow the same package direction as the rest of the
-application. Catalog declarations own normalized game facts; the planner
-engine owns authored meaning, simulation state, legality, candidates, and
-findings; the application adapts complete engine products into interactions;
-React renders them. Trait-offer semantics are specified by
-`REWARD_MODEL.md` and `SIMULATION_AND_VALIDATION.md`, while their editor
-surface is specified by `EDITOR_MODEL.md` and `CONTEXTUAL_EDITOR_UX.md`.
-Neither the application nor React reconstructs provider, rarity, replacement,
-slot, or lifecycle policy.
-
-## Rejected Shapes
-
-Do not introduce:
-
-- simulation logic inside React components;
-- a UI tree as the authored topology authority;
-- persisted Redux store snapshots as the project format;
-- a second validator in the external game module;
-- game-module APIs inside the planner-engine package;
-- arbitrary executable plan code;
-- a graph library as topology storage;
-- silent repair of invalid user choices;
-- generic fallback behavior for missing current-run rules;
-- probability scoring, route-likelihood warnings, or seeded RNG replay;
-- premature incremental simulation, workers, databases, or Rust services.
+### Catalog — packages/hades2-catalog
+
+Owns explicit game declarations and their compilation into the engine's
+supported catalog contract. It may import the engine's declared catalog-schema
+and normalized interfaces, but not authored state, simulation implementation,
+application composition or React.
+
+### Engine — packages/planner-engine
+
+Owns authored state, semantic addresses, codecs, commands, history,
+requirements, reward transitions, materialization, simulation, candidates,
+validation, findings, authoring queries and execution assembly/codecs.
+
+It defines the normalized interfaces it consumes. It must not import the
+catalog implementation, React, Redux, Tauri, browser/filesystem APIs or game
+runtime objects. Operations receive explicit inputs and return pure products
+or immutable transitions. Presentation labels invented by the editor, focus
+destinations and picker sections are not engine products.
+
+### Application — apps/planner
+
+Owns composition, persistence adapters, state coordination, projections,
+interaction binding and React presentation. It constructs the catalog and
+engine collaborators; it does not reconstruct their rules.
+
+Redux coordinates authored history, session state and atomic publication.
+React renders supported products and invokes bound intents or deliberately
+retained fixed semantic mappings. Neither layer repairs topology, determines
+eligibility or counts lifecycle events.
+
+## Construction and Publication
+
+Each producer returns every fact and capability its consumers need. Do not
+return an apparent result while hiding essential semantic data in module
+registration, initialization order or a result-keyed sidecar map.
+
+A stage may use a mutable builder internally. Its boundary returns a complete
+immutable product. A cache may reuse that product, and identity attestation
+may verify its provenance; neither substitutes for carrying the product.
+
+Application-wide collaborators are created at the composition root and
+passed as narrow capabilities. A parameter object or factory is justified by
+a real product boundary, not merely a long signature. Do not introduce an
+ambient context, service locator, mutable service table or dependency-injection
+container.
+
+The authored snapshot and its exact evaluation are published together.
+Undo/Redo may reuse an assembly for the identical immutable snapshot. It must
+never combine current authorship with another snapshot's history, findings or
+candidate context.
+
+Evaluation coverage is not authoring readiness. A missing required choice
+locks later repair regions; invalidity alone does not. Retained authored
+structure stays visible even without assessed facts. The engine owns the
+[horizon](SIMULATION_AND_VALIDATION.md#authoring-readiness); the application
+[binds it to controls](EDITOR_MODEL.md#authored-first-assembly).
+
+## Code Placement and Imports
+
+Place a module with the authority that owns its policy, not the first caller
+that needs it. Before adding a boundary, name its owner, inputs, returned
+product, consumers, primary tests and superseded path. Prefer the nearest
+existing semantic neighborhood over generic common/shared/helpers directories.
+
+An assembly module composes owned products; it does not become their policy
+owner. An `index.ts` is a deliberate supported surface, not a convenience
+barrel. Large chronological or atomic coordinators can be correct boundaries:
+splitting their mutable state across wrappers can make ownership worse.
+
+Cross-package consumers use declared package exports. Within the planner,
+cross-root imports use `@planner/*` for composition, persistence, projections,
+state, ui and workspace. Test support uses `@planner-test/*`, and repository
+authored fixtures use `@run-planner/test-fixtures`. Immediate-neighborhood
+`./` and `../` imports remain appropriate; planner imports do not climb two
+or more parent directories.
+
+Aliases identify ownership roots, not public APIs or injection boundaries.
+The engine uses direct internal relative imports instead of routing internal
+dependencies through public barrels. Pure package imports remain static, and
+planner aliases do not enter pure package source. Enforce mechanically
+observable boundaries through TypeScript, ESLint or architecture tests.
+
+Production source must not import test fixtures, harnesses, expected manifests
+or observers. Those belong under test support.
+
+## Adding a Feature
+
+### Reuse existing meaning first
+
+A new room using existing templates should primarily be declaration work:
+supply its exact exits, encounter binding, reward surface, eligibility and
+defaults. Normalization proves the contract; existing engine and application
+consumers use it. A biome-name branch is not justified merely because the
+declaration is new.
+
+A genuinely new mechanic starts at the authority that cannot yet express it.
+For a targeted acquisition:
+
+1. Catalog describes the supported effect and its declaration facts.
+2. Authored state persists only the user's choices; commands maintain their
+   structural ownership atomically.
+3. Lifecycle determines when settlement runs.
+4. Settlement returns branch effects, findings and exact repair frontiers
+   together.
+5. Candidates consume those frontiers; the application binds the child and
+   its finding to one repair interaction.
+6. React renders the supported control and submits a complete intent.
+
+Not every feature touches every lane. Layout polish may need no engine
+change; a supported declaration may need no application change. Execution
+publication consumes engine meaning rather than inventing an additional
+semantic interpretation.
+
+### Verify the handoff, not only the happy path
+
+Keep the complete policy matrix with its owning authority. Consumer suites
+retain representative contact witnesses rather than repeat that matrix.
+A targeted effect needs an incomplete-target repair witness, not just proof
+that a complete acquisition succeeds. A generated pickup needs a source edit
+and removal witness, not just proof that it appears once.
+
+Use real authored checkpoints for interactions that span the route. Shared
+checkpoints are current-schema documents decoded and frozen through the
+production codec, not serialized evaluations or rendered workspaces. Their
+manifest attests identity, intent, provenance and canonical bytes. Static
+imports preserve changed-test reachability. Command/codec/history tests remain
+command-driven; downstream tests need not replay the entire route to obtain
+a starting state.
+
+Fixture migrations must preserve each scenario's intent, pass current strict
+decoding and regenerate canonical bytes and hashes. A one-to-many migration
+must emit all documents rather than silently select a sibling. Temporary
+transformers are removed after conversion; no permanent alternate fixture
+decoder is introduced. Generated execution fixtures follow the separate
+byte-preservation and mirroring discipline in contributor instructions.
+
+## Hosts, Performance and Maintenance
+
+Vite builds the same React application for browser and desktop. Tauri owns
+native windows, packaging, scoped file transport and the remembered active-file
+reference. Rust does not parse planner semantics. Browser/filesystem effects
+stay behind application adapters; desktop integration does not move simulator
+rules into the host. Native file-drop interception remains disabled to retain
+ordinary HTML interaction behavior.
+
+TypeScript checks static contracts; runtime codecs protect external contacts.
+Vitest transformation alone is not a type proof. Correctness and performance
+are separate verification products: shared watchdogs detect likely hangs,
+while measured rebuild, candidate, edit and cached-Undo comparisons assess
+latency. Commands and calibrated thresholds belong to repository configuration
+and contributor instructions, not duplicated design tables.
+
+Optimize measured bottlenecks while preserving pure input/output contracts.
+Keep normalized data immutable, avoid duplicate derived Redux state and keep
+subscriptions narrow. Do not introduce workers, incremental invalidation or
+new infrastructure solely in anticipation of growth.
+
+Refactor in complete vertical slices: move an authority, its consumers and
+primary tests, then remove the superseded path. Separate behavior-preserving
+movement from behavior corrections. File count and line count are evidence,
+not quotas. Production checks protect real contacts; exhaustive structural
+closure and mutation auditing belong in tests, not a second production model.
+
+Stable documents describe current ownership, invariants, examples and safe
+extension. They do not accumulate version milestones or gate histories.
+Temporary investigations and delivery plans are retired after their durable
+conclusions have an owning home.
