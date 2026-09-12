@@ -7,6 +7,7 @@ import { findingIdentityKey, ownerRegion, type FindingRegionEntry } from '../../
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import { rewardFindingChronologyForRoom } from '../finding-chronology';
 import { createBiomeRewardFacts } from '../../facts';
+import { mergeRewardFindingEmissions } from '../../findings';
 import type { RewardBranchState } from '../../branch-primitives';
 import type { RewardHistoryState } from '../../../../reward-kernel';
 import {
@@ -114,9 +115,9 @@ export function applyReachedOfferSettlement(
           branchHistory,
           enteredBiomeCount,
         ),
-      findings,
       ownerRegion(wheel.origin),
     );
+    mergeRewardFindingEmissions(findings, settlement.findingEmissions);
     return Object.freeze({
       branches: settlement.branches,
       findings: changedFindings(),
@@ -148,7 +149,6 @@ export function applyReachedOfferSettlement(
     room,
     event,
     producerFacts,
-    findings,
     (detail) => {
       throw new BiomeRewardSimulationContractError(detail);
     },
@@ -158,6 +158,7 @@ export function applyReachedOfferSettlement(
     inputs.authoredSeaStarDuplicateSiteKeys,
     timelineOwner,
   );
+  mergeRewardFindingEmissions(findings, settlement.findingEmissions);
   return Object.freeze({
     branches: settlement.branches,
     findings: changedFindings(),

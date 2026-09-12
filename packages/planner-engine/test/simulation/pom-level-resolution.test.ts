@@ -33,6 +33,7 @@ import {
 import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition-settlement';
+import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { applyProjectCommand } from '@run-planner/engine/authored-project';
 import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
 import {
@@ -60,9 +61,9 @@ function settleTestRoomReward(
   source: Parameters<typeof settleOwnedAcquisitionSite>[2]['source'],
   sequence: number,
   facts: Parameters<typeof settleOwnedAcquisitionSite>[3],
-  findings: Parameters<typeof settleOwnedAcquisitionSite>[4],
+  findings: Map<string, import('../../src/simulation/finding-regions').FindingRegionEntry>,
 ) {
-  return settleOwnedAcquisitionSite(
+  const settlement = settleOwnedAcquisitionSite(
     catalog,
     branches,
     {
@@ -73,8 +74,9 @@ function settleTestRoomReward(
       historySequence: sequence,
     },
     facts,
-    findings,
-  ).branches;
+  );
+  mergeRewardFindingEmissions(findings, settlement.findingEmissions);
+  return settlement.branches;
 }
 
 function equippedHistory() {

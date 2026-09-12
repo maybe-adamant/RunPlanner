@@ -77,7 +77,7 @@ import {
   type ReachedTraitChildCheckpoint,
   type ReachedTraitOfferCandidateContact,
 } from './trait-settlement';
-import { addRewardFinding, rewardFinding } from './findings';
+import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from './findings';
 import type { ResolvedAcquisitionSource } from './model';
 
 export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalVisitRoom;
@@ -107,6 +107,8 @@ export interface AcquisitionSettlementProduct {
   readonly site: AcquisitionSiteAddress;
   readonly entries: readonly AcquisitionSettlementEntry[];
   readonly branches: readonly RewardBranchState[];
+  /** Ordered findings emitted while this site and its composed children settled. */
+  readonly findingEmissions: readonly FindingRegionEntry[];
   /**
    * Exact pre-entry histories captured by one canonical ordered optional-pickup
    * settlement. Candidate artifacts consume these products; they never replay
@@ -133,32 +135,6 @@ export interface ProducerRoleSettlementProduct {
   readonly findingEmissions: readonly FindingRegionEntry[];
   readonly roleFrontiers: readonly AcquisitionRoleFrontier[];
   readonly traitChildSettlements: readonly ReachedTraitChildCheckpoint[];
-}
-
-/**
- * Replays a returned producer-role finding product through the sole finding
- * writer so same-identity Pom evaluations retain their existing merge and
- * deduplication semantics.
- */
-export function accumulateProducerRoleFindingEmissions(
-  findings: Map<string, FindingRegionEntry>,
-  emissions: readonly FindingRegionEntry[],
-): void {
-  for (const emission of emissions) {
-    if (emission.levelResolutionEvaluations === undefined) {
-      addRewardFinding(findings, emission.finding, emission.atomicRegion, emission.chronology);
-      continue;
-    }
-    for (const evaluation of emission.levelResolutionEvaluations) {
-      addRewardFinding(
-        findings,
-        emission.finding,
-        emission.atomicRegion,
-        emission.chronology,
-        evaluation,
-      );
-    }
-  }
 }
 
 export interface DerivedAcquisitionEntryFrontier {
@@ -478,7 +454,6 @@ export function settleProducerAcquisitionSite(
   room: CanonicalRewardRoom,
   event: Extract<HistoryEvent, { readonly kind: 'producerRoleAdvanced' }>,
   facts: RewardFactsFactory,
-  findings: Map<string, FindingRegionEntry>,
   fail: (detail: string) => never,
   atomicRegion?: string,
   findingChronology?: FindingChronology,
@@ -545,11 +520,11 @@ export function settleProducerAcquisitionSite(
     false,
     authoredSeaStarDuplicateSiteKeys,
   );
-  accumulateProducerRoleFindingEmissions(findings, settled.findingEmissions);
   return Object.freeze({
     site,
     entries: Object.freeze([entry]),
     branches: settled.branches,
+    findingEmissions: settled.findingEmissions,
     roleFrontiers: settled.roleFrontiers,
     traitChildSettlements: settled.traitChildSettlements,
   });
@@ -561,7 +536,6 @@ export function settleOwnedAcquisitionSite(
   branches: readonly RewardBranchState[],
   request: OwnedAcquisitionSettlementRequest,
   facts: RewardFactsFactory,
-  findings: Map<string, FindingRegionEntry>,
   atomicRegion?: string,
   findingChronology?: FindingChronology,
 ): AcquisitionSettlementProduct {
@@ -594,6 +568,7 @@ export function settleOwnedAcquisitionSite(
   });
   const roleFrontiers: AcquisitionRoleFrontier[] = [];
   const traitChildSettlements: ReachedTraitChildCheckpoint[] = [];
+  const findingEmissions = new Map<string, FindingRegionEntry>();
   const sourceReward: AuthoredRewardState = Object.freeze({
     offer: source.offer,
     traitOffersByAcquisitionRole: source.traitOffersByAcquisitionRole ?? Object.freeze({}),
@@ -621,7 +596,7 @@ export function settleOwnedAcquisitionSite(
       request.authoredSeaStarDuplicateSiteKeys,
     );
     current = settled.branches;
-    accumulateProducerRoleFindingEmissions(findings, settled.findingEmissions);
+    mergeRewardFindingEmissions(findingEmissions, settled.findingEmissions);
     roleFrontiers.push(...settled.roleFrontiers);
     traitChildSettlements.push(...settled.traitChildSettlements);
   }
@@ -655,8 +630,8 @@ export function settleOwnedAcquisitionSite(
                 authoredSeaStarDuplicateSiteKeys: request.authoredSeaStarDuplicateSiteKeys,
               }),
         },
-        findings,
       );
+      mergeRewardFindingEmissions(findingEmissions, replacement.findingEmissions);
       current = mergeEquivalentRewardBranches(
         Object.freeze([...untouched, ...replacement.branches]),
       );
@@ -669,6 +644,7 @@ export function settleOwnedAcquisitionSite(
     site,
     entries: Object.freeze(entries),
     branches: current,
+    findingEmissions: Object.freeze([...findingEmissions.values()]),
     roleFrontiers: Object.freeze(roleFrontiers),
     traitChildSettlements: Object.freeze(traitChildSettlements),
   });
@@ -700,12 +676,12 @@ export function settleAcquisitionResolvedReward(
     readonly authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string>;
   },
   facts: RewardFactsFactory,
-  findings: Map<string, FindingRegionEntry>,
   atomicRegion?: string,
   findingChronology?: FindingChronology,
 ): AcquisitionSettlementProduct {
   const site = createAcquisitionSiteAddress(request.siteOwner, request.pointKey);
   const address = createAcquisitionEntryAddress(site, request.entryKey);
+  const findingEmissions = new Map<string, FindingRegionEntry>();
   const declaration = catalog.rewards.rewardTypes.byKey[request.visibleOffer.rewardType];
   const resolution = declaration?.sourceResolution;
   if (resolution?.kind !== 'acquisitionRole') {
@@ -734,7 +710,7 @@ export function settleAcquisitionResolvedReward(
   });
   if (request.reward === undefined || request.reward === null) {
     addRewardFinding(
-      findings,
+      findingEmissions,
       rewardFinding('rewardMissing', address, {}),
       atomicRegion ?? ownerRegion(address),
       findingChronology ?? historyChronology(request.historySequence),
@@ -750,12 +726,13 @@ export function settleAcquisitionResolvedReward(
         }),
       ]),
       branches: Object.freeze([]),
+      findingEmissions: Object.freeze([...findingEmissions.values()]),
       derivedEntryFrontiers: Object.freeze([frontier]),
     });
   }
   if (request.reward.offer.rewardType !== request.visibleOffer.rewardType) {
     addRewardFinding(
-      findings,
+      findingEmissions,
       rewardFinding('rewardSourceUnavailable', address, {
         reason: 'retainedSourceMismatch',
         rewardType: request.visibleOffer.rewardType,
@@ -767,6 +744,7 @@ export function settleAcquisitionResolvedReward(
       site,
       entries: Object.freeze([]),
       branches: Object.freeze([]),
+      findingEmissions: Object.freeze([...findingEmissions.values()]),
       derivedEntryFrontiers: Object.freeze([frontier]),
     });
   }
@@ -803,7 +781,6 @@ export function settleAcquisitionResolvedReward(
         : { authoredSeaStarDuplicateSiteKeys: request.authoredSeaStarDuplicateSiteKeys }),
     },
     facts,
-    findings,
     atomicRegion,
     findingChronology,
   );
@@ -834,7 +811,6 @@ export function settleArtificerReplacementAcquisition(
     readonly findingChronology?: FindingChronology;
     readonly authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string>;
   },
-  findings: Map<string, FindingRegionEntry>,
 ): AcquisitionSettlementProduct {
   const disposition = request.sourceReward.dispositionByAcquisitionRole[request.acquisitionRole];
   if (disposition?.kind !== 'artificer')
@@ -850,10 +826,11 @@ export function settleArtificerReplacementAcquisition(
   const untouched = branches.filter(
     (branch) => !hasArtificerUse(branch, request.sourceOrigin, request.acquisitionRole),
   );
+  const findingEmissions = new Map<string, FindingRegionEntry>();
   const replacement = request.replacement ?? null;
   if (replacement === null) {
     addRewardFinding(
-      findings,
+      findingEmissions,
       rewardFinding('rewardMissing', address, { acquisitionRole: request.acquisitionRole }),
       request.atomicRegion ?? ownerRegion(address),
       request.findingChronology ?? historyChronology(request.historySequence),
@@ -869,6 +846,7 @@ export function settleArtificerReplacementAcquisition(
         }),
       ]),
       branches: mergeEquivalentRewardBranches(untouched),
+      findingEmissions: Object.freeze([...findingEmissions.values()]),
       roleFrontiers: Object.freeze([]),
       traitChildSettlements: Object.freeze([]),
     });
@@ -931,7 +909,7 @@ export function settleArtificerReplacementAcquisition(
       request.authoredSeaStarDuplicateSiteKeys,
     );
     current = settled.branches;
-    accumulateProducerRoleFindingEmissions(findings, settled.findingEmissions);
+    mergeRewardFindingEmissions(findingEmissions, settled.findingEmissions);
     roleFrontiers.push(...settled.roleFrontiers);
     traitChildSettlements.push(...settled.traitChildSettlements);
   }
@@ -946,6 +924,7 @@ export function settleArtificerReplacementAcquisition(
       }),
     ]),
     branches: mergeEquivalentRewardBranches(Object.freeze([...untouched, ...current])),
+    findingEmissions: Object.freeze([...findingEmissions.values()]),
     roleFrontiers: Object.freeze(roleFrontiers),
     traitChildSettlements: Object.freeze(traitChildSettlements),
   });
@@ -996,7 +975,6 @@ export function settlePickupAcquisitionSite(
     /** Candidate-only outer reward probes do not publish the child's own frontier. */
     readonly publishUnpickedChildFrontiers?: boolean;
   },
-  findings: Map<string, FindingRegionEntry>,
 ): AcquisitionSettlementProduct {
   const site = request.site;
   const definitions = new Map<
@@ -1051,6 +1029,7 @@ export function settlePickupAcquisitionSite(
   const pickupEntryFrontiers: PickupAcquisitionEntryFrontier[] = [];
   const roleFrontiers: AcquisitionRoleFrontier[] = [];
   const traitChildSettlements: ReachedTraitChildCheckpoint[] = [];
+  const findingEmissions = new Map<string, FindingRegionEntry>();
   const interactedSources = new Set<string>();
   // Active inventory authorship is independent of pickup order. An unpicked
   // unresolved entry still owns an editable leaf and a missing-authorship
@@ -1063,7 +1042,7 @@ export function settlePickupAcquisitionSite(
       Object.freeze({ address, reward: null, branchesBeforeEntry: current }),
     );
     addRewardFinding(
-      findings,
+      findingEmissions,
       rewardFinding('rewardMissing', address, {}),
       request.atomicRegion ?? ownerRegion(address),
       request.findingChronology ?? historyChronology(request.historySequence),
@@ -1140,7 +1119,7 @@ export function settlePickupAcquisitionSite(
           request.authoredSeaStarDuplicateSiteKeys,
         );
         candidateOnly = settled.branches;
-        accumulateProducerRoleFindingEmissions(findings, settled.findingEmissions);
+        mergeRewardFindingEmissions(findingEmissions, settled.findingEmissions);
         roleFrontiers.push(...settled.roleFrontiers);
         traitChildSettlements.push(...settled.traitChildSettlements);
       }
@@ -1155,7 +1134,7 @@ export function settlePickupAcquisitionSite(
           Object.freeze({ address, reward: null, branchesBeforeEntry: current }),
         );
         addRewardFinding(
-          findings,
+          findingEmissions,
           rewardFinding('rewardMissing', address, {}),
           request.atomicRegion ?? ownerRegion(address),
           request.findingChronology ?? historyChronology(request.historySequence),
@@ -1205,8 +1184,8 @@ export function settlePickupAcquisitionSite(
                 authoredSeaStarDuplicateSiteKeys: request.authoredSeaStarDuplicateSiteKeys,
               }),
         },
-        findings,
       );
+      mergeRewardFindingEmissions(findingEmissions, settlement.findingEmissions);
       current = settlement.branches;
       roleFrontiers.push(...(settlement.roleFrontiers ?? []));
       traitChildSettlements.push(...(settlement.traitChildSettlements ?? []));
@@ -1275,7 +1254,7 @@ export function settlePickupAcquisitionSite(
         request.authoredSeaStarDuplicateSiteKeys,
       );
       current = settled.branches;
-      accumulateProducerRoleFindingEmissions(findings, settled.findingEmissions);
+      mergeRewardFindingEmissions(findingEmissions, settled.findingEmissions);
       roleFrontiers.push(...settled.roleFrontiers);
       traitChildSettlements.push(...settled.traitChildSettlements);
     }
@@ -1284,6 +1263,7 @@ export function settlePickupAcquisitionSite(
     site,
     entries: Object.freeze(entries),
     branches: current,
+    findingEmissions: Object.freeze([...findingEmissions.values()]),
     pickupEntryFrontiers: Object.freeze(pickupEntryFrontiers),
     roleFrontiers: Object.freeze(roleFrontiers),
     traitChildSettlements: Object.freeze(traitChildSettlements),
@@ -1657,7 +1637,7 @@ export function applyProducerRoleHistory(
               authoredSeaStarDuplicateSiteKeys,
             );
             replacementBranches = replacementSettlement.branches;
-            accumulateProducerRoleFindingEmissions(
+            mergeRewardFindingEmissions(
               findingEmissions,
               replacementSettlement.findingEmissions,
             );
@@ -1826,7 +1806,7 @@ export function applyProducerRoleHistory(
         ),
       },
     );
-    accumulateProducerRoleFindingEmissions(findingEmissions, traitSettlement.findingEntries);
+    mergeRewardFindingEmissions(findingEmissions, traitSettlement.findingEntries);
     if (traitSettlement.candidateContact !== undefined)
       traitOfferCandidateContacts.push(traitSettlement.candidateContact);
     for (const mutation of traitSettlement.priorTraitMutations ?? [])

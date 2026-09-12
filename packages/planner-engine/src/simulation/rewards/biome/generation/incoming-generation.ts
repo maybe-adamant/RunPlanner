@@ -7,8 +7,7 @@ import type { HistoryEvent, HistoryStateView, ProgressiveRoomHistoryViews } from
 import type { CanonicalResolvedIncomingReward } from '../../../materialization';
 import { preparedAcquisitionSiteOwner, type RewardLifecycleReferences } from '../prepared-inputs';
 import { createBiomeRewardFacts } from '../../facts';
-import { rewardFinding } from '../../findings';
-import { addRewardFinding } from '../../findings';
+import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import {
   countedBinding,
@@ -110,7 +109,7 @@ function completeIncomingOfferCandidate(
           );
     for (const acquisitionEvent of events) {
       if (branches.length === 0) break;
-      branches = settleProducerAcquisitionSite(
+      const settlement = settleProducerAcquisitionSite(
         catalog,
         branches,
         candidateRoom,
@@ -125,7 +124,6 @@ function completeIncomingOfferCandidate(
             history,
             enteredBiomeCount,
           ),
-        candidateFindings,
         (detail) => {
           throw new BiomeRewardSimulationContractError(detail);
         },
@@ -138,7 +136,9 @@ function completeIncomingOfferCandidate(
         ),
         preparedAcquisitionSiteOwner(snapshot, entry.room),
         authoredSeaStarDuplicateSiteKeys,
-      ).branches;
+      );
+      mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);
+      branches = settlement.branches;
     }
   }
   return createRewardProducerCandidateResult(candidateFindings, branches);

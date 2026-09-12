@@ -399,7 +399,6 @@ describe('finite Hex progress', () => {
         },
       },
       facts,
-      new Map(),
     );
     expect(settlement.branches[0]?.hexProgress).toMatchObject({
       bankedPathPoints: 0,
@@ -455,7 +454,6 @@ describe('finite Hex progress', () => {
           },
         },
         facts,
-        new Map(),
       ).branches[0]!;
     expect(settleSpell('option1').hexProgress.bankedPathPoints).toBe(0);
     expect(settleSpell('option2').hexProgress.bankedPathPoints).toBe(1);
@@ -499,7 +497,6 @@ describe('finite Hex progress', () => {
         },
       },
       facts,
-      new Map(),
     );
     expect(missingChild.branches).toEqual([]);
   });
@@ -544,7 +541,6 @@ describe('finite Hex progress', () => {
         },
       },
       facts,
-      new Map(),
     ).branches[0]!;
     expect(settled.history.useRecord.SpellDrop).toBe(1);
     expect(settled.hexProgress).toMatchObject({ bankedPathPoints: 0, investedPathPoints: 3 });
@@ -566,7 +562,6 @@ describe('finite Hex progress', () => {
         },
       },
       facts,
-      new Map(),
     ).branches[0]!;
     expect(laterBig.hexProgress).toMatchObject({ bankedPathPoints: 0, investedPathPoints: 8 });
   });

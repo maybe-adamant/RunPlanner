@@ -68,6 +68,28 @@ export function addRewardFinding(
   );
 }
 
+/** Merges ordered reward finding emissions through the sole finding writer. */
+export function mergeRewardFindingEmissions(
+  findings: Map<string, FindingRegionEntry>,
+  emissions: readonly FindingRegionEntry[],
+): void {
+  for (const emission of emissions) {
+    if (emission.levelResolutionEvaluations === undefined) {
+      addRewardFinding(findings, emission.finding, emission.atomicRegion, emission.chronology);
+      continue;
+    }
+    for (const evaluation of emission.levelResolutionEvaluations) {
+      addRewardFinding(
+        findings,
+        emission.finding,
+        emission.atomicRegion,
+        emission.chronology,
+        evaluation,
+      );
+    }
+  }
+}
+
 export function offerEvidence(offer: ResolvedRewardOffer): FindingEvidence {
   const payload = offer.payload;
   return {

@@ -28,6 +28,7 @@ import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition-settlement';
+import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 
 const owner = { kind: 'project' } as SemanticAddress;
 
@@ -38,9 +39,9 @@ function settleTestRoomReward(
   source: Parameters<typeof settleOwnedAcquisitionSite>[2]['source'],
   sequence: number,
   facts: Parameters<typeof settleOwnedAcquisitionSite>[3],
-  findings: Parameters<typeof settleOwnedAcquisitionSite>[4],
+  findings: Map<string, import('../../src/simulation/finding-regions').FindingRegionEntry>,
 ) {
-  return settleOwnedAcquisitionSite(
+  const settlement = settleOwnedAcquisitionSite(
     catalog,
     branches,
     {
@@ -51,8 +52,9 @@ function settleTestRoomReward(
       historySequence: sequence,
     },
     facts,
-    findings,
-  ).branches;
+  );
+  mergeRewardFindingEmissions(findings, settlement.findingEmissions);
+  return settlement.branches;
 }
 
 function levelMutation(

@@ -30,7 +30,7 @@ import {
   settlePickupAcquisitionSite,
 } from '../../acquisition-settlement';
 import { settleShopAcquisitionSite } from '../../shop-settlement';
-import { addRewardFinding, rewardFinding } from '../../findings';
+import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import type { RewardBranchState } from '../../branch-primitives';
 import {
   createRewardProducerCandidateResult,
@@ -269,8 +269,8 @@ export function settleAuthoredAcquisitionSite(
           facts: pickupFacts,
           traitContext: routeLoadout,
         },
-        targetFindings,
       );
+      mergeRewardFindingEmissions(targetFindings, settled.findingEmissions);
       acquisitionRoleFrontiers.push(...(settled.roleFrontiers ?? []));
       traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
       return Object.freeze([
@@ -419,8 +419,8 @@ export function settleAuthoredAcquisitionSite(
             return artificerAcquisitionSite(room.origin, source);
           },
         },
-        targetFindings,
       );
+      mergeRewardFindingEmissions(targetFindings, settled.findingEmissions);
       if (!replaySourceMismatch) {
         acquisitionRoleFrontiers.push(...(settled.roleFrontiers ?? []));
         traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
@@ -454,8 +454,7 @@ export function settleAuthoredAcquisitionSite(
               ) {
                 return Object.freeze({ findings: Object.freeze([]), supported: false });
               }
-              const candidateFindings = new Map<string, FindingRegionEntry>();
-              const candidateBranches = settlePickupAcquisitionSite(
+              const candidateSettlement = settlePickupAcquisitionSite(
                 catalog,
                 frontier.branchesBeforeEntry,
                 {
@@ -497,9 +496,13 @@ export function settleAuthoredAcquisitionSite(
                     return artificerAcquisitionSite(room.origin, source);
                   },
                 },
-                candidateFindings,
-              ).branches;
-              return createRewardProducerCandidateResult(candidateFindings, candidateBranches);
+              );
+              return Object.freeze({
+                findings: Object.freeze(
+                  candidateSettlement.findingEmissions.map((entry) => entry.finding),
+                ),
+                supported: candidateSettlement.branches.length > 0,
+              });
             },
           }),
         );
@@ -548,8 +551,8 @@ export function settleAuthoredAcquisitionSite(
           ),
         fail: contractFail,
       },
-      targetFindings,
     );
+    mergeRewardFindingEmissions(targetFindings, settled.findingEmissions);
     // Shop-spawned objects cannot duplicate. Their structurally retained
     // result stays available for repair, but has no active child action; use
     // the captured source frontiers to publish the source-role finding.

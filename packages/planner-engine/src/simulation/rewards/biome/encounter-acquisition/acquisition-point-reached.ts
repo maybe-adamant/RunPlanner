@@ -51,12 +51,11 @@ import type { RewardBranchState } from '../../branch-primitives';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import { rewardFindingChronologyForRoom } from '../finding-chronology';
 import { createBiomeRewardFacts } from '../../facts';
-import { addRewardFinding, rewardFinding } from '../../findings';
+import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import type { AuthoredSiteSettlementResult } from '../generation/authored-site-settlement';
 import { settleAuthoredAcquisitionSite } from '../generation/authored-site-settlement';
 import type { ReachedTraitChildCheckpoint } from '../../trait-settlement';
 import {
-  createRewardProducerCandidateResult,
   type RewardProducerOwnerAddress,
   type RewardProducerFrontier,
 } from '../../producer-frontiers';
@@ -225,7 +224,6 @@ export function applyAcquisitionPointReachedTransition(
           );
         if (offer.rewardType !== input.rewardType)
           return Object.freeze({ findings: Object.freeze([]), supported: false });
-        const candidateFindings = new Map<string, FindingRegionEntry>();
         const candidateSettlement = settlePickupAcquisitionSite(
           catalog,
           input.branchesBeforeEntry,
@@ -259,17 +257,19 @@ export function applyAcquisitionPointReachedTransition(
               return artificerAcquisitionSite(room.origin, source);
             },
           },
-          candidateFindings,
         );
-        return createRewardProducerCandidateResult(
-          candidateFindings,
-          Object.freeze([
-            ...candidateSettlement.branches,
-            ...(candidateSettlement.traitChildSettlements ?? []).map(
-              (checkpoint) => checkpoint.branch,
-            ),
-          ]),
-        );
+        const candidateBranches = Object.freeze([
+          ...candidateSettlement.branches,
+          ...(candidateSettlement.traitChildSettlements ?? []).map(
+            (checkpoint) => checkpoint.branch,
+          ),
+        ]);
+        return Object.freeze({
+          findings: Object.freeze(
+            candidateSettlement.findingEmissions.map((entry) => entry.finding),
+          ),
+          supported: candidateBranches.length > 0,
+        });
       },
     });
   };
@@ -387,10 +387,10 @@ export function applyAcquisitionPointReachedTransition(
         authoredSeaStarDuplicateSiteKeys,
       },
       (history) => factsAt(acquisitionView, history),
-      findings,
       undefined,
       chronology,
     );
+    mergeRewardFindingEmissions(findings, settled.findingEmissions);
     return transitionResult({
       branches: settled.branches,
       findings,
@@ -450,8 +450,8 @@ export function applyAcquisitionPointReachedTransition(
           authoredSeaStarDuplicateSiteKeys,
           traitContext: inputs.routeLoadout,
         },
-        findings,
       );
+      mergeRewardFindingEmissions(findings, settled.findingEmissions);
       return transitionResult({
         branches: settled.branches,
         findings,
@@ -591,8 +591,8 @@ export function applyAcquisitionPointReachedTransition(
           findingChronology: chronology,
           authoredSeaStarDuplicateSiteKeys,
         },
-        findings,
       );
+      mergeRewardFindingEmissions(findings, settled.findingEmissions);
       const settledEntryKey = semanticAddressKey(entry);
       const branches = settled.branches.map((branch) => {
         const settledThisEntry = branch.events.some(
@@ -713,8 +713,8 @@ export function applyAcquisitionPointReachedTransition(
           findingChronology: chronology,
           authoredSeaStarDuplicateSiteKeys,
         },
-        findings,
       );
+      mergeRewardFindingEmissions(findings, settled.findingEmissions);
       return transitionResult({
         branches: settled.branches,
         findings,

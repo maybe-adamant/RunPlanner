@@ -18,7 +18,7 @@ import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { RewardBranchState } from '../../branch-primitives';
 import { processOfferGenerationCohort } from '../../offer-generation';
 import { settleOwnedAcquisitionSite } from '../../acquisition-settlement';
-import { addRewardFinding, rewardFinding } from '../../findings';
+import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import { historyFindingChronology } from '../finding-chronology';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
 import type { ShipLifecycleCandidateContext } from '../../lifecycle-artifacts';
@@ -263,7 +263,7 @@ export function applyRewardWheelOfferPointMaterialization(
         acquisitionEvent?.kind === 'offerPointAcquired'
       ) {
         const source = shipWheelRoomRewardSource(wheel, selectedOffer, offer);
-        settleOwnedAcquisitionSite(
+        const settlement = settleOwnedAcquisitionSite(
           catalog,
           candidateBranches,
           {
@@ -284,9 +284,9 @@ export function applyRewardWheelOfferPointMaterialization(
               branchHistory,
               enteredBiomeCount,
             ),
-          candidateFindings,
           ownerRegion(wheel.origin),
         );
+        mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);
       }
       return Object.freeze({
         findings: Object.freeze(

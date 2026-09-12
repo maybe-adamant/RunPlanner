@@ -54,7 +54,7 @@ import {
   type ReachedTraitChildCheckpoint,
   type ReachedTraitOfferCandidateContact,
 } from '../../trait-settlement';
-import { addRewardFinding, rewardFinding } from '../../findings';
+import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import type { BossArcanaOutcome } from '../../model';
 import type { PlannerTimelineFacts } from '../../../timeline-facts';
 
@@ -668,10 +668,10 @@ export function applyEncounterSettlementTransition(inputs: {
           history,
           inputs.enteredBiomeCount,
         ),
-      findings,
       undefined,
       chronology(snapshot, room, event),
     );
+    mergeRewardFindingEmissions(findings, settlement.findingEmissions);
     roleFrontiers.push(...(settlement.roleFrontiers ?? []));
     for (const checkpoint of settlement.traitChildSettlements ?? [])
       recordChild(checkpoint, room.origin);
