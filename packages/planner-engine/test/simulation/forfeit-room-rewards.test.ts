@@ -1,10 +1,15 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAcquisitionRoleAddress,
   createBiomeAddress,
   createIncomingRewardAddress,
+  createLocalRewardAddress,
+  createOccurrenceAddress,
+  createOccurrenceId,
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
+  createRoomRunStateCheckpointAddress,
   createRoomActionAddress,
   createRouteAddress,
   createTraitOfferAddress,
@@ -13,13 +18,64 @@ import {
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
-import { createCompleteFGProject, goldenFStartId } from '@run-planner/test-fixtures/underworld';
+import {
+  createCompleteFGProject,
+  createGoldenFGHProject,
+  goldenFStartId,
+  goldenHBiome,
+  loadNemesisFieldsCheckpoint,
+} from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { simulateProject } from '../../src/simulation';
+import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
+import { createArcanaFearState } from '../../src/simulation/arcana-fear';
+import { evaluateProgressiveBiomeAssembly } from '../../src/simulation/progressive/biome';
+import {
+  appendRewardEvent,
+  mergeEquivalentRewardBranches,
+} from '../../src/simulation/rewards/branch-primitives';
+import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createPreparedProjectCandidateSession } from '../../src/simulation/candidates';
 import { simulateProjectAssembly } from '../../src/simulation/evaluation/project';
 
 const biome = createBiomeAddress('Underworld', 'F');
+const fieldsOccurrenceId = createOccurrenceId('golden-h-combat09');
+const fieldsCage1 = createLocalRewardAddress(goldenHBiome, fieldsOccurrenceId, 'cages', 'cage1');
+const fieldsCage2 = createLocalRewardAddress(goldenHBiome, fieldsOccurrenceId, 'cages', 'cage2');
+
+function replayEnteredFieldsForfeit(rank: 0 | 1) {
+  const baseline = simulateProject(catalog, createGoldenFGHProject());
+  const previous = baseline.route?.biomes.find((candidate) => candidate.biomeKey === 'G');
+  let project = loadNemesisFieldsCheckpoint();
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceFearVowRank',
+    route: createRouteAddress('Underworld'),
+    vowKey: 'BoonSkipShrineUpgrade',
+    rank,
+  });
+  const route = project.route;
+  const plan = route?.biomes.find((candidate) => candidate.biomeKey === 'H');
+  if (route === undefined) throw new Error('expected Underworld route');
+  if (previous?.authoring !== 'complete' || previous.validity !== 'valid' || plan === undefined)
+    throw new Error('expected complete-valid G seed and authored Fields fixture');
+  const arcanaFear = createArcanaFearState(catalog, route.loadout);
+  const progressive = evaluateProgressiveBiomeAssembly(catalog, goldenHBiome, plan, {
+    enteredBiomeCount: 3,
+    resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
+    loadout: route.loadout,
+    seed: {
+      history: previous.history,
+      rewardBranches: previous.rewards.branches.map((branch) =>
+        Object.freeze({
+          ...branch,
+          arcanaFear: Object.freeze({ ...branch.arcanaFear, fear: arcanaFear.fear }),
+        }),
+      ),
+    },
+  });
+  if (progressive === null) throw new Error('Fields fixture did not publish progressive assembly');
+  return progressive;
+}
 
 function simulated(rewardType: 'Boon' | 'HermesUpgrade') {
   let project = createCompleteFGProject();
@@ -97,6 +153,131 @@ describe('Vow of Forfeit Red Onion substitution', () => {
       ).toBe(false);
     },
   );
+
+  it('fixes the first qualifying entered Fields cage before its later pickup', () => {
+    const replay = replayEnteredFieldsForfeit(1);
+    const branch = replay.evaluation.rewards.branches[0];
+    if (branch === undefined) throw new Error('expected Fields reward branch');
+    const forfeited = branch.events.find(
+      (event) =>
+        event.kind === 'rewardForfeited' &&
+        semanticAddressKey(event.origin) === semanticAddressKey(fieldsCage1),
+    );
+    const onion = branch.events.find(
+      (event) =>
+        event.kind === 'concreteAcquisition' &&
+        semanticAddressKey(event.origin) === semanticAddressKey(fieldsCage1),
+    );
+    const laterPickup = branch.events.find(
+      (event) =>
+        event.kind === 'concreteAcquisition' &&
+        semanticAddressKey(event.origin) === semanticAddressKey(fieldsCage2),
+    );
+    const laterBoon = branch.events.find(
+      (event) =>
+        event.kind === 'concreteAcquisition' &&
+        event.historySequence > (onion?.historySequence ?? Infinity) &&
+        event.acquisition.acquisition.gameName === 'HestiaUpgrade',
+    );
+    const fieldsForfeits = branch.events.filter(
+      (event) =>
+        event.kind === 'rewardForfeited' &&
+        event.origin.kind === 'localReward' &&
+        event.origin.biomeKey === 'H',
+    );
+
+    if (forfeited === undefined) throw new Error('expected entered Fields Forfeit evidence');
+    expect(forfeited).toMatchObject({
+      rewardType: 'HermesUpgrade',
+      replacementRewardType: 'RoomRewardConsolationPrize',
+    });
+    expect(onion).toMatchObject({
+      acquisition: { acquisition: { gameName: 'RoomRewardConsolationPrize' } },
+    });
+    expect(
+      branch.events.some(
+        (event) =>
+          event.kind === 'rewardOffered' &&
+          semanticAddressKey(event.origin) === semanticAddressKey(fieldsCage1) &&
+          event.offer.rewardType === 'HermesUpgrade',
+      ),
+    ).toBe(true);
+    expect(forfeited?.historySequence).toBeLessThan(onion?.historySequence ?? Infinity);
+    expect(laterPickup?.historySequence).toBeLessThan(onion?.historySequence ?? Infinity);
+    expect(fieldsForfeits).toEqual([forfeited]);
+    expect(laterBoon).toMatchObject({
+      acquisition: { acquisition: { gameName: 'HestiaUpgrade' } },
+    });
+    expect(
+      branch.events.some(
+        (event) =>
+          event.kind === 'rewardForfeited' &&
+          semanticAddressKey(event.origin) === semanticAddressKey(fieldsCage2),
+      ),
+    ).toBe(false);
+    expect(
+      (branch.traitHistory?.events ?? []).some(
+        (event) =>
+          'owner' in event && semanticAddressKey(event.owner) === semanticAddressKey(fieldsCage1),
+      ),
+    ).toBe(false);
+    expect(
+      replay.candidateArtifacts.acquisitionConversions.at(
+        createAcquisitionRoleAddress(fieldsCage1, 'self'),
+      ),
+    ).toMatchObject({
+      realizedAcquisition: {
+        acquisition: { kind: 'consumable', gameName: 'RoomRewardConsolationPrize' },
+      },
+    });
+    const fieldsEntrySnapshot = replay.evaluation.rewards.runStateSnapshots.find(
+      (snapshot) =>
+        semanticAddressKey(snapshot.owner) ===
+        semanticAddressKey(
+          createRoomRunStateCheckpointAddress(
+            createOccurrenceAddress(goldenHBiome, fieldsOccurrenceId),
+            { kind: 'roomEntered' },
+          ),
+        ),
+    );
+    expect(fieldsEntrySnapshot?.forfeitStatus).toBe('consumed');
+
+    const inactiveBranch = replayEnteredFieldsForfeit(0).evaluation.rewards.branches[0];
+    if (inactiveBranch === undefined) throw new Error('expected inactive Fields reward branch');
+    expect(
+      inactiveBranch.events.some(
+        (event) =>
+          event.kind === 'rewardForfeited' &&
+          semanticAddressKey(event.origin) === semanticAddressKey(fieldsCage1),
+      ),
+    ).toBe(false);
+    expect(
+      inactiveBranch.events.some(
+        (event) =>
+          event.kind === 'concreteAcquisition' &&
+          semanticAddressKey(event.origin) === semanticAddressKey(fieldsCage1) &&
+          event.acquisition.acquisition.gameName !== 'RoomRewardConsolationPrize',
+      ),
+    ).toBe(true);
+  });
+
+  it('keeps entry-fixed Forfeit owners distinct during branch equivalence', () => {
+    const seed = initializeTestRewardBranches()[0]!;
+    const first = appendRewardEvent(seed, 1, {
+      kind: 'rewardForfeited',
+      origin: fieldsCage1,
+      rewardType: 'HermesUpgrade',
+      replacementRewardType: 'RoomRewardConsolationPrize',
+    });
+    const second = appendRewardEvent(seed, 1, {
+      kind: 'rewardForfeited',
+      origin: fieldsCage2,
+      rewardType: 'HermesUpgrade',
+      replacementRewardType: 'RoomRewardConsolationPrize',
+    });
+
+    expect(mergeEquivalentRewardBranches([first, second])).toHaveLength(2);
+  });
 
   it('substitutes the picked Thessaly Ship-wheel Boon while keeping its trait child dormant', () => {
     const owner = createRewardWheelOfferAddress(

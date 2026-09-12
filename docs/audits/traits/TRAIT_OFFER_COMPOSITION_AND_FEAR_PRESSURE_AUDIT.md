@@ -252,6 +252,53 @@ different Apollo trait or an analogous trait from another giver.
 Denial does **not** remove an already equipped trait. It changes future offer
 eligibility only after a concrete displayed option is left unselected.
 
+### Biome coverage and accepted settlement timing
+
+The planner preserves observable outcomes, not every native spawn callback.
+Required-reward acquisition settlement remains sufficient unless an earlier
+decision changes a modeled outcome. Fields' coexisting cages need earlier
+consumption because pickup order is independent of spawn order. This is one
+Forfeit policy with different lifecycle contacts, not one policy per biome.
+
+| Biome / surface | Native reward path                                                                                                                                    | Accepted planner contact                                                                                                                                 |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F               | Opening and ordinary encounters call SpawnRoomReward.                                                                                                 | Shared required-reward settlement.                                                                                                                       |
+| G               | Ordinary incoming rewards, including qualifying rewards after detours.                                                                                | Shared settlement; door generation does not consume.                                                                                                     |
+| H combat cages  | All active cage objects spawn in list order during room setup.                                                                                        | Selected room entry fixes the Onion and consumes the use; pickup reuses that outcome.                                                                    |
+| H minibosses    | One locked reward spawns before combat and unlocks afterward.                                                                                         | Shared required-reward settlement. No observable modeled counterexample justifies separate pre-combat machinery.                                         |
+| H other rooms   | Ordinary incoming rewards qualify; FieldsOptionalRewards contains no natural Boon/Hermes.                                                             | Shared incoming settlement; optional Artificer replacements use conversion settlement.                                                                   |
+| I               | TartarusRewards includes Boon; ClockworkGoal does not qualify.                                                                                        | Shared reward settlement, not goal completion.                                                                                                           |
+| N               | Hub generates offers; entered rooms spawn rewards. Side-room stores have no natural Boon/Hermes.                                                      | Shared settlement in visit order, not board order. Restores do not replay consumption or reset the use. Side-room Artificer remains separately eligible. |
+| O ships         | Selected wheel reward spawns after combat. WaitForNextEncounterReady waits for required objects and reward screens before continuing.                 | Picked reward settlement only; unpicked previews do not consume. No separate spawn phase is needed.                                                      |
+| O other rooms   | Ordinary incoming reward path; empty intro does not qualify.                                                                                          | Shared settlement.                                                                                                                                       |
+| P               | GeneratedP_PreCombat overrides the reward to Empty; rewarded combat supplies the incoming reward. HeraclesCombatP can replace the encounter sequence. | One incoming reward settlement, not one opportunity per phase.                                                                                           |
+| Q               | Qualifying ordinary rewards use SpawnRoomReward; shop purchases and boss drops do not qualify merely by being rewards.                                | Shared incoming settlement; purchases remain separate.                                                                                                   |
+
+Source anchors: `EncounterSets.lua:446–490` (ordinary, H miniboss and Ship
+sequences); `RoomLogic.lua:1368` (WaitForNextEncounterReady), `:1466` (wheel
+reward override), `:5758` (SpawnRewardCagesMiniboss);
+`EncounterData_MiniBoss.lua:260,331` (both H bindings);
+`EncounterData_Generated.lua:1182` (P preliminary Empty reward);
+`EncounterData_Heracles.lua:168` (Heracles P). Catalog stores mirror the
+nonqualifying N side-room and H optional reward domains. Fountain rewards
+also spawn early through HealthRestore start events in EncounterData_Unique;
+early spawn alone does not warrant another planner timing mechanism.
+
+Artificer's required replacement uses existing settlement. In Fields,
+converting an optional minor reward into a boon before collecting the cage
+Onion cannot produce a second Onion: entry has already consumed Forfeit.
+The later cage pickup does not consume again. Merely tagging the cage while
+leaving the counter available would be incorrect. Additional timing machinery
+requires a concrete legal interleaving that changes the modeled outcome.
+
+Coverage owners: `forfeit-room-rewards.test.ts` covers ordinary Boon/Hermes,
+Fields ownership/reordered pickup and picked/unpicked Ship rewards;
+`biomes/h/materialization.test.ts` covers the provider contact;
+`artificer.test.ts` covers conversion, shared consumption, Devotion exclusion,
+Time Piece and Sea Star; `arcana-fear.test.ts` covers effective use, suppression
+and reset. Other biome rows are source/declaration/shared-path inspection,
+not claims of dedicated active-Forfeit fixtures for each biome.
+
 ### Suppression by Circe
 
 Black Night Banishment may disable Denial for the rest of the run. Once
@@ -287,12 +334,30 @@ The authored door or generated replacement remains a Boon or Hermes reward.
 At spawn time the Vow substitutes the consolation consumable, so no trait
 offer is opened and no trait is acquired from that reward.
 
-This spawn boundary is reached from three supported sources. Ordinary room
+This spawn boundary is reached from ordinary rooms, Fields cages, Ship wheels,
+and Artificer replacements. Ordinary room
 completion calls `SpawnRoomReward` for its selected door reward. A selected
 Thessaly Ship wheel reward is stored as the active encounter's room-reward
 override, and `EncounterEventsShipsCombat` calls `SpawnRoomReward` after that
 encounter. A picked Ship-wheel Boon or Hermes reward therefore qualifies;
 unpicked wheel previews do not.
+
+Fields `SpawnRewardCages` (`RoomLogic.lua:5683`) calls `SpawnRoomReward` for
+each active `room.CageRewards` entry in `ipairs` order during room setup.
+Therefore the first qualifying cage reward consumes the available Forfeit use
+before any cage combat or pickup. Nonqualifying cages are skipped; later
+qualifying cages spawn their real loot. Native random point selection changes
+where each cage appears, not this reward-list order. The user confirmed in a
+live game probe that one specific cage contains the Onion before acquisition;
+choosing a different cage first does not move that substitution.
+
+The room retains each original `CageRewards` offer, while the cage's `RewardId`
+refers to its spawned reward object. `UseFieldsRewardFinder` reads the spawned
+objects' icon fields. The Onion is not a presentation wrapper retaining its
+original god identity. Planner generation must retain the original offer/bag
+identity, fix the replacement on selected room entry, and settle the already
+fixed object on pickup. Merely offering an unentered Fields room does not spawn
+its cages or consume Forfeit.
 
 Artificer first destroys the eligible minor object, consumes one use, and
 chooses a `RunProgress` replacement while excluding Devotion and Spell Drop;

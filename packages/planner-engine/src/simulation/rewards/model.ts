@@ -157,7 +157,7 @@ export type RewardEvent =
       };
     })
   | (RewardEventBase & {
-      /** Automatic RoomReward substitution evidence; concrete Onion follows this event. */
+      /** Automatic RoomReward substitution evidence; the fixed Onion settles at its pickup. */
       readonly kind: 'rewardForfeited';
       readonly rewardType: 'Boon' | 'HermesUpgrade';
       readonly replacementRewardType: 'RoomRewardConsolationPrize';

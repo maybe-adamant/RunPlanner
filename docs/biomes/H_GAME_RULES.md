@@ -126,6 +126,15 @@ chronology remain owned by that Fields occurrence. A counted cage offer
 consumes its declaration-backed RunProgress support when its owning room is
 prepared; selecting another normal peer does not recreate that room's cages.
 
+On entering the selected room, native cage reward objects spawn in active
+cage-list order, before the authored encounter/pickup sequence. An available
+Vow of Forfeit use replaces the first Boon/Hermes object in that list with a
+required Red Onion. The original offer still owns its bag/source evidence;
+the replacement is a fixed acquisition outcome, not a new selectable bag
+reward. Reordering cage combat or pickup actions cannot move the Onion, and
+its pickup cannot consume Forfeit a second time. Unentered offered siblings
+and dormant cages do not participate in this spawn pass.
+
 The Passive phase is fixed entry evidence. The active cage count then creates a
 fixed sequence of two or three ordinal encounter cycles. Authored cage order
 chooses which cage occupies the first, second, and optional third cycle; it does

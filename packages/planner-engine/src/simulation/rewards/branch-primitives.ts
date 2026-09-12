@@ -158,6 +158,15 @@ function equivalentBranchStateKey(branch: RewardBranchState): string {
     traitHistory: branch.traitHistory,
     arcanaFear: branch.arcanaFear,
     keepsakes: branch.keepsakes,
+    rewardForfeited: branch.events
+      .filter((event) => event.kind === 'rewardForfeited')
+      .map((event) =>
+        Object.freeze({
+          origin: semanticAddressKey(event.origin),
+          rewardType: event.rewardType,
+          replacementRewardType: event.replacementRewardType,
+        }),
+      ),
     ...(branch.seaStarDuplicateEligibilityBySource === undefined
       ? {}
       : {

@@ -1153,15 +1153,23 @@ After a valid participating Olympian or Hermes trait selection, effective Vow
 of Denial records up to two exact unselected materialized keys on that same
 trait event. The folded banned set is route-wide eligibility history;
 suppressing Denial stops new bans but never removes existing ones. Effective
-Vow of Forfeit is narrower: at the RoomReward materialization boundary it
+Vow of Forfeit is narrower: for qualifying RoomReward sources it
 substitutes the first supported incoming `Boon` or `HermesUpgrade` in each
 biome with a required `RoomRewardConsolationPrize` (Red Onion). The authored
 offer and bag result remain, while a `rewardForfeited` event records the fixed
 replacement and the canonical concrete acquisition settles the Onion. This
-also covers a picked Thessaly Ship-wheel reward and an Artificer-generated
-RoomReward Boon/Hermes replacement; it does not inspect the resolved giver.
-Shops, Devotion, direct room-local rewards, and pickups do not trigger or
-consume Forfeit. The Red Onion keeps its normal
+also covers a picked Thessaly Ship-wheel reward, a Fields cage reward, and an
+Artificer-generated RoomReward Boon/Hermes replacement; it does not inspect the
+resolved giver. Fields fixes this outcome on selected room entry in active
+cage-list order, independently of later cage activation and pickup order.
+Unentered offered rooms do not consume the use. Pickup settles the fixed
+replacement without spending Forfeit again. Other required rewards, including
+miniboss and selected Ship-wheel rewards, retain acquisition-time settlement
+where it yields the same modeled outcome. Native spawn timing alone does not
+require a separate simulation phase; earlier consumption is needed when
+coexisting rewards make pickup order observably different. Shops, Devotion, and other
+acquisitions outside the qualifying native RoomReward spawn path do not
+trigger or consume Forfeit. The Red Onion keeps its normal
 pickup, Time Piece, and Sea Star contacts, but cannot start a trait offer,
 Artificer conversion, or Echo last-reward recreation. The Arcana/Fear ledger
 retains only the per-biome consumed flag needed by later settlement and Run
