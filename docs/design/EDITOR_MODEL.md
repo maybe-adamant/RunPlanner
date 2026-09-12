@@ -342,6 +342,11 @@ they do not alter command behavior.
 
 ## Verification and Safe Extension
 
+Focused tests live under `apps/planner/test/`, mirroring their production
+neighborhood in `src/`. Architecture and product-loop suites remain separate
+test neighborhoods; fixtures and reusable harnesses stay under test support.
+Production directories contain no test files.
+
 Keep policy in its engine/catalog owner. Application tests prove correct
 consumption and reachability:
 
