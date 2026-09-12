@@ -1209,6 +1209,11 @@ describe('Echo Gate B Boon Boon Boon', () => {
       { giverKey: 'Aphrodite', traitKey: 'AphroditeWeaponBoon', rarity: 'Heroic' as const },
     ],
     [
+      'Common',
+      createTraitHistoryState(),
+      { giverKey: 'Aphrodite', traitKey: 'AphroditeWeaponBoon', rarity: 'Common' as const },
+    ],
+    [
       'Legendary',
       createTraitHistoryState(),
       { giverKey: 'Aphrodite', traitKey: 'RandomStatusBoon', rarity: 'Legendary' as const },
@@ -1241,6 +1246,19 @@ describe('Echo Gate B Boon Boon Boon', () => {
         rarity: option.rarity,
         traitKey: option.traitKey,
       });
+      const outcome = echoLastRunBoonOutcomes(catalog, history).find(
+        (candidate) =>
+          candidate.option.giverKey === option.giverKey &&
+          candidate.option.traitKey === option.traitKey &&
+          candidate.option.rarity === option.rarity,
+      );
+      expect(outcome).toBeDefined();
+      expect(result.branch.traitHistory?.equippedTraits[option.traitKey]?.level).toBe(
+        outcome?.effectiveLevel,
+      );
+      if (_label === 'Heroic' || _label === 'Common') expect(outcome?.effectiveLevel).toBe(1);
+      if (_label === 'Duo' || _label === 'Legendary')
+        expect(outcome?.effectiveLevel).toBeUndefined();
       expect(
         result.branch.traitHistory?.events
           .slice(-2)

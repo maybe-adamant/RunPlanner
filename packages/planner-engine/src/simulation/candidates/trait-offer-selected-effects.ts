@@ -298,6 +298,7 @@ export function evaluateEchoLastRunBoonDomain(
       return Object.freeze({
         option: outcome.option,
         ...(effectiveRarity === undefined ? {} : { effectiveRarity }),
+        ...(outcome.effectiveLevel === undefined ? {} : { effectiveLevel: outcome.effectiveLevel }),
         support: universallySupported ? ('possible' as const) : ('impossible' as const),
         branchSupport,
         ...(!universallySupported

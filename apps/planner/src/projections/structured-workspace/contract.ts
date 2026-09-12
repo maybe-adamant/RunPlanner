@@ -658,6 +658,9 @@ export interface WorkspaceEchoLastRunBoonDomain {
     | { readonly rows: readonly WorkspaceEchoLastRunBoonDraftRow[]; readonly selectedIndex: number }
     | undefined;
   readonly effectiveRarityFor: (option: AuthoredEchoLastRunBoonOption) => TraitRarity | undefined;
+  readonly effectiveLevelFor: (
+    identity: WorkspaceEchoLastRunBoonTraitIdentity,
+  ) => number | undefined;
   readonly labelFor: (identity: WorkspaceEchoLastRunBoonTraitIdentity) => string;
   readonly summaryFor: (value: AuthoredEchoLastRunBoonOffer) => string;
   readonly rarityPickerFor: (

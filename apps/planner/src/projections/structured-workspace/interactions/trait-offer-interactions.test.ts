@@ -938,7 +938,10 @@ describe('trait-offer-interactions', () => {
     const loadable = boon?.forOffer(boonOffer);
     const domain = loadable?.load();
     expect(traitCarrierChildDomain).toHaveBeenCalledTimes(1);
-    expect(domain?.summaryFor(child)).toBe('Aphrodite · Flutter Strike · Common → Rare');
+    expect(domain?.summaryFor(child)).toBe('Flutter Strike · Common → Rare');
+    expect(domain?.labelFor(child.options[0])).toBe('Flutter Strike');
+    expect(domain?.effectiveRarityFor(child.options[0])).toBe('Rare');
+    expect(domain?.effectiveLevelFor(child.options[0])).toBe(1);
     expect(traitCarrierChildDomain).toHaveBeenCalledTimes(1);
   });
 

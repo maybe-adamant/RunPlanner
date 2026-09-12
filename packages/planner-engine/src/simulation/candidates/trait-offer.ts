@@ -183,6 +183,7 @@ export interface EchoLastRunBoonDomainQuery {
 export interface EvaluatedEchoLastRunBoonCandidate {
   readonly option: import('../../authored-project/traits').AuthoredEchoLastRunBoonOption;
   readonly effectiveRarity?: import('../../catalog-schema').TraitRarity;
+  readonly effectiveLevel?: number;
   readonly support: DirectTraitOutcomeSupport;
   readonly branchSupport: readonly boolean[];
   readonly reason?: 'branchDivergence' | 'unavailable';

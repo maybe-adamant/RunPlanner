@@ -241,6 +241,8 @@ function EchoLastRunBoonChoiceEditor({
           const complete = completeRow(row);
           const effectiveRarity =
             complete === undefined ? undefined : domain.effectiveRarityFor(complete);
+          const effectiveLevel =
+            row.identity === undefined ? undefined : domain.effectiveLevelFor(row.identity);
           return (
             <TraitOfferOption
               key={index}
@@ -272,6 +274,7 @@ function EchoLastRunBoonChoiceEditor({
               rarityAriaLabel={`Boon Boon Boon outcome ${index + 1} rarity`}
               {...(row.rarity === undefined ? {} : { rarityValue: row.rarity })}
               {...(effectiveRarity === undefined ? {} : { effectiveRarity })}
+              {...(effectiveLevel === undefined ? {} : { effectiveLevel })}
               selected={selectedIndex === index}
               selectedDisabled={false}
               selectedName={`${controlId}-selected`}
