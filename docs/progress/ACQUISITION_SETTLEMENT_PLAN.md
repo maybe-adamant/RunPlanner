@@ -2,7 +2,7 @@
 
 ## Status and objective
 
-Status: locked; Slice A is next. Implementation has not started.
+Status: locked; Slice A complete and independently reviewed. Slice B is next.
 Production base: `088ee598`.
 Evidence: `docs/investigations/ACQUISITION_SETTLEMENT_BOUNDARIES.md`.
 The worktree also contains the requested retirement of older trait investigations;
@@ -84,6 +84,15 @@ Characterize with existing builders and real role settlement:
 
 Strengthen existing coverage rather than duplicating refill/Forfeit matrices.
 Review independently, then commit this focused behavior correction.
+
+Delivered: removed the pending-sibling bypass; covered exhausted uncollected
+entries, legitimate duplicate copies, and candidate agreement. Corrected the
+existing Fields Hammer workflow to retain the exact second-conversion finding:
+its authored route has only one eligible late-Hammer entry, not three.
+Validation: Artificer 22 tests, H materialization 28 tests, full engine 143 files /
+1,856 tests, workspace/fixture typechecks, formatting and diff checks passed.
+Independent review passed, including a separate 50-test run. Full repository
+closure remains deferred until the refactoring slices finish.
 
 ### B — Return complete site settlement products
 

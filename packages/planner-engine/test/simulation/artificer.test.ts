@@ -658,6 +658,104 @@ describe('The Artificer', () => {
     expect(exhausted.product.branches[0]?.history.consumableRecord.GiftDrop).toBe(1);
   });
 
+  it('does not restore an exhausted uncollected RunProgress entry for a sibling conversion', () => {
+    const store = catalog.rewards.stores.byKey.RunProgress;
+    if (store === undefined) throw new Error('RunProgress store is missing');
+    const maxHealthIndex = store.entries.findIndex(
+      (entry) => entry.rewardType === 'MaxHealthDrop' && entry.requirement === undefined,
+    );
+    const maxManaIndex = store.entries.findIndex(
+      (entry) => entry.rewardType === 'MaxManaDrop' && entry.requirement === undefined,
+    );
+    if (maxHealthIndex < 0 || maxManaIndex < 0)
+      throw new Error('base RunProgress health and mana entries are missing');
+    const remainingEntryCounts = store.entries.map((_, index) =>
+      index === maxHealthIndex || index === maxManaIndex ? 1 : 0,
+    );
+    const seeded = initialBranches().map((branch) =>
+      Object.freeze({
+        ...branch,
+        bags: Object.freeze({
+          ...branch.bags,
+          RunProgress: Object.freeze({ remainingEntryCounts: Object.freeze(remainingEntryCounts) }),
+        }),
+      }),
+    );
+
+    const first = convert(seeded, 0, 'MaxHealthDrop', true);
+    expect(first.findings.size).toBe(0);
+    expect(first.product.branches[0]?.bags.RunProgress?.remainingEntryCounts[maxHealthIndex]).toBe(
+      0,
+    );
+    expect(first.product.branches[0]?.bags.RunProgress?.remainingEntryCounts[maxManaIndex]).toBe(1);
+    expect(first.product.branches[0]?.history.consumableRecord.MaxHealthDrop).toBeUndefined();
+
+    const second = convert(first.product.branches, 1, 'MaxHealthDrop', true);
+    expect([...second.findings.values()]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          finding: expect.objectContaining({ code: 'artificerReplacementUnavailable' }),
+        }),
+      ]),
+    );
+    const branch = second.product.branches[0];
+    if (branch === undefined) throw new Error('Artificer sibling branch is missing');
+    expect(artificerStatus(catalog, branch.arcanaFear)).toMatchObject({ spent: 1, remaining: 2 });
+    expect(branch.bags.RunProgress?.remainingEntryCounts[maxHealthIndex]).toBe(0);
+    expect(branch.bags.RunProgress?.remainingEntryCounts[maxManaIndex]).toBe(1);
+    expect(branch.events.filter((event) => event.kind === 'artificerConversion')).toHaveLength(1);
+    expect(
+      branch.events.filter(
+        (event) => event.kind === 'rewardOffered' && event.offer.rewardType === 'MaxHealthDrop',
+      ),
+    ).toHaveLength(1);
+
+    const frontier = second.product.roleFrontiers?.find(
+      (candidate) =>
+        semanticAddressKey(candidate.address.owner) === semanticAddressKey(second.origin),
+    );
+    if (frontier?.artificerReplacementCandidate === undefined)
+      throw new Error('Artificer sibling candidate is missing');
+    expect(
+      frontier.artificerReplacementCandidate.evaluateOffer({ rewardType: 'MaxHealthDrop' }),
+    ).toEqual({ findings: [], supported: false });
+  });
+
+  it('spends each legitimate RunProgress copy for deferred sibling conversions', () => {
+    const store = catalog.rewards.stores.byKey.RunProgress;
+    if (store === undefined) throw new Error('RunProgress store is missing');
+    const maxHealthIndex = store.entries.findIndex(
+      (entry) => entry.rewardType === 'MaxHealthDrop' && entry.requirement === undefined,
+    );
+    if (maxHealthIndex < 0) throw new Error('base RunProgress health entry is missing');
+    const remainingEntryCounts = store.entries.map((_, index) =>
+      index === maxHealthIndex ? 2 : 0,
+    );
+    const seeded = initialBranches().map((branch) =>
+      Object.freeze({
+        ...branch,
+        bags: Object.freeze({
+          ...branch.bags,
+          RunProgress: Object.freeze({ remainingEntryCounts: Object.freeze(remainingEntryCounts) }),
+        }),
+      }),
+    );
+
+    const first = convert(seeded, 0, 'MaxHealthDrop', true);
+    const second = convert(first.product.branches, 1, 'MaxHealthDrop', true);
+    expect(second.findings.size).toBe(0);
+    const branch = second.product.branches[0];
+    if (branch === undefined) throw new Error('Artificer duplicate-copy branch is missing');
+    expect(branch.bags.RunProgress?.remainingEntryCounts[maxHealthIndex]).toBe(0);
+    expect(artificerStatus(catalog, branch.arcanaFear)).toMatchObject({ spent: 2, remaining: 1 });
+    expect(branch.events.filter((event) => event.kind === 'artificerConversion')).toHaveLength(2);
+    expect(
+      branch.events.filter(
+        (event) => event.kind === 'rewardOffered' && event.offer.rewardType === 'MaxHealthDrop',
+      ),
+    ).toHaveLength(2);
+  });
+
   it.each(['Boon', 'HermesUpgrade'] as const)(
     'forfeits an Artificer-generated %s as a concrete Red Onion after spending both ledgers',
     (replacementType) => {

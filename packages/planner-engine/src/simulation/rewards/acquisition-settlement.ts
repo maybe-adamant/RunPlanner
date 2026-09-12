@@ -1552,43 +1552,7 @@ export function applyProducerRoleHistory(
           ))
             throw error;
         }
-        const replacementAcquisitionNames = new Set(
-          replacementLifecycle.acquisitionLifecycle.map(
-            (binding) =>
-              resolveAcquisitionRole(
-                catalog.rewards,
-                artificerReplacement.offer,
-                binding.role,
-                binding.lifecyclePoint,
-              ).acquisition.gameName,
-          ),
-        );
-        const latestSiblingSequence = branch.events.reduce<number | undefined>(
-          (latest, event) =>
-            event.kind === 'artificerConversion' &&
-            JSON.stringify(event.replacement) === JSON.stringify(artificerReplacement.offer)
-              ? Math.max(latest ?? Number.NEGATIVE_INFINITY, event.historySequence)
-              : latest,
-          undefined,
-        );
-        const hasPendingSibling =
-          latestSiblingSequence !== undefined &&
-          !branch.events.some(
-            (event) =>
-              event.kind === 'concreteAcquisition' &&
-              event.historySequence > latestSiblingSequence &&
-              replacementAcquisitionNames.has(event.acquisition.acquisition.gameName),
-          );
-        // Fields rewards coexist on the map. Once one Artificer conversion
-        // consumes the counted offer, sibling conversions may materialize the
-        // same reward until any such reward is actually acquired.
-        const generationBags =
-          bags.length > 0
-            ? bags
-            : hasPendingSibling
-              ? Object.freeze([prepared.bag])
-              : Object.freeze([]);
-        for (const bag of generationBags) {
+        for (const bag of bags) {
           const arcanaFear = consumeArtificerUse(catalog, branch.arcanaFear, {
             owner: incoming.origin,
             acquisitionRole: resolution.role,
@@ -1703,7 +1667,7 @@ export function applyProducerRoleHistory(
           next.push(...replacementBranches);
           continue;
         }
-        if (generationBags.length > 0) continue;
+        if (bags.length > 0) continue;
       }
       addRewardFinding(
         findingEmissions,
