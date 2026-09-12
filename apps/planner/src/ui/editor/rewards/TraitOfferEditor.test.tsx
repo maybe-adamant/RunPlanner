@@ -2,6 +2,7 @@
 
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -13,6 +14,7 @@ import {
   createEncounterPhaseAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
+  createTraitAcquisitionTargetAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   semanticAddressKey,
@@ -83,6 +85,135 @@ function findTraitOfferControl(
 }
 
 describe('trait offer editor entry and dialog', () => {
+  it.each(['noProc', 'proc'] as const)(
+    'saves an initial Stone %s decision with the complete offer',
+    async (kind) => {
+      const application = createApplication();
+      const reward = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
+      const address = createTraitOfferAddress(reward, 'source');
+      let project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
+        kind: 'ReplaceStartingKeepsake',
+        selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+        keepsakeKey: 'UnpickedBoonKeepsake',
+      });
+      project = applyProjectCommand(project, application.catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward,
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+      });
+      project = applyProjectCommand(project, application.catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward,
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+      });
+      application.store.dispatch(authoredProjectReplaced(project));
+      const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+      expect(workspace.interactions.traitOffers.get(semanticAddressKey(address))?.value).toBeNull();
+      const before = application.store.getState();
+      const user = userEvent.setup();
+      const view = render(
+        <Provider store={application.store}>
+          <TraitOfferDialog interactions={workspace.interactions} target={address} />
+        </Provider>,
+      );
+      const checkbox = await screen.findByRole('checkbox', { name: 'Concave Stone procced' });
+      expect(checkbox).toHaveProperty('checked', false);
+      if (kind === 'proc') await user.click(checkbox);
+      // Opening and editing the Stone child must not publish a partial command.
+      expect(application.store.getState()).toBe(before);
+      await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+      const savedWorkspace = application.selectStructuredWorkspace(application.store.getState())!;
+      const saved = savedWorkspace.interactions.traitOffers.get(semanticAddressKey(address))?.value;
+      expect(saved?.kind).toBe('traits');
+      if (saved?.kind !== 'traits') throw new Error('saved offer missing');
+      expect(saved.concaveStoneResult).toEqual(
+        kind === 'proc' ? { kind, optionKey: 'option2' } : undefined,
+      );
+      view.unmount();
+      render(
+        <Provider store={application.store}>
+          <TraitOfferDialog interactions={savedWorkspace.interactions} target={address} />
+        </Provider>,
+      );
+      expect(await screen.findByRole('checkbox', { name: 'Concave Stone procced' })).toHaveProperty(
+        'checked',
+        kind === 'proc',
+      );
+      application.dispose();
+    },
+  );
+
+  it('repairs Stone residual Bridal Glow using the primary boon and preserves both selections on save', async () => {
+    const application = createApplication();
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(2, 1));
+    const address = createTraitOfferAddress(reward, 'source');
+    let project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'UnpickedBoonKeepsake',
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: address,
+      value: {
+        kind: 'traits',
+        giverKey: 'Hera',
+        selectedOptionKey: 'option1',
+        options: [
+          { traitKey: 'HeraSpecialBoon', rarity: 'Common' },
+          { traitKey: 'BoonDecayBoon', rarity: 'Common' },
+          { traitKey: 'HeraCastBoon', rarity: 'Common' },
+        ],
+        concaveStoneResult: { kind: 'proc', optionKey: 'option2' },
+      },
+    });
+    application.store.dispatch(authoredProjectReplaced(project));
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    expect(
+      [...workspace.findingsByRepairTarget.values()]
+        .flat()
+        .map((finding) => semanticAddressKey(finding.origin)),
+    ).toContain(semanticAddressKey(createTraitAcquisitionTargetAddress(address, 'option2')));
+    const user = userEvent.setup();
+    const view = render(
+      <Provider store={application.store}>
+        <TraitOfferDialog interactions={workspace.interactions} target={address} />
+      </Provider>,
+    );
+    expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    await user.click(await screen.findByRole('button', { name: 'option2 acquisition target' }));
+    const primaryLabel = application.catalog.traits.byKey.HeraSpecialBoon!.label;
+    await user.click(await screen.findByRole('option', { name: new RegExp(primaryLabel) }));
+    await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+    const savedWorkspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const saved = savedWorkspace.interactions.traitOffers.get(semanticAddressKey(address))?.value;
+    expect(saved).toMatchObject({
+      selectedOptionKey: 'option1',
+      concaveStoneResult: { kind: 'proc', optionKey: 'option2' },
+    });
+    if (saved?.kind !== 'traits') throw new Error('saved Stone offer missing');
+    expect(saved.options[1]?.targetTraitKey).toBe('HeraSpecialBoon');
+    expect(saved.options[0]?.targetTraitKey).toBeUndefined();
+    view.unmount();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferDialog interactions={savedWorkspace.interactions} target={address} />
+      </Provider>,
+    );
+    expect(
+      (await screen.findByRole('button', { name: 'option2 acquisition target' })).textContent,
+    ).toContain(primaryLabel);
+    application.dispose();
+  });
+
   it('repairs a retained Echo target beside an incomplete row, saves, and reopens the nested choice', async () => {
     const application = createApplication();
     const trait = createTraitOfferAddress(
@@ -193,6 +324,324 @@ describe('trait offer editor entry and dialog', () => {
     expect(screen.getByRole('button', { name: 'Boon Boon Boon outcome 2' })).toBeTruthy();
     application.dispose();
   });
+
+  it.each(['All Together', 'Natural Selection'] as const)(
+    'repairs and persists a real Echo %s choice through the dialog',
+    async (effect) => {
+      const application = createApplication();
+      const trait = createTraitOfferAddress(
+        createEncounterPhaseAddress(
+          goldenHBiome,
+          { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-h-bridge01') },
+          'Encounter',
+        ),
+        'selection',
+      );
+      const project = applyProjectCommand(reachedEchoProject(), application.catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait,
+        value: {
+          kind: 'traits',
+          giverKey: 'Echo',
+          selectedOptionKey: 'option1',
+          options: [
+            {
+              traitKey: 'EchoLastRunBoon',
+              echoLastRunBoon: {
+                selectedOptionKey: 'option1',
+                options: [
+                  effect === 'All Together'
+                    ? { giverKey: 'Hera', traitKey: 'AllElementalBoon', rarity: 'Legendary' }
+                    : { giverKey: 'Demeter', traitKey: 'GoodStuffBoon', rarity: 'Duo' },
+                ],
+              },
+            },
+            { traitKey: 'DiminishingDodgeBoon' },
+            { traitKey: 'DiminishingHealthAndManaBoon' },
+          ],
+        },
+      });
+      application.store.dispatch(authoredProjectReplaced(project));
+      const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+      const user = userEvent.setup();
+      const view = render(
+        <Provider store={application.store}>
+          <TraitOfferDialog interactions={workspace.interactions} target={trait} />
+        </Provider>,
+      );
+      await user.click(await screen.findByRole('button', { name: 'Edit choice' }));
+      expect(screen.getByRole('button', { name: 'Save Boon Boon Boon choice' })).toHaveProperty(
+        'disabled',
+        true,
+      );
+      const chooseEnabled = async () => {
+        const options = await screen.findAllByRole('option');
+        const enabled = options.find(
+          (item) =>
+            item.getAttribute('aria-disabled') !== 'true' && !(item as HTMLOptionElement).disabled,
+        );
+        if (enabled === undefined) throw new Error('real Echo domain has no repair choice');
+        await user.click(enabled);
+      };
+      if (effect === 'All Together') {
+        for (const setKey of ['earth', 'fire', 'air', 'water'] as const) {
+          await user.click(
+            screen.getByRole('button', { name: `Echo All Together ${setKey} grant` }),
+          );
+          await chooseEnabled();
+        }
+      } else {
+        await user.click(screen.getByRole('button', { name: 'Choose all targets' }));
+        for (let index = 1; index <= 8; index++) {
+          await screen.findByText(`Target ${index} of 8`);
+          await chooseEnabled();
+        }
+      }
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Save Boon Boon Boon choice' })).toHaveProperty(
+          'disabled',
+          false,
+        ),
+      );
+      await user.click(screen.getByRole('button', { name: 'Save Boon Boon Boon choice' }));
+      await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+      const saved = application.store.getState().projectWorkspace.history!.present;
+      const reloaded = decodeProjectDocument(
+        JSON.parse(encodeProjectDocument(saved)),
+        application.catalog,
+      );
+      application.store.dispatch(authoredProjectReplaced(reloaded));
+      const reopened = application.selectStructuredWorkspace(application.store.getState())!;
+      const offer = reopened.interactions.traitOffers.get(semanticAddressKey(trait))?.value;
+      if (offer?.kind !== 'traits') throw new Error('missing reloaded Echo offer');
+      const payload = offer.options[0]?.echoLastRunBoon?.options[0];
+      expect(offer.selectedOptionKey).toBe('option1');
+      expect(offer.options[0]?.echoLastRunBoon?.selectedOptionKey).toBe('option1');
+      const evaluated = simulateProjectAssembly(
+        application.catalog,
+        reloaded,
+      ).evaluation.route.biomes.find((biome) => biome.biomeKey === 'H');
+      if (evaluated === undefined || !('rewards' in evaluated))
+        throw new Error('Echo room not evaluated');
+      if (effect === 'All Together') {
+        expect(payload?.allTogetherResult).toBeDefined();
+        for (const key of Object.values(payload!.allTogetherResult!)) {
+          if (key !== null)
+            expect(
+              evaluated.rewards.branches.every(
+                (branch) => branch.traitHistory?.equippedTraits[key] !== undefined,
+              ),
+            ).toBe(true);
+        }
+      } else {
+        expect(payload?.naturalSelectionTargets).toHaveLength(8);
+        expect(
+          evaluated.rewards.branches.every(
+            (branch) => branch.traitHistory?.equippedTraits.GoodStuffBoon !== undefined,
+          ),
+        ).toBe(true);
+      }
+      view.unmount();
+      render(
+        <Provider store={application.store}>
+          <TraitOfferDialog interactions={reopened.interactions} target={trait} />
+        </Provider>,
+      );
+      await user.click(await screen.findByRole('button', { name: 'Edit choice' }));
+      expect(await screen.findByRole('group', { name: `Echo ${effect} outcome` })).toBeTruthy();
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Save Boon Boon Boon choice' })).toHaveProperty(
+          'disabled',
+          false,
+        ),
+      );
+      application.dispose();
+    },
+  );
+
+  it.each(['All Together', 'Natural Selection'] as const)(
+    'repairs and reloads a real Stone %s residual through its compound editor',
+    async (effect) => {
+      const application = createApplication();
+      let project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
+        kind: 'ReplaceStartingKeepsake',
+        selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+        keepsakeKey: 'UnpickedBoonKeepsake',
+      });
+      const prerequisites =
+        effect === 'All Together'
+          ? ([
+              ['Hera', ['HeraWeaponBoon', 'HeraSpecialBoon', 'HeraCastBoon']],
+              ['Hera', ['BoonDecayBoon', 'HeraManaBoon', 'HeraSprintBoon']],
+              ['Hera', ['DamageSharePotencyBoon', 'HeraManaBoon', 'HeraSprintBoon']],
+            ] as const)
+          : ([
+              ['Poseidon', ['PoseidonWeaponBoon', 'PoseidonSpecialBoon', 'PoseidonCastBoon']],
+              ['Demeter', ['DemeterSpecialBoon', 'DemeterCastBoon', 'DemeterSprintBoon']],
+              ['Demeter', ['PlantHealthBoon', 'DemeterCastBoon', 'DemeterSprintBoon']],
+            ] as const);
+      const sites = [goldenFStartId, goldenFOccurrenceId(2, 1), goldenFOccurrenceId(4, 1)];
+      for (const [index, [giverKey, traits]] of prerequisites.entries()) {
+        const reward = createIncomingRewardAddress(goldenFBiome, sites[index]!);
+        project = applyProjectCommand(project, application.catalog, {
+          kind: 'ReplaceIncomingReward',
+          reward,
+          value: {
+            rewardType: 'Boon',
+            payload: { kind: 'BoonSource', source: `${giverKey}Upgrade` },
+          },
+        });
+        project = applyProjectCommand(project, application.catalog, {
+          kind: 'ReplaceTraitOffer',
+          trait: createTraitOfferAddress(reward, 'source'),
+          value: {
+            kind: 'traits',
+            giverKey,
+            selectedOptionKey: 'option1',
+            options: [
+              {
+                traitKey: traits[0],
+                rarity: 'Common',
+                ...(traits[0] === 'BoonDecayBoon' ? { targetTraitKey: 'HeraWeaponBoon' } : {}),
+              },
+              { traitKey: traits[1], rarity: 'Common' },
+              { traitKey: traits[2], rarity: 'Common' },
+            ],
+          },
+        });
+      }
+      const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(6, 1));
+      const trait = createTraitOfferAddress(reward, 'source');
+      const giverKey = effect === 'All Together' ? 'Hera' : 'Demeter';
+      project = applyProjectCommand(project, application.catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward,
+        value: {
+          rewardType: 'Boon',
+          payload: { kind: 'BoonSource', source: `${giverKey}Upgrade` },
+        },
+      });
+      project = applyProjectCommand(project, application.catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait,
+        value: {
+          kind: 'traits',
+          giverKey,
+          selectedOptionKey: 'option1',
+          concaveStoneResult: { kind: 'proc', optionKey: 'option2' },
+          options:
+            effect === 'All Together'
+              ? [
+                  { traitKey: 'HeraSpecialBoon', rarity: 'Common' },
+                  { traitKey: 'AllElementalBoon', rarity: 'Legendary' },
+                  { traitKey: 'HeraCastBoon', rarity: 'Common' },
+                ]
+              : [
+                  { traitKey: 'DemeterCastBoon', rarity: 'Common' },
+                  { traitKey: 'GoodStuffBoon', rarity: 'Duo' },
+                  { traitKey: 'DemeterManaBoon', rarity: 'Common' },
+                ],
+        },
+      });
+      application.store.dispatch(authoredProjectReplaced(project));
+      const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+      const user = userEvent.setup();
+      const view = render(
+        <Provider store={application.store}>
+          <TraitOfferDialog interactions={workspace.interactions} target={trait} />
+        </Provider>,
+      );
+      expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
+        'disabled',
+        true,
+      );
+      await user.click(
+        await screen.findByRole('button', {
+          name: effect === 'All Together' ? 'Choose all grants' : 'Choose all targets',
+        }),
+      );
+      for (let index = 0; index < (effect === 'All Together' ? 4 : 8); index++) {
+        if (effect === 'Natural Selection') await screen.findByText(`Target ${index + 1} of 8`);
+        const choices = await screen.findAllByRole('option');
+        const enabled = choices.find(
+          (item) =>
+            item.getAttribute('aria-disabled') !== 'true' && !(item as HTMLOptionElement).disabled,
+        );
+        if (enabled === undefined)
+          throw new Error(`real Stone ${effect} domain has no repair choice`);
+        await user.click(enabled);
+      }
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
+          'disabled',
+          false,
+        ),
+      );
+      await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+      const saved = application.store.getState().projectWorkspace.history!.present;
+      const reloaded = decodeProjectDocument(
+        JSON.parse(encodeProjectDocument(saved)),
+        application.catalog,
+      );
+      application.store.dispatch(authoredProjectReplaced(reloaded));
+      const reopened = application.selectStructuredWorkspace(application.store.getState())!;
+      const offer = reopened.interactions.traitOffers.get(semanticAddressKey(trait))?.value;
+      if (offer?.kind !== 'traits') throw new Error('missing Stone offer after reload');
+      expect(offer.selectedOptionKey).toBe('option1');
+      expect(offer.concaveStoneResult).toEqual({ kind: 'proc', optionKey: 'option2' });
+      const payload = offer.options[1]!;
+      const evaluated = simulateProjectAssembly(
+        application.catalog,
+        reloaded,
+      ).evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
+      if (evaluated === undefined || !('rewards' in evaluated))
+        throw new Error('Stone room not evaluated');
+      expect(evaluated.rewards.branches.length).toBeGreaterThan(0);
+      if (effect === 'All Together') {
+        expect(payload.allTogetherResult).toBeDefined();
+        for (const key of Object.values(payload.allTogetherResult!)) {
+          if (key !== null)
+            expect(
+              evaluated.rewards.branches.every(
+                (branch) => branch.traitHistory?.equippedTraits[key] !== undefined,
+              ),
+            ).toBe(true);
+        }
+      } else {
+        expect(payload.naturalSelectionTargets).toHaveLength(8);
+        expect(
+          evaluated.rewards.branches.every(
+            (branch) => branch.traitHistory?.equippedTraits.GoodStuffBoon !== undefined,
+          ),
+        ).toBe(true);
+      }
+      view.unmount();
+      render(
+        <Provider store={application.store}>
+          <TraitOfferDialog interactions={reopened.interactions} target={trait} />
+        </Provider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
+          'disabled',
+          false,
+        ),
+      );
+      // Clearing the proc must not delete retained residual detail or the primary.
+      await user.click(screen.getByRole('checkbox', { name: 'Concave Stone procced' }));
+      await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+      const dormant = application
+        .selectStructuredWorkspace(application.store.getState())!
+        .interactions.traitOffers.get(semanticAddressKey(trait))?.value;
+      expect(dormant).toMatchObject({
+        selectedOptionKey: 'option1',
+        concaveStoneResult: { kind: 'noProc' },
+      });
+      if (dormant?.kind !== 'traits') throw new Error('missing dormant Stone offer');
+      expect(dormant.options[1]).toEqual(payload);
+      application.dispose();
+    },
+  );
 
   it('repairs and persists a real missing targeted outcome through the prepared Hera interaction', async () => {
     const application = createApplication();

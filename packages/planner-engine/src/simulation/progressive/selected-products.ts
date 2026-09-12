@@ -238,7 +238,8 @@ export function retainBlockedRegionProducts(
     ) => {
       const key = semanticAddressKey(address);
       return blockedTraitCapabilityAddress !== undefined &&
-        key === semanticAddressKey(blockedTraitCapabilityAddress) &&
+        (key === semanticAddressKey(blockedTraitCapabilityAddress) ||
+          (blockedTraitAt !== undefined && key === semanticAddressKey(blockedTraitAt))) &&
         blockedCapability !== undefined
         ? blockedCapability
         : retainedTraitKeys.has(key)

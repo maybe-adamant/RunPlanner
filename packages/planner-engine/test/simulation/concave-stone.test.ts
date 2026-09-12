@@ -4,8 +4,12 @@ import {
   createIncomingRewardAddress,
   createOccurrenceId,
   createTraitOfferAddress,
+  createTraitAcquisitionTargetAddress,
+  createAllTogetherSetAddress,
+  createNaturalSelectionResultAddress,
   semanticAddressKey,
   type AuthoredTraitOfferTraits,
+  type OneToEight,
 } from '@run-planner/engine/authored-project';
 import { normalizeAuthoredChaosTraitOffer } from '../../src/authored-project/traits';
 import {
@@ -15,6 +19,7 @@ import {
   type TraitOfferEvent,
 } from '../../src/simulation';
 import { applyTraitOfferForAcquisition } from '../../src/simulation/rewards/trait-settlement';
+import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
 import { advanceCurrentKeepsake, createKeepsakeState } from '../../src/simulation/keepsakes/state';
 import {
   applyEchoConcaveStoneReplay,
@@ -208,6 +213,247 @@ describe('Concave Stone declaration and source ledger', () => {
 });
 
 describe('Concave Stone trait settlement', () => {
+  it('repairs and settles All Together carried by the residual option', () => {
+    const before = foldTraitHistoryEvents(
+      catalog,
+      ['HeraWeaponBoon', 'CommonGlobalDamageBoon', 'DamageSharePotencyBoon'].map(
+        (traitKey, sequence): TraitOfferEvent => ({
+          kind: 'traitOffer',
+          owner: origin,
+          acquisitionRole: 'prior',
+          sequence,
+          acquisitionPoint: 'prior',
+          giverKey: 'Hera',
+          selectedOptionKey: 'option1',
+          options: [{ traitKey, rarity: 'Common' }],
+        }),
+      ),
+    );
+    const value: AuthoredTraitOfferTraits = {
+      kind: 'traits',
+      giverKey: 'Hera',
+      selectedOptionKey: 'option1',
+      options: [
+        { traitKey: 'BoonDecayBoon', rarity: 'Common', targetTraitKey: 'HeraWeaponBoon' },
+        { traitKey: 'AllElementalBoon', rarity: 'Legendary' },
+        { traitKey: 'HeraSprintBoon', rarity: 'Common' },
+      ],
+      concaveStoneResult: { kind: 'proc', optionKey: 'option2' },
+    };
+    const missing = settle(value, 'Common', {}, before);
+    expect(missing.findingEntries.map((entry) => entry.finding.origin)).toContainEqual(
+      createAllTogetherSetAddress(trait, 'option2', 'earth'),
+    );
+    const result = {
+      earth: 'ElementalDamageBoon',
+      fire: 'ElementalBaseDamageBoon',
+      air: 'ElementalDamageFloorBoon',
+      water: 'ElementalHealthBoon',
+    };
+    const capability = createTraitOfferCandidateArtifacts(
+      catalog,
+      new Map([
+        [
+          semanticAddressKey(trait),
+          [{ before, context: {}, keepsakes: branchWithStone('Common', before).keepsakes }],
+        ],
+      ]),
+    ).at(trait)!;
+    expect(capability.allTogetherSet(value, 'option2', 'earth')[0]).toContain(result.earth);
+    const unresolvedPrimary: AuthoredTraitOfferTraits = {
+      ...value,
+      options: [
+        { traitKey: 'BoonDecayBoon', rarity: 'Common' },
+        value.options[1]!,
+        value.options[2]!,
+      ],
+    };
+    expect(capability.allTogetherSet(unresolvedPrimary, 'option2', 'earth')).toEqual([]);
+    const repaired = settle(
+      {
+        ...value,
+        options: [
+          value.options[0]!,
+          { ...value.options[1]!, allTogetherResult: result },
+          value.options[2]!,
+        ],
+      },
+      'Common',
+      {},
+      before,
+    );
+    expect(repaired.findingEntries).toEqual([]);
+    expect(repaired.blockedChild).toBeUndefined();
+    expect(repaired.branch.traitHistory?.equippedTraits.HeraWeaponBoon).toMatchObject({
+      rarity: 'Heroic',
+      level: 2,
+    });
+    for (const key of Object.values(result))
+      expect(repaired.branch.traitHistory?.equippedTraits[key]).toBeDefined();
+  });
+  it('repairs a Stone Natural Selection prefix using post-primary targets and settles exactly its increments', () => {
+    const before = foldTraitHistoryEvents(
+      catalog,
+      [
+        ['Poseidon', 'PoseidonWeaponBoon'],
+        ['Demeter', 'DemeterSpecialBoon'],
+        ['Demeter', 'PlantHealthBoon'],
+      ].map(([giverKey, traitKey], sequence): TraitOfferEvent => ({
+        kind: 'traitOffer',
+        owner: origin,
+        acquisitionRole: 'prior',
+        sequence,
+        acquisitionPoint: 'prior',
+        giverKey: giverKey!,
+        selectedOptionKey: 'option1',
+        options: [{ traitKey: traitKey!, rarity: 'Common' }],
+      })),
+    );
+    const value: AuthoredTraitOfferTraits = {
+      kind: 'traits',
+      giverKey: 'Demeter',
+      selectedOptionKey: 'option1',
+      options: [
+        { traitKey: 'DemeterCastBoon', rarity: 'Common' },
+        { traitKey: 'GoodStuffBoon', rarity: 'Duo' },
+        { traitKey: 'DemeterSprintBoon', rarity: 'Common' },
+      ],
+      concaveStoneResult: { kind: 'proc', optionKey: 'option2' },
+    };
+    const address = createNaturalSelectionResultAddress(trait, 'option2');
+    const missing = settle(value, 'Common', {}, before);
+    expect(missing.blockedChild?.address).toEqual(address);
+    const capability = createTraitOfferCandidateArtifacts(
+      catalog,
+      new Map([
+        [
+          semanticAddressKey(trait),
+          [
+            {
+              before,
+              context: {},
+              keepsakes: branchWithStone('Common', before).keepsakes,
+            },
+          ],
+        ],
+      ]),
+    ).at(trait)!;
+    const disposition = catalog.traits.byKey.GoodStuffBoon!.selectedDisposition;
+    if (disposition.kind !== 'naturalSelection')
+      throw new Error('missing Natural Selection declaration');
+    const assess = (targets?: readonly string[]) =>
+      capability.naturalSelectionTargets(
+        value,
+        'option2',
+        disposition.levelCount,
+        disposition.slots,
+        targets,
+      )[0]!;
+    const targets: string[] = [];
+    expect(assess().nextTargetTraitKeys).toContain('DemeterCastBoon');
+    for (let index = 0; index < 8; index++) {
+      const next = assess(targets).nextTargetTraitKeys;
+      const target = index === 0 ? 'DemeterCastBoon' : next[0];
+      expect(next).toContain(target);
+      if (target === undefined) throw new Error('missing increment target');
+      targets.push(target);
+    }
+    expect(assess(targets)).toMatchObject({ complete: true, legal: true });
+    const withTargets = (sequence: readonly string[]): AuthoredTraitOfferTraits => ({
+      ...value,
+      options: [
+        value.options[0]!,
+        { ...value.options[1]!, naturalSelectionTargets: sequence as OneToEight<string> },
+        value.options[2]!,
+      ],
+    });
+    const stale = settle(withTargets(['HeraWeaponBoon']), 'Common', {}, before);
+    expect(stale.blockedChild?.address).toEqual(address);
+    expect(assess(['HeraWeaponBoon']).legal).toBe(false);
+    const repairedValue = withTargets(targets);
+    const repaired = settle(repairedValue, 'Common', {}, before);
+    expect(repaired.blockedChild).toBeUndefined();
+    expect(repaired.findingEntries).toEqual([]);
+    for (const key of new Set(targets)) {
+      expect(repaired.branch.traitHistory?.equippedTraits[key]?.level).toBe(
+        1 + targets.filter((target) => target === key).length,
+      );
+    }
+    const dormant = settle(
+      { ...repairedValue, concaveStoneResult: { kind: 'noProc' } },
+      'Common',
+      {},
+      before,
+    );
+    expect(dormant.branch.traitHistory?.equippedTraits.GoodStuffBoon).toBeUndefined();
+    expect(dormant.branch.traitHistory?.equippedTraits.DemeterCastBoon?.level).toBe(1);
+    expect(repairedValue.options[1]?.naturalSelectionTargets).toEqual(targets);
+  });
+  it('settles a residual target after the primary boon and reports its original option owner', () => {
+    const before = foldTraitHistoryEvents(catalog, [
+      {
+        kind: 'traitOffer',
+        owner: origin,
+        acquisitionRole: 'prior',
+        sequence: 0,
+        acquisitionPoint: 'prior',
+        giverKey: 'Apollo',
+        selectedOptionKey: 'option1',
+        options: [{ traitKey: 'ApolloWeaponBoon', rarity: 'Common' }],
+      },
+    ]);
+    const value: AuthoredTraitOfferTraits = {
+      kind: 'traits',
+      giverKey: 'Hera',
+      selectedOptionKey: 'option1',
+      options: [
+        { traitKey: 'HeraSpecialBoon', rarity: 'Common' },
+        { traitKey: 'BoonDecayBoon', rarity: 'Common' },
+        { traitKey: 'HeraCastBoon', rarity: 'Common' },
+      ],
+      concaveStoneResult: { kind: 'proc', optionKey: 'option2' },
+    };
+    const missing = settle(value, 'Common', {}, before);
+    expect(missing.blockedChild?.address).toEqual(
+      createTraitAcquisitionTargetAddress(trait, 'option2'),
+    );
+    const repaired = settle(
+      {
+        ...value,
+        options: [
+          value.options[0]!,
+          {
+            ...value.options[1]!,
+            targetTraitKey: 'HeraSpecialBoon',
+          },
+          value.options[2]!,
+        ],
+      },
+      'Common',
+      {},
+      before,
+    );
+    expect(repaired.blockedChild).toBeUndefined();
+    expect(repaired.findingEntries).toEqual([]);
+    expect(repaired.branch.traitHistory?.equippedTraits.HeraSpecialBoon?.rarity).toBe('Heroic');
+  });
+  it('keeps an existing later offer valid when an earlier Stone proc is removed', () => {
+    const later = offer();
+    const priorProc = settle(offer({ kind: 'proc', optionKey: 'option2' }));
+    expect(settleWithKeepsakes(later, priorProc.branch.keepsakes).blockedChild).toBeUndefined();
+    const priorNoProc = settle(offer());
+    const afterEdit = settleWithKeepsakes(later, priorNoProc.branch.keepsakes);
+    expect(afterEdit.blockedChild).toBeUndefined();
+    expect(afterEdit.findingEntries).toEqual([]);
+    expect(afterEdit.branch.keepsakes.stone?.status).toBe('pending');
+    expect(later.concaveStoneResult).toBeUndefined();
+    const published = selectedTraitOfferProducts([afterEdit.branch]).selectedTraitOffers[0]?.offer;
+    expect(published).toMatchObject({ concaveStoneResult: { kind: 'noProc' } });
+    expect(
+      settleWithKeepsakes(offer({ kind: 'noProc' }), priorProc.branch.keepsakes).blockedChild,
+    ).toBeUndefined();
+  });
+
   it.each([
     ['Common', 25],
     ['Rare', 50],
@@ -223,6 +469,9 @@ describe('Concave Stone trait settlement', () => {
       expect(
         result.branch.traitHistory?.events.filter((event) => event.kind === 'traitOffer'),
       ).toHaveLength(1);
+      const implicit = settle(offer(), rank);
+      expect(implicit.blockedChild).toBeUndefined();
+      expect(implicit.branch.keepsakes).toEqual(result.branch.keepsakes);
     },
   );
 
@@ -310,6 +559,7 @@ describe('Concave Stone trait settlement', () => {
   });
 
   it('forces a Heroic proc only when a residual row exists and excludes a replacement row', () => {
+    expect(settle(offer(), 'Heroic').blockedChild?.address).toEqual(trait);
     const noProc = settle(offer({ kind: 'noProc' }), 'Heroic');
     expect(noProc.blockedChild?.address).toEqual(trait);
     expect(noProc.branch.keepsakes.stone).toMatchObject({ status: 'pending', rank: 'Heroic' });
@@ -411,6 +661,9 @@ describe('Concave Stone candidate capability', () => {
     );
     const capability = artifacts.at(trait);
     if (capability === undefined) throw new Error('missing Stone candidate capability');
+    expect(capability.concaveStone(offer())).toMatchObject([
+      { required: false, resultSupport: 'possible', supported: true },
+    ]);
     expect(capability.concaveStone(offer({ kind: 'noProc' }))).toMatchObject([
       {
         procSupport: 75,

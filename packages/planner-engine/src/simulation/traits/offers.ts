@@ -379,9 +379,9 @@ function evaluateReachedTraitOfferWithAssessments(
         findings: Object.freeze([]),
       })
     : assessTraitReplacementComposition(catalog, legalityOffer, before, effectiveContext);
-  const targetedAcquisition = frozenAcquisition
-    ? Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) })
-    : assessSelectedTargetedAcquisition(catalog, legalityOffer, before);
+  // A frozen source row still acquires its targeted effect at the current
+  // frontier, after the primary selection has settled.
+  const targetedAcquisition = assessSelectedTargetedAcquisition(catalog, legalityOffer, before);
   const rawAssessments = frozenAcquisition
     ? Object.freeze([])
     : (assessments ?? assessTraitOffer(catalog, legalityOffer, before, effectiveContext));

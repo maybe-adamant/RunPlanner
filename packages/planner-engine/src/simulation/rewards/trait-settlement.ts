@@ -38,7 +38,7 @@ import {
 } from '../../authored-project/traits';
 import { circeResolutionDomain, manualArcanaGraspCost } from '../arcana-fear';
 import { advanceCurrentKeepsake } from '../keepsakes/state';
-import { consumeConcaveStone } from '../keepsakes/trait-effects';
+import { consumeConcaveStone, concaveStoneProcSupport } from '../keepsakes/trait-effects';
 import type { RewardBranchState } from './branch-primitives';
 import type { TraitOfferOptionLevelResolution } from '../traits/offer-levels';
 import { settleMoonBeamPathPoints, settleSelectedHexTree } from './trait-settlement/hex-settlement';
@@ -75,6 +75,8 @@ type TraitOfferAcquisitionMode =
   | {
       readonly kind: 'frozenConcaveStoneSecondary';
       readonly levelResolution?: TraitOfferOptionLevelResolution;
+      readonly sourceTraitAddress?: TraitOfferAddress;
+      readonly sourceOptionKey: AuthoredTraitOfferTraits['selectedOptionKey'];
     };
 
 interface ApplyTraitOfferOptions {
@@ -366,10 +368,26 @@ function applyTraitOfferForAcquisitionInternal(
   // A Stone residual is an acquisition from the already-evaluated source
   // screen, not a second authored offer. Keep its callback machinery private
   // to settlement and publish only the source offer's evaluation trace.
+  // Resolve an available Stone's omitted choice here so execution consumes
+  // an explicit disposition without rewriting authored data or inferring it.
   const traitEvaluations =
     acquisitionMode.kind === 'frozenConcaveStoneSecondary'
       ? Object.freeze([...(branch.traitEvaluations ?? [])])
-      : Object.freeze([...(branch.traitEvaluations ?? []), evaluation]);
+      : Object.freeze([
+          ...(branch.traitEvaluations ?? []),
+          evaluation.offer.kind === 'traits' &&
+          evaluation.offer.concaveStoneResult === undefined &&
+          catalog.traitGivers.byKey[evaluation.offer.giverKey]?.shopAwareGodTrait === true &&
+          concaveStoneProcSupport(catalog, effectiveBranch.keepsakes) !== undefined
+            ? Object.freeze({
+                ...evaluation,
+                offer: Object.freeze({
+                  ...evaluation.offer,
+                  concaveStoneResult: Object.freeze({ kind: 'noProc' as const }),
+                }),
+              })
+            : evaluation,
+        ]);
   if (
     findings !== undefined &&
     callingCard !== undefined &&
@@ -501,6 +519,8 @@ function applyTraitOfferForAcquisitionInternal(
   // and installed atomically with the selected row. There is no post-selection
   // mutation, so sibling rows and Concave Stone residuals remain frozen.
   const traitAddress = (() => {
+    if (acquisitionMode.kind === 'frozenConcaveStoneSecondary')
+      return acquisitionMode.sourceTraitAddress;
     const owner = traitOwnerAddress(reward.origin);
     return owner === undefined ? undefined : createTraitOfferAddress(owner, role);
   })();
@@ -526,7 +546,10 @@ function applyTraitOfferForAcquisitionInternal(
     catalog,
     traitHistory: applied.history,
     traitAddress,
-    selectedOptionKey: applied.event.selectedOptionKey,
+    selectedOptionKey:
+      acquisitionMode.kind === 'frozenConcaveStoneSecondary'
+        ? acquisitionMode.sourceOptionKey
+        : applied.event.selectedOptionKey,
     selected,
     selectedDisposition,
     targetedAcquisition: evaluation.targetedAcquisition,
@@ -625,6 +648,8 @@ function applyTraitOfferForAcquisitionInternal(
         Object.freeze({
           mode: Object.freeze({
             kind: 'frozenConcaveStoneSecondary',
+            sourceOptionKey: stone.secondary.sourceOptionKey,
+            ...(traitAddress === undefined ? {} : { sourceTraitAddress: traitAddress }),
             ...(stone.secondary.levelResolution === undefined
               ? {}
               : { levelResolution: stone.secondary.levelResolution }),
@@ -633,7 +658,10 @@ function applyTraitOfferForAcquisitionInternal(
       );
       stoneBranch = secondarySettlement.branch;
       blockedChildAddress ??= secondarySettlement.blockedChild?.address;
-      blockedChildCandidateContext ??= secondarySettlement.blockedChild?.candidateContext;
+      // Residual children retain the outer offer's address. Their candidate
+      // capability advances this source frontier through the primary selection.
+      if (secondarySettlement.blockedChild !== undefined)
+        blockedChildCandidateContext ??= childCandidateContext;
     }
   }
   return Object.freeze({
@@ -783,7 +811,25 @@ function applyEchoLastRunBoonForAcquisition(
     Object.freeze({ mode: Object.freeze({ kind: 'direct' }) }),
     Object.freeze({ address, outcome }),
   );
-  return Object.freeze({ ...settlement, findingEntries: Object.freeze([...findings.values()]) });
+  // The nested acquisition is edited atomically through its Echo choice owner;
+  // its internal one-row offer is not an independently authored trait screen.
+  return Object.freeze({
+    ...settlement,
+    ...(settlement.blockedChild === undefined
+      ? {}
+      : {
+          blockedChild: Object.freeze({ ...settlement.blockedChild, address }),
+        }),
+    findingEntries: Object.freeze(
+      [...findings.values()].map((entry) =>
+        Object.freeze({
+          ...entry,
+          finding: Object.freeze({ ...entry.finding, origin: address }),
+          atomicRegion: ownerRegion(address),
+        }),
+      ),
+    ),
+  });
 }
 
 function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | undefined {

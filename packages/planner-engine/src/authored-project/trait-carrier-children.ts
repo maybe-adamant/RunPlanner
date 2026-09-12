@@ -292,37 +292,47 @@ export function discoverAuthoredTraitCarrierChildren(
   const selected = offer.options[optionIndex(optionKey)];
   if (selected === undefined) return Object.freeze([]);
   const children: AuthoredTraitCarrierChild[] = [];
+  const appendPayloadChildren = (
+    childOptionKey: TraitOptionKey,
+    option: AuthoredTraitOfferTraits['options'][number],
+  ) => {
+    for (const payload of discoverAuthoredTraitCarrierPayloads(catalog, option.traitKey, option)) {
+      if (payload.kind === 'traitAcquisitionTarget')
+        children.push(
+          Object.freeze({
+            ...payload,
+            address: createTraitAcquisitionTargetAddress(address, childOptionKey),
+            optionKey: childOptionKey,
+          }),
+        );
+      else if (payload.kind === 'allTogetherSet')
+        children.push(
+          Object.freeze({
+            ...payload,
+            address: createAllTogetherSetAddress(address, childOptionKey, payload.setKey),
+            optionKey: childOptionKey,
+          }),
+        );
+      else
+        children.push(
+          Object.freeze({
+            ...payload,
+            address: createNaturalSelectionResultAddress(address, childOptionKey),
+            optionKey: childOptionKey,
+          }),
+        );
+    }
+  };
+  appendPayloadChildren(optionKey, selected);
+  const residualOptionKey =
+    offer.concaveStoneResult?.kind === 'proc' ? offer.concaveStoneResult.optionKey : undefined;
+  const residual =
+    residualOptionKey === undefined || residualOptionKey === optionKey
+      ? undefined
+      : offer.options[optionIndex(residualOptionKey)];
+  if (residualOptionKey !== undefined && residual !== undefined)
+    appendPayloadChildren(residualOptionKey, residual);
   const declaration = catalog.traits.byKey[selected.traitKey];
-  for (const payload of discoverAuthoredTraitCarrierPayloads(
-    catalog,
-    selected.traitKey,
-    selected,
-  )) {
-    if (payload.kind === 'traitAcquisitionTarget')
-      children.push(
-        Object.freeze({
-          ...payload,
-          address: createTraitAcquisitionTargetAddress(address, optionKey),
-          optionKey,
-        }),
-      );
-    else if (payload.kind === 'allTogetherSet')
-      children.push(
-        Object.freeze({
-          ...payload,
-          address: createAllTogetherSetAddress(address, optionKey, payload.setKey),
-          optionKey,
-        }),
-      );
-    else
-      children.push(
-        Object.freeze({
-          ...payload,
-          address: createNaturalSelectionResultAddress(address, optionKey),
-          optionKey,
-        }),
-      );
-  }
   if (declaration?.selectedDisposition.kind === 'circe') {
     children.push(
       Object.freeze({
@@ -407,7 +417,10 @@ function requireOwnedOption(
   offer: AuthoredTraitOfferTraits,
   child: AuthoredTraitOptionCarrierChild,
 ): AuthoredTraitOfferTraits['options'][number] {
-  if (offer.selectedOptionKey !== child.optionKey)
+  const activeStoneResidual =
+    offer.concaveStoneResult?.kind === 'proc' &&
+    offer.concaveStoneResult.optionKey === child.optionKey;
+  if (offer.selectedOptionKey !== child.optionKey && !activeStoneResidual)
     throw new Error('trait carrier child does not belong to the selected trait option');
   const option = offer.options[optionIndex(child.optionKey)];
   if (option === undefined) throw new Error('trait carrier child option is missing');

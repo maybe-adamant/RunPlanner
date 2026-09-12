@@ -209,7 +209,7 @@ function AllTogetherSetPicker({
 function AllTogetherOutcomeEditor({
   interactions,
   offer,
-  optionIndex,
+  optionPosition,
   onSelect,
 }: {
   readonly interactions: readonly Extract<
@@ -217,11 +217,11 @@ function AllTogetherOutcomeEditor({
     { readonly child: { readonly kind: 'allTogetherSet' } }
   >[];
   readonly offer: AuthoredTraitOfferTraits;
-  readonly optionIndex: number;
+  readonly optionPosition: number;
   readonly onSelect: (result: AuthoredAllTogetherResult) => void;
 }) {
   const findingTarget = useFindingTarget();
-  const option = offer.options[optionIndex];
+  const option = offer.options[optionPosition];
   const labelsForControls = () =>
     Object.freeze(
       Object.fromEntries(
@@ -312,7 +312,7 @@ function AllTogetherOutcomeEditor({
 function NaturalSelectionOutcomeEditor({
   interaction,
   offer,
-  optionIndex,
+  optionPosition,
   onSelect,
 }: {
   readonly interaction: Extract<
@@ -320,11 +320,11 @@ function NaturalSelectionOutcomeEditor({
     { readonly child: { readonly kind: 'naturalSelectionResult' } }
   >;
   readonly offer: AuthoredTraitOfferTraits;
-  readonly optionIndex: number;
+  readonly optionPosition: number;
   readonly onSelect: (targets: readonly string[]) => void;
 }) {
   const findingTarget = useFindingTarget();
-  const option = offer.options[optionIndex];
+  const option = offer.options[optionPosition];
   const initial = option?.naturalSelectionTargets ?? Object.freeze([]);
   const [draft, setDraft] = useState<readonly string[]>(initial);
   const [retainedTarget, setRetainedTarget] = useState<string>();
@@ -335,10 +335,10 @@ function NaturalSelectionOutcomeEditor({
         ? offer
         : replaceTraitOfferOption(
             offer,
-            optionIndex,
+            optionPosition,
             naturalSelectionOptionWithTargets(option, draft),
           ),
-    [draft, optionIndex, offer, option],
+    [draft, optionPosition, offer, option],
   );
   const loadable = useMemo(
     () => interaction.forOffer(draftOffer, retainedTarget),
@@ -382,7 +382,7 @@ function NaturalSelectionOutcomeEditor({
       interaction.forOffer(
         replaceTraitOfferOption(
           draftOffer,
-          optionIndex,
+          optionPosition,
           naturalSelectionOptionWithTargets(option, next),
         ),
       ),
@@ -449,16 +449,13 @@ function NaturalSelectionOutcomeEditor({
 export function TraitOfferSelectedSpecialOutcomes({
   interaction,
   offer,
-  optionIndex,
   carrierChildren,
   feedback,
   concaveStone,
   onUpdate,
-  onConcaveStoneResult,
 }: {
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly offer: AuthoredTraitOfferTraits;
-  readonly optionIndex: number;
   readonly carrierChildren: readonly WorkspaceTraitCarrierChildInteraction[];
   readonly feedback: readonly import('@planner/projections/structured-workspace').WorkspaceTraitOfferFeedback[];
   readonly concaveStone:
@@ -468,10 +465,6 @@ export function TraitOfferSelectedSpecialOutcomes({
       }
     | undefined;
   readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
-  readonly onConcaveStoneResult?: (
-    offer: AuthoredTraitOfferTraits,
-    result: AuthoredConcaveStoneResult | null,
-  ) => void;
 }) {
   const ransomAssessment = feedback.find((entry) => entry.kind === 'ransom')?.assessment;
   const allTogetherSets = carrierChildren.filter(
@@ -482,7 +475,15 @@ export function TraitOfferSelectedSpecialOutcomes({
       { readonly child: { readonly kind: 'allTogetherSet' } }
     > => child.child.kind === 'allTogetherSet',
   );
-  const naturalSelection = carrierChildren.find(
+  const allTogetherGroups = [
+    ...new Map(
+      allTogetherSets.map((child) => [
+        child.child.optionKey,
+        allTogetherSets.filter((candidate) => candidate.child.optionKey === child.child.optionKey),
+      ]),
+    ).values(),
+  ];
+  const naturalSelections = carrierChildren.filter(
     (
       child,
     ): child is Extract<
@@ -492,21 +493,23 @@ export function TraitOfferSelectedSpecialOutcomes({
   );
   return (
     <>
-      {allTogetherSets.length === 0 ? null : (
+      {allTogetherGroups.map((interactions) => (
         <AllTogetherOutcomeEditor
-          interactions={allTogetherSets}
+          interactions={interactions}
+          key={interactions[0]!.child.optionKey}
           offer={offer}
-          optionIndex={optionIndex}
+          optionPosition={optionIndex(interactions[0]!.child.optionKey)}
           onSelect={(allTogetherResult) =>
-            onUpdate(allTogetherSets[0]!.update(offer, allTogetherResult))
+            onUpdate(interactions[0]!.update(offer, allTogetherResult))
           }
         />
-      )}
-      {naturalSelection === undefined ? null : (
+      ))}
+      {naturalSelections.map((naturalSelection) => (
         <NaturalSelectionOutcomeEditor
           interaction={naturalSelection}
+          key={naturalSelection.child.optionKey}
           offer={offer}
-          optionIndex={optionIndex}
+          optionPosition={optionIndex(naturalSelection.child.optionKey)}
           onSelect={(targets) =>
             onUpdate(
               naturalSelection.update(
@@ -516,7 +519,7 @@ export function TraitOfferSelectedSpecialOutcomes({
             )
           }
         />
-      )}
+      ))}
       {concaveStone === undefined ? null : (
         <ConcaveStoneOutcomeEditor
           domain={concaveStone.domain}
@@ -525,7 +528,6 @@ export function TraitOfferSelectedSpecialOutcomes({
           traitLabel={interaction.traitLabel}
           onSelect={(result) => {
             onUpdate(concaveStone.interaction.update(offer, result));
-            onConcaveStoneResult?.(offer, result);
           }}
         />
       )}

@@ -307,19 +307,6 @@ export function bindTraitOfferInteractions(input: {
               if (!branches.every((branch) => branch.required === first.required)) return false;
               return !first.required || offer.concaveStoneResult !== undefined;
             },
-            intentFor: (
-              _offer: AuthoredTraitOfferTraits,
-              result:
-                import('@run-planner/engine/authored-project').AuthoredConcaveStoneResult | null,
-            ) =>
-              derivedShopPayloadIntent(
-                derivedShopEntryEdit,
-                Object.freeze({
-                  kind: 'ReplaceConcaveStoneResult' as const,
-                  trait: control.address,
-                  value: result,
-                }),
-              ),
             forOffer: (offer: AuthoredTraitOfferTraits) =>
               Object.freeze({
                 load: () => {
@@ -433,7 +420,10 @@ export function bindTraitOfferInteractions(input: {
               (child.kind === 'traitAcquisitionTarget' ||
                 child.kind === 'allTogetherSet' ||
                 child.kind === 'naturalSelectionResult') &&
-              child.optionKey === optionKey,
+              (child.optionKey === optionKey ||
+                (optionKey === value.selectedOptionKey &&
+                  value.concaveStoneResult?.kind === 'proc' &&
+                  child.optionKey === value.concaveStoneResult.optionKey)),
           )
           .map((child) => child),
       );
@@ -792,7 +782,7 @@ export function bindTraitOfferInteractions(input: {
                                 branchSupport: candidate.result.branchSupport,
                                 selected:
                                   candidate.result.traitKey ===
-                                  offer.options[optionIndex(optionKey)]?.targetTraitKey,
+                                  offer.options[optionIndex(child.optionKey)]?.targetTraitKey,
                               }),
                             ),
                             (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
@@ -855,7 +845,8 @@ export function bindTraitOfferInteractions(input: {
                         );
                         if (evaluated.kind !== 'naturalSelectionResult') return undefined;
                         const currentTargets = [
-                          ...(offer.options[optionIndex(optionKey)]?.naturalSelectionTargets ?? []),
+                          ...(offer.options[optionIndex(child.optionKey)]
+                            ?.naturalSelectionTargets ?? []),
                           ...(retainedTargetKey === undefined ? [] : [retainedTargetKey]),
                         ];
                         const available = new Set(evaluated.result.nextTargetTraitKeys);

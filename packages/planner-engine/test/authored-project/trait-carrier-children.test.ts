@@ -32,6 +32,58 @@ function offer(traitKey: string): AuthoredTraitOfferTraits {
 
 describe('trait carrier children', () => {
   it.each([
+    ['BoonDecayBoon', 'traitAcquisitionTarget', 1],
+    ['AllElementalBoon', 'allTogetherSet', 4],
+    ['GoodStuffBoon', 'naturalSelectionResult', 1],
+  ] as const)(
+    'activates %s payload children for the Stone residual only while selected',
+    (traitKey, kind, count) => {
+      const value: AuthoredTraitOfferTraits = {
+        ...offer(traitKey),
+        options: [{ traitKey: 'HeraWeaponBoon', rarity: 'Common' }, offer(traitKey).options[0]!],
+        concaveStoneResult: { kind: 'proc', optionKey: 'option2' },
+      };
+      const children = discoverAuthoredTraitCarrierChildren(catalog, address, value).filter(
+        (child) => child.kind === kind,
+      );
+      expect(children).toHaveLength(count);
+      expect(children.every((child) => 'optionKey' in child && child.optionKey === 'option2')).toBe(
+        true,
+      );
+      expect(
+        discoverAuthoredTraitCarrierChildren(catalog, address, {
+          ...value,
+          concaveStoneResult: { kind: 'noProc' },
+        }).some((child) => child.kind === kind),
+      ).toBe(false);
+      expect(value.options[1]).toEqual(offer(traitKey).options[0]);
+    },
+  );
+
+  it('updates a Stone residual payload without changing the primary selection or sibling', () => {
+    const value: AuthoredTraitOfferTraits = {
+      ...offer('BoonDecayBoon'),
+      options: [
+        { traitKey: 'HeraWeaponBoon', rarity: 'Common' },
+        { traitKey: 'BoonDecayBoon', rarity: 'Common' },
+      ],
+      concaveStoneResult: { kind: 'proc', optionKey: 'option2' },
+    };
+    const child = discoverAuthoredTraitCarrierChildren(catalog, address, value).find(
+      (child) => child.kind === 'traitAcquisitionTarget',
+    );
+    if (child?.kind !== 'traitAcquisitionTarget') throw new Error('missing residual target');
+    const updated = updateAuthoredTraitCarrierChild(value, {
+      kind: 'traitAcquisitionTarget',
+      child,
+      targetTraitKey: 'HeraWeaponBoon',
+    });
+    expect(updated.selectedOptionKey).toBe('option1');
+    expect(updated.concaveStoneResult).toEqual(value.concaveStoneResult);
+    expect(updated.options[0]).toBe(value.options[0]);
+    expect(updated.options[1]?.targetTraitKey).toBe('HeraWeaponBoon');
+  });
+  it.each([
     ['Hera', 'BoonDecayBoon', 'HeraWeaponBoon'],
     ['Icarus', 'UpgradeHammerBoon', 'StaffDoubleAttackTrait'],
   ])(

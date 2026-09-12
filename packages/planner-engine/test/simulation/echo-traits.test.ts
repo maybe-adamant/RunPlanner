@@ -1526,7 +1526,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     );
     if (result.blockedChild === undefined)
       throw new Error('nested All Together checkpoint missing');
-    expect(result.blockedChild.address).toMatchObject({ kind: 'allTogetherSet', setKey: 'earth' });
+    expect(result.blockedChild.address).toEqual(createEchoLastRunBoonAddress(echoOwner, 'option1'));
     expect(result.findingEntries).toContainEqual(
       expect.objectContaining({
         finding: expect.objectContaining({
