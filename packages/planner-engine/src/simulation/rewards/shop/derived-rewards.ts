@@ -4,7 +4,7 @@ import {
   type AcquisitionSiteAddress,
   type SemanticAddress,
 } from '../../../authored-project/addresses';
-import { createUnresolvedShopAcquisitionRewardState } from '../../../authored-project/traits';
+import { createUnresolvedShopAcquisitionRewardState } from '../../../authored-project/traits/state';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   echoShopDuplicateOffer,
@@ -136,7 +136,7 @@ export interface ShopGoldMaterializationProduct {
 export function materializeShopGold(input: {
   readonly catalog: Catalog;
   readonly branch: RewardBranchState;
-  readonly pendingGold?: import('../../../authored-project/traits').EquippedTrait | undefined;
+  readonly pendingGold?: import('../../../authored-project/traits/state').EquippedTrait | undefined;
   readonly existingMaterialization?: PendingShopGoldMaterialization | undefined;
   readonly sourceOffer: PendingShopPaidOffer;
   readonly roleBindings: PendingShopGoldMaterialization['roleBindings'];

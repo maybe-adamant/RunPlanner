@@ -2,7 +2,7 @@ import type { Catalog, KeepsakeRank } from '../../catalog-schema';
 
 import { semanticAddressKey, type SemanticAddress } from '../../authored-project/addresses';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
-import type { AuthoredTraitOffer } from '../../authored-project/traits';
+import type { AuthoredTraitOffer } from '../../authored-project/traits/state';
 
 import { createRewardBagState, insertExactPriorityIntoBag } from '../../reward-kernel';
 import {
@@ -112,8 +112,8 @@ export function applyJeweledPomEquipResult(
         traitKey: result.traitKey,
         ...(result.rarity === undefined ? {} : { rarity: result.rarity }),
       },
-    ]) as import('../../authored-project/traits').OneToThree<
-      import('../../authored-project/traits').AuthoredTraitOption
+    ]) as import('../../authored-project/traits/state').OneToThree<
+      import('../../authored-project/traits/state').AuthoredTraitOption
     >,
     selectedOptionKey: 'option1',
   });
@@ -176,8 +176,8 @@ export function applyExperimentalHammerEquipResult(
     giverKey: effect.giverKey,
     options: Object.freeze([
       { traitKey: result.traitKey },
-    ]) as import('../../authored-project/traits').OneToThree<
-      import('../../authored-project/traits').AuthoredTraitOption
+    ]) as import('../../authored-project/traits/state').OneToThree<
+      import('../../authored-project/traits/state').AuthoredTraitOption
     >,
     selectedOptionKey: 'option1',
   });

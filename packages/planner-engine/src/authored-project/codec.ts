@@ -1,7 +1,7 @@
 import type { Catalog, RouteDeclaration } from '../catalog-schema';
 import { decodeBiomeState } from './biomeState';
 import { assessStartingArcanaGrasp } from './loadout';
-import { normalizeAuthoredHexTree } from './hex-tree';
+import { normalizeAuthoredHexTree } from './traits/hex-tree';
 import { decodeBiomeTopology } from './topology/codec';
 import { decodeKeepsakeEquipResults } from './keepsake-equip-codec';
 import {
@@ -25,7 +25,7 @@ function decodeHexTree(
   catalog: Catalog,
   spellTraitKey: string,
   path: string,
-): import('./traits').AuthoredHexTreeConfiguration {
+): import('./traits/state').AuthoredHexTreeConfiguration {
   const raw = expectRecord(value, path);
   expectExactKeys(raw, ['layoutKey', 'rareTalentKeys', 'epicTalentKeys'], path);
   const rareTalentKeys = expectArray(raw.rareTalentKeys, `${path}.rareTalentKeys`).map(

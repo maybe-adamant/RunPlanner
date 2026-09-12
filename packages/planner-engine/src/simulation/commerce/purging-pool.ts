@@ -1,6 +1,6 @@
 import type { PurgingPoolState } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
-import type { EquippedTrait } from '../../authored-project/traits';
+import type { EquippedTrait } from '../../authored-project/traits/state';
 import type { FindingEvidence } from '../model';
 import { semanticAddressKey, type OccurrenceAddress } from '../../authored-project/addresses';
 

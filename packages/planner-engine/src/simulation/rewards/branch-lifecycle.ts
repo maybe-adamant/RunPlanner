@@ -67,7 +67,7 @@ export function initializeRewardBranches(
   loadout?: {
     readonly weaponKey: string;
     readonly aspectKey: string;
-    readonly aspectHexTree?: import('../../authored-project/traits').AuthoredHexTreeConfiguration;
+    readonly aspectHexTree?: import('../../authored-project/traits/state').AuthoredHexTreeConfiguration;
   },
 ): readonly RewardBranchState[] {
   if (initialBranches === undefined) {

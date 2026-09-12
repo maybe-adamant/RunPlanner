@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 
-import { decodeNemesisRandomEventOutcome } from '../../../src/authored-project/room-state/nemesis-outcome-codec';
+import { decodeNemesisRandomEventOutcome } from '../../../src/authored-project/room-state/decoding/nemesis-outcome-codec';
 
 describe('Nemesis outcome decoder', () => {
   it('preserves each closed response path', () => {

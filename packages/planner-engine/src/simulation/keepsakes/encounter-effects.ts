@@ -1,5 +1,5 @@
 import type { Catalog } from '../../catalog-schema';
-import type { AuthoredGorgonAthenaOffer } from '../../authored-project/traits';
+import type { AuthoredGorgonAthenaOffer } from '../../authored-project/traits/state';
 import type {
   FigLeafStateValue,
   GorgonLifecycleStatus,

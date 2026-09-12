@@ -10,7 +10,7 @@ import {
 import {
   normalizeAuthoredTranscendentEmbryoOutcome,
   type AuthoredTranscendentEmbryoOutcome,
-} from './traits';
+} from './traits/state';
 
 /** Decode the sparse immediate result of an authored keepsake selection. */
 export function decodeKeepsakeEquipResults(

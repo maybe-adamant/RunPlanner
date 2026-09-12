@@ -1,10 +1,10 @@
 import type { Catalog, TraitRarity } from '../../catalog-schema';
-import type { AuthoredTraitOffer, TraitOptionKey } from '../../authored-project/traits';
+import type { AuthoredTraitOffer, TraitOptionKey } from '../../authored-project/traits/state';
 import type { RewardHistoryState } from '../../reward-kernel/model';
 import type { BoonRarityFacts } from './rarity';
 import type { TraitFindingCode } from '../model';
 import type { TraitHistoryState, TraitReplacementTransition } from './history/model';
-import { optionIndex } from '../../authored-project/traits';
+import { optionIndex } from '../../authored-project/traits/state';
 import { targetedAcquisitionTargetKeys } from './level-effects';
 import { ordinaryEquippedSlots } from './history/fold';
 import { resolveTraitOfferOptionLevel } from './offer-levels';
@@ -51,7 +51,7 @@ export interface TraitOfferContext {
 }
 
 export interface EchoLastRunBoonOutcome {
-  readonly option: import('../../authored-project/traits').AuthoredEchoLastRunBoonOption;
+  readonly option: import('../../authored-project/traits/state').AuthoredEchoLastRunBoonOption;
   readonly effectiveRarity: TraitRarity;
   readonly effectiveLevel?: number;
   readonly assessment: TraitAssessment;

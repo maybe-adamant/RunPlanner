@@ -5,12 +5,12 @@ import {
   type AcquisitionEntryAddress,
   type AcquisitionSiteAddress,
 } from '../../../authored-project/addresses';
-import { artificerReplacementEntryKey } from '../../../authored-project/artificer';
-import { seaStarDuplicateSiteKey } from '../../../authored-project/sea-star';
+import { artificerReplacementEntryKey } from '../../../authored-project/acquisition/artificer';
+import { seaStarDuplicateSiteKey } from '../../../authored-project/acquisition/sea-star';
 import {
   createUnresolvedAcquisitionRewardState,
   optionIndex,
-} from '../../../authored-project/traits';
+} from '../../../authored-project/traits/state';
 import type { Catalog } from '../../../catalog-schema';
 import {
   applyConcreteAcquisition,

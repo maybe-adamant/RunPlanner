@@ -52,7 +52,7 @@ export interface PendingShopState {
   readonly witness: ShopGenerationWitness;
   readonly remainingSlotIndexes?: readonly number[];
   readonly travelActiveAtEntry?: boolean;
-  readonly goldActiveAtEntry?: import('../../authored-project/traits').EquippedTrait;
+  readonly goldActiveAtEntry?: import('../../authored-project/traits/state').EquippedTrait;
   readonly firstNormalPurchaseSeen?: boolean;
   readonly travelRefill?: PendingShopTravelRefill;
   readonly goldMaterialization?: PendingShopGoldMaterialization;

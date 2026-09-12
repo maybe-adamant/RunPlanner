@@ -1,4 +1,4 @@
-import type { AuthoredHexTreeConfiguration } from '../authored-project/traits';
+import type { AuthoredHexTreeConfiguration } from '../authored-project/traits/state';
 import type { Catalog } from '../catalog-schema';
 import type { RewardBranchState } from './rewards/branch-primitives';
 

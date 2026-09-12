@@ -1,5 +1,5 @@
 import type { Catalog } from '../../catalog-schema';
-import type { AuthoredTraitOption } from '../../authored-project/traits';
+import type { AuthoredTraitOption } from '../../authored-project/traits/state';
 import type { KeepsakeState } from '../keepsakes/state';
 import { isLevelBearingTrait } from './history/upgrades';
 import type { TraitHistoryState } from './history/model';

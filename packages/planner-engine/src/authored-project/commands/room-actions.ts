@@ -7,9 +7,9 @@ import {
   structurallyActiveOccurrenceIds,
 } from '../room-actions/defaults';
 import { createBiomeAddress } from '../addresses';
-import { reconcileAcquisitionResolvedRewardEntry } from '../acquisition-entry';
+import { reconcileAcquisitionResolvedRewardEntry } from '../acquisition/acquisition-entry';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
-import { updateOccurrence } from './occurrence-mutation';
+import { updateOccurrence } from './occurrence/mutation';
 import type { RoomActionCommand } from './types';
 
 function requireIndex(

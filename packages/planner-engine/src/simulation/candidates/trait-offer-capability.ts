@@ -15,8 +15,8 @@ import type {
   AuthoredLevelResolution,
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
-} from '../../authored-project/traits';
-import { optionIndex, type TraitOptionKey } from '../../authored-project/traits';
+} from '../../authored-project/traits/state';
+import { optionIndex, type TraitOptionKey } from '../../authored-project/traits/state';
 import { circeResolutionDomain } from '../arcana-fear';
 import {
   assessTraitOffer,
@@ -51,7 +51,7 @@ import {
   concaveStoneResidualOptionKeys,
 } from '../keepsakes/trait-effects';
 import { evaluateCallingCardOffer } from '../keepsakes/reward-effects';
-import type { AuthoredConcaveStoneResult } from '../../authored-project/traits';
+import type { AuthoredConcaveStoneResult } from '../../authored-project/traits/state';
 import { resolveTraitOfferOptionLevel } from '../traits/offer-levels';
 import { deriveBoonRarityValues } from '../traits/rarity';
 import { settleSelectedTraitChildren } from '../rewards/trait-settlement/selected-child-settlement';

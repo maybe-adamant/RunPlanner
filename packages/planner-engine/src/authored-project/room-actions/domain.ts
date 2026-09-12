@@ -20,16 +20,19 @@ import {
   type BiomeAddress,
   type SemanticAddress,
 } from '../addresses';
-import { acquisitionSiteFromStorageKey, parseArtificerReplacementEntryKey } from '../artificer';
+import {
+  acquisitionSiteFromStorageKey,
+  parseArtificerReplacementEntryKey,
+} from '../acquisition/artificer';
 import { parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
-import { authoredAcquisitionSources } from '../acquisition-sources';
+import { authoredAcquisitionSources } from '../acquisition/acquisition-sources';
 import {
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   parseSeaStarDuplicateSiteKey,
   seaStarDuplicateUsesFreshObject,
-} from '../sea-star';
+} from '../acquisition/sea-star';
 import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
-import { rewardSourceResolvesAtAcquisition } from '../reward-state';
+import { rewardSourceResolvesAtAcquisition } from '../acquisition/reward-state';
 import type { RoomActionReference, RoomOccurrence } from '../model';
 import {
   encounterEnvelopeSlots,
@@ -39,7 +42,7 @@ import { activeRoomActionReferences, roomActionKey } from './state';
 import {
   parseClockedTraitGeneratedPickupEntryKey,
   selectedPickupProducerForEntry,
-} from '../pickup-producers';
+} from '../acquisition/pickup-producers';
 import {
   assembleRoomLifecycleStructure,
   authoredRoomLifecycleProfileKey,

@@ -113,7 +113,9 @@ export interface TranscendentEmbryoCandidateCapability {
   readonly thresholds: readonly ReachedTranscendentEmbryoThreshold[];
   readonly evaluate: (
     outcome:
-      import('../../authored-project/traits').AuthoredTranscendentEmbryoOutcome | null | undefined,
+      | import('../../authored-project/traits/state').AuthoredTranscendentEmbryoOutcome
+      | null
+      | undefined,
   ) => readonly TranscendentEmbryoBlessingAssessment[];
 }
 export interface TranscendentEmbryoCandidateArtifacts {
@@ -134,7 +136,7 @@ export function createTranscendentEmbryoCandidateArtifacts(
         thresholds,
         evaluate: (
           outcome:
-            | import('../../authored-project/traits').AuthoredTranscendentEmbryoOutcome
+            | import('../../authored-project/traits/state').AuthoredTranscendentEmbryoOutcome
             | null
             | undefined,
         ) =>

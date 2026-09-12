@@ -4,7 +4,10 @@ import type {
   SemanticAddress,
   TraitOfferAddress,
 } from '../../authored-project/addresses';
-import type { AuthoredTraitOffer, AuthoredTraitOfferTraits } from '../../authored-project/traits';
+import type {
+  AuthoredTraitOffer,
+  AuthoredTraitOfferTraits,
+} from '../../authored-project/traits/state';
 import type { ArcanaFearState } from '../arcana-fear';
 import type { KeepsakeState } from '../keepsakes/state';
 import type {
@@ -17,7 +20,7 @@ import type {
 } from './offer-domain';
 import { assessTraitOfferComposition } from './offer-domain';
 import { type BoonRarityFacts } from './rarity';
-import { optionIndex } from '../../authored-project/traits';
+import { optionIndex } from '../../authored-project/traits/state';
 import { assessRansom } from './history/transitions';
 import { foldTraitHistoryEvents } from './history/fold';
 import { isPomUpgradeTarget } from './history/upgrades';
@@ -215,11 +218,11 @@ export interface SelectedTraitOfferBranchAssessment extends TraitOfferBranchAsse
   readonly baseRarities: readonly (TraitRarity | undefined)[];
   /** Echo's exact nested menu after chronology-owned rarity floors are applied. */
   readonly effectiveEchoLastRunBoon?: {
-    readonly options: readonly (import('../../authored-project/traits').AuthoredEchoLastRunBoonOption & {
+    readonly options: readonly (import('../../authored-project/traits/state').AuthoredEchoLastRunBoonOption & {
       /** Declaration-owned source used by native Echo loot-history attribution. */
       readonly lootHistorySource?: string;
     })[];
-    readonly selectedOptionKey: import('../../authored-project/traits').TraitOptionKey;
+    readonly selectedOptionKey: import('../../authored-project/traits/state').TraitOptionKey;
   };
 }
 

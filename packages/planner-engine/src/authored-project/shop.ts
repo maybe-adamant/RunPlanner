@@ -2,7 +2,7 @@ import type { Catalog } from '../catalog-schema';
 import type { ResolvedRewardOffer } from '../reward-kernel';
 import type { AuthoredRewardState, RoomOccurrence } from './model';
 import type { AcquisitionSiteAddress } from './addresses';
-import { acquisitionSiteStorageKey } from './artificer';
+import { acquisitionSiteStorageKey } from './acquisition/artificer';
 
 export const INFERNAL_CONTRACT_ENTRY_KEY = 'infernalContractReward' as const;
 export const TRAVEL_DEAL_REFILL_ENTRY_KEY = 'travelDealRefill' as const;

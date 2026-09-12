@@ -8,7 +8,7 @@ import {
   type AuthoredTranscendentEmbryoOutcome,
   type AuthoredTraitOfferTraits,
   type TraitOptionKey,
-} from '../../authored-project/traits';
+} from '../../authored-project/traits/state';
 import { hasEffectiveInRunUpgrade } from '../traits/history/upgrades';
 import type { TraitHistoryState } from '../traits/history/model';
 import { assessTraitOption } from '../traits/authoring/assessment';

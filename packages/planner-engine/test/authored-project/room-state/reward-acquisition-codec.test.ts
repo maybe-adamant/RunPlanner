@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 
-import { decodeRewardState } from '../../../src/authored-project/room-state/reward-acquisition-codec';
+import { decodeRewardState } from '../../../src/authored-project/room-state/decoding/reward-acquisition-codec';
 import { decodeRoomState } from '../../../src/authored-project/room-state/codec';
 import { createTestDefaultRoomState as createDefaultRoomState } from '../support/default-room-state';
 import { mutable, room, roomStatePath as path } from '../support/room-state-codec';

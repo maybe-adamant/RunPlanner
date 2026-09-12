@@ -1,6 +1,6 @@
 # Engine structure cleanup
 
-Status: locked after independent challenge; A ready to implement.
+Status: A complete and independently reviewed; B–D pending.
 Production baseline: `85c7a875`.
 
 ## Objective and invariants
@@ -111,6 +111,14 @@ generation witnesses. Review progressive repair and execution publication as
 consumers without reproducing their policy matrices.
 
 ## Delivery and acceptance
+
+A verification: repository typecheck passed; engine tests passed (143 files,
+1,861 tests); runtime import-graph tests passed (2 tests); touched ESLint,
+Prettier and diff checks passed. Independent review reported no findings.
+A one-off TypeScript comparison resolved module references to baseline
+identities and ignored formatting trivia/optional trailing commas: all 124
+changed files matched across the 31 moves. No assertions or fixtures changed.
+The complete phase gate and baseline performance comparison remain for D.
 
 Each slice is a complete reviewed commit; A/B never mix behavior changes with
 movement. Main owns docs, Git and broad verification; one executor owns source

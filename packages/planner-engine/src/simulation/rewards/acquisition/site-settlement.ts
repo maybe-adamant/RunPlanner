@@ -11,7 +11,7 @@ import {
   artificerAcquisitionSite,
   artificerReplacementEntryKey,
   parseArtificerReplacementEntryKey,
-} from '../../../authored-project/artificer';
+} from '../../../authored-project/acquisition/artificer';
 import type { AuthoredRewardState } from '../../../authored-project/model';
 import type { Catalog } from '../../../catalog-schema';
 import {

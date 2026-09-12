@@ -6,18 +6,21 @@ import type {
   RoomOccurrence,
 } from '../model';
 import { activeRoomActionReferences, roomActionKey } from '../room-actions/state';
-import { decodeRoomActionState } from './room-action-codec';
-import { assertStygianWellPurchaseActionClosure, decodeStygianWellState } from './well-codec';
+import { decodeRoomActionState } from '../room-state/decoding/room-action-codec';
+import {
+  assertStygianWellPurchaseActionClosure,
+  decodeStygianWellState,
+} from '../room-state/decoding/well-codec';
 import { decodeRoomState } from '../room-state/codec';
 import { decodeRoomEncounterState } from '../room-state/encounters';
 import { createBiomeAddress, semanticAddressKey } from '../addresses';
-import { authoredAcquisitionSources } from '../acquisition-sources';
+import { authoredAcquisitionSources } from '../acquisition/acquisition-sources';
 import { resolveAcquisitionRole } from '../../reward-kernel/history';
 import {
   createSeaStarDuplicateRewardState,
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   parseSeaStarDuplicateSiteKey,
-} from '../sea-star';
+} from '../acquisition/sea-star';
 import {
   echoLastRewardPickupEntryKeys,
   parseClockedTraitGeneratedPickupEntryKey,
@@ -26,10 +29,10 @@ import {
   parseNemesisGeneratedPickupSiteKey,
   nemesisGeneratedPickupSiteKey,
   selectedPickupProducers,
-} from '../pickup-producers';
-import { parseArtificerReplacementEntryKey } from '../artificer';
+} from '../acquisition/pickup-producers';
+import { parseArtificerReplacementEntryKey } from '../acquisition/artificer';
 import { parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
-import { rewardSourceResolvesAtAcquisition } from '../reward-state';
+import { rewardSourceResolvesAtAcquisition } from '../acquisition/reward-state';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   INFERNAL_CONTRACT_ENTRY_KEY,
@@ -37,7 +40,7 @@ import {
 } from '../shop';
 import { expectExactKeys, expectRecord, failProjectDocument } from '../validation';
 import type { DecodedTopologyStructure } from './decoding/coordinator';
-import { decodeAcquisitionSites } from './acquisition-site-codec';
+import { decodeAcquisitionSites } from '../room-state/decoding/acquisition-site-codec';
 import { decodeFountainRarityResult } from '../fountain-rarity-codec';
 import { decodeKeepsakeEquipResults } from '../keepsake-equip-codec';
 import { expectBoolean, expectString } from '../validation';

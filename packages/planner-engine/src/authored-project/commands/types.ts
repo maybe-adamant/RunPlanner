@@ -47,7 +47,7 @@ import type {
   AuthoredLevelResolution,
   AuthoredTraitOffer,
   TraitOptionKey,
-} from '../traits';
+} from '../traits/state';
 
 export type ProjectStateCommand =
   | {
@@ -64,7 +64,7 @@ export type ProjectStateCommand =
   | {
       readonly kind: 'ReplaceAspectHexTree';
       readonly route: RouteAddress;
-      readonly value: import('../traits').AuthoredHexTreeConfiguration;
+      readonly value: import('../traits/state').AuthoredHexTreeConfiguration;
     }
   | {
       readonly kind: 'ReplaceManualArcanaSelection';
@@ -146,7 +146,7 @@ export type TranscendentEmbryoEquipResultCommand = {
 export type TranscendentEmbryoTransformationCommand = {
   readonly kind: 'ReplaceTranscendentEmbryoTransformation';
   readonly outcome: TranscendentEmbryoOutcomeAddress;
-  readonly value: import('../traits').AuthoredTranscendentEmbryoOutcome | null;
+  readonly value: import('../traits/state').AuthoredTranscendentEmbryoOutcome | null;
 };
 
 export type TopologyCommand =
@@ -551,7 +551,7 @@ export type TraitOfferCommand =
   | {
       readonly kind: 'ReplaceConcaveStoneResult';
       readonly trait: TraitOfferAddress;
-      readonly value: import('../traits').AuthoredConcaveStoneResult | null;
+      readonly value: import('../traits/state').AuthoredConcaveStoneResult | null;
     };
 
 export type LevelResolutionCommand = {

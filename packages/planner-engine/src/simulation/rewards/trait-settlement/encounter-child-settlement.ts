@@ -13,7 +13,7 @@ import {
   optionIndex,
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredTraitOfferTraits,
-} from '../../../authored-project/traits';
+} from '../../../authored-project/traits/state';
 import { echoLastRunBoonOutcomes } from '../../traits';
 import type { EchoLastRunBoonOutcome } from '../../traits/offer-domain';
 
@@ -114,7 +114,7 @@ export function assessCirceChild(
   catalog: Catalog,
   branch: RewardBranchState,
   disposition: Extract<TraitSelectedDisposition, { readonly kind: 'circe' }>,
-  resolution: import('../../../authored-project/traits').AuthoredCirceResolution | undefined,
+  resolution: import('../../../authored-project/traits/state').AuthoredCirceResolution | undefined,
 ): EncounterChildRejection | undefined {
   const domain = circeResolutionDomain(
     catalog,
@@ -159,7 +159,7 @@ export function settleValidatedCirceChild(
   catalog: Catalog,
   branch: RewardBranchState,
   disposition: Extract<TraitSelectedDisposition, { readonly kind: 'circe' }>,
-  resolution: import('../../../authored-project/traits').AuthoredCirceResolution | undefined,
+  resolution: import('../../../authored-project/traits/state').AuthoredCirceResolution | undefined,
   owner: SemanticAddress,
   sequence: number,
 ): RewardBranchState {

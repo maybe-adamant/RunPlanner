@@ -21,7 +21,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
-import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits';
+import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits/state';
 import {
   artificerStatus,
   createArcanaFearState,

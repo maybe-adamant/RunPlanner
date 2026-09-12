@@ -1,6 +1,9 @@
 import type { Catalog } from '../../catalog-schema';
 import { createBiomeAddress, type TraitOfferAddress } from '../../authored-project/addresses';
-import type { AuthoredTraitOffer, AuthoredTraitOfferTraits } from '../../authored-project/traits';
+import type {
+  AuthoredTraitOffer,
+  AuthoredTraitOfferTraits,
+} from '../../authored-project/traits/state';
 import type { ProjectDocument } from '../../authored-project/model';
 import type { ProjectCandidateArtifacts } from '../candidate-artifacts';
 import { candidateArtifactsForProjectEvaluationAssembly } from '../project-evaluation-assembly';

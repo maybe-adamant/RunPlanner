@@ -6,12 +6,15 @@ import {
   selectedEncounterAuthoringProfileKey,
 } from '../room-state/encounter-envelope';
 import { semanticAddressKey } from '../addresses';
-import { parseArtificerReplacementEntryKey } from '../artificer';
+import { parseArtificerReplacementEntryKey } from '../acquisition/artificer';
 import { parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
-import { authoredAcquisitionSources } from '../acquisition-sources';
-import { echoLastRewardPickupEntryKeys, activeSelectedPickupProducers } from '../pickup-producers';
-import { seaStarDuplicateSourceIsActive } from '../sea-star';
-import { rewardSourceResolvesAtAcquisition } from '../reward-state';
+import { authoredAcquisitionSources } from '../acquisition/acquisition-sources';
+import {
+  echoLastRewardPickupEntryKeys,
+  activeSelectedPickupProducers,
+} from '../acquisition/pickup-producers';
+import { seaStarDuplicateSourceIsActive } from '../acquisition/sea-star';
+import { rewardSourceResolvesAtAcquisition } from '../acquisition/reward-state';
 export { roomActionKey } from './key';
 import { roomActionKey } from './key';
 

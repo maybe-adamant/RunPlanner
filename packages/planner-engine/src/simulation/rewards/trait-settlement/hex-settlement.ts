@@ -1,5 +1,5 @@
 import type { Catalog, TraitSelectedDisposition } from '../../../catalog-schema';
-import type { AuthoredTraitOfferTraits } from '../../../authored-project/traits';
+import type { AuthoredTraitOfferTraits } from '../../../authored-project/traits/state';
 import { bankPathPoints, installHexTree } from '../../hex-progress';
 import type { ReachedTraitOfferEvaluation } from '../../traits';
 import type { RewardBranchState } from '../branch-primitives';

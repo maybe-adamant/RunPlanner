@@ -8,7 +8,7 @@ import {
   type LocatedBiome,
 } from './contract';
 import { requireFieldsCages, requireFieldsOptionalRewards } from '../room-state/declaration';
-import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
+import { replaceOccurrence, updateOccurrenceTopology } from './occurrence/mutation';
 import type { FieldsSpatialCommand } from './types';
 
 export function applyFieldsSpatialCommand(

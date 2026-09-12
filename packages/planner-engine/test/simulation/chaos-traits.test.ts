@@ -34,8 +34,8 @@ import { applyStygianWellPurchase } from '../../src/simulation/commerce/stygian-
 import type {
   AuthoredChaosTraitOffer,
   AuthoredTraitOfferTraits,
-} from '../../src/authored-project/traits';
-import { normalizeAuthoredChaosTraitOffer } from '../../src/authored-project/traits';
+} from '../../src/authored-project/traits/state';
+import { normalizeAuthoredChaosTraitOffer } from '../../src/authored-project/traits/state';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { loadSurfaceNOPProject } from '@run-planner/test-fixtures/surface';

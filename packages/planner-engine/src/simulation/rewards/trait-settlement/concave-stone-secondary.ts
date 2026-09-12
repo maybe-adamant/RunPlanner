@@ -3,7 +3,7 @@ import {
   createTraitOfferAddress,
   type TraitOfferOwnerAddress,
 } from '../../../authored-project/addresses';
-import { optionIndex, type AuthoredTraitOfferTraits } from '../../../authored-project/traits';
+import { optionIndex, type AuthoredTraitOfferTraits } from '../../../authored-project/traits/state';
 import type { FindingChronology } from '../../finding-regions';
 import type { ReachedTraitOfferEvaluation } from '../../traits';
 import type { TraitOfferOptionLevelResolution } from '../../traits/offer-levels';

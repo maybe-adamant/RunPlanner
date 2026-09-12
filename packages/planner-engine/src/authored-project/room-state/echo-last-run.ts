@@ -5,7 +5,7 @@ import {
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredEchoLastRunBoonOption,
   type TraitOptionKey,
-} from '../traits';
+} from '../traits/state';
 import {
   expectArray,
   expectExactKeys,

@@ -9,12 +9,12 @@ import type {
   RoomOccurrence,
 } from '../model';
 import { createBiomeAddress, createOccurrenceAddress } from '../addresses';
-import { authoredAcquisitionSources } from '../acquisition-sources';
+import { authoredAcquisitionSources } from '../acquisition/acquisition-sources';
 import {
   acquisitionSiteStorageKey,
   artificerAcquisitionSite,
   artificerReplacementEntryKey,
-} from '../artificer';
+} from '../acquisition/artificer';
 import type { RoomOccurrenceRole, RoomStateContext } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
 import { reconcileRoomEncounterState } from '../room-state/encounter-reconciliation';
@@ -40,7 +40,7 @@ import {
   requireTopology,
   type LocatedBiome,
 } from './contract';
-import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
+import { replaceOccurrence, updateOccurrenceTopology } from './occurrence/mutation';
 import type { RoomReplacementCommand } from './types';
 
 function resolvedBatchStore(

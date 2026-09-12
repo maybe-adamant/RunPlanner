@@ -4,7 +4,7 @@ import { assembleRoomActionDomain } from '../room-actions/domain';
 import type { ProjectDocument } from '../model';
 import type { FigurineArcanaCommand } from './types';
 import { failCommand, requireOccurrence, type LocatedBiome } from './contract';
-import { updateOccurrence } from './occurrence-mutation';
+import { updateOccurrence } from './occurrence/mutation';
 
 /** Stores only a declaration-canonical set; the reached post-Judgment domain remains engine-owned. */
 export function applyFigurineArcanaCommand(

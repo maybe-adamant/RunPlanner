@@ -1,7 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import { createInitialBiomeState, replaceBiomeStateField } from '../biomeState';
 import { assessStartingArcanaGrasp } from '../loadout';
-import { createDefaultAuthoredHexTree, normalizeAuthoredHexTree } from '../hex-tree';
+import { createDefaultAuthoredHexTree, normalizeAuthoredHexTree } from '../traits/hex-tree';
 import { resolveCompletionBoss } from '../completion-boss';
 import { fixedCompletionOccurrenceId } from '../fixed-room-links';
 import { createDefaultRoomState } from '../room-state/defaults';

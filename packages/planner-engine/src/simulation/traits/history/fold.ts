@@ -1,6 +1,6 @@
 import type { Catalog, TraitElement, TraitRarity } from '../../../catalog-schema';
 import { semanticAddressKey } from '../../../authored-project/addresses';
-import { optionIndex, type EquippedTrait } from '../../../authored-project/traits';
+import { optionIndex, type EquippedTrait } from '../../../authored-project/traits/state';
 import type { RewardHistoryState } from '../../../reward-kernel/model';
 import type {
   ChaosBlessingInstance,

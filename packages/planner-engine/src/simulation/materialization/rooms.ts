@@ -33,12 +33,12 @@ import type { ResolvedRewardOffer, ShopOptionEntry } from '../../reward-kernel/m
 import {
   echoLastRewardPickupEntryKeys,
   activeSelectedPickupProducers,
-} from '../../authored-project/pickup-producers';
+} from '../../authored-project/acquisition/pickup-producers';
 import { assembleRoomActionDomain } from '../../authored-project/room-actions/domain';
 import { scheduleRequiredRoomActions } from '../../authored-project/room-actions/defaults';
 import { roomActionKey } from '../../authored-project/room-actions/state';
-import { acquisitionSiteFromStorageKey } from '../../authored-project/artificer';
-import { seaStarDuplicateSourceIsActive } from '../../authored-project/sea-star';
+import { acquisitionSiteFromStorageKey } from '../../authored-project/acquisition/artificer';
+import { seaStarDuplicateSourceIsActive } from '../../authored-project/acquisition/sea-star';
 import { assembleRoomActionRoster, assembleRoomLifecycleTimeline } from '../room-actions';
 import { extendedWellItemKeys } from '../commerce/stygian-well';
 

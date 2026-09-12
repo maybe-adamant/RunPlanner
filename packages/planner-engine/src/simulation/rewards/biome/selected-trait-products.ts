@@ -6,7 +6,7 @@ import {
   type TraitOfferAddress,
   type TraitOfferOwnerAddress,
 } from '../../../authored-project/addresses';
-import type { AuthoredEchoLastRunBoonOffer } from '../../../authored-project/traits';
+import type { AuthoredEchoLastRunBoonOffer } from '../../../authored-project/traits/state';
 import type { Catalog } from '../../../catalog-schema';
 import type { RewardBranchState } from '../branch-primitives';
 import type {

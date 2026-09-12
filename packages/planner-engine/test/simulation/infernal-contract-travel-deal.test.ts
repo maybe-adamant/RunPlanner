@@ -16,7 +16,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import { createDefaultRoomState } from '../../src/authored-project/room-state/defaults';
 import { createDefaultRoomEncounterState } from '../../src/authored-project/room-state/encounter-envelope';
-import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits';
+import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits/state';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   echoShopDuplicateOffer,

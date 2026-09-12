@@ -1,5 +1,5 @@
 import type { Catalog } from '../../catalog-schema';
-import { optionIndex } from '../../authored-project/traits';
+import { optionIndex } from '../../authored-project/traits/state';
 import type { ProjectDocument } from '../../authored-project/model';
 import type {
   TraitOfferCandidateArtifacts,
@@ -351,7 +351,7 @@ export function evaluateEchoLastRunBoonDomain(
               ? {}
               : { allTogetherResult: selectedChild.allTogetherResult }),
           }),
-        ]) as import('../../authored-project/traits').AuthoredTraitOfferTraits['options'],
+        ]) as import('../../authored-project/traits/state').AuthoredTraitOfferTraits['options'],
         selectedOptionKey: 'option1' as const,
         rarificationActions: Object.freeze([]),
       });
@@ -414,8 +414,8 @@ export function evaluateEchoLastRunBoonDomain(
 function allTogetherSetResult(
   catalog: Catalog,
   capability: TraitOfferCandidateCapability,
-  value: import('../../authored-project/traits').AuthoredTraitOfferTraits,
-  optionKey: import('../../authored-project/traits').TraitOptionKey,
+  value: import('../../authored-project/traits/state').AuthoredTraitOfferTraits,
+  optionKey: import('../../authored-project/traits/state').TraitOptionKey,
   setKey: import('../../catalog-schema').DirectTraitSetKey,
 ) {
   const branches = capability.allTogetherSet(value, optionKey, setKey);

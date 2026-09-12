@@ -9,7 +9,7 @@ import {
   type TraitOptionKey,
   TRAIT_OPTION_KEYS,
   normalizeAuthoredConcaveStoneResult,
-} from '../traits';
+} from '../traits/state';
 import {
   expectArray,
   expectExactKeys,
@@ -347,7 +347,7 @@ export function decodeEncounterTraitOffer(
     !(TRAIT_OPTION_KEYS as readonly string[]).includes(rejectedOptionKey)
   )
     failProjectDocument(`${path}.rejectedOptionKey`, 'must name an option row');
-  let concaveStoneResult: import('../traits').AuthoredConcaveStoneResult | undefined;
+  let concaveStoneResult: import('../traits/state').AuthoredConcaveStoneResult | undefined;
   if ('concaveStoneResult' in record) {
     const rawResult = expectRecord(record.concaveStoneResult, `${path}.concaveStoneResult`);
     const resultKind = expectString(rawResult.kind, `${path}.concaveStoneResult.kind`);

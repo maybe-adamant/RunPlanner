@@ -1,4 +1,4 @@
-import { locateReward, updateRewardState } from './reward-source';
+import { locateReward, updateRewardState } from './acquisition/reward-source';
 import type { Catalog } from '../../catalog-schema';
 import {
   traitGiverForAcquisitionRole,
@@ -12,15 +12,15 @@ import {
   type AuthoredGorgonAthenaOffer,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
-} from '../traits';
-import { createDefaultAuthoredHexTree, normalizeAuthoredHexTree } from '../hex-tree';
-import { reconcileSelectedPickupProducerState } from '../pickup-producers';
+} from '../traits/state';
+import { createDefaultAuthoredHexTree, normalizeAuthoredHexTree } from '../traits/hex-tree';
+import { reconcileSelectedPickupProducerState } from '../acquisition/pickup-producers';
 import { createBiomeAddress, type TraitOfferAddress } from '../addresses';
 import type { ProjectDocument, RoomOccurrence, AuthoredRewardState } from '../model';
 import { selectedEncounterAuthoringProfileKey } from '../room-state/encounter-envelope';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
-import { sameOccurrenceValue } from './occurrence-leaf-value';
-import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
+import { sameOccurrenceValue } from './occurrence/leaf-value';
+import { replaceOccurrence, updateOccurrenceTopology } from './occurrence/mutation';
 import type { TraitOfferCommand } from './types';
 import {
   authoredAcquisitionEntry,

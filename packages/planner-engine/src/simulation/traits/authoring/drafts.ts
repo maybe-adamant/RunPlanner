@@ -2,13 +2,13 @@ import type { Catalog } from '../../../catalog-schema';
 import type {
   AuthoredTraitOfferTraits,
   AuthoredTraitOption,
-} from '../../../authored-project/traits';
+} from '../../../authored-project/traits/state';
 import {
   optionIndex,
   TRAIT_OPTION_KEYS,
   traitOfferSupportsExhaustion,
-} from '../../../authored-project/traits';
-import { createDefaultAuthoredHexTree } from '../../../authored-project/hex-tree';
+} from '../../../authored-project/traits/state';
+import { createDefaultAuthoredHexTree } from '../../../authored-project/traits/hex-tree';
 import { ordinaryEquippedSlots } from '../history/fold';
 import type { TraitHistoryState } from '../history/model';
 import { targetedAcquisitionTargetKeys } from '../level-effects';
