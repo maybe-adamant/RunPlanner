@@ -102,9 +102,6 @@ export type {
   EchoPomTargetDomainQuery,
   EvaluatedEchoLastRunBoonCandidate,
   EvaluatedEchoLastRunBoonDomain,
-  EchoLastRunBoonDraftRow,
-  EchoLastRunBoonDraftSupport,
-  EchoLastRunBoonTraitIdentity,
   EchoLastRunBoonDomainEvaluation,
   EchoLastRunBoonDomainQuery,
   EvaluatedAllTogetherSetDomain,
@@ -131,6 +128,11 @@ export type {
   RansomAssessmentCandidateEvaluation,
   EvaluatedRansomAssessmentCandidate,
 } from './trait-offer';
+export type {
+  EchoLastRunBoonDraftRow,
+  EchoLastRunBoonDraftSupport,
+  EchoLastRunBoonTraitIdentity,
+} from './trait-offer/echo-draft';
 export type {
   ConcaveStoneCandidateBranch,
   TraitOfferGenerationState,
@@ -164,4 +166,4 @@ export {
   previousEchoLastRunBoonDraft,
   echoLastRunBoonRarityCandidates,
   echoLastRunBoonTraitCandidatesForRow,
-} from './trait-offer';
+} from './trait-offer/echo-draft';

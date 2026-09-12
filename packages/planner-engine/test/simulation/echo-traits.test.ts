@@ -43,14 +43,16 @@ import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candida
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import {
-  echoLastRunBoonTraitCandidatesForRow,
-  evaluateEchoLastRunBoonDraftSupport,
-  nextEchoLastRunBoonDraft,
-  previousEchoLastRunBoonDraft,
   evaluateEchoLastRunBoonDomain,
   evaluateEchoPomTargetDomain,
   evaluateTraitOfferFocusedOptionCandidate,
 } from '../../src/simulation/candidates/trait-offer';
+import {
+  echoLastRunBoonTraitCandidatesForRow,
+  evaluateEchoLastRunBoonDraftSupport,
+  nextEchoLastRunBoonDraft,
+  previousEchoLastRunBoonDraft,
+} from '../../src/simulation/candidates/trait-offer/echo-draft';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import {
   assessTraitOption,

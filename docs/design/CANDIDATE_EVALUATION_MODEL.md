@@ -720,6 +720,19 @@ result still passes through complete-offer assessment. React never derives the
 ordinary/high-tier/replacement partition, mandatory exhaustion fill, or a
 Fallback Gold availability rule.
 
+Ordinary draft construction lives in `simulation/traits/authoring/drafts.ts`
+and consumes assessment policy from its sibling `assessment.ts`. Assessment
+owns the composition-domain identity cache with its producer; prefix-dependent
+fresh variants remain uncached. The captured capability retains branch-local
+contexts and selects drafts without exposing those histories to the editor.
+
+BBB transient drafts instead live in
+`simulation/candidates/trait-offer/echo-draft.ts`. They consume the already
+evaluated mixed-provider domain, preserve sparse rows and selected child
+payloads, and own distinct-trait filtering and trailing append/removal. Query
+evaluation remains separate from these draft operations. Sharing editor
+presentation does not make BBB and ordinary draft construction one algorithm.
+
 An unreached offer normally returns unavailable contextual coverage. Closed
 authored invariants do not disappear with that coverage: duplicate sibling
 traits remain an evaluated focused impossibility, using the same duplicate
