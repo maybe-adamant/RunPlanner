@@ -2,9 +2,15 @@
 
 ## Status and base
 
-Status: locked for implementation; Slice A is next.
+Status: Slice A implemented; Slice B remains.
 Production base: `f50d0cf3`.
 User approved implementation. Commit this contract and investigation first.
+
+Slice A preserves all 39 original function bodies in their new owners. Focused
+acceptance passed (6 files / 71 tests), and the engine lane passed (143 files /
+1,859 tests). Independent review's sole finding, six unnecessary private-helper
+exports, is resolved; final typecheck/lint/format checks passed. Full repository and baseline
+performance closure remain assigned to Slice B.
 
 Independent pre-plan challenge completed: retain one exhaustive command router,
 context-bound decision validation, and one shared lazy attachment memo. These
