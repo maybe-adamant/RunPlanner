@@ -751,6 +751,12 @@ preserve the order of later refinements. A stylesheet relocation must not
 silently change layout or finding precedence; verify the expanded cascade and
 representative wide/narrow browser surfaces.
 
+Compound controls must fit their actual container, not only a viewport breakpoint.
+Wrap complete target/value fields before compressing their contents; at narrower
+widths a label may sit above its slider, but the slider and displayed value stay
+together. Check descendants against their field and visible panel: an ancestor
+with clipped overflow can hide a defect from document-level overflow checks.
+
 ## Workspace Invariants
 
 The structured workspace must ensure:

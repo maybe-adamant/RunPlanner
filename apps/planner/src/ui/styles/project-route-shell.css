@@ -513,7 +513,13 @@
   margin-top: 1rem;
 }
 
-.route-keepsake-controls,
+.route-keepsake-controls {
+  display: grid;
+  align-items: start;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+}
+
 .route-weapon-controls {
   display: grid;
   gap: 0.75rem;
