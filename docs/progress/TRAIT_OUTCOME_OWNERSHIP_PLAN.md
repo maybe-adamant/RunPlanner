@@ -4,7 +4,6 @@
 
 Status: locked; Gates A–C complete and independently reviewed. Gate D is next.
 Base: `7e0237f6` (clean production worktree when drafted).
-Evidence: `docs/investigations/TRAIT_OUTCOME_TRANSPORT_AND_SETTLEMENT.md`.
 
 Make trait outcomes complete owned products rather than independent fields
 that every intermediary must remember to forward. Decompose settlement only
