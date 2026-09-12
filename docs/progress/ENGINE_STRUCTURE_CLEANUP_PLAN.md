@@ -1,6 +1,6 @@
 # Engine structure cleanup
 
-Status: A and B complete and independently reviewed; C–D pending.
+Status: A–C complete and independently reviewed; D pending.
 Production baseline: `85c7a875`.
 
 ## Objective and invariants
@@ -138,6 +138,15 @@ Independent review reported no findings. All 96 changed TypeScript files matched
 the baseline after module-identity normalization across the 17 moves; no
 assertions, public export names or fixtures changed. Directory grouping is done;
 the remaining slices are bounded ownership extractions, not more folder cleanup.
+
+C verification: repository typecheck and 10 focused correctness files (135
+tests, including the runtime import graph) passed; touched lint, formatting and
+diff checks passed. Independent review found two stale imports, removed and
+verified in a bounded remediation. One-off comparison preserved all 31 original
+declarations' bodies/contracts and the closed template map. Only the trivial
+local throwing helper is present in both files. No fixtures or semantics changed.
+Common assembly and the separately consumed Ship state product retain their
+previous order and consumers; no additional processing pass was introduced.
 
 Each slice is a complete reviewed commit; A/B never mix behavior changes with
 movement. Main owns docs, Git and broad verification; one executor owns source

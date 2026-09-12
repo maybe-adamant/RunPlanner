@@ -81,6 +81,14 @@ The established short form remains:
 declaration -> catalog -> history -> validator -> feedback
 ```
 
+Room materialization separates declaration-specific leaf construction from
+common occurrence assembly in `simulation/materialization/rooms/`. Templates
+return the complete reward/encounter/lifecycle leaf; common assembly adds
+active acquisition sites, room features, action domains, the roster and its
+lifecycle timeline in that order. Ship combat state remains a separately
+consumable template product for reward authoring. This is an internal ownership
+boundary, not an additional simulation pass or a second scheduler.
+
 ### Authoring readiness
 
 Progressive evaluation distinguishes required incompleteness from invalid

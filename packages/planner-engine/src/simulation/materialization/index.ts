@@ -7,7 +7,7 @@ export {
   type FieldsBatchFacts,
 } from './decision-facts';
 export { HubMaterializationContractError, materializeHubDecision } from './hub';
-export { materializeShipCombatState, type MaterializedShipCombatState } from './rooms';
+export { materializeShipCombatState, type MaterializedShipCombatState } from './rooms/templates';
 export type {
   CanonicalAuthoredRoom,
   CanonicalAdditionalContinuation,

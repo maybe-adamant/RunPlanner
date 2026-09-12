@@ -22,7 +22,7 @@ import {
   echoShopDuplicateOffer,
   INFERNAL_CONTRACT_ENTRY_KEY,
 } from '../../src/authored-project/shop';
-import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms';
+import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms/assemble';
 import { processShopInventory } from '../../src/simulation/rewards/shop/inventory';
 import {
   completePendingShopAcquisitionSite,

@@ -30,7 +30,7 @@ import type {
   CanonicalResolvedIncomingReward,
   CanonicalRoomReference,
 } from './model';
-import { materializeAuthoredRoom } from './rooms';
+import { materializeAuthoredRoom } from './rooms/assemble';
 
 export class HubMaterializationContractError extends Error {
   constructor(detail: string) {

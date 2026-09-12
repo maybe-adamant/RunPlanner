@@ -38,7 +38,7 @@ import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   echoShopDuplicateOffer,
 } from '../../src/authored-project/shop';
-import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms';
+import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms/assemble';
 import { createDerivedAcquisitionEntryCandidateArtifacts } from '../../src/simulation/rewards/acquisition/artifacts';
 import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { processShopInventory } from '../../src/simulation/rewards/shop/inventory';
