@@ -12,7 +12,7 @@ import { applyOccurrenceCommand } from './occurrence';
 import { applyProjectStateCommand } from './project-state';
 import { applyRoomReplacementCommand } from './room-replacement';
 import { applyRouteDetourCommand } from './route-detours';
-import { applyTopologyCommand } from './topology';
+import { applyTopologyCommand } from './topology/dispatch';
 import { applyTraitOfferCommand } from './trait-offer';
 import { applyLevelResolutionCommand } from './level-resolution';
 import { applyAcquisitionSiteCommand, materializeDerivedShopEntry } from './acquisition-site';
