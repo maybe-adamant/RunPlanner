@@ -15,9 +15,9 @@ import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 import type {
   StructuredWorkspaceContextualServices,
   WorkspaceRoomPickerControl,
-  WorkspaceRewardControl,
   WorkspaceInteractionCatalog,
 } from '../contract';
+import type { WorkspaceRewardControl } from '../contracts/rewards';
 import type {
   WorkspaceBatchInteractionRequirement,
   WorkspaceHubInteractionRequirement,

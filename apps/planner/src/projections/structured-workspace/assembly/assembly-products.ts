@@ -2,9 +2,9 @@ import { semanticAddressKey } from '@run-planner/engine/authored-project';
 
 import {
   StructuredWorkspaceProjectionContractError,
-  type WorkspaceRewardControl,
   type WorkspaceRoomPickerControl,
 } from '../contract';
+import type { WorkspaceRewardControl } from '../contracts/rewards';
 import type { WorkspaceInspectorDestination } from '../contracts/navigation';
 import type { WorkspaceNode } from '../contracts/structure';
 

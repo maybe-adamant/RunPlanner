@@ -23,13 +23,12 @@ import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 
 import { requireWorkspaceRoom } from '../assembly/catalog-room';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
+import type { WorkspaceRoomInteraction, WorkspaceRoomPickerControl } from '../contract';
 import type {
-  WorkspaceRoomInteraction,
-  WorkspaceRoomPickerControl,
   WorkspaceStartInteraction,
   WorkspaceTakeoverBatchInteraction,
   WorkspaceTopologyRemovalInteraction,
-} from '../contract';
+} from '../contracts/structure';
 import type {
   WorkspaceStartInteractionRequirement,
   WorkspaceTakeoverInteractionRequirement,

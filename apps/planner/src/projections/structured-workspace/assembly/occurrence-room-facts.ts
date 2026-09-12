@@ -36,12 +36,10 @@ import {
 } from './occurrence-reward-assembly';
 import {
   StructuredWorkspaceProjectionContractError,
-  type WorkspaceEncounterPhase,
-  type WorkspaceExplicitRewardControl,
-  type WorkspaceRewardControl,
-  type WorkspaceRoomLocal,
   type WorkspaceShipStructurePhase,
 } from '../contract';
+import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
+import type { WorkspaceExplicitRewardControl, WorkspaceRewardControl } from '../contracts/rewards';
 
 export interface WorkspaceOccurrenceRoomInput extends WorkspaceOccurrenceRewardAssemblyInput {
   readonly evaluatedRoom?: CanonicalAuthoredRoom;

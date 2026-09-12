@@ -31,12 +31,14 @@ import { requireWorkspaceRoom } from './catalog-room';
 import {
   StructuredWorkspaceProjectionContractError,
   workspaceLocalVisitOrderKey,
-  type WorkspaceLocalVisitOrderControl,
-  type WorkspaceLocalVisitOrderOption,
-  type WorkspaceRewardControl,
   type WorkspaceRoomPickerControl,
   type WorkspaceRoomSummary,
 } from '../contract';
+import type {
+  WorkspaceLocalVisitOrderControl,
+  WorkspaceLocalVisitOrderOption,
+} from '../contracts/locals';
+import type { WorkspaceRewardControl } from '../contracts/rewards';
 import type {
   WorkspaceHubInteractionRequirement,
   WorkspaceOccurrenceInteractionRequirement,

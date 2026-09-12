@@ -59,10 +59,10 @@ import {
 } from './interactions/interaction-requirements';
 import {
   type StructuredWorkspaceContextualServices,
-  type WorkspaceRewardControl,
   type WorkspaceRoomPickerControl,
   type WorkspaceStatus,
 } from './contract';
+import type { WorkspaceRewardControl } from './contracts/rewards';
 import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 import { projectHexTreeDomain } from './interactions/trait-offers/hex';
 import type { WorkspaceInspectorDestination } from './contracts/navigation';

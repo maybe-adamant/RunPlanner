@@ -1,11 +1,9 @@
 import { rewardChildMarkers } from '../assembly/occurrence-action-markers';
 import type { WorkspaceMarker } from '../contracts/navigation';
-import type {
-  WorkspaceRewardControl,
-  WorkspaceRoomFeature,
-  WorkspaceRoomLocal,
-  WorkspaceRoomSummary,
-} from '../contract';
+import type { WorkspaceRoomSummary } from '../contract';
+import type { WorkspaceRewardControl } from '../contracts/rewards';
+import type { WorkspaceRoomFeature } from '../contracts/features';
+import type { WorkspaceRoomLocal } from '../contracts/locals';
 import type {
   WorkspaceMixedBatchNode,
   WorkspaceOrdinaryBatchNode,

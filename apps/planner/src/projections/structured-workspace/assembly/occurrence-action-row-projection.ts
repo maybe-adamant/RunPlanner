@@ -24,14 +24,10 @@ import {
   appendTranscendentEmbryoTimelineEffects,
   scopeRoomLifecycleTimeline,
 } from '@run-planner/engine/simulation';
-import {
-  StructuredWorkspaceProjectionContractError,
-  type WorkspaceEncounterPhase,
-  type WorkspaceRewardControl,
-  type WorkspaceRoomActions,
-  type WorkspaceRoomLocal,
-  type WorkspaceFountainRarityControl,
-} from '../contract';
+import { StructuredWorkspaceProjectionContractError } from '../contract';
+import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
+import type { WorkspaceRewardControl } from '../contracts/rewards';
+import type { WorkspaceRoomActions, WorkspaceFountainRarityControl } from '../contracts/timeline';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import { occurrenceActionLabel } from './occurrence-action-label';
 import { projectRoomLifecycleTimeline } from './occurrence-action-timeline-projection';

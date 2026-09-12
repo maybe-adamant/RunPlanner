@@ -23,15 +23,18 @@ import {
   workspaceInteractionKey,
   type StructuredWorkspaceContextualServices,
 } from '../contract';
+import type { WorkspaceCandidateInteraction } from '../contract';
 import type {
   WorkspaceEncounterInteraction,
   WorkspaceNemesisEventDomain,
   WorkspaceNemesisFeatureInteraction,
   WorkspaceFigLeafInteraction,
-  WorkspaceRoomActionInteraction,
   WorkspaceLocalVisitGenerationInteraction,
   WorkspaceLocalVisitOrderInteraction,
-  WorkspaceCandidateInteraction,
+  WorkspaceFieldsSpatialPointInteraction,
+} from '../contracts/locals';
+import type { WorkspaceRoomActionInteraction } from '../contracts/timeline';
+import type {
   WorkspaceShopPurchaseParticipationInteraction,
   WorkspacePurgingPoolInteraction,
   WorkspacePurgingPoolSlotInteraction,
@@ -43,11 +46,12 @@ import type {
   WorkspaceStygianWellOfferInteraction,
   WorkspaceStygianWellPurchaseInteraction,
   WorkspaceStygianWellTwistResultInteraction,
+} from '../contracts/commerce';
+import type {
   WorkspaceChaosSpawnInteraction,
   WorkspaceZagreusSpawnInteraction,
   WorkspaceResourcePlacementInteraction,
-  WorkspaceFieldsSpatialPointInteraction,
-} from '../contract';
+} from '../contracts/features';
 import type { WorkspaceOccurrenceInteractionRequirement } from './interaction-requirements';
 import { candidateInteraction } from './interaction-binding-primitives';
 import {

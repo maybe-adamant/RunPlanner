@@ -35,10 +35,10 @@ import { requireWorkspaceRoom } from './catalog-room';
 import {
   StructuredWorkspaceProjectionContractError,
   workspaceInteractionKey,
-  type WorkspaceRewardControl,
   type WorkspaceRoomPickerControl,
-  type WorkspaceStageDecisionRemoval,
 } from '../contract';
+import type { WorkspaceStageDecisionRemoval } from '../contracts/structure';
+import type { WorkspaceRewardControl } from '../contracts/rewards';
 import type {
   WorkspaceBatchInteractionRequirement,
   WorkspaceOccurrenceInteractionRequirement,

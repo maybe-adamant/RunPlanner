@@ -7,11 +7,8 @@ import {
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { summarizeRewardOffer } from '@planner/projections/rewards/rewardPicker';
 import { workspaceAcquisitionRoleLabel } from './occurrence-reward-assembly';
-import type {
-  WorkspaceEncounterPhase,
-  WorkspaceRewardControl,
-  WorkspaceRoomLocal,
-} from '../contract';
+import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
+import type { WorkspaceRewardControl } from '../contracts/rewards';
 
 function wellPurchaseLabel(
   catalog: Catalog,

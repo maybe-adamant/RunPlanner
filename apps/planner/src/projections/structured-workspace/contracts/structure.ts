@@ -1,4 +1,7 @@
 import type { WorkspaceAspectHexTreeControl } from './traits';
+import type { WorkspaceChaosExitControl, WorkspaceZagreusContractControl } from './features';
+import type { WorkspaceLocalVisitDecision } from './locals';
+import type { WorkspaceRewardControl } from './rewards';
 import type {
   AuthoredBatchState,
   BiomeAddress,
@@ -8,6 +11,7 @@ import type {
   HubDecisionAddress,
   HubOpenSetAddress,
   HubVisitAddress,
+  HubSlotAddress,
   KeepsakeEquipResultAddress,
   OccurrenceId,
   ProjectCommand,
@@ -16,19 +20,16 @@ import type {
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type { CanonicalBatch, ProjectEvaluationAssembly } from '@run-planner/engine/simulation';
+import type { TakeoverBatchCommand } from '@planner/workspace/takeoverBatchInteraction';
 
 import type {
-  WorkspaceChaosExitControl,
+  WorkspaceCandidateInteraction,
   WorkspaceCommandIntent,
   WorkspaceInteractionCatalog,
   WorkspaceInteractionChoice,
-  WorkspaceLocalVisitDecision,
   WorkspaceProjectionSource,
-  WorkspaceRewardControl,
   WorkspaceRoomSummary,
-  WorkspaceStageDecisionRemoval,
   WorkspaceStatus,
-  WorkspaceZagreusContractControl,
 } from '../contract';
 import type {
   WorkspaceDefaultInspectorDestination,
@@ -526,3 +527,118 @@ export interface StructuredWorkspaceProjection {
 export interface StructuredWorkspaceProjectionService {
   project(assembly: ProjectEvaluationAssembly): StructuredWorkspaceProjection;
 }
+
+export interface WorkspaceBatchRewardStoreInteraction extends WorkspaceCandidateInteraction<string> {
+  readonly intentFor: (
+    storeKey: string,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceBatchRewardStore' | 'InitializeExitDecision' }>
+  >;
+}
+
+type WorkspaceCreateStartIntent = WorkspaceCommandIntent<
+  Extract<ProjectCommand, { readonly kind: 'CreateStart' }>
+>;
+
+/** Generic topology creation; the resulting occurrence owns all room authoring. */
+export interface WorkspaceStartInteraction {
+  readonly intent: () => WorkspaceCreateStartIntent;
+  readonly key: string;
+  readonly owner: BiomeAddress;
+}
+
+export interface WorkspaceTopologyRemovalInteraction {
+  readonly intent: WorkspaceCommandIntent<
+    Extract<
+      ProjectCommand,
+      { readonly kind: 'ClearTopology' | 'RemoveExitDecision' | 'RemoveHubDecision' }
+    >
+  >;
+  readonly key: string;
+  readonly owner: BiomeAddress | ExitDecisionAddress | HubDecisionAddress;
+}
+
+/** A visible stage can carry removal for its hidden source decision. */
+export interface WorkspaceStageDecisionRemoval {
+  readonly interactionKey: string;
+  readonly label: string;
+}
+
+export interface WorkspaceExitSelectionInteraction {
+  readonly key: string;
+  readonly owner: ExitDecisionAddress;
+  readonly selectedExitKey?: string;
+  readonly targets: readonly WorkspaceInteractionChoice<string>[];
+}
+
+/** One explicitly activated opening attempt owns its provisional occurrence identity. */
+export interface WorkspaceHubSlotOpeningAttempt extends WorkspaceCandidateInteraction<boolean> {
+  readonly intentFor: (
+    open: true,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'OpenHubSlot' }>>;
+}
+
+export interface WorkspaceHubSlotCloseInteraction extends WorkspaceCandidateInteraction<boolean> {
+  readonly intentFor: (
+    open: false,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'CloseHubSlot' }>>;
+}
+
+export type WorkspaceHubSlotInteraction =
+  | {
+      readonly beginOpeningAttempt: () => WorkspaceHubSlotOpeningAttempt;
+      readonly key: string;
+      readonly owner: HubSlotAddress;
+      readonly selected: false;
+    }
+  | {
+      readonly close?: WorkspaceHubSlotCloseInteraction;
+      readonly key: string;
+      readonly owner: HubSlotAddress;
+      readonly selected: true;
+    };
+
+/** One lazily-evaluated complete Hub traversal proposal. */
+export interface WorkspaceHubVisitOrderProposal extends WorkspaceCandidateInteraction<
+  readonly string[]
+> {
+  readonly intent: () => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceHubVisitOrder' }>
+  >;
+}
+
+/**
+ * The Hub decision owns one aggregate traversal interaction. Room cards may
+ * request a complete proposed prefix, but individual rendered positions never
+ * become command owners.
+ */
+export interface WorkspaceHubVisitOrderInteraction {
+  readonly key: string;
+  readonly owner: HubDecisionAddress;
+  readonly proposalFor: (hubSlotKeys: readonly string[]) => WorkspaceHubVisitOrderProposal;
+  readonly selectedHubSlotKeys: readonly string[];
+}
+
+interface WorkspaceTakeoverBatchInteractionBase {
+  readonly key: string;
+  readonly owner: ExitDecisionAddress;
+}
+
+export interface WorkspaceCompletedHubHandoffInteraction extends WorkspaceTakeoverBatchInteractionBase {
+  readonly action: 'create';
+  readonly intent: () => WorkspaceTakeoverCommandIntent;
+  readonly label: string;
+  readonly presentation: 'completedHubHandoff';
+}
+
+export interface WorkspaceTakeoverRepairInteraction extends WorkspaceTakeoverBatchInteractionBase {
+  readonly action: 'reconcile';
+  readonly intent: () => WorkspaceTakeoverCommandIntent;
+  readonly label: string;
+  readonly presentation: 'repair';
+}
+
+export type WorkspaceTakeoverBatchInteraction =
+  WorkspaceCompletedHubHandoffInteraction | WorkspaceTakeoverRepairInteraction;
+
+type WorkspaceTakeoverCommandIntent = WorkspaceCommandIntent<TakeoverBatchCommand>;

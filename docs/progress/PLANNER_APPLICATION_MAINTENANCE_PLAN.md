@@ -468,3 +468,13 @@ CSS retains exactly all 683 top-level nodes in identical order. Ten browser
 scenarios loaded without errors at desktop/narrow widths, including nested
 picker Escape behavior. Most screenshots are byte-identical; small E-related
 inventory/scroll differences are being reconciled separately before closure.
+
+E remediation closed: complete room-feature/local/timeline/reward/commerce and
+structural contract families moved with direct internal consumers. Root retains
+shared and final composition only. Exact comparison preserves all 205 declarations
+and public exports. Removed the inventory wrapper introduced during extraction;
+the corrected well screenshot is byte-identical to baseline. Independent review,
+full typecheck, contract lane (75 tests), room inventory witnesses (25 tests),
+all changed/new-file lint/format and diff checks passed. Final browser pass covers
+all ten scenes without errors, including nested Escape. D/F2 remain unchanged
+with their recorded acceptance evidence. G is the remaining combined gate.

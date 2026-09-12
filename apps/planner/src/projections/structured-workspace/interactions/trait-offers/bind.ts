@@ -13,7 +13,7 @@ import type { CandidateProjectionSession } from '@planner/projections/candidates
 
 import { derivedShopPayloadIntent, traitOfferCommandFor } from '../reward-child-command-binding';
 import { StructuredWorkspaceProjectionContractError } from '@planner/projections/structured-workspace/contract';
-import type { WorkspaceRewardControl } from '@planner/projections/structured-workspace/contract';
+import type { WorkspaceRewardControl } from '@planner/projections/structured-workspace/contracts/rewards';
 import { bindChaosOfferInteraction } from './chaos';
 import { bindTraitOfferOptionDomain } from './option-domain';
 

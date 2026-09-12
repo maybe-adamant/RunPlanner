@@ -43,10 +43,10 @@ import {
   StructuredWorkspaceProjectionContractError,
   type WorkspaceAssessment,
   type WorkspaceProjectionSource,
-  type WorkspaceRewardControl,
   type WorkspaceRoomPickerControl,
   type WorkspaceStatus,
 } from '../contract';
+import type { WorkspaceRewardControl } from '../contracts/rewards';
 import {
   assembleWorkspaceDecision,
   type WorkspaceAuthoredBatchDecision,
