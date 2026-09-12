@@ -94,6 +94,12 @@ source-independent consumers as non-Shop carriers. Surface Shrine and I/Q
 World Shop inventories use that same boundary; complete-route live proof
 remains pending.
 
+Shrine delay selection occurs inside native `CreateSurfaceShopButtons`, before
+the chosen delay determines price, display, and delivery metadata. Its temporary
+selection context ends when construction returns or throws. Native faults
+propagate after context restoration; a later unrelated `RandomInt` must not
+inherit an abandoned Shrine selection.
+
 World Shop has three base slots: one Boon, one major non-Boon, and one minor.
 The special supplemental offers—Infernal Contract, Travel Deal, and Echo Gold
 Gold Gold—are not new native reward kinds; they are additional declared shop
@@ -115,3 +121,10 @@ offers and dependencies.
 
 An uninteracted Well, Shop, Shrine, or Pool is Overview content, not an implied
 Timeline transaction. Present and interacted are distinct published facts.
+
+Native `UseConsumableItem` calls `ConsumableUsedPresentation` after its use
+checks and before dispatching the item's effect. Anvil and Twist arm their
+existing native selectors only after the exact published transaction begins
+successfully at that accepted contact. A rejected prerequisite leaves the
+native use running without planner selectors; it does not suppress the game
+function or reconstruct its payment or effect loop.

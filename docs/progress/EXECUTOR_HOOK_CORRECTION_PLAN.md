@@ -2,25 +2,36 @@
 
 ## Status and baseline
 
-Status: locked; A1 resumes after planner Fields Forfeit correction `550a56a7`.
-The user-approved A1 amendment retains steering and records completed Fields
-contents/positions as diagnostics only. Native Forfeit creates the Onion;
+Status: locked; Gate A complete. Later gates have not started.
+Fields Forfeit was corrected in the planner separately (`550a56a7`). The
+user-approved Fields amendment retains steering and records completed contents
+and positions as diagnostics only; native Forfeit creates the Onion and
 existing room-exit conformance remains unchanged.
 
-A1 implementation and independent review are complete locally, with no
-actionable review findings. Verification: `lua tests/all.lua` 434/434 passed;
-`luacheck src/` zero warnings/errors across 93 files; modpack smoke passed one
-module entrypoint and one coordinator pipeline. Live Fields placement remains
-pending user testing. A2–A5 and later gates have not been started by this slice.
+| Unit | Executor commit | Independent review and verification                                                                         |
+| ---- | --------------- | ----------------------------------------------------------------------------------------------------------- |
+| A1   | `789c42b`       | Passed; 434 executor tests, clean luacheck, modpack smoke passed.                                           |
+| A2   | `5433248`       | Passed; direct-level and composed-carrier witnesses, 436 executor tests.                                    |
+| A3   | `dc08c5f`       | Passed after adding the exact cross-handler regression witness; 8 focused tests and clean luacheck.         |
+| A4   | `46e7a7b`       | Passed; 7 focused tests and clean luacheck, including both Pool/Nemesis hook orders.                        |
+| A5   | `cd46cf4`       | Passed; 15 transformation and 14 feature-hook tests, including rejected admission and native-fault cleanup. |
+
+Gate A closure: `lua tests/all.lua` passed 450/450; `luacheck src/` reported
+zero warnings/errors in 93 files; modpack `lua tests/smoke.lua` passed one
+module entrypoint and one coordinator pipeline. No protocol, fixture, catalog,
+engine, or application changes were needed. The planner-wide suite was not
+rerun for this isolated Lua/documentation delivery. No deployment or push.
+
+Live-game verification remains pending; source and harness evidence are not
+claims of tested host scheduling. Gate C retains the separate unresolved
+deferred-menu and callback lifetime questions.
 
 - Planner baseline: `a400489d`.
 - Plan Executor baseline: `3252224`, in sibling repository
   `../run-planner-modpack/Submodules/adamantRunPlanner-Plan_Executor`.
-- The paused executor A1 draft changes `room/features/fields.lua`,
-  `native_bindings.lua`, and `tests/room/test_fields_features.lua`. Amend it in
-  place: retain the coordinator fix, remove the new placement mismatch proof
-  and unsupported `acquisitionEnabled`-to-Onion inference. Admission logging
-  remains separately committed as `3252224`.
+- A1 replaced the paused placement-mismatch draft with the accepted diagnostic
+  contact; no `acquisitionEnabled`-to-Onion inference or draft native binding
+  remains. Admission logging is separately committed as `3252224`.
 - Evidence: [hook audit](../investigations/executor-hook-audit/README.md), its
   168 expanded registration rows, mode classifications, and thread-lifetime
   dispositions. Source findings are not claims of live reproduction.
