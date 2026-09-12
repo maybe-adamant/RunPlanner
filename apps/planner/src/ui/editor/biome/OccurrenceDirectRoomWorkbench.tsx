@@ -10,14 +10,13 @@ import type {
   WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
 import { RoomActionsWorkbench } from './OccurrenceRoomActions';
-import { RoomEncounterStructureWorkbench, RoomFeaturesWorkbench } from './OccurrenceRoomFeatures';
-import {
-  EncounterPhaseControl,
-  FieldsWorkbench,
-  LocalVisitWorkbench,
-  RewardWheelWorkbench,
-  ShopWorkbench,
-} from './OccurrenceEncounterWorkbench';
+import { RoomFeaturesWorkbench } from './room-features/RoomFeaturesWorkbench';
+import { RoomEncounterStructureWorkbench } from './locals/RoomEncounterStructureWorkbench';
+import { EncounterPhaseControl } from './locals/EncounterPhaseControl';
+import { FieldsWorkbench } from './locals/FieldsWorkbench';
+import { LocalVisitWorkbench } from './locals/LocalVisitWorkbench';
+import { RewardWheelWorkbench } from './locals/RewardWheelWorkbench';
+import { ShopWorkbench } from './commerce/ShopWorkbench';
 import { CandidateSelect } from './CandidateSelect';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';

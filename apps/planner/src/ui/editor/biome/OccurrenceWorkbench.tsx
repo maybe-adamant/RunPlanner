@@ -12,10 +12,10 @@ import {
 } from '@planner/projections/structured-workspace';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { RunStateLauncher } from './RunStateSheet';
-import { AnomalyClearedControl } from './OccurrenceRoomFeatures';
+import { AnomalyClearedControl } from './room-features/AnomalyControls';
 import { RoomActionsWorkbench } from './OccurrenceRoomActions';
 import { DirectRoomWorkbench, IncomingRewardOverview } from './OccurrenceDirectRoomWorkbench';
-import { FieldsLayoutWorkbench } from './OccurrenceEncounterWorkbench';
+import { FieldsLayoutWorkbench } from './locals/FieldsWorkbench';
 
 interface OccurrenceWorkbenchProps {
   readonly incomingDoor?: WorkspaceDoorContract;

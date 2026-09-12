@@ -1,16 +1,9 @@
 import {
   requireWorkspaceInteraction,
-  workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
-  type WorkspaceChaosExitControl,
   type WorkspaceRoomActions,
   type WorkspaceRoomFeature,
-  type WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
-import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
-import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
-import { useAppDispatch } from '@planner/state/store';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -18,7 +11,7 @@ import {
   useOptionalWorkspaceInteraction,
   useWorkspaceInteraction,
 } from '@planner/ui/controls/useWorkspaceInteraction';
-import type { ReactNode } from 'react';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 
 const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze({
   sections: Object.freeze([]),
@@ -26,379 +19,27 @@ const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze(
 const emptyStringPicker: ContextualPickerModel<string> = Object.freeze({
   sections: Object.freeze([]),
 });
-export function ChaosMapWorkbench({
-  control,
-  interactions,
-}: {
-  readonly control: WorkspaceChaosExitControl;
-  readonly interactions: WorkspaceInteractionCatalog;
-}) {
-  const executeIntent = useCommandIntent();
-  const interaction = requireWorkspaceInteraction(
-    interactions.chaosExits,
-    workspaceInteractionKey(control.owner),
-  );
-  return (
-    <label
-      className="field-control field-control-inline"
-      htmlFor={`chaos-map-${control.door.room.occurrenceId}`}
-    >
-      <span>Map</span>
-      <select
-        id={`chaos-map-${control.door.room.occurrenceId}`}
-        onChange={(event) => executeIntent(interaction.mapIntent(event.target.value))}
-        value={control.door.room.gameName}
-      >
-        {control.mapChoices.map((choice) => (
-          <option key={choice.value} value={choice.value}>
-            {choice.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
 
-/** The selected Midshop owns only the available spawn affordance. */
-function ZagreusSpawnWorkbench({
-  feature,
-  interactions,
-}: {
-  readonly feature: Extract<WorkspaceRoomFeature, { readonly kind: 'zagreusContract' }>;
-  readonly interactions: WorkspaceInteractionCatalog;
-}) {
-  const findingTarget = useFindingTarget();
-  const executeIntent = useCommandIntent();
-  const owner = feature.action === 'add' ? feature.control.owner : feature.owner;
-  return (
-    <label className="room-feature-presence-row">
-      <input
-        {...(feature.action === 'add' ? findingTarget(owner) : {})}
-        checked={feature.action === 'remove'}
-        data-command={feature.action === 'add' ? 'AddZagreusContract' : 'RemoveZagreusContract'}
-        disabled={feature.presence.kind === 'optionalAbsent' && !feature.presence.enabled}
-        onChange={() =>
-          executeIntent(
-            feature.action === 'add'
-              ? requireWorkspaceInteraction(
-                  interactions.zagreusSpawns,
-                  workspaceInteractionKey(owner),
-                ).spawnIntent()
-              : requireWorkspaceInteraction(
-                  interactions.zagreusContracts,
-                  workspaceInteractionKey(owner),
-                ).removeIntent,
-          )
-        }
-        type="checkbox"
-      />
-      <span>Zagreus Contract</span>
-    </label>
-  );
-}
+type InventoryFeature = Extract<
+  WorkspaceRoomFeature,
+  { readonly kind: 'hermesShrine' | 'purgingPool' | 'stygianWell' }
+>;
 
-/** A selected source exposes only the declared Chaos creation command. */
-function ChaosSpawnWorkbench({
-  feature,
-  interactions,
-}: {
-  readonly feature: Extract<WorkspaceRoomFeature, { readonly kind: 'chaos' }>;
-  readonly interactions: WorkspaceInteractionCatalog;
-}) {
-  const findingTarget = useFindingTarget();
-  const executeIntent = useCommandIntent();
-  const owner = feature.action === 'add' ? feature.control.owner : feature.owner;
-  return (
-    <label className="room-feature-presence-row">
-      <input
-        {...findingTarget(owner)}
-        checked={feature.action === 'remove'}
-        data-command={feature.action === 'add' ? 'AddChaos' : 'RemoveChaos'}
-        disabled={
-          feature.presence.kind === 'forcedPresent' ||
-          (feature.presence.kind === 'optionalAbsent' && !feature.presence.enabled)
-        }
-        onChange={() => {
-          if (feature.action === 'add') {
-            executeIntent(
-              requireWorkspaceInteraction(
-                interactions.chaosSpawns,
-                workspaceInteractionKey(owner),
-              ).spawnIntent(),
-            );
-            return;
-          }
-          const removeIntent = requireWorkspaceInteraction(
-            interactions.chaosExits,
-            workspaceInteractionKey(owner),
-          ).removeIntent;
-          if (removeIntent !== undefined) executeIntent(removeIntent);
-        }}
-        type="checkbox"
-      />
-      <span>Chaos Gate</span>
-    </label>
-  );
-}
-
-/**
- * The workspace has already established this is an authored Anomaly and has
- * supplied its closed declaration map domain. These controls intentionally do
- * not ask React to re-evaluate replacement eligibility or reward legality.
- */
-export function AnomalyRoomControl({ room }: { readonly room: WorkspaceRoomSummary }) {
-  const dispatch = useAppDispatch();
-  const anomaly = room.anomaly;
-  if (anomaly === undefined) return null;
-  return (
-    <label
-      className="field-control field-control-inline"
-      htmlFor={`anomaly-map-${room.occurrenceId}`}
-    >
-      <span>Room</span>
-      <select
-        id={`anomaly-map-${room.occurrenceId}`}
-        onChange={(event) =>
-          dispatch(
-            authoredProjectCommandDispatched({
-              gameName: event.target.value,
-              kind: 'ReplaceAnomalyMap',
-              occurrence: room.address,
-            }),
-          )
-        }
-        value={room.gameName}
-      >
-        {anomaly.mapChoices.map((choice) => (
-          <option key={choice.value} value={choice.value}>
-            {choice.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-export function AnomalyClearedControl({ room }: { readonly room: WorkspaceRoomSummary }) {
-  const dispatch = useAppDispatch();
-  const anomaly = room.anomaly;
-  if (anomaly === undefined) return null;
-  return (
-    <label className="anomaly-outcome-control">
-      <input
-        checked={anomaly.success}
-        onChange={(event) =>
-          dispatch(
-            authoredProjectCommandDispatched({
-              kind: 'ReplaceAnomalySuccess',
-              occurrence: room.address,
-              success: event.target.checked,
-            }),
-          )
-        }
-        type="checkbox"
-      />
-      <span>Cleared</span>
-    </label>
-  );
-}
-
-export function RevertAnomalyAction({ room }: { readonly room: WorkspaceRoomSummary }) {
-  const dispatch = useAppDispatch();
-  const anomaly = room.anomaly;
-  if (anomaly === undefined) return null;
-  return (
-    <div className="anomaly-revert-action">
-      <button
-        className="danger-action action-compact"
-        data-command="RevertAnomaly"
-        onClick={() =>
-          dispatch(
-            authoredProjectCommandDispatched({
-              kind: 'RevertAnomaly',
-              occurrence: room.address,
-            }),
-          )
-        }
-        type="button"
-      >
-        Restore {anomaly.rememberedRoomLabel}
-      </button>
-    </div>
-  );
-}
-
-function RoomResourceControls({
-  interactions,
-  room,
-}: {
-  readonly interactions: WorkspaceInteractionCatalog;
-  readonly room: WorkspaceRoomSummary;
-}) {
-  const findingTarget = useFindingTarget();
-  const dispatch = useAppDispatch();
-  const executeIntent = useCommandIntent();
-  return (
-    <div aria-label="Resources" className="room-feature-action-list" role="region">
-      {room.resources?.map((resource) => (
-        <div className="room-feature-presence-row room-resource-row" key={resource.family}>
-          <label className="room-resource-selection">
-            <input
-              {...findingTarget(resource.address)}
-              checked={resource.action === 'remove'}
-              disabled={!resource.legal && resource.action !== 'remove'}
-              onChange={() =>
-                executeIntent(
-                  requireWorkspaceInteraction(
-                    interactions.resourcePlacements,
-                    resource.interactionKey,
-                  ).intent,
-                )
-              }
-              type="checkbox"
-            />
-            <span>{resource.label}</span>
-          </label>
-          {resource.action === 'move' && resource.currentPlacement !== undefined ? (
-            <span className="resource-placement-disclosure">
-              Currently placed at{' '}
-              <button
-                className="semantic-focus-link"
-                onClick={() => dispatch(semanticOwnerNavigated(resource.currentPlacement!.address))}
-                type="button"
-              >
-                {resource.currentPlacement.biomeKey} · {resource.currentPlacement.locationLabel}
-              </button>
-              .
-            </span>
-          ) : null}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-type RoomFeaturePresence = Exclude<WorkspaceRoomFeature, { readonly kind: 'nemesisEvent' }>;
-
-type RoomFeatureEntry =
-  | { readonly kind: 'heading'; readonly key: string; readonly label: ReactNode }
-  | { readonly kind: 'content'; readonly key: string; readonly content: ReactNode }
-  | { readonly kind: 'feature'; readonly key: string; readonly feature: RoomFeaturePresence };
-
-function featureEntries(
-  key: string,
-  label: string,
-  features: readonly RoomFeaturePresence[],
-): readonly RoomFeatureEntry[] {
-  return features.length === 0
-    ? Object.freeze([])
-    : Object.freeze([
-        Object.freeze({ kind: 'heading' as const, key: `${key}:heading`, label }),
-        ...features.map((feature, index) =>
-          Object.freeze({ kind: 'feature' as const, key: `${key}:${index}`, feature }),
-        ),
-      ]);
-}
-
-function contentEntries(
-  key: string,
-  label: ReactNode,
-  content: ReactNode | undefined,
-): readonly RoomFeatureEntry[] {
-  return content === undefined
-    ? Object.freeze([])
-    : Object.freeze([
-        Object.freeze({ kind: 'heading' as const, key: `${key}:heading`, label }),
-        Object.freeze({ kind: 'content' as const, key: `${key}:content`, content }),
-      ]);
-}
-
-export function RoomFeaturesWorkbench({
+export function RoomInventoryPanels({
   features,
   interactions,
   roomActions,
-  room,
 }: {
-  readonly features: readonly WorkspaceRoomFeature[];
+  readonly features: readonly InventoryFeature[];
   readonly interactions: WorkspaceInteractionCatalog;
   readonly roomActions?: WorkspaceRoomActions;
-  readonly room: WorkspaceRoomSummary;
 }) {
   const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
-  const additionalExits = features.filter(
-    (
-      feature,
-    ): feature is Extract<RoomFeaturePresence, { readonly kind: 'chaos' | 'zagreusContract' }> =>
-      feature.kind === 'chaos' || feature.kind === 'zagreusContract',
-  );
-  const roomObjects = features.filter(
-    (
-      feature,
-    ): feature is Extract<
-      RoomFeaturePresence,
-      { readonly kind: 'hermesShrine' | 'purgingPool' | 'stygianWell' }
-    > =>
-      feature.kind === 'hermesShrine' ||
-      feature.kind === 'purgingPool' ||
-      feature.kind === 'stygianWell',
-  );
-  const entries: readonly RoomFeatureEntry[] = Object.freeze([
-    ...(room.resources === undefined || room.resources.length === 0
-      ? []
-      : contentEntries(
-          'resources',
-          <>
-            <span>Resources</span>{' '}
-            <span className="room-feature-heading-note">
-              (Each successful element outcome can be placed once across the route)
-            </span>
-          </>,
-          <RoomResourceControls interactions={interactions} room={room} />,
-        )),
-    ...featureEntries('additional-exits', 'Additional Exits', additionalExits),
-    ...featureEntries('room-objects', 'Objects', roomObjects),
-  ]);
-  if (entries.length === 0) return null;
   return (
-    <section aria-label="Room features" className="room-features-workbench">
-      {entries.map((entry) => {
-        if (entry.kind === 'heading') {
-          return (
-            <h5 className="room-feature-category-heading" key={entry.key}>
-              {entry.label}
-            </h5>
-          );
-        }
-        if (entry.kind === 'content') {
-          return (
-            <div className="room-feature-category-content" key={entry.key}>
-              {entry.content}
-            </div>
-          );
-        }
-        const feature = entry.feature;
+    <>
+      {features.map((feature) => {
         switch (feature.kind) {
-          case 'zagreusContract':
-            return (
-              <ZagreusSpawnWorkbench
-                feature={feature}
-                interactions={interactions}
-                key={workspaceInteractionKey(
-                  feature.action === 'add' ? feature.control.owner : feature.owner,
-                )}
-              />
-            );
-          case 'chaos':
-            return (
-              <ChaosSpawnWorkbench
-                feature={feature}
-                interactions={interactions}
-                key={workspaceInteractionKey(
-                  feature.action === 'add' ? feature.control.owner : feature.owner,
-                )}
-              />
-            );
           case 'stygianWell':
             return (() => {
               const presence =
@@ -650,45 +291,7 @@ export function RoomFeaturesWorkbench({
             })();
         }
       })}
-    </section>
-  );
-}
-
-export function RoomEncounterStructureWorkbench({
-  children,
-  features,
-  interactions,
-}: {
-  readonly children?: ReactNode;
-  readonly features: readonly WorkspaceRoomFeature[];
-  readonly interactions: WorkspaceInteractionCatalog;
-}) {
-  const executeIntent = useCommandIntent();
-  const encounters = features.filter((feature) => feature.kind === 'nemesisEvent');
-  if (children === undefined && encounters.length === 0) return null;
-  return (
-    <section aria-label="Encounter structure" className="room-structure-workbench">
-      <div className="local-reward-heading">
-        <h4>Encounters</h4>
-      </div>
-      {children}
-      {encounters.map((feature) => {
-        const interaction = requireWorkspaceInteraction(
-          interactions.nemesisFeatures,
-          feature.interactionKey,
-        );
-        return (
-          <label className="room-feature-presence-row" key={feature.interactionKey}>
-            <input
-              checked={feature.action === 'remove'}
-              onChange={() => executeIntent(interaction.intent)}
-              type="checkbox"
-            />
-            <span>Nemesis Event</span>
-          </label>
-        );
-      })}
-    </section>
+    </>
   );
 }
 
