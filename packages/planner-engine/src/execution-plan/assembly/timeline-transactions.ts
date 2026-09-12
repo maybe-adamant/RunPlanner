@@ -11,7 +11,7 @@ import { optionIndex } from '../../authored-project/traits/state';
 import type { TraitOfferOwnerAddress } from '../../authored-project/addresses';
 import { nemesisGeneratedPickupSiteKey } from '../../authored-project/acquisition/pickup-producers';
 import type { CanonicalAuthoredRoom } from '../../simulation/materialization';
-import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation-products';
+import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation/evaluation-products';
 import type { RewardEvent } from '../../simulation/rewards/model';
 import type { PlannerTimelineFacts } from '../../simulation/timeline-facts';
 import {

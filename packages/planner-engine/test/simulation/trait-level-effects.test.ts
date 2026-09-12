@@ -24,7 +24,7 @@ import { describe, expect, it } from 'vitest';
 import { goldenFBiome, goldenFStartId } from '@run-planner/test-fixtures/underworld';
 
 import { initializeTestRewardBranches } from '../support/arcana-fear';
-import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { applyEncounterEndEffectsTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/encounter-end-effects';
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';

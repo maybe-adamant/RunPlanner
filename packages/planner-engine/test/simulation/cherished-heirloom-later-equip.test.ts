@@ -22,7 +22,7 @@ import {
   keepsakeSelectionUnavailableReason,
 } from '../../src/simulation/keepsakes/state';
 import { attestGorgonBranchState } from '../../src/simulation/keepsakes/encounter-effects';
-import { simulateProject } from '../../src/simulation/project';
+import { simulateProject } from '../../src/simulation/evaluation/project';
 import {
   applyExperimentalHammerEquipResult,
   applyJeweledPomEquipResult,
@@ -31,7 +31,7 @@ import {
   initializeRewardBranches,
   publicRewardBranch,
 } from '../../src/simulation/rewards/branch-lifecycle';
-import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
 import type { RewardBranch } from '../../src/simulation/rewards/model';

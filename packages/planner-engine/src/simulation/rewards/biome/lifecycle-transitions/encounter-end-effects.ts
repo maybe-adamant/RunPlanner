@@ -45,7 +45,7 @@ import type { DerivedAcquisitionEntryFrontier } from '../../acquisition/contract
 import type { RewardBranchState } from '../../branch-primitives';
 import { advanceRewardBranches } from '../../branch-lifecycle';
 import { rewardFinding } from '../../findings';
-import type { ReachedTraitChildCheckpoint } from '../../trait-settlement';
+import type { ReachedTraitChildCheckpoint } from '../../trait-settlement/coordinator';
 import type { LifecycleFinding } from './types';
 import {
   EMPTY_PLANNER_TIMELINE_FACTS,

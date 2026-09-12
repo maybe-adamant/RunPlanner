@@ -27,7 +27,7 @@ import {
   foldTraitHistoryEvents,
 } from '../../src/simulation/traits';
 import { simulateProjectAssembly } from '../../src/simulation';
-import { candidateArtifactsForProjectEvaluationAssembly } from '../../src/simulation/project-evaluation-assembly';
+import { candidateArtifactsForProjectEvaluationAssembly } from '../../src/simulation/evaluation/project-evaluation-assembly';
 import { applyFountainUsedTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/fountain-used';
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';

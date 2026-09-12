@@ -16,7 +16,7 @@ import { type StygianWellCandidateArtifacts } from '../../commerce/stygian-well'
 import type {
   LevelResolutionCandidateArtifacts,
   TraitOfferCandidateArtifacts,
-} from '../../candidates/trait-offer-capability';
+} from '../../candidates/trait-offer/capability';
 import type { FindingRegionEntry } from '../../finding-regions';
 import type { BiomeRewardSimulation, RewardBranch } from '../model';
 import type { RoomLifecycleCandidateArtifacts } from '../lifecycle-artifacts';

@@ -1,5 +1,5 @@
 import type { CanonicalAuthoredRoom, CanonicalBatch } from '../../simulation/materialization';
-import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation-products';
+import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation/evaluation-products';
 import type { RunStateSnapshot } from '../../simulation/rewards/run-state';
 import { executionRoomOwnerKey } from './support';
 import { assembleExecutionOverview, executionReward } from './overview';

@@ -4,7 +4,7 @@ import type {
   CanonicalBatch,
   CanonicalHubDecision,
 } from '../../simulation/materialization';
-import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation-products';
+import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation/evaluation-products';
 import { semanticAddressKey } from '../../authored-project/addresses';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import { executionRoomOwnerKey } from './support';

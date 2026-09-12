@@ -6,7 +6,7 @@ import {
   expectRecord,
   failProjectDocument,
 } from '../../validation';
-import { decodeGorgonAthenaOffer } from '../encounter-trait-offers';
+import { decodeGorgonAthenaOffer } from './encounter-trait-offer-codec';
 import { encounterSetForBinding } from '../encounter-envelope';
 
 export function decodeGorgonPhaseResults(

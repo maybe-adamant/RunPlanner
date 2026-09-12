@@ -8,7 +8,7 @@ import {
 } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
 import type { ResolvedRewardOffer, ShopOptionSelection } from '../../reward-kernel';
-import type { ProjectEvaluation } from '../evaluation-products';
+import type { ProjectEvaluation } from '../evaluation/evaluation-products';
 import type {
   RewardProducerCandidateArtifacts,
   RewardProducerCandidateCapability,

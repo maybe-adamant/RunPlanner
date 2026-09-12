@@ -1,4 +1,4 @@
-import { assertExactProjectEvaluationAssembly } from '../simulation/project-evaluation-assembly';
+import { assertExactProjectEvaluationAssembly } from '../simulation/evaluation/project-evaluation-assembly';
 import type { RunStateSnapshot } from '../simulation/rewards/run-state';
 import {
   EXECUTION_CATALOG_VERSION,

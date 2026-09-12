@@ -17,7 +17,7 @@ import { createCompleteFGProject, goldenFStartId } from '@run-planner/test-fixtu
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { simulateProject } from '../../src/simulation';
 import { createPreparedProjectCandidateSession } from '../../src/simulation/candidates';
-import { simulateProjectAssembly } from '../../src/simulation/project';
+import { simulateProjectAssembly } from '../../src/simulation/evaluation/project';
 
 const biome = createBiomeAddress('Underworld', 'F');
 

@@ -1,22 +1,22 @@
-import { semanticAddressKey, type BiomeAddress } from '../authored-project/addresses';
+import { semanticAddressKey, type BiomeAddress } from '../../authored-project/addresses';
 import {
   createEmptyRoomLifecycleCandidateArtifacts,
   type RoomLifecycleCandidateArtifacts,
-} from './rewards/lifecycle-artifacts';
+} from '../rewards/lifecycle-artifacts';
 import {
   createEmptyRewardProducerCandidateArtifacts,
   type RewardProducerCandidateArtifacts,
-} from './rewards/producer-frontiers';
+} from '../rewards/producer-frontiers';
 import {
   createEmptyLevelResolutionCandidateArtifacts,
   createEmptyTraitOfferCandidateArtifacts,
   type LevelResolutionCandidateArtifacts,
   type TraitOfferCandidateArtifacts,
-} from './candidates/trait-offer-capability';
+} from '../candidates/trait-offer/capability';
 import {
   createEmptyEncounterCandidateArtifacts,
   type EncounterCandidateArtifacts,
-} from './encounters/candidates';
+} from '../encounters/candidates';
 import {
   createEmptyChaosCandidateArtifacts,
   createEmptyZagreusContractCandidateArtifacts,
@@ -24,7 +24,7 @@ import {
   type ChaosCandidateArtifacts,
   type RoomTargetCandidateArtifacts,
   type ZagreusContractCandidateArtifacts,
-} from './generation/candidate-artifacts';
+} from '../generation/candidate-artifacts';
 import {
   createEmptyFountainRarityCandidateArtifacts,
   createEmptyTranscendentEmbryoCandidateArtifacts,
@@ -38,33 +38,33 @@ import {
   type KeepsakeSelectionCandidateArtifacts,
   type KeepsakeSelectionCandidateCapability,
   type TranscendentEmbryoCandidateArtifacts,
-} from './keepsakes/candidate-artifacts';
+} from '../keepsakes/candidate-artifacts';
 import {
   createEmptyAcquisitionConversionCandidateArtifacts,
   createEmptyDerivedAcquisitionEntryCandidateArtifacts,
   type AcquisitionConversionCandidateArtifacts,
   type DerivedAcquisitionEntryCandidateArtifacts,
-} from './rewards/acquisition/artifacts';
+} from '../rewards/acquisition/artifacts';
 import {
   createEmptySteadyGrowthCandidateArtifacts,
   type SteadyGrowthCandidateArtifacts,
-} from './candidates/steady-growth';
+} from '../candidates/steady-growth';
 import {
   createJudgmentArcanaCandidateArtifacts,
   type JudgmentArcanaCandidateArtifacts,
-} from './arcana-fear';
+} from '../arcana-fear';
 import {
   createEmptyPurgingPoolCandidateArtifacts,
   type PurgingPoolCandidateArtifacts,
-} from './commerce/purging-pool';
+} from '../commerce/purging-pool';
 import {
   createEmptyHermesShrineCandidateArtifacts,
   type HermesShrineCandidateArtifacts,
-} from './commerce/hermes-shrine';
+} from '../commerce/hermes-shrine';
 import {
   createEmptyStygianWellCandidateArtifacts,
   type StygianWellCandidateArtifacts,
-} from './commerce/stygian-well';
+} from '../commerce/stygian-well';
 
 export interface BiomeCandidateArtifacts {
   readonly origin: BiomeAddress;

@@ -20,7 +20,7 @@ import type { OrdinaryBatchGenerationAssessment } from '../generation';
 import {
   createBiomeCandidateArtifacts,
   type BiomeCandidateArtifacts,
-} from '../candidate-artifacts';
+} from '../evaluation/candidate-artifacts';
 import {
   createKeepsakeEquipResultCandidateArtifacts,
   createKeepsakeSelectionCandidateArtifacts,
@@ -28,7 +28,7 @@ import {
 } from '../keepsakes/candidate-artifacts';
 import { type DerivedAcquisitionEntryCandidateArtifacts } from '../rewards/acquisition/artifacts';
 import type { SteadyGrowthCandidateArtifacts } from '../candidates/steady-growth';
-import type { TraitOfferCandidateArtifacts } from '../candidates/trait-offer-capability';
+import type { TraitOfferCandidateArtifacts } from '../candidates/trait-offer/capability';
 import type { TraitChildSettlementCheckpoints } from '../rewards/biome';
 import { findingIdentityKey, type FindingRegionEntry } from '../finding-regions';
 import type { BiomeRewardSimulation } from '../rewards';

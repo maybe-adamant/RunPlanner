@@ -9,7 +9,7 @@ import {
   type ReachedSteadyGrowthThreshold,
   type SteadyGrowthTargetAssessment,
 } from '../traits/history/transitions';
-import type { ProjectEvaluation } from '../evaluation-products';
+import type { ProjectEvaluation } from '../evaluation/evaluation-products';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 
 export interface SteadyGrowthOutcomeCandidateQuery {

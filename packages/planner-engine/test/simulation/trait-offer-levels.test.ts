@@ -18,8 +18,8 @@ import {
   type TraitOfferEvent,
 } from '@run-planner/engine/simulation';
 
-import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
-import { applyTraitOfferForAcquisition } from '../../src/simulation/rewards/trait-settlement';
+import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
+import { applyTraitOfferForAcquisition } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import type { TraitOfferCandidateContext } from '../../src/simulation/traits';
 

@@ -1,5 +1,5 @@
-import type { Catalog } from '../../catalog-schema';
-import { evaluateCallingCardOffer } from '../keepsakes/reward-effects';
+import type { Catalog } from '../../../catalog-schema';
+import { evaluateCallingCardOffer } from '../../keepsakes/reward-effects';
 import {
   createCirceResolutionAddress,
   createEchoLastRunBoonAddress,
@@ -10,11 +10,15 @@ import {
   type SemanticAddress,
   type TraitOfferAddress,
   type TraitOfferOwnerAddress,
-} from '../../authored-project/addresses';
-import { recordLootTypeHistorySource } from '../../reward-kernel';
-import type { CanonicalResolvedIncomingReward } from '../materialization';
-import { type SemanticFinding, type TraitFindingCode } from '../model';
-import { ownerRegion, type FindingChronology, type FindingRegionEntry } from '../finding-regions';
+} from '../../../authored-project/addresses';
+import { recordLootTypeHistorySource } from '../../../reward-kernel';
+import type { CanonicalResolvedIncomingReward } from '../../materialization';
+import { type SemanticFinding, type TraitFindingCode } from '../../model';
+import {
+  ownerRegion,
+  type FindingChronology,
+  type FindingRegionEntry,
+} from '../../finding-regions';
 import {
   attachTraitHistory,
   advanceChaosClock,
@@ -28,45 +32,45 @@ import {
   recordReachedTraitOffer,
   traitOfferCompositionDomains,
   type TraitHistoryState,
-} from '../traits';
-import type { EchoLastRunBoonOutcome, TraitOfferContext } from '../traits/offer-domain';
+} from '../../traits';
+import type { EchoLastRunBoonOutcome, TraitOfferContext } from '../../traits/offer-domain';
 import {
   optionIndex,
   traitGiverForAcquisitionRole,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
-} from '../../authored-project/traits/state';
-import { circeResolutionDomain, manualArcanaGraspCost } from '../arcana-fear';
-import { advanceCurrentKeepsake } from '../keepsakes/state';
-import { consumeConcaveStone, concaveStoneProcSupport } from '../keepsakes/trait-effects';
-import type { RewardBranchState } from './branch-primitives';
-import type { TraitOfferOptionLevelResolution } from '../traits/offer-levels';
-import { settleMoonBeamPathPoints, settleSelectedHexTree } from './trait-settlement/hex-settlement';
-import { maybeAddGodSent } from '../hex-progress';
+} from '../../../authored-project/traits/state';
+import { circeResolutionDomain, manualArcanaGraspCost } from '../../arcana-fear';
+import { advanceCurrentKeepsake } from '../../keepsakes/state';
+import { consumeConcaveStone, concaveStoneProcSupport } from '../../keepsakes/trait-effects';
+import type { RewardBranchState } from '../branch-primitives';
+import type { TraitOfferOptionLevelResolution } from '../../traits/offer-levels';
+import { settleMoonBeamPathPoints, settleSelectedHexTree } from './hex-settlement';
+import { maybeAddGodSent } from '../../hex-progress';
 import {
   createTraitChildFindingEntry,
   settleSelectedTraitChildren,
-} from './trait-settlement/selected-child-settlement';
-import { prepareConcaveStoneSecondary } from './trait-settlement/concave-stone-secondary';
+} from './selected-child-settlement';
+import { prepareConcaveStoneSecondary } from './concave-stone-secondary';
 import {
   assessCirceChild,
   assessEchoBoonChild,
   settleEchoPomChild,
   settleValidatedCirceChild,
-} from './trait-settlement/encounter-child-settlement';
-import { addRewardFinding } from './findings';
-import { settleReachedLevelResolution } from './level-resolution-settlement';
-import { isTraitOfferMutationEvent } from '../traits/history/fold';
+} from './encounter-child-settlement';
+import { addRewardFinding } from '../findings';
+import { settleReachedLevelResolution } from '../level-resolution-settlement';
+import { isTraitOfferMutationEvent } from '../../traits/history/fold';
 
 export interface ReachedTraitChildCheckpoint {
   readonly address: SemanticAddress;
   readonly branch: RewardBranchState;
-  readonly candidateContext?: import('../traits').TraitOfferCandidateContext;
+  readonly candidateContext?: import('../../traits').TraitOfferCandidateContext;
 }
 
 export interface ReachedTraitOfferCandidateContact {
   readonly address: TraitOfferAddress;
-  readonly context: import('../traits').TraitOfferCandidateContext;
+  readonly context: import('../../traits').TraitOfferCandidateContext;
 }
 
 type TraitOfferAcquisitionMode =
@@ -916,7 +920,7 @@ function encounterTraitContext(
         | 'suppressTemporaryBoonRarity'
       >
     | undefined,
-  freshRarityOverride: import('../../catalog-schema').TraitRarity | undefined,
+  freshRarityOverride: import('../../../catalog-schema').TraitRarity | undefined,
 ): TraitOfferContext {
   const recreation = branch.history.lastRewardRecreation;
   return Object.freeze({
@@ -960,7 +964,7 @@ export function settleEncounterTraitOffer(
   lifecyclePoint: string,
   findingChronology?: FindingChronology,
   acquisitionRole = 'selection',
-  freshRarityOverride?: import('../../catalog-schema').TraitRarity,
+  freshRarityOverride?: import('../../../catalog-schema').TraitRarity,
   loadout?: Pick<
     TraitOfferContext,
     | 'weaponKey'

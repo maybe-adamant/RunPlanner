@@ -23,11 +23,11 @@ import { describe, expect, it } from 'vitest';
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
-import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
-import { evaluateCirceResolutionDomain } from '../../src/simulation/candidates/trait-offer';
+import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
+import { evaluateCirceResolutionDomain } from '../../src/simulation/candidates/trait-offer/query';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
-import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { createTraitHistoryState, evaluateReachedTraitOffer } from '../../src/simulation/traits';
 
 const surface = createRouteAddress('Surface');

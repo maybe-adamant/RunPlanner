@@ -1,15 +1,15 @@
-import type { Catalog } from '../../catalog-schema';
-import type { ProjectDocument } from '../model';
+import type { Catalog } from '../../../catalog-schema';
+import type { ProjectDocument } from '../../model';
 import {
   failCommand,
   requireOccurrence,
   requireRoom,
   requireTopology,
   type LocatedBiome,
-} from './contract';
-import { requireFieldsCages, requireFieldsOptionalRewards } from '../room-state/declaration';
-import { replaceOccurrence, updateOccurrenceTopology } from './occurrence/mutation';
-import type { FieldsSpatialCommand } from './types';
+} from '../contract';
+import { requireFieldsCages, requireFieldsOptionalRewards } from '../../room-state/declaration';
+import { replaceOccurrence, updateOccurrenceTopology } from './mutation';
+import type { FieldsSpatialCommand } from '../types';
 
 export function applyFieldsSpatialCommand(
   document: ProjectDocument,

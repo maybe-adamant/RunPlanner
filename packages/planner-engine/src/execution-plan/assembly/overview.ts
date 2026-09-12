@@ -8,7 +8,7 @@ import {
 import { hermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shrine-delivery';
 import { INFERNAL_CONTRACT_ENTRY_KEY } from '../../authored-project/shop';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
-import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation-products';
+import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation/evaluation-products';
 import type {
   CanonicalAuthoredRoom,
   CanonicalBatch,

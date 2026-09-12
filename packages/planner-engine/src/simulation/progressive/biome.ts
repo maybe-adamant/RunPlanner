@@ -15,7 +15,7 @@ import { evaluateHubDecisionGenerationInternal } from '../generation/hub';
 import {
   createBiomeCandidateArtifacts,
   type BiomeCandidateArtifacts,
-} from '../candidate-artifacts';
+} from '../evaluation/candidate-artifacts';
 import {
   type AcquisitionConversionCandidateArtifacts,
   type DerivedAcquisitionEntryCandidateArtifacts,
@@ -141,8 +141,8 @@ function generation(
   rewards: BiomeRewardSimulation,
   rewardProducers: RewardProducerCandidateArtifacts,
   roomLifecycles: RoomLifecycleCandidateArtifacts,
-  traitOffers: import('../candidates/trait-offer-capability').TraitOfferCandidateArtifacts,
-  levelResolutions: import('../candidates/trait-offer-capability').LevelResolutionCandidateArtifacts,
+  traitOffers: import('../candidates/trait-offer/capability').TraitOfferCandidateArtifacts,
+  levelResolutions: import('../candidates/trait-offer/capability').LevelResolutionCandidateArtifacts,
   judgmentArcana: JudgmentArcanaCandidateArtifacts,
   figurineArcana: FigurineArcanaCandidateArtifacts,
   keepsakeSelections: KeepsakeSelectionCandidateArtifacts,

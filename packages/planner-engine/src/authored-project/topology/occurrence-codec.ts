@@ -12,7 +12,7 @@ import {
   decodeStygianWellState,
 } from '../room-state/decoding/well-codec';
 import { decodeRoomState } from '../room-state/codec';
-import { decodeRoomEncounterState } from '../room-state/encounters';
+import { decodeRoomEncounterState } from '../room-state/decoding/encounter-state-codec';
 import { createBiomeAddress, semanticAddressKey } from '../addresses';
 import { authoredAcquisitionSources } from '../acquisition/acquisition-sources';
 import { resolveAcquisitionRole } from '../../reward-kernel/history';

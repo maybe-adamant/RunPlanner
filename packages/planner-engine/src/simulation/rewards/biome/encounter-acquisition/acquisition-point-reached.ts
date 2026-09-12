@@ -54,7 +54,7 @@ import { createBiomeRewardFacts } from '../../facts';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import type { AuthoredSiteSettlementResult } from '../generation/authored-site-settlement';
 import { settleAuthoredAcquisitionSite } from '../generation/authored-site-settlement';
-import type { ReachedTraitChildCheckpoint } from '../../trait-settlement';
+import type { ReachedTraitChildCheckpoint } from '../../trait-settlement/coordinator';
 import type { RewardProducerOwnerAddress, RewardProducerFrontier } from '../../producer-frontiers';
 
 export interface HermesShrineRefillState {

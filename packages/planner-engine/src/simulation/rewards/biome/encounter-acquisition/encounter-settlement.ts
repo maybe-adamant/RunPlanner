@@ -53,7 +53,7 @@ import {
   settleEncounterTraitOffer,
   type ReachedTraitChildCheckpoint,
   type ReachedTraitOfferCandidateContact,
-} from '../../trait-settlement';
+} from '../../trait-settlement/coordinator';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import type { BossArcanaOutcome } from '../../model';
 import type { PlannerTimelineFacts } from '../../../timeline-facts';

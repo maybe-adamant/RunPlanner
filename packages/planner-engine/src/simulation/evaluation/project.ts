@@ -1,4 +1,4 @@
-import type { Catalog } from '../catalog-schema';
+import type { Catalog } from '../../catalog-schema';
 import {
   createBiomeAddress,
   createKeepsakeEquipResultAddress,
@@ -7,31 +7,31 @@ import {
   createRouteStartKeepsakeSelectionAddress,
   semanticAddressKey,
   type SemanticAddress,
-} from '../authored-project/addresses';
-import type { AuthoredRoutePlan, ProjectDocument } from '../authored-project/model';
-import { forcedChaosOccurrenceKeysForRoute } from '../authored-project/chaos-gate-reconciliation';
+} from '../../authored-project/addresses';
+import type { AuthoredRoutePlan, ProjectDocument } from '../../authored-project/model';
+import { forcedChaosOccurrenceKeysForRoute } from '../../authored-project/chaos-gate-reconciliation';
 import {
   createProjectCandidateArtifacts,
   type BiomeCandidateArtifacts,
 } from './candidate-artifacts';
-import { type KeepsakeSelectionCandidateCapability } from './keepsakes/candidate-artifacts';
+import { type KeepsakeSelectionCandidateCapability } from '../keepsakes/candidate-artifacts';
 import {
   assessExperimentalHammerEquipResult,
   assessJeweledPomEquipResult,
   assessTranscendentEmbryoBlessing,
-} from './keepsakes/trait-effects';
-import { createKeepsakeState } from './keepsakes/state';
-import { createArcanaFearState } from './arcana-fear';
-import { createTraitHistoryState } from './traits/history/fold';
-import type { BiomeHistoryPrefix } from './history';
-import type { MaterializedBiomePrefix } from './materialization';
-import type { SemanticFinding } from './model';
-import { resolveAuthoringBoundary } from './authoring-boundary';
+} from '../keepsakes/trait-effects';
+import { createKeepsakeState } from '../keepsakes/state';
+import { createArcanaFearState } from '../arcana-fear';
+import { createTraitHistoryState } from '../traits/history/fold';
+import type { BiomeHistoryPrefix } from '../history';
+import type { MaterializedBiomePrefix } from '../materialization';
+import type { SemanticFinding } from '../model';
+import { resolveAuthoringBoundary } from '../progressive/authoring-boundary';
 import {
   deriveResourceExecutionPolicy,
   effectiveRouteResourcePlacements,
   routeResourceAuthoring,
-} from './resources';
+} from '../resources';
 import {
   createExactProjectEvaluationAssembly,
   ProjectSimulationContractError,
@@ -118,7 +118,7 @@ interface RouteProjectEvaluationAssembly {
   readonly routeStartKeepsakes: ReadonlyMap<string, KeepsakeSelectionCandidateCapability>;
   readonly routeStartKeepsakeEquipResults: ReadonlyMap<
     string,
-    import('./keepsakes/candidate-artifacts').KeepsakeEquipResultCandidateCapability
+    import('../keepsakes/candidate-artifacts').KeepsakeEquipResultCandidateCapability
   >;
   readonly authoringHorizon: AuthoringHorizon;
 }
@@ -153,7 +153,7 @@ function evaluateRouteAssembly(
   const routeStartKeepsakes = new Map<string, KeepsakeSelectionCandidateCapability>();
   const routeStartKeepsakeEquipResults = new Map<
     string,
-    import('./keepsakes/candidate-artifacts').KeepsakeEquipResultCandidateCapability
+    import('../keepsakes/candidate-artifacts').KeepsakeEquipResultCandidateCapability
   >();
   const resourceAuthoring = routeResourceAuthoring(catalog, route);
   const resourceFindingsByBiome = new Map<string, SemanticFinding[]>();

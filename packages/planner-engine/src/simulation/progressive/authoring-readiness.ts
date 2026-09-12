@@ -1,8 +1,11 @@
-import type { SemanticAddress } from '../authored-project/addresses';
+import type { SemanticAddress } from '../../authored-project/addresses';
 import { authoringBoundaryReadiness, resolveAuthoringBoundary } from './authoring-boundary';
-import type { ProjectBiomeEvaluation, ProjectEvaluationAssembly } from './evaluation-products';
-import type { CanonicalBiome, MaterializedBiomePrefix } from './materialization';
-import { assertExactProjectEvaluationAssembly } from './project-evaluation-assembly';
+import type {
+  ProjectBiomeEvaluation,
+  ProjectEvaluationAssembly,
+} from '../evaluation/evaluation-products';
+import type { CanonicalBiome, MaterializedBiomePrefix } from '../materialization';
+import { assertExactProjectEvaluationAssembly } from '../evaluation/project-evaluation-assembly';
 
 export type AuthoringReadiness = 'editable' | 'locked';
 

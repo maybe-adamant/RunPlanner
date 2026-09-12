@@ -25,7 +25,7 @@ import type {
   CanonicalDecision,
   CanonicalPhysicalExit,
 } from '../materialization';
-import type { ProjectEvaluation } from '../evaluation-products';
+import type { ProjectEvaluation } from '../evaluation/evaluation-products';
 import {
   coverageUnavailable,
   unavailable,

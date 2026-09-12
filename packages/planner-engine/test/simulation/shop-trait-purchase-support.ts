@@ -40,7 +40,7 @@ import {
 } from '../../src/authored-project/shop';
 import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms';
 import { createDerivedAcquisitionEntryCandidateArtifacts } from '../../src/simulation/rewards/acquisition/artifacts';
-import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
+import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { processShopInventory } from '../../src/simulation/rewards/shop/inventory';
 import { settleShopAcquisitionSite } from '../../src/simulation/rewards/shop/settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';

@@ -49,7 +49,7 @@ import {
 } from '../../src/simulation/keepsakes/encounter-effects';
 import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
 import { resolveGorgonCandidateRarity } from '../../src/simulation/rewards/biome/encounter-acquisition/gorgon-started';
-import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 
 import {
   attachTraitHistory,

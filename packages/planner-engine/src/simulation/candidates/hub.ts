@@ -24,7 +24,7 @@ import {
 } from '../generation';
 import type { CanonicalHubDecision } from '../materialization';
 import type { SemanticFinding } from '../model';
-import type { ProjectEvaluation } from '../evaluation-products';
+import type { ProjectEvaluation } from '../evaluation/evaluation-products';
 import {
   evaluateProgressiveBiome,
   evaluateProgressiveBiomeBeforeClamp,

@@ -127,7 +127,7 @@ export type {
   RansomAssessmentCandidateQuery,
   RansomAssessmentCandidateEvaluation,
   EvaluatedRansomAssessmentCandidate,
-} from './trait-offer';
+} from './trait-offer/query';
 export type {
   EchoLastRunBoonDraftRow,
   EchoLastRunBoonDraftSupport,
@@ -138,7 +138,7 @@ export type {
   TraitOfferGenerationState,
   ChaosOfferDomain,
   ChaosOfferCurseOptionDomain,
-} from './trait-offer-capability';
+} from './trait-offer/capability';
 export type {
   SteadyGrowthOutcomeCandidateQuery,
   EvaluatedSteadyGrowthOutcomeCandidate,

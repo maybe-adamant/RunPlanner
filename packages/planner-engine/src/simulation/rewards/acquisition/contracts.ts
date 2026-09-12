@@ -19,7 +19,7 @@ import type {
   PriorTraitMutation,
   ReachedTraitChildCheckpoint,
   ReachedTraitOfferCandidateContact,
-} from '../trait-settlement';
+} from '../trait-settlement/coordinator';
 import type { AcquisitionSource } from './source';
 
 export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalVisitRoom;

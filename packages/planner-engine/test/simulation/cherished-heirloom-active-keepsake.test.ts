@@ -20,10 +20,10 @@ import {
 } from '../../src/simulation/keepsakes/state';
 import { attestGorgonBranchState } from '../../src/simulation/keepsakes/encounter-effects';
 import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
-import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { evaluateProgressiveBiomeAssembly } from '../../src/simulation/progressive/biome';
-import { simulateProject } from '../../src/simulation/project';
+import { simulateProject } from '../../src/simulation/evaluation/project';
 import {
   attachTraitHistory,
   foldTraitHistoryEvents,

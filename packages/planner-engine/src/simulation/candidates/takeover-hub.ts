@@ -12,7 +12,7 @@ import {
   hubTerminalTakeoverCandidateSupportAtFrontier,
   type HubTerminalTakeoverCandidateSupport,
 } from '../generation';
-import type { ProjectEvaluation } from '../evaluation-products';
+import type { ProjectEvaluation } from '../evaluation/evaluation-products';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 import { CandidateEvaluationContractError } from './contract';
 import {

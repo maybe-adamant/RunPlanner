@@ -10,7 +10,7 @@ import {
 import { createCompleteFGProject, goldenFBiome } from '@run-planner/test-fixtures/underworld';
 import { describe, expect, it } from 'vitest';
 
-import type { ProjectEvaluation } from '../../src/simulation/evaluation-products';
+import type { ProjectEvaluation } from '../../src/simulation/evaluation/evaluation-products';
 import { createFountainRarityCandidateArtifacts } from '../../src/simulation/keepsakes/candidate-artifacts';
 import { type FountainRarityCandidateCapability } from '../../src/simulation/keepsakes/candidate-artifacts';
 import {

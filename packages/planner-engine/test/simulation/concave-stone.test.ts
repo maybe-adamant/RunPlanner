@@ -18,7 +18,7 @@ import {
   foldTraitHistoryEvents,
   type TraitOfferEvent,
 } from '../../src/simulation';
-import { applyTraitOfferForAcquisition } from '../../src/simulation/rewards/trait-settlement';
+import { applyTraitOfferForAcquisition } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
 import { advanceCurrentKeepsake, createKeepsakeState } from '../../src/simulation/keepsakes/state';
 import {
@@ -27,7 +27,7 @@ import {
   concaveStoneResidualOptionKeys,
   consumeConcaveStone,
 } from '../../src/simulation/keepsakes/trait-effects';
-import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
+import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { describe, expect, it } from 'vitest';
 

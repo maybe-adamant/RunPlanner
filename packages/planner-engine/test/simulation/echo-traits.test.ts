@@ -39,21 +39,21 @@ import { authorLegalTraitOffers, editTestRoomActionOrder } from '@run-planner/te
 import { createGoldenFGHProject, goldenHBiome } from '@run-planner/test-fixtures/underworld';
 import { describe, expect, it } from 'vitest';
 
-import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
+import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import {
   evaluateEchoLastRunBoonDomain,
   evaluateEchoPomTargetDomain,
   evaluateTraitOfferFocusedOptionCandidate,
-} from '../../src/simulation/candidates/trait-offer';
+} from '../../src/simulation/candidates/trait-offer/query';
 import {
   echoLastRunBoonTraitCandidatesForRow,
   evaluateEchoLastRunBoonDraftSupport,
   nextEchoLastRunBoonDraft,
   previousEchoLastRunBoonDraft,
 } from '../../src/simulation/candidates/trait-offer/echo-draft';
-import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import {
   assessTraitOption,
   attachTraitHistory,

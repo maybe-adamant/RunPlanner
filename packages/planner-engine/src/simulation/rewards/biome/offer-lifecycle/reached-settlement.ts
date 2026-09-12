@@ -17,7 +17,7 @@ import {
 } from '../../acquisition/site-settlement';
 import type { AcquisitionRoleFrontier } from '../../acquisition/contracts';
 import { preparedAcquisitionSiteOwner } from '../prepared-inputs';
-import type { ReachedTraitChildCheckpoint } from '../../trait-settlement';
+import type { ReachedTraitChildCheckpoint } from '../../trait-settlement/coordinator';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import { shipWheelRoomRewardSource } from './reward-wheel-lifecycle';
 

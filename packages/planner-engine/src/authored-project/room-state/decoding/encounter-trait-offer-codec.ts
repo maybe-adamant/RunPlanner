@@ -1,4 +1,4 @@
-import type { Catalog, EncounterSlotBinding } from '../../catalog-schema';
+import type { Catalog, EncounterSlotBinding } from '../../../catalog-schema';
 import {
   traitOfferSupportsExhaustion,
   type AuthoredGorgonAthenaOffer,
@@ -9,7 +9,7 @@ import {
   type TraitOptionKey,
   TRAIT_OPTION_KEYS,
   normalizeAuthoredConcaveStoneResult,
-} from '../traits/state';
+} from '../../traits/state';
 import {
   expectArray,
   expectExactKeys,
@@ -18,10 +18,10 @@ import {
   expectRecord,
   expectString,
   failProjectDocument,
-} from '../validation';
-import { decodeEchoLastRunBoon } from './echo-last-run';
-import { decodeAllTogetherResult } from './all-together';
-import { encounterSetForBinding } from './encounter-envelope';
+} from '../../validation';
+import { decodeEchoLastRunBoon } from './echo-last-run-codec';
+import { decodeAllTogetherResult } from './all-together-codec';
+import { encounterSetForBinding } from '../encounter-envelope';
 
 export function decodeEncounterTraitOffer(
   value: unknown,
@@ -347,7 +347,7 @@ export function decodeEncounterTraitOffer(
     !(TRAIT_OPTION_KEYS as readonly string[]).includes(rejectedOptionKey)
   )
     failProjectDocument(`${path}.rejectedOptionKey`, 'must name an option row');
-  let concaveStoneResult: import('../traits/state').AuthoredConcaveStoneResult | undefined;
+  let concaveStoneResult: import('../../traits/state').AuthoredConcaveStoneResult | undefined;
   if ('concaveStoneResult' in record) {
     const rawResult = expectRecord(record.concaveStoneResult, `${path}.concaveStoneResult`);
     const resultKind = expectString(rawResult.kind, `${path}.concaveStoneResult.kind`);

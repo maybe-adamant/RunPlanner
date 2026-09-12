@@ -23,8 +23,8 @@ import {
   goldenGStartId,
   goldenGOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
-import { simulateProjectAssembly } from '../../src/simulation/project';
-import { stygianWellCandidateForProjectEvaluationAssembly } from '../../src/simulation/project-evaluation-assembly';
+import { simulateProjectAssembly } from '../../src/simulation/evaluation/project';
+import { stygianWellCandidateForProjectEvaluationAssembly } from '../../src/simulation/evaluation/project-evaluation-assembly';
 import {
   applyStygianWellPurchase,
   advanceStygianWellBossUses,

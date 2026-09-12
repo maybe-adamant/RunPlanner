@@ -2,7 +2,7 @@ import type { FigurineArcanaAddress } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
 import { type FigurineArcanaCandidateArtifacts } from '../keepsakes/candidate-artifacts';
-import type { ProjectEvaluation } from '../evaluation-products';
+import type { ProjectEvaluation } from '../evaluation/evaluation-products';
 import type { SemanticFinding } from '../model';
 import { unsatisfiedRandomArcanaRequirementKeys } from '../arcana-fear';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';

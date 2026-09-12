@@ -3,21 +3,21 @@ import {
   type LevelResolutionAddress,
   type TraitOfferAddress,
   type NaturalSelectionResultAddress,
-} from '../../authored-project/addresses';
+} from '../../../authored-project/addresses';
 import type {
   BoonRarityRollOrder,
   BoonRarityValues,
   Catalog,
   TraitOrdinaryBoonSlot,
   TraitRarity,
-} from '../../catalog-schema';
+} from '../../../catalog-schema';
 import type {
   AuthoredLevelResolution,
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
-} from '../../authored-project/traits/state';
-import { optionIndex, type TraitOptionKey } from '../../authored-project/traits/state';
-import { circeResolutionDomain } from '../arcana-fear';
+} from '../../../authored-project/traits/state';
+import { optionIndex, type TraitOptionKey } from '../../../authored-project/traits/state';
+import { circeResolutionDomain } from '../../arcana-fear';
 import {
   assessTraitOffer,
   assessTraitOfferBeforeRarification,
@@ -43,18 +43,18 @@ import {
   recordReachedTraitOffer,
   type RansomAssessment,
   boonRarityFactsForOffer,
-} from '../traits';
-import type { EchoLastRunBoonOutcome, TraitOfferContext } from '../traits/offer-domain';
-import { advanceCurrentKeepsake } from '../keepsakes/state';
+} from '../../traits';
+import type { EchoLastRunBoonOutcome, TraitOfferContext } from '../../traits/offer-domain';
+import { advanceCurrentKeepsake } from '../../keepsakes/state';
 import {
   concaveStoneProcSupport,
   concaveStoneResidualOptionKeys,
-} from '../keepsakes/trait-effects';
-import { evaluateCallingCardOffer } from '../keepsakes/reward-effects';
-import type { AuthoredConcaveStoneResult } from '../../authored-project/traits/state';
-import { resolveTraitOfferOptionLevel } from '../traits/offer-levels';
-import { deriveBoonRarityValues } from '../traits/rarity';
-import { settleSelectedTraitChildren } from '../rewards/trait-settlement/selected-child-settlement';
+} from '../../keepsakes/trait-effects';
+import { evaluateCallingCardOffer } from '../../keepsakes/reward-effects';
+import type { AuthoredConcaveStoneResult } from '../../../authored-project/traits/state';
+import { resolveTraitOfferOptionLevel } from '../../traits/offer-levels';
+import { deriveBoonRarityValues } from '../../traits/rarity';
+import { settleSelectedTraitChildren } from '../../rewards/trait-settlement/selected-child-settlement';
 
 export interface ConcaveStoneCandidateBranch {
   readonly procSupport: number;
@@ -157,7 +157,7 @@ export interface TraitOfferCandidateCapability {
   readonly allTogetherSet: (
     value: AuthoredTraitOffer,
     optionKey: TraitOptionKey,
-    setKey: import('../../catalog-schema').DirectTraitSetKey,
+    setKey: import('../../../catalog-schema').DirectTraitSetKey,
   ) => readonly (readonly (string | null)[])[];
   /** Exact selected Natural Selection result assessment at this child frontier. */
   readonly naturalSelectionTargets: (
@@ -208,13 +208,13 @@ export interface ChaosOfferDomain {
     ChaosOfferCurseOptionDomain,
   ];
   readonly selectedCurseKey?: string;
-  readonly selectedCurseOperands: readonly import('../../catalog-schema').ChaosNumericOperand[];
+  readonly selectedCurseOperands: readonly import('../../../catalog-schema').ChaosNumericOperand[];
   readonly blessingKeys: readonly string[];
   /** Legal rows before retaining the authored identity for repair. */
   readonly availableBlessingKeys: readonly string[];
-  readonly rarities: readonly import('../../catalog-schema').TraitRarity[];
+  readonly rarities: readonly import('../../../catalog-schema').TraitRarity[];
   readonly blessingOperands: Readonly<
-    Record<string, readonly import('../../catalog-schema').ChaosNumericOperand[]>
+    Record<string, readonly import('../../../catalog-schema').ChaosNumericOperand[]>
   >;
 }
 
@@ -702,7 +702,7 @@ export function createTraitOfferCandidateArtifacts(
         allTogetherSet: (
           value: AuthoredTraitOffer,
           optionKey: TraitOptionKey,
-          setKey: import('../../catalog-schema').DirectTraitSetKey,
+          setKey: import('../../../catalog-schema').DirectTraitSetKey,
         ) =>
           Object.freeze(
             branchContexts.flatMap((context) => {
@@ -877,7 +877,7 @@ export function createTraitOfferCandidateArtifacts(
             branchContexts.map((context) => {
               const eligible = <
                 T extends {
-                  readonly offerRequirements?: readonly import('../../catalog-schema').ChaosOfferRequirement[];
+                  readonly offerRequirements?: readonly import('../../../catalog-schema').ChaosOfferRequirement[];
                 },
               >(
                 entry: T,

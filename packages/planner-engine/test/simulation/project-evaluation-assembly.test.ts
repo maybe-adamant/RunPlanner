@@ -6,12 +6,12 @@ import {
   assertExactProjectEvaluationAssembly,
   candidateArtifactsForProjectEvaluationAssembly,
   ProjectSimulationContractError,
-} from '../../src/simulation/project-evaluation-assembly';
-import { simulateProjectAssembly } from '../../src/simulation/project';
+} from '../../src/simulation/evaluation/project-evaluation-assembly';
+import { simulateProjectAssembly } from '../../src/simulation/evaluation/project';
 import type {
   ProjectEvaluation,
   ProjectEvaluationAssembly,
-} from '../../src/simulation/evaluation-products';
+} from '../../src/simulation/evaluation/evaluation-products';
 
 import { createCompleteFTakeoverProject } from './support/f-takeover-project';
 
