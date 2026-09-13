@@ -2,9 +2,12 @@
 
 ## Status and baseline
 
-Status: locked; Gate A complete. Gate B's H08/H09 cleanup is complete;
-`UseExitDoor` remains unchanged pending its separate contact investigation.
-Gates C and D have not started.
+Status: locked; Gates A and B complete. The final Gate B room-close correction
+is committed in executor `ab7fcbe`. C1 (`ee1b31b`) and C2 (`9355a83`) are complete;
+C3 is complete (`2f981b0`); C4 wheel (`a8d9eb1`) and inventory (`d5fdcf9`)
+handling are complete. C5 is complete (`0d2ac61`), with the separate Mystery
+composition witness correction in `bfb87df`. C6 admission wording is corrected.
+Gate C is complete; Gate D has not started.
 Fields Forfeit was corrected in the planner separately (`550a56a7`). The
 user-approved Fields amendment retains steering and records completed contents
 and positions as diagnostics only; native Forfeit creates the Onion and
@@ -200,8 +203,12 @@ actionable findings. Verification: 448/448 executor tests, clean luacheck for
 both changed production files, and passing modpack smoke. Removed marker and
 preflight-only setup; retained native preparation, row metadata, level/Sea Star
 outcome witnesses, and strengthened the preparation/reordering witness.
-`UseExitDoor` is untouched and remains this gate's outstanding investigation;
-Gate B is not yet closed. No deployment or live-game verification.
+The remaining unit removes the unproven `UseExitDoor` contact and checks its
+published `exitUsable` obligations at actual room closure. Local verification:
+449/449 executor tests, clean `luacheck src/`, passing modpack smoke, and clean
+diff checks. Independent review found no actionable issues and independently
+reran all 449 executor tests successfully. Gate B is complete in `ab7fcbe`.
+No deployment or live-game verification.
 
 - H09: remove the unused visible-Pom UseLoot marker wrapper and only its dead
   transport/test setup. Keep useful outcome witnesses, not historical tests
@@ -210,9 +217,15 @@ Gate B is not yet closed. No deployment or live-game verification.
   eligibility preflight if it adds no required construction input. Retain
   native preparation and exact planner-row insertion. Do not strengthen or
   recreate eligibility checks in its place.
-- Inspect `UseExitDoor` against the actual host registration/caller chain.
-  Lua-source absence alone is insufficient proof that it is dead. Remove only
-  if redundant/unreachable is established; otherwise retain a bounded probe.
+- Remove `UseExitDoor`: the supplied native traversal is `AttemptUseDoor` to
+  `LeaveRoom`, and ModUtil can register a wrapper without a native base, so
+  successful registration is not contact evidence. Check `exitUsable` before
+  `roomExit` in existing room closure, before timeline disposal. Keep the wire
+  deadline, native continuation on mismatch, and existing route handling; add
+  no replacement door-attempt hook or generalized checkpoint machinery.
+- Acceptance: room closure catches an unfinished `exitUsable` obligation,
+  completed obligations permit closure, and failed departure checks still
+  invoke the native departure. Replace synthetic hook invocation witnesses.
 - Acceptance: existing NPC preparation/choice and level acquisition witnesses
   exercise the remaining path; deletions have no replacement shadow path.
 - One cleanup commit is appropriate if these remain small. Do not refactor
@@ -222,6 +235,66 @@ Gate B is not yet closed. No deployment or live-game verification.
   machinery with new RNG plumbing merely to make the remaining code uniform.
 
 ## Gate C — Bounded contract and lifetime correction
+
+C1 source disposition: `Main.lua:thread` resumes immediately until a yield.
+Ordinary keepsake and Circe/Icarus selectors run before yielding; retain those
+scopes and the existing selected-trait consequence carriers. Echo BBB genuinely
+waits before constructing its nested menu. Narrow its pending-payload consumer
+to that native menu, with a coroutine witness for an unrelated intervening menu.
+Do not simulate an unsupported delayed first dispatch to justify new transport.
+C1 verification: NPC acquisition 25/25 and acquisition composition 6/6;
+changed-source lint and diff checks pass. Independent review passed after
+correcting the new coroutine witness to start inside the selected-trait callback.
+
+C2 complete: consume Mystery construction context at `GiveLoot`, bind its
+returned native provider directly, and delete the separate `CreateLoot` hook.
+The animation retains no construction override. Independent review and
+focused tests pass (Mystery 3/3; acquisition composition 6/6), with clean lint
+and diff checks. C3 retains the item-bound Spell/Path call stacks and binds Hex
+construction to the owner's native spell-trait identity, consuming it before
+the one native construction. Independent review and 38 focused tests pass,
+with clean production lint and diff checks. The same-spell post-wait witness
+proves one-shot retirement rather than just identity filtering.
+
+C4 acceptance refinement: the checked-in Travel Deal fixture has no incoming
+refill dependency. Do not invent an acquisition-to-refill edge or move another
+owner's terminal to satisfy that proposed witness. Use the real independent
+refill product for realization and source-backed wait/interleaving tests; a
+denied-begin adapter test covers native continuation only, not a claim that the
+planner currently emits such a dependency. Begin at the exact construction
+contact before insertion. Any broader dependency claim remains unproven.
+C4 wheel verification: independent review, 7/7 focused tests, production lint
+and diff checks pass. A source-backed coroutine witness covers immediate
+notification/resume, generation isolation, and one-shot reward handoff.
+C4 inventory verification: independent review passed after correcting unowned
+Well/Shrine refills to bypass initial inventory forcing. All 11 focused tests,
+changed-production lint and diff checks pass. Coroutine tests cover a suspended
+world restock, unrelated generation, native retry and single completion;
+populated initial inventories witness denied/unowned native continuation.
+
+C5 terminal disposition: spawn-time family selection is preparation, not a
+transaction begin. Accepted trait exchange completes after native
+`TradeDoExchange` returns, bound by the exact outer dialog screen that native
+code forwards to it. Replace the global next-`RemoveTrait` observer with that
+bounded contact, without verifying the removed trait. Free-item drop binds its
+own source; contest begins at native setup rather than timer completion.
+Keep unrelated existing diagnostics; this is not a mismatch-policy redesign.
+No checked-in prerequisite-bearing Nemesis product has been established. Use
+the real event product for native-sequence coverage and a denied-begin adapter
+witness for generic continuation, without fabricating a planner dependency.
+C5 verification: independent review passed; 9/9 Nemesis tests and 10/10 runtime
+composition tests passed, with clean lint and diff checks. The separate stale
+Mystery integration witness now follows the returned provider, not its removed
+construction hook; independent review and 14/14 feature-interaction tests pass.
+C6 confirms `CreateNewHero` admission before native construction; only the
+durable wording changed, with existing loadout witnesses retained.
+
+Gate C closure: 463/463 executor tests pass, `luacheck src/` reports zero
+warnings/errors across 93 files, and modpack smoke passes one entrypoint and one
+coordinator pipeline. The first broad run exposed the stale Mystery test above;
+the corrected final run passes. No planner code, protocol or fixture changed.
+No deployment or push. Native-source and coroutine harness coverage are not
+live-game timing verification; that remains pending user testing.
 
 This gate is a bounded list of unresolved contract questions, not a new adapter
 design pass. The outcome matrix already recommends the intervention. Establish

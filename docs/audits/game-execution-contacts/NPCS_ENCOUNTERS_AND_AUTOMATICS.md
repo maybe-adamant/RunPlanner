@@ -56,8 +56,8 @@ Nemesis uses a distinct event family rather than a trait provider menu.
 | Choose event family                 | `SpawnNemesisForRandomEvents` and `CheckAvailableTextLines`               | Covered.                                                  |
 | Free item                           | `NPCRewardDropPreProcess`, `NPCRewardDropPreProcessArgs`, `NPCRewardDrop` | Covered for the exact authored consumable identity.       |
 | Gold/damage trade accept or decline | `NemesisTradeChoice`                                                      | Covered; price and damage amounts are simulation-neutral. |
-| Trait trade                         | `NemesisTradeChoice` → native `GenerateSellTraitShop` / `SellOptions`     | Exact offer target; native response and removal retained. |
-| Damage contest                      | `NemesisDamageContestTimer`                                               | Covered for success/failure only.                         |
+| Trait trade                         | `NemesisTradeChoice` → native `GenerateSellTraitShop` / `SellOptions` → `TradeDoExchange` | Exact offer target; screen-bound exchange terminal, native response/removal retained. |
+| Damage contest                      | `StartNemesisDamageContest` → `NemesisDamageContestTimer`                  | Source-bound start/completion; native contest retained.   |
 
 Door theft and shop theft retain their documented planner simplifications and
 are not Timeline obligations. See the Nemesis disposition in the room/route
@@ -72,7 +72,40 @@ give descriptor or perform the exchange. Purging Pool inventory steering must
 not run for that single-trait trade request. A one-shot trade context is consumed
 at generation, not retained through player menu input to identify the offer.
 
+### Native event boundaries
+
+Spawn-time text selection prepares the family without beginning the interaction.
+`EventLogic.lua:NemesisTradeChoice` opens the native choice and, on acceptance,
+sets `TradeDoExchange` on the outer dialog screen's close callback.
+`NarrativeLogic.lua:PlayTextLines` and `UILogic.lua:OnScreenCloseFinished`
+forward that same screen. Accepted trait exchanges therefore retain only the
+screen-bound transaction until `TradeDoExchange` returns. The executor does
+not observe a global next trait removal or verify the removal in that callback;
+native exchange and room-exit trait conformance own those responsibilities.
+
+`InteractLogic.lua:NPCRewardDropPreProcess` synchronously prepares reward
+arguments without yielding. Its source context is needed only during that
+preparation. The later `NPCRewardDrop` begins the exact source's free-item
+interaction and completes it on return. Contest participation instead begins
+at `EventLogic.lua:StartNemesisDamageContest`; its source identifies the later
+`NemesisDamageContestTimer` completion. Native countdown, response and reward
+application remain unchanged.
+
 ## Encounter realization
+
+### Ship wheel selection
+
+`RoomLogic.lua:ShipsEncounterSetup` constructs reward previews, then waits for
+`ShipsEncounterSelected`. Its generation-only steering context ends after the
+last required preview; the native wheel retains its published wheel/offer
+identity. `UseShipWheel` is the accepted contact: rejection occurs in the
+earlier directional use functions. It sets the reward and notifies waiters,
+which `Main.lua:notifyExistingWaiters` resumes immediately. The executor must
+resolve the stamped wheel in the current occurrence and publish its accepted
+choice and reward context before native notification can resume the encounter.
+It cannot retrieve that information from a setup scope after native use returns.
+
+### Encounter phases
 
 The planner publishes ordered encounter phases in each occurrence Overview.
 The game exposes single and multi-phase selection through `ChooseEncounter` and

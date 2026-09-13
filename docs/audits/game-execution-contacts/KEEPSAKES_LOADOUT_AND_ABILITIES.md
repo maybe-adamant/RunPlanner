@@ -295,6 +295,17 @@ bounded contacts are:
 
 Individual Hex combat effects remain outside the run-planning simulation.
 
+`SpellScreenLogic.lua:AcceptAndCloseSpellScreen` yields during presentation
+before `CreateTalentTree`, then waits again after construction. The owner
+supplies the native construction's spell-trait identity alongside the published
+partial tree; starting Selene supplies its starting spell identity. Only the
+matching `CreateTalentTree` consumes that context. Random construction scope
+ends with that non-yielding native function, not the surrounding presentation.
+This does not compare or automate the player's Spell selection. Path's accepted
+item and aspect-routed item instead retain their bindings through the direct
+`OpenTalentScreen` call and release them on return; its screen waits do not
+require an additional producer chain.
+
 ## Gathering tools
 
 Pickaxe, Exorcism Book, Shovel, and Fishing Rod reach the modeled element roll

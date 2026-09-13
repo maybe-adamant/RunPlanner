@@ -18,6 +18,29 @@ catalog disposition rather than by copying every trait key into this audit.
 - Focused offer adapters beneath `src/mods/room/timeline/acquisitions/` in the
   Plan Executor
 
+## Acquired callback scheduling
+
+`Scripts/Main.lua:thread` starts its coroutine immediately through `resume`,
+which calls `coroutine.resume`; the coroutine runner invokes the supplied
+function before yielding. `wait` and `waitUntil` yield that coroutine explicitly.
+`TraitLogic.lua:AddTraitData` dispatches acquired effects with
+`thread(CallFunctionName, ...)`, and `EventLogic.lua:CallFunctionName` invokes
+the named callback directly. Threaded dispatch alone therefore does not imply
+that the caller's scope has already returned. Lifetime analysis must trace the
+first actual yield relative to the steering contact, including nested calls.
+
+Native presentation threads can remain pending after outcome selection without
+requiring its random-selection scope to remain active. By contrast,
+`EventLogic.lua:EchoLastRunBoon` waits before constructing its nested menu; that
+menu's published payload genuinely must survive the outer choice.
+
+That nested menu is identified by its native
+`OnPressedFunctionNameOverride = "SelectEchoBoon"`. The pending result applies
+only at this contact and transfers to the constructed menu's identity before
+native menu handling begins. Unrelated trait menus during Echo's waits must
+retain their native rows. The selected nested result then uses the ordinary
+trait consequence adapters; it does not retain a separate Echo outcome path.
+
 ## Provider contact matrix
 
 | Provider family  | Providers                                                                             | Native contact                                                                         | Status                                                                                                     |

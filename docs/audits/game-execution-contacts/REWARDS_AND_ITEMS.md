@@ -5,6 +5,34 @@ native carrier because the same planner outcome may need a different contact
 when it comes from a room reward, a direct item, a purchase, or a generated
 pickup.
 
+## Mystery provider construction lifetime
+
+`StoreLogic.lua:UnwrapRandomLoot` calls `GiveLoot` before its presentation and
+wait. `RoomLogic.lua:GiveLoot` returns the exact object from `CreateLoot`.
+The executor consumes its construction context at `GiveLoot`, inserts
+`ForceLootName`, and binds that returned provider directly. Subsequent
+`GiveLoot` or `CreateLoot` calls during the unwrap animation are not part of
+that construction. The provider binding, rather than the producer's call stack,
+carries the transaction to the ordinary trait screen. Native creation and
+animation remain untouched.
+
+## Dynamic inventory construction lifetime
+
+`StoreLogic.lua:HandleStorePurchase` and
+`SurfaceShopLogic.lua:HandleSurfaceShopAction` perform native acceptance before
+calling `FillInShopOptions` for Travel Deal. That construction contact begins
+the published refill before inserting its inventory; a rejected purchase never
+reaches it. Unowned or denied refills remain native and must not be confused
+with initial Overview inventory generation. Native price, rush, delivery, and
+replacement application remain native-owned.
+
+World `StoreLogic.lua:RestockWorldItem` can wait for a menu to close before
+construction and can retry `FillInShopOptions`. Its exact invocation retains
+the replacement context through that wait and retry, begins at its first Fill,
+and completes once on native Restock return. Another coroutine's inventory
+generation cannot inherit it. Generation-only selectors remain bounded to
+construction, not the waiting restock.
+
 ## Source index
 
 - Catalog inventory: `packages/hades2-catalog/src/declarations/rewards/`

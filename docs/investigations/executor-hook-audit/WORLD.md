@@ -152,7 +152,7 @@ button_hooks.lua:90-97 installs module-local delayScope, invokes unprotected bas
 
 ## Bounded timing/contact probes, not asserted live failures
 
-1. UseExitDoor unresolved: no definition/caller in supplied Lua; traced traversal AttemptUseDoor -> LeaveRoom. Tests fabricate it. Missing Lua evidence is not absence of engine export. Verify runtime contact.
+1. UseExitDoor disposition: remove the unproven hook and check its `exitUsable` obligations at existing room closure. Native traversal is AttemptUseDoor -> LeaveRoom; ModUtil can register a wrapper without a native base. This preserves the obligation without requiring proof that no hidden export exists. Baseline row 7 above records the original synthetic-contact problem.
 2. Nemesis early readiness: row() begins during spawn -> CheckAvailableTextLines before player contact. Native chain proven; need valid published row with unfinished prerequisite to establish reachable wrongful failure. Closed window would be fault, not mismatch.
 3. Well/Shrine late readiness: FillInShopOptions begins only after native generation (hooks.lua:53-55/:78-80), after filtering and payment. Need actual blocked refill witness. Find source-exact contact without treating failed purchase attempts as actions.
 4. Ship wheel late readiness: native reward writes and waiter notification precede begin. Need actual coroutine scheduling and valid prerequisite-bearing owner before asserting race.
