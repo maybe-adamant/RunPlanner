@@ -12,6 +12,7 @@ import { authoredAcquisitionSources } from '../acquisition/acquisition-sources';
 import {
   echoLastRewardPickupEntryKeys,
   activeSelectedPickupProducers,
+  parseClockedTraitGeneratedPickupEntryKey,
 } from '../acquisition/pickup-producers';
 import { seaStarDuplicateSourceIsActive } from '../acquisition/sea-star';
 import { rewardSourceResolvesAtAcquisition } from '../acquisition/reward-state';
@@ -255,6 +256,15 @@ export function activeRoomActionReferences(
       const reference: Extract<RoomActionReference, { kind: 'interactAcquisitionEntry' }> =
         existingReference ??
         Object.freeze({ kind: 'interactAcquisitionEntry' as const, siteKey, entryKey });
+      // Saved clocked payload is not evidence that a drop is still due here.
+      // Unplaced drops are exposed by the simulator's exact due capability;
+      // ordered stale placements stay addressable so the user can remove them.
+      if (
+        siteKey === 'roomExit' &&
+        parseClockedTraitGeneratedPickupEntryKey(entryKey) !== undefined &&
+        existingReference === undefined
+      )
+        continue;
       if (
         siteKey === 'hermesShrineDelivery' &&
         shrineDelivery === undefined &&
