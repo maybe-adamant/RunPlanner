@@ -179,6 +179,12 @@ construction callback to mirror an execution-plan row. This keeps lifecycle
 wiring available for realization without turning native implementation detail
 into a second game model.
 
+Rewards destroyed by Time Piece retain their generation and placement products,
+but publish no acquisition transaction. This applies equally to incoming rewards,
+Hub and side-room rewards, Fields cages, and Ship wheels. A wheel still publishes
+its selection; an acquisition, when present, must match that selection and depend
+on it. Keepsake charge conformance covers Time Piece without a destruction hook.
+
 Selected acquisition transactions remain on the wire with their exact roles,
 payloads, and meaningful local dependencies, but they are not checkpoint
 obligations. Their completion means that the native action reached its declared

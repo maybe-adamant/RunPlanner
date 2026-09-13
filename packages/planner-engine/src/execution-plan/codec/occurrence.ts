@@ -49,10 +49,9 @@ function validateRewardWheelProduct(
   const wheelAcquisitionCount = occurrence.timeline.transactions.filter(
     (transaction) =>
       transaction.kind === 'acquisition' &&
-      transaction.window.kind === 'shipPostCombat' &&
-      isWheelOfferOwner(transaction.sourceOwner),
+      (isWheelOfferOwner(transaction.sourceOwner) || isWheelOfferOwner(transaction.owner)),
   ).length;
-  if (wheelChoiceCount !== wheels.length || wheelAcquisitionCount !== wheels.length)
+  if (wheelChoiceCount !== wheels.length || wheelAcquisitionCount > wheels.length)
     fail(`${label}.overview.rewardWheels is disconnected from its timeline product`);
   if (wheels.length === 0) return;
 
@@ -75,6 +74,7 @@ function validateRewardWheelProduct(
 
   const sameReward = (left: unknown, right: unknown) =>
     JSON.stringify(left) === JSON.stringify(right);
+  let matchedAcquisitionCount = 0;
   for (const wheel of wheels) {
     const phase = occurrence.overview.encounterPhases.filter(
       (candidate) =>
@@ -132,8 +132,11 @@ function validateRewardWheelProduct(
         transaction.window.kind === 'shipPostCombat' &&
         transaction.window.wheelKey === wheel.wheelKey,
     );
-    if (acquisitions.length !== 1)
+    if (acquisitions.length > 1)
       fail(`${label}.overview.rewardWheels.${wheel.wheelKey} must match one picked acquisition`);
+    // A selected reward destroyed by Time Piece has no execution acquisition.
+    if (acquisitions.length === 0) continue;
+    matchedAcquisitionCount += acquisitions.length;
     if (
       !occurrence.timeline.dependencies.some(
         (dependency) =>
@@ -143,6 +146,8 @@ function validateRewardWheelProduct(
     )
       fail(`${label}.overview.rewardWheels.${wheel.wheelKey} is missing its choice dependency`);
   }
+  if (matchedAcquisitionCount !== wheelAcquisitionCount)
+    fail(`${label}.overview.rewardWheels has an unmatched picked acquisition`);
 }
 
 function validateFieldsCageSlots(
