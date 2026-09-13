@@ -16,6 +16,7 @@ import {
   loadUnderworldFGHICheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
+  createPreparedProjectCandidateSession,
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
   levelResolutionCandidateForProjectEvaluationAssembly,
   simulateProjectAssembly,
@@ -25,6 +26,8 @@ import {
   loadSurfaceNOProject,
   loadSurfaceNOPProject,
   loadSurfaceNOPQProject,
+  oBiome,
+  oOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import { allTogetherOffer, allTogetherResult } from '../simulation/shop-trait-purchase-support';
 import {
@@ -42,6 +45,10 @@ import {
   createLevelResolutionAddress,
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
+  createRewardWheelOfferAddress,
+  createSteadyGrowthOutcomeAddress,
+  createTranscendentEmbryoOutcomeAddress,
+  createShopOfferAddress,
   parseHermesShrineDeliveryEntryKey,
   parseClockedTraitGeneratedPickupEntryKey,
   semanticAddressKey,
@@ -604,6 +611,172 @@ function selectedTransactionPair(product: ExecutionSemanticProduct): {
 }
 
 describe('execution-plan compiler and codec', () => {
+  it('keeps the current wheel on the old Embryo blessing and applies Favor to later offers', () => {
+    const complete = surfaceScheduledLifecycleProject();
+    let project: ProjectDocument = {
+      ...complete,
+      route: { ...complete.route, biomes: complete.route.biomes.slice(0, 2) },
+    };
+    const room = createOccurrenceAddress(oBiome, oOccurrenceIds.combat01);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence: room,
+      encounterCount: 3,
+    });
+    const current = createRewardWheelOfferAddress(
+      oBiome,
+      oOccurrenceIds.combat01,
+      'wheel2',
+      'offer1',
+    );
+    const following = createShopOfferAddress(oBiome, oOccurrenceIds.preboss, 'Boon');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: current,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopPurchaseParticipation',
+      offer: following,
+      purchased: true,
+    });
+    const outcome = createTranscendentEmbryoOutcomeAddress(room, 'Combat2');
+    const rarityAt = (blessingKey: string, blessingValues: Readonly<Record<string, number>>) => {
+      let authored = authorLegalTraitOffers(
+        applyProjectCommand(project, catalog, {
+          kind: 'ReplaceTranscendentEmbryoTransformation',
+          outcome,
+          value: { blessingKey, blessingValues },
+        }),
+      );
+      const pending = simulateProjectAssembly(catalog, authored);
+      const missing = pending.evaluation.findings.find(
+        (finding) => finding.code === 'steadyGrowthOutcomeMissing',
+      );
+      if (missing?.origin.kind === 'steadyGrowthOutcome') {
+        const candidate = createPreparedProjectCandidateSession(catalog, pending).evaluate({
+          kind: 'steadyGrowthOutcome',
+          outcome: missing.origin,
+          targetTraitKey: undefined,
+        });
+        if (
+          candidate.kind !== 'steadyGrowthOutcome' ||
+          candidate.result.eligibleTargetKeys[0] === undefined
+        )
+          throw new Error('missing shifted Steady target');
+        authored = authorLegalTraitOffers(
+          applyProjectCommand(authored, catalog, {
+            kind: 'ReplaceSteadyGrowthTarget',
+            outcome: missing.origin,
+            targetTraitKey: candidate.result.eligibleTargetKeys[0],
+          }),
+        );
+      }
+      const assembly = simulateProjectAssembly(catalog, authored);
+      const session = createPreparedProjectCandidateSession(catalog, assembly);
+      return [current, following].map((owner) => {
+        const trait = createTraitOfferAddress(owner, 'source');
+        const draft = session.traitOfferStartingDraft(trait, 'Apollo');
+        if (draft === undefined)
+          throw new Error(`missing trait draft ${semanticAddressKey(trait)}`);
+        const candidate = session.evaluate({ kind: 'traitOffer', trait, value: draft });
+        if (candidate.kind !== 'traitOffer') throw new Error('missing wheel candidate');
+        const rarity = candidate.result.branches[0]?.offerGenerationState?.rarity;
+        if (rarity?.kind !== 'orderedChecks') throw new Error('missing wheel rarity state');
+        return rarity.values.Rare;
+      });
+    };
+    const neutral = rarityAt('ChaosWeaponBlessing', { damageBonus: 0.7 });
+    const favor = rarityAt('ChaosRarityBlessing', { rareBonus: 0.7 });
+    expect(favor[0]).toBe(neutral[0]);
+    expect(favor[1]! - neutral[1]!).toBeCloseTo(0.7);
+  });
+
+  it('acquires a wheel boon before Steady Growth and repairs its target after a wheel edit', () => {
+    const complete = surfaceScheduledLifecycleProject();
+    let project: ProjectDocument = {
+      ...complete,
+      route: { ...complete.route, biomes: complete.route.biomes.slice(0, 2) },
+    };
+    const offer = createRewardWheelOfferAddress(
+      oBiome,
+      oOccurrenceIds.combat01,
+      'wheel1',
+      'offer1',
+    );
+    const trait = createTraitOfferAddress(offer, 'source');
+    const outcome = createSteadyGrowthOutcomeAddress(
+      createOccurrenceAddress(oBiome, oOccurrenceIds.combat01),
+      'Combat1',
+    );
+    project = authorLegalTraitOffers(
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceRewardWheelOffer',
+        offer,
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+      }),
+    );
+    const acquired = simulateProjectAssembly(catalog, project);
+    const biome = acquired.evaluation.route.biomes.find((entry) => entry.biomeKey === 'O');
+    if (biome === undefined || !('rewards' in biome)) throw new Error('missing O reward product');
+    const selected = biome.rewards.selectedTraitOffers.find(
+      (entry) => semanticAddressKey(entry.address) === semanticAddressKey(trait),
+    );
+    if (selected?.offer.kind !== 'traits') throw new Error('missing wheel trait offer');
+    expect(selected.offer.selectedOptionKey).toBe('option1');
+    const targetTraitKey = selected.offer.options[0]!.traitKey;
+    const candidate = createPreparedProjectCandidateSession(catalog, acquired).evaluate({
+      kind: 'steadyGrowthOutcome',
+      outcome,
+      targetTraitKey,
+    });
+    expect(candidate.kind).toBe('steadyGrowthOutcome');
+    if (candidate.kind !== 'steadyGrowthOutcome') throw new Error('missing Steady candidate');
+    expect(candidate.result.eligibleTargetKeys).toContain(targetTraitKey);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSteadyGrowthTarget',
+      outcome,
+      targetTraitKey,
+    });
+    expect(
+      planFor(project).plan.occurrences.find(
+        (occurrence) => occurrence.id === oOccurrenceIds.combat01,
+      )?.timeline.transactions,
+    ).toContainEqual(
+      expect.objectContaining({
+        kind: 'automatic',
+        effect: 'steadyGrowth',
+        target: targetTraitKey,
+      }),
+    );
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer,
+      value: { rewardType: 'RoomMoneyDrop' },
+    });
+    const edited = simulateProjectAssembly(catalog, project);
+    expect(
+      edited.evaluation.findings.some(
+        (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(outcome),
+      ),
+    ).toBe(true);
+    const repair = createPreparedProjectCandidateSession(catalog, edited).evaluate({
+      kind: 'steadyGrowthOutcome',
+      outcome,
+      targetTraitKey: undefined,
+    });
+    if (repair.kind !== 'steadyGrowthOutcome') throw new Error('missing Steady repair');
+    expect(repair.result.eligibleTargetKeys).not.toContain(targetTraitKey);
+    const replacement = repair.result.eligibleTargetKeys[0];
+    if (replacement === undefined) throw new Error('missing replacement target');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSteadyGrowthTarget',
+      outcome,
+      targetTraitKey: replacement,
+    });
+    expect(() => planFor(project)).not.toThrow();
+  });
   it('round trips the compact selected normal and boosted World Shop correlation fixture', () => {
     const plan = decodeExecutionPlan(surfaceQShopCorrelationFixture);
     const shop = plan.occurrences.find((occurrence) => occurrence.id === 'surface-q-preboss');

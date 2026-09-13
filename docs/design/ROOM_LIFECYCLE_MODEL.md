@@ -51,19 +51,19 @@ boundaries may be exact, grouped, or derived:
 The source audit owns the native functions and call-site evidence for these
 classifications. This document owns their normalized meaning:
 
-| Planner seam                    | Engine authority                                                  | Classification and normalized meaning                                                                                                                                                                                                               |
-| ------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Room preparation                | `prepareRoom` and entry-time `materializeOfferPoint` operations   | **Grouped.** Preparation follows predecessor commit and precedes the target's room-entry event. It consumes the room and incoming reward already attached to the chosen door rather than regenerating them.                                         |
-| Room entered                    | `enterRoom`; editor `roomEntered` boundary                        | **Exact.** The target room is already current and its entry-time preparation already exists. This boundary excludes predecessor commit and target generation.                                                                                       |
-| Start encounter                 | `startEncounter(phase)`; editor `encounterStart` boundary         | **Grouped around an exact transition.** It begins the closed mandatory start sequence and ends with the encounter active. A required pre-combat choice may share that sequence only when no unrelated player action can interleave.                 |
-| Encounter completed             | `completeEncounter(phase)`                                        | **Exact internal checkpoint.** Completion identity, encounter-local offers, and phase blockers settle even for noncombat, Fig Leaf-skipped, and end-effect-suppressed phases. It is not a separate player-facing row.                               |
-| Encounter ended                 | `encounterEndEffectsApplied`; editor `encounterEnd` boundary      | **Exact post-state when end effects apply.** Encounter-use effects and newly materialized deliveries are visible to later actions. A phase that suppresses end effects completes without this event but retains its visible End encounter boundary. |
-| Required-object barrier cleared | Room Action dependencies and fixed roster checkpoints             | **Derived.** There is no authored clear-barrier action. Required object and encounter completion change the inputs until the fixed next transition becomes available.                                                                               |
-| Outgoing batch generated        | `generateOutgoingBatch`; internal `outgoingGeneration` checkpoint | **Exact internal checkpoint.** Target identities and incoming rewards are frozen. It remains simulation/history authority but is not a player-facing row.                                                                                           |
-| Cleanup · Doors open            | editor `cleanup` interval anchored to roster `exitUsable`         | **Derived player-facing interval.** It begins when required work is resolved and a door or equivalent continuation is usable. Eligible optional actions may occur on either side; using the continuation ends the interval.                         |
-| Exit usable                     | roster `exitUsable` capability/checkpoint                         | **Exact capability anchoring Cleanup.** Profiles with a continuation retain this predicate without rendering another row. Required actions cannot follow it, and later optional actions do not mutate the frozen outgoing batch.                    |
-| Room committed                  | `commitRoom`                                                      | **Exact.** Commit follows outgoing generation and supported remaining local work. It is distinct from the earlier moment when exits become usable.                                                                                                  |
-| Room exited                     | `exitRoom`                                                        | **Grouped transfer.** The source fragment closes and hands the already-generated target to preparation and entry. The transfer does not choose or regenerate that target.                                                                           |
+| Planner seam                    | Engine authority                                                  | Classification and normalized meaning                                                                                                                                                                                                                               |
+| ------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Room preparation                | `prepareRoom` and entry-time `materializeOfferPoint` operations   | **Grouped.** Preparation follows predecessor commit and precedes the target's room-entry event. It consumes the room and incoming reward already attached to the chosen door rather than regenerating them.                                                         |
+| Room entered                    | `enterRoom`; editor `roomEntered` boundary                        | **Exact.** The target room is already current and its entry-time preparation already exists. This boundary excludes predecessor commit and target generation.                                                                                                       |
+| Start encounter                 | `startEncounter(phase)`; editor `encounterStart` boundary         | **Grouped around an exact transition.** It begins the closed mandatory start sequence and ends with the encounter active. A required pre-combat choice may share that sequence only when no unrelated player action can interleave.                                 |
+| Encounter completed             | `completeEncounter(phase)`                                        | **Exact internal checkpoint.** Completion identity, encounter-local offers, and phase blockers settle even for noncombat, Fig Leaf-skipped, and end-effect-suppressed phases. It is not a separate player-facing row.                                               |
+| Encounter ended                 | `encounterEndEffectsApplied`; editor `encounterEnd` boundary      | **Distinct effect checkpoint and visible boundary.** The boundary starts the post-combat interval. End effects then apply at the profile's declared point, after required rewards in O ship phases. Suppressed phases retain the boundary without the effect event. |
+| Required-object barrier cleared | Room Action dependencies and fixed roster checkpoints             | **Derived.** There is no authored clear-barrier action. Required object and encounter completion change the inputs until the fixed next transition becomes available.                                                                                               |
+| Outgoing batch generated        | `generateOutgoingBatch`; internal `outgoingGeneration` checkpoint | **Exact internal checkpoint.** Target identities and incoming rewards are frozen. It remains simulation/history authority but is not a player-facing row.                                                                                                           |
+| Cleanup · Doors open            | editor `cleanup` interval anchored to roster `exitUsable`         | **Derived player-facing interval.** It begins when required work is resolved and a door or equivalent continuation is usable. Eligible optional actions may occur on either side; using the continuation ends the interval.                                         |
+| Exit usable                     | roster `exitUsable` capability/checkpoint                         | **Exact capability anchoring Cleanup.** Profiles with a continuation retain this predicate without rendering another row. Required actions cannot follow it, and later optional actions do not mutate the frozen outgoing batch.                                    |
+| Room committed                  | `commitRoom`                                                      | **Exact.** Commit follows outgoing generation and supported remaining local work. It is distinct from the earlier moment when exits become usable.                                                                                                                  |
+| Room exited                     | `exitRoom`                                                        | **Grouped transfer.** The source fragment closes and hands the already-generated target to preparation and entry. The transfer does not choose or regenerate that target.                                                                                           |
 
 The editor boundary order describes semantic visibility, not a literal call
 stack. `cleanup` is the one player-facing final-room interval and is labeled
@@ -551,7 +551,12 @@ their authored choice but emit no lifecycle product.
 `encounterStarted` applies only the resolved definition's encounter-depth
 effect. `encounterCompleted` stays at its declared later lifecycle point.
 `encounterEndEffectsApplied` follows that completion only for a resolved phase
-whose declaration permits the game's end effects. It is absent for noncombat
+whose declaration permits the game's end effects. In reward-bearing O ship
+phases, required post-combat interactions intervene: native encounter events
+wait for them before applying end effects. Completion still makes those
+interactions available; it does not imply that end effects have already run.
+The visible End Encounter boundary stays before this interval.
+The event is absent for noncombat
 and `skipEndEncounterEffects` phases; Fig Leaf's skipped execution does not by
 itself remove it. N entered side-room occurrences execute their own preparation
 and lifecycle in authored `enteredOrdinal` order before the corresponding
@@ -563,16 +568,17 @@ Steady Growth consumes this existing `encounterEndEffectsApplied` seam. Each
 qualifying emitted event advances every equipped Steady Growth acquisition
 once; source-declared skipped subrooms do not advance it. A reached threshold
 settles its authored rarity target immediately at that checkpoint and publishes
-one fixed automatic timeline effect after End encounter. It is not a movable
+one fixed automatic timeline effect inside End Encounter, after any required
+pre-effect phase actions. It is not a movable
 Room Action, and it does not introduce a second lifecycle clock or scheduler.
 
 One encounter-end checkpoint settles every fixed automatic outcome before it
 publishes any pickup created by a matured clock. Steady Growth precedes
 Transcendent Embryo in that fixed order. Supply Chain and Hermes Shrine clocks
 may mature at the same checkpoint, but their pickup frontiers observe the final
-post-automatic branches and become ordinary acquisitions only at
-`afterEncounterPhase`. Their authored acquisition rows may interleave with
-other post-encounter pickups; acquiring one can never affect an automatic
+post-automatic branches and become ordinary acquisitions only after the
+end-effects checkpoint. Their authored acquisition rows may interleave with
+other pickups permitted in that interval; acquiring one can never affect an automatic
 outcome from the checkpoint that created it.
 
 ## Operations, Effects, and Events
@@ -862,6 +868,7 @@ materializeOfferPoint(wheel1)
 startEncounter(combat1)
 completeEncounter(combat1)
 advanceProducer(wheel1Acquisition)
+applyEncounterEndEffects(combat1)
 ... optional declared phases ...
 generateOutgoingBatch
 commitRoom

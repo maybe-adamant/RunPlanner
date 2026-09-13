@@ -617,7 +617,7 @@ describe('project profile operations', () => {
         candidate.code === 'hermesShrineDeliveryPlacementRequired' &&
         candidate.origin.kind === 'acquisitionEntry' &&
         candidate.origin.site.owner.kind === 'occurrence' &&
-        candidate.origin.site.owner.occurrenceId === steadyGrowthOutcome.owner.occurrenceId,
+        candidate.origin.site.owner.occurrenceId === 'c34604d0-c4e3-4c26-8539-54a82158716f',
     );
     if (deliveryFinding?.origin.kind !== 'acquisitionEntry') {
       throw new Error('loaded profile lost its due Shrine delivery placement');

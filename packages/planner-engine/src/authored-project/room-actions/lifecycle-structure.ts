@@ -236,8 +236,14 @@ export function roomLifecycleWindowOrdinal(
         ? beforePoint((point) => point.kind === 'encounterStart')
         : lastAfterPoint((point) => point.kind === 'encounterEnd');
     case 'encounterEnd':
-      return afterPoint(
-        (point) => point.kind === 'encounterEnd' && point.phaseKey === window.phaseKey,
+      return (
+        afterPoint((point) => point.kind === 'encounterEnd' && point.phaseKey === window.phaseKey) +
+        (structure.profileKey === 'ShipCombatRoom' &&
+        structure.phases.some(
+          (phase) => phase.phaseKey === window.phaseKey && phase.rewardWheelKey !== undefined,
+        )
+          ? 1
+          : 0)
       );
     case 'fields':
       return 1;

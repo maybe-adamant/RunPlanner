@@ -208,7 +208,17 @@ describe('structured workspace actions assembly', () => {
       (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'encounterEnd',
     );
     expect(endIndex).toBeGreaterThanOrEqual(0);
-    expect(steadyIndex).toBe(endIndex + 1);
+    const pickupIndex = phase.timeline.findIndex(
+      (entry) =>
+        entry.kind === 'action' &&
+        entry.actionKey ===
+          roomActionKey({
+            kind: 'interactWheelReward',
+            wheelKey: 'wheel1',
+          }),
+    );
+    expect(pickupIndex).toBeGreaterThan(endIndex);
+    expect(steadyIndex).toBe(pickupIndex + 1);
     expect(encounterEnd).toMatchObject({
       checkpointKey: 'combat:Combat1',
       label: 'End encounter',

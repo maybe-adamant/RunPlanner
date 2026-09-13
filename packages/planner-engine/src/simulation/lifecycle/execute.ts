@@ -58,6 +58,11 @@ interface RoomActionSchedule {
     operationIndex: number,
     state: ExecutionState,
   ) => ExecutionState;
+  readonly afterEncounterEndEffects: (
+    phase: ResolvedEncounterPhase,
+    operationIndex: number,
+    state: ExecutionState,
+  ) => ExecutionState;
 }
 
 type EventData<Event extends RoomLifecycleEvent = RoomLifecycleEvent> =
@@ -113,6 +118,35 @@ function requireEncounterPhase(context: OperationContext): ResolvedEncounterPhas
     );
   }
   return context.encounterPhase;
+}
+
+function encounterAllowsEndEffects(phase: ResolvedEncounterPhase): boolean {
+  return phase.kind !== 'nonCombat' && phase.kind !== 'story' && !phase.skipEndEncounterEffects;
+}
+
+function deferShipEncounterEndEffects(
+  context: OperationContext,
+  phase: ResolvedEncounterPhase,
+): boolean {
+  return (
+    context.profile.key === 'ShipCombatRoom' &&
+    context.input.roomActionRoster !== undefined &&
+    phase.rewardAttachment?.kind === 'rewardWheel' &&
+    encounterAllowsEndEffects(phase)
+  );
+}
+
+function appendEncounterEndEffects(
+  context: OperationContext,
+  state: ExecutionState,
+): ExecutionState {
+  const phase = requireEncounterPhase(context);
+  return appendEvent(state, context, {
+    kind: 'encounterEndEffectsApplied',
+    phaseKey: phase.slotKey,
+    execution: context.figLeafSkipped === true ? 'skippedByFigLeaf' : 'normal',
+    figLeafSkipOwner: context.figLeafSkipOwner === true,
+  });
 }
 
 const lifecycleEffectRegistry = Object.freeze({
@@ -210,12 +244,9 @@ const lifecycleEffectRegistry = Object.freeze({
             completion,
           )
         : appendEvent(state, context, completion);
-    return phase.kind === 'nonCombat' || phase.kind === 'story' || phase.skipEndEncounterEffects
-      ? completed
-      : appendEvent(completed, context, {
-          ...completion,
-          kind: 'encounterEndEffectsApplied',
-        });
+    if (!encounterAllowsEndEffects(phase) || deferShipEncounterEndEffects(context, phase))
+      return completed;
+    return appendEncounterEndEffects(context, completed);
   },
   recordRequiredObjectCompletions: (context, state) => {
     const requiredObjects = context.input.requiredObjects;
@@ -362,19 +393,21 @@ function encounterSequenceOperationHandler(
       phaseIndex >= skipOwnerIndex &&
       (context.encounterPhases[skipOwnerIndex]?.skipEndEncounterEffects === true ||
         phaseIndex === skipOwnerIndex);
-    next = applyEffects(
-      operation,
-      {
-        ...context,
-        operationIndex,
-        encounterPhase,
-        ...(skipped ? { figLeafSkipped: true } : {}),
-        ...(skipped && phaseIndex === skipOwnerIndex ? { figLeafSkipOwner: true } : {}),
-      },
-      next,
-    );
+    const phaseContext: OperationContext = {
+      ...context,
+      operationIndex,
+      encounterPhase,
+      ...(skipped ? { figLeafSkipped: true } : {}),
+      ...(skipped && phaseIndex === skipOwnerIndex ? { figLeafSkipOwner: true } : {}),
+    };
+    next = applyEffects(operation, phaseContext, next);
     if (schedule !== undefined) {
       next = schedule.afterEncounterPhase(encounterPhase, operationIndex, next);
+      if (next.blockedAt !== undefined) return next;
+      if (deferShipEncounterEndEffects(phaseContext, encounterPhase)) {
+        next = appendEncounterEndEffects(phaseContext, next);
+      }
+      next = schedule.afterEncounterEndEffects(encounterPhase, operationIndex, next);
       if (next.blockedAt !== undefined) return next;
     }
   }
@@ -864,18 +897,36 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     state: ExecutionState,
   ): ExecutionState => {
     let next = state;
-    if (
-      context.profile.key === 'ShipCombatRoom' &&
-      phase.rewardAttachment?.kind === 'rewardWheel'
-    ) {
-      next = consumeExact(
-        Object.freeze({ kind: 'interactWheelReward', wheelKey: phase.rewardAttachment.key }),
-        operationIndex,
-        next,
-        true,
+    const wheelKey =
+      context.profile.key === 'ShipCombatRoom' && phase.rewardAttachment?.kind === 'rewardWheel'
+        ? phase.rewardAttachment.key
+        : undefined;
+    if (wheelKey !== undefined) {
+      const participants = roster.rows.filter(
+        (row) =>
+          !row.stale &&
+          row.participation === 'required' &&
+          row.window.kind === 'shipPostCombat' &&
+          row.window.wheelKey === wheelKey,
       );
+      const unranked = participants.find((row) => row.rank === null);
+      if (unranked !== undefined) return blockAt(next, unranked);
+      const lastParticipantRank = participants.reduce(
+        (rank, row) => Math.max(rank, row.rank ?? 0),
+        0,
+      );
+      next = drainThroughRank(lastParticipantRank, operationIndex, next);
       if (next.blockedAt !== undefined) return next;
     }
+    return next;
+  };
+
+  const afterEncounterEndEffects = (
+    phase: ResolvedEncounterPhase,
+    operationIndex: number,
+    state: ExecutionState,
+  ): ExecutionState => {
+    let next = state;
     const deliveries = roster.rows
       .filter(
         (row) =>
@@ -918,6 +969,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     afterOperation,
     beforeEncounterPhase,
     afterEncounterPhase,
+    afterEncounterEndEffects,
   });
 }
 

@@ -153,6 +153,12 @@ Source families: `PowersLogic.lua`, `TraitLogic.lua`, `MetaUpgradeLogic.lua`,
 | Path points and native talent spending                                  | `room/timeline/acquisitions/path/hooks.lua`                               | `UseConsumableItem`, `ConsumableUsedPresentation`, `OpenSpellScreen`, `OpenTalentScreen`                                                             | Bind; Native spending | Accepted item binds through its actual screen call and retires on return. Shared Sea Star applies where published; no per-node click script.                                                                                         | Point addition and player investment.                                   |
 | God Sent, Calling Card/Time Piece charges, passive keepsakes and expiry | Existing native behavior and named conformance readers                    | No God Sent eligibility/selection hook or separate passive-effect actuator                                                                           | Native + Check        | God Sent availability contributes to planner node accounting but does not authorize forcing its nodes. Other deterministic effects likewise need no second implementation.                                                           | Eligibility, node insertion, charges, clocks and deterministic effects. |
 
+For O wheel-bearing combat, native `EndEncounterEffects` runs after the
+required reward/NPC wait. The automatic contacts above use that native phase
+checkpoint; they do not run at enemy defeat or move the game's clocks. The
+planner publishes the same order, with automatic outcomes after required
+phase acquisitions and before any pickups those outcomes create.
+
 ## Maintenance and evidence
 
 Update the affected row when a feature changes: published input, executor

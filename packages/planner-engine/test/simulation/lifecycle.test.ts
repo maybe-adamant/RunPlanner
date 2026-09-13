@@ -459,6 +459,84 @@ describe('single-room lifecycle execution', () => {
     expect(reached[2]?.index).toBeGreaterThan(phase2End);
   });
 
+  it.each([
+    ['Icarus before wheel', true],
+    ['wheel before Icarus', false],
+  ])(
+    'defers Ship end effects until required wheel and Icarus interactions (%s)',
+    (_name, icarusFirst) => {
+      const choose = Object.freeze({ kind: 'chooseRewardWheel' as const, wheelKey: 'wheel1' });
+      const icarus = Object.freeze({ kind: 'interactEncounter' as const, phaseKey: 'Combat1' });
+      const wheel = Object.freeze({ kind: 'interactWheelReward' as const, wheelKey: 'wheel1' });
+      const delivery = Object.freeze({
+        kind: 'interactAcquisitionEntry' as const,
+        siteKey: 'hermesShrineDelivery',
+        entryKey: hermesShrineDeliveryEntryKey(origin, 'initial:first'),
+        encounterPhaseKey: 'Combat1',
+      });
+      const fragment = executeRoomLifecycle(
+        catalog,
+        inputWithoutProducer({
+          lifecycleProfileKey: 'ShipCombatRoom',
+          encounterEnvelopeKey: 'ShipEncounter',
+          encounterPhases: phases('ShipEncounter', ['GeneratedO_Intro01', 'IcarusCombatO']),
+          roomActionRoster: actionRoster(
+            origin,
+            [choose, ...(icarusFirst ? [icarus, wheel] : [wheel, icarus]), delivery],
+            [
+              {
+                reference: choose,
+                participation: 'required',
+                window: { kind: 'shipPreCombat', wheelKey: 'wheel1' },
+                dependencies: [],
+              },
+              {
+                reference: icarus,
+                participation: 'required',
+                window: { kind: 'shipPostCombat', wheelKey: 'wheel1' },
+                dependencies: [],
+              },
+              {
+                reference: wheel,
+                participation: 'required',
+                window: { kind: 'shipPostCombat', wheelKey: 'wheel1' },
+                dependencies: [{ kind: 'afterAction', action: choose }],
+              },
+              {
+                reference: delivery,
+                participation: 'required',
+                window: { kind: 'encounterEnd', phaseKey: 'Combat1' },
+                dependencies: [],
+              },
+            ],
+            'ShipCombatRoom',
+            ['Intro', 'Combat1'],
+          ),
+        }),
+      );
+      const interaction = fragment.events.findIndex(
+        (event) => event.kind === 'encounterInteractionReached' && event.phaseKey === 'Combat1',
+      );
+      const wheelPickup = fragment.events.findIndex(
+        (event) => event.kind === 'offerPointAcquired' && event.offerPoint === 'wheel1',
+      );
+      const endEffects = fragment.events.findIndex(
+        (event) => event.kind === 'encounterEndEffectsApplied' && event.phaseKey === 'Combat1',
+      );
+      const deliveryPickup = fragment.events.findIndex(
+        (event) => event.kind === 'acquisitionPointReached' && event.entryKey === delivery.entryKey,
+      );
+
+      expect(fragment.blockedAt).toBeUndefined();
+      expect(interaction).toBeGreaterThan(0);
+      expect(icarusFirst ? wheelPickup : interaction).toBeGreaterThan(
+        icarusFirst ? interaction : wheelPickup,
+      );
+      expect(endEffects).toBeGreaterThan(wheelPickup);
+      expect(deliveryPickup).toBeGreaterThan(endEffects);
+    },
+  );
+
   it('drains a Fields delivery after its exact cage end effects', () => {
     const fieldsOrigin = createOccurrenceAddress(
       createBiomeAddress('Underworld', 'H'),

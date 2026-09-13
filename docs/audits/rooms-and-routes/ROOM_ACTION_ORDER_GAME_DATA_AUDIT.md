@@ -343,6 +343,14 @@ phase's required reward and required NPC interactions have resolved. Icarus's
 ShipCombat sequence uses this same wait after spawning both its post-combat
 interaction and the selected wheel reward.
 
+`RoomLogic.lua:StartEncounter` calls `EndEncounterEffects` only after these
+encounter events return. That function calls `TraitLogic.lua:CheckChamberTraits`
+when declaration guards allow it. Steady Growth and Embryo therefore mature
+after the required reward/NPC interval, not merely after enemy defeat. The
+planner retains combat completion as its availability boundary and places the
+separate end-effects checkpoint after this interval. Pickups created by the
+checkpoint cannot be prerequisites for it.
+
 O therefore has one physical room chronology partitioned into repeated fixed
 phase windows:
 
@@ -352,10 +360,12 @@ choose Wheel 1 reward
 complete Combat 1
 resolve Combat 1 reward/NPC actions in a legal order
 cross the required-object barrier
+apply Combat 1 end effects
 choose Wheel 2 reward, when active
 complete Combat 2
 resolve Combat 2 reward/NPC actions in a legal order
 cross the final required-object barrier
+apply Combat 2 end effects
 generate outgoing room
 ```
 
