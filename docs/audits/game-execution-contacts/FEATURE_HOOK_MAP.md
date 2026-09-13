@@ -92,6 +92,13 @@ Source families: `InteractLogic.lua`, `UpgradeChoiceLogic.lua`, `TraitLogic.lua`
 [traits and offers](TRAITS_AND_OFFERS.md). Acquisition completion releases
 steering dependencies; it is not proof of the player's retained result.
 
+A shared source is not a unique acquisition owner. A trial publishes separate
+chosen/spurned acquisitions under one incoming reward. The source and producer
+indexes retain both; the native loot identity selects the published owner at
+materialization. Capture producer context before spawning, but resolve the
+transaction only once the object identity exists. This does not add a timing
+check or select an owner by readiness.
+
 | Planner feature / published fact                                            | Executor owner                                                                 | Native hooks                                                                                             | Approach                          | Why these contacts / lifetime                                                                                                                                                                   | Native work retained                                                                                               |
 | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | Material acquisition owner and roles                                        | `room/timeline/acquisitions/binding.lua`                                       | `SpawnRoomReward`, `CreateLoot`, `CreateConsumableItem`                                                  | Bind                              | Producer context identifies exact material output during construction; binding travels on the object, not a producer call stack through later pickup.                                           | Native object creation. Generated pickups are distinct from the effect that drops them.                            |
