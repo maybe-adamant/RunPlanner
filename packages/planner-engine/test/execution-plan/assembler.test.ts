@@ -46,6 +46,7 @@ import {
   createLevelResolutionAddress,
   createNemesisRandomEventAddress,
   createIncomingRewardAddress,
+  createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
@@ -474,6 +475,65 @@ describe('engine-owned F/G execution semantic product', () => {
       }
     }
   });
+  it.each([
+    [
+      'hub',
+      () => loadSurfaceNOProject(),
+      createIncomingRewardAddress(nBiome, createOccurrenceId('surface-n-combat02')),
+    ],
+    [
+      'side room',
+      () => loadSurfaceNOProject(),
+      createIncomingRewardAddress(nBiome, createOccurrenceId('surface-n-combat05-sideDoor1')),
+    ],
+    [
+      'wheel',
+      () => loadSurfaceNOProject(),
+      createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
+    ],
+    [
+      'cage',
+      () => createGoldenFGHProject(),
+      createLocalRewardAddress(
+        goldenHBiome,
+        createOccurrenceId('golden-h-combat02'),
+        'cages',
+        'cage1',
+      ),
+    ],
+  ] as const)('publishes a Timepieced %s reward without an acquisition', (_, build, source) => {
+    let project = applyProjectCommand(build(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress(source.routeKey),
+      keepsakeKey: 'GoldifyKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition: createAcquisitionRoleAddress(source, 'self'),
+      value: { kind: 'timePiece' },
+    });
+    const product = productFor(project);
+    const room = product.occurrences.find((candidate) => candidate.id === source.occurrenceId)!;
+    expect(product.selectedOccurrenceIds).toContain(source.occurrenceId);
+    expect(room).toBeDefined();
+    expect(room.roomExitConformance?.facts.some((fact) => fact.kind === 'keepsakeEffects')).toBe(
+      true,
+    );
+    expect(
+      room.timeline.transactions.some(
+        (transaction) =>
+          transaction.kind === 'acquisition' &&
+          transaction.sourceOwner === semanticAddressKey(source),
+      ),
+    ).toBe(false);
+    expect(() => encodeExecutionPlan(compileExecutionPlan({ product }))).not.toThrow();
+    if (source.kind === 'rewardWheelOffer') {
+      expect(
+        room.timeline.transactions.some((transaction) => transaction.kind === 'chooseRewardWheel'),
+      ).toBe(true);
+    }
+  });
+
   it('publishes both ShipCombat phase counts and wheel cohort widths', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
