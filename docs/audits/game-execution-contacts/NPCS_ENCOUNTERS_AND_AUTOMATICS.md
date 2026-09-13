@@ -39,6 +39,14 @@ at their own accepted interaction; the executor neither recreates the drop nor
 requires source-trait provenance. Coverage of a dormant contact does not claim
 that its route navigation is enabled.
 
+The published rows are inserted before the named NPC function so native
+option-specific preparation sees them (notably Circe's familiar data). Native
+requirements, priority selection, and preparation remain native; the executor
+does not run its own eligibility preflight. It retains the native row metadata
+and requires the published keys to exist in that construction input. The menu
+contact reapplies the same rows after native ordering, preserving prepared
+metadata rather than rebuilding the NPC's effects.
+
 ## Nemesis random events
 
 Nemesis uses a distinct event family rather than a trait provider menu.

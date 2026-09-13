@@ -136,8 +136,9 @@ family matrix.
 H01–H07 have since been corrected and locally verified by the correction plan's
 Gate A. The rows below retain the inspected baseline defect descriptions;
 accepted contact details now live in the owning durable feature inventories.
-Live-game verification remains separate. H08–H10 and the bounded timing and
-condition questions remain open for the later gates.
+Live-game verification remains separate. H08/H09 are addressed by the bounded
+NPC-preflight and unused Pom-marker cleanup. H10, the `UseExitDoor` contact,
+and the bounded timing and condition questions remain open for later work.
 
 | ID  | Finding                                                                                                                                                                                     | Disposition                                                                                                                                                                              |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

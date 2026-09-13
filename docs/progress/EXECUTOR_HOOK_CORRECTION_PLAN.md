@@ -2,7 +2,9 @@
 
 ## Status and baseline
 
-Status: locked; Gate A complete. Later gates have not started.
+Status: locked; Gate A complete. Gate B's H08/H09 cleanup is complete;
+`UseExitDoor` remains unchanged pending its separate contact investigation.
+Gates C and D have not started.
 Fields Forfeit was corrected in the planner separately (`550a56a7`). The
 user-approved Fields amendment retains steering and records completed contents
 and positions as diagnostics only; native Forfeit creates the Onion and
@@ -192,6 +194,14 @@ diagnostic snapshot together; do not build a structural-check framework.
   affect a later unrelated RandomInt. Successful paths remain unchanged.
 
 ## Gate B — Remove proven unnecessary machinery
+
+H08/H09 implemented in executor `e6e166f` and independently reviewed with no
+actionable findings. Verification: 448/448 executor tests, clean luacheck for
+both changed production files, and passing modpack smoke. Removed marker and
+preflight-only setup; retained native preparation, row metadata, level/Sea Star
+outcome witnesses, and strengthened the preparation/reordering witness.
+`UseExitDoor` is untouched and remains this gate's outstanding investigation;
+Gate B is not yet closed. No deployment or live-game verification.
 
 - H09: remove the unused visible-Pom UseLoot marker wrapper and only its dead
   transport/test setup. Keep useful outcome witnesses, not historical tests
