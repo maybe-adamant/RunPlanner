@@ -35,8 +35,22 @@ Recommendations use:
   truthful contact. This is not permission to add a replacement implementation.
 
 “Keep” means keep that intervention shape, not certify every current line or
-coroutine lifetime. Recommendations do not authorize edits. None requires a
-new engine product or protocol field on the evidence presently established.
+coroutine lifetime. Recommendations do not authorize edits. The approved
+destination contract-presence correction requires a narrow protocol field;
+other recommendations do not require a new engine product.
+
+### Settled condition dispositions
+
+These user-approved decisions replace the corresponding provisional condition
+recommendations below. Sea Star inserts `1`/`-1` at the bound chance-value read
+and leaves the native RNG call and duplication intact; the separate next-roll
+interceptor is removed. God Sent eligibility, selection and later insertion
+remain entirely native: the executor steers only layout and Rare/Epic nodes.
+Planner God Sent node-count modeling remains unchanged. Contract presence is
+copied from canonical topology into an explicit destination-door boolean,
+applied after native room initialization and before previews; its later native
+spawn consumes that flag rather than setting presence again. No executor
+midshop inference or destination-feature look-ahead is introduced.
 
 Read each recommendation with its disposition: an explicit open question takes
 precedence over “Keep.” In particular, condition-override rows are provisional,
