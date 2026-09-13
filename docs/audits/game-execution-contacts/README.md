@@ -12,6 +12,10 @@ classification belong to
 [Game Integration Boundary](../../design/GAME_INTEGRATION_BOUNDARY.md). Source
 facts remain in the focused game-data audits linked by each inventory.
 
+Start with the [planner feature → native hook map](FEATURE_HOOK_MAP.md) for
+the cross-family implementation lookup: published input, executor owner, exact
+native contacts, intervention approach, lifetime and retained native work.
+
 ## Coverage vocabulary
 
 | Status              | Meaning                                                                                                                 |
@@ -53,12 +57,10 @@ wire authority. Compile-time execution censuses own closed-union coverage;
 these documents explain native meaning and must not duplicate those tests as a
 manually maintained manifest.
 
-Each family's contact notes state the published answer, native insertion or
-selection point, retained native work, and any lifetime spanning multiple
-callbacks. Those are the maintained hook decisions; a registration census is
-a temporary completeness aid, not another authority. When runtime evidence
-changes a decision, update that family here rather than preserving an old
-baseline matrix alongside it.
+The feature map is the single cross-family hook lookup; family inventories
+retain the detailed evidence and uncertainties behind those rows. When runtime
+evidence changes a contact, update its map row and the affected family evidence,
+not a separate historical baseline or registration census.
 
 Source inspection and adapter/coroutine tests are not full-route live proof.
 The bounded live gaps remain with their families: Fields physical placement,

@@ -59,7 +59,8 @@ For a specific contract, go directly to its specialist authority:
 - [Game integration](docs/design/GAME_INTEGRATION_BOUNDARY.md) defines the
   compiler/executor contract; [biome execution navigation](docs/design/BIOME_EXECUTION_NAVIGATION.md)
   defines only the biome-specific execution work beyond the shared F/G
-  baseline.
+  baseline. The [feature-to-hook map](docs/audits/game-execution-contacts/FEATURE_HOOK_MAP.md)
+  maps published planner facts to native contacts and explains each intervention.
 - [Source audit map](docs/audits/README.md) routes source evidence by subject.
 
 ## Quickstart
