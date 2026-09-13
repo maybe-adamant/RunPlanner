@@ -773,6 +773,14 @@ Resource topology cleanup, missing Shrine-delivery retraction, inactive clocked
 pickup retraction and Chaos topology reconciliation remain in that explicit
 command-local order.
 
+Retained clocked-pickup payload alone does not create an optional action. The
+simulator's reached due-entry capability exposes unplaced drops; ordered stale
+placements remain addressable for repair. Explicitly removing a clocked pickup
+removes its host-local entry and action together. A still-due drop remains
+available to place again, while other recurring drops from the same source are
+untouched. Source retraction may retain dormant payload for repair, but must not
+resurrect it as an optional pickup.
+
 The two required-action contacts serve different inputs. The first closes
 newly active source actions; the second compares the generated-pickup result
 against its immediate predecessor and closes newly generated actions. Combining

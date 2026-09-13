@@ -8,6 +8,7 @@ import {
 } from '../room-actions/defaults';
 import { createBiomeAddress } from '../addresses';
 import { reconcileAcquisitionResolvedRewardEntry } from '../acquisition/acquisition-entry';
+import { parseClockedTraitGeneratedPickupEntryKey } from '../acquisition/pickup-producers';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { updateOccurrence } from './occurrence/mutation';
 import type { RoomActionCommand } from './types';
@@ -157,12 +158,24 @@ export function applyRoomActionCommand(
       break;
   }
 
-  return updateOccurrence(
-    document,
-    located,
-    Object.freeze({
-      ...occurrence,
-      roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
-    }),
-  );
+  const nextOccurrence = {
+    ...occurrence,
+    roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
+  };
+  const removed = command.kind === 'RemoveRoomAction' ? order[existingIndex] : undefined;
+  if (
+    removed?.kind === 'interactAcquisitionEntry' &&
+    removed.siteKey === 'roomExit' &&
+    parseClockedTraitGeneratedPickupEntryKey(removed.entryKey) !== undefined
+  ) {
+    const acquisitionSites = { ...occurrence.acquisitionSites };
+    const site = acquisitionSites.roomExit;
+    const pickupEntries = { ...site?.pickupEntries };
+    delete pickupEntries[removed.entryKey];
+    if (Object.keys(pickupEntries).length === 0) delete acquisitionSites.roomExit;
+    else acquisitionSites.roomExit = Object.freeze({ pickupEntries: Object.freeze(pickupEntries) });
+    if (Object.keys(acquisitionSites).length === 0) delete nextOccurrence.acquisitionSites;
+    else nextOccurrence.acquisitionSites = Object.freeze(acquisitionSites);
+  }
+  return updateOccurrence(document, located, Object.freeze(nextOccurrence));
 }
