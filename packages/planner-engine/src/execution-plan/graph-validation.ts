@@ -49,16 +49,36 @@ export function validateExecutionGraph(
       invalid(`${label}.cageRewards is only valid for a FieldsEncounter target`);
     }
   };
+  const validateZagreusContractPresence = (
+    target: { readonly id: string; readonly zagreusContractPresent: boolean },
+    label: string,
+  ): void => {
+    const referenced = occurrences.get(target.id);
+    if (referenced === undefined) return;
+    const expected =
+      referenced.overview.additional?.some((additional) => additional.kind === 'zagreusContract') ??
+      false;
+    if (target.zagreusContractPresent !== expected)
+      invalid(`${label}.zagreusContractPresent must match the destination Overview.additional`);
+  };
   const continuations = (entry: ExecutionOccurrence): Set<string> => {
     const result = new Set<string>();
     if (entry.doors.kind === 'batch') {
       for (const target of entry.doors.targets) {
         assertRoomReference(target.room, `${entry.id} door target`);
         validateDoorCagePayload(target, `${entry.id} door target ${target.room.id}`);
+        validateZagreusContractPresence(
+          { id: target.room.id, zagreusContractPresent: target.zagreusContractPresent },
+          `${entry.id} door target ${target.room.id}`,
+        );
         result.add(target.room.id);
       }
     } else if (entry.doors.kind === 'fixed') {
       assertRoomReference(entry.doors.target, `${entry.id} fixed target`);
+      validateZagreusContractPresence(
+        { id: entry.doors.target.id, zagreusContractPresent: entry.doors.zagreusContractPresent },
+        `${entry.id} fixed target ${entry.doors.target.id}`,
+      );
       result.add(entry.doors.target.id);
     }
     for (const additional of entry.overview.additional ?? []) {

@@ -1,5 +1,14 @@
 import type { ExecutionDoors } from '../model';
-import { MAX_OWNER_STRING, array, exact, fail, integer, object, stringValue } from './primitives';
+import {
+  MAX_OWNER_STRING,
+  array,
+  booleanValue,
+  exact,
+  fail,
+  integer,
+  object,
+  stringValue,
+} from './primitives';
 import { reward } from './rewards';
 import { roomReference } from './room';
 
@@ -11,7 +20,7 @@ export function doors(value: unknown, label: string): ExecutionDoors {
       const row = object(entry, `${label}.targets[${index}]`);
       exact(
         row,
-        ['exitKey', 'index', 'room'],
+        ['exitKey', 'index', 'room', 'zagreusContractPresent'],
         ['reward', 'cageRewards'],
         `${label}.targets[${index}]`,
       );
@@ -28,6 +37,10 @@ export function doors(value: unknown, label: string): ExecutionDoors {
         exitKey: stringValue(row.exitKey, `${label}.targets[${index}].exitKey`),
         index: integer(row.index, `${label}.targets[${index}].index`),
         room: roomReference(row.room, `${label}.targets[${index}].room`),
+        zagreusContractPresent: booleanValue(
+          row.zagreusContractPresent,
+          `${label}.targets[${index}].zagreusContractPresent`,
+        ),
         ...(row.reward === undefined
           ? {}
           : { reward: reward(row.reward, `${label}.targets[${index}].reward`) }),
@@ -49,11 +62,15 @@ export function doors(value: unknown, label: string): ExecutionDoors {
     });
   }
   if (record.kind === 'fixed') {
-    exact(record, ['kind', 'owner', 'target'], [], label);
+    exact(record, ['kind', 'owner', 'target', 'zagreusContractPresent'], [], label);
     return Object.freeze({
       kind: 'fixed',
       owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
       target: roomReference(record.target, `${label}.target`),
+      zagreusContractPresent: booleanValue(
+        record.zagreusContractPresent,
+        `${label}.zagreusContractPresent`,
+      ),
     });
   }
   if (record.kind === 'terminal') {

@@ -7,7 +7,23 @@ is committed in executor `ab7fcbe`. C1 (`ee1b31b`) and C2 (`9355a83`) are comple
 C3 is complete (`2f981b0`); C4 wheel (`a8d9eb1`) and inventory (`d5fdcf9`)
 handling are complete. C5 is complete (`0d2ac61`), with the separate Mystery
 composition witness correction in `bfb87df`. C6 admission wording is corrected.
-Gate C is complete; Gate D has not started.
+Gate C is complete. Gate D first group is locked in `096e844c`; D1 is complete
+in executor `bffd8a1` (independent review, 81 focused tests and clean lint).
+D2 is complete in executor `7a6a7e7` (independent review, 34 focused tests and
+clean lint). D3 is complete in executor `d442ba1`; remaining Gate D groups await
+discussion. Independent review caught and closed the fixed-door flag handoff;
+the final host-creation/spawn witness also passed recheck. The pre-existing
+shop-correlation fixture serialization mismatch was corrected separately in
+executor `4905b4f`, with no semantic change.
+
+D1–D3 verification: 102 focused engine execution tests, 469 executor tests,
+clean Lua lint, modpack smoke and all 13 byte-identical fixture mirrors passed.
+The broad planner gate passed typechecking, 22 fixture checks, 3,005 correctness
+tests, performance comparison and lint. It stopped on pre-existing audit table
+formatting; after that formatting-only correction, format checking and build
+passed. No repeated broad test run was needed. Execution protocol advances to
+37; authored schema remains unchanged. Live testing remains pending, and no
+deployment or push was performed.
 Fields Forfeit was corrected in the planner separately (`550a56a7`). The
 user-approved Fields amendment retains steering and records completed contents
 and positions as diagnostics only; native Forfeit creates the Onion and

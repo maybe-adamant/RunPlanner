@@ -8,7 +8,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 36 as const;
+export const EXECUTION_PROTOCOL_VERSION = 37 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
 export type ExecutionBiomeKey = 'F' | 'G' | 'H' | 'I' | 'N' | 'O' | 'P' | 'Q';
 
@@ -734,6 +734,8 @@ export interface ExecutionDoorTarget {
   readonly exitKey: string;
   readonly index: number;
   readonly room: { readonly id: string; readonly biomeKey: string; readonly gameName: string };
+  /** Whether the destination Overview publishes a Zagreus Contract additional exit. */
+  readonly zagreusContractPresent: boolean;
   readonly reward?: ExecutionReward;
   /** Ordered cage rewards generated on this Fields target, including previews. */
   readonly cageRewards?: readonly ExecutionReward[];
@@ -754,6 +756,8 @@ export type ExecutionDoors =
         readonly biomeKey: string;
         readonly gameName: string;
       };
+      /** Whether the destination Overview publishes a Zagreus Contract additional exit. */
+      readonly zagreusContractPresent: boolean;
     }
   | { readonly kind: 'terminal'; readonly owner: string };
 

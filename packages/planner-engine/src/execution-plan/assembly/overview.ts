@@ -273,6 +273,11 @@ function executionAdditionalExits(
   );
 }
 
+/** The destination-navigation input copied from this occurrence's canonical additional exits. */
+export function zagreusContractPresent(batch: CanonicalBatch | undefined): boolean {
+  return batch?.additional.some((exit) => exit.key === 'zagreusContract') ?? false;
+}
+
 function executionShop(
   room: CanonicalAuthoredRoom,
   biome: CompleteValidBiomeProjectEvaluation,
