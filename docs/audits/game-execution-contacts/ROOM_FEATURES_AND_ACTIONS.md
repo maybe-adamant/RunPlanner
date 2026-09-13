@@ -19,7 +19,7 @@ a global action cursor.
 - Resources: `Scripts/HarvestLogic.lua:266-330`
 - Current native contacts: `src/mods/room/features/` for fixed room content and
   inventories, `src/mods/navigation/` for doors and their rewards, and focused
-  action-family adapters beneath `src/mods/room/timeline/` in the Plan Executor
+  action-family adapters beneath `src/mods/room/timeline/` in the Run Planner game module
 
 ## Overview contacts
 

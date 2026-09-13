@@ -43,7 +43,7 @@ construction, not the waiting restock.
 - Shops and Mystery Boons: `Scripts/StoreLogic.lua:326-430` and
   `Scripts/StoreLogic.lua:1134-1360`
 - Current adapters: focused `src/mods/room/timeline/` acquisition,
-  item-effect, interaction, and transformation modules in the Plan Executor
+  item-effect, interaction, and transformation modules in the Run Planner game module
 
 ## Native acquisition contacts
 

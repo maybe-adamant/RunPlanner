@@ -10,7 +10,7 @@ different scoped owners.
 policy. This map records its concrete application; the [family inventories](README.md)
 retain detailed source evidence and bounded uncertainties. The engine's
 `packages/planner-engine/src/execution-plan/model.ts` owns the published union.
-Executor owners below are relative to `src/mods/` in the Plan Executor
+Executor owners below are relative to `src/mods/` in the Run Planner game module
 repository, not modules in the planner. Native symbols refer to the inspected
 Hades II scripts; registration alone is not evidence of a native function.
 

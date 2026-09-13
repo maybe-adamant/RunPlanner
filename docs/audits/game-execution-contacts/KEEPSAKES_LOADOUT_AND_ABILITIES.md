@@ -22,7 +22,7 @@ selected loadout.
   `Scripts/EncounterLogic.lua` functions `HandleAthenaSpawn` and `AthenaUse`
 - Run start: `Scripts/RunLogic.lua:439-620`
 - Current start/equip adapter: the focused adapters beneath
-  `src/mods/loadout/` in the Plan Executor
+  `src/mods/loadout/` in the Run Planner game module
 
 ## Keepsake native lifecycle
 
