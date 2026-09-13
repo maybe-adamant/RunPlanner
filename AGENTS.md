@@ -305,10 +305,18 @@ scratch serialization output.
 
 - Generate their semantic content through the owning planner fixture/product
   builder. Do not hand-author wire fields that production cannot emit.
-- Preserve each existing fixture's checked-in serialization exactly. Do not run
-  a broad JSON or Prettier rewrite over execution fixtures. New fixtures use the
-  direct compact `encodeExecutionPlan` output plus one trailing newline; legacy
-  pretty-printed fixtures remain in their established form until retired.
+- Use the repository's Prettier JSON format for every checked-in execution
+  fixture, including its trailing newline. Generate through `encodeExecutionPlan`
+  and format that wire output with Prettier before writing it. Do not serialize
+  the expanded in-memory plan, use plain `JSON.stringify` indentation, or write
+  compact one-line fixtures. Published plans remain compact; this policy applies
+  only to checked-in fixtures.
+- For a generator using Prettier's API, resolve the repository configuration
+  for the destination and pass its filepath to `prettier.format`. A shell-based
+  refresh must finish with `npx prettier --write <changed-fixture-paths>` before
+  mirroring or handoff. This is part of generation, not a later cleanup pass.
+  `npm run format:check` enforces the same format. Do not manually wrap lines or
+  reformat unrelated fixtures during semantic changes.
 - Regenerate only fixtures whose semantic product changed. For a protocol-wide
   scalar such as the version number, use a bounded mechanical edit rather than
   rebuilding otherwise unchanged products.

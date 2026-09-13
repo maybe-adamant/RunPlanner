@@ -311,7 +311,7 @@ describe('structured workspace actions assembly', () => {
       kind: 'SetHermesShrinePurchase',
       occurrence: source,
       generationKey: 'initial:secondLeft',
-      purchase: { delay: 2, rushed: false },
+      purchase: { delay: 3, rushed: false },
     });
 
     const hostId = oOccurrenceIds.devotion;

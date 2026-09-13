@@ -799,7 +799,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
       kind: 'SetHermesShrinePurchase',
       occurrence: host,
       generationKey: 'travelDealRefill',
-      purchase: { delay: 2, rushed: false },
+      purchase: { delay: 3, rushed: false },
     });
     // Countdown chronology is owned by the dedicated Shrine-delivery tests.
     // This Travel Deal witness starts from the exact derived host and proves
