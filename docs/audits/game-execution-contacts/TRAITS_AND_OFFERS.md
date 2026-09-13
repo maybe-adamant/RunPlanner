@@ -20,6 +20,20 @@ catalog disposition rather than by copying every trait key into this audit.
 
 ## Acquired callback scheduling
 
+### Sea Star chance operand
+
+Each supported planned acquisition supplies its Sea Star proc/no-proc result.
+At that acquisition's `DoubleRewardChance` read, the executor inserts `1` or
+`-1` respectively. Native `InteractLogic.lua:UseConsumableItem` and
+`UpgradeChoiceLogic.lua:HandleUpgradeChoiceSelection` multiply that operand by
+the declared positive Luck multiplier and call native `RandomChance`.
+`RandomLogic.lua:RandomChance` uses `random() <= chance`, so a negative operand
+excludes even a zero draw. No separate RNG hook, duplicate-object creation or
+duplication proof is needed. The bounded adapter diagnoses a missing chance
+read only; native RNG consumption and duplication remain native.
+
+### Acquired effects
+
 `Scripts/Main.lua:thread` starts its coroutine immediately through `resume`,
 which calls `coroutine.resume`; the coroutine runner invokes the supplied
 function before yielding. `wait` and `waitUntil` yield that coroutine explicitly.

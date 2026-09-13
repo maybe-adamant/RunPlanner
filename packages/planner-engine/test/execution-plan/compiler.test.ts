@@ -8,6 +8,8 @@ import {
   createUnderworldFPoolCheckpoint,
   createUnderworldFWellCheckpoint,
   goldenFBiome,
+  goldenGBiome,
+  goldenGOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
 import {
   loadUnderworldFGHCheckpoint,
@@ -28,6 +30,7 @@ import { allTogetherOffer, allTogetherResult } from '../simulation/shop-trait-pu
 import {
   applyProjectCommand,
   clockedTraitGeneratedPickupEntryKey,
+  createAdditionalExitAddress,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   decodeProjectDocument,
@@ -1607,6 +1610,101 @@ describe('execution-plan compiler and codec', () => {
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
   });
 
+  it('copies Zagreus Contract presence from the destination Overview into batch and fixed Doors', () => {
+    const shopId = goldenGOccurrenceId(5, 1);
+    const contractId = createOccurrenceId('execution-contract-destination');
+    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'AddZagreusContract',
+      additional: createAdditionalExitAddress(goldenGBiome, shopId, 'zagreusContract'),
+      occurrenceId: contractId,
+    });
+    const { product, plan } = planFor(project);
+    const shop = plan.occurrences.find((occurrence) => occurrence.id === shopId);
+    expect(shop?.overview.additional).toContainEqual(
+      expect.objectContaining({
+        kind: 'zagreusContract',
+        room: expect.objectContaining({ id: contractId }),
+      }),
+    );
+    const source = plan.occurrences.find(
+      (occurrence) =>
+        occurrence.doors.kind === 'batch' &&
+        occurrence.doors.targets.some((target) => target.room.id === shopId),
+    );
+    if (source?.doors.kind !== 'batch')
+      throw new Error('fixture lacks the first G Shop door target');
+    const target = source.doors.targets.find((candidate) => candidate.room.id === shopId);
+    expect(target?.zagreusContractPresent).toBe(true);
+    expect(
+      plan.occurrences.flatMap((occurrence) =>
+        occurrence.doors.kind === 'batch'
+          ? occurrence.doors.targets.filter((target) => target.room.id !== shopId)
+          : [],
+      ),
+    ).toContainEqual(expect.objectContaining({ zagreusContractPresent: false }));
+    const emittedFixed = plan.occurrences.find((occurrence) => occurrence.doors.kind === 'fixed');
+    expect(emittedFixed?.doors).toMatchObject({
+      kind: 'fixed',
+      zagreusContractPresent: false,
+    });
+
+    const missing = JSON.parse(encodeExecutionPlan(plan)) as {
+      occurrences: Array<{ doors: { kind: string; targets?: Array<Record<string, unknown>> } }>;
+      [key: string]: unknown;
+    };
+    const missingTarget = missing.occurrences.find(
+      (occurrence) => occurrence.doors.kind === 'batch',
+    )?.doors.targets?.[0];
+    if (missingTarget === undefined) throw new Error('fixture lacks a batch target');
+    delete missingTarget.zagreusContractPresent;
+    refreshWireFingerprint(missing);
+    expect(() => decodeExecutionPlan(missing)).toThrow(/zagreusContractPresent is required/);
+
+    const nonBoolean = JSON.parse(encodeExecutionPlan(plan)) as typeof missing;
+    const nonBooleanTarget = nonBoolean.occurrences.find(
+      (occurrence) => occurrence.doors.kind === 'batch',
+    )?.doors.targets?.[0];
+    if (nonBooleanTarget === undefined) throw new Error('fixture lacks a batch target');
+    nonBooleanTarget.zagreusContractPresent = 'true';
+    refreshWireFingerprint(nonBoolean);
+    expect(() => decodeExecutionPlan(nonBoolean)).toThrow(
+      /zagreusContractPresent must be a boolean/,
+    );
+
+    const fixedProduct: ExecutionSemanticProduct = Object.freeze({
+      ...product,
+      occurrences: Object.freeze(
+        product.occurrences.map((occurrence) =>
+          occurrence.id !== source.id
+            ? occurrence
+            : Object.freeze({
+                ...occurrence,
+                doors: Object.freeze({
+                  kind: 'fixed' as const,
+                  owner: occurrence.doors.owner,
+                  target: target!.room,
+                  zagreusContractPresent: true,
+                }),
+              }),
+        ),
+      ),
+    });
+    const fixedPlan = compileExecutionPlan({ product: fixedProduct });
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(fixedPlan)))).toEqual(fixedPlan);
+
+    const malformed = JSON.parse(encodeExecutionPlan(fixedPlan)) as {
+      occurrences: Array<{ id: string; doors: Record<string, unknown> }>;
+      [key: string]: unknown;
+    };
+    const fixed = malformed.occurrences.find((occurrence) => occurrence.id === source.id);
+    if (fixed === undefined) throw new Error('fixture lost fixed contract destination');
+    fixed.doors.zagreusContractPresent = false;
+    refreshWireFingerprint(malformed);
+    expect(() => decodeExecutionPlan(malformed)).toThrow(
+      /zagreusContractPresent must match the destination Overview.additional/,
+    );
+  });
+
   it('keeps the published Surface N prefix decodable', () => {
     expect(() => decodeExecutionPlan(surfaceNFixture)).not.toThrow();
   });
@@ -1940,7 +2038,7 @@ describe('execution-plan compiler and codec', () => {
     expect(boss?.doors).toMatchObject({ kind: 'terminal' });
   });
 
-  it('accepts only closed protocol-36 Underworld and Surface route prefixes', () => {
+  it('accepts only closed protocol-37 Underworld and Surface route prefixes', () => {
     const fixture = JSON.parse(JSON.stringify(underworldFGHIFixture));
     fixture.extent = {
       kind: 'configuredPrefix',
@@ -2185,7 +2283,7 @@ describe('execution-plan compiler and codec', () => {
     expect(decodeExecutionPlan(wire)).toEqual(plan);
   });
 
-  it('keeps pending Gorgon diagnostics on the protocol-36 source-rarity wire shape', () => {
+  it('keeps pending Gorgon diagnostics on the protocol-37 source-rarity wire shape', () => {
     const wire = JSON.parse(JSON.stringify(fOpeningFixture)) as {
       occurrences: Array<{
         diagnostics?: {

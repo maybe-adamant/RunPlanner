@@ -56,6 +56,15 @@ is emitted with `interacted: true` and its exact engine-owned inventory. The
 native adapter must realize the object in both cases, pass through vanilla
 inventory generation only in the former, and constrain the latter.
 
+Door destinations carry explicit `zagreusContractPresent` for both batch and
+fixed navigation. This is the same canonical additional-exit presence published
+in the destination Overview, copied for an earlier consumer rather than
+independently inferred. Navigation applies the value after native room
+initialization and before its incoming preview; the native contract spawn
+later reads that same flag. The executor does not identify midshops or inspect
+future Overview features to reconstruct the door's advertisement. The
+additional exit and its binding remain destination-room-owned.
+
 ## Execution ownership
 
 ### Prefer the published answer
@@ -157,7 +166,7 @@ The conformance surface is bounded to:
 | Room entered                  | occurrence/room identity, published Overview content, and any obligation due at `roomEntered`                                                                      |
 | Semantic Timeline transaction | the exact published transaction bound to the native action when it is an explicit obligation; acquisition handles instead express steering and local DAG readiness |
 | Exits ready                   | complete exit count, physical types, target room identities, reward identities, and obligations due at outgoing generation                                         |
-| Room exit                     | obligations due at `exitUsable` and `roomExit`, and only the planner-published named conformance facts that changed in this occurrence                              |
+| Room exit                     | obligations due at `exitUsable` and `roomExit`, and only the planner-published named conformance facts that changed in this occurrence                             |
 
 The published `exitUsable` deadline is checked at actual room closure, before
 the timeline is discarded. It does not require a separate door-use callback:

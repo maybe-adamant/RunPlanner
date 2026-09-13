@@ -466,6 +466,13 @@ already occurred this run, and the `0.4` chance succeeds.
 `C_Boss01`. The Midshop's ordinary exit flow remains available.
 `ObstacleData.ZagContract` hides the target reward preview.
 
+The host's `ZagreusContractSuccess` also drives the contract sub-icon on the
+door leading into that host (`RewardPresentation.lua:PopulateDoorRewardPreviewSubIcons`).
+Its native timing is therefore destination construction, before entry—not
+only `SpawnZagContract`. Executor publication carries host contract presence
+on the incoming door and applies it after native `CreateRoom` initialization,
+before the preview, so the preview and later spawn read the same value.
+
 The contract's special behavior ends at the door. It is outside the ordinary
 normal-door batch, so normal-door force pressure and Preboss takeover do not
 replace or own it. That distinction has no practical Preboss collision at the

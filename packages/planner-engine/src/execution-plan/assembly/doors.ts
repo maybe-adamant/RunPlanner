@@ -2,7 +2,7 @@ import { semanticAddressKey } from '../../authored-project/addresses';
 import type { CanonicalAuthoredRoom, CanonicalBatch } from '../../simulation/materialization';
 import type { ExecutionDoorTarget, ExecutionDoors, ExecutionReward } from '../model';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
-import { executionRewardFromOffer } from './overview';
+import { executionRewardFromOffer, zagreusContractPresent } from './overview';
 
 interface ExecutionDoorsInput {
   readonly room: CanonicalAuthoredRoom;
@@ -47,6 +47,9 @@ export function assembleExecutionDoors({
             biomeKey: target.room.origin.biomeKey,
             gameName: target.room.gameName,
           }),
+          zagreusContractPresent: zagreusContractPresent(
+            batches.get(semanticAddressKey(target.room.origin)),
+          ),
           ...(reward === undefined ? {} : { reward }),
           ...(cageRewards === undefined ? {} : { cageRewards }),
         });
@@ -63,6 +66,7 @@ export function assembleExecutionDoors({
         owner: semanticAddressKey(batch.origin),
         kind: 'fixed',
         target: Object.freeze({ ...target }),
+        zagreusContractPresent: targets[0]!.zagreusContractPresent,
       });
     }
     return Object.freeze({
@@ -85,6 +89,7 @@ export function assembleExecutionDoors({
         biomeKey: fixed.origin.biomeKey,
         gameName: fixed.gameName,
       }),
+      zagreusContractPresent: zagreusContractPresent(batches.get(semanticAddressKey(fixed.origin))),
     });
   return Object.freeze({ owner, kind: 'terminal' });
 }

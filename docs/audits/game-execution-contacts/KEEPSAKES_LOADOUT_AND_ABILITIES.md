@@ -281,8 +281,10 @@ and [Enemy formation and Fear Vows](../rooms-and-routes/ENEMY_FORMATION_AND_FEAR
 
 The eight spell traits are Total Eclipse, Dark Side, Lunar Ray, Wolf Howl,
 Night Bloom, Phase Shift, Twilight Curse, and Moon Water. The planner owns the
-selected layout, Rare/Epic node identities, God Sent node, banked points,
-invested points, and closed-tree state.
+selected layout, Rare/Epic node identities, modeled God Sent availability,
+banked points, invested points, and closed-tree state. Eligible God Sent adds
+two nodes to the planner's accounting for Path availability; this simulation
+fact does not authorize executor steering of those nodes.
 
 Spell/Hex selection and Path acquisition are covered by focused contacts;
 Moon Beam remains native-authoritative. The fixed-route product reaches those
@@ -290,8 +292,14 @@ pickups, while complete live native probes remain pending. The product does not
 model individual Hex combat effects or player-selected node positions. The two
 bounded contacts are:
 
-1. force the selected Spell at the Spell offer;
-2. force/observe the published node investment when Path points are spent.
+1. realize Spell offers and the selected Hex's layout and Rare/Epic identities;
+2. retain native Path spending and node selection, with published state checked
+   through the existing conformance boundary.
+
+God Sent eligibility, talent selection, initial insertion and later updates
+remain entirely native. The Hex adapter neither suppresses
+`ServeDuoGameRequirements` nor selects a published God Sent talent. It does not
+diagnose an unconsumed God Sent selector because it owns no such selector.
 
 Individual Hex combat effects remain outside the run-planning simulation.
 

@@ -51,13 +51,13 @@ metadata rather than rebuilding the NPC's effects.
 
 Nemesis uses a distinct event family rather than a trait provider menu.
 
-| Planner outcome                     | Game contact                                                              | Status                                                    |
-| ----------------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------- |
-| Choose event family                 | `SpawnNemesisForRandomEvents` and `CheckAvailableTextLines`               | Covered.                                                  |
-| Free item                           | `NPCRewardDropPreProcess`, `NPCRewardDropPreProcessArgs`, `NPCRewardDrop` | Covered for the exact authored consumable identity.       |
-| Gold/damage trade accept or decline | `NemesisTradeChoice`                                                      | Covered; price and damage amounts are simulation-neutral. |
+| Planner outcome                     | Game contact                                                                              | Status                                                                                |
+| ----------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Choose event family                 | `SpawnNemesisForRandomEvents` and `CheckAvailableTextLines`                               | Covered.                                                                              |
+| Free item                           | `NPCRewardDropPreProcess`, `NPCRewardDropPreProcessArgs`, `NPCRewardDrop`                 | Covered for the exact authored consumable identity.                                   |
+| Gold/damage trade accept or decline | `NemesisTradeChoice`                                                                      | Covered; price and damage amounts are simulation-neutral.                             |
 | Trait trade                         | `NemesisTradeChoice` → native `GenerateSellTraitShop` / `SellOptions` → `TradeDoExchange` | Exact offer target; screen-bound exchange terminal, native response/removal retained. |
-| Damage contest                      | `StartNemesisDamageContest` → `NemesisDamageContestTimer`                  | Source-bound start/completion; native contest retained.   |
+| Damage contest                      | `StartNemesisDamageContest` → `NemesisDamageContestTimer`                                 | Source-bound start/completion; native contest retained.                               |
 
 Door theft and shop theft retain their documented planner simplifications and
 are not Timeline obligations. See the Nemesis disposition in the room/route
