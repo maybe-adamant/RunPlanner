@@ -331,22 +331,72 @@ is” disposition is valid; this gate has no quota of production edits.
 
 ## Gate D — Condition overrides under the clarified invariant
 
+### Locked first delivery group
+
+User-approved contract, based on executor `bfb87df` and planner `252327d4`.
+Implement the following three independently reviewed slices, then pause to
+discuss the remaining groups. No deployment or push is authorized.
+
+**D1 — Sea Star chance operand.** Each supported planned acquisition owns its
+proc/no-proc result. At its bound `DoubleRewardChance` read, insert `1` for proc
+or `-1` for no proc. Native multiplies by its positive, at-least-one declared
+Luck multiplier and performs `RandomChance` and duplication itself. `nil`
+cannot be multiplied; zero is not a guaranteed false result under native `<=`.
+Remove the separate `RandomChance` interception and its next-roll arming state.
+Retain bounded acquisition context and a diagnostic for a missing chance read,
+not proof of duplication. Outside active planner ownership, invoke native.
+Primary tests: existing Sea Star and representative carrier/composition tests,
+including native RNG consumption, both outcomes with luck, and scope cleanup.
+No new execution field or native duplicate creation.
+
+**D2 — Native God Sent.** The executor owns Hex layout and Rare/Epic identities,
+not God Sent availability or identity. Remove the forced-false
+`ServeDuoGameRequirements` override, God Sent selection and corresponding
+missing-result diagnostic. Retain native God Sent creation and later updates,
+ordinary tree generation and the D/C-corrected construction lifetime. Planner
+simulation still counts the two eligible God Sent nodes for Path availability;
+do not change simulation, UI, conformance or remove wire facts in this slice.
+Tests exercise native God Sent present/absent behavior while layout and
+Rare/Epic steering still work, including starting Selene and later Hex callers.
+
+**D3 — Destination contract presence.** Add explicit
+`zagreusContractPresent` to the destination door product for batch and fixed
+navigation. Derive it from the same canonical additional-exit fact used for
+the destination Overview; no midshop inference, legality replay or executor
+look-ahead into destination features. Publish false as well as true. Set the
+native destination room flag before its preview is constructed, preserving it
+for later native `SpawnZagContract`; remove the spawn-time assignment while
+retaining additional-exit binding. Trace `CreateRoom` initialization so native
+generation cannot overwrite a published false. Fixed host returns must carry
+the same destination fact, without moving ownership of the additional exit.
+
+This is a bounded protocol amendment: engine model/assembly/strict codecs,
+Lua decoder and navigation adapter, owning tests and generated fixtures.
+One protocol bump; no authored schema bump or save migration. The assembler
+copies the canonical fact; it does not derive eligibility. Check agreement
+where both door and destination records are published. Preserve established
+fixture serialization, regenerate only semantic changes, update unchanged
+version scalars mechanically and mirror executor fixtures byte-for-byte.
+Primary witnesses: contract present and absent before preview and at native
+spawn, fixed destination path, strict protocol decode and one real published
+contract route. No generic destination-Overview carrier or new checkpoint.
+
+Each slice removes its superseded path in the same commit. Main owns plan,
+docs, Git and closure; one executor writes, independent reviewer checks the
+stable slice. D1/D2 use focused Lua tests; D3 also uses engine execution-product
+tests and broad repository checks at delivery closure because the protocol
+crosses packages. Live timing remains pending user testing.
+
+### Remaining groups — discuss after D1–D3
+
 Adjudicate the seven groups in INTERVENTION_MODES, rather than blanket-removing
 functions named Eligible. For each record: native condition, published answer,
 whether it is a construction input or gameplay precondition, simplest supported
 contact, retained native application, and a concrete witness.
 
-- Sea Star: determine whether its actual chance read can remain native while
-  forcing the roll. Do not force the gate open merely to guarantee a callback.
-- God Sent absence: assess complete-tree insertion versus the current
-  requirements suppression without reproducing talent generation. The current
-  export is only layout/special identities, not a complete native tree; retain
-  that matrix recommendation unless a smaller truthful native input is found.
 - Structural Chaos/Well/Pool/Shrine presence: preserve the explicit published
   room-content contract. Gate substitution can be retained as a documented
   construction technique if its effects are confined to that realization.
-- ZagreusContractSuccess: trace every affected use before treating the flag
-  as a harmless spawn input.
 - Reward eligibility filters: preserve exact published reward selection and
   native bookkeeping; no new bag/store policy in the executor.
 - NPC preflight: consume Gate B's settled disposition, do not revisit or
@@ -382,8 +432,8 @@ undifferentiated instruction to remove eligibility overrides.
   and `luacheck src/` from the executor root. Check modpack smoke at integration
   closure if registration/composition changed. Do not run the planner-wide
   correctness suite for isolated Lua or documentation edits.
-- No fixture regeneration or schema/protocol bump is expected. If a semantic
-  wire gap requires an approved amendment, follow planner-owned generation,
+- D3 is the approved protocol amendment. Other slices do not change the wire;
+  further gaps require an explicit amendment. Follow planner-owned generation,
   byte-for-byte mirroring, and bounded fixture churn rules.
 - Existing user edits and the separate Postboss recovery plan are not silently
   absorbed or declared closed by this plan.
