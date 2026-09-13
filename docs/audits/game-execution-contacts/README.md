@@ -53,6 +53,20 @@ wire authority. Compile-time execution censuses own closed-union coverage;
 these documents explain native meaning and must not duplicate those tests as a
 manually maintained manifest.
 
+Each family's contact notes state the published answer, native insertion or
+selection point, retained native work, and any lifetime spanning multiple
+callbacks. Those are the maintained hook decisions; a registration census is
+a temporary completeness aid, not another authority. When runtime evidence
+changes a decision, update that family here rather than preserving an old
+baseline matrix alongside it.
+
+Source inspection and adapter/coroutine tests are not full-route live proof.
+The bounded live gaps remain with their families: Fields physical placement,
+Spell/Path presentation, nested trait consequences and later-biome contacts.
+No generic scheduling workaround follows from the mere possibility of a host
+interleaving. A differing-source reward/keepsake-provenance probe is recorded
+with navigation reward selection.
+
 ## Cross-family invariants
 
 1. Exact native source identity selects a transaction. Provider similarity,

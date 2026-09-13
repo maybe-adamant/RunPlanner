@@ -126,8 +126,21 @@ The keepsake boundary is closed without a general effect interpreter:
   conformance.
 - Gift Gift Gift publishes only a reached volatile Hammer or Embryo replay.
   Its transaction remains pending across `EquipKeepsake` and completes at the
-  result-producing native terminal, because native trait acquisition may be
-  dispatched after the equip call returns.
+  result-producing native terminal. Native acquired callbacks begin immediately
+  on `thread` dispatch; presentation after an actual yield must not extend an
+  unrelated RNG scope.
+
+Immediate Hammer, Jeweled Pom and Embryo outcomes retain the equip owner's
+published result only for their named callback. The native callback lacks a
+complete target input: candidate selection stays scoped to that callback,
+while native code owns expiry tags, dictionaries, addition and removal.
+Embryo also inserts the published magnitude through processed-trait data.
+Automatic Embryo resolves its due owner directly; it needs no executor clock.
+
+Phial is different: native `UseHealthFountain` reaches a later rarity callback.
+The room/source-bound target survives until that contact supplies native
+`ForceUpgrade`; fountain healing, consumption and rarity application remain
+native. A fountain-use-return-only scope would lose this target.
 
 Moon Beam is not a separate keepsake actuator: the fixed-route product reaches
 Talent rewards through the existing generic navigation and Path contacts.
@@ -302,6 +315,12 @@ remain entirely native. The Hex adapter neither suppresses
 diagnose an unconsumed God Sent selector because it owns no such selector.
 
 Individual Hex combat effects remain outside the run-planning simulation.
+
+The published layout and special-node identities are not a complete native
+tree: ordinary nodes, connections and native talent application are not an
+exported object graph. Bounded native construction selectors therefore remain
+the smaller adapter; assembling a tree from scratch would recreate missing
+game machinery.
 
 `SpellScreenLogic.lua:AcceptAndCloseSpellScreen` yields during presentation
 before `CreateTalentTree`, then waits again after construction. The owner

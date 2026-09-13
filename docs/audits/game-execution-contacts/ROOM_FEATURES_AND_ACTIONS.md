@@ -44,6 +44,35 @@ Presence and interaction are different. An uninteracted Well or Pool is a
 valid Overview fact with no purchase/sale transaction. A Shop or Shrine still
 requires full inventory authoring even when no offer is purchased.
 
+### Published presence as a native construction input
+
+The presence adapters deliberately replace the native eligibility result for
+an owned occurrence. They do not recalculate spawn rules or create objects:
+
+| Published content     | Native decision                                                 | Native work retained                                                                                              |
+| --------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Chaos additional exit | `IsSecretDoorEligible` inside `HandleSecretSpawns`              | Point availability, gate creation, health cost and `ForceSecretDoor` trait consumption.                           |
+| Stygian Well          | `IsWellShopEligible`                                            | Inventory generation, point selection, obstacle setup and `LastWellShopDepth`.                                    |
+| Purging Pool          | `IsSellTraitShopEligible`                                       | Point selection, obstacle setup and native sale-value construction.                                               |
+| Hermes Shrine         | `IsSurfaceShopEligible`                                         | Inventory generation, obstacle setup, price, rush and delivery behavior.                                          |
+| Zagreus Contract      | Destination `zagreusContractPresent` applied after `CreateRoom` | Incoming preview and later `SpawnZagContract` read the same host flag; native creates the additional destination. |
+
+`RoomLogic.lua:HandleSecretSpawns` checks native point availability outside
+these predicates and owns their resulting mutations. `StoreLogic.lua:RunShopGeneration`
+also calls the Well/Shrine predicates before spawning. Their occurrence-bound
+answers must therefore cover both contacts, not just a spawn-time scope.
+Chaos's Boolean is confined to secret generation; native calls outside that
+scope pass through. Unowned occurrences and passive sessions retain native
+decisions. This is explicit room-content insertion, not a claim that only the
+random roll was overridden.
+
+Resource construction and gathering are separate contacts. Native room leave
+auto-harvest runs after the room session closes, so resource-owned disposition
+must survive until `GrantElementFromTool`. The adapter inserts spawn policy at
+`SetupHarvestPoints` and steers the exact later element roll; it does not keep
+the departed session alive or increment counters itself. The following room's
+exit checkpoint can observe the late harvest through named element conformance.
+
 ### Fields placement evidence
 
 The Fields adapter reads the coordinator's current room session through its
@@ -103,11 +132,30 @@ eligibility pass before trait forcing.
 Normal door rooms and rewards are realized during native outgoing generation
 through `ChooseNextRoomData`, `IsRoomRewardEligible`, `ChooseRoomReward`, and
 `DoUnlockRoomExits`. Chaos and Zagreus Contract are additional exits and retain
-their dedicated native spawning contacts. `UseExitDoor` opens the
-`exitUsable` Timeline checkpoint, but the executor does not interpret the
-selected destination or compare native transition strings there.
+their dedicated native spawning contacts. Actual `LeaveRoom` closure checks
+the published `exitUsable` and departure obligations. The supplied native
+scripts contain no `UseExitDoor` contact; the executor does not interpret the
+selected destination or compare transition strings at closure.
 
-For those additional exits, Overview is the authoritative declaration that the
+### Reward-selection filter
+
+Navigation and Fields optional rewards bind their published reward to a
+bounded `ChooseRoomReward` invocation. Their `IsRoomRewardEligible` override
+accepts the published reward type, rather than rerunning legality that the
+planner already settled. `RewardLogic.lua:ChooseRoomReward` still performs
+native store refill/selection, priority removal, store withdrawal and assignment
+of `room.Reward`, `ForceLootName` and `RewardOverrides`. Returning just the
+reward name would skip this work; recreating it in the executor is not a
+simplification. The temporary filter ends on native return or fault.
+
+Source identity is installed through the existing reward fields and
+`SetupRoomReward` contact. A complete live witness for a differing native
+source with keepsake provenance or Devotion setup remains useful: source
+patching alone does not prove all native source-specific preparation agrees.
+
+### Additional exits and checkpoints
+
+For additional exits, Overview is the authoritative declaration that the
 feature must spawn, but Navigation owns the resulting Door. Immediately before
 room exit it proves the complete additional-door set and each Door's occurrence,
 kind, and destination alongside the normal Door product. The route cursor then
