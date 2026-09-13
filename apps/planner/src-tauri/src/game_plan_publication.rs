@@ -11,10 +11,10 @@ const PROFILE_DIRECTORY: &str = "profiles";
 const RETURN_OF_MODDING_DIRECTORY: &str = "ReturnOfModding";
 const PLUGINS_DIRECTORY: &str = "plugins";
 const CONFIG_DIRECTORY: &str = "config";
-const EXECUTOR_DIRECTORY: &str = "adamantRunPlanner-Plan_Executor";
+const EXECUTOR_DIRECTORY: &str = "adamantRunPlanner-Run_Planner";
 const EXECUTOR_NAMESPACE: &str = "adamantRunPlanner";
-const EXECUTOR_NAME: &str = "Plan_Executor";
-const EXECUTOR_VERSION: &str = "0.0.1";
+const EXECUTOR_NAME: &str = "Run_Planner";
+const EXECUTOR_VERSION: &str = "0.3.0";
 const MAX_PLAN_BYTES: usize = 1_048_576;
 const MAX_MANIFEST_BYTES: u64 = 16_384;
 

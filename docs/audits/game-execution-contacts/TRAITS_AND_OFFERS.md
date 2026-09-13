@@ -16,7 +16,7 @@ catalog disposition rather than by copying every trait key into this audit.
   `Scripts/TraitLogic.lua:2703-2790`
 - Cherished Heirloom: `Scripts/PowersLogic.lua:4808-4810`
 - Focused offer adapters beneath `src/mods/room/timeline/acquisitions/` in the
-  Plan Executor
+  Run Planner game module
 
 ## Acquired callback scheduling
 

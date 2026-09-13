@@ -373,7 +373,7 @@ declaration-owned `RequiredCardNames` eligibility fact. The numeric Eternity
 chance remains source evidence, not planner state. Judgment and Figurine accept
 The Fates when a named companion is already active or is in the same selected
 set; their execution projection orders a same-set companion first because the
-native operation resolves cards sequentially. The Plan Executor constrains only
+native operation resolves cards sequentially. The Run Planner game module constrains only
 the corresponding native random selector inside Circe's acquire-function scope,
 including Eternity's native positive `RandomChance` branch when it is the exact
 published target. Native code owns the Arcana/Fear mutation and existing

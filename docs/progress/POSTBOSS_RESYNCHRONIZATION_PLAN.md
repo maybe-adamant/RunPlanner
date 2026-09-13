@@ -8,10 +8,10 @@ Gate D live proof and closure remain**.
 Planning bases:
 
 - Run Planner: `ea2915d7`
-- Plan Executor: `5cf1cb8`
+- Run Planner game module: `5cf1cb8`
 - Modpack parent: `f923f8e`
 
-This plan consumes the Plan Executor host's selected active-plan capability.
+This plan consumes the Run Planner game module host's selected active-plan capability.
 Published-slot identity remains host configuration and does not enter the
 execution protocol or recovered route session.
 
@@ -186,7 +186,7 @@ and carries the required room-entry diagnostic frame.
 The compiler otherwise remains a lossless translator. It does not construct a
 resume snapshot, suffix plan, or alternate route.
 
-### Plan Executor host and runtime
+### Run Planner game module host and runtime
 
 The host provides one active decoded-plan source. The runtime owns one
 `attemptPostbossAdmission` coordinator that:

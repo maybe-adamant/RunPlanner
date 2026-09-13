@@ -22,7 +22,7 @@ when an exact planned fact cannot be realized through an existing contact.
 The planner engine owns candidate pools, eligibility, force pressure, caps,
 history, room replacement, selected topology, and the exact resulting Room
 Occurrences. The execution compiler translates that product without rerunning
-those policies. The Plan Executor steers the native game at bounded contacts
+those policies. The Run Planner game module steers the native game at bounded contacts
 and otherwise lets the game perform its own lifecycle.
 
 Navigation owns:

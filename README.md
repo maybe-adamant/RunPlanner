@@ -4,7 +4,8 @@ Run Planner is a standalone Hades II route-authoring and simulation
 application for Run Director. It owns the supported catalog, authored route,
 deterministic game-language history, possibility and eligibility evaluation,
 validation, findings, editor projections, profiles, recovery, and undo/redo.
-The external game module consumes a validated execution plan and audits live
+The [Run Planner game module](https://github.com/h2pack-runplanner/adamantRunPlanner-Run_Planner)
+consumes a validated execution plan and audits live
 runtime behavior; it is not a second planner or simulator.
 
 ## Architecture

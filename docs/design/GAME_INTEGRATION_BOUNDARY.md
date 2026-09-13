@@ -17,7 +17,7 @@ entry-conformance state match. No other mid-run attachment, edited-plan repair,
 or recovery after a mismatch is supported.
 
 The transport names the slots `slot-1.runplanner.json` through
-`slot-6.runplanner.json` under the Plan Executor configuration directory. The
+`slot-6.runplanner.json` under the Run Planner game module configuration directory. The
 planner never writes an active-pointer file, activates a slot implicitly, or
 chooses a profile when more than one compatible profile is present. There is no
 compatibility alias, active-pointer reader, or implicit migration. An empty or
@@ -331,9 +331,9 @@ explicit replacement that clears prior state.
 Publication is profile-scoped transport, not authored or execution semantics.
 The desktop adapter resolves a compatible profile again at write time, maps a
 caller-supplied slot number in the closed range 1 through 6 to its fixed
-filename, confines the destination below that profile's Plan Executor
+filename, confines the destination below that profile's Run Planner game module
 configuration tree, rejects links and non-regular files, enforces the existing
-1 MiB bound, and atomically replaces only the selected slot. The Plan Executor
+1 MiB bound, and atomically replaces only the selected slot. The Run Planner game module
 persists `ActivePlanSlot` (defaulting to Slot 1), displays the selected slot's
 bounded status, and loads and freezes that one slot only at the next new-run
 or eligible Postboss admission. Changing the setting cannot hot-swap a live
@@ -348,7 +348,7 @@ and room coordinators at that occurrence. A mismatch makes execution passive;
 the executor does not search another slot, retry at later rooms, replay loadout
 effects, or reconstruct earlier Timeline progress.
 
-The Plan Executor verifies protocol and catalog identity before opening a
+The Run Planner game module verifies protocol and catalog identity before opening a
 session. Runtime identifier existence and checkpoint contact are conformance
 checks, not permission to reproduce planner eligibility policy. Exact source
 binding and published prerequisite readiness are execution coordination, not

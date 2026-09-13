@@ -13,7 +13,7 @@
   `packages/hades2-catalog/src/declarations/encounters/`
 - Current native contacts: `src/mods/room/timeline/encounters/hooks.lua`,
   and focused acquisition adapters beneath
-  `src/mods/room/timeline/acquisitions/` in the Plan Executor
+  `src/mods/room/timeline/acquisitions/` in the Run Planner game module
 
 ## Trait-menu carriers
 

@@ -3,7 +3,7 @@
 ## Status and scope
 
 Audited on 2026-09-08 against the current planner, execution-plan compiler,
-and Plan Executor implementation.
+and Run Planner game module implementation.
 
 This audit owns the cross-cutting lifecycle facts for effects which become
 observable without a direct player action at the moment they mature. It checks
