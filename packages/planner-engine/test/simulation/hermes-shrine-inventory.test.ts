@@ -12,7 +12,6 @@ import {
   createOccurrenceId,
   createRoomActionAddress,
   createRouteStartKeepsakeSelectionAddress,
-  createSteadyGrowthOutcomeAddress,
   hermesShrineDeliveryEntryKey,
   parseHermesShrineDeliveryEntryKey,
   roomActionKey,
@@ -617,19 +616,16 @@ describe('Hermes Shrine delayed-delivery derivation', () => {
 
   it('preserves a reached automatic outcome while an unresolved Shrine is added and removed', () => {
     const project = loadSurfacePSteadyGrowthShrineFrontierCheckpoint();
-    const plan = project.route.biomes.find((biome) => biome.biomeKey === 'P');
-    const occurrence = plan?.topology?.occurrences.find(
-      (room) => room.occurrenceId === 'c34604d0-c4e3-4c26-8539-54a82158716f',
+    const finding = simulateProjectAssembly(catalog, project).evaluation.findings.find(
+      (candidate) =>
+        candidate.code === 'steadyGrowthOutcomeMissing' &&
+        candidate.origin.kind === 'steadyGrowthOutcome' &&
+        candidate.origin.biomeKey === 'P',
     );
-    if (occurrence === undefined) throw new Error('checkpoint lost the reached P occurrence');
-    const host = createOccurrenceAddress(pBiome, occurrence.occurrenceId);
-    const outcomeKey = semanticAddressKey({
-      kind: 'steadyGrowthOutcome',
-      routeKey: 'Surface',
-      biomeKey: 'P',
-      owner: host,
-      phaseKey: 'Combat',
-    });
+    if (finding?.origin.kind !== 'steadyGrowthOutcome')
+      throw new Error('checkpoint lost the reached P outcome');
+    const host = finding.origin.owner;
+    const outcomeKey = semanticAddressKey(finding.origin);
     const assertReachedOutcome = (candidate: typeof project) => {
       const biome = simulateProjectAssembly(catalog, candidate).evaluation.route.biomes.find(
         (item) => item.biomeKey === 'P',
@@ -667,9 +663,17 @@ describe('Hermes Shrine delayed-delivery derivation', () => {
     let project = loadSurfacePSteadyGrowthShrineFrontierCheckpoint();
     const occurrenceId = createOccurrenceId('c34604d0-c4e3-4c26-8539-54a82158716f');
     const host = createOccurrenceAddress(pBiome, occurrenceId);
+    const finding = simulateProjectAssembly(catalog, project).evaluation.findings.find(
+      (candidate) =>
+        candidate.code === 'steadyGrowthOutcomeMissing' &&
+        candidate.origin.kind === 'steadyGrowthOutcome' &&
+        candidate.origin.biomeKey === 'P',
+    );
+    if (finding?.origin.kind !== 'steadyGrowthOutcome')
+      throw new Error('checkpoint lost the reached P outcome');
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceSteadyGrowthTarget',
-      outcome: createSteadyGrowthOutcomeAddress(host, 'Combat'),
+      outcome: finding.origin,
       targetTraitKey: 'HeraCastBoon',
     });
     const deliveryFinding = simulateProjectAssembly(catalog, project).evaluation.findings.find(

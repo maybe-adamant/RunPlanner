@@ -146,10 +146,15 @@ the next ShipCombat phase. Latest Model may target one exact eligible equipped
 Rank-I Hammer and upgrade it to Rank II through the shared targeted-acquisition
 lifecycle.
 
-Encounter end has the same meaning here as in an ordinary combat room: combat
-has ended and the Icarus/wheel objects are available. The later
-`WaitForNextEncounterReady` barrier belongs to starting the next Ship phase,
-not to a different O-specific encounter-end meaning. No room feature or
+The visible End Encounter boundary marks combat completion and makes the
+Icarus/wheel interactions available. Unlike ordinary combat, the native
+`WaitForNextEncounterReady` barrier clears those required interactions before
+`StartEncounter` calls `EndEncounterEffects`. The planner therefore applies
+end effects after the required phase actions: the current wheel reward sees
+the old Embryo blessing, while Steady Growth can target the newly acquired
+boon. Automatic outcomes remain last inside End Encounter, before pickups
+created by that checkpoint and before the next phase or Cleanup.
+No room feature or
 physical exit is usable between phases; O has one room-level Cleanup after its
 final active phase. The source evidence and relationship to wheel selection
 and room-local ordering are owned by

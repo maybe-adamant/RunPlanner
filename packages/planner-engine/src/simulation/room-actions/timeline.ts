@@ -88,27 +88,53 @@ function appendAutomaticTimelineEffects(
     byPhase.set(key, current);
   }
   const order = (effect: AutomaticEffect) => (effect.effect === 'steadyGrowth' ? 0 : 1);
+  const shipPostCombatActionIndexByPhase = new Map<string, number>();
+  let latestEncounterEndPhaseKey: string | undefined;
+  timeline.entries.forEach((entry, index) => {
+    if (entry.kind === 'boundary' && entry.boundary.kind === 'encounterEnd') {
+      latestEncounterEndPhaseKey = entry.boundary.phaseKey;
+      return;
+    }
+    if (
+      entry.kind === 'action' &&
+      entry.action.participation === 'required' &&
+      entry.action.window.kind === 'shipPostCombat'
+    ) {
+      if (latestEncounterEndPhaseKey !== undefined)
+        shipPostCombatActionIndexByPhase.set(latestEncounterEndPhaseKey, index);
+    }
+  });
   const entries: RoomLifecycleTimelineEntry[] = [];
-  for (const entry of timeline.entries) {
+  for (const [index, entry] of timeline.entries.entries()) {
     const boundary = entry.kind === 'boundary' ? entry.boundary : undefined;
     if (boundary?.kind === 'encounterEnd') {
       entries.push(entry);
-      for (const effect of (byPhase.get(boundary.phaseKey) ?? []).sort(
-        (left, right) => order(left) - order(right),
-      ))
-        entries.push(effect);
+      if (!shipPostCombatActionIndexByPhase.has(boundary.phaseKey)) {
+        for (const effect of (byPhase.get(boundary.phaseKey) ?? []).sort(
+          (left, right) => order(left) - order(right),
+        ))
+          entries.push(effect);
+      }
       continue;
     }
     if (entry.kind === 'automaticEffect') continue;
     entries.push(entry);
+    const phaseKey = [...shipPostCombatActionIndexByPhase.entries()].find(
+      ([, actionIndex]) => actionIndex === index,
+    )?.[0];
+    if (phaseKey !== undefined)
+      for (const effect of (byPhase.get(phaseKey) ?? []).sort(
+        (left, right) => order(left) - order(right),
+      ))
+        entries.push(effect);
   }
   return Object.freeze({ ...timeline, entries: Object.freeze(entries) });
 }
 
 /**
  * Add reached Steady Growth checkpoints to the engine-owned room timeline.
- * The effect is fixed immediately after its phase's encounter end; consumers
- * only adapt the resulting entry into their presentation contract.
+ * The effect is fixed at its phase's end-effects checkpoint, after required
+ * ship post-combat work where present. Consumers render that engine order.
  */
 export function appendSteadyGrowthTimelineEffects(
   timeline: RoomLifecycleTimeline,
@@ -142,8 +168,8 @@ export function appendSteadyGrowthTimelineEffects(
 }
 
 /**
- * Add reached Transcendent Embryo checkpoints immediately after their owning
- * encounter end. The checkpoint is automatic and remains outside the room
+ * Add reached Transcendent Embryo checkpoints at their owning phase's end
+ * effects. The checkpoint is automatic and remains outside the room
  * action order, just like Steady Growth.
  */
 export function appendTranscendentEmbryoTimelineEffects(

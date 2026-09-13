@@ -805,6 +805,156 @@ describe('room lifecycle timeline', () => {
     ).toMatchObject({ rank: 2, placement: 'after' });
   });
 
+  it('places Ship automatic effects after each wheel interval and before the next boundary', () => {
+    const choose1 = { kind: 'chooseRewardWheel' as const, wheelKey: 'wheel1' };
+    const reward1 = { kind: 'interactWheelReward' as const, wheelKey: 'wheel1' };
+    const choose2 = { kind: 'chooseRewardWheel' as const, wheelKey: 'wheel2' };
+    const reward2 = { kind: 'interactWheelReward' as const, wheelKey: 'wheel2' };
+    const wheelPhase = (phaseKey: 'Combat1' | 'Combat2', wheelKey: 'wheel1' | 'wheel2') =>
+      Object.freeze({
+        ...encounter(phaseKey),
+        rewardAttachment: Object.freeze({
+          kind: 'rewardWheel' as const,
+          key: wheelKey,
+          reward: Object.freeze({
+            kind: 'countedChoice' as const,
+            storeKeys: Object.freeze(['store']),
+            eligibleRewardTypes: Object.freeze([]),
+            ineligibleRewardTypes: Object.freeze([]),
+            allowedRewardTypes: Object.freeze([]),
+            producerLifecycleKey: 'test',
+          }),
+          defaultStoreKey: 'store',
+          offerKeys: Object.freeze(['offer1']),
+          offerCount: Object.freeze({ min: 1, max: 1, defaultValue: 1 }),
+          picked: 'exactlyOne' as const,
+        }),
+      });
+    const timeline = assembleRoomLifecycleTimeline({
+      owner,
+      lifecycleProfileKey: 'ShipCombatRoom',
+      encounterPhases: Object.freeze([
+        encounter('Intro'),
+        wheelPhase('Combat1', 'wheel1'),
+        wheelPhase('Combat2', 'wheel2'),
+      ]),
+      roomActionRoster: roster({
+        rows: Object.freeze([
+          rankedRow(choose1, { kind: 'shipPreCombat', wheelKey: 'wheel1' }, 1),
+          rankedRow(reward1, { kind: 'shipPostCombat', wheelKey: 'wheel1' }, 2),
+          rankedRow(choose2, { kind: 'shipPreCombat', wheelKey: 'wheel2' }, 3),
+          rankedRow(reward2, { kind: 'shipPostCombat', wheelKey: 'wheel2' }, 4),
+        ]),
+        checkpoints: Object.freeze([
+          Object.freeze({
+            checkpointKey: 'nextPhaseUsable:wheel1',
+            label: 'Next phase usable',
+            window: Object.freeze({ kind: 'shipPostCombat' as const, wheelKey: 'wheel1' }),
+            afterRank: 2,
+          }),
+          Object.freeze({
+            checkpointKey: 'outgoingGeneration',
+            label: 'Outgoing generation',
+            window: Object.freeze({ kind: 'shipPostCombat' as const, wheelKey: 'wheel2' }),
+            afterRank: 4,
+          }),
+        ]),
+      }),
+    });
+    const steadyGrowth = createSteadyGrowthOutcomeAddress(owner, 'Combat1');
+    const embryo = createTranscendentEmbryoOutcomeAddress(owner, 'Combat2');
+    const enriched = appendTranscendentEmbryoTimelineEffects(
+      appendSteadyGrowthTimelineEffects(timeline, [steadyGrowth]),
+      [embryo],
+    );
+    const entries = enriched.entries;
+    const indexOf = (predicate: (entry: (typeof entries)[number]) => boolean) =>
+      entries.findIndex(predicate);
+    const wheel1 = indexOf(
+      (entry) => entry.kind === 'action' && entry.action.key === roomActionKey(reward1),
+    );
+    const effect1 = indexOf(
+      (entry) => entry.kind === 'automaticEffect' && entry.address === steadyGrowth,
+    );
+    const nextPhase = indexOf(
+      (entry) =>
+        entry.kind === 'boundary' &&
+        entry.boundary.kind === 'nextPhase' &&
+        entry.boundary.wheelKey === 'wheel2',
+    );
+    const wheel2 = indexOf(
+      (entry) => entry.kind === 'action' && entry.action.key === roomActionKey(reward2),
+    );
+    const effect2 = indexOf(
+      (entry) => entry.kind === 'automaticEffect' && entry.address === embryo,
+    );
+    const cleanup = indexOf(
+      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
+    );
+
+    expect(effect1).toBe(wheel1 + 1);
+    expect(effect1).toBeLessThan(nextPhase);
+    expect(effect2).toBe(wheel2 + 1);
+    expect(effect2).toBeLessThan(cleanup);
+  });
+
+  it('keeps a Ship optional generated pickup after its required end-effect checkpoint', () => {
+    const choose = { kind: 'chooseRewardWheel' as const, wheelKey: 'wheel1' };
+    const wheel = { kind: 'interactWheelReward' as const, wheelKey: 'wheel1' };
+    const generated = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'roomExit',
+      entryKey: 'clockedTraitGenerated:wheel-child',
+      encounterPhaseKey: 'Combat1',
+    };
+    const timeline = assembleRoomLifecycleTimeline({
+      owner,
+      lifecycleProfileKey: 'ShipCombatRoom',
+      encounterPhases: Object.freeze([
+        Object.freeze({
+          ...encounter('Combat1'),
+          rewardAttachment: Object.freeze({
+            kind: 'rewardWheel' as const,
+            key: 'wheel1',
+            reward: Object.freeze({
+              kind: 'countedChoice' as const,
+              storeKeys: Object.freeze(['store']),
+              eligibleRewardTypes: Object.freeze([]),
+              ineligibleRewardTypes: Object.freeze([]),
+              allowedRewardTypes: Object.freeze([]),
+              producerLifecycleKey: 'test',
+            }),
+            defaultStoreKey: 'store',
+            offerKeys: Object.freeze(['offer1']),
+            offerCount: Object.freeze({ min: 1, max: 1, defaultValue: 1 }),
+            picked: 'exactlyOne' as const,
+          }),
+        }),
+      ]),
+      roomActionRoster: roster({
+        rows: Object.freeze([
+          rankedRow(choose, { kind: 'shipPreCombat', wheelKey: 'wheel1' }, 1),
+          rankedRow(wheel, { kind: 'shipPostCombat', wheelKey: 'wheel1' }, 2),
+          rankedRow(generated, { kind: 'shipPostCombat', wheelKey: 'wheel1' }, 3, 'optional'),
+        ]),
+      }),
+    });
+    const steadyGrowth = createSteadyGrowthOutcomeAddress(owner, 'Combat1');
+    const entries = appendSteadyGrowthTimelineEffects(timeline, [steadyGrowth]).entries;
+    const requiredIndex = entries.findIndex(
+      (entry) => entry.kind === 'action' && entry.action.key === roomActionKey(wheel),
+    );
+    const effectIndex = entries.findIndex(
+      (entry) => entry.kind === 'automaticEffect' && entry.address === steadyGrowth,
+    );
+    const optionalIndex = entries.findIndex(
+      (entry) => entry.kind === 'action' && entry.action.key === roomActionKey(generated),
+    );
+
+    expect(effectIndex).toBe(requiredIndex + 1);
+    expect(optionalIndex).toBe(effectIndex + 1);
+  });
+
   it('keeps a three-cage Fields permutation atomic with one visible Cleanup boundary', () => {
     const cage = (phaseKey: string) =>
       Object.freeze({ kind: 'completeFieldsCage' as const, phaseKey });
