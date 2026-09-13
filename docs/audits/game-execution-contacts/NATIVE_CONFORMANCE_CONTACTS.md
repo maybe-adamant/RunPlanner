@@ -68,6 +68,15 @@ native inventory.
 ## Named room-exit facts
 
 Room-exit conformance runs immediately before the wrapped native `LeaveRoom`.
+
+Native `AttemptUseDoor` (`RoomLogic.lua:749`) rejects unusable doors before
+calling `LeaveRoom` (`:872`). The supplied scripts contain no `UseExitDoor`
+definition or caller. ModUtil's path wrapping can install a wrapper with a nil
+base, so registration alone does not establish that a native function exists.
+The executor uses actual room closure to check both published `exitUsable` and
+`roomExit` obligations before disposing of the timeline. It does not hook door
+attempts for this check, and a mismatch still permits native departure. This
+disposition does not depend on proving the absence of an undisclosed host export.
 At that point the room's player actions and native encounter-end effects have
 settled, while the next room has not begun mutating run state.
 

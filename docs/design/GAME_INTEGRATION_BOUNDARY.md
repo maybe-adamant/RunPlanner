@@ -156,8 +156,13 @@ The conformance surface is bounded to:
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Room entered                  | occurrence/room identity, published Overview content, and any obligation due at `roomEntered`                                                                      |
 | Semantic Timeline transaction | the exact published transaction bound to the native action when it is an explicit obligation; acquisition handles instead express steering and local DAG readiness |
-| Exits ready                   | complete exit count, physical types, target room identities, reward identities, and obligations due at outgoing/exit-usable contact                                |
-| Room exit                     | obligations due at `roomExit` and only the planner-published named conformance facts that changed in this occurrence                                               |
+| Exits ready                   | complete exit count, physical types, target room identities, reward identities, and obligations due at outgoing generation                                         |
+| Room exit                     | obligations due at `exitUsable` and `roomExit`, and only the planner-published named conformance facts that changed in this occurrence                              |
+
+The published `exitUsable` deadline is checked at actual room closure, before
+the timeline is discarded. It does not require a separate door-use callback:
+native `AttemptUseDoor` rejects locked attempts and reaches `LeaveRoom` for
+departure. A failed obligation check stops realization, never native traversal.
 
 The runtime may use several native calls to build one product. Conformance is
 decided against the completed semantic product rather than by requiring each
@@ -180,9 +185,11 @@ second offer-legality policy before forcing them.
 
 The route-start keepsake is a pre-room realization, not a room Timeline step.
 The wire carries its exact selected key and any already-authored immediate
-equip result. The Executor freezes the plan at the nested `EquipKeepsake`
-contact inside `StartNewRun`, arms that result, and lets the matching native
-acquire callback consume it. Later rack changes use the same callback adapter
+equip result. Inside `StartNewRun`, the Executor admits and freezes the plan
+before native `CreateNewHero` construction, making the starting Hex available
+to aspect construction. The nested `EquipKeepsake` contact arms its immediate
+result and lets the matching native acquire callback consume it. Later rack
+changes use the same callback adapter
 from their ordinary Timeline trace. Only the opening presentation is delayed;
 Jeweled Pom, Experimental Hammer, and Transcendent Embryo acquire their result
 when the keepsake is equipped.

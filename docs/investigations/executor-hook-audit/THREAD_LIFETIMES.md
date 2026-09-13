@@ -8,6 +8,41 @@ work in synchronous tests.
 
 ## Review rule
 
+Acquired-effect source disposition: `Main.lua:thread` immediately resumes the
+new coroutine; only an actual yield releases the caller. Ordinary equip and
+Circe/Icarus selectors precede such yields, so their scopes are retained. The
+rows below record the original scheduling questions, not proof of deferred
+first dispatch. Echo BBB does wait before its nested menu: its retained result
+is now restricted to the native `SelectEchoBoon` menu and transferred to that
+menu before native handling. A coroutine witness exercises both waits with an
+unrelated menu between them. Live interleaving frequency remains unmeasured.
+
+### Accepted corrections to the baseline rows
+
+The tables below retain the inspected baseline and original questions. Current
+source-backed dispositions are:
+
+- Mystery consumes construction context at `GiveLoot` and binds its returned
+  provider. The separate `CreateLoot` wrapper is removed; later unwrap animation
+  has no construction context.
+- Spell/Path retain their native provider/item-bound screen stacks. Hex tree
+  construction consumes the expected spell-trait identity before native tree
+  generation, so presentation waits cannot extend the tree override.
+- Ship wheel generation scope retires at the final preview. Native wheel
+  identity survives until accepted use, which publishes its continuation before
+  native notification immediately resumes encounter setup.
+- Refills begin at `FillInShopOptions`, after native purchase checks. World
+  restock context is invocation-local through its screen wait and retry, then
+  retires on native return. Unowned/denied refills bypass initial inventory
+  forcing. Well/Shrine selectors remain construction-local.
+- Nemesis family/free-item preparation only peeks. Accepted trait exchange
+  carries its owner on the exact outer dialog screen to native exchange return;
+  the global next-removal observer is removed. Free drop begins at its exact
+  source, and contest begins at setup with a source-bound timer terminal.
+
+These are verified with focused source-backed coroutine and adapter witnesses,
+not live-game scheduling claims. Condition-override questions remain separate.
+
 Use [OUTCOME_INTERVENTIONS](OUTCOME_INTERVENTIONS.md) to choose the native seam.
 This document evaluates only the context lifetime that seam needs. A justified
 selector scope is not a mandate to keep that selector if a simpler supported

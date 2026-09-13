@@ -137,8 +137,9 @@ H01–H07 have since been corrected and locally verified by the correction plan'
 Gate A. The rows below retain the inspected baseline defect descriptions;
 accepted contact details now live in the owning durable feature inventories.
 Live-game verification remains separate. H08/H09 are addressed by the bounded
-NPC-preflight and unused Pom-marker cleanup. H10, the `UseExitDoor` contact,
-and the bounded timing and condition questions remain open for later work.
+NPC-preflight and unused Pom-marker cleanup. The `UseExitDoor` contact is
+resolved by moving its obligation check to actual room closure; the bounded
+timing and condition questions remain open for later work.
 
 | ID  | Finding                                                                                                                                                                                     | Disposition                                                                                                                                                                              |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -155,9 +156,11 @@ and the bounded timing and condition questions remain open for later work.
 
 ## Open timing/host questions
 
-1. Native `UseExitDoor` has no definition/call in the supplied Lua snapshot.
-   Establish whether it is a real host/export/compatibility contact and whether
-   the already-covered `LeaveRoom` is its effective path before deleting it.
+1. Resolved: native `UseExitDoor` has no definition/call in the supplied Lua
+   snapshot. Registration does not prove existence because ModUtil accepts a
+   nil base. Remove this contact and check its obligations at existing
+   `LeaveRoom` closure, reached by native `AttemptUseDoor` after usable-door
+   checks. No replacement attempt hook or protocol change is needed.
 2. Native acquired trait effects use `thread(CallFunctionName, ...)`. Circe,
    Icarus and ordinary equip scopes need an actual scheduling witness; immediate
    test callbacks do not prove their lifetime. Echo explicitly retains some
