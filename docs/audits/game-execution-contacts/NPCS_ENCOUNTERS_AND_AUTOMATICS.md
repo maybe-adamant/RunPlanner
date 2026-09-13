@@ -47,6 +47,19 @@ and requires the published keys to exist in that construction input. The menu
 contact reapplies the same rows after native ordering, preserving prepared
 metadata rather than rebuilding the NPC's effects.
 
+For Circe promotion, native `CirceMetaUpgradeRarity` selects cards and invokes
+their upgrade callbacks; copying final rarity fields would omit those effects.
+For Vow removal, `CirceRemoveShrineUpgrades` owns disable callbacks and value
+extraction. The executor selects their keys only. Ordered Arcana draws use
+native `AddRandomMetaUpgrades` admission/card selectors, preserving native
+activation and dependent eligibility rather than replaying it in Lua.
+
+Icarus Latest Model selects the old Hammer in `UpgradeHammers`, before its
+inner rarity call. Native code uses that same selected trait for later weapon
+setup, so merely overriding the inner `ForceUpgrade` argument would be too
+late. Echo's Pom target similarly steers `EchoDoubleLevelBoon`'s native
+candidate selection; native calculates and applies the level increase.
+
 ## Nemesis random events
 
 Nemesis uses a distinct event family rather than a trait provider menu.

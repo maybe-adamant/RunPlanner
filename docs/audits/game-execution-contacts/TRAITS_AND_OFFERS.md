@@ -55,6 +55,25 @@ native menu handling begins. Unrelated trait menus during Echo's waits must
 retain their native rows. The selected nested result then uses the ordinary
 trait consequence adapters; it does not retain a separate Echo outcome path.
 
+### Why selected-effect contacts remain split
+
+The offer screen supplies a selected consequence; its native effect function
+supplies the actual candidate set or target argument. Neither contact alone
+can replace both without rebuilding the native effect.
+
+| Published result            | Intervention                                                                | Lifetime and native work retained                                                               |
+| --------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Ordinary/Chaos offer rows   | Insert at initial menu construction; identify Rejected after native sorting | Provider/menu binding, not a global next-screen cursor; native selection and trait application. |
+| All Together children       | Select candidates within `GrantBoons`                                       | Named acquired callback; native eligibility and additions.                                      |
+| Natural Selection targets   | Constrain `FYShuffle` within `DistributeLevels`                             | Named callback only; native caps, distribution and mutation.                                    |
+| Bridal Glow target          | Supply `ForceUpgrade` to `AddRarityToTraits` within `HeraSuperchargeBoon`   | Native supercharge behavior and application, not a replacement rarity loop.                     |
+| Concave Stone proc/residual | Bind the native chance read and original residual row                       | Outer/nested selection scope; reuse ordinary child-effect adapters. No second physical pickup.  |
+
+The native acquired callbacks above reach their selectors before their first
+yield in the inspected source. Echo's waiting nested menu is deliberately not
+generalized to them. Source-backed callback/coroutine tests establish these
+handoffs; they do not certify arbitrary host-mod interleavings.
+
 ## Provider contact matrix
 
 | Provider family  | Providers                                                                             | Native contact                                                                         | Status                                                                                                     |
@@ -130,6 +149,16 @@ The primary source evidence for these effects remains in
 
 ## Level-result carrier matrix
 
+Visible Pom offers publish the final level count, including Fated bonuses.
+The adapter inserts that count as `loot.StackNum` before initial
+`CreateBoonLootButtons`. Native `UpgradeChoiceLogic.lua` would add
+`GetTotalHeroTraitValue("FatedPomLevelBonus")` again when `IsFateValid()` holds,
+so only that read is masked during the initial row build. Native eligibility,
+display, selection and mutation still use the final count; rerolls and unrelated
+reads remain native. The mask is restored on return or fault. Converting the
+wire back to a base count merely to remove this mask would require unnecessary
+semantic translation.
+
 | Source                                 | Planner result                                                          | Native carrier                                             | Status                                                                                                 |
 | -------------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | Pom of Power variants                  | explicit offered targets, selected target, count                        | Loot choice screen                                         | Covered by the visible-Pom adapter.                                                                    |
@@ -151,8 +180,9 @@ implementation.
 
 ## Trait removal contacts
 
-Purging Pool sales and Nemesis trait trades publish exact trait keys and use
-their own transaction types. Ransoms are not equivalent: their removals are a
+Purging Pool sales and Nemesis trait trades publish exact trait keys. The Pool
+uses inventory steering and room-exit conformance, not a sale transaction;
+Nemesis retains its encounter interaction. Ransoms are not equivalent: their removals are a
 consequence of acquiring a trait and can remove several traits. Native
 `SacrificeAllBoon` remains authoritative for that deterministic removal/level
 sequence; the executor neither publishes nor replays it.
