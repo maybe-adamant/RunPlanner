@@ -1688,7 +1688,7 @@
                     "rushed": true
                   },
                   "secondLeft": {
-                    "delay": 2,
+                    "delay": 3,
                     "rushed": false
                   }
                 }

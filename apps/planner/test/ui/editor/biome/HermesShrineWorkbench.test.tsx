@@ -320,7 +320,7 @@ describe('Hermes Shrine workbench', () => {
       kind: 'SetHermesShrinePurchase',
       occurrence: source,
       generationKey: 'initial:secondRight',
-      purchase: { delay: 2, rushed: false },
+      purchase: { delay: 3, rushed: false },
     });
     const view = renderOccurrenceWorkbench(
       project,
@@ -409,7 +409,7 @@ describe('Hermes Shrine workbench', () => {
       kind: 'SetHermesShrinePurchase',
       occurrence: source,
       generationKey: 'initial:secondRight',
-      purchase: { delay: 2, rushed: false },
+      purchase: { delay: 3, rushed: false },
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'PlaceHermesShrineDelivery',
@@ -500,7 +500,7 @@ describe('Hermes Shrine workbench', () => {
       kind: 'SetHermesShrinePurchase',
       occurrence: source,
       generationKey: 'initial:first',
-      purchase: { delay: 2, rushed: false },
+      purchase: { delay: 3, rushed: false },
     });
     const application = createApplication();
     const hostId = oOccurrenceIds.devotion;

@@ -8,7 +8,7 @@ const normalizedBiomeSnapshotHashes = [
   ['H', '5d712dd0a75404d6'],
   ['I', '62d1ea2369b90952'],
   ['N', 'eb4de64c3f1e840f'],
-  ['O', '10b7437e68a7e55f'],
+  ['O', '1b8cb14a851f5c96'],
   ['P', '8211e77a35e75dd0'],
   ['Q', 'c8aeb8cb0841ee84'],
 ] as const;

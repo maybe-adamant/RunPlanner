@@ -1217,16 +1217,6 @@
                   "secondRight": {
                     "rewardType": "ShopHermesUpgrade"
                   }
-                },
-                "purchaseBySlot": {
-                  "secondLeft": {
-                    "delay": 8,
-                    "rushed": false
-                  },
-                  "secondRight": {
-                    "delay": 8,
-                    "rushed": false
-                  }
                 }
               },
               "keepsakeRack": {
@@ -2178,7 +2168,7 @@
                 },
                 "purchaseBySlot": {
                   "secondLeft": {
-                    "delay": 5,
+                    "delay": 2,
                     "rushed": false
                   }
                 }

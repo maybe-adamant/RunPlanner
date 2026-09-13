@@ -82,6 +82,65 @@ policy, not a duplicated store choice. Non-ShipCombat O sources retain the
 ordinary authored base-store choice where their room-start selection is
 otherwise observable.
 
+### Ship intro counter and end-effect policy
+
+A completed `GeneratedO_Intro01` is combat, not an empty-room encounter.
+Its `CountsForRoomEncounterDepth = false` excludes it from encounter-depth
+counters only. It does not suppress encounter-end effects. This also applies
+to the native first-visit variant, `GeneratedO_Intro01_First`, which inherits
+the same declaration. The fixed `O_Intro` room is a different owner and must
+not be confused with a ShipCombat occurrence's Intro phase.
+
+Source contacts:
+
+- `EncounterData_Generated.lua:820,922,964`: `GeneratedO` and the two generated
+  intro declarations. The intro inherits the Ship combat event sequence,
+  overrides its reward to `Empty`, and skips wheel setup. It does not declare
+  `SkipEndEncounterEffects` or a noncombat encounter type.
+- `RoomLogic.lua:1900,1931`: encounter-depth increments are conditional on
+  `CountsForRoomEncounterDepth`; the later `EndEncounterEffects` call is not.
+- `RoomLogic.lua:2869,2928–3003`: end effects reject noncombat/skipped effects,
+  then use independent boss, encounter-use, and room-upgrade guards. Each ship
+  phase is the current main encounter at this contact.
+- `TraitLogic.lua:2881`: `CheckChamberTraits` advances `RoomsPerUpgrade`
+  effects. Timed resource-drop suppression holds a due drop near maturity;
+  it is not an encounter-depth rule.
+- `TraitData.lua:998`: `StorePendingDeliveryItem` uses `UsesAsEncounters`,
+  without `UsesRequireSpawnMultiplier`.
+- `RoomLogic.lua:4264`: `UsesAsRooms` is consumed during room departure, not
+  between ship phases.
+
+The following matrix assumes a completed, non-skipped phase and an already
+active effect. Per-effect holds and native suppression flags still apply.
+
+| Product or effect                                                  | Generated ship Intro         | Ship Combat1/Combat2                                | Authority / distinction                                                                                                |
+| ------------------------------------------------------------------ | ---------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Room, biome and route encounter-depth counters                     | No                           | Yes                                                 | `CountsForRoomEncounterDepth`; Heracles Intro is a separate concrete encounter that does count.                        |
+| Encounter occurrence/completion history                            | Yes                          | Yes                                                 | `EncountersOccurredCache` and completion caches are recorded independently of depth.                                   |
+| Hermes delivery countdown                                          | Yes                          | Yes                                                 | `UsesAsEncounters`, guarded by the room's `IgnoreEncounterUses`, not encounter depth.                                  |
+| Encounter-duration Chaos curses, Well items, Experimental Hammer   | Yes                          | Yes                                                 | The encounter-use expiry lane; retain any effect-specific holds or spawn-multiplier requirements.                      |
+| Steady Growth and Transcendent Embryo                              | Yes                          | Yes                                                 | `CheckChamberTraits`, guarded by `SkipRoomsPerUpgrade`.                                                                |
+| Supply Chain progress / due optional drops                         | Yes                          | Yes                                                 | Same room-upgrade call; `SkipTimedDropResources` separately governs actual drop maturity. Dropping is not acquisition. |
+| Native room-upgrade keepsake decay/escalation                      | Yes                          | Yes                                                 | The loop guarded by `SkipRoomsPerUpgrade`; only modeled effects enter planner state.                                   |
+| Persistent keepsake rank experience                                | Yes                          | Yes                                                 | `AdvanceKeepsake` is independent of those two suppressors; persistent rank progression remains outside the simulation. |
+| Boss-use effects, Judgment and Crystal Figurine                    | No                           | No                                                  | Neither generated ship phase is a boss.                                                                                |
+| Physical room entry/history and biome depth cache                  | Once for the room            | No additional entry                                 | Advancing an internal encounter does not enter another room or create another resource-history slot.                   |
+| Room-departure effects, including Enshrouded `UsesAsRooms`         | No internal tick             | Only when the room is left                          | No synthetic room departure between phases.                                                                            |
+| Wheel generation / selected room reward                            | No; native reward is `Empty` | One wheel and its selected reward per active combat | Intro skips `ShipsEncounterSetup`; it does not consume a reward merely by being combat.                                |
+| Pending acquisition/generation effects such as Yarn, Hymn or Ixion | No generic clock tick        | No generic clock tick                               | Their own offer/acquisition/gate contacts remain authoritative.                                                        |
+
+This is the same policy separation used for
+[N side rooms](N_GAME_RULES.md): no global "counts as a room/encounter" switch.
+N side rooms have explicit `IgnoreEncounterUses` and `SkipRoomsPerUpgrade`
+suppressors; generated ship intros do not.
+
+The planner preserves `countsEncounterDepth: false` for generated ship intros
+while allowing their Hermes delivery ticks through the normal combat default.
+All modeled end-effect lanes process this contact independently of encounter
+depth. Boss rooms remain ordinary delivery hosts: a delivery whose countdown
+reaches zero there must publish its required pickup, with no executor clock
+compensation or boss-specific placement exception.
+
 ### Outgoing-store consequences
 
 The source-owned outgoing store is not uniformly the target's visible reward.

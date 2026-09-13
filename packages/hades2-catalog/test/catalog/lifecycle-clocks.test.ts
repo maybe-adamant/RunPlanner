@@ -76,7 +76,8 @@ describe('declaration-owned lifecycle clocks', () => {
     ).toBe(true);
     expect(
       catalog.encounterDefinitions.byKey.GeneratedO_Intro01?.advancesHermesShrineDeliveryUses,
-    ).toBe(false);
+    ).toBe(true);
+    expect(catalog.encounterDefinitions.byKey.GeneratedO_Intro01?.countsEncounterDepth).toBe(false);
     expect(
       catalog.encounterDefinitions.byKey.Story_Circe_01?.advancesHermesShrineDeliveryUses,
     ).toBe(false);

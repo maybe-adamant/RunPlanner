@@ -27,6 +27,11 @@ import {
   hermesShrineDeliveryPlacementForPurchaseReschedule,
   simulateProjectAssembly,
 } from '../../../src/simulation';
+import {
+  assembleExecutionProduct,
+  compileExecutionPlan,
+  encodeExecutionPlan,
+} from '../../../src/execution-plan';
 
 function shrinePhase(
   slotKey: string,
@@ -100,6 +105,40 @@ function projectWithUnrankedDeliveryHost() {
 }
 
 describe('Hermes Shrine delivery placement', () => {
+  it('counts ship intros toward a delivery that matures at the boss and publishes its pickup', () => {
+    let project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
+    const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: source,
+      generationKey: 'initial:secondLeft',
+      purchase: { delay: 6, rushed: false },
+    });
+    const placement = hermesShrineDeliveryPlacementForPurchaseReschedule(
+      simulateProjectAssembly(catalog, project),
+      source,
+      'initial:secondLeft',
+    );
+    expect(placement).toMatchObject({
+      kind: 'PlaceHermesShrineDelivery',
+      entry: { site: { owner: { occurrenceId: 'surface-o-preboss:boss' } } },
+      encounterPhaseKey: 'Encounter',
+    });
+    if (placement === undefined) throw new Error('boss delivery placement missing');
+    project = applyProjectCommand(project, catalog, placement);
+    const product = assembleExecutionProduct({
+      assembly: simulateProjectAssembly(catalog, project),
+    });
+    const boss = product.occurrences.find((room) => room.id === 'surface-o-preboss:boss');
+    expect(boss?.timeline.transactions).toContainEqual(
+      expect.objectContaining({
+        kind: 'acquisition',
+        hermesShrineSourceKey: hermesShrineDeliveryEntryKey(source, 'initial:secondLeft'),
+      }),
+    );
+    expect(() => encodeExecutionPlan(compileExecutionPlan({ product }))).not.toThrow();
+  });
+
   it('materializes and ranks a due delivery at a host without an acquisition site', () => {
     const { project, biome, source, host } = projectWithUnrankedDeliveryHost();
     const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:first');

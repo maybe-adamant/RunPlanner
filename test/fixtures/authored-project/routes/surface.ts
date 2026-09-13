@@ -156,7 +156,7 @@ export function createSurfaceNOHermesShrineDeliveryCheckpoint(options?: {
     kind: 'SetHermesShrinePurchase',
     occurrence: shrine,
     generationKey: 'initial:secondLeft',
-    purchase: { delay: 2, rushed: false },
+    purchase: { delay: 3, rushed: false },
   });
   const deliveryHost = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
   if (options?.placeDelayedDelivery === false) return project;
