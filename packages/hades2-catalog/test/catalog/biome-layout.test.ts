@@ -158,6 +158,17 @@ const roomFacts = [
 ] as const;
 
 describe('biome layout declarations', () => {
+  it('keeps P_Combat15 Outdoor despite its two physical Indoor doors', () => {
+    // RoomDataP inherits P_BaseOutdoor; P_Combat15.thing_bin has two Indoor doors.
+    expect(catalog.rooms.byKey.P_Combat15).toMatchObject({
+      structuralTags: ['Outdoor'],
+      exits: [
+        { index: 1, type: 'OlympusIndoorExitDoor' },
+        { index: 2, type: 'OlympusIndoorExitDoor' },
+      ],
+    });
+  });
+
   it.each(biomeContracts)(
     '$biomeKey completion declarations stay biome-local and authored',
     (fixture) => {

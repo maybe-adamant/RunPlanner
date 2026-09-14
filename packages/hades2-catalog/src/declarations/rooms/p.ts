@@ -557,7 +557,7 @@ export const pRooms = [
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     additionalExits: [chaosExit],
-    structuralTags: ['Indoor'],
+    structuralTags: ['Outdoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
       { index: 2, type: 'OlympusIndoorExitDoor' },
