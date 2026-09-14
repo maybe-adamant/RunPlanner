@@ -232,7 +232,9 @@ On the inactive-to-active transition, `UpgradeAllCommon`:
 
 - upgrades each unique equipped Common god trait to Rare when it satisfies the
   source's shop god-trait classification and is not blocked from in-run
-  rarification; and
+  rarification;
+- separately assigns its own equipped rarity to Rare, even when offered as
+  Epic (`TraitLogic.lua:2668`); and
 - installs a `GodLootOnly` additive rarity bonus with `Rare = 1`.
 
 The source adds one to the Rare check; it does not replace the existing Rare
@@ -243,8 +245,9 @@ planner-facing rule is a Rare-or-higher floor for fresh scalable god traits,
 but the underlying source fact is a numeric `+1` ledger contribution.
 
 The activation pass also upgrades already equipped eligible Common traits.
-Deactivation removes only the future-offer bonus; it does not downgrade those
-past promotions. Reactivation runs the promotion pass again. Echo's second
+Deactivation removes only the future-offer bonus; all applied rarity changes
+persist. The fold retains authored offer rarity as separate evidence.
+Reactivation repeats the pass. Echo's second
 choice receives a special selection-time upgrade if the first selected choice
 activated Proper Upbringing after the second choice had already been generated
 as Common.

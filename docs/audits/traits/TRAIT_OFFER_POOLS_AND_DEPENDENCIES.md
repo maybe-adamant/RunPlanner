@@ -904,19 +904,10 @@ Common traits. A trait acquisition or replacement that supplies the final
 required element participates in the activation check after it enters equipped
 state, so that newly selected trait is included when eligible.
 
-The source function also assigns Proper Upbringing's own displayed rarity to
-Rare on activation, independently of its rolled rarity. Its infusion rarity
-participates in the game's offer-generation tabulation, but the planner models
-possible authored offers rather than their rarity probabilities. The
-self-assignment changes neither the effect's activation/strength nor a modeled
-eligibility fact: the declaration is `BlockInRunRarify`, `BlockStacking`, and
-`ExcludeFromRarityCount`. The planner therefore retains its authored rarity as
-offer evidence and does not mutate its effective rarity on activation. This is
-a deliberate probability/presentation collapse, not a general rule for
-infusion traits. The observable promotions of other equipped traits and the
-future-offer floor remain semantic. Selling, level/stack preservation,
-presentation delays, double-boon handling, and sources that explicitly ignore
-temporary or all rarity bonuses remain outside the slice.
+The same fold includes the source's own rarity assignment, while preserving
+its authored offer and exclusion flags. See the
+[rarity ledger audit](BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md#proper-upbringing)
+for that native assignment and its persistence after deactivation.
 
 ### Three related upgradeability contracts
 

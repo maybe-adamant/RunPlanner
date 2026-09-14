@@ -1191,14 +1191,12 @@ Bridal Glow Hephaestus cooldown limits are explicit normalized products.
 Proper Upbringing is the declaration-owned rarity-floor lifecycle. Its
 normalized declaration supplies a `Common`-to-`Rare` floor that activates when
 the equipped ledger reaches its declaration-owned base-element minimums.
-Chronological replay promotes eligible equipped Common boon-rarity traits on
-the inactive-to-active transition, leaves the effect source and
-`BlockInRunRarify`/fixed-rarity traits unchanged, and exposes the active floor
-as a derived history fact. Deactivation removes only the future-offer floor;
-promotions remain, and a later reactivation performs a new pass. The effect
-source's own authored rarity remains offer evidence. This is an explicit
-declaration product, not a generic effect interpreter or persisted mutation
-state.
+The existing trait-history fold applies activation to eligible Common targets
+and the source's own equipped rarity, leaving excluded targets unchanged.
+Authored offers remain unchanged evidence. Deactivation removes only the
+future-offer floor; applied rarity changes persist. Reactivation repeats the
+pass. The [source audit](../audits/traits/BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md#proper-upbringing)
+records the distinction between target promotion and source assignment.
 
 The empty-slot test is always derived from this ledger at the reached offer
 boundary; no persisted first-offer marker or replacement counter exists.
