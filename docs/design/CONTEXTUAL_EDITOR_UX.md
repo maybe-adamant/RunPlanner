@@ -508,6 +508,12 @@ trait-offer interaction. React passes the complete local outcome and focused
 option key to the bound interaction; it never constructs engine queries or
 evaluates trait rules.
 
+Infusion rows retain concrete rarity authoring but display `Infusion (C)`,
+`Infusion (R)`, or `Infusion (E)`; accessible option names spell out the tier.
+Their effective-rarity summary displays `Infusion`. Common-only rows use the
+same fixed-value presentation. These labels never change stored values,
+candidate support, or the ability to repair an unavailable rarity.
+
 The trait picker aggregates concrete variants by trait. A trait is available
 when at least one visible rarity is supported, unassessed when exact lifecycle
 coverage is unavailable, and unavailable only when every visible concrete

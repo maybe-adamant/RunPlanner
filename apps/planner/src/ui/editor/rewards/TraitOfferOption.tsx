@@ -1,15 +1,15 @@
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
 
-import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
+import type {
+  ContextualPickerItem,
+  ContextualPickerModel,
+} from '@planner/projections/contextual/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { traitRarityPresentation } from './traitRarityPresentation';
 
 const emptyRarityPicker: ContextualPickerModel<TraitRarity> = Object.freeze({
   sections: Object.freeze([]),
 });
-
-function rarityLabel(rarity: TraitRarity): string {
-  return rarity;
-}
 
 /** One bound trait row. Controllers retain draft and candidate policy. */
 export function TraitOfferOption<TraitValue>({
@@ -41,6 +41,7 @@ export function TraitOfferOption<TraitValue>({
   traitAriaLabel,
   persephoneAriaLabel,
   traitLabel,
+  traitKey,
   traitPicker,
 }: {
   readonly controlId: string;
@@ -71,8 +72,28 @@ export function TraitOfferOption<TraitValue>({
   readonly traitAriaLabel: string;
   readonly persephoneAriaLabel?: string;
   readonly traitLabel?: string;
+  readonly traitKey?: string;
   readonly traitPicker: ContextualPickerModel<TraitValue>;
 }) {
+  const presentRarityItem = (item: ContextualPickerItem<TraitRarity>) => {
+    const presentation = traitRarityPresentation(traitKey, item.value);
+    return presentation.label === item.value
+      ? item
+      : { ...item, label: presentation.label, ariaLabel: presentation.accessibleLabel };
+  };
+  const presentedRarityPicker =
+    rarityPicker === undefined
+      ? emptyRarityPicker
+      : {
+          ...rarityPicker,
+          ...(rarityPicker.selected === undefined
+            ? {}
+            : { selected: presentRarityItem(rarityPicker.selected) }),
+          sections: rarityPicker.sections.map((section) => ({
+            ...section,
+            items: section.items.map(presentRarityItem),
+          })),
+        };
   return (
     <fieldset className="trait-offer-option trait-offer-ordinary-option">
       <legend>
@@ -104,11 +125,13 @@ export function TraitOfferOption<TraitValue>({
           id={`${controlId}-rarity`}
           label="Rarity"
           loading={loading}
-          model={rarityPicker ?? emptyRarityPicker}
+          model={presentedRarityPicker}
           {...(onRarityOpenChange === undefined ? {} : { onOpenChange: onRarityOpenChange })}
           onSelect={onSelectRarity}
           placeholder="Choose a rarity"
-          {...(rarityValue === undefined ? {} : { triggerLabel: rarityLabel(rarityValue) })}
+          {...(rarityValue === undefined
+            ? {}
+            : { triggerLabel: traitRarityPresentation(traitKey, rarityValue).label })}
         />
       ) : fixedRarity === undefined ? null : (
         <div
@@ -116,7 +139,9 @@ export function TraitOfferOption<TraitValue>({
           className="field-control trait-offer-fixed-rarity"
         >
           <span>Rarity</span>
-          <strong>{rarityLabel(fixedRarity)}</strong>
+          <strong title={traitRarityPresentation(traitKey, fixedRarity).accessibleLabel}>
+            {traitRarityPresentation(traitKey, fixedRarity).label}
+          </strong>
         </div>
       )}
       {onRarify === undefined ? null : (
@@ -132,7 +157,13 @@ export function TraitOfferOption<TraitValue>({
       {effectiveRarity === undefined && effectiveLevel === undefined ? null : (
         <dl aria-label="Effective trait values" className="trait-option-effective-summary">
           <dt>Effective rarity</dt>
-          <dd>{effectiveRarity ?? <span aria-label="Not applicable">—</span>}</dd>
+          <dd>
+            {effectiveRarity === undefined ? (
+              <span aria-label="Not applicable">—</span>
+            ) : (
+              traitRarityPresentation(traitKey, effectiveRarity).effectiveLabel
+            )}
+          </dd>
           <dt>Effective level</dt>
           <dd>{effectiveLevel ?? <span aria-label="Not applicable">—</span>}</dd>
         </dl>

@@ -246,6 +246,7 @@ function EchoLastRunBoonChoiceEditor({
           return (
             <TraitOfferOption
               key={index}
+              {...(row.identity === undefined ? {} : { traitKey: row.identity.traitKey })}
               controlId={`${controlId}-option${index + 1}`}
               legend={`Option ${index + 1}`}
               loading={false}
