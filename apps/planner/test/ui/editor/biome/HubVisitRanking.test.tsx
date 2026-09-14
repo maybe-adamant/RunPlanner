@@ -8,7 +8,7 @@ import {
   createIncomingRewardAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
-import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -98,16 +98,19 @@ describe('HubVisitRanking', () => {
     const firstRemaining = screen.getByRole('article', { name: 'Combat 01 Hub room' });
 
     expect(within(firstVisit).queryByText('Visit 1')).toBeNull();
-    expect(within(firstVisit).getByText('Entered')).toBeTruthy();
+    expect(within(firstVisit).queryByText('Entered')).toBeNull();
+    expect(within(firstVisit).queryByText('Combat')).toBeNull();
     expect(within(firstRemaining).queryByText('Not in visit order')).toBeNull();
 
     for (const card of document.querySelectorAll<HTMLElement>('.hub-open-room-card')) {
       const handle = card.querySelector<HTMLElement>('[data-hub-roster-drag-handle]');
       expect(card.querySelector('.hub-roster-primary')).not.toBeNull();
-      expect(card.querySelector('.hub-roster-primary + .hub-main-reward')).not.toBeNull();
+      const preview = card.querySelector('.hub-roster-primary > .hub-timeline-reward-preview');
+      expect(preview).not.toBeNull();
+      expect(preview?.querySelector('strong')?.textContent).toBeTruthy();
       expect(handle?.getAttribute('aria-hidden')).toBe('true');
       expect(handle?.hasAttribute('tabindex')).toBe(false);
-      expect(card.querySelector('.hub-main-reward')).not.toBeNull();
+      expect(within(card).queryByRole('button', { name: 'Reward' })).toBeNull();
       expect(card.textContent).not.toContain('Evaluated');
     }
   });
@@ -116,7 +119,7 @@ describe('HubVisitRanking', () => {
     renderStaticHubDecisionWorkbench(representativeHubProject);
     selectHubTab('Hub Timeline');
 
-    const expectedRegions = ['drag-handle', 'rank', 'identity', 'visit-meta', 'reorder-controls'];
+    const expectedRegions = ['drag-handle', 'rank', 'identity', 'reward', 'reorder-controls'];
     const cards = Array.from(document.querySelectorAll<HTMLElement>('.hub-open-room-card'));
     expect(cards.length).toBeGreaterThan(1);
 
@@ -669,21 +672,7 @@ describe('HubVisitRanking', () => {
     expect(within(firstTail).getByRole('button', { name: /^Add .+ as visit 4$/ })).toBeTruthy();
   });
 
-  it('uses the rank for authored selection and reserves Entered for evaluated entry', () => {
-    const entered = renderStaticHubDecisionWorkbench(loadSurfaceNOPQProject());
-    const overviewCard = within(entered.container).getByRole('article', {
-      name: 'Combat 05 Hub room',
-    });
-    expect(within(overviewCard).queryByText('Entered')).toBeNull();
-    selectHubTab('Hub Timeline');
-    const enteredCard = within(entered.container).getByRole('article', {
-      name: 'Combat 05 Hub room',
-    });
-    expect(enteredCard.dataset.visitPosition).toBe('1');
-    expect(within(enteredCard).queryByText('Visit 1')).toBeNull();
-    expect(within(enteredCard).getByText('Entered')).toBeTruthy();
-    cleanup();
-
+  it('keeps authored ranks and assessment visible before a room is evaluated', () => {
     const view = renderHubDecisionWorkbench(
       withRetainedHubBehindMissingLink(loadSurfaceNOPQProject()),
     );
@@ -700,7 +689,7 @@ describe('HubVisitRanking', () => {
     selectHubTab('Hub Timeline');
     const retainedCard = screen.getByRole('article', { name: 'Combat 02 Hub room' });
     expect(retainedCard.dataset.visitPosition).toBe('3');
-    expect(within(retainedCard).queryByText('Visit 3')).toBeNull();
-    expect(within(retainedCard).queryByText('Entered')).toBeNull();
+    expect(retainedCard.querySelector('.hub-roster-rank')?.textContent).toBe('3');
+    expect(retainedCard.querySelector('.hub-slot-heading [data-assessment]')).not.toBeNull();
   });
 });

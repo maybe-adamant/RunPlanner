@@ -34,7 +34,6 @@ describe('HubRoomCards', () => {
     const slotOrderBefore = overviewSlotOrder();
     expect(closedCard.querySelector('[data-assessment]')).toBeNull();
     expect(closedCard.querySelector('.room-kind')).toBeNull();
-    expect(closedCard.querySelector('.hub-slot-meta')).toBeNull();
     expect(within(closedCard).getByText('Open this room to edit its reward.')).toBeTruthy();
 
     await view.user.pointer({ keys: '[MouseLeft]', target: open });
@@ -49,7 +48,6 @@ describe('HubRoomCards', () => {
     const openedCard = screen.getByRole('article', { name: 'Combat 04 Hub room' });
     expect(overviewSlotOrder()).toEqual(slotOrderBefore);
     expect(openedCard.querySelector('.room-kind')).toBeNull();
-    expect(openedCard.querySelector('.hub-slot-meta')).toBeNull();
     expect(within(openedCard).getByLabelText('Reward')).toBeTruthy();
     expect(within(openedCard).queryByText('Open this room to edit its reward.')).toBeNull();
     expect(within(openedCard).queryByText(/Closing this slot removes/)).toBeNull();

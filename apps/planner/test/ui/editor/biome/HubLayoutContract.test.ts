@@ -48,6 +48,13 @@ describe('Hub layout contract', () => {
     expect(firstCssBlock('.hub-roster-primary')).toContain(
       'grid-template-columns: 28px 26px minmax(10rem, 2fr) minmax(10rem, 1.35fr) auto;',
     );
+    expect(firstCssBlock('.hub-timeline-reward-preview')).toContain(
+      'grid-template-columns: auto minmax(0, 1fr);',
+    );
+    const compactStyles = styles.slice(styles.indexOf('@container (max-width: 760px)'));
+    expect(compactStyles).toMatch(
+      /> \.hub-timeline-reward-preview \{\s*grid-column: 3 \/ -1;\s*grid-row: 2;/,
+    );
   });
 
   it('aligns room labels with membership and visit controls across Hub views', () => {
@@ -65,5 +72,8 @@ describe('Hub layout contract', () => {
       /\.hub-roster-primary \{\s*grid-template-columns: 28px 24px minmax\(0, 1fr\);/,
     );
     expect(narrowStyles).toMatch(/> \.hub-roster-identity \{\s*grid-column: 3;\s*grid-row: 1;/);
+    expect(narrowStyles).toMatch(
+      /> \.hub-timeline-reward-preview \{\s*grid-column: 1 \/ -1;\s*grid-row: 2;/,
+    );
   });
 });

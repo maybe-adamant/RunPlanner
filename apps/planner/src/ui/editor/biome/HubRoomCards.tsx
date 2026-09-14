@@ -19,7 +19,6 @@ import {
 } from './HubMembershipBoard';
 import { HubRoomOrderControls, type HubRosterDropState } from './HubVisitRanking';
 
-type HubRewardPresentation = 'editor' | 'preview';
 export function OpenHubRoomCard({
   dropAfter,
   dropBefore,
@@ -36,7 +35,6 @@ export function OpenHubRoomCard({
   slot,
   showMembership = true,
   showOrder = true,
-  rewardPresentation = 'editor',
 }: {
   readonly dropAfter: HubRosterDropState | undefined;
   readonly dropBefore: HubRosterDropState | undefined;
@@ -60,7 +58,6 @@ export function OpenHubRoomCard({
   readonly visitOrderInteraction: WorkspaceHubVisitOrderInteraction;
   readonly showMembership?: boolean;
   readonly showOrder?: boolean;
-  readonly rewardPresentation?: HubRewardPresentation;
 }) {
   const findingTarget = useFindingTarget();
   const visitTarget =
@@ -80,13 +77,6 @@ export function OpenHubRoomCard({
   const roomHeading = (
     <div className="hub-slot-heading">
       <h3>{slot.label}</h3>
-      {showOrder ? null : <MarkerAssessment marker={slot.marker} />}
-    </div>
-  );
-  const roomState = (
-    <div className="hub-slot-state">
-      <span className="room-kind">{slot.roomKind}</span>
-      {slot.room?.entered ? <span className="neutral-status">Entered</span> : null}
       {visitMarker === undefined ? null : <MarkerAssessment marker={visitMarker} />}
       {showSlotAssessment ? <MarkerAssessment marker={slot.marker} /> : null}
     </div>
@@ -100,12 +90,12 @@ export function OpenHubRoomCard({
   useLayoutEffect(() => {
     if (!focusedMainReward) return;
     card.current?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
-    if (rewardPresentation === 'editor') {
+    if (!showOrder) {
       card.current
         ?.querySelector<HTMLButtonElement>('.hub-main-reward .contextual-picker-trigger')
         ?.focus({ preventScroll: true });
     }
-  }, [focusedMainReward, rewardPresentation]);
+  }, [focusedMainReward, showOrder]);
 
   return (
     <article
@@ -145,20 +135,26 @@ export function OpenHubRoomCard({
             {visitPosition === -1 ? '—' : visitPosition + 1}
           </span>
         )}
-        {showOrder ? (
-          <>
-            <div className="hub-roster-identity" data-hub-roster-region="identity">
-              {roomHeading}
-            </div>
-            <div
-              className="hub-slot-meta hub-roster-visit-meta"
-              data-hub-roster-region="visit-meta"
-            >
-              {roomState}
-            </div>
-          </>
-        ) : (
-          <div className="hub-roster-identity">{roomHeading}</div>
+        <div
+          className="hub-roster-identity"
+          data-hub-roster-region={showOrder ? 'identity' : undefined}
+        >
+          {roomHeading}
+        </div>
+        {!showOrder ? null : (
+          <div
+            aria-label={`${slot.label} reward preview`}
+            className="hub-timeline-reward-preview"
+            data-hub-roster-region="reward"
+            data-hub-main-reward-owner={rewardOwnerKey}
+          >
+            {rewards === undefined || rewards.length === 0 ? null : (
+              <>
+                <span>Reward</span>
+                <strong>{rewards.map((candidate) => candidate.summary).join(', ')}</strong>
+              </>
+            )}
+          </div>
         )}
         {!showMembership || onMembershipTransition === undefined ? null : (
           <HubSlotMembershipControl
@@ -177,25 +173,21 @@ export function OpenHubRoomCard({
           />
         )}
       </div>
-      {rewards === undefined || rewards.length === 0 || slot.door === undefined ? null : (
+      {showOrder ||
+      rewards === undefined ||
+      rewards.length === 0 ||
+      slot.door === undefined ? null : (
         <div
-          aria-label={`${slot.label} reward ${rewardPresentation}`}
-          className={`hub-main-reward${!showOrder ? ' hub-overview-reward-slot' : ''}`}
+          aria-label={`${slot.label} reward editor`}
+          className="hub-main-reward hub-overview-reward-slot"
           data-focused-main-reward={focusedMainReward || undefined}
           data-hub-main-reward-owner={rewardOwnerKey}
         >
-          {rewardPresentation === 'editor' ? (
-            <DoorRewardEditor
-              door={slot.door}
-              idPrefix={`hub-${slot.hubSlotKey}`}
-              interactions={interactions}
-            />
-          ) : (
-            <div className="hub-timeline-reward-preview">
-              <span>Reward</span>
-              <strong>{rewards.map((candidate) => candidate.summary).join(', ')}</strong>
-            </div>
-          )}
+          <DoorRewardEditor
+            door={slot.door}
+            idPrefix={`hub-${slot.hubSlotKey}`}
+            interactions={interactions}
+          />
         </div>
       )}
     </article>

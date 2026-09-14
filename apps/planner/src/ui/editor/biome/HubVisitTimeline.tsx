@@ -333,7 +333,6 @@ export function HubVisitTimeline({
                 pointerDragging={pointerDrag?.slotKey === slot.hubSlotKey}
                 ranking={ranking}
                 requiredVisitCount={node.requiredVisitCount}
-                rewardPresentation="preview"
                 showMembership={false}
                 slot={slot}
                 visitMarker={visit.marker}
@@ -377,7 +376,6 @@ export function HubVisitTimeline({
               pointerDragging={pointerDrag?.slotKey === slot.hubSlotKey}
               ranking={ranking}
               requiredVisitCount={node.requiredVisitCount}
-              rewardPresentation="preview"
               showMembership={false}
               slot={slot}
               visitOrderInteraction={visitOrderInteraction}
