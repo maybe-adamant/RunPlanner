@@ -1304,6 +1304,32 @@ describe('engine-owned F/G execution semantic product', () => {
     expect(shopOffer?.transactionOwner).toBe(transaction?.owner);
   });
 
+  it('omits a retained unpicked Contract reward without an active Contract capability', () => {
+    const shop = createOccurrenceAddress(goldenFBiome, createOccurrenceId('golden-f-preboss-shop'));
+    const entry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(shop, 'roomExit'),
+      'infernalContractReward',
+    );
+    const project = applyProjectCommand(fOnlyProject(), catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry,
+      value: { rewardType: 'StackUpgrade' },
+    });
+    expect(
+      project.route.biomes[0]!.topology!.occurrences.find(
+        (room) => room.occurrenceId === shop.occurrenceId,
+      )?.acquisitionSites?.roomExit?.pickupEntries?.infernalContractReward?.offer,
+    ).toEqual({ rewardType: 'StackUpgrade' });
+    const product = productFor(project);
+    const published = product.occurrences.find((room) => room.id === shop.occurrenceId);
+    expect(published?.overview.shop).toBeDefined();
+    expect(published?.overview.shop?.infernalContract).toBeUndefined();
+    expect(published?.timeline.transactions).not.toContainEqual(
+      expect.objectContaining({ sourceOwner: semanticAddressKey(entry) }),
+    );
+    expect(() => compileExecutionPlan({ product })).not.toThrow();
+  });
+
   it('publishes a purchased World Shop Travel Deal replacement as an acquisition outcome', () => {
     const shopId = createOccurrenceId('golden-f-preboss-shop');
     const shop = createOccurrenceAddress(goldenFBiome, shopId);
@@ -1371,6 +1397,42 @@ describe('engine-owned F/G execution semantic product', () => {
       owner: replacementTransaction?.owner,
       afterOwner: refillTransaction?.owner,
     });
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'RemoveRoomAction',
+      action: createRoomActionAddress(
+        goldenFBiome,
+        shopId,
+        roomActionKey({
+          kind: 'interactAcquisitionEntry',
+          siteKey: 'roomExit',
+          entryKey: 'travelDealRefill',
+        }),
+      ),
+    });
+    const unpurchased = productFor(authorLegalTraitOffers(project));
+    expect(
+      unpurchased.occurrences.find((candidate) => candidate.id === shopId)?.timeline.transactions,
+    ).toContainEqual(expect.objectContaining({ kind: 'travelDealRefill' }));
+
+    project = replaceTestShopOfferActions(project, catalog, shop, []);
+    expect(
+      project.route.biomes[0]!.topology!.occurrences.find(
+        (candidate) => candidate.occurrenceId === shopId,
+      )?.acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill?.offer,
+    ).toEqual({ rewardType: 'ArmorBoost' });
+    const inactive = productFor(authorLegalTraitOffers(project));
+    expect(
+      inactive.occurrences.find((candidate) => candidate.id === shopId)?.timeline.transactions,
+    ).not.toContainEqual(expect.objectContaining({ kind: 'travelDealRefill' }));
+    expect(() => compileExecutionPlan({ product: inactive })).not.toThrow();
+
+    project = replaceTestShopOfferActions(project, catalog, shop, ['MajorNonBoon']);
+    expect(
+      productFor(authorLegalTraitOffers(project)).occurrences.find(
+        (candidate) => candidate.id === shopId,
+      )?.timeline.transactions,
+    ).toContainEqual(expect.objectContaining({ kind: 'travelDealRefill' }));
   });
 
   it('publishes an unpurchased Anvil only as visible Shop inventory', () => {
@@ -1538,6 +1600,39 @@ describe('engine-owned F/G execution semantic product', () => {
     expect(
       decodeExecutionTransaction(JSON.parse(JSON.stringify(rushedDelivery)), 'transaction'),
     ).toEqual(rushedDelivery);
+
+    const withoutRefillPurchase = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: shrineAddress,
+      generationKey: 'travelDealRefill',
+      purchase: null,
+    });
+    for (const purchase of [{ delay: 2, rushed: false }, null] as const) {
+      const changed = applyProjectCommand(withoutRefillPurchase, catalog, {
+        kind: 'SetHermesShrinePurchase',
+        occurrence: shrineAddress,
+        generationKey: 'initial:first',
+        purchase,
+      });
+      expect(
+        changed.route.biomes[0]!.topology!.occurrences.find(
+          (candidate) => candidate.occurrenceId === shrineAddress.occurrenceId,
+        )?.hermesShrine?.travelDealRefill?.offer,
+      ).toEqual({ rewardType: 'ArmorBoost' });
+      const nOnly = {
+        ...changed,
+        route: { ...changed.route, biomes: changed.route.biomes.slice(0, 1) },
+      };
+      const inactive = productFor(nOnly);
+      const inactiveRoom = inactive.occurrences.find(
+        (candidate) => candidate.id === shrineAddress.occurrenceId,
+      );
+      expect(inactiveRoom?.overview.hermesShrine?.offers).toHaveLength(3);
+      expect(inactiveRoom?.timeline.transactions).not.toContainEqual(
+        expect.objectContaining({ kind: 'travelDealRefill' }),
+      );
+      expect(() => compileExecutionPlan({ product: inactive })).not.toThrow();
+    }
   });
 
   it('requires and publishes the exact result for a purchased Anvil', () => {
@@ -2106,6 +2201,18 @@ describe('engine-owned F/G execution semantic product', () => {
     });
     expect(competitor).toBeUndefined();
     expect(occurrence?.timeline.dependencies).toEqual([]);
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: well,
+      generationKey: 'initial:secondLeft',
+      purchased: false,
+    });
+    const inactive = productFor(authorLegalTraitOffers(project));
+    expect(
+      inactive.occurrences.find((candidate) => candidate.id === wellId)?.timeline.transactions,
+    ).not.toContainEqual(expect.objectContaining({ kind: 'travelDealRefill' }));
+    expect(() => compileExecutionPlan({ product: inactive })).not.toThrow();
   });
 
   it('projects only supplied occurrence-local dependencies without semantic inference', () => {

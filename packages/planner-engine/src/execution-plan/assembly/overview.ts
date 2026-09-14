@@ -127,33 +127,22 @@ export function travelDealRefill(
       readonly refill: Extract<ExecutionTravelDealRefill, { readonly carrier: 'worldShop' }>;
     }
   | undefined {
-  const entryLocation = Object.values(room.acquisitionSites)
-    .map((site) => Object.freeze({ site, entry: site.entries.travelDealRefill }))
-    .find((candidate) => candidate.entry !== undefined);
-  const entry = entryLocation?.entry;
-  if (entryLocation === undefined || entry === undefined) return undefined;
-  if (entry === null)
+  const rows = biome.rewards.derivedAcquisitionEntries.filter(
+    (candidate) =>
+      candidate.kind === 'travelDealRefill' &&
+      semanticAddressKey(candidate.address.site.owner) === semanticAddressKey(room.origin),
+  );
+  if (rows.length === 0) return undefined;
+  const row = rows[0]!;
+  const entryAddress = row.address;
+  const entry = Object.values(room.acquisitionSites).find(
+    (site) => semanticAddressKey(site.address) === semanticAddressKey(entryAddress.site),
+  )?.entries[entryAddress.entryKey];
+  if (entry === undefined || entry === null)
     throw new CompilerError(
       'executionCoverageMissing',
       `${room.gameName} lacks Travel Deal result`,
     );
-  const entryAddress = createAcquisitionEntryAddress(
-    entryLocation.site.address,
-    'travelDealRefill',
-  );
-  const rows = biome.rewards.derivedAcquisitionEntries.filter(
-    (candidate) =>
-      candidate.kind === 'travelDealRefill' &&
-      semanticAddressKey(candidate.address) === semanticAddressKey(entryAddress) &&
-      candidate.sourceOfferKey !== undefined &&
-      offers.some((offer) => offer.offerKey === candidate.sourceOfferKey),
-  );
-  if (rows.length === 0)
-    throw new CompilerError(
-      'executionCoverageMissing',
-      `${room.gameName} lacks Travel Deal source`,
-    );
-  const row = rows[0]!;
   agreement(
     rows.map((candidate) =>
       Object.freeze({
@@ -164,7 +153,11 @@ export function travelDealRefill(
     ),
     `${room.gameName} Travel Deal refill`,
   );
-  if (row.sourceOfferKey === undefined || row.slotIndex === undefined)
+  if (
+    row.sourceOfferKey === undefined ||
+    row.slotIndex === undefined ||
+    !offers.some((offer) => offer.offerKey === row.sourceOfferKey)
+  )
     throw new CompilerError(
       'executionCoverageMissing',
       `${room.gameName} lacks Travel Deal source`,
@@ -320,8 +313,13 @@ function executionShop(
     ),
   );
   const contractEntry = room.acquisitionSites.roomExit?.entries[INFERNAL_CONTRACT_ENTRY_KEY];
+  const contractActive = biome.rewards.derivedAcquisitionEntries.some(
+    (candidate) =>
+      candidate.kind === 'infernalContractReward' &&
+      semanticAddressKey(candidate.address.site.owner) === semanticAddressKey(room.origin),
+  );
   const contract =
-    contractEntry === undefined || contractEntry === null
+    !contractActive || contractEntry === undefined || contractEntry === null
       ? undefined
       : Object.freeze({
           sourceOwner: semanticAddressKey(
@@ -412,22 +410,22 @@ export function hermesShrineTravelDealRefill(
     }
   | undefined {
   const shrine = room.hermesShrine;
-  const refillOffer = shrine?.travelDealRefill?.offer;
-  if (shrine === undefined || refillOffer === undefined || refillOffer === null) return undefined;
-  const travelDeal = shrine.travelDealRefill;
-  if (travelDeal === undefined) return undefined;
-  const shrineDeliverySite = room.acquisitionSites.hermesShrineDelivery;
-  if (shrineDeliverySite === undefined)
-    throw new CompilerError(
-      'executionCoverageMissing',
-      `${room.gameName} lacks Shrine delivery site for Travel Deal refill`,
-    );
+  if (shrine === undefined) return undefined;
   const owner = executionRoomOwnerKey(room);
   const assessments = biome.rewards.hermesShrineAssessments.find(
     (candidate) => semanticAddressKey(candidate.origin) === owner,
   )?.assessments;
   if (assessments === undefined || assessments.length === 0)
     throw new CompilerError('executionCoverageMissing', `${room.gameName} lacks Shrine assessment`);
+  if (assessments.every((assessment) => assessment.travelDealRefill === undefined))
+    return undefined;
+  const travelDeal = shrine.travelDealRefill;
+  const refillOffer = travelDeal?.offer;
+  if (travelDeal === undefined || refillOffer === undefined || refillOffer === null)
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} lacks Shrine Travel Deal result`,
+    );
   const refillEvidence = agreement(
     assessments.map((assessment) => {
       const refill = assessment.travelDealRefill;

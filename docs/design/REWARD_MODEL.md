@@ -769,6 +769,17 @@ first accepted paid non-`SpellDrop` purchase while its one-use Echo trait is
 equipped. The three stable keys share the ordinary acquisition-site vocabulary
 without becoming initial inventory slots.
 
+Refill activity comes from the reached simulation capability, not the presence
+of retained authored refill detail. Clearing the triggering Shop/Well purchase,
+or changing a Shrine rush to delayed or unpurchased, leaves an unused refill
+dormant. Its saved choice neither creates a finding nor publishes a refill
+transaction, and the editor hides the inactive row once assessed. Restoring a
+qualifying trigger reuses that choice. A retained refill purchase still needs
+its repair control; hiding dormant detail must not hide an authored interaction.
+The same capability boundary governs Contract pedestals: retaining an unpicked
+reward after losing Infernal Contract does not publish a pedestal. A selected
+stale pickup remains a validation finding and a repairable authored action.
+
 Shop state is entry-materialized rather than door-offer state. Every picked
 shop occurrence must own a complete value for every slot in its declared
 profile. An unpicked shop occurrence may omit that state entirely; if it was
