@@ -306,6 +306,12 @@ Unavailable
   Combat 01 — appearance cap reached
 ```
 
+Olympus groups ordinary room choices by their declared Indoor/Outdoor tags
+instead of room kind; dual-tagged Preboss stays a separate category. These
+headings describe the destination room, while picker-only suffixes such as
+`(1I/1O)` describe its outgoing doors. Required and unavailable sections retain
+the shared presentation policy.
+
 The category projection follows its concrete children:
 
 - zero supported children: omit the category from the ordinary list;

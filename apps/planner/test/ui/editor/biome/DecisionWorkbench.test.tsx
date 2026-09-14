@@ -738,6 +738,46 @@ describe('DecisionWorkbench', () => {
     expect(screen.queryByLabelText('Door 2 room')).toBeNull();
   });
 
+  it('shows P physical door types before and after choosing a room with its exit summary', async () => {
+    const owner = createExitDecisionAddress(pBiome, {
+      kind: 'occurrence',
+      occurrenceId: pOccurrenceId('P_Combat03', 1, 1),
+    });
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision: owner,
+    });
+    project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision: owner });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(pBiome, owner.source),
+      storeKey: 'MetaProgress',
+    });
+    const view = renderDecisionWorkbench(project, 'Surface', 'P', subjectForOwner(owner));
+    expect(screen.getByText('Door 1 · Indoor')).toBeTruthy();
+    expect(screen.getByText('Door 2 · Outdoor')).toBeTruthy();
+
+    await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
+    const indoorRooms = within(await screen.findByRole('group', { name: 'Indoor' }));
+    await view.user.type(screen.getByRole('combobox', { name: 'Room choices' }), 'Indoor');
+    await view.user.click(indoorRooms.getByRole('option', { name: /Combat 04 \(2I\)/ }));
+
+    expect(screen.getByRole('heading', { name: 'Combat 04' })).toBeTruthy();
+    expect(screen.getByText('Door 1 · Indoor')).toBeTruthy();
+    expect(screen.getByText('Door 2 · Outdoor')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Door 1 room' }).textContent).toContain('Combat 04');
+
+    await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
+    expect(
+      within(await screen.findByRole('group', { name: 'Indoor' })).getByText('Combat 04 (2I)'),
+    ).toBeTruthy();
+    await view.user.keyboard('{Escape}');
+    await view.user.click(screen.getByRole('button', { name: 'Door 2 room' }));
+    expect(
+      within(await screen.findByRole('group', { name: 'Outdoor' })).getByText('Combat 15 (2I)'),
+    ).toBeTruthy();
+  });
+
   it('reanchors an authored downstream decision when its normal selected room changes', async () => {
     const project = loadSurfaceNOPQProject();
     const owner = createExitDecisionAddress(pBiome, {

@@ -201,7 +201,10 @@ function TargetRow({
       <div className="exit-content">
         <div className="exit-heading">
           <div>
-            <p className="card-kicker">Door {target.index}</p>
+            <p className="card-kicker">
+              Door {target.index}
+              {target.exitTypeLabel && ` · ${target.exitTypeLabel}`}
+            </p>
             <h4>{door.room.label}</h4>
           </div>
           <div className="owner-markers">
@@ -284,7 +287,10 @@ function MissingTargetRow({
       <div className="exit-content">
         <div className="exit-heading">
           <div>
-            <p className="card-kicker">Door {target.index}</p>
+            <p className="card-kicker">
+              Door {target.index}
+              {target.exitTypeLabel && ` · ${target.exitTypeLabel}`}
+            </p>
             <h4>Choose room</h4>
           </div>
           <div className="owner-markers">

@@ -67,6 +67,7 @@ export interface WorkspacePhysicalTarget {
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly door: WorkspaceDoorContract;
   readonly exitKey: string;
+  readonly exitTypeLabel?: string;
   readonly index: number;
   readonly marker: WorkspaceMarker;
   readonly physicalState: 'available' | 'unavailable';
@@ -103,6 +104,7 @@ export type WorkspaceBatchRepairIntent = WorkspaceCommandIntent<
 export interface WorkspaceMissingPhysicalTarget {
   readonly authoring: WorkspaceMissingTargetAuthoring;
   readonly exitKey: string;
+  readonly exitTypeLabel?: string;
   readonly index: number;
   readonly marker: WorkspaceMarker;
 }

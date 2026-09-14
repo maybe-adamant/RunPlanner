@@ -13,7 +13,7 @@ import {
 } from '@planner/projections/candidates/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import {
-  roomCategoryForKind,
+  roomPickerCandidateCategory,
   roomPickerCandidateLabel,
   roomSelectorCategories,
   selectRoomsForTargetCategory,
@@ -318,7 +318,7 @@ export function bindTopologyInteractions(input: {
           choices: Object.freeze(
             candidateRooms.map((room) =>
               Object.freeze({
-                category: roomCategoryForKind(room.kind) ?? room.kind,
+                category: roomPickerCandidateCategory(control.address.biomeKey, room),
                 gameName: room.gameName,
                 label: room.label,
               }),
@@ -332,7 +332,7 @@ export function bindTopologyInteractions(input: {
               candidates.startRooms(control.address, candidateRooms),
               (option) =>
                 Object.freeze({
-                  category: roomCategoryForKind(option.value.kind) ?? option.value.kind,
+                  category: roomPickerCandidateCategory(control.address.biomeKey, option.value),
                   label: roomPickerCandidateLabel(control.address.biomeKey, option.value),
                   selected: option.value.gameName === control.selectedGameName,
                 }),
@@ -411,7 +411,7 @@ export function bindTopologyInteractions(input: {
           choices: Object.freeze(
             candidateRooms.map((room) =>
               Object.freeze({
-                category: roomCategoryForKind(room.kind) ?? room.kind,
+                category: roomPickerCandidateCategory(control.address.biomeKey, room),
                 gameName: room.gameName,
                 label: room.label,
               }),
@@ -545,7 +545,7 @@ export function bindTopologyInteractions(input: {
               ),
               (option) =>
                 Object.freeze({
-                  category: roomCategoryForKind(option.value.kind) ?? option.value.kind,
+                  category: roomPickerCandidateCategory(control.address.biomeKey, option.value),
                   label: roomPickerCandidateLabel(control.address.biomeKey, option.value),
                   selected: false,
                 }),
@@ -576,7 +576,7 @@ export function bindTopologyInteractions(input: {
         choices: Object.freeze(
           ordinaryRooms.map((room) =>
             Object.freeze({
-              category: roomCategoryForKind(room.kind) ?? room.kind,
+              category: roomPickerCandidateCategory(control.address.biomeKey, room),
               gameName: room.gameName,
               label: room.label,
             }),
@@ -617,7 +617,7 @@ export function bindTopologyInteractions(input: {
             candidates.roomTargets(control.address, ordinaryRooms),
             (option) =>
               Object.freeze({
-                category: roomCategoryForKind(option.value.kind) ?? option.value.kind,
+                category: roomPickerCandidateCategory(control.address.biomeKey, option.value),
                 label: roomPickerCandidateLabel(control.address.biomeKey, option.value),
                 selected: option.value.gameName === selectedGameName,
               }),

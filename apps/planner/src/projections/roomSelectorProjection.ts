@@ -52,12 +52,41 @@ export function roomCategoryForKind(kind: RoomKind): RoomSelectorCategory | unde
   return unhandledKind;
 }
 
-/**
- * F/G/I combat maps mix normal-door widths inside broad room domains. Expose
- * that declaration fact only while the user is choosing a room; canonical
- * room labels remain unchanged everywhere else.
- */
+export function roomPickerCandidateCategory(biomeKey: string, room: RoomDeclaration): string {
+  if (biomeKey === 'P') {
+    const indoor = room.structuralTags.includes('Indoor');
+    const outdoor = room.structuralTags.includes('Outdoor');
+    if (indoor !== outdoor) return indoor ? 'Indoor' : 'Outdoor';
+  }
+  return roomCategoryForKind(room.kind) ?? room.kind;
+}
+
+/** Physical door names are independent of the destination room's structural tags. */
+export function olympusExitTypeLabel(
+  exitType: string | undefined,
+): 'Indoor' | 'Outdoor' | undefined {
+  if (exitType === 'OlympusIndoorExitDoor') return 'Indoor';
+  if (exitType === 'OlympusOutdoorExitDoor') return 'Outdoor';
+  return undefined;
+}
+
+/** Picker-only physical exit summaries; canonical room labels remain unchanged. */
 export function roomPickerCandidateLabel(biomeKey: string, room: RoomDeclaration): string {
+  if (biomeKey === 'P') {
+    const indoorCount = room.exits.filter(
+      (exit) => olympusExitTypeLabel(exit.type) === 'Indoor',
+    ).length;
+    const outdoorCount = room.exits.filter(
+      (exit) => olympusExitTypeLabel(exit.type) === 'Outdoor',
+    ).length;
+    const counts = [
+      indoorCount > 0 ? `${indoorCount}I` : '',
+      outdoorCount > 0 ? `${outdoorCount}O` : '',
+    ]
+      .filter(Boolean)
+      .join('/');
+    return counts === '' ? room.label : `${room.label} (${counts})`;
+  }
   if (room.kind !== 'Combat' || (biomeKey !== 'F' && biomeKey !== 'G' && biomeKey !== 'I')) {
     return room.label;
   }
