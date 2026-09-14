@@ -185,6 +185,13 @@ construction callback to mirror an execution-plan row. This keeps lifecycle
 wiring available for realization without turning native implementation detail
 into a second game model.
 
+Numeric state comparisons allow only absolute floating-point roundoff of
+`1e-9`, shared by room-exit conformance, postboss admission, and starting Fear
+checks. They do not round published values or native steering operands. Types,
+keys, identities, booleans, and collection structure remain exact; non-finite
+values fail. A one-unit counter difference or a meaningful fractional difference
+still desynchronizes. Diagnostic logs retain double-precision numeric detail.
+
 Rewards destroyed by Time Piece retain their generation and placement products,
 but publish no acquisition transaction. This applies equally to incoming rewards,
 Hub and side-room rewards, Fields cages, and Ship wheels. A wheel still publishes
