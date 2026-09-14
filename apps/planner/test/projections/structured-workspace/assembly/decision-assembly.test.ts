@@ -27,12 +27,8 @@ import {
   goldenIBiome,
 } from '@run-planner/test-fixtures/underworld';
 import {
-  authorLegalTraitOffers,
-  authorSurfaceWorldShop,
-  loadSurfaceNOProject,
   loadSurfaceNOPQProject,
   nOccurrenceIds,
-  oBiome,
   oOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
@@ -523,16 +519,16 @@ describe('structured workspace decision assembly', () => {
     expect(assembly.batch.targets[0]?.room.roomLocal.kind).toBe('ship');
   });
 
-  it('projects O target-specific outgoing-store consequences without adding a Ship selector', () => {
+  it('labels O outgoing store controls without adding a Ship selector', () => {
     const source = biomeSource(loadSurfaceNOPQProject(), 'Surface', 'O');
     const cases = [
-      [oOccurrenceIds.intro, 'No incoming reward · outgoing store discarded.', 'Next store roll'],
-      [oOccurrenceIds.combat01, 'Devotion · RunProgress forced.', undefined],
-      [oOccurrenceIds.devotion, 'Story fixed · counts as MetaProgress.', 'Next store roll'],
-      [oOccurrenceIds.combat02, 'Shop fixed · counts as RunProgress.', undefined],
+      [oOccurrenceIds.intro, 'Next store roll'],
+      [oOccurrenceIds.combat01, undefined],
+      [oOccurrenceIds.devotion, 'Next store roll'],
+      [oOccurrenceIds.combat02, undefined],
     ] as const;
 
-    for (const [occurrenceId, statement, rewardStoreLabel] of cases) {
+    for (const [occurrenceId, rewardStoreLabel] of cases) {
       const decision = batchDecisionAt(source, occurrenceId);
       const owner = createExitDecisionAddress(source.biome, decision.source);
       const evaluated = source.evaluatedBatch(owner);
@@ -550,94 +546,8 @@ describe('structured workspace decision assembly', () => {
       });
       if (assembly.kind !== 'batch') throw new Error(`O ${occurrenceId} is not a batch`);
 
-      expect(assembly.batch.targets[0]?.rewardConsequence?.statement).toBe(statement);
       expect(assembly.batch.rewardStoreLabel).toBe(rewardStoreLabel);
     }
-  });
-
-  it('keeps an unevaluated O target consequence explicitly unavailable', () => {
-    const source = biomeSource(loadSurfaceNOPQProject(), 'Surface', 'O');
-    const decision = batchDecisionAt(source, oOccurrenceIds.devotion);
-    const kit = decisionKit(source);
-    const assembly = assembleWorkspaceDecision({
-      persistence: 'authored',
-      assembleOccurrence: kit.assembleOccurrence,
-      catalog,
-      decision,
-      kind: 'batch',
-      markerDestinations: kit.markers.emitter,
-      source,
-    });
-    if (assembly.kind !== 'batch') throw new Error('retained O decision is not a batch');
-
-    expect(assembly.batch.targets[0]?.rewardConsequence).toEqual({
-      kind: 'unavailable',
-      statement: 'Reward-store consequence unavailable until this target is evaluated.',
-    });
-  });
-
-  it('projects forced, inherited, and fixed O consequences from valid target occurrences', () => {
-    const consequenceFor = (project: ProjectDocument, sourceOccurrenceId: string) => {
-      const source = biomeSource(authorLegalTraitOffers(project), 'Surface', 'O');
-      const decision = batchDecisionAt(source, sourceOccurrenceId);
-      const evaluated = source.evaluatedBatch(
-        createExitDecisionAddress(source.biome, decision.source),
-      );
-      if (evaluated === undefined) throw new Error(`O ${sourceOccurrenceId} evaluation is missing`);
-      const kit = decisionKit(source);
-      const assembly = assembleWorkspaceDecision({
-        persistence: 'authored',
-        assembleOccurrence: kit.assembleOccurrence,
-        catalog,
-        decision,
-        evaluated,
-        kind: 'batch',
-        markerDestinations: kit.markers.emitter,
-        source,
-      });
-      if (assembly.kind !== 'batch') throw new Error('O consequence decision is not a batch');
-      return assembly.batch.targets[0]?.rewardConsequence?.statement;
-    };
-
-    let miniboss = applyProjectCommand(loadSurfaceNOProject(), catalog, {
-      gameName: 'O_MiniBoss01',
-      kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.devotion),
-    });
-    miniboss = applyProjectCommand(miniboss, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(oBiome, oOccurrenceIds.devotion),
-      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
-    });
-
-    let reprieve = applyProjectCommand(loadSurfaceNOProject(), catalog, {
-      gameName: 'O_Reprieve01',
-      kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.devotion),
-    });
-    reprieve = applyProjectCommand(reprieve, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(oBiome, oOccurrenceIds.devotion),
-      value: { rewardType: 'MaxHealthDrop' },
-    });
-
-    const midshop = authorSurfaceWorldShop(
-      applyProjectCommand(loadSurfaceNOProject(), catalog, {
-        gameName: 'O_Shop01',
-        kind: 'ReplaceOccurrenceRoom',
-        occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.devotion),
-      }),
-      oBiome,
-      oOccurrenceIds.devotion,
-    );
-
-    expect(consequenceFor(miniboss, oOccurrenceIds.combat01)).toBe('Boon · RunProgress forced.');
-    expect(consequenceFor(reprieve, oOccurrenceIds.combat01)).toBe(
-      'Reward drawn from RunProgress.',
-    );
-    expect(consequenceFor(midshop, oOccurrenceIds.combat01)).toBe(
-      'Shop fixed · counts as RunProgress.',
-    );
   });
 
   it('keeps the Fields outcome control available while a retained batch awaits its outcome', () => {

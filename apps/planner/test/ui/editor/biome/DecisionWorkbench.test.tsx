@@ -1206,7 +1206,7 @@ describe('DecisionWorkbench', () => {
     expect(effectivePool.querySelector('p')).toBeNull();
   });
 
-  it('renders O target consequences from the decision projection and relabels only non-Ship stores', () => {
+  it('labels O outgoing store controls only on non-Ship decisions', () => {
     const project = loadSurfaceNOPQProject();
     const shipOwner = createExitDecisionAddress(oBiome, {
       kind: 'occurrence',
@@ -1214,7 +1214,6 @@ describe('DecisionWorkbench', () => {
     });
     renderStaticDecisionWorkbench(project, 'Surface', 'O', subjectForOwner(shipOwner));
 
-    expect(screen.getByText('Devotion · RunProgress forced.')).toBeTruthy();
     expect(screen.queryByLabelText('Reward Pool')).toBeNull();
     expect(screen.queryByLabelText('Next store roll')).toBeNull();
     cleanup();
@@ -1225,7 +1224,6 @@ describe('DecisionWorkbench', () => {
     });
     renderStaticDecisionWorkbench(project, 'Surface', 'O', subjectForOwner(ordinaryOwner));
 
-    expect(screen.getByText('Story fixed · counts as MetaProgress.')).toBeTruthy();
     expect(screen.getByLabelText('Next store roll')).toBeTruthy();
     expect(screen.queryByLabelText('Reward Pool')).toBeNull();
   });

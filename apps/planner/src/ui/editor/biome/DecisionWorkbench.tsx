@@ -225,14 +225,6 @@ function TargetRow({
             This saved door is no longer available here. Fix the earlier route first.
           </p>
         ) : null}
-        {target.rewardConsequence === undefined ? null : (
-          <p
-            className="target-reward-consequence"
-            data-consequence-kind={target.rewardConsequence.kind}
-          >
-            {target.rewardConsequence.statement}
-          </p>
-        )}
         <div className="door-reward-slot">
           <DoorRewardEditor
             door={door}
@@ -319,7 +311,7 @@ function MissingTargetRow({
         {canAuthorRoom ? (
           <div
             aria-live="polite"
-            className="field-control field-control-inline pending-reward-status"
+            className="field-control field-control-inline pending-reward-status door-reward-slot"
           >
             <span>Reward</span>
             <span className="fixed-room-state">Choose room to show reward</span>
