@@ -5,9 +5,12 @@ import type {
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
-import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
+import {
+  useWorkspaceInteraction,
+  useWorkspaceInteractionController,
+} from '@planner/ui/controls/useWorkspaceInteraction';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
-import { useLayoutEffect } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { TranscendentEmbryoOutcomeFields } from './rewards/TranscendentEmbryoOutcomeFields';
 
@@ -91,7 +94,7 @@ export function KeepsakeSelectionPicker({
 
 export function KeepsakeEquipResultPicker({
   id,
-  interaction,
+  interaction: requestedInteraction,
   label: labelOverride,
 }: {
   readonly id: string;
@@ -100,15 +103,30 @@ export function KeepsakeEquipResultPicker({
 }) {
   const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
-  const { activate, pending, result: domain } = useWorkspaceInteraction(interaction);
+  const [interaction, setInteraction] = useState(requestedInteraction);
+  const controller =
+    useWorkspaceInteractionController<
+      ReturnType<WorkspaceKeepsakeEquipResultInteraction['load']>
+    >();
+  const { pending, result: domain } = controller.observe(interaction);
+  useLayoutEffect(() => {
+    // Publish the binding and its numeric domain together, without unmounting
+    // the slider between consecutive updates during a native drag.
+    if (
+      requestedInteraction.owner.resultKind === 'transcendentEmbryo' &&
+      requestedInteraction.value !== undefined
+    ) {
+      controller.activate(requestedInteraction);
+    }
+    // The activated capability and its controlled inputs must commit atomically.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setInteraction(requestedInteraction);
+  }, [controller, requestedInteraction]);
   const resultKind = interaction.owner.resultKind;
   const embryoValue =
     resultKind === 'transcendentEmbryo'
       ? (interaction as TranscendentEmbryoInteraction).value
       : undefined;
-  useLayoutEffect(() => {
-    if (embryoValue !== undefined) activate();
-  }, [activate, embryoValue]);
   const label =
     resultKind === 'transcendentEmbryo'
       ? 'Target'
@@ -137,7 +155,7 @@ export function KeepsakeEquipResultPicker({
         loading={pending}
         model={domain?.picker ?? emptyModel}
         onOpenChange={(open) => {
-          if (open) activate();
+          if (open) controller.activate(interaction);
         }}
         onSelect={(value) => commitEquipResult(dispatch, interaction, value)}
         placeholder={placeholder}
