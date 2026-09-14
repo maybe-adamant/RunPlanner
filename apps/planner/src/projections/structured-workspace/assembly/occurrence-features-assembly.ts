@@ -76,18 +76,6 @@ function declaredRoomShopAllItemKeys(catalog: Catalog): readonly string[] {
       );
 }
 
-function declaredRoomShopTwistItemKeys(catalog: Catalog): readonly string[] {
-  const profile = catalog.rewards.shops.byKey.RoomShop;
-  return profile === undefined
-    ? Object.freeze([])
-    : Object.freeze(
-        profile.groups.values
-          .flatMap((group) => group.options.values)
-          .find((option) => option.key === 'RandomStoreItem')?.stygianWell?.nestedResultItemKeys ??
-          [],
-      );
-}
-
 function declaredSurfaceShopRewardTypes(catalog: Catalog, slotKey: string): readonly string[] {
   const profile = catalog.rewards.shops.byKey.SurfaceShop;
   if (profile === undefined) return Object.freeze([]);
@@ -192,7 +180,6 @@ function roomFeatures(
   const pool = input.occurrence.purgingPool;
   const declaredPoolTraitKeys = declaredPurgingPoolTraitKeys(input.catalog);
   const declaredWellAllItemKeys = declaredRoomShopAllItemKeys(input.catalog);
-  const declaredWellTwistItemKeys = declaredRoomShopTwistItemKeys(input.catalog);
   const declaredShrineAllRewardTypes = declaredSurfaceShopAllRewardTypes(input.catalog);
   const poolSlotLabel = (slotKey: 'left' | 'middle' | 'right'): string =>
     slotKey === 'left' ? 'Offer 1' : slotKey === 'middle' ? 'Offer 2' : 'Offer 3';
@@ -224,17 +211,7 @@ function roomFeatures(
                 : (['healing', 'secondLeft', 'secondRight'] as const).map((slotKey) => {
                     const generationKey = `initial:${slotKey}` as const;
                     const selected = well.offerKeyBySlot[slotKey];
-                    const twistKey = well.twistResultKeyBySlot?.[slotKey] ?? null;
-                    const twistCandidates =
-                      !purchased.has(generationKey) || selected !== 'RandomStoreItem'
-                        ? []
-                        : (wellAssessment?.twistCandidateItemKeysByGeneration[generationKey] ??
-                          declaredWellTwistItemKeys);
                     const address = featureAddress({ kind: 'stygianWellOffer', generationKey });
-                    const twistAddress = featureAddress({
-                      kind: 'stygianWellTwist',
-                      generationKey,
-                    });
                     return Object.freeze({
                       address,
                       marker: input.markerDestinations.marker(address),
@@ -257,24 +234,6 @@ function roomFeatures(
                       offerInteractionKey: `stygianWellOffer:${semanticAddressKey(poolOwner)}:${generationKey}`,
                       purchaseInteractionKey: `stygianWellPurchase:${semanticAddressKey(poolOwner)}:${generationKey}`,
                       purchased: purchased.has(generationKey),
-                      ...(twistKey === null &&
-                      (!purchased.has(generationKey) || selected !== 'RandomStoreItem')
-                        ? {}
-                        : {
-                            twist: Object.freeze({
-                              address: twistAddress,
-                              marker: input.markerDestinations.marker(twistAddress),
-                              itemKey: twistKey,
-                              ...(twistKey === null ? {} : { itemLabel: itemLabel(twistKey) }),
-                              candidateItemKeys: twistCandidates,
-                              candidateItems: Object.freeze(
-                                twistCandidates.map((key) =>
-                                  Object.freeze({ key, label: itemLabel(key) }),
-                                ),
-                              ),
-                              interactionKey: `stygianWellTwist:${semanticAddressKey(poolOwner)}:${generationKey}`,
-                            }),
-                          }),
                     });
                   });
             const refill =
@@ -288,21 +247,11 @@ function roomFeatures(
                 : (() => {
                     const generationKey = 'travelDealRefill' as const;
                     const selected = well.travelDealRefillKey ?? null;
-                    const twistKey = well.twistResultKeyBySlot?.travelDealRefill ?? null;
                     const candidates =
                       wellAssessment === undefined
                         ? declaredWellAllItemKeys
                         : (wellAssessment.travelDealRefill?.candidateItemKeys ?? Object.freeze([]));
-                    const twistCandidates =
-                      !purchased.has(generationKey) || selected !== 'RandomStoreItem'
-                        ? []
-                        : (wellAssessment?.twistCandidateItemKeysByGeneration[generationKey] ??
-                          declaredWellTwistItemKeys);
                     const address = featureAddress({ kind: 'stygianWellOffer', generationKey });
-                    const twistAddress = featureAddress({
-                      kind: 'stygianWellTwist',
-                      generationKey,
-                    });
                     return [
                       Object.freeze({
                         address,
@@ -319,24 +268,6 @@ function roomFeatures(
                         offerInteractionKey: `stygianWellOffer:${semanticAddressKey(poolOwner)}:${generationKey}`,
                         purchaseInteractionKey: `stygianWellPurchase:${semanticAddressKey(poolOwner)}:${generationKey}`,
                         purchased: purchased.has(generationKey),
-                        ...(twistKey === null &&
-                        (!purchased.has(generationKey) || selected !== 'RandomStoreItem')
-                          ? {}
-                          : {
-                              twist: Object.freeze({
-                                address: twistAddress,
-                                marker: input.markerDestinations.marker(twistAddress),
-                                itemKey: twistKey,
-                                ...(twistKey === null ? {} : { itemLabel: itemLabel(twistKey) }),
-                                candidateItemKeys: twistCandidates,
-                                candidateItems: Object.freeze(
-                                  twistCandidates.map((key) =>
-                                    Object.freeze({ key, label: itemLabel(key) }),
-                                  ),
-                                ),
-                                interactionKey: `stygianWellTwist:${semanticAddressKey(poolOwner)}:${generationKey}`,
-                              }),
-                            }),
                       }),
                     ];
                   })();

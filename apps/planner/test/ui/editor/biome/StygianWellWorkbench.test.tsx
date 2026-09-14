@@ -5,9 +5,10 @@ import {
   applyProjectCommand,
   createOccurrenceAddress,
   createOccurrenceId,
+  createRoomFeatureAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -18,7 +19,8 @@ import type {
 } from '@planner/projections/structured-workspace';
 import { createApplication } from '@planner/composition/createApplication';
 import { projectRouteStygianWellIndex } from '@planner/projections/routeRoomFeatureIndex';
-import { workspaceBiome, workspaceProjection } from '@planner-test/support/biome-workbench';
+import { renderWorkspace, workspaceProjection } from '@planner-test/support/biome-workbench';
+import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import { RouteWellsPanel } from '@planner/ui/shell/RouteWellsPanel';
 import {
@@ -177,27 +179,61 @@ describe('Stygian Well workbench', () => {
     );
   });
 
-  it('shows Twist only for a purchased Twist generation and clears purchase intent on exit', async () => {
-    const view = renderOccurrenceWorkbench(authoredWell(), 'Underworld', 'F', occurrence);
-    openOverview();
-    expect(screen.queryByRole('button', { name: 'Stygian Well Offer 2 Twist result' })).toBeNull();
+  it.each([
+    ['initial:secondLeft', 'Purchase Slot 2 Offer'],
+    ['travelDealRefill', 'Purchase Travel Deal Offer'],
+  ] as const)(
+    'shows and retains the %s Twist result on its Timeline action',
+    async (generationKey, label) => {
+      const owner = createOccurrenceAddress(goldenFBiome, postbossId);
+      const inventory =
+        generationKey === 'initial:secondLeft'
+          ? authoredWell()
+          : applyProjectCommand(createUnderworldFWellCheckpoint(false), catalog, {
+              kind: 'ReplaceStygianWellTravelDealRefill',
+              occurrence: owner,
+              itemKey: 'RandomStoreItem',
+            });
+      const purchased = applyProjectCommand(inventory, catalog, {
+        kind: 'SetStygianWellPurchase',
+        occurrence: owner,
+        generationKey,
+        purchased: true,
+      });
+      const view = renderWorkspace(purchased, 'Underworld', 'F');
+      act(() =>
+        view.application.store.dispatch(
+          semanticOwnerFocused(
+            createRoomFeatureAddress(owner, {
+              kind: 'stygianWellTwist',
+              generationKey,
+            }),
+          ),
+        ),
+      );
+      expect(
+        screen.queryByRole('button', { name: 'Stygian Well Offer 2 Twist result' }),
+      ).toBeNull();
+      const picker = screen.getByRole('button', {
+        name: `${label} · Fateful Twist Twist result`,
+      });
+      await view.user.click(picker);
+      const result = screen
+        .getAllByRole('option')
+        .find((option) => option.getAttribute('data-selected-value') === 'false');
+      if (result === undefined || result.textContent === null)
+        throw new Error('Twist result missing');
+      const resultLabel = result.textContent;
+      await view.user.click(result);
+      expect(picker.textContent).toContain(resultLabel);
+      await view.user.click(picker);
+      expect(
+        screen.getByRole('option', { name: resultLabel }).getAttribute('data-selected-value'),
+      ).toBe('true');
+    },
+  );
 
-    await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Stygian Well Offer 2' }));
-    expect(screen.getByRole('button', { name: 'Stygian Well Offer 2 Twist result' })).toBeTruthy();
-    const purchaseRow = occurrence(
-      workspaceBiome(view.application, 'Underworld', 'F'),
-    )?.room.roomActions?.rows.find(
-      (row) =>
-        row.reference.kind === 'purchaseStygianWellOffer' &&
-        row.reference.generationKey === 'initial:secondLeft',
-    );
-    expect(purchaseRow?.label).toBe('Purchase Slot 2 Offer · Fateful Twist');
-
-    await view.user.click(screen.getByRole('checkbox', { name: 'Interact with Stygian Well' }));
-    expect(screen.queryAllByRole('button', { name: /^Stygian Well / })).toHaveLength(0);
-  });
-
-  it('repairs a retained purchased generation without discarding its dormant Twist result', async () => {
+  it('clears an incompatible retained Twist result when its parent item is replaced', async () => {
     const owner = createOccurrenceAddress(goldenFBiome, postbossId);
     let project = applyProjectCommand(authoredWell(), catalog, {
       kind: 'SetStygianWellPurchase',
@@ -226,16 +262,17 @@ describe('Stygian Well workbench', () => {
     const offer = screen.getByRole('button', { name: 'Stygian Well Offer 2 Item' });
     expect((purchase as HTMLInputElement).checked).toBe(true);
     expect(offer.textContent).toContain('Unresolved');
-    expect(
-      screen.getByRole('button', { name: 'Stygian Well Offer 2 Twist result' }).textContent,
-    ).toContain('Life Essence');
+    expect(screen.queryByRole('button', { name: /Twist result$/ })).toBeNull();
 
     await view.user.click(offer);
     await view.user.click(screen.getByRole('option', { name: 'Fateful Twist' }));
-    const twist = screen.getByRole('button', {
-      name: 'Stygian Well Offer 2 Twist result',
-    });
-    expect(twist.textContent).toContain('Life Essence');
+    expect(
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes[0]!.topology!.occurrences.find(
+          (room) => room.occurrenceId === postbossId,
+        )?.stygianWell?.twistResultKeyBySlot?.secondLeft,
+    ).toBeUndefined();
   });
 
   it('indexes present Wells and navigates to the owning room', async () => {

@@ -135,15 +135,6 @@ export type WorkspaceRoomFeature =
         readonly offerInteractionKey: string;
         readonly purchaseInteractionKey: string;
         readonly purchased: boolean;
-        readonly twist?: {
-          readonly address: RoomFeatureAddress;
-          readonly marker: WorkspaceMarker;
-          readonly itemKey: string | null;
-          readonly itemLabel?: string;
-          readonly candidateItemKeys: readonly string[];
-          readonly candidateItems: readonly { readonly key: string; readonly label: string }[];
-          readonly interactionKey: string;
-        };
       }[];
     };
 

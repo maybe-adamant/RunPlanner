@@ -15,11 +15,19 @@ import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { RoomSelector } from './RoomSelector';
 import { RewardSurfaceEditor } from './DoorRewardEditor';
 import { TimelineActionDeleteButton } from './TimelineActionDeleteButton';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 import { KeepsakeEquipResultPicker, KeepsakeSelectionPicker } from '../KeepsakePickers';
+
+const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze({
+  sections: Object.freeze([]),
+});
 
 function PostbossKeepsakeControl({
   hideLabel = false,
@@ -252,9 +260,55 @@ export function inspectorRoomActionContent(
   interactions: WorkspaceInteractionCatalog,
   row: NonNullable<WorkspaceRoomSummary['roomActions']>['rows'][number],
 ): ReactNode {
+  if (row.stygianWellTwist !== undefined) {
+    return (
+      <StygianWellTwistTimelineContent
+        interactions={interactions}
+        label={row.label}
+        twist={row.stygianWellTwist}
+      />
+    );
+  }
   return row.reference.kind !== 'interactKeepsakeRack' ||
     room.keepsakeSelection === undefined ? null : (
     <KeepsakeRackTimelineContent interactions={interactions} selection={room.keepsakeSelection} />
+  );
+}
+
+function StygianWellTwistTimelineContent({
+  interactions,
+  label,
+  twist,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly label: string;
+  readonly twist: NonNullable<
+    NonNullable<WorkspaceRoomSummary['roomActions']>['rows'][number]['stygianWellTwist']
+  >;
+}) {
+  const interaction = requireWorkspaceInteraction(
+    interactions.stygianWellTwistResults,
+    twist.interactionKey,
+  );
+  const picker = useWorkspaceInteraction(interaction);
+  const findingTarget = useFindingTarget();
+  const executeIntent = useCommandIntent();
+  return (
+    <ContextualPicker
+      findingTarget={findingTarget(twist.address)}
+      ariaLabel={`${label} Twist result`}
+      id={`${interaction.key}-picker`}
+      label="Result"
+      layout="inline"
+      loading={picker.pending}
+      model={picker.result ?? emptyNullablePicker}
+      onOpenChange={(open) => {
+        if (open) picker.activate();
+      }}
+      onSelect={(itemKey) => executeIntent(interaction.intentFor(itemKey))}
+      placeholder="Unresolved"
+      {...(twist.itemLabel === undefined ? {} : { triggerLabel: twist.itemLabel })}
+    />
   );
 }
 export function inspectorRoomActionTrailingContent(

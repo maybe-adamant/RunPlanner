@@ -1914,6 +1914,95 @@ describe('engine-owned F/G execution semantic product', () => {
     ).not.toContainEqual(expect.objectContaining({ afterOwner: twist?.owner }));
   });
 
+  it('keeps a dormant or incompatible Well mystery result out of the execution wire', () => {
+    const well = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
+    let project = createCompleteFGIxionChaosProject();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStygianWellOffer',
+      occurrence: well,
+      slotKey: 'secondRight',
+      itemKey: 'RandomStoreItem',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: well,
+      generationKey: 'initial:secondRight',
+      purchased: true,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStygianWellTwistResult',
+      occurrence: well,
+      generationKey: 'initial:secondRight',
+      itemKey: 'TemporaryBoonRarityTrait',
+    });
+    const purchasedWithResult = project;
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: well,
+      generationKey: 'initial:secondRight',
+      purchased: false,
+    });
+    const dormant = productFor(authorLegalTraitOffers(project));
+    expect(
+      dormant.occurrences
+        .flatMap((occurrence) => occurrence.timeline.transactions)
+        .some(
+          (transaction) =>
+            transaction.kind === 'transformation' &&
+            transaction.transformation.kind === 'stygianWellTwist',
+        ),
+    ).toBe(false);
+    expect(
+      dormant.occurrences
+        .flatMap((occurrence) => occurrence.overview.stygianWell?.offers ?? [])
+        .some((offer) => offer.twistResultKey !== undefined),
+    ).toBe(false);
+
+    const compatibleAssembly = simulateProjectAssembly(
+      catalog,
+      authorLegalTraitOffers(purchasedWithResult),
+    );
+    const f = compatibleAssembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
+    if (f?.authoring !== 'complete' || !('snapshot' in f))
+      throw new Error('expected complete F execution evaluation');
+    const sourceRoom = orderedExecutionRooms([f]).find(
+      (room) => room.occurrenceId === well.occurrenceId,
+    );
+    if (sourceRoom?.stygianWell === undefined) throw new Error('Well source room is missing');
+    const inactiveRoom = {
+      ...sourceRoom,
+      stygianWell: {
+        ...sourceRoom.stygianWell,
+        offerKeyBySlot: {
+          ...sourceRoom.stygianWell.offerKeyBySlot,
+          secondRight: 'TemporaryForcedSecretDoorTrait',
+        },
+      },
+    };
+    const inactiveTimeline = executionTimelineTransactions(
+      inactiveRoom,
+      f,
+      mergePlannerTimelineFacts(
+        inactiveRoom.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
+        f.rewards.timelineFacts,
+      ),
+    );
+    const inactive = assembleExecutionOverview(inactiveRoom, f, undefined, inactiveTimeline);
+    expect(
+      inactiveTimeline.some(
+        (transaction) =>
+          transaction.kind === 'transformation' &&
+          transaction.transformation.kind === 'stygianWellTwist',
+      ),
+    ).toBe(false);
+    expect(inactive.stygianWell?.offers?.some((offer) => offer.twistResultKey !== undefined)).toBe(
+      false,
+    );
+  });
+
   it('publishes reached automatic outcomes while keeping Run State diagnostic-only', () => {
     const product = productFor(automaticOutcomeProject());
     expect(product.startingKeepsake.equipResults?.transcendentEmbryo).toEqual({

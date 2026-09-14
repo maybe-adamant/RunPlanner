@@ -4,6 +4,7 @@ import {
   createEncounterPhaseAddress,
   createFountainRarityOutcomeAddress,
   createOccurrenceAddress,
+  createRoomFeatureAddress,
   createAcquisitionSiteAddress,
   createRoomActionAddress,
   createShopOfferAddress,
@@ -65,6 +66,9 @@ export interface WorkspaceOccurrenceActionsInput {
   readonly derivedAcquisitionEntries?: (
     site: import('@run-planner/engine/authored-project').AcquisitionSiteAddress,
   ) => readonly WorkspaceDerivedAcquisitionEntry[];
+  readonly stygianWellAssessment?: (
+    owner: import('@run-planner/engine/authored-project').OccurrenceAddress,
+  ) => import('@run-planner/engine/simulation').StygianWellCandidateCapability | undefined;
 }
 
 export interface WorkspaceOccurrenceActionAssemblyInput extends WorkspaceOccurrenceActionsInput {
@@ -262,6 +266,48 @@ function roomActionsForOccurrence(
           roleIsAcquired(control.address.acquisitionRole),
         ),
       );
+      const stygianWellTwist = (() => {
+        if (row.reference.kind !== 'purchaseStygianWellOffer') return undefined;
+        const generationKey = row.reference.generationKey;
+        const slot = generationKey.startsWith('initial:')
+          ? (generationKey.slice('initial:'.length) as 'healing' | 'secondLeft' | 'secondRight')
+          : undefined;
+        const offerKey =
+          generationKey === 'travelDealRefill'
+            ? input.occurrence.stygianWell?.travelDealRefillKey
+            : slot === undefined
+              ? undefined
+              : input.occurrence.stygianWell?.offerKeyBySlot[slot];
+        const candidateItemKeys =
+          input.stygianWellAssessment?.(owner)?.twistCandidateItemKeysByGeneration[generationKey];
+        if (offerKey !== 'RandomStoreItem' || candidateItemKeys === undefined) return undefined;
+        const featureAddress = createRoomFeatureAddress(owner, {
+          kind: 'stygianWellTwist',
+          generationKey,
+        });
+        const marker = input.markerDestinations.marker(featureAddress);
+        input.markerDestinations.setRoomTab([marker], 'actions');
+        const childKey = generationKey === 'travelDealRefill' ? 'travelDealRefill' : slot!;
+        const itemLabelFor = (itemKey: string): string =>
+          input.catalog.rewards.shops.byKey.RoomShop?.groups.values
+            .flatMap((group) => group.options.values)
+            .find((option) => option.key === itemKey)?.label ?? itemKey;
+        const itemKey = input.occurrence.stygianWell?.twistResultKeyBySlot?.[childKey] ?? null;
+        return Object.freeze({
+          address: featureAddress,
+          generationKey,
+          marker,
+          itemKey,
+          ...(itemKey === null ? {} : { itemLabel: itemLabelFor(itemKey) }),
+          candidateItemKeys,
+          candidateItems: Object.freeze(
+            candidateItemKeys.map((itemKey) =>
+              Object.freeze({ key: itemKey, label: itemLabelFor(itemKey) }),
+            ),
+          ),
+          interactionKey: `stygianWellTwist:${semanticAddressKey(owner)}:${generationKey}`,
+        });
+      })();
       return Object.freeze({
         address,
         issues: issuesFor(row.key),
@@ -326,6 +372,7 @@ function roomActionsForOccurrence(
         window: row.window,
         ...(row.stale || traitOffer === undefined ? {} : { traitOffer }),
         ...(fountainRarity === undefined ? {} : { fountainRarity }),
+        ...(stygianWellTwist === undefined ? {} : { stygianWellTwist }),
         executable: row.executable,
       });
     }),

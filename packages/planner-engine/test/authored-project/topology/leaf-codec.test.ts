@@ -108,7 +108,7 @@ describe('topology leaf codecs', () => {
     });
   });
 
-  it('round-trips retained purchased Well generations after their initial or refill source is cleared', () => {
+  it('retains Twist results for same-item and unpurchased generations, then clears incompatible parents', () => {
     let document = applyProjectCommand(
       project('codec-retained-well-purchase', 'Underworld', 1),
       catalog,
@@ -164,6 +164,65 @@ describe('topology leaf codecs', () => {
         generationKey: 'travelDealRefill' as const,
         itemKey: 'HealDropRange',
       },
+    ])
+      document = applyProjectCommand(document, catalog, command);
+
+    const staleEncoded = encodedProject(document);
+    const stalePlan = staleEncoded.route!.biomes[0]! as unknown as { topology: EncodedTopology };
+    const staleWell = stalePlan.topology.occurrences.find(
+      (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+    )?.stygianWell as {
+      offerKeyBySlot: { secondLeft: string | null };
+      travelDealRefillKey: string | null;
+    };
+    staleWell.offerKeyBySlot.secondLeft = 'ArmorBoostStore';
+    staleWell.travelDealRefillKey = 'ArmorBoostStore';
+    let repaired = decodeProjectDocument(staleEncoded, catalog);
+    for (const command of [
+      {
+        kind: 'ReplaceStygianWellOffer' as const,
+        occurrence,
+        slotKey: 'secondLeft' as const,
+        itemKey: 'RandomStoreItem',
+      },
+      {
+        kind: 'ReplaceStygianWellTravelDealRefill' as const,
+        occurrence,
+        itemKey: 'RandomStoreItem',
+      },
+    ])
+      repaired = applyProjectCommand(repaired, catalog, command);
+    expect(
+      planFor(repaired, 'Underworld', 'F').topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+      )?.stygianWell?.twistResultKeyBySlot,
+    ).toEqual({});
+
+    for (const command of [
+      {
+        kind: 'ReplaceStygianWellOffer' as const,
+        occurrence,
+        slotKey: 'secondLeft' as const,
+        itemKey: 'RandomStoreItem',
+      },
+      {
+        kind: 'SetStygianWellPurchase' as const,
+        occurrence,
+        generationKey: 'initial:secondLeft' as const,
+        purchased: false,
+      },
+    ])
+      document = applyProjectCommand(document, catalog, command);
+
+    let well = planFor(document, 'Underworld', 'F').topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+    )?.stygianWell;
+    expect(well).toMatchObject({
+      purchasedGenerationKeys: ['travelDealRefill'],
+      twistResultKeyBySlot: { secondLeft: 'HealDropRange', travelDealRefill: 'HealDropRange' },
+    });
+
+    for (const command of [
       {
         kind: 'ReplaceStygianWellOffer' as const,
         occurrence,
@@ -178,14 +237,14 @@ describe('topology leaf codecs', () => {
     ])
       document = applyProjectCommand(document, catalog, command);
 
-    const well = planFor(document, 'Underworld', 'F').topology?.occurrences.find(
+    well = planFor(document, 'Underworld', 'F').topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
     )?.stygianWell;
     expect(well).toMatchObject({
       offerKeyBySlot: { secondLeft: null },
       travelDealRefillKey: null,
-      purchasedGenerationKeys: ['initial:secondLeft', 'travelDealRefill'],
-      twistResultKeyBySlot: { secondLeft: 'HealDropRange', travelDealRefill: 'HealDropRange' },
+      purchasedGenerationKeys: ['travelDealRefill'],
+      twistResultKeyBySlot: {},
     });
     expect(decodeProjectDocument(encodedProject(document), catalog)).toEqual(document);
   });

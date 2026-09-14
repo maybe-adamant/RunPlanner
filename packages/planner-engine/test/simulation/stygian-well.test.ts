@@ -5,6 +5,8 @@ import {
   createAdditionalExitAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createIncomingRewardAddress,
+  createTraitOfferAddress,
   forcedChaosOccurrenceKeys,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
@@ -24,9 +26,11 @@ import {
   goldenGOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
 import { simulateProjectAssembly } from '../../src/simulation/evaluation/project';
+import { createTraitHistoryState } from '../../src/simulation/traits';
 import { stygianWellCandidateForProjectEvaluationAssembly } from '../../src/simulation/evaluation/project-evaluation-assembly';
 import {
   applyStygianWellPurchase,
+  assessStygianWellPurchase,
   advanceStygianWellBossUses,
   advanceStygianWellEncounterUses,
   assessStygianWell,
@@ -56,9 +60,16 @@ describe('Stygian Well consequential purchase state', () => {
       );
       const candidate = stygianWellCandidateForProjectEvaluationAssembly(assembly, owner);
       expect(candidate?.assessments).not.toHaveLength(0);
-      expect(candidate?.assessments.every((assessment) => assessment.inventory?.complete)).toBe(
-        true,
-      );
+      expect(
+        candidate?.assessments
+          .filter(
+            (
+              assessment,
+            ): assessment is import('../../src/simulation/commerce/stygian-well').StygianWellEntryCandidateContext =>
+              'inventory' in assessment,
+          )
+          .every((assessment) => assessment.inventory?.complete),
+      ).toBe(true);
       const biome = assembly.evaluation.route.biomes.find(
         (candidateBiome) => candidateBiome.biomeKey === 'F',
       );
@@ -81,6 +92,34 @@ describe('Stygian Well consequential purchase state', () => {
     expect(applyStygianWellPurchase(catalog, empty(), 'TemporaryBoonRarityTrait').yarnUses).toBe(1);
     expect(applyStygianWellPurchase(catalog, empty(), 'LimitedSwapTraitDrop').hymnUses).toBe(1);
     expect(applyStygianWellPurchase(catalog, empty(), 'LastStandShopItem')).toEqual(empty());
+  });
+
+  it('reports and skips a retained Travel refill when its actual trigger is removed', () => {
+    let project = createUnderworldFWellCheckpoint(false);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createIncomingRewardAddress(goldenFBiome, createOccurrenceId('golden-f-b8-e1')),
+        'self',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'Hermes',
+        options: [
+          { traitKey: 'RestockBoon', rarity: 'Epic' },
+          { traitKey: 'HermesWeaponBoon', rarity: 'Rare' },
+          { traitKey: 'SprintShieldBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option2',
+      },
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    const f = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
+    if (f?.authoring !== 'complete') throw new Error('expected complete F Well evaluation');
+    expect(f.rewards.findings).toContainEqual(
+      expect.objectContaining({ code: 'stygianWellTravelDealRefillUnavailable' }),
+    );
+    expect(f.rewards.branches.every((branch) => branch.stygianWell?.extendedUses !== 1)).toBe(true);
   });
 
   it('materializes and consumes one Ixion use at the first reached host-capable Chaos room', () => {
@@ -666,7 +705,11 @@ describe('Stygian Well consequential purchase state', () => {
     expect(extendedWellItemKeys(catalog)).not.toContain('TemporaryBoonRarityTrait');
   });
 
-  it('publishes exact Travel Deal and active Twist domains while retaining stale authored children', () => {
+  it('assesses Travel Deal and Twist only at their reached purchase contacts', () => {
+    const travelHistory = {
+      ...createTraitHistoryState(),
+      equippedTraits: { RestockBoon: {} as never },
+    };
     const well = {
       interacted: true,
       offerKeyBySlot: {
@@ -678,45 +721,182 @@ describe('Stygian Well consequential purchase state', () => {
       travelDealRefillKey: 'TemporaryImprovedCastTrait',
       twistResultKeyBySlot: { secondLeft: 'TemporaryDiscountTrait' },
     } as const;
-    const assessment = assessStygianWell(
+    const assessment = assessStygianWellPurchase(
       catalog,
-      catalog.rooms.byKey.F_Combat01,
       well,
-      empty(),
-      undefined,
-      [],
       'initial:secondLeft',
-      true,
+      empty(),
+      travelHistory,
+      'initial:secondLeft',
     );
-    expect(assessment.complete).toBe(true);
+    expect(assessment.issues).toEqual([]);
     expect(assessment.travelDealRefill).toMatchObject({
       sourceGenerationKey: 'initial:secondLeft',
     });
     expect(assessment.travelDealRefill?.candidateItemKeys).not.toContain('RandomStoreItem');
     expect(assessment.travelDealRefill?.candidateItemKeys).not.toContain('LimitedSwapTraitDrop');
-    expect(assessment.twistCandidateItemKeysByGeneration['initial:secondLeft']).toEqual(
-      twistResultItemKeys(catalog),
-    );
+    expect(assessment.twistCandidateItemKeys).toEqual(twistResultItemKeys(catalog));
 
-    const activeDiscount = assessStygianWell(
+    const activeDiscount = assessStygianWellPurchase(
       catalog,
-      catalog.rooms.byKey.F_Combat01,
       well,
-      { ...empty(), discountUses: [3] },
-      undefined,
-      [],
       'initial:secondLeft',
-      true,
+      { ...empty(), discountUses: [3] },
+      travelHistory,
+      'initial:secondLeft',
     );
-    expect(activeDiscount.twistCandidateItemKeysByGeneration['initial:secondLeft']).not.toContain(
-      'TemporaryDiscountTrait',
-    );
+    expect(activeDiscount.twistCandidateItemKeys).not.toContain('TemporaryDiscountTrait');
     expect(activeDiscount.issues).toContainEqual(
       expect.objectContaining({ kind: 'twistInvalid', generationKey: 'initial:secondLeft' }),
     );
   });
 
-  it('requires a same-group refill only after the actual first ranked purchase activates Travel Deal', () => {
+  it('uses the authored purchase order for Discount before or after Twist', () => {
+    const well = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
+    const configured = (order: readonly ('initial:secondLeft' | 'initial:secondRight')[]) => {
+      let project = createUnderworldFWellCheckpoint(false);
+      for (const [slotKey, itemKey] of [
+        ['secondLeft', 'TemporaryDiscountTrait'],
+        ['secondRight', 'RandomStoreItem'],
+      ] as const) {
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceStygianWellOffer',
+          occurrence: well,
+          slotKey,
+          itemKey,
+        });
+      }
+      for (const generationKey of [
+        'initial:healing',
+        'initial:secondLeft',
+        'initial:secondRight',
+      ] as const) {
+        project = applyProjectCommand(project, catalog, {
+          kind: 'SetStygianWellPurchase',
+          occurrence: well,
+          generationKey,
+          purchased: false,
+        });
+      }
+      for (const generationKey of order) {
+        project = applyProjectCommand(project, catalog, {
+          kind: 'SetStygianWellPurchase',
+          occurrence: well,
+          generationKey,
+          purchased: true,
+        });
+      }
+      return applyProjectCommand(project, catalog, {
+        kind: 'ReplaceStygianWellTwistResult',
+        occurrence: well,
+        generationKey: 'initial:secondRight',
+        itemKey: 'TemporaryDiscountTrait',
+      });
+    };
+    const candidate = (project: ReturnType<typeof configured>) =>
+      stygianWellCandidateForProjectEvaluationAssembly(
+        simulateProjectAssembly(catalog, project),
+        well,
+      );
+
+    expect(
+      candidate(configured(['initial:secondLeft', 'initial:secondRight']))
+        ?.twistCandidateItemKeysByGeneration['initial:secondRight'],
+    ).not.toContain('TemporaryDiscountTrait');
+    expect(
+      candidate(configured(['initial:secondRight', 'initial:secondLeft']))
+        ?.twistCandidateItemKeysByGeneration['initial:secondRight'],
+    ).toContain('TemporaryDiscountTrait');
+  });
+
+  it('captures Travel refill and refill Twist domains before the source effect', () => {
+    const well = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
+    let project = createUnderworldFWellCheckpoint(false);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStygianWellOffer',
+      occurrence: well,
+      slotKey: 'secondLeft',
+      itemKey: 'RandomStoreItem',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStygianWellTwistResult',
+      occurrence: well,
+      generationKey: 'initial:secondLeft',
+      itemKey: 'TemporaryDiscountTrait',
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    const capability = stygianWellCandidateForProjectEvaluationAssembly(assembly, well);
+    expect(capability?.travelDealRefill?.candidateItemKeys).toContain('TemporaryDiscountTrait');
+    expect(capability?.twistCandidateItemKeysByGeneration['initial:secondLeft']).toContain(
+      'TemporaryDiscountTrait',
+    );
+
+    let refillProject = createUnderworldFWellCheckpoint(false);
+    for (const [slotKey, itemKey] of [
+      ['healing', 'TemporaryDiscountTrait'],
+      ['secondLeft', 'TemporaryImprovedCastTrait'],
+      ['secondRight', 'LimitedSwapTraitDrop'],
+    ] as const) {
+      refillProject = applyProjectCommand(refillProject, catalog, {
+        kind: 'ReplaceStygianWellOffer',
+        occurrence: well,
+        slotKey,
+        itemKey,
+      });
+    }
+    for (const generationKey of [
+      'initial:healing',
+      'initial:secondLeft',
+      'initial:secondRight',
+    ] as const) {
+      refillProject = applyProjectCommand(refillProject, catalog, {
+        kind: 'SetStygianWellPurchase',
+        occurrence: well,
+        generationKey,
+        purchased: false,
+      });
+    }
+    refillProject = applyProjectCommand(refillProject, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: well,
+      generationKey: 'initial:healing',
+      purchased: true,
+    });
+    refillProject = applyProjectCommand(refillProject, catalog, {
+      kind: 'ReplaceStygianWellTravelDealRefill',
+      occurrence: well,
+      itemKey: 'RandomStoreItem',
+    });
+    refillProject = applyProjectCommand(refillProject, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: well,
+      generationKey: 'travelDealRefill',
+      purchased: true,
+    });
+    refillProject = applyProjectCommand(refillProject, catalog, {
+      kind: 'ReplaceStygianWellTwistResult',
+      occurrence: well,
+      generationKey: 'travelDealRefill',
+      itemKey: 'HealDropRange',
+    });
+    const refillAssembly = simulateProjectAssembly(catalog, refillProject);
+    expect(
+      stygianWellCandidateForProjectEvaluationAssembly(refillAssembly, well)
+        ?.twistCandidateItemKeysByGeneration.travelDealRefill,
+    ).toContain('HealDropRange');
+    expect(
+      stygianWellCandidateForProjectEvaluationAssembly(refillAssembly, well)
+        ?.twistCandidateItemKeysByGeneration.travelDealRefill,
+    ).not.toContain('TemporaryDiscountTrait');
+  });
+
+  it('requires a same-group refill only when its actual trigger has Travel Deal', () => {
     const base = {
       interacted: true,
       offerKeyBySlot: {
@@ -726,29 +906,25 @@ describe('Stygian Well consequential purchase state', () => {
       },
       purchasedGenerationKeys: ['initial:healing'],
     } as const;
-    const missing = assessStygianWell(
+    const missing = assessStygianWellPurchase(
       catalog,
-      catalog.rooms.byKey.F_Combat01,
       base,
-      empty(),
-      undefined,
-      [],
       'initial:healing',
-      true,
+      empty(),
+      { ...createTraitHistoryState(), equippedTraits: { RestockBoon: {} as never } },
+      'initial:healing',
     );
     expect(missing.issues).toContainEqual(
       expect.objectContaining({ kind: 'refillMissing', generationKey: 'travelDealRefill' }),
     );
     expect(missing.travelDealRefill?.candidateItemKeys).toContain('ArmorBoostStore');
-    const withoutTravel = assessStygianWell(
+    const withoutTravel = assessStygianWellPurchase(
       catalog,
-      catalog.rooms.byKey.F_Combat01,
       base,
+      'initial:healing',
       empty(),
       undefined,
-      [],
       'initial:healing',
-      false,
     );
     expect(withoutTravel.travelDealRefill).toBeUndefined();
     expect(withoutTravel.issues).not.toContainEqual(
@@ -756,7 +932,7 @@ describe('Stygian Well consequential purchase state', () => {
     );
   });
 
-  it('retains stale purchased initial and refill generations as repairable assessment findings', () => {
+  it('keeps initial inventory repair separate from dormant purchase-owned children', () => {
     const assessment = assessStygianWell(
       catalog,
       catalog.rooms.byKey.F_Combat01,
@@ -773,22 +949,17 @@ describe('Stygian Well consequential purchase state', () => {
       },
       empty(),
       undefined,
-      [],
-      'initial:secondLeft',
-      true,
     );
     expect(assessment.candidateItemKeysBySlot.secondLeft).toContain('RandomStoreItem');
     expect(assessment.issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ kind: 'missing', generationKey: 'initial:secondLeft' }),
-        expect.objectContaining({ kind: 'refillMissing', generationKey: 'travelDealRefill' }),
-        expect.objectContaining({ kind: 'twistOrphan', generationKey: 'initial:secondLeft' }),
       ]),
     );
     expect(assessment.complete).toBe(false);
   });
 
-  it('ignores dormant refill detail but rejects a refill purchase without its trigger', () => {
+  it('ignores dormant refill and Twist detail at initial inventory assessment', () => {
     const well = {
       interacted: true,
       offerKeyBySlot: {
@@ -799,30 +970,8 @@ describe('Stygian Well consequential purchase state', () => {
       travelDealRefillKey: 'RandomStoreItem',
       twistResultKeyBySlot: { travelDealRefill: 'HealDropRange' },
     } as const;
-    for (const hasTravelDeal of [false, true]) {
-      const dormant = assessStygianWell(
-        catalog,
-        catalog.rooms.byKey.F_Combat01,
-        well,
-        empty(),
-        undefined,
-        [],
-        undefined,
-        hasTravelDeal,
-      );
-      expect(dormant.travelDealRefill).toBeUndefined();
-      expect(dormant.issues).toEqual([]);
-      expect(dormant.complete).toBe(true);
-    }
-    const purchased = assessStygianWell(
-      catalog,
-      catalog.rooms.byKey.F_Combat01,
-      { ...well, purchasedGenerationKeys: ['travelDealRefill'] },
-      empty(),
-    );
-    expect(purchased.issues).toContainEqual({
-      kind: 'refillUnavailable',
-      generationKey: 'travelDealRefill',
-    });
+    const dormant = assessStygianWell(catalog, catalog.rooms.byKey.F_Combat01, well, empty());
+    expect(dormant.issues).toEqual([]);
+    expect(dormant.complete).toBe(true);
   });
 });

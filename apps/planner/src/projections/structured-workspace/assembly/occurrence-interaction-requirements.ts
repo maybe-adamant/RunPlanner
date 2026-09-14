@@ -176,20 +176,22 @@ export function occurrenceInteractionRequirements(
                 offerInteractionKey: slot.offerInteractionKey,
                 purchased: slot.purchased,
                 purchaseInteractionKey: slot.purchaseInteractionKey,
-                ...(slot.twist === undefined
-                  ? {}
-                  : {
-                      twist: Object.freeze({
-                        itemKey: slot.twist.itemKey,
-                        ...(slot.twist.itemLabel === undefined
-                          ? {}
-                          : { itemLabel: slot.twist.itemLabel }),
-                        candidateItemKeys: slot.twist.candidateItemKeys,
-                        candidateItems: slot.twist.candidateItems,
-                        interactionKey: slot.twist.interactionKey,
-                      }),
-                    }),
               }),
+            ),
+          ),
+          twists: Object.freeze(
+            (room.roomActions?.rows ?? []).flatMap((row) =>
+              row.stygianWellTwist === undefined
+                ? []
+                : [
+                    Object.freeze({
+                      generationKey: row.stygianWellTwist.generationKey,
+                      itemKey: row.stygianWellTwist.itemKey,
+                      candidateItemKeys: row.stygianWellTwist.candidateItemKeys,
+                      candidateItems: row.stygianWellTwist.candidateItems,
+                      interactionKey: row.stygianWellTwist.interactionKey,
+                    }),
+                  ],
             ),
           ),
         }),

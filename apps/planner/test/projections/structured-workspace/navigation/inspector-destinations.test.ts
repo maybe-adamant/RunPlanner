@@ -34,6 +34,7 @@ import {
   createGoldenFGHProject,
   createGoldenFGHIProject,
   createCompleteFGProject,
+  createUnderworldFWellCheckpoint,
   goldenFBiome,
   goldenGBiome,
   goldenHBiome,
@@ -406,60 +407,44 @@ describe('workspace inspector destinations', () => {
     });
   });
 
-  it('keeps an orphaned Well mystery result visible and clearable', () => {
-    const original = createGoldenFGHIProject();
+  it('routes a purchased Well mystery repair to its Timeline action', () => {
     const owner = createOccurrenceAddress(
       goldenFBiome,
       createOccurrenceId('golden-f-preboss-shop:postboss'),
     );
-    const document: ProjectDocument = {
-      ...original,
-      route: {
-        ...original.route,
-        biomes: original.route.biomes.map((entry) =>
-          entry.biomeKey !== 'F' || entry.topology === null
-            ? entry
-            : {
-                ...entry,
-                topology: {
-                  ...entry.topology,
-                  occurrences: entry.topology.occurrences.map((room) =>
-                    room.occurrenceId !== owner.occurrenceId
-                      ? room
-                      : {
-                          ...room,
-                          stygianWell: {
-                            offerKeyBySlot: {
-                              healing: 'ArmorBoostStore',
-                              secondLeft: null,
-                              secondRight: null,
-                            },
-                            interacted: true,
-                            twistResultKeyBySlot: { healing: 'TemporaryBoonRarityTrait' },
-                          },
-                        },
-                  ),
-                },
-              },
-        ),
-      },
-    };
+    let document = createUnderworldFWellCheckpoint(false);
+    document = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceStygianWellOffer',
+      occurrence: owner,
+      slotKey: 'secondLeft',
+      itemKey: 'RandomStoreItem',
+    });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: owner,
+      generationKey: 'initial:secondLeft',
+      purchased: true,
+    });
     const assembled = assembly(document);
     const finding = assembled.evaluation.findings.find(
       (entry) => entry.code === 'stygianWellTwistInvalid',
     );
-    if (finding === undefined) throw new Error('orphan finding missing');
+    if (finding === undefined) throw new Error('Twist finding missing');
     const workspace = structuredWorkspace.project(assembled);
     expect(destination(workspace, finding.origin)).toMatchObject({
-      focusAddress: finding.origin,
-      roomTab: 'overview',
+      focusAddress: { kind: 'roomAction' },
+      roomTab: 'actions',
     });
     const control = [...workspace.interactions.stygianWellTwistResults.values()].find(
-      (entry) => entry.generationKey === 'initial:healing',
+      (entry) => entry.generationKey === 'initial:secondLeft',
     );
-    if (control === undefined) throw new Error('orphan repair missing');
-    expect(control.candidateItemKeys).toEqual([]);
-    const repaired = applyProjectCommand(document, catalog, control.intentFor(null).command);
+    if (control === undefined) throw new Error('Twist repair missing');
+    expect(control.candidateItemKeys).not.toEqual([]);
+    const repaired = applyProjectCommand(
+      document,
+      catalog,
+      control.intentFor('HealDropRange').command,
+    );
     expect(
       assembly(repaired).evaluation.findings.some(
         (entry) => entry.code === 'stygianWellTwistInvalid',

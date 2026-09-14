@@ -2,10 +2,17 @@
 
 ## Status and objective
 
-Status: **Locked for implementation.** Gate A is next; Gate B has not started.
+Status: **Gate A implemented and independently reviewed.** Gate B is next and
+has not started.
 Base: `e351211b` (timeline presentation cleanup; clean tracked worktree).
 
 The expanded contract passed independent adversarial review before locking.
+Gate A review findings about the saved result label and incompatible retained
+children are resolved. Focused simulation, execution, codec, navigation and UI
+tests passed, including initial/refill Timeline selection and reopening.
+Workspace contract checks, engine/application/fixture typechecks, and scoped
+lint/format checks passed. The complete repository gate remains reserved for
+final phase closure.
 
 Separate generated inventory from the outcome of acquiring its item. A Travel
 Deal refill is conditional inventory, but once generated it follows its host's

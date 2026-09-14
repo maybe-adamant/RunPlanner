@@ -440,8 +440,12 @@ consumable path and does not make a nested result a direct Extended purchase.
 ### Repetition, temporary use, and direct consequential effects
 
 Initial offers are distinct within one Well, and a Travel Deal refill excludes
-the purchased and still-visible names in that Well. A later Well may repeat an
-earlier identity. Most temporary traits stack or overlap. The exact source
+the purchased and still-visible names in that Well. `HandleStorePurchase`
+calls `FillInShopOptions` for that refill before applying the triggering item's
+effect. `AwardRandomStoreItem` instead evaluates Fateful Twist's nested pool
+when that item is used, so earlier purchases can change its result eligibility.
+A later Well may repeat an earlier identity. Most temporary traits stack or
+overlap. The exact source
 exceptions are: `TemporaryDiscountTrait` is ineligible while held;
 `TemporaryEmptySlotDamageTrait` is ineligible while held and requires an empty
 primary or secondary core slot; and `LastStandShopItem` is offered only while a
@@ -480,14 +484,18 @@ The three direct run-consequential identities are:
   the ordinary 10% replacement roll and therefore still applies while
   Ordinary has disabled that roll.
 
-### Current schema-71 planner disposition
+### Current planner disposition
 
 Forced F/G/H Postboss Wells are always present. An uninteracted Well retains
 dormant inventory detail but contributes no exact purchases or effects;
 interaction requires all three visible identities. Each purchase is a paid,
 atomic Cleanup action and never enters the free-pickup alternative-interaction
 lifecycle. Travel Deal owns one same-group refill from the first ranked
-purchase. The modeled state is limited to Ixion uses and their automatically
+qualifying purchase, assessed before its item effect. Initial inventory,
+refill generation, and Twist acquisition each use their own reached context.
+A Twist result is required only for its purchase and applies within that same
+action; an unpurchased retained result is dormant. The modeled state is limited
+to Ixion uses and their automatically
 derived next host-capable Chaos gate, Yarn rarity uses, Sacrificial Hymn replacement uses, active
 Discount and Empty Slot lifetimes, and Extended charges. Last Stand remains an
 exact concrete paid consumable; a failed live predicate is an execution

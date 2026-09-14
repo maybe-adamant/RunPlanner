@@ -42,32 +42,15 @@ export interface StygianWellAssessment {
   readonly candidateItemKeysBySlot: Readonly<
     Record<import('../../authored-project/model').StygianWellSlotKey, readonly string[]>
   >;
-  readonly travelDealRefill?: {
-    readonly sourceGenerationKey: import('../../authored-project/model').StygianWellGenerationKey;
-    readonly candidateItemKeys: readonly string[];
-  };
-  readonly twistCandidateItemKeysByGeneration: Readonly<
-    Partial<
-      Record<import('../../authored-project/model').StygianWellGenerationKey, readonly string[]>
-    >
-  >;
-  readonly issues: readonly StygianWellAssessmentIssue[];
+  readonly issues: readonly StygianWellInventoryAssessmentIssue[];
 }
 
-export type StygianWellAssessmentIssue =
+export type StygianWellInventoryAssessmentIssue =
   | {
       readonly kind: 'missing' | 'wrongGroup';
       readonly generationKey: import('../../authored-project/model').StygianWellGenerationKey;
     }
-  | { readonly kind: 'duplicate' }
-  | {
-      readonly kind: 'refillMissing' | 'refillUnavailable' | 'refillWrongGroup' | 'refillDuplicate';
-      readonly generationKey: 'travelDealRefill';
-    }
-  | {
-      readonly kind: 'twistMissing' | 'twistInvalid' | 'twistOrphan';
-      readonly generationKey: import('../../authored-project/model').StygianWellGenerationKey;
-    };
+  | { readonly kind: 'duplicate' };
 
 export interface StygianWellPlacementAssessment {
   readonly forced: boolean;
@@ -75,9 +58,34 @@ export interface StygianWellPlacementAssessment {
   readonly priorWellCount: number;
 }
 
-export interface StygianWellCandidateContext {
+export interface StygianWellEntryCandidateContext {
   readonly placement: StygianWellPlacementAssessment;
   readonly inventory?: StygianWellAssessment;
+}
+
+export type StygianWellCandidateContext =
+  StygianWellEntryCandidateContext | { readonly purchase: StygianWellPurchaseAssessment };
+
+export interface StygianWellPurchaseAssessment {
+  readonly generationKey: import('../../authored-project/model').StygianWellGenerationKey;
+  readonly travelDealRefill?: {
+    readonly sourceGenerationKey: Exclude<
+      import('../../authored-project/model').StygianWellGenerationKey,
+      'travelDealRefill'
+    >;
+    readonly candidateItemKeys: readonly string[];
+  };
+  readonly twistCandidateItemKeys?: readonly string[];
+  readonly issues: readonly (
+    | {
+        readonly kind: 'refillMissing' | 'refillWrongGroup' | 'refillDuplicate';
+        readonly generationKey: 'travelDealRefill';
+      }
+    | {
+        readonly kind: 'twistMissing' | 'twistInvalid';
+        readonly generationKey: import('../../authored-project/model').StygianWellGenerationKey;
+      }
+  )[];
 }
 
 /** The entry ledger includes the current room; Wells require three intervening rooms. */
@@ -111,6 +119,37 @@ export function assessStygianWellPlacement(
   });
 }
 
+function wellCandidateItemKeys(
+  catalog: Catalog,
+  state: Pick<StygianWellRunState, 'discountUses' | 'emptySlotUses'> | undefined,
+  traitHistory: import('../traits').TraitHistoryState | undefined,
+  slot: import('../../authored-project/model').StygianWellSlotKey,
+): readonly string[] {
+  const profile = catalog.rewards.shops.byKey.RoomShop;
+  const hasEmptyPrimaryOrSecondary =
+    traitHistory === undefined ||
+    traitHistory.equippedSlots.Attack === undefined ||
+    traitHistory.equippedSlots.Special === undefined;
+  return Object.freeze(
+    [
+      ...(profile?.slots.values.find((entry) => entry.key === slot)?.groupKey === 'Healing'
+        ? (profile.groups.byKey.Healing?.options.values ?? [])
+        : (profile?.groups.byKey.Other?.options.values ?? [])),
+    ]
+      .filter((option) => {
+        const requirements = option.stygianWell?.offerRequirements ?? [];
+        if (requirements.includes('inactive')) {
+          if (option.stygianWell?.effect === 'discount' && (state?.discountUses.length ?? 0) > 0)
+            return false;
+          if (option.stygianWell?.effect === 'emptySlot' && (state?.emptySlotUses.length ?? 0) > 0)
+            return false;
+        }
+        return !requirements.includes('emptyAttackOrSpecial') || hasEmptyPrimaryOrSecondary;
+      })
+      .map((option) => option.key),
+  );
+}
+
 /** Inventory-level assessment intentionally contains no price or pickup policy. */
 export function assessStygianWell(
   catalog: Catalog,
@@ -119,89 +158,14 @@ export function assessStygianWell(
   state?: Pick<StygianWellRunState, 'discountUses' | 'emptySlotUses'>,
   traitHistory?: import('../traits').TraitHistoryState,
   priorEnteredWellFlags: readonly boolean[] = Object.freeze([]),
-  firstPurchaseGenerationKey?: import('../../authored-project/model').StygianWellGenerationKey,
-  hasTravelDeal = false,
 ): StygianWellAssessment {
   const declaration = room?.roomShop;
   const placement = assessStygianWellPlacement(room, priorEnteredWellFlags);
-  const profile = catalog.rewards.shops.byKey.RoomShop;
-  const hasEmptyPrimaryOrSecondary =
-    traitHistory === undefined ||
-    traitHistory.equippedSlots.Attack === undefined ||
-    traitHistory.equippedSlots.Special === undefined;
-  const activeDiscount = (state?.discountUses.length ?? 0) > 0;
-  const activeEmptySlot = (state?.emptySlotUses.length ?? 0) > 0;
-  const candidate = (slot: 'healing' | 'secondLeft' | 'secondRight') =>
-    Object.freeze(
-      [
-        ...(profile?.slots.values.find((entry) => entry.key === slot)?.groupKey === 'Healing'
-          ? (profile.groups.byKey.Healing?.options.values ?? [])
-          : (profile?.groups.byKey.Other?.options.values ?? [])),
-      ]
-        .filter((option) => {
-          const requirements = option.stygianWell?.offerRequirements ?? [];
-          if (requirements.includes('inactive')) {
-            if (option.stygianWell?.effect === 'discount' && activeDiscount) return false;
-            if (option.stygianWell?.effect === 'emptySlot' && activeEmptySlot) return false;
-          }
-          return !requirements.includes('emptyAttackOrSpecial') || hasEmptyPrimaryOrSecondary;
-        })
-        .map((option) => option.key),
-    );
   const domains = Object.freeze({
-    healing: candidate('healing'),
-    secondLeft: candidate('secondLeft'),
-    secondRight: candidate('secondRight'),
+    healing: wellCandidateItemKeys(catalog, state, traitHistory, 'healing'),
+    secondLeft: wellCandidateItemKeys(catalog, state, traitHistory, 'secondLeft'),
+    secondRight: wellCandidateItemKeys(catalog, state, traitHistory, 'secondRight'),
   });
-  const purchased = new Set(well.purchasedGenerationKeys ?? []);
-  const twistResults = new Set(
-    twistResultItemKeys(catalog).filter((itemKey) => {
-      const option = wellOption(catalog, itemKey);
-      return option?.stygianWell?.effect !== 'discount' || !activeDiscount;
-    }),
-  );
-  const itemForGeneration = (
-    generation: import('../../authored-project/model').StygianWellGenerationKey,
-  ) => {
-    if (generation === 'travelDealRefill') return well.travelDealRefillKey;
-    return well.offerKeyBySlot[
-      generation.slice(
-        'initial:'.length,
-      ) as import('../../authored-project/model').StygianWellSlotKey
-    ];
-  };
-  const sourceSlot = firstPurchaseGenerationKey?.startsWith('initial:')
-    ? (firstPurchaseGenerationKey.slice(
-        'initial:'.length,
-      ) as import('../../authored-project/model').StygianWellSlotKey)
-    : undefined;
-  const excluded = new Set(
-    Object.values(well.offerKeyBySlot).filter((key): key is string => key !== null),
-  );
-  const travelDealRefill =
-    !hasTravelDeal || sourceSlot === undefined
-      ? undefined
-      : Object.freeze({
-          sourceGenerationKey: firstPurchaseGenerationKey!,
-          candidateItemKeys: Object.freeze(domains[sourceSlot].filter((key) => !excluded.has(key))),
-        });
-  const twistCandidateItemKeysByGeneration = Object.freeze(
-    Object.fromEntries(
-      (
-        [
-          'initial:healing',
-          'initial:secondLeft',
-          'initial:secondRight',
-          'travelDealRefill',
-        ] as const
-      )
-        .filter(
-          (generation) =>
-            purchased.has(generation) && itemForGeneration(generation) === 'RandomStoreItem',
-        )
-        .map((generation) => [generation, Object.freeze([...twistResults])]),
-    ),
-  );
   if (!well.interacted)
     return Object.freeze({
       placement,
@@ -210,12 +174,10 @@ export function assessStygianWell(
       eligible: placement.eligible,
       complete: false,
       candidateItemKeysBySlot: domains,
-      ...(travelDealRefill === undefined ? {} : { travelDealRefill }),
-      twistCandidateItemKeysByGeneration,
       issues: Object.freeze([]),
     });
   const values = STYGIAN_WELL_SLOT_KEYS.map((key) => well.offerKeyBySlot[key]);
-  const issues: StygianWellAssessment['issues'][number][] = [];
+  const issues: StygianWellInventoryAssessmentIssue[] = [];
   for (const key of STYGIAN_WELL_SLOT_KEYS) {
     const generationKey = `initial:${key}` as const;
     if (well.offerKeyBySlot[key] === null) {
@@ -226,57 +188,6 @@ export function assessStygianWell(
   }
   const selected = values.filter((value): value is string => value !== null);
   if (new Set(selected).size !== selected.length) issues.push({ kind: 'duplicate' });
-  if (travelDealRefill === undefined && purchased.has('travelDealRefill')) {
-    issues.push({ kind: 'refillUnavailable', generationKey: 'travelDealRefill' });
-  } else if (
-    travelDealRefill !== undefined &&
-    (well.travelDealRefillKey === undefined || well.travelDealRefillKey === null)
-  ) {
-    issues.push({ kind: 'refillMissing', generationKey: 'travelDealRefill' });
-  } else if (
-    travelDealRefill !== undefined &&
-    well.travelDealRefillKey !== undefined &&
-    well.travelDealRefillKey !== null
-  ) {
-    if (!travelDealRefill.candidateItemKeys.includes(well.travelDealRefillKey)) {
-      const sourceDomain = sourceSlot === undefined ? [] : domains[sourceSlot];
-      issues.push({
-        kind: sourceDomain.includes(well.travelDealRefillKey)
-          ? 'refillDuplicate'
-          : 'refillWrongGroup',
-        generationKey: 'travelDealRefill',
-      });
-    }
-  }
-  for (const generation of [
-    'initial:healing',
-    'initial:secondLeft',
-    'initial:secondRight',
-    'travelDealRefill',
-  ] as const) {
-    if (
-      generation === 'travelDealRefill' &&
-      travelDealRefill === undefined &&
-      !purchased.has(generation)
-    )
-      continue;
-    const result =
-      well.twistResultKeyBySlot?.[
-        generation === 'travelDealRefill'
-          ? 'travelDealRefill'
-          : (generation.slice(
-              'initial:'.length,
-            ) as import('../../authored-project/model').StygianWellSlotKey)
-      ];
-    const isPurchasedTwist =
-      purchased.has(generation) && itemForGeneration(generation) === 'RandomStoreItem';
-    if (isPurchasedTwist && (result === undefined || result === null))
-      issues.push({ kind: 'twistMissing', generationKey: generation });
-    else if (isPurchasedTwist && !twistResults.has(result!))
-      issues.push({ kind: 'twistInvalid', generationKey: generation });
-    else if (!isPurchasedTwist && result !== undefined && result !== null)
-      issues.push({ kind: 'twistOrphan', generationKey: generation });
-  }
   return Object.freeze({
     placement,
     interacted: true,
@@ -284,8 +195,82 @@ export function assessStygianWell(
     eligible: placement.eligible,
     complete: issues.length === 0,
     candidateItemKeysBySlot: domains,
+    issues: Object.freeze(issues),
+  });
+}
+
+/** Assesses one reached Well purchase against its exact pre-effect branch state. */
+export function assessStygianWellPurchase(
+  catalog: Catalog,
+  well: StygianWellState,
+  generationKey: import('../../authored-project/model').StygianWellGenerationKey,
+  state: Pick<StygianWellRunState, 'discountUses' | 'emptySlotUses'>,
+  traitHistory: import('../traits').TraitHistoryState | undefined,
+  firstPurchaseGenerationKey:
+    import('../../authored-project/model').StygianWellGenerationKey | undefined,
+): StygianWellPurchaseAssessment {
+  const activeDiscount = state.discountUses.length > 0;
+  const slot = generationKey.startsWith('initial:')
+    ? (generationKey.slice(
+        'initial:'.length,
+      ) as import('../../authored-project/model').StygianWellSlotKey)
+    : undefined;
+  const itemKey =
+    generationKey === 'travelDealRefill'
+      ? well.travelDealRefillKey
+      : slot === undefined
+        ? undefined
+        : well.offerKeyBySlot[slot];
+  const issues: StygianWellPurchaseAssessment['issues'][number][] = [];
+  const isFirstInitialPurchase = firstPurchaseGenerationKey === generationKey && slot !== undefined;
+  const travelDealRefill =
+    !isFirstInitialPurchase || traitHistory?.equippedTraits.RestockBoon === undefined
+      ? undefined
+      : (() => {
+          const selected = Object.values(well.offerKeyBySlot).filter(
+            (key): key is string => key !== null,
+          );
+          const sourceDomain = wellCandidateItemKeys(catalog, state, traitHistory, slot);
+          const candidateItemKeys = Object.freeze(
+            sourceDomain.filter((key) => !selected.includes(key)),
+          );
+          const refill = well.travelDealRefillKey;
+          if (refill === undefined || refill === null)
+            issues.push({ kind: 'refillMissing', generationKey: 'travelDealRefill' });
+          else if (!candidateItemKeys.includes(refill))
+            issues.push({
+              kind: sourceDomain.includes(refill) ? 'refillDuplicate' : 'refillWrongGroup',
+              generationKey: 'travelDealRefill',
+            });
+          return Object.freeze({
+            sourceGenerationKey: generationKey as Exclude<
+              import('../../authored-project/model').StygianWellGenerationKey,
+              'travelDealRefill'
+            >,
+            candidateItemKeys,
+          });
+        })();
+  const twistCandidateItemKeys =
+    itemKey !== 'RandomStoreItem'
+      ? undefined
+      : Object.freeze(
+          twistResultItemKeys(catalog).filter((key) => {
+            const option = wellOption(catalog, key);
+            return option?.stygianWell?.effect !== 'discount' || !activeDiscount;
+          }),
+        );
+  if (twistCandidateItemKeys !== undefined) {
+    const childKey = generationKey === 'travelDealRefill' ? 'travelDealRefill' : slot!;
+    const result = well.twistResultKeyBySlot?.[childKey];
+    if (result === undefined || result === null)
+      issues.push({ kind: 'twistMissing', generationKey });
+    else if (!twistCandidateItemKeys.includes(result))
+      issues.push({ kind: 'twistInvalid', generationKey });
+  }
+  return Object.freeze({
+    generationKey,
     ...(travelDealRefill === undefined ? {} : { travelDealRefill }),
-    twistCandidateItemKeysByGeneration,
+    ...(twistCandidateItemKeys === undefined ? {} : { twistCandidateItemKeys }),
     issues: Object.freeze(issues),
   });
 }
@@ -389,21 +374,38 @@ export function createStygianWellCandidateArtifacts(
     at: (occurrence: OccurrenceAddress) => {
       const assessments = privateContexts.get(semanticAddressKey(occurrence));
       if (assessments === undefined || assessments.length === 0) return undefined;
-      const first = assessments[0]!;
-      const travelDealRefill = first.inventory?.travelDealRefill;
+      const entryAssessments = assessments.filter(
+        (assessment): assessment is StygianWellEntryCandidateContext => 'placement' in assessment,
+      );
+      const firstEntry = entryAssessments[0];
+      const purchaseContexts = (
+        generationKey: import('../../authored-project/model').StygianWellGenerationKey,
+      ) =>
+        assessments.filter(
+          (assessment): assessment is { readonly purchase: StygianWellPurchaseAssessment } =>
+            'purchase' in assessment && assessment.purchase.generationKey === generationKey,
+        );
+      const refillContexts = purchaseContexts('initial:healing')
+        .concat(purchaseContexts('initial:secondLeft'), purchaseContexts('initial:secondRight'))
+        .filter((assessment) => assessment.purchase.travelDealRefill !== undefined);
+      const travelDealRefill = refillContexts[0]?.purchase.travelDealRefill;
       return Object.freeze({
         assessments,
-        placementEligible: assessments.every((assessment) => assessment.placement.eligible),
-        required: assessments.every((assessment) => assessment.placement.forced),
-        present: assessments.every((assessment) => assessment.inventory !== undefined),
-        interacted: assessments.every((assessment) => assessment.inventory?.interacted === true),
+        placementEligible: entryAssessments.every((assessment) => assessment.placement.eligible),
+        required: entryAssessments.every((assessment) => assessment.placement.forced),
+        present:
+          entryAssessments.length > 0 &&
+          entryAssessments.every((assessment) => assessment.inventory !== undefined),
+        interacted: entryAssessments.every(
+          (assessment) => assessment.inventory?.interacted === true,
+        ),
         candidateItemKeysBySlot: Object.freeze(
           Object.fromEntries(
             (['healing', 'secondLeft', 'secondRight'] as const).map((slotKey) => [
               slotKey,
               Object.freeze(
-                (first.inventory?.candidateItemKeysBySlot[slotKey] ?? []).filter((itemKey) =>
-                  assessments.every(
+                (firstEntry?.inventory?.candidateItemKeysBySlot[slotKey] ?? []).filter((itemKey) =>
+                  entryAssessments.every(
                     (assessment) =>
                       assessment.inventory?.candidateItemKeysBySlot[slotKey].includes(itemKey) ===
                       true,
@@ -420,11 +422,11 @@ export function createStygianWellCandidateArtifacts(
                 sourceGenerationKey: travelDealRefill.sourceGenerationKey,
                 candidateItemKeys: Object.freeze(
                   travelDealRefill.candidateItemKeys.filter((itemKey) =>
-                    assessments.every(
+                    refillContexts.every(
                       (assessment) =>
-                        assessment.inventory?.travelDealRefill?.sourceGenerationKey ===
+                        assessment.purchase.travelDealRefill?.sourceGenerationKey ===
                           travelDealRefill.sourceGenerationKey &&
-                        assessment.inventory.travelDealRefill.candidateItemKeys.includes(itemKey),
+                        assessment.purchase.travelDealRefill.candidateItemKeys.includes(itemKey),
                     ),
                   ),
                 ),
@@ -432,21 +434,33 @@ export function createStygianWellCandidateArtifacts(
             }),
         twistCandidateItemKeysByGeneration: Object.freeze(
           Object.fromEntries(
-            Object.entries(first.inventory?.twistCandidateItemKeysByGeneration ?? {}).map(
-              ([generationKey, itemKeys]) => [
-                generationKey,
-                Object.freeze(
-                  (itemKeys ?? []).filter((itemKey) =>
-                    assessments.every(
-                      (assessment) =>
-                        assessment.inventory?.twistCandidateItemKeysByGeneration[
-                          generationKey as import('../../authored-project/model').StygianWellGenerationKey
-                        ]?.includes(itemKey) === true,
+            (
+              [
+                'initial:healing',
+                'initial:secondLeft',
+                'initial:secondRight',
+                'travelDealRefill',
+              ] as const
+            ).flatMap((generationKey) => {
+              const generationContexts = purchaseContexts(generationKey).filter(
+                (assessment) => assessment.purchase.twistCandidateItemKeys !== undefined,
+              );
+              const itemKeys = generationContexts[0]?.purchase.twistCandidateItemKeys;
+              if (itemKeys === undefined) return [];
+              return [
+                [
+                  generationKey,
+                  Object.freeze(
+                    itemKeys.filter((itemKey) =>
+                      generationContexts.every(
+                        (assessment) =>
+                          assessment.purchase.twistCandidateItemKeys?.includes(itemKey) === true,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ] as const,
+              ];
+            }),
           ),
         ),
       });

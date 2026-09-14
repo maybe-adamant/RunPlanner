@@ -1747,17 +1747,43 @@ export function evaluateBiomeRewardChronology(
         break;
       }
       case 'wellPurchase': {
+        const wellRoom = rooms.get(semanticAddressKey(event.origin));
+        const wellOrigin = wellRoom?.kind === 'authored' ? wellRoom.origin : undefined;
         const transition = applyWellPurchaseTransition({
           catalog,
           snapshot,
           event,
-          room: rooms.get(semanticAddressKey(event.origin)),
+          room: wellRoom,
           branches,
+          refillGenerationSupported:
+            wellOrigin !== undefined &&
+            wellRefillRealizations.has(
+              semanticAddressKey(
+                createTravelDealRefillRealizationAddress(
+                  createBiomeAddress(wellOrigin.routeKey, wellOrigin.biomeKey),
+                  wellOrigin.occurrenceId,
+                ),
+              ),
+            ),
         });
         for (const finding of transition.findings)
           findings.set(findingIdentityKey(finding.finding), finding);
         branches = transition.branches;
         recordTimelineFacts(transition.timelineFacts);
+        if (transition.candidateContexts.length > 0 && wellRoom?.kind === 'authored') {
+          const key = semanticAddressKey(event.origin);
+          const existing = stygianWellAssessments.get(key);
+          stygianWellAssessments.set(
+            key,
+            Object.freeze({
+              origin: wellRoom.origin,
+              assessments: Object.freeze([
+                ...(existing?.assessments ?? []),
+                ...transition.candidateContexts,
+              ]),
+            }),
+          );
+        }
         if (transition.refillRealization !== undefined)
           wellRefillRealizations.set(
             semanticAddressKey(transition.refillRealization.owner),
