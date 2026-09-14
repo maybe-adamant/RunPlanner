@@ -49,18 +49,21 @@ export function RewardSurfaceEditor({
     target?.focus({ preventScroll: true });
     target?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
   }, [firstEditableReward, focusOwner, focusedOwner, idPrefix]);
-  if (visibility === 'hidden' && editableRewards.length === 0) {
-    return (
-      <p className="fixed-room-state" id={`${idPrefix}-status`} tabIndex={-1}>
-        Reward hidden on this door.
-      </p>
-    );
-  }
   if (editableRewards.length === 0) {
     return (
-      <p aria-live="polite" className="fixed-room-state" id={`${idPrefix}-status`} tabIndex={-1}>
-        No reward
-      </p>
+      <div aria-label={ariaLabel} className="door-reward-list">
+        <div
+          aria-live="polite"
+          className="field-control field-control-inline door-fixed-reward"
+          id={`${idPrefix}-status`}
+          tabIndex={-1}
+        >
+          <span>Reward</span>
+          <span className="fixed-room-state">
+            {visibility === 'hidden' ? 'Hidden on this door' : 'No reward'}
+          </span>
+        </div>
+      </div>
     );
   }
   const showRewardLabels = editableRewards.length > 1;

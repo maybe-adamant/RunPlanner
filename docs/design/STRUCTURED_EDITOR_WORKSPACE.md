@@ -472,7 +472,9 @@ Selecting a decision shows all of its physical offers together. Every authored
 offer keeps its Room and Reward rows at the same visual level, because the
 selected room owns the complete reward surface for that offered door. An
 unresolved offer keeps its pending Reward row, while a resolved room publishes
-`No reward`, one editor, or all active sibling editors. The door contract keeps
+`No reward`, one editor, or all active sibling editors. Fixed and empty rewards
+use the same labeled inline row as editable rewards, with a consistent gap
+from Room controls rather than a horizontal divider. The door contract keeps
 game preview visibility separate from planner authorship. An Anomaly or
 Zagreus automatic return remains hidden in game, but
 its freshly generated host reward still consumes the ordinary reward store and

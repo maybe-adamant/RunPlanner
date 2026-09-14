@@ -64,7 +64,6 @@ import type {
   WorkspaceMissingTargetAuthoring,
   WorkspaceOccurrenceWorkbenchNode,
   WorkspacePhysicalTarget,
-  WorkspaceTargetRewardConsequence,
 } from '../contracts/structure';
 
 export type WorkspaceAuthoredBatchDecision = ExitDecision & {
@@ -268,92 +267,6 @@ function effectiveRewardStoreForBatch(
   });
 }
 
-function targetRewardTypeLabel(
-  catalog: Catalog,
-  rewardType: string | undefined,
-): string | undefined {
-  if (rewardType === undefined) return undefined;
-  if (rewardType === 'Devotion') return 'Devotion';
-  return catalog.rewards.rewardTypes.byKey[rewardType]?.label ?? rewardType;
-}
-
-/**
- * O's target cards need to explain what the inherited store does for the
- * selected room. This is a projection product, not a second reward policy.
- */
-function oTargetRewardConsequence(
-  input: WorkspaceDecisionAssemblyBaseInput,
-  target: AuthoredBatchTarget,
-  evaluatedTarget: CanonicalTarget | undefined,
-): WorkspaceTargetRewardConsequence | undefined {
-  if (input.source.biome.biomeKey !== 'O') return undefined;
-  if (evaluatedTarget === undefined || evaluatedTarget.exit.kind === 'unavailable') {
-    return Object.freeze({
-      kind: 'unavailable',
-      statement: 'Reward-store consequence unavailable until this target is evaluated.',
-    });
-  }
-
-  const occurrence = input.source.occurrence(target.occurrenceId);
-  if (occurrence === undefined) {
-    throw new StructuredWorkspaceProjectionContractError(
-      `${target.occurrenceId} has no authored O target occurrence`,
-    );
-  }
-  const room = requireWorkspaceRoom(input.catalog, occurrence.gameName);
-  const incoming = evaluatedTarget.room.incomingReward;
-  if (incoming === undefined) {
-    if (evaluatedTarget.room.unresolvedIncomingReward !== undefined) {
-      return Object.freeze({
-        kind: 'unavailable',
-        statement: 'Reward-store consequence unavailable until the incoming reward is resolved.',
-      });
-    }
-    return Object.freeze({
-      kind: 'discarded',
-      statement: 'No incoming reward · outgoing store discarded.',
-    });
-  }
-
-  if (room.forcedRewardStoreKey !== undefined) {
-    const rewardType = targetRewardTypeLabel(input.catalog, incoming.offer.rewardType);
-    return Object.freeze({
-      kind: 'forced',
-      statement: `${rewardType ?? 'Reward'} · ${room.forcedRewardStoreKey} forced.`,
-    });
-  }
-
-  const storeKey = incoming.resolvedStoreKey;
-  if (storeKey === undefined) {
-    return Object.freeze({
-      kind: 'unavailable',
-      statement: 'Reward-store provenance unavailable until the inherited store is resolved.',
-    });
-  }
-  switch (incoming.producerKind) {
-    case 'countedChoice':
-      return Object.freeze({
-        kind: 'inherited',
-        statement: `Reward drawn from ${storeKey}.`,
-      });
-    case 'fixed':
-      return Object.freeze({
-        kind: 'fixed',
-        statement: `${targetRewardTypeLabel(input.catalog, incoming.offer.rewardType) ?? 'Reward'} fixed · counts as ${storeKey}.`,
-      });
-    case 'shop':
-      return Object.freeze({
-        kind: 'fixed',
-        statement: `Shop fixed · counts as ${storeKey}.`,
-      });
-    case 'freeReward':
-      return Object.freeze({
-        kind: 'unavailable',
-        statement: 'Reward-store consequence is unavailable for this target.',
-      });
-  }
-}
-
 function rewardStoreLabelForBatch(input: WorkspaceDecisionAssemblyBaseInput): string {
   return input.source.biome.biomeKey === 'O' ? 'Next store roll' : 'Reward Pool';
 }
@@ -540,7 +453,6 @@ function projectAuthoredTargetWithOverlay(
     ...(sourceDecisionRemoval === undefined ? {} : { sourceDecisionRemoval }),
     railMarker: markerForTarget,
   });
-  const rewardConsequence = oTargetRewardConsequence(input, target, evaluatedTarget);
   return Object.freeze({
     node,
     occurrenceInteractionRequirements: occurrenceAssembly.occurrenceInteractionRequirements,
@@ -558,7 +470,6 @@ function projectAuthoredTargetWithOverlay(
         requiredNormalExitOrdinal(target.exitKey),
       marker: markerForTarget,
       physicalState,
-      ...(rewardConsequence === undefined ? {} : { rewardConsequence }),
       selected,
       retained: evaluatedTarget === undefined || physicalState === 'unavailable',
       nextPath: evaluatedTarget?.continuation ?? fallbackContinuation,

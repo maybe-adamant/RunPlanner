@@ -45,7 +45,6 @@ export type {
   WorkspaceRailSelectedTarget,
   WorkspaceRoute,
   WorkspaceTakeoverBatchNode,
-  WorkspaceTargetRewardConsequence,
 } from './contracts/structure';
 export type {
   WorkspaceCandidateInteraction,

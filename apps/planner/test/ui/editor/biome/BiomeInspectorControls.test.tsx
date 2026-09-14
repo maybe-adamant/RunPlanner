@@ -345,7 +345,9 @@ describe('Biome inspector controls', () => {
     expect(within(identity).getByText('Entrance')).toBeTruthy();
     expect(within(identity).queryByRole('button', { name: 'Room' })).toBeNull();
     expect(within(identity).queryByRole('button', { name: 'Reward' })).toBeNull();
-    expect(within(identity).getByText('No reward')).toBeTruthy();
+    const rewardRow = within(identity).getByText('No reward').closest('.door-fixed-reward');
+    expect(rewardRow).toBeTruthy();
+    expect(within(rewardRow as HTMLElement).getByText('Reward')).toBeTruthy();
   });
 
   it('binds a room-local selected resource removal to one semantic edit and undo', async () => {

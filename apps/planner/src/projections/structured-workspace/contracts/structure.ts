@@ -63,15 +63,6 @@ export interface WorkspaceDoorContract {
   readonly room: WorkspaceRoomSummary;
 }
 
-/**
- * Read-only consequence copy for one O target. The decision projection owns
- * this text so React does not reconstruct reward-store policy from room data.
- */
-export interface WorkspaceTargetRewardConsequence {
-  readonly kind: 'discarded' | 'forced' | 'inherited' | 'fixed' | 'unavailable';
-  readonly statement: string;
-}
-
 export interface WorkspacePhysicalTarget {
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly door: WorkspaceDoorContract;
@@ -82,7 +73,6 @@ export interface WorkspacePhysicalTarget {
   readonly selected: boolean;
   readonly retained: boolean;
   readonly nextPath: 'continuesSpine' | 'deadLeaf';
-  readonly rewardConsequence?: WorkspaceTargetRewardConsequence;
   /** Occurrence workbench identity; door UI and decision rails consume `door`. */
   readonly room: WorkspaceRoomSummary;
   /** A declaration-owned target capability, not a React eligibility result. */
