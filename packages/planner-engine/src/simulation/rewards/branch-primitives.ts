@@ -30,6 +30,9 @@ export interface PendingShopTravelRefill {
   readonly evaluateOffer: (
     offer: ResolvedRewardOffer,
   ) => import('./producer-frontiers').RewardProducerCandidateResult;
+  readonly evaluateShopOption: (
+    selection: import('../../reward-kernel').ShopOptionSelection,
+  ) => import('./producer-frontiers').RewardProducerCandidateResult;
 }
 
 export type PendingShopPaidOffer = Omit<CanonicalShopOffer, 'offerOrigin'> & {

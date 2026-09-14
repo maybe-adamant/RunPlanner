@@ -782,21 +782,16 @@ describe('Echo Gate D Gold Gold Gold', () => {
       createOccurrenceAddress(goldenFBiome, shopOccurrenceId),
       'roomExit',
     );
-    const travel = createAcquisitionEntryAddress(site, 'travelDealRefill');
+    const travel = createShopOfferAddress(goldenFBiome, shopOccurrenceId, 'travelDealRefill');
     const duplicate = createAcquisitionEntryAddress(site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY);
     let history = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
-      kind: 'ReplaceAcquisitionEntryOffer',
-      entry: travel,
+      kind: 'ReplaceShopOffer',
+      offer: travel,
       value: {
         rewardType: 'RandomLoot',
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
       },
     });
-    const travelDefault = history.present.route.biomes
-      .find((candidate) => candidate.biomeKey === 'F')
-      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopOccurrenceId)
-      ?.acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill;
-    if (travelDefault === undefined) throw new Error('missing Travel child');
     history = applyProjectHistoryCommand(history, catalog, {
       kind: 'SelectDerivedShopEntry',
       site,
@@ -834,8 +829,8 @@ describe('Echo Gate D Gold Gold Gold', () => {
     ).toEqual(history.present);
 
     history = applyProjectHistoryCommand(history, catalog, {
-      kind: 'ReplaceAcquisitionEntryOffer',
-      entry: travel,
+      kind: 'ReplaceShopOffer',
+      offer: travel,
       value: { rewardType: 'MaxHealthDrop' },
     });
     expect(

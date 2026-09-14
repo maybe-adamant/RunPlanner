@@ -606,6 +606,27 @@ function materializeShopEntry(
   )
     fail(`${context.room.gameName} has no single-slot Infernal Contract profile`);
   const contractSlot = contractProfile?.slots.values[0];
+  const travelState = shop.travelDealRefill;
+  const materializedTravel =
+    travelState === undefined || travelState.reward === null
+      ? undefined
+      : Object.freeze({
+          offerKey: 'travelDealRefill',
+          offerOrigin: createShopOfferAddress(
+            context.biome,
+            context.occurrence.occurrenceId,
+            'travelDealRefill',
+          ),
+          optionKey: travelState.optionKey,
+          offer: travelState.reward.offer,
+          traitOffersByAcquisitionRole: travelState.reward.traitOffersByAcquisitionRole,
+          levelResolutionsByAcquisitionRole: travelState.reward.levelResolutionsByAcquisitionRole,
+          dispositionByAcquisitionRole: travelState.reward.dispositionByAcquisitionRole,
+          ...(travelState.anvilResult === undefined
+            ? {}
+            : { anvilResult: travelState.anvilResult }),
+          traitContext: traitContextForOffer(context, travelState.reward.offer),
+        });
   const materializedContract =
     contractSlot === undefined ||
     contractState === undefined ||
@@ -629,6 +650,7 @@ function materializeShopEntry(
   return Object.freeze({
     kind: 'shop',
     profileKey: profile.key,
+    ...(materializedTravel === undefined ? {} : { travelDealRefill: materializedTravel }),
     offers: Object.freeze(
       profile.slots.values.flatMap((slot) => {
         const authored = shop.offers[slot.key];

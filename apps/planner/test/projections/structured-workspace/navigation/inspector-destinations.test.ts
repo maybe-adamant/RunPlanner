@@ -16,6 +16,7 @@ import {
   createOccurrenceId,
   createOccurrenceAddress,
   createRoomActionAddress,
+  createShopOfferAddress,
   createProjectDocument,
   createTargetAddress,
   createTraitOfferAddress,
@@ -311,12 +312,9 @@ function staleTravelDealShopProject(): {
     },
   });
   document = applyProjectCommand(document, catalog, {
-    kind: 'ReplaceAcquisitionEntryOffer',
-    entry,
-    value: {
-      rewardType: 'BlindBoxLoot',
-      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
-    },
+    kind: 'ReplaceShopOffer',
+    offer: createShopOfferAddress(goldenGBiome, shopId, 'travelDealRefill'),
+    value: { rewardType: 'BlindBoxLoot' },
   });
   const reference = {
     kind: 'interactAcquisitionEntry' as const,
@@ -328,6 +326,14 @@ function staleTravelDealShopProject(): {
     action: createRoomActionAddress(goldenGBiome, shopId, roomActionKey(reference)),
     reference,
     index: 0,
+  });
+  document = applyProjectCommand(document, catalog, {
+    kind: 'ReplaceAcquisitionEntryOffer',
+    entry,
+    value: {
+      rewardType: 'BlindBoxLoot',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    },
   });
   return { document, entry };
 }
@@ -613,7 +619,7 @@ describe('workspace inspector destinations', () => {
     });
   });
 
-  it('routes an invalid Travel Deal refill finding to its containing Shop and remove-only action row', () => {
+  it('routes an invalid Travel Deal refill finding to its Shop and removable retained acquisition', () => {
     const configured = staleTravelDealShopProject();
     const assembled = assembly(configured.document);
     const finding = assembled.evaluation.findings.find(
@@ -657,8 +663,11 @@ describe('workspace inspector destinations', () => {
     expect(invalidRow).toMatchObject({
       participation: 'optional',
       stale: false,
+      rewardPayload: {
+        showOffer: true,
+        control: { owner: { kind: 'acquisitionEntry', address: configured.entry } },
+      },
     });
-    expect(invalidRow).not.toHaveProperty('rewardPayload');
     expect(
       shopRoom.roomLocal.supplementalOffers.some(
         (offer) => offer.kind === 'travelDealInvalid' && offer.key === configured.entry.entryKey,

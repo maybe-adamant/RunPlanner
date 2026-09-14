@@ -15,6 +15,8 @@ import {
   createRewardWheelOfferAddress,
   createRoomActionAddress,
   createRouteStartKeepsakeSelectionAddress,
+  encodeProjectDocument,
+  parseProjectDocument,
   createTraitOfferAddress,
   semanticAddressKey,
   roomActionKey,
@@ -33,13 +35,17 @@ import { semanticFindingKey } from '@planner/projections/evaluationProjection';
 import { findingSelected, semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  replaceTestShopOfferActions,
+} from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenGBiome,
+  createUnderworldFWellCheckpoint,
 } from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNProject,
@@ -1518,6 +1524,79 @@ describe('OccurrenceEncounterWorkbench', () => {
     const resolvedPurchase = screen.getByText('Purchase Slot 1 Offer · Mystery Boon').closest('li');
     if (resolvedPurchase === null) throw new Error('resolved Mystery Boon row is missing');
     expect(within(resolvedPurchase).getByRole('button', { name: /Trait/ })).toBeTruthy();
+  });
+
+  it('authors Travel inventory separately from its Mystery acquisition and preserves repair through Undo and reload', async () => {
+    const shopId = createOccurrenceId('golden-f-preboss-shop');
+    const shop = createOccurrenceAddress(goldenFBiome, shopId);
+    const project = authorLegalTraitOffers(
+      replaceTestShopOfferActions(createUnderworldFWellCheckpoint(), catalog, shop, ['Boon']),
+    );
+    const view = renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(shopId));
+    const current = () => view.application.store.getState().projectWorkspace.history!.present;
+    const room = () =>
+      current().route.biomes[0]!.topology!.occurrences.find(
+        (candidate) => candidate.occurrenceId === shopId,
+      )!;
+    await view.user.click(screen.getByRole('button', { name: 'Travel Deal Item' }));
+    await view.user.click(
+      within(await screen.findByRole('listbox')).getByRole('option', { name: 'Mystery Boon' }),
+    );
+    expect(room().state.kind === 'shop' ? room().state : undefined).toMatchObject({
+      shop: {
+        travelDealRefill: {
+          optionKey: 'BlindBoxLoot',
+          reward: { offer: { rewardType: 'BlindBoxLoot' } },
+        },
+      },
+    });
+    expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeUndefined();
+    expect(screen.queryByText('Eventual God')).toBeNull();
+    await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Travel Deal' }));
+    openRoomTab('Room Timeline');
+    const purchase = () =>
+      screen.getByText('Purchase Travel Deal Offer · Mystery Boon').closest('li')!;
+    await view.user.click(within(purchase()).getByRole('button', { name: 'Reward' }));
+    const options = within(await screen.findByRole('listbox')).getAllByRole('option');
+    await view.user.click(
+      options.find((option) => option.getAttribute('aria-disabled') !== 'true')!,
+    );
+    await view.user.click(within(purchase()).getByRole('button', { name: /Trait/ }));
+    await view.user.click(await screen.findByRole('button', { name: 'Save trait offer' }));
+    expect(
+      room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill
+        ?.traitOffersByAcquisitionRole.hiddenSource,
+    ).toBeTruthy();
+    openRoomTab('Room Overview');
+    await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Travel Deal' }));
+    expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeUndefined();
+    act(() => {
+      view.application.store.dispatch(authoredProjectUndoRequested());
+    });
+    expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeTruthy();
+    const restoredChild = room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill;
+    await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Offer 1' }));
+    expect(screen.getByRole('checkbox', { name: 'Purchased Travel Deal' })).toHaveProperty(
+      'checked',
+      true,
+    );
+    expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toEqual(
+      restoredChild,
+    );
+    act(() => {
+      view.application.store.dispatch(authoredProjectUndoRequested());
+    });
+    expect(screen.getByRole('button', { name: 'Travel Deal Item' }).textContent).toContain(
+      'Mystery Boon',
+    );
+    expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toEqual(
+      restoredChild,
+    );
+    const saved = parseProjectDocument(encodeProjectDocument(current()), catalog);
+    cleanup();
+    renderOccurrenceWorkbench(saved, 'Underworld', 'F', occurrenceById(shopId));
+    openRoomTab('Room Timeline');
+    expect(within(purchase()).getByRole('button', { name: /Trait/ })).toBeTruthy();
   });
 
   it('removes the Shop Death Defiance repair control while retaining purchase authoring', async () => {

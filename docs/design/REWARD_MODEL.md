@@ -681,6 +681,7 @@ interface ShopOfferState {
 interface ShopState {
   profileKey: string;
   offers: Readonly<Record<string, ShopOfferState>>;
+  travelDealRefill?: ShopOfferState;
 }
 ```
 
@@ -776,10 +777,12 @@ Mystery Boon source resolution and trait/level choices remain acquisition-owned;
 an uncollected pedestal requires none of them. Missing or generation-invalid
 inventory points to the pedestal reward owner, not its optional pickup action.
 
-Travel Deal and Gold Gold Gold are distinct supplemental opportunities under
-the `roomExit` acquisition site, not initial inventory. Travel is a paid
-replacement derived from the first accepted paid purchase when Travel Deal
-was already equipped. Gold is a free pickup derived from the first accepted
+Travel Deal is dynamic inventory in `shop.travelDealRefill`, outside the initial
+profile's slot counts. It is a paid replacement derived after the first accepted
+paid acquisition when Travel Deal was already equipped. Its exact option is
+validated against the captured source group and post-trigger generation context;
+structural commands and decoding use only the host profile's option domain.
+Gold Gold Gold is a free pickup under the `roomExit` acquisition site, derived from the first accepted
 paid non-`SpellDrop` purchase while its one-use Echo trait is equipped.
 
 Refill activity comes from the reached simulation capability, not the presence
@@ -842,13 +845,14 @@ the one authored order, evaluates that source against history from earlier
 authored actions, and never retries another permutation. It retains ordinary
 reward-source possibility branches within that fixed order.
 
-Payload and order are deliberately separate. A dormant Travel or Gold entry
-may persist its complete reward and nested acquisition detail while absent from
-the order. Engine-owned derived-entry defaults and candidate products let one
-semantic command edit that payload without selecting it, or apply one complete
-`roomActions.order` participation/order proposal. Travel/Gold dependencies are
-normalized together, so a source removal, rebind, move, or dependent removal
-is atomic and no row publishes a conflicting local order.
+Payload and order are deliberately separate. Travel uses the ordinary Shop
+inventory editor and keeps its `interactAcquisitionEntry(roomExit, travelDealRefill)`
+participant. Non-Mystery children remain on the inventory slot. Mystery's sparse
+acquisition child exists only while purchased and resolves against the later
+pre-acquisition context, not the refill-generation context. Removing its purchase
+clears that child atomically and retains inventory. Gold may retain its complete
+free-pickup payload before participation; its derived-entry commands edit that
+payload without selecting it. Both use the occurrence's one `roomActions.order`.
 
 The persisted order remains available to a later plan compiler without the
 compiler or simulator choosing a different witness order. The editor derives

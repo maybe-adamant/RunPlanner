@@ -5,6 +5,7 @@ import type {
   RoomEncounterState,
   RoomOccurrence,
 } from '../model';
+import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
 import {
   createAcquisitionEntryAddress,
   createBiomeAddress,
@@ -411,7 +412,13 @@ function traitPickupOffers(
           case 'rewardWheelOffer':
             return { kind: 'interactWheelReward' as const, wheelKey: owner.wheelKey };
           case 'shopOffer':
-            return { kind: 'interactShopOffer' as const, offerKey: owner.offerKey };
+            return owner.offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+              ? {
+                  kind: 'interactAcquisitionEntry' as const,
+                  siteKey: 'roomExit',
+                  entryKey: TRAVEL_DEAL_REFILL_ENTRY_KEY,
+                }
+              : { kind: 'interactShopOffer' as const, offerKey: owner.offerKey };
           case 'encounterPhase':
             return { kind: 'interactEncounter' as const, phaseKey: owner.phaseKey };
           case 'gorgonPhase':
@@ -469,6 +476,11 @@ function traitPickupOffers(
     case 'shop':
       for (const [offerKey, offer] of Object.entries(occurrence.state.shop?.offers ?? {}))
         addReward(createShopOfferAddress(biome, occurrence.occurrenceId, offerKey), offer.reward);
+      if (occurrence.state.shop?.travelDealRefill !== undefined)
+        addReward(
+          createShopOfferAddress(biome, occurrence.occurrenceId, TRAVEL_DEAL_REFILL_ENTRY_KEY),
+          occurrence.state.shop.travelDealRefill.reward,
+        );
       break;
     case 'none':
       break;

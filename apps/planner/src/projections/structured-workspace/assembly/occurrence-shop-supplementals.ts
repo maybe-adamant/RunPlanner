@@ -1,5 +1,6 @@
 import {
   createAcquisitionEntryAddress,
+  createShopOfferAddress,
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
   type AcquisitionSiteAddress,
@@ -105,21 +106,38 @@ function derivedRewardSupplementalOffer(
     (gold && capability.sourceOfferKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
       ? 'Travel Deal refill'
       : capability.sourceOfferKey);
-  const authored = context.pickupEntries[entryKey] ?? capability.fixedReward ?? null;
-  const materialized = Object.hasOwn(context.pickupEntries, entryKey);
+  const travelInventory =
+    !gold && context.input.occurrence.state.kind === 'shop'
+      ? context.input.occurrence.state.shop?.travelDealRefill
+      : undefined;
+  const authored = gold
+    ? (context.pickupEntries[entryKey] ?? capability.fixedReward ?? null)
+    : (travelInventory?.reward ?? null);
+  const materialized = gold
+    ? Object.hasOwn(context.pickupEntries, entryKey)
+    : travelInventory !== undefined;
   const address = createAcquisitionEntryAddress(context.acquisitionSite, entryKey);
   const projectedReward = rewardControl(
     context.input,
-    { kind: 'acquisitionEntry' as const, address },
+    gold
+      ? { kind: 'acquisitionEntry' as const, address }
+      : {
+          kind: 'shopOffer' as const,
+          address: createShopOfferAddress(
+            context.input.biome,
+            context.input.occurrence.occurrenceId,
+            entryKey,
+          ),
+        },
     undefined,
     authored?.offer ?? null,
     authored,
     capability.rewardTypes,
-    materialized
+    materialized || !gold
       ? undefined
       : Object.freeze({
           site: context.acquisitionSite,
-          entryKey,
+          entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
           sourceOfferKey: capability.sourceOfferKey,
         }),
   ) as WorkspaceExplicitRewardControl;
@@ -149,7 +167,31 @@ function derivedRewardSupplementalOffer(
     sourceOfferKey: capability.sourceOfferKey,
     materialized,
     purchase,
-    rewardControl: projectedReward,
+    rewardControl: Object.freeze({
+      ...projectedReward,
+      shopOption: Object.freeze({
+        selectedOptionKey: travelInventory?.optionKey ?? null,
+        options: Object.freeze([
+          ...new Map(
+            context.input.catalog.rewards.shops.byKey[
+              context.input.occurrence.state.kind === 'shop'
+                ? context.input.occurrence.state.shop!.profileKey
+                : ''
+            ]!.groups.values.flatMap((group) => group.options.values).map(
+              (option) =>
+                [
+                  option.key,
+                  Object.freeze({
+                    key: option.key,
+                    label: option.label,
+                    rewardType: option.rewardType,
+                  }),
+                ] as const,
+            ),
+          ).values(),
+        ]),
+      }),
+    }),
   });
 }
 

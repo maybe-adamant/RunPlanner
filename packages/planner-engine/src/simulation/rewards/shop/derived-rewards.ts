@@ -79,6 +79,18 @@ export function deriveTravelRefill(input: {
   const effectiveExcludedNames = excludedDomain.length > 0 ? excludedNames : new Set<string>();
   const domain = excludedDomain.length > 0 ? excludedDomain : supportedOffers(new Set());
   if (domain.length === 0) return undefined;
+  const witnessesFor = (offer: ResolvedRewardOffer) =>
+    findShopIndexedGenerationWitnesses(
+      catalog.rewards,
+      profile,
+      slotIndex,
+      offer,
+      generationFacts,
+      requirements,
+      effectiveExcludedNames.size === 0
+        ? {}
+        : { excludedPurchaseInteractionNames: effectiveExcludedNames },
+    );
   return Object.freeze({
     sourceOfferKey: sourceOffer.offerKey,
     slotIndex,
@@ -88,18 +100,14 @@ export function deriveTravelRefill(input: {
     evaluateOffer: (offer: ResolvedRewardOffer) =>
       Object.freeze({
         findings: Object.freeze([]),
-        supported:
-          findShopIndexedGenerationWitnesses(
-            catalog.rewards,
-            profile,
-            slotIndex,
-            offer,
-            generationFacts,
-            requirements,
-            effectiveExcludedNames.size === 0
-              ? {}
-              : { excludedPurchaseInteractionNames: effectiveExcludedNames },
-          ).length > 0,
+        supported: witnessesFor(offer).length > 0,
+      }),
+    evaluateShopOption: (selection: import('../../../reward-kernel').ShopOptionSelection) =>
+      Object.freeze({
+        findings: Object.freeze([]),
+        supported: witnessesFor(selection.offer).some(
+          (witness) => witness.optionKeys[slotIndex] === selection.optionKey,
+        ),
       }),
   });
 }

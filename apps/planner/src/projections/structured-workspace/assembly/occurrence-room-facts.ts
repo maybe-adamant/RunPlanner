@@ -1,4 +1,5 @@
 import {
+  authoredShopOffer,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createIncomingRewardAddress,
@@ -110,7 +111,7 @@ export function assembleOccurrenceRewardLocal(
               return Object.entries(state.pickupEntries ?? {}).flatMap(([key, reward]) => {
                 const shopInventoryReward =
                   input.occurrence.state.kind === 'shop' && siteKey === 'roomExit'
-                    ? input.occurrence.state.shop?.offers[key]?.reward
+                    ? authoredShopOffer(input.occurrence, key)?.reward
                     : undefined;
                 if (input.occurrence.state.kind === 'shop' && siteKey === 'roomExit') {
                   if (
@@ -142,7 +143,12 @@ export function assembleOccurrenceRewardLocal(
                 const pickup = activePickups.find(
                   (candidate) => candidate.siteKey === siteKey && candidate.key === key,
                 );
-                const capability = derivedEntries.find((entry) => entry.address.entryKey === key);
+                const capability = derivedEntries.find(
+                  (entry) =>
+                    entry.address.entryKey === key &&
+                    entry.kind !== 'travelDealRefill' &&
+                    entry.kind !== 'travelDealPlaceholder',
+                );
                 const echoCapability =
                   capability?.kind === 'echoLastReward' ? capability : undefined;
                 const fixedEchoOffer = echoCapability?.fixedReward?.offer;

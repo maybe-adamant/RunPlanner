@@ -86,6 +86,8 @@ export interface CanonicalShopEntryState {
   }[];
   /** Separate native one-slot Contract cohort; undefined means no room descriptor. */
   readonly infernalContractOffer?: CanonicalShopOffer | null;
+  /** Dynamic Travel inventory is not a profile slot but uses the ordinary Shop offer owner. */
+  readonly travelDealRefill?: CanonicalShopOffer | null;
 }
 
 export interface CanonicalLocalReward {

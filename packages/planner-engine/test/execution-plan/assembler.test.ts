@@ -1325,8 +1325,7 @@ describe('engine-owned F/G execution semantic product', () => {
   it('publishes a purchased World Shop Travel Deal replacement as an acquisition outcome', () => {
     const shopId = createOccurrenceId('golden-f-preboss-shop');
     const shop = createOccurrenceAddress(goldenFBiome, shopId);
-    const site = createAcquisitionSiteAddress(shop, 'roomExit');
-    const refill = createAcquisitionEntryAddress(site, 'travelDealRefill');
+    const refill = createShopOfferAddress(goldenFBiome, shopId, 'travelDealRefill');
     let project = applyProjectCommand(createUnderworldFWellCheckpoint(), catalog, {
       kind: 'ReplaceShopOffer',
       offer: createShopOfferAddress(goldenFBiome, shopId, 'MajorNonBoon'),
@@ -1334,14 +1333,8 @@ describe('engine-owned F/G execution semantic product', () => {
     });
     project = replaceTestShopOfferActions(project, catalog, shop, ['MajorNonBoon']);
     project = applyProjectCommand(project, catalog, {
-      kind: 'SelectDerivedShopEntry',
-      site,
-      entryKey: 'travelDealRefill',
-      sourceOfferKey: 'MajorNonBoon',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionEntryOffer',
-      entry: refill,
+      kind: 'ReplaceShopOffer',
+      offer: refill,
       value: { rewardType: 'ArmorBoost' },
     });
     project = applyProjectCommand(project, catalog, {
@@ -1368,7 +1361,10 @@ describe('engine-owned F/G execution semantic product', () => {
       expect.arrayContaining([
         expect.objectContaining({
           kind: 'travelDealRefill',
-          refill: expect.objectContaining({ carrier: 'worldShop' }),
+          refill: expect.objectContaining({
+            carrier: 'worldShop',
+            replacement: expect.objectContaining({ optionKey: 'ArmorBoost' }),
+          }),
         }),
         expect.objectContaining({
           kind: 'acquisition',
@@ -1408,10 +1404,13 @@ describe('engine-owned F/G execution semantic product', () => {
     ).toContainEqual(expect.objectContaining({ kind: 'travelDealRefill' }));
 
     project = replaceTestShopOfferActions(project, catalog, shop, []);
+    const dormantRoom = project.route.biomes[0]!.topology!.occurrences.find(
+      (candidate) => candidate.occurrenceId === shopId,
+    )!;
     expect(
-      project.route.biomes[0]!.topology!.occurrences.find(
-        (candidate) => candidate.occurrenceId === shopId,
-      )?.acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill?.offer,
+      dormantRoom.state.kind === 'shop'
+        ? dormantRoom.state.shop?.travelDealRefill?.reward?.offer
+        : undefined,
     ).toEqual({ rewardType: 'ArmorBoost' });
     const inactive = productFor(authorLegalTraitOffers(project));
     expect(

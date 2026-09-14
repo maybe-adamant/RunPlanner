@@ -7,7 +7,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits/state';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 82 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 83 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -90,6 +90,8 @@ export type AuthoredExperimentalHammerEquipResult =
 export interface ShopState {
   readonly profileKey: string;
   readonly offers: Readonly<Record<string, ShopOfferState>>;
+  /** Retained Travel Deal refill inventory; its purchase action remains a roomExit pickup. */
+  readonly travelDealRefill?: ShopOfferState;
 }
 
 /** The final realized Pool list; null is unresolved authoring, never a reroll request. */

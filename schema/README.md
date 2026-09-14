@@ -1,5 +1,18 @@
 # Project schema boundary
 
+Schema 83 separates World Shop Travel Deal inventory from Mystery acquisition.
+
+```bash
+npm run schema:migrate-82-to-83 -- path/to/schema-82-project.runplanner.json
+```
+
+The migration moves the refill into `shop.travelDealRefill`, retaining its
+Room Action and ordinary reward children. Purchased Mystery Boons retain their
+source/traits in the acquisition entry; unpurchased Mysteries become identity-only
+inventory. Ambiguous ordinary/boosted Boons and early/late Hammers receive a null
+option for explicit repair. Well and Shrine state is unchanged. The command
+writes a sibling file and never overwrites the source.
+
 Schema 82 stores the Infernal Contract pedestal as initial Shop inventory,
 separate from any Mystery Boon source resolved when collected.
 
@@ -75,7 +88,7 @@ output. It has no route-selection, in-place, or target-version mode.
 
 The schema-72 splitter's pure transformation is exported from
 `schema/split-project-72-to-73.js` for checkpoint conversion. The source value
-is never mutated. The production decoder accepts schema 82 only; stale
+is never mutated. The production decoder accepts schema 83 only; stale
 documents are not migrated implicitly in the application.
 
 Migrate a schema-74 document with:

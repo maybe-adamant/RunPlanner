@@ -1015,7 +1015,15 @@ describe('room-action commands', () => {
     const shopBiome = createBiomeAddress('Surface', 'N');
     const major = createShopOfferAddress(shopBiome, shopId, 'MajorNonBoon');
     const minor = createShopOfferAddress(shopBiome, shopId, 'Minor');
+    const travel = createShopOfferAddress(shopBiome, shopId, 'travelDealRefill');
     const initial = createCompleteNProject();
+    expect(() =>
+      applyProjectCommand(initial, catalog, {
+        kind: 'ReplaceShopPurchaseParticipation',
+        offer: travel,
+        purchased: true,
+      }),
+    ).toThrow('Travel Deal uses its roomExit acquisition entry participation');
     let history = createProjectHistory(initial);
     history = applyProjectHistoryCommand(history, catalog, {
       kind: 'ReplaceShopPurchaseParticipation',

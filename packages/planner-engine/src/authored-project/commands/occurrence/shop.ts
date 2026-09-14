@@ -12,6 +12,8 @@ import { pickupEffectForOffer } from '../../../reward-kernel/history';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
+  authoredShopOffer,
+  replaceAuthoredShopOffer,
   shopSlotProfile,
 } from '../../shop';
 
@@ -26,13 +28,14 @@ export function applyShopOccurrenceCommand(
   if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined) {
     failCommand(command, `${occurrence.gameName} has no materialized shop inventory`);
   }
-  if (
-    command.offer.offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY ||
-    command.offer.offerKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
-  ) {
+  if (command.offer.offerKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY) {
     failCommand(command, `${command.offer.offerKey} is reserved for a supplemental Shop entry`);
   }
-  const offer = occurrence.state.shop.offers[command.offer.offerKey];
+  const offer =
+    authoredShopOffer(occurrence, command.offer.offerKey) ??
+    (command.offer.offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+      ? Object.freeze({ optionKey: null, reward: null })
+      : undefined);
   if (offer === undefined) failCommand(command, `unknown shop offer ${command.offer.offerKey}`);
   if (command.kind === 'ReplaceAnvilResult') {
     const reward = offer.reward;
@@ -49,19 +52,7 @@ export function applyShopOccurrenceCommand(
       located,
       replaceOccurrence(
         current,
-        Object.freeze({
-          ...occurrence,
-          state: Object.freeze({
-            ...occurrence.state,
-            shop: Object.freeze({
-              ...occurrence.state.shop,
-              offers: Object.freeze({
-                ...occurrence.state.shop.offers,
-                [command.offer.offerKey]: replacement,
-              }),
-            }),
-          }),
-        }),
+        replaceAuthoredShopOffer(occurrence, command.offer.offerKey, replacement),
       ),
     );
   }
@@ -73,14 +64,24 @@ export function applyShopOccurrenceCommand(
   );
   const slot = profile?.slots.byKey[command.offer.offerKey];
   const group = slot === undefined ? undefined : profile?.groups.byKey[slot.groupKey];
-  if (group === undefined) failCommand(command, 'shop offer has no declaration-owned group');
+  const optionDomain =
+    command.offer.offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+      ? (profile?.groups.values.flatMap((candidate) => candidate.options.values) ?? [])
+      : group?.options.values;
+  if (optionDomain === undefined) failCommand(command, 'shop offer has no declaration-owned group');
   const selectedOffer =
     command.kind === 'ReplaceShopOfferOption' ? command.value.offer : command.value;
   const retainedOption =
-    offer.optionKey === null ? undefined : group.options.byKey[offer.optionKey];
-  const compatibleOptions = group.options.values.filter(
-    (candidate) => candidate.rewardType === selectedOffer.rewardType,
-  );
+    offer.optionKey === null
+      ? undefined
+      : optionDomain.find((candidate) => candidate.key === offer.optionKey);
+  const compatibleOptions = [
+    ...new Map(
+      optionDomain
+        .filter((candidate) => candidate.rewardType === selectedOffer.rewardType)
+        .map((option) => [option.key, option]),
+    ).values(),
+  ];
   const selectedOptionKey =
     command.kind === 'ReplaceShopOfferOption'
       ? command.value.optionKey
@@ -89,7 +90,10 @@ export function applyShopOccurrenceCommand(
         : compatibleOptions.length === 1
           ? compatibleOptions[0]!.key
           : null;
-  const option = selectedOptionKey === null ? undefined : group.options.byKey[selectedOptionKey];
+  const option =
+    selectedOptionKey === null
+      ? undefined
+      : optionDomain.find((candidate) => candidate.key === selectedOptionKey);
   if (command.kind === 'ReplaceShopOfferOption' && option === undefined)
     failCommand(command, `unknown shop option ${command.value.optionKey}`);
   if (option !== undefined && option.rewardType !== selectedOffer.rewardType)
@@ -123,25 +127,16 @@ export function applyShopOccurrenceCommand(
           ...(pickupEffect?.effect.kind === 'anvilOfFates' ? { anvilResult: null } : {}),
         });
       })();
-  const purchaseSelected = occurrence.roomActions.order.some(
-    (reference) =>
-      reference.kind === 'interactShopOffer' && reference.offerKey === command.offer.offerKey,
+  const purchaseSelected = occurrence.roomActions.order.some((reference) =>
+    command.offer.offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+      ? reference.kind === 'interactAcquisitionEntry' &&
+        reference.siteKey === 'roomExit' &&
+        reference.entryKey === command.offer.offerKey
+      : reference.kind === 'interactShopOffer' && reference.offerKey === command.offer.offerKey,
   );
   const nextOccurrence = reconcileAcquisitionResolvedRewardEntry(
     catalog,
-    Object.freeze({
-      ...occurrence,
-      state: Object.freeze({
-        ...occurrence.state,
-        shop: Object.freeze({
-          ...occurrence.state.shop,
-          offers: Object.freeze({
-            ...occurrence.state.shop.offers,
-            [command.offer.offerKey]: replacement,
-          }),
-        }),
-      }),
-    }),
+    replaceAuthoredShopOffer(occurrence, command.offer.offerKey, replacement),
     command.offer.offerKey,
     purchaseSelected,
     replacement.reward,

@@ -1,6 +1,8 @@
 import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
+  createShopOfferAddress,
+  createBiomeAddress,
   semanticAddressKey,
   type SemanticAddress,
 } from '../../../authored-project/addresses';
@@ -16,7 +18,6 @@ import {
 } from '../../../authored-project/shop';
 import {
   evaluateShopPurchaseGateAtSlot,
-  findShopIndexedGenerationWitnesses,
   purchaseInteractionName,
   type ProducerLifecyclePointKey,
   type ShopGenerationWitness,
@@ -92,8 +93,11 @@ export function settleShopAcquisitionSite(
       (row) =>
         !row.stale &&
         row.rank !== null &&
-        row.reference.kind === 'interactShopOffer' &&
-        row.reference.offerKey === offerKey,
+        (row.reference.kind === 'interactShopOffer'
+          ? row.reference.offerKey === offerKey
+          : row.reference.kind === 'interactAcquisitionEntry' &&
+            row.reference.siteKey === 'roomExit' &&
+            row.reference.entryKey === offerKey),
     )?.owner;
   const roleFrontiers: AcquisitionRoleFrontier[] = [];
   const derivedEntryFrontiers: DerivedAcquisitionEntryFrontier[] = [];
@@ -176,7 +180,7 @@ export function settleShopAcquisitionSite(
   }
   const branchCohortSize = executions.length;
   const eligibleGoldSourceOfferKeys = (): readonly string[] => {
-    const travel = room.acquisitionSites.roomExit?.entries[TRAVEL_DEAL_REFILL_ENTRY_KEY];
+    const travel = entry.travelDealRefill;
     return eligibleShopGoldSourceOfferKeys(
       catalog,
       entry.offers,
@@ -311,43 +315,8 @@ export function settleShopAcquisitionSite(
 
       if (entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY) {
         const refill = execution.travelRefill;
-        const authoredChild = room.acquisitionSites.roomExit?.entries[entryKey];
-        const child = authoredChild;
-        if (refill === undefined || child === undefined) {
-          entryPurchaseFailureRecorded = true;
-          addRewardFinding(
-            findings,
-            rewardFinding(
-              'shopPurchaseUnavailable',
-              createAcquisitionEntryAddress(site, entryKey),
-              { kind: 'travelDealRefillUnavailable' },
-            ),
-            ownerRegion(room.origin),
-            context.findingChronology ?? historyChronology(historySequence),
-          );
-          continue;
-        }
-        if (child === null) {
-          addRewardFinding(
-            findings,
-            rewardFinding('rewardMissing', createAcquisitionEntryAddress(site, entryKey), {}),
-            ownerRegion(room.origin),
-            context.findingChronology ?? historyChronology(historySequence),
-          );
-          continue;
-        }
-        const support = findShopIndexedGenerationWitnesses(
-          catalog.rewards,
-          profile,
-          refill.slotIndex,
-          child.offer,
-          refill.generationFacts,
-          requirements,
-          refill.excludedNames.size === 0
-            ? {}
-            : { excludedPurchaseInteractionNames: refill.excludedNames },
-        );
-        if (support.length === 0) {
+        const inventory = entry.travelDealRefill;
+        if (refill === undefined || inventory === undefined || inventory === null) {
           entryPurchaseFailureRecorded = true;
           addRewardFinding(
             findings,
@@ -363,34 +332,40 @@ export function settleShopAcquisitionSite(
         }
         const slot = profile.slots.values[refill.slotIndex]!;
         const group = profile.groups.byKey[slot.groupKey]!;
-        const witnessByRarityContext = new Map<string, ShopGenerationWitness>();
-        for (const witness of support) {
-          const optionKey = witness.optionKeys[refill.slotIndex];
-          const option = optionKey === undefined ? undefined : group.options.byKey[optionKey];
-          if (option !== undefined)
-            witnessByRarityContext.set(JSON.stringify(option.boonRarityOverride ?? {}), witness);
+        const exactOption =
+          inventory.optionKey === null ? undefined : group.options.byKey[inventory.optionKey];
+        if (
+          exactOption === undefined ||
+          exactOption.rewardType !== inventory.offer.rewardType ||
+          !refill.evaluateShopOption({ optionKey: exactOption.key, offer: inventory.offer })
+            .supported
+        ) {
+          entryPurchaseFailureRecorded = true;
+          addRewardFinding(
+            findings,
+            rewardFinding(
+              'shopPurchaseUnavailable',
+              createAcquisitionEntryAddress(site, entryKey),
+              { kind: 'travelDealRefillUnavailable' },
+            ),
+            ownerRegion(room.origin),
+            context.findingChronology ?? historyChronology(historySequence),
+          );
+          continue;
         }
-        for (const witness of witnessByRarityContext.values()) {
-          const optionKey = witness.optionKeys[refill.slotIndex];
-          const option = optionKey === undefined ? undefined : group.options.byKey[optionKey];
-          if (option === undefined) continue;
+        {
+          const option = exactOption;
           const refillExecution: ShopExecution = {
             ...execution,
-            witness,
             remainingSlotIndexes: Object.freeze([...execution.remainingSlotIndexes]),
           };
           const refillOffer = Object.freeze({
+            ...inventory,
             offerKey: entryKey,
-            offerOrigin: createAcquisitionEntryAddress(site, entryKey),
-            optionKey: optionKey ?? null,
-            offer: child.offer,
-            traitOffersByAcquisitionRole: child.traitOffersByAcquisitionRole,
-            ...(child.levelResolutionsByAcquisitionRole === undefined
-              ? {}
-              : { levelResolutionsByAcquisitionRole: child.levelResolutionsByAcquisitionRole }),
-            dispositionByAcquisitionRole: child.dispositionByAcquisitionRole,
+            offerOrigin: inventory.offerOrigin,
+            optionKey: exactOption.key,
             traitContext: Object.freeze({
-              ...(entry.offers[refill.slotIndex]?.traitContext ?? {}),
+              ...(inventory.traitContext ?? {}),
               ...(option.boonRarityOverride === undefined
                 ? {}
                 : { boonRarityItemOverride: option.boonRarityOverride }),
@@ -645,10 +620,16 @@ export function settleShopAcquisitionSite(
           if (travelRefill !== undefined) {
             execution.travelRefill = travelRefill;
             const address = createAcquisitionEntryAddress(site, TRAVEL_DEAL_REFILL_ENTRY_KEY);
+            const inventoryOwner = createShopOfferAddress(
+              createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+              room.origin.occurrenceId,
+              TRAVEL_DEAL_REFILL_ENTRY_KEY,
+            );
             const branchesBeforeEntry = Object.freeze([execution.candidate]);
             derivedEntryFrontiers.push(
               Object.freeze({
                 address,
+                inventoryOwner,
                 kind: 'travelDealRefill' as const,
                 branchCohortSize,
                 sourceOfferKey: inventoryOffer.offerKey,
@@ -656,8 +637,29 @@ export function settleShopAcquisitionSite(
                 rewardTypes: travelRefill.rewardTypes,
                 branchesBeforeEntry,
                 evaluateOffer: travelRefill.evaluateOffer,
+                evaluateShopOption: travelRefill.evaluateShopOption,
               }),
             );
+            const inventory = entry.travelDealRefill;
+            if (
+              inventory == null ||
+              inventory.optionKey === null ||
+              !travelRefill.evaluateShopOption({
+                optionKey: inventory.optionKey,
+                offer: inventory.offer,
+              }).supported
+            ) {
+              addRewardFinding(
+                findings,
+                inventory == null
+                  ? rewardFinding('rewardMissing', inventoryOwner, {})
+                  : rewardFinding('shopPurchaseUnavailable', inventoryOwner, {
+                      kind: 'travelDealRefillUnavailable',
+                    }),
+                ownerRegion(room.origin),
+                context.findingChronology ?? historyChronology(historySequence),
+              );
+            }
           }
         }
       }

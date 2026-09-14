@@ -271,6 +271,7 @@ function settle(options: {
   readonly contract?: boolean;
   readonly travel?: boolean;
   readonly travelChild?: AuthoredRewardState;
+  readonly travelOptionKey?: string;
   readonly timePiece?: boolean;
   readonly contractRewardType?:
     'BlindBoxLoot' | 'StackUpgradeBig' | 'StackUpgrade' | 'TalentBigDrop' | 'TalentDrop';
@@ -332,6 +333,27 @@ function settle(options: {
     ...state,
     shop: Object.freeze({
       ...state.shop,
+      ...(options.travelChild === undefined
+        ? {}
+        : {
+            travelDealRefill: Object.freeze({
+              optionKey:
+                options.travelOptionKey ??
+                catalog.rewards.shops.byKey[state.shop.profileKey]?.groups.values
+                  .flatMap((group) => group.options.values)
+                  .find((option) => option.rewardType === options.travelChild!.offer.rewardType)
+                  ?.key ??
+                null,
+              reward:
+                options.travelChild.offer.rewardType === 'BlindBoxLoot'
+                  ? {
+                      offer: { rewardType: 'BlindBoxLoot' },
+                      traitOffersByAcquisitionRole: {},
+                      dispositionByAcquisitionRole: {},
+                    }
+                  : options.travelChild,
+            }),
+          }),
       offers: Object.freeze(
         Object.fromEntries(
           Object.keys(state.shop.offers).map((key) => [
@@ -375,11 +397,14 @@ function settle(options: {
     acquisitionSites: Object.freeze({
       roomExit: Object.freeze({
         pickupEntries: Object.freeze({
+          ...(options.travelChild?.offer.rewardType === 'BlindBoxLoot' &&
+          options.order.includes('travelDealRefill')
+            ? { travelDealRefill: options.travelChild }
+            : {}),
           ...(contractRewardType === 'BlindBoxLoot' &&
           options.order.includes('infernalContractReward')
             ? { infernalContractReward: selectedContract }
             : {}),
-          ...(options.travelChild === undefined ? {} : { travelDealRefill: options.travelChild }),
           ...(options.echoDuplicateSourceKey === undefined ||
           options.echoDuplicateChild === undefined
             ? {}
@@ -967,19 +992,94 @@ describe('Infernal Contract and Travel Deal chronology', () => {
       }),
       'Q_WorldShop',
     );
-    const settled = settle({
-      order: ['MixedProgress1', 'travelDealRefill'],
-      travel: true,
-      travelChild: refillReward,
-      roomGameName: 'Q_PreBoss01',
+    for (const travelOptionKey of ['RandomLoot', 'BoostedRandomLoot']) {
+      const settled = settle({
+        order: ['MixedProgress1', 'travelDealRefill'],
+        travel: true,
+        travelChild: refillReward,
+        travelOptionKey,
+        roomGameName: 'Q_PreBoss01',
+      });
+      expect([...settled.findings.values()]).toEqual([]);
+      expect(settled.settlement.branches).toHaveLength(1);
+      expect(
+        settled.settlement.branches[0]?.traitEvaluations
+          ?.filter((evaluation) => evaluation.acquisitionRole === 'source')
+          .map((evaluation) => evaluation.context.boonRarityFacts?.itemOverride),
+      ).toEqual([
+        profile.groups.byKey.MixedProgress!.options.byKey[travelOptionKey]?.boonRarityOverride,
+      ]);
+    }
+  });
+
+  it('generates Mystery inventory after the trigger but resolves its source after intervening purchases', () => {
+    const apollo = authoredShopReward(explicitShopOffers.Boon!);
+    const mystery = authoredShopReward({
+      rewardType: 'BlindBoxLoot',
+      payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
     });
-    expect([...settled.findings.values()]).toEqual([]);
-    expect(settled.settlement.branches).toHaveLength(1);
+    const result = settle({
+      order: ['Boon', 'infernalContractReward', 'travelDealRefill'],
+      travel: true,
+      contract: true,
+      contractBlindBoxSource: 'HestiaUpgrade',
+      shopOfferOverrides: {
+        Boon: {
+          ...apollo,
+          traitOffersByAcquisitionRole: {
+            source: {
+              kind: 'traits',
+              giverKey: 'Apollo',
+              options: [
+                { traitKey: 'ApolloSprintBoon', rarity: 'Common' },
+                { traitKey: 'ApolloManaBoon', rarity: 'Common' },
+                { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+              ],
+              selectedOptionKey: 'option1',
+            },
+          },
+        },
+      },
+      travelChild: {
+        ...mystery,
+        traitOffersByAcquisitionRole: {
+          hiddenSource: {
+            kind: 'traits',
+            giverKey: 'Zeus',
+            options: [
+              { traitKey: 'ZeusWeaponBoon', rarity: 'Rare' },
+              { traitKey: 'ZeusSpecialBoon', rarity: 'Common' },
+              { traitKey: 'ZeusCastBoon', rarity: 'Common' },
+            ],
+            selectedOptionKey: 'option2',
+          },
+        },
+      },
+    });
+    expect([...result.findings.values()]).toEqual([]);
+    const generation = result.settlement.derivedEntryFrontiers?.find(
+      (frontier) => frontier.kind === 'travelDealRefill',
+    );
+    const acquisition = result.settlement.derivedEntryFrontiers?.find(
+      (frontier) =>
+        frontier.kind === 'acquisitionResolvedReward' &&
+        frontier.address.entryKey === 'travelDealRefill',
+    );
     expect(
-      settled.settlement.branches[0]?.traitEvaluations
-        ?.filter((evaluation) => evaluation.acquisitionRole === 'source')
-        .map((evaluation) => evaluation.context.boonRarityFacts?.itemOverride),
-    ).toEqual([undefined, { Rare: 0.9, Epic: 0.25, Legendary: 0.1 }]);
+      generation?.branchesBeforeEntry[0]?.traitHistory?.equippedTraits.HestiaWeaponBoon,
+    ).toBeUndefined();
+    expect(
+      acquisition?.branchesBeforeEntry[0]?.traitHistory?.equippedTraits.HestiaWeaponBoon,
+    ).toBeDefined();
+    expect(
+      acquisition?.evaluateOffer?.({
+        rewardType: 'BlindBoxLoot',
+        payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+      }).supported,
+    ).toBe(true);
+    expect(
+      result.settlement.branches[0]?.traitHistory?.equippedTraits.ZeusSpecialBoon,
+    ).toBeDefined();
   });
 
   it('withholds a derived refill capability when reached branches disagree', () => {
