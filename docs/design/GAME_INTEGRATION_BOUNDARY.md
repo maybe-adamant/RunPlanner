@@ -65,6 +65,12 @@ later reads that same flag. The executor does not identify midshops or inspect
 future Overview features to reconstruct the door's advertisement. The
 additional exit and its binding remain destination-room-owned.
 
+Fixed continuations, including Zagreus and Anomaly returns, reference the
+destination occurrence rather than repeating its reward inline. Navigation
+resolves that destination's published incoming reward for both realization and
+exit proof; absence of an inline reward does not mean no reward. Native required
+Boss drops retain their explicit preservation policy.
+
 ## Execution ownership
 
 ### Prefer the published answer
