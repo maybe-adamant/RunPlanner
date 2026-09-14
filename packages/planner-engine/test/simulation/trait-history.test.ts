@@ -499,7 +499,25 @@ describe('Proper Upbringing rarity lifecycle', () => {
     ]);
     expect(history.properUpbringingActive).toBe(true);
     expect(history.equippedTraits.PoseidonWeaponBoon?.rarity).toBe('Rare');
+    expect(history.equippedTraits.ElementalRarityUpgradeBoon?.rarity).toBe('Rare');
   });
+
+  it.each(['Common', 'Rare', 'Epic'] as const)(
+    'assigns active Proper Upbringing Rare without rewriting its %s offer',
+    (rarity) => {
+      const history = acquireLegalTrait(
+        twoEachHistory(),
+        'Hera',
+        'ElementalRarityUpgradeBoon',
+        rarity,
+      );
+      expect(history.properUpbringingActive).toBe(true);
+      expect(history.equippedTraits.ElementalRarityUpgradeBoon?.rarity).toBe('Rare');
+      const offer = history.events.at(-1);
+      expect(offer?.kind === 'traitOffer' ? offer.options[0]?.rarity : undefined).toBe(rarity);
+      expect(foldTraitHistoryEvents(catalog, history.events)).toEqual(history);
+    },
+  );
 
   it('promotes every eligible boon-rarity Common independently of core-god status', () => {
     const history = historyFrom([
@@ -517,7 +535,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
     expect(history.equippedTraits.HermesWeaponBoon?.rarity).toBe('Rare');
     expect(history.equippedTraits.SupportingFireBoon?.rarity).toBe('Rare');
     expect(history.equippedTraits.InvulnerabilityDashBoon?.rarity).toBe('Rare');
-    expect(history.equippedTraits.ElementalRarityUpgradeBoon?.rarity).toBe('Common');
+    expect(history.equippedTraits.ElementalRarityUpgradeBoon?.rarity).toBe('Rare');
     expect(history.godBoonRarityCounts.Common ?? 0).toBe(0);
     expect(history.godBoonRarityCounts.Rare).toBe(11);
     expect(history.equippedTraits.HeraWeaponBoon).not.toBe(
@@ -678,6 +696,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
     const deactivated = acquireLegalTrait(activated, 'Hera', 'HeraWeaponBoon', 'Epic');
     expect(deactivated.properUpbringingActive).toBeUndefined();
     expect(deactivated.equippedTraits.HermesWeaponBoon?.rarity).toBe('Rare');
+    expect(deactivated.equippedTraits.ElementalRarityUpgradeBoon?.rarity).toBe('Rare');
     expect(deactivated.equippedTraits.ApolloWeaponBoon).toBeUndefined();
     expect(deactivated.equippedTraits.HeraWeaponBoon?.rarity).toBe('Epic');
     const replacementEvent = deactivated.events.at(-1);
@@ -693,6 +712,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
     const reactivated = acquireLegalTrait(deactivated, 'Hermes', 'SlowProjectileBoon', 'Common');
     expect(reactivated.properUpbringingActive).toBe(true);
     expect(reactivated.equippedTraits.SlowProjectileBoon?.rarity).toBe('Rare');
+    expect(reactivated.equippedTraits.ElementalRarityUpgradeBoon?.rarity).toBe('Rare');
     expect(reactivated.equippedTraits.HeraWeaponBoon?.rarity).toBe('Epic');
   });
 

@@ -188,6 +188,13 @@ function promoteActiveFloorTargets(
     equippedTraits[traitKey] = withRarityAndSteadyGrowthCredit(catalog, equipped, 'Rare');
     promotedKeys.push(traitKey);
   }
+  // UpgradeAllCommon assigns its source rarity separately, even if it was Epic.
+  for (const { sourceKey, effect } of effects) {
+    equippedTraits[sourceKey] = Object.freeze({
+      ...equippedTraits[sourceKey]!,
+      rarity: effect.minimumRarity,
+    });
+  }
   for (const event of events) {
     const transition = event.targetedAcquisitionTransition;
     if (
