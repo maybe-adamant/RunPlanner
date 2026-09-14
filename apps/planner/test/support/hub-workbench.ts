@@ -2,7 +2,6 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createHubDecisionAddress,
-  createHubSlotAddress,
   createIncomingRewardAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -12,11 +11,9 @@ import { afterEach, beforeAll, vi } from 'vitest';
 import type { PlannerApplication } from '@planner/composition/createApplication';
 import {
   loadSurfaceNPartialHubProject,
-  loadSurfaceNProject,
   loadSurfaceNTenOpenInvalidProject,
   loadSurfaceNOPQProject,
   nBiome,
-  nLocalOccurrenceIdsBySlot,
   nOccurrenceId,
 } from '@run-planner/test-fixtures/surface';
 
@@ -87,29 +84,6 @@ export function twoVisitHubProject(): ProjectDocument {
     kind: 'ReplaceHubVisitOrder',
     hub: createHubDecisionAddress(nBiome, 'hub'),
     hubSlotKeys: ['combat05', 'miniBoss01'],
-  });
-}
-
-export function hubRoomDetailProject(): ProjectDocument {
-  let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
-    kind: 'ReplaceHubVisitOrder',
-    hub: createHubDecisionAddress(nBiome, 'hub'),
-    hubSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat09'],
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CloseHubSlot',
-    slot: createHubSlotAddress(nBiome, 'hub', 'combat23'),
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'OpenHubSlot',
-    slot: createHubSlotAddress(nBiome, 'hub', 'combat07'),
-    occurrenceId: nOccurrenceId('combat07'),
-    localOccurrenceIdsBySlot: nLocalOccurrenceIdsBySlot('combat07'),
-  });
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceHubVisitOrder',
-    hub: createHubDecisionAddress(nBiome, 'hub'),
-    hubSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat07', 'combat09'],
   });
 }
 

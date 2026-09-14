@@ -602,7 +602,7 @@ summaries. A visible pointer drag grip is an optional direct-manipulation
 surface, with named arrow controls retained for keyboard operation.
 
 The Hub Timeline roster reserves one shared column layout for its drag handle,
-rank, room identity, visit metadata, Room details, and reorder controls. Long
+rank, room identity, visit metadata, and reorder controls. Long
 room labels wrap within the identity column; they do not move later columns.
 The Overview board uses three equal columns at its normal workbench width, two
 at an intermediate container width, and one on narrow layouts. All 26 fixed
@@ -626,7 +626,9 @@ the parent main visit and its Overview. The rail uses the complete marker
 family supplied by each owner, including acquisition children, rather than a
 rendered-position or partial-marker heuristic.
 
-Compact board cells may focus their room and reward state in the inspector, but
+Hub Overview owns membership and main-reward editing; Hub Timeline owns visit
+order. Both display read-only room labels. The rail is the primary navigation
+to visited room details, with findings retaining their exact destinations.
 N never acquires arbitrary room replacement merely to reuse an ordinary room
 picker. Membership, visits, and the completed-Hub handoff remain Hub-owned
 semantic interactions.
@@ -638,8 +640,8 @@ to its room configuration. Pointer and touch changes preserve the current
 viewport. Keyboard changes use transient React-local continuity to move to the
 nearest enabled membership control in the source region (then its documented
 local fallback), never the card that just moved. This focus continuity is not
-persisted or stored in Redux. Explicit Room details, reward, and finding
-actions continue to use their exact semantic owner destinations.
+persisted or stored in Redux. Explicit rail, reward, and finding actions
+continue to use their exact semantic owner destinations.
 
 ## Progressive Coverage and Findings
 

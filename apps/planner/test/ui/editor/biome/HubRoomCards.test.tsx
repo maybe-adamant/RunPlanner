@@ -3,7 +3,6 @@
 import {
   createHubSlotAddress,
   createIncomingRewardAddress,
-  createOccurrenceAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { act, screen, waitFor, within } from '@testing-library/react';
@@ -17,12 +16,8 @@ import {
   nBiome,
   nOccurrenceId,
 } from '@run-planner/test-fixtures/surface';
-import {
-  hubRoomDetailProject,
-  nHubOccurrence,
-  nHubState,
-} from '@planner-test/support/hub-workbench';
-import { renderHubDecisionWorkbench, workspaceBiome } from '@planner-test/support/biome-workbench';
+import { nHubOccurrence, nHubState } from '@planner-test/support/hub-workbench';
+import { renderHubDecisionWorkbench } from '@planner-test/support/biome-workbench';
 
 describe('HubRoomCards', () => {
   it('opens, edits, and closes an unvisited room through its compact card', async () => {
@@ -38,6 +33,8 @@ describe('HubRoomCards', () => {
       ).flatMap((card) => (card.dataset.hubSlotKey === undefined ? [] : [card.dataset.hubSlotKey]));
     const slotOrderBefore = overviewSlotOrder();
     expect(closedCard.querySelector('[data-assessment]')).toBeNull();
+    expect(closedCard.querySelector('.room-kind')).toBeNull();
+    expect(closedCard.querySelector('.hub-slot-meta')).toBeNull();
     expect(within(closedCard).getByText('Open this room to edit its reward.')).toBeTruthy();
 
     await view.user.pointer({ keys: '[MouseLeft]', target: open });
@@ -51,6 +48,8 @@ describe('HubRoomCards', () => {
 
     const openedCard = screen.getByRole('article', { name: 'Combat 04 Hub room' });
     expect(overviewSlotOrder()).toEqual(slotOrderBefore);
+    expect(openedCard.querySelector('.room-kind')).toBeNull();
+    expect(openedCard.querySelector('.hub-slot-meta')).toBeNull();
     expect(within(openedCard).getByLabelText('Reward')).toBeTruthy();
     expect(within(openedCard).queryByText('Open this room to edit its reward.')).toBeNull();
     expect(within(openedCard).queryByText(/Closing this slot removes/)).toBeNull();
@@ -134,55 +133,13 @@ describe('HubRoomCards', () => {
     );
   });
 
-  it('offers direct Room details for every visited Hub room workbench', async () => {
-    const project = hubRoomDetailProject();
-    const view = renderHubDecisionWorkbench(project);
-
-    const sideRoomCombat = screen.getByRole('article', { name: 'Combat 05 Hub room' });
-    const miniboss = screen.getByRole('article', { name: 'Satyr Champion Hub room' });
-    const ordinaryCombat = screen.getByRole('article', { name: 'Combat 07 Hub room' });
-    const unvisitedCombat = screen.getByRole('article', { name: 'Combat 10 Hub room' });
-    const detail = within(sideRoomCombat).getByRole('button', {
-      name: 'Open details for Combat 05',
-    });
-    const hub = workspaceBiome(view.application, 'Surface', 'N').nodes.find(
-      (node) => node.kind === 'hubDecision',
-    );
-    if (hub?.kind !== 'hubDecision') throw new Error('N Hub workspace node is missing');
-    const ordinarySlot = hub.slots.find((slot) => slot.hubSlotKey === 'combat07');
-    if (ordinarySlot?.room === undefined) throw new Error('Combat 07 Hub room is missing');
-
-    expect(detail.closest('.hub-slot-meta')).not.toBeNull();
-    expect(sideRoomCombat.querySelector('.hub-main-reward')?.nextElementSibling).not.toBe(detail);
-    expect(unvisitedCombat.querySelector('.hub-slot-meta')).not.toBeNull();
-    expect(ordinarySlot.visited).toBe(true);
-    expect(ordinarySlot.room.encounterPhases).toEqual(
-      expect.arrayContaining([expect.objectContaining({ customizable: true })]),
-    );
-    expect(ordinarySlot.room.workbench).toMatchObject({
-      kind: 'standard',
-      encounterPhases: expect.arrayContaining([expect.objectContaining({ customizable: true })]),
-    });
-    expect(
-      within(miniboss).getByRole('button', { name: 'Open details for Satyr Champion' }),
-    ).toBeTruthy();
-    expect(
-      within(ordinaryCombat).getByRole('button', { name: 'Open details for Combat 07' }),
-    ).toBeTruthy();
-    expect(within(unvisitedCombat).queryByRole('button', { name: /Open details/ })).toBeNull();
-    await view.user.click(detail);
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
-      createOccurrenceAddress(nBiome, nHubOccurrence(view.application, 'combat05').occurrenceId),
-    );
-  });
-
   it('keeps a visited Medea encounter trait offer out of the Hub room card', () => {
     const project = loadSurfaceNStoryBoardProject();
     renderHubDecisionWorkbench(project);
     const story = screen.getByRole('article', { name: 'Medea Hub room' });
 
     expect(within(story).queryByRole('button', { name: /^Edit Trait/ })).toBeNull();
-    expect(within(story).getByRole('button', { name: 'Open details for Medea' })).toBeTruthy();
+    expect(within(story).queryByRole('button', { name: 'Open details for Medea' })).toBeNull();
   });
 
   it('keeps exact closed-slot focus visible in the complete Overview set without authoring history', () => {

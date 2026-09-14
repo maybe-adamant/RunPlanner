@@ -205,13 +205,13 @@ export function HubDecisionWorkbench({
       >
         {activeTab === 'overview' ? (
           <section className="hub-board" aria-label="Hub room participation">
-            <div className="hub-overview-heading">
+            <header className="hub-board-heading">
               <div className="owner-markers">
                 <h4>Open rooms</h4>
                 <MarkerAssessment marker={node.openSet} />
               </div>
-            </div>
-            <p className="fixed-room-state">Open or close the rooms available on this Hub board.</p>
+              <p>Open or close the rooms available on this Hub board.</p>
+            </header>
             <div
               {...openSetTarget}
               aria-label="Hub room set"

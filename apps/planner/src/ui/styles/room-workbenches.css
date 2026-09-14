@@ -443,6 +443,22 @@
   overflow: hidden;
 }
 
+.hub-board-heading {
+  display: grid;
+  gap: 6px;
+  padding: 12px 12px 0;
+}
+
+.hub-board-heading h4,
+.hub-board-heading p {
+  margin: 0;
+}
+
+.hub-board-heading p {
+  color: #aaa7af;
+  font-size: 0.88rem;
+}
+
 .hub-ranked-room-board {
   display: grid;
   position: relative;
@@ -627,10 +643,6 @@
   gap: 8px;
 }
 
-.hub-slot-heading {
-  align-items: flex-start;
-}
-
 .hub-slot-heading h3 {
   margin: 0;
   color: #f2ede5;
@@ -644,8 +656,8 @@
 
 .hub-roster-primary {
   display: grid;
-  grid-template-columns: 28px 26px minmax(10rem, 2fr) minmax(10rem, 1.35fr) minmax(7rem, auto) auto;
-  align-items: start;
+  grid-template-columns: 28px 26px minmax(10rem, 2fr) minmax(10rem, 1.35fr) auto;
+  align-items: center;
   gap: 8px;
 }
 
@@ -655,15 +667,8 @@
 
 .hub-overview-reward-slot {
   display: grid;
-  min-block-size: 78px;
-  align-items: start;
-}
-
-.hub-overview-heading {
-  display: flex;
+  grid-template-rows: minmax(36px, auto);
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
 }
 
 .hub-roster-drag-handle {
@@ -696,7 +701,7 @@
   display: grid;
   min-width: 0;
   min-block-size: 32px;
-  align-content: start;
+  align-content: center;
   gap: 4px;
 }
 
@@ -713,31 +718,10 @@
   margin-top: 7px;
 }
 
-.hub-roster-visit-meta,
-.hub-roster-details {
-  margin-top: 0;
-}
-
 .hub-roster-visit-meta {
   grid-template-columns: minmax(0, 1fr);
   align-content: start;
-}
-
-.hub-roster-details {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  justify-content: flex-start;
-}
-
-.hub-roster-details .semantic-focus-link {
-  max-width: 100%;
-  overflow-wrap: anywhere;
-}
-
-.hub-roster-details-placeholder {
-  display: block;
-  min-block-size: 28px;
+  margin-top: 0;
 }
 
 .hub-slot-state {
@@ -746,18 +730,6 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.hub-roster-identity .hub-slot-state {
-  gap: 5px;
-}
-
-.hub-slot-meta > .semantic-focus-link {
-  justify-self: end;
-}
-
-.hub-roster-identity .hub-slot-meta > .semantic-focus-link {
-  justify-self: auto;
 }
 
 .hub-rank-actions {
@@ -1166,7 +1138,7 @@
 }
 
 .hub-main-reward > .fixed-room-state {
-  margin-top: 0;
+  margin: 0;
   padding-top: 0;
   border-top: 0;
 }
@@ -1267,7 +1239,7 @@
   }
 
   .hub-roster-primary {
-    grid-template-columns: 28px 24px minmax(0, 1fr) minmax(8rem, 1fr) auto auto;
+    grid-template-columns: 28px 24px minmax(0, 1fr) minmax(8rem, 1fr) auto;
   }
 
   .hub-roster-primary > .hub-membership-action {
@@ -1299,17 +1271,10 @@
 
   .hub-open-room-card[data-hub-card-presentation='timeline']
     .hub-roster-primary
-    > .hub-roster-details {
-    grid-column: 3;
-    grid-row: 3;
-  }
-
-  .hub-open-room-card[data-hub-card-presentation='timeline']
-    .hub-roster-primary
     > .hub-rank-actions {
     grid-column: 4;
-    grid-row: 3;
-    justify-self: start;
+    grid-row: 1;
+    justify-self: end;
   }
 }
 
@@ -1319,35 +1284,28 @@
   }
 
   .hub-open-room-card[data-hub-card-presentation='timeline'] .hub-roster-primary {
-    grid-template-columns: 28px minmax(0, 1fr);
+    grid-template-columns: 28px 24px minmax(0, 1fr);
   }
 
   .hub-open-room-card[data-hub-card-presentation='timeline']
     .hub-roster-primary
     > .hub-roster-identity {
-    grid-column: 1 / -1;
-    grid-row: 2;
+    grid-column: 3;
+    grid-row: 1;
   }
 
   .hub-open-room-card[data-hub-card-presentation='timeline']
     .hub-roster-primary
     > .hub-roster-visit-meta {
     grid-column: 1 / -1;
-    grid-row: 3;
-  }
-
-  .hub-open-room-card[data-hub-card-presentation='timeline']
-    .hub-roster-primary
-    > .hub-roster-details {
-    grid-column: 1 / -1;
-    grid-row: 4;
+    grid-row: 2;
   }
 
   .hub-open-room-card[data-hub-card-presentation='timeline']
     .hub-roster-primary
     > .hub-rank-actions {
     grid-column: 1 / -1;
-    grid-row: 5;
+    grid-row: 3;
     justify-self: end;
   }
 }

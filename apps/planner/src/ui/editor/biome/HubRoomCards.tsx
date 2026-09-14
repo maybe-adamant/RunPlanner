@@ -10,8 +10,6 @@ import {
   type WorkspaceInteractionCatalog,
   type WorkspaceMarker,
 } from '@planner/projections/structured-workspace';
-import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
-import { useAppDispatch } from '@planner/state/store';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { DoorRewardEditor } from './DoorRewardEditor';
 import {
@@ -67,7 +65,6 @@ export function OpenHubRoomCard({
   const findingTarget = useFindingTarget();
   const visitTarget =
     showOrder && visitMarker !== undefined ? findingTarget(visitMarker.address) : undefined;
-  const dispatch = useAppDispatch();
   const card = useRef<HTMLElement>(null);
   const rewards =
     slot.door?.offerRewardSurface.visibility === 'visible'
@@ -77,13 +74,13 @@ export function OpenHubRoomCard({
   const rewardOwnerKey =
     reward === undefined ? undefined : semanticAddressKey(reward.marker.address);
   const focusedMainReward = rewardOwnerKey === focusedRewardOwnerKey;
-  const canInspectLocalDetail = slot.visited && slot.room !== undefined;
   const visitPosition = ranking.authoredVisitOrder.indexOf(slot.hubSlotKey);
   const showSlotAssessment =
     visitMarker === undefined || visitMarker.assessment !== slot.marker.assessment;
   const roomHeading = (
     <div className="hub-slot-heading">
       <h3>{slot.label}</h3>
+      {showOrder ? null : <MarkerAssessment marker={slot.marker} />}
     </div>
   );
   const roomState = (
@@ -94,17 +91,6 @@ export function OpenHubRoomCard({
       {showSlotAssessment ? <MarkerAssessment marker={slot.marker} /> : null}
     </div>
   );
-  const roomDetails =
-    !canInspectLocalDetail || slot.room === undefined ? null : (
-      <button
-        aria-label={`Open details for ${slot.label}`}
-        className="semantic-focus-link"
-        onClick={() => dispatch(semanticOwnerFocused(slot.room!.marker.address))}
-        type="button"
-      >
-        Room details
-      </button>
-    );
 
   // A reward owner deliberately resolves to the Hub board. Keep the picker
   // closed, but bring the existing card into view so the returned destination
@@ -170,20 +156,9 @@ export function OpenHubRoomCard({
             >
               {roomState}
             </div>
-            <div className="hub-slot-meta hub-roster-details" data-hub-roster-region="room-details">
-              {roomDetails ?? (
-                <span aria-hidden="true" className="hub-roster-details-placeholder" />
-              )}
-            </div>
           </>
         ) : (
-          <div className="hub-roster-identity">
-            {roomHeading}
-            <div className="hub-slot-meta">
-              {roomState}
-              {roomDetails}
-            </div>
-          </div>
+          <div className="hub-roster-identity">{roomHeading}</div>
         )}
         {!showMembership || onMembershipTransition === undefined ? null : (
           <HubSlotMembershipControl

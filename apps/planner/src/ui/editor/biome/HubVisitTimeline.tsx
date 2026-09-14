@@ -288,9 +288,9 @@ export function HubVisitTimeline({
   }, [ranking, rankingStateKey]);
   return (
     <section className="hub-board" aria-label="Hub visit timeline">
-      <div className="owner-markers">
+      <header className="hub-board-heading">
         <h4>Hub visit order</h4>
-      </div>
+      </header>
       <p aria-live="polite" className="visually-hidden">
         {rankAnnouncement}
       </p>
