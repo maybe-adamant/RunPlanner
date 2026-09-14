@@ -276,20 +276,29 @@ export function activeRoomActionReferences(
           shrineDelivery.routeKey === biome.routeKey &&
           shrineDelivery.biomeKey === biome.biomeKey &&
           shrineDelivery.sourceOccurrenceId === occurrence.occurrenceId;
+        const finalPrebossHost =
+          room.kind === 'Preboss' &&
+          catalog.routes.byKey[biome.routeKey]?.biomeKeys.at(-1) === biome.biomeKey;
         // A retained cross-occurrence entry is not a timeline action until
-        // the due encounter has reached it and supplied its exact phase. The
-        // derived capability is the repair surface before then; admitting a
-        // phase-less reference here would invent a generic cleanup window.
-        if (!sourceIsCurrent && reference.encounterPhaseKey === undefined) continue;
+        // its exact delivery contact is reached. Final-Preboss entry is the
+        // sole phase-less cross-occurrence contact and uses post-outgoing.
+        if (!sourceIsCurrent && reference.encounterPhaseKey === undefined && !finalPrebossHost)
+          continue;
         if (sourceIsCurrent) {
-          const slotKey = shrineDelivery.generationKey.startsWith('initial:')
-            ? (shrineDelivery.generationKey.slice(
-                'initial:'.length,
-              ) as import('../model').HermesShrineSlotKey)
-            : undefined;
+          const purchase =
+            shrineDelivery.generationKey === 'travelDealRefill'
+              ? occurrence.hermesShrine?.travelDealRefill?.purchase
+              : occurrence.hermesShrine?.purchaseBySlot?.[
+                  shrineDelivery.generationKey.slice(
+                    'initial:'.length,
+                  ) as import('../model').HermesShrineSlotKey
+                ];
+          if (purchase?.rushed !== true) continue;
           if (
-            slotKey === undefined ||
-            occurrence.hermesShrine?.purchaseBySlot?.[slotKey]?.rushed !== true
+            shrineDelivery.generationKey === 'travelDealRefill' &&
+            !Object.values(occurrence.hermesShrine?.purchaseBySlot ?? {}).some(
+              (initialPurchase) => initialPurchase.rushed,
+            )
           )
             continue;
         }

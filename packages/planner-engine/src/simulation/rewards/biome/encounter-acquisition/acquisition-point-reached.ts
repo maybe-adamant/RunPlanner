@@ -612,6 +612,9 @@ export function applyAcquisitionPointReachedTransition(
               generationKey: 'travelDealRefill',
               rewardType: refillOffer.rewardType,
               remainingUses: refillPurchase.delay,
+              ...(refillPurchase.rushed
+                ? { dueAt: room.origin, dueSequence: event.sequence, rushed: true }
+                : {}),
             });
           }
         }

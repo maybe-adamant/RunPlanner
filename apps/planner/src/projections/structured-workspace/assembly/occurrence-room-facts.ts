@@ -251,35 +251,51 @@ export function assembleOccurrenceRewardLocal(
   const rushedShrineRewardControls = Object.freeze(
     input.occurrence.hermesShrine === undefined
       ? []
-      : Object.entries(input.occurrence.hermesShrine.purchaseBySlot ?? []).flatMap(
-          ([slotKey, purchase]) => {
-            if (purchase?.rushed !== true) return [];
-            const typedSlotKey =
-              slotKey as import('@run-planner/engine/authored-project').HermesShrineSlotKey;
-            const inventoryOffer = input.occurrence.hermesShrine?.offerBySlot[typedSlotKey];
-            if (inventoryOffer === null || inventoryOffer === undefined) return [];
-            const generationKey =
-              `initial:${typedSlotKey}` as import('@run-planner/engine/authored-project').HermesShrineGenerationKey;
-            const entry = createAcquisitionEntryAddress(
-              createAcquisitionSiteAddress(address, 'hermesShrineDelivery'),
-              hermesShrineDeliveryEntryKey(address, generationKey),
-            );
-            const reward =
-              input.occurrence.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[
-                entry.entryKey
-              ] ?? defaultHermesShrineDeliveryReward(input.catalog, inventoryOffer.rewardType);
-            return [
-              rewardControl(
-                input,
-                { kind: 'acquisitionEntry' as const, address: entry },
-                undefined,
-                reward?.offer ?? null,
-                reward,
-                Object.freeze([inventoryOffer.rewardType]),
-              ) as WorkspaceExplicitRewardControl,
-            ];
-          },
-        ),
+      : [
+          ...Object.entries(input.occurrence.hermesShrine.purchaseBySlot ?? []).map(
+            ([slotKey, purchase]) => [`initial:${slotKey}`, purchase] as const,
+          ),
+          ...(input.occurrence.hermesShrine.travelDealRefill?.purchase === undefined
+            ? []
+            : [
+                [
+                  'travelDealRefill' as const,
+                  input.occurrence.hermesShrine.travelDealRefill.purchase,
+                ] as const,
+              ]),
+        ].flatMap(([generationKey, purchase]) => {
+          if (purchase?.rushed !== true) return [];
+          const inventoryOffer =
+            generationKey === 'travelDealRefill'
+              ? input.occurrence.hermesShrine?.travelDealRefill?.offer
+              : input.occurrence.hermesShrine?.offerBySlot[
+                  generationKey.slice(
+                    'initial:'.length,
+                  ) as import('@run-planner/engine/authored-project').HermesShrineSlotKey
+                ];
+          if (inventoryOffer === null || inventoryOffer === undefined) return [];
+          const entry = createAcquisitionEntryAddress(
+            createAcquisitionSiteAddress(address, 'hermesShrineDelivery'),
+            hermesShrineDeliveryEntryKey(
+              address,
+              generationKey as import('@run-planner/engine/authored-project').HermesShrineGenerationKey,
+            ),
+          );
+          const reward =
+            input.occurrence.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[
+              entry.entryKey
+            ] ?? defaultHermesShrineDeliveryReward(input.catalog, inventoryOffer.rewardType);
+          return [
+            rewardControl(
+              input,
+              { kind: 'acquisitionEntry' as const, address: entry },
+              undefined,
+              reward?.offer ?? null,
+              reward,
+              Object.freeze([inventoryOffer.rewardType]),
+            ) as WorkspaceExplicitRewardControl,
+          ];
+        }),
   );
   return Object.freeze({
     encounterPhases,

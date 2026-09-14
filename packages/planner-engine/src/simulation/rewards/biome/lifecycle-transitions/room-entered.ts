@@ -34,10 +34,14 @@ import {
 import { consumeRoomRewardForfeit } from '../../../arcana-fear';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { LifecycleFinding } from './types';
+import { dueHermesShrineDeliveryFrontier } from './hermes-shrine-delivery';
+import type { DerivedAcquisitionEntryFrontier } from '../../acquisition/contracts';
 
 export interface RoomEnteredTransition {
   readonly branches: readonly RewardBranchState[];
   readonly findings: readonly LifecycleFinding[];
+  readonly derivedAcquisitionEntryFrontiers: readonly DerivedAcquisitionEntryFrontier[];
+  readonly hermesShrineDeliveryPlacementRequired: boolean;
   readonly purgingPoolAssessment?: {
     readonly origin: OccurrenceAddress;
     readonly assessments: readonly PurgingPoolAssessment[];
@@ -173,6 +177,40 @@ export function applyRoomEnteredTransition(
         ),
       );
   }
+  const declaration = room === undefined ? undefined : catalog.rooms.byKey[room.gameName];
+  const isFinalPreboss =
+    room?.origin.kind === 'occurrence' &&
+    declaration?.kind === 'Preboss' &&
+    catalog.routes.byKey[room.origin.routeKey]?.biomeKeys.at(-1) === room.origin.biomeKey;
+  if (isFinalPreboss) {
+    next = Object.freeze(
+      next.map((branch) =>
+        Object.freeze({
+          ...branch,
+          pendingHermesShrineDeliveries: Object.freeze(
+            Object.fromEntries(
+              Object.entries(branch.pendingHermesShrineDeliveries).map(([key, delivery]) => [
+                key,
+                delivery.dueAt === undefined
+                  ? Object.freeze({
+                      ...delivery,
+                      remainingUses: 0,
+                      dueAt: room.origin,
+                      dueSequence: event.sequence,
+                    })
+                  : delivery,
+              ]),
+            ),
+          ),
+        }),
+      ),
+    );
+  }
+  const dueDeliveries =
+    isFinalPreboss && room?.origin.kind === 'occurrence'
+      ? dueHermesShrineDeliveryFrontier(catalog, room, room.origin, next, event.sequence, undefined)
+      : undefined;
+  if (dueDeliveries !== undefined) findings.push(...dueDeliveries.findings);
   if (
     room !== undefined &&
     room.lifecycleProfileKey !== 'ShipCombatRoom' &&
@@ -421,6 +459,8 @@ export function applyRoomEnteredTransition(
   return Object.freeze({
     branches: next,
     findings: Object.freeze(findings),
+    derivedAcquisitionEntryFrontiers: dueDeliveries?.frontiers ?? Object.freeze([]),
+    hermesShrineDeliveryPlacementRequired: dueDeliveries?.placementRequired ?? false,
     ...(purgingPoolAssessment === undefined ? {} : { purgingPoolAssessment }),
     ...(hermesShrineAssessment === undefined ? {} : { hermesShrineAssessment }),
     ...(stygianWellAssessment === undefined ? {} : { stygianWellAssessment }),

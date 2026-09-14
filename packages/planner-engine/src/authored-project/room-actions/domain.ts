@@ -162,6 +162,7 @@ function phaseRewardAttachment(
 }
 
 function travelDealSourceAction(
+  biome: BiomeAddress,
   occurrence: RoomOccurrence,
   reference: RoomActionReference,
 ): RoomActionReference | undefined {
@@ -182,14 +183,50 @@ function travelDealSourceAction(
   ) {
     return occurrence.roomActions.order.find((candidate) => candidate.kind === 'interactShopOffer');
   }
+  if (
+    reference.kind === 'interactAcquisitionEntry' &&
+    reference.siteKey === 'hermesShrineDelivery' &&
+    (() => {
+      const delivery = parseHermesShrineDeliveryEntryKey(reference.entryKey);
+      return (
+        delivery?.generationKey === 'travelDealRefill' &&
+        delivery.routeKey === biome.routeKey &&
+        delivery.biomeKey === biome.biomeKey &&
+        delivery.sourceOccurrenceId === occurrence.occurrenceId &&
+        occurrence.hermesShrine?.travelDealRefill?.purchase?.rushed === true
+      );
+    })()
+  ) {
+    return occurrence.roomActions.order.find((candidate) => {
+      if (
+        candidate.kind !== 'interactAcquisitionEntry' ||
+        candidate.siteKey !== 'hermesShrineDelivery'
+      )
+        return false;
+      const delivery = parseHermesShrineDeliveryEntryKey(candidate.entryKey);
+      if (
+        delivery === undefined ||
+        !delivery.generationKey.startsWith('initial:') ||
+        delivery.routeKey !== biome.routeKey ||
+        delivery.biomeKey !== biome.biomeKey ||
+        delivery.sourceOccurrenceId !== occurrence.occurrenceId
+      )
+        return false;
+      const slotKey = delivery.generationKey.slice(
+        'initial:'.length,
+      ) as import('../model').HermesShrineSlotKey;
+      return occurrence.hermesShrine?.purchaseBySlot?.[slotKey]?.rushed === true;
+    });
+  }
   return undefined;
 }
 
 function travelDealDependencies(
+  biome: BiomeAddress,
   occurrence: RoomOccurrence,
   reference: RoomActionReference,
 ): readonly RoomActionDependency[] {
-  const source = travelDealSourceAction(occurrence, reference);
+  const source = travelDealSourceAction(biome, occurrence, reference);
   return source === undefined
     ? []
     : [frozen({ kind: 'afterAction' as const, action: source, authoringOnly: true as const })];
@@ -235,7 +272,7 @@ function baseContribution(
         reference,
         'optional',
         frozen({ kind: 'postOutgoing' }),
-        travelDealDependencies(occurrence, reference),
+        travelDealDependencies(biome, occurrence, reference),
       );
     case 'completeFieldsCage':
       return contribution(biome, occurrence, reference, 'required', frozen({ kind: 'fields' }));
@@ -451,6 +488,9 @@ function baseContribution(
         hermesDelivery.routeKey === biome.routeKey &&
         hermesDelivery.biomeKey === biome.biomeKey &&
         hermesDelivery.sourceOccurrenceId === occurrence.occurrenceId;
+      const finalPrebossHost =
+        catalog.rooms.byKey[occurrence.gameName]?.kind === 'Preboss' &&
+        catalog.routes.byKey[biome.routeKey]?.biomeKeys.at(-1) === biome.biomeKey;
       return contribution(
         biome,
         occurrence,
@@ -461,7 +501,9 @@ function baseContribution(
           : hermesDelivery !== undefined
             ? sameRoomShrineDelivery
               ? frozen({ kind: 'postOutgoing' })
-              : frozen({ kind: 'encounterEnd', phaseKey: reference.encounterPhaseKey! })
+              : reference.encounterPhaseKey === undefined && finalPrebossHost
+                ? frozen({ kind: 'postOutgoing' })
+                : frozen({ kind: 'encounterEnd', phaseKey: reference.encounterPhaseKey! })
             : producer?.placement === 'roomExit' ||
                 (producer?.source.kind === 'traitOffer' &&
                   producer.source.owner.kind === 'shopOffer') ||
@@ -469,7 +511,7 @@ function baseContribution(
               ? frozen({ kind: 'postOutgoing' })
               : frozen({ kind: 'standard', phase: 'afterCombat' }),
         [
-          ...travelDealDependencies(occurrence, reference),
+          ...travelDealDependencies(biome, occurrence, reference),
           ...(producer === undefined
             ? []
             : [frozen({ kind: 'afterAction' as const, action: producer.sourceAction })]),

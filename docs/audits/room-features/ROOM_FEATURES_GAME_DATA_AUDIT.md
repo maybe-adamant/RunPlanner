@@ -340,8 +340,8 @@ is not a room action. A rushed purchase creates one required source-room pickup;
 a delayed purchase is scheduled at source cleanup, counts qualifying later
 encounter-end effects, and materializes at its reached host. Side-room Shrines
 use the same source rule but do not consume a newly scheduled or older pending
-use. Final Preboss completion flushes pending deliveries. Numeric prices and
-economy remain sim-neutral.
+use. Final Preboss entry flushes pending deliveries into required post-outgoing
+pickups. Numeric prices and economy remain sim-neutral.
 
 ## Stygian Wells
 

@@ -235,19 +235,27 @@ export function applyAcquisitionSiteCommand(
           ];
     if (sourceOffer === undefined || sourceOffer === null || purchase === undefined)
       failCommand(command, 'does not name a purchased Shrine delivery');
-    if (command.encounterPhaseKey.trim().length === 0)
-      failCommand(command, 'has no due encounter phase');
+    const hostDeclaration = catalog.rooms.byKey[host.gameName];
+    const finalPrebossHost =
+      hostDeclaration?.kind === 'Preboss' &&
+      catalog.routes.byKey[site.routeKey]?.biomeKeys.at(-1) === site.biomeKey;
+    if (command.encounterPhaseKey !== undefined && command.encounterPhaseKey.trim().length === 0)
+      failCommand(command, 'has an empty due encounter phase');
     const sourceIsHost =
       parsed.routeKey === site.owner.routeKey &&
       parsed.biomeKey === site.owner.biomeKey &&
       parsed.sourceOccurrenceId === site.owner.occurrenceId;
     if (sourceIsHost)
       failCommand(command, 'same-room Shrine deliveries use the post-outgoing window');
+    if (command.encounterPhaseKey === undefined && !finalPrebossHost)
+      failCommand(command, 'has no due encounter phase');
     const deliveryReference = Object.freeze({
       kind: 'interactAcquisitionEntry' as const,
       siteKey: 'hermesShrineDelivery',
       entryKey: command.entry.entryKey,
-      encounterPhaseKey: command.encounterPhaseKey,
+      ...(command.encounterPhaseKey === undefined
+        ? {}
+        : { encounterPhaseKey: command.encounterPhaseKey }),
     });
     const actionIndex = host.roomActions.order.findIndex(
       (reference) => roomActionKey(reference) === roomActionKey(deliveryReference),

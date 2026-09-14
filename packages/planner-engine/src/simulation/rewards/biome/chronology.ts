@@ -1261,6 +1261,7 @@ export function evaluateBiomeRewardChronology(
         branches = entered.branches;
         for (const entry of entered.findings)
           addRewardFinding(findings, entry.finding, entry.region, entry.chronology);
+        recordDerivedAcquisitionEntryFrontiers(entered.derivedAcquisitionEntryFrontiers);
         if (entered.purgingPoolAssessment !== undefined)
           purgingPoolAssessments.set(
             semanticAddressKey(entered.purgingPoolAssessment.origin),
@@ -1285,6 +1286,7 @@ export function evaluateBiomeRewardChronology(
           }
           captureRunState(owner, checkpointRoom, view);
         }
+        if (entered.hermesShrineDeliveryPlacementRequired) break historyEvents;
         break;
       }
       case 'roomPrepared':
@@ -1601,8 +1603,6 @@ export function evaluateBiomeRewardChronology(
           catalog,
           event,
           room?.kind === 'authored' ? room : undefined,
-          enteredBiomeCount,
-          fullRunBiomeCount,
           branches,
         );
         branches = transition.branches;

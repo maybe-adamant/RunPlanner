@@ -172,15 +172,15 @@ function decodeOrdinaryHermesShrineState(
                 expectExactKeys(value, ['delay', 'rushed'], `${path}.travelDealRefill.purchase`);
                 if (
                   ![2, 3, 4, 5, 6, 7, 8].includes(value.delay as number) ||
-                  value.rushed !== false
+                  typeof value.rushed !== 'boolean'
                 )
                   failProjectDocument(
                     `${path}.travelDealRefill.purchase`,
-                    'must have delay 2 through 8 and rushed false',
+                    'must have delay 2 through 8 and a boolean rushed value',
                   );
                 return Object.freeze({
                   delay: value.delay as 2 | 3 | 4 | 5 | 6 | 7 | 8,
-                  rushed: false,
+                  rushed: value.rushed,
                 });
               })();
         const offer = decodeHermesShrineInventoryOffer(
@@ -220,9 +220,15 @@ function decodeHermesShrineInventoryOffer(
 }
 
 function assertHermesShrineDeliveryActionClosure(
+  catalog: Catalog,
   shrine: HermesShrineState | undefined,
   roomActions: RoomActionState,
-  source: { readonly routeKey: string; readonly biomeKey: string; readonly occurrenceId: string },
+  source: {
+    readonly routeKey: string;
+    readonly biomeKey: string;
+    readonly occurrenceId: string;
+    readonly gameName: string;
+  },
   path: string,
 ): void {
   const rushed = new Set<import('../model').HermesShrineGenerationKey>(
@@ -231,6 +237,9 @@ function assertHermesShrineDeliveryActionClosure(
       .map(([slotKey]) => `initial:${slotKey}` as import('../model').HermesShrineGenerationKey),
   );
   const actionCounts = new Map<import('../model').HermesShrineGenerationKey, number>();
+  const finalPrebossHost =
+    catalog.rooms.byKey[source.gameName]?.kind === 'Preboss' &&
+    catalog.routes.byKey[source.routeKey]?.biomeKeys.at(-1) === source.biomeKey;
   for (const reference of roomActions.order) {
     if (
       reference.kind !== 'interactAcquisitionEntry' ||
@@ -248,7 +257,7 @@ function assertHermesShrineDeliveryActionClosure(
           path,
           'same-room Shrine deliveries must use the post-outgoing window without an encounter phase',
         );
-      if (!sourceIsCurrent && reference.encounterPhaseKey === undefined)
+      if (!sourceIsCurrent && reference.encounterPhaseKey === undefined && !finalPrebossHost)
         failProjectDocument(
           path,
           'cross-occurrence Shrine deliveries must preserve their due encounter phase',
@@ -692,12 +701,14 @@ export function decodeRoomOccurrence(input: {
     }
   }
   assertHermesShrineDeliveryActionClosure(
+    catalog,
     hermesShrine,
     roomActions,
     {
       routeKey: biomeAddress.routeKey,
       biomeKey: biomeAddress.biomeKey,
       occurrenceId: rawOccurrence.occurrenceId,
+      gameName: room.gameName,
     },
     `${rawOccurrence.path}.roomActions.order`,
   );

@@ -473,8 +473,8 @@ export type AcquisitionSiteCommand =
       /** Atomically materializes and ranks one due Shrine delivery entry. */
       readonly kind: 'PlaceHermesShrineDelivery';
       readonly entry: AcquisitionEntryAddress;
-      /** Exact encounter end that made this cross-occurrence delivery due. */
-      readonly encounterPhaseKey: string;
+      /** Exact encounter end that made this delivery due; final Preboss entry is phase-less. */
+      readonly encounterPhaseKey?: string;
     }
   | {
       /** Accepts one simulator-attested optional pickup at its maturity checkpoint. */

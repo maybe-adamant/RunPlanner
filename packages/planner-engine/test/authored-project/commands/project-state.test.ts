@@ -158,14 +158,22 @@ describe('authored-project project-state commands', () => {
       siteKey: 'hermesShrineDelivery',
       entryKey: hermesShrineDeliveryEntryKey(occurrence, 'travelDealRefill'),
     });
-    expect(() =>
-      applyProjectCommand(refilled, catalog, {
-        kind: 'SetHermesShrinePurchase',
-        occurrence,
-        generationKey: 'travelDealRefill',
-        purchase: { delay: 2, rushed: true },
-      }),
-    ).toThrow(ProjectCommandContractError);
+    const refillRushed = applyProjectCommand(refilled, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence,
+      generationKey: 'travelDealRefill',
+      purchase: { delay: 2, rushed: true },
+    });
+    const rushedPostboss = refillRushed.route.biomes[0]?.topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+    );
+    expect(rushedPostboss?.hermesShrine?.travelDealRefill?.purchase).toEqual({
+      delay: 2,
+      rushed: true,
+    });
+    expect(rushedPostboss?.acquisitionSites?.hermesShrineDelivery?.pickupEntries).toHaveProperty(
+      hermesShrineDeliveryEntryKey(occurrence, 'travelDealRefill'),
+    );
     const second = applyProjectCommand(seeded, catalog, {
       kind: 'ReplaceHermesShrineOffer',
       occurrence,

@@ -40,8 +40,6 @@ import {
   assessHermesShrineInventory,
   assessHermesShrinePlacement,
   assessHermesShrineTravelDealRefill,
-  deriveHermesShrineDeliveries,
-  hasPendingHermesSpellDrop,
   priorTwoSurfaceShopPresence,
 } from '../../src/simulation/commerce/hermes-shrine';
 import { createHermesShrineCandidateArtifacts } from '../../src/simulation/commerce/hermes-shrine';
@@ -472,121 +470,7 @@ describe('Hermes Shrine entry inventory gate', () => {
   );
 });
 
-describe('Hermes Shrine delayed-delivery derivation', () => {
-  const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
-  const firstHost = createOccurrenceAddress(oBiome, oOccurrenceIds.combat01);
-  const secondHost = createOccurrenceAddress(oBiome, createOccurrenceId('surface-o-preboss:boss'));
-
-  it('counts only later qualifying end-effects and leaves independent items pending', () => {
-    const deliveries = deriveHermesShrineDeliveries(
-      [
-        {
-          sourceKey: 'first',
-          sourceSequence: 10,
-          sourceOrigin: source,
-          rewardType: 'SpellDrop',
-          delay: 2,
-          rushed: false,
-        },
-        {
-          sourceKey: 'secondLeft',
-          sourceSequence: 10,
-          sourceOrigin: source,
-          rewardType: 'TalentDrop',
-          delay: 3,
-          rushed: false,
-        },
-      ],
-      [
-        // A purchase-room event and omitted skipped/noncombat events cannot
-        // consume the newly-created countdown because their sequence is not later.
-        { sequence: 10, kind: 'encounterEndEffectsApplied', origin: source },
-        {
-          sequence: 20,
-          kind: 'encounterEndEffectsApplied',
-          origin: firstHost,
-          encounterPhaseKey: 'Combat1',
-        },
-        {
-          sequence: 30,
-          kind: 'encounterEndEffectsApplied',
-          origin: secondHost,
-          encounterPhaseKey: 'Combat2',
-        },
-      ],
-    );
-    expect(deliveries).toMatchObject([
-      {
-        sourceKey: 'first',
-        deliveryKind: 'countdown',
-        hostOrigin: secondHost,
-        encounterPhaseKey: 'Combat2',
-        remainingUses: 0,
-      },
-      { sourceKey: 'secondLeft', deliveryKind: 'pending', remainingUses: 1 },
-    ]);
-    // Maturity selects a host; it does not prove that the required pickup
-    // settled. The reservation remains live through the due host state.
-    expect(hasPendingHermesSpellDrop(deliveries)).toBe(true);
-  });
-
-  it('rushes in the source room and final Preboss completion flushes every remaining item', () => {
-    const deliveries = deriveHermesShrineDeliveries(
-      [
-        {
-          sourceKey: 'rush',
-          sourceSequence: 10,
-          sourceOrigin: source,
-          rewardType: 'HealBigDrop',
-          delay: 8,
-          rushed: true,
-        },
-        {
-          sourceKey: 'spell',
-          sourceSequence: 10,
-          sourceOrigin: source,
-          rewardType: 'SpellDrop',
-          delay: 8,
-          rushed: false,
-        },
-      ],
-      [{ sequence: 20, kind: 'finalPrebossCompletion', origin: secondHost }],
-    );
-    expect(deliveries).toMatchObject([
-      { deliveryKind: 'rush', hostOrigin: source, hostSequence: 10 },
-      { deliveryKind: 'finalPrebossCompletion', hostOrigin: secondHost, hostSequence: 20 },
-    ]);
-    expect(hasPendingHermesSpellDrop(deliveries)).toBe(true);
-  });
-
-  it('leaves a tail Postboss purchase pending when the modeled route has no later encounter', () => {
-    const tail = createOccurrenceAddress(
-      pBiome,
-      createOccurrenceId('surface-p-preboss-shop:postboss'),
-    );
-    expect(
-      deriveHermesShrineDeliveries(
-        [
-          {
-            sourceKey: hermesShrineDeliveryEntryKey(tail, 'initial:secondLeft'),
-            sourceSequence: 10,
-            sourceOrigin: tail,
-            rewardType: 'SpellDrop',
-            delay: 8,
-            rushed: false,
-          },
-        ],
-        [],
-      ),
-    ).toEqual([
-      expect.objectContaining({
-        sourceOrigin: tail,
-        deliveryKind: 'pending',
-        remainingUses: 8,
-      }),
-    ]);
-  });
-
+describe('Hermes Shrine delayed deliveries', () => {
   it('clamps an unresolved fixed Boss delivery after Preboss and before Postboss', () => {
     const evaluation = simulateProjectAssembly(
       catalog,
@@ -799,27 +683,12 @@ describe('Hermes Shrine Travel Deal generation', () => {
       kind: 'SetHermesShrinePurchase',
       occurrence: host,
       generationKey: 'travelDealRefill',
-      purchase: { delay: 3, rushed: false },
+      purchase: { delay: 3, rushed: true },
     });
-    // Countdown chronology is owned by the dedicated Shrine-delivery tests.
-    // This Travel Deal witness starts from the exact derived host and proves
-    // that the refill settles through delivery, not through purchase.
-    const refillHost = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
-    const deliveryPhaseKey = 'Encounter';
     const refillEntry = createAcquisitionEntryAddress(
-      createAcquisitionSiteAddress(refillHost, 'hermesShrineDelivery'),
+      createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
       hermesShrineDeliveryEntryKey(host, 'travelDealRefill'),
     );
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionEntryOffer',
-      entry: refillEntry,
-      value: { rewardType: 'ArmorBoost' },
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'PlaceHermesShrineDelivery',
-      entry: refillEntry,
-      encounterPhaseKey: deliveryPhaseKey,
-    });
     const route = project.route;
     const plan = route?.biomes.find((candidate) => candidate.biomeKey === 'O');
     if (route === undefined || plan === undefined) throw new Error('fixture lost Surface O');
@@ -828,7 +697,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
     if (snapshot == null || snapshot.entryRoom === undefined || history == null)
       throw new Error('fixture lost O history');
     const materializedRefillHost = prefixAuthoredRooms(snapshot).find(
-      (room) => semanticAddressKey(room.origin) === semanticAddressKey(refillHost),
+      (room) => semanticAddressKey(room.origin) === semanticAddressKey(host),
     );
     expect(
       materializedRefillHost?.roomActionRoster.rows.map((row) => row.reference),
@@ -836,7 +705,6 @@ describe('Hermes Shrine Travel Deal generation', () => {
       kind: 'interactAcquisitionEntry',
       siteKey: 'hermesShrineDelivery',
       entryKey: refillEntry.entryKey,
-      encounterPhaseKey: deliveryPhaseKey,
     });
     expect(
       materializedRefillHost?.roomActionRoster.rows.find(
@@ -844,7 +712,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
           row.reference.kind === 'interactAcquisitionEntry' &&
           row.reference.entryKey === refillEntry.entryKey,
       )?.window,
-    ).toEqual({ kind: 'encounterEnd', phaseKey: deliveryPhaseKey });
+    ).toEqual({ kind: 'postOutgoing' });
     const completeSnapshot = snapshot as typeof snapshot & {
       readonly entryRoom: NonNullable<typeof snapshot.entryRoom>;
     };
@@ -859,11 +727,57 @@ describe('Hermes Shrine Travel Deal generation', () => {
     expect(result.findings.map((finding) => finding.code)).not.toContain(
       'hermesShrineTravelDealRefillUnavailable',
     );
+    expect(result.findings.map((finding) => finding.code)).not.toContain('rewardSourceUnavailable');
+    expect(
+      result.branches.some((branch) =>
+        branch.events.some(
+          (event) =>
+            event.kind === 'concreteAcquisition' &&
+            event.settlement !== undefined &&
+            semanticAddressKey(event.settlement.entry) === semanticAddressKey(refillEntry),
+        ),
+      ),
+    ).toBe(true);
     expect(result.hermesShrineDeliveries.map((delivery) => delivery.sourceKey)).not.toContain(
       hermesShrineDeliveryEntryKey(host, 'travelDealRefill'),
     );
     expect(refillEntry.entryKey).toBe(hermesShrineDeliveryEntryKey(host, 'travelDealRefill'));
     expect(refillEntry.entryKey).not.toBe(hermesShrineDeliveryEntryKey(host, 'initial:first'));
+
+    const unpurchasedRefill = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: host,
+      generationKey: 'travelDealRefill',
+      purchase: null,
+    });
+    const unrushedSource = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: host,
+      generationKey: 'initial:first',
+      purchase: { delay: 2, rushed: false },
+    });
+    for (const [cleanup, cleaned] of [
+      ['unpurchase', unpurchasedRefill],
+      ['unrush source', unrushedSource],
+    ] as const) {
+      const cleanedPlan = cleaned.route?.biomes.find((candidate) => candidate.biomeKey === 'O');
+      if (cleanedPlan === undefined) throw new Error('fixture lost cleaned O');
+      const cleanedSnapshot = materializeBiomePrefix(catalog, oBiome, cleanedPlan, route.loadout);
+      const cleanedHost =
+        cleanedSnapshot === null
+          ? undefined
+          : prefixAuthoredRooms(cleanedSnapshot).find(
+              (room) => semanticAddressKey(room.origin) === semanticAddressKey(host),
+            );
+      expect(
+        cleanedHost?.roomActionRoster.rows.map((row) => row.reference),
+        cleanup,
+      ).not.toContainEqual({
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'hermesShrineDelivery',
+        entryKey: refillEntry.entryKey,
+      });
+    }
 
     const secondRush = applyProjectCommand(project, catalog, {
       kind: 'SetHermesShrinePurchase',

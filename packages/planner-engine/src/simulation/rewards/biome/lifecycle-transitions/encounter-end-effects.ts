@@ -9,10 +9,6 @@ import {
   type SteadyGrowthOutcomeAddress,
   type TranscendentEmbryoOutcomeAddress,
 } from '../../../../authored-project/addresses';
-import {
-  defaultHermesShrineDeliveryReward,
-  hermesShrineDeliveryEntryKey,
-} from '../../../../authored-project/hermes-shrine-delivery';
 import type { HistoryEvent } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { ownerRegion } from '../../../finding-regions';
@@ -52,6 +48,7 @@ import {
   type PlannerTimelineFacts,
   type PlannerTimelineNode,
 } from '../../../timeline-facts';
+import { dueHermesShrineDeliveryFrontier } from './hermes-shrine-delivery';
 
 export interface EncounterEndEffectsTransition {
   readonly branches: readonly RewardBranchState[];
@@ -394,8 +391,6 @@ export function applyEncounterEndEffectsTransition(
   catalog: Catalog,
   event: Extract<HistoryEvent, { readonly kind: 'encounterEndEffectsApplied' }>,
   room: CanonicalAuthoredRoom | undefined,
-  enteredBiomeCount: number,
-  fullRunBiomeCount: number,
   branches: readonly RewardBranchState[],
 ): EncounterEndEffectsTransition {
   const declaration = room === undefined ? undefined : catalog.rooms.byKey[room.gameName];
@@ -448,9 +443,7 @@ export function applyEncounterEndEffectsTransition(
         const deliveries = Object.fromEntries(
           Object.entries(pending).map(([key, delivery]) => {
             if (delivery.dueAt !== undefined) return [key, delivery] as const;
-            const forceComplete =
-              enteredBiomeCount === fullRunBiomeCount && declaration?.kind === 'Preboss';
-            const remainingUses = forceComplete ? 0 : delivery.remainingUses - 1;
+            const remainingUses = delivery.remainingUses - 1;
             return [
               key,
               Object.freeze({
@@ -548,66 +541,16 @@ export function applyEncounterEndEffectsTransition(
     declaration.ignoreEncounterUses !== true &&
     encounterPhase?.advancesHermesShrineDeliveryUses === true
   ) {
-    const deliveryHost = event.origin;
-    const site = createAcquisitionSiteAddress(deliveryHost, 'hermesShrineDelivery');
-    for (const branch of finalBranches) {
-      for (const delivery of Object.values(branch.pendingHermesShrineDeliveries)) {
-        if (
-          delivery.dueAt === undefined ||
-          semanticAddressKey(delivery.dueAt) !== semanticAddressKey(deliveryHost)
-        )
-          continue;
-        const entryKey = hermesShrineDeliveryEntryKey(
-          delivery.sourceOrigin,
-          delivery.generationKey,
-        );
-        const retained =
-          room?.kind === 'authored'
-            ? room.acquisitionSites?.hermesShrineDelivery?.entries[entryKey]
-            : undefined;
-        const fixedReward = defaultHermesShrineDeliveryReward(catalog, delivery.rewardType);
-        const hasExactDeliveryAction =
-          room?.kind === 'authored' &&
-          room.roomActionRoster?.rows.some(
-            (row) =>
-              row.reference.kind === 'interactAcquisitionEntry' &&
-              row.reference.siteKey === 'hermesShrineDelivery' &&
-              row.reference.entryKey === entryKey &&
-              row.reference.encounterPhaseKey === event.phaseKey,
-          );
-        if (retained === undefined || !hasExactDeliveryAction)
-          deliveryPlacementFindings.push(
-            Object.freeze({
-              finding: rewardFinding(
-                'hermesShrineDeliveryPlacementRequired',
-                createAcquisitionEntryAddress(site, entryKey),
-                { sourceKey: delivery.sourceKey, encounterPhaseKey: event.phaseKey },
-              ),
-              region: ownerRegion(createAcquisitionEntryAddress(site, entryKey)),
-              chronology: Object.freeze({
-                kind: 'history' as const,
-                sequence: event.sequence,
-                boundary: 'at' as const,
-              }),
-            }),
-          );
-        derivedAcquisitionEntryFrontiers.push(
-          Object.freeze({
-            address: createAcquisitionEntryAddress(site, entryKey),
-            kind: 'hermesShrineDelivery',
-            branchCohortSize: finalBranches.length,
-            rewardTypes: Object.freeze([delivery.rewardType]),
-            encounterPhaseKey: event.phaseKey,
-            ...(fixedReward === null ? {} : { fixedReward }),
-            retainedSourceMismatch:
-              retained !== undefined &&
-              retained !== null &&
-              retained.offer.rewardType !== delivery.rewardType,
-            branchesBeforeEntry: Object.freeze([branch]),
-          }),
-        );
-      }
-    }
+    const due = dueHermesShrineDeliveryFrontier(
+      catalog,
+      room,
+      event.origin,
+      finalBranches,
+      event.sequence,
+      event.phaseKey,
+    );
+    deliveryPlacementFindings.push(...due.findings);
+    derivedAcquisitionEntryFrontiers.push(...due.frontiers);
   }
   const timelineNodes: PlannerTimelineNode[] = [
     ...(steadyAdvance?.thresholds ?? []).map(({ address }) =>

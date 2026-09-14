@@ -204,6 +204,14 @@
   gap: 12px;
 }
 
+.hermes-shrine-purchase-details:has(select:disabled) {
+  opacity: 0.68;
+}
+
+.hermes-shrine-delay-control select {
+  width: 6.5rem;
+}
+
 .room-purging-pool > label {
   display: grid;
   gap: 4px;

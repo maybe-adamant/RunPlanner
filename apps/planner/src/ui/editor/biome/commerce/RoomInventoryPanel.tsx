@@ -416,7 +416,6 @@ function HermesShrineSlotEditor({
   const executeIntent = useCommandIntent();
   const offerPicker = useWorkspaceInteraction(offer);
   const current = purchase.purchase;
-  const displayedPurchase = current ?? { delay: 2, rushed: false };
   return (
     <div className="shop-family-offer-row hermes-shrine-slot">
       <ContextualPicker
@@ -463,8 +462,13 @@ function HermesShrineSlotEditor({
                 }),
               );
             }}
-            value={displayedPurchase.delay}
+            value={current?.delay ?? ''}
           >
+            {current === null && (
+              <option value="" disabled>
+                Random
+              </option>
+            )}
             {[2, 3, 4, 5, 6, 7, 8].map((delay) => (
               <option key={delay} value={delay}>
                 {delay}
@@ -472,21 +476,19 @@ function HermesShrineSlotEditor({
             ))}
           </select>
         </label>
-        {purchase.generationKey === 'travelDealRefill' ? null : (
-          <label className="shop-family-participation">
-            <input
-              aria-label={`Rush Hermes Shrine ${label}`}
-              checked={displayedPurchase.rushed}
-              disabled={current === null}
-              onChange={(event) => {
-                if (current === null) return;
-                executeIntent(purchase.intentFor({ ...current, rushed: event.target.checked }));
-              }}
-              type="checkbox"
-            />
-            Rushed
-          </label>
-        )}
+        <label className="shop-family-participation">
+          <input
+            aria-label={`Rush Hermes Shrine ${label}`}
+            checked={current?.rushed ?? false}
+            disabled={current === null}
+            onChange={(event) => {
+              if (current === null) return;
+              executeIntent(purchase.intentFor({ ...current, rushed: event.target.checked }));
+            }}
+            type="checkbox"
+          />
+          Rushed
+        </label>
       </div>
     </div>
   );

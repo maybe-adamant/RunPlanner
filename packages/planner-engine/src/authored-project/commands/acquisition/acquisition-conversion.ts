@@ -134,15 +134,16 @@ export function applyAcquisitionDispositionCommand(
       const retainedEntry = authoredAcquisitionEntryAtSite(occurrence, owner.site, owner.entryKey);
       const rushedSource =
         shrineDelivery !== undefined &&
-        shrineDelivery.generationKey !== 'travelDealRefill' &&
         shrineDelivery.routeKey === owner.routeKey &&
         shrineDelivery.biomeKey === owner.biomeKey &&
         shrineDelivery.sourceOccurrenceId === occurrence.occurrenceId
-          ? occurrence.hermesShrine?.offerBySlot[
-              shrineDelivery.generationKey.slice(
-                'initial:'.length,
-              ) as import('../../model').HermesShrineSlotKey
-            ]
+          ? shrineDelivery.generationKey === 'travelDealRefill'
+            ? occurrence.hermesShrine?.travelDealRefill?.offer
+            : occurrence.hermesShrine?.offerBySlot[
+                shrineDelivery.generationKey.slice(
+                  'initial:'.length,
+                ) as import('../../model').HermesShrineSlotKey
+              ]
           : undefined;
       const entry =
         retainedEntry === undefined && rushedSource !== undefined && rushedSource !== null

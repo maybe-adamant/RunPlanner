@@ -159,8 +159,6 @@ export function applyOccurrenceCommand(
         failCommand(command, 'Shrine purchase delay must be from 2 through 8');
       if (command.purchase !== null && typeof command.purchase.rushed !== 'boolean')
         failCommand(command, 'Shrine purchase rushed must be boolean');
-      if (command.generationKey === 'travelDealRefill' && command.purchase?.rushed === true)
-        failCommand(command, 'Shrine Travel Deal refill cannot be rushed');
       const existing = occurrence.hermesShrine.purchaseBySlot ?? {};
       const next = { ...existing } as Record<string, unknown>;
       if (slotKey !== undefined) {
@@ -234,11 +232,26 @@ export function applyOccurrenceCommand(
             )
           : nextOccurrence,
       );
-      return unplaceHermesShrineDelivery(
+      const unplacedDelivery = unplaceHermesShrineDelivery(
         updated,
         deliveryEntryKey,
         command.purchase?.rushed === true ? command.occurrence : undefined,
       );
+      // A refill can only be triggered by this Shrine's first rushed initial
+      // delivery. Retain its authored detail when that source is un-rushed,
+      // but retract the now-dormant active refill action.
+      if (
+        slotKey !== undefined &&
+        command.purchase?.rushed !== true &&
+        !Object.values(nextOccurrence.hermesShrine.purchaseBySlot ?? {}).some(
+          (purchase) => purchase.rushed,
+        )
+      )
+        return unplaceHermesShrineDelivery(
+          unplacedDelivery,
+          hermesShrineDeliveryEntryKey(command.occurrence, 'travelDealRefill'),
+        );
+      return unplacedDelivery;
     }
     case 'ReplaceHermesShrineTravelDealRefill': {
       const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
