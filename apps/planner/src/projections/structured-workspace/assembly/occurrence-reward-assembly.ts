@@ -104,7 +104,6 @@ export type WorkspaceDerivedAcquisitionEntry = {
     | 'echoLastReward'
     | 'hermesShrineDelivery'
     | 'clockedTraitPickup'
-    | 'infernalContractReward'
     | 'acquisitionResolvedReward'
     | 'travelDealPlaceholder'
     | 'travelDealRefill';
@@ -621,8 +620,14 @@ export function controlsForOccurrence(
         );
       }
       for (const [offerKey, shopOffer] of Object.entries(occurrence.state.shop.offers)) {
-        const slot = profile.slots.byKey[offerKey];
-        const group = slot === undefined ? undefined : profile.groups.byKey[slot.groupKey];
+        const offerProfile =
+          offerKey === 'infernalContractReward'
+            ? input.catalog.rewards.shops.byKey[
+                room.infernalContractReward?.generationProfileKey ?? ''
+              ]
+            : profile;
+        const slot = offerProfile?.slots.byKey[offerKey];
+        const group = slot === undefined ? undefined : offerProfile?.groups.byKey[slot.groupKey];
         if (group === undefined) {
           throw new StructuredWorkspaceProjectionContractError(
             `${room.gameName} shop offer ${offerKey} has no declared reward domain`,

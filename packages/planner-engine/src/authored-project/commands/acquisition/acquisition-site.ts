@@ -20,6 +20,7 @@ import {
   INFERNAL_CONTRACT_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
   replaceAuthoredAcquisitionEntryAtSite,
+  shopSlotProfile,
 } from '../../shop';
 import { parseArtificerReplacementEntryKey } from '../../acquisition/artificer';
 import {
@@ -511,14 +512,16 @@ export function applyAcquisitionSiteCommand(
     );
     const pickup = producer?.pickups.find((candidate) => candidate.key === command.entry.entryKey);
     const shop = occurrence.state.kind === 'shop' ? occurrence.state.shop : undefined;
-    const shopInventoryReward = shop?.offers[command.entry.entryKey]?.reward;
+    const shopInventoryReward =
+      command.entry.entryKey === INFERNAL_CONTRACT_ENTRY_KEY
+        ? shop?.offers.infernalContractReward?.reward
+        : shop?.offers[command.entry.entryKey]?.reward;
     const acquisitionResolvedEntry =
       shopInventoryReward !== null &&
       shopInventoryReward !== undefined &&
       rewardSourceResolvesAtAcquisition(catalog, shopInventoryReward.offer);
     const shopOwnedEntry =
       acquisitionResolvedEntry ||
-      command.entry.entryKey === INFERNAL_CONTRACT_ENTRY_KEY ||
       command.entry.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY ||
       command.entry.entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY;
     if (
@@ -540,11 +543,6 @@ export function applyAcquisitionSiteCommand(
     if (shopOwnedEntry) {
       if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined)
         failCommand(command, 'Shop-owned entry requires a materialized Shop');
-      const room = catalog.rooms.byKey[occurrence.gameName];
-      const source =
-        command.entry.entryKey === INFERNAL_CONTRACT_ENTRY_KEY
-          ? room?.infernalContractReward
-          : undefined;
       if (
         acquisitionResolvedEntry &&
         command.value.rewardType !== shopInventoryReward.offer.rewardType
@@ -553,15 +551,16 @@ export function applyAcquisitionSiteCommand(
           command,
           `must retain Shop inventory reward type ${shopInventoryReward.offer.rewardType}`,
         );
-      if (
-        command.entry.entryKey === INFERNAL_CONTRACT_ENTRY_KEY &&
-        (source === undefined || !source.rewardTypes.includes(command.value.rewardType))
-      )
-        failCommand(command, 'reward is outside the Infernal Contract pedestal domain');
-      const effectSource =
-        source === undefined
-          ? ({ kind: 'shopProfile', key: occurrence.state.shop.profileKey } as const)
-          : ({ kind: 'producerLifecycle', key: source.producerLifecycleKey } as const);
+      const effectSource = {
+        kind: 'shopProfile',
+        key:
+          shopSlotProfile(
+            catalog,
+            occurrence.gameName,
+            occurrence.state.shop.profileKey,
+            command.entry.entryKey,
+          )?.key ?? '',
+      } as const;
       return updateOccurrenceTopology(
         document,
         located,

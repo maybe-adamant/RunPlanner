@@ -682,9 +682,12 @@ export function executionTimelineTransactions(
     }
     const shopOffer =
       actionReference.kind === 'interactShopOffer'
-        ? room.entryState?.offers.find(
+        ? (room.entryState?.offers.find(
             (candidate) => candidate.offerKey === actionReference.offerKey,
-          )
+          ) ??
+          (room.entryState?.infernalContractOffer?.offerKey === actionReference.offerKey
+            ? room.entryState.infernalContractOffer
+            : undefined))
         : undefined;
     if (actionReference.kind === 'interactShopOffer' && shopOffer === undefined)
       throw new CompilerError(

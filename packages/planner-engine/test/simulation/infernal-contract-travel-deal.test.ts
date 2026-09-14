@@ -2,6 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   createBiomeAddress,
   createOccurrenceId,
+  createDefaultAuthoredHexTree,
   semanticAddressKey,
   type AuthoredRewardState,
 } from '@run-planner/engine/authored-project';
@@ -34,6 +35,7 @@ import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation
 import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
 import { createDerivedAcquisitionEntryCandidateArtifacts } from '../../src/simulation/rewards/acquisition/artifacts';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { installHexTree } from '../../src/simulation/hex-progress';
 
 const biome = createBiomeAddress('Underworld', 'F');
 const loadout = { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' } as const;
@@ -57,7 +59,7 @@ const explicitShopOffers: Readonly<Record<string, ResolvedRewardOffer>> = Object
 
 function authoredShopReward(
   offer: ResolvedRewardOffer,
-  profileKey: 'WorldShop' | 'I_WorldShop' | 'Q_WorldShop' = 'WorldShop',
+  profileKey: 'WorldShop' | 'I_WorldShop' | 'Q_WorldShop' | 'ZagPedestalOptions' = 'WorldShop',
 ): AuthoredRewardState {
   const state = createUnresolvedAcquisitionRewardState(catalog, offer, {
     kind: 'shopProfile',
@@ -76,6 +78,7 @@ function authoredShopReward(
           ] as const),
           selectedOptionKey: 'option1' as const,
           rarificationActions: Object.freeze([]),
+          hexTree: createDefaultAuthoredHexTree(catalog, 'SpellPolymorphTrait'),
         })
       : source === 'ApolloUpgrade'
         ? Object.freeze({
@@ -187,6 +190,7 @@ function seededBranches(options: {
   readonly echo?: boolean;
   readonly travel?: boolean;
   readonly timePiece?: boolean;
+  readonly startingSpell?: boolean;
 }) {
   const events = [
     ...(options.contract === true
@@ -236,7 +240,24 @@ function seededBranches(options: {
   return initializeTestRewardBranches().map((branch) =>
     Object.freeze({
       ...branch,
-      history: attachTraitHistory(branch.history, traits),
+      ...(options.startingSpell === true
+        ? installHexTree(
+            catalog,
+            branch,
+            'SpellPolymorphTrait',
+            createDefaultAuthoredHexTree(catalog, 'SpellPolymorphTrait'),
+          )
+        : {}),
+      history: attachTraitHistory(
+        {
+          ...branch.history,
+          useRecord:
+            options.startingSpell === true
+              ? { ...branch.history.useRecord, SpellDrop: 1 }
+              : branch.history.useRecord,
+        },
+        traits,
+      ),
       traitHistory: traits,
       ...(options.timePiece === true
         ? { keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.arcanaFear) }
@@ -263,6 +284,9 @@ function settle(options: {
   readonly roomGameName?: 'F_PreBoss01' | 'I_PreBoss02' | 'Q_PreBoss01';
   readonly enteredBiomes?: number;
   readonly partial?: boolean;
+  readonly startingSpell?: boolean;
+  readonly missingContract?: boolean;
+  readonly unresolvedContract?: boolean;
 }) {
   const roomGameName = options.roomGameName ?? 'F_PreBoss01';
   const declaration = catalog.rooms.byKey[roomGameName];
@@ -315,14 +339,29 @@ function settle(options: {
             Object.freeze({
               optionKey: null,
               reward:
-                options.shopOfferOverrides?.[key] ??
-                authoredShopReward(
-                  explicitShopOffers[key] ??
-                    (() => {
-                      throw new Error(`missing explicit Shop fixture offer for ${key}`);
-                    })(),
-                  state.shop!.profileKey as 'WorldShop' | 'I_WorldShop' | 'Q_WorldShop',
-                ),
+                key === 'infernalContractReward'
+                  ? options.missingContract === true
+                    ? null
+                    : options.unresolvedContract === true
+                      ? createUnresolvedAcquisitionRewardState(
+                          catalog,
+                          { rewardType: contractRewardType },
+                          { kind: 'shopProfile', key: 'ZagPedestalOptions' },
+                        )
+                      : contractRewardType === 'BlindBoxLoot'
+                        ? authoredShopReward(
+                            { rewardType: contractRewardType },
+                            'ZagPedestalOptions',
+                          )
+                        : selectedContract
+                  : (options.shopOfferOverrides?.[key] ??
+                    authoredShopReward(
+                      explicitShopOffers[key] ??
+                        (() => {
+                          throw new Error(`missing explicit Shop fixture offer for ${key}`);
+                        })(),
+                      state.shop!.profileKey as 'WorldShop' | 'I_WorldShop' | 'Q_WorldShop',
+                    )),
             }),
           ]),
         ),
@@ -336,7 +375,10 @@ function settle(options: {
     acquisitionSites: Object.freeze({
       roomExit: Object.freeze({
         pickupEntries: Object.freeze({
-          infernalContractReward: selectedContract,
+          ...(contractRewardType === 'BlindBoxLoot' &&
+          options.order.includes('infernalContractReward')
+            ? { infernalContractReward: selectedContract }
+            : {}),
           ...(options.travelChild === undefined ? {} : { travelDealRefill: options.travelChild }),
           ...(options.echoDuplicateSourceKey === undefined ||
           options.echoDuplicateChild === undefined
@@ -413,7 +455,7 @@ function settle(options: {
     },
   });
   mergeRewardFindingEmissions(findings, settlement.findingEmissions);
-  return { canonical, findings, settlement };
+  return { canonical, findings, settlement, inventory };
 }
 
 describe('Infernal Contract and Travel Deal chronology', () => {
@@ -490,6 +532,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     const first = settle({
       order: ['Minor'],
       contract: true,
+      contractRewardType: 'StackUpgrade',
       travel: true,
       echo: true,
       partial: true,
@@ -563,21 +606,75 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     }
   });
 
-  it('publishes the exact branch-attested five-reward Contract domain', () => {
-    const result = settle({ order: [], contract: true });
-    const contract = result.settlement.derivedEntryFrontiers?.find(
-      (entry) => entry.kind === 'infernalContractReward',
-    );
-    expect(contract?.rewardTypes).toEqual([
-      'BlindBoxLoot',
-      'StackUpgradeBig',
-      'StackUpgrade',
-      'TalentBigDrop',
-      'TalentDrop',
+  it('requires active pedestal inventory without requiring collection or its acquisition children', () => {
+    const missing = settle({ order: [], contract: true, missingContract: true });
+    expect(missing.inventory.findingEmissions.map((entry) => entry.finding)).toEqual([
+      expect.objectContaining({
+        code: 'rewardMissing',
+        origin: expect.objectContaining({
+          kind: 'shopOffer',
+          offerKey: INFERNAL_CONTRACT_ENTRY_KEY,
+        }),
+      }),
     ]);
-    expect(contract?.evaluateOffer?.({ rewardType: 'StackUpgrade' }).supported).toBe(true);
-    expect(contract?.evaluateOffer?.({ rewardType: 'MaxHealthDrop' }).supported).toBe(false);
+    for (const contractRewardType of ['BlindBoxLoot', 'StackUpgrade', 'StackUpgradeBig'] as const) {
+      const uncollected = settle({
+        order: [],
+        contract: true,
+        contractRewardType,
+        unresolvedContract: true,
+      });
+      expect([...uncollected.findings.values()], contractRewardType).toEqual([]);
+      expect(uncollected.settlement.branches).toHaveLength(1);
+    }
+    expect([...settle({ order: [], missingContract: true }).findings.values()]).toEqual([]);
   });
+
+  it('rejects a pedestal Path even when the first Hex is acquired later in the Shop', () => {
+    const result = settle({
+      order: ['Minor'],
+      contract: true,
+      contractRewardType: 'TalentDrop',
+      unresolvedContract: true,
+      shopOfferOverrides: { Minor: authoredShopReward({ rewardType: 'SpellDrop' }) },
+    });
+    expect(result.inventory.findingEmissions.map((entry) => entry.finding.code)).toEqual([
+      'shopOfferUnavailable',
+    ]);
+  });
+
+  it.each(['TalentDrop', 'TalentBigDrop'] as const)(
+    'validates uncollected %s against entry Hex eligibility',
+    (contractRewardType) => {
+      const unavailable = settle({
+        order: [],
+        contract: true,
+        contractRewardType,
+        unresolvedContract: true,
+      });
+      expect(unavailable.inventory.findingEmissions.map((entry) => entry.finding.code)).toEqual([
+        'shopOfferUnavailable',
+      ]);
+      const available = settle({
+        order: [],
+        contract: true,
+        contractRewardType,
+        unresolvedContract: true,
+        startingSpell: true,
+      });
+      expect([...available.findings.values()]).toEqual([]);
+      const alreadyInShop = settle({
+        order: [],
+        contract: true,
+        startingSpell: true,
+        contractRewardType,
+        shopOfferOverrides: { Minor: authoredShopReward({ rewardType: 'TalentDrop' }) },
+      });
+      expect(alreadyInShop.inventory.findingEmissions.map((entry) => entry.finding.code)).toEqual([
+        'shopOfferUnavailable',
+      ]);
+    },
+  );
 
   it('derives one exact indexed fresh refill after the first paid offer and settles it as paid', () => {
     const derived = settle({ order: ['MajorNonBoon'], travel: true });
@@ -944,6 +1041,8 @@ describe('Infernal Contract and Travel Deal chronology', () => {
         timePiece: true,
         contractRewardType,
         contractGold: true,
+        startingSpell:
+          contractRewardType === 'TalentDrop' || contractRewardType === 'TalentBigDrop',
       });
       expect([...result.findings.values()]).toEqual([]);
       expect(result.settlement.branches).toHaveLength(1);

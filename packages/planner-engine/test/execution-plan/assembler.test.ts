@@ -1306,20 +1306,12 @@ describe('engine-owned F/G execution semantic product', () => {
 
   it('omits a retained unpicked Contract reward without an active Contract capability', () => {
     const shop = createOccurrenceAddress(goldenFBiome, createOccurrenceId('golden-f-preboss-shop'));
-    const entry = createAcquisitionEntryAddress(
-      createAcquisitionSiteAddress(shop, 'roomExit'),
-      'infernalContractReward',
-    );
+    const entry = createShopOfferAddress(goldenFBiome, shop.occurrenceId, 'infernalContractReward');
     const project = applyProjectCommand(fOnlyProject(), catalog, {
-      kind: 'ReplaceAcquisitionEntryOffer',
-      entry,
+      kind: 'ReplaceShopOffer',
+      offer: entry,
       value: { rewardType: 'StackUpgrade' },
     });
-    expect(
-      project.route.biomes[0]!.topology!.occurrences.find(
-        (room) => room.occurrenceId === shop.occurrenceId,
-      )?.acquisitionSites?.roomExit?.pickupEntries?.infernalContractReward?.offer,
-    ).toEqual({ rewardType: 'StackUpgrade' });
     const product = productFor(project);
     const published = product.occurrences.find((room) => room.id === shop.occurrenceId);
     expect(published?.overview.shop).toBeDefined();

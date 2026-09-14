@@ -4,7 +4,6 @@ import type { RoomOccurrenceRole } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
 import { failCommand, type LocatedBiome } from './contract';
 import type { ProjectCommand, RouteDetourCommand } from './types';
-import { createInfernalContractEntries } from '../shop';
 
 function entryRole(
   room: RoomDeclaration,
@@ -66,19 +65,13 @@ export function reconcileNormalTargetEntryStates(
     return Object.freeze({
       ...withoutAcquisitionSites,
       state: defaultState,
-      ...(defaultState.shop === undefined
-        ? {}
-        : {
+      ...(defaultState.kind === 'shop' && defaultState.shop !== undefined
+        ? {
             acquisitionSites: Object.freeze({
-              roomExit: Object.freeze({
-                ...(room.infernalContractReward === undefined
-                  ? {}
-                  : {
-                      pickupEntries: createInfernalContractEntries(catalog, room.gameName),
-                    }),
-              }),
+              roomExit: Object.freeze({}),
             }),
-          }),
+          }
+        : {}),
     });
   });
   return Object.freeze({ ...topology, occurrences: Object.freeze(occurrences) });

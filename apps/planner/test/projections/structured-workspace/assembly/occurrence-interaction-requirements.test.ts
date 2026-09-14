@@ -49,7 +49,7 @@ describe('occurrence interaction requirements', () => {
       shop.occurrenceInteractionRequirements.filter(
         (requirement) => requirement.kind === 'shopPurchaseParticipation',
       ),
-    ).toHaveLength(3);
+    ).toHaveLength(4);
   });
 
   it('owns Well, Pool, Shrine, and resource requirement rows', () => {

@@ -84,6 +84,8 @@ export interface CanonicalShopEntryState {
     readonly offerKey: string;
     readonly offerOrigin: ShopOfferAddress;
   }[];
+  /** Separate native one-slot Contract cohort; undefined means no room descriptor. */
+  readonly infernalContractOffer?: CanonicalShopOffer | null;
 }
 
 export interface CanonicalLocalReward {

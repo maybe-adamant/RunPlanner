@@ -1,5 +1,9 @@
 import type { Catalog, RoomDeclaration } from '../../../../catalog-schema';
-import { semanticAddressKey, type SemanticAddress } from '../../../../authored-project/addresses';
+import {
+  createShopOfferAddress,
+  semanticAddressKey,
+  type SemanticAddress,
+} from '../../../../authored-project/addresses';
 import {
   findShopPartialAuthoredGenerationWitnesses,
   type AuthoredShopOffer,
@@ -65,9 +69,18 @@ export function applyShopOfferPointMaterialization(
   const findings = new Map<string, FindingRegionEntry>();
   const frontierBranches = branches;
   const shopEntry = room.entryState?.kind === 'shop' ? room.entryState : undefined;
+  const contractOwner =
+    declaration.infernalContractReward === undefined
+      ? undefined
+      : createShopOfferAddress(
+          { kind: 'biome', routeKey: room.origin.routeKey, biomeKey: room.origin.biomeKey },
+          room.origin.occurrenceId,
+          'infernalContractReward',
+        );
   const owners = Object.freeze([
     ...(shopEntry?.offers.map((offer) => offer.offerOrigin) ?? []),
     ...(shopEntry?.unresolvedOffers.map((offer) => offer.offerOrigin) ?? []),
+    ...(contractOwner === undefined ? [] : [contractOwner]),
   ]);
   const ownerKeys = new Set(owners.map(semanticAddressKey));
   const findingChronology = rewardFindingChronologyForRoom(
@@ -108,33 +121,55 @@ export function applyShopOfferPointMaterialization(
         throw new BiomeRewardSimulationContractError(
           'shop reward frontier received a foreign owner',
         );
-      const profile = catalog.rewards.shops.byKey[shopEntry.profileKey];
+      const contract = shopEntry.infernalContractOffer;
+      const isContract =
+        contractOwner !== undefined && semanticAddressKey(contractOwner) === ownerKey;
+      const profile =
+        catalog.rewards.shops.byKey[
+          isContract
+            ? (declaration.infernalContractReward?.generationProfileKey ?? '')
+            : shopEntry.profileKey
+        ];
       if (profile === undefined)
         throw new BiomeRewardSimulationContractError(
           `unknown shop profile ${shopEntry.profileKey}`,
         );
-      const focused = [...shopEntry.offers, ...shopEntry.unresolvedOffers].find(
-        (entry) => semanticAddressKey(entry.offerOrigin) === ownerKey,
-      );
+      const focused =
+        (isContract
+          ? contract === null || contract === undefined
+            ? []
+            : [contract]
+          : [...shopEntry.offers, ...shopEntry.unresolvedOffers]
+        ).find((entry) => semanticAddressKey(entry.offerOrigin) === ownerKey) ??
+        (isContract
+          ? { offerKey: 'infernalContractReward', offerOrigin: contractOwner! }
+          : undefined);
       if (focused === undefined)
         throw new BiomeRewardSimulationContractError('shop reward frontier lost its owner');
       return Object.freeze({
         profile,
         focused,
         concreteByKey: new Map<string, AuthoredShopOffer>(
-          shopEntry.offers.map((entry) => [
+          (isContract
+            ? contract === null || contract === undefined
+              ? []
+              : [contract]
+            : shopEntry.offers
+          ).map((entry) => [
             entry.offerKey,
             Object.freeze({ optionKey: entry.optionKey, offer: entry.offer }),
           ]),
         ),
-        requirements:
-          declaration.incomingReward.kind === 'shop'
+        requirements: isContract
+          ? undefined
+          : declaration.incomingReward.kind === 'shop'
             ? declaration.incomingReward.additionalOptionRequirements
             : undefined,
       });
     };
     const supportsSelection = (owner: SemanticAddress, selection: AuthoredShopOffer): boolean => {
       const context = candidateContext(owner);
+      const isContract = context.focused.offerKey === 'infernalContractReward';
       const fixedOffers = context.profile.slots.values.map((slot) =>
         slot.key === context.focused.offerKey
           ? selection
@@ -146,9 +181,14 @@ export function applyShopOfferPointMaterialization(
             catalog.rewards,
             context.profile,
             fixedOffers,
-            facts(branch.history, new Set(), branch),
+            facts(
+              branch.history,
+              new Set(isContract ? shopEntry!.offers.map((offer) => offer.offer.rewardType) : []),
+              branch,
+            ),
             context.requirements,
-          ).length > 0,
+          ).length > 0 &&
+          (!isContract || branch.traitHistory?.equippedTraits.InfernalContractBoon !== undefined),
       );
     };
     producerFrontiers.push(

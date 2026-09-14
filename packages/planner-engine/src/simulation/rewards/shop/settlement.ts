@@ -5,7 +5,6 @@ import {
   type SemanticAddress,
 } from '../../../authored-project/addresses';
 
-import { createUnresolvedAcquisitionRewardState } from '../../../authored-project/traits/state';
 import { parseArtificerReplacementEntryKey } from '../../../authored-project/acquisition/artificer';
 import { rewardSourceResolvesAtAcquisition } from '../../../authored-project/acquisition/reward-state';
 
@@ -19,7 +18,6 @@ import {
   evaluateShopPurchaseGateAtSlot,
   findShopIndexedGenerationWitnesses,
   purchaseInteractionName,
-  type ResolvedRewardOffer,
   type ProducerLifecyclePointKey,
   type ShopGenerationWitness,
 } from '../../../reward-kernel';
@@ -46,7 +44,6 @@ import {
 } from '../findings';
 import { EMPTY_PLANNER_TIMELINE_FACTS } from '../../timeline-facts';
 
-import { applyProducerRoleHistory } from '../acquisition/role-settlement';
 import {
   withStoredArtificerReplacements,
   settleAcquisitionResolvedReward,
@@ -136,6 +133,7 @@ export function settleShopAcquisitionSite(
     firstNormalPurchaseSeen: boolean;
     travelRefill?: TravelRefill;
     goldMaterialization?: GoldMaterialization;
+    contractOffer?: import('../../materialization').CanonicalShopOffer;
   };
   type GoldMaterialization = PendingShopGoldMaterialization;
   const executions: ShopExecution[] = [];
@@ -171,81 +169,12 @@ export function settleShopAcquisitionSite(
       ...(pending.goldMaterialization === undefined
         ? {}
         : { goldMaterialization: pending.goldMaterialization }),
+      ...(pending.infernalContractOffer === undefined
+        ? {}
+        : { contractOffer: pending.infernalContractOffer }),
     });
   }
   const branchCohortSize = executions.length;
-  const contractDescriptor = declaration.infernalContractReward;
-  const contractChild = room.acquisitionSites.roomExit?.entries[INFERNAL_CONTRACT_ENTRY_KEY];
-  if (contractDescriptor !== undefined && contractChild !== undefined) {
-    for (const execution of executions) {
-      if (execution.candidate.traitHistory?.equippedTraits.InfernalContractBoon !== undefined) {
-        const contractAddress = createAcquisitionEntryAddress(site, INFERNAL_CONTRACT_ENTRY_KEY);
-        const routeContext = entry.offers.find(
-          (offer) =>
-            offer.traitContext?.weaponKey !== undefined &&
-            offer.traitContext.aspectKey !== undefined,
-        )?.traitContext;
-        if (routeContext?.weaponKey === undefined || routeContext.aspectKey === undefined)
-          return fail(`${room.gameName} Contract candidate frontier has no route loadout`);
-        const branchesBeforeEntry = Object.freeze([execution.candidate]);
-        derivedEntryFrontiers.push(
-          Object.freeze({
-            address: contractAddress,
-            kind: 'infernalContractReward' as const,
-            branchCohortSize,
-            rewardTypes: contractDescriptor.rewardTypes,
-            branchesBeforeEntry,
-            evaluateOffer: (offer: ResolvedRewardOffer) => {
-              if (!contractDescriptor.rewardTypes.includes(offer.rewardType))
-                return Object.freeze({ findings: Object.freeze([]), supported: false });
-              const candidate = createUnresolvedAcquisitionRewardState(catalog, offer, {
-                kind: 'producerLifecycle',
-                key: contractDescriptor.producerLifecycleKey,
-              });
-              const settled = settleOwnedAcquisitionSite(
-                catalog,
-                branchesBeforeEntry,
-                {
-                  siteOwner: room.origin,
-                  pointKey: 'roomExit',
-                  entryKey: INFERNAL_CONTRACT_ENTRY_KEY,
-                  source: Object.freeze({
-                    origin: contractAddress,
-                    offer: candidate.offer,
-                    producerLifecycleKey: contractDescriptor.producerLifecycleKey,
-                    producerKind: 'freeReward',
-                    instanceProvenance: 'free',
-                    traitOffersByAcquisitionRole: candidate.traitOffersByAcquisitionRole,
-                    ...(candidate.levelResolutionsByAcquisitionRole === undefined
-                      ? {}
-                      : {
-                          levelResolutionsByAcquisitionRole:
-                            candidate.levelResolutionsByAcquisitionRole,
-                        }),
-                    dispositionByAcquisitionRole: candidate.dispositionByAcquisitionRole,
-                    traitContext: Object.freeze({}),
-                  }),
-                  historySequence,
-                  ...(context.authoredSeaStarDuplicateSiteKeys === undefined
-                    ? {}
-                    : {
-                        authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys,
-                      }),
-                },
-                context.facts,
-                ownerRegion(room.origin),
-                context.findingChronology,
-              );
-              return Object.freeze({
-                findings: Object.freeze(settled.findingEmissions.map((entry) => entry.finding)),
-                supported: settled.branches.length === branchesBeforeEntry.length,
-              });
-            },
-          }),
-        );
-      }
-    }
-  }
   const eligibleGoldSourceOfferKeys = (): readonly string[] => {
     const travel = room.acquisitionSites.roomExit?.entries[TRAVEL_DEAL_REFILL_ENTRY_KEY];
     return eligibleShopGoldSourceOfferKeys(
@@ -256,25 +185,27 @@ export function settleShopAcquisitionSite(
         : Object.freeze({ offerKey: TRAVEL_DEAL_REFILL_ENTRY_KEY, offer: travel.offer }),
     );
   };
-  const settlePaid = (
+  const settleOffer = (
     execution: ShopExecution,
     offer: PaidOffer,
+    shopProfileKey: string,
+    instanceProvenance: 'free' | 'paid',
     roleBindings: readonly {
       readonly role: string;
       readonly lifecyclePoint: ProducerLifecyclePointKey;
     }[],
     agreementBranches: readonly RewardBranchState[],
   ): boolean => {
-    let current = Object.freeze([execution.candidate]);
     const purchaseActionOwner = actionOwnerForOffer(offer.offerKey);
     const source: AcquisitionSource = withStoredArtificerReplacements(
       room,
       Object.freeze({
         origin: offer.offerOrigin,
         offer: offer.offer,
-        producerLifecycleKey: profile.key,
+        producerLifecycleKey: shopProfileKey,
         producerKind: 'shop',
-        instanceProvenance: 'paid',
+        instanceProvenance,
+        blocksSeaStarDuplication: true as const,
         ...(offer.traitOffersByAcquisitionRole === undefined
           ? {}
           : { traitOffersByAcquisitionRole: offer.traitOffersByAcquisitionRole }),
@@ -289,33 +220,54 @@ export function settleShopAcquisitionSite(
         ...(purchaseActionOwner === undefined ? {} : { timelineOwner: purchaseActionOwner }),
       }),
     );
-    const settlement = Object.freeze({
-      site,
-      entry: createAcquisitionEntryAddress(site, offer.offerKey),
+    const request = Object.freeze({
+      siteOwner: room.origin,
+      pointKey: 'roomExit',
+      entryKey: offer.offerKey,
+      historySequence,
+      roleBindings,
+      directTraitAgreementBranches: agreementBranches,
+      ...(purchaseActionOwner === undefined ? {} : { timelineOwner: purchaseActionOwner }),
+      ...(context.authoredSeaStarDuplicateSiteKeys === undefined
+        ? {}
+        : { authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys }),
     });
-    for (const binding of roleBindings) {
-      recordRoles(offer.offerKey, [binding]);
-      const settled = applyProducerRoleHistory(
-        catalog,
-        current,
-        source,
-        Object.freeze({ ...binding, historySequence }),
-        context.facts,
-        ownerRegion(room.origin),
-        context.findingChronology,
-        settlement,
-        agreementBranches,
-        true,
-        false,
-        context.authoredSeaStarDuplicateSiteKeys,
-      );
-      current = settled.branches;
-      mergeRewardFindingEmissions(findings, settled.findingEmissions);
-      roleFrontiers.push(...settled.roleFrontiers);
-      traitChildSettlements.push(...settled.traitChildSettlements);
-    }
-    if (current.length !== 1) return false;
-    execution.candidate = current[0]!;
+    const current = Object.freeze([execution.candidate]);
+    const settled = rewardSourceResolvesAtAcquisition(catalog, offer.offer)
+      ? settleAcquisitionResolvedReward(
+          catalog,
+          current,
+          {
+            ...request,
+            visibleOffer: offer.offer,
+            reward: room.acquisitionSites.roomExit?.entries[offer.offerKey],
+            producerLifecycleKey: shopProfileKey,
+            producerKind: 'shop',
+            instanceProvenance,
+            blocksSeaStarDuplication: true,
+            ...(offer.traitContext === undefined ? {} : { traitContext: offer.traitContext }),
+            branchCohortSize,
+          },
+          context.facts,
+          ownerRegion(room.origin),
+          context.findingChronology,
+        )
+      : settleOwnedAcquisitionSite(
+          catalog,
+          current,
+          { ...request, source, deferArtificerReplacement: true },
+          context.facts,
+          ownerRegion(room.origin),
+          context.findingChronology,
+        );
+    mergeRewardFindingEmissions(findings, settled.findingEmissions);
+    derivedEntryFrontiers.push(...(settled.derivedEntryFrontiers ?? []));
+    roleFrontiers.push(...(settled.roleFrontiers ?? []));
+    traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
+    for (const settledEntry of settled.entries)
+      recordRoles(offer.offerKey, settledEntry.acquisitionRoles);
+    if (settled.branches.length !== 1) return false;
+    execution.candidate = settled.branches[0]!;
     return true;
   };
 
@@ -325,12 +277,7 @@ export function settleShopAcquisitionSite(
     for (const execution of executions) {
       if (entryKey === INFERNAL_CONTRACT_ENTRY_KEY) {
         const descriptor = declaration.infernalContractReward;
-        const child = room.acquisitionSites.roomExit?.entries[entryKey];
-        if (
-          descriptor === undefined ||
-          child === undefined ||
-          execution.candidate.traitHistory?.equippedTraits.InfernalContractBoon === undefined
-        ) {
+        if (descriptor === undefined || execution.contractOffer === undefined) {
           addRewardFinding(
             findings,
             rewardFinding(
@@ -343,56 +290,22 @@ export function settleShopAcquisitionSite(
           );
           continue;
         }
-        if (child === null) {
-          addRewardFinding(
-            findings,
-            rewardFinding('rewardMissing', createAcquisitionEntryAddress(site, entryKey), {}),
-            ownerRegion(room.origin),
-            context.findingChronology ?? historyChronology(historySequence),
-          );
-          continue;
-        }
-        const settled = settleOwnedAcquisitionSite(
-          catalog,
-          Object.freeze([execution.candidate]),
-          {
-            siteOwner: room.origin,
-            pointKey: 'roomExit',
-            entryKey,
-            source: withStoredArtificerReplacements(
-              room,
-              Object.freeze({
-                origin: createAcquisitionEntryAddress(site, entryKey),
-                offer: child.offer,
-                producerLifecycleKey: descriptor.producerLifecycleKey,
-                producerKind: 'freeReward',
-                instanceProvenance: 'free',
-                traitOffersByAcquisitionRole: child.traitOffersByAcquisitionRole,
-                ...(child.levelResolutionsByAcquisitionRole === undefined
-                  ? {}
-                  : { levelResolutionsByAcquisitionRole: child.levelResolutionsByAcquisitionRole }),
-                dispositionByAcquisitionRole: child.dispositionByAcquisitionRole,
-                traitContext: Object.freeze({}),
-              }),
-            ),
-            historySequence,
-            ...(context.authoredSeaStarDuplicateSiteKeys === undefined
-              ? {}
-              : {
-                  authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys,
-                }),
-          },
-          context.facts,
-          ownerRegion(room.origin),
-          context.findingChronology,
-        );
-        mergeRewardFindingEmissions(findings, settled.findingEmissions);
-        roleFrontiers.push(...(settled.roleFrontiers ?? []));
-        traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
-        if (settled.branches.length === 1) {
-          execution.candidate = settled.branches[0]!;
+        const bindings =
+          catalog.rewards.producerLifecycles.byKey[descriptor.producerLifecycleKey]?.rewardTypes
+            .byKey[execution.contractOffer.offer.rewardType]?.acquisitionLifecycle;
+        if (bindings === undefined)
+          return fail(`${room.gameName} Contract item lacks its declared acquisition lifecycle`);
+        if (
+          settleOffer(
+            execution,
+            execution.contractOffer,
+            descriptor.generationProfileKey,
+            'free',
+            bindings,
+            agreementBranches,
+          )
+        )
           survivors.push(execution);
-        }
         continue;
       }
 
@@ -508,7 +421,16 @@ export function settleShopAcquisitionSite(
           if (gold.materialization !== undefined)
             refillExecution.goldMaterialization = gold.materialization;
           derivedEntryFrontiers.push(...gold.derivedEntryFrontiers);
-          if (settlePaid(refillExecution, refillOffer, bindings, agreementBranches)) {
+          if (
+            settleOffer(
+              refillExecution,
+              refillOffer,
+              profile.key,
+              'paid',
+              bindings,
+              agreementBranches,
+            )
+          ) {
             survivors.push(refillExecution);
           }
         }
@@ -624,10 +546,7 @@ export function settleShopAcquisitionSite(
       const inventoryOffer = slotIndex < 0 ? undefined : entry.offers[slotIndex];
       if (inventoryOffer === undefined)
         return fail(`${room.gameName} acquisition order has unknown entry ${entryKey}`);
-      const acquisitionResolved = rewardSourceResolvesAtAcquisition(catalog, inventoryOffer.offer);
-      const authoredPurchaseReward = acquisitionResolved
-        ? room.acquisitionSites.roomExit?.entries[entryKey]
-        : undefined;
+
       const purchase = evaluateShopPurchaseGateAtSlot(
         profile,
         execution.witness,
@@ -690,50 +609,10 @@ export function settleShopAcquisitionSite(
       execution.candidate = gold.branch;
       if (gold.materialization !== undefined) execution.goldMaterialization = gold.materialization;
       derivedEntryFrontiers.push(...gold.derivedEntryFrontiers);
-      if (acquisitionResolved) {
-        const purchaseActionOwner = actionOwnerForOffer(entryKey);
-        const settled = settleAcquisitionResolvedReward(
-          catalog,
-          Object.freeze([execution.candidate]),
-          {
-            siteOwner: room.origin,
-            pointKey: 'roomExit',
-            entryKey,
-            visibleOffer: inventoryOffer.offer,
-            reward: authoredPurchaseReward,
-            producerLifecycleKey: profile.key,
-            producerKind: 'shop',
-            instanceProvenance: 'paid',
-            ...(paidOffer.traitContext === undefined
-              ? {}
-              : { traitContext: paidOffer.traitContext }),
-            ...(purchaseActionOwner === undefined ? {} : { timelineOwner: purchaseActionOwner }),
-            historySequence,
-            branchCohortSize,
-            roleBindings: bindings,
-            directTraitAgreementBranches: agreementBranches,
-            ...(context.authoredSeaStarDuplicateSiteKeys === undefined
-              ? {}
-              : {
-                  authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys,
-                }),
-          },
-          context.facts,
-          ownerRegion(room.origin),
-          context.findingChronology,
-        );
-        mergeRewardFindingEmissions(findings, settled.findingEmissions);
-        derivedEntryFrontiers.push(...(settled.derivedEntryFrontiers ?? []));
-        roleFrontiers.push(...(settled.roleFrontiers ?? []));
-        traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
-        for (const settledEntry of settled.entries)
-          recordRoles(entryKey, settledEntry.acquisitionRoles);
-        if (settled.branches.length !== 1) {
-          entryPurchaseFailureRecorded = true;
-          continue;
-        }
-        execution.candidate = settled.branches[0]!;
-      } else if (!settlePaid(execution, paidOffer, bindings, agreementBranches)) continue;
+      if (!settleOffer(execution, paidOffer, profile.key, 'paid', bindings, agreementBranches)) {
+        entryPurchaseFailureRecorded = true;
+        continue;
+      }
       execution.remainingSlotIndexes = purchase.remainingSlotIndexes;
       if (!execution.firstNormalPurchaseSeen) {
         execution.firstNormalPurchaseSeen = true;
@@ -841,6 +720,9 @@ export function settleShopAcquisitionSite(
             ...(execution.goldMaterialization === undefined
               ? {}
               : { goldMaterialization: execution.goldMaterialization }),
+            ...(execution.contractOffer === undefined
+              ? {}
+              : { infernalContractOffer: execution.contractOffer }),
           }),
         }),
       }),
@@ -867,6 +749,19 @@ export function settleShopAcquisitionSite(
       (context.order ?? []).map((offerKey) => {
         const offer = entry.offers.find((candidate) => candidate.offerKey === offerKey);
         if (offer === undefined) {
+          const contract =
+            offerKey === INFERNAL_CONTRACT_ENTRY_KEY ? entry.infernalContractOffer : undefined;
+          if (contract !== undefined && contract !== null) {
+            const acquisitionResolved = rewardSourceResolvesAtAcquisition(catalog, contract.offer);
+            return Object.freeze({
+              address: createAcquisitionEntryAddress(site, offerKey),
+              source: acquisitionResolved
+                ? createAcquisitionEntryAddress(site, offerKey)
+                : contract.offerOrigin,
+              acquisitionRoles: rolesByOfferKey.get(offerKey) ?? Object.freeze([]),
+              participation: 'optional' as const,
+            });
+          }
           const supplemental = room.acquisitionSites.roomExit?.entries[offerKey];
           const artificerReplacement = parseArtificerReplacementEntryKey(offerKey);
           if (

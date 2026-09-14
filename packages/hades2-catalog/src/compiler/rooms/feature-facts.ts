@@ -91,13 +91,10 @@ export function normalizeRoomInfernalContractFacts(
     }
     if (raw.entryKey !== 'infernalContractReward')
       fail(`${path}.infernalContractReward.entryKey`, 'must be infernalContractReward');
-    const expected = [
-      'BlindBoxLoot',
-      'StackUpgradeBig',
-      'StackUpgrade',
-      'TalentBigDrop',
-      'TalentDrop',
-    ] as const;
+    const profile = rewardCatalog.shops.byKey.ZagPedestalOptions;
+    if (profile === undefined || profile.slotCount !== 1)
+      return fail(`${path}.infernalContractReward`, 'requires the single-slot ZagPedestalOptions');
+    const expected = profile.groups.values.flatMap((group) => group.rewardTypes);
     if (
       raw.rewardTypes.length !== expected.length ||
       expected.some((rewardType, index) => raw.rewardTypes[index] !== rewardType)
@@ -113,14 +110,9 @@ export function normalizeRoomInfernalContractFacts(
     }
     return Object.freeze({
       entryKey: 'infernalContractReward' as const,
+      generationProfileKey: profile.key,
       producerLifecycleKey: lifecycle.key,
-      rewardTypes: Object.freeze([...expected]) as unknown as readonly [
-        string,
-        string,
-        string,
-        string,
-        string,
-      ],
+      rewardTypes: Object.freeze([...raw.rewardTypes] as const),
     });
   })();
   return Object.freeze({

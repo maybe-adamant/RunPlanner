@@ -24,6 +24,7 @@ describe('room collection closure', () => {
     for (const gameName of expected) {
       expect(catalog.rooms.byKey[gameName]?.infernalContractReward).toEqual({
         entryKey: 'infernalContractReward',
+        generationProfileKey: 'ZagPedestalOptions',
         producerLifecycleKey: 'ZagPedestal',
         rewardTypes: [
           'BlindBoxLoot',

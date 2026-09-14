@@ -145,7 +145,6 @@ export interface WorkspaceBiomeSource {
       | 'echoLastReward'
       | 'hermesShrineDelivery'
       | 'clockedTraitPickup'
-      | 'infernalContractReward'
       | 'acquisitionResolvedReward'
       | 'travelDealPlaceholder'
       | 'travelDealRefill';

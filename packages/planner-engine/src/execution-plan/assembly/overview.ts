@@ -1,12 +1,10 @@
 import {
-  createAcquisitionEntryAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
   createTravelDealRefillRealizationAddress,
   semanticAddressKey,
 } from '../../authored-project/addresses';
 import { hermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shrine-delivery';
-import { INFERNAL_CONTRACT_ENTRY_KEY } from '../../authored-project/shop';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation/evaluation-products';
 import type {
@@ -312,24 +310,31 @@ function executionShop(
       })(),
     ),
   );
-  const contractEntry = room.acquisitionSites.roomExit?.entries[INFERNAL_CONTRACT_ENTRY_KEY];
-  const contractActive = biome.rewards.derivedAcquisitionEntries.some(
-    (candidate) =>
-      candidate.kind === 'infernalContractReward' &&
-      semanticAddressKey(candidate.address.site.owner) === semanticAddressKey(room.origin),
-  );
+  const contractEntry = room.entryState.infernalContractOffer;
+  const contractActive =
+    contractEntry != null &&
+    biome.rewards.branches.every((branch) =>
+      branch.events.some(
+        (event) =>
+          event.kind === 'rewardOffered' &&
+          semanticAddressKey(event.origin) === semanticAddressKey(contractEntry.offerOrigin),
+      ),
+    );
   const contract =
     !contractActive || contractEntry === undefined || contractEntry === null
       ? undefined
-      : Object.freeze({
-          sourceOwner: semanticAddressKey(
-            createAcquisitionEntryAddress(
-              room.acquisitionSites.roomExit!.address,
-              INFERNAL_CONTRACT_ENTRY_KEY,
-            ),
-          ),
-          rewardType: contractEntry.offer.rewardType,
-        });
+      : (() => {
+          const actionOwner = transactionOwnerByOffer.get(contractEntry.offerKey);
+          const transaction =
+            actionOwner === undefined ? undefined : transactionByOwner.get(actionOwner);
+          return Object.freeze({
+            sourceOwner:
+              transaction?.kind === 'acquisition'
+                ? transaction.sourceOwner
+                : semanticAddressKey(contractEntry.offerOrigin),
+            rewardType: contractEntry.offer.rewardType,
+          });
+        })();
   return Object.freeze({
     profileKey: room.entryState.profileKey,
     offers,

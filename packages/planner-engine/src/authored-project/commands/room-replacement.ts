@@ -19,7 +19,6 @@ import type { RoomOccurrenceRole, RoomStateContext } from '../room-state/declara
 import { createDefaultRoomState } from '../room-state/defaults';
 import { reconcileRoomEncounterState } from '../room-state/encounter-reconciliation';
 import { createDefaultRoomEncounterState } from '../room-state/encounter-envelope';
-import { createInfernalContractEntries } from '../shop';
 import {
   activeRoomActionReferences,
   createDefaultRoomActionState,
@@ -465,17 +464,7 @@ export function applyRoomReplacementCommand(
       : {}),
     state: replacementState,
     ...(replacementState.kind === 'shop' && replacementState.shop !== undefined
-      ? {
-          acquisitionSites: Object.freeze({
-            roomExit: Object.freeze({
-              ...(replacementRoom.infernalContractReward === undefined
-                ? {}
-                : {
-                    pickupEntries: createInfernalContractEntries(catalog, replacementRoom.gameName),
-                  }),
-            }),
-          }),
-        }
+      ? { acquisitionSites: Object.freeze({ roomExit: Object.freeze({}) }) }
       : {}),
     encounters: reconcileRoomEncounterState(
       catalog,

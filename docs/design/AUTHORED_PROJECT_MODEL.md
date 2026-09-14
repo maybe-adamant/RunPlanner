@@ -475,9 +475,12 @@ owner rather than copying its payload.
 Declaration-derived supplemental entries, currently Gold Gold Gold's free Shop
 duplicate and Travel Deal's refill, may own sparse acquisition-time children at
 the site. A dormant payload may exist without participating; adding its fixed
-Room Action reference alone joins chronology. Infernal Contract uses its own
-fixed supplemental key and the same payload site rather than extending
-declaration-owned Shop inventory.
+Room Action reference alone joins chronology. Infernal Contract instead owns
+a conditional initial `shop.offers.infernalContractReward` slot, using the
+ordinary Shop offer and participation commands. Its room declaration binds it
+to the separate pedestal pool; the host's indexed slots remain unchanged.
+Like any Shop Mystery Boon, it has a sparse acquisition entry only when its
+hidden source must be resolved on collection.
 
 Trait-generated and Sea Star duplicate sites are closed source-scoped site
 keys, not new site variants. A selected Quick Buck, Buried Treasure, or

@@ -515,7 +515,7 @@ export function echoGoldShop(
   };
   const resolvedShopRewards = Object.freeze(
     Object.fromEntries(
-      Object.entries(baseState.shop.offers).map(([key]) => {
+      catalog.rewards.shops.byKey[baseState.shop.profileKey]!.slots.values.map(({ key }) => {
         const override = offerOverrides[key];
         const rewardOverride =
           options.rewardOverrides?.[key] ?? (key === 'Minor' ? spellReward : undefined);
@@ -537,8 +537,9 @@ export function echoGoldShop(
   );
   const shop: NonNullable<typeof baseState.shop> = Object.freeze({
     ...baseState.shop,
-    offers: Object.freeze(
-      Object.fromEntries(
+    offers: Object.freeze({
+      ...baseState.shop.offers,
+      ...Object.fromEntries(
         Object.entries(resolvedShopRewards).map(([key, reward]) => [
           key,
           Object.freeze({
@@ -555,7 +556,7 @@ export function echoGoldShop(
           }),
         ]),
       ),
-    ),
+    }),
   });
   const sourceKey = order.find((key) => shop.offers[key]?.reward?.offer.rewardType !== 'SpellDrop');
   const duplicateKey = sourceKey === undefined ? undefined : ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY;

@@ -759,15 +759,28 @@ the actual reordered reached count through the existing engine input, not
 change Shop declarations. The exact generated option identity is also the
 source witness consumed by the offer-local boon-rarity ledger.
 
-Supplemental Shop opportunities do not alter those profile slot counts.
-Qualifying Shops may additionally expose fixed `infernalContractReward`,
-`travelDealRefill`, and `echoDoubleShopReward` entries under the existing
-`roomExit` acquisition site. Contract is a free declaration-owned pedestal;
-Travel is a paid replacement derived from the first accepted paid purchase
-when Travel Deal was already equipped; Gold is a free pickup derived from the
-first accepted paid non-`SpellDrop` purchase while its one-use Echo trait is
-equipped. The three stable keys share the ordinary acquisition-site vocabulary
-without becoming initial inventory slots.
+Qualifying Shops have a conditional initial `infernalContractReward` slot,
+generated from `ZagPedestalOptions` without changing the host profile's indexed
+slot count or group rules. Its activation and concrete item are captured at
+entry. Collection uses the ordinary Shop acquisition dispatch with free
+provenance: it triggers neither Travel Deal nor Gold Gold Gold. Native store
+objects cannot duplicate via Sea Star; eligible pedestal Poms and Paths may
+still be converted with Time Piece.
+
+An active Contract pedestal requires an authored reward identity even when left
+uncollected. Its `ZagPedestalOptions` generation profile is evaluated alongside
+the host's room-entry inventory, separately from its optional `roomExit`
+acquisition. The candidate frontier uses those frozen generation facts: buying
+the first Hex in the same Shop cannot enable an initial pedestal Path of Stars.
+Mystery Boon source resolution and trait/level choices remain acquisition-owned;
+an uncollected pedestal requires none of them. Missing or generation-invalid
+inventory points to the pedestal reward owner, not its optional pickup action.
+
+Travel Deal and Gold Gold Gold are distinct supplemental opportunities under
+the `roomExit` acquisition site, not initial inventory. Travel is a paid
+replacement derived from the first accepted paid purchase when Travel Deal
+was already equipped. Gold is a free pickup derived from the first accepted
+paid non-`SpellDrop` purchase while its one-use Echo trait is equipped.
 
 Refill activity comes from the reached simulation capability, not the presence
 of retained authored refill detail. Clearing the triggering Shop/Well purchase,

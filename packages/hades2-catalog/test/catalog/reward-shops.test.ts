@@ -55,6 +55,7 @@ describe('reward compiler Shop normalizer', () => {
       RoomShop: ['Healing', 'Other', 'Other'],
       SurfaceShop: ['First', 'Second', 'Second'],
       WorldShop: ['Boon', 'MajorNonBoon', 'Minor'],
+      ZagPedestalOptions: ['Reward'],
       I_WorldShop: ['BoostedBoon', 'MixedProgress', 'Survival', 'PremiumProgress', 'MetaProgress'],
       Q_WorldShop: [
         'MixedProgress',
@@ -170,6 +171,19 @@ describe('reward compiler Shop normalizer', () => {
             'StackUpgrade',
             'StoreRewardRandomStack',
             'SpellDrop',
+            'TalentDrop',
+          ],
+        },
+      ],
+      ZagPedestalOptions: [
+        {
+          key: 'Reward',
+          offerCount: 1,
+          options: [
+            'BlindBoxLoot',
+            'StackUpgradeBig',
+            'StackUpgrade',
+            'TalentBigDrop',
             'TalentDrop',
           ],
         },

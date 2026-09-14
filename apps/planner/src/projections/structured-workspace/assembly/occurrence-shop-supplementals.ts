@@ -1,7 +1,6 @@
 import {
   createAcquisitionEntryAddress,
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
-  INFERNAL_CONTRACT_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
   type AcquisitionSiteAddress,
   type AuthoredRewardState,
@@ -154,50 +153,11 @@ function derivedRewardSupplementalOffer(
   });
 }
 
-function contractSupplementalOffer(
-  capability: WorkspaceDerivedAcquisitionEntry | undefined,
-  context: ShopSupplementalAssemblyContext,
-): WorkspaceShopSupplementalDescriptor | undefined {
-  if (capability === undefined) return undefined;
-  const authored = context.pickupEntries[INFERNAL_CONTRACT_ENTRY_KEY];
-  if (authored === undefined) {
-    throw new StructuredWorkspaceProjectionContractError(
-      `${context.roomGameName} contract opportunity has no structural child`,
-    );
-  }
-  if (capability.rewardTypes === undefined) {
-    throw new StructuredWorkspaceProjectionContractError(
-      `${context.roomGameName} contract opportunity has no attested reward domain`,
-    );
-  }
-  const address = createAcquisitionEntryAddress(
-    context.acquisitionSite,
-    INFERNAL_CONTRACT_ENTRY_KEY,
-  );
-  return Object.freeze({
-    kind: 'infernalContractReward' as const,
-    key: INFERNAL_CONTRACT_ENTRY_KEY,
-    label: 'Infernal Contract reward',
-    materialized: true,
-    purchase: supplementalPurchase(context, INFERNAL_CONTRACT_ENTRY_KEY),
-    rewardControl: rewardControl(
-      context.input,
-      { kind: 'acquisitionEntry' as const, address },
-      undefined,
-      authored?.offer ?? null,
-      authored,
-      capability.rewardTypes,
-    ) as WorkspaceExplicitRewardControl,
-  });
-}
-
 export function assembleShopSupplementalOffers({
-  contractCapability,
   context,
   goldCapability,
   travelCapability,
 }: {
-  readonly contractCapability: WorkspaceDerivedAcquisitionEntry | undefined;
   readonly context: ShopSupplementalAssemblyContext;
   readonly goldCapability: WorkspaceDerivedAcquisitionEntry | undefined;
   readonly travelCapability: WorkspaceDerivedAcquisitionEntry | undefined;
@@ -206,7 +166,6 @@ export function assembleShopSupplementalOffers({
     [
       derivedRewardSupplementalOffer('travel', travelCapability, context),
       derivedRewardSupplementalOffer('gold', goldCapability, context),
-      contractSupplementalOffer(contractCapability, context),
     ].filter((offer): offer is WorkspaceShopSupplementalDescriptor => offer !== undefined),
   );
 }

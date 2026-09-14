@@ -620,9 +620,6 @@ function roomLocalForOccurrence(
         'roomExit',
       );
       const derivedEntries = input.derivedAcquisitionEntries?.(acquisitionSite) ?? [];
-      const contractCapability = derivedEntries.find(
-        (entry) => entry.kind === 'infernalContractReward',
-      );
       const travelCapability = derivedEntries.find(
         (entry) => entry.kind === 'travelDealRefill' || entry.kind === 'travelDealPlaceholder',
       );
@@ -630,7 +627,13 @@ function roomLocalForOccurrence(
         (entry) =>
           entry.kind === 'echoDoubleShopReward' || entry.kind === 'echoDoubleShopPlaceholder',
       );
-      const offers = profile.slots.values.map((slot) => {
+      const slots = [
+        ...profile.slots.values,
+        ...(room.infernalContractReward === undefined
+          ? []
+          : [{ key: 'infernalContractReward', label: 'Contract' }]),
+      ];
+      const offers = slots.map((slot) => {
         if (shop.offers[slot.key] === undefined) {
           throw new StructuredWorkspaceProjectionContractError(
             `${room.gameName} shop state is missing ${slot.key}`,
@@ -672,7 +675,6 @@ function roomLocalForOccurrence(
         roomGameName: room.gameName,
       });
       const supplementalOffers = assembleShopSupplementalOffers({
-        contractCapability,
         context: supplementalContext,
         goldCapability,
         travelCapability,

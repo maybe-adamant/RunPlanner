@@ -245,35 +245,32 @@ describe('authored-project Shop occurrence commands', () => {
     expect(replaceTestShopOfferActions(project, catalog, shop, ['MajorNonBoon'])).toBe(project);
   });
 
-  it('replaces the structural Infernal Contract reward across its declared type domain', () => {
-    const shopId = createOccurrenceId('round-trip-n-preboss');
-    const entry = createAcquisitionEntryAddress(
-      createAcquisitionSiteAddress(createOccurrenceAddress(nBiome, shopId), 'roomExit'),
-      'infernalContractReward',
-    );
-    const project = applyProjectCommand(createCompleteNProject(), catalog, {
-      kind: 'ReplaceAcquisitionEntryOffer',
-      entry,
-      value: { rewardType: 'StackUpgrade' },
-    });
-    const occurrence = project.route.biomes
-      .find((biome) => biome.biomeKey === 'N')
-      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopId);
-    expect(
-      occurrence?.acquisitionSites?.roomExit?.pickupEntries?.infernalContractReward?.offer,
-    ).toEqual({ rewardType: 'StackUpgrade' });
-    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
-      project,
-    );
-  });
+  it.each(['StackUpgrade', 'BlindBoxLoot'] as const)(
+    'replaces and round-trips uncollected Contract %s inventory',
+    (rewardType) => {
+      const shopId = createOccurrenceId('round-trip-n-preboss');
+      const project = applyProjectCommand(createCompleteNProject(), catalog, {
+        kind: 'ReplaceShopOffer',
+        offer: createShopOfferAddress(nBiome, shopId, 'infernalContractReward'),
+        value: { rewardType },
+      });
+      const occurrence = project.route.biomes
+        .find((biome) => biome.biomeKey === 'N')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopId);
+      expect(
+        occurrence?.state.kind === 'shop'
+          ? occurrence.state.shop?.offers.infernalContractReward?.reward?.offer
+          : undefined,
+      ).toEqual({ rewardType });
+      expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+        project,
+      );
+    },
+  );
 
   it('requires a declaration-owned offer in materialized Shop inventory', () => {
     const shopId = createOccurrenceId('round-trip-n-preboss');
-    for (const reservedKey of [
-      'infernalContractReward',
-      'travelDealRefill',
-      'echoDoubleShopReward',
-    ] as const) {
+    for (const reservedKey of ['travelDealRefill', 'echoDoubleShopReward'] as const) {
       expect(() =>
         applyProjectCommand(createCompleteNProject(), catalog, {
           kind: 'ReplaceShopOffer',
@@ -287,6 +284,18 @@ describe('authored-project Shop occurrence commands', () => {
         }),
       );
     }
+    expect(() =>
+      applyProjectCommand(createCompleteNProject(), catalog, {
+        kind: 'ReplaceShopOffer',
+        offer: createShopOfferAddress(nBiome, shopId, 'infernalContractReward'),
+        value: { rewardType: 'MaxHealthDrop' },
+      }),
+    ).toThrowError(
+      expect.objectContaining({
+        commandKind: 'ReplaceShopOffer',
+        detail: expect.stringContaining('not available'),
+      }),
+    );
     expect(() =>
       applyProjectCommand(createCompleteNProject(), catalog, {
         kind: 'ReplaceShopOffer',

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 81,
+  "schemaVersion": 82,
   "projectId": "run-plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -1090,6 +1090,10 @@
                           }
                         }
                       }
+                    },
+                    "infernalContractReward": {
+                      "optionKey": null,
+                      "reward": null
                     }
                   }
                 }
@@ -1116,7 +1120,6 @@
               "acquisitionSites": {
                 "roomExit": {
                   "pickupEntries": {
-                    "infernalContractReward": null,
                     "Boon": {
                       "offer": {
                         "rewardType": "BlindBoxLoot",
@@ -2036,6 +2039,10 @@
                           }
                         }
                       }
+                    },
+                    "infernalContractReward": {
+                      "optionKey": null,
+                      "reward": null
                     }
                   }
                 }
@@ -2058,7 +2065,6 @@
               "acquisitionSites": {
                 "roomExit": {
                   "pickupEntries": {
-                    "infernalContractReward": null,
                     "Boon": {
                       "offer": {
                         "rewardType": "BlindBoxLoot",

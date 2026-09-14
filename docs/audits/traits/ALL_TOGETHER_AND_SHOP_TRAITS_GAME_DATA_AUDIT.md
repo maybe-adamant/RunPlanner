@@ -202,6 +202,19 @@ Eligibility and payload resolution still follow the selected option's normal
 declaration. The weights affect probability only; all eligible identities are
 possibilities.
 
+`SpawnZagContractRewards` (`EventLogic.lua:1899`) invokes `FillInShopOptions`
+on room entry. `StoreItemEligible` (`StoreLogic.lua:289`) applies the selected
+item's generation requirements then, independently of later collection.
+`TalentDrop` and inherited `TalentBigDrop` use `TalentLegal`
+(`ConsumableData.lua:686`, `RequirementsData.lua:1355`): a previously used
+Spell Drop, an unclosed Path, and no `TalentDrop` in the current Shop. The
+planner excludes the external lifetime-unlock predicate, as elsewhere. This
+pool does not add the RunProgress store's Pom-target or route-Talent guards.
+Consequently, acquiring the first Hex later in that Shop cannot make an
+initial Contract Path legal. Planner disposition: require the active
+pedestal's identity at inventory generation; evaluate its optional acquisition
+and any Mystery Boon source or trait/level choices only when collected.
+
 `BlindBoxLoot` resolves through the ordinary eligible-god domain on
 interaction. That domain requires `GodLoot = true`. Hermes instead declares
 `GodLoot = false` and only `TreatAsGodLootByShops = true`, so a contract Blind
@@ -382,18 +395,24 @@ Travel Deal's trigger depends on that distinction.
 
 ## Current Planner Disposition
 
-Schema 38 implements these World-Shop facts without changing the
-declaration-owned initial slot counts. All Together persists one complete
+The planner implements these World-Shop facts without changing the host
+profiles' indexed slot counts. All Together persists one complete
 four-set result and directly grants each non-exhausted rarityless child without
-god-history mutation. Infernal Contract uses the fixed free
-`infernalContractReward` pickup. Travel Deal derives one paid
+god-history mutation. Infernal Contract uses a conditional initial
+`infernalContractReward` Shop slot generated from its own pedestal pool.
+Travel Deal derives one paid
 `travelDealRefill` from the first accepted paid purchase when already equipped.
-Echo Gold uses the free `echoDoubleShopReward` pickup. The three supplemental
+Echo Gold uses the free `echoDoubleShopReward` pickup. These two supplemental
 entries share the existing room-exit acquisition site; payload/participation
 and chronology remain separate, and Travel/Gold source dependencies are
 resolved by the occurrence's one `roomActions.order`. Base initial purchases
 participate only through their exact `interactShopOffer` references; Overview's
 Purchased markers edit that membership without adding a second persisted set.
+The free Contract slot uses that same collection path, excluding paid-purchase
+effects. Native store consumables—including the pedestal—set
+`CanDuplicate = false` in `SpawnStoreItemInWorld` (`StoreLogic.lua:635`); a zero price does not
+make them Sea Star sources. Its Mystery Boon resolves the hidden source through
+the existing acquisition entry rather than during inventory generation.
 
 The first accepted purchase identifies the Travel/Gold source slot, but it is
 not a complete payload context. Generated reward legality belongs to the exact

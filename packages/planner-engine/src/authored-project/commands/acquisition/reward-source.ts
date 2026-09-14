@@ -9,7 +9,7 @@ import {
   parseClockedTraitGeneratedPickupEntryKey,
   selectedPickupProducerForEntry,
 } from '../../acquisition/pickup-producers';
-import { authoredAcquisitionEntryAtSite } from '../../shop';
+import { authoredAcquisitionEntryAtSite, shopSlotProfile } from '../../shop';
 import { parseArtificerReplacementEntryKey } from '../../acquisition/artificer';
 import { parseHermesShrineDeliveryEntryKey } from '../../hermes-shrine-delivery';
 import { requireShipCombatWheels } from '../../room-state/declaration';
@@ -48,7 +48,12 @@ function pickupEntrySource(
       reward: entry,
       levelEffectSource: {
         kind: 'shopProfile' as const,
-        key: occurrence.state.shop.profileKey,
+        key: shopSlotProfile(
+          catalog,
+          occurrence.gameName,
+          occurrence.state.shop.profileKey,
+          owner.entryKey,
+        )!.key,
       },
     });
   if (parseArtificerReplacementEntryKey(owner.entryKey) !== undefined)
@@ -229,7 +234,15 @@ export function locateReward(
             command,
             'cannot edit acquisition outcome before reward authorship',
           ),
-          levelEffectSource: { kind: 'shopProfile', key: state.shop.profileKey } as const,
+          levelEffectSource: {
+            kind: 'shopProfile',
+            key: shopSlotProfile(
+              catalog,
+              occurrence.gameName,
+              state.shop.profileKey,
+              owner.offerKey,
+            )!.key,
+          } as const,
         });
       }
   }

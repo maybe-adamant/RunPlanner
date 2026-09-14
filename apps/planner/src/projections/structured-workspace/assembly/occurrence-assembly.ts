@@ -6,7 +6,6 @@ import {
   createRoomFeatureAddress,
   createBiomeAddress,
   createOccurrenceAddress,
-  createAcquisitionEntryAddress,
   createKeepsakeEquipResultAddress,
   semanticAddressKey,
   createPostbossKeepsakeSelectionAddress,
@@ -19,8 +18,6 @@ import {
   type TraitOfferAddress,
   type LevelResolutionAddress,
   type KeepsakeEquipResultAddress,
-  acquisitionSiteFromStorageKey,
-  INFERNAL_CONTRACT_ENTRY_KEY,
 } from '@run-planner/engine/authored-project';
 import type { WorkspaceRunStateLauncher } from '../contracts/run-state';
 import type { WorkspaceOccurrenceWorkbenchNode, WorkspaceDoorReward } from '../contracts/structure';
@@ -689,30 +686,6 @@ export function assembleWorkspaceOccurrence(
       for (const marker of acquisitionMarkers) {
         input.markerDestinations.redirectToContext(marker, row.marker, node.key);
       }
-      const unavailableAcquisitionMarkers = (() => {
-        if (
-          row.rewardPayload !== undefined ||
-          row.reference.kind !== 'interactAcquisitionEntry' ||
-          row.reference.entryKey !== INFERNAL_CONTRACT_ENTRY_KEY
-        ) {
-          return Object.freeze([]);
-        }
-        const site = acquisitionSiteFromStorageKey(address, row.reference.siteKey);
-        if (site === undefined) {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${row.key} has invalid acquisition site ${row.reference.siteKey}`,
-          );
-        }
-        return Object.freeze([
-          input.markerDestinations.marker(site),
-          input.markerDestinations.marker(
-            createAcquisitionEntryAddress(site, row.reference.entryKey),
-          ),
-        ]);
-      })();
-      for (const marker of unavailableAcquisitionMarkers) {
-        input.markerDestinations.redirectTo(marker, row.marker, node.key);
-      }
       const wheelKey =
         row.window.kind === 'shipPostCombat' || row.window.kind === 'shipPreCombat'
           ? row.window.wheelKey
@@ -738,7 +711,6 @@ export function assembleWorkspaceOccurrence(
           row.marker,
           ...(row.rewardPayload?.showOffer === true ? [row.rewardPayload.control.marker] : []),
           ...acquisitionMarkers,
-          ...unavailableAcquisitionMarkers,
         ],
         tab,
       );

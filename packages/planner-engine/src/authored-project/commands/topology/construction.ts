@@ -16,7 +16,6 @@ import { createDefaultRoomState } from '../../room-state/defaults';
 import { createDefaultRoomEncounterState } from '../../room-state/encounter-envelope';
 import { isHostRouteDetourRoom } from '../../topology/query';
 import { sameExitDecisionSource } from '../../topology/source-identity';
-import { createInfernalContractEntries } from '../../shop';
 import { createDefaultRoomActionState } from '../../room-actions/state';
 import { failCommand, requireOccurrence, withBiome, type LocatedBiome } from '../contract';
 import type { TopologyCommand } from '../types';
@@ -111,21 +110,12 @@ export function defaultOccurrence(
     room,
     `occurrences.${occurrenceId}.encounters`,
   );
-  const contractEntries = createInfernalContractEntries(catalog, room.gameName);
   return Object.freeze({
     occurrenceId,
     gameName: room.gameName,
     state,
     ...(state.kind === 'shop' && state.shop !== undefined
-      ? {
-          acquisitionSites: Object.freeze({
-            roomExit: Object.freeze({
-              ...(Object.keys(contractEntries).length === 0
-                ? {}
-                : { pickupEntries: contractEntries }),
-            }),
-          }),
-        }
+      ? { acquisitionSites: Object.freeze({ roomExit: Object.freeze({}) }) }
       : {}),
     encounters,
     roomActions: createDefaultRoomActionState(room),
