@@ -442,7 +442,7 @@ describe('Gorgon Amulet lifecycle', () => {
 
   it('preserves O/P chronology: opening and intro blockers precede positive generated phases', () => {
     expect(catalog.encounterDefinitions.byKey.GeneratedO_Intro01?.blocksGorgon).toBe(true);
-    expect(catalog.encounterDefinitions.byKey.PIntroCombat01?.blocksGorgon).toBe(true);
+    expect(catalog.encounterDefinitions.byKey.GeneratedP_PreCombat?.blocksGorgon).toBe(true);
     expect(catalog.encounterDefinitions.byKey.GeneratedO?.blocksGorgon).not.toBe(true);
     expect(catalog.encounterDefinitions.byKey.GeneratedP?.blocksGorgon).not.toBe(true);
   });

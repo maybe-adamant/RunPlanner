@@ -2370,7 +2370,7 @@
               },
               "encounters": {
                 "encounterKeyByPhase": {
-                  "Encounter": "PIntroCombat_ZombieQuad"
+                  "Encounter": "Empty"
                 },
                 "figLeafSkipByPhase": {
                   "Encounter": false
