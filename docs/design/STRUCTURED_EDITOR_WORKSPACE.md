@@ -756,6 +756,10 @@ preserve the order of later refinements. A stylesheet relocation must not
 silently change layout or finding precedence; verify the expanded cascade and
 representative wide/narrow browser surfaces.
 
+Keep the room editor beside the rail only while it retains roughly half the
+available app width; otherwise stack them with shared scrolling, independently
+of the header and navigation's mobile layout.
+
 Compound controls must fit their actual container, not only a viewport breakpoint.
 Wrap complete target/value fields before compressing their contents; at narrower
 widths a label may sit above its slider, but the slider and displayed value stay

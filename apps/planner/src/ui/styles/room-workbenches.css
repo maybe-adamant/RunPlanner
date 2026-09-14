@@ -774,7 +774,8 @@
 }
 
 .room-action-row {
-  grid-template-columns: minmax(0, 1fr) auto;
+  container: room-action / inline-size;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
   align-items: center;
   margin-left: 24px;
   border-left: 2px solid rgb(174 152 202 / 36%);
@@ -795,13 +796,13 @@
   flex-wrap: wrap;
 }
 
-.room-action-row > .room-action-identity.scheduled-trait-effect-identity {
-  flex-wrap: nowrap;
+.room-action-identity > strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
-.room-action-row
-  > .room-action-identity.scheduled-trait-effect-identity:has(> .transcendent-embryo-outcome-row) {
-  flex-wrap: wrap;
+.room-timeline-effect-row > .room-action-identity {
+  grid-column: 1 / -1;
 }
 
 .scheduled-trait-effect-identity > .transcendent-embryo-outcome-row {
@@ -810,42 +811,42 @@
 
 .room-action-inline-editors {
   display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   min-width: 0;
+  max-width: 100%;
   gap: 5px;
+}
+
+.room-action-inline-editors:empty {
+  display: none;
 }
 
 .room-action-inline-editors > .trait-offer-launcher {
   width: max-content;
-  min-width: 13rem;
-  max-width: 18rem;
+  min-width: min(100%, 13rem);
+  max-width: min(100%, 18rem);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .room-action-inline-reward {
-  width: min(16rem, 24vw);
-  min-width: 13rem;
+  flex: 0 1 16rem;
+  width: 16rem;
+  min-width: min(100%, 13rem);
+  max-width: 100%;
 }
 
 .room-action-inline-reward .field-control-inline {
   grid-template-columns: minmax(0, 1fr);
 }
 
-.room-action-row[data-inline-layout='mystery-boon'] {
-  grid-template-columns: auto minmax(0, 1fr);
-}
-
 .room-action-row[data-inline-layout='mystery-boon'] > .room-action-controls,
 .room-action-row[data-inline-layout='mystery-boon'] .room-action-inline-editors {
-  width: 100%;
   justify-content: flex-start;
-}
-
-.room-action-row[data-inline-layout='mystery-boon'] .room-action-inline-editors {
-  flex: 1;
 }
 
 .room-action-row[data-inline-layout='mystery-boon'] .trait-offer-launcher {
@@ -853,15 +854,19 @@
 }
 
 .room-action-row > .room-action-controls {
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
   justify-content: flex-end;
 }
 
-.room-action-row[data-inline-layout='compact'] {
-  grid-template-columns: auto minmax(0, 1fr);
-}
-
-.room-action-row[data-inline-layout='compact']:has(.transcendent-embryo-outcome-row) {
-  container-type: inline-size;
+.room-action-ordering {
+  display: flex;
+  flex: 0 0 auto;
+  max-width: 100%;
+  align-items: center;
+  gap: 4px;
+  margin-inline-start: auto;
 }
 
 .room-action-row[data-inline-layout='compact'] > .room-action-controls {
@@ -873,33 +878,25 @@
   justify-content: flex-start;
 }
 
-.room-action-row[data-inline-layout='compact']
-  > .room-action-controls
-  > .hub-rank-action:first-of-type {
-  margin-inline-start: auto;
-}
-
-@container (max-width: 34rem) {
-  .room-action-row[data-inline-layout='compact']:has(.transcendent-embryo-outcome-row)
-    > .room-action-controls {
+@container room-action (max-width: 50rem) {
+  .room-action-row[data-inline-layout] > .room-action-identity,
+  .room-action-row[data-inline-layout] > .room-action-controls {
     grid-column: 1 / -1;
-    flex-wrap: wrap;
-  }
-
-  .room-action-row[data-inline-layout='compact']:has(.transcendent-embryo-outcome-row)
-    .room-action-inline-editors {
-    flex: 1 0 100%;
   }
 }
 
 .fountain-rarity-inline {
   display: flex;
-  min-width: min(16rem, 30vw);
+  flex: 0 1 20rem;
+  min-width: min(100%, 16rem);
+  max-width: 100%;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
 .fountain-rarity-inline > .field-control {
+  flex: 1 1 13rem;
   min-width: 0;
 }
 
@@ -954,16 +951,10 @@
   line-height: 1.35;
 }
 
-@media (max-width: 700px) {
-  .room-action-row,
-  .room-action-row[data-inline-layout='mystery-boon'] {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
+@container room-action (max-width: 34rem) {
+  .room-action-row > .room-action-identity,
   .room-action-row > .room-action-controls {
     grid-column: 1 / -1;
-    flex-wrap: wrap;
-    justify-content: flex-end;
   }
 }
 
@@ -998,6 +989,7 @@
 }
 
 .room-action-lifecycle-boundary[data-fields-cage-slot='true'] {
+  container: room-action / inline-size;
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr) auto;
 }
@@ -1015,11 +1007,7 @@
   min-width: 8rem;
 }
 
-@media (max-width: 700px) {
-  .room-action-lifecycle-boundary[data-fields-cage-slot='true'] {
-    grid-template-columns: 28px minmax(0, 1fr);
-  }
-
+@container room-action (max-width: 34rem) {
   .fields-cage-slot-control {
     width: 100%;
     grid-column: 2 / -1;

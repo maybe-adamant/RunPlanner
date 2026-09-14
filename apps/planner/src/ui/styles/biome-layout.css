@@ -499,7 +499,8 @@
 
 .room-keepsake-control {
   display: flex;
-  min-width: min(16rem, 30vw);
+  min-width: min(100%, 16rem);
+  max-width: 100%;
   align-items: center;
   gap: 6px;
 }
@@ -507,14 +508,18 @@
 .room-keepsake-action {
   display: flex;
   min-width: 0;
+  max-width: 100%;
   align-items: center;
   gap: 8px;
-  white-space: nowrap;
+  flex-wrap: wrap;
 }
 
-.room-keepsake-action:has(> .transcendent-embryo-outcome-row) {
+.room-keepsake-action > .room-keepsake-control,
+.room-keepsake-action > .keepsake-equip-result-control {
+  flex: 0 1 16rem;
+  min-width: min(100%, 13rem);
+  max-width: 100%;
   flex-wrap: wrap;
-  white-space: normal;
 }
 
 .room-keepsake-action > .transcendent-embryo-outcome-row {
@@ -561,14 +566,14 @@
 
 .transcendent-embryo-outcome-row > .contextual-picker,
 .scheduled-trait-effect-identity > .contextual-picker {
-  min-width: 13rem;
-  grid-template-columns: auto minmax(8rem, 1fr);
+  min-width: min(100%, 13rem);
+  max-width: 100%;
+  grid-template-columns: auto minmax(0, 1fr);
   column-gap: 6px;
 }
 
 .transcendent-embryo-outcome-row > .contextual-picker {
   flex: 1 1 13rem;
-  min-width: min(100%, 13rem);
 }
 
 .transcendent-embryo-rarity {

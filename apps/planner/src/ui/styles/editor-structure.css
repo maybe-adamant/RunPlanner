@@ -25,9 +25,9 @@
 }
 
 /*
- * A biome workspace owns the editor's remaining height. Its two regions are
- * independent scrollports; route overview content continues to use the
- * ordinary editor-panel scroll container.
+ * A biome workspace owns the editor's remaining height. Side-by-side regions
+ * scroll independently; responsive stacking returns them to the parent
+ * scrollport used by ordinary editor-panel content.
  */
 .editor-panel-content[data-editor-layout='biome'] {
   display: grid;

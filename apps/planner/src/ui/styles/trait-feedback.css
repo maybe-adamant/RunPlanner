@@ -8,9 +8,16 @@
 
 .pickup-outcome-control {
   display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.reward-acquisition-conversion {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .pickup-outcome-control > span {
@@ -24,7 +31,8 @@
 
 .pickup-outcome-control > select {
   width: auto;
-  min-width: 13rem;
+  min-width: min(100%, 13rem);
+  max-width: 100%;
 }
 
 .room-action-outcome-controls,
@@ -43,6 +51,8 @@
 }
 
 .room-action-outcome-controls > .trait-offer-launchers {
+  min-width: 0;
+  max-width: 100%;
   margin-top: 0;
 }
 

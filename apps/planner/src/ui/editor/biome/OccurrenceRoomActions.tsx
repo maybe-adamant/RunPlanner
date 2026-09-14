@@ -392,27 +392,29 @@ export function RoomActionsWorkbench({
                 row={row}
               />
             </div>
-            {placement === undefined ? (
-              <RoomActionOrderingControls
-                onApply={apply}
-                onRemove={removeRow}
-                proposals={proposals}
-                row={row}
-                showRemoval={
-                  row.reference.kind !== 'interactKeepsakeRack' &&
-                  (!row.participationOwnedByOverview || row.stale)
-                }
-              />
-            ) : (
-              <button
-                className="secondary-action action-compact"
-                onClick={() => executeIntent(placement)}
-                type="button"
-              >
-                {row.participation === 'required' ? 'Place required delivery' : 'Take pickup'}
-              </button>
-            )}
-            {renderRowTrailingContent?.(row)}
+            <div className="room-action-ordering">
+              {placement === undefined ? (
+                <RoomActionOrderingControls
+                  onApply={apply}
+                  onRemove={removeRow}
+                  proposals={proposals}
+                  row={row}
+                  showRemoval={
+                    row.reference.kind !== 'interactKeepsakeRack' &&
+                    (!row.participationOwnedByOverview || row.stale)
+                  }
+                />
+              ) : (
+                <button
+                  className="secondary-action action-compact"
+                  onClick={() => executeIntent(placement)}
+                  type="button"
+                >
+                  {row.participation === 'required' ? 'Place required delivery' : 'Take pickup'}
+                </button>
+              )}
+              {renderRowTrailingContent?.(row)}
+            </div>
           </div>
           {row.issues.length === 0 ? null : (
             <ul className="room-action-issues">
