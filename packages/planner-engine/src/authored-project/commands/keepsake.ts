@@ -92,7 +92,8 @@ export function applyKeepsakeCommand(
     }
     const located = locateBiome(document, catalog, command);
     const occurrence = requireOccurrence(located.plan, command.outcome.owner.occurrenceId, command);
-    const room = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
+    const room = catalog.rooms.byKey[occurrence.gameName];
+    if (room === undefined) failCommand(command, `unknown room ${occurrence.gameName}`);
     if (!encounterBindingsBySlot(catalog, room, room.gameName).has(command.outcome.phaseKey))
       failCommand(command, `${room.gameName} has no encounter phase ${command.outcome.phaseKey}`);
     const current = occurrence.encounters.transcendentEmbryoBlessingByPhase ?? {};
