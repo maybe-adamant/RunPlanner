@@ -284,6 +284,10 @@ describe('Hermes Shrine workbench', () => {
     expect(sourcePicker.textContent).toContain('Apollo');
     expect(sourcePicker.textContent).not.toContain('Mystery Boon');
     expect(within(inlineEditors).getByRole('button', { name: /Trait/ })).toBeTruthy();
+    const ordering = resolvedDeliveryRow.querySelector('.room-action-ordering');
+    expect(ordering).not.toBeNull();
+    expect(within(ordering as HTMLElement).getAllByRole('button')).toHaveLength(3);
+    expect(ordering?.contains(sourcePicker)).toBe(false);
     expect(
       resolvedDeliveryRow
         .querySelector(':scope > .acquisition-entry-resolution')

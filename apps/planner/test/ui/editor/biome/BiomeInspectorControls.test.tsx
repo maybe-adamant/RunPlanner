@@ -763,7 +763,7 @@ describe('Biome inspector controls', () => {
       name: 'Remove Choose keepsake from timeline',
     });
     expect(removeKeepsake.classList.contains('room-action-delete')).toBe(true);
-    expect(removeKeepsake.parentElement?.classList.contains('room-action-controls')).toBe(true);
+    expect(removeKeepsake.parentElement?.classList.contains('room-action-ordering')).toBe(true);
     expect(removeKeepsake.parentElement?.lastElementChild).toBe(removeKeepsake);
     fireEvent.click(removeKeepsake);
     expect(

@@ -1,3 +1,36 @@
+/* Sidebar (148px), rail (280px), and gutters take about half the app at this width. */
+@media (max-width: 1000px) {
+  .editor-panel-content[data-editor-layout='biome'] {
+    display: block;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+
+  .biome-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+  }
+
+  .biome-structure-region {
+    height: auto;
+    max-height: none;
+    padding-right: 0;
+    padding-bottom: 18px;
+    border-right: 0;
+    border-bottom: 1px solid #30313a;
+    overflow-y: visible;
+    scrollbar-gutter: auto;
+  }
+
+  .biome-inspector {
+    height: auto;
+    max-height: none;
+    padding-right: 0;
+    overflow-y: visible;
+    scrollbar-gutter: auto;
+  }
+}
+
 @media (max-width: 700px) {
   body {
     overflow: auto;
@@ -90,16 +123,8 @@
   }
 
   .editor-panel-content[data-editor-layout='biome'] {
-    display: block;
     overflow: visible;
-  }
-
-  .editor-panel-content[data-editor-layout='biome'] > .biome-workspace {
-    grid-row: auto;
-  }
-
-  .biome-workspace {
-    grid-template-columns: 1fr;
+    scrollbar-gutter: auto;
   }
 
   .route-weapon-controls,
@@ -118,25 +143,6 @@
     position: fixed;
     inset: 0;
     width: auto;
-  }
-
-  .biome-structure-region {
-    height: auto;
-    max-height: none;
-    padding-right: 0;
-    padding-bottom: 18px;
-    border-right: 0;
-    border-bottom: 1px solid #30313a;
-    overflow-y: visible;
-    scrollbar-gutter: auto;
-  }
-
-  .biome-inspector {
-    height: auto;
-    max-height: none;
-    padding-right: 0;
-    overflow-y: visible;
-    scrollbar-gutter: auto;
   }
 
   .exit-list {
