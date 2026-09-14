@@ -412,8 +412,6 @@ describe('Supply Chain lifecycle', () => {
         sequence: 6,
       }),
       room,
-      1,
-      4,
       [branch],
     );
     const pickup = transition.derivedAcquisitionEntryFrontiers.find(
@@ -468,7 +466,7 @@ describe('Supply Chain lifecycle', () => {
       operationIndex: 1,
       sequence: 1,
     });
-    const advanced = applyEncounterEndEffectsTransition(catalog, figLeafEnd, room, 1, 4, [branch]);
+    const advanced = applyEncounterEndEffectsTransition(catalog, figLeafEnd, room, [branch]);
     expect(advanced.branches[0]?.pendingHermesShrineDeliveries.delivery).toMatchObject({
       remainingUses: 0,
       dueAt: occurrence,
@@ -482,8 +480,6 @@ describe('Supply Chain lifecycle', () => {
       catalog,
       Object.freeze({ ...figLeafEnd, sequence: 2, operationIndex: 2 }),
       { ...room, gameName: 'N_Sub01' } as unknown as CanonicalAuthoredRoom,
-      1,
-      4,
       [branch],
     );
     expect(suppressed.branches[0]?.pendingHermesShrineDeliveries.delivery).toMatchObject({
@@ -550,8 +546,6 @@ describe('Supply Chain lifecycle', () => {
           sequence: index + 1,
         }),
         oRoom,
-        1,
-        4,
         oBranches,
       );
       oBranches = transition.branches;
@@ -579,8 +573,6 @@ describe('Supply Chain lifecycle', () => {
         sequence: 4,
       }),
       skippedRoom,
-      1,
-      4,
       branches,
     );
     expect(catalog.rooms.byKey.N_Sub01?.skipRoomsPerUpgrade).toBe(true);
@@ -612,8 +604,6 @@ describe('Supply Chain lifecycle', () => {
           sequence,
         }),
         room,
-        1,
-        4,
         branches,
       );
       branches = transition.branches;
@@ -675,8 +665,6 @@ describe('Supply Chain lifecycle', () => {
           sequence,
         }),
         room,
-        1,
-        4,
         branches,
       ).branches;
     }
@@ -700,8 +688,6 @@ describe('Supply Chain lifecycle', () => {
         sequence: 21,
       }),
       chaosRoom,
-      1,
-      4,
       branches,
     );
     expect(catalog.rooms.byKey.Chaos_01?.skipTimedDropResources).toBe(true);
@@ -722,8 +708,6 @@ describe('Supply Chain lifecycle', () => {
         sequence: 22,
       }),
       room,
-      1,
-      4,
       deferred.branches,
     );
     expect(maturedAfterChaos.derivedAcquisitionEntryFrontiers).toHaveLength(2);

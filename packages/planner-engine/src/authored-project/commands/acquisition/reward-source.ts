@@ -43,7 +43,11 @@ function pickupEntrySource(
   const entry = authoredAcquisitionEntryAtSite(occurrence, owner.site, owner.entryKey);
   if (entry === undefined || entry === null)
     failCommand(command, `missing or unresolved pickup entry ${owner.entryKey}`);
-  if (occurrence.state.kind === 'shop' && occurrence.state.shop !== undefined)
+  if (
+    owner.site.pointKey === 'roomExit' &&
+    occurrence.state.kind === 'shop' &&
+    occurrence.state.shop !== undefined
+  )
     return Object.freeze({
       reward: entry,
       levelEffectSource: {

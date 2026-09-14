@@ -338,12 +338,12 @@ function roomActionsForOccurrence(
     ).flatMap((capability) => {
       if (
         capability.kind !== 'hermesShrineDelivery' ||
-        capability.encounterPhaseKey === undefined ||
         projectedRows.some(
           (row) =>
             row.reference.kind === 'interactAcquisitionEntry' &&
             row.reference.siteKey === 'hermesShrineDelivery' &&
-            row.reference.entryKey === capability.address.entryKey,
+            row.reference.entryKey === capability.address.entryKey &&
+            row.reference.encounterPhaseKey === capability.encounterPhaseKey,
         )
       )
         return [];
@@ -351,7 +351,9 @@ function roomActionsForOccurrence(
         kind: 'interactAcquisitionEntry' as const,
         siteKey: 'hermesShrineDelivery' as const,
         entryKey: capability.address.entryKey,
-        encounterPhaseKey: capability.encounterPhaseKey,
+        ...(capability.encounterPhaseKey === undefined
+          ? {}
+          : { encounterPhaseKey: capability.encounterPhaseKey }),
       });
       const control = controlAt(capability.address);
       const actionAddress = createRoomActionAddress(
@@ -382,16 +384,21 @@ function roomActionsForOccurrence(
             command: Object.freeze({
               kind: 'PlaceHermesShrineDelivery' as const,
               entry: capability.address,
-              encounterPhaseKey: capability.encounterPhaseKey,
+              ...(capability.encounterPhaseKey === undefined
+                ? {}
+                : { encounterPhaseKey: capability.encounterPhaseKey }),
             }),
             focus: Object.freeze({ owner: actionAddress, timing: 'after' as const }),
           }),
           rank: null,
           stale: false,
-          window: Object.freeze({
-            kind: 'encounterEnd' as const,
-            phaseKey: capability.encounterPhaseKey,
-          }),
+          window:
+            capability.encounterPhaseKey === undefined
+              ? Object.freeze({ kind: 'postOutgoing' as const })
+              : Object.freeze({
+                  kind: 'encounterEnd' as const,
+                  phaseKey: capability.encounterPhaseKey,
+                }),
           executable: false,
         }),
       ];

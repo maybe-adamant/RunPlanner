@@ -16,8 +16,12 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   createSurfaceNOHermesShrineDeliveryCheckpoint,
+  loadSurfaceNOPQProject,
   oBiome,
   oOccurrenceIds,
+  pBiome,
+  qBiome,
+  qOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import { createEnteredNLocalProject, nLocalOccurrenceId } from '../support/complete-n-project';
 import { initializeTestRewardBranches } from '../../support/arcana-fear';
@@ -137,6 +141,77 @@ describe('Hermes Shrine delivery placement', () => {
       }),
     );
     expect(() => encodeExecutionPlan(compileExecutionPlan({ product }))).not.toThrow();
+  });
+
+  it('matures a delayed P Postboss Shrine delivery at final Q Preboss entry', () => {
+    const source = createOccurrenceAddress(
+      pBiome,
+      createOccurrenceId('surface-p-preboss-shop:postboss'),
+    );
+    let project = loadSurfaceNOPQProject();
+    for (const [slotKey, rewardType] of [
+      ['first', 'HealBigDrop'],
+      ['secondLeft', 'MaxHealthDrop'],
+      ['secondRight', 'MaxManaDrop'],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: source,
+        slotKey,
+        value: { rewardType },
+      });
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: source,
+      generationKey: 'initial:secondRight',
+      purchase: { delay: 8, rushed: false },
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    const placement = hermesShrineDeliveryPlacementForPurchaseReschedule(
+      assembly,
+      source,
+      'initial:secondRight',
+    );
+    expect(placement).toEqual({
+      kind: 'PlaceHermesShrineDelivery',
+      entry: createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(
+          createOccurrenceAddress(qBiome, qOccurrenceIds.preboss),
+          'hermesShrineDelivery',
+        ),
+        hermesShrineDeliveryEntryKey(source, 'initial:secondRight'),
+      ),
+    });
+    if (placement === undefined) throw new Error('final Preboss placement missing');
+    project = applyProjectCommand(project, catalog, placement);
+    const settled = simulateProjectAssembly(catalog, project);
+    expect(settled.evaluation.status).toBe('valid');
+    const product = assembleExecutionProduct({ assembly: settled });
+    expect(
+      product.occurrences.find((room) => room.id === qOccurrenceIds.preboss)?.timeline.transactions,
+    ).toContainEqual(
+      expect.objectContaining({
+        kind: 'acquisition',
+        hermesShrineSourceKey: placement.entry.entryKey,
+        window: { kind: 'postOutgoing' },
+      }),
+    );
+    expect(() => encodeExecutionPlan(compileExecutionPlan({ product }))).not.toThrow();
+
+    const wrongPhase = applyProjectCommand(project, catalog, {
+      ...placement,
+      encounterPhaseKey: 'Encounter',
+    });
+    const repair = hermesShrineDeliveryPlacementForPurchaseReschedule(
+      simulateProjectAssembly(catalog, wrongPhase),
+      source,
+      'initial:secondRight',
+    );
+    expect(repair).toEqual(placement);
+    const repaired = applyProjectCommand(wrongPhase, catalog, repair!);
+    const roundTrip = decodeProjectDocument(JSON.parse(encodeProjectDocument(repaired)), catalog);
+    expect(simulateProjectAssembly(catalog, roundTrip).evaluation.status).toBe('valid');
   });
 
   it('materializes and ranks a due delivery at a host without an acquisition site', () => {
@@ -315,8 +390,6 @@ describe('Hermes Shrine delivery placement', () => {
         figLeafSkipOwner: false,
       },
       room,
-      1,
-      4,
       [pending],
     );
 
@@ -384,8 +457,6 @@ describe('Hermes Shrine delivery placement', () => {
       catalog,
       endEffects(source, 1),
       roomFor('N_Sub10', 'EphyraSideRoom'),
-      1,
-      4,
       [pending],
     );
     expect(sideRoom.branches[0]?.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
@@ -398,8 +469,6 @@ describe('Hermes Shrine delivery placement', () => {
       catalog,
       endEffects(host, 2),
       roomFor('N_Hub', 'EphyraHub'),
-      1,
-      4,
       sideRoom.branches,
     );
     expect(firstMainEncounter.branches[0]?.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
@@ -411,8 +480,6 @@ describe('Hermes Shrine delivery placement', () => {
       catalog,
       endEffects(host, 3),
       roomFor('N_Hub', 'EphyraHub'),
-      1,
-      4,
       firstMainEncounter.branches,
     );
     expect(dueMainEncounter.branches[0]?.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
@@ -483,8 +550,6 @@ describe('Hermes Shrine delivery placement', () => {
         figLeafSkipOwner: false,
       },
       room,
-      1,
-      4,
       [pending],
     );
     expect(transition.findings).toContainEqual(

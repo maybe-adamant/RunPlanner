@@ -17,28 +17,6 @@ const SLOT_KEYS = [
   'secondRight',
 ] as const satisfies readonly HermesShrineSlotKey[];
 
-/**
- * The source action remains the only authored Shrine delivery fact.  This
- * small evaluator deliberately accepts the lifecycle stream rather than a
- * mutable run-state object: callers can derive both a prefix reservation and
- * a later delivery host without persisting a shadow pending-delivery model.
- */
-export interface HermesShrinePurchaseScheduleInput {
-  readonly sourceKey: string;
-  readonly sourceSequence: number;
-  readonly sourceOrigin: import('../../authored-project/addresses').OccurrenceAddress;
-  readonly rewardType: string;
-  readonly delay: 2 | 3 | 4 | 5 | 6 | 7 | 8;
-  readonly rushed: boolean;
-}
-
-export interface HermesShrineDeliveryLifecycleEvent {
-  readonly sequence: number;
-  readonly origin: import('../../authored-project/addresses').OccurrenceAddress;
-  readonly kind: 'encounterEndEffectsApplied' | 'finalPrebossCompletion';
-  readonly encounterPhaseKey?: string;
-}
-
 export interface DerivedHermesShrineDelivery {
   readonly sourceKey: string;
   readonly sourceOrigin: import('../../authored-project/addresses').OccurrenceAddress;
@@ -50,84 +28,6 @@ export interface DerivedHermesShrineDelivery {
   /** Exact encounter phase whose end effects matured this delayed item. */
   readonly encounterPhaseKey?: string;
   readonly remainingUses: number;
-}
-
-/**
- * Derive each independent pending Shrine item from actions plus reached
- * lifecycle events.  The purchase room cannot decrement a newly-created
- * item because only later events are considered.  Callers emit
- * `finalPrebossCompletion` only for the reached fourth-biome Preboss.
- */
-export function deriveHermesShrineDeliveries(
-  purchases: readonly HermesShrinePurchaseScheduleInput[],
-  lifecycle: readonly HermesShrineDeliveryLifecycleEvent[],
-): readonly DerivedHermesShrineDelivery[] {
-  const orderedEvents = [...lifecycle].sort((left, right) => left.sequence - right.sequence);
-  return Object.freeze(
-    purchases.map((purchase) => {
-      if (purchase.rushed)
-        return Object.freeze({
-          sourceKey: purchase.sourceKey,
-          sourceOrigin: purchase.sourceOrigin,
-          rewardType: purchase.rewardType,
-          deliveryKind: 'rush' as const,
-          hostOrigin: purchase.sourceOrigin,
-          hostSequence: purchase.sourceSequence,
-          remainingUses: 0,
-        });
-      let remainingUses = purchase.delay;
-      for (const event of orderedEvents) {
-        if (event.sequence <= purchase.sourceSequence) continue;
-        if (event.kind === 'finalPrebossCompletion')
-          return Object.freeze({
-            sourceKey: purchase.sourceKey,
-            sourceOrigin: purchase.sourceOrigin,
-            rewardType: purchase.rewardType,
-            deliveryKind: 'finalPrebossCompletion' as const,
-            hostOrigin: event.origin,
-            hostSequence: event.sequence,
-            ...(event.encounterPhaseKey === undefined
-              ? {}
-              : { encounterPhaseKey: event.encounterPhaseKey }),
-            remainingUses: 0,
-          });
-        remainingUses -= 1;
-        if (remainingUses === 0)
-          return Object.freeze({
-            sourceKey: purchase.sourceKey,
-            sourceOrigin: purchase.sourceOrigin,
-            rewardType: purchase.rewardType,
-            deliveryKind: 'countdown' as const,
-            hostOrigin: event.origin,
-            hostSequence: event.sequence,
-            ...(event.encounterPhaseKey === undefined
-              ? {}
-              : { encounterPhaseKey: event.encounterPhaseKey }),
-            remainingUses: 0,
-          });
-      }
-      return Object.freeze({
-        sourceKey: purchase.sourceKey,
-        sourceOrigin: purchase.sourceOrigin,
-        rewardType: purchase.rewardType,
-        deliveryKind: 'pending' as const,
-        remainingUses,
-      });
-    }),
-  );
-}
-
-/**
- * A delayed SpellDrop reserves later generation until its actual pickup
- * settles. A countdown which has reached its host is still pending: its
- * pickup can be stale, unresolved, or fail ordinary settlement.
- */
-export function hasPendingHermesSpellDrop(
-  deliveries: readonly DerivedHermesShrineDelivery[],
-): boolean {
-  return deliveries.some(
-    (delivery) => delivery.rewardType === 'SpellDrop' && delivery.deliveryKind !== 'rush',
-  );
 }
 
 /**

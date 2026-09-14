@@ -146,14 +146,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
     let branches: readonly RewardBranchState[] = [initial];
     expect(branches[0]?.keepsakes.transcendentEmbryo?.progress).toBe(0);
     for (let sequence = 1; sequence < 8; sequence += 1) {
-      const transition = applyEncounterEndEffectsTransition(
-        catalog,
-        end(sequence),
-        room,
-        1,
-        4,
-        branches,
-      );
+      const transition = applyEncounterEndEffectsTransition(catalog, end(sequence), room, branches);
       expect(transition.transcendentEmbryoThresholds).toHaveLength(0);
       expect(transition.branches[0]?.keepsakes.transcendentEmbryo?.progress).toBe(sequence);
       branches = transition.branches;
@@ -164,8 +157,6 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       catalog,
       end(8),
       { ...room, gameName: 'N_Sub01' } as unknown as CanonicalAuthoredRoom,
-      1,
-      4,
       branches,
     );
     expect(suppressed.transcendentEmbryoThresholds).toHaveLength(0);
@@ -178,8 +169,6 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
         ...room,
         encounters: {},
       } as unknown as CanonicalAuthoredRoom,
-      1,
-      4,
       suppressed.branches,
     );
     expect(missing.branches).toHaveLength(0);
@@ -187,14 +176,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       { finding: { code: 'transcendentEmbryoOutcomeMissing' } },
     ]);
 
-    const resolved = applyEncounterEndEffectsTransition(
-      catalog,
-      end(9),
-      room,
-      1,
-      4,
-      suppressed.branches,
-    );
+    const resolved = applyEncounterEndEffectsTransition(catalog, end(9), room, suppressed.branches);
     expect(resolved.findings).toHaveLength(0);
     expect(resolved.branches[0]?.keepsakes.transcendentEmbryo).toMatchObject({
       progress: 0,
@@ -264,8 +246,6 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
         sequence: 1,
       }),
       room,
-      1,
-      4,
       [branch],
     );
     const delivery = transition.derivedAcquisitionEntryFrontiers.find(

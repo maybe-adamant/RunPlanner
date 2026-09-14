@@ -824,10 +824,13 @@ receives that convenience because their visible identities affect outgoing
 generation.
 
 Well purchases settle immediately as paid effects and never invoke free-pickup
-alternatives. A rushed Shrine purchase derives one required same-room pickup at
-the post-outgoing action rank; a delayed purchase derives a later required
-pickup at the reached encounter-end host. The source cleanup schedules it
-without consuming a delay use. A Hub side-room source is ordinary for
+alternatives. A rushed Shrine purchase, including a Travel Deal replacement,
+derives one required same-room pickup at the post-outgoing action rank. A delayed
+purchase is scheduled at source cleanup without consuming a delay use and
+derives a later required pickup at the reached encounter-end host. At the
+catalog route's final Preboss, entry expires every still-pending delivery into a
+required phase-less post-outgoing pickup; it does not decrement the ordinary
+encounter clock or acquire a reward. A Hub side-room source is ordinary for
 scheduling, but cannot advance an older pending delivery; later qualifying main
 Hub visits can advance or host it. Fixed Boss occurrences are ordinary later
 delivery hosts. No feature owns a private purchase order or a completion-only

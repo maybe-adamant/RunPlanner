@@ -392,15 +392,18 @@ export function hermesShrineDeliveryPlacementForPurchaseReschedule(
   const finding = matches[0];
   if (finding?.origin.kind !== 'acquisitionEntry') return undefined;
   const encounterPhaseKey = finding.evidence.encounterPhaseKey;
-  if (typeof encounterPhaseKey !== 'string' || encounterPhaseKey.length === 0) {
+  if (
+    encounterPhaseKey !== undefined &&
+    (typeof encounterPhaseKey !== 'string' || encounterPhaseKey.length === 0)
+  ) {
     throw new ProjectSimulationContractError(
-      `Shrine delivery ${entryKey} placement has no encounter phase`,
+      `Shrine delivery ${entryKey} placement has an invalid encounter phase`,
     );
   }
   return Object.freeze({
     kind: 'PlaceHermesShrineDelivery',
     entry: finding.origin,
-    encounterPhaseKey,
+    ...(encounterPhaseKey === undefined ? {} : { encounterPhaseKey }),
   });
 }
 

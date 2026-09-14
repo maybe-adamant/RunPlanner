@@ -150,7 +150,11 @@ describe('Hermes Shrine workbench', () => {
     });
     const inactiveRush = screen.getByRole('checkbox', { name: 'Rush Hermes Shrine Offer 1' });
     expect(inactiveDelay).toHaveProperty('disabled', true);
-    expect(inactiveDelay).toHaveProperty('value', '2');
+    expect(inactiveDelay).toHaveProperty('value', '');
+    expect(within(inactiveDelay).getByRole('option', { name: 'Random' })).toHaveProperty(
+      'selected',
+      true,
+    );
     expect(inactiveRush).toHaveProperty('disabled', true);
     expect(inactiveRush).toHaveProperty('checked', false);
 
@@ -167,6 +171,18 @@ describe('Hermes Shrine workbench', () => {
         }) as HTMLSelectElement
       ).value,
     ).toBe('2');
+    expect(within(inactiveDelay).queryByRole('option', { name: 'Random' })).toBeNull();
+    await view.user.selectOptions(inactiveDelay, '8');
+    expect(inactiveDelay).toHaveProperty('value', '8');
+    await view.user.click(purchased);
+    expect(inactiveDelay).toHaveProperty('disabled', true);
+    expect(within(inactiveDelay).getByRole('option', { name: 'Random' })).toHaveProperty(
+      'selected',
+      true,
+    );
+    expect(inactiveRush).toHaveProperty('disabled', true);
+    await view.user.click(purchased);
+    expect(inactiveDelay).toHaveProperty('value', '2');
     await view.user.click(
       within(offerRow).getByRole('checkbox', { name: 'Rush Hermes Shrine Offer 1' }),
     );
@@ -640,7 +656,7 @@ describe('Hermes Shrine workbench', () => {
     expect((presence as HTMLInputElement).disabled).toBe(true);
   });
 
-  it('keeps refill delay editable without exposing Rush', () => {
+  it('rushes a Travel Deal refill through the shared Shrine purchase controls', async () => {
     const owner = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     let project = completeOrdinaryShrine();
     project = applyProjectCommand(project, catalog, {
@@ -654,7 +670,12 @@ describe('Hermes Shrine workbench', () => {
       generationKey: 'travelDealRefill',
       purchase: { delay: 4, rushed: false },
     });
-    renderOccurrenceWorkbench(project, 'Surface', 'O', occurrence(oOccurrenceIds.combat07));
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Surface',
+      'O',
+      occurrence(oOccurrenceIds.combat07),
+    );
     openOverview();
 
     const delay = screen.getByRole('combobox', {
@@ -662,8 +683,21 @@ describe('Hermes Shrine workbench', () => {
     });
     expect((delay as HTMLSelectElement).disabled).toBe(false);
     expect((delay as HTMLSelectElement).value).toBe('4');
-    expect(screen.queryByRole('checkbox', { name: 'Rush Hermes Shrine Travel Deal' })).toBeNull();
+    const rush = screen.getByRole('checkbox', { name: 'Rush Hermes Shrine Travel Deal' });
+    expect((rush as HTMLInputElement).checked).toBe(false);
     expect(within(delay).getAllByRole('option')).toHaveLength(7);
+    await view.user.click(rush);
+    expect(
+      (screen.getByRole('checkbox', { name: 'Rush Hermes Shrine Travel Deal' }) as HTMLInputElement)
+        .checked,
+    ).toBe(true);
+    expect(
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'O')!
+        .topology!.occurrences.find((room) => room.occurrenceId === oOccurrenceIds.combat07)!
+        .hermesShrine?.travelDealRefill?.purchase,
+    ).toEqual({ delay: 4, rushed: true });
   });
 
   it('hides the retained Travel Deal refill when Rush is cleared and restores it when rushed again', async () => {
