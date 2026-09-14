@@ -35,7 +35,7 @@ export interface AcquisitionSource {
     Record<string, AcquisitionSiteAddress>
   >;
   readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
-  /** A Sea Star second interaction is never eligible to produce a third. */
+  /** Native source forbids duplication (store objects and Sea Star duplicates). */
   readonly blocksSeaStarDuplication?: true;
   /** Owning Room Action supplied by the reached transition, never reconstructed later. */
   readonly timelineOwner?: SemanticAddress;

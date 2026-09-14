@@ -101,6 +101,7 @@ import {
 } from '../../src/simulation/timeline-facts';
 import { migrateProjectDocument as migrateProject79To80 } from '../../../../schema/migrate-project-79-to-80.js';
 import { migrateProjectDocument as migrateProject80To81 } from '../../../../schema/migrate-project-80-to-81.js';
+import { migrateProjectDocument as migrateProject81To82 } from '../../../../schema/migrate-project-81-to-82.js';
 
 function fOnlyProject(project = createCompleteFGProject()) {
   return Object.freeze({
@@ -2083,7 +2084,7 @@ describe('execution-plan compiler and codec', () => {
       }
     }
 
-    const migrated = migrateProject80To81(migrateProject79To80(legacy));
+    const migrated = migrateProject81To82(migrateProject80To81(migrateProject79To80(legacy)));
     const loaded = parseProjectDocument(JSON.stringify(migrated), catalog);
     expect(qSupplyChainSlices(loaded)).toEqual(before);
     expect(

@@ -7,7 +7,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits/state';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 81 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 82 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {

@@ -459,7 +459,6 @@ export function evaluateBiomeRewardChronology(
       }
       if (
         (first?.kind !== 'travelDealRefill' &&
-          first?.kind !== 'infernalContractReward' &&
           first?.kind !== 'acquisitionResolvedReward' &&
           first?.kind !== 'echoDoubleShopReward') ||
         combined.length !== first.branchCohortSize ||

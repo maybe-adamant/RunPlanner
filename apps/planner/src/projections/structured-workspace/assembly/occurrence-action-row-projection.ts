@@ -7,7 +7,6 @@ import {
   createAcquisitionSiteAddress,
   createRoomActionAddress,
   createShopOfferAddress,
-  INFERNAL_CONTRACT_ENTRY_KEY,
   parseArtificerReplacementEntryKey,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
   roomActionKey,
@@ -96,18 +95,7 @@ function roomActionsForOccurrence(
   )
     return undefined;
   const owner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
-  const contractAvailable =
-    roomLocal.kind === 'shop' &&
-    roomLocal.supplementalOffers.some((offer) => offer.kind === 'infernalContractReward');
-  const suppressUnavailableContract = (row: (typeof roster.rows)[number]): boolean =>
-    !contractAvailable &&
-    row.rank === null &&
-    row.reference.kind === 'interactAcquisitionEntry' &&
-    row.reference.entryKey === INFERNAL_CONTRACT_ENTRY_KEY;
-  const suppressedActionKeys = new Set(
-    roster.rows.filter(suppressUnavailableContract).map((row) => row.key),
-  );
-  const presentedRows = roster.rows.filter((row) => !suppressUnavailableContract(row));
+  const presentedRows = roster.rows;
   const presentedActionKeys = new Set(presentedRows.map((row) => row.key));
   const proposals = roster.proposals
     .filter((proposal) => presentedActionKeys.has(roomActionKey(proposal.reference)))
@@ -213,8 +201,7 @@ function roomActionsForOccurrence(
         row.reference.kind === 'sellPurgingPoolTrait' ||
         (roomLocal.kind === 'shop' &&
           row.reference.kind === 'interactAcquisitionEntry' &&
-          (row.reference.entryKey === INFERNAL_CONTRACT_ENTRY_KEY ||
-            row.reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY ||
+          (row.reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY ||
             row.reference.entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY));
       const fountainRarity = (() => {
         if (row.reference.kind !== 'useFountain' || input.fountainRarityAssessment === undefined) {
@@ -490,7 +477,7 @@ function roomActionsForOccurrence(
   const unrankedOrStaleRows = Object.freeze(
     lifecycleTimeline.repairRows.flatMap(({ key }) => {
       const projected = allProjectedRows.find((row) => row.key === key);
-      if (projected === undefined && !suppressedActionKeys.has(key)) {
+      if (projected === undefined) {
         throw new Error(`Room action timeline repair row ${key} has no projected row`);
       }
       return projected === undefined ? [] : [projected];

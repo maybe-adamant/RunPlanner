@@ -56,6 +56,8 @@ export interface PendingShopState {
   readonly firstNormalPurchaseSeen?: boolean;
   readonly travelRefill?: PendingShopTravelRefill;
   readonly goldMaterialization?: PendingShopGoldMaterialization;
+  /** Entry-generated free Contract pedestal; it is not indexed in the host profile witness. */
+  readonly infernalContractOffer?: CanonicalShopOffer;
 }
 
 /** Cross-biome run state scheduled from one feature-local Shrine purchase. */

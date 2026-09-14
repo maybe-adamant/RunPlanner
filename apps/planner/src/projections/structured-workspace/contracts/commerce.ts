@@ -47,14 +47,6 @@ export type WorkspaceShopSupplementalDescriptor =
       readonly purchase: WorkspaceShopSupplementalPurchaseDescriptor;
     }
   | {
-      readonly kind: 'infernalContractReward';
-      readonly key: string;
-      readonly label: string;
-      readonly purchase: WorkspaceShopSupplementalPurchaseDescriptor;
-      readonly rewardControl: WorkspaceExplicitRewardControl;
-      readonly materialized: boolean;
-    }
-  | {
       readonly kind: 'travelDealRefill';
       readonly key: string;
       readonly label: string;

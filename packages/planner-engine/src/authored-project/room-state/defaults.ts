@@ -52,7 +52,12 @@ function defaultCountedStoreKey(
   return room.forcedRewardStoreKey ?? room.individualRewardStoreKey ?? batchStoreKey;
 }
 
-function defaultShopState(catalog: Catalog, binding: ShopRewardBinding, path: string): ShopState {
+function defaultShopState(
+  catalog: Catalog,
+  binding: ShopRewardBinding,
+  path: string,
+  hasInfernalContractSlot: boolean,
+): ShopState {
   const profile = catalog.rewards.shops.byKey[binding.shopProfileKey];
   if (profile === undefined) {
     failProjectDocument(path, `unknown shop profile ${binding.shopProfileKey}`);
@@ -61,6 +66,8 @@ function defaultShopState(catalog: Catalog, binding: ShopRewardBinding, path: st
   for (const slot of profile.slots.values) {
     offers[slot.key] = Object.freeze({ optionKey: null, reward: null });
   }
+  if (hasInfernalContractSlot)
+    offers.infernalContractReward = Object.freeze({ optionKey: null, reward: null });
   return Object.freeze({
     profileKey: profile.key,
     offers: Object.freeze(offers),
@@ -270,7 +277,12 @@ export function createDefaultRoomState(
         kind: 'shop',
         ...(entryActive
           ? {
-              shop: defaultShopState(catalog, requireShopBinding(room, path), path),
+              shop: defaultShopState(
+                catalog,
+                requireShopBinding(room, path),
+                path,
+                room.infernalContractReward !== undefined,
+              ),
             }
           : {}),
       });
@@ -283,7 +295,12 @@ export function createDefaultRoomState(
           kind: 'shop',
           ...(entryActive
             ? {
-                shop: defaultShopState(catalog, requireShopBinding(room, path), path),
+                shop: defaultShopState(
+                  catalog,
+                  requireShopBinding(room, path),
+                  path,
+                  room.infernalContractReward !== undefined,
+                ),
               }
             : {}),
         });

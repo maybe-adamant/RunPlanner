@@ -761,6 +761,7 @@ export interface RoomDeclaration {
   /** Source-owned zero-cost Infernal Contract pedestal at qualifying Preboss rooms. */
   readonly infernalContractReward?: {
     readonly entryKey: 'infernalContractReward';
+    readonly generationProfileKey: string;
     readonly producerLifecycleKey: string;
     readonly rewardTypes: readonly [string, string, string, string, string];
   };

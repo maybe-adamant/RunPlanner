@@ -1,4 +1,4 @@
-import type { Catalog } from '../../../catalog-schema';
+import type { Catalog, RoomDeclaration } from '../../../catalog-schema';
 import type { ShopRewardBinding } from '../../../reward-kernel/bindings';
 import type { ShopProfileDeclaration } from '../../../reward-kernel/model';
 import { pickupEffectForOffer, type ResolvedRewardOffer } from '../../../reward-kernel';
@@ -17,7 +17,7 @@ import {
 } from '../../validation';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
-  INFERNAL_CONTRACT_ENTRY_KEY,
+  shopSlotProfile,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '../../shop';
 import { decodeNullableRewardState } from './reward-acquisition-codec';
@@ -104,6 +104,7 @@ export function decodeShopState(
   value: unknown,
   catalog: Catalog,
   binding: ShopRewardBinding,
+  room: RoomDeclaration,
   path: string,
 ): ShopState {
   const shop = expectRecord(value, path);
@@ -116,9 +117,7 @@ export function decodeShopState(
   if (profileKey !== binding.shopProfileKey) {
     failProjectDocument(`${path}.profileKey`, `expected ${binding.shopProfileKey}`);
   }
-  return Object.freeze({
-    ...decodeShopOffers(shop.offers, catalog, profile, path),
-  });
+  return decodeShopOffers(shop.offers, catalog, profile, path, room);
 }
 
 function decodeShopOffers(
@@ -126,17 +125,25 @@ function decodeShopOffers(
   catalog: Catalog,
   profile: ShopProfileDeclaration,
   path: string,
+  room: RoomDeclaration,
 ): ShopState {
   const rawOffers = expectRecord(value, `${path}.offers`);
   expectExactKeys(
     rawOffers,
-    profile.slots.values.map((slot) => slot.key),
+    [
+      ...profile.slots.values.map((slot) => slot.key),
+      ...(room.infernalContractReward === undefined ? [] : ['infernalContractReward']),
+    ],
     `${path}.offers`,
   );
   const offers: Record<string, ShopOfferState> = {};
-  for (const slot of profile.slots.values) {
+  for (const slot of [
+    ...profile.slots.values,
+    ...(room.infernalContractReward === undefined
+      ? []
+      : [{ key: 'infernalContractReward', groupKey: 'Reward' }]),
+  ]) {
     if (
-      slot.key === INFERNAL_CONTRACT_ENTRY_KEY ||
       slot.key === TRAVEL_DEAL_REFILL_ENTRY_KEY ||
       slot.key === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
     ) {
@@ -152,11 +159,14 @@ function decodeShopOffers(
       rawOffer.optionKey === null
         ? null
         : expectString(rawOffer.optionKey, `${offerPath}.optionKey`);
+    const offerProfile = shopSlotProfile(catalog, room.gameName, profile.key, slot.key);
+    if (offerProfile === undefined)
+      failProjectDocument(offerPath, 'shop offer has no declaration-owned profile');
     const reward = decodeShopInventoryReward(
       rawOffer.reward,
       catalog,
       `${offerPath}.reward`,
-      profile.key,
+      offerProfile.key,
     );
     if (reward === null) {
       if (rawOffer.anvilResult !== undefined)
@@ -167,7 +177,7 @@ function decodeShopOffers(
       continue;
     }
     const offer = reward.offer;
-    const group = profile.groups.byKey[slot.groupKey];
+    const group = offerProfile.groups.byKey[slot.groupKey];
     if (group === undefined) {
       failProjectDocument(offerPath, `unknown shop group ${slot.groupKey}`);
     }

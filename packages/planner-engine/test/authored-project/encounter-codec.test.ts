@@ -194,8 +194,8 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
     );
   });
 
-  it.each(['infernalContractReward', 'travelDealRefill', 'echoDoubleShopReward'] as const)(
-    'rejects reserved initial Shop slot key %s at the schema-54 codec boundary',
+  it.each(['travelDealRefill', 'echoDoubleShopReward'] as const)(
+    'rejects derived Shop entry key %s in initial inventory',
     (reservedKey) => {
       const world = catalog.rewards.shops.byKey.WorldShop;
       const first = world?.slots.values[0];

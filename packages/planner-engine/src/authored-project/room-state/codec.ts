@@ -294,6 +294,12 @@ function decodeShopRoomState(
   }
   return Object.freeze({
     kind: 'shop',
-    shop: decodeShopState(state.shop, catalog, requireShopBinding(room, path), `${path}.shop`),
+    shop: decodeShopState(
+      state.shop,
+      catalog,
+      requireShopBinding(room, path),
+      room,
+      `${path}.shop`,
+    ),
   });
 }

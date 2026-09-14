@@ -39,13 +39,9 @@ export function ShopWorkbench({
     executeIntent(actionInteraction.intentFor(proposal.key));
   };
   const supplementalLabel = (kind: (typeof room.supplementalOffers)[number]['kind']): string =>
-    kind === 'infernalContractReward'
-      ? 'Contract'
-      : kind === 'travelDealPlaceholder' ||
-          kind === 'travelDealInvalid' ||
-          kind === 'travelDealRefill'
-        ? 'Travel Deal'
-        : 'Echo Gold';
+    kind === 'travelDealPlaceholder' || kind === 'travelDealInvalid' || kind === 'travelDealRefill'
+      ? 'Travel Deal'
+      : 'Echo Gold';
   if (!room.materialized) {
     return (
       <section aria-label="Shop inventory and conditions" className="shop-editor">

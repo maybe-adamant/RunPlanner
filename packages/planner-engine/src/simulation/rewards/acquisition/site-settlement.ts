@@ -291,6 +291,7 @@ export function settleAcquisitionResolvedReward(
     readonly producerLifecycleKey: string;
     readonly producerKind?: CanonicalResolvedIncomingReward['producerKind'];
     readonly instanceProvenance: 'free' | 'paid';
+    readonly blocksSeaStarDuplication?: true;
     readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
     readonly timelineOwner?: SemanticAddress;
     readonly historySequence: number;
@@ -385,6 +386,9 @@ export function settleAcquisitionResolvedReward(
         producerLifecycleKey: request.producerLifecycleKey,
         ...(request.producerKind === undefined ? {} : { producerKind: request.producerKind }),
         instanceProvenance: request.instanceProvenance,
+        ...(request.blocksSeaStarDuplication === undefined
+          ? {}
+          : { blocksSeaStarDuplication: request.blocksSeaStarDuplication }),
         traitOffersByAcquisitionRole: request.reward.traitOffersByAcquisitionRole,
         ...(request.reward.levelResolutionsByAcquisitionRole === undefined
           ? {}

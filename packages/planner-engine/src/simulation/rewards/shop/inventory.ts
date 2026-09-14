@@ -1,4 +1,4 @@
-import { semanticAddressKey } from '../../../authored-project/addresses';
+import { createShopOfferAddress, semanticAddressKey } from '../../../authored-project/addresses';
 import {
   applyOfferProjection,
   evaluateShopGenerationSupport,
@@ -11,6 +11,7 @@ import { type RewardGenerationFindingCode } from '../../model';
 import { appendRewardEvent, freezeRecord, type RewardBranchState } from '../branch-primitives';
 import { addRewardFinding, historyChronology, offerEvidence, rewardFinding } from '../findings';
 import { shopRequirements, type ShopProcessingContext } from './context';
+import { findShopIndexedGenerationWitnesses } from '../../../reward-kernel';
 
 export interface ShopInventoryProduct {
   readonly branches: readonly RewardBranchState[];
@@ -119,8 +120,91 @@ export function processShopInventory(
       );
     }
   }
+  const contractProfileKey = declaration.infernalContractReward?.generationProfileKey;
+  const contractProfile =
+    contractProfileKey === undefined ? undefined : catalog.rewards.shops.byKey[contractProfileKey];
+  const contractOffer = entry.infernalContractOffer;
+  const contractOwner =
+    declaration.infernalContractReward === undefined
+      ? undefined
+      : createShopOfferAddress(
+          { kind: 'biome', routeKey: room.origin.routeKey, biomeKey: room.origin.biomeKey },
+          room.origin.occurrenceId,
+          'infernalContractReward',
+        );
+  const contractBranches: RewardBranchState[] = [];
+  if (
+    contractProfileKey !== undefined &&
+    (contractProfile === undefined || contractProfile.slotCount !== 1)
+  )
+    return fail(`${room.gameName} lost its single-slot Contract profile`);
+  for (const branch of next) {
+    const active = branch.traitHistory?.equippedTraits.InfernalContractBoon !== undefined;
+    if (contractProfile === undefined || !active) {
+      contractBranches.push(branch);
+      continue;
+    }
+    const owner = contractOffer?.offerOrigin ?? contractOwner;
+    if (contractOffer === undefined || contractOffer === null || owner === undefined) {
+      addRewardFinding(
+        findings,
+        rewardFinding('rewardMissing', owner ?? room.origin, {}),
+        ownerRegion(room.origin),
+        context.findingChronology ?? historyChronology(context.historySequence),
+      );
+      continue;
+    }
+    const support = findShopIndexedGenerationWitnesses(
+      catalog.rewards,
+      contractProfile,
+      0,
+      contractOffer.offer,
+      context.facts(
+        branch.history,
+        new Set(entry.offers.map((offer) => offer.offer.rewardType)),
+        branch,
+      ),
+    );
+    if (support.length === 0) {
+      addRewardFinding(
+        findings,
+        rewardFinding('shopOfferUnavailable', owner, offerEvidence(contractOffer.offer)),
+        ownerRegion(room.origin),
+        context.findingChronology ?? historyChronology(context.historySequence),
+      );
+      continue;
+    }
+    let candidate = appendRewardEvent(
+      Object.freeze({
+        ...branch,
+        history: applyOfferProjection(
+          catalog.rewards,
+          branch.history,
+          contractOffer.offer,
+          context.facts(
+            branch.history,
+            new Set(entry.offers.map((offer) => offer.offer.rewardType)),
+            branch,
+          ),
+        ),
+      }),
+      historySequence,
+      { kind: 'rewardOffered', origin: owner, offer: contractOffer.offer },
+    );
+    candidate = Object.freeze({
+      ...candidate,
+      pendingShops: freezeRecord({
+        ...candidate.pendingShops,
+        [semanticAddressKey(room.origin)]: Object.freeze({
+          ...candidate.pendingShops[semanticAddressKey(room.origin)]!,
+          infernalContractOffer: contractOffer,
+        }),
+      }),
+    });
+    contractBranches.push(candidate);
+  }
   return Object.freeze({
-    branches: Object.freeze(next),
+    branches: Object.freeze(contractBranches),
     findingEmissions: Object.freeze([...findings.values()]),
   });
 }

@@ -1,5 +1,17 @@
 # Project schema boundary
 
+Schema 82 stores the Infernal Contract pedestal as initial Shop inventory,
+separate from any Mystery Boon source resolved when collected.
+
+```bash
+npm run schema:migrate-81-to-82 -- path/to/schema-81-project.runplanner.json
+```
+
+The migration preserves inventory, acquisition outcomes, and collection order,
+rewriting the old supplemental action to the ordinary Shop action. It writes
+a sibling file without overwriting the source. Active but unconfigured
+pedestals now produce an inventory finding, even when left uncollected.
+
 Schema 81 preserves the exact declaration-owned option selected in each World
 Shop slot. This distinguishes ordinary Boons from the boosted Boons declared
 by the I and Q World Shops without inventing a second reward type.
@@ -63,7 +75,7 @@ output. It has no route-selection, in-place, or target-version mode.
 
 The schema-72 splitter's pure transformation is exported from
 `schema/split-project-72-to-73.js` for checkpoint conversion. The source value
-is never mutated. The production decoder accepts schema 81 only; stale
+is never mutated. The production decoder accepts schema 82 only; stale
 documents are not migrated implicitly in the application.
 
 Migrate a schema-74 document with:

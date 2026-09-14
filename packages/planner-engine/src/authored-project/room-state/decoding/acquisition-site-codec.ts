@@ -9,7 +9,7 @@ import {
   parseNemesisGeneratedPickupSiteKey,
   type SelectedPickupProducer,
 } from '../../acquisition/pickup-producers';
-import { INFERNAL_CONTRACT_ENTRY_KEY } from '../../shop';
+import { shopSlotProfile } from '../../shop';
 import { decodeNullableRewardState } from './reward-acquisition-codec';
 import { expectExactKeys, expectRecord, failProjectDocument } from '../../validation';
 
@@ -140,14 +140,12 @@ export function decodeAcquisitionSites(
                               : (producerByEntry.get(`${pointKey}\u0000${key}`)
                                   ?.producerLifecycleKey ?? ''),
                           }
-                        : key === INFERNAL_CONTRACT_ENTRY_KEY
-                          ? {
-                              kind: 'producerLifecycle',
-                              key:
-                                catalog.rooms.byKey[occurrence.gameName]?.infernalContractReward
-                                  ?.producerLifecycleKey ?? '',
-                            }
-                          : { kind: 'shopProfile', key: shopProfileKey },
+                        : {
+                            kind: 'shopProfile',
+                            key:
+                              shopSlotProfile(catalog, occurrence.gameName, shopProfileKey, key)
+                                ?.key ?? '',
+                          },
                 artificerSite ||
                   seaStarDuplicateSite ||
                   hermesDeliveryEntry(key) ||

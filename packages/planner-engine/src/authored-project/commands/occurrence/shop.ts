@@ -11,8 +11,8 @@ import { reconcileAcquisitionResolvedRewardEntry } from '../../acquisition/acqui
 import { pickupEffectForOffer } from '../../../reward-kernel/history';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
-  INFERNAL_CONTRACT_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
+  shopSlotProfile,
 } from '../../shop';
 
 export function applyShopOccurrenceCommand(
@@ -27,7 +27,6 @@ export function applyShopOccurrenceCommand(
     failCommand(command, `${occurrence.gameName} has no materialized shop inventory`);
   }
   if (
-    command.offer.offerKey === INFERNAL_CONTRACT_ENTRY_KEY ||
     command.offer.offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY ||
     command.offer.offerKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
   ) {
@@ -66,7 +65,12 @@ export function applyShopOccurrenceCommand(
       ),
     );
   }
-  const profile = catalog.rewards.shops.byKey[occurrence.state.shop.profileKey];
+  const profile = shopSlotProfile(
+    catalog,
+    occurrence.gameName,
+    occurrence.state.shop.profileKey,
+    command.offer.offerKey,
+  );
   const slot = profile?.slots.byKey[command.offer.offerKey];
   const group = slot === undefined ? undefined : profile?.groups.byKey[slot.groupKey];
   if (group === undefined) failCommand(command, 'shop offer has no declaration-owned group');
@@ -108,7 +112,7 @@ export function applyShopOccurrenceCommand(
             })
           : createUnresolvedAcquisitionRewardState(catalog, selectedOffer, {
               kind: 'shopProfile',
-              key: occurrence.state.shop.profileKey,
+              key: profile!.key,
             });
         const pickupEffect = resolvesAtAcquisition
           ? undefined

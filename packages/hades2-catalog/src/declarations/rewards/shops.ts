@@ -204,6 +204,27 @@ function wellOption(
 }
 
 export const shops = [
+  // EventLogic.SpawnZagContractRewards generates this free pedestal on room entry.
+  // Only the Talent items have modeled run requirements in this native pool.
+  {
+    key: 'ZagPedestalOptions',
+    groups: [
+      {
+        key: 'Reward',
+        offerCount: 1,
+        options: [
+          option({ key: 'BlindBoxLoot', rewardType: 'BlindBoxLoot' }),
+          option({ key: 'StackUpgradeBig', rewardType: 'StackUpgradeBig' }),
+          option({ key: 'StackUpgrade', rewardType: 'StackUpgrade' }),
+          option({ key: 'TalentBigDrop', rewardType: 'TalentBigDrop', requirement: talentLegal }),
+          option({ key: 'TalentDrop', rewardType: 'TalentDrop', requirement: talentLegal }),
+        ],
+      },
+    ],
+    slots: [
+      { key: 'infernalContractReward', label: 'Infernal Contract reward', groupKey: 'Reward' },
+    ],
+  },
   // RoomShop is the game's Stygian Well profile, kept separate because its
   // options are immediate paid effects, not World-Shop reward acquisition. The option key is the game
   // identity consumed by the Well simulation; neutral effects deliberately

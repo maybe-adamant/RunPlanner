@@ -236,7 +236,10 @@ export function normalizeShops(
           const slotKey = requireNonEmpty(slot.key, `${slotPath}.key`);
           if (slotKey.startsWith(echoDuplicateKeyPrefix))
             fail(`${slotPath}.key`, `must not use reserved prefix ${echoDuplicateKeyPrefix}`);
-          if (reservedSupplementalKeys.has(slotKey))
+          if (
+            reservedSupplementalKeys.has(slotKey) &&
+            !(key === 'ZagPedestalOptions' && slotKey === 'infernalContractReward')
+          )
             fail(`${slotPath}.key`, `must not use reserved supplemental key ${slotKey}`);
           return Object.freeze({
             key: slotKey,

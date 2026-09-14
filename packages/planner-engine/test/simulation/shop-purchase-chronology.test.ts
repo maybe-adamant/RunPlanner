@@ -636,7 +636,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
     ).toBeUndefined();
     expect(
       occurrence(undone.present)?.acquisitionSites?.roomExit?.pickupEntries?.infernalContractReward,
-    ).toBeDefined();
+    ).toBeUndefined();
     expect(redoProjectHistory(undone).present).toEqual(edited.present);
   });
 

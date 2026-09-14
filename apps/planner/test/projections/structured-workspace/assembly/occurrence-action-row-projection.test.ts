@@ -29,7 +29,10 @@ import {
   withFPrebossSelection,
   type ProjectDocument,
 } from '@planner-test/support/structured-workspace/occurrence-assembly.test-support';
-import { clockedTraitGeneratedPickupEntryKey } from '@run-planner/engine/authored-project';
+import {
+  clockedTraitGeneratedPickupEntryKey,
+  createShopOfferAddress,
+} from '@run-planner/engine/authored-project';
 import { occurrenceActionLabel } from '@planner/projections/structured-workspace/assembly/occurrence-action-label';
 
 describe('structured workspace actions assembly', () => {
@@ -636,89 +639,26 @@ describe('structured workspace actions assembly', () => {
     ).toBe(false);
   });
 
-  it('retains a selected unavailable Infernal Contract action without inventing its editor', () => {
+  it('projects the Contract slot as initial inventory with an Overview repair owner', () => {
     const shopId = createOccurrenceId('golden-f-preboss-shop');
     const project = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
-    const retained: ProjectDocument = {
-      ...project,
-      route: {
-        ...project.route,
-        biomes: project.route.biomes.map((biome): typeof biome =>
-          biome.biomeKey !== 'F' || biome.topology === null
-            ? biome
-            : {
-                ...biome,
-                topology: {
-                  ...biome.topology,
-                  occurrences: biome.topology.occurrences.map((occurrence): typeof occurrence =>
-                    occurrence.occurrenceId !== shopId
-                      ? occurrence
-                      : {
-                          ...occurrence,
-                          roomActions: {
-                            order: [
-                              ...occurrence.roomActions.order,
-                              {
-                                kind: 'interactAcquisitionEntry' as const,
-                                siteKey: 'roomExit',
-                                entryKey: 'infernalContractReward',
-                              },
-                            ],
-                          },
-                        },
-                  ),
-                },
-              },
-        ),
-      },
-    };
-    const result = assemble(retained, 'Underworld', 'F', shopId, undefined, () =>
-      Object.freeze([]),
-    );
-    const room = result.assembly.node.room;
-    const isContract = (
-      reference: import('@run-planner/engine/authored-project').RoomActionReference,
-    ) =>
-      reference.kind === 'interactAcquisitionEntry' &&
-      reference.entryKey === 'infernalContractReward';
-
-    expect(room.roomLocal).toMatchObject({ kind: 'shop', supplementalOffers: [] });
-    expect(room.roomActions?.rows.some((row) => isContract(row.reference))).toBe(true);
-    expect(room.roomActions?.repairRows.some((row) => isContract(row.reference))).toBe(false);
-    expect(room.roomActions?.proposals.some((proposal) => isContract(proposal.reference))).toBe(
-      true,
-    );
-    const site = createAcquisitionSiteAddress(
-      createOccurrenceAddress(goldenFBiome, shopId),
-      'roomExit',
-    );
-    const contract = createAcquisitionEntryAddress(site, 'infernalContractReward');
-    expect(result.markers.destinations().get(semanticAddressKey(contract))).toMatchObject({
-      focusAddress: { kind: 'roomAction' },
-      roomTab: 'actions',
+    const address = createShopOfferAddress(goldenFBiome, shopId, 'infernalContractReward');
+    const result = assemble(project, 'Underworld', 'F', shopId);
+    expect(result.assembly.node.room.roomLocal).toMatchObject({
+      kind: 'shop',
+      offers: expect.arrayContaining([
+        expect.objectContaining({
+          key: 'infernalContractReward',
+          rewardControl: expect.objectContaining({
+            offer: null,
+            owner: { kind: 'shopOffer', address },
+          }),
+        }),
+      ]),
     });
-    expect(result.markers.destinations().get(semanticAddressKey(site))).toMatchObject({
-      focusAddress: { kind: 'roomAction' },
-      roomTab: 'actions',
+    expect(result.markers.destinations().get(semanticAddressKey(address))).toMatchObject({
+      focusAddress: address,
     });
-  });
-
-  it('omits an unearned Infernal Contract from actions and repairs', () => {
-    const shopId = createOccurrenceId('golden-f-preboss-shop');
-    const project = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
-    const room = assemble(project, 'Underworld', 'F', shopId, undefined, () => Object.freeze([]))
-      .assembly.node.room;
-    const isContract = (
-      reference: import('@run-planner/engine/authored-project').RoomActionReference,
-    ) =>
-      reference.kind === 'interactAcquisitionEntry' &&
-      reference.entryKey === 'infernalContractReward';
-
-    expect(room.roomActions?.rows.some((row) => isContract(row.reference))).toBe(false);
-    expect(room.roomActions?.repairRows.some((row) => isContract(row.reference))).toBe(false);
-    expect(room.roomActions?.proposals.some((proposal) => isContract(proposal.reference))).toBe(
-      false,
-    );
   });
 
   it('projects a Gold duplicate ordered after its Travel refill source', () => {

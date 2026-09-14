@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 81,
+  "schemaVersion": 82,
   "projectId": "surface-1",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -1168,6 +1168,10 @@
                           }
                         }
                       }
+                    },
+                    "infernalContractReward": {
+                      "optionKey": null,
+                      "reward": null
                     }
                   }
                 }
@@ -1184,9 +1188,7 @@
               },
               "acquisitionSites": {
                 "roomExit": {
-                  "pickupEntries": {
-                    "infernalContractReward": null
-                  }
+                  "pickupEntries": {}
                 }
               },
               "additionalExits": []

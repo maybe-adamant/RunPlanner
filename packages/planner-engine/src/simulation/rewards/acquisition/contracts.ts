@@ -69,7 +69,6 @@ export interface DerivedAcquisitionEntryFrontier {
     | 'echoDoubleShopPlaceholder'
     | 'echoDoubleShopReward'
     | 'echoLastReward'
-    | 'infernalContractReward'
     | 'acquisitionResolvedReward'
     | 'hermesShrineDelivery'
     | 'clockedTraitPickup'

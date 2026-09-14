@@ -594,6 +594,38 @@ function materializeShopEntry(
   if (profile === undefined) {
     fail(`${context.room.gameName} references unknown shop profile ${shop.profileKey}`);
   }
+  const contractState = shop.offers.infernalContractReward;
+  const contractProfileKey = context.room.infernalContractReward?.generationProfileKey;
+  const contractProfile =
+    contractProfileKey === undefined
+      ? undefined
+      : context.catalog.rewards.shops.byKey[contractProfileKey];
+  if (
+    contractProfileKey !== undefined &&
+    (contractProfile === undefined || contractProfile.slotCount !== 1)
+  )
+    fail(`${context.room.gameName} has no single-slot Infernal Contract profile`);
+  const contractSlot = contractProfile?.slots.values[0];
+  const materializedContract =
+    contractSlot === undefined ||
+    contractState === undefined ||
+    contractState === null ||
+    contractState.reward === null
+      ? null
+      : Object.freeze({
+          offerKey: 'infernalContractReward',
+          offerOrigin: createShopOfferAddress(
+            context.biome,
+            context.occurrence.occurrenceId,
+            'infernalContractReward',
+          ),
+          optionKey: contractState.optionKey,
+          offer: contractState.reward.offer,
+          traitOffersByAcquisitionRole: contractState.reward.traitOffersByAcquisitionRole,
+          levelResolutionsByAcquisitionRole: contractState.reward.levelResolutionsByAcquisitionRole,
+          dispositionByAcquisitionRole: contractState.reward.dispositionByAcquisitionRole,
+          traitContext: traitContextForOffer(context, contractState.reward.offer),
+        });
   return Object.freeze({
     kind: 'shop',
     profileKey: profile.key,
@@ -647,6 +679,7 @@ function materializeShopEntry(
           : [];
       }),
     ),
+    ...(contractProfileKey === undefined ? {} : { infernalContractOffer: materializedContract }),
   });
 }
 

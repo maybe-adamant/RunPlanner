@@ -33,11 +33,7 @@ import {
 import { parseArtificerReplacementEntryKey } from '../acquisition/artificer';
 import { parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
 import { rewardSourceResolvesAtAcquisition } from '../acquisition/reward-state';
-import {
-  ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
-  INFERNAL_CONTRACT_ENTRY_KEY,
-  TRAVEL_DEAL_REFILL_ENTRY_KEY,
-} from '../shop';
+import { ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY, TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
 import { expectExactKeys, expectRecord, failProjectDocument } from '../validation';
 import type { DecodedTopologyStructure } from './decoding/coordinator';
 import { decodeAcquisitionSites } from '../room-state/decoding/acquisition-site-codec';
@@ -593,7 +589,7 @@ export function decodeRoomOccurrence(input: {
         'materialized Shop requires roomExit state',
       );
     }
-    for (const [entryKey, entry] of Object.entries(acquisitionSites.roomExit.pickupEntries ?? {})) {
+    for (const entryKey of Object.keys(acquisitionSites.roomExit.pickupEntries ?? {})) {
       const inventoryReward = state.shop.offers[entryKey]?.reward;
       if (
         inventoryReward !== null &&
@@ -601,18 +597,6 @@ export function decodeRoomOccurrence(input: {
         rewardSourceResolvesAtAcquisition(catalog, inventoryReward.offer)
       )
         continue;
-      if (entryKey === INFERNAL_CONTRACT_ENTRY_KEY) {
-        const descriptor = room.infernalContractReward;
-        if (
-          descriptor === undefined ||
-          (entry !== null && !descriptor.rewardTypes.includes(entry.offer.rewardType))
-        )
-          failProjectDocument(
-            `${rawOccurrence.path}.acquisitionSites.roomExit.pickupEntries.${entryKey}`,
-            'must be a declared Infernal Contract pedestal reward',
-          );
-        continue;
-      }
       if (entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY) continue;
       if (entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY) continue;
       if (entryKey.startsWith('echoDoubleShop:'))
@@ -626,12 +610,6 @@ export function decodeRoomOccurrence(input: {
           'must be a supported supplemental Shop entry',
         );
     }
-    const contractEntry = acquisitionSites.roomExit.pickupEntries?.[INFERNAL_CONTRACT_ENTRY_KEY];
-    if ((room.infernalContractReward !== undefined) !== (contractEntry !== undefined))
-      failProjectDocument(
-        `${rawOccurrence.path}.acquisitionSites.roomExit.pickupEntries`,
-        'must contain exactly the declaration-owned Infernal Contract entry',
-      );
   } else {
     const expected = pickupProducers
       .filter((producer) => producer.siteKey === 'roomExit')
