@@ -140,6 +140,12 @@ Encounter start/end, cleanup, screen construction, and similar callbacks may
 schedule a realization or identify the lifecycle window in which a semantic
 transaction occurs. Their exact callback names, duplicate contacts, and
 representation-only ordering are not independent conformance requirements.
+Lifecycle windows narrow discovery of unbound actions; they do not veto steering
+an exact bound transaction whose DAG prerequisites are satisfied. Encounter-end
+pickup availability survives the final end-effects callback until the next
+encounter or room closure, while the automatic-effect callback contact remains
+transient. Resulting acquisition state is checked at room exit, not by asserting
+that player input happened inside the spawning callback.
 The supported native game functions used by those adapters are required host
 infrastructure. A missing function or an error raised by it propagates as an
 executor fault; it is not converted into ineligibility, a default value, or a

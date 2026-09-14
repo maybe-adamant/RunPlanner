@@ -92,6 +92,11 @@ Source families: `InteractLogic.lua`, `UpgradeChoiceLogic.lua`, `TraitLogic.lua`
 [traits and offers](TRAITS_AND_OFFERS.md). Acquisition completion releases
 steering dependencies; it is not proof of the player's retained result.
 
+An encounter-end delivery becomes a later player pickup. Its discovery window
+survives the final `EndEncounterEffects` return, without keeping the automatic
+effect contact active. Exact bound acquisitions consult DAG prerequisites, not
+callback-window assertions; room-exit conformance verifies the retained result.
+
 A shared source is not a unique acquisition owner. A trial publishes separate
 chosen/spurned acquisitions under one incoming reward. The source and producer
 indexes retain both; the native loot identity selects the published owner at
