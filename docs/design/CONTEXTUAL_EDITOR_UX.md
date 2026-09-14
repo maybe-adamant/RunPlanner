@@ -648,6 +648,9 @@ Automatic Steady Growth and Embryo outcomes use their fixed timeline points
 and bound target controls, not draggable author-created effects. Immediate
 keepsake targets stay at their exact equip owner. Progress, rarity and magnitude
 come from engine products; React does not advance clocks or infer those values.
+Embryo magnitude edits preserve the active slider element and focus across
+candidate refreshes. Updated values and their numeric domain appear together,
+without briefly removing the control or retaining another binding's domain.
 
 ## Ownership Seams
 

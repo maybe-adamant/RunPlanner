@@ -1,5 +1,5 @@
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
-import { useEffect, useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useState } from 'react';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -31,23 +31,33 @@ export function TranscendentEmbryoEffectRow({
   );
   const [manualOpen, setManualOpen] = useState(false);
   const [closedAtNavigationRevision, setClosedAtNavigationRevision] = useState<number>();
-  const interaction = requireWorkspaceInteraction(
+  const requestedInteraction = requireWorkspaceInteraction(
     interactions.transcendentEmbryo,
     workspaceInteractionKey(control.address),
   );
   const loadable = useMemo(
-    () => interaction.forBlessing(control.value),
-    [control.value, interaction],
+    () => requestedInteraction.forBlessing(control.value),
+    [control.value, requestedInteraction],
   );
+  const [binding, setBinding] = useState(() => ({
+    interaction: requestedInteraction,
+    loadable,
+    outcome: control.value,
+  }));
   const controller = useWorkspaceInteractionController<
     WorkspaceTranscendentEmbryoDomain | undefined
   >();
-  const loaded = controller.observe(loadable);
-  useEffect(() => {
+  const loaded = controller.observe(binding.loadable);
+  useLayoutEffect(() => {
+    // Keep the outcome and its activated domain coherent so an authored
+    // magnitude update does not detach the slider that owns the drag.
     controller.activate(loadable);
-  }, [controller, loadable]);
+    // The activated capability and its controlled inputs must commit atomically.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setBinding({ interaction: requestedInteraction, loadable, outcome: control.value });
+  }, [controller, loadable, requestedInteraction, control.value]);
   const domain = loaded.result;
-  const outcome = control.value;
+  const { interaction, outcome } = binding;
   const selected = outcome?.blessingKey ?? '';
   const focused =
     focusedSemanticOwner?.kind === 'transcendentEmbryoOutcome' &&
@@ -68,7 +78,7 @@ export function TranscendentEmbryoEffectRow({
           ·
         </span>
         <strong>Transcendent Embryo</strong>
-        {domain?.emptyNoOp === true && control.value === undefined ? (
+        {domain?.emptyNoOp === true && outcome === undefined ? (
           <span>No eligible blessing (no-op)</span>
         ) : (
           <div className="transcendent-embryo-outcome-row">

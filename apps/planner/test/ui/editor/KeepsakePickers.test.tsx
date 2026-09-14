@@ -81,6 +81,8 @@ describe('KeepsakeEquipResultPicker', () => {
     expect(propertySpeed.closest('.transcendent-embryo-outcome-row')).toBeTruthy();
     expect((propertySpeed as HTMLInputElement).type).toBe('range');
     expect(screen.getByLabelText('Property speed value').textContent).toBe('0.76');
+    propertySpeed.focus();
+    fireEvent.pointerDown(propertySpeed);
     fireEvent.change(propertySpeed, { target: { value: '0.77' } });
     await waitFor(() => expect(intentFor).toHaveBeenCalled());
     expect(intentFor).toHaveBeenLastCalledWith({
@@ -108,7 +110,22 @@ describe('KeepsakeEquipResultPicker', () => {
         <KeepsakeEquipResultPicker id="embryo-result" interaction={nextInteraction} />
       </Provider>,
     );
-    expect((screen.getByLabelText('Property speed') as HTMLInputElement).value).toBe('0.77');
+    expect(screen.getByLabelText('Property speed')).toBe(propertySpeed);
+    expect((propertySpeed as HTMLInputElement).value).toBe('0.77');
+    expect(document.activeElement).toBe(propertySpeed);
+    fireEvent.input(propertySpeed, { target: { value: '0.78' } });
+    expect(intentFor).toHaveBeenLastCalledWith({
+      ...nextValue,
+      blessingValues: { propertySpeed: 0.78, weaponSpeed: 0.79 },
+    });
+    fireEvent.pointerUp(propertySpeed);
+
+    view.rerender(
+      <Provider store={application.store}>
+        <KeepsakeEquipResultPicker id="embryo-result" interaction={unselectedInteraction} />
+      </Provider>,
+    );
+    expect(screen.queryByLabelText('Property speed')).toBeNull();
     application.dispose();
   });
 });
