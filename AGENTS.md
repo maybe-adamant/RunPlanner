@@ -329,9 +329,20 @@ scratch serialization output.
 
 ## Documentation
 
-Update the owning document whenever a modeling or ownership decision changes.
-Keep implementation progress separate from design authority once a progress
-tracker is introduced.
+Durable documentation describes the current model, contracts, and source
+evidence; it is not a bug-fix changelog.
+
+- Update the owning document when a model, ownership, contract, or supported
+  integration boundary changes, or when its existing explanation is inaccurate.
+- Integrate newly established game facts into the existing source audit or
+  matrix, with one primary owner for each fact.
+- A fix that restores an already-documented contract normally needs only code,
+  regression coverage, and a commit message—not another documentation paragraph.
+
+Revise the existing explanation or table row rather than appending a narrative
+for each fix. Do not duplicate the same lesson across design documents, audits,
+and hook maps. Keep implementation history and verification results in commits
+or the applicable progress tracker, separate from durable design authority.
 
 Unknown game behavior belongs in focused audit notes or failing/skipped
 research fixtures. Do not add generic `unsupported` values to production
@@ -389,8 +400,8 @@ Temporary implementation plans are intentionally isolated:
 - commit a locked audit/plan before implementation when it is the execution
   contract.
 
-At completion of the final slice, absorb institutional knowledge into the
-smallest stable owning documents under `docs/design/`, `docs/biomes/`, and
+At completion of the final slice, promote only new durable decisions or evidence
+into the smallest stable owning documents under `docs/design/`, `docs/biomes/`, and
 `docs/audits/`; remove gate language from production comments; and delete the
 temporary plan in the same closure change. Update an audit's planner
 disposition without erasing source facts or documented source/model

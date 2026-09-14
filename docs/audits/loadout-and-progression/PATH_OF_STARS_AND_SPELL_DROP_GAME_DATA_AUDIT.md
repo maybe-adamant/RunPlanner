@@ -116,10 +116,12 @@ the declared point value.
 
 ### Three distinct spells in an ordered offer
 
-`PregenerateSpells` removes random eligible spell identities until it has
-three distinct entries or exhausts the eligible set. `CreateSpellButtons`
-creates positions one through three from that set. The installed ordinary
-domain contains eight normal spell identities, so the planner's fully
+`LootData_Selene.SpellDrop.SetupEvents` calls `PregenerateSpells` during item
+creation, including World Shop items. It draws random eligible spell identities
+until it has three distinct entries or exhausts the eligible set, caching them
+in `SessionMapState.SelectedSpells`. `GetEligibleSpells` returns that cached list;
+`CreateSpellButtons` creates positions one through three from it. The installed
+ordinary domain contains eight normal spell identities, so the planner's fully
 progressed baseline has a complete three-option offer.
 
 Offer order is semantically significant. `SpellTalentData.InitialBonuses` is
