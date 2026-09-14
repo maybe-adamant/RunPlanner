@@ -231,7 +231,8 @@ keepsake, because `AdvanceKeepsake` targets only `GameState.LastAwardTrait`.
 ## Transcendent Embryo
 
 The special advance unequip uses `AdvanceKeepsakeMoment = true`, which avoids
-the ordinary Embryo cleanup that would detach the current Chaos blessing.
+the ordinary Embryo cleanup that stops tracking the current Chaos blessing for
+future transformations. Ordinary unequip retains the blessing itself.
 `CurrentRoom` is restored to the rebuilt source trait, and its acquisition
 callback is not replayed, so the current blessing remains unchanged.
 

@@ -53,38 +53,6 @@ export interface KeepsakeRackUsedTransition {
   readonly timelineFacts: PlannerTimelineFacts;
 }
 
-function detachTranscendentEmbryoBlessing(
-  catalog: Catalog,
-  branch: RewardBranchState,
-  owner: ReturnType<typeof createPostbossKeepsakeSelectionAddress>,
-  sequence: number,
-): RewardBranchState {
-  const source = branch.keepsakes.transcendentEmbryo;
-  if (
-    source === undefined ||
-    source.origin !== 'ordinary' ||
-    branch.keepsakes.currentKey !== 'RandomBlessingKeepsake'
-  )
-    return branch;
-  const before = branch.traitHistory ?? createTraitHistoryState();
-  const traitHistory = foldTraitHistoryEvents(catalog, [
-    ...before.events,
-    Object.freeze({
-      kind: 'directChaosBlessingRemoval' as const,
-      owner,
-      acquisitionRole: 'transcendentEmbryoRackReplacement' as const,
-      sequence,
-      acquisitionPoint: 'keepsakeRackUsed',
-      acquisitionIdentity: source.markedBlessingAcquisitionIdentity,
-    }),
-  ]);
-  return Object.freeze({
-    ...branch,
-    history: attachTraitHistory(branch.history, traitHistory),
-    traitHistory,
-  });
-}
-
 /** Applies a ranked postboss rack and emits its exact pre-selection/equip frontiers. */
 export function applyKeepsakeRackUsedTransition(
   catalog: Catalog,
@@ -181,10 +149,7 @@ export function applyKeepsakeRackUsedTransition(
         );
     const replacementSucceeded =
       before.currentKey !== after.currentKey && after.currentKey === keepsakeKey;
-    const detachedBranch = replacementSucceeded
-      ? detachTranscendentEmbryoBlessing(catalog, branch, selection, event.sequence)
-      : branch;
-    const transitionedBranch = Object.freeze({ ...detachedBranch, keepsakes: after });
+    const transitionedBranch = Object.freeze({ ...branch, keepsakes: after });
     return Object.freeze({
       branch: replacementSucceeded
         ? applyMoonBeamEquip(

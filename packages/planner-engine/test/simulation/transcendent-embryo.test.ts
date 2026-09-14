@@ -419,7 +419,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
     expect(reached.state.transcendentEmbryo?.progress).toBe(0);
   });
 
-  it('preserves the active blessing through Heirloom, then detaches it when unequipped', () => {
+  it('preserves transformation progress through Heirloom, then stops tracking when unequipped', () => {
     const equipped = applyTranscendentEmbryoEquipResult(
       catalog,
       branchWithHistory(
@@ -455,7 +455,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
     ]);
   });
 
-  it('detaches the marked blessing before an ordinary rack replacement reaches later Chaos eligibility', () => {
+  it('retains the blessing and its effects after unequipping, without further transformations', () => {
     const rackOccurrence = createOccurrenceAddress(
       createBiomeAddress('Underworld', 'F'),
       createOccurrenceId('embryo-rack-replacement'),
@@ -501,22 +501,36 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
     const replaced = transition.branches[0];
     if (replaced === undefined) throw new Error('rack replacement did not produce a branch');
     expect(replaced.keepsakes.currentKey).toBe('GoldifyKeepsake');
-    expect(replaced.traitHistory?.events).toContainEqual(
-      expect.objectContaining({
-        kind: 'directChaosBlessingRemoval',
-        acquisitionRole: 'transcendentEmbryoRackReplacement',
-        acquisitionPoint: 'keepsakeRackUsed',
-        acquisitionIdentity: expect.stringContaining('embryo-rack-replacement'),
-      }),
+    expect(replaced.keepsakes.transcendentEmbryo).toBeUndefined();
+    expect(replaced.traitHistory?.maturedChaosBlessings).toEqual(
+      equipped.traitHistory?.maturedChaosBlessings,
     );
-    expect(replaced.traitHistory?.maturedChaosBlessings).toHaveLength(0);
-    expect(replaced.traitHistory?.elementCounts).toEqual({
-      Aether: 0,
-      Earth: 0,
-      Air: 0,
-      Fire: 0,
-      Water: 0,
-    });
+    expect(replaced.traitHistory?.elementCounts).toEqual(equipped.traitHistory?.elementCounts);
+
+    let laterBranches = transition.branches;
+    for (let sequence = 3; sequence <= 10; sequence += 1) {
+      const later = applyEncounterEndEffectsTransition(
+        catalog,
+        {
+          kind: 'encounterEndEffectsApplied',
+          origin: rackOccurrence,
+          phaseKey: 'Encounter',
+          execution: 'normal',
+          figLeafSkipOwner: false,
+          operationIndex: sequence,
+          sequence,
+        },
+        { gameName: 'RoomOpening01', encounters: {} } as unknown as CanonicalAuthoredRoom,
+        laterBranches,
+      );
+      expect(later.findings).toHaveLength(0);
+      expect(later.transcendentEmbryoThresholds).toHaveLength(0);
+      expect(later.branches[0]?.keepsakes.transcendentEmbryo).toBeUndefined();
+      expect(later.branches[0]?.traitHistory?.maturedChaosBlessings).toEqual(
+        equipped.traitHistory?.maturedChaosBlessings,
+      );
+      laterBranches = later.branches;
+    }
 
     const laterChaos = createTraitOfferAddress(
       createIncomingRewardAddress(
@@ -551,7 +565,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
     expect(
       domain?.curseOptions.every((option) => option.curseKeys.includes('ChaosMetaUpgradeCurse')),
     ).toBe(true);
-    expect(domain?.blessingKeys).not.toContain('ChaosLastStandBlessing');
+    expect(domain?.blessingKeys).toContain('ChaosLastStandBlessing');
   });
 
   it('keeps a Gift Gift Gift Embryo blessing when the current rack keepsake is unrelated', () => {

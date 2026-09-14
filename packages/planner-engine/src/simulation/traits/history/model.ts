@@ -215,8 +215,7 @@ export interface DirectChaosBlessingEvent {
 export interface DirectChaosBlessingRemovalEvent {
   readonly kind: 'directChaosBlessingRemoval';
   readonly owner: SemanticAddress;
-  readonly acquisitionRole:
-    'transcendentEmbryoTransformation' | 'transcendentEmbryoRackReplacement';
+  readonly acquisitionRole: 'transcendentEmbryoTransformation';
   readonly sequence: number;
   readonly acquisitionPoint: string;
   readonly acquisitionIdentity: string;
