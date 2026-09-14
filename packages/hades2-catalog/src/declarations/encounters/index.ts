@@ -7,7 +7,8 @@ import { hEncounterDefinitions, hEncounterSets } from './h';
 import { iEncounterDefinitions, iEncounterSets } from './i';
 import { nEncounterDefinitions, nEncounterSets } from './n';
 import { oEncounterDefinitions, oEncounterSets } from './o';
-import { pEncounterDefinitions, pEncounterSets } from './p';
+import { pEncounterDefinitions } from './p_definitions';
+import { pEncounterSets } from './p_sets';
 import { qEncounterDefinitions, qEncounterSets } from './q';
 import {
   sharedEncounterDefinitions,
