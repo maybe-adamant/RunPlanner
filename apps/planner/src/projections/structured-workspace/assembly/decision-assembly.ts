@@ -32,6 +32,7 @@ import {
 } from '@run-planner/engine/simulation';
 
 import { requireWorkspaceRoom } from './catalog-room';
+import { olympusExitTypeLabel } from '@planner/projections/roomSelectorProjection';
 import {
   StructuredWorkspaceProjectionContractError,
   workspaceInteractionKey,
@@ -177,7 +178,7 @@ function batchRepairIntentForUnavailableTargets(
 function missingTargetsForPhysicalExits(
   input: WorkspaceDecisionAssemblyBaseInput,
   source: ExitDecision['source'],
-  exits: readonly { readonly exitKey: string; readonly index: number }[],
+  exits: readonly DeclaredPhysicalExit[],
   authoredExitKeys: ReadonlySet<string>,
   prerequisite: WorkspaceMissingTargetSetupPrerequisite | undefined = undefined,
 ): readonly WorkspaceMissingPhysicalTarget[] {
@@ -186,6 +187,7 @@ function missingTargetsForPhysicalExits(
   for (const exit of [...exits].sort((left, right) => left.index - right.index)) {
     if (authoredExitKeys.has(exit.exitKey)) continue;
     const owner = createTargetAddress(input.source.biome, source, exit.exitKey);
+    const exitTypeLabel = olympusExitTypeLabel(exit.type);
     missing.push(
       Object.freeze({
         authoring:
@@ -197,6 +199,7 @@ function missingTargetsForPhysicalExits(
                 prerequisiteExitKey: firstMissing.exitKey,
               })),
         exitKey: exit.exitKey,
+        ...(exitTypeLabel === undefined ? {} : { exitTypeLabel }),
         index: exit.index,
         marker: input.markerDestinations.marker(owner),
       }),
@@ -407,6 +410,7 @@ function projectAuthoredTargetWithOverlay(
   }
   const selected = selectedExitTarget(decision)?.exitKey === target.exitKey;
   const declaredExit = physical.find((candidate) => candidate.exitKey === target.exitKey);
+  const exitTypeLabel = olympusExitTypeLabel(declaredExit?.type);
   const physicalState =
     evaluatedTarget?.exit.kind ??
     (declaredExit === undefined ? ('unavailable' as const) : ('available' as const));
@@ -464,6 +468,7 @@ function projectAuthoredTargetWithOverlay(
         : { clockworkReward: evaluatedTarget.room.clockworkReward }),
       door,
       exitKey: target.exitKey,
+      ...(exitTypeLabel === undefined ? {} : { exitTypeLabel }),
       index:
         evaluatedTarget?.exit.index ??
         declaredExit?.index ??
