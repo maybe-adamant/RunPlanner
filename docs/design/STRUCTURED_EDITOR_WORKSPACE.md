@@ -272,6 +272,17 @@ occurrence-owned chronology. Doors consumes the unchanged total outgoing-stage
 product. A
 section is omitted when its projected product is empty.
 
+Timeline action headings use **Purchase** for paid World Shop/Well items and
+their refills, **Interact** for other actions (including Contract items and
+Echo-generated pickups), and **Sell** for Pool sales. Omit generic `with` and
+`pickup` wording; retain distinguishing cage, phase, source-role, and boosted
+identities. Purchases use `Purchase Slot N Offer · Item` or
+`Purchase Travel Deal Offer · Item`, with N matching inventory display order;
+Contract items use `Interact Contract Item · Item`. Timeline Pom names are
+**Pom**, **Double Pom**, **Triple Pom**, and
+**Pom Slice**, without changing catalog names. Headings, drag previews, and
+action controls share the projected label; outcome details remain separate.
+
 Required chronology rows arrive ranked from the activating semantic command
 and expose only engine-assessed moves. React renders no Position or generic
 Remove control for them. A retained malformed omission is the exception: its

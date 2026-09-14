@@ -193,12 +193,12 @@ describe('underworld product loop', () => {
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const requiredRow = within(actions)
-      .getByText('Interact with Boon pickup · Apollo')
+      .getByText('Interact Apollo boon')
       .closest<HTMLElement>('[data-room-action-key]');
     if (requiredRow === null) throw new Error('required pickup row is missing');
     expect(within(requiredRow).queryByText('Position')).toBeNull();
     const deleteButton = within(requiredRow).getByRole('button', {
-      name: 'Remove Interact with Boon pickup · Apollo from timeline',
+      name: 'Remove Interact Apollo boon from timeline',
     });
     expect((deleteButton as HTMLButtonElement).disabled).toBe(true);
     expect(deleteButton.classList.contains('quiet-action')).toBe(true);

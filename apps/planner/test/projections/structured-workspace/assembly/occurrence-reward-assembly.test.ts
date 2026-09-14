@@ -350,7 +350,7 @@ describe('structured workspace reward assembly', () => {
     const row = room.roomActions?.rows.find(
       (candidate) => candidate.reference.kind === 'interactIncomingReward',
     );
-    expect(row?.label).toContain('Red Onion');
+    expect(row?.label).toBe('Interact Apollo boon');
     expect(row?.rewardPayload).toMatchObject({
       control: {
         realizedAcquisition: { rewardType: 'RoomRewardConsolationPrize', label: 'Red Onion' },
@@ -471,8 +471,8 @@ describe('structured workspace reward assembly', () => {
         ])
         .sort(([left], [right]) => left!.localeCompare(right!)),
     ).toEqual([
-      ['maxMana', 'Interact with Max Magick pickup'],
-      ['psyche', 'Interact with Psyche pickup'],
+      ['maxMana', 'Interact Max Magick'],
+      ['psyche', 'Interact Psyche'],
     ]);
     expect(
       actions?.rows

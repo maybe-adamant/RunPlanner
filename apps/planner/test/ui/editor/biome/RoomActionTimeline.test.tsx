@@ -295,9 +295,9 @@ describe('OccurrenceRoomActions', () => {
     if (fieldsEncounter !== null) expectBefore(fieldsEncounter, fieldsActions);
     const timeline = within(fieldsActions).getByRole('list', { name: 'Room timeline' });
     const optionalPool = within(fieldsActions).getByRole('region', { name: 'Optional actions' });
-    expect(within(timeline).queryByText(/^Interact with Optional 1 pickup · .+/)).toBeNull();
+    expect(within(timeline).queryByText(/^Interact Optional 1 · .+/)).toBeNull();
     const optionalAction = within(optionalPool)
-      .getByText(/^Interact with Optional 1 pickup · .+/)
+      .getByText(/^Interact Optional 1 · .+/)
       .closest('li');
     if (optionalAction === null) throw new Error('Optional reward action is missing');
     expect(within(optionalAction).queryByLabelText('Optional 1')).toBeNull();
@@ -345,7 +345,7 @@ describe('OccurrenceRoomActions', () => {
           .every((option) => !option.disabled),
       ).toBe(true);
     }
-    expect(within(timeline).queryByText(/^Complete Cage/)).toBeNull();
+    expect(within(timeline).queryByText(/^Interact Cage\d+ encounter/)).toBeNull();
     for (const row of timeline.querySelectorAll('[data-in-order="true"]')) {
       expect(row.querySelectorAll('.hub-rank-action')).toHaveLength(2);
     }
@@ -370,13 +370,13 @@ describe('OccurrenceRoomActions', () => {
     }
 
     const cagePickup = within(timeline)
-      .getByText(/^Interact with Cage 1 pickup · /)
+      .getByText(/^Interact Cage 1 · /)
       .closest<HTMLElement>('[data-room-action-key]');
     if (cagePickup === null) throw new Error('Cage 1 pickup row is missing');
     expectBefore(ends[0]!, cagePickup);
     expect(cagePickup.querySelector('[data-room-action-drag-handle]')).not.toBeNull();
     const movePickupEarlier = within(cagePickup).getByRole('button', {
-      name: /^Move Interact with Cage 1 pickup · .* earlier$/,
+      name: /^Move Interact Cage 1 · .* earlier$/,
     }) as HTMLButtonElement;
     expect(movePickupEarlier.disabled).toBe(false);
     await view.user.click(movePickupEarlier);
@@ -580,8 +580,8 @@ describe('OccurrenceRoomActions', () => {
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const timeline = within(actions).getByRole('list', { name: 'Room timeline' });
     const repairs = within(actions).getByRole('region', { name: 'Timeline repairs' });
-    expect(within(timeline).queryByText('Complete Cage03')).toBeNull();
-    expect(within(repairs).getByText('Complete Cage03')).toBeTruthy();
+    expect(within(timeline).queryByText('Interact Cage03 encounter')).toBeNull();
+    expect(within(repairs).getByText('Interact Cage03 encounter')).toBeTruthy();
     expect(within(repairs).getByText('This required action has not been placed.')).toBeTruthy();
   });
 
@@ -597,11 +597,11 @@ describe('OccurrenceRoomActions', () => {
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const optionalPool = within(actions).getByRole('region', { name: 'Optional actions' });
     const initialOptional = within(optionalPool)
-      .getByText(/^Interact with Optional 1 pickup · .+/)
+      .getByText(/^Interact Optional 1 · .+/)
       .closest<HTMLElement>('[data-room-action-key]');
     if (initialOptional === null) throw new Error('Optional 1 action is missing');
     const insertion = within(initialOptional).getByRole('combobox', {
-      name: /^Insert Interact with Optional 1 pickup/,
+      name: /^Insert Interact Optional 1/,
     }) as HTMLSelectElement;
     expect(insertion.closest('label')?.classList.contains('field-control-inline')).toBe(true);
     const lastAvailable = Array.from(insertion.options).findLast(
@@ -610,9 +610,9 @@ describe('OccurrenceRoomActions', () => {
     if (lastAvailable === undefined) throw new Error('Optional 1 has no insertion proposal');
     await view.user.selectOptions(insertion, lastAvailable.value);
 
-    expect(within(optionalPool).queryByText(/^Interact with Optional 1 pickup · .+/)).toBeNull();
+    expect(within(optionalPool).queryByText(/^Interact Optional 1 · .+/)).toBeNull();
     const orderedOptional = within(actions)
-      .getByText(/^Interact with Optional 1 pickup · .+/)
+      .getByText(/^Interact Optional 1 · .+/)
       .closest<HTMLElement>('[data-room-action-key]');
     const roomEntered = within(actions).getByLabelText('Room entered');
     const board = within(actions).getByRole('list', { name: 'Room timeline' });
@@ -855,7 +855,7 @@ describe('OccurrenceRoomActions', () => {
     await view.user.selectOptions(disposition, 'artificer');
     await waitFor(() => {
       const sourceAction = screen
-        .getByText(/^Interact with Reward pickup · /)
+        .getByText('Interact Nectar')
         .closest<HTMLElement>('[data-room-action-key]');
       if (sourceAction === null) throw new Error('Artificer source action is missing');
       expect(
@@ -889,10 +889,10 @@ describe('OccurrenceRoomActions', () => {
     openRoomTab('Room Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const sourceAction = within(actions)
-      .getByText(/^Interact with Reward pickup · /)
+      .getByText('Interact Bones')
       .closest<HTMLElement>('[data-room-action-key]');
     const replacementAction = within(actions)
-      .getByText(/^Interact with Artificer pickup/)
+      .getByText(/^Interact Artificer reward/)
       .closest<HTMLElement>('[data-room-action-key]');
     if (sourceAction === null || replacementAction === null)
       throw new Error('Artificer source/replacement actions are missing');
@@ -996,7 +996,7 @@ describe('OccurrenceRoomActions', () => {
     );
     await waitFor(() => {
       const restored = screen
-        .getByText(/^Interact with Reward pickup/)
+        .getByText('Interact Bones')
         .closest<HTMLElement>('[data-room-action-key]');
       if (restored === null) throw new Error('Restored required row is missing');
       expect(within(restored).queryByText('Position')).toBeNull();
@@ -1043,19 +1043,19 @@ describe('OccurrenceRoomActions', () => {
     act(() => view.application.store.dispatch(semanticOwnerNavigated(action)));
     openRoomTab('Room Timeline');
     const repairs = await screen.findByRole('region', { name: 'Timeline repairs' });
-    const stale = within(repairs).getByText('Interact with Combat').closest('li');
+    const stale = within(repairs).getByText('Interact Combat').closest('li');
     if (stale === null) throw new Error('Stale Standard encounter action is missing');
     expect(within(stale).getByText('This action no longer belongs to the room.')).toBeTruthy();
     expect(document.getElementById(semanticOwnerControlElementId(action))).toBe(stale);
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(action);
 
     const remove = within(stale).getByRole('button', {
-      name: 'Remove Interact with Combat from timeline',
+      name: 'Remove Interact Combat from timeline',
     });
     expect((remove as HTMLButtonElement).disabled).toBe(false);
     expect(remove.classList.contains('danger-action')).toBe(true);
     await view.user.click(remove);
-    await waitFor(() => expect(screen.queryByText('Interact with Combat')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('Interact Combat')).toBeNull());
     expect(
       occurrenceRoomActionOrder(
         view.application.store.getState().projectWorkspace.history!.present,
@@ -1100,15 +1100,15 @@ describe('OccurrenceRoomActions', () => {
       return row;
     };
 
-    const icarus = rowFor('Interact with Icarus combat');
+    const icarus = rowFor('Interact Icarus combat');
     const legalArrow = within(icarus)
-      .getAllByRole('button', { name: /Move Interact with Icarus combat (earlier|later)/ })
+      .getAllByRole('button', { name: /Move Interact Icarus combat (earlier|later)/ })
       .find((button) => !(button as HTMLButtonElement).disabled);
     if (legalArrow === undefined) throw new Error('Icarus has no legal same-window arrow move');
-    const wheelTwoChoice = rowFor('Choose Combat 2 reward');
+    const wheelTwoChoice = rowFor('Interact Combat 2 wheel');
     expect(
       within(wheelTwoChoice)
-        .getAllByRole('button', { name: /Move Choose Combat 2 reward (earlier|later)/ })
+        .getAllByRole('button', { name: /Move Interact Combat 2 wheel (earlier|later)/ })
         .some((button) => (button as HTMLButtonElement).disabled),
     ).toBe(true);
 
@@ -1118,8 +1118,8 @@ describe('OccurrenceRoomActions', () => {
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(actionOrder()).toEqual(initialOrder);
 
-    const restoredIcarus = rowFor('Interact with Icarus combat');
-    const wheelPick = rowFor('Interact with Combat 1 reward pickup');
+    const restoredIcarus = rowFor('Interact Icarus combat');
+    const wheelPick = rowFor('Interact Combat 1 reward');
     const handle = restoredIcarus.querySelector<HTMLElement>('[data-room-action-drag-handle]');
     const board = actions.querySelector<HTMLElement>('.ship-phase-list');
     if (handle === null || board === null) throw new Error('Ship pointer board is missing');
@@ -1208,15 +1208,19 @@ describe('OccurrenceRoomActions', () => {
     expect(within(actions).getByText('Cleanup · Doors open')).toBeTruthy();
     expect(within(actions).queryByText('Outgoing generation')).toBeNull();
     expect(within(actions).queryByText('Exit usable')).toBeNull();
-    expect(within(actions).queryByText('Buy Boon · Zeus')).toBeNull();
+    expect(within(actions).queryByText('Purchase Slot 1 Offer · Zeus boon')).toBeNull();
 
-    const minor = within(actions).getByText('Buy Max Magick').closest('li');
+    const minor = within(actions).getByText('Purchase Slot 3 Offer · Max Magick').closest('li');
     if (minor === null) throw new Error('Minor Shop action is missing');
     expect(
-      within(minor).queryByRole('button', { name: 'Remove Buy Max Magick from timeline' }),
+      within(minor).queryByRole('button', {
+        name: 'Remove Purchase Slot 3 Offer · Max Magick from timeline',
+      }),
     ).toBeNull();
     await view.user.click(
-      within(minor).getByRole('button', { name: 'Move Buy Max Magick earlier' }),
+      within(minor).getByRole('button', {
+        name: 'Move Purchase Slot 3 Offer · Max Magick earlier',
+      }),
     );
     expect(
       occurrenceRoomActionOrder(
@@ -1257,8 +1261,12 @@ describe('OccurrenceRoomActions', () => {
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     expect(within(actions).queryByRole('region', { name: 'Timeline repairs' })).toBeNull();
     const board = within(actions).getByRole('list', { name: 'Room timeline' });
-    const major = within(actions).getByText('Buy Heal').closest<HTMLElement>('li');
-    const minor = within(actions).getByText('Buy Max Magick').closest<HTMLElement>('li');
+    const major = within(actions)
+      .getByText('Purchase Slot 2 Offer · Heal')
+      .closest<HTMLElement>('li');
+    const minor = within(actions)
+      .getByText('Purchase Slot 3 Offer · Max Magick')
+      .closest<HTMLElement>('li');
     if (major === null || minor === null) throw new Error('Ranked Shop action rows are missing');
     const handle = major.querySelector<HTMLElement>('[data-room-action-drag-handle]');
     if (handle === null) throw new Error('Ranked Room Action drag handle is missing');
