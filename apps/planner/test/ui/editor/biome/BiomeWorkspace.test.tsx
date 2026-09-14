@@ -512,7 +512,7 @@ describe('BiomeWorkspace', () => {
     const hubCard = screen.getByRole('article', {
       name: `${firstVisit.node.room.label} Hub room`,
     });
-    expect(hubCard.querySelector('.hub-main-reward')?.textContent).toContain(
+    expect(hubCard.querySelector('.hub-timeline-reward-preview')?.textContent).toContain(
       firstVisit.mainReward.label,
     );
   });

@@ -709,29 +709,6 @@
   min-width: 0;
 }
 
-.hub-slot-meta {
-  display: grid;
-  min-block-size: 28px;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  margin-top: 7px;
-}
-
-.hub-roster-visit-meta {
-  grid-template-columns: minmax(0, 1fr);
-  align-content: start;
-  margin-top: 0;
-}
-
-.hub-slot-state {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
 .hub-rank-actions {
   display: flex;
   min-height: 32px;
@@ -1166,7 +1143,8 @@
 
 .hub-timeline-reward-preview {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: baseline;
   gap: 8px;
   color: #aaa7af;
@@ -1176,9 +1154,7 @@
 .hub-timeline-reward-preview strong {
   min-width: 0;
   color: #e7dfd5;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .hub-membership-control {
@@ -1264,7 +1240,7 @@
 
   .hub-open-room-card[data-hub-card-presentation='timeline']
     .hub-roster-primary
-    > .hub-roster-visit-meta {
+    > .hub-timeline-reward-preview {
     grid-column: 3 / -1;
     grid-row: 2;
   }
@@ -1296,7 +1272,7 @@
 
   .hub-open-room-card[data-hub-card-presentation='timeline']
     .hub-roster-primary
-    > .hub-roster-visit-meta {
+    > .hub-timeline-reward-preview {
     grid-column: 1 / -1;
     grid-row: 2;
   }
