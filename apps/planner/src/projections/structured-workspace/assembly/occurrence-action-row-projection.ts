@@ -303,7 +303,7 @@ function roomActionsForOccurrence(
                       resolvedRewardControl.owner.kind === 'acquisitionEntry' &&
                       resolvedRewardControl.offerEditVisibility === 'visible') ||
                     (row.reference.kind === 'interactAcquisitionEntry' &&
-                      input.occurrence.state.kind !== 'shop' &&
+                      !participationOwnedByOverview &&
                       resolvedRewardControl.offerEditVisibility === 'visible')),
               }),
             }),
