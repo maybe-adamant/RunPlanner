@@ -613,6 +613,40 @@ describe('single-room lifecycle execution', () => {
     expect(endEffects).toBe(completed + 1);
   });
 
+  it.each(['PIntroCombat_ZombieQuad', 'Empty'])(
+    'runs the Olympus entrance lifecycle for %s independently of encounter depth',
+    (encounterKey) => {
+      const fragment = executeRoomLifecycle(
+        catalog,
+        inputWithoutProducer({
+          origin: createOccurrenceAddress(
+            createBiomeAddress('Surface', 'P'),
+            createOccurrenceId('p-entrance-lifecycle'),
+          ),
+          lifecycleProfileKey: 'RewardlessCombatRoom',
+          encounterEnvelopeKey: 'SingleEncounter',
+          encounterPhases: phases('SingleEncounter', [encounterKey]),
+        }),
+      );
+      expect(fragment.blockedAt).toBeUndefined();
+      expect(fragment.events.some((event) => event.kind === 'encounterDepthAdvanced')).toBe(false);
+      const endEffects = fragment.events.filter(
+        (event) => event.kind === 'encounterEndEffectsApplied',
+      );
+      if (encounterKey === 'Empty') {
+        expect(endEffects).toHaveLength(0);
+      } else {
+        expect(endEffects).toMatchObject([{ phaseKey: 'Encounter' }]);
+        expect(endEffects[0]!.sequence).toBeGreaterThan(
+          fragment.events.find((event) => event.kind === 'encounterCompleted')!.sequence,
+        );
+        expect(endEffects[0]!.sequence).toBeLessThan(
+          fragment.events.find((event) => event.kind === 'roomExited')!.sequence,
+        );
+      }
+    },
+  );
+
   it('derives end effects from each resolved phase rather than P depth or sequence position', () => {
     const normalP = executeRoomLifecycle(
       catalog,

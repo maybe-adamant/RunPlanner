@@ -191,7 +191,8 @@ export const checkpointManifest = Object.freeze([
       'Reached P Steady Growth outcome sharing an occurrence with unresolved Shrine authoring',
     schemaVersion: 81,
     catalogVersion: '0.55.0-anvil-of-fates',
-    provenance: 'saved user profile reproducing the Gate B application-load failure',
+    provenance:
+      'saved user profile with Empty P entrance to retain the combat-room repair frontier',
   },
   {
     id: 'surface-nopq',

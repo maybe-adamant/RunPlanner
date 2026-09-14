@@ -249,6 +249,27 @@ The repeated `Empty` entry affects weighting. `PIntroDreamRunEmpty` is gated to
 the Dream-run context. The combat entries inherit the non-counting
 `BasePIntroEncounters` behavior.
 
+Non-counting here refers only to `CountsForRoomEncounterDepth`. The two P
+encounter families have distinct native flags:
+
+| Family                                                            | Counts encounter depth | Skips end effects | Allows Fig Leaf skip | Explicitly blocks Athena |
+| ----------------------------------------------------------------- | ---------------------- | ----------------- | -------------------- | ------------------------ |
+| All 15 supported `PIntroCombat*` entrance variants                | No                     | No                | No                   | No                       |
+| `GeneratedP_PreCombat` and all 52 `P_Combat*_PreCombat*` variants | No                     | Yes               | Yes                  | Yes                      |
+
+`EncounterData_Opening.lua:BasePIntroEncounters` sets only the depth flag;
+none of its supported children overrides these flags. The room-specific
+pre-combats inherit `P_BaseVignette`, then
+`EncounterData_Generated.lua:GeneratedP_PreCombat`, which explicitly sets all
+four. `RoomLogic.lua:EndEncounterEffects` returns early for noncombat or
+`SkipEndEncounterEffects`, not for `CountsForRoomEncounterDepth = false`.
+Consequently the entrance combat advances `CheckChamberTraits` clocks, unlike
+the ordinary pre-combat. `Empty` inherits `NonCombat` and does not advance them.
+`TraitData_Keepsake.lua:AthenaEncounterKeepsake` separately requires biome depth
+at least two, so absence of an explicit encounter blocker does not make the
+standard entrance eligible for Gorgon. The planner preserves these independent
+facts in each encounter declaration.
+
 ### P map-specific pre-combat support
 
 Every P normal room has two ordered positions. Its first position combines

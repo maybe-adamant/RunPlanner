@@ -110,18 +110,15 @@ describe('encounter envelope catalog', () => {
       'BossZagreus01',
       'GeneratedAnomalyB',
     ];
-    const pOpeningAndPreCombat = Object.keys(definitions).filter(
-      (key) =>
-        key === 'GeneratedP_PreCombat' ||
-        key.startsWith('PIntroCombat') ||
-        key.startsWith('P_Combat'),
+    const pPreCombat = Object.keys(definitions).filter(
+      (key) => key === 'GeneratedP_PreCombat' || key.startsWith('P_Combat'),
     );
     expect(
       Object.values(definitions)
         .filter((definition) => definition.blocksGorgon === true)
         .map((definition) => definition.key)
         .sort(),
-    ).toEqual([...explicitBlockers, ...pOpeningAndPreCombat].sort());
+    ).toEqual([...explicitBlockers, ...pPreCombat].sort());
 
     for (const key of [
       'Empty',
@@ -142,6 +139,35 @@ describe('encounter envelope catalog', () => {
     }
     expect(definitions.GeneratedNSubRoom).toMatchObject({ hostsGorgon: true });
     expect(definitions.GeneratedNSubRoom?.blocksGorgon).not.toBe(true);
+  });
+
+  it('separates Olympus entrance combats from the room pre-combat family', () => {
+    const built = createCatalog(declarations);
+    const definitions = built.encounterDefinitions.byKey;
+    const openingKeys = built.encounterSets.byKey.POpeningEncounters!.encounterDefinitionKeys;
+    expect(openingKeys.filter((key) => key !== 'Empty')).toHaveLength(15);
+    for (const key of openingKeys.filter((key) => key !== 'Empty')) {
+      expect(definitions[key], key).toMatchObject({
+        kind: 'combat',
+        countsEncounterDepth: false,
+        canEncounterSkip: false,
+        skipEndEncounterEffects: false,
+        blocksGorgon: false,
+      });
+    }
+    const preCombat = Object.values(definitions).filter(
+      ({ key }) => key === 'GeneratedP_PreCombat' || key.startsWith('P_Combat'),
+    );
+    expect(preCombat).toHaveLength(53);
+    for (const definition of preCombat) {
+      expect(definition, definition.key).toMatchObject({
+        kind: 'combat',
+        countsEncounterDepth: false,
+        canEncounterSkip: true,
+        skipEndEncounterEffects: true,
+        blocksGorgon: true,
+      });
+    }
   });
 
   it('publishes the declaration-owned Fig Leaf support and blocker matrix', () => {

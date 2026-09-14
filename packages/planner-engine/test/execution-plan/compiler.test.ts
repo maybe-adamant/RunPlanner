@@ -1885,6 +1885,32 @@ describe('execution-plan compiler and codec', () => {
   it('reaches a complete Surface automatic and scheduled-acquisition lifecycle', () => {
     const { plan } = planFor(surfaceScheduledLifecycleProject());
     expect(plan.extent.biomeKeys).toEqual(['N', 'O', 'P', 'Q']);
+    const entrance = plan.occurrences.find((occurrence) => occurrence.gameName === 'P_Intro');
+    const entered = entrance?.diagnostics?.roomEntered;
+    const exited = entrance?.diagnostics?.beforeRoomExit;
+    expect(entered?.counters.biomeEncounterDepth).toBe(1);
+    expect(exited?.counters.biomeEncounterDepth).toBe(1);
+    expect(entered?.retainedEffects).toMatchObject({
+      steadyGrowth: [{ traitKey: 'BoonGrowthBoon', interval: 4, progress: 0 }],
+      keepsakes: { transcendentEmbryo: { progress: 3 } },
+      hermesShrineDeliveries: [{ remainingUses: 2 }],
+    });
+    expect(exited?.retainedEffects).toMatchObject({
+      steadyGrowth: [{ traitKey: 'BoonGrowthBoon', interval: 4, progress: 1 }],
+      keepsakes: { transcendentEmbryo: { progress: 4 } },
+      hermesShrineDeliveries: [{ remainingUses: 1 }],
+    });
+    const firstCombat = plan.occurrences.find(
+      (occurrence) => occurrence.id === 'surface-p-1-1-p_combat03',
+    );
+    expect(firstCombat?.diagnostics?.beforeRoomExit).toMatchObject({
+      counters: { biomeEncounterDepth: 2 },
+      retainedEffects: {
+        steadyGrowth: [{ traitKey: 'BoonGrowthBoon', interval: 4, progress: 2 }],
+        keepsakes: { transcendentEmbryo: { progress: 5 } },
+        hermesShrineDeliveries: [],
+      },
+    });
     const transactions = plan.occurrences.flatMap((occurrence) =>
       occurrence.timeline.transactions.map((transaction) => ({
         biomeKey: occurrence.biomeKey,

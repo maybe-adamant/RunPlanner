@@ -98,6 +98,14 @@ Legendary checks; the biome layer does not simulate a roll.
 
 ### Concrete encounter selection
 
+The biome entrance `P_Intro` is not the Intro phase of an ordinary combat room.
+All supported `PIntroCombat*` entrance encounters are non-counting for encounter
+depth but run normal encounter-end effects. They advance Steady Growth, Embryo,
+and the other clocks governed by those effects before the room is left. They
+do not permit Fig Leaf skipping and do not explicitly block Gorgon; Gorgon's
+separate minimum biome-depth requirement still excludes the entrance. Selecting
+`Empty` instead produces no combat end effects.
+
 Ordinary P room-local composition uses the game's ordered multiple-encounter
 protocol. The declaration supplies an `Intro` first position and a `Combat`
 terminal position; preparation chooses and records each active position in
