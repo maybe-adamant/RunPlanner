@@ -191,7 +191,12 @@ export function occurrenceActionLabel(
           : undefined;
       const shrineDelivery = parseHermesShrineDeliveryEntryKey(reference.entryKey);
       if (reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY) {
-        return actionLabel('Travel Deal Offer', 'Purchase');
+        return actionLabel(
+          'Travel Deal Offer',
+          'Purchase',
+          true,
+          supplemental?.kind === 'travelDealRefill' ? supplemental.rewardControl : rewardControl,
+        );
       }
       if (reference.entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY) {
         return actionLabel(supplemental?.label ?? 'Echo duplicate');

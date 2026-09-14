@@ -472,10 +472,13 @@ persisted site state. Their activating semantic command nevertheless inserts
 the exact required action reference into the occurrence's sole
 `roomActions.order`; that row points back to the existing reward/acquisition
 owner rather than copying its payload.
-Declaration-derived supplemental entries, currently Gold Gold Gold's free Shop
-duplicate and Travel Deal's refill, may own sparse acquisition-time children at
-the site. A dormant payload may exist without participating; adding its fixed
-Room Action reference alone joins chronology. Infernal Contract instead owns
+Gold Gold Gold's free Shop duplicate may retain its complete site payload without
+participating. Travel Deal owns `shop.travelDealRefill`, an optional ordinary
+`ShopOfferState` outside initial indexed inventory, addressed by `shopOffer` with
+the reserved refill key. Its retained `interactAcquisitionEntry` reference joins
+chronology; only a purchased Mystery has a separate site child, reconciled
+atomically on item replacement and purchase insertion/removal. Other reward
+children remain on the slot. Infernal Contract owns
 a conditional initial `shop.offers.infernalContractReward` slot, using the
 ordinary Shop offer and participation commands. Its room declaration binds it
 to the separate pedestal pool; the host's indexed slots remain unchanged.
@@ -502,12 +505,11 @@ deleting unrelated actions. `MoveRoomAction` changes one ranked action's
 position within the complete chronology;
 `ReplaceAcquisitionEntryOffer` edits only a declaration-compatible materialized
 pickup. Neither command may infer entries from room names or rendered rows.
-`EditDerivedShopEntry` atomically installs one engine-supplied complete default
-for a dormant Travel or Gold row and applies one nested reward, trait, level, or
-conversion edit without changing `roomActions.order`. `SelectDerivedShopEntry`
-atomically materializes the same default and applies one engine-supplied
-complete participation/order proposal. These are one shared command family,
-not effect-specific state or a second Shop chronology.
+`EditDerivedShopEntry` atomically materializes a Gold duplicate and applies one
+nested reward, trait, level, or conversion edit without changing
+`roomActions.order`. `SelectDerivedShopEntry` materializes that same pickup;
+participation is a separate Room Action command. Travel uses ordinary Shop
+inventory commands, not this derived-pickup family.
 
 The engine classifies every structurally active Room Action as required or
 optional from the same action domain consumed by simulation. The semantic

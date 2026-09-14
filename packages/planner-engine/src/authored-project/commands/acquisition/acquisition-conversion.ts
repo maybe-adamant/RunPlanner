@@ -9,7 +9,12 @@ import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } fr
 import { replaceOccurrence, updateOccurrenceTopology } from '../occurrence/mutation';
 import type { AcquisitionDispositionCommand } from '../types';
 import { createNormalDispositionByAcquisitionRole } from '../../acquisition/reward-state';
-import { authoredAcquisitionEntryAtSite, replaceAuthoredAcquisitionEntryAtSite } from '../../shop';
+import {
+  authoredAcquisitionEntryAtSite,
+  replaceAuthoredAcquisitionEntryAtSite,
+  authoredShopOffer,
+  replaceAuthoredShopOffer,
+} from '../../shop';
 import {
   acquisitionSiteStorageKey,
   artificerAcquisitionSite,
@@ -243,20 +248,15 @@ export function applyAcquisitionDispositionCommand(
     case 'shopOffer': {
       if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined)
         return failCommand(command, `${occurrence.gameName} has no materialized Shop offers`);
-      const entry = occurrence.state.shop.offers[owner.offerKey];
+      const entry = authoredShopOffer(occurrence, owner.offerKey);
       if (entry === undefined) return failCommand(command, `missing Shop offer ${owner.offerKey}`);
       if (entry.reward === null)
         failCommand(command, 'cannot edit acquisition disposition before reward authorship');
-      state = Object.freeze({
-        ...occurrence.state,
-        shop: Object.freeze({
-          ...occurrence.state.shop,
-          offers: Object.freeze({
-            ...occurrence.state.shop.offers,
-            [owner.offerKey]: Object.freeze({ ...entry, reward: replace(entry.reward) }),
-          }),
-        }),
-      });
+      state = replaceAuthoredShopOffer(
+        occurrence,
+        owner.offerKey,
+        Object.freeze({ ...entry, reward: replace(entry.reward) }),
+      ).state;
       break;
     }
     case 'encounterPhase':

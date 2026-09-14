@@ -15,10 +15,9 @@ import {
 import {
   authoredAcquisitionEntry,
   authoredAcquisitionEntryAtSite,
+  authoredShopOfferFromState,
   echoShopDuplicateOffer,
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
-  INFERNAL_CONTRACT_ENTRY_KEY,
-  TRAVEL_DEAL_REFILL_ENTRY_KEY,
   replaceAuthoredAcquisitionEntryAtSite,
   shopSlotProfile,
 } from '../../shop';
@@ -60,18 +59,17 @@ function shrineDeliverySource(
 function derivedShopEntryValue(
   catalog: Catalog,
   occurrence: import('../../model').RoomOccurrence,
-  entryKey: typeof TRAVEL_DEAL_REFILL_ENTRY_KEY | typeof ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+  entryKey: typeof ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   sourceOfferKey: string,
   command: AcquisitionSiteCommand | DerivedShopEntryEditCommand,
 ): import('../../model').AuthoredRewardState | null {
   const shop = occurrence.state.kind === 'shop' ? occurrence.state.shop : undefined;
   if (shop === undefined) failCommand(command, 'has no materialized Shop');
   const source =
-    shop.offers[sourceOfferKey]?.reward ??
+    authoredShopOfferFromState(shop, sourceOfferKey)?.reward ??
     occurrence.acquisitionSites?.roomExit?.pickupEntries?.[sourceOfferKey];
   if (source === undefined || source === null)
     failCommand(command, `has no concrete derived-entry source ${sourceOfferKey}`);
-  if (entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY) return null;
   const duplicateOffer = echoShopDuplicateOffer(catalog, source.offer);
   return duplicateOffer === null
     ? null
@@ -366,10 +364,7 @@ export function applyAcquisitionSiteCommand(
     const profileKey =
       occurrence.state.kind === 'shop' ? occurrence.state.shop?.profileKey : undefined;
     if (profileKey === undefined) failCommand(command, 'has no materialized Shop');
-    if (
-      command.entryKey !== TRAVEL_DEAL_REFILL_ENTRY_KEY &&
-      command.entryKey !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
-    )
+    if (command.entryKey !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY)
       failCommand(command, 'has an unknown derived Shop entry');
     const pickupEntries = occurrence.acquisitionSites?.roomExit?.pickupEntries ?? {};
     const derivedValue = derivedShopEntryValue(
@@ -521,22 +516,16 @@ export function applyAcquisitionSiteCommand(
     const pickup = producer?.pickups.find((candidate) => candidate.key === command.entry.entryKey);
     const shop = occurrence.state.kind === 'shop' ? occurrence.state.shop : undefined;
     const shopInventoryReward =
-      command.entry.entryKey === INFERNAL_CONTRACT_ENTRY_KEY
-        ? shop?.offers.infernalContractReward?.reward
-        : shop?.offers[command.entry.entryKey]?.reward;
+      shop === undefined
+        ? undefined
+        : authoredShopOfferFromState(shop, command.entry.entryKey)?.reward;
     const acquisitionResolvedEntry =
       shopInventoryReward !== null &&
       shopInventoryReward !== undefined &&
       rewardSourceResolvesAtAcquisition(catalog, shopInventoryReward.offer);
     const shopOwnedEntry =
-      acquisitionResolvedEntry ||
-      command.entry.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY ||
-      command.entry.entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY;
-    if (
-      entry === undefined &&
-      command.entry.entryKey !== TRAVEL_DEAL_REFILL_ENTRY_KEY &&
-      command.entry.entryKey !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
-    )
+      acquisitionResolvedEntry || command.entry.entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY;
+    if (entry === undefined && command.entry.entryKey !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY)
       failCommand(command, 'does not own a materialized pickup entry');
     if (
       !shopOwnedEntry &&
@@ -627,10 +616,7 @@ export function materializeDerivedShopEntry(
   const profileKey =
     occurrence.state.kind === 'shop' ? occurrence.state.shop?.profileKey : undefined;
   if (profileKey === undefined) failCommand(command, 'has no materialized Shop');
-  if (
-    command.entryKey !== TRAVEL_DEAL_REFILL_ENTRY_KEY &&
-    command.entryKey !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
-  )
+  if (command.entryKey !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY)
     failCommand(command, 'has an unknown derived Shop entry');
   const site = occurrence.acquisitionSites?.roomExit;
   if (site?.pickupEntries?.[command.entryKey] !== undefined) return document;

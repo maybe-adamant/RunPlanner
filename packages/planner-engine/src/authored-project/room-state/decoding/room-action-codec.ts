@@ -52,6 +52,8 @@ function decodeRoomActionReference(value: unknown, path: string): RoomActionRefe
   }
   if (kind === 'interactShopOffer') {
     expectExactKeys(reference, ['kind', 'offerKey'], path);
+    if (reference.offerKey === 'travelDealRefill')
+      failProjectDocument(path, 'Travel Deal uses its roomExit acquisition entry participation');
     return Object.freeze({
       kind,
       offerKey: expectNonBlankString(reference.offerKey, `${path}.offerKey`),

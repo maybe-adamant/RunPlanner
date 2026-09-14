@@ -8,6 +8,8 @@ import {
   createAcquisitionSiteAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createRoomActionAddress,
+  roomActionKey,
   createLevelResolutionAddress,
   createShopOfferAddress,
   createTraitOfferAddress,
@@ -181,6 +183,18 @@ describe('authored-project Shop occurrence commands', () => {
       purchased: true,
     });
     expect(occurrence()?.acquisitionSites?.roomExit?.pickupEntries?.Boon).toBeNull();
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
+    const missingChild = JSON.parse(encodeProjectDocument(project));
+    delete missingChild.route.biomes
+      .find((biome: { biomeKey: string }) => biome.biomeKey === 'N')
+      .topology.occurrences.find(
+        (candidate: { occurrenceId: string }) => candidate.occurrenceId === shopId,
+      ).acquisitionSites.roomExit.pickupEntries.Boon;
+    expect(() => decodeProjectDocument(missingChild, catalog)).toThrow(
+      'purchased acquisition-resolved Shop reward requires an acquisition entry',
+    );
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',
       entry,
@@ -268,9 +282,124 @@ describe('authored-project Shop occurrence commands', () => {
     },
   );
 
-  it('requires a declaration-owned offer in materialized Shop inventory', () => {
+  it('reconciles a Travel Mystery child with its sole purchase participant and item identity', () => {
     const shopId = createOccurrenceId('round-trip-n-preboss');
-    for (const reservedKey of ['travelDealRefill', 'echoDoubleShopReward'] as const) {
+    const offer = createShopOfferAddress(nBiome, shopId, 'travelDealRefill');
+    const site = createAcquisitionSiteAddress(createOccurrenceAddress(nBiome, shopId), 'roomExit');
+    const entry = createAcquisitionEntryAddress(site, 'travelDealRefill');
+    const reference = {
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'roomExit',
+      entryKey: 'travelDealRefill',
+    } as const;
+    const action = createRoomActionAddress(nBiome, shopId, roomActionKey(reference));
+    const room = (project: ReturnType<typeof createCompleteNProject>) =>
+      project.route.biomes
+        .find((biome) => biome.biomeKey === 'N')!
+        .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === shopId)!;
+    let project = applyProjectCommand(createCompleteNProject(), catalog, {
+      kind: 'ReplaceShopOffer',
+      offer,
+      value: { rewardType: 'BlindBoxLoot' },
+    });
+    expect(
+      room(project).acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill,
+    ).toBeUndefined();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action,
+      reference,
+      index: room(project).roomActions.order.length,
+    });
+    expect(room(project).acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeNull();
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
+    const missingChild = JSON.parse(encodeProjectDocument(project));
+    delete missingChild.route.biomes
+      .find((biome: { biomeKey: string }) => biome.biomeKey === 'N')
+      .topology.occurrences.find(
+        (occurrence: { occurrenceId: string }) => occurrence.occurrenceId === shopId,
+      ).acquisitionSites.roomExit.pickupEntries.travelDealRefill;
+    expect(() => decodeProjectDocument(missingChild, catalog)).toThrow(
+      'purchased acquisition-resolved Shop reward requires an acquisition entry',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry,
+      value: {
+        rewardType: 'BlindBoxLoot',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      },
+    });
+    const child = room(project).acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill;
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer,
+      value: { rewardType: 'BlindBoxLoot' },
+    });
+    expect(room(project).acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toEqual(
+      child,
+    );
+    expect(
+      activeRoomActionReferences(catalog, nBiome, room(project)).filter(
+        (value) => roomActionKey(value) === roomActionKey(reference),
+      ),
+    ).toHaveLength(1);
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
+    const removed = applyProjectCommand(project, catalog, { kind: 'RemoveRoomAction', action });
+    expect(
+      room(removed).acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill,
+    ).toBeUndefined();
+    const removedState = room(removed).state;
+    expect(
+      removedState.kind === 'shop' ? removedState.shop?.travelDealRefill?.reward?.offer : undefined,
+    ).toEqual({ rewardType: 'BlindBoxLoot' });
+    const raw = JSON.parse(encodeProjectDocument(project));
+    raw.route.biomes
+      .find((biome: { biomeKey: string }) => biome.biomeKey === 'N')
+      .topology.occurrences.find(
+        (occurrence: { occurrenceId: string }) => occurrence.occurrenceId === shopId,
+      ).roomActions.order = [];
+    expect(() => decodeProjectDocument(raw, catalog)).toThrow('requires its Shop purchase action');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer,
+      value: { rewardType: 'StackUpgrade' },
+    });
+    expect(
+      room(project).acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill,
+    ).toBeUndefined();
+    const replacedState = room(project).state;
+    expect(
+      replacedState.kind === 'shop'
+        ? replacedState.shop?.travelDealRefill?.reward?.levelResolutionsByAcquisitionRole
+        : undefined,
+    ).toEqual({ self: { kind: 'choice', offeredTraitKeys: [], selectedTraitKey: null } });
+    expect(room(project).roomActions.order).toContainEqual(reference);
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
+  });
+
+  it('accepts the dynamic Travel inventory owner and rejects other undeclared Shop entries', () => {
+    const shopId = createOccurrenceId('round-trip-n-preboss');
+    const travel = applyProjectCommand(createCompleteNProject(), catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(nBiome, shopId, 'travelDealRefill'),
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    expect(
+      travel.route.biomes
+        .find((biome) => biome.biomeKey === 'N')
+        ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === shopId)?.state,
+    ).toMatchObject({
+      kind: 'shop',
+      shop: { travelDealRefill: { reward: { offer: { rewardType: 'MaxHealthDrop' } } } },
+    });
+    for (const reservedKey of ['echoDoubleShopReward'] as const) {
       expect(() =>
         applyProjectCommand(createCompleteNProject(), catalog, {
           kind: 'ReplaceShopOffer',

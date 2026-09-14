@@ -1,4 +1,7 @@
 import {
+  createAcquisitionSiteAddress,
+  createBiomeAddress,
+  createOccurrenceAddress,
   semanticAddressKey,
   type AcquisitionEntryAddress,
   type AcquisitionRoleAddress,
@@ -373,7 +376,7 @@ export function retainBlockedRegionProducts(
       ? undefined
       : (selectedArtifacts.derivedAcquisitionEntries.at(blockedDerivedAcquisitionAt) ??
         blockedArtifacts.derivedAcquisitionEntries.at(blockedDerivedAcquisitionAt));
-  const derivedAcquisitionEntries: DerivedAcquisitionEntryCandidateArtifacts =
+  const retainedDerivedEntries: DerivedAcquisitionEntryCandidateArtifacts =
     blockedDerivedAcquisitionAt === undefined || blockedDerivedAcquisitionCapability === undefined
       ? retainedArtifacts.derivedAcquisitionEntries
       : Object.freeze({
@@ -400,6 +403,46 @@ export function retainBlockedRegionProducts(
                 capability: blockedDerivedAcquisitionCapability,
               }),
             ]);
+          },
+        });
+  // Dynamic inventory can be the repair frontier before any acquisition exists.
+  // Retain its reached generation descriptor along with the Shop candidate below.
+  const blockedShopSite =
+    blockedAt.kind === 'shopOffer' && blockedAt.offerKey === 'travelDealRefill'
+      ? createAcquisitionSiteAddress(
+          createOccurrenceAddress(
+            createBiomeAddress(blockedAt.routeKey, blockedAt.biomeKey),
+            blockedAt.occurrenceId,
+          ),
+          'roomExit',
+        )
+      : blockedDerivedAcquisitionAt?.entryKey === 'travelDealRefill' &&
+          blockedDerivedAcquisitionAt.site.pointKey === 'roomExit'
+        ? blockedDerivedAcquisitionAt.site
+        : undefined;
+  const blockedShopEntry =
+    blockedShopSite === undefined
+      ? undefined
+      : [selectedArtifacts, blockedArtifacts]
+          .flatMap((artifacts) => artifacts.derivedAcquisitionEntries.entriesAt(blockedShopSite))
+          .find((entry) => entry.capability.kind === 'travelDealRefill');
+  const derivedAcquisitionEntries: DerivedAcquisitionEntryCandidateArtifacts =
+    blockedShopSite === undefined || blockedShopEntry === undefined
+      ? retainedDerivedEntries
+      : Object.freeze({
+          at: retainedDerivedEntries.at,
+          entriesAt: (site: import('../../authored-project/addresses').AcquisitionSiteAddress) => {
+            const entries = retainedDerivedEntries.entriesAt(site);
+            return semanticAddressKey(site) !== semanticAddressKey(blockedShopSite)
+              ? entries
+              : Object.freeze([
+                  ...entries.filter(
+                    (entry) =>
+                      entry.capability.kind !== 'travelDealRefill' &&
+                      entry.capability.kind !== 'travelDealPlaceholder',
+                  ),
+                  blockedShopEntry,
+                ]);
           },
         });
   const rewardOwner = ancestors.rewardOwner;

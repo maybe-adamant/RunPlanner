@@ -14,6 +14,7 @@ import {
 import { decodeRoomState } from '../room-state/codec';
 import { decodeRoomEncounterState } from '../room-state/decoding/encounter-state-codec';
 import { createBiomeAddress, semanticAddressKey } from '../addresses';
+import { authoredShopOfferFromState } from '../shop';
 import { authoredAcquisitionSources } from '../acquisition/acquisition-sources';
 import { resolveAcquisitionRole } from '../../reward-kernel/history';
 import {
@@ -598,15 +599,50 @@ export function decodeRoomOccurrence(input: {
         'materialized Shop requires roomExit state',
       );
     }
-    for (const entryKey of Object.keys(acquisitionSites.roomExit.pickupEntries ?? {})) {
-      const inventoryReward = state.shop.offers[entryKey]?.reward;
+    const purchasedOfferKeys = new Set(
+      roomActions.order.flatMap((action) =>
+        action.kind === 'interactShopOffer'
+          ? [action.offerKey]
+          : action.kind === 'interactAcquisitionEntry' &&
+              action.siteKey === 'roomExit' &&
+              action.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+            ? [action.entryKey]
+            : [],
+      ),
+    );
+    const pickupEntries = acquisitionSites.roomExit.pickupEntries ?? {};
+    for (const offerKey of purchasedOfferKeys) {
+      const reward = authoredShopOfferFromState(state.shop, offerKey)?.reward;
+      if (
+        reward !== null &&
+        reward !== undefined &&
+        rewardSourceResolvesAtAcquisition(catalog, reward.offer) &&
+        !Object.hasOwn(pickupEntries, offerKey)
+      )
+        failProjectDocument(
+          `${rawOccurrence.path}.acquisitionSites.roomExit.pickupEntries.${offerKey}`,
+          'purchased acquisition-resolved Shop reward requires an acquisition entry',
+        );
+    }
+    for (const entryKey of Object.keys(pickupEntries)) {
+      const inventoryReward = authoredShopOfferFromState(state.shop, entryKey)?.reward;
       if (
         inventoryReward !== null &&
         inventoryReward !== undefined &&
         rewardSourceResolvesAtAcquisition(catalog, inventoryReward.offer)
-      )
+      ) {
+        if (!purchasedOfferKeys.has(entryKey))
+          failProjectDocument(
+            `${rawOccurrence.path}.acquisitionSites.roomExit.pickupEntries.${entryKey}`,
+            'requires its Shop purchase action',
+          );
         continue;
-      if (entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY) continue;
+      }
+      if (entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY)
+        failProjectDocument(
+          `${rawOccurrence.path}.acquisitionSites.roomExit.pickupEntries.${entryKey}`,
+          'Travel pickup payload is reserved for a purchased acquisition-resolved Shop reward',
+        );
       if (entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY) continue;
       if (entryKey.startsWith('echoDoubleShop:'))
         failProjectDocument(

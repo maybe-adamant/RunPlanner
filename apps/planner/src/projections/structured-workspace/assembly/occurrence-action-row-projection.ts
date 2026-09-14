@@ -349,7 +349,9 @@ function roomActionsForOccurrence(
                       resolvedRewardControl.owner.kind === 'acquisitionEntry' &&
                       resolvedRewardControl.offerEditVisibility === 'visible') ||
                     (row.reference.kind === 'interactAcquisitionEntry' &&
-                      !participationOwnedByOverview &&
+                      (!participationOwnedByOverview ||
+                        (row.reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY &&
+                          resolvedRewardControl.owner.kind === 'acquisitionEntry')) &&
                       resolvedRewardControl.offerEditVisibility === 'visible')),
               }),
             }),

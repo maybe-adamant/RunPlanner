@@ -1,6 +1,7 @@
 import {
   seaStarDuplicateSiteKey,
   SEA_STAR_DUPLICATE_ENTRY_KEY,
+  authoredShopOffer,
   type AcquisitionDisposition,
 } from '@run-planner/engine/authored-project';
 import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
@@ -51,7 +52,7 @@ export function bindAcquisitionConversionInteractions(input: {
       const anvilCapability = input.candidates.anvilResult(conversion.address);
       const shopOffer =
         owner.kind === 'shopOffer' && occurrence?.state.kind === 'shop'
-          ? occurrence.state.shop?.offers[owner.offerKey]
+          ? authoredShopOffer(occurrence, owner.offerKey)
           : undefined;
       const anvil =
         owner.kind !== 'shopOffer' ||

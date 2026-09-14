@@ -9,6 +9,7 @@ import {
 import { createBiomeAddress } from '../addresses';
 import { reconcileAcquisitionResolvedRewardEntry } from '../acquisition/acquisition-entry';
 import { parseClockedTraitGeneratedPickupEntryKey } from '../acquisition/pickup-producers';
+import { authoredShopOffer, TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { updateOccurrence } from './occurrence/mutation';
 import type { RoomActionCommand } from './types';
@@ -47,6 +48,8 @@ export function applyRoomActionCommand(
   )?.domain;
   const order = occurrence.roomActions.order;
   if (command.kind === 'ReplaceShopPurchaseParticipation') {
+    if (command.offer.offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY)
+      failCommand(command, 'Travel Deal uses its roomExit acquisition entry participation');
     const reference = Object.freeze({
       kind: 'interactShopOffer' as const,
       offerKey: command.offer.offerKey,
@@ -58,7 +61,7 @@ export function applyRoomActionCommand(
       if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined) {
         failCommand(command, `${occurrence.gameName} has no materialized shop inventory`);
       }
-      if (occurrence.state.shop.offers[command.offer.offerKey] === undefined) {
+      if (authoredShopOffer(occurrence, command.offer.offerKey) === undefined) {
         failCommand(command, `unknown shop offer ${command.offer.offerKey}`);
       }
     }
@@ -80,7 +83,7 @@ export function applyRoomActionCommand(
       command.offer.offerKey,
       command.purchased,
       occurrence.state.kind === 'shop'
-        ? occurrence.state.shop?.offers[command.offer.offerKey]?.reward
+        ? authoredShopOffer(occurrence, command.offer.offerKey)?.reward
         : undefined,
     );
     if (nextOccurrence === occurrence) return document;
@@ -158,11 +161,31 @@ export function applyRoomActionCommand(
       break;
   }
 
-  const nextOccurrence = {
+  let nextOccurrence = {
     ...occurrence,
     roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
   };
   const removed = command.kind === 'RemoveRoomAction' ? order[existingIndex] : undefined;
+  const inserted = command.kind === 'InsertRoomAction' ? command.reference : undefined;
+  const travelParticipation =
+    removed?.kind === 'interactAcquisitionEntry' &&
+    removed.siteKey === 'roomExit' &&
+    removed.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+      ? false
+      : inserted?.kind === 'interactAcquisitionEntry' &&
+          inserted.siteKey === 'roomExit' &&
+          inserted.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+        ? true
+        : undefined;
+  if (travelParticipation !== undefined && nextOccurrence.state.kind === 'shop') {
+    nextOccurrence = reconcileAcquisitionResolvedRewardEntry(
+      catalog,
+      nextOccurrence,
+      TRAVEL_DEAL_REFILL_ENTRY_KEY,
+      travelParticipation,
+      authoredShopOffer(nextOccurrence, TRAVEL_DEAL_REFILL_ENTRY_KEY)?.reward,
+    );
+  }
   if (
     removed?.kind === 'interactAcquisitionEntry' &&
     removed.siteKey === 'roomExit' &&

@@ -53,7 +53,7 @@ interface WorkspaceRewardControlBase {
   readonly conversions?: readonly WorkspaceAcquisitionConversionControl[];
   readonly derivedShopEntryEdit?: {
     readonly site: AcquisitionSiteAddress;
-    readonly entryKey: 'travelDealRefill' | 'echoDoubleShopReward';
+    readonly entryKey: 'echoDoubleShopReward';
     readonly sourceOfferKey: string;
   };
 }

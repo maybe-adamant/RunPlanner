@@ -494,7 +494,7 @@ export type AcquisitionSiteCommand =
       /** Materializes one derived Shop entry; chronology insertion is a separate command. */
       readonly kind: 'SelectDerivedShopEntry';
       readonly site: AcquisitionSiteAddress;
-      readonly entryKey: 'travelDealRefill' | 'echoDoubleShopReward';
+      readonly entryKey: 'echoDoubleShopReward';
       readonly sourceOfferKey: string;
     };
 
@@ -586,7 +586,7 @@ export type DerivedShopEntryPayloadCommand =
 export type DerivedShopEntryEditCommand = {
   readonly kind: 'EditDerivedShopEntry';
   readonly site: AcquisitionSiteAddress;
-  readonly entryKey: 'travelDealRefill' | 'echoDoubleShopReward';
+  readonly entryKey: 'echoDoubleShopReward';
   readonly sourceOfferKey: string;
   readonly edit: DerivedShopEntryPayloadCommand;
 };

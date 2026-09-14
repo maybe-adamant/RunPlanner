@@ -12,6 +12,7 @@ import {
 import { acquisitionSiteFromStorageKey } from './artificer';
 import { roomActionKey } from '../room-actions/key';
 import type { AuthoredRewardState, RoomActionReference, RoomOccurrence } from '../model';
+import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
 
 /** One concrete authored acquisition and the exact action which can settle it. */
 export interface AuthoredAcquisitionSource {
@@ -42,7 +43,11 @@ function sourceAction(
       case 'rewardWheelOffer':
         return reference.kind === 'interactWheelReward' && reference.wheelKey === owner.wheelKey;
       case 'shopOffer':
-        return reference.kind === 'interactShopOffer' && reference.offerKey === owner.offerKey;
+        return owner.offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+          ? reference.kind === 'interactAcquisitionEntry' &&
+              reference.siteKey === 'roomExit' &&
+              reference.entryKey === owner.offerKey
+          : reference.kind === 'interactShopOffer' && reference.offerKey === owner.offerKey;
       case 'acquisitionEntry':
         return (
           (reference.kind === 'interactAcquisitionEntry' &&
@@ -115,6 +120,11 @@ export function authoredAcquisitionSources(
     case 'shop':
       for (const [offerKey, offer] of Object.entries(occurrence.state.shop?.offers ?? {}))
         add(createShopOfferAddress(biome, occurrence.occurrenceId, offerKey), offer.reward);
+      if (occurrence.state.shop?.travelDealRefill !== undefined)
+        add(
+          createShopOfferAddress(biome, occurrence.occurrenceId, TRAVEL_DEAL_REFILL_ENTRY_KEY),
+          occurrence.state.shop.travelDealRefill.reward,
+        );
       break;
     case 'none':
       break;

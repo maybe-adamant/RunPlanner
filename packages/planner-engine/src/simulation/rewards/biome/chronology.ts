@@ -415,7 +415,7 @@ export function evaluateBiomeRewardChronology(
       import('../acquisition/contracts').DerivedAcquisitionEntryFrontier[]
     >();
     for (const frontier of frontiers ?? []) {
-      const key = semanticAddressKey(frontier.address);
+      const key = semanticAddressKey(frontier.inventoryOwner ?? frontier.address);
       incomingByOwner.set(key, [...(incomingByOwner.get(key) ?? []), frontier]);
     }
     for (const [key, incoming] of incomingByOwner) {
@@ -434,7 +434,9 @@ export function evaluateBiomeRewardChronology(
         const host = rooms.get(semanticAddressKey(origin));
         const authoredEntry =
           host?.kind === 'authored'
-            ? host.acquisitionSites[first.address.site.pointKey]?.entries[first.address.entryKey]
+            ? host.entryState?.kind === 'shop'
+              ? host.entryState.travelDealRefill
+              : undefined
             : undefined;
         if (authoredEntry !== undefined) {
           const realizationOwner = createTravelDealRefillRealizationAddress(
@@ -486,7 +488,7 @@ export function evaluateBiomeRewardChronology(
             first.kind === 'travelDealRefill' || first.kind === 'echoDoubleShopReward'
               ? ('generationOnly' as const)
               : ('ownEnteredLifecycle' as const),
-          owners: Object.freeze([first.address]),
+          owners: Object.freeze([first.inventoryOwner ?? first.address]),
           evaluateOffer: (owner: SemanticAddress, offer: ResolvedRewardOffer) => {
             if (semanticAddressKey(owner) !== key)
               return fail('derived acquisition frontier received a foreign owner');
@@ -496,6 +498,22 @@ export function evaluateBiomeRewardChronology(
               supported: results.every((result) => result.supported),
             });
           },
+          ...(first.evaluateShopOption === undefined
+            ? {}
+            : {
+                evaluateShopOption: (
+                  _owner: SemanticAddress,
+                  selection: import('../../../reward-kernel').ShopOptionSelection,
+                ) => {
+                  const results = combined.map((candidate) =>
+                    candidate.evaluateShopOption!(selection),
+                  );
+                  return Object.freeze({
+                    findings: Object.freeze(results.flatMap((result) => result.findings)),
+                    supported: results.every((result) => result.supported),
+                  });
+                },
+              }),
         }),
       );
     }

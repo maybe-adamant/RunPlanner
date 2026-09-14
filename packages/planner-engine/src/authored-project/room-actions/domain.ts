@@ -20,6 +20,7 @@ import {
   type BiomeAddress,
   type SemanticAddress,
 } from '../addresses';
+import { authoredShopOffer } from '../shop';
 import {
   acquisitionSiteFromStorageKey,
   parseArtificerReplacementEntryKey,
@@ -374,7 +375,7 @@ function baseContribution(
     case 'interactShopOffer': {
       const reward =
         occurrence.state.kind === 'shop'
-          ? occurrence.state.shop?.offers[reference.offerKey]?.reward
+          ? authoredShopOffer(occurrence, reference.offerKey)?.reward
           : undefined;
       const owner =
         reward !== null &&
@@ -516,9 +517,18 @@ function baseContribution(
             ? []
             : [frozen({ kind: 'afterAction' as const, action: producer.sourceAction })]),
         ],
-        site === undefined
-          ? actionOwner(biome, occurrence, reference)
-          : createAcquisitionEntryAddress(site, reference.entryKey),
+        occurrence.state.kind === 'shop' &&
+          reference.siteKey === 'roomExit' &&
+          reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY &&
+          occurrence.state.shop?.travelDealRefill?.reward != null &&
+          !rewardSourceResolvesAtAcquisition(
+            catalog,
+            occurrence.state.shop.travelDealRefill.reward.offer,
+          )
+          ? createShopOfferAddress(biome, occurrence.occurrenceId, reference.entryKey)
+          : site === undefined
+            ? actionOwner(biome, occurrence, reference)
+            : createAcquisitionEntryAddress(site, reference.entryKey),
       );
     }
   }

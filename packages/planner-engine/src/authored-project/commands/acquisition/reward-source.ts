@@ -9,7 +9,12 @@ import {
   parseClockedTraitGeneratedPickupEntryKey,
   selectedPickupProducerForEntry,
 } from '../../acquisition/pickup-producers';
-import { authoredAcquisitionEntryAtSite, shopSlotProfile } from '../../shop';
+import {
+  authoredAcquisitionEntryAtSite,
+  authoredShopOffer,
+  replaceAuthoredShopOffer,
+  shopSlotProfile,
+} from '../../shop';
 import { parseArtificerReplacementEntryKey } from '../../acquisition/artificer';
 import { parseHermesShrineDeliveryEntryKey } from '../../hermes-shrine-delivery';
 import { requireShipCombatWheels } from '../../room-state/declaration';
@@ -230,7 +235,7 @@ export function locateReward(
         failCommand(command, `${occurrence.gameName} has no materialized Shop offers`);
       }
       {
-        const reward = state.shop.offers[owner.offerKey]?.reward;
+        const reward = authoredShopOffer(occurrence, owner.offerKey)?.reward;
         if (reward === undefined) failCommand(command, `missing Shop offer ${owner.offerKey}`);
         return Object.freeze({
           reward: requireAuthoredReward(
@@ -379,27 +384,22 @@ export function updateRewardState(
         failCommand(command, `${occurrence.gameName} has no materialized Shop offers`);
       }
       {
-        const entry = state.shop.offers[owner.offerKey];
+        const entry = authoredShopOffer(occurrence, owner.offerKey);
         if (entry === undefined) failCommand(command, `missing Shop offer ${owner.offerKey}`);
-        return Object.freeze({
-          ...state,
-          shop: Object.freeze({
-            ...state.shop,
-            offers: Object.freeze({
-              ...state.shop.offers,
-              [owner.offerKey]: Object.freeze({
-                ...entry,
-                reward: update(
-                  requireAuthoredReward(
-                    entry.reward,
-                    command,
-                    'cannot edit acquisition outcome before reward authorship',
-                  ),
-                ),
-              }),
-            }),
+        return replaceAuthoredShopOffer(
+          { ...occurrence, state },
+          owner.offerKey,
+          Object.freeze({
+            ...entry,
+            reward: update(
+              requireAuthoredReward(
+                entry.reward,
+                command,
+                'cannot edit acquisition outcome before reward authorship',
+              ),
+            ),
           }),
-        });
+        ).state;
       }
     case 'encounterPhase':
       return failCommand(command, 'encounter trait offers are updated by the encounter owner path');

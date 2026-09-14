@@ -16,6 +16,7 @@ import {
 } from '../acquisition/pickup-producers';
 import { seaStarDuplicateSourceIsActive } from '../acquisition/sea-star';
 import { rewardSourceResolvesAtAcquisition } from '../acquisition/reward-state';
+import { authoredShopOffer } from '../shop';
 export { roomActionKey } from './key';
 import { roomActionKey } from './key';
 
@@ -151,6 +152,14 @@ export function activeRoomActionReferences(
         if (!purchasedKeys.has(offerKey)) continue;
         references.push(Object.freeze({ kind: 'interactShopOffer', offerKey }));
       }
+      if (occurrence.state.shop?.travelDealRefill !== undefined)
+        references.push(
+          Object.freeze({
+            kind: 'interactAcquisitionEntry',
+            siteKey: 'roomExit',
+            entryKey: 'travelDealRefill',
+          }),
+        );
     }
   }
   if (occurrence.purgingPool?.interacted === true) {
@@ -213,9 +222,15 @@ export function activeRoomActionReferences(
   );
   for (const [siteKey, site] of Object.entries(occurrence.acquisitionSites ?? {})) {
     for (const entryKey of Object.keys(site.pickupEntries ?? {})) {
+      if (
+        occurrence.state.kind === 'shop' &&
+        siteKey === 'roomExit' &&
+        entryKey === 'travelDealRefill'
+      )
+        continue;
       const shopInventoryReward =
         occurrence.state.kind === 'shop' && siteKey === 'roomExit'
-          ? occurrence.state.shop?.offers[entryKey]?.reward
+          ? authoredShopOffer(occurrence, entryKey)?.reward
           : undefined;
       // A paid acquisition-resolved Shop entry is payload owned by its one
       // purchase action. It is not a second pickup participant.

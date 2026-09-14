@@ -1,13 +1,51 @@
 import type { Catalog } from '../catalog-schema';
 import type { ShopProfileDeclaration } from '../reward-kernel/model';
 import type { ResolvedRewardOffer } from '../reward-kernel';
-import type { AuthoredRewardState, RoomOccurrence } from './model';
+import type { AuthoredRewardState, RoomOccurrence, ShopOfferState, ShopState } from './model';
 import type { AcquisitionSiteAddress } from './addresses';
 import { acquisitionSiteStorageKey } from './acquisition/artificer';
 
 export const INFERNAL_CONTRACT_ENTRY_KEY = 'infernalContractReward' as const;
 export const TRAVEL_DEAL_REFILL_ENTRY_KEY = 'travelDealRefill' as const;
 export const ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY = 'echoDoubleShopReward' as const;
+
+/** The one persisted Shop-owner lookup for declared offers and Travel's dynamic refill slot. */
+export function authoredShopOffer(
+  occurrence: RoomOccurrence,
+  offerKey: string,
+): ShopOfferState | undefined {
+  const shop = occurrence.state.kind === 'shop' ? occurrence.state.shop : undefined;
+  if (shop === undefined) return undefined;
+  return authoredShopOfferFromState(shop, offerKey);
+}
+
+export function authoredShopOfferFromState(
+  shop: ShopState,
+  offerKey: string,
+): ShopOfferState | undefined {
+  return offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY ? shop.travelDealRefill : shop.offers[offerKey];
+}
+
+export function replaceAuthoredShopOffer(
+  occurrence: RoomOccurrence,
+  offerKey: string,
+  offer: ShopOfferState,
+): RoomOccurrence {
+  if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined)
+    throw new Error('Shop offer has no Shop owner');
+  const shop = occurrence.state.shop;
+  return Object.freeze({
+    ...occurrence,
+    state: Object.freeze({
+      ...occurrence.state,
+      shop: Object.freeze(
+        offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+          ? { ...shop, travelDealRefill: offer }
+          : { ...shop, offers: Object.freeze({ ...shop.offers, [offerKey]: offer }) },
+      ),
+    }),
+  });
+}
 
 /** Resolves a persisted Shop slot to its declaration-owned generation cohort. */
 export function shopSlotProfile(

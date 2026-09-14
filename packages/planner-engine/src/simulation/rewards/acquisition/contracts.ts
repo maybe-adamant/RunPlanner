@@ -65,6 +65,8 @@ export interface ProducerRoleSettlementProduct {
 
 export interface DerivedAcquisitionEntryFrontier {
   readonly address: AcquisitionEntryAddress;
+  /** Dynamic inventory and its later acquisition have different candidate owners. */
+  readonly inventoryOwner?: import('../../../authored-project/addresses').ShopOfferAddress;
   readonly kind:
     | 'echoDoubleShopPlaceholder'
     | 'echoDoubleShopReward'
@@ -94,6 +96,9 @@ export interface DerivedAcquisitionEntryFrontier {
   readonly branchesBeforeEntry: readonly RewardBranchState[];
   readonly evaluateOffer?: (
     offer: ResolvedRewardOffer,
+  ) => import('../producer-frontiers').RewardProducerCandidateResult;
+  readonly evaluateShopOption?: (
+    selection: import('../../../reward-kernel').ShopOptionSelection,
   ) => import('../producer-frontiers').RewardProducerCandidateResult;
 }
 

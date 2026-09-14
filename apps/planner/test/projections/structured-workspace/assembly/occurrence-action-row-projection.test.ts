@@ -875,7 +875,7 @@ describe('structured workspace actions assembly', () => {
 
   it('projects a Gold duplicate ordered after its Travel refill source', () => {
     const shopId = createOccurrenceId('golden-f-preboss-shop');
-    const base = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
+    let base = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
     const occurrenceAddress = createOccurrenceAddress(goldenFBiome, shopId);
     const site = createAcquisitionSiteAddress(occurrenceAddress, 'roomExit');
     const occurrence = base.route.biomes
@@ -883,7 +883,12 @@ describe('structured workspace actions assembly', () => {
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopId);
     const source =
       occurrence?.state.kind === 'shop' ? occurrence.state.shop?.offers.Boon?.reward : undefined;
-    if (source === undefined) throw new Error('F Preboss Boon default is missing');
+    if (source == null) throw new Error('F Preboss Boon default is missing');
+    base = applyProjectCommand(base, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(goldenFBiome, shopId, 'travelDealRefill'),
+      value: source.offer,
+    });
     const duplicate = createAcquisitionEntryAddress(site, 'echoDoubleShopReward');
     const project: ProjectDocument = {
       ...base,
@@ -921,7 +926,6 @@ describe('structured workspace actions assembly', () => {
                             ...(candidate.acquisitionSites ?? {}),
                             roomExit: {
                               pickupEntries: {
-                                travelDealRefill: source,
                                 echoDoubleShopReward: source,
                               },
                             },
@@ -975,7 +979,7 @@ describe('structured workspace actions assembly', () => {
 
   it('proposes an unranked Travel refill immediately after its source purchase', () => {
     const shopId = createOccurrenceId('golden-f-preboss-shop');
-    const base = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
+    let base = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
     const occurrenceAddress = createOccurrenceAddress(goldenFBiome, shopId);
     const site = createAcquisitionSiteAddress(occurrenceAddress, 'roomExit');
     const occurrence = base.route.biomes
@@ -983,7 +987,12 @@ describe('structured workspace actions assembly', () => {
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopId);
     const source =
       occurrence?.state.kind === 'shop' ? occurrence.state.shop?.offers.Boon?.reward : undefined;
-    if (source === undefined) throw new Error('F Preboss Boon default is missing');
+    if (source == null) throw new Error('F Preboss Boon default is missing');
+    base = applyProjectCommand(base, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(goldenFBiome, shopId, 'travelDealRefill'),
+      value: source.offer,
+    });
     const project: ProjectDocument = {
       ...base,
       route: {
@@ -1015,7 +1024,6 @@ describe('structured workspace actions assembly', () => {
                             ...(candidate.acquisitionSites ?? {}),
                             roomExit: {
                               pickupEntries: {
-                                travelDealRefill: source,
                                 echoDoubleShopReward: source,
                               },
                             },
