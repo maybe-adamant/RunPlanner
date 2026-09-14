@@ -32,9 +32,9 @@ describe('Hub layout contract', () => {
     expect(firstCssBlock('.hub-main-reward > .fixed-room-state')).toContain('margin: 0;');
   });
 
-  it('keeps the Overview board at three, two, and one columns as its container narrows', () => {
+  it('keeps the Overview board at four, two, and one columns as its container narrows', () => {
     expect(firstCssBlock('.hub-overview-room-grid')).toContain(
-      'grid-template-columns: repeat(3, minmax(0, 1fr));',
+      'grid-template-columns: repeat(4, minmax(0, 1fr));',
     );
     expect(styles).toMatch(
       /@container \(max-width: 760px\) \{[\s\S]*?\.hub-overview-room-grid \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/,

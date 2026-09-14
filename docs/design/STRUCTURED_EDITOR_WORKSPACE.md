@@ -604,7 +604,7 @@ surface, with named arrow controls retained for keyboard operation.
 The Hub Timeline roster reserves one shared column layout for its drag handle,
 rank, room identity, visit metadata, and reorder controls. Long
 room labels wrap within the identity column; they do not move later columns.
-The Overview board uses three equal columns at its normal workbench width, two
+The Overview board uses four equal columns at its normal workbench width, two
 at an intermediate container width, and one on narrow layouts. All 26 fixed
 slots remain in declaration order at every breakpoint, and these layout rules
 are presentation-only.
