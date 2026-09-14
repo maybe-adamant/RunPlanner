@@ -37,12 +37,17 @@ import type {
 } from '@planner/projections/structured-workspace';
 import {
   loadSurfaceNOProject,
+  loadSurfaceNOPQProject,
   createSurfaceNShrineSideRoomDeliveryCheckpoint,
   nBiome,
   nLocalOccurrenceId,
   nOccurrenceId,
   oBiome,
   oOccurrenceIds,
+  pBiome,
+  pOccurrenceIds,
+  qBiome,
+  qOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import { authorLegalTraitOffers, supportedTraitOffer } from '@run-planner/test-fixtures/shared';
 import {
@@ -389,6 +394,84 @@ describe('Hermes Shrine workbench', () => {
       ),
     );
     expect(() => workspaceProjection(view.application)).not.toThrow();
+  });
+
+  it('repairs a forced final-Preboss Mystery delivery through its own timeline controls', async () => {
+    const source = createOccurrenceAddress(
+      pBiome,
+      createOccurrenceId(`${pOccurrenceIds.prebossShop}:postboss`),
+    );
+    const host = createOccurrenceAddress(qBiome, qOccurrenceIds.preboss);
+    const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondRight');
+    let project = loadSurfaceNOPQProject();
+    for (const [slotKey, rewardType] of [
+      ['first', 'HealBigDrop'],
+      ['secondLeft', 'MaxHealthDrop'],
+      ['secondRight', 'BlindBoxLoot'],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: source,
+        slotKey,
+        value: { rewardType },
+      });
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: source,
+      generationKey: 'initial:secondRight',
+      purchase: { delay: 8, rushed: false },
+    });
+    const view = renderOccurrenceWorkbench(project, 'Surface', 'Q', occurrence(host.occurrenceId));
+    fireEvent.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    await view.user.click(screen.getByRole('button', { name: 'Place required delivery' }));
+    const placed = view.application.store.getState().projectWorkspace.history!.present;
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectReplaced(
+          decodeProjectDocument(JSON.parse(encodeProjectDocument(placed)), catalog),
+        ),
+      ),
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    const delivery = screen.getByText('Receive Mystery Boon').closest('li');
+    if (delivery === null) throw new Error('final Preboss Mystery delivery row is missing');
+    await view.user.click(within(delivery).getByRole('button', { name: 'Reward' }));
+    await view.user.click(within(await screen.findByRole('listbox')).getByText('Apollo'));
+    expect(within(delivery).getByRole('button', { name: /Trait/ })).toHaveProperty(
+      'disabled',
+      false,
+    );
+    const entry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
+      entryKey,
+    );
+    const traitEditor = workspaceProjection(view.application).interactions.traitOffers.get(
+      semanticAddressKey(createTraitOfferAddress(entry, 'hiddenSource')),
+    );
+    const draft = traitEditor?.traitsStartingDraft?.();
+    if (traitEditor === undefined || draft === undefined)
+      throw new Error('final Preboss Mystery delivery trait editor is missing');
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched(traitEditor.intentFor(draft).command),
+      ),
+    );
+
+    const settled = view.application.store.getState().projectWorkspace;
+    if (settled.kind !== 'openProject')
+      throw new Error('project was closed during delivery repair');
+    const reward = settled.history.present.route.biomes
+      .find((biome) => biome.biomeKey === 'Q')
+      ?.topology?.occurrences.find((room) => room.occurrenceId === host.occurrenceId)
+      ?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey];
+    expect(reward?.offer).toEqual({
+      rewardType: 'BlindBoxLoot',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    });
+    expect(reward?.traitOffersByAcquisitionRole.hiddenSource).toMatchObject({ kind: 'traits' });
+    expect(settled.assembly.evaluation.status).toBe('valid');
+    expect(within(delivery).getByRole('button', { name: /Edit Trait/ })).toBeTruthy();
   });
 
   it('keeps a reloaded Mystery delivery repairable after its earlier God leaves the pool', async () => {

@@ -754,6 +754,11 @@ describe('structured workspace actions assembly', () => {
         .filter((row) => row.rank !== null)
         .map((row) => row.participationOwnedByOverview),
     ).toEqual([true, true, true]);
+    expect(
+      result.roomActions?.rows
+        .filter((row) => row.rank !== null)
+        .map((row) => row.rewardPayload?.showOffer),
+    ).toEqual([false, false, false]);
   });
 
   it('proposes an unranked Travel refill immediately after its source purchase', () => {
