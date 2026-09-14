@@ -787,4 +787,42 @@ describe('Stygian Well consequential purchase state', () => {
     );
     expect(assessment.complete).toBe(false);
   });
+
+  it('ignores dormant refill detail but rejects a refill purchase without its trigger', () => {
+    const well = {
+      interacted: true,
+      offerKeyBySlot: {
+        healing: 'ArmorBoostStore',
+        secondLeft: 'TemporaryImprovedCastTrait',
+        secondRight: 'LimitedSwapTraitDrop',
+      },
+      travelDealRefillKey: 'RandomStoreItem',
+      twistResultKeyBySlot: { travelDealRefill: 'HealDropRange' },
+    } as const;
+    for (const hasTravelDeal of [false, true]) {
+      const dormant = assessStygianWell(
+        catalog,
+        catalog.rooms.byKey.F_Combat01,
+        well,
+        empty(),
+        undefined,
+        [],
+        undefined,
+        hasTravelDeal,
+      );
+      expect(dormant.travelDealRefill).toBeUndefined();
+      expect(dormant.issues).toEqual([]);
+      expect(dormant.complete).toBe(true);
+    }
+    const purchased = assessStygianWell(
+      catalog,
+      catalog.rooms.byKey.F_Combat01,
+      { ...well, purchasedGenerationKeys: ['travelDealRefill'] },
+      empty(),
+    );
+    expect(purchased.issues).toContainEqual({
+      kind: 'refillUnavailable',
+      generationKey: 'travelDealRefill',
+    });
+  });
 });

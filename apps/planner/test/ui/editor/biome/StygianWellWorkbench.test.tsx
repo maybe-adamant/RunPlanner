@@ -21,7 +21,12 @@ import { projectRouteStygianWellIndex } from '@planner/projections/routeRoomFeat
 import { workspaceBiome, workspaceProjection } from '@planner-test/support/biome-workbench';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import { RouteWellsPanel } from '@planner/ui/shell/RouteWellsPanel';
-import { goldenFBiome, loadUnderworldFGProject } from '@run-planner/test-fixtures/underworld';
+import {
+  createUnderworldFWellCheckpoint,
+  goldenFBiome,
+  loadUnderworldFGProject,
+} from '@run-planner/test-fixtures/underworld';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { renderOccurrenceWorkbench } from '@planner-test/support/biome-workbench';
 
 afterEach(cleanup);
@@ -105,17 +110,18 @@ describe('Stygian Well workbench', () => {
     expect(screen.getAllByRole('button', { name: /^Stygian Well / })).toHaveLength(3);
   });
 
-  it('retains an authored refill as selected-invalid when reached assessment has no refill capability', async () => {
+  it('keeps an inactive purchased refill repairable and hides it after clearing Purchased', async () => {
     const owner = createOccurrenceAddress(goldenFBiome, postbossId);
-    let project = applyProjectCommand(loadUnderworldFGProject(), catalog, {
-      kind: 'SetStygianWellInteraction',
-      occurrence: owner,
-      interacted: true,
-    });
-    project = applyProjectCommand(project, catalog, {
+    let project = applyProjectCommand(authoredWell(), catalog, {
       kind: 'ReplaceStygianWellTravelDealRefill',
       occurrence: owner,
       itemKey: 'ArmorBoostStore',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: owner,
+      generationKey: 'travelDealRefill',
+      purchased: true,
     });
 
     const view = renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrence);
@@ -127,6 +133,48 @@ describe('Stygian Well workbench', () => {
     expect(screen.getByText('Current selection')).toBeTruthy();
     expect(choice.getAttribute('data-candidate-state')).toBe('impossible');
     expect(choice.getAttribute('aria-disabled')).toBe('true');
+    await view.user.keyboard('{Escape}');
+    await view.user.click(
+      screen.getByRole('checkbox', { name: 'Purchased Stygian Well Travel Deal' }),
+    );
+    expect(screen.queryByRole('button', { name: 'Stygian Well Travel Deal Item' })).toBeNull();
+  });
+
+  it('hides a dormant refill when the last initial purchase is cleared and restores it on purchase', async () => {
+    const owner = createOccurrenceAddress(goldenFBiome, postbossId);
+    let project = createUnderworldFWellCheckpoint();
+    for (const generationKey of ['initial:secondRight', 'travelDealRefill'] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'SetStygianWellPurchase',
+        occurrence: owner,
+        generationKey,
+        purchased: false,
+      });
+    }
+    const view = renderOccurrenceWorkbench(
+      authorLegalTraitOffers(project),
+      'Underworld',
+      'F',
+      occurrence,
+    );
+    openOverview();
+    const refillLabel = screen.getByRole('button', {
+      name: 'Stygian Well Travel Deal Item',
+    }).textContent;
+    const purchase = screen.getByRole('checkbox', { name: 'Purchased Stygian Well Offer 2' });
+    await view.user.click(purchase);
+    expect(screen.queryByRole('button', { name: 'Stygian Well Travel Deal Item' })).toBeNull();
+    expect(
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes[0]!.topology!.occurrences.find(
+          (room) => room.occurrenceId === postbossId,
+        )?.stygianWell?.travelDealRefillKey,
+    ).toBe('ExtendedShopTrait');
+    await view.user.click(purchase);
+    expect(screen.getByRole('button', { name: 'Stygian Well Travel Deal Item' }).textContent).toBe(
+      refillLabel,
+    );
   });
 
   it('shows Twist only for a purchased Twist generation and clears purchase intent on exit', async () => {

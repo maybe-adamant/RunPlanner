@@ -6,6 +6,7 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createBiomeAddress,
+  createIncomingRewardAddress,
   createRewardWheelOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
@@ -43,7 +44,7 @@ import {
   oBiome,
   oOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
-import { supportedTraitOffer } from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers, supportedTraitOffer } from '@run-planner/test-fixtures/shared';
 import {
   renderOccurrenceWorkbench,
   workspaceBiome,
@@ -663,6 +664,67 @@ describe('Hermes Shrine workbench', () => {
     expect((delay as HTMLSelectElement).value).toBe('4');
     expect(screen.queryByRole('checkbox', { name: 'Rush Hermes Shrine Travel Deal' })).toBeNull();
     expect(within(delay).getAllByRole('option')).toHaveLength(7);
+  });
+
+  it('hides the retained Travel Deal refill when Rush is cleared and restores it when rushed again', async () => {
+    const postbossId = createOccurrenceId('surface-n-preboss:postboss');
+    const owner = createOccurrenceAddress(nBiome, postbossId);
+    let project = loadSurfaceNOProject();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, createOccurrenceId('surface-n-combat05')),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
+    });
+    const hermes = createIncomingRewardAddress(nBiome, createOccurrenceId('surface-n-combat09'));
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: hermes,
+      value: { rewardType: 'HermesUpgrade' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(hermes, 'self'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Hermes',
+        options: [
+          { traitKey: 'RestockBoon', rarity: 'Epic' },
+          { traitKey: 'HermesWeaponBoon', rarity: 'Rare' },
+          { traitKey: 'SprintShieldBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineTravelDealRefill',
+      occurrence: owner,
+      value: { rewardType: 'ArmorBoost' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: owner,
+      generationKey: 'initial:first',
+      purchase: { delay: 2, rushed: true },
+    });
+    project = authorLegalTraitOffers({
+      ...project,
+      route: { ...project.route, biomes: project.route.biomes.slice(0, 1) },
+    });
+    const view = renderOccurrenceWorkbench(project, 'Surface', 'N', occurrence(postbossId));
+    openOverview();
+    expect(screen.getByRole('button', { name: 'Hermes Shrine Travel Deal Item' })).toBeTruthy();
+    const rush = screen.getByRole('checkbox', { name: 'Rush Hermes Shrine Offer 1' });
+    await view.user.click(rush);
+    expect(screen.queryByRole('button', { name: 'Hermes Shrine Travel Deal Item' })).toBeNull();
+    expect(
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes[0]!.topology!.occurrences.find(
+          (room) => room.occurrenceId === postbossId,
+        )?.hermesShrine?.travelDealRefill?.offer,
+    ).toEqual({ rewardType: 'ArmorBoost' });
+    await view.user.click(rush);
+    expect(screen.getByRole('button', { name: 'Hermes Shrine Travel Deal Item' })).toBeTruthy();
   });
 
   it('indexes only present Shrines and navigates to their owning room', async () => {

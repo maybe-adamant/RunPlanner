@@ -279,9 +279,11 @@ function roomFeatures(
                   });
             const refill =
               well === undefined ||
-              (well.travelDealRefillKey === undefined &&
-                well.twistResultKeyBySlot?.travelDealRefill == null &&
-                wellAssessment?.travelDealRefill === undefined)
+              (wellAssessment?.travelDealRefill === undefined &&
+                !purchased.has('travelDealRefill') &&
+                (wellAssessment !== undefined ||
+                  (well.travelDealRefillKey === undefined &&
+                    well.twistResultKeyBySlot?.travelDealRefill == null)))
                 ? []
                 : (() => {
                     const generationKey = 'travelDealRefill' as const;
@@ -452,8 +454,9 @@ function roomFeatures(
                     }),
               ),
               ...(shrine === undefined ||
-              (shrine.travelDealRefill === undefined &&
-                shrineAssessment?.travelDealRefill === undefined)
+              (shrineAssessment?.travelDealRefill === undefined &&
+                shrine.travelDealRefill?.purchase === undefined &&
+                (shrineAssessment !== undefined || shrine.travelDealRefill === undefined))
                 ? {}
                 : {
                     travelDealRefill: (() => {

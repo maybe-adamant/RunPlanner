@@ -226,15 +226,19 @@ export function assessStygianWell(
   }
   const selected = values.filter((value): value is string => value !== null);
   if (new Set(selected).size !== selected.length) issues.push({ kind: 'duplicate' });
-  if (
+  if (travelDealRefill === undefined && purchased.has('travelDealRefill')) {
+    issues.push({ kind: 'refillUnavailable', generationKey: 'travelDealRefill' });
+  } else if (
     travelDealRefill !== undefined &&
     (well.travelDealRefillKey === undefined || well.travelDealRefillKey === null)
   ) {
     issues.push({ kind: 'refillMissing', generationKey: 'travelDealRefill' });
-  } else if (well.travelDealRefillKey !== undefined && well.travelDealRefillKey !== null) {
-    if (travelDealRefill === undefined)
-      issues.push({ kind: 'refillUnavailable', generationKey: 'travelDealRefill' });
-    else if (!travelDealRefill.candidateItemKeys.includes(well.travelDealRefillKey)) {
+  } else if (
+    travelDealRefill !== undefined &&
+    well.travelDealRefillKey !== undefined &&
+    well.travelDealRefillKey !== null
+  ) {
+    if (!travelDealRefill.candidateItemKeys.includes(well.travelDealRefillKey)) {
       const sourceDomain = sourceSlot === undefined ? [] : domains[sourceSlot];
       issues.push({
         kind: sourceDomain.includes(well.travelDealRefillKey)
@@ -250,6 +254,12 @@ export function assessStygianWell(
     'initial:secondRight',
     'travelDealRefill',
   ] as const) {
+    if (
+      generation === 'travelDealRefill' &&
+      travelDealRefill === undefined &&
+      !purchased.has(generation)
+    )
+      continue;
     const result =
       well.twistResultKeyBySlot?.[
         generation === 'travelDealRefill'
