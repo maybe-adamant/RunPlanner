@@ -589,6 +589,9 @@ They cover incoming rewards, Fields cages, Ship encounter counts and wheels,
 Ephyra side-room generation/order/rewards, Shop offers, sparse acquisition
 payloads, and the exact occurrence-owned Room Action order. Leaf edits do not
 rewrite topology.
+For existing detours, declaration lookup uses the occurrence's game name while
+the address retains its hosting biome. Automatic outcome edits validate that
+declaration's encounter phase, not equality between its room set and host biome.
 
 ### Trait Offer Outcomes
 

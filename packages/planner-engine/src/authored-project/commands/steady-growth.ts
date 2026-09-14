@@ -1,6 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ProjectDocument } from '../model';
-import { failCommand, requireOccurrence, requireRoom, type LocatedBiome } from './contract';
+import { failCommand, requireOccurrence, type LocatedBiome } from './contract';
 import { updateOccurrence } from './occurrence/mutation';
 import type { SteadyGrowthCommand } from './types';
 import { encounterBindingsBySlot } from '../room-state/encounter-envelope';
@@ -17,7 +17,8 @@ export function applySteadyGrowthCommand(
     failCommand(command, `unknown trait ${target}`);
   const occurrence = requireOccurrence(located.plan, command.outcome.owner.occurrenceId, command);
   const phaseKey = command.outcome.phaseKey;
-  const room = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
+  const room = catalog.rooms.byKey[occurrence.gameName];
+  if (room === undefined) failCommand(command, `unknown room ${occurrence.gameName}`);
   if (!encounterBindingsBySlot(catalog, room, room.gameName).has(phaseKey))
     failCommand(command, `${room.gameName} has no encounter phase ${phaseKey}`);
   const current = occurrence.encounters.steadyGrowthTargetByPhase ?? {};
