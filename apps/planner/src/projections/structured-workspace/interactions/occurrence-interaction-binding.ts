@@ -811,39 +811,44 @@ export function bindOccurrenceLocalInteractions(
                 }),
             }),
           );
-          if (slot.twist !== undefined) {
-            stygianWellTwistResults.set(
-              slot.twist.interactionKey,
-              Object.freeze({
-                key: slot.twist.interactionKey,
-                load: createMemoizedStableIdentityPickerLoad({
-                  assessment: requirement.assessment,
-                  choices: [
-                    { label: 'Unresolved', value: null },
-                    ...slot.twist.candidateItems.map((item) => ({
-                      label: item.label,
-                      value: item.key,
-                    })),
-                  ],
-                  selected: slot.twist.itemKey,
-                  selectedLabel: slot.twist.itemLabel,
-                }),
-                owner: requirement.owner,
-                generationKey: slot.generationKey,
-                itemKey: slot.twist.itemKey,
-                candidateItemKeys: slot.twist.candidateItemKeys,
-                intentFor: (itemKey: string | null) =>
-                  Object.freeze({
-                    command: Object.freeze({
-                      kind: 'ReplaceStygianWellTwistResult' as const,
-                      occurrence: requirement.owner,
-                      generationKey: slot.generationKey,
-                      itemKey,
-                    }),
-                  }),
+        }
+        for (const twist of requirement.twists) {
+          stygianWellTwistResults.set(
+            twist.interactionKey,
+            Object.freeze({
+              key: twist.interactionKey,
+              load: createMemoizedStableIdentityPickerLoad({
+                assessment: requirement.assessment,
+                choices: [
+                  { label: 'Unresolved', value: null },
+                  ...twist.candidateItems.map((item) => ({
+                    label: item.label,
+                    value: item.key,
+                  })),
+                ],
+                selected: twist.itemKey,
+                selectedLabel:
+                  twist.itemKey === null
+                    ? 'Unresolved'
+                    : (catalog.rewards.shops.byKey.RoomShop?.groups.values
+                        .flatMap((group) => group.options.values)
+                        .find((option) => option.key === twist.itemKey)?.label ?? twist.itemKey),
               }),
-            );
-          }
+              owner: requirement.owner,
+              generationKey: twist.generationKey,
+              itemKey: twist.itemKey,
+              candidateItemKeys: twist.candidateItemKeys,
+              intentFor: (itemKey: string | null) =>
+                Object.freeze({
+                  command: Object.freeze({
+                    kind: 'ReplaceStygianWellTwistResult' as const,
+                    occurrence: requirement.owner,
+                    generationKey: twist.generationKey,
+                    itemKey,
+                  }),
+                }),
+            }),
+          );
         }
         break;
       }

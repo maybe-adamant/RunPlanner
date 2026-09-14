@@ -100,6 +100,18 @@ export interface WorkspaceRoomActionRow {
   readonly traitOffer?: WorkspaceTraitOfferControl;
   /** Exact Phial target control nested under this occurrence-owned fountain action. */
   readonly fountainRarity?: WorkspaceFountainRarityControl;
+  /** Exact Fateful Twist result control at this purchased Well action. */
+  readonly stygianWellTwist?: {
+    readonly address: import('@run-planner/engine/authored-project').RoomFeatureAddress;
+    readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
+    readonly marker: WorkspaceMarker;
+    readonly itemKey: string | null;
+    /** Catalog-derived presentation for the authored result when the picker is closed. */
+    readonly itemLabel?: string;
+    readonly candidateItemKeys: readonly string[];
+    readonly candidateItems: readonly { readonly key: string; readonly label: string }[];
+    readonly interactionKey: string;
+  };
   readonly executable: boolean;
 }
 

@@ -593,11 +593,16 @@ function executionStygianWell(
               ] as const
             ).flatMap(([generationKey, offerKey, twistResultKey]) => {
               if (offerKey === null || offerKey === undefined) return [];
+              const purchased =
+                room.stygianWell?.purchasedGenerationKeys?.includes(generationKey) === true;
               return [
                 Object.freeze({
                   generationKey,
                   offerKey,
-                  ...(twistResultKey === undefined || twistResultKey === null
+                  ...(!purchased ||
+                  offerKey !== 'RandomStoreItem' ||
+                  twistResultKey === undefined ||
+                  twistResultKey === null
                     ? {}
                     : { twistResultKey }),
                 }),

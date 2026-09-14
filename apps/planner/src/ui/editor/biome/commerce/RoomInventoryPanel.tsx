@@ -8,10 +8,7 @@ import type { WorkspacePurgingPoolSlotInteraction } from '@planner/projections/s
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import {
-  useOptionalWorkspaceInteraction,
-  useWorkspaceInteraction,
-} from '@planner/ui/controls/useWorkspaceInteraction';
+import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 
 const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze({
@@ -339,14 +336,6 @@ function StygianWellSlotEditor({
     slot.purchaseInteractionKey,
   );
   const offerPicker = useWorkspaceInteraction(offer);
-  const twist =
-    slot.twist === undefined
-      ? undefined
-      : requireWorkspaceInteraction(
-          interactions.stygianWellTwistResults,
-          slot.twist.interactionKey,
-        );
-  const twistPicker = useOptionalWorkspaceInteraction<ContextualPickerModel<string | null>>(twist);
   return (
     <div className="shop-family-offer-row room-purging-pool-slot">
       <ContextualPicker
@@ -374,27 +363,6 @@ function StygianWellSlotEditor({
         />
         Purchased
       </label>
-      {twist === undefined ? null : (
-        <>
-          <ContextualPicker
-            findingTarget={findingTarget(slot.twist!.address)}
-            ariaLabel={`Stygian Well ${slot.label} Twist result`}
-            id={`${twist.key}-picker`}
-            label={`${slot.label} Twist result`}
-            layout="inline"
-            loading={twistPicker.pending}
-            model={twistPicker.result ?? emptyNullablePicker}
-            onOpenChange={(open) => {
-              if (open) twistPicker.activate();
-            }}
-            onSelect={(itemKey) => executeIntent(twist.intentFor(itemKey))}
-            placeholder="Unresolved"
-            {...(slot.twist!.itemLabel === undefined
-              ? {}
-              : { triggerLabel: slot.twist!.itemLabel })}
-          />
-        </>
-      )}
     </div>
   );
 }

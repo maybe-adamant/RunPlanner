@@ -316,6 +316,9 @@ export function assembleWorkspaceOccurrence(
     ...(input.derivedAcquisitionEntries === undefined
       ? {}
       : { derivedAcquisitionEntries: input.derivedAcquisitionEntries }),
+    ...(input.stygianWellAssessment === undefined
+      ? {}
+      : { stygianWellAssessment: input.stygianWellAssessment }),
     controls: allRewardControls,
     encounterPhases,
     roomLabel: room.label,
@@ -670,6 +673,13 @@ export function assembleWorkspaceOccurrence(
       ),
     );
     for (const row of roomActions.rows) {
+      if (row.stygianWellTwist !== undefined) {
+        input.markerDestinations.redirectToContext(
+          row.stygianWellTwist.marker,
+          row.marker,
+          node.key,
+        );
+      }
       const acquisitionMarkers = Object.freeze([
         ...(row.traitOffer === undefined ? [] : traitOfferMarkers(row.traitOffer)),
         ...(row.rewardPayload !== undefined &&

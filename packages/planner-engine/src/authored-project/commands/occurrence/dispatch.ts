@@ -429,6 +429,7 @@ export function applyOccurrenceCommand(
       );
       if (command.itemKey !== null && !known.has(command.itemKey))
         failCommand(command, 'unknown RoomShop item');
+      const previousItemKey = well.offerKeyBySlot[command.slotKey];
       return updateOccurrence(
         document,
         located,
@@ -440,6 +441,19 @@ export function applyOccurrenceCommand(
               ...well.offerKeyBySlot,
               [command.slotKey]: command.itemKey,
             }),
+            ...(previousItemKey === 'RandomStoreItem' && command.itemKey === 'RandomStoreItem'
+              ? {}
+              : well.twistResultKeyBySlot === undefined
+                ? {}
+                : {
+                    twistResultKeyBySlot: Object.freeze(
+                      Object.fromEntries(
+                        Object.entries(well.twistResultKeyBySlot ?? {}).filter(
+                          ([slotKey]) => slotKey !== command.slotKey,
+                        ),
+                      ),
+                    ),
+                  }),
           }),
         }),
       );
@@ -456,12 +470,29 @@ export function applyOccurrenceCommand(
       );
       if (command.itemKey !== null && !known.has(command.itemKey))
         failCommand(command, 'unknown RoomShop item');
+      const previousItemKey = well.travelDealRefillKey;
       return updateOccurrence(
         document,
         located,
         Object.freeze({
           ...occurrence,
-          stygianWell: Object.freeze({ ...well, travelDealRefillKey: command.itemKey }),
+          stygianWell: Object.freeze({
+            ...well,
+            travelDealRefillKey: command.itemKey,
+            ...(previousItemKey === 'RandomStoreItem' && command.itemKey === 'RandomStoreItem'
+              ? {}
+              : well.twistResultKeyBySlot === undefined
+                ? {}
+                : {
+                    twistResultKeyBySlot: Object.freeze(
+                      Object.fromEntries(
+                        Object.entries(well.twistResultKeyBySlot ?? {}).filter(
+                          ([slotKey]) => slotKey !== 'travelDealRefill',
+                        ),
+                      ),
+                    ),
+                  }),
+          }),
         }),
       );
     }

@@ -376,30 +376,26 @@ export function applyRoomEnteredTransition(
       if (entry === undefined)
         throw new BiomeRewardSimulationContractError(`${room.gameName} has no Well entry frontier`);
       const priorEnteredWellFlags = priorThreeRoomShopPresence(entry.ledgers.roomAppearances);
-      const firstPurchaseGenerationKey = room.roomActions.order.find(
-        (action) => action.kind === 'purchaseStygianWellOffer',
-      )?.generationKey;
-      const assessments: readonly StygianWellCandidateContext[] = Object.freeze(
-        next.map((branch) =>
-          room.stygianWell === undefined
-            ? Object.freeze({
-                placement: assessStygianWellPlacement(declaration, priorEnteredWellFlags),
-              })
-            : Object.freeze({
-                placement: assessStygianWellPlacement(declaration, priorEnteredWellFlags),
-                inventory: assessStygianWell(
-                  catalog,
-                  declaration,
-                  room.stygianWell,
-                  branch.stygianWell,
-                  branch.traitHistory,
-                  priorEnteredWellFlags,
-                  firstPurchaseGenerationKey,
-                  branch.traitHistory?.equippedTraits.RestockBoon !== undefined,
-                ),
-              }),
-        ),
-      );
+      const assessments: readonly import('../../../commerce/stygian-well').StygianWellEntryCandidateContext[] =
+        Object.freeze(
+          next.map((branch) =>
+            room.stygianWell === undefined
+              ? Object.freeze({
+                  placement: assessStygianWellPlacement(declaration, priorEnteredWellFlags),
+                })
+              : Object.freeze({
+                  placement: assessStygianWellPlacement(declaration, priorEnteredWellFlags),
+                  inventory: assessStygianWell(
+                    catalog,
+                    declaration,
+                    room.stygianWell,
+                    branch.stygianWell,
+                    branch.traitHistory,
+                    priorEnteredWellFlags,
+                  ),
+                }),
+          ),
+        );
       stygianWellAssessment = Object.freeze({
         origin: room.origin,
         assessments,
@@ -425,26 +421,14 @@ export function applyRoomEnteredTransition(
                 ? 'stygianWellWrongGroup'
                 : issue.kind === 'duplicate'
                   ? 'stygianWellDuplicate'
-                  : issue.kind.startsWith('refill')
-                    ? 'stygianWellTravelDealRefillUnavailable'
-                    : 'stygianWellTwistInvalid';
+                  : 'stygianWellWrongGroup';
           const origin =
             issue.kind === 'duplicate'
               ? createRoomFeatureAddress(room.origin, { kind: 'stygianWellInventory' })
-              : issue.kind.startsWith('refill')
-                ? createRoomFeatureAddress(room.origin, {
-                    kind: 'stygianWellOffer',
-                    generationKey: 'travelDealRefill',
-                  })
-                : issue.kind.startsWith('twist')
-                  ? createRoomFeatureAddress(room.origin, {
-                      kind: 'stygianWellTwist',
-                      generationKey: issue.generationKey,
-                    })
-                  : createRoomFeatureAddress(room.origin, {
-                      kind: 'stygianWellOffer',
-                      generationKey: issue.generationKey,
-                    });
+              : createRoomFeatureAddress(room.origin, {
+                  kind: 'stygianWellOffer',
+                  generationKey: issue.generationKey,
+                });
           findings.push(
             Object.freeze({
               finding: rewardFinding(code, origin, { reason: issue.kind }),

@@ -657,7 +657,11 @@ export function executionTimelineTransactions(
             ? undefined
             : room.stygianWell?.twistResultKeyBySlot?.[slot];
       const wellOwner = semanticAddressKey(timeline.action.owner);
-      if (twistResultKey !== undefined && twistResultKey !== null) {
+      if (
+        offerKey === 'RandomStoreItem' &&
+        twistResultKey !== undefined &&
+        twistResultKey !== null
+      ) {
         add({
           kind: 'transformation',
           owner: wellOwner,
@@ -918,7 +922,9 @@ export function executionTimelineTransactions(
           generationKey: 'travelDealRefill',
           offerKey: refill.offerKey,
           effect: refill.effect,
-          ...(refill.twistResultKey === undefined ? {} : { twistResultKey: refill.twistResultKey }),
+          ...(refill.offerKey !== 'RandomStoreItem' || refill.twistResultKey === undefined
+            ? {}
+            : { twistResultKey: refill.twistResultKey }),
         }),
       }),
       window: windowFor(semanticAddressKey(refill.sourceOwner)),

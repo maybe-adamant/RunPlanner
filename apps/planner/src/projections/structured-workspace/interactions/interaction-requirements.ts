@@ -178,13 +178,13 @@ export type WorkspaceOccurrenceInteractionRequirement =
         readonly offerInteractionKey: string;
         readonly purchased: boolean;
         readonly purchaseInteractionKey: string;
-        readonly twist?: {
-          readonly itemKey: string | null;
-          readonly itemLabel?: string;
-          readonly candidateItemKeys: readonly string[];
-          readonly candidateItems: readonly { readonly key: string; readonly label: string }[];
-          readonly interactionKey: string;
-        };
+      }[];
+      readonly twists: readonly {
+        readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
+        readonly itemKey: string | null;
+        readonly candidateItemKeys: readonly string[];
+        readonly candidateItems: readonly { readonly key: string; readonly label: string }[];
+        readonly interactionKey: string;
       }[];
     }
   | {

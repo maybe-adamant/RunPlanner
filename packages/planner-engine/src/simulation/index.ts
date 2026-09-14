@@ -10,6 +10,7 @@ export {
 export { type PurgingPoolCandidateCapability } from './commerce/purging-pool';
 export {
   assessStygianWell,
+  assessStygianWellPurchase,
   assessStygianWellPlacement,
   priorThreeRoomShopPresence,
   applyStygianWellPurchase,
@@ -18,8 +19,9 @@ export {
   extendedWellItemKeys,
   twistResultItemKeys,
   type StygianWellAssessment,
-  type StygianWellAssessmentIssue,
+  type StygianWellInventoryAssessmentIssue,
   type StygianWellCandidateContext,
+  type StygianWellPurchaseAssessment,
   type StygianWellRunState,
 } from './commerce/stygian-well';
 export {
