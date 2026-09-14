@@ -16,6 +16,7 @@ export interface ContextualPickerItem<T> {
   readonly key: string;
   readonly value: T;
   readonly label: string;
+  readonly ariaLabel?: string;
   readonly state: ContextualOptionState;
   readonly selected: boolean;
   readonly disabled: boolean;
