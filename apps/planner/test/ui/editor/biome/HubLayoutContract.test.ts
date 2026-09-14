@@ -19,6 +19,19 @@ function firstCssBlock(selector: string): string {
 }
 
 describe('Hub layout contract', () => {
+  it('insets board headings to match the Overview and Timeline content', () => {
+    expect(firstCssBlock('.hub-board-heading')).toContain('padding: 12px 12px 0;');
+    expect(firstCssBlock('.hub-overview-room-grid')).toContain('padding: 12px;');
+    expect(firstCssBlock('.hub-ranked-room-board')).toContain('padding: 12px;');
+  });
+
+  it('gives open and closed rewards a picker-height row that can grow with wrapped text', () => {
+    const rewardSlot = firstCssBlock('.hub-overview-reward-slot');
+    expect(rewardSlot).toContain('grid-template-rows: minmax(36px, auto);');
+    expect(rewardSlot).toContain('align-items: center;');
+    expect(firstCssBlock('.hub-main-reward > .fixed-room-state')).toContain('margin: 0;');
+  });
+
   it('keeps the Overview board at three, two, and one columns as its container narrows', () => {
     expect(firstCssBlock('.hub-overview-room-grid')).toContain(
       'grid-template-columns: repeat(3, minmax(0, 1fr));',
@@ -31,9 +44,26 @@ describe('Hub layout contract', () => {
     );
   });
 
-  it('keeps timeline cards on one explicit six-region roster layout before responsive stacking', () => {
+  it('keeps timeline cards on one explicit five-region roster layout before responsive stacking', () => {
     expect(firstCssBlock('.hub-roster-primary')).toContain(
-      'grid-template-columns: 28px 26px minmax(10rem, 2fr) minmax(10rem, 1.35fr) minmax(7rem, auto) auto;',
+      'grid-template-columns: 28px 26px minmax(10rem, 2fr) minmax(10rem, 1.35fr) auto;',
     );
+  });
+
+  it('aligns room labels with membership and visit controls across Hub views', () => {
+    expect(firstCssBlock('.hub-roster-primary')).toContain('align-items: center;');
+    expect(firstCssBlock('.hub-roster-identity')).toContain('align-content: center;');
+    expect(firstCssBlock('.hub-slot-heading')).toContain('align-items: center;');
+    expect(
+      firstCssBlock(
+        ".hub-open-room-card[data-hub-card-presentation='overview'] .hub-roster-primary",
+      ),
+    ).toContain('grid-template-columns: minmax(0, 1fr) auto;');
+
+    const narrowStyles = styles.slice(styles.indexOf('@container (max-width: 560px)'));
+    expect(narrowStyles).toMatch(
+      /\.hub-roster-primary \{\s*grid-template-columns: 28px 24px minmax\(0, 1fr\);/,
+    );
+    expect(narrowStyles).toMatch(/> \.hub-roster-identity \{\s*grid-column: 3;\s*grid-row: 1;/);
   });
 });

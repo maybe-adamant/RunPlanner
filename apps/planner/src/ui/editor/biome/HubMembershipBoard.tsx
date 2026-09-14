@@ -242,12 +242,7 @@ export function ClosedHubRoomOption({
         <div className="hub-roster-identity">
           <div className="hub-slot-heading">
             <h3>{slot.label}</h3>
-          </div>
-          <div className="hub-slot-meta">
-            <div className="hub-slot-state">
-              <span className="room-kind">{slot.roomKind}</span>
-              <MarkerAssessment marker={slot.marker} />
-            </div>
+            <MarkerAssessment marker={slot.marker} />
           </div>
         </div>
         <HubSlotMembershipControl

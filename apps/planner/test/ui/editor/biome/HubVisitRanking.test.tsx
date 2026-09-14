@@ -116,14 +116,7 @@ describe('HubVisitRanking', () => {
     renderStaticHubDecisionWorkbench(representativeHubProject);
     selectHubTab('Hub Timeline');
 
-    const expectedRegions = [
-      'drag-handle',
-      'rank',
-      'identity',
-      'visit-meta',
-      'room-details',
-      'reorder-controls',
-    ];
+    const expectedRegions = ['drag-handle', 'rank', 'identity', 'visit-meta', 'reorder-controls'];
     const cards = Array.from(document.querySelectorAll<HTMLElement>('.hub-open-room-card'));
     expect(cards.length).toBeGreaterThan(1);
 
@@ -133,7 +126,6 @@ describe('HubVisitRanking', () => {
           .map((child) => child.getAttribute('data-hub-roster-region'))
           .filter((region): region is string => region !== null),
       ).toEqual(expectedRegions);
-      expect(card.querySelector('[data-hub-roster-region="room-details"]')).not.toBeNull();
     }
   });
 
@@ -679,6 +671,11 @@ describe('HubVisitRanking', () => {
 
   it('uses the rank for authored selection and reserves Entered for evaluated entry', () => {
     const entered = renderStaticHubDecisionWorkbench(loadSurfaceNOPQProject());
+    const overviewCard = within(entered.container).getByRole('article', {
+      name: 'Combat 05 Hub room',
+    });
+    expect(within(overviewCard).queryByText('Entered')).toBeNull();
+    selectHubTab('Hub Timeline');
     const enteredCard = within(entered.container).getByRole('article', {
       name: 'Combat 05 Hub room',
     });
@@ -700,14 +697,10 @@ describe('HubVisitRanking', () => {
     expect(laterVisit.visited).toBe(true);
     expect(laterVisit.room.detailsActive).toBe(true);
     expect(laterVisit.room.entered).toBe(false);
+    selectHubTab('Hub Timeline');
     const retainedCard = screen.getByRole('article', { name: 'Combat 02 Hub room' });
     expect(retainedCard.dataset.visitPosition).toBe('3');
     expect(within(retainedCard).queryByText('Visit 3')).toBeNull();
     expect(within(retainedCard).queryByText('Entered')).toBeNull();
-    expect(
-      within(retainedCard).getByRole('button', {
-        name: 'Open details for Combat 02',
-      }),
-    ).toBeTruthy();
   });
 });
