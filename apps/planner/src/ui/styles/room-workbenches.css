@@ -849,6 +849,12 @@
   justify-content: flex-start;
 }
 
+.room-action-row[data-inline-layout='mystery-boon'] .room-action-inline-reward {
+  flex-basis: 10rem;
+  width: 10rem;
+  min-width: 0;
+}
+
 .room-action-row[data-inline-layout='mystery-boon'] .trait-offer-launcher {
   margin-inline-start: auto;
 }

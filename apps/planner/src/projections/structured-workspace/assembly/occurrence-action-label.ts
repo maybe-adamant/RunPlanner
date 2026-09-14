@@ -1,14 +1,53 @@
 import {
+  ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   parseArtificerReplacementEntryKey,
   parseClockedTraitGeneratedPickupEntryKey,
   parseEchoLastRewardPickupEntryKey,
   parseHermesShrineDeliveryEntryKey,
+  TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
+import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { summarizeRewardOffer } from '@planner/projections/rewards/rewardPicker';
 import { workspaceAcquisitionRoleLabel } from './occurrence-reward-assembly';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
+
+function timelineRewardName(catalog: Catalog, rewardType: string): string {
+  switch (rewardType) {
+    case 'StackUpgrade':
+      return 'Pom';
+    case 'StackUpgradeBig':
+      return 'Double Pom';
+    case 'StackUpgradeTriple':
+      return 'Triple Pom';
+    default:
+      return catalog.rewards.rewardTypes.byKey[rewardType]?.label ?? rewardType;
+  }
+}
+
+function timelineRewardLabel(
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+  control?: WorkspaceRewardControl,
+): string {
+  // Mystery's source is edited alongside the action, not repeated in its heading.
+  if (offer.rewardType === 'BlindBoxLoot') {
+    return timelineRewardName(catalog, offer.rewardType);
+  }
+  if (offer.rewardType === 'Boon' || offer.rewardType === 'RandomLoot') {
+    const name =
+      control?.shopOption?.options.find(
+        (option) => option.key === control.shopOption?.selectedOptionKey,
+      )?.label ?? timelineRewardName(catalog, offer.rewardType);
+    return offer.payload?.kind === 'BoonSource'
+      ? `${timelineRewardName(catalog, offer.payload.source)} ${name.toLowerCase()}`
+      : name;
+  }
+  return offer.payload === undefined
+    ? timelineRewardName(catalog, offer.rewardType)
+    : summarizeRewardOffer(catalog, offer);
+}
 
 function wellPurchaseLabel(
   catalog: Catalog,
@@ -20,6 +59,14 @@ function wellPurchaseLabel(
         'initial:'.length,
       ) as import('@run-planner/engine/authored-project').StygianWellSlotKey)
     : undefined;
+  const profile = catalog.rewards.shops.byKey.RoomShop;
+  const slotIndex = profile?.slots.values.findIndex((slot) => slot.key === slotKey) ?? -1;
+  const subject =
+    slotKey === undefined
+      ? 'Travel Deal Offer'
+      : slotIndex < 0
+        ? 'Well Offer'
+        : `Slot ${slotIndex + 1} Offer`;
   const itemKey =
     slotKey === undefined
       ? occurrence.stygianWell?.travelDealRefillKey
@@ -27,15 +74,10 @@ function wellPurchaseLabel(
   const itemLabel =
     itemKey === null || itemKey === undefined
       ? undefined
-      : catalog.rewards.shops.byKey.RoomShop?.groups.values
+      : profile?.groups.values
           .flatMap((group) => group.options.values)
           .find((option) => option.key === itemKey)?.label;
-  if (itemLabel !== undefined) return itemLabel;
-  const slotLabel =
-    slotKey === undefined
-      ? 'Travel Deal'
-      : (catalog.rewards.shops.byKey.RoomShop?.slots.byKey[slotKey]?.label ?? slotKey);
-  return `Well ${slotLabel}`;
+  return itemLabel === undefined ? subject : `${subject} · ${itemLabel}`;
 }
 
 /** Presentation labels for engine-authored action references. */
@@ -51,21 +93,23 @@ export function occurrenceActionLabel(
   >,
   purgingPoolTraitKeyBySlot?: Readonly<Record<'left' | 'middle' | 'right', string | null>>,
 ): string {
-  const pickupLabel = (subject: string, includeOfferSummary = true): string => {
-    const label = `Interact with ${subject} pickup`;
+  const actionLabel = (
+    subject: string | undefined,
+    verb: 'Interact' | 'Purchase' = 'Interact',
+    includeOfferSummary = true,
+    control = rewardControl,
+  ): string => {
     const summary =
-      !includeOfferSummary || rewardControl?.offer === null || rewardControl?.offer === undefined
+      !includeOfferSummary || control?.offer === null || control?.offer === undefined
         ? undefined
-        : summarizeRewardOffer(catalog, rewardControl.offer);
-    const described =
-      summary === undefined || summary === subject
-        ? label
-        : summary.startsWith(`${subject} · `)
-          ? `${label} · ${summary.slice(subject.length + 3)}`
-          : `${label} · ${summary}`;
-    return rewardControl?.realizedAcquisition === undefined
-      ? described
-      : `${described} -> ${rewardControl.realizedAcquisition.label} (Vow of Forfeit)`;
+        : timelineRewardLabel(catalog, control.offer, control);
+    return `${verb} ${
+      subject === undefined
+        ? (summary ?? 'Reward')
+        : summary === undefined || summary === subject
+          ? subject
+          : `${subject} · ${summary}`
+    }`;
   };
   const phase =
     'phaseKey' in reference
@@ -73,11 +117,22 @@ export function occurrenceActionLabel(
       : undefined;
   switch (reference.kind) {
     case 'collectRequiredReward':
-      return 'Collect Boss Reward';
+      return 'Interact Boss Reward';
     case 'completeFieldsCage':
-      return `Complete ${phase?.label ?? reference.phaseKey}`;
-    case 'interactIncomingReward':
-      return pickupLabel(workspaceAcquisitionRoleLabel(reference.acquisitionRole));
+      return `Interact ${phase?.label ?? reference.phaseKey} encounter`;
+    case 'interactIncomingReward': {
+      const role = reference.acquisitionRole;
+      if (role === 'chosenSource' || role === 'spurnedSource') {
+        const payload = rewardControl?.offer?.payload;
+        const source = payload?.kind === 'DevotionPair' ? payload[role] : undefined;
+        return `Interact ${role === 'chosenSource' ? 'Chosen' : 'Spurned'} boon${
+          source === undefined ? '' : ` · ${timelineRewardName(catalog, source)}`
+        }`;
+      }
+      return actionLabel(
+        rewardControl?.offer == null ? workspaceAcquisitionRoleLabel(role) : undefined,
+      );
+    }
     case 'interactLocalReward': {
       const local =
         roomLocal.kind !== 'fields'
@@ -88,42 +143,46 @@ export function occurrenceActionLabel(
                 candidate.control.owner.address.groupKey === reference.groupKey &&
                 candidate.control.owner.address.slotKey === reference.slotKey,
             );
-      return pickupLabel(local?.label ?? reference.slotKey);
+      return actionLabel(local?.label ?? reference.slotKey);
     }
     case 'chooseRewardWheel': {
       const wheel =
         roomLocal.kind === 'ship'
           ? roomLocal.wheels.find((candidate) => candidate.key === reference.wheelKey)
           : undefined;
-      return `Choose ${wheel?.label ?? reference.wheelKey}`;
+      return `Interact ${wheel?.label.replace(/ reward$/, ' wheel') ?? `${reference.wheelKey} wheel`}`;
     }
     case 'interactWheelReward': {
       const wheel =
         roomLocal.kind === 'ship'
           ? roomLocal.wheels.find((candidate) => candidate.key === reference.wheelKey)
           : undefined;
-      return pickupLabel(wheel?.label ?? `${reference.wheelKey} reward`);
+      return actionLabel(wheel?.label ?? `${reference.wheelKey} reward`);
     }
     case 'interactShopOffer': {
-      const offer =
+      const slotIndex =
         roomLocal.kind === 'shop'
-          ? roomLocal.offers.find((candidate) => candidate.key === reference.offerKey)
-          : undefined;
-      const inventoryReward = offer?.rewardControl.offer ?? undefined;
-      const rewardLabel =
-        inventoryReward === undefined ? undefined : summarizeRewardOffer(catalog, inventoryReward);
-      return `Buy ${rewardLabel ?? offer?.label ?? reference.offerKey}`;
+          ? roomLocal.offers.findIndex((candidate) => candidate.key === reference.offerKey)
+          : -1;
+      const offer = roomLocal.kind === 'shop' ? roomLocal.offers[slotIndex] : undefined;
+      const contract = reference.offerKey === 'infernalContractReward';
+      return actionLabel(
+        contract ? 'Contract Item' : slotIndex < 0 ? 'Shop Offer' : `Slot ${slotIndex + 1} Offer`,
+        contract ? 'Interact' : 'Purchase',
+        true,
+        offer?.rewardControl,
+      );
     }
     case 'purchaseStygianWellOffer':
-      return `Buy ${wellPurchaseLabel(catalog, occurrence, reference.generationKey)}`;
+      return `Purchase ${wellPurchaseLabel(catalog, occurrence, reference.generationKey)}`;
     case 'sellPurgingPoolTrait': {
       const traitKey = purgingPoolTraitKeyBySlot?.[reference.slotKey];
       return `Sell ${traitKey === null || traitKey === undefined ? `${reference.slotKey} Pool trait` : (catalog.traits.byKey[traitKey]?.label ?? traitKey)}`;
     }
     case 'interactEncounter':
-      return `Interact with ${phase?.selectedEncounter.label ?? `${reference.phaseKey} encounter`}`;
+      return `Interact ${phase?.selectedEncounter.label ?? `${reference.phaseKey} encounter`}`;
     case 'interactGorgon':
-      return 'Interact with Athena';
+      return 'Interact Athena';
     case 'interactAcquisitionEntry': {
       const clockedTraitPickup = parseClockedTraitGeneratedPickupEntryKey(reference.entryKey);
       const supplemental =
@@ -131,6 +190,12 @@ export function occurrenceActionLabel(
           ? roomLocal.supplementalOffers.find((candidate) => candidate.key === reference.entryKey)
           : undefined;
       const shrineDelivery = parseHermesShrineDeliveryEntryKey(reference.entryKey);
+      if (reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY) {
+        return actionLabel('Travel Deal Offer', 'Purchase');
+      }
+      if (reference.entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY) {
+        return actionLabel(supplemental?.label ?? 'Echo duplicate');
+      }
       const explicitRewardType =
         rewardControl?.offer?.rewardType ??
         (rewardControl?.kind === 'explicitReward' && rewardControl.rewardTypes.length === 1
@@ -139,34 +204,23 @@ export function occurrenceActionLabel(
       const explicitRewardLabel =
         explicitRewardType === undefined
           ? undefined
-          : (catalog.rewards.rewardTypes.byKey[explicitRewardType]?.label ?? explicitRewardType);
+          : timelineRewardName(catalog, explicitRewardType);
       const entryLabel =
         parseArtificerReplacementEntryKey(reference.entryKey) !== undefined
-          ? 'Artificer'
+          ? 'Artificer reward'
           : clockedTraitPickup !== undefined
             ? 'Supply Chain Pom Slice'
             : parseEchoLastRewardPickupEntryKey(reference.entryKey) !== undefined
-              ? 'Reward Reward Reward replay'
-              : explicitRewardLabel !== undefined
-                ? explicitRewardLabel
-                : shrineDelivery !== undefined
-                  ? 'Hermes Shrine delivery'
-                  : reference.entryKey;
-      if (shrineDelivery !== undefined) {
-        if (rewardControl?.offer?.rewardType === 'BlindBoxLoot') {
-          return `Receive ${entryLabel}`;
-        }
-        const summary =
-          rewardControl?.offer === null || rewardControl?.offer === undefined
-            ? entryLabel
-            : summarizeRewardOffer(catalog, rewardControl.offer);
-        return `Receive ${summary}`;
-      }
-      return pickupLabel(supplemental?.label ?? entryLabel, clockedTraitPickup === undefined);
+              ? 'Echo reward'
+              : rewardControl?.offer != null
+                ? undefined
+                : (explicitRewardLabel ??
+                  (shrineDelivery !== undefined ? 'Hermes delivery' : reference.entryKey));
+      return actionLabel(entryLabel, 'Interact', clockedTraitPickup === undefined);
     }
     case 'useFountain':
-      return 'Use fountain';
+      return 'Interact Fountain';
     case 'interactKeepsakeRack':
-      return 'Choose keepsake';
+      return 'Interact Keepsake Rack';
   }
 }

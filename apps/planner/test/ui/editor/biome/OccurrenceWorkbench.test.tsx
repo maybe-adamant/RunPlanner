@@ -246,7 +246,7 @@ describe('OccurrenceWorkbench', () => {
       renderStaticOccurrenceWorkbench(project(), routeKey, biomeKey, occurrenceById(occurrenceId));
       openRoomTab('Room Timeline');
       const actions = screen.getByRole('region', { name: 'Room Timeline' });
-      const pickup = within(actions).getByText(/^Interact with .* pickup/);
+      const pickup = within(actions).getByText(/^Interact /);
       const start = within(actions).getByLabelText('Start encounter');
       const end = within(actions).getByLabelText('End encounter');
       expectBefore(pickup, start);

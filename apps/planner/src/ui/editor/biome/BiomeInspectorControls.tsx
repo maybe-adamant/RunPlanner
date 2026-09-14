@@ -72,16 +72,18 @@ function KeepsakeRackTimelineContent({
 
 function KeepsakeRackTimelineDeleteButton({
   interaction,
+  label,
 }: {
   readonly interaction: WorkspaceKeepsakeSelectionInteraction;
+  readonly label: string;
 }) {
   const dispatch = useAppDispatch();
   if (interaction.removeIntent === undefined) return null;
   return (
     <TimelineActionDeleteButton
       enabled
-      explanation="Remove Choose keepsake from the timeline"
-      label="Choose keepsake"
+      explanation={`Remove ${label} from the timeline`}
+      label={label}
       onRemove={() => {
         const intent = interaction.removeIntent?.();
         if (intent !== undefined) {
@@ -267,7 +269,7 @@ export function inspectorRoomActionTrailingContent(
     workspaceInteractionKey(room.keepsakeSelection.address),
   );
   if (interaction?.removeIntent === undefined) return null;
-  return <KeepsakeRackTimelineDeleteButton interaction={interaction} />;
+  return <KeepsakeRackTimelineDeleteButton interaction={interaction} label={row.label} />;
 }
 export function inspectorOptionalRoomActionContent(
   room: WorkspaceRoomSummary,

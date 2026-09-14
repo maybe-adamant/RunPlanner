@@ -205,7 +205,7 @@ describe('Hermes Shrine workbench', () => {
             'initial:first',
           ),
     );
-    expect(deliveryRow?.label).toBe('Receive Big Heal');
+    expect(deliveryRow?.label).toBe('Interact Big Heal');
     expect(deliveryRow?.rewardPayload?.control.offer).toMatchObject({ rewardType: 'HealBigDrop' });
   });
 
@@ -260,7 +260,7 @@ describe('Hermes Shrine workbench', () => {
         .find((item) => item.label === 'Apollo'),
     ).toMatchObject({ state: 'possible', disabled: false });
 
-    const deliveryRow = screen.getByText('Receive Mystery Boon').closest('li');
+    const deliveryRow = screen.getByText('Interact Mystery Boon').closest('li');
     if (deliveryRow === null) throw new Error('rushed Mystery Boon delivery row is missing');
     await view.user.click(within(deliveryRow).getByRole('button', { name: 'Reward' }));
     expect(await screen.findByText('Eventual God')).toBeTruthy();
@@ -276,11 +276,11 @@ describe('Hermes Shrine workbench', () => {
       }),
     );
 
-    const resolvedDeliveryRow = screen.getByText(/^Receive Mystery Boon/).closest('li');
+    const resolvedDeliveryRow = screen.getByText(/^Interact Mystery Boon/).closest('li');
     if (resolvedDeliveryRow === null)
       throw new Error('resolved rushed Mystery Boon delivery row is missing');
     expect(resolvedDeliveryRow.getAttribute('data-inline-layout')).toBe('mystery-boon');
-    expect(within(resolvedDeliveryRow).queryByText('Receive Mystery Boon · Apollo')).toBeNull();
+    expect(within(resolvedDeliveryRow).queryByText('Interact Mystery Boon · Apollo')).toBeNull();
     const inlineEditors = resolvedDeliveryRow.querySelector<HTMLElement>(
       ':scope > .room-action-controls > .room-action-inline-editors',
     );
@@ -355,13 +355,13 @@ describe('Hermes Shrine workbench', () => {
       occurrence(oOccurrenceIds.devotion),
     );
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    const delivery = screen.getByText('Receive Mystery Boon').closest('li');
+    const delivery = screen.getByText('Interact Mystery Boon').closest('li');
     if (delivery === null) throw new Error('unplaced Mystery delivery row is missing');
     expect(within(delivery).queryByRole('button', { name: 'Reward' })).toBeNull();
     await view.user.click(
       within(delivery).getByRole('button', { name: 'Place required delivery' }),
     );
-    const placedDelivery = await screen.findByText('Receive Mystery Boon');
+    const placedDelivery = await screen.findByText('Interact Mystery Boon');
     const placedDeliveryRow = placedDelivery.closest('li');
     if (placedDeliveryRow === null) throw new Error('placed Mystery delivery row is missing');
 
@@ -434,7 +434,7 @@ describe('Hermes Shrine workbench', () => {
       ),
     );
     fireEvent.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    const delivery = screen.getByText('Receive Mystery Boon').closest('li');
+    const delivery = screen.getByText('Interact Mystery Boon').closest('li');
     if (delivery === null) throw new Error('final Preboss Mystery delivery row is missing');
     await view.user.click(within(delivery).getByRole('button', { name: 'Reward' }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Apollo'));
@@ -579,7 +579,7 @@ describe('Hermes Shrine workbench', () => {
       application,
     );
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    const delivery = screen.getByText(/^Receive Mystery Boon/).closest('li');
+    const delivery = screen.getByText(/^Interact Mystery Boon/).closest('li');
     if (delivery === null) throw new Error('reloaded Mystery delivery row is missing');
     await view.user.click(within(delivery).getByRole('button', { name: 'Reward' }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Zeus'));
@@ -617,7 +617,7 @@ describe('Hermes Shrine workbench', () => {
     );
 
     await view.user.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    const deliveryRow = screen.getByText('Receive Big Heal').closest('li');
+    const deliveryRow = screen.getByText('Interact Big Heal').closest('li');
     if (deliveryRow === null) throw new Error('delayed delivery row is missing');
     expect(within(deliveryRow).queryByRole('button', { name: 'Remove action' })).toBeNull();
     await view.user.click(
@@ -662,7 +662,7 @@ describe('Hermes Shrine workbench', () => {
       application,
     );
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    const delivery = screen.getByText('Receive Max Health').closest('li');
+    const delivery = screen.getByText('Interact Max Health').closest('li');
     if (delivery === null) throw new Error('N side-room delivery row is missing');
     expect(within(delivery).getByRole('button', { name: 'Place required delivery' })).toBeTruthy();
     expect(

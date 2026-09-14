@@ -716,11 +716,11 @@ describe('Biome inspector controls', () => {
     ).toEqual({ keepsakeKey: 'BossPreDamageKeepsake' });
     await waitFor(() =>
       expect(
-        within(timeline).getByRole('button', { name: 'Move Choose keepsake earlier' }),
+        within(timeline).getByRole('button', { name: 'Move Interact Keepsake Rack earlier' }),
       ).toBeTruthy(),
     );
     expect(
-      within(timeline).getByText('Choose keepsake').closest('[data-in-order="true"]'),
+      within(timeline).getByText('Interact Keepsake Rack').closest('[data-in-order="true"]'),
     ).not.toBeNull();
     expect(within(timeline).queryByRole('listitem', { name: 'Keepsake Rack' })).toBeNull();
     const orderBeforeChange = view.application.store
@@ -753,14 +753,14 @@ describe('Biome inspector controls', () => {
     fireEvent.click(within(timeline).getByRole('button', { name: 'Choose Keepsake' }));
     fireEvent.click(within(screen.getByRole('listbox')).getByText('Jeweled Pom'));
     const keepsakeAction = within(timeline)
-      .getByText('Choose keepsake')
+      .getByText('Interact Keepsake Rack')
       .closest<HTMLElement>('[data-in-order="true"]');
     expect(keepsakeAction).not.toBeNull();
     if (keepsakeAction === null) throw new Error('keepsake action row is absent');
     expect(within(keepsakeAction).getByRole('button', { name: 'Choose Keepsake' })).toBeTruthy();
     expect(within(keepsakeAction).getByRole('button', { name: 'Target' })).toBeTruthy();
     const removeKeepsake = within(timeline).getByRole('button', {
-      name: 'Remove Choose keepsake from timeline',
+      name: 'Remove Interact Keepsake Rack from timeline',
     });
     expect(removeKeepsake.classList.contains('room-action-delete')).toBe(true);
     expect(removeKeepsake.parentElement?.classList.contains('room-action-ordering')).toBe(true);
@@ -812,7 +812,7 @@ describe('Biome inspector controls', () => {
     );
     fireEvent.click(within(keepsakes).getByText('Aromatic Phial'));
     fireEvent.click(
-      await within(timeline).findByRole('button', { name: 'Move Choose keepsake earlier' }),
+      await within(timeline).findByRole('button', { name: 'Move Interact Keepsake Rack earlier' }),
     );
 
     const phialTarget = await within(timeline).findByLabelText('Phial Target');

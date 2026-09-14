@@ -32,8 +32,220 @@ import {
 import {
   clockedTraitGeneratedPickupEntryKey,
   createShopOfferAddress,
+  ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+  TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '@run-planner/engine/authored-project';
+import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { occurrenceActionLabel } from '@planner/projections/structured-workspace/assembly/occurrence-action-label';
+import type { WorkspaceExplicitRewardControl } from '@planner/projections/structured-workspace/contracts/rewards';
+import type { WorkspaceRoomLocal } from '@planner/projections/structured-workspace/contracts/locals';
+
+function labelRewardControl(offer: ResolvedRewardOffer): WorkspaceExplicitRewardControl {
+  const entry = createAcquisitionEntryAddress(
+    createAcquisitionSiteAddress(createOccurrenceAddress(goldenFBiome, goldenFStartId), 'roomExit'),
+    'pickup',
+  );
+  return {
+    kind: 'explicitReward',
+    owner: { kind: 'acquisitionEntry', address: entry },
+    marker: {
+      address: entry,
+      assessment: 'unassessed',
+      findingCount: 0,
+      focusKey: semanticAddressKey(entry),
+    },
+    offer,
+    offerEditVisibility: 'hidden',
+    retainedSourceMismatch: false,
+    rewardTypes: [offer.rewardType],
+  };
+}
+
+describe('timeline action labels', () => {
+  it.each([
+    [{ rewardType: 'StackUpgrade' }, 'Interact Pom'],
+    [{ rewardType: 'StackUpgradeBig' }, 'Interact Double Pom'],
+    [{ rewardType: 'StackUpgradeTriple' }, 'Interact Triple Pom'],
+    [{ rewardType: 'StoreRewardRandomStack' }, 'Interact Pom Slice'],
+    [{ rewardType: 'MaxHealthDrop' }, 'Interact Max Health'],
+    [
+      { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+      'Interact Demeter boon',
+    ],
+    [{ rewardType: 'BlindBoxLoot' }, 'Interact Mystery Boon'],
+    [
+      { rewardType: 'BlindBoxLoot', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+      'Interact Mystery Boon',
+    ],
+  ] as const)('describes %j concisely', (offer, expected) => {
+    expect(
+      occurrenceActionLabel(
+        catalog,
+        { kind: 'interactAcquisitionEntry', siteKey: 'roomExit', entryKey: 'pickup' },
+        { kind: 'none' },
+        [],
+        labelRewardControl(offer),
+        {},
+      ),
+    ).toBe(expected);
+  });
+
+  it('names only the corresponding Trial god while retaining Chosen and Spurned roles', () => {
+    const control = labelRewardControl({
+      rewardType: 'Devotion',
+      payload: { kind: 'DevotionPair', chosenSource: 'ZeusUpgrade', spurnedSource: 'HeraUpgrade' },
+    });
+    const labels = (['chosenSource', 'spurnedSource'] as const).map((acquisitionRole) =>
+      occurrenceActionLabel(
+        catalog,
+        { kind: 'interactIncomingReward', producerPoint: 'IncomingReward', acquisitionRole },
+        { kind: 'none' },
+        [],
+        control,
+        {},
+      ),
+    );
+    expect(labels).toEqual(['Interact Chosen boon · Zeus', 'Interact Spurned boon · Hera']);
+  });
+
+  it('distinguishes paid, boosted, Contract, refill, and Echo actions in the same Shop', () => {
+    const control = labelRewardControl({
+      rewardType: 'RandomLoot',
+      payload: { kind: 'BoonSource', source: 'DemeterUpgrade' },
+    });
+    const entry = control.owner.address;
+    if (entry.kind !== 'acquisitionEntry') throw new Error('Expected an acquisition entry');
+    const purchase = { address: entry, marker: control.marker };
+    const roomLocal: WorkspaceRoomLocal = {
+      kind: 'shop',
+      materialized: true,
+      offers: (
+        [
+          ['Major', control],
+          [
+            'BoostedBoon',
+            {
+              ...control,
+              shopOption: {
+                selectedOptionKey: 'BoostedRandomLoot',
+                options: [
+                  { key: 'BoostedRandomLoot', label: 'Boosted Boon', rewardType: 'RandomLoot' },
+                ],
+              },
+            },
+          ],
+          ['infernalContractReward', labelRewardControl({ rewardType: 'StackUpgradeBig' })],
+        ] as const
+      ).map(([key, rewardControl]) => ({
+        key,
+        label: key,
+        purchase,
+        participation: {
+          interactionKey: key,
+          owner: createShopOfferAddress(goldenFBiome, goldenFStartId, key),
+          purchased: true,
+        },
+        rewardControl,
+      })),
+      supplementalOffers: [
+        {
+          kind: 'travelDealRefill',
+          key: TRAVEL_DEAL_REFILL_ENTRY_KEY,
+          label: 'Travel Deal refill after Offer 1',
+          materialized: true,
+          sourceOfferKey: 'Major',
+          rewardControl: control,
+          purchase: {
+            ...purchase,
+            purchased: true,
+            reference: {
+              kind: 'interactAcquisitionEntry',
+              siteKey: 'roomExit',
+              entryKey: TRAVEL_DEAL_REFILL_ENTRY_KEY,
+            },
+          },
+        },
+        {
+          kind: 'echoDoubleShopReward',
+          key: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+          label: 'Gold Gold Gold duplicate of Offer 1',
+          materialized: true,
+          sourceOfferKey: 'Major',
+          eligibleSourceOfferKeys: ['Major'],
+          rewardControl: control,
+          purchase: {
+            ...purchase,
+            purchased: true,
+            reference: {
+              kind: 'interactAcquisitionEntry',
+              siteKey: 'roomExit',
+              entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+            },
+          },
+        },
+      ],
+    };
+    expect(
+      roomLocal.offers.map(({ key }) =>
+        occurrenceActionLabel(
+          catalog,
+          { kind: 'interactShopOffer', offerKey: key },
+          roomLocal,
+          [],
+          undefined,
+          {},
+        ),
+      ),
+    ).toEqual([
+      'Purchase Slot 1 Offer · Demeter boon',
+      'Purchase Slot 2 Offer · Demeter boosted boon',
+      'Interact Contract Item · Double Pom',
+    ]);
+    expect(
+      roomLocal.supplementalOffers.map(({ key }) =>
+        occurrenceActionLabel(
+          catalog,
+          { kind: 'interactAcquisitionEntry', siteKey: 'roomExit', entryKey: key },
+          roomLocal,
+          [],
+          control,
+          {},
+        ),
+      ),
+    ).toEqual([
+      'Purchase Travel Deal Offer · Demeter boon',
+      'Interact Gold Gold Gold duplicate of Offer 1 · Demeter boon',
+    ]);
+  });
+
+  it.each([
+    ['initial:healing', 'Purchase Slot 1 Offer · Splintered Shield'],
+    ['initial:secondLeft', 'Purchase Slot 2 Offer · Fateful Twist'],
+    ['initial:secondRight', 'Purchase Slot 3 Offer · Yarn of Ariadne'],
+    ['travelDealRefill', 'Purchase Travel Deal Offer · Splintered Shield'],
+  ] as const)('includes the slot and item for Well generation %s', (generationKey, expected) => {
+    expect(
+      occurrenceActionLabel(
+        catalog,
+        { kind: 'purchaseStygianWellOffer', generationKey },
+        { kind: 'none' },
+        [],
+        undefined,
+        {
+          stygianWell: {
+            interacted: true,
+            offerKeyBySlot: {
+              healing: 'ArmorBoostStore',
+              secondLeft: 'RandomStoreItem',
+              secondRight: 'TemporaryBoonRarityTrait',
+            },
+            travelDealRefillKey: 'ArmorBoostStore',
+          },
+        },
+      ),
+    ).toBe(expected);
+  });
+});
 
 describe('structured workspace actions assembly', () => {
   it('projects two matured clocked trait pickups through the existing optional-action surface', () => {
@@ -117,7 +329,7 @@ describe('structured workspace actions assembly', () => {
       {},
     );
 
-    expect(label).toBe('Interact with Supply Chain Pom Slice pickup');
+    expect(label).toBe('Interact Supply Chain Pom Slice');
     expect(label).not.toContain('clockedTraitGenerated:');
   });
 
@@ -137,7 +349,7 @@ describe('structured workspace actions assembly', () => {
     );
 
     expect(collect).toMatchObject({
-      label: 'Collect Boss Reward',
+      label: 'Interact Boss Reward',
       participation: 'required',
       window: { kind: 'standard', phase: 'afterCombat' },
     });
@@ -166,7 +378,7 @@ describe('structured workspace actions assembly', () => {
       {},
     );
 
-    expect(label).toBe('Receive Hermes Shrine delivery');
+    expect(label).toBe('Interact Hermes delivery');
     expect(label).not.toContain('hermesShrineDelivery:');
   });
 
@@ -286,7 +498,7 @@ describe('structured workspace actions assembly', () => {
         row.reference.kind === 'interactAcquisitionEntry' && row.reference.entryKey === replayKey,
     );
 
-    expect(replayRepair?.label).toBe('Interact with Reward Reward Reward replay pickup');
+    expect(replayRepair?.label).toBe('Interact Echo reward');
     expect(replayRepair?.label).not.toContain('echoLastReward:');
   });
 
@@ -332,7 +544,7 @@ describe('structured workspace actions assembly', () => {
     );
 
     expect(dueRow).toMatchObject({
-      label: 'Receive Max Health',
+      label: 'Interact Max Health',
       participation: 'required',
       rank: null,
       reference: { encounterPhaseKey: 'Encounter' },
@@ -357,7 +569,7 @@ describe('structured workspace actions assembly', () => {
         row.reference.entryKey === entryKey,
     );
     expect(placedRow).toMatchObject({
-      label: 'Receive Max Health',
+      label: 'Interact Max Health',
       participation: 'required',
       window: { kind: 'encounterEnd', phaseKey: 'Encounter' },
     });

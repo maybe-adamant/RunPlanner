@@ -191,7 +191,7 @@ describe('Stygian Well workbench', () => {
         row.reference.kind === 'purchaseStygianWellOffer' &&
         row.reference.generationKey === 'initial:secondLeft',
     );
-    expect(purchaseRow?.label).toBe('Buy Fateful Twist');
+    expect(purchaseRow?.label).toBe('Purchase Slot 2 Offer · Fateful Twist');
 
     await view.user.click(screen.getByRole('checkbox', { name: 'Interact with Stygian Well' }));
     expect(screen.queryAllByRole('button', { name: /^Stygian Well / })).toHaveLength(0);
