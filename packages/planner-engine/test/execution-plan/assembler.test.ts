@@ -2031,6 +2031,58 @@ describe('engine-owned F/G execution semantic product', () => {
     );
   });
 
+  it('carries an unequipped Embryo blessing through Postboss exit and the following biome', () => {
+    const selection = createRouteStartKeepsakeSelectionAddress('Underworld');
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection,
+      keepsakeKey: 'RandomBlessingKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTranscendentEmbryoEquipResult',
+      result: createKeepsakeEquipResultAddress(selection, 'transcendentEmbryo'),
+      value: { blessingKey: 'ChaosWeaponBlessing', blessingValues: { damageBonus: 0.7 } },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTranscendentEmbryoTransformation',
+      outcome: createTranscendentEmbryoOutcomeAddress(
+        createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(7, 1)),
+        'Encounter',
+      ),
+      value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: createPostbossKeepsakeSelectionAddress(
+        createOccurrenceAddress(goldenFBiome, createOccurrenceId('golden-f-preboss-shop:postboss')),
+      ),
+      keepsakeKey: 'GoldifyKeepsake',
+    });
+    const product = productFor(project);
+    const postboss = product.occurrences.find((room) => room.gameName === 'F_PostBoss01');
+    const retainedChaos = postboss?.diagnostics?.roomEntered?.chaos;
+    expect(retainedChaos).toEqual({
+      active: [],
+      matured: [{ blessingKey: 'ChaosElementalBlessing', rarity: 'Epic' }],
+    });
+    expect(postboss?.diagnostics?.beforeRoomExit?.chaos).toEqual(retainedChaos);
+    expect(
+      postboss?.diagnostics?.beforeRoomExit?.retainedEffects.keepsakes.transcendentEmbryo,
+    ).toBeNull();
+    const nextBiome = product.occurrences.filter(
+      (room) => room.biomeKey === 'G' && product.selectedOccurrenceIds.includes(room.id),
+    );
+    expect(nextBiome.length).toBeGreaterThan(0);
+    for (const room of nextBiome) {
+      expect(room.diagnostics?.roomEntered?.chaos).toEqual(retainedChaos);
+      expect(room.diagnostics?.beforeRoomExit?.chaos).toEqual(retainedChaos);
+      expect(
+        room.diagnostics?.beforeRoomExit?.retainedEffects.keepsakes.transcendentEmbryo,
+      ).toBeNull();
+    }
+    expect(() => encodeExecutionPlan(compileExecutionPlan({ product }))).not.toThrow();
+  });
+
   it('copies exact Boss Arcana outcomes and their semantic order into execution', () => {
     const project = bossAutomaticOutcomeProject();
     const assembly = simulateProjectAssembly(catalog, project);

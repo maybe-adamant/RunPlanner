@@ -461,9 +461,11 @@ the application.
 
 The corrected direct-acquisition contacts are also part of the supported
 chronology. Trial Upgrade does not recreate Echo's last eligible reward. An
-ordinary replacement of Transcendent Embryo removes its marked direct blessing
-before later history is observed; the separately audited Cherished Heirloom and
-Gift Gift Gift paths retain their distinct source behaviors.
+ordinary replacement of Transcendent Embryo retains its current direct blessing
+and only clears its transformation marker (`KeepsakeLogic.lua:228-235`). The
+eight-encounter transformation removes the marked blessing before granting its
+replacement (`TraitLogic.lua:2935-2952`). The separately audited Cherished Heirloom
+and Gift Gift Gift paths retain their distinct source behaviors.
 
 Transcendent Embryo calls the same processed Chaos-blessing machinery as an
 ordinary Trial Upgrade. Its route-start equip, later rack equip, Gift Gift Gift
