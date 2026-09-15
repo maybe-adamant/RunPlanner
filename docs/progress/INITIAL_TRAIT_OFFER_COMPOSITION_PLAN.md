@@ -19,12 +19,12 @@ Gate A is implemented, independently reviewed and committed (`e92454d1`). Gate B
 is implemented, independently reviewed and committed (`23d7adff`). Gate C is
 implemented, independently reviewed and committed (`a5333e65`). Gate D is
 complete and independently reviewed, including the user-approved NPC
-screen-consumption correction (`6e1702a2`). Gate E is next. Its expanded
+screen-consumption correction (`6e1702a2`). Gate E is in progress. Its expanded
 source-contract and permissive-draft amendment has completed two independent
 plan reviews. The user has accepted the finding dispositions, including
 zero-to-three-row editing with Gold at zero and the declaration-owned Trial
-exceptions. The amendment awaits commit; no Gate E production work has
-started. The source reviewer identified a witness label error, corrected against
+exceptions. That amendment was committed as `f22c1d83` before implementation.
+The source reviewer identified a witness label error, corrected against
 the catalog (Glorious Disaster, not Super Nova); the product review's initial
 Fallback Gold gap and the source follow-up's multi-replacement Hymn bonus
 correction are also incorporated. No unresolved review finding remains.
@@ -145,10 +145,16 @@ Source references use the reviewed local snapshot at
 
 The native optional linked priorities are declared for `BlindChanceBoon`,
 `MassiveKnockupBoon` and `PoseidonStatusBoon` in `TraitData.lua`, each with
-`PriorityChance = 0.25`. Account for their supported seed paths, not just the
-ordinary core seed. Any needed normalized fact belongs in the catalog, not a
-trait-name switch in the engine. Profile-dependent first-seen priorities and
-reroll exclusion paths remain outside the progressed initial-screen baseline.
+`PriorityChance = 0.25`. Retain this source fact in the catalog, but generation
+checks possibility, not probability: these are optional seed paths, not weighted
+search, a quota, or a required offer. Their narrow justification is that a
+guaranteed later non-member rarity bucket can exclude the identity from ordinary
+filling while priority insertion still admits it. When those later checks can
+fail, ordinary filling can reproduce the same outcome; the exact 25% adds no
+distinction to validity. The S4 source witness demonstrates the distinguishing
+case. Keep one bounded alternative per applicable provider, not probability
+simulation or trait-name policy in the engine. Profile-dependent first-seen
+priorities and reroll exclusions remain outside the progressed baseline.
 
 ## Intended engine shape
 
@@ -568,20 +574,20 @@ game code out of production and fixture generators. A full live-game replay is
 not required to prove source branch reachability, but do not describe a static
 or helper probe as in-game confirmation.
 
-| Rule family               | Minimum distinguishing evidence                                                                                                                                                                                                                                                   | Primary owner                                                              |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| S1–S3 seeds               | Original Apollo witness; five vacant cores; later one-seed screen; occupied slot with eligible versus banned provider identity; no eligible cores; unavailable Attack/Special; Hymn with and without a replacement                                                                | Engine trait-offers/replacement                                            |
-| S4 linked priority        | One source-backed optional seed that can also enter normal filling when its priority roll fails; merely offered prerequisite grants no eligibility; declaration matrix for all three chances                                                                                      | Engine witness; catalog owns declarations                                  |
-| S5–S7 rarity buckets      | Seed-specific versus pooled rarity; later success supersedes tentative Common without consuming it; identity removed across every bucket; depletion alters next draw; guaranteed roll cannot fail; failed empty-Common attempt                                                    | Engine composition                                                         |
-| S8–S9 rescue              | Zero initial replacement roll still permits vacancy rescue; effective Denial on/off/suppressed with bans retained; present-zero versus absent entry; short nonempty and empty terminal screens                                                                                    | Engine composition/Denial                                                  |
-| S10 Trial                 | Source-executed Apollo Trial rescue witness reproduced through real authored acquisitions; with Denial on no Duo rescue; a normal inherited Duo stays individually ineligible; catalog matrix covers the five requirement overrides                                               | Catalog predicates; engine composition and one acquisition-history contact |
-| S11 replacement effects   | Exhausted active-Hymn screen with three replacement alternatives: each receives +2; select a non-first row and verify its level credit and exactly one use consumed; row permutation does not change these facts                                                                  | Engine replacement assessment and existing acquisition-history contact     |
-| Exact unordered offer     | Permuting all three authored rows preserves generation support; no sibling equips; branch-correlated support cannot be manufactured by merging histories                                                                                                                          | Engine composition/candidate contact                                       |
-| Picker separation         | Individually legal non-core and replacement rows stay selectable despite incompatible siblings; locally illegal traits stay unavailable; missing target retains an exact repair domain under invalid composition                                                                  | Engine focused candidates                                                  |
-| Structural editing        | Remove a required third row and see a finding while Add remains usable; add during invalid composition; Add at three/Remove at zero disabled but visible; all unused identities banned/acquired/ineligible disables Add without invoking composition                              | Engine drafts + one representative UI workflow                             |
-| Zero-row editing          | Remove the final row to Gold, receive an invalidity finding when native generation cannot end empty, then Add one eligible row to repair; neither transition needs a valid complete-screen constructor; use existing persisted variants and discard trait-only references at zero | Engine drafts; fold into the representative UI repair workflow             |
-| Empty-terminal authoring  | An unresolved exhausted offer opens directly as valid Fallback Gold; Start over can replace an invalid traits draft with Gold; Add is disabled when no unused eligible identity exists; unauthored state is not implicitly Gold                                                   | Engine starting-outcome contract and one UI contact                        |
-| References and boundaries | Remove trailing selected/Stone-referenced row without corrupting retained children; preserve Rejected/Rarification contract; fixed-size providers and BBB unchanged                                                                                                               | Existing owner tests and representative binding contact                    |
+| Rule family               | Minimum distinguishing evidence                                                                                                                                                                                                                                                          | Primary owner                                                              |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| S1–S3 seeds               | Original Apollo witness; five vacant cores; later one-seed screen; occupied slot with eligible versus banned provider identity; no eligible cores; unavailable Attack/Special; Hymn with and without a replacement                                                                       | Engine trait-offers/replacement                                            |
+| S4 linked priority        | Guaranteed-Duo Apollo witness: priority insertion permits Dazzling Display where ordinary filling must take both Duos; with non-guaranteed checks ordinary filling can reproduce that offer. Merely offered prerequisite grants no eligibility; catalog owns all three declared chances. | Engine witness; catalog owns declarations                                  |
+| S5–S7 rarity buckets      | Seed-specific versus pooled rarity; later success supersedes tentative Common without consuming it; identity removed across every bucket; depletion alters next draw; guaranteed roll cannot fail; failed empty-Common attempt                                                           | Engine composition                                                         |
+| S8–S9 rescue              | Zero initial replacement roll still permits vacancy rescue; effective Denial on/off/suppressed with bans retained; present-zero versus absent entry; short nonempty and empty terminal screens                                                                                           | Engine composition/Denial                                                  |
+| S10 Trial                 | Source-executed Apollo Trial rescue witness reproduced through real authored acquisitions; with Denial on no Duo rescue; a normal inherited Duo stays individually ineligible; catalog matrix covers the five requirement overrides                                                      | Catalog predicates; engine composition and one acquisition-history contact |
+| S11 replacement effects   | Exhausted active-Hymn screen with three replacement alternatives: each receives +2; select a non-first row and verify its level credit and exactly one use consumed; row permutation does not change these facts                                                                         | Engine replacement assessment and existing acquisition-history contact     |
+| Exact unordered offer     | Permuting all three authored rows preserves generation support; no sibling equips; branch-correlated support cannot be manufactured by merging histories                                                                                                                                 | Engine composition/candidate contact                                       |
+| Picker separation         | Individually legal non-core and replacement rows stay selectable despite incompatible siblings; locally illegal traits stay unavailable; missing target retains an exact repair domain under invalid composition                                                                         | Engine focused candidates                                                  |
+| Structural editing        | Remove a required third row and see a finding while Add remains usable; add during invalid composition; Add at three/Remove at zero disabled but visible; all unused identities banned/acquired/ineligible disables Add without invoking composition                                     | Engine drafts + one representative UI workflow                             |
+| Zero-row editing          | Remove the final row to Gold, receive an invalidity finding when native generation cannot end empty, then Add one eligible row to repair; neither transition needs a valid complete-screen constructor; use existing persisted variants and discard trait-only references at zero        | Engine drafts; fold into the representative UI repair workflow             |
+| Empty-terminal authoring  | An unresolved exhausted offer opens directly as valid Fallback Gold; Start over can replace an invalid traits draft with Gold; Add is disabled when no unused eligible identity exists; unauthored state is not implicitly Gold                                                          | Engine starting-outcome contract and one UI contact                        |
+| References and boundaries | Remove trailing selected/Stone-referenced row without corrupting retained children; preserve Rejected/Rarification contract; fixed-size providers and BBB unchanged                                                                                                                      | Existing owner tests and representative binding contact                    |
 
 Strengthen existing primary tests in `trait-offers.test.ts`,
 `trait-replacement.test.ts`, `denial-traits.test.ts` and
