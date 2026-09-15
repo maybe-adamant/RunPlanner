@@ -136,9 +136,9 @@ describe('focused trait offer candidates', () => {
       catalog,
       simulateProjectAssembly(catalog, authored),
     );
-    const draft = session.traitOfferStartingDraft(trait, 'WeaponUpgrade');
+    const draft = session.traitOfferStartingOutcome(trait, 'WeaponUpgrade');
     expect(draft).toBeDefined();
-    if (draft === undefined) throw new Error('Artificer hammer draft is missing');
+    if (draft?.kind !== 'traits') throw new Error('Artificer hammer draft is missing');
     for (const option of draft.options) {
       expect(catalog.traits.byKey[option.traitKey]?.hammerCompatibility).toMatchObject({
         weaponKey: 'WeaponLob',
@@ -282,7 +282,7 @@ describe('focused trait offer candidates', () => {
     });
   });
 
-  it('keeps a missing Q-style trait child candidate-backed with Common excluded and Rare supported', () => {
+  it('keeps a missing Q-style trait child repairable while the complete screen rejects Common', () => {
     const qOverride = catalog.rooms.byKey.Q_MiniBoss02?.boonRarityOverride;
     if (qOverride === undefined) throw new Error('missing Q Miniboss rarity override');
     const value = offer(
@@ -311,16 +311,19 @@ describe('focused trait offer candidates', () => {
     const rare = focused(value, 'option2', [missingChildContext]);
     if (common.kind !== 'traitOfferFocusedOption' || rare.kind !== 'traitOfferFocusedOption')
       throw new Error('missing child candidate context was unavailable');
-    expect(common.result.supported).toBe(false);
-    expect(common.result.evidence).toContainEqual(
-      expect.objectContaining({
-        finding: expect.objectContaining({ code: 'rarityRollUnavailable', detail: 'Common' }),
-      }),
-    );
+    expect(common.result.supported).toBe(true);
+    expect(common.result.evidence).toEqual([]);
     expect(rare.result.supported).toBe(true);
+    expect(
+      evaluateTraitOfferCandidate(catalog, project, evaluation, artifacts([missingChildContext]), {
+        kind: 'traitOffer',
+        trait,
+        value,
+      }),
+    ).toMatchObject({ kind: 'traitOffer', result: { supported: false } });
   });
 
-  it('publishes exact branch-correlated rarity and replacement generation state', () => {
+  it('publishes exact branch-correlated rarity state', () => {
     const qOverride = catalog.rooms.byKey.Q_MiniBoss02?.boonRarityOverride;
     if (qOverride === undefined) throw new Error('missing Q Miniboss rarity override');
     const value = offer(
@@ -360,7 +363,6 @@ describe('focused trait offer candidates', () => {
           values: catalog.boonRarityBases.olympian,
           rollOrder: catalog.boonRarityRollOrder,
         },
-        replacementRollChance: 0.1,
       }),
       expect.objectContaining({
         rarity: {
@@ -368,8 +370,6 @@ describe('focused trait offer candidates', () => {
           values: { ...catalog.boonRarityBases.olympian, ...qOverride },
           rollOrder: catalog.boonRarityRollOrder,
         },
-        replacementRollChance: 1,
-        forcedRollRequiredReplacementCount: expect.any(Number),
       }),
     ]);
   });
@@ -478,7 +478,7 @@ describe('focused trait offer candidates', () => {
     expect(unavailableFocused).toEqual(unavailableComplete);
   });
 
-  it('attributes first-offer priority and Attack/Special composition to the focused value', () => {
+  it('keeps core composition out of focused row eligibility', () => {
     const noAttackOrSpecial = offer(
       'Apollo',
       Object.freeze([
@@ -491,12 +491,8 @@ describe('focused trait offer candidates', () => {
     if (missingAttack.kind !== 'traitOfferFocusedOption') {
       throw new Error('focused candidate was unavailable');
     }
-    expect(missingAttack.result.supported).toBe(false);
-    expect(missingAttack.result.evidence).toContainEqual({
-      source: 'firstOfferComposition',
-      blocksFocusedOption: true,
-      finding: { code: 'missingAttackOrSpecial' },
-    });
+    expect(missingAttack.result.supported).toBe(true);
+    expect(missingAttack.result.evidence).toEqual([]);
 
     const completeMissingAttack = evaluateTraitOfferCandidate(
       catalog,
@@ -509,7 +505,7 @@ describe('focused trait offer candidates', () => {
       kind: 'traitOffer',
       result: {
         supported: false,
-        findings: [expect.objectContaining({ code: 'missingAttackOrSpecial' })],
+        findings: [expect.objectContaining({ code: 'traitOfferGenerationUnavailable' })],
       },
     });
 
@@ -545,18 +541,11 @@ describe('focused trait offer candidates', () => {
     if (nonPriority.kind !== 'traitOfferFocusedOption') {
       throw new Error('focused candidate was unavailable');
     }
-    expect(nonPriority.result.evidence).toContainEqual({
-      source: 'firstOfferComposition',
-      blocksFocusedOption: true,
-      finding: {
-        code: 'nonPriorityTrait',
-        traitKey: 'ApolloRetaliateBoon',
-        optionKey: 'option1',
-      },
-    });
+    expect(nonPriority.result.supported).toBe(true);
+    expect(nonPriority.result.evidence).toEqual([]);
   });
 
-  it('blocks a focused replacement excess without poisoning an ordinary sibling', () => {
+  it('keeps eligible replacement rows editable when their combination is impossible', () => {
     const before = foldTraitHistoryEvents(catalog, [
       {
         kind: 'traitOffer',
@@ -614,26 +603,27 @@ describe('focused trait offer candidates', () => {
     if (replacement.kind !== 'traitOfferFocusedOption') {
       throw new Error('focused candidate was unavailable');
     }
-    expect(replacement.result.supported).toBe(false);
-    expect(replacement.result.evidence).toContainEqual({
-      source: 'replacementComposition',
-      blocksFocusedOption: true,
-      finding: expect.objectContaining({ code: 'replacementCompositionExceeded' }),
-    });
+    expect(replacement.result.supported).toBe(true);
+    expect(replacement.result.evidence).toEqual([]);
 
     const ordinary = focused(value, 'option3', [reachedContext(before)]);
     if (ordinary.kind !== 'traitOfferFocusedOption') {
       throw new Error('focused candidate was unavailable');
     }
     expect(ordinary.result.supported).toBe(true);
-    expect(ordinary.result.evidence).toContainEqual({
-      source: 'replacementComposition',
-      blocksFocusedOption: false,
-      finding: expect.objectContaining({ code: 'replacementCompositionExceeded' }),
-    });
+    expect(ordinary.result.evidence).toEqual([]);
+    expect(
+      evaluateTraitOfferCandidate(
+        catalog,
+        project,
+        evaluation,
+        artifacts([reachedContext(before)]),
+        { kind: 'traitOffer', trait, value },
+      ),
+    ).toMatchObject({ kind: 'traitOffer', result: { supported: false } });
   });
 
-  it('does not combine different blocking reasons from separate branches', () => {
+  it('keeps focused eligibility correlated with its branch', () => {
     const value = offer(
       'Apollo',
       Object.freeze([
@@ -647,53 +637,14 @@ describe('focused trait offer candidates', () => {
     if (result.kind !== 'traitOfferFocusedOption') {
       throw new Error('focused candidate was unavailable');
     }
-    expect(result.result.supported).toBe(false);
+    expect(result.result.supported).toBe(true);
     expect(result.result.branches).toHaveLength(2);
-    expect(result.result.branches[0]).toMatchObject({
-      supported: false,
-      evidence: [
-        {
-          source: 'firstOfferComposition',
-          blocksFocusedOption: true,
-          finding: { code: 'missingAttackOrSpecial' },
-        },
-      ],
-    });
+    expect(result.result.branches[0]).toMatchObject({ supported: true, evidence: [] });
     expect(result.result.branches[1]?.evidence).toContainEqual({
       source: 'focusedOption',
       blocksFocusedOption: true,
       finding: expect.objectContaining({ code: 'alreadyEquipped', traitKey: 'ApolloCastBoon' }),
     });
-  });
-
-  it('retains focused support when one history branch supports the same draft', () => {
-    const value = offer(
-      'Apollo',
-      Object.freeze([
-        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
-        { traitKey: 'ApolloSprintBoon', rarity: 'Common' },
-        { traitKey: 'ApolloManaBoon', rarity: 'Common' },
-      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
-    );
-    const occupied = historyWith('Apollo', 'ApolloWeaponBoon', 'Common');
-    const result = focused(value, 'option1', [reachedContext(occupied), reachedContext()]);
-    if (result.kind !== 'traitOfferFocusedOption') {
-      throw new Error('focused candidate was unavailable');
-    }
-    expect(result.result.supported).toBe(true);
-    expect(result.result.branches).toMatchObject([
-      { supported: true, evidence: [] },
-      {
-        supported: false,
-        evidence: [
-          {
-            source: 'firstOfferComposition',
-            blocksFocusedOption: true,
-            finding: { code: 'missingAttackOrSpecial' },
-          },
-        ],
-      },
-    ]);
   });
 
   it('retains Hammer loadout and acquired-Hammer exclusions in focused evidence', () => {

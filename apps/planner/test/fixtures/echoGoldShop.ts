@@ -96,7 +96,7 @@ export function createEchoGoldHPrebossProject(): ProjectDocument {
   const traitDraft = createPreparedProjectCandidateSession(
     catalog,
     simulateProjectAssembly(catalog, project),
-  ).traitOfferStartingDraft(forcedTrait, replacement.giver.key);
+  ).traitOfferStartingOutcome(forcedTrait, replacement.giver.key);
   if (traitDraft === undefined) throw new Error('no candidate-supported H miniboss trait offer');
   return applyProjectCommand(project, catalog, {
     kind: 'ReplaceTraitOffer',

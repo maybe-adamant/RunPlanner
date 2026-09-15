@@ -104,73 +104,24 @@ export function TraitOfferEditorShell({
     value.kind === 'traits' && rejectedRules !== undefined
       ? interaction.rejectedBlockDomain?.(rejectedRules)
       : undefined;
-  const traitsStartingDraft = useMemo(
-    () => (value.kind === 'fallbackGold' ? interaction.traitsStartingDraft?.() : undefined),
-    [interaction, value],
-  );
   const recoveryDraft =
     support !== 'impossible'
       ? undefined
-      : value.kind === 'traits'
-        ? interaction.traitsStartingDraft?.()
+      : value.kind === 'traits' || value.kind === 'fallbackGold'
+        ? interaction.traitOfferStartingOutcome?.()
         : value.kind === 'chaos'
           ? interaction.chaos?.startingDraft()
           : undefined;
-  const nextTraitOfferDraft = useMemo(
-    () => (value.kind === 'traits' ? interaction.nextOptionalHighTierDraft?.(value) : undefined),
-    [interaction, value],
-  );
-  const previousTraitOfferDraft = useMemo(
-    () =>
-      value.kind === 'traits' ? interaction.previousOptionalHighTierDraft?.(value) : undefined,
-    [interaction, value],
-  );
-  const previousTraitOfferLoadable = useMemo(
-    () =>
-      previousTraitOfferDraft === undefined
-        ? undefined
-        : traitOfferLoadable(interaction, previousTraitOfferDraft),
-    [interaction, previousTraitOfferDraft],
-  );
-  const previousTraitOfferController = useWorkspaceInteractionController<TraitOfferCandidates>();
-  const previousTraitOfferLoaded = previousTraitOfferController.observe(previousTraitOfferLoadable);
-  const previousTraitOfferSupport = candidateSupport(previousTraitOfferLoaded.result?.[0]);
-  const canRemoveOption =
-    previousTraitOfferDraft !== undefined &&
-    (previousTraitOfferSupport === 'possible' || previousTraitOfferSupport === 'forced');
-  const fallbackGoldValue = useMemo(
-    () =>
-      value.kind !== 'traits' ||
-      (interaction.giver.providerKind !== 'olympian' && interaction.giver.providerKind !== 'hermes')
-        ? undefined
-        : (Object.freeze({
-            kind: 'fallbackGold' as const,
-            giverKey: value.giverKey,
-          }) satisfies AuthoredTraitOffer),
-    [interaction.giver.providerKind, value],
-  );
-  const fallbackGoldLoadable = useMemo(
-    () =>
-      fallbackGoldValue === undefined
-        ? undefined
-        : traitOfferLoadable(interaction, fallbackGoldValue),
-    [fallbackGoldValue, interaction],
-  );
-  const fallbackGoldController = useWorkspaceInteractionController<TraitOfferCandidates>();
-  const fallbackGoldLoaded = fallbackGoldController.observe(fallbackGoldLoadable);
-  const fallbackGoldSupport = candidateSupport(fallbackGoldLoaded.result?.[0]);
+  const ordinary =
+    interaction.giver.providerKind === 'olympian' || interaction.giver.providerKind === 'hermes';
+  const appendedDraft = ordinary ? interaction.appendTraitOfferDraft?.(value) : undefined;
+  const removedDraft =
+    ordinary && value.kind === 'traits' ? interaction.removeTraitOfferDraft?.(value) : undefined;
   useEffect(() => {
     controller.activate(loadable);
     // Activation is deliberately tied to the opened dialog, not to render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadable]);
-  useEffect(() => {
-    if (fallbackGoldLoadable !== undefined) fallbackGoldController.activate(fallbackGoldLoadable);
-  }, [fallbackGoldController, fallbackGoldLoadable]);
-  useEffect(() => {
-    if (previousTraitOfferLoadable !== undefined)
-      previousTraitOfferController.activate(previousTraitOfferLoadable);
-  }, [previousTraitOfferController, previousTraitOfferLoadable]);
   const updateValue = (nextValue: AuthoredTraitOffer): void => {
     const nextLoadable = traitOfferLoadable(interaction, nextValue);
     setDraft(Object.freeze({ interaction, loadable: nextLoadable, value: nextValue }));
@@ -333,18 +284,18 @@ export function TraitOfferEditorShell({
           />
         }
         shapeActions={
-          <TraitOfferShapeActions
-            {...(nextTraitOfferDraft === undefined
-              ? {}
-              : { onAdd: () => updateValue(nextTraitOfferDraft) })}
-            {...(!canRemoveOption || previousTraitOfferDraft === undefined
-              ? {}
-              : { onRemove: () => updateValue(previousTraitOfferDraft) })}
-            {...(fallbackGoldValue === undefined ||
-            (fallbackGoldSupport !== 'possible' && fallbackGoldSupport !== 'forced')
-              ? {}
-              : { onFallback: () => updateValue(fallbackGoldValue) })}
-          />
+          ordinary ? (
+            <TraitOfferShapeActions
+              addDisabled={appendedDraft === undefined}
+              onAdd={() => {
+                if (appendedDraft !== undefined) updateValue(appendedDraft);
+              }}
+              onRemove={() => {
+                if (removedDraft !== undefined) updateValue(removedDraft);
+              }}
+              removeDisabled={removedDraft === undefined}
+            />
+          ) : undefined
         }
         feedback={feedbackSection}
         recovery={recoveryAction}
@@ -359,16 +310,6 @@ export function TraitOfferEditorShell({
         value.kind === 'fallbackGold' ? (
           <section className="trait-offer-fallback">
             <p>Fallback Gold</p>
-            <button
-              className="quiet-action"
-              disabled={traitsStartingDraft === undefined}
-              onClick={() => {
-                if (traitsStartingDraft !== undefined) updateValue(traitsStartingDraft);
-              }}
-              type="button"
-            >
-              Return to traits
-            </button>
           </section>
         ) : value.kind === 'chaos' && interaction.chaos !== undefined ? (
           <ChaosTraitOfferEditor
@@ -383,6 +324,18 @@ export function TraitOfferEditorShell({
       recovery={recoveryAction}
       reset={resetAction}
       save={save}
+      shapeActions={
+        value.kind === 'fallbackGold' && ordinary ? (
+          <TraitOfferShapeActions
+            addDisabled={appendedDraft === undefined}
+            onAdd={() => {
+              if (appendedDraft !== undefined) updateValue(appendedDraft);
+            }}
+            onRemove={() => undefined}
+            removeDisabled
+          />
+        ) : undefined
+      }
     />
   );
 }

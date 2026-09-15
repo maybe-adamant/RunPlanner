@@ -168,6 +168,7 @@ export const poseidonTraits = [
       Water: 1,
     },
     usesBoonRarity: true,
+    optionalLinkedPriority: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -276,6 +277,7 @@ export const poseidonTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Provider } from 'react-redux';
@@ -33,6 +33,111 @@ import { loadSurfaceNStoryBoardProject } from '@run-planner/test-fixtures/surfac
 afterEach(cleanup);
 
 describe('ordinary offer shell', () => {
+  it.each(['unresolved', 'invalid'] as const)(
+    'renders an engine-supplied empty terminal from an %s offer',
+    async (state) => {
+      const user = userEvent.setup();
+      const application = createApplication();
+      application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+      const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+      const base = [...workspace.interactions.traitOffers.values()].find(
+        (entry) => entry.giver.providerKind === 'olympian',
+      )!;
+      const gold: AuthoredTraitOffer = { kind: 'fallbackGold', giverKey: base.giver.key };
+      const onCommit = vi.fn();
+      const startingOutcome = vi.fn(() => gold);
+      const interaction: WorkspaceTraitOfferInteraction = {
+        ...base,
+        value: state === 'unresolved' ? null : base.value,
+        traitOfferStartingOutcome: startingOutcome,
+        appendTraitOfferDraft: () => undefined,
+        load: (value = gold) => [
+          {
+            value,
+            evaluation: {
+              kind: 'traitOffer',
+              result: {
+                supported: value === gold,
+                branches: [],
+                assessments: [],
+                effectiveLevels: [],
+                persephoneLevelBonusMaximums: [],
+                findings: value === gold ? [] : [{ code: 'traitOfferGenerationUnavailable' }],
+              },
+            },
+          },
+        ],
+      };
+      render(
+        <Provider store={application.store}>
+          <TraitOfferEditor
+            address={interaction.owner}
+            interactions={{
+              ...workspace.interactions,
+              traitOffers: new Map([[interaction.key, interaction]]),
+            }}
+            onCommit={onCommit}
+          />
+        </Provider>,
+      );
+      if (state === 'invalid')
+        await user.click(await screen.findByRole('button', { name: 'Start over' }));
+      expect(await screen.findByText('Fallback Gold')).toBeTruthy();
+      expect(startingOutcome).toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: 'Add option' }).hasAttribute('disabled')).toBe(
+        true,
+      );
+      await waitFor(() =>
+        expect(
+          screen.getByRole('button', { name: 'Save trait offer' }).hasAttribute('disabled'),
+        ).toBe(false),
+      );
+      await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+      expect(onCommit).toHaveBeenCalledWith(gold);
+      application.dispose();
+    },
+  );
+
+  it('repairs a real ordinary draft through short and Gold states without composition locking', async () => {
+    const user = userEvent.setup();
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const interaction = [...workspace.interactions.traitOffers.values()].find(
+      (entry) => entry.giver.providerKind === 'olympian',
+    );
+    if (interaction?.value?.kind !== 'traits' || interaction.value.options.length !== 3)
+      throw new Error('expected a complete ordinary offer');
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor address={interaction.owner} interactions={workspace.interactions} />
+      </Provider>,
+    );
+    const save = await screen.findByRole('button', { name: 'Save trait offer' });
+    await waitFor(() => expect(save.hasAttribute('disabled')).toBe(false));
+    expect(screen.getByRole('button', { name: 'Add option' }).hasAttribute('disabled')).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Remove last option' }));
+    await waitFor(() => expect(save.hasAttribute('disabled')).toBe(true));
+    expect(screen.getByRole('button', { name: 'Add option' }).hasAttribute('disabled')).toBe(false);
+    expect(await screen.findByText(/Trait offer cannot occur here/)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Remove last option' }));
+    await user.click(screen.getByRole('button', { name: 'Remove last option' }));
+    expect(screen.getByText('Fallback Gold')).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Remove last option' }).hasAttribute('disabled'),
+    ).toBe(true);
+    expect(screen.getByRole('button', { name: 'Add option' }).hasAttribute('disabled')).toBe(false);
+    await waitFor(() => expect(save.hasAttribute('disabled')).toBe(true));
+    await user.click(screen.getByRole('button', { name: 'Add option' }));
+    expect(screen.getByLabelText('option1 trait')).toBeTruthy();
+    expect(screen.queryByLabelText('option2 trait')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Add option' }).hasAttribute('disabled')).toBe(false);
+    await user.click(await screen.findByRole('button', { name: 'Start over' }));
+    await waitFor(() => expect(save.hasAttribute('disabled')).toBe(false));
+    expect(screen.getByLabelText('option3 trait')).toBeTruthy();
+    application.dispose();
+  });
+
   it('does not evaluate trait eligibility during render', () => {
     const events: ApplicationEvaluationEvent[] = [];
     const application = createApplication({
@@ -591,7 +696,7 @@ describe('ordinary offer shell', () => {
     application.dispose();
   });
 
-  it('omits offer-shape actions when no optional high-tier draft is available', () => {
+  it('keeps ordinary offer-shape actions visible but disabled when no structural draft is available', () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
     const workspace = application.selectStructuredWorkspace(application.store.getState())!;
@@ -613,8 +718,8 @@ describe('ordinary offer shell', () => {
       ...base,
       value,
       load: (draft = value) => base.load(draft),
-      nextOptionalHighTierDraft: () => undefined,
-      previousOptionalHighTierDraft: () => undefined,
+      appendTraitOfferDraft: () => undefined,
+      removeTraitOfferDraft: () => undefined,
     });
     const interactions: WorkspaceInteractionCatalog = Object.freeze({
       ...workspace.interactions,
@@ -629,8 +734,10 @@ describe('ordinary offer shell', () => {
     expect(screen.getByLabelText('option1 trait')).toBeTruthy();
     expect(screen.getByLabelText('option2 trait')).toBeTruthy();
     expect(screen.queryByLabelText('option3 trait')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Add option' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Remove last option' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Add option' }).hasAttribute('disabled')).toBe(true);
+    expect(
+      screen.getByRole('button', { name: 'Remove last option' }).hasAttribute('disabled'),
+    ).toBe(true);
     expect(screen.queryByRole('button', { name: 'Select Fallback Gold' })).toBeNull();
     application.dispose();
   });
@@ -657,8 +764,17 @@ describe('ordinary offer shell', () => {
         base.value.options[1]!,
       ]) as AuthoredTraitOfferTraits['options'],
     });
-    const append = vi.fn((draft: AuthoredTraitOfferTraits) =>
-      draft.options.length === 1 ? two : undefined,
+    const append = vi.fn((draft: AuthoredTraitOffer) =>
+      draft.kind === 'fallbackGold'
+        ? one
+        : draft.kind === 'traits' && draft.options.length === 1
+          ? two
+          : undefined,
+    );
+    const removeDraft = vi.fn((draft: AuthoredTraitOfferTraits) =>
+      draft.options.length === 1
+        ? Object.freeze({ kind: 'fallbackGold' as const, giverKey: draft.giverKey })
+        : one,
     );
     const starting = vi.fn(() => one);
     const interaction = Object.freeze({
@@ -681,10 +797,9 @@ describe('ordinary offer shell', () => {
             }),
           }),
         ]),
-      nextOptionalHighTierDraft: append,
-      previousOptionalHighTierDraft: (draft: AuthoredTraitOfferTraits) =>
-        draft.options.length === 2 ? one : undefined,
-      traitsStartingDraft: starting,
+      appendTraitOfferDraft: append,
+      removeTraitOfferDraft: removeDraft,
+      traitOfferStartingOutcome: starting,
     });
     const interactions: WorkspaceInteractionCatalog = Object.freeze({
       ...workspace.interactions,
@@ -698,7 +813,6 @@ describe('ordinary offer shell', () => {
     );
 
     const actions = await screen.findByRole('group', { name: 'Offer shape actions' });
-    const fallback = within(actions).getByRole('button', { name: 'Select Fallback Gold' });
     const add = within(actions).getByRole('button', { name: 'Add option' });
     const firstTrait = screen.getByLabelText('option1 trait');
     expect(
@@ -706,24 +820,25 @@ describe('ordinary offer shell', () => {
     ).toBeTruthy();
     expect(add.classList.contains('quiet-action')).toBe(true);
     expect(add.classList.contains('action-compact')).toBe(true);
-    expect(fallback.className).toBe(add.className);
     await user.click(add);
     expect(append).toHaveBeenCalledWith(one);
     expect(screen.getByLabelText('option2 trait')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Add option' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Add option' }).hasAttribute('disabled')).toBe(true);
     const remove = await screen.findByRole('button', { name: 'Remove last option' });
-    expect(remove.className).toBe(fallback.className);
+    expect(remove.className).toBe(add.className);
     await user.click(remove);
     expect(screen.queryByLabelText('option2 trait')).toBeNull();
     expect((screen.getByLabelText('Selected') as HTMLInputElement).checked).toBe(true);
-    await user.click(screen.getByRole('button', { name: 'Add option' }));
-    await user.click(screen.getByRole('button', { name: 'Select Fallback Gold' }));
+    await user.click(screen.getByRole('button', { name: 'Remove last option' }));
     expect(screen.getByText('Fallback Gold')).toBeTruthy();
     expect(screen.queryByLabelText('option1 trait')).toBeNull();
     expect(screen.queryByLabelText('Death Defiance condition met')).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Return to traits' }));
-    expect(starting).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByRole('button', { name: 'Remove last option' }).hasAttribute('disabled'),
+    ).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Add option' }));
     expect(screen.getByLabelText('option1 trait')).toBeTruthy();
+    expect(starting).not.toHaveBeenCalled();
     application.dispose();
   });
 

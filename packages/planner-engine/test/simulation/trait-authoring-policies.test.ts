@@ -23,7 +23,7 @@ import {
   assessNaturalSelectionTargets,
   assessRansom,
   recordReachedTraitOffer,
-  traitOfferStartingDraft,
+  traitOfferStartingOutcome,
   targetedAcquisitionTargetKeys,
   type TraitOfferEvent,
   type TraitLevelMutationEvent,
@@ -104,10 +104,10 @@ function findingCode(traitKey: string, history: ReturnType<typeof createTraitHis
 
 describe('Boon Growth and Boon Decay target predicates', () => {
   it('does not materialize zero Persephone contributions in an automatic three-option draft', () => {
-    const draft = traitOfferStartingDraft(catalog, 'Apollo', createTraitHistoryState(), {
+    const draft = traitOfferStartingOutcome(catalog, 'Apollo', createTraitHistoryState(), {
       aspectKey: 'LobImpulseAspect',
     });
-    if (draft === undefined) throw new Error('missing Apollo starting draft');
+    if (draft?.kind !== 'traits') throw new Error('missing Apollo starting draft');
 
     expect(draft.options).toHaveLength(3);
     expect(draft.options.every((option) => !('persephoneLevelBonus' in option))).toBe(true);
@@ -606,7 +606,7 @@ describe('Boon Growth and Boon Decay target predicates', () => {
       giverKey: 'Hera',
       options: Object.freeze([
         { traitKey: 'BoonDecayBoon', rarity: 'Common' },
-        { traitKey: 'DamageShareRetaliateBoon', rarity: 'Common' },
+        { traitKey: 'HeraSpecialBoon', rarity: 'Common' },
         { traitKey: 'SpawnCastDamageBoon', rarity: 'Common' },
       ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
       selectedOptionKey: 'option1',

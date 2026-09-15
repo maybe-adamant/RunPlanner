@@ -36,10 +36,10 @@ export function bindTraitOfferInteractions(input: {
         return Object.freeze({ label: trait.label, value: trait.key });
       }),
     );
-    const startingDraft = () =>
-      candidates.traitOfferStartingDraft(control.address, control.giver.key);
+    const startingOutcome = () =>
+      candidates.traitOfferStartingOutcome(control.address, control.giver.key);
     const chaosInteraction = bindChaosOfferInteraction({ catalog, candidates, control });
-    const load = (value = control.offer ?? startingDraft()) =>
+    const load = (value = control.offer ?? startingOutcome()) =>
       value === undefined ? Object.freeze([]) : candidates.traitOffer(control.address, value);
     const rejectedBlockDomain = (rules: readonly WorkspaceRejectedBlockRule[]) => {
       if (rules.length === 0) return undefined;
@@ -126,11 +126,11 @@ export function bindTraitOfferInteractions(input: {
             }),
           }),
         value: control.offer,
-        traitsStartingDraft: startingDraft,
-        nextOptionalHighTierDraft: (value: AuthoredTraitOfferTraits) =>
-          candidates.nextOptionalHighTierTraitOfferDraft(control.address, value),
-        previousOptionalHighTierDraft: (value: AuthoredTraitOfferTraits) =>
-          candidates.previousOptionalHighTierTraitOfferDraft(control.address, value),
+        traitOfferStartingOutcome: startingOutcome,
+        appendTraitOfferDraft: (value: AuthoredTraitOffer) =>
+          candidates.appendTraitOfferDraft(control.address, value),
+        removeTraitOfferDraft: (value: AuthoredTraitOfferTraits) =>
+          candidates.removeTraitOfferDraft(control.address, value),
       }),
     );
   }

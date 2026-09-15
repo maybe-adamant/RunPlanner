@@ -377,6 +377,8 @@ export interface TraitDeclaration {
   readonly equipmentSlot?: TraitEquipmentSlot;
   readonly elementContributions: Readonly<Partial<Record<TraitElement, number>>>;
   readonly usesBoonRarity: boolean;
+  /** May enter the initial offer as a linked priority seed, or be skipped. */
+  readonly optionalLinkedPriority?: boolean;
   readonly isCoreGodTrait: boolean;
   readonly blockStacking: boolean;
   /** Source `BlockOfferIfPreviouslyPicked`; survives later trait removal. */

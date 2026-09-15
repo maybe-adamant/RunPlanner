@@ -7,6 +7,8 @@ import {
   oOccurrenceIds,
   pBiome,
   pOccurrenceId,
+  qBiome,
+  qOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
@@ -278,7 +280,7 @@ function buildSurfaceScheduledLifecycleProject(clearLocalVisits = false): Projec
       giverKey: 'Demeter',
       options: [
         { traitKey: 'BoonGrowthBoon', rarity: 'Epic' },
-        { traitKey: 'ReserveManaHitShieldBoon', rarity: 'Epic' },
+        { traitKey: 'DemeterManaBoon', rarity: 'Epic' },
         { traitKey: 'PlantHealthBoon', rarity: 'Epic' },
       ],
       selectedOptionKey: 'option1',
@@ -294,6 +296,30 @@ function buildSurfaceScheduledLifecycleProject(clearLocalVisits = false): Projec
     reward: createIncomingRewardAddress(pBiome, pOccurrenceId('P_MiniBoss01', 5, 1)),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
   });
+  // This route leaves Gain vacant: retain each Trial acquisition while
+  // supplying its eligible core seed alongside the passive choices.
+  for (const [role, giverKey, keys] of [
+    ['chosenSource', 'Ares', ['AresExCastBoon', 'BloodDropRevengeBoon', 'AresManaBoon']],
+    ['spurnedSource', 'Hephaestus', ['AntiArmorBoon', 'HeavyArmorBoon', 'HephaestusManaBoon']],
+  ] as const) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createIncomingRewardAddress(oBiome, oOccurrenceIds.devotion),
+        role,
+      ),
+      value: {
+        kind: 'traits',
+        giverKey,
+        options: [
+          { traitKey: keys[0], rarity: 'Common' },
+          { traitKey: keys[1], rarity: 'Common' },
+          { traitKey: keys[2], rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+  }
   const icarusPhase = createEncounterPhaseAddress(
     oBiome,
     { kind: 'occurrence', occurrenceId: oOccurrenceIds.combat01 },
@@ -339,6 +365,33 @@ function buildSurfaceScheduledLifecycleProject(clearLocalVisits = false): Projec
   project = settleReachedAutomaticOutcomes(project);
   project = placeDelayedShrineDeliveries(project);
   project = acceptOneSupplyChainSlice(project);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceLevelResolution',
+    levelResolution: createLevelResolutionAddress(
+      createIncomingRewardAddress(pBiome, pOccurrenceId('P_Combat12', 8, 1)),
+      'self',
+    ),
+    value: {
+      kind: 'choice',
+      offeredTraitKeys: ['ApolloWeaponBoon', 'HephaestusCastBoon', 'AresSprintBoon'],
+      selectedTraitKey: 'ApolloWeaponBoon',
+    },
+  });
+  project = settleReachedAutomaticOutcomes(authorLegalTraitOffers(project));
+  const qOfferAddress = createTraitOfferAddress(
+    createIncomingRewardAddress(qBiome, qOccurrenceIds.firstMiniboss1),
+    'source',
+  );
+  const qDraft = createPreparedProjectCandidateSession(
+    catalog,
+    simulateProjectAssembly(catalog, project),
+  ).traitOfferStartingOutcome(qOfferAddress, 'Ares');
+  if (qDraft === undefined) throw new Error('scheduled lifecycle fixture lacks Q Ares context');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: qOfferAddress,
+    value: qDraft,
+  });
   project = settleReachedAutomaticOutcomes(authorLegalTraitOffers(project));
   const finalAssembly = simulateProjectAssembly(catalog, project);
   if (!finalAssembly.evaluation.route.summary.eligibleForExecutionPlan)

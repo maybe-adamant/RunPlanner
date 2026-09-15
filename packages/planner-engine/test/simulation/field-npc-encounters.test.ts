@@ -683,8 +683,8 @@ describe('field NPC encounter requirements', () => {
     const initialOffer = createPreparedProjectCandidateSession(
       catalog,
       unresolvedAssembly,
-    ).traitOfferStartingDraft(traitAddress, 'Artemis');
-    if (initialOffer === undefined) throw new Error('Artemis candidate offer is missing');
+    ).traitOfferStartingOutcome(traitAddress, 'Artemis');
+    if (initialOffer?.kind !== 'traits') throw new Error('Artemis candidate offer is missing');
     expect(initialOffer).toMatchObject({ giverKey: 'Artemis', selectedOptionKey: 'option1' });
     expect(initialOffer.options.map((option) => option.traitKey)).toEqual([
       'SupportingFireBoon',
@@ -964,7 +964,6 @@ describe('field NPC encounter requirements', () => {
     expect(trace?.branches).toEqual([
       expect.objectContaining({
         composition: { applies: false, legal: true, findings: [] },
-        replacementComposition: expect.objectContaining({ applies: false, legal: true }),
       }),
     ]);
     expect(biome.rewards.branches[0]?.traitHistory).toMatchObject({

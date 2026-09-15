@@ -23,6 +23,50 @@ const traits = {
 };
 
 describe('trait requirements and dependencies', () => {
+  it('declares the three optional linked-priority insertions', () => {
+    expect(
+      Object.fromEntries(
+        traits.traits.values
+          .filter((trait) => trait.optionalLinkedPriority)
+          .map((trait) => [trait.key, trait.optionalLinkedPriority]),
+      ),
+    ).toEqual({
+      BlindChanceBoon: true,
+      MassiveKnockupBoon: true,
+      PoseidonStatusBoon: true,
+    });
+  });
+
+  it('keeps Trial exclusion on ordinary Duos while preserving source overrides', () => {
+    const trialOverrides = new Set([
+      'ApolloSecondStageCastBoon',
+      'GoodStuffBoon',
+      'SuperSacrificeBoonHera',
+      'SuperSacrificeBoonZeus',
+      'SelfCastBoon',
+    ]);
+    const duoTraits = traits.traits.values.filter(
+      (trait) =>
+        trait.rarityDomain.kind === 'ranked' &&
+        trait.rarityDomain.freshOfferRarities.length === 1 &&
+        trait.rarityDomain.freshOfferRarities[0] === 'Duo',
+    );
+    expect(duoTraits.map((trait) => trait.key)).toEqual(
+      expect.arrayContaining([...trialOverrides]),
+    );
+    for (const trait of duoTraits) {
+      const devotionRequirement = trait.offerRequirements.find(
+        (requirement) =>
+          requirement.kind === 'offerContext' && requirement.context === 'devotionNoDuo',
+      );
+      expect(devotionRequirement).toEqual(
+        trialOverrides.has(trait.key)
+          ? undefined
+          : { kind: 'offerContext', context: 'devotionNoDuo', required: false },
+      );
+    }
+  });
+
   it('normalizes rarity, element, context, and derived-fact contracts', () => {
     expect(traits?.rarityOrder).toEqual(['Common', 'Rare', 'Epic', 'Heroic']);
     expect(traits?.baseElements).toEqual(['Earth', 'Air', 'Fire', 'Water']);
@@ -275,8 +319,22 @@ describe('trait requirements and dependencies', () => {
 
     const actualOfferRequirements = Object.fromEntries(
       traits.traits.values
-        .filter((trait) => trait.offerRequirements.length > 0)
-        .map((trait) => [trait.key, JSON.stringify(trait.offerRequirements)]),
+        .map(
+          (trait) =>
+            [
+              trait.key,
+              trait.offerRequirements.filter(
+                (requirement) =>
+                  !(
+                    requirement.kind === 'offerContext' &&
+                    requirement.context === 'devotionNoDuo' &&
+                    requirement.required === false
+                  ),
+              ),
+            ] as const,
+        )
+        .filter(([, requirements]) => requirements.length > 0)
+        .map(([traitKey, requirements]) => [traitKey, JSON.stringify(requirements)]),
     );
     expect(actualOfferRequirements).toEqual(expectedOfferRequirements);
 

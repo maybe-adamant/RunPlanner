@@ -176,7 +176,7 @@ function createGoldenEchoGiftKeepsakePendingProject(
   const traitDraft = createPreparedProjectCandidateSession(
     catalog,
     simulateProjectAssembly(catalog, project),
-  ).traitOfferStartingDraft(forcedTrait, supportedSource.giver.key);
+  ).traitOfferStartingOutcome(forcedTrait, supportedSource.giver.key);
   if (traitDraft === undefined) throw new Error('no candidate-supported H miniboss trait offer');
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceTraitOffer',

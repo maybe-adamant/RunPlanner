@@ -31,8 +31,8 @@ import {
   isChaosGodScreenGiver,
   isAspectSpellDropDormant,
   recordReachedTraitOffer,
-  traitOfferCompositionDomains,
-  offerGenerationAdjustedTraitGiverContext,
+  traitOfferGenerationContext,
+  traitOfferGenerationLegal,
   type TraitHistoryState,
 } from '../../traits';
 import type { EchoLastRunBoonOutcome, TraitOfferContext } from '../../traits/offer-domain';
@@ -414,8 +414,8 @@ function applyTraitOfferForAcquisitionInternal(
   }
   if (
     findings !== undefined &&
-    (evaluation.composition.findings.length > 0 ||
-      evaluation.replacementComposition.findings.length > 0 ||
+    ((evaluation.generation?.findings.length ?? 0) > 0 ||
+      evaluation.composition.findings.length > 0 ||
       evaluation.assessments.some((assessment) => !assessment.legal))
   ) {
     const owner = traitOwnerAddress(reward.origin);
@@ -436,6 +436,20 @@ function applyTraitOfferForAcquisitionInternal(
           );
         }),
       );
+      evaluation.generation?.findings.forEach((finding) => {
+        addTraitFinding(
+          findings,
+          owner,
+          role,
+          lifecyclePoint,
+          sequence,
+          finding.code,
+          undefined,
+          undefined,
+          undefined,
+          findingChronology,
+        );
+      });
       evaluation.composition.findings.forEach((finding) => {
         addTraitFinding(
           findings,
@@ -446,20 +460,6 @@ function applyTraitOfferForAcquisitionInternal(
           finding.code,
           finding.traitKey,
           undefined,
-          undefined,
-          findingChronology,
-        );
-      });
-      evaluation.replacementComposition.findings.forEach((finding) => {
-        addTraitFinding(
-          findings,
-          owner,
-          role,
-          lifecyclePoint,
-          sequence,
-          finding.code,
-          undefined,
-          finding.detail,
           undefined,
           findingChronology,
         );
@@ -501,10 +501,7 @@ function applyTraitOfferForAcquisitionInternal(
         catalog,
         branchAfterOffer,
         sequence,
-        evaluation.composition.legal &&
-          evaluation.replacementComposition.legal &&
-          evaluation.targetedAcquisition.legal &&
-          evaluation.assessments.every((assessment) => assessment.legal)
+        traitOfferGenerationLegal(evaluation) && evaluation.targetedAcquisition.legal
           ? effectiveAuthored
           : undefined,
       ),
@@ -748,15 +745,12 @@ export function applyTraitOfferForAcquisition(
       closedContext,
       branch.arcanaFear,
     ) !== undefined;
+  const evaluation = settlement.branch.traitEvaluations?.[branch.traitEvaluations?.length ?? 0];
   const consumesHymn =
     (traitContext.limitedSwapUses ?? 0) > 0 &&
-    authored.kind === 'traits' &&
-    traitOfferCompositionDomains(
-      catalog,
-      authored.giverKey,
-      branch.traitHistory ?? createTraitHistoryState(),
-      closedContext,
-    ).replacements.length > 0;
+    evaluation !== undefined &&
+    traitOfferGenerationLegal(evaluation) &&
+    evaluation.assessments.some((assessment) => assessment.replacementTransition !== undefined);
   if (!consumesYarn && !consumesHymn)
     return complete({
       ...settlement,
@@ -935,21 +929,15 @@ function withBoonRarityFacts(
   context: TraitOfferContext,
 ): TraitOfferContext {
   const history = branch.traitHistory ?? createTraitHistoryState();
-  const adjusted =
-    context.resolvedProviderKey === undefined
-      ? context
-      : offerGenerationAdjustedTraitGiverContext(
-          catalog,
-          history,
-          context.resolvedProviderKey,
-          context,
-        );
-  const facts = boonRarityFactsForOffer(catalog, history, adjusted, branch.arcanaFear);
-  if (facts === undefined) return adjusted;
-  return Object.freeze({
-    ...adjusted,
-    boonRarityFacts: facts,
-  });
+  return context.resolvedProviderKey === undefined
+    ? context
+    : traitOfferGenerationContext(
+        catalog,
+        history,
+        context.resolvedProviderKey,
+        context,
+        branch.arcanaFear,
+      );
 }
 
 /** Settles one encounter-local trait offer and returns its exact child checkpoint when blocked. */

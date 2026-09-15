@@ -234,21 +234,9 @@ const findingCopy = {
     title: 'Replacement rarity is incorrect',
     description: 'Use the exact next rarity required by the occupied trait.',
   },
-  replacementCompositionExceeded: {
-    title: 'Too many replacements',
-    description: 'This offer contains more replacements than its ordinary pool allows.',
-  },
   wrongHammerLoadout: {
     title: 'Hammer is incompatible with this loadout',
     description: 'This Hammer trait does not support the selected weapon and aspect.',
-  },
-  nonPriorityTrait: {
-    title: 'First Olympian offer needs a priority trait',
-    description: 'Every option in the first Olympian offer must be a priority trait.',
-  },
-  missingAttackOrSpecial: {
-    title: 'First Olympian offer needs Attack or Special',
-    description: 'The first Olympian offer must include an Attack or Special trait.',
   },
   missingPomTarget: {
     title: 'Choose a Pom target',
@@ -338,27 +326,6 @@ const findingCopy = {
   echoLastRunBoonOptionUnavailable: {
     title: 'Boon Boon Boon outcome is unavailable',
     description: 'Choose a source-resolved boon that is eligible at the pre-Echo frontier.',
-  },
-  fullTraitOfferWidthRequired: {
-    title: 'Three choices are required',
-    description: 'This offer still has enough ordinary traits to fill all three choices.',
-  },
-  missingMandatoryOrdinary: {
-    title: 'Include every remaining ordinary trait',
-    description: 'This exhausted offer must show each legal Common-capable ordinary trait.',
-  },
-  missingForcedReplacement: {
-    title: 'Include the required replacement',
-    description: 'A legal replacement must fill this exhausted offer’s remaining position.',
-  },
-  unsupportedSparseTraitOffer: {
-    title: 'This reduced offer cannot occur',
-    description:
-      'The remaining legal traits and replacements do not support this number of choices.',
-  },
-  fallbackGoldUnavailable: {
-    title: 'Fallback Gold cannot occur here',
-    description: 'A trait outcome is still available for this offer.',
   },
   traitOfferSelectionUnavailable: {
     title: 'Choose a materialized trait',
@@ -576,6 +543,14 @@ const findingCopy = {
     title: 'Persephone level bonus unavailable',
     description: 'Choose a contribution within the active Persephone range for this trait.',
   },
+  traitOfferGenerationUnavailable: {
+    title: 'Trait offer cannot occur here',
+    description: 'This set of choices is not supported by the current native offer stages.',
+  },
+  unsupportedSparseTraitOffer: {
+    title: 'This offer needs three choices',
+    description: 'This provider has a fixed three-choice offer.',
+  },
 } as const satisfies Readonly<Record<FindingCode, FindingPresentation>>;
 
 const projectStatusCopy = {
@@ -668,40 +643,10 @@ export function presentFinding(finding: SemanticFinding): FindingPresentation {
  * SemanticFinding origin to pass through `presentFinding`.
  */
 export function presentTraitCandidateFinding(code: TraitCandidateFindingCode): FindingPresentation {
-  switch (code) {
-    case 'fullTraitOfferWidthRequired':
-      return {
-        title: 'Three choices are required',
-        description: 'This offer still has enough ordinary traits to fill all three choices.',
-      };
-    case 'missingMandatoryOrdinary':
-      return {
-        title: 'Include every remaining ordinary trait',
-        description: 'This exhausted offer must show each legal Common-capable ordinary trait.',
-      };
-    case 'missingForcedReplacement':
-      return {
-        title: 'Include the required replacement',
-        description: 'A legal replacement must fill this exhausted offer’s remaining position.',
-      };
-    case 'unsupportedSparseTraitOffer':
-      return {
-        title: 'This reduced offer cannot occur',
-        description:
-          'The remaining legal traits and replacements do not support this number of choices.',
-      };
-    case 'fallbackGoldUnavailable':
-      return {
-        title: 'Fallback Gold cannot occur here',
-        description: 'A trait outcome is still available for this offer.',
-      };
-    default:
-      break;
-  }
   if (code === 'duplicateOfferedTrait') {
     return {
       title: 'Trait is offered more than once',
-      description: 'Each trait offer must contain three distinct alternatives.',
+      description: 'Each offered trait must be distinct.',
     };
   }
   return findingCopy[code];

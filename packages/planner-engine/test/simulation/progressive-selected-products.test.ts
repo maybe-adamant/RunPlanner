@@ -293,7 +293,7 @@ describe('progressive selected and blocked products', () => {
       baselineAssessment?.targets.map((target) => semanticAddressKey(target.origin)),
     );
     expect(retainedAssessment?.targets).toHaveLength(containingDecision.targets.length);
-    expect(session.traitOfferStartingDraft(trait, 'Chaos')).toMatchObject({
+    expect(session.traitOfferStartingOutcome(trait, 'Chaos')).toMatchObject({
       kind: 'traits',
       giverKey: 'Chaos',
     });
@@ -607,7 +607,7 @@ describe('progressive selected and blocked products', () => {
         kind: 'acquisitionConversion',
         result: { artificerSupported: true, artificerReplacementAddress: trait.owner },
       });
-      expect(selected.traitOfferStartingDraft(trait, giverKey)).toMatchObject({
+      expect(selected.traitOfferStartingOutcome(trait, giverKey)).toMatchObject({
         kind: 'traits',
         options: expect.any(Array),
       });
@@ -670,12 +670,12 @@ describe('progressive selected and blocked products', () => {
       kind: 'traitOffer',
       result: {
         supported: false,
-        findings: [
+        findings: expect.arrayContaining([
           expect.objectContaining({
             code: 'duplicateOfferedTrait',
             traitKey: first.traitKey,
           }),
-        ],
+        ]),
       },
     });
   });
@@ -715,14 +715,14 @@ describe('progressive selected and blocked products', () => {
     );
 
     const session = createPreparedProjectCandidateSession(catalog, assembly);
-    const draft = session.traitOfferStartingDraft(trait, 'Zeus');
+    const draft = session.traitOfferStartingOutcome(trait, 'Zeus');
     expect(draft).toMatchObject({
       kind: 'traits',
       giverKey: 'Zeus',
       options: expect.any(Array),
     });
-    expect(draft?.options).toHaveLength(3);
-    if (draft === undefined) throw new Error('invalid offer has no recovery draft');
+    if (draft?.kind !== 'traits') throw new Error('invalid offer has no recovery draft');
+    expect(draft.options).toHaveLength(3);
     expect(session.evaluate({ kind: 'traitOffer', trait, value: draft })).toMatchObject({
       kind: 'traitOffer',
       result: { supported: true, findings: [] },

@@ -56,9 +56,9 @@ function keepsakeEquipResultKey(
 export type TraitCandidateAdapters = Pick<
   CandidateProjectionSession,
   | 'traitOffer'
-  | 'traitOfferStartingDraft'
-  | 'nextOptionalHighTierTraitOfferDraft'
-  | 'previousOptionalHighTierTraitOfferDraft'
+  | 'traitOfferStartingOutcome'
+  | 'appendTraitOfferDraft'
+  | 'removeTraitOfferDraft'
   | 'chaosOfferDomain'
   | 'traitOfferFocusedOptions'
   | 'traitCarrierChildDomain'
@@ -89,14 +89,9 @@ export function createTraitCandidateAdapters(
         [value],
         [{ kind: 'traitOffer', trait: owner, value }],
       ),
-    traitOfferStartingDraft: (owner, giverKey) => {
-      const draft = core.traitOfferStartingDraft(owner, giverKey);
-      return draft?.kind === 'traits' ? draft : undefined;
-    },
-    nextOptionalHighTierTraitOfferDraft: (owner, value) =>
-      core.nextOptionalHighTierTraitOfferDraft(owner, value),
-    previousOptionalHighTierTraitOfferDraft: (owner, value) =>
-      core.previousOptionalHighTierTraitOfferDraft(owner, value),
+    traitOfferStartingOutcome: (owner, giverKey) => core.traitOfferStartingOutcome(owner, giverKey),
+    appendTraitOfferDraft: (owner, value) => core.appendTraitOfferDraft(owner, value),
+    removeTraitOfferDraft: (owner, value) => core.removeTraitOfferDraft(owner, value),
     chaosOfferDomain: (owner, value) => core.chaosOfferDomain(owner, value),
     traitOfferFocusedOptions: (owner, value, optionKey, variants) =>
       core.projectOptions(

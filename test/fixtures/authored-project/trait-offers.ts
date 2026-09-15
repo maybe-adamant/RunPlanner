@@ -174,7 +174,7 @@ export function authorLegalTraitOffers(project: ProjectDocument): ProjectDocumen
     if (missing !== undefined && missing.origin.kind === 'traitOffer') {
       let authored: ProjectDocument | undefined;
       for (const giver of catalog.traitGivers.values) {
-        const draft = session.traitOfferStartingDraft(missing.origin, giver.key);
+        const draft = session.traitOfferStartingOutcome(missing.origin, giver.key);
         if (draft === undefined) continue;
         try {
           authored = applyProjectCommand(current, catalog, {
@@ -202,7 +202,7 @@ export function authorLegalTraitOffers(project: ProjectDocument): ProjectDocumen
               (branch) =>
                 branch.assessments.some((assessment) => !assessment.legal) ||
                 !branch.composition.legal ||
-                !branch.replacementComposition.legal ||
+                branch.generation?.legal === false ||
                 !branch.targetedAcquisition.legal,
             ),
           )
@@ -210,7 +210,10 @@ export function authorLegalTraitOffers(project: ProjectDocument): ProjectDocumen
     );
     let changed = false;
     for (const invalid of invalids) {
-      const replacement = session.traitOfferStartingDraft(invalid.address, invalid.offer.giverKey);
+      const replacement = session.traitOfferStartingOutcome(
+        invalid.address,
+        invalid.offer.giverKey,
+      );
       if (replacement === undefined) continue;
       current = applyProjectCommand(current, catalog, {
         kind: 'ReplaceTraitOffer',

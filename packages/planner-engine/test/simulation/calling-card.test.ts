@@ -306,7 +306,7 @@ describe('Calling Card offer settlement', () => {
     const callingCard = candidate.callingCard(value)[0]!;
 
     expect(result.assessments[0]).toMatchObject({ legal: true });
-    expect(result.replacementComposition.legal).toBe(true);
+    expect(result.generation?.legal).toBe(true);
     expect(
       callingCard.effectiveOffer.kind === 'traits' && callingCard.effectiveOffer.options[0]?.rarity,
     ).toBe('Epic');

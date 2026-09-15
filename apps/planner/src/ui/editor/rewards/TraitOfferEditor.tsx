@@ -113,7 +113,9 @@ export function TraitOfferEditor({
     workspaceInteractionKey(address),
   );
   const initialValue =
-    interaction.value ?? interaction.chaos?.startingDraft() ?? interaction.traitsStartingDraft?.();
+    interaction.value ??
+    interaction.chaos?.startingDraft() ??
+    interaction.traitOfferStartingOutcome?.();
   if (initialValue === undefined) {
     return (
       <div className="trait-offer-editor" role="status">

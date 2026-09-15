@@ -678,7 +678,7 @@ describe('execution-plan compiler and codec', () => {
       const session = createPreparedProjectCandidateSession(catalog, assembly);
       return [current, following].map((owner) => {
         const trait = createTraitOfferAddress(owner, 'source');
-        const draft = session.traitOfferStartingDraft(trait, 'Apollo');
+        const draft = session.traitOfferStartingOutcome(trait, 'Apollo');
         if (draft === undefined)
           throw new Error(`missing trait draft ${semanticAddressKey(trait)}`);
         const candidate = session.evaluate({ kind: 'traitOffer', trait, value: draft });

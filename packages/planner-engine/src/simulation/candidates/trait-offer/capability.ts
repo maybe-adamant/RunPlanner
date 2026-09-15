@@ -21,10 +21,9 @@ import { circeResolutionDomain } from '../../arcana-fear';
 import {
   assessTraitOffer,
   assessTraitOfferBeforeRarification,
-  nextTraitOfferDraft,
-  nextOptionalHighTierTraitOfferDraft,
-  previousOptionalHighTierTraitOfferDraft,
-  traitOfferStartingDraft,
+  appendTraitOfferDraft,
+  removeTraitOfferDraft,
+  traitOfferStartingOutcome,
   assessSelectedTargetedAcquisition,
   targetedAcquisitionTargetKeys,
   type TraitOfferBranchAssessment,
@@ -35,8 +34,8 @@ import {
   echoPomGreatestLevelTraitKeys,
   echoLastRunBoonOutcomes,
   directTraitSetOutcomes,
-  offerGenerationAdjustedTraitGiverContext,
   offerGenerationAdjustedTraitOfferContext,
+  traitOfferGenerationContext,
   isChaosGodScreenGiver,
   assessNaturalSelectionTargets,
   type NaturalSelectionTargetAssessment,
@@ -81,12 +80,6 @@ export interface TraitOfferGenerationState {
         readonly rollOrder: BoonRarityRollOrder;
       }
     | { readonly kind: 'fixed'; readonly rarity: TraitRarity };
-  readonly replacementRollChance: number;
-  readonly eligibleReplacementCount: number;
-  readonly maximumReplacementCount: number;
-  readonly requiredReplacementCount: number;
-  readonly shortageRequiredReplacementCount: number;
-  readonly forcedRollRequiredReplacementCount: number;
 }
 
 export interface TraitOfferCandidateBranchAssessment extends TraitOfferBranchAssessment {
@@ -98,8 +91,12 @@ function traitOfferCandidateContext(
   history: TraitHistoryState,
   context: TraitOfferContext,
   value: AuthoredTraitOffer,
+  arcanaFear?: import('../../arcana-fear').ArcanaFearState,
 ): TraitOfferContext {
-  return offerGenerationAdjustedTraitOfferContext(catalog, history, value, context);
+  const giver = value.kind === 'chaos' ? undefined : catalog.traitGivers.byKey[value.giverKey];
+  return giver?.providerKind === 'olympian' || giver?.providerKind === 'hermes'
+    ? traitOfferGenerationContext(catalog, history, value.giverKey, context, arcanaFear)
+    : offerGenerationAdjustedTraitOfferContext(catalog, history, value, context);
 }
 
 /**
@@ -117,17 +114,14 @@ export interface TraitOfferCandidateCapability {
     readonly invalidActions: readonly number[];
     readonly rarifiableOptionKeys: readonly TraitOptionKey[];
   }[];
-  /** One exact supported traits draft for returning from Fallback Gold, if any. */
-  readonly traitsStartingDraft: (giverKey: string) => AuthoredTraitOfferTraits | undefined;
-  readonly nextTraitOptionDraft: (
-    value: AuthoredTraitOfferTraits,
+  /** One exact native-supported initial traits-or-Gold outcome. */
+  readonly traitOfferStartingOutcome: (giverKey: string) => AuthoredTraitOffer | undefined;
+  readonly appendTraitOptionDraft: (
+    value: AuthoredTraitOffer,
   ) => AuthoredTraitOfferTraits | undefined;
-  readonly nextOptionalHighTierDraft: (
+  readonly removeTraitOptionDraft: (
     value: AuthoredTraitOfferTraits,
-  ) => AuthoredTraitOfferTraits | undefined;
-  readonly previousOptionalHighTierDraft: (
-    value: AuthoredTraitOfferTraits,
-  ) => AuthoredTraitOfferTraits | undefined;
+  ) => AuthoredTraitOffer | undefined;
   readonly targetedAcquisitionTargets: (
     value: AuthoredTraitOffer,
     optionKey: TraitOptionKey,
@@ -345,7 +339,13 @@ export function createTraitOfferCandidateArtifacts(
           catalog,
           primaryOffer,
           context.before,
-          traitOfferCandidateContext(catalog, context.before, context.context, primaryOffer),
+          traitOfferCandidateContext(
+            catalog,
+            context.before,
+            context.context,
+            primaryOffer,
+            context.arcanaFear,
+          ),
         );
         const callingCard =
           context.keepsakes === undefined
@@ -360,7 +360,13 @@ export function createTraitOfferCandidateArtifacts(
           traitAddress.acquisitionRole,
           effectiveOffer,
           context.before,
-          traitOfferCandidateContext(catalog, context.before, context.context, effectiveOffer),
+          traitOfferCandidateContext(
+            catalog,
+            context.before,
+            context.context,
+            effectiveOffer,
+            context.arcanaFear,
+          ),
           0,
           context.arcanaFear,
           false,
@@ -368,8 +374,8 @@ export function createTraitOfferCandidateArtifacts(
           callingCard === undefined ? undefined : primaryOffer,
         );
         const primarySupported =
+          primary.generation?.legal !== false &&
           primary.composition.legal &&
-          primary.replacementComposition.legal &&
           primary.targetedAcquisition.legal &&
           primary.assessments[optionIndex(effectiveOffer.selectedOptionKey)]?.legal === true;
         if (!primarySupported) return undefined;
@@ -393,6 +399,7 @@ export function createTraitOfferCandidateArtifacts(
               context.before,
               context.context,
               effectiveOffer,
+              context.arcanaFear,
             ),
             ...(context.arcanaFear === undefined ? {} : { arcanaFear: context.arcanaFear }),
             ...(context.keepsakes === undefined ? {} : { keepsakes: context.keepsakes }),
@@ -416,17 +423,18 @@ export function createTraitOfferCandidateArtifacts(
         evaluateOffer: (value: AuthoredTraitOffer) =>
           Object.freeze(
             branchContexts.map((context) => {
-              const base = assessTraitOfferBeforeRarification(
-                catalog,
-                value,
-                context.before,
-                traitOfferCandidateContext(catalog, context.before, context.context, value),
-              );
               const resolvedContext = traitOfferCandidateContext(
                 catalog,
                 context.before,
                 context.context,
                 value,
+                context.arcanaFear,
+              );
+              const base = assessTraitOfferBeforeRarification(
+                catalog,
+                value,
+                context.before,
+                resolvedContext,
               );
               const rarityFacts = boonRarityFactsForOffer(
                 catalog,
@@ -448,21 +456,10 @@ export function createTraitOfferCandidateArtifacts(
                         rarity: resolvedContext.freshRarityOverride,
                       });
               const offerGenerationState =
-                value.kind !== 'traits' || rarity === undefined
+                value.kind === 'chaos' || rarity === undefined
                   ? undefined
                   : Object.freeze({
                       rarity,
-                      replacementRollChance:
-                        resolvedContext.replacementRollChance ?? catalog.boonReplacementChance,
-                      eligibleReplacementCount:
-                        base.replacementComposition.eligibleReplacementCount,
-                      maximumReplacementCount: base.replacementComposition.maximumReplacementCount,
-                      requiredReplacementCount:
-                        base.replacementComposition.requiredReplacementCount,
-                      shortageRequiredReplacementCount:
-                        base.replacementComposition.shortageRequiredReplacementCount,
-                      forcedRollRequiredReplacementCount:
-                        base.replacementComposition.forcedRollRequiredReplacementCount,
                     });
               const levelResolutions =
                 value.kind !== 'traits'
@@ -512,8 +509,8 @@ export function createTraitOfferCandidateArtifacts(
               // retain the legality/composition assessment of that base offer.
               return Object.freeze({
                 assessments,
+                ...(base.generation === undefined ? {} : { generation: base.generation }),
                 composition: base.composition,
-                replacementComposition: base.replacementComposition,
                 ...(offerGenerationState === undefined ? {} : { offerGenerationState }),
                 persephoneLevelBonusMaximums: Object.freeze(
                   levelResolutions.map((resolution) => resolution?.persephoneLevelBonusMaximum),
@@ -537,7 +534,13 @@ export function createTraitOfferCandidateArtifacts(
                 catalog,
                 value,
                 context.before,
-                traitOfferCandidateContext(catalog, context.before, context.context, value),
+                traitOfferCandidateContext(
+                  catalog,
+                  context.before,
+                  context.context,
+                  value,
+                  context.arcanaFear,
+                ),
               );
               const result =
                 keepsakes === undefined
@@ -569,6 +572,7 @@ export function createTraitOfferCandidateArtifacts(
                               context.before,
                               context.context,
                               attempted,
+                              context.arcanaFear,
                             ),
                           );
                           const attempt = evaluateCallingCardOffer(
@@ -585,49 +589,45 @@ export function createTraitOfferCandidateArtifacts(
               });
             }),
           ),
-        traitsStartingDraft: (giverKey: string) =>
+        traitOfferStartingOutcome: (giverKey: string) =>
           branchContexts
             .map((context) => {
-              const draft = traitOfferStartingDraft(
+              const outcome = traitOfferStartingOutcome(
                 catalog,
                 giverKey,
                 context.before,
-                offerGenerationAdjustedTraitGiverContext(
+                traitOfferGenerationContext(
                   catalog,
                   context.before,
                   giverKey,
                   context.context,
+                  context.arcanaFear,
                 ),
               );
-              return draft;
+              return outcome;
             })
-            .find((draft): draft is NonNullable<typeof draft> => draft !== undefined),
-        nextTraitOptionDraft: (value: AuthoredTraitOffer) => {
-          if (value.kind !== 'traits') return undefined;
+            .find((outcome): outcome is NonNullable<typeof outcome> => outcome !== undefined),
+        appendTraitOptionDraft: (value: AuthoredTraitOffer) => {
+          if (value.kind === 'chaos') return undefined;
           return branchContexts
             .map((context) =>
-              nextTraitOfferDraft(
+              appendTraitOfferDraft(
                 catalog,
                 value,
                 context.before,
-                traitOfferCandidateContext(catalog, context.before, context.context, value),
+                traitOfferCandidateContext(
+                  catalog,
+                  context.before,
+                  context.context,
+                  value,
+                  context.arcanaFear,
+                ),
               ),
             )
             .find((draft): draft is NonNullable<typeof draft> => draft !== undefined);
         },
-        nextOptionalHighTierDraft: (value: AuthoredTraitOfferTraits) =>
-          branchContexts
-            .map((context) =>
-              nextOptionalHighTierTraitOfferDraft(
-                catalog,
-                value,
-                context.before,
-                traitOfferCandidateContext(catalog, context.before, context.context, value),
-              ),
-            )
-            .find((draft): draft is NonNullable<typeof draft> => draft !== undefined),
-        previousOptionalHighTierDraft: (value: AuthoredTraitOfferTraits) =>
-          previousOptionalHighTierTraitOfferDraft(catalog, value),
+        removeTraitOptionDraft: (value: AuthoredTraitOfferTraits) =>
+          removeTraitOfferDraft(catalog, value),
         targetedAcquisitionTargets: (value: AuthoredTraitOffer, optionKey: TraitOptionKey) =>
           Object.freeze(
             branchContexts.map((context) => {
@@ -653,7 +653,13 @@ export function createTraitOfferCandidateArtifacts(
                 catalog,
                 value,
                 context.before,
-                traitOfferCandidateContext(catalog, context.before, context.context, value),
+                traitOfferCandidateContext(
+                  catalog,
+                  context.before,
+                  context.context,
+                  value,
+                  context.arcanaFear,
+                ),
               )[optionIndex(optionKey)];
               return Object.freeze({
                 sourceSupported: secondary !== undefined || (sourceAssessment?.legal ?? false),
@@ -768,7 +774,13 @@ export function createTraitOfferCandidateArtifacts(
                 catalog,
                 value,
                 context.before,
-                traitOfferCandidateContext(catalog, context.before, context.context, value),
+                traitOfferCandidateContext(
+                  catalog,
+                  context.before,
+                  context.context,
+                  value,
+                  context.arcanaFear,
+                ),
               );
               const replacementOptionKeys =
                 value.kind === 'traits'
@@ -843,7 +855,13 @@ export function createTraitOfferCandidateArtifacts(
                   : address.trait.acquisitionRole,
                 value,
                 context.before,
-                traitOfferCandidateContext(catalog, context.before, context.context, value),
+                traitOfferCandidateContext(
+                  catalog,
+                  context.before,
+                  context.context,
+                  value,
+                  context.arcanaFear,
+                ),
                 0,
                 context.arcanaFear,
                 false,

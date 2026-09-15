@@ -2148,10 +2148,10 @@ describe('Echo Gate B Boon Boon Boon', () => {
       ),
     ).toBe(true);
 
-    const draft = createPreparedProjectCandidateSession(catalog, assembly).traitOfferStartingDraft(
-      echoOwner,
-      'Echo',
-    );
+    const draft = createPreparedProjectCandidateSession(
+      catalog,
+      assembly,
+    ).traitOfferStartingOutcome(echoOwner, 'Echo');
     expect(draft).toMatchObject({
       kind: 'traits',
       giverKey: 'Echo',
@@ -2703,7 +2703,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
     const replayDraft = createPreparedProjectCandidateSession(
       catalog,
       simulateProjectAssembly(catalog, project),
-    ).traitOfferStartingDraft(replayTrait, 'WeaponUpgrade');
+    ).traitOfferStartingOutcome(replayTrait, 'WeaponUpgrade');
     if (replayDraft === undefined) throw new Error('Fresh Hammer replay offer is missing');
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',

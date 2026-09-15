@@ -834,11 +834,7 @@ describe('Chaos paired-trait history', () => {
       {},
       0,
     );
-    expect(invalidFresh.assessments[0]?.findings).toContainEqual({
-      code: 'freshRarityUnavailable',
-      traitKey: 'ZeusWeaponBoon',
-      detail: 'Rare',
-    });
+    expect(invalidFresh.generation?.legal).toBe(false);
     expect(invalidFresh.context.replacementRollChance).toBe(0);
 
     const ordinaryWithOccupiedSlot = foldTraitHistoryEvents(catalog, [
@@ -886,7 +882,7 @@ describe('Chaos paired-trait history', () => {
       newTraitKey: 'ZeusWeaponBoon',
       requiredRarity: 'Rare',
     });
-    expect(mixed.replacementComposition.legal).toBe(true);
+    expect(mixed.generation?.legal).toBe(true);
     expect(mixed.context.replacementRollChance).toBe(1);
     expect(mixed.context.boonRarityFacts).toBeUndefined();
 
@@ -905,7 +901,8 @@ describe('Chaos paired-trait history', () => {
         ],
       ]),
     ).at(address);
-    const draft = capability?.traitsStartingDraft('Zeus');
+    const draft = capability?.traitOfferStartingOutcome('Zeus');
+    if (draft?.kind !== 'traits') throw new Error('expected Zeus traits');
     expect(draft?.options.some((option) => option.rarity === 'Rare')).toBe(true);
     expect(
       draft?.options
@@ -914,8 +911,6 @@ describe('Chaos paired-trait history', () => {
     ).toBe(true);
     expect(capability?.evaluateOffer(replacement)[0]?.offerGenerationState).toMatchObject({
       rarity: { kind: 'fixed', rarity: 'Common' },
-      replacementRollChance: 1,
-      forcedRollRequiredReplacementCount: 1,
     });
 
     const rejectedHistory = pairHistory(chaos('ChaosRestrictBoonCurse', 'ChaosElementalBlessing'));
@@ -1037,7 +1032,7 @@ describe('Chaos paired-trait history', () => {
     if (secondEvaluation === undefined) throw new Error('Hermes screen did not settle');
     expect(secondEvaluation.assessments.every((assessment) => assessment.legal)).toBe(true);
     expect(secondEvaluation.composition.legal).toBe(true);
-    expect(secondEvaluation.replacementComposition.legal).toBe(true);
+    expect(secondEvaluation.generation?.legal).toBe(true);
     expect(secondEvaluation.targetedAcquisition.legal).toBe(true);
     expect(second.branch.traitHistory?.equippedTraits.HermesWeaponBoon).toMatchObject({
       rarity: 'Common',
@@ -1070,7 +1065,7 @@ describe('Chaos paired-trait history', () => {
     });
     expect(thirdEvaluation.assessments.every((assessment) => assessment.legal)).toBe(true);
     expect(thirdEvaluation.composition.legal).toBe(true);
-    expect(thirdEvaluation.replacementComposition.legal).toBe(true);
+    expect(thirdEvaluation.generation?.legal).toBe(true);
     expect(thirdEvaluation.targetedAcquisition.legal).toBe(true);
     expect(third.branch.traitHistory?.equippedTraits.DemeterWeaponBoon).toMatchObject({
       rarity: 'Rare',
@@ -1138,7 +1133,7 @@ describe('Chaos paired-trait history', () => {
     expect(evaluations.map((evaluation) => evaluation.context.replacementRollChance)).toEqual([
       1, 1,
     ]);
-    expect(evaluations.every((evaluation) => evaluation.replacementComposition.legal)).toBe(true);
+    expect(evaluations.every((evaluation) => evaluation.generation?.legal)).toBe(true);
     expect(
       [hymnThenOrdinary, ordinaryThenHymn].map((branch) => branch.stygianWell.hymnUses),
     ).toEqual([1, 1]);

@@ -9,7 +9,6 @@ import {
   evaluateReachedTraitOffer,
   recordReachedTraitOffer,
   traitCandidates,
-  traitOfferCompositionDomains,
 } from '../../src/simulation/traits';
 import { suppressFearVow } from '../../src/simulation/arcana-fear';
 
@@ -26,7 +25,13 @@ function denialState() {
 function narrowedApolloCatalog(traitKeys: readonly string[]) {
   const giver = catalog.traitGivers.byKey.Apollo;
   if (giver === undefined) throw new Error('Apollo giver is missing');
-  const narrowed = Object.freeze({ ...giver, traitKeys: Object.freeze(traitKeys) });
+  const narrowed = Object.freeze({
+    ...giver,
+    traitKeys: Object.freeze(traitKeys),
+    priorityTraitKeys: Object.freeze(
+      giver.priorityTraitKeys.filter((key) => traitKeys.includes(key)),
+    ),
+  });
   return Object.freeze({
     ...catalog,
     traitGivers: Object.freeze({
@@ -177,9 +182,9 @@ describe('Vow of Denial trait history', () => {
       1,
       denialState(),
     );
-    expect(rarityInvalid.assessments[0]?.findings).toContainEqual(
-      expect.objectContaining({ code: 'rarityRollUnavailable' }),
-    );
+    expect(rarityInvalid.generation?.findings).toContainEqual({
+      code: 'traitOfferGenerationUnavailable',
+    });
     expect(recordReachedTraitOffer(catalog, rarityInvalid, 1, 'test')).toEqual({
       history: createTraitHistoryState(),
     });
@@ -284,7 +289,7 @@ describe('Vow of Denial trait history', () => {
       denialState(),
     );
     expect(exhausted.composition.legal).toBe(true);
-    expect(exhausted.replacementComposition.legal).toBe(true);
+    expect(exhausted.generation?.legal).toBe(true);
     expect(recordReachedTraitOffer(testCatalog, exhausted, 2, 'test')).toEqual({
       history: applied.history,
     });
@@ -327,10 +332,9 @@ describe('Vow of Denial trait history', () => {
       2,
       'test',
     );
-    const domains = traitOfferCompositionDomains(testCatalog, 'Apollo', denial.history);
+    const candidates = traitCandidates(testCatalog, 'Apollo', denial.history);
     expect(denial.history.bannedTraitKeys).toEqual(['ApolloWeaponBoon', 'ApolloSpecialBoon']);
-    expect(domains.ordinary).toEqual([]);
-    expect(domains.replacements).toEqual([
+    expect(candidates.filter((candidate) => candidate.available)).toEqual([
       expect.objectContaining({ traitKey: 'ApolloSprintBoon', rarity: 'Rare', available: true }),
     ]);
   });

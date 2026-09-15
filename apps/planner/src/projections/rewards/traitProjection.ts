@@ -53,12 +53,6 @@ export interface TraitOfferStatePresentation {
           readonly checks: readonly { readonly label: string; readonly value: string }[];
         }
       | { readonly kind: 'fixed'; readonly rarity: string };
-    readonly replacementChance: string;
-    readonly eligibleReplacementCount: number;
-    readonly maximumReplacementCount: number;
-    readonly requiredReplacementCount: number;
-    readonly shortageRequiredReplacementCount: number;
-    readonly forcedRollRequiredReplacementCount: number;
   }[];
 }
 
@@ -104,12 +98,6 @@ export function projectTraitOfferState(
                       ),
                     ),
                   }),
-            replacementChance: formatCheckValue(state.replacementRollChance),
-            eligibleReplacementCount: state.eligibleReplacementCount,
-            maximumReplacementCount: state.maximumReplacementCount,
-            requiredReplacementCount: state.requiredReplacementCount,
-            shortageRequiredReplacementCount: state.shortageRequiredReplacementCount,
-            forcedRollRequiredReplacementCount: state.forcedRollRequiredReplacementCount,
           });
         })(),
       ),
@@ -334,8 +322,10 @@ function ownerLocationForAddress(
 interface AggregatedTraitTrace {
   readonly trace: SelectedTraitOfferAssessment;
   readonly assessments: SelectedTraitOfferAssessment['branches'][number]['assessments'][number][];
+  readonly generations: NonNullable<
+    SelectedTraitOfferAssessment['branches'][number]['generation']
+  >[];
   readonly compositions: SelectedTraitOfferAssessment['branches'][number]['composition'][];
-  readonly replacementCompositions: SelectedTraitOfferAssessment['branches'][number]['replacementComposition'][];
   readonly targetedAcquisitions: SelectedTraitOfferAssessment['branches'][number]['targetedAcquisition'][];
   biomeOrder: number;
   chronologicalIndex: number;
@@ -361,11 +351,11 @@ function aggregateTraceEvidence(traces: readonly AggregatedTraitTrace[]): {
       if (!assessment.legal) invalid = true;
       for (const finding of assessment.findings) findingKeys.add(findingKey(finding));
     }
-    for (const composition of trace.compositions) {
-      if (!composition.legal) invalid = true;
-      for (const finding of composition.findings) findingKeys.add(findingKey(finding));
+    for (const generation of trace.generations) {
+      if (!generation.legal) invalid = true;
+      for (const finding of generation.findings) findingKeys.add(findingKey(finding));
     }
-    for (const composition of trace.replacementCompositions) {
+    for (const composition of trace.compositions) {
       if (!composition.legal) invalid = true;
       for (const finding of composition.findings) findingKeys.add(findingKey(finding));
     }
@@ -432,8 +422,10 @@ function groupedTraitTraces(route: ProjectEvaluation['route']): readonly Aggrega
       if (existing === undefined) {
         grouped.set(key, {
           assessments: trace.branches.flatMap((branch) => [...branch.assessments]),
+          generations: trace.branches.flatMap((branch) =>
+            branch.generation === undefined ? [] : [branch.generation],
+          ),
           compositions: trace.branches.map((branch) => branch.composition),
-          replacementCompositions: trace.branches.map((branch) => branch.replacementComposition),
           targetedAcquisitions: trace.branches.map((branch) => branch.targetedAcquisition),
           biomeOrder,
           chronologicalIndex: trace.chronologicalIndex,
@@ -441,10 +433,12 @@ function groupedTraitTraces(route: ProjectEvaluation['route']): readonly Aggrega
         });
       } else {
         existing.assessments.push(...trace.branches.flatMap((branch) => [...branch.assessments]));
-        existing.compositions.push(...trace.branches.map((branch) => branch.composition));
-        existing.replacementCompositions.push(
-          ...trace.branches.map((branch) => branch.replacementComposition),
+        existing.generations.push(
+          ...trace.branches.flatMap((branch) =>
+            branch.generation === undefined ? [] : [branch.generation],
+          ),
         );
+        existing.compositions.push(...trace.branches.map((branch) => branch.composition));
         existing.targetedAcquisitions.push(
           ...trace.branches.map((branch) => branch.targetedAcquisition),
         );

@@ -314,22 +314,18 @@ export interface ProjectCandidateSession {
     ): readonly ProjectCandidateSessionEvaluation[];
   };
   /** Exact trait-outcome transitions retained behind the prepared session. */
-  readonly traitOfferStartingDraft: (
+  readonly traitOfferStartingOutcome: (
     owner: TraitOfferAddress,
     giverKey: string,
+  ) => AuthoredTraitOffer | undefined;
+  readonly appendTraitOfferDraft: (
+    owner: TraitOfferAddress,
+    value: AuthoredTraitOffer,
   ) => AuthoredTraitOfferTraits | undefined;
-  readonly nextTraitOfferDraft: (
+  readonly removeTraitOfferDraft: (
     owner: TraitOfferAddress,
     value: AuthoredTraitOfferTraits,
-  ) => AuthoredTraitOfferTraits | undefined;
-  readonly nextOptionalHighTierTraitOfferDraft: (
-    owner: TraitOfferAddress,
-    value: AuthoredTraitOfferTraits,
-  ) => AuthoredTraitOfferTraits | undefined;
-  readonly previousOptionalHighTierTraitOfferDraft: (
-    owner: TraitOfferAddress,
-    value: AuthoredTraitOfferTraits,
-  ) => AuthoredTraitOfferTraits | undefined;
+  ) => AuthoredTraitOffer | undefined;
   readonly chaosOfferDomain: (
     owner: TraitOfferAddress,
     value?: AuthoredTraitOffer,
@@ -716,18 +712,12 @@ export function createPreparedProjectCandidateSession(
     project,
     evaluation,
     evaluate,
-    traitOfferStartingDraft: (owner: TraitOfferAddress, giverKey: string) =>
-      traitCapability(owner)?.traitsStartingDraft(giverKey),
-    nextTraitOfferDraft: (owner: TraitOfferAddress, value: AuthoredTraitOfferTraits) =>
-      traitCapability(owner)?.nextTraitOptionDraft(value),
-    nextOptionalHighTierTraitOfferDraft: (
-      owner: TraitOfferAddress,
-      value: AuthoredTraitOfferTraits,
-    ) => traitCapability(owner)?.nextOptionalHighTierDraft(value),
-    previousOptionalHighTierTraitOfferDraft: (
-      owner: TraitOfferAddress,
-      value: AuthoredTraitOfferTraits,
-    ) => traitCapability(owner)?.previousOptionalHighTierDraft(value),
+    traitOfferStartingOutcome: (owner: TraitOfferAddress, giverKey: string) =>
+      traitCapability(owner)?.traitOfferStartingOutcome(giverKey),
+    appendTraitOfferDraft: (owner: TraitOfferAddress, value: AuthoredTraitOffer) =>
+      traitCapability(owner)?.appendTraitOptionDraft(value),
+    removeTraitOfferDraft: (owner: TraitOfferAddress, value: AuthoredTraitOfferTraits) =>
+      traitCapability(owner)?.removeTraitOptionDraft(value),
     chaosOfferDomain: (owner: TraitOfferAddress, value?: AuthoredTraitOffer) =>
       traitCapability(owner)?.chaosOfferDomain(value) ?? Object.freeze([]),
   });

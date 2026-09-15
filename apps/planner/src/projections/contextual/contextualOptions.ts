@@ -217,6 +217,10 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
   const sibling = siblingExplanation(catalog, finding);
   if (sibling !== undefined) return sibling;
   switch (finding.code) {
+    case 'traitOfferGenerationUnavailable':
+      return { kind: 'trait', message: 'This trait offer cannot occur at the current frontier.' };
+    case 'unsupportedSparseTraitOffer':
+      return { kind: 'trait', message: 'This provider needs three choices.' };
     case 'fieldsSpatialPointMissing':
       return { kind: 'generic', message: 'Choose a physical point for this active Fields item.' };
     case 'fieldsSpatialPointUnavailable':
@@ -394,11 +398,6 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'circeResolutionTargetUnavailable':
     case 'circeOptionUnavailable':
       return { kind: 'generic', message: 'Repair the selected Circe outcome.' };
-    case 'fullTraitOfferWidthRequired':
-    case 'missingMandatoryOrdinary':
-    case 'missingForcedReplacement':
-    case 'unsupportedSparseTraitOffer':
-    case 'fallbackGoldUnavailable':
     case 'traitOfferSelectionUnavailable':
       return { kind: 'trait', message: 'Repair this exhausted trait offer.' };
     case 'encounterUnavailable':
@@ -499,22 +498,10 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'trait', message: 'The occupied trait is already at maximum rarity.' };
     case 'replacementRarityMismatch':
       return { kind: 'trait', message: 'The replacement must use the exact promoted rarity.' };
-    case 'replacementCompositionExceeded':
-      return { kind: 'trait', message: 'This offer contains too many replacement options.' };
     case 'wrongHammerLoadout':
       return {
         kind: 'trait',
         message: 'This Hammer trait is incompatible with the selected loadout.',
-      };
-    case 'nonPriorityTrait':
-      return {
-        kind: 'trait',
-        message: 'Every option in the first Olympian offer must be a priority trait.',
-      };
-    case 'missingAttackOrSpecial':
-      return {
-        kind: 'trait',
-        message: 'The first Olympian offer must include an Attack or Special trait.',
       };
     case 'missingPomTarget':
       return { kind: 'trait', message: 'Choose a trait to receive this Pom.' };

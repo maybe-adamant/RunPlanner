@@ -463,14 +463,14 @@ export interface WorkspaceTraitOfferInteraction {
     >
   >;
   readonly value: AuthoredTraitOffer | null;
-  /** Exact engine-backed fresh traits draft for initial authoring or stale-offer recovery. */
-  readonly traitsStartingDraft?: () => AuthoredTraitOfferTraits | undefined;
-  readonly nextOptionalHighTierDraft?: (
-    value: AuthoredTraitOfferTraits,
+  /** Exact engine-backed native traits-or-Gold initial outcome. */
+  readonly traitOfferStartingOutcome?: () => AuthoredTraitOffer | undefined;
+  readonly appendTraitOfferDraft?: (
+    value: AuthoredTraitOffer,
   ) => AuthoredTraitOfferTraits | undefined;
-  readonly previousOptionalHighTierDraft?: (
+  readonly removeTraitOfferDraft?: (
     value: AuthoredTraitOfferTraits,
-  ) => AuthoredTraitOfferTraits | undefined;
+  ) => AuthoredTraitOffer | undefined;
 }
 
 export interface WorkspaceRejectedBlockDomain {

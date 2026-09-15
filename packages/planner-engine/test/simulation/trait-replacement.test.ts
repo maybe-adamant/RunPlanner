@@ -1,24 +1,21 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   assessTraitOption,
+  assessTraitOffer,
   boonRarityFactsForOffer,
   assessTraitOfferComposition,
-  assessTraitOfferDomainComposition,
-  assessTraitReplacementComposition,
   createTraitHistoryState,
   foldTraitHistoryEvents,
-  nextTraitOfferDraft,
-  nextOptionalHighTierTraitOfferDraft,
-  previousOptionalHighTierTraitOfferDraft,
-  traitOfferCompositionDomains,
   traitCandidates,
   recordReachedTraitOffer,
-  traitOfferStartingDraft,
+  traitOfferStartingOutcome,
   evaluateReachedTraitOffer,
   type TraitOfferEvent,
 } from '@run-planner/engine/simulation';
 import type { AuthoredTraitOffer } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
+import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 
 const owner = { kind: 'project' } as const;
 
@@ -48,7 +45,7 @@ function history(entries: readonly [string, string, string][]) {
 function offer(
   giverKey: string,
   options: Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
-): AuthoredTraitOffer {
+): Extract<AuthoredTraitOffer, { kind: 'traits' }> {
   return Object.freeze({ kind: 'traits', giverKey, options, selectedOptionKey: 'option1' });
 }
 
@@ -119,46 +116,6 @@ function narrowHeraDraftCatalog() {
   });
 }
 
-function optionalHighTierApolloCatalog() {
-  const giver = catalog.traitGivers.byKey.Apollo!;
-  const traitKeys = ['ApolloWeaponBoon', 'DoubleExManaBoon', 'ApolloSecondStageCastBoon'] as const;
-  const narrowedGiver = Object.freeze({
-    ...giver,
-    traitKeys: Object.freeze([...traitKeys]),
-    priorityTraitKeys: Object.freeze([...traitKeys]),
-  });
-  const highTierKeys = new Set(traitKeys.slice(1));
-  const narrowedTraits = Object.freeze(
-    Object.fromEntries(
-      Object.entries(catalog.traits.byKey).map(([key, declaration]) => [
-        key,
-        highTierKeys.has(key as (typeof traitKeys)[number])
-          ? Object.freeze({ ...declaration, offerRequirements: Object.freeze([]) })
-          : declaration,
-      ]),
-    ),
-  ) as typeof catalog.traits.byKey;
-  return Object.freeze({
-    ...catalog,
-    traitGivers: Object.freeze({
-      ...catalog.traitGivers,
-      values: Object.freeze(
-        catalog.traitGivers.values.map((candidate) =>
-          candidate.key === 'Apollo' ? narrowedGiver : candidate,
-        ),
-      ),
-      byKey: Object.freeze({ ...catalog.traitGivers.byKey, Apollo: narrowedGiver }),
-    }),
-    traits: Object.freeze({
-      ...catalog.traits,
-      values: Object.freeze(
-        catalog.traits.values.map((declaration) => narrowedTraits[declaration.key]!),
-      ),
-      byKey: narrowedTraits,
-    }),
-  });
-}
-
 function historyFor(testCatalog: typeof catalog, entries: readonly [string, string, string][]) {
   return foldTraitHistoryEvents(
     testCatalog,
@@ -183,6 +140,53 @@ function historyFor(testCatalog: typeof catalog, entries: readonly [string, stri
 }
 
 describe('derived Olympian trait replacement', () => {
+  it('applies Hymn’s level bonus to every displayed replacement alternative', () => {
+    const testCatalog = narrowApolloCatalog();
+    const before = historyFor(testCatalog, [
+      ['Zeus', 'ZeusWeaponBoon', 'Common'],
+      ['Zeus', 'ZeusSpecialBoon', 'Rare'],
+      ['Zeus', 'ZeusCastBoon', 'Epic'],
+    ]);
+    const value = offer(
+      'Apollo',
+      Object.freeze([
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Rare' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Epic' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Heroic' },
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
+    );
+    expect(
+      assessTraitOffer(testCatalog, value, before, { limitedSwapUses: 1 }).map(
+        (assessment) => assessment.replacementTransition?.levelBonus,
+      ),
+    ).toEqual([2, 2, 2]);
+    for (const options of [value.options, [...value.options].reverse()]) {
+      const initial = initializeTestRewardBranches()[0]!;
+      const settlement = settleEncounterTraitOffer(
+        testCatalog,
+        {
+          ...initial,
+          traitHistory: before,
+          stygianWell: { ...initial.stygianWell, hymnUses: 2 },
+        },
+        owner,
+        {
+          ...value,
+          options: options as typeof value.options,
+          selectedOptionKey: 'option2',
+        },
+        4,
+        'encounterCompleted',
+      );
+      expect(settlement.branch.stygianWell.hymnUses).toBe(1);
+      expect(settlement.branch.traitHistory?.equippedTraits.ApolloSpecialBoon).toMatchObject({
+        rarity: 'Epic',
+        level: 3,
+      });
+      expect(settlement.branch.traitHistory?.equippedTraits.ZeusSpecialBoon).toBeUndefined();
+    }
+  });
+
   it('publishes a reached valid fallback without recording an event or mutating history', () => {
     const testCatalog = exhaustedApolloCatalog();
     const before = createTraitHistoryState();
@@ -197,7 +201,7 @@ describe('derived Olympian trait replacement', () => {
     );
     expect(evaluation.reached).toBe(true);
     expect(evaluation.composition.legal).toBe(true);
-    expect(evaluation.replacementComposition.legal).toBe(true);
+    expect(evaluation.generation?.legal).toBe(true);
     expect(evaluation.assessments).toEqual([]);
 
     const recorded = recordReachedTraitOffer(testCatalog, evaluation, 4, 'test');
@@ -207,109 +211,50 @@ describe('derived Olympian trait replacement', () => {
     expect(recorded.history.equippedTraits).toEqual({});
   });
 
+  it('retains Hymn when an individually valid replacement belongs to an invalid screen', () => {
+    const before = history([['Zeus', 'ZeusWeaponBoon', 'Common']]);
+    const value = offer('Apollo', [
+      { traitKey: 'ApolloWeaponBoon', rarity: 'Rare' },
+      { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+      { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+    ]);
+    const initial = initializeTestRewardBranches()[0]!;
+    const settled = settleEncounterTraitOffer(
+      catalog,
+      {
+        ...initial,
+        traitHistory: before,
+        stygianWell: { ...initial.stygianWell, hymnUses: 1 },
+      },
+      owner,
+      value,
+      2,
+      'encounterCompleted',
+    );
+    const evaluation = settled.branch.traitEvaluations?.at(-1);
+    expect(evaluation?.assessments[0]?.replacementTransition).toBeDefined();
+    expect(evaluation?.generation?.legal).toBe(false);
+    expect(settled.branch.traitHistory?.events).toEqual(before.events);
+    expect(settled.branch.stygianWell.hymnUses).toBe(1);
+  });
+
   it('retains a mandatory targeted ordinary trait in an unselected sparse row', () => {
     const testCatalog = narrowHeraDraftCatalog();
     const before = historyFor(testCatalog, [['Hephaestus', 'HephaestusWeaponBoon', 'Common']]);
-    const draft = traitOfferStartingDraft(testCatalog, 'Hera', before);
+    const draft = traitOfferStartingOutcome(testCatalog, 'Hera', before);
+    if (draft?.kind !== 'traits') throw new Error('expected a Hera trait draft');
     expect(draft?.options.map((option) => option.traitKey)).toEqual(
       expect.arrayContaining(['BoonDecayBoon', 'BoonGrowthBoon']),
     );
-    expect(draft?.options[0]?.traitKey).not.toBe('BoonDecayBoon');
-    expect(assessTraitReplacementComposition(testCatalog, draft!, before).legal).toBe(true);
+    expect(draft.options[Number(draft.selectedOptionKey.slice(-1)) - 1]?.traitKey).not.toBe(
+      'BoonDecayBoon',
+    );
+    expect(
+      evaluateReachedTraitOffer(testCatalog, owner, 'source', draft, before, {}, 1).generation
+        ?.legal,
+    ).toBe(true);
   });
 
-  it.each([
-    ['O3 full triple', 3, 0, 0, ['ordinary', 'ordinary', 'ordinary'], false, true],
-    ['O2 no R sparse pair', 2, 0, 0, ['ordinary', 'ordinary'], false, true],
-    ['O2 forced R', 2, 0, 1, ['ordinary', 'ordinary', 'replacement'], false, true],
-    ['O1 H plus R', 1, 1, 1, ['ordinary', 'highTier', 'replacement'], false, true],
-    ['O1 two R', 1, 0, 2, ['ordinary', 'replacement', 'replacement'], false, true],
-    ['O1 no R sparse singleton', 1, 0, 0, ['ordinary'], false, true],
-    ['O0 H plus R', 0, 1, 2, ['highTier', 'replacement', 'replacement'], false, true],
-    ['O0 R only', 0, 0, 2, ['replacement', 'replacement'], false, true],
-    ['O0 empty fallback', 0, 0, 0, [], true, true],
-    ['O0 eligible unrolled H fallback', 0, 2, 0, [], true, true],
-  ] as const)(
-    'applies the universal exhaustion matrix: %s',
-    (_name, ordinaryCount, highTierCount, replacementCount, authoredKinds, fallbackGold, legal) => {
-      const keys = (prefix: string, count: number) =>
-        Array.from({ length: count }, (_, index) => `${prefix}${index + 1}`);
-      const authored = authoredKinds.map((kind, index) =>
-        Object.freeze({ traitKey: `${kind}${index + 1}`, kind }),
-      );
-      const result = assessTraitOfferDomainComposition({
-        ordinaryKeys: keys('ordinary', ordinaryCount),
-        highTierKeys: keys('highTier', highTierCount),
-        replacementKeys: keys('replacement', replacementCount),
-        authored: Object.freeze(authored),
-        fallbackGold,
-        replacementRollChance: 0.1,
-      });
-      expect(result.legal).toBe(legal);
-    },
-  );
-
-  it.each([
-    [
-      'O3 cannot be sparse',
-      3,
-      0,
-      0,
-      ['ordinary', 'ordinary'],
-      false,
-      'fullTraitOfferWidthRequired',
-    ],
-    ['O2 cannot omit ordinary', 2, 0, 0, ['ordinary'], false, 'missingMandatoryOrdinary'],
-    ['O2 must fill R', 2, 0, 1, ['ordinary', 'ordinary'], false, 'missingForcedReplacement'],
-    [
-      'O1 H must still fill R',
-      1,
-      1,
-      1,
-      ['ordinary', 'highTier'],
-      false,
-      'missingForcedReplacement',
-    ],
-    [
-      'O1 two R requires both',
-      1,
-      0,
-      2,
-      ['ordinary', 'replacement'],
-      false,
-      'missingForcedReplacement',
-    ],
-    ['O0 H must fill R', 0, 1, 2, ['highTier'], false, 'missingForcedReplacement'],
-    [
-      'O0 R requires all available fill',
-      0,
-      0,
-      2,
-      ['replacement'],
-      false,
-      'missingForcedReplacement',
-    ],
-    ['fallback rejects ordinary', 1, 0, 0, [], true, 'fallbackGoldUnavailable'],
-    ['fallback rejects replacement', 0, 0, 1, [], true, 'fallbackGoldUnavailable'],
-  ] as const)(
-    'rejects incomplete universal exhaustion result: %s',
-    (_name, ordinaryCount, highTierCount, replacementCount, authoredKinds, fallbackGold, code) => {
-      const keys = (prefix: string, count: number) =>
-        Array.from({ length: count }, (_, index) => `${prefix}${index + 1}`);
-      const result = assessTraitOfferDomainComposition({
-        ordinaryKeys: keys('ordinary', ordinaryCount),
-        highTierKeys: keys('highTier', highTierCount),
-        replacementKeys: keys('replacement', replacementCount),
-        authored: Object.freeze(
-          authoredKinds.map((kind, index) => ({ traitKey: `${kind}${index + 1}`, kind })),
-        ),
-        fallbackGold,
-        replacementRollChance: 0.1,
-      });
-      expect(result.legal).toBe(false);
-      expect(result.findings.map((finding) => finding.code)).toContain(code);
-    },
-  );
   it.each([
     ['Common', 'Rare'],
     ['Rare', 'Epic'],
@@ -340,13 +285,15 @@ describe('derived Olympian trait replacement', () => {
     expect(replacement.legal).toBe(true);
     expect(replacement.replacementTransition?.requiredRarity).toBe('Rare');
 
+    const mixed = offer('Apollo', [
+      { traitKey: 'ApolloWeaponBoon', rarity: 'Rare' },
+      { traitKey: 'ApolloSpecialBoon', rarity: 'Rare' },
+      { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+    ]);
     expect(
-      assessTraitOption(catalog, 'ApolloSpecialBoon', before, context, 'Rare').findings,
-    ).toContainEqual({
-      code: 'freshRarityUnavailable',
-      traitKey: 'ApolloSpecialBoon',
-      detail: 'Rare',
-    });
+      evaluateReachedTraitOffer(catalog, owner, 'source', mixed, before, context, 1).generation
+        ?.legal,
+    ).toBe(false);
   });
 
   it('preserves promoted rarity when fresh Epic is guaranteed', () => {
@@ -390,13 +337,15 @@ describe('derived Olympian trait replacement', () => {
       traitKey: 'ApolloWeaponBoon',
       detail: 'Rare:Epic',
     });
+    const invalid = offer('Apollo', [
+      { traitKey: 'ApolloWeaponBoon', rarity: 'Rare' },
+      { traitKey: 'ApolloSpecialBoon', rarity: 'Rare' },
+      { traitKey: 'ApolloCastBoon', rarity: 'Epic' },
+    ]);
     expect(
-      assessTraitOption(catalog, 'ApolloSpecialBoon', before, context, 'Rare').findings,
-    ).toContainEqual({
-      code: 'rarityRollUnavailable',
-      traitKey: 'ApolloSpecialBoon',
-      detail: 'Rare',
-    });
+      evaluateReachedTraitOffer(catalog, owner, 'source', invalid, before, context, 1).generation
+        ?.legal,
+    ).toBe(false);
 
     const evaluation = evaluateReachedTraitOffer(
       catalog,
@@ -562,11 +511,16 @@ describe('derived Olympian trait replacement', () => {
         { traitKey: 'ApolloCastBoon', rarity: 'Common' },
       ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     );
-    const composition = assessTraitReplacementComposition(testCatalog, value, before);
+    const composition = evaluateReachedTraitOffer(
+      testCatalog,
+      owner,
+      'source',
+      value,
+      before,
+      {},
+      1,
+    ).generation;
     expect(composition).toMatchObject({
-      ordinaryCandidateCount: 1,
-      maximumReplacementCount: 2,
-      replacementCount: 2,
       legal: true,
     });
   });
@@ -586,11 +540,16 @@ describe('derived Olympian trait replacement', () => {
         { traitKey: 'ApolloCastBoon', rarity: 'Rare' },
       ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     );
-    const composition = assessTraitReplacementComposition(testCatalog, value, before);
+    const composition = evaluateReachedTraitOffer(
+      testCatalog,
+      owner,
+      'source',
+      value,
+      before,
+      {},
+      1,
+    ).generation;
     expect(composition).toMatchObject({
-      ordinaryCandidateCount: 0,
-      maximumReplacementCount: 3,
-      replacementCount: 3,
       legal: true,
     });
   });
@@ -621,7 +580,7 @@ describe('derived Olympian trait replacement', () => {
     expect(applied.history.equippedTraits.ApolloSpecialBoon).toBeDefined();
   });
 
-  it('keeps failed offer requirements on replacement-shaped options', () => {
+  it('rejects a replacement with an undeclared promoted rarity', () => {
     const assessment = assessTraitOption(
       catalog,
       'ApolloWeaponBoon',
@@ -631,8 +590,6 @@ describe('derived Olympian trait replacement', () => {
     );
     expect(assessment.legal).toBe(false);
     expect(assessment.findings).toEqual([
-      { code: 'offerContext', traitKey: 'ApolloWeaponBoon', detail: 'devotionNoDuo' },
-      { code: 'occupiedBoonSlot', traitKey: 'ApolloWeaponBoon', detail: 'Melee' },
       { code: 'replacementRarityMismatch', traitKey: 'ApolloWeaponBoon', detail: 'Rare:Duo' },
       { code: 'freshRarityUnavailable', traitKey: 'ApolloWeaponBoon', detail: 'Duo' },
     ]);
@@ -677,83 +634,21 @@ describe('derived Olympian trait replacement', () => {
         { traitKey: 'ApolloCastBoon', rarity: 'Rare' },
       ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     );
-    const composition = assessTraitReplacementComposition(catalog, value, before);
-    expect(composition.ordinaryCandidateCount).toBeGreaterThanOrEqual(2);
-    expect(composition.maximumReplacementCount).toBe(1);
-    expect(composition.replacementCount).toBe(3);
-    expect(composition.legal).toBe(false);
+    const composition = evaluateReachedTraitOffer(
+      catalog,
+      owner,
+      'source',
+      value,
+      before,
+      {},
+      1,
+    ).generation;
+    expect(composition?.legal).toBe(false);
   });
 
   it('does not expose Heroic as a fresh candidate', () => {
     const candidates = traitCandidates(catalog, 'Apollo', createTraitHistoryState());
     expect(candidates.some((candidate) => candidate.rarity === 'Heroic')).toBe(false);
-  });
-
-  it('uses the exact first-Olympian priority domain for composition and draft growth', () => {
-    const before = createTraitHistoryState();
-    const domains = traitOfferCompositionDomains(catalog, 'Apollo', before);
-    expect(new Set(domains.ordinary.map((candidate) => candidate.traitKey))).toEqual(
-      new Set(catalog.traitGivers.byKey.Apollo!.priorityTraitKeys),
-    );
-    const sparse = offer(
-      'Apollo',
-      Object.freeze([{ traitKey: 'ApolloWeaponBoon', rarity: 'Common' }]),
-    );
-    const next = nextTraitOfferDraft(
-      catalog,
-      sparse as Extract<AuthoredTraitOffer, { kind: 'traits' }>,
-      before,
-    );
-    // The draft may remain incomplete, but the engine only exposes a next
-    // position that has a valid completion path through the shared domain.
-    expect(next?.options).toHaveLength(2);
-    const completed = nextTraitOfferDraft(catalog, next!, before);
-    expect(completed?.options).toHaveLength(3);
-    expect(assessTraitReplacementComposition(catalog, completed!, before).legal).toBe(true);
-  });
-
-  it('exposes shape transitions only for optional Duo and Legendary outcomes', () => {
-    const testCatalog = optionalHighTierApolloCatalog();
-    const before = createTraitHistoryState();
-    const initial = traitOfferStartingDraft(testCatalog, 'Apollo', before);
-    expect(initial?.options.map((option) => option.rarity)).toEqual(['Common', 'Legendary', 'Duo']);
-    const withoutDuo = previousOptionalHighTierTraitOfferDraft(testCatalog, initial!);
-    expect(withoutDuo?.options.map((option) => option.rarity)).toEqual(['Common', 'Legendary']);
-    const withoutHighTier = previousOptionalHighTierTraitOfferDraft(testCatalog, withoutDuo!);
-    expect(withoutHighTier?.options.map((option) => option.rarity)).toEqual(['Common']);
-    expect(previousOptionalHighTierTraitOfferDraft(testCatalog, withoutHighTier!)).toBeUndefined();
-    expect(
-      nextOptionalHighTierTraitOfferDraft(testCatalog, withoutHighTier!, before)?.options.map(
-        (option) => option.rarity,
-      ),
-    ).toEqual(['Common', 'Legendary']);
-
-    const ordinaryOnly = offer(
-      'Apollo',
-      Object.freeze([{ traitKey: 'ApolloWeaponBoon', rarity: 'Common' }]),
-    ) as Extract<AuthoredTraitOffer, { kind: 'traits' }>;
-    expect(
-      nextOptionalHighTierTraitOfferDraft(narrowApolloCatalog(), ordinaryOnly, before),
-    ).toBeUndefined();
-  });
-
-  it('reports typed whole-offer findings for unsupported fallback and missing exhaustion fill', () => {
-    const fallback = assessTraitReplacementComposition(
-      catalog,
-      Object.freeze({ kind: 'fallbackGold', giverKey: 'Apollo' }),
-      createTraitHistoryState(),
-    );
-    expect(fallback.findings).toEqual([{ code: 'fallbackGoldUnavailable' }]);
-
-    const testCatalog = narrowApolloCatalog();
-    const before = historyFor(testCatalog, [['Zeus', 'ZeusWeaponBoon', 'Common']]);
-    const incomplete = offer(
-      'Apollo',
-      Object.freeze([{ traitKey: 'ApolloCastBoon', rarity: 'Common' }]),
-    );
-    expect(assessTraitReplacementComposition(testCatalog, incomplete, before).findings).toEqual(
-      expect.arrayContaining([expect.objectContaining({ code: 'missingMandatoryOrdinary' })]),
-    );
   });
 
   it('rejects an in-memory traits draft whose selection is not materialized', () => {
@@ -765,7 +660,7 @@ describe('derived Olympian trait replacement', () => {
       ],
       selectedOptionKey: 'option3' as const,
     });
-    expect(assessTraitOfferComposition(catalog, invalid, createTraitHistoryState())).toMatchObject({
+    expect(assessTraitOfferComposition(catalog, invalid)).toMatchObject({
       legal: false,
       findings: [{ code: 'traitOfferSelectionUnavailable' }],
     });
@@ -780,9 +675,8 @@ describe('derived Olympian trait replacement', () => {
       ],
       selectedOptionKey: 'option1' as const,
     });
-    expect(assessTraitReplacementComposition(catalog, value, createTraitHistoryState())).toEqual(
+    expect(assessTraitOfferComposition(catalog, value)).toEqual(
       expect.objectContaining({
-        applies: false,
         legal: false,
         findings: [{ code: 'unsupportedSparseTraitOffer' }],
       }),

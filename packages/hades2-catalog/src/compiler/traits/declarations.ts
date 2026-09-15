@@ -420,6 +420,14 @@ export function normalizeTraits(
           }),
       elementContributions: Object.freeze(elementContributions),
       usesBoonRarity,
+      ...(trait.optionalLinkedPriority === undefined
+        ? {}
+        : {
+            optionalLinkedPriority: requireBoolean(
+              trait.optionalLinkedPriority,
+              `${path}.optionalLinkedPriority`,
+            ),
+          }),
       isCoreGodTrait,
       blockStacking: requireBoolean(trait.blockStacking, `${path}.blockStacking`),
       blockOfferIfPreviouslyPicked:
