@@ -21,7 +21,7 @@ implemented, independently reviewed and committed (`a5333e65`). Gate D is
 complete and independently reviewed, including the user-approved NPC
 screen-consumption correction (`6e1702a2`). Gate E is implemented and has passed
 two independent reviews and bounded remediation; its implementation is committed
-with this status update. The accepted zero-to-three-row editing, Gold terminal, Trial
+as `de59551e`. The accepted zero-to-three-row editing, Gold terminal, Trial
 declarations and Hymn correction are delivered together. The amendment was
 committed as `f22c1d83`; `80781a84` records the narrow linked-priority
 possibility qualification. No probability simulation was added.
@@ -33,7 +33,16 @@ The final integration pass also updates stale finding assertions and authors
 native-valid lifecycle fixture screens without weakening prefix boundaries or
 changing the generic fixture repair helper. Only the two semantically changed
 execution fixtures are regenerated and mirrored. Broad repository verification,
-cumulative performance comparison and durable-document closure remain Gate F.
+cumulative performance comparison and durable-document closure remain Gate H.
+
+Gate F is specified below from the completed
+[BBB requirement-origin matrix](../investigations/TRAIT_ELIGIBILITY_GAME_PARITY_REVIEW.md#bbb-requirement-origin-matrix)
+and the user-approved declaration shape. Its implementation baseline is
+`de59551e`; implementation has not started. Gate G's rarity-credit, sale,
+acquisition-fallback and Personal Loan payout contracts are specified below.
+Unusual non-Pom level behavior is explicitly deferred to an in-game probe after
+G.2, not a prerequisite for implementing the confirmed target domain.
+Commit this amendment before starting F.
 
 E verification: the focused catalog, offer-generation, candidate, settlement,
 binding and editor suites pass after the final corrections. All 70 compiler
@@ -44,7 +53,8 @@ full repository or performance closure result is claimed here.
 
 The revised order is A replacement rarity → B forced-rarity precedence
 → C Chaos pair rarity → D Ordinary consumption/expiry → E ordinary screen composition
-→ F closure. The amended execution contract was committed as `e023b3d9` before
+→ F declaration requirements and BBB eligibility → G Bridal Glow and Personal Loan → H closure.
+The earlier amended execution contract was committed as `e023b3d9` before
 Gate B implementation.
 
 Correct ordinary initial boon screens so that complete-offer validation,
@@ -52,6 +62,9 @@ candidate support and editor draft construction agree with the supported native
 generation stages. An individually eligible trait is not sufficient to prove a
 valid screen; pool counts are not sufficient either. First correct the
 source-rarity and expiry facts on which later offer validation depends.
+Then give trait declarations independent eligibility and linked-prerequisite
+contracts, so BBB can consume current-state eligibility without ordinary boon
+generation prerequisites. Ordinary generation continues to require both.
 
 The user-visible witness is the Apollo Trial in `G_Combat13`, occurrence
 `05d7ce68-dcfd-4dcd-8750-6a4efbdd6c36`, in the supplied `underworld.json`:
@@ -77,6 +90,8 @@ Included:
 - individual-only picker eligibility, engine-owned valid starting drafts and
   structural append/removal operations, with their existing application
   bindings and shared trait editor;
+- a catalog-owned split between eligibility and linked-boon requirements,
+  consumed consistently by ordinary generation and BBB's existing replay path;
 - correction of obsolete composition evidence and explanations.
 
 The expanded E amendment includes the accepted correction of the source-proven Trial
@@ -92,14 +107,19 @@ active Hymn level bonus, independent of authored display order, while its
 successful native seed still causes one use to be consumed per screen. Keep
 the existing transition and consumption owners; do not expand level settlement.
 
-**Bridal Glow and Echo Boon Boon Boon are separate follow-up work, not closure
-additions.** Bridal's acquisition fallback and later source-rarity level credit
-belong together in its own correction. Preserve its existing offer prerequisite
-here. BBB's current-run predicates versus linked prerequisites are original
-investigation finding 4; do not change its replay eligibility, prior-run
-approximation, variable-size draft rules, rarity/level behavior or selected-child
-settlement. Ordinary expiry reuses existing promotion behavior without expanding
-it into the deferred Bridal correction.
+BBB's current-run predicates versus linked prerequisites are original
+investigation finding 4 and now belong to Gate F. Preserve its prior-run
+approximation, source union, variable-size draft rules, direct-grant rarity/level
+behavior and selected-child effect ownership. This is not ordinary bucket
+generation for BBB or a new replay editor.
+
+Gate G owns Bridal Glow's acquisition fallback and later source-rarity level
+credit, plus Personal Loan's payout-time rarity-upgrade block. Target eligibility
+and rarity outcomes are agreed; extending levels to traditionally non-Pom
+targets awaits the bounded G.2 probe. Do not implement G during F. Preserve
+Bridal's existing offer prerequisite and target/effect behavior in the requirement split. Ordinary
+expiry continues to reuse existing promotion behavior without adding the
+deferred Bridal correction.
 
 Also excluded: rerolls; new save-progression inputs; Death Defiance or precise
 God Sent investment modeling; Chaos-pair, NPC, Hammer or Spell Drop composition
@@ -124,21 +144,24 @@ do not silently rewrite saved choices to make them legal.
 Read `docs/design/SIMULATION_AND_VALIDATION.md` in full before engine work.
 The specialist authorities are the trait-offer sections of
 `docs/design/REWARD_MODEL.md`, the trait-offer candidate boundary in
-`docs/design/CANDIDATE_EVALUATION_MODEL.md`, and these source audits:
+`docs/design/CANDIDATE_EVALUATION_MODEL.md`, the trait declaration and requirement
+sections of `docs/design/CATALOG_MODEL.md`, and these source audits:
 
 - `docs/audits/traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md`;
 - `docs/audits/traits/TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md`;
 - `docs/audits/traits/BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md`, especially numeric
   precedence, Proper Upbringing, Gorgon and Yarn;
 - `docs/audits/traits/CHAOS_TRAIT_GAME_DATA_AUDIT.md`, especially paired rarity,
-  curse clocks and maturation.
+  curse clocks and maturation;
+- `docs/audits/rewards-and-acquisition/VOLATILE_OFFER_ELIGIBILITY_GAME_DATA_AUDIT.md`,
+  especially BBB's retained baseline and Task Force's modeled Spell Drop prefix.
 
 Their current small-pool quotas and first-offer-only account are the policies
 being corrected, not acceptance requirements to preserve. The rarity audit's
 obsolete descriptions of Chaos effects as future consumers are also not
 authority to ignore implemented modifiers. Other modeled exclusions remain in
 force. The rarity investigation's C1/C2 map to Gate B, C3 to Gate C, and C4 to
-Gate D; its C5/C6 are the deferred Bridal correction.
+Gate D; its C5/C6 are the separate Gate G Bridal correction.
 
 Source references use the reviewed local snapshot at
 `/home/ayyatma/wsl-projects/modding/1GameData/Scripts`:
@@ -365,7 +388,7 @@ The focused starting points for the added rarity work are:
 Status: implemented and independently reviewed with no findings. The new
 regression failed before the fix; all 98 tests in the four owning/contact files
 below pass after it. Workspace/fixture typechecking and focused ESLint pass.
-Full closure verification remains in Gate F. Implementation is committed.
+Full closure verification remains in Gate H. Implementation is committed.
 
 Deliver the focused individual-assessment fix, its candidate contact, and
 source/authority corrections specific to replacement rarity. No new composition
@@ -382,7 +405,7 @@ Status: implemented, independently reviewed and committed. The review's
 Yarn witness gap was corrected and verified. All 117 tests across the five
 focused Chaos, Gorgon, rarity, candidate and replacement files pass, along with
 engine typechecking, scoped ESLint, formatting and diff checks. Full repository
-and performance verification remain in Gate F.
+and performance verification remain in Gate H.
 
 Deliver C1/C2 from the rarity investigation: establish Ordinary before numeric
 facts are built or consumed, align Gorgon's resolver, and preserve Yarn until
@@ -405,7 +428,7 @@ schema, declaration and editor files pass. Engine, catalog and planner
 typechecks, scoped ESLint, formatting and diff checks pass. The witnesses cover
 selected/candidate agreement, invalid-pair history exclusion and exact finding
 ownership, retained Yarn, and a visible invalid rarity with a legal editor
-repair. Full repository and performance verification remain in Gate F.
+repair. Full repository and performance verification remain in Gate H.
 
 Deliver C3: source-backed chance support for the selected pair, aligned across
 validation and existing Chaos rarity candidates. Keep static decoding,
@@ -427,7 +450,7 @@ candidate tests pass, plus the 18 existing Concave Stone tests. Engine
 typechecking, scoped ESLint, formatting and diff checks pass. The independent
 reviewer reran all 29 Chaos tests. Red witnesses reproduced both the missing
 final-boon promotion and the NPC consumption/Rejected gaps before correction.
-Full verification remains in Gate F.
+Full verification remains in Gate H.
 
 Native Artemis, Athena and Dionysus screens qualify through
 `TreatAsGodLootByShops` (`NPCData_Artemis.lua:1850`, `NPCData_Athena.lua:26`,
@@ -589,20 +612,20 @@ game code out of production and fixture generators. A full live-game replay is
 not required to prove source branch reachability, but do not describe a static
 or helper probe as in-game confirmation.
 
-| Rule family               | Minimum distinguishing evidence                                                                                                                                                                                                                                                          | Primary owner                                                              |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| S1–S3 seeds               | Original Apollo witness; five vacant cores; later one-seed screen; occupied slot with eligible versus banned provider identity; no eligible cores; unavailable Attack/Special; Hymn with and without a replacement                                                                       | Engine trait-offers/replacement                                            |
+| Rule family               | Minimum distinguishing evidence                                                                                                                                                                                                                                                                        | Primary owner                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| S1–S3 seeds               | Original Apollo witness; five vacant cores; later one-seed screen; occupied slot with eligible versus banned provider identity; no eligible cores; unavailable Attack/Special; Hymn with and without a replacement                                                                                     | Engine trait-offers/replacement                                            |
 | S4 linked priority        | Guaranteed-Duo Apollo witness: priority insertion permits Dazzling Display where ordinary filling must take both Duos; with non-guaranteed checks ordinary filling can reproduce that offer. Merely offered prerequisite grants no eligibility; catalog owns the three optional-priority declarations. | Engine witness; catalog owns declarations                                  |
-| S5–S7 rarity buckets      | Seed-specific versus pooled rarity; later success supersedes tentative Common without consuming it; identity removed across every bucket; depletion alters next draw; guaranteed roll cannot fail; failed empty-Common attempt                                                           | Engine composition                                                         |
-| S8–S9 rescue              | Zero initial replacement roll still permits vacancy rescue; effective Denial on/off/suppressed with bans retained; present-zero versus absent entry; short nonempty and empty terminal screens                                                                                           | Engine composition/Denial                                                  |
-| S10 Trial                 | Source-executed Apollo Trial rescue witness reproduced through real authored acquisitions; with Denial on no Duo rescue; a normal inherited Duo stays individually ineligible; catalog matrix covers the five requirement overrides                                                      | Catalog predicates; engine composition and one acquisition-history contact |
-| S11 replacement effects   | Exhausted active-Hymn screen with three replacement alternatives: each receives +2; select a non-first row and verify its level credit and exactly one use consumed; row permutation does not change these facts                                                                         | Engine replacement assessment and existing acquisition-history contact     |
-| Exact unordered offer     | Permuting all three authored rows preserves generation support; no sibling equips; branch-correlated support cannot be manufactured by merging histories                                                                                                                                 | Engine composition/candidate contact                                       |
-| Picker separation         | Individually legal non-core and replacement rows stay selectable despite incompatible siblings; locally illegal traits stay unavailable; missing target retains an exact repair domain under invalid composition                                                                         | Engine focused candidates                                                  |
-| Structural editing        | Remove a required third row and see a finding while Add remains usable; add during invalid composition; Add at three/Remove at zero disabled but visible; all unused identities banned/acquired/ineligible disables Add without invoking composition                                     | Engine drafts + one representative UI workflow                             |
-| Zero-row editing          | Remove the final row to Gold, receive an invalidity finding when native generation cannot end empty, then Add one eligible row to repair; neither transition needs a valid complete-screen constructor; use existing persisted variants and discard trait-only references at zero        | Engine drafts; fold into the representative UI repair workflow             |
-| Empty-terminal authoring  | An unresolved exhausted offer opens directly as valid Fallback Gold; Start over can replace an invalid traits draft with Gold; Add is disabled when no unused eligible identity exists; unauthored state is not implicitly Gold                                                          | Engine starting-outcome contract and one UI contact                        |
-| References and boundaries | Remove trailing selected/Stone-referenced row without corrupting retained children; preserve Rejected/Rarification contract; fixed-size providers and BBB unchanged                                                                                                                      | Existing owner tests and representative binding contact                    |
+| S5–S7 rarity buckets      | Seed-specific versus pooled rarity; later success supersedes tentative Common without consuming it; identity removed across every bucket; depletion alters next draw; guaranteed roll cannot fail; failed empty-Common attempt                                                                         | Engine composition                                                         |
+| S8–S9 rescue              | Zero initial replacement roll still permits vacancy rescue; effective Denial on/off/suppressed with bans retained; present-zero versus absent entry; short nonempty and empty terminal screens                                                                                                         | Engine composition/Denial                                                  |
+| S10 Trial                 | Source-executed Apollo Trial rescue witness reproduced through real authored acquisitions; with Denial on no Duo rescue; a normal inherited Duo stays individually ineligible; catalog matrix covers the five requirement overrides                                                                    | Catalog predicates; engine composition and one acquisition-history contact |
+| S11 replacement effects   | Exhausted active-Hymn screen with three replacement alternatives: each receives +2; select a non-first row and verify its level credit and exactly one use consumed; row permutation does not change these facts                                                                                       | Engine replacement assessment and existing acquisition-history contact     |
+| Exact unordered offer     | Permuting all three authored rows preserves generation support; no sibling equips; branch-correlated support cannot be manufactured by merging histories                                                                                                                                               | Engine composition/candidate contact                                       |
+| Picker separation         | Individually legal non-core and replacement rows stay selectable despite incompatible siblings; locally illegal traits stay unavailable; missing target retains an exact repair domain under invalid composition                                                                                       | Engine focused candidates                                                  |
+| Structural editing        | Remove a required third row and see a finding while Add remains usable; add during invalid composition; Add at three/Remove at zero disabled but visible; all unused identities banned/acquired/ineligible disables Add without invoking composition                                                   | Engine drafts + one representative UI workflow                             |
+| Zero-row editing          | Remove the final row to Gold, receive an invalidity finding when native generation cannot end empty, then Add one eligible row to repair; neither transition needs a valid complete-screen constructor; use existing persisted variants and discard trait-only references at zero                      | Engine drafts; fold into the representative UI repair workflow             |
+| Empty-terminal authoring  | An unresolved exhausted offer opens directly as valid Fallback Gold; Start over can replace an invalid traits draft with Gold; Add is disabled when no unused eligible identity exists; unauthored state is not implicitly Gold                                                                        | Engine starting-outcome contract and one UI contact                        |
+| References and boundaries | Remove trailing selected/Stone-referenced row without corrupting retained children; preserve Rejected/Rarification contract; fixed-size providers and BBB unchanged                                                                                                                                    | Existing owner tests and representative binding contact                    |
 
 Strengthen existing primary tests in `trait-offers.test.ts`,
 `trait-replacement.test.ts`, `denial-traits.test.ts` and
@@ -618,9 +641,412 @@ Their handoff names actual tests run and remaining uncertainties. Main checks
 all displaced paths are gone, test ownership, cache validity and algorithmic
 work before accepting the combined commit. No new engine contract ships with
 old picker/draft/UI semantics attached. Full verification and cumulative
-performance comparison remain F, not a repeated per-subpass gate.
+performance comparison remain H, not a repeated per-subpass gate.
 
-### F — Closure
+### F — Separate declaration requirements and correct BBB eligibility
+
+#### Contract and source boundary
+
+Deliver one coherent catalog-and-engine slice. The declaration model must stand
+on its own; BBB is a consumer, not the reason for trait-specific flags or a
+parallel requirement table. The completed matrix classifies all 103 currently
+non-empty trait requirement lists: 41 linked-only, 34 with both kinds, and
+28 eligibility-only. All 75 native linked groups matched the existing catalog
+expressions exactly; no existing Boolean group needs to be split internally.
+Use that inventory, not a fresh broad audit or classification by predicate kind.
+
+Replace `TraitDeclaration.offerRequirements` and its raw declaration counterpart
+with two explicit fields using the existing expression type:
+
+```ts
+interface TraitDeclaration {
+  // Existing declaration fields remain alongside these two collections.
+  readonly eligibilityRequirements: readonly TraitRequirementExpression[];
+  readonly linkedBoonRequirements: readonly TraitRequirementExpression[];
+}
+```
+
+`eligibilityRequirements` owns modeled current-state and offer-context
+conditions. `linkedBoonRequirements` owns the native prerequisite boon groups
+used by ordinary generation. Every expression is declared once, in its owning
+collection, preserving its full AND/OR structure. "Mixed" is an audit category,
+not a declaration variant, discriminator or runtime branch: those declarations
+simply populate both fields. Empty collections have no requirements.
+
+For example, Romantic Spark keeps its Devotion exclusion under eligibility and
+its Zeus/Aphrodite groups under linked prerequisites. Lightning Lance keeps
+cast-family exclusions under eligibility and its core-Cast group under linked
+prerequisites. Whispered Prayer's explicit Hex identity requirement is
+eligibility, not a linked group. Keep the Icarus occupied-slot approximation in
+eligibility without introducing another predicate; Icarus is outside BBB's
+source union.
+
+Raw declarations and normalized products use the same distinction. Catalog
+construction validates references and expressions in both collections; it must
+not infer categories at runtime, flatten them into a retained combined list,
+or leave a BBB-specific correction table beside the declarations. Separate
+Chaos and Well fields also named `offerRequirements` are different contracts
+and are unchanged.
+
+Native `EchoLastRunBoon` (`EventLogic.lua:1604–1618`) filters through
+`IsTraitEligible` (`RunLogic.lua:98–134`), not `HasTraitRequirements`
+(`RunLogic.lua:57`). Ordinary generation consumes both. Keep one existing
+predicate evaluator, with explicit consumer choice of the applicable collections:
+
+| Consumer                                       | Required behavior                                                                                                             |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Ordinary declaration assessment and generation | Evaluate both collections; preserve existing eligibility, bucket inputs and findings                                          |
+| BBB outcome generation and row validation      | Evaluate eligibility only, plus existing replay membership, ownership, bans, slot and distinctness restrictions               |
+| BBB selected acquisition and nested effects    | Consume the validated outcome through existing effect owners; do not reapply ordinary linked, replacement or fresh-roll rules |
+
+The source matrix classifies already-modeled requirements; it is not permission
+to import every native `GameStateRequirements` predicate. Retain the progressed
+save/volatile baseline, Task Force's settled concrete Spell Drop approximation,
+and existing giver membership. Preserve BBB's direct-grant rarity and level 1,
+existing Proper promotion, no stack boosts, no replacement and nested target
+repair. No prior-save cache, extra authored input, editor redesign, acquisition
+timing change or Bridal effect correction belongs in F.
+
+#### Ownership, context and delivery
+
+Complete these internal steps before one implementation commit; do not ship a
+catalog-only interface change for downstream code to repair later.
+
+1. Migrate declaration facts and both normalized-catalog validation passes.
+   Update the ordinary assessor to require both collections in the same slice.
+   Shared evaluator behavior and ordinary generation policy remain unchanged.
+2. Give `echoLastRunBoonOutcomes` the existing exact `TraitOfferContext` and use
+   the shared lower-level `checkRequirement`. Do not call the ordinary assessor
+   or import it back into `offer-domain.ts`: that would reintroduce linked and
+   fresh-offer rules and create a dependency cycle.
+3. Carry the same pre-choice context through all four outcome-builder consumers
+   and the child-validation handoff. Candidate and selected products use their
+   captured branch context; no merged history, later selected state, new replay
+   pass, UI flag or context sidecar may replace it.
+4. Preserve reached invalid rows and their exact repair capabilities. A saved
+   BBB choice newly failing modeled eligibility becomes a repairable finding,
+   not a load exception, silent removal or automatic reselection.
+
+Focused starting paths are relative to their package's `src/`:
+
+| Owner                                   | Starting contact                                                                                                         | Change                                                                                    |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| Catalog                                 | `declarations/traits/types.ts`, provider declarations, `compiler/traits/declarations.ts`                                 | Explicit partition and normalization/reference validation of both lists                   |
+| Engine catalog contract                 | `catalog-schema/traits.ts`                                                                                               | Replace the combined declaration field with the two supported fields                      |
+| Engine ordinary assessment              | `simulation/traits/authoring/assessment.ts:assessTraitDeclarationEligibility`                                            | Preserve conjunction; pass existing context at the outer BBB availability call            |
+| Engine declaration context query        | `authored-project/traits/state.ts:traitGiverUsesOfferContext`                                                            | Inspect eligibility expressions; do not retain an obsolete combined-list reader           |
+| Engine BBB domain                       | `simulation/traits/offer-domain.ts:echoLastRunBoonOutcomes`                                                              | Use modeled eligibility at the exact pre-choice context                                   |
+| Engine candidates and retained products | `simulation/candidates/trait-offer/capability.ts`, `simulation/rewards/biome/selected-trait-products.ts`                 | Pass captured `context.context` and `trace.context`, respectively                         |
+| Engine selected child                   | `simulation/rewards/trait-settlement/encounter-child-settlement.ts:assessEchoBoonChild`, sole caller in `coordinator.ts` | Pass the same pre-choice context and validate every authored row before nested settlement |
+
+`settledSpellDrop` is currently added inside
+`applyTraitOfferForAcquisitionInternal` from existing `useRecord.SpellDrop`.
+BBB's child validator is outside that augmentation. Make the existing fact
+available in the common pre-choice encounter context for both paths, preserving
+the exact chronological prefix. Do not add a second history interpretation.
+Aspect of Selene's starting Hex alone remains distinct from a settled Spell Drop.
+
+Live Echo uses nonblocked, non-Devotion `H_Bridge01`; existing false defaults for
+gift/Devotion context are truthful there. Explicit true-context checks belong
+at the pure outcome boundary, not a fabricated Echo encounter in another room.
+`simulation/traits/offers.ts` retains its already-assessed child handoff.
+Application and React consume existing capabilities/findings unchanged.
+
+#### Acceptance, review and deletions
+
+| Evidence                                    | Required outcome                                                                                                                                                                                                                          | Primary owner                                                                                                      |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Declaration partition                       | All 103 non-empty declarations classified once; complete linked groups retained; mixed declarations retain eligibility; representative empty/invalid-reference normalization in both collections                                          | Catalog `test/catalog/trait-requirements-dependencies.test.ts` and `trait-raw-boundary.test.ts`                    |
+| Ordinary conjunction                        | A missing linked prerequisite or failed eligibility condition still excludes the ordinary trait; both satisfied preserves existing bucket behavior                                                                                        | Existing engine `test/simulation/trait-offers.test.ts` and `traits/authoring/initial-composition.test.ts` contacts |
+| BBB linked bypass with eligibility retained | A linked-only trait is replayable without its prerequisites; a mixed trait still fails its eligibility condition; no blanket exclusion of trait-identity predicates                                                                       | Engine `test/simulation/echo-traits.test.ts`                                                                       |
+| Modeled state predicates                    | Representative element, Hex, rarity-count/upgradeability and cast-exclusion cases affect BBB using the shared predicates, not a duplicate per-trait interpreter                                                                           | Same BBB suite; full declaration classification stays catalog-owned                                                |
+| Exact context and chronology                | Context-only gift/Devotion divergence changes pure outcomes; a settled-Spell chronology witness distinguishes starting Hex from concrete Spell Drop and reaches child validation and captured candidate/projection consumers consistently | Same BBB suite, reusing existing branch and H encounter builders                                                   |
+| Saved-choice repair                         | An upstream state change leaves the authored BBB row visible with a finding and an exact legal repair domain; no invalid child effect settles                                                                                             | Existing BBB repair and real H Echo witnesses                                                                      |
+| Preserved replay semantics                  | Existing source exclusions, distinctness, direct-grant rarity/level 1, stack suppression and nested targeted-effect witnesses remain correct                                                                                              | Existing BBB suite; do not duplicate its full matrix in UI tests                                                   |
+
+Strengthen existing tests at their authority rather than adding one test per
+catalog row or a new end-to-end route for every predicate. Ordinary suites
+retain representative conjunction/generation witnesses, not a second copy of
+the BBB matrix. No test or fixture may require the local native-script path.
+
+Minimum F validation commands (all must pass):
+
+```sh
+npm run test:correctness -- \
+  packages/hades2-catalog/test/catalog/trait-requirements-dependencies.test.ts \
+  packages/hades2-catalog/test/catalog/trait-raw-boundary.test.ts \
+  packages/planner-engine/test/simulation/echo-traits.test.ts \
+  packages/planner-engine/test/simulation/trait-offers.test.ts \
+  packages/planner-engine/test/simulation/traits/authoring/initial-composition.test.ts \
+  packages/planner-engine/test/simulation/trait-offer-focused-candidates.test.ts
+npm run typecheck
+git diff --check
+```
+
+The implementation handoff must also list the final changed-file arguments and
+successful results for `npx eslint --max-warnings=0` (changed TypeScript) and
+`npx prettier --check` (changed supported files), plus any additional affected
+tests. Diagnose baseline failures explicitly rather than weakening assertions
+or claiming a clean gate. Full `npm run check` and performance remain H.
+
+The independent review must challenge lost eligibility in mixed declarations,
+accidentally relaxed ordinary generation, required context dropped at any of
+the four consumers, stale invalid-row repair, and fresh-offer rules leaking
+into replay. Check the complete source-to-consumer slice against the matrix,
+not merely the number of renamed fields. Use one executor and one fresh
+independent reviewer under the repository gate routine; reuse the executor for
+bounded remediation.
+
+Remove the combined trait field, its normalization/reference-validation reads,
+and history-only BBB calls in the same slice. Do not retain compatibility
+aliases, a duplicate conjunction array, BBB flags, runtime classification,
+new requirement DSL or a generic eligibility framework. Mechanical test-input
+updates are allowed; unrelated test restructuring is not.
+
+This changes the normalized catalog contract and its content identity, not the
+persisted authored schema or execution protocol. Follow existing catalog identity
+handling; refresh only changed generated products and use bounded metadata edits
+where identity alone changes. Do not bump protocol/schema or regenerate every
+execution fixture merely because a requirement collection was renamed.
+
+### G — Bridal Glow and Personal Loan correction
+
+G.1–G.3 are specified for implementation. The rarity investigation's C6 and C5
+respectively own the existing Bridal source evidence; G.2 and G.3 record their
+focused native traces below. Non-Pom level behavior remains a bounded probe
+after G.2. This remains separate from F's requirement split.
+
+#### G.1 — Source-independent rarity credit and sale preservation
+
+Native Bridal records its chosen target as `UpgradedTraitName` at acquisition
+(`TraitLogic.lua:2823–2835`). Its grant is Common +1, Rare +2, Epic +3, Heroic +4
+(`TraitData_Hera.lua:2021–2045`). `CreditMissingStacks`
+(`TraitLogic.lua:2838–2857`) awards only the difference between the old and new
+rarity-scaled grant, provided the remembered trait key is currently equipped
+and not `BlockStacking`. Both `UpgradeAllCommon` and `AddRarityToTraits` invoke
+this same rarity-change consequence (`TraitLogic.lua:2664–2665`, `3032–3033`).
+
+The planner contract is the same:
+
+- Acquisition retains its existing initial promotion and level award, together
+  with the chosen target. A later rarity increase never repeats acquisition,
+  promotes the target again or requests another target choice.
+- Every actual increase in Bridal's equipped rarity credits that remembered
+  target with `grant(newRarity) - grant(oldRarity)`, regardless of what caused
+  the increase. Consecutive promotions credit only their respective differences;
+  a no-op or rejected mutation adds nothing.
+- Credit requires that the remembered trait key is currently equipped and
+  stackable and has a modeled level. Do not rerun ordinary Pom eligibility or
+  the preferred acquisition target search. A missing target receives no credit,
+  and a different boon in its former slot is not a substitute. No deferred debt
+  or retargeting is added. G.2's deferred non-Pom level extension applies to both
+  initial grants and later credit; absence of a modeled level is not a claim
+  that native stacking cannot occur.
+- Selling Bridal removes Bridal and its own element contribution normally.
+  The target keeps its attained rarity and levels, including later credit.
+  These are completed mutations, not an ongoing buff to reverse. Native sale
+  calls `RemoveWeaponTrait` (`SellTraitLogic.lua:327–328`); Bridal declares no
+  target-reversal expiration action. Preserve the planner's existing removal
+  behavior rather than adding a Bridal-specific sale handler.
+
+The engine's existing trait-history rarity transition owns the consequence.
+Proper decides which traits it promotes; it must contain no Bridal-specific
+target-credit logic. Remove the credit loop from `promoteActiveFloorTargets`
+in `simulation/traits/history/fold.ts` and route its promotions through the same
+rarity-change consequence used by Steady Growth and Aromatic Phial. Reuse the
+recorded acquisition target and existing rarity-grant arithmetic. Keep the
+initial acquisition award separate and preserve same-boundary ordering, so
+Proper activation caused by Bridal's own acquisition cannot miss or double
+the additional credit. Retain Steady Growth's existing progress adjustment.
+
+No caller-specific flags, new rarity event system, duplicated Proper exception,
+or target payload threaded through every promotion caller. No authored-schema,
+UI or executor change is needed for G.1. How Bridal was acquired—ordinary
+selection, BBB or Concave Stone—must not change its later credit behavior.
+
+Primary verification stays in engine `test/simulation/trait-history.test.ts`:
+
+- Common acquisition grants +1, then Common→Rare grants another +1 and
+  Rare→Epic→Heroic adds +2 in total; a direct Common→Heroic promotion grants +3.
+- Proper's existing activation and same-boundary acquisition witnesses retain
+  exactly-once credit through the shared path; Phial and Growth use that same
+  rule. Extend representative contacts in `keepsakes-phial.test.ts` and the
+  existing Growth tests, without duplicating the complete matrix per source.
+- Missing/nonstackable targets receive no credit; a replacement occupying the
+  old slot is not targeted. Keep normal, BBB and Stone acquisition handoffs
+  covered through their existing owner tests, not three copies of every case.
+- A real Pool sale after credited promotion removes Bridal while retaining
+  the target's final rarity/level and prior acquisition history. Use the
+  existing `purging-pool-sales.test.ts` workflow rather than only deleting a
+  field in a test setup.
+- Folding the same history remains deterministic, and no promotion awards
+  the initial grant a second time.
+
+These are acceptance requirements, not claims of implemented or tested behavior.
+Use the G.2/G.3 acceptance alongside these tests for the gate's independent
+review; broad repository/performance closure remains H.
+
+#### G.2 — Acquisition fallback and bounded non-Pom level probe
+
+Native `HeraSuperchargeBoon` first calls `AddRarityToTraits` with
+`TargetRarity = 4`, `MaxRarity = 3`, and `StackEligibleOnly = true`; only when
+that yields no target does it retry with `TargetRarity = 4` alone
+(`TraitLogic.lua:2823–2835`, `2978–3000`). Resolve those two domains in the engine
+at the acquisition effect's exact equipped-state boundary. A nonempty preferred
+domain wins; the fallback is not an extra set of alternatives beside it.
+
+| Target condition                    | Preferred               | Fallback                    | Existing authority                                      |
+| ----------------------------------- | ----------------------- | --------------------------- | ------------------------------------------------------- |
+| Equipped at the effect boundary     | Required                | Required                    | Trait history                                           |
+| God membership                      | Plain core-god domain   | Shop-aware god domain       | `isCoreGodTrait`; giver `shopAwareGodTrait`             |
+| Stackability                        | Must not block stacking | No stackability restriction | `blockStacking`                                         |
+| Current rarity                      | Common/Rare/Epic        | Heroic also allowed         | Equipped rarity                                         |
+| Heroic promotion support            | Required                | Required                    | Equipped `rarityDomain`                                 |
+| In-run rarity block                 | Must be absent          | Must be absent              | Declaration plus G.3 runtime fact                       |
+| Hephaestus effective cooldown limit | Still applies           | Still applies               | `maximumEligibleLevelByRarity` and current level/rarity |
+
+Use these facts rather than provider-name lists, a new fallback-category flag,
+or a new eligibility framework. Ordinary Pom eligibility and `blockStacking`
+are different facts: Hermes/NPC traits can be non-Pom yet not block stacking.
+Already-Heroic and nonstackable targets can still be legal fallback choices;
+do not impose an additional requirement that promotion must change their
+rarity. Native includes the newly equipped Bridal source in its search, so do
+not add a blanket source-key exclusion. Bridal's existing source eligibility
+is correct and remains unchanged for both ordinary offers and BBB. The fallback
+belongs exclusively to acquisition target selection; it does not make Bridal
+offerable when its initial eligibility requirements fail.
+
+Keep the two queries explicit within the existing target-domain owner in
+`simulation/traits/level-effects.ts`: source eligibility continues to consult
+the preferred-only domain; selected acquisition target resolution uses the
+preferred domain, then the fallback when necessary. Share their underlying
+predicates, not their different selection policies. The existing
+`targetedAcquisitionTargetKeys` also feeds source availability in
+`authoring/assessment.ts` and `offer-domain.ts`; do not broaden those readers
+when adding fallback to selected settlement and the captured target-picker
+capability. Preserve starting-draft behavior as well. Use the exact post-primary
+context for a Concave Stone residual and the existing BBB selected-child
+context; neither carrier gets a separate fallback rule.
+If supporting source-self targeting requires the selected source's equipped
+view, derive that at the effect boundary without equipping unrelated options
+or replaying the whole offer. The application keeps the same contextual target
+picker and `targetTraitKey` payload. An empty search result, missing candidate
+coverage or an invalid selected target must not activate fallback; only an
+actually empty evaluated preferred domain does. Missing/stale target choices
+retain the existing repair findings and exact candidate context. An empty
+preferred pool is not by itself a successfully settled no-op.
+
+Settlement promotes the selected target to Heroic and preserves its other
+modeled state. Keep established level grants for ordinary Pom-eligible targets
+and G.1's subsequent credit. Do not manufacture a level for nonstackable or
+otherwise currently non-level-bearing targets. The internal
+`TraitTargetedAcquisitionTransition` currently requires `oldLevel`/`newLevel`,
+and `assessSelectedTargetedAcquisition` defaults a missing level to zero;
+replace that assumption with an optional, coherent level-change product and
+update its consumers together. This is an internal transition correction, not
+a new authored payload, persisted fallback mode or execution protocol. Existing
+execution publication already carries the chosen target; it must not infer
+eligibility or invent deferred levels.
+
+Native attempts explicit stacking when `BlockStacking` is false even outside
+the normal Pom domain. The user will test this after G.2 before deciding whether
+to extend modeled levels. Until that decision, non-Pom fallback targets receive
+their known rarity outcome in the planner without new level bookkeeping. This
+is an explicit bounded modeling omission, not evidence of native zero levels;
+do not encode a permanent rarity-only assertion in tests or declarations.
+No runtime `unsupported` category or executor compensation is added.
+
+Primary acceptance stays in the existing engine trait-history, offer and
+focused-candidate tests, with representative carrier/application contacts:
+
+- Preferred targets exclude fallback-only choices until the preferred domain
+  is genuinely empty. Ordinary-offer and BBB availability witnesses both retain
+  the existing rejection of Bridal in a fallback-only inventory; an already
+  offered Bridal can nevertheless resolve its acquisition target from that
+  inventory after the intervening state change.
+- Cover a stackable non-Pom target, a nonstackable but rarifiable target, an
+  already-Heroic target and the source-self case; preserve rarity blocks and
+  Hephaestus caps. Use declarations for tier exclusions rather than duplicating
+  every provider's inventory. G.3 supplies the paid-out Personal Loan witness.
+- A real Concave Stone chain that exhausts the preferred domain exposes the
+  fallback target through the same picker and settles it. The existing BBB
+  child path uses the same authority. Preserve repair access for a stale target
+  without a carrier-specific UI or another complete policy matrix.
+- Rarity-only internal transitions do not fabricate level zero or numeric
+  deltas. Existing normal-target level and G.1 credit witnesses stay intact.
+  Publication carries the selected fallback target without a format change.
+
+The post-G.2 probe inspects native `StackNum`, displayed level and actual effect
+before/after Bridal for representative Hermes, Artemis, Athena and Dionysus
+targets, with an ordinary Pom target and an explicitly nonstackable target as
+controls. Include any normal-god non-Pom case whose behavior is uncertain and
+subsequent source-rarity credit where applicable. Record source-supported
+versus observed outcomes; amend the level contract only after the user reviews
+the results. An unresolved probe may remain explicitly deferred at H, while
+the implemented eligibility/rarity contract can pass review independently.
+
+#### G.3 — Personal Loan payout-time rarity eligibility
+
+Personal Loan (`BankBoon`) does not delete itself at payout. Native acquisition
+banks the player's gold plus the declared positive return
+(`PowersLogic.lua:1716–1723`, `TraitData_Dionysus.lua:494–545`). On a qualifying
+non-final boss defeat, the game pays the stored amount, sets `StoredGold = 0`
+and `BlockInRunRarify = true`, and changes its tray presentation to expired
+(`CombatLogic.lua:3953–3966`). The equipped identity, rarity and Water element
+remain. Rarity counting does not inspect `BlockInRunRarify`
+(`TraitLogic.lua:669–670`), so an expired Common Personal Loan still prevents
+Uncommon Grace from being offered or active (`TraitData_Hera.lua:1796–1814`).
+
+Use the existing `bossDefeated` checkpoint and route-position facts. Apply the
+transition for an equipped Personal Loan at a non-final boss, independently of
+Judgment, Figurine, their activation choices or Barren. Do not nest this work
+inside either Arcana effect. Zagreus already uses `ContractBoss` materialized
+as `StandardRewardRoom` and emits no `bossDefeated`; no extra Zagreus exclusion
+or new lifecycle is needed. Apply the block before later encounter-end effects,
+including Steady Growth on the same boss.
+
+Ownership and implementation bounds:
+
+- The catalog owns Personal Loan's declared payout behavior. The existing
+  encounter settlement handoff in
+  `simulation/rewards/biome/encounter-acquisition/encounter-settlement.ts`
+  invokes the trait-history transition at the checkpoint.
+- Record the runtime rarity block on the equipped instance through the existing
+  trait-history event/fold path (`simulation/traits/history/`). Do not mutate
+  only one snapshot or change the immutable catalog's `blockInRunRarify` flag.
+  Rebuilds and later biomes retain the transition; a fresh acquisition does not
+  inherit an earlier instance's state.
+- Equipped-trait rarity consumers read the declaration plus the runtime block:
+  Steady Growth, Proper Upbringing, Aromatic Phial and G.2's Bridal fallback.
+  Phial must exclude it from both its consumption and mutation domains. Keep
+  the common block check narrow; each effect retains its own target rules.
+  Fresh-offer rarity checks stay declaration-based. Do not confuse rarity
+  blocking with `BlockStacking` or ordinary Pom eligibility.
+- Preserve trait membership, rarity, element and rarity-count contributions,
+  and acquisition history. Candidates, findings and progressive evaluation
+  consume the resulting history normally, without Personal Loan-specific UI
+  or candidate reconstruction.
+- No gold accounting, authored choice, visible timeline action, scheduler,
+  generic trait-expiry framework or executor hook. No authored-schema or
+  execution-protocol addition: existing execution diagnostics and conformance
+  explicitly project observable trait fields rather than the whole equipped
+  instance. Refresh generated products only when their actual output changes.
+
+Primary verification belongs to engine trait-history and lifecycle tests:
+
+- Pre-payout eligibility becomes blocked at the qualifying checkpoint, with
+  deterministic refolding and unchanged Common count, Water and membership.
+- A later Proper activation and the existing Growth/Phial target queries
+  respect the runtime block; G.2's fallback uses the same equipped-state fact.
+  Keep the predicate matrix at its owner rather than duplicating it per UI.
+- One authored P acquisition → P boss → Q witness proves the cross-biome
+  handoff and reached candidate domain. Cover Growth maturing on that boss so
+  payout ordering is exercised, not merely a manually marked equipped object.
+- Payout does not depend on Judgment/Figurine being active; final-boss and
+  ordinary encounter completion do not apply it. A later fresh instance starts
+  with its declaration's normal eligibility.
+
+### H — Closure
 
 After gate reviews and their bounded remediation passes, perform the main-session
 whole-product review, then complete repository verification and the performance
@@ -629,13 +1055,20 @@ test expectations and generated products; valid cases must not be weakened
 merely to make the suite pass.
 
 Integrate corrected source precedence, Chaos rarity support, Ordinary expiry
-and composition into their owning reward/candidate sections and source audits,
-replacing obsolete explanations rather than appending fix narratives. Delete
+and composition into their owning reward/candidate sections and source audits.
+Integrate the eligibility/linked distinction into the catalog contract and BBB
+source disposition. Integrate G's agreed source-independent Bridal rarity
+credit, sale preservation, acquisition-only target fallback and Personal Loan
+payout-time rarity block into their owning settlement/history contracts and
+source evidence. Bridal's ordinary and BBB offer eligibility remains unchanged;
+only the non-Pom level extension awaits the bounded probe. Replace obsolete
+explanations rather than appending fix narratives. Delete
 this plan and the bucket-rule investigation. Retire the delivered parts of the
-original eligibility and rarity investigations; retain only the
-concrete deferred Bridal/BBB questions and necessary source evidence, or move
-them into their focused follow-up investigation. Do not keep completed matrices
-as delivery history or make Bridal/BBB implementation a closure prerequisite.
+original eligibility and rarity investigations, promoting source evidence into
+its smallest durable owner. Retain temporary notes only for concrete unresolved
+questions explicitly deferred by the user; completed matrices do not remain as
+delivery history. Record the G.2 level probe's result or explicit deferral
+before closure; do not describe its unmodeled levels as confirmed zero.
 
 Each implementation gate receives a focused executor packet and a fresh
 independent review under the repository routine; E requires both independent
@@ -672,6 +1105,11 @@ a bounded checked-in authored fixture; tests must not depend on a Windows path.
 Do not clone the whole user plan into many fixtures or recreate the native
 algorithm in test helpers. Retain existing provider-boundary tests for BBB,
 Chaos, NPC, Hammer and Spell Drop without adding a duplicate exclusion matrix.
+The whole-product review also includes F's requirement/context witnesses and
+G.1–G.3's settlement, repair and lifecycle witnesses specified in their owning
+sections; the ordinary-screen table above does not replace those acceptance
+requirements. The non-Pom level probe may remain explicitly deferred without
+blocking the agreed G implementation or being reported as verified behavior.
 
 Review specifically for:
 
@@ -679,8 +1117,8 @@ Review specifically for:
 - Gorgon/candidate/selected paths resolving different source-rarity precedence;
 - Chaos's authored static domain being mistaken for contextual probability
   support, or its direct grants being treated as fresh screens;
-- an expiry correction that promotes too early, runs a new clock, changes
-  authored rarity, or expands into Bridal/BBB settlement;
+- an Ordinary-expiry correction that promotes too early, runs a new clock,
+  changes authored rarity, or absorbs the separately owned F/G work;
 - a new staged validator still defeated by old pre-filtering or quota checks;
 - picker/primary-target repair or Add/Remove still blocked by sibling composition,
   or a new blank persisted state introduced merely for draft controls;
@@ -693,7 +1131,21 @@ Review specifically for:
   three-position support check using existing prepared facts;
 - inaccurate replacement statistics retained solely for presentation;
 - source assumptions widened beyond the agreed source-rarity, expiry and
-  ordinary initial-screen scope.
+  ordinary initial-screen scope, F's declaration/BBB correction, or G's bounded
+  Bridal and Personal Loan contracts;
+- eligibility silently moved into linked prerequisites, ordinary generation
+  evaluating only one collection, or BBB reusing ordinary replacement/roll
+  policy instead of its source-specific replay contract;
+- context lost between BBB candidate, retained-product and child-settlement
+  consumers, or an invalid authored replay row losing its repair domain;
+- Bridal acquisition fallback broadening ordinary/BBB offer eligibility, or
+  using a missing/stale target rather than an empty preferred domain to enable it;
+- Bridal rarity credit remaining Proper-specific, applying twice, retargeting
+  a missing recipient, or rolling back the recipient's gains on sale;
+- Personal Loan payout removing the trait or its rarity/element contribution,
+  depending on Arcana activation, or leaking its runtime rarity block into
+  fresh offers or ordinary level eligibility;
+- unprobed non-Pom levels being invented, encoded as zero or claimed as parity.
 
 The source-level Trial `BlockRarities` question is resolved by S10 and its native
 probe; the declaration-sensitive correction is accepted scope, using existing
