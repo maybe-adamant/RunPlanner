@@ -88,6 +88,7 @@ describe('trait requirements and dependencies', () => {
       kind: 'selectable',
       rarities: ['Common', 'Rare', 'Epic'],
     });
+    expect(traits?.traits.byKey.BankBoon?.nonFinalBossRarityBlock).toBe(true);
     for (const traitKey of expectedGiverPools.Hades ?? []) {
       expect(traits.traits.byKey[traitKey]).toMatchObject({
         rarityDomain: { kind: 'none' },

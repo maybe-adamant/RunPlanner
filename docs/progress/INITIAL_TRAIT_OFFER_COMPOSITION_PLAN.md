@@ -45,7 +45,20 @@ The user confirmed Bridal self-targeting and a Hermes target reaching level 2
 in game, and accepted G.2 without extending non-Pom level bookkeeping.
 G.1 is implemented, independently reviewed with no actionable findings, and
 committed as `a0f01090`. G.2 is implemented and independently reviewed; its one
-coverage finding is remediated. G.3 has not started.
+coverage finding is remediated and G.2 is committed as `c4cb937d`.
+G.3 is implemented and independently reviewed with no remaining actionable
+findings. Its missing final-boss/ordinary-completion coverage was added at the
+encounter-settlement owner. The authored P → Q witness makes Steady Growth
+mature on the P boss and proves Personal Loan is blocked before the reached
+target domain is captured. G.3 is delivered; broad closure remains H.
+
+G.3 verification: nine focused catalog/engine files pass (125 tests).
+Workspace and fixture typechecks, changed-TypeScript ESLint, changed-file
+Prettier and `git diff --check` pass after final test repairs. The runtime
+trait-history flag preserves equipped membership, Common rarity counting and
+Water, resets on a fresh acquisition, and is not an actionable DAG dependency
+or an execution-protocol field. No authored-schema, fixture, application or
+executor change is needed.
 
 G.2 verification: eight focused engine files pass (242 tests); after review,
 three affected files pass again (116 tests), including the new base-Common /
@@ -148,7 +161,7 @@ generation for BBB or a new replay editor.
 Gate G owns Bridal Glow's acquisition fallback and later source-rarity level
 credit, plus Personal Loan's payout-time rarity-upgrade block. Target eligibility
 and rarity outcomes are agreed; extending levels to traditionally non-Pom
-targets awaits the bounded G.2 probe. Do not implement G during F. Preserve
+targets remains excluded after the user's G.2 probe. Do not implement G during F. Preserve
 Bridal's existing offer prerequisite and target/effect behavior in the requirement split. Ordinary
 expiry continues to reuse existing promotion behavior without adding the
 deferred Bridal correction.
@@ -845,8 +858,8 @@ execution fixture merely because a requirement collection was renamed.
 
 G.1–G.3 are specified for implementation. The rarity investigation's C6 and C5
 respectively own the existing Bridal source evidence; G.2 and G.3 record their
-focused native traces below. Non-Pom level behavior remains a bounded probe
-after G.2. This remains separate from F's requirement split.
+focused native traces below. Non-Pom level bookkeeping remains an accepted
+omission after the user's G.2 probe. This remains separate from F's requirement split.
 
 #### G.1 — Source-independent rarity credit and sale preservation
 
@@ -871,7 +884,7 @@ The planner contract is the same:
   stackable and has a modeled level. Do not rerun ordinary Pom eligibility or
   the preferred acquisition target search. A missing target receives no credit,
   and a different boon in its former slot is not a substitute. No deferred debt
-  or retargeting is added. G.2's deferred non-Pom level extension applies to both
+  or retargeting is added. G.2's accepted non-Pom level omission applies to both
   initial grants and later credit; absence of a modeled level is not a claim
   that native stacking cannot occur.
 - Selling Bridal removes Bridal and its own element contribution normally.
@@ -981,8 +994,8 @@ execution publication already carries the chosen target; it must not infer
 eligibility or invent deferred levels.
 
 Native attempts explicit stacking when `BlockStacking` is false even outside
-the normal Pom domain. The user will test this after G.2 before deciding whether
-to extend modeled levels. Until that decision, non-Pom fallback targets receive
+the normal Pom domain. After a live Hermes witness, the user accepted keeping
+the current scope: non-Pom fallback targets receive
 their known rarity outcome in the planner without new level bookkeeping. This
 is an explicit bounded modeling omission, not evidence of native zero levels;
 do not encode a permanent rarity-only assertion in tests or declarations.
@@ -1139,8 +1152,8 @@ Chaos, NPC, Hammer and Spell Drop without adding a duplicate exclusion matrix.
 The whole-product review also includes F's requirement/context witnesses and
 G.1–G.3's settlement, repair and lifecycle witnesses specified in their owning
 sections; the ordinary-screen table above does not replace those acceptance
-requirements. The non-Pom level probe may remain explicitly deferred without
-blocking the agreed G implementation or being reported as verified behavior.
+requirements. The accepted non-Pom level omission does not block the agreed G
+implementation and must not be reported as full native level parity.
 
 Review specifically for:
 

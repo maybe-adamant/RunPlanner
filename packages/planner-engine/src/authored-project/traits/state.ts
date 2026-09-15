@@ -186,6 +186,8 @@ export interface EquippedTrait {
   readonly giverKey: string;
   readonly providerKind: TraitProviderKind;
   readonly rarity?: TraitRarity;
+  /** Runtime-only payout state for one still-equipped trait instance. */
+  readonly rarityBlockedInRun?: true;
   /** Fresh Pom-eligible traits start at 1; replacement may inherit it elsewhere. */
   readonly level?: number;
   /** Hammers additionally carry an independent I/II rank. */

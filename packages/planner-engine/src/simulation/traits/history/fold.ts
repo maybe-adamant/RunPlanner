@@ -10,6 +10,7 @@ import type {
 } from './model';
 import {
   bridalGlowAddedLevels,
+  isInRunRarityBlocked,
   isLevelBearingTrait,
   isPomUpgradeTarget,
   nextRarity,
@@ -33,6 +34,7 @@ export function isTraitOfferMutationEvent(event: TraitHistoryEvent): boolean {
     case 'steadyGrowthProgress':
     case 'pickupProducerProgress':
     case 'echoKeepsakeReplay':
+    case 'rarityBlock':
       return false;
   }
 }
@@ -200,7 +202,7 @@ function promoteActiveFloorTargets(
     if (
       declaration === undefined ||
       !declaration.usesBoonRarity ||
-      declaration.blockInRunRarify ||
+      isInRunRarityBlocked(catalog, equipped) ||
       activeSources.has(traitKey) ||
       declaration.rarityDomain.kind !== 'ranked' ||
       !declaration.rarityDomain.equippedRarities.includes('Rare') ||
@@ -400,6 +402,15 @@ export function foldTraitHistoryEvents(
             event.newRarity,
             event.resetSteadyGrowthProgress === true,
           );
+        continue;
+      }
+      if (event.kind === 'rarityBlock') {
+        const target = equipped[event.traitKey];
+        if (
+          catalog.traits.byKey[event.traitKey]?.nonFinalBossRarityBlock === true &&
+          target !== undefined
+        )
+          equipped[event.traitKey] = Object.freeze({ ...target, rarityBlockedInRun: true });
         continue;
       }
       if (event.kind === 'elementContribution') {

@@ -70,6 +70,7 @@ export const dionysusTraits = [
     label: 'Personal Loan',
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
+    nonFinalBossRarityBlock: true,
   },
   {
     ...variableDionysusTrait,

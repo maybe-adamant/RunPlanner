@@ -16,6 +16,7 @@ import {
   createOccurrenceId,
   createOccurrenceAddress,
   createRewardWheelOfferAddress,
+  createSteadyGrowthOutcomeAddress,
   semanticAddressKey,
   type BiomeAddress,
   type AuthoredTraitOffer,
@@ -935,28 +936,81 @@ describe('field NPC encounter requirements', () => {
     ).toBe(true);
   });
 
-  it('acquires selectable Dionysus rarity and Water without Olympian composition', () => {
+  it('blocks Personal Loan before same-boss Steady Growth targeting and retains it into Q', () => {
     const storyId = pOccurrenceId('P_Story01', 7, 1);
     const storyPhase = phase(pBiome, storyId);
-    const initial = loadSurfaceNOPQProject();
+    const growthReward = createIncomingRewardAddress(pBiome, pOccurrenceId('P_Combat07', 4, 1));
+    let initial = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: growthReward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+    });
+    initial = applyProjectCommand(initial, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(pBiome, pOccurrenceId('P_Combat11', 4, 2)),
+      value: { rewardType: 'HermesUpgrade' },
+    });
+    initial = applyProjectCommand(initial, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(growthReward, 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Demeter',
+        options: [
+          { traitKey: 'BoonGrowthBoon', rarity: 'Epic' },
+          { traitKey: 'DemeterManaBoon', rarity: 'Rare' },
+          { traitKey: 'PlantHealthBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    initial = authorLegalTraitOffers(
+      applyProjectCommand(initial, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(pBiome, pOccurrenceId('P_MiniBoss01', 5, 1)),
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+      }),
+    );
     const storyOffer = authoredOccurrence(initial, 'P', storyId).encounters.traitOffersByPhase
       ?.Encounter?.Story_Dionysus_01;
     expect(storyOffer).toMatchObject({ giverKey: 'Dionysus' });
-    const project = applyProjectCommand(initial, catalog, {
+    let project = applyProjectCommand(initial, catalog, {
       kind: 'ReplaceTraitOffer',
       trait: createTraitOfferAddress(storyPhase, 'selection'),
       value: {
         kind: 'traits',
         giverKey: 'Dionysus',
         options: [
-          { traitKey: 'CastLobBoon', rarity: 'Rare' },
+          { traitKey: 'BankBoon', rarity: 'Common' },
           { traitKey: 'HiddenMaxHealthBoon', rarity: 'Epic' },
           { traitKey: 'FirstHangoverBoon', rarity: 'Common' },
         ],
         selectedOptionKey: 'option1',
       },
     });
-    const { biome } = evaluatedSurfaceBiome(project, 'P');
+    const boss = createOccurrenceAddress(pBiome, createOccurrenceId('surface-p-preboss-shop:boss'));
+    const growthOutcome = createSteadyGrowthOutcomeAddress(boss, 'Encounter');
+    const assembly = simulateProjectAssembly(catalog, project);
+    expect(assembly.evaluation.findings).toEqual([
+      expect.objectContaining({ code: 'steadyGrowthOutcomeMissing', origin: growthOutcome }),
+    ]);
+    const candidate = createPreparedProjectCandidateSession(catalog, assembly).evaluate({
+      kind: 'steadyGrowthOutcome',
+      outcome: growthOutcome,
+      targetTraitKey: 'BankBoon',
+    });
+    expect(candidate.kind).toBe('steadyGrowthOutcome');
+    if (candidate.kind !== 'steadyGrowthOutcome') throw new Error('missing boss Growth domain');
+    expect(candidate.result.eligibleTargetKeys).not.toContain('BankBoon');
+    expect(candidate.result.selectedPossible).toBe(false);
+    const target = candidate.result.eligibleTargetKeys[0];
+    if (target === undefined) throw new Error('same-boss Growth needs a remaining eligible target');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSteadyGrowthTarget',
+      outcome: growthOutcome,
+      targetTraitKey: target,
+    });
+    const { result, biome } = evaluatedSurfaceBiome(project, 'P');
     if (!('rewards' in biome)) throw new Error('P reward evaluation is missing');
     const trace = biome.rewards.selectedTraitOffers.find(
       (candidate) => semanticAddressKey(candidate.address.owner) === semanticAddressKey(storyPhase),
@@ -966,12 +1020,52 @@ describe('field NPC encounter requirements', () => {
         composition: { applies: false, legal: true, findings: [] },
       }),
     ]);
-    expect(biome.rewards.branches[0]?.traitHistory).toMatchObject({
+    expect(trace?.branches).not.toHaveLength(0);
+    const history = biome.rewards.branches[0]?.traitHistory;
+    const acquired = history?.events.find(
+      (event) =>
+        event.kind === 'traitOffer' &&
+        semanticAddressKey(event.owner) === semanticAddressKey(storyPhase) &&
+        event.options.some((option) => option.traitKey === 'BankBoon'),
+    );
+    const payout = history?.events.find(
+      (event) => event.kind === 'rarityBlock' && event.traitKey === 'BankBoon',
+    );
+    const bossGrowth = history?.events.find(
+      (event) =>
+        event.kind === 'steadyGrowthProgress' &&
+        semanticAddressKey(event.owner) === semanticAddressKey(boss),
+    );
+    expect(acquired).toMatchObject({ kind: 'traitOffer', selectedOptionKey: 'option1' });
+    expect(payout).toMatchObject({ kind: 'rarityBlock', acquisitionRole: 'nonFinalBossPayout' });
+    expect(acquired?.sequence).toBeLessThan(payout?.sequence ?? 0);
+    expect(payout).toMatchObject({ owner: boss, acquisitionPoint: 'bossDefeated' });
+    expect(bossGrowth).toMatchObject({ oldProgress: 3, newProgress: 0, requiredInterval: 4 });
+    expect(payout?.sequence).toBeLessThan(bossGrowth?.sequence ?? 0);
+    expect(history).toMatchObject({
       equippedTraits: {
-        CastLobBoon: { giverKey: 'Dionysus', providerKind: 'npc', rarity: 'Rare' },
+        BankBoon: {
+          giverKey: 'Dionysus',
+          providerKind: 'npc',
+          rarity: 'Common',
+          rarityBlockedInRun: true,
+        },
       },
     });
-    expect(biome.rewards.branches[0]?.traitHistory?.elementCounts.Water).toBeGreaterThanOrEqual(1);
+    expect(history?.elementCounts.Water).toBeGreaterThanOrEqual(1);
+    expect(
+      result.findings.filter(
+        (finding) => 'biomeKey' in finding.origin && finding.origin.biomeKey === 'P',
+      ),
+    ).toEqual([]);
+    const qBiome = result.route.biomes.find((candidate) => candidate.biomeKey === 'Q');
+    if (qBiome?.authoring !== 'complete' || !('rewards' in qBiome))
+      throw new Error('Q continuation must remain complete after P Personal Loan payout');
+    expect(
+      qBiome.rewards.branches.some(
+        (branch) => branch.traitHistory?.equippedTraits.BankBoon?.rarityBlockedInRun === true,
+      ),
+    ).toBe(true);
   });
 
   it('keeps an invalid Artemis selection authored at its exact phase trait owner', () => {

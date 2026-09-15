@@ -28,6 +28,8 @@ export interface RawTraitDeclaration {
   readonly blockStacking: boolean;
   readonly blockOfferIfPreviouslyPicked?: boolean;
   readonly blockInRunRarify: boolean;
+  /** Native boss payout leaves this equipped instance present but no longer rarifiable. */
+  readonly nonFinalBossRarityBlock?: true;
   readonly excludeFromRarityCount: boolean;
   readonly rarityFloorEffect?: ProperUpbringingEffect;
   readonly targetedAcquisition?: TargetedTraitAcquisition;

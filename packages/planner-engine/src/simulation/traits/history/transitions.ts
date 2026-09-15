@@ -5,11 +5,45 @@ import type {
   SteadyGrowthProgressEvent,
   TraitHistoryState,
   TraitLevelMutationEvent,
+  TraitRarityBlockEvent,
   TraitRarityMutationEvent,
   TraitRemovalEvent,
 } from './model';
 import { foldTraitHistoryEvents } from './fold';
-import { hasEffectiveInRunUpgrade, isLevelBearingTrait, nextRarity } from './upgrades';
+import {
+  hasEffectiveInRunUpgrade,
+  isInRunRarityBlocked,
+  isLevelBearingTrait,
+  nextRarity,
+} from './upgrades';
+
+/** Records every declaration-owned non-final boss payout against the current equipped instance. */
+export function settleNonFinalBossRarityBlocks(
+  catalog: Catalog,
+  history: TraitHistoryState,
+  owner: SemanticAddress,
+  sequence: number,
+): TraitHistoryState {
+  const events: TraitRarityBlockEvent[] = Object.values(history.equippedTraits)
+    .filter(
+      (trait) =>
+        catalog.traits.byKey[trait.traitKey]?.nonFinalBossRarityBlock === true &&
+        !isInRunRarityBlocked(catalog, trait),
+    )
+    .map((trait) =>
+      Object.freeze({
+        kind: 'rarityBlock' as const,
+        owner,
+        acquisitionRole: 'nonFinalBossPayout' as const,
+        sequence,
+        acquisitionPoint: 'bossDefeated' as const,
+        traitKey: trait.traitKey,
+      }),
+    );
+  return events.length === 0
+    ? history
+    : foldTraitHistoryEvents(catalog, [...history.events, ...events]);
+}
 
 /** Data-only result of one Ransom after its outer trait has been equipped. */
 export interface RansomAssessment {
@@ -212,7 +246,12 @@ export function settleFountainRarityMutation(
 ): { readonly history: TraitHistoryState; readonly legal: boolean } {
   const target = history.equippedTraits[targetTraitKey];
   const next = catalog.traitRarityOrder[3];
-  if (target === undefined || target.rarity !== 'Common' || next !== 'Heroic')
+  if (
+    target === undefined ||
+    isInRunRarityBlocked(catalog, target) ||
+    target.rarity !== 'Common' ||
+    next !== 'Heroic'
+  )
     return Object.freeze({ history, legal: false });
   const event: TraitRarityMutationEvent = Object.freeze({
     kind: 'rarityMutation',
@@ -274,7 +313,7 @@ export function advanceSteadyGrowthProgress(
       return (
         declaration?.usesBoonRarity === true &&
         candidate.rarity !== undefined &&
-        !declaration.blockInRunRarify &&
+        !isInRunRarityBlocked(catalog, candidate) &&
         nextRarity(catalog, candidate.traitKey, candidate.rarity) !== undefined &&
         hasEffectiveInRunUpgrade(catalog, candidate.traitKey, candidate)
       );
