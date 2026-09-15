@@ -85,13 +85,33 @@ describe('trait raw declaration boundary', () => {
           trait.key === 'AphroditeWeaponBoon'
             ? {
                 ...trait,
-                offerRequirements: [{ kind: 'futurePredicate' } as never],
+                eligibilityRequirements: [{ kind: 'futurePredicate' } as never],
               }
             : trait,
         ),
       },
     };
     expect(() => createCatalog(unknownRequirement)).toThrow(/unknown requirement kind/);
+
+    const unknownLinkedReference = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'AphroditeWeaponBoon'
+            ? {
+                ...trait,
+                linkedBoonRequirements: [
+                  { kind: 'anyEquippedTrait', traitKeys: ['MissingTrait'] },
+                ] as never,
+              }
+            : trait,
+        ),
+      },
+    };
+    expect(() => createCatalog(unknownLinkedReference)).toThrow(
+      /linkedBoonRequirements\[0\]\.traitKeys\[0\]: unknown trait operand MissingTrait/,
+    );
   });
 
   it('rejects malformed raw array and object contacts with declaration paths', () => {
@@ -101,13 +121,28 @@ describe('trait raw declaration boundary', () => {
         ...declarations.traitCatalog,
         traits: declarations.traitCatalog.traits.map((trait) =>
           trait.key === 'AphroditeWeaponBoon'
-            ? { ...trait, offerRequirements: null as never }
+            ? { ...trait, eligibilityRequirements: null as never }
             : trait,
         ),
       },
     };
     expect(() => createCatalog(malformedRequirements)).toThrow(
-      /traits\[.*\]\.offerRequirements: must be an array/,
+      /traits\[.*\]\.eligibilityRequirements: must be an array/,
+    );
+
+    const malformedLinkedRequirements = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'AphroditeWeaponBoon'
+            ? { ...trait, linkedBoonRequirements: null as never }
+            : trait,
+        ),
+      },
+    };
+    expect(() => createCatalog(malformedLinkedRequirements)).toThrow(
+      /traits\[.*\]\.linkedBoonRequirements: must be an array/,
     );
 
     const malformedElements = {

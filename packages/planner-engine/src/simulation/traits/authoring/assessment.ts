@@ -210,7 +210,11 @@ export function assessTraitDeclarationEligibility(
   if (history.bannedTraitKeys.includes(traitKey)) findings.push({ code: 'bannedTrait', traitKey });
   if (trait.blockOfferIfPreviouslyPicked && history.previouslyPickedTraitKeys.includes(traitKey))
     findings.push({ code: 'previouslyPicked', traitKey });
-  for (const requirement of trait.offerRequirements) {
+  for (const requirement of trait.eligibilityRequirements) {
+    const failure = checkRequirement(catalog, requirement, trait, history, context);
+    if (failure !== undefined) findings.push({ ...failure, traitKey });
+  }
+  for (const requirement of trait.linkedBoonRequirements) {
     const failure = checkRequirement(catalog, requirement, trait, history, context);
     if (failure !== undefined) findings.push({ ...failure, traitKey });
   }
@@ -260,7 +264,7 @@ export function assessTraitOptionAgainstRarityDomain(
   if (
     trait.selectedDisposition.kind === 'echo' &&
     trait.selectedDisposition.effect === 'lastRunBoon' &&
-    !echoLastRunBoonOutcomes(catalog, history).some((outcome) => outcome.assessment.legal)
+    !echoLastRunBoonOutcomes(catalog, history, context).some((outcome) => outcome.assessment.legal)
   )
     findings.push({ code: 'offerContext', traitKey, detail: 'echoLastRunBoonEmpty' });
   if (

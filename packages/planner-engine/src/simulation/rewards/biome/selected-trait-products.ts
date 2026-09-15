@@ -137,7 +137,7 @@ export function selectedTraitOfferProducts(
                     catalog === undefined
                   )
                     return {};
-                  const outcomes = echoLastRunBoonOutcomes(catalog, trace.before);
+                  const outcomes = echoLastRunBoonOutcomes(catalog, trace.before, trace.context);
                   const resolveOption = (
                     option: AuthoredEchoLastRunBoonOffer['options'][number],
                   ) => {

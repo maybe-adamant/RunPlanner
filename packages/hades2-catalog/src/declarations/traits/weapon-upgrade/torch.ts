@@ -4,7 +4,8 @@ export const torchWeaponUpgradeTraits = [
   {
     key: 'TorchExSpecialCountTrait',
     label: 'Hidden Helix',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -18,7 +19,8 @@ export const torchWeaponUpgradeTraits = [
   {
     key: 'TorchSpecialSpeedTrait',
     label: 'Clean Coil',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -37,7 +39,8 @@ export const torchWeaponUpgradeTraits = [
   {
     key: 'TorchAttackSpeedTrait',
     label: 'Furious Blaze',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -51,7 +54,8 @@ export const torchWeaponUpgradeTraits = [
   {
     key: 'TorchSpecialLineTrait',
     label: 'Melting Helix',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -70,7 +74,8 @@ export const torchWeaponUpgradeTraits = [
   {
     key: 'TorchSpecialImpactTrait',
     label: 'Enduring Coil',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -89,7 +94,8 @@ export const torchWeaponUpgradeTraits = [
   {
     key: 'TorchMoveSpeedTrait',
     label: 'Mega Blaze',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -108,7 +114,8 @@ export const torchWeaponUpgradeTraits = [
   {
     key: 'TorchSplitAttackTrait',
     label: 'Dividing Blaze',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -122,7 +129,8 @@ export const torchWeaponUpgradeTraits = [
   {
     key: 'TorchEnhancedAttackTrait',
     label: 'Inverted Blaze',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -141,7 +149,8 @@ export const torchWeaponUpgradeTraits = [
   {
     key: 'TorchDiscountExAttackTrait',
     label: 'Sudden Burst',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -155,7 +164,8 @@ export const torchWeaponUpgradeTraits = [
   {
     key: 'TorchLongevityTrait',
     label: 'Rising Helix',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -169,7 +179,8 @@ export const torchWeaponUpgradeTraits = [
   {
     key: 'TorchOrbitPointTrait',
     label: 'Whirling Helix',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -188,7 +199,8 @@ export const torchWeaponUpgradeTraits = [
   {
     key: 'TorchSpinAttackTrait',
     label: 'Leaden Blaze',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -207,7 +219,8 @@ export const torchWeaponUpgradeTraits = [
   {
     key: 'TorchAutofireSprintTrait',
     label: 'Demonic Cell',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,

@@ -4,7 +4,9 @@ import { catalog } from '../../src';
 import { declarations } from '../../src/declarations';
 import {
   expectedElementTraitKeys,
+  expectedDevotionMixedRequirementOwners,
   expectedGiverPools,
+  expectedLinkedBoonRequirementOwners,
   expectedOrdinarySlots,
   expectedOfferRequirements,
   expectedPositiveRequirementOwners,
@@ -21,6 +23,10 @@ const traits = {
   rarityOrder: catalog.traitRarityOrder,
   baseElements: catalog.traitBaseElements,
 };
+const allRequirements = (trait: (typeof traits.traits.values)[number]) => [
+  ...trait.linkedBoonRequirements,
+  ...trait.eligibilityRequirements,
+];
 
 describe('trait requirements and dependencies', () => {
   it('declares the three optional linked-priority insertions', () => {
@@ -55,7 +61,7 @@ describe('trait requirements and dependencies', () => {
       expect.arrayContaining([...trialOverrides]),
     );
     for (const trait of duoTraits) {
-      const devotionRequirement = trait.offerRequirements.find(
+      const devotionRequirement = trait.eligibilityRequirements.find(
         (requirement) =>
           requirement.kind === 'offerContext' && requirement.context === 'devotionNoDuo',
       );
@@ -110,7 +116,7 @@ describe('trait requirements and dependencies', () => {
       });
       expect(traits.traits.byKey[traitKey]?.equipmentSlot).toBeUndefined();
     }
-    expect(traits?.traits.byKey.FocusAttackDamageTrait?.offerRequirements).toEqual([
+    expect(traits?.traits.byKey.FocusAttackDamageTrait?.eligibilityRequirements).toEqual([
       {
         kind: 'anyEquippedTrait',
         traitKeys: [
@@ -126,7 +132,7 @@ describe('trait requirements and dependencies', () => {
         ],
       },
     ]);
-    expect(traits?.traits.byKey.FocusSpecialDamageTrait?.offerRequirements).toEqual([
+    expect(traits?.traits.byKey.FocusSpecialDamageTrait?.eligibilityRequirements).toEqual([
       {
         kind: 'anyEquippedTrait',
         traitKeys: [
@@ -165,13 +171,13 @@ describe('trait requirements and dependencies', () => {
       Fire: 1,
       Water: 1,
     });
-    expect(traits?.traits.byKey.CommonGlobalDamageBoon?.offerRequirements).toContainEqual({
+    expect(traits?.traits.byKey.CommonGlobalDamageBoon?.eligibilityRequirements).toContainEqual({
       kind: 'godBoonRarityCount',
       rarity: 'Common',
       minimum: 0,
       maximum: 0,
     });
-    expect(traits?.traits.byKey.BoonGrowthBoon?.offerRequirements).toContainEqual({
+    expect(traits?.traits.byKey.BoonGrowthBoon?.eligibilityRequirements).toContainEqual({
       kind: 'rarifiableTrait',
     });
     expect(traits?.traits.byKey.BoonDecayBoon?.targetedAcquisition).toEqual({
@@ -196,16 +202,16 @@ describe('trait requirements and dependencies', () => {
       Epic: 6,
       Heroic: 5,
     });
-    expect(traits?.traits.byKey.ElementalUnifiedBoon?.offerRequirements).toContainEqual({
+    expect(traits?.traits.byKey.ElementalUnifiedBoon?.eligibilityRequirements).toContainEqual({
       kind: 'highestBaseElementCount',
       minimum: 4,
     });
-    expect(traits?.traits.byKey.ElementalDamageBoon?.offerRequirements).toContainEqual({
+    expect(traits?.traits.byKey.ElementalDamageBoon?.eligibilityRequirements).toContainEqual({
       kind: 'elementCount',
       element: 'Earth',
       minimum: 2,
     });
-    expect(traits?.traits.byKey.PlantHealthBoon?.offerRequirements).toContainEqual({
+    expect(traits?.traits.byKey.PlantHealthBoon?.eligibilityRequirements).toContainEqual({
       kind: 'offerContext',
       context: 'blockGiftBoons',
       required: false,
@@ -249,7 +255,8 @@ describe('trait requirements and dependencies', () => {
         key: actual.key,
         label: actual.label,
         rarityDomain: actual.rarityDomain,
-        offerRequirements: actual.offerRequirements,
+        eligibilityRequirements: actual.eligibilityRequirements,
+        linkedBoonRequirements: actual.linkedBoonRequirements,
         equipmentSlot: actual.equipmentSlot,
         elementContributions: actual.elementContributions,
         usesBoonRarity: actual.usesBoonRarity,
@@ -270,7 +277,8 @@ describe('trait requirements and dependencies', () => {
                 equippedRarities: expected.equippedRarities,
               }
             : { kind: 'none' },
-        offerRequirements: expected.offerRequirements,
+        eligibilityRequirements: expected.eligibilityRequirements,
+        linkedBoonRequirements: expected.linkedBoonRequirements,
         equipmentSlot: expected.equipmentSlot,
         elementContributions: expected.elementContributions,
         usesBoonRarity: expected.usesBoonRarity,
@@ -293,7 +301,7 @@ describe('trait requirements and dependencies', () => {
   });
 
   it('keeps the complete positive, settled SpellDrop, and dependency requirement matrix', () => {
-    type Requirement = (typeof traits.traits.values)[number]['offerRequirements'][number];
+    type Requirement = (typeof traits.traits.values)[number]['eligibilityRequirements'][number];
     const containsPositiveEquippedRequirement = (requirement: Requirement): boolean => {
       if (requirement.kind === 'anyEquippedTrait') return true;
       if (requirement.kind === 'all')
@@ -301,7 +309,7 @@ describe('trait requirements and dependencies', () => {
       return false;
     };
     const positiveOwners = traits.traits.values
-      .filter((trait) => trait.offerRequirements.some(containsPositiveEquippedRequirement))
+      .filter((trait) => allRequirements(trait).some(containsPositiveEquippedRequirement))
       .map((trait) => trait.key);
     expect(positiveOwners).toHaveLength(expectedPositiveRequirementOwners.length);
     expect(new Set(positiveOwners)).toEqual(new Set(expectedPositiveRequirementOwners));
@@ -313,7 +321,7 @@ describe('trait requirements and dependencies', () => {
       return false;
     };
     const settledSpellDropOwners = traits.traits.values
-      .filter((trait) => trait.offerRequirements.some(containsSettledSpellDropRequirement))
+      .filter((trait) => allRequirements(trait).some(containsSettledSpellDropRequirement))
       .map((trait) => trait.key);
     expect(settledSpellDropOwners).toEqual(expectedSettledSpellDropRequirementOwners);
 
@@ -323,7 +331,7 @@ describe('trait requirements and dependencies', () => {
           (trait) =>
             [
               trait.key,
-              trait.offerRequirements.filter(
+              allRequirements(trait).filter(
                 (requirement) =>
                   !(
                     requirement.kind === 'offerContext' &&
@@ -338,6 +346,27 @@ describe('trait requirements and dependencies', () => {
     );
     expect(actualOfferRequirements).toEqual(expectedOfferRequirements);
 
+    const linkedOwners = new Set<string>(expectedLinkedBoonRequirementOwners);
+    const devotionMixedOwners = new Set<string>(expectedDevotionMixedRequirementOwners);
+    const castMixedOwners = new Set(['CastAnywhereBoon', 'SelfCastBoon']);
+    for (const trait of traits.traits.values) {
+      const expected = JSON.parse(expectedOfferRequirements[trait.key] ?? '[]') as Requirement[];
+      const linked = linkedOwners.has(trait.key)
+        ? castMixedOwners.has(trait.key)
+          ? [expected[0]!]
+          : expected
+        : [];
+      const eligibility = devotionMixedOwners.has(trait.key)
+        ? [{ kind: 'offerContext', context: 'devotionNoDuo', required: false }]
+        : castMixedOwners.has(trait.key)
+          ? [expected[1]!]
+          : linkedOwners.has(trait.key)
+            ? []
+            : expected;
+      expect(trait.linkedBoonRequirements).toEqual(linked);
+      expect(trait.eligibilityRequirements).toEqual(eligibility);
+    }
+
     const deferred = new Set(declarations.traitCatalog.deferredTraitKeys);
     const walk = (requirement: Requirement): readonly string[] => {
       if (requirement.kind === 'anyEquippedTrait' || requirement.kind === 'notEquippedTrait') {
@@ -347,19 +376,48 @@ describe('trait requirements and dependencies', () => {
       return [];
     };
     for (const trait of traits.traits.values) {
-      for (const requirement of trait.offerRequirements) {
+      for (const requirement of allRequirements(trait)) {
         for (const key of walk(requirement)) {
           expect(traits.traits.byKey[key] ?? deferred.has(key)).toBeTruthy();
         }
       }
     }
-    expect(traits.traits.byKey.LobAmmoMagnetismTrait?.offerRequirements).toContainEqual({
+    expect(traits.traits.byKey.LobAmmoMagnetismTrait?.eligibilityRequirements).toContainEqual({
       kind: 'notEquippedTrait',
       traitKeys: ['LobPulseAmmoTrait'],
     });
-    expect(traits.traits.byKey.LobPulseAmmoTrait?.offerRequirements).toContainEqual({
+    expect(traits.traits.byKey.LobPulseAmmoTrait?.eligibilityRequirements).toContainEqual({
       kind: 'notEquippedTrait',
       traitKeys: ['LobAmmoMagnetismTrait'],
     });
+
+    const partition = traits.traits.values.reduce(
+      (counts, trait) => {
+        const eligibility = trait.eligibilityRequirements.length > 0;
+        const linked = trait.linkedBoonRequirements.length > 0;
+        counts[
+          eligibility && linked
+            ? 'mixed'
+            : eligibility
+              ? 'eligibilityOnly'
+              : linked
+                ? 'linkedOnly'
+                : 'empty'
+        ] += 1;
+        return counts;
+      },
+      { empty: 0, linkedOnly: 0, eligibilityOnly: 0, mixed: 0 },
+    );
+    expect(partition).toEqual({ empty: 316, linkedOnly: 41, eligibilityOnly: 28, mixed: 34 });
+    expect(traits.traits.byKey.SprintEchoBoon).toMatchObject({
+      eligibilityRequirements: [
+        { kind: 'offerContext', context: 'devotionNoDuo', required: false },
+      ],
+    });
+    expect(traits.traits.byKey.SprintEchoBoon?.linkedBoonRequirements).toHaveLength(1);
+    expect(traits.traits.byKey.WeakPotencyBoon).toMatchObject({
+      eligibilityRequirements: [],
+    });
+    expect(traits.traits.byKey.WeakPotencyBoon?.linkedBoonRequirements).toHaveLength(1);
   });
 });

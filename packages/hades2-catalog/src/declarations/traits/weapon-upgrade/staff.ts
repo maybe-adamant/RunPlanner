@@ -4,7 +4,8 @@ export const staffWeaponUpgradeTraits = [
   {
     key: 'StaffDoubleAttackTrait',
     label: 'Wicked Thrasher',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -18,7 +19,8 @@ export const staffWeaponUpgradeTraits = [
   {
     key: 'StaffLongAttackTrait',
     label: 'Extending Wallop',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -32,7 +34,8 @@ export const staffWeaponUpgradeTraits = [
   {
     key: 'StaffDashAttackTrait',
     label: 'Melting Swipe',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -46,7 +49,8 @@ export const staffWeaponUpgradeTraits = [
   {
     key: 'StaffTripleShotTrait',
     label: 'Dual Moonshot',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -65,7 +69,8 @@ export const staffWeaponUpgradeTraits = [
   {
     key: 'StaffJumpSpecialTrait',
     label: 'Shimmering Moonshot',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -84,7 +89,8 @@ export const staffWeaponUpgradeTraits = [
   {
     key: 'StaffExAoETrait',
     label: 'Cross Cataclysm',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -98,7 +104,8 @@ export const staffWeaponUpgradeTraits = [
   {
     key: 'StaffAttackRecoveryTrait',
     label: 'Rapid Thrasher',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -117,7 +124,8 @@ export const staffWeaponUpgradeTraits = [
   {
     key: 'StaffFastSpecialTrait',
     label: 'Rapid Moonshot',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -136,7 +144,8 @@ export const staffWeaponUpgradeTraits = [
   {
     key: 'StaffExHealTrait',
     label: 'Vampiric Cataclysm',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -155,7 +164,8 @@ export const staffWeaponUpgradeTraits = [
   {
     key: 'StaffSecondStageTrait',
     label: 'Giga Moonburst',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -174,7 +184,8 @@ export const staffWeaponUpgradeTraits = [
   {
     key: 'StaffPowershotTrait',
     label: 'Aetheric Moonburst',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -193,7 +204,8 @@ export const staffWeaponUpgradeTraits = [
   {
     key: 'StaffOneWayAttackTrait',
     label: 'Mirrored Thrasher',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -207,7 +219,8 @@ export const staffWeaponUpgradeTraits = [
   {
     key: 'StaffRaiseDeadBigTrait',
     label: 'Soulfilled Ankh',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -221,7 +234,8 @@ export const staffWeaponUpgradeTraits = [
   {
     key: 'StaffRaiseDeadDoubleTrait',
     label: 'Mirrored Ankh',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -235,7 +249,8 @@ export const staffWeaponUpgradeTraits = [
   {
     key: 'StaffLoneShadeRespawnTrait',
     label: 'Scarab Etchings',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -249,7 +264,8 @@ export const staffWeaponUpgradeTraits = [
   {
     key: 'StaffLoneShadeRallyTrait',
     label: 'Pharaoh Etchings',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,

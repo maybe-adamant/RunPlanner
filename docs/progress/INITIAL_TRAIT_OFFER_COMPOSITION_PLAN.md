@@ -35,14 +35,24 @@ changing the generic fixture repair helper. Only the two semantically changed
 execution fixtures are regenerated and mirrored. Broad repository verification,
 cumulative performance comparison and durable-document closure remain Gate H.
 
-Gate F is specified below from the completed
+Gate F is implemented and independently reviewed with no actionable findings,
+from the completed
 [BBB requirement-origin matrix](../investigations/TRAIT_ELIGIBILITY_GAME_PARITY_REVIEW.md#bbb-requirement-origin-matrix)
 and the user-approved declaration shape. Its implementation baseline is
-`de59551e`; implementation has not started. Gate G's rarity-credit, sale,
+`afc808ca`. Gate G's rarity-credit, sale,
 acquisition-fallback and Personal Loan payout contracts are specified below.
 Unusual non-Pom level behavior is explicitly deferred to an in-game probe after
 G.2, not a prerequisite for implementing the confirmed target domain.
-Commit this amendment before starting F.
+Gate G has not started.
+
+F verification: all six required focused files pass (115 tests); the complete
+catalog lane passes (33 files, 263 tests). Workspace/fixture typechecks,
+changed-TypeScript ESLint, changed-file Prettier and `git diff --check` pass.
+The independent reviewer also ran the BBB suite (62 tests). A disposable
+before/after comparison confirmed that all 419 trait declarations preserve
+their original requirement conjunction and match the audited partition. No
+schema, protocol or generated-fixture changes were needed. Broad repository
+and cumulative performance verification remain H.
 
 E verification: the focused catalog, offer-generation, candidate, settlement,
 binding and editor suites pass after the final corrections. All 70 compiler

@@ -16,52 +16,62 @@ export const circeTraits = [
     ...raritylessNpcTrait,
     key: 'CirceShrinkTrait',
     label: 'Word of Smaller Stature',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
   {
     ...raritylessNpcTrait,
     key: 'CirceEnlargeTrait',
     label: 'Word of Greater Girth',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
   {
     ...raritylessNpcTrait,
     key: 'ArcanaRarityTrait',
     label: 'Lapis Lazuli Insight',
-    offerRequirements: [{ kind: 'manualArcanaGraspCost', minimum: 1 }],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [{ kind: 'manualArcanaGraspCost', minimum: 1 }],
     selectedDisposition: { kind: 'circe', effect: 'promoteArcana' },
   },
   {
     ...raritylessNpcTrait,
     key: 'HealAmplifyTrait',
     label: 'Old Herbal Remedy',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
   {
     ...raritylessNpcTrait,
     key: 'DoubleFamiliarTrait',
     label: 'Primal Psychic Connection',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
   {
     ...raritylessNpcTrait,
     key: 'RemoveShrineTrait',
     label: 'Black Night Banishment',
-    offerRequirements: [{ kind: 'offerContext', context: 'circeRemovableFearVow', required: true }],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [
+      { kind: 'offerContext', context: 'circeRemovableFearVow', required: true },
+    ],
     selectedDisposition: { kind: 'circe', effect: 'disableFear' },
   },
   {
     ...raritylessNpcTrait,
     key: 'RandomArcanaTrait',
     label: 'Red Citrine Divination',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     selectedDisposition: { kind: 'circe', effect: 'activateArcana' },
   },
   {
     ...raritylessNpcTrait,
     key: 'CirceSorceryDamageBoon',
     label: 'Hymn to the Eye of Night',
-    offerRequirements: [
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: [
@@ -80,7 +90,8 @@ export const circeTraits = [
     ...raritylessNpcTrait,
     key: 'ExPolymorphBoon',
     label: 'Turning to a Simple Form',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
 ] as const satisfies readonly RawTraitDeclaration[];
 

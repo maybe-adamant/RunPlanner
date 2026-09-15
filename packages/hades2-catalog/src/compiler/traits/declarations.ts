@@ -155,20 +155,28 @@ export function normalizeTraits(
         ),
       });
     }
-    const offerRequirements = Object.freeze(
-      (
-        requireArray(
-          trait.offerRequirements,
-          `${path}.offerRequirements`,
-        ) as readonly TraitRequirementExpression[]
-      ).map((requirement, requirementIndex) =>
-        normalizeRequirement(
-          requirement,
-          declarationContact,
-          deferred,
-          `${path}.offerRequirements[${requirementIndex}]`,
+    const normalizeRequirements = (
+      requirements: unknown,
+      requirementsPath: string,
+    ): readonly TraitRequirementExpression[] =>
+      Object.freeze(
+        (requireArray(requirements, requirementsPath) as readonly TraitRequirementExpression[]).map(
+          (requirement, requirementIndex) =>
+            normalizeRequirement(
+              requirement,
+              declarationContact,
+              deferred,
+              `${requirementsPath}[${requirementIndex}]`,
+            ),
         ),
-      ),
+      );
+    const eligibilityRequirements = normalizeRequirements(
+      trait.eligibilityRequirements,
+      `${path}.eligibilityRequirements`,
+    );
+    const linkedBoonRequirements = normalizeRequirements(
+      trait.linkedBoonRequirements,
+      `${path}.linkedBoonRequirements`,
     );
     let rarityFloorEffect: ProperUpbringingEffect | undefined;
     if (trait.rarityFloorEffect !== undefined) {
@@ -408,7 +416,8 @@ export function normalizeTraits(
       key: requireNonEmpty(trait.key, `${path}.key`),
       label: requireNonEmpty(trait.label, `${path}.label`),
       rarityDomain,
-      offerRequirements,
+      eligibilityRequirements,
+      linkedBoonRequirements,
       ...(trait.equipmentSlot === undefined
         ? {}
         : {
@@ -466,12 +475,20 @@ export function normalizeTraits(
   }
   // Re-run requirements now that exact included keys are known.
   for (const trait of collection.values) {
-    trait.offerRequirements.forEach((requirement, index) =>
+    trait.eligibilityRequirements.forEach((requirement, index) =>
       normalizeRequirement(
         requirement,
         collection,
         deferred,
-        `traits.${trait.key}.offerRequirements[${index}]`,
+        `traits.${trait.key}.eligibilityRequirements[${index}]`,
+      ),
+    );
+    trait.linkedBoonRequirements.forEach((requirement, index) =>
+      normalizeRequirement(
+        requirement,
+        collection,
+        deferred,
+        `traits.${trait.key}.linkedBoonRequirements[${index}]`,
       ),
     );
   }

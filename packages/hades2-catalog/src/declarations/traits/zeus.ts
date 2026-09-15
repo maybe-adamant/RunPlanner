@@ -7,7 +7,8 @@ export const zeusTraits = [
     label: 'Heaven Strike',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Air: 1,
     },
@@ -22,7 +23,8 @@ export const zeusTraits = [
     label: 'Heaven Flourish',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Air: 1,
     },
@@ -37,7 +39,8 @@ export const zeusTraits = [
     label: 'Storm Ring',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Air: 1,
     },
@@ -52,7 +55,8 @@ export const zeusTraits = [
     label: 'Thunder Rush',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Air: 1,
     },
@@ -67,7 +71,8 @@ export const zeusTraits = [
     label: 'Ionic Gain',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Air: 1,
     },
@@ -82,7 +87,8 @@ export const zeusTraits = [
     label: 'Power Surge',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Air: 1,
     },
@@ -96,7 +102,8 @@ export const zeusTraits = [
     label: 'Divine Vengeance',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Air: 1,
     },
@@ -110,7 +117,13 @@ export const zeusTraits = [
     label: 'Lightning Lance',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    eligibilityRequirements: [
+      {
+        kind: 'notEquippedTrait',
+        traitKeys: ['CastProjectileBoon', 'HadesCastProjectileBoon', 'CastLobBoon', 'SelfCastBoon'],
+      },
+    ],
+    linkedBoonRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: [
@@ -124,10 +137,6 @@ export const zeusTraits = [
           'ZeusCastBoon',
           'AresCastBoon',
         ],
-      },
-      {
-        kind: 'notEquippedTrait',
-        traitKeys: ['CastProjectileBoon', 'HadesCastProjectileBoon', 'CastLobBoon', 'SelfCastBoon'],
       },
     ],
     elementContributions: {
@@ -143,7 +152,8 @@ export const zeusTraits = [
     label: 'Static Shock',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Air: 1,
     },
@@ -157,7 +167,8 @@ export const zeusTraits = [
     label: 'Double Strike',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: [
@@ -184,7 +195,8 @@ export const zeusTraits = [
     label: 'Arc Flash',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: ['ZeusWeaponBoon', 'ZeusSpecialBoon'],
@@ -203,7 +215,8 @@ export const zeusTraits = [
     label: 'Electric Overload',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: ['FocusLightningBoon'],
@@ -222,7 +235,8 @@ export const zeusTraits = [
     label: 'Air Quality',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic'],
-    offerRequirements: [
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [
       {
         kind: 'elementCount',
         element: 'Air',
@@ -240,7 +254,8 @@ export const zeusTraits = [
     label: 'Shocking Loss',
     freshOfferRarities: ['Legendary'],
     equippedRarities: ['Legendary'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -283,7 +298,8 @@ export const zeusTraits = [
     label: "King's Ransom",
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
