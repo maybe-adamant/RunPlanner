@@ -245,6 +245,9 @@ describe('project simulation composition', () => {
       selectedEncounterKey: 'GeneratedI',
       selectedPossible: true,
       candidateEncounterKeys: ['GeneratedI'],
+      exclusions: expect.not.arrayContaining([
+        expect.objectContaining({ encounterKey: 'GeneratedI' }),
+      ]),
     });
 
     const { result, route: underworld } = route(initial, 'Underworld');

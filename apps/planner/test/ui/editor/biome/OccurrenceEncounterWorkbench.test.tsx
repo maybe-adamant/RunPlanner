@@ -834,7 +834,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     await waitFor(() => {
       expect(encounter.getAttribute('data-candidate-state')).toBe('impossible');
       expect(
-        screen.getAllByText('This encounter phase is not active for the selected room setup.'),
+        screen.getAllByText(/Requires biome encounter depth 2–5; currently \d+\./),
       ).not.toHaveLength(0);
     });
     expect(within(phase).queryByRole('button', { name: 'Reset to default' })).toBeNull();

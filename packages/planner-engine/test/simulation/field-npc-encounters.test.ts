@@ -635,6 +635,28 @@ describe('field NPC encounter requirements', () => {
       selectedPossible: false,
     });
     expect(gSupport?.candidateEncounterKeys).not.toContain('ArtemisCombatG');
+    expect(gSupport?.exclusions).toContainEqual(
+      expect.objectContaining({
+        encounterKey: 'ArtemisCombatG',
+        kind: 'requirements',
+        definitions: [
+          expect.objectContaining({
+            evaluation: expect.objectContaining({
+              kind: 'all',
+              children: expect.arrayContaining([
+                expect.objectContaining({
+                  kind: 'encounterKeyCount',
+                  scope: 'route',
+                  actual: 1,
+                  expected: { max: 0 },
+                  satisfied: false,
+                }),
+              ]),
+            }),
+          }),
+        ],
+      }),
+    );
 
     const { result, biome } = evaluatedBiome(project, 'G');
     expect(result.status).toBe('invalid');
@@ -1093,6 +1115,32 @@ describe('field NPC encounter requirements', () => {
       selectedPossible: true,
     });
     expect(support(project, laterGPhase)?.candidateEncounterKeys).not.toContain('ArachneCombatG');
+    expect(support(project, laterGPhase)?.exclusions).toContainEqual(
+      expect.objectContaining({
+        encounterKey: 'ArachneCombatG',
+        definitions: [
+          expect.objectContaining({
+            evaluation: expect.objectContaining({
+              children: expect.arrayContaining([
+                expect.objectContaining({
+                  kind: 'encounterKeyCount',
+                  scope: 'biome',
+                  actual: 1,
+                  satisfied: false,
+                }),
+                expect.objectContaining({
+                  kind: 'previousRoomEncounterKeyCount',
+                  roomWindow: 5,
+                  matchingEncounterKeys: ['ArachneCombatG'],
+                  actual: 1,
+                  satisfied: false,
+                }),
+              ]),
+            }),
+          }),
+        ],
+      }),
+    );
     const evaluation = evaluatedBiome(project, 'G');
     expect(evaluation.biome.findings).not.toContainEqual(
       expect.objectContaining({ code: 'encounterUnavailable', origin: gArachnePhase }),
@@ -1432,6 +1480,25 @@ describe('field NPC encounter requirements', () => {
     expect(indoorCombatSupport?.candidateEncounterKeys).not.toContain('HeraclesCombatP');
     expect(indoorCombatSupport?.candidateEncounterKeys).toContain('AthenaCombatP');
     expect(indoorCombatSupport?.candidateEncounterKeys).not.toContain('IcarusCombatP');
+    expect(indoorCombatSupport?.exclusions).toContainEqual(
+      expect.objectContaining({
+        encounterKey: 'IcarusCombatP',
+        definitions: [
+          expect.objectContaining({
+            evaluation: expect.objectContaining({
+              children: expect.arrayContaining([
+                expect.objectContaining({
+                  kind: 'currentRoomStructuralTagsInclude',
+                  actual: ['Indoor'],
+                  expected: ['Outdoor'],
+                  satisfied: false,
+                }),
+              ]),
+            }),
+          }),
+        ],
+      }),
+    );
 
     const outdoorOccurrenceId = pOccurrenceId('P_Combat11', 4, 2);
     const outdoorCombat = phase(pBiome, outdoorOccurrenceId, 'Combat');

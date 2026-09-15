@@ -243,6 +243,8 @@ export {
 } from './room-actions';
 export {
   type EncounterPhaseCandidateSupport,
+  type EncounterCandidateExclusion,
+  type EncounterRequirementEvidence,
   type EncounterPhaseSequenceStatus,
   encounterPhaseAuthoringDomainForRoom,
   type EncounterPhaseAuthoringDomain,

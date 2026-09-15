@@ -23,13 +23,20 @@ import type { CanonicalAuthoredRoom } from '../materialization';
 import type { SemanticFinding } from '../model';
 import type { ResolvedEncounterPhase } from './model';
 import { resolvedEncounterPhaseForDefinition } from './resolve';
+import {
+  encounterRequirementEvidence,
+  type EncounterCandidateExclusion,
+  type EncounterRequirementEvidence,
+} from './requirement-evidence';
 
 export interface EncounterPhaseCandidateSupport {
   readonly origin: EncounterPhaseAddress;
   readonly selectedEncounterKey: string;
   readonly candidateEncounterKeys: readonly string[];
+  readonly exclusions: readonly EncounterCandidateExclusion[];
   /** Whether this declared slot's structural activation requirement holds. */
   readonly activationSatisfied: boolean;
+  readonly activationFailure?: EncounterRequirementEvidence;
   readonly selectedPossible: boolean;
   /** This is a structurally active editable pooled slot. */
   readonly active: true;
@@ -338,11 +345,36 @@ export function prepareRoomEncounterPhases(
         .filter((profile) => (eligibleDefinitionsByProfile.get(profile.key)?.length ?? 0) > 0)
         .map((profile) => profile.key),
     );
+    const exclusions: readonly EncounterCandidateExclusion[] = Object.freeze(
+      profiles
+        .filter((profile) => !candidateEncounterKeys.includes(profile.key))
+        .map((profile) =>
+          Object.freeze({
+            encounterKey: profile.key,
+            kind: 'requirements' as const,
+            definitions: Object.freeze(
+              profile.encounterDefinitionKeys.map((key) => {
+                const requirement = catalog.encounterDefinitions.byKey[key]!.requirements;
+                if (requirement === undefined)
+                  throw new Error(`${key} excluded without requirements`);
+                return Object.freeze({
+                  encounterDefinitionKey: key,
+                  evaluation: encounterRequirementEvidence(requirement, context),
+                });
+              }),
+            ),
+          }),
+        ),
+    );
     const support: EncounterPhaseCandidateSupport = Object.freeze({
       origin,
       selectedEncounterKey: phase.encounterKey,
       candidateEncounterKeys,
+      exclusions,
       activationSatisfied,
+      ...(!activationSatisfied && slot.activationRequirement !== undefined
+        ? { activationFailure: encounterRequirementEvidence(slot.activationRequirement, context) }
+        : {}),
       selectedPossible: activationSatisfied && candidateEncounterKeys.includes(phase.encounterKey),
       active: true,
     });

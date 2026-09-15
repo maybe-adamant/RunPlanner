@@ -4,6 +4,10 @@ export {
   resolveEncounterPhases,
 } from './resolve';
 export type { ResolvedEncounterPhase } from './model';
+export type {
+  EncounterCandidateExclusion,
+  EncounterRequirementEvidence,
+} from './requirement-evidence';
 export {
   assessFigLeafSkip,
   type FigLeafSkipAssessment,
