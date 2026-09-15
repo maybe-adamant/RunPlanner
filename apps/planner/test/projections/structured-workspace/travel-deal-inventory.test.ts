@@ -8,6 +8,7 @@ import {
   createOccurrenceAddress,
   createRoomActionAddress,
   createShopOfferAddress,
+  createTraitOfferAddress,
   roomActionKey,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
@@ -22,6 +23,70 @@ import {
   replaceTestShopOfferActions,
 } from '@run-planner/test-fixtures/shared';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
+
+it('keeps a purchased Travel Deal boon editable while its trait offer is incomplete', () => {
+  const shopId = goldenGOccurrenceId(5, 1);
+  const room = createOccurrenceAddress(goldenGBiome, shopId);
+  const inventory = createShopOfferAddress(goldenGBiome, shopId, 'travelDealRefill');
+  const trait = createTraitOfferAddress(inventory, 'source');
+  const site = createAcquisitionSiteAddress(room, 'roomExit');
+  let project = applyProjectCommand(createUnderworldFWellCheckpoint(false), catalog, {
+    kind: 'RemoveExitDecision',
+    decision: createExitDecisionAddress(goldenGBiome, { kind: 'occurrence', occurrenceId: shopId }),
+  });
+  project = replaceTestShopOfferActions(project, catalog, room, []);
+  project = authorLegalTraitOffers(project);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopPurchaseParticipation',
+    offer: createShopOfferAddress(goldenGBiome, shopId, 'Boon'),
+    purchased: true,
+  });
+  project = authorLegalTraitOffers(project);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: inventory,
+    value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+  });
+  const reference = {
+    kind: 'interactAcquisitionEntry',
+    siteKey: 'roomExit',
+    entryKey: 'travelDealRefill',
+  } as const;
+  project = applyProjectCommand(project, catalog, {
+    kind: 'InsertRoomAction',
+    action: createRoomActionAddress(goldenGBiome, shopId, roomActionKey(reference)),
+    reference,
+    index: 1,
+  });
+  const missing = projectStructuredWorkspaceFixture(project);
+  expect(missing.evaluation.findings).toContainEqual(
+    expect.objectContaining({ code: 'traitOfferMissing', origin: trait }),
+  );
+  expect(
+    derivedAcquisitionEntriesForProjectEvaluationAssembly(missing.assembly, site),
+  ).toContainEqual(expect.objectContaining({ kind: 'travelDealRefill' }));
+  expect(missing.workspace.interactions.shopOffers.has(semanticAddressKey(inventory))).toBe(true);
+  expect(missing.workspace.interactions.traitOffers.has(semanticAddressKey(trait))).toBe(true);
+  expect(missing.workspace.focusByOwner.get(semanticAddressKey(trait))).toMatchObject({
+    roomTab: 'actions',
+  });
+  const node = missing.workspace.route.biomes
+    .flatMap((biome) => biome.nodes)
+    .find((node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === shopId);
+  if (node?.kind !== 'occurrenceWorkbench') throw new Error('Travel Deal room is missing');
+  expect(
+    node.room.roomActions?.rows.find((row) => row.key === roomActionKey(reference))?.rewardPayload
+      ?.inlineTraitOffers,
+  ).toEqual([expect.objectContaining({ address: trait })]);
+  project = authorLegalTraitOffers(project);
+  const settled = projectStructuredWorkspaceFixture(project);
+  expect(settled.evaluation.findings).toEqual([
+    expect.objectContaining({
+      code: 'continuationMissing',
+      origin: createExitDecisionAddress(goldenGBiome, { kind: 'occurrence', occurrenceId: shopId }),
+    }),
+  ]);
+});
 
 it('replaces the Travel Deal placeholder with editable inventory before outgoing doors are authored', async () => {
   const shopId = goldenGOccurrenceId(5, 1);

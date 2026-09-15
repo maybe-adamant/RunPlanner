@@ -78,6 +78,7 @@ import type { WorkspaceMarker } from '../contracts/navigation';
 export interface WorkspaceOccurrenceProjectionFacts {
   readonly authoredAdditionalExitKeys: readonly string[];
   readonly detailsActive: boolean;
+  readonly contractOfferActive?: boolean;
   readonly chaosPlacement?: ChaosCandidateCapability;
   readonly chaosGateForced: boolean;
   readonly zagreusContractPlacement?: ZagreusContractCandidateCapability;
@@ -620,6 +621,14 @@ export function controlsForOccurrence(
         );
       }
       for (const [offerKey, shopOffer] of Object.entries(occurrence.state.shop.offers)) {
+        if (
+          offerKey === 'infernalContractReward' &&
+          input.facts.contractOfferActive !== true &&
+          !occurrence.roomActions.order.some(
+            (action) => action.kind === 'interactShopOffer' && action.offerKey === offerKey,
+          )
+        )
+          continue;
         const offerProfile =
           offerKey === 'infernalContractReward'
             ? input.catalog.rewards.shops.byKey[

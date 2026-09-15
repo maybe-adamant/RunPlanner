@@ -70,7 +70,10 @@ export function applyShopOfferPointMaterialization(
   const frontierBranches = branches;
   const shopEntry = room.entryState?.kind === 'shop' ? room.entryState : undefined;
   const contractOwner =
-    declaration.infernalContractReward === undefined
+    declaration.infernalContractReward === undefined ||
+    !frontierBranches.some(
+      (branch) => branch.traitHistory?.equippedTraits.InfernalContractBoon !== undefined,
+    )
       ? undefined
       : createShopOfferAddress(
           { kind: 'biome', routeKey: room.origin.routeKey, biomeKey: room.origin.biomeKey },

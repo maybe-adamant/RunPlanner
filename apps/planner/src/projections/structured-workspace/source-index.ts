@@ -29,6 +29,7 @@ import {
   type AcquisitionSiteAddress,
   type AcquisitionEntryAddress,
   type AcquisitionRoleAddress,
+  type ShopOfferAddress,
 } from '@run-planner/engine/authored-project';
 import type { BiomeLayout, Catalog } from '@run-planner/engine/catalog-schema';
 import type {
@@ -106,6 +107,7 @@ export interface WorkspaceBiomeSource {
   readonly isActiveTraitOffer: (
     owner: import('@run-planner/engine/authored-project').TraitOfferAddress,
   ) => boolean;
+  readonly isActiveShopOffer: (owner: ShopOfferAddress) => boolean;
   readonly levelResolutionAssessment: (
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
@@ -669,6 +671,7 @@ function createWorkspaceBiomeSource(
   chaosAssessment: WorkspaceBiomeSource['chaosAssessment'],
   chaosGateForced: WorkspaceBiomeSource['chaosGateForced'],
   zagreusContractAssessment: WorkspaceBiomeSource['zagreusContractAssessment'],
+  isActiveShopOffer: WorkspaceBiomeSource['isActiveShopOffer'],
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -794,6 +797,7 @@ function createWorkspaceBiomeSource(
       hubDecisionsByKey.get(semanticAddressKey(createHubDecisionAddress(biome, hubKey))),
     isAssessed: coverage.isAssessed,
     isActiveTraitOffer,
+    isActiveShopOffer,
     levelResolutionAssessment: (owner: LevelResolutionAddress) =>
       levelResolutionAssessments.get(semanticAddressKey(owner)),
     acquisitionConversionCandidate,
@@ -870,6 +874,7 @@ export function createWorkspaceProjectSourceIndex(
     undefined,
   chaosAssessment: WorkspaceBiomeSource['chaosAssessment'] = () => undefined,
   zagreusContractAssessment: WorkspaceBiomeSource['zagreusContractAssessment'] = () => undefined,
+  isActiveShopOffer: WorkspaceBiomeSource['isActiveShopOffer'] = () => false,
 ): WorkspaceProjectSourceIndex {
   const ixionGeneratedChaos = ixionGeneratedChaosOccurrenceKeys(project);
   const route = project.route;
@@ -900,6 +905,7 @@ export function createWorkspaceProjectSourceIndex(
             chaosAssessment,
             (owner) => ixionGeneratedChaos.has(semanticAddressKey(owner)),
             zagreusContractAssessment,
+            isActiveShopOffer,
           ),
         ),
       ),
