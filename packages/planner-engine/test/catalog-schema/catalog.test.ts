@@ -55,7 +55,14 @@ describe('summarizeCatalog', () => {
       weapons: emptyCollection(),
       aspects: emptyCollection(),
       traits: emptyCollection(),
-      chaos: { curses: emptyCollection(), blessings: emptyCollection() },
+      chaos: {
+        curses: emptyCollection(),
+        blessings: emptyCollection(),
+        rarity: {
+          itemOverride: { Rare: 0.4, Epic: 0.1, Duo: 0, Legendary: 0.05 },
+          rollOrder: ['Common', 'Rare', 'Epic'],
+        },
+      },
       traitGivers: emptyCollection(),
       traitGiverByAcquisitionGameName: {},
       boonRarityBases: {

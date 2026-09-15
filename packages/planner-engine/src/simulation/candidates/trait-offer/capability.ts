@@ -43,6 +43,8 @@ import {
   recordReachedTraitOffer,
   type RansomAssessment,
   boonRarityFactsForOffer,
+  assessChaosPairRarity,
+  chaosPairRarities,
 } from '../../traits';
 import type { EchoLastRunBoonOutcome, TraitOfferContext } from '../../traits/offer-domain';
 import { advanceCurrentKeepsake } from '../../keepsakes/state';
@@ -480,18 +482,29 @@ export function createTraitOfferCandidateArtifacts(
                         }),
                       ),
                     );
-              const assessments = Object.freeze(
-                base.assessments.map((assessment, index) => {
-                  const level = levelResolutions[index];
-                  return level === undefined || level.findings.length === 0
-                    ? assessment
-                    : Object.freeze({
-                        ...assessment,
-                        legal: false,
-                        findings: Object.freeze([...assessment.findings, ...level.findings]),
-                      });
-                }),
-              );
+              const assessments =
+                value.kind === 'chaos'
+                  ? Object.freeze([
+                      assessChaosPairRarity(
+                        catalog,
+                        context.before,
+                        value,
+                        resolvedContext,
+                        context.arcanaFear,
+                      ),
+                    ])
+                  : Object.freeze(
+                      base.assessments.map((assessment, index) => {
+                        const level = levelResolutions[index];
+                        return level === undefined || level.findings.length === 0
+                          ? assessment
+                          : Object.freeze({
+                              ...assessment,
+                              legal: false,
+                              findings: Object.freeze([...assessment.findings, ...level.findings]),
+                            });
+                      }),
+                    );
               // Calling Card acts only after the authored (rolled) offer is
               // accepted. Its derived effective rarity is deliberately not a
               // fresh-roll input: Heroic and promoted replacement rows must
@@ -944,12 +957,14 @@ export function createTraitOfferCandidateArtifacts(
                 value?.kind === 'chaos'
                   ? catalog.chaos.blessings.byKey[value.blessingKey]
                   : blessings[0];
-              const rarities =
-                blessing?.fixedRarity === 'Legendary'
-                  ? (['Legendary'] as const)
-                  : selectedCurse?.semanticTag === 'Barren'
-                    ? (['Heroic'] as const)
-                    : (['Common', 'Rare', 'Epic'] as const);
+              const rarities = chaosPairRarities(
+                catalog,
+                context.before,
+                context.context,
+                context.arcanaFear,
+                selectedCurse,
+                blessing,
+              );
               return Object.freeze({
                 curseOptions: Object.freeze(
                   optionKeys.map((optionKey) =>

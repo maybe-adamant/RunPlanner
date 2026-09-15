@@ -125,6 +125,10 @@ export interface RawTraitCatalogInput {
   readonly chaos: {
     readonly curses: readonly import('@run-planner/engine/catalog-schema').ChaosCurseDeclaration[];
     readonly blessings: readonly import('@run-planner/engine/catalog-schema').ChaosBlessingDeclaration[];
+    readonly rarity: {
+      readonly itemOverride: import('@run-planner/engine/catalog-schema').BoonRarityOverride;
+      readonly rollOrder: readonly import('@run-planner/engine/catalog-schema').TraitRarity[];
+    };
   };
   readonly hexes: readonly RawHexDeclaration[];
 }

@@ -98,6 +98,10 @@ describe('Chaos compiler owner', () => {
       fixedRarity: 'Legendary',
       derivedOutcome: { kind: 'defiance', healthPercent: 40, magickPercent: 40 },
     });
+    expect(catalog.chaos.rarity).toEqual({
+      itemOverride: { Rare: 0.4, Epic: 0.1, Duo: 0, Legendary: 0.05 },
+      rollOrder: ['Common', 'Rare', 'Epic'],
+    });
     const revelation = catalog.chaos.blessings.byKey.ChaosExSpeedBlessing;
     expect(revelation?.operands.map((operand) => operand.key)).toEqual([
       'weaponSpeed',

@@ -93,6 +93,11 @@ export type ChaosDerivedOutcome =
 export interface ChaosTraitCatalog {
   readonly curses: CatalogCollection<ChaosCurseDeclaration>;
   readonly blessings: CatalogCollection<ChaosBlessingDeclaration>;
+  /** TrialUpgrade's sparse source override and exact low-to-high roll checks. */
+  readonly rarity: {
+    readonly itemOverride: BoonRarityOverride;
+    readonly rollOrder: BoonRarityRollOrder;
+  };
 }
 
 /** Rarities that can exist on an equipped trait or a fresh offer. */
