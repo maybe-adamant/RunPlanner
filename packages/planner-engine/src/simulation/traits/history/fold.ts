@@ -236,6 +236,7 @@ export function foldTraitHistoryEvents(
     const sequence = ordered[index]!.sequence;
     const group: TraitHistoryEvent[] = [];
     while (ordered[index]?.sequence === sequence) group.push(ordered[index++]!);
+    let ordinaryExpired = false;
     for (const event of group) {
       if (event.kind === 'directChaosBlessing') {
         const blessing = catalog.chaos.blessings.byKey[event.blessingKey];
@@ -305,6 +306,7 @@ export function foldTraitHistoryEvents(
             survivors.push(Object.freeze({ ...active, remaining }));
             continue;
           }
+          if (active.semanticTag === 'Ordinary') ordinaryExpired = true;
           maturedChaos.push(
             Object.freeze({
               acquisitionIdentity: active.acquisitionIdentity,
@@ -550,7 +552,7 @@ export function foldTraitHistoryEvents(
     promoteActiveFloorTargets(
       catalog,
       equipped,
-      newlyActive,
+      ordinaryExpired ? nextActiveSources : newlyActive,
       ordered
         .slice(0, index)
         .filter((event): event is TraitOfferEvent => event.kind === 'traitOffer'),

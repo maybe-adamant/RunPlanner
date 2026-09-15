@@ -37,6 +37,7 @@ import {
   directTraitSetOutcomes,
   offerGenerationAdjustedTraitGiverContext,
   offerGenerationAdjustedTraitOfferContext,
+  isChaosGodScreenGiver,
   assessNaturalSelectionTargets,
   type NaturalSelectionTargetAssessment,
   evaluateReachedTraitOffer,
@@ -853,9 +854,7 @@ export function createTraitOfferCandidateArtifacts(
             }),
           ),
         chaosOfferRules: (value?: AuthoredTraitOffer) =>
-          value?.kind !== 'traits' ||
-          (catalog.traitGivers.byKey[value.giverKey]?.providerKind !== 'olympian' &&
-            catalog.traitGivers.byKey[value.giverKey]?.providerKind !== 'hermes')
+          value?.kind !== 'traits' || !isChaosGodScreenGiver(catalog, value.giverKey)
             ? Object.freeze([])
             : Object.freeze(
                 branchContexts.map((context) => {
