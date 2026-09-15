@@ -38,6 +38,7 @@ import {
   type CanonicalHubDecision,
   type MaterializedBiomePrefix,
   type ProjectEvaluation,
+  type ProjectEvaluationAssembly,
   type SemanticFinding,
 } from '@run-planner/engine/simulation';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
@@ -124,54 +125,40 @@ function createStructuralFrontierProject(biomeKey: 'G' | 'H' | 'P'): ProjectDocu
   });
 }
 
-/**
- * These tests deliberately bypass only assembly provenance. Production still
- * rejects foreign assemblies; the seam lets this adapter prove it rejects a
- * malformed evaluator overlay before React can render it.
- */
+const overlaySources = vi.hoisted(
+  () => new WeakMap<ProjectEvaluationAssembly, ProjectEvaluationAssembly>(),
+);
+
+// Malformed-overlay tests retain the matching simulator's candidate capabilities
+// while exercising the projection's authored/evaluated data contract guards.
 vi.mock('@run-planner/engine/simulation', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@run-planner/engine/simulation')>();
+  const source = (assembly: ProjectEvaluationAssembly) => overlaySources.get(assembly) ?? assembly;
   return {
     ...actual,
-    assertProjectEvaluationAssembly: () => undefined,
-    candidateArtifactsForProjectEvaluationAssembly: () =>
-      Object.freeze({ biomeAt: () => undefined }),
+    assertProjectEvaluationAssembly: (assembly: ProjectEvaluationAssembly) =>
+      actual.assertProjectEvaluationAssembly(source(assembly)),
     encounterPhaseCandidateSupportForProjectEvaluationAssembly: (
-      ...args: Parameters<typeof actual.encounterPhaseCandidateSupportForProjectEvaluationAssembly>
-    ) => {
-      try {
-        return actual.encounterPhaseCandidateSupportForProjectEvaluationAssembly(...args);
-      } catch {
-        // A deliberately forged evaluator overlay has no exact candidate
-        // capability. Withhold phase controls so the overlay guard under test
-        // can reject its malformed evaluator product first.
-        return undefined;
-      }
-    },
+      ...[assembly, ...args]: Parameters<
+        typeof actual.encounterPhaseCandidateSupportForProjectEvaluationAssembly
+      >
+    ) =>
+      actual.encounterPhaseCandidateSupportForProjectEvaluationAssembly(source(assembly), ...args),
     encounterPhaseSequenceStatusForProjectEvaluationAssembly: (
-      ...args: Parameters<typeof actual.encounterPhaseSequenceStatusForProjectEvaluationAssembly>
-    ) => {
-      try {
-        return actual.encounterPhaseSequenceStatusForProjectEvaluationAssembly(...args);
-      } catch {
-        // The forged overlay intentionally has no exact preparation status.
-        // Preserve the production provenance guard while this test-only seam
-        // lets the projection reject the malformed evaluator overlay first.
-        return undefined;
-      }
-    },
+      ...[assembly, ...args]: Parameters<
+        typeof actual.encounterPhaseSequenceStatusForProjectEvaluationAssembly
+      >
+    ) => actual.encounterPhaseSequenceStatusForProjectEvaluationAssembly(source(assembly), ...args),
     encounterPhaseFigLeafSupportForProjectEvaluationAssembly: (
-      ...args: Parameters<typeof actual.encounterPhaseFigLeafSupportForProjectEvaluationAssembly>
-    ) => {
-      try {
-        return actual.encounterPhaseFigLeafSupportForProjectEvaluationAssembly(...args);
-      } catch {
-        // The forged overlay has no exact Fig Leaf capability. Preserve the
-        // production provenance guard while allowing malformed-overlay tests
-        // to reach their intended source/evaluator contract assertion.
-        return undefined;
-      }
-    },
+      ...[assembly, ...args]: Parameters<
+        typeof actual.encounterPhaseFigLeafSupportForProjectEvaluationAssembly
+      >
+    ) => actual.encounterPhaseFigLeafSupportForProjectEvaluationAssembly(source(assembly), ...args),
+    isShopOfferActiveForProjectEvaluationAssembly: (
+      ...[assembly, ...args]: Parameters<
+        typeof actual.isShopOfferActiveForProjectEvaluationAssembly
+      >
+    ) => actual.isShopOfferActiveForProjectEvaluationAssembly(source(assembly), ...args),
   };
 });
 
@@ -228,11 +215,13 @@ function projectWorkspace(project: ProjectDocument, evaluation?: ProjectEvaluati
   // matching assembly so newly projected dormant/settlement controls do not
   // fail before the intended malformed-evaluation assertion is reached.
   const matchingCandidates = createCandidateSessionFactory(catalog).bind(assembly);
+  const overlay = Object.freeze({ ...assembly, evaluation });
+  overlaySources.set(overlay, assembly);
   return projection(
     Object.freeze({
       bind: () => matchingCandidates,
     }),
-  ).project(Object.freeze({ ...assembly, evaluation }));
+  ).project(overlay);
 }
 
 function fBatch(snapshot: CanonicalBiome): CanonicalBatch {

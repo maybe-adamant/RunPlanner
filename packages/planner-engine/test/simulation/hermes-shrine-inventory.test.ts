@@ -12,6 +12,7 @@ import {
   createOccurrenceId,
   createRoomActionAddress,
   createRouteStartKeepsakeSelectionAddress,
+  createTargetAddress,
   hermesShrineDeliveryEntryKey,
   parseHermesShrineDeliveryEntryKey,
   roomActionKey,
@@ -45,7 +46,6 @@ import {
 import { createHermesShrineCandidateArtifacts } from '../../src/simulation/commerce/hermes-shrine';
 import { prefixAuthoredRooms } from '../../src/simulation/candidates/evaluated-biome';
 import { composeBiomeHistoryPrefix } from '../../src/simulation/history';
-import { prepareRoomEncounterPhases } from '../../src/simulation/encounters/preparation';
 import { materializeBiomePrefix } from '../../src/simulation/materialization';
 import { evaluateBiomeRewards } from '../../src/simulation/rewards/biome';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
@@ -177,6 +177,7 @@ function outgoingSeedBranches(rewardType: 'HermesUpgrade' | 'SpellDrop' | 'Talen
 function evaluateShrineOutgoingPrefix(
   project: ReturnType<typeof loadSurfaceNOProject>,
   rewardType: 'HermesUpgrade' | 'SpellDrop' | 'TalentDrop',
+  outgoingOccurrenceId = oOccurrenceIds.combat07,
 ) {
   const route = project.route;
   const plan = route?.biomes.find((candidate) => candidate.biomeKey === 'O');
@@ -186,9 +187,9 @@ function evaluateShrineOutgoingPrefix(
     (decision) =>
       decision.kind === 'exit' &&
       decision.source.kind === 'occurrence' &&
-      decision.source.occurrenceId === oOccurrenceIds.combat07,
+      decision.source.occurrenceId === outgoingOccurrenceId,
   );
-  if (cutoff < 0) throw new Error('fixture lost O_Combat07 outgoing decision');
+  if (cutoff < 0) throw new Error(`fixture lost ${outgoingOccurrenceId} outgoing decision`);
   const prefixPlan = Object.freeze({
     ...plan,
     topology: Object.freeze({
@@ -199,7 +200,7 @@ function evaluateShrineOutgoingPrefix(
   const snapshot = materializeBiomePrefix(catalog, oBiome, prefixPlan, route.loadout);
   const history = snapshot === null ? undefined : composeBiomeHistoryPrefix(catalog, snapshot);
   if (snapshot?.entryRoom === undefined || history === null || history === undefined)
-    throw new Error('fixture lost O_Combat07 outgoing prefix');
+    throw new Error(`fixture lost ${outgoingOccurrenceId} outgoing prefix`);
   const rewards = evaluateBiomeRewards(
     catalog,
     snapshot as typeof snapshot & { readonly entryRoom: NonNullable<typeof snapshot.entryRoom> },
@@ -212,9 +213,10 @@ function evaluateShrineOutgoingPrefix(
     (candidate) =>
       candidate.owner.kind === 'exitDecision' &&
       candidate.owner.source.kind === 'occurrence' &&
-      candidate.owner.source.occurrenceId === oOccurrenceIds.combat07,
+      candidate.owner.source.occurrenceId === outgoingOccurrenceId,
   );
-  if (runState === undefined) throw new Error('fixture lost O_Combat07 outgoing Run State');
+  if (runState === undefined)
+    throw new Error(`fixture lost ${outgoingOccurrenceId} outgoing Run State`);
   return Object.freeze({ snapshot, rewards, runState });
 }
 
@@ -854,55 +856,49 @@ describe('Hermes Shrine Travel Deal generation', () => {
 });
 
 describe('Hermes Shrine Spell reservation lifecycle input', () => {
-  it('makes a delayed Spell reservation available to later encounter preparation', () => {
-    const project = loadSurfaceNOProject();
-    const route = project.route;
-    const plan = route?.biomes.find((candidate) => candidate.biomeKey === 'O');
-    if (route === undefined || plan === undefined) throw new Error('fixture lost Surface O');
-    const snapshot = materializeBiomePrefix(catalog, oBiome, plan, route.loadout);
-    if (snapshot?.entryRoom === undefined) throw new Error('fixture lost O entry');
-    const host = prefixAuthoredRooms(snapshot).find(
-      (room) => room.occurrenceId === oOccurrenceIds.combat04 && room.entered,
+  it('carries a delayed Spell reservation into later room-generation checkpoints', () => {
+    const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'SetHermesShrinePresence',
+      occurrence: source,
+      present: true,
+    });
+    for (const [slotKey, rewardType] of [
+      ['first', 'HealBigDrop'],
+      ['secondLeft', 'SpellDrop'],
+      ['secondRight', 'MaxManaDrop'],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: source,
+        slotKey,
+        value: { rewardType },
+      });
+    }
+    const target = createTargetAddress(
+      oBiome,
+      { kind: 'occurrence', occurrenceId: oOccurrenceIds.combat01 },
+      'exit1',
     );
-    if (host === undefined) throw new Error('fixture lost O_Combat04');
-    const envelope = catalog.encounterEnvelopes.byKey[host.encounterEnvelopeKey];
-    if (envelope === undefined) throw new Error('catalog lost O_Combat04 envelope');
-    const withSpellGuard = {
-      ...catalog,
-      encounterEnvelopes: {
-        ...catalog.encounterEnvelopes,
-        byKey: {
-          ...catalog.encounterEnvelopes.byKey,
-          [envelope.key]: {
-            ...envelope,
-            slots: envelope.slots.map((slot) =>
-              slot.key === 'Combat1'
-                ? {
-                    ...slot,
-                    activationRequirement: {
-                      kind: 'flagEquals' as const,
-                      flag: 'pendingSpellDrop',
-                      value: false,
-                    },
-                  }
-                : slot,
-            ),
-          },
-        },
-      },
-    } as typeof catalog;
+    const unpurchased = evaluateShrineOutgoingPrefix(project, 'SpellDrop', oOccurrenceIds.combat01);
+    expect(unpurchased.rewards.targetHistory).toContainEqual(
+      expect.objectContaining({ origin: target, pendingSpellDrops: [false] }),
+    );
 
-    const history = composeBiomeHistoryPrefix(catalog, snapshot);
-    const checkpoint = history?.rooms.find(
-      (room) => semanticAddressKey(room.origin) === semanticAddressKey(host.origin),
-    )?.preparation;
-    if (checkpoint === undefined) throw new Error('fixture never prepared O_Combat04');
-    expect(prepareRoomEncounterPhases(withSpellGuard, host, checkpoint).valid).toBe(true);
-    expect(
-      prepareRoomEncounterPhases(withSpellGuard, host, checkpoint, {
-        pendingSpellDrop: true,
-      }).valid,
-    ).toBe(false);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: source,
+      generationKey: 'initial:secondLeft',
+      purchase: { delay: 8, rushed: false },
+    });
+    const purchased = evaluateShrineOutgoingPrefix(project, 'SpellDrop', oOccurrenceIds.combat01);
+    const sourceKey = hermesShrineDeliveryEntryKey(source, 'initial:secondLeft');
+    expect(purchased.runState.pendingHermesShrineDeliveries[sourceKey]).toMatchObject({
+      rewardType: 'SpellDrop',
+    });
+    expect(purchased.rewards.targetHistory).toContainEqual(
+      expect.objectContaining({ origin: target, pendingSpellDrops: [true] }),
+    );
   });
 });
 
