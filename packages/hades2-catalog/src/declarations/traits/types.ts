@@ -22,6 +22,8 @@ export interface RawTraitDeclaration {
   readonly equipmentSlot?: TraitDeclaration['equipmentSlot'];
   readonly elementContributions: TraitDeclaration['elementContributions'];
   readonly usesBoonRarity: boolean;
+  /** May enter the initial offer as a linked priority seed, or be skipped. */
+  readonly optionalLinkedPriority?: boolean;
   readonly blockStacking: boolean;
   readonly blockOfferIfPreviouslyPicked?: boolean;
   readonly blockInRunRarify: boolean;

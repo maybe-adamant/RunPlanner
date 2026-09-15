@@ -251,6 +251,7 @@ export const hestiaTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [
@@ -279,6 +280,7 @@ export const hestiaTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [

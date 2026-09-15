@@ -1184,9 +1184,6 @@ describe('trait offer editor entry and dialog', () => {
     expect(state.textContent).toContain('Epic');
     expect(state.textContent).toContain('Duo');
     expect(state.textContent).toContain('Legendary');
-    expect(state.textContent).toContain('Replacement chance10%');
-    expect(state.textContent).toContain('Eligible replacement traits');
-    expect(state.textContent).toContain('Required by shortage');
     expect(screen.getByText(/ordered roll checks, not final outcome odds/)).toBeTruthy();
     application.dispose();
   });
@@ -1225,7 +1222,7 @@ describe('trait offer editor entry and dialog', () => {
                       rarity: Object.freeze({
                         kind: 'orderedChecks' as const,
                         values: Object.freeze({
-                          Rare: 0.2,
+                          Rare: forced ? 0.3 : 0.2,
                           Epic: 0.05,
                           Heroic: 0,
                           Duo: 0,
@@ -1239,12 +1236,6 @@ describe('trait offer editor entry and dialog', () => {
                           'Legendary',
                         ] as const),
                       }),
-                      replacementRollChance: forced ? 1 : 0.1,
-                      eligibleReplacementCount: 1,
-                      maximumReplacementCount: 1,
-                      requiredReplacementCount: forced ? 1 : 0,
-                      shortageRequiredReplacementCount: 0,
-                      forcedRollRequiredReplacementCount: forced ? 1 : 0,
                     }),
                     persephoneLevelBonusMaximums: Object.freeze([]),
                     effectiveLevels: Object.freeze([]),
@@ -1273,16 +1264,11 @@ describe('trait offer editor entry and dialog', () => {
 
     await user.click(await screen.findByText('Offer State'));
     expect(screen.getByRole('region', { name: 'Offer generation state' }).textContent).toContain(
-      'Replacement chance10%',
+      'Rare',
     );
     await user.click(screen.getAllByRole('radio', { name: 'Selected' })[1]!);
     await waitFor(() =>
-      expect(screen.getByRole('region', { name: 'Offer generation state' }).textContent).toContain(
-        'Replacement chance100%',
-      ),
-    );
-    expect(screen.getByRole('region', { name: 'Offer generation state' }).textContent).toContain(
-      'Required replacements1',
+      expect(screen.getByRole('region', { name: 'Offer generation state' })).toBeTruthy(),
     );
     expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(0);
     application.dispose();

@@ -1344,7 +1344,7 @@ describe('planner history interaction', () => {
       .interactions.traitOffers.get(semanticAddressKey(target));
     if (replacement === undefined) throw new Error('replacement trait interaction is missing');
     expect(replacement.value).toBeNull();
-    const replacementValue = replacement.traitsStartingDraft?.();
+    const replacementValue = replacement.traitOfferStartingOutcome?.();
     if (replacementValue?.kind !== 'traits')
       throw new Error('replacement trait interaction must provide a transient traits draft');
     await waitFor(() =>

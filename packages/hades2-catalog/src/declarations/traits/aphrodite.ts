@@ -251,6 +251,7 @@ export const aphroditeTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [
@@ -285,6 +286,7 @@ export const aphroditeTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [
@@ -313,6 +315,7 @@ export const aphroditeTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [
@@ -347,6 +350,7 @@ export const aphroditeTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [
@@ -387,6 +391,7 @@ export const aphroditeTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [
@@ -421,6 +426,7 @@ export const aphroditeTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [
@@ -449,6 +455,7 @@ export const aphroditeTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [
@@ -483,6 +490,7 @@ export const aphroditeTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [

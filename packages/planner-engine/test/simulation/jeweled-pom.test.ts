@@ -89,9 +89,7 @@ describe('Jeweled Pom', () => {
       2,
       'encounterCompleted',
     );
-    expect(sparseOrdinary.branch.traitEvaluations?.at(-1)?.replacementComposition.legal).toBe(
-      false,
-    );
+    expect(sparseOrdinary.branch.traitEvaluations?.at(-1)?.generation?.legal).toBe(false);
     expect(sparseOrdinary.branch.traitHistory?.equippedTraits.ApolloWeaponBoon).toBeUndefined();
   });
 

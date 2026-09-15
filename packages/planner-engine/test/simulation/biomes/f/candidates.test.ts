@@ -324,7 +324,7 @@ describe('F candidate support', () => {
       expect(simulateProject(catalog, replaced).findings).toContainEqual(
         expect.objectContaining({ code: 'traitOfferMissing', origin: trait }),
       );
-      const draft = candidateSession(replaced).traitOfferStartingDraft(trait, 'Zeus');
+      const draft = candidateSession(replaced).traitOfferStartingOutcome(trait, 'Zeus');
       expect(draft).toBeDefined();
       const repaired = applyProjectCommand(replaced, catalog, {
         kind: 'ReplaceTraitOffer',

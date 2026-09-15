@@ -35,7 +35,6 @@ export function isTraitOfferMutationEvent(event: TraitHistoryEvent): boolean {
 
 const emptyElements = Object.freeze({ Aether: 0, Earth: 0, Air: 0, Fire: 0, Water: 0 });
 const BASE_ELEMENTS: readonly TraitElement[] = Object.freeze(['Earth', 'Air', 'Fire', 'Water']);
-const ORDINARY_EQUIPMENT_SLOTS = new Set(['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana']);
 
 function combinedElementFacts(
   fromTraits: ReturnType<typeof deriveFacts>,
@@ -105,17 +104,6 @@ function deriveFacts(catalog: Catalog, equippedTraits: Readonly<Record<string, E
     godBoonRarityCounts: Object.freeze(rarityCounts),
     upgradableTraitCount: upgradable,
   });
-}
-
-/** The ordinary five-slot view is derived from the one complete equipment ledger. */
-export function ordinaryEquippedSlots(
-  history: TraitHistoryState,
-): Readonly<Record<string, EquippedTrait>> {
-  return Object.freeze(
-    Object.fromEntries(
-      Object.entries(history.equippedSlots).filter(([slot]) => ORDINARY_EQUIPMENT_SLOTS.has(slot)),
-    ),
-  );
 }
 
 function activeRarityFloorSources(

@@ -303,7 +303,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     const hiddenSource = workspaceProjection(view.application).interactions.traitOffers.get(
       semanticAddressKey(createTraitOfferAddress(mysteryBoon, 'hiddenSource')),
     );
-    const hiddenSourceDraft = hiddenSource?.traitsStartingDraft?.();
+    const hiddenSourceDraft = hiddenSource?.traitOfferStartingOutcome?.();
     if (hiddenSource === undefined)
       throw new Error('Narcissus Blind Box hidden-source editor is missing');
     if (hiddenSourceDraft === undefined)

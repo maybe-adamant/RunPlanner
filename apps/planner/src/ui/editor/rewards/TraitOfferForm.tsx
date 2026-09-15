@@ -3,28 +3,35 @@ import type { ReactNode } from 'react';
 export function TraitOfferShapeActions({
   onAdd,
   onRemove,
-  onFallback,
+  addDisabled = false,
+  removeDisabled = false,
 }: {
   readonly onAdd?: () => void;
   readonly onRemove?: () => void;
-  readonly onFallback?: () => void;
+  readonly addDisabled?: boolean;
+  readonly removeDisabled?: boolean;
 }) {
-  if (onAdd === undefined && onRemove === undefined && onFallback === undefined) return null;
+  if (onAdd === undefined && onRemove === undefined) return null;
   return (
     <div aria-label="Offer shape actions" className="trait-offer-shape-actions" role="group">
       {onAdd === undefined ? null : (
-        <button className="quiet-action action-compact" onClick={onAdd} type="button">
+        <button
+          className="quiet-action action-compact"
+          disabled={addDisabled}
+          onClick={onAdd}
+          type="button"
+        >
           Add option
         </button>
       )}
       {onRemove === undefined ? null : (
-        <button className="quiet-action action-compact" onClick={onRemove} type="button">
+        <button
+          className="quiet-action action-compact"
+          disabled={removeDisabled}
+          onClick={onRemove}
+          type="button"
+        >
           Remove last option
-        </button>
-      )}
-      {onFallback === undefined ? null : (
-        <button className="quiet-action action-compact" onClick={onFallback} type="button">
-          Select Fallback Gold
         </button>
       )}
     </div>
@@ -70,7 +77,10 @@ export function TraitOfferForm({
           {shapeActions}
         </>
       ) : (
-        content
+        <>
+          {content}
+          {shapeActions}
+        </>
       )}
       {feedback}
       {recovery}

@@ -3,7 +3,6 @@ import type { AuthoredTraitOffer, EquippedTrait } from '../../../authored-projec
 import { boonRarityRollUnavailable } from '../rarity';
 import { optionIndex } from '../../../authored-project/traits/state';
 import { isPomUpgradeTarget, nextRarity } from '../history/upgrades';
-import { ordinaryEquippedSlots } from '../history/fold';
 import type {
   TraitHistoryState,
   TraitReplacementTransition,
@@ -17,47 +16,17 @@ import {
 } from '../level-effects';
 import {
   assessTraitOfferComposition,
-  assessTraitOfferDomainComposition,
   echoLastRunBoonOutcomes,
   type TraitAssessment,
   type TraitAssessmentFinding,
   type TraitCandidateAssessment,
   type TraitOfferCompositionAssessment,
-  type TraitOfferCompositionDomains,
   type TraitOfferContext,
-  type TraitOfferDomainOptionKind,
-  type TraitReplacementCompositionAssessment,
 } from '../offer-domain';
+import { assessInitialOfferSupport, type InitialOfferInput } from './initial-composition';
+import type { InitialOfferSupport } from './initial-composition';
 
 export type { TraitFindingCode } from '../../model';
-
-// This is an identity cache of the complete, immutable domain product. It is
-// never a semantic input: callers can always derive the same product from the
-// explicit catalog, pre-offer history, giver, and context arguments.
-const compositionDomainCache = new WeakMap<
-  Catalog,
-  WeakMap<TraitHistoryState, Map<string, TraitOfferCompositionDomains>>
->();
-
-function compositionDomainCacheKey(giverKey: string, context: TraitOfferContext): string {
-  return JSON.stringify([
-    giverKey,
-    context.weaponKey,
-    context.aspectKey,
-    context.devotionNoDuo,
-    context.blockGiftBoons,
-    context.echoLastRewardAvailable,
-    context.echoLastRewardRecreation,
-    context.freshRarityOverride,
-    context.gorgonResolvedRarity,
-    context.circeRemovableFearVow,
-    context.manualArcanaGraspCost,
-    context.currentKeepsakeKey,
-    context.stackBoostsSuppressed,
-    context.boonRarityFacts,
-    context.suppressTemporaryBoonRarity,
-  ]);
-}
 
 export interface NaturalSelectionStep {
   readonly targetTraitKey: string;
@@ -221,6 +190,33 @@ export function assessTraitOption(
   return assessTraitOptionAgainstRarityDomain(catalog, traitKey, history, context, rarity);
 }
 
+/** Native declaration eligibility before picker ownership, occupied-slot and
+ * rarity layers. Initial generation deliberately consumes this view. */
+export function assessTraitDeclarationEligibility(
+  catalog: Catalog,
+  traitKey: string,
+  history: TraitHistoryState,
+  context: TraitOfferContext = {},
+): TraitAssessment {
+  const trait = catalog.traits.byKey[traitKey];
+  if (trait === undefined)
+    return Object.freeze({
+      legal: false,
+      findings: Object.freeze([
+        { code: 'missingPrerequisite' as const, traitKey, detail: 'unknown trait' },
+      ]),
+    });
+  const findings: TraitAssessmentFinding[] = [];
+  if (history.bannedTraitKeys.includes(traitKey)) findings.push({ code: 'bannedTrait', traitKey });
+  if (trait.blockOfferIfPreviouslyPicked && history.previouslyPickedTraitKeys.includes(traitKey))
+    findings.push({ code: 'previouslyPicked', traitKey });
+  for (const requirement of trait.offerRequirements) {
+    const failure = checkRequirement(catalog, requirement, trait, history, context);
+    if (failure !== undefined) findings.push({ ...failure, traitKey });
+  }
+  return Object.freeze({ legal: findings.length === 0, findings: Object.freeze(findings) });
+}
+
 export function assessTraitOptionAgainstRarityDomain(
   catalog: Catalog,
   traitKey: string,
@@ -229,26 +225,12 @@ export function assessTraitOptionAgainstRarityDomain(
   rarity?: TraitRarity,
   supportedRarities?: readonly TraitRarity[],
 ): TraitAssessment {
+  const declaration = assessTraitDeclarationEligibility(catalog, traitKey, history, context);
   const trait = catalog.traits.byKey[traitKey];
-  if (trait === undefined)
-    return {
-      legal: false,
-      findings: [{ code: 'missingPrerequisite', traitKey, detail: 'unknown trait' }],
-    };
-  const findings: TraitAssessmentFinding[] = [];
-  if (history.bannedTraitKeys.includes(traitKey)) findings.push({ code: 'bannedTrait', traitKey });
+  if (trait === undefined) return declaration;
+  const findings: TraitAssessmentFinding[] = [...declaration.findings];
   if (history.equippedTraits[traitKey] !== undefined)
     findings.push({ code: 'alreadyEquipped', traitKey });
-  if (
-    trait.blockOfferIfPreviouslyPicked &&
-    history.equippedTraits[traitKey] === undefined &&
-    history.previouslyPickedTraitKeys.includes(traitKey)
-  )
-    findings.push({ code: 'previouslyPicked', traitKey });
-  for (const requirement of trait.offerRequirements) {
-    const failure = checkRequirement(catalog, requirement, trait, history, context);
-    if (failure !== undefined) findings.push({ ...failure, traitKey });
-  }
   if (trait.selectedDisposition.kind === 'upgradeOccupiedBoonSlot') {
     const target = history.equippedSlots[trait.selectedDisposition.slot];
     if (!isPomUpgradeTarget(catalog, target))
@@ -264,8 +246,6 @@ export function assessTraitOptionAgainstRarityDomain(
   ) {
     findings.push({ code: 'targetedAcquisitionNoEligibleTarget', traitKey });
   }
-  if (context.devotionNoDuo && rarity === 'Duo')
-    findings.push({ code: 'offerContext', traitKey, detail: 'devotionNoDuo' });
   if (trait.equipmentSlot !== undefined && history.equippedSlots[trait.equipmentSlot] !== undefined)
     findings.push({ code: 'occupiedBoonSlot', traitKey, detail: trait.equipmentSlot });
   if (
@@ -352,8 +332,40 @@ export function assessTraitOptionAgainstRarityDomain(
       detail: trait.equipmentSlot,
     });
   }
-  // A replacement's explicit promoted rarity is not drawn from the fresh table.
+  // Ordered rarity probability, depletion and final rescue are complete-offer
+  // generation facts for ordinary Olympian/Hermes offers. A row stays
+  // individually repairable when its declared rarity can only arrive through
+  // zero-chance final rescue. Fixed-provider boon screens retain their direct
+  // numeric rarity check because they do not traverse that staged generation.
+  // A source override is the exact rarity for fresh rows, not an offer-wide
+  // rewrite. Legal replacements retain their explicit promoted rarity even
+  // when the fresh table is overridden (for example, Ordinary at Common).
+  const ordinaryGeneration = giver?.providerKind === 'olympian' || giver?.providerKind === 'hermes';
+  const exactSourceRarity = context.freshRarityOverride ?? context.gorgonResolvedRarity;
+  const freshRarityAllowed =
+    ordinaryGeneration && context.gorgonResolvedRarity === undefined
+      ? trait.rarityDomain.kind !== 'ranked' ||
+        rarity === undefined ||
+        trait.rarityDomain.freshOfferRarities.includes(rarity)
+      : exactSourceRarity === undefined
+        ? trait.rarityDomain.kind !== 'ranked' ||
+          rarity === undefined ||
+          trait.rarityDomain.freshOfferRarities.includes(rarity)
+        : rarity === exactSourceRarity;
   if (
+    trait.rarityDomain.kind === 'ranked' &&
+    rarity !== undefined &&
+    !freshRarityAllowed &&
+    replacementTransition === undefined
+  ) {
+    findings.push({
+      code: 'freshRarityUnavailable',
+      traitKey,
+      detail: rarity,
+    });
+  }
+  if (
+    !ordinaryGeneration &&
     replacementTransition === undefined &&
     context.boonRarityFacts !== undefined &&
     rarity !== undefined &&
@@ -367,23 +379,6 @@ export function assessTraitOptionAgainstRarityDomain(
     )
   )
     findings.push({ code: 'rarityRollUnavailable', traitKey, detail: rarity });
-  // A source override is the exact rarity for fresh rows, not an offer-wide
-  // rewrite. Legal replacements retain their explicit promoted rarity even
-  // when the fresh table is overridden (for example, Ordinary at Common).
-  if (
-    trait.rarityDomain.kind === 'ranked' &&
-    rarity !== undefined &&
-    (context.freshRarityOverride === undefined && context.gorgonResolvedRarity === undefined
-      ? !trait.rarityDomain.freshOfferRarities.includes(rarity)
-      : rarity !== (context.freshRarityOverride ?? context.gorgonResolvedRarity)) &&
-    replacementTransition === undefined
-  ) {
-    findings.push({
-      code: 'freshRarityUnavailable',
-      traitKey,
-      detail: rarity,
-    });
-  }
   return Object.freeze({
     legal: findings.length === 0,
     findings: Object.freeze(findings),
@@ -399,62 +394,17 @@ export function assessTraitOffer(
 ): readonly TraitAssessment[] {
   if (offer.kind !== 'traits') return Object.freeze([]);
   const offerContext = { ...context, resolvedProviderKey: offer.giverKey };
-  let hymnApplied = false;
-  const giver = catalog.traitGivers.byKey[offer.giverKey];
-  const eligibleTraitKeys =
-    giver === undefined
-      ? Object.freeze([])
-      : Object.freeze(
-          giver.traitKeys.filter(
-            (traitKey) => assessTraitOption(catalog, traitKey, history, offerContext).legal,
-          ),
-        );
-  const chosen = new Set<string>();
   return Object.freeze(
     offer.options.map((option) => {
-      const trait = catalog.traits.byKey[option.traitKey];
-      const priorityOffer =
-        giver?.providerKind === 'olympian' &&
-        Object.keys(ordinaryEquippedSlots(history)).length === 0;
-      const occupied =
-        trait?.equipmentSlot === undefined ? undefined : history.equippedSlots[trait.equipmentSlot];
-      const replacementShaped =
-        context.ordinarySlotReplacement !== 'forbidden' &&
-        occupied !== undefined &&
-        occupied.traitKey !== option.traitKey &&
-        giver?.providerKind === 'olympian' &&
-        giver.priorityTraitKeys.includes(option.traitKey);
-      const highTierOnly = isOptionalHighTierTrait(catalog, option.traitKey);
-      const supportedRarities =
-        priorityOffer || replacementShaped || highTierOnly || trait?.rarityDomain.kind !== 'ranked'
-          ? undefined
-          : Object.freeze(
-              eligibleTraitKeys
-                .filter((traitKey) => !chosen.has(traitKey))
-                .flatMap((traitKey) => {
-                  const candidate = catalog.traits.byKey[traitKey];
-                  return candidate?.rarityDomain.kind === 'ranked' &&
-                    !isOptionalHighTierTrait(catalog, traitKey)
-                    ? candidate.rarityDomain.freshOfferRarities
-                    : [];
-                }),
-            );
       const assessment = assessTraitOptionAgainstRarityDomain(
         catalog,
         option.traitKey,
         history,
         offerContext,
         option.rarity,
-        supportedRarities,
       );
-      chosen.add(option.traitKey);
-      if (
-        hymnApplied ||
-        (context.limitedSwapUses ?? 0) === 0 ||
-        assessment.replacementTransition === undefined
-      )
+      if ((context.limitedSwapUses ?? 0) === 0 || assessment.replacementTransition === undefined)
         return assessment;
-      hymnApplied = true;
       return Object.freeze({
         ...assessment,
         replacementTransition: Object.freeze({
@@ -478,25 +428,27 @@ export function assessTraitOfferBeforeRarification(
   context: TraitOfferContext = {},
 ): {
   readonly assessments: readonly TraitAssessment[];
+  readonly generation?: InitialOfferSupport;
   readonly composition: TraitOfferCompositionAssessment;
-  readonly replacementComposition: TraitReplacementCompositionAssessment;
   readonly legal: boolean;
 } {
   const assessments = assessTraitOffer(catalog, offer, history, context);
-  const composition = assessTraitOfferComposition(catalog, offer, history);
-  const replacementComposition = assessTraitReplacementComposition(
-    catalog,
-    offer,
-    history,
-    context,
-  );
+  const giver = offer.kind === 'chaos' ? undefined : catalog.traitGivers.byKey[offer.giverKey];
+  const ordinary = giver?.providerKind === 'olympian' || giver?.providerKind === 'hermes';
+  const generation = ordinary
+    ? assessInitialOfferSupport({
+        ...traitOfferGenerationInput(catalog, offer.giverKey, history, context),
+        offer,
+      })
+    : undefined;
+  const composition = assessTraitOfferComposition(catalog, offer);
   return Object.freeze({
     assessments,
+    ...(generation === undefined ? {} : { generation }),
     composition,
-    replacementComposition,
     legal:
+      (generation?.legal ?? true) &&
       composition.legal &&
-      replacementComposition.legal &&
       assessments.every((assessment) => assessment.legal),
   });
 }
@@ -596,30 +548,14 @@ export function traitCandidates(
 ): readonly TraitCandidateAssessment[] {
   const giver = catalog.traitGivers.byKey[giverKey];
   if (giver === undefined) return Object.freeze([]);
-  const firstOlympian =
-    giver.providerKind === 'olympian' && Object.keys(ordinaryEquippedSlots(history)).length === 0;
-  const priority = new Set(giver.priorityTraitKeys);
-  const addCompositionContext = (
-    traitKey: string,
-    assessment: TraitAssessment,
-  ): TraitAssessment => {
-    if (!firstOlympian || priority.has(traitKey)) return assessment;
-    return Object.freeze({
-      legal: false,
-      findings: Object.freeze([
-        ...assessment.findings,
-        Object.freeze({ code: 'nonPriorityTrait' as const, traitKey }),
-      ]),
-    });
-  };
   const candidates: TraitCandidateAssessment[] = [];
   for (const traitKey of giver.traitKeys) {
     const trait = catalog.traits.byKey[traitKey];
     if (trait === undefined) continue;
-    const assessment = addCompositionContext(
-      traitKey,
-      assessTraitOption(catalog, traitKey, history, { ...context, resolvedProviderKey: giverKey }),
-    );
+    const assessment = assessTraitOption(catalog, traitKey, history, {
+      ...context,
+      resolvedProviderKey: giverKey,
+    });
     if (trait.rarityDomain.kind === 'none') {
       candidates.push(Object.freeze({ traitKey, available: assessment.legal, assessment }));
       continue;
@@ -631,15 +567,12 @@ export function traitCandidates(
       // Ordinary fresh generation never admits Heroic. A chronological source
       // result such as Gorgon is already the exact reached realization.
       if (rarity === 'Heroic' && sourceRarity !== 'Heroic') continue;
-      const rarityAssessment = addCompositionContext(
+      const rarityAssessment = assessTraitOption(
+        catalog,
         traitKey,
-        assessTraitOption(
-          catalog,
-          traitKey,
-          history,
-          { ...context, resolvedProviderKey: giverKey },
-          rarity,
-        ),
+        history,
+        { ...context, resolvedProviderKey: giverKey },
+        rarity,
       );
       // A fresh rarity that is also the exact promoted replacement rarity is
       // represented by the replacement candidate below, never as an ordinary
@@ -690,182 +623,34 @@ export function traitCandidates(
   return Object.freeze(candidates);
 }
 
-/**
- * Partitions exact legal candidates from one immutable pre-offer frontier.
- * `traitCandidates` supplies the shared first-Olympian priority restriction,
- * so composition cannot accidentally admit a candidate the picker rejects.
- */
-export function traitOfferCompositionDomains(
+/** Shared declaration and replacement inputs for support and draft construction. */
+export function traitOfferGenerationInput(
   catalog: Catalog,
   giverKey: string,
-  history: TraitHistoryState,
-  context: TraitOfferContext = {},
-): TraitOfferCompositionDomains {
-  const key = compositionDomainCacheKey(giverKey, context);
-  let byHistory = compositionDomainCache.get(catalog);
-  if (byHistory === undefined) {
-    byHistory = new WeakMap();
-    compositionDomainCache.set(catalog, byHistory);
-  }
-  let cached = byHistory.get(history);
-  if (cached === undefined) {
-    cached = new Map();
-    byHistory.set(history, cached);
-  }
-  const previous = cached.get(key);
-  if (previous !== undefined) return previous;
-  const giver = catalog.traitGivers.byKey[giverKey];
-  const ordinaryByTraitKey = new Map<
-    string,
-    { readonly candidate: TraitCandidateAssessment; readonly exactRollAvailable: boolean }
-  >();
-  const highTier: TraitCandidateAssessment[] = [];
-  const replacements: TraitCandidateAssessment[] = [];
-  const firstOlympian =
-    giver?.providerKind === 'olympian' && Object.keys(ordinaryEquippedSlots(history)).length === 0;
-  for (const candidate of traitCandidates(catalog, giverKey, history, context)) {
-    if (firstOlympian && !giver?.priorityTraitKeys.includes(candidate.traitKey)) continue;
-    const structural = assessTraitOption(catalog, candidate.traitKey, history, {
-      ...context,
-      resolvedProviderKey: giverKey,
-    });
-    if (!candidate.available && !structural.legal) continue;
-    if (candidate.assessment.replacementTransition !== undefined) {
-      replacements.push(candidate);
-      continue;
-    }
-    const trait = catalog.traits.byKey[candidate.traitKey];
-    if (trait?.rarityDomain.kind !== 'ranked') continue;
-    if (trait.rarityDomain.freshOfferRarities.includes('Common')) {
-      const previousOrdinary = ordinaryByTraitKey.get(candidate.traitKey);
-      if (
-        previousOrdinary === undefined ||
-        (!previousOrdinary.exactRollAvailable && candidate.available)
-      )
-        ordinaryByTraitKey.set(candidate.traitKey, {
-          candidate: candidate.available
-            ? candidate
-            : Object.freeze({
-                traitKey: candidate.traitKey,
-                rarity: 'Common' as const,
-                available: true,
-                assessment: structural,
-              }),
-          exactRollAvailable: candidate.available,
-        });
-    }
-    if (!candidate.available) continue;
-    else if (candidate.rarity === 'Duo' || candidate.rarity === 'Legendary')
-      highTier.push(candidate);
-  }
-  const domains = Object.freeze({
-    ordinary: Object.freeze([...ordinaryByTraitKey.values()].map(({ candidate }) => candidate)),
-    highTier: Object.freeze(highTier),
-    replacements: Object.freeze(replacements),
-  });
-  cached.set(key, domains);
-  return domains;
-}
-
-export function assessTraitReplacementComposition(
-  catalog: Catalog,
-  offer: AuthoredTraitOffer,
   before: TraitHistoryState,
   context: TraitOfferContext = {},
-): TraitReplacementCompositionAssessment {
-  const giver = catalog.traitGivers.byKey[offer.giverKey];
-  const applies = giver?.providerKind === 'olympian' || giver?.providerKind === 'hermes';
-  const domains = applies
-    ? traitOfferCompositionDomains(catalog, offer.giverKey, before, context)
-    : undefined;
-  if (offer.kind === 'fallbackGold') {
-    const result = assessTraitOfferDomainComposition({
-      ordinaryKeys: Object.freeze(domains?.ordinary.map((candidate) => candidate.traitKey) ?? []),
-      highTierKeys: Object.freeze(domains?.highTier.map((candidate) => candidate.traitKey) ?? []),
-      replacementKeys: Object.freeze(
-        domains?.replacements.map((candidate) => candidate.traitKey) ?? [],
-      ),
-      authored: Object.freeze([]),
-      fallbackGold: true,
-      replacementRollChance: context.replacementRollChance ?? catalog.boonReplacementChance,
-    });
-    return Object.freeze({
-      applies,
-      ...result,
-      legal: applies && result.legal,
-    });
-  }
-  if (offer.kind !== 'traits')
-    return Object.freeze({
-      applies: false,
-      legal: true,
-      ordinaryCandidateCount: 0,
-      eligibleReplacementCount: 0,
-      maximumReplacementCount: 0,
-      requiredReplacementCount: 0,
-      shortageRequiredReplacementCount: 0,
-      forcedRollRequiredReplacementCount: 0,
-      replacementCount: 0,
-      findings: Object.freeze([]),
-    });
-  if (!applies || giver === undefined) {
-    const sparse = offer.kind === 'traits' && offer.options.length !== 3;
-    return Object.freeze({
-      applies: false,
-      legal: !sparse,
-      ordinaryCandidateCount: 0,
-      eligibleReplacementCount: 0,
-      maximumReplacementCount: 0,
-      requiredReplacementCount: 0,
-      shortageRequiredReplacementCount: 0,
-      forcedRollRequiredReplacementCount: 0,
-      replacementCount: 0,
-      findings: sparse
-        ? Object.freeze([Object.freeze({ code: 'unsupportedSparseTraitOffer' as const })])
-        : Object.freeze([]),
-    });
-  }
-
-  const ordinaryKeys = new Set(domains!.ordinary.map((candidate) => candidate.traitKey));
-  const highTierKeys = new Set(domains!.highTier.map((candidate) => candidate.traitKey));
-  const replacementKeys = new Set(domains!.replacements.map((candidate) => candidate.traitKey));
-  const authored = offer.options.map((option) => {
-    const assessment = assessTraitOption(
-      catalog,
-      option.traitKey,
-      before,
-      { ...context, resolvedProviderKey: offer.giverKey },
-      option.rarity,
-    );
-    const kind: TraitOfferDomainOptionKind =
-      assessment.replacementTransition !== undefined
-        ? 'replacement'
-        : highTierKeys.has(option.traitKey)
-          ? 'highTier'
-          : 'ordinary';
-    return Object.freeze({ traitKey: option.traitKey, kind });
-  });
-  const result = assessTraitOfferDomainComposition({
-    ordinaryKeys: Object.freeze([...ordinaryKeys]),
-    highTierKeys: Object.freeze([...highTierKeys]),
-    replacementKeys: Object.freeze([...replacementKeys]),
-    authored: Object.freeze(authored),
-    fallbackGold: false,
-    replacementRollChance: context.replacementRollChance ?? catalog.boonReplacementChance,
-  });
-  return Object.freeze({
-    applies: true,
-    ...result,
-  });
-}
-
-export function isOptionalHighTierTrait(catalog: Catalog, traitKey: string): boolean {
-  const declaration = catalog.traits.byKey[traitKey];
-  return (
-    declaration?.rarityDomain.kind === 'ranked' &&
-    declaration.rarityDomain.freshOfferRarities.length > 0 &&
-    declaration.rarityDomain.freshOfferRarities.every(
-      (rarity) => rarity === 'Duo' || rarity === 'Legendary',
-    )
-  );
+): InitialOfferInput {
+  const resolved = { ...context, resolvedProviderKey: giverKey };
+  return {
+    catalog,
+    giverKey,
+    history: before,
+    context: resolved,
+    declarationEligible: (traitKey) =>
+      assessTraitDeclarationEligibility(catalog, traitKey, before, resolved).legal,
+    replacementFor: (traitKey) => {
+      const trait = catalog.traits.byKey[traitKey];
+      const occupied =
+        trait?.equipmentSlot === undefined ? undefined : before.equippedSlots[trait.equipmentSlot];
+      const rarity =
+        occupied?.rarity === undefined
+          ? undefined
+          : nextRarity(catalog, occupied.traitKey, occupied.rarity);
+      if (rarity === undefined) return undefined;
+      const assessment = assessTraitOption(catalog, traitKey, before, resolved, rarity);
+      return assessment.replacementTransition === undefined
+        ? undefined
+        : Object.freeze({ traitKey, rarity });
+    },
+  };
 }

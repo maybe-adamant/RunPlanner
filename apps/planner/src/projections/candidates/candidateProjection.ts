@@ -228,18 +228,18 @@ export interface CandidateProjectionSession {
     owner: TraitOfferAddress,
     value: AuthoredTraitOffer,
   ) => readonly CandidateOptionProjection<AuthoredTraitOffer>[];
-  readonly traitOfferStartingDraft: (
+  readonly traitOfferStartingOutcome: (
     owner: TraitOfferAddress,
     giverKey: string,
+  ) => AuthoredTraitOffer | undefined;
+  readonly appendTraitOfferDraft: (
+    owner: TraitOfferAddress,
+    value: AuthoredTraitOffer,
   ) => AuthoredTraitOfferTraits | undefined;
-  readonly nextOptionalHighTierTraitOfferDraft: (
+  readonly removeTraitOfferDraft: (
     owner: TraitOfferAddress,
     value: AuthoredTraitOfferTraits,
-  ) => AuthoredTraitOfferTraits | undefined;
-  readonly previousOptionalHighTierTraitOfferDraft: (
-    owner: TraitOfferAddress,
-    value: AuthoredTraitOfferTraits,
-  ) => AuthoredTraitOfferTraits | undefined;
+  ) => AuthoredTraitOffer | undefined;
   readonly chaosOfferDomain: (
     owner: TraitOfferAddress,
     value?: AuthoredTraitOffer,

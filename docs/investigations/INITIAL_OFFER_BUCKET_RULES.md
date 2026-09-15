@@ -112,9 +112,10 @@ The complete in-scope matrix is `BlindChanceBoon` after Apollo Attack,
 `MassiveKnockupBoon` after Hephaestus Attack/Special/Sprint, and
 `PoseidonStatusBoon` after Poseidon Attack/Special, each at 0.25
 (`TraitData.lua:143,178,223`). There is one per affected provider. A merely
-offered prerequisite cannot unlock it. These probabilities are absent from the
-current normalized trait declarations; priority identities and prerequisites
-already exist there.
+offered prerequisite cannot unlock it. The catalog represents this as
+`optionalLinkedPriority: true`, with existing declaration prerequisites;
+absent/false adds no linked-priority insertion. The numeric source chance stays
+in this evidence rather than the normalized contract.
 
 For possibility support, 25% means an optional path; its exact magnitude has no
 further meaning. If later rarity buckets not containing the linked identity can

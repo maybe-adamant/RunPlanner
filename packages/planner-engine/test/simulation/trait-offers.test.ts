@@ -14,8 +14,6 @@ import { factsWithHistory, type RewardKernelFacts } from '@run-planner/engine/re
 import {
   assessTraitOption,
   assessTraitOffer,
-  assessTraitOfferComposition,
-  assessTraitOfferDomainComposition,
   createTraitHistoryState,
   evaluateReachedTraitOffer,
   foldTraitHistoryEvents,
@@ -23,9 +21,7 @@ import {
   recordReachedTraitOffer,
   traitCandidates,
   boonRarityFactsForOffer,
-  traitOfferCompositionDomains,
-  traitOfferStartingDraft,
-  nextTraitOfferDraft,
+  traitOfferStartingOutcome,
   type ProjectEvaluation,
   type SelectedTraitOfferAssessment,
   type TraitOfferEvent,
@@ -349,508 +345,17 @@ function historyFrom(
   );
 }
 
-describe('rarity-aware high-tier composition', () => {
-  const timeStop = catalog.traits.byKey.TimeStopLastStandBoon;
-  const duo = catalog.traits.byKey.ApolloSecondStageCastBoon;
-  const hermes = catalog.traitGivers.byKey.Hermes;
-  if (timeStop === undefined || duo === undefined || hermes === undefined)
-    throw new Error('missing Hermes Legendary fixture');
-  const highTierCatalog = Object.freeze({
-    ...catalog,
-    traits: Object.freeze({
-      ...catalog.traits,
-      values: Object.freeze(
-        catalog.traits.values.map((trait) =>
-          trait.key === timeStop.key || trait.key === duo.key
-            ? Object.freeze({ ...trait, offerRequirements: Object.freeze([]) })
-            : trait,
-        ),
-      ),
-      byKey: Object.freeze({
-        ...catalog.traits.byKey,
-        [timeStop.key]: Object.freeze({ ...timeStop, offerRequirements: Object.freeze([]) }),
-        [duo.key]: Object.freeze({ ...duo, offerRequirements: Object.freeze([]) }),
-      }),
-    }),
-    traitGivers: Object.freeze({
-      ...catalog.traitGivers,
-      values: Object.freeze(
-        catalog.traitGivers.values.map((giver) =>
-          giver.key === 'Hermes'
-            ? Object.freeze({ ...giver, traitKeys: Object.freeze([timeStop.key, duo.key]) })
-            : giver,
-        ),
-      ),
-      byKey: Object.freeze({
-        ...catalog.traitGivers.byKey,
-        Hermes: Object.freeze({ ...hermes, traitKeys: Object.freeze([timeStop.key, duo.key]) }),
-      }),
-    }),
-  });
-  const possibleContext = {
-    boonRarityFacts: {
-      providerBase: { Rare: 0.06, Epic: 0.03, Heroic: 0, Duo: 0, Legendary: 0.01 },
-      rollOrder: ['Common', 'Rare', 'Epic', 'Duo', 'Legendary'],
-      contributions: [],
-    },
-  } as const;
-  const impossibleContext = {
-    boonRarityFacts: {
-      providerBase: { Rare: 0.06, Epic: 0.03, Heroic: 0, Duo: 0, Legendary: 0.01 },
-      rollOrder: ['Common', 'Rare', 'Epic', 'Duo', 'Legendary'],
-      roomOverride: { Legendary: 0 },
-      contributions: [],
-    },
-  } as const;
-  const duoContext = {
-    boonRarityFacts: {
-      providerBase: { Rare: 0.06, Epic: 0.03, Heroic: 0, Duo: 0, Legendary: 0.01 },
-      rollOrder: ['Common', 'Rare', 'Epic', 'Duo', 'Legendary'],
-      roomOverride: { Duo: 0.2, Legendary: 0 },
-      contributions: [],
-    },
-  } as const;
-
-  it('keeps high-tier support branch-local, excludes impossible checks, and never requires H', () => {
-    const history = createTraitHistoryState();
-    expect(
-      traitOfferCompositionDomains(highTierCatalog, 'Hermes', history, impossibleContext).highTier,
-    ).toEqual([]);
-    expect(
-      traitOfferCompositionDomains(
-        highTierCatalog,
-        'Hermes',
-        history,
-        possibleContext,
-      ).highTier.map((candidate) => [candidate.traitKey, candidate.rarity]),
-    ).toEqual([[timeStop.key, 'Legendary']]);
-    expect(
-      traitOfferCompositionDomains(highTierCatalog, 'Hermes', history, duoContext).highTier.map(
-        (candidate) => [candidate.traitKey, candidate.rarity],
-      ),
-    ).toEqual([[duo.key, 'Duo']]);
-    // Re-reading the impossible branch must not inherit support cached for the possible one.
-    expect(
-      traitOfferCompositionDomains(highTierCatalog, 'Hermes', history, impossibleContext).highTier,
-    ).toEqual([]);
-    expect(
-      assessTraitOfferDomainComposition({
-        ordinaryKeys: ['ordinary1', 'ordinary2'],
-        highTierKeys: [timeStop.key],
-        replacementKeys: [],
-        authored: [
-          { traitKey: 'ordinary1', kind: 'ordinary' },
-          { traitKey: 'ordinary2', kind: 'ordinary' },
-        ],
-        fallbackGold: false,
-        replacementRollChance: 0.1,
-      }).legal,
-    ).toBe(true);
-  });
-
-  it('memoizes one frozen composition domain for repeated explicit inputs', () => {
-    const history = createTraitHistoryState();
-    const first = traitOfferCompositionDomains(highTierCatalog, 'Hermes', history, possibleContext);
-    const second = traitOfferCompositionDomains(
-      highTierCatalog,
-      'Hermes',
-      history,
-      possibleContext,
-    );
-
-    expect(Object.isFrozen(first)).toBe(true);
-    expect(second).toBe(first);
-  });
-});
-
-describe('prefix-aware ordinary rarity composition', () => {
-  const commonOnly = catalog.traits.byKey.HiddenMaxHealthBoon;
-  const scalableOne = catalog.traits.byKey.FirstHangoverBoon;
-  const scalableTwo = catalog.traits.byKey.CombatEncounterHealBoon;
-  const dionysus = catalog.traitGivers.byKey.Dionysus;
-  if (
-    commonOnly === undefined ||
-    scalableOne === undefined ||
-    scalableTwo === undefined ||
-    dionysus === undefined
-  )
-    throw new Error('missing mixed-rarity Dionysus fixture');
-  const commonOnlyDeclaration = Object.freeze({
-    ...commonOnly,
-    rarityDomain: Object.freeze({
-      ...commonOnly.rarityDomain,
-      freshOfferRarities: Object.freeze(['Common'] as const),
-    }),
-  });
-  const giver = Object.freeze({
-    ...dionysus,
-    traitKeys: Object.freeze([commonOnly.key, scalableOne.key, scalableTwo.key]),
-  });
-  const mixedCatalog = Object.freeze({
-    ...catalog,
-    traits: Object.freeze({
-      ...catalog.traits,
-      values: Object.freeze(
-        catalog.traits.values.map((trait) =>
-          trait.key === commonOnly.key ? commonOnlyDeclaration : trait,
-        ),
-      ),
-      byKey: Object.freeze({
-        ...catalog.traits.byKey,
-        [commonOnly.key]: commonOnlyDeclaration,
-      }),
-    }),
-    traitGivers: Object.freeze({
-      ...catalog.traitGivers,
-      values: Object.freeze(
-        catalog.traitGivers.values.map((candidate) =>
-          candidate.key === giver.key ? giver : candidate,
-        ),
-      ),
-      byKey: Object.freeze({ ...catalog.traitGivers.byKey, [giver.key]: giver }),
-    }),
-  });
-  const apollo = catalog.traitGivers.byKey.Apollo;
-  if (apollo === undefined) throw new Error('missing Apollo priority fixture');
-  const priorityGiver = Object.freeze({
-    ...apollo,
-    traitKeys: giver.traitKeys,
-    priorityTraitKeys: giver.traitKeys,
-  });
-  const priorityCatalog = Object.freeze({
-    ...mixedCatalog,
-    traitGivers: Object.freeze({
-      ...mixedCatalog.traitGivers,
-      values: Object.freeze(
-        mixedCatalog.traitGivers.values.map((candidate) =>
-          candidate.key === priorityGiver.key ? priorityGiver : candidate,
-        ),
-      ),
-      byKey: Object.freeze({
-        ...mixedCatalog.traitGivers.byKey,
-        [priorityGiver.key]: priorityGiver,
-      }),
-    }),
-  });
-  const legendary = catalog.traits.byKey.TimeStopLastStandBoon;
-  if (legendary === undefined) throw new Error('missing Legendary composition fixture');
-  const eligibleLegendary = Object.freeze({
-    ...legendary,
-    offerRequirements: Object.freeze([]),
-  });
-  const highTierGiver = Object.freeze({
-    ...giver,
-    traitKeys: Object.freeze([...giver.traitKeys, eligibleLegendary.key]),
-  });
-  const highTierMixedCatalog = Object.freeze({
-    ...mixedCatalog,
-    traits: Object.freeze({
-      ...mixedCatalog.traits,
-      values: Object.freeze(
-        mixedCatalog.traits.values.map((trait) =>
-          trait.key === eligibleLegendary.key ? eligibleLegendary : trait,
-        ),
-      ),
-      byKey: Object.freeze({
-        ...mixedCatalog.traits.byKey,
-        [eligibleLegendary.key]: eligibleLegendary,
-      }),
-    }),
-    traitGivers: Object.freeze({
-      ...mixedCatalog.traitGivers,
-      values: Object.freeze(
-        mixedCatalog.traitGivers.values.map((candidate) =>
-          candidate.key === highTierGiver.key ? highTierGiver : candidate,
-        ),
-      ),
-      byKey: Object.freeze({
-        ...mixedCatalog.traitGivers.byKey,
-        [highTierGiver.key]: highTierGiver,
-      }),
-    }),
-  });
-  const guaranteedRareContext = {
-    boonRarityFacts: {
-      providerBase: catalog.boonRarityBases.olympian,
-      rollOrder: catalog.boonRarityRollOrder,
-      contributions: [{ additive: { Rare: 1 } }],
-    },
-  } as const;
-  const guaranteedLegendaryContext = {
-    boonRarityFacts: {
-      providerBase: { Rare: 0, Epic: 0, Heroic: 0, Duo: 0, Legendary: 1 },
-      rollOrder: catalog.boonRarityRollOrder,
-      contributions: [],
-    },
-  } as const;
-  const history = createTraitHistoryState();
-
-  it('keeps each first-Olympian priority row on its own rarity domain', () => {
-    const offer = {
-      kind: 'traits',
-      giverKey: priorityGiver.key,
-      options: [
-        { traitKey: commonOnly.key, rarity: 'Common' },
-        { traitKey: scalableOne.key, rarity: 'Rare' },
-        { traitKey: scalableTwo.key, rarity: 'Rare' },
-      ],
-      selectedOptionKey: 'option1',
-    } as const;
-    expect(
-      assessTraitOffer(priorityCatalog, offer, history, guaranteedRareContext).every(
-        (assessment) => assessment.legal,
-      ),
-    ).toBe(true);
-  });
-
-  it('removes selected identities from pooled rarity buckets between rows', () => {
-    const accepted = {
-      kind: 'traits',
-      giverKey: giver.key,
-      options: [
-        { traitKey: scalableOne.key, rarity: 'Rare' },
-        { traitKey: scalableTwo.key, rarity: 'Rare' },
-        { traitKey: commonOnly.key, rarity: 'Common' },
-      ],
-      selectedOptionKey: 'option1',
-    } as const;
-    expect(
-      assessTraitOffer(mixedCatalog, accepted, history, guaranteedRareContext).every(
-        (assessment) => assessment.legal,
-      ),
-    ).toBe(true);
-
-    const stale = {
-      ...accepted,
-      options: [
-        { traitKey: commonOnly.key, rarity: 'Common' },
-        { traitKey: scalableOne.key, rarity: 'Rare' },
-        { traitKey: scalableTwo.key, rarity: 'Rare' },
-      ],
-    } as const;
-    expect(assessTraitOffer(mixedCatalog, stale, history, guaranteedRareContext)[0]).toMatchObject({
-      legal: false,
-      findings: [{ code: 'rarityRollUnavailable', traitKey: commonOnly.key, detail: 'Common' }],
-    });
-  });
-
-  it('builds initial and incremental drafts that complete through the changing pool', () => {
-    const initial = traitOfferStartingDraft(
-      mixedCatalog,
-      giver.key,
-      history,
-      guaranteedRareContext,
-    );
-    expect(initial).toBeDefined();
-    expect(initial?.options.map(({ traitKey, rarity }) => [traitKey, rarity])).toEqual([
-      [scalableOne.key, 'Rare'],
-      [scalableTwo.key, 'Rare'],
-      [commonOnly.key, 'Common'],
-    ]);
-    expect(
-      initial !== undefined &&
-        assessTraitOffer(mixedCatalog, initial, history, guaranteedRareContext).every(
-          (assessment) => assessment.legal,
-        ),
-    ).toBe(true);
-
-    const one = {
-      kind: 'traits',
-      giverKey: giver.key,
-      options: [{ traitKey: scalableTwo.key, rarity: 'Rare' }],
-      selectedOptionKey: 'option1',
-    } as const;
-    const two = nextTraitOfferDraft(mixedCatalog, one, history, guaranteedRareContext);
-    const three = two && nextTraitOfferDraft(mixedCatalog, two, history, guaranteedRareContext);
-    expect(three?.options.at(-1)).toEqual({ traitKey: commonOnly.key, rarity: 'Common' });
-    expect(
-      three !== undefined &&
-        assessTraitOffer(mixedCatalog, three, history, guaranteedRareContext).every(
-          (assessment) => assessment.legal,
-        ),
-    ).toBe(true);
-  });
-
-  it('keeps a guaranteed optional high tier outside the ordinary bucket pass', () => {
-    const mixedOffer = {
-      kind: 'traits',
-      giverKey: highTierGiver.key,
-      options: [
-        { traitKey: scalableOne.key, rarity: 'Common' },
-        { traitKey: commonOnly.key, rarity: 'Common' },
-        { traitKey: eligibleLegendary.key, rarity: 'Legendary' },
-      ],
-      selectedOptionKey: 'option1',
-    } as const;
-    expect(
-      assessTraitOffer(highTierMixedCatalog, mixedOffer, history, guaranteedLegendaryContext).every(
-        (assessment) => assessment.legal,
-      ),
-    ).toBe(true);
-
-    const initial = traitOfferStartingDraft(
-      highTierMixedCatalog,
-      highTierGiver.key,
-      history,
-      guaranteedLegendaryContext,
-    );
-    expect(initial).toBeDefined();
-    expect(initial?.options.every((option) => option.rarity === 'Common')).toBe(true);
-
-    const one = {
-      kind: 'traits',
-      giverKey: highTierGiver.key,
-      options: [{ traitKey: scalableOne.key, rarity: 'Common' }],
-      selectedOptionKey: 'option1',
-    } as const;
-    const two = nextTraitOfferDraft(highTierMixedCatalog, one, history, guaranteedLegendaryContext);
-    const three =
-      two === undefined
-        ? undefined
-        : nextTraitOfferDraft(highTierMixedCatalog, two, history, guaranteedLegendaryContext);
-    expect(three).toBeDefined();
-    expect(
-      three !== undefined &&
-        assessTraitOffer(highTierMixedCatalog, three, history, guaranteedLegendaryContext).every(
-          (assessment) => assessment.legal,
-        ),
-    ).toBe(true);
-  });
-});
-
 describe('Sacrificial Hymn replacement composition', () => {
-  it('uses the replacement roll only for optional or forced rows, never shortage fill', () => {
-    const fullDomain = {
-      ordinaryKeys: ['ordinary1', 'ordinary2', 'ordinary3'],
-      highTierKeys: [],
-      replacementKeys: ['replacement1'],
-      fallbackGold: false,
-    } as const;
-    const optionalReplacement = [
-      { traitKey: 'replacement1', kind: 'replacement' as const },
-      { traitKey: 'ordinary1', kind: 'ordinary' as const },
-      { traitKey: 'ordinary2', kind: 'ordinary' as const },
-    ];
-    expect(
-      assessTraitOfferDomainComposition({
-        ...fullDomain,
-        authored: optionalReplacement,
-        replacementRollChance: 0,
-      }).findings,
-    ).toContainEqual(expect.objectContaining({ code: 'replacementCompositionExceeded' }));
-    expect(
-      assessTraitOfferDomainComposition({
-        ...fullDomain,
-        authored: optionalReplacement,
-        replacementRollChance: 0.1,
-      }).legal,
-    ).toBe(true);
-    expect(
-      assessTraitOfferDomainComposition({
-        ...fullDomain,
-        authored: [
-          { traitKey: 'ordinary1', kind: 'ordinary' },
-          { traitKey: 'ordinary2', kind: 'ordinary' },
-          { traitKey: 'ordinary3', kind: 'ordinary' },
-        ],
-        replacementRollChance: 1,
-      }).findings,
-    ).toContainEqual(expect.objectContaining({ code: 'missingForcedReplacement' }));
-    expect(
-      assessTraitOfferDomainComposition({
-        ordinaryKeys: ['ordinary1', 'ordinary2'],
-        highTierKeys: [],
-        replacementKeys: ['replacement1'],
-        authored: [
-          { traitKey: 'ordinary1', kind: 'ordinary' },
-          { traitKey: 'ordinary2', kind: 'ordinary' },
-          { traitKey: 'replacement1', kind: 'replacement' },
-        ],
-        fallbackGold: false,
-        replacementRollChance: 0,
-      }).legal,
-    ).toBe(true);
-  });
-
-  it('raises the existing exhaustion replacement minimum without replacing its composition model', () => {
-    expect(
-      assessTraitOfferDomainComposition({
-        ordinaryKeys: ['ordinary1', 'ordinary2', 'ordinary3'],
-        highTierKeys: [],
-        replacementKeys: ['replacement1'],
-        authored: [
-          { traitKey: 'ordinary1', kind: 'ordinary' },
-          { traitKey: 'ordinary2', kind: 'ordinary' },
-          { traitKey: 'ordinary3', kind: 'ordinary' },
-        ],
-        fallbackGold: false,
-        replacementRollChance: 1,
-      }).findings,
-    ).toContainEqual(expect.objectContaining({ code: 'missingForcedReplacement' }));
-    expect(
-      assessTraitOfferDomainComposition({
-        ordinaryKeys: ['ordinary1', 'ordinary2', 'ordinary3'],
-        highTierKeys: [],
-        replacementKeys: ['replacement1'],
-        authored: [
-          { traitKey: 'replacement1', kind: 'replacement' },
-          { traitKey: 'ordinary1', kind: 'ordinary' },
-          { traitKey: 'ordinary2', kind: 'ordinary' },
-        ],
-        fallbackGold: false,
-        replacementRollChance: 1,
-      }).legal,
-    ).toBe(true);
-  });
-
-  it('does not add a Hymn replacement on top of shortage fill', () => {
-    const domain = {
-      ordinaryKeys: ['ordinary1'],
-      highTierKeys: [],
-      replacementKeys: ['replacement1', 'replacement2', 'replacement3'],
-      fallbackGold: false,
-      replacementRollChance: 1,
-    } as const;
-    const filled = assessTraitOfferDomainComposition({
-      ...domain,
-      authored: [
-        { traitKey: 'ordinary1', kind: 'ordinary' },
-        { traitKey: 'replacement1', kind: 'replacement' },
-        { traitKey: 'replacement2', kind: 'replacement' },
-      ],
-    });
-    expect(filled).toMatchObject({
-      legal: true,
-      maximumReplacementCount: 2,
-      requiredReplacementCount: 2,
-      shortageRequiredReplacementCount: 2,
-      forcedRollRequiredReplacementCount: 1,
-      replacementCount: 2,
-    });
-
-    const additive = assessTraitOfferDomainComposition({
-      ...domain,
-      authored: [
-        { traitKey: 'replacement1', kind: 'replacement' },
-        { traitKey: 'replacement2', kind: 'replacement' },
-        { traitKey: 'replacement3', kind: 'replacement' },
-      ],
-    });
-    expect(additive.maximumReplacementCount).toBe(2);
-    expect(additive.findings).toContainEqual(
-      expect.objectContaining({ code: 'replacementCompositionExceeded' }),
-    );
-  });
-
   it('starts the next eligible offer with one replacement while a Hymn use is active', () => {
     const history = historyFrom([
       { giverKey: 'Apollo', traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
     ]);
-    const draft = traitOfferStartingDraft(catalog, 'Hera', history, {
+    const draft = traitOfferStartingOutcome(catalog, 'Hera', history, {
       limitedSwapUses: 1,
       replacementRollChance: 1,
     });
     expect(draft).toBeDefined();
+    if (draft?.kind !== 'traits') throw new Error('expected a Hera Hymn draft');
     expect(
       draft?.options.some(
         (option) =>
@@ -869,7 +374,7 @@ describe('Sacrificial Hymn replacement composition', () => {
     const history = historyFrom([
       { giverKey: 'Apollo', traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
     ]);
-    const draft = traitOfferStartingDraft(catalog, 'Hera', history, {
+    const draft = traitOfferStartingOutcome(catalog, 'Hera', history, {
       limitedSwapUses: 1,
       replacementRollChance: 1,
     });
@@ -885,12 +390,18 @@ describe('Sacrificial Hymn replacement composition', () => {
         ).replacementTransition !== undefined,
     );
     if (replacementIndex < 0) throw new Error('expected a forced replacement option');
-    const selectedOptionKey = `option${replacementIndex + 1}` as 'option1' | 'option2' | 'option3';
+    const replacement = draft.options[replacementIndex]!;
+    const options = [
+      ...draft.options.slice(0, replacementIndex),
+      ...draft.options.slice(replacementIndex + 1),
+    ];
+    options.splice(1, 0, replacement);
+    const selectedOptionKey = 'option2' as const;
     const initial = initializeTestRewardBranches()[0]!;
     const eligibleDraft: AuthoredTraitOffer = Object.freeze({
       ...draft,
       options: Object.freeze(
-        draft.options.map((option) => Object.freeze({ ...option, rarity: 'Rare' as const })),
+        options.map((option) => Object.freeze({ ...option, rarity: 'Rare' as const })),
       ) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
       selectedOptionKey,
     });
@@ -911,8 +422,7 @@ describe('Sacrificial Hymn replacement composition', () => {
       'encounterCompleted',
     );
     expect(settlement.branch.stygianWell).toMatchObject({ yarnUses: 1, hymnUses: 1 });
-    const equipped =
-      settlement.branch.traitHistory?.equippedTraits[draft.options[replacementIndex]!.traitKey];
+    const equipped = settlement.branch.traitHistory?.equippedTraits[replacement.traitKey];
     if (equipped === undefined)
       throw new Error(
         JSON.stringify({
@@ -1039,14 +549,24 @@ describe('rarity offer settlement contacts', () => {
         boonRarityRoomOverride,
       })!,
     });
+    const value = {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      selectedOptionKey: 'option1',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+    } as const;
     expect(
-      assessTraitOption(catalog, 'ApolloWeaponBoon', history, contextFor(fOverride), 'Common')
-        .findings,
-    ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
+      evaluateReachedTraitOffer(catalog, owner, 'source', value, history, contextFor(fOverride), 1)
+        .generation?.legal,
+    ).toBe(true);
     expect(
-      assessTraitOption(catalog, 'ApolloWeaponBoon', history, contextFor(qOverride), 'Common')
-        .findings,
-    ).toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable', detail: 'Common' }));
+      evaluateReachedTraitOffer(catalog, owner, 'source', value, history, contextFor(qOverride), 1)
+        .generation?.legal,
+    ).toBe(false);
   });
 
   it('settles a Hermes offer in a Miniboss with the room override, not the room reward provider', () => {
@@ -1087,9 +607,7 @@ describe('rarity offer settlement contacts', () => {
       rollOrder: ['Common', 'Rare', 'Epic', 'Duo', 'Legendary'],
       roomOverride: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
     });
-    expect(settled.traitEvaluations?.[0]?.assessments[0]?.findings).toContainEqual(
-      expect.objectContaining({ code: 'rarityRollUnavailable', detail: 'Common' }),
-    );
+    expect(settled.traitEvaluations?.[0]?.generation?.legal).toBe(false);
   });
 });
 
@@ -1372,91 +890,11 @@ describe('reached trait offer chronology', () => {
     Object.freeze({
       kind: 'traits',
       giverKey,
-      options: Object.freeze(traitKeys.map((traitKey) => Object.freeze({ traitKey }))) as [
-        { readonly traitKey: string },
-        { readonly traitKey: string },
-        { readonly traitKey: string },
-      ],
+      options: Object.freeze(
+        traitKeys.map((traitKey) => Object.freeze({ traitKey, rarity: 'Common' as const })),
+      ) as TraitOfferEvent['options'],
       selectedOptionKey: 'option1' as const,
     });
-
-  it('assesses the first Olympian offer as one complete priority composition', () => {
-    const valid = offer('Apollo', ['ApolloWeaponBoon', 'ApolloSpecialBoon', 'ApolloCastBoon']);
-    expect(assessTraitOfferComposition(catalog, valid, createTraitHistoryState())).toEqual({
-      applies: true,
-      legal: true,
-      findings: [],
-    });
-
-    const nonPriority = offer('Apollo', [
-      'ApolloWeaponBoon',
-      'ApolloSpecialBoon',
-      'ApolloRetaliateBoon',
-    ]);
-    expect(assessTraitOfferComposition(catalog, nonPriority, createTraitHistoryState())).toEqual({
-      applies: true,
-      legal: false,
-      findings: [
-        {
-          code: 'nonPriorityTrait',
-          traitKey: 'ApolloRetaliateBoon',
-          optionKey: 'option3',
-        },
-      ],
-    });
-
-    const missingAttackOrSpecial = offer('Apollo', [
-      'ApolloCastBoon',
-      'ApolloSprintBoon',
-      'ApolloManaBoon',
-    ]);
-    expect(
-      assessTraitOfferComposition(catalog, missingAttackOrSpecial, createTraitHistoryState()),
-    ).toEqual({ applies: true, legal: false, findings: [{ code: 'missingAttackOrSpecial' }] });
-  });
-
-  it('does not apply first-offer composition after a slot is occupied or to Hermes/Hammer', () => {
-    const occupied = foldTraitHistoryEvents(catalog, [
-      {
-        kind: 'traitOffer',
-        owner,
-        acquisitionRole: 'seed',
-        sequence: 1,
-        giverKey: 'Apollo',
-        options: Object.freeze([
-          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
-          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
-          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
-        ]) as TraitOfferEvent['options'],
-        selectedOptionKey: 'option1',
-        acquisitionPoint: 'seed',
-      },
-    ]);
-    const invalid = offer('Apollo', ['ApolloCastBoon', 'ApolloSprintBoon', 'ApolloManaBoon']);
-    expect(assessTraitOfferComposition(catalog, invalid, occupied)).toEqual({
-      applies: false,
-      legal: true,
-      findings: [],
-    });
-    expect(
-      assessTraitOfferComposition(
-        catalog,
-        offer('Hermes', ['HermesWeaponBoon', 'HermesSpecialBoon', 'HermesCastDiscountBoon']),
-        createTraitHistoryState(),
-      ),
-    ).toEqual({ applies: false, legal: true, findings: [] });
-    expect(
-      assessTraitOfferComposition(
-        catalog,
-        offer('WeaponUpgrade', [
-          'StaffDoubleAttackTrait',
-          'StaffLongAttackTrait',
-          'StaffDashAttackTrait',
-        ]),
-        createTraitHistoryState(),
-      ),
-    ).toEqual({ applies: false, legal: true, findings: [] });
-  });
 
   it('keeps an invalid first offer out of history so a later Olympian can satisfy the rule', () => {
     const first = evaluateReachedTraitOffer(
@@ -1468,7 +906,7 @@ describe('reached trait offer chronology', () => {
       {},
       0,
     );
-    expect(first.composition.legal).toBe(false);
+    expect(first.generation?.legal).toBe(false);
     expect(recordReachedTraitOffer(catalog, first, 1, 'test').history.events).toHaveLength(0);
 
     const second = evaluateReachedTraitOffer(
@@ -1480,7 +918,7 @@ describe('reached trait offer chronology', () => {
       {},
       1,
     );
-    expect(second.composition.legal).toBe(true);
+    expect(second.generation?.legal).toBe(true);
     expect(recordReachedTraitOffer(catalog, second, 2, 'test').history.events).toHaveLength(1);
   });
 
@@ -1508,7 +946,7 @@ describe('reached trait offer chronology', () => {
     if (f === undefined || !('rewards' in f)) throw new Error('F reward evaluation is missing');
 
     expect(f.findings).toContainEqual({
-      code: 'missingAttackOrSpecial',
+      code: 'traitOfferGenerationUnavailable',
       severity: 'error',
       phase: 'rewardGeneration',
       origin: traitAddress,
@@ -1529,7 +967,7 @@ describe('reached trait offer chronology', () => {
         trace.acquisitionRole === 'source',
     );
     if (firstTrace === undefined) throw new Error('first-offer repair trace is missing');
-    expect(firstTrace.branches[0]?.composition).toMatchObject({ applies: true, legal: false });
+    expect(firstTrace.branches[0]?.generation).toMatchObject({ applies: true, legal: false });
     expect(laterTrace).toBeUndefined();
     expect(branch.traitHistory?.events).not.toContainEqual(
       expect.objectContaining({ owner, acquisitionRole: 'source' }),
@@ -1632,7 +1070,7 @@ describe('reached trait offer chronology', () => {
 
     expect(result.result.supported).toBe(true);
     expect(result.result.branches).toHaveLength(2);
-    expect(result.result.branches[0]).toEqual({
+    expect(result.result.branches[0]).toMatchObject({
       assessments: [
         { legal: true, findings: [] },
         { legal: true, findings: [] },
@@ -1642,21 +1080,21 @@ describe('reached trait offer chronology', () => {
       persephoneLevelBonusMaximums: [undefined, undefined, undefined],
       effectiveLevels: [1, 1, 1],
     });
-    expect(result.result.branches[1]).toEqual({
+    expect(result.result.branches[1]).toMatchObject({
       assessments: [
         { legal: true, findings: [] },
         { legal: true, findings: [] },
         { legal: true, findings: [] },
       ],
-      composition: {
+      generation: {
         applies: true,
         legal: false,
-        findings: [{ code: 'missingAttackOrSpecial' }],
+        findings: [{ code: 'traitOfferGenerationUnavailable' }],
       },
       persephoneLevelBonusMaximums: [undefined, undefined, undefined],
       effectiveLevels: [1, 1, 1],
     });
-    expect(result.result.findings).toContainEqual({ code: 'missingAttackOrSpecial' });
+    expect(result.result.findings).toContainEqual({ code: 'traitOfferGenerationUnavailable' });
   });
 
   it('keeps naturally surviving same-owner traces on one pre-offer state and context', () => {
@@ -1675,15 +1113,12 @@ describe('reached trait offer chronology', () => {
     }
   });
 
-  it('marks non-priority first-offer candidates unavailable with a composition reason', () => {
+  it('keeps individually eligible non-core choices available while the whole offer needs repair', () => {
     const candidate = traitCandidates(catalog, 'Apollo', createTraitHistoryState()).find(
       (entry) => entry.traitKey === 'ApolloRetaliateBoon' && entry.rarity === 'Common',
     );
-    expect(candidate?.available).toBe(false);
-    expect(candidate?.assessment.findings).toContainEqual({
-      code: 'nonPriorityTrait',
-      traitKey: 'ApolloRetaliateBoon',
-    });
+    expect(candidate?.available).toBe(true);
+    expect(candidate?.assessment.findings).toEqual([]);
   });
 
   it('keeps Athena preferred candidates authorable without a Death Defiance input', () => {

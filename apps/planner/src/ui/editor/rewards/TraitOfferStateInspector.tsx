@@ -20,7 +20,7 @@ export function TraitOfferStateInspector({
                 : `Possible state ${index + 1}`
             }
             className="trait-offer-state"
-            key={`${state.replacementChance}:${JSON.stringify(state.rarity)}:${index}`}
+            key={`${JSON.stringify(state.rarity)}:${index}`}
           >
             {presentation.states.length === 1 ? null : <h3>Possible state {index + 1}</h3>}
             {state.rarity.kind === 'fixed' ? (
@@ -37,32 +37,6 @@ export function TraitOfferStateInspector({
                 ))}
               </dl>
             )}
-            <dl className="trait-offer-state-replacement">
-              <div>
-                <dt>Replacement chance</dt>
-                <dd>{state.replacementChance}</dd>
-              </div>
-              <div>
-                <dt>Eligible replacement traits</dt>
-                <dd>{state.eligibleReplacementCount}</dd>
-              </div>
-              <div>
-                <dt>Allowed replacements</dt>
-                <dd>{state.maximumReplacementCount}</dd>
-              </div>
-              <div>
-                <dt>Required replacements</dt>
-                <dd>{state.requiredReplacementCount}</dd>
-              </div>
-              <div>
-                <dt>Required by forced roll</dt>
-                <dd>{state.forcedRollRequiredReplacementCount}</dd>
-              </div>
-              <div>
-                <dt>Required by shortage</dt>
-                <dd>{state.shortageRequiredReplacementCount}</dd>
-              </div>
-            </dl>
           </section>
         ))}
       </div>

@@ -16,9 +16,7 @@ export {
   assessTraitOffer,
   assessTraitOfferBeforeRarification,
   assessTraitOption,
-  assessTraitReplacementComposition,
   traitCandidates,
-  traitOfferCompositionDomains,
 } from './authoring/assessment';
 export type {
   NaturalSelectionStep,
@@ -26,8 +24,7 @@ export type {
   TraitFindingCode,
 } from './authoring/assessment';
 export {
-  nextOptionalHighTierTraitOfferDraft,
-  nextTraitOfferDraft,
-  previousOptionalHighTierTraitOfferDraft,
-  traitOfferStartingDraft,
+  appendTraitOfferDraft,
+  removeTraitOfferDraft,
+  traitOfferStartingOutcome,
 } from './authoring/drafts';

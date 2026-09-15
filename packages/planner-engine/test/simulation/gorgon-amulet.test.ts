@@ -618,7 +618,7 @@ describe('Gorgon Amulet lifecycle', () => {
     if (priorCherished) {
       const unresolved = evaluateGWithGorgonSeed(project, acquired);
       const trait = createTraitOfferAddress(createGorgonPhaseAddress(phase), 'gorgonAthena');
-      const draft = unresolved.traitOfferArtifacts.at(trait)?.traitsStartingDraft('Athena');
+      const draft = unresolved.traitOfferArtifacts.at(trait)?.traitOfferStartingOutcome('Athena');
       expect(
         unresolved.simulation.branches.every(
           (branch) => branch.keepsakes.gorgon?.status === 'pending',
@@ -860,7 +860,7 @@ describe('Gorgon Amulet lifecycle', () => {
       createPreparedProjectCandidateSession(
         catalog,
         contextInvalidAssembly,
-      ).traitOfferStartingDraft(trait, 'Athena'),
+      ).traitOfferStartingOutcome(trait, 'Athena'),
     ).toMatchObject({ kind: 'traits', giverKey: 'Athena' });
 
     const missing = Object.freeze({
@@ -992,7 +992,7 @@ describe('Gorgon Amulet lifecycle', () => {
     expect(selected).toMatchObject({ acquisitionRole: 'gorgonAthena', reached: true });
     if (selected?.offer.kind !== 'traits') throw new Error('selected Gorgon offer is missing');
     const session = createPreparedProjectCandidateSession(catalog, consumed);
-    expect(session.traitOfferStartingDraft(trait, 'Athena')).toMatchObject({
+    expect(session.traitOfferStartingOutcome(trait, 'Athena')).toMatchObject({
       kind: 'traits',
       giverKey: 'Athena',
     });
@@ -1086,10 +1086,10 @@ describe('Gorgon Amulet lifecycle', () => {
       p.rewards.branches.every((branch) => branch.keepsakes.gorgon?.status === 'pending'),
     ).toBe(true);
 
-    const draft = createPreparedProjectCandidateSession(catalog, assembly).traitOfferStartingDraft(
-      trait,
-      'Athena',
-    );
+    const draft = createPreparedProjectCandidateSession(
+      catalog,
+      assembly,
+    ).traitOfferStartingOutcome(trait, 'Athena');
     expect(draft?.kind).toBe('traits');
     if (draft?.kind !== 'traits') return;
     expect(draft.options).toHaveLength(3);

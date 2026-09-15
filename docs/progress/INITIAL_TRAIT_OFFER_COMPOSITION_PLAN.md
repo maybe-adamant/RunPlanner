@@ -19,15 +19,29 @@ Gate A is implemented, independently reviewed and committed (`e92454d1`). Gate B
 is implemented, independently reviewed and committed (`23d7adff`). Gate C is
 implemented, independently reviewed and committed (`a5333e65`). Gate D is
 complete and independently reviewed, including the user-approved NPC
-screen-consumption correction (`6e1702a2`). Gate E is in progress. Its expanded
-source-contract and permissive-draft amendment has completed two independent
-plan reviews. The user has accepted the finding dispositions, including
-zero-to-three-row editing with Gold at zero and the declaration-owned Trial
-exceptions. That amendment was committed as `f22c1d83` before implementation.
-The source reviewer identified a witness label error, corrected against
-the catalog (Glorious Disaster, not Super Nova); the product review's initial
-Fallback Gold gap and the source follow-up's multi-replacement Hymn bonus
-correction are also incorporated. No unresolved review finding remains.
+screen-consumption correction (`6e1702a2`). Gate E is implemented and has passed
+two independent reviews and bounded remediation; its implementation is committed
+with this status update. The accepted zero-to-three-row editing, Gold terminal, Trial
+declarations and Hymn correction are delivered together. The amendment was
+committed as `f22c1d83`; `80781a84` records the narrow linked-priority
+possibility qualification. No probability simulation was added.
+
+The E reviews verified native stage support and application/product boundaries.
+Remediation preserves selected-child consumption guards, prevents invalid
+screens from consuming Hymn, and gates fixed-provider removal in the engine.
+The final integration pass also updates stale finding assertions and authors
+native-valid lifecycle fixture screens without weakening prefix boundaries or
+changing the generic fixture repair helper. Only the two semantically changed
+execution fixtures are regenerated and mirrored. Broad repository verification,
+cumulative performance comparison and durable-document closure remain Gate F.
+
+E verification: the focused catalog, offer-generation, candidate, settlement,
+binding and editor suites pass after the final corrections. All 70 compiler
+tests and the three dependent clocked-pickup cleanup tests pass; workspace and
+fixture typechecks, changed-code ESLint, changed-source/fixture formatting and
+`git diff --check` pass. Both mirrored fixture pairs match byte-for-byte. No
+full repository or performance closure result is claimed here.
+
 The revised order is A replacement rarity → B forced-rarity precedence
 → C Chaos pair rarity → D Ordinary consumption/expiry → E ordinary screen composition
 → F closure. The amended execution contract was committed as `e023b3d9` before
@@ -143,14 +157,15 @@ Source references use the reviewed local snapshot at
 | `LootData_Chaos.lua:TrialUpgrade`; `TraitLogic.lua:SetTransformingTraitsOnLoot` (1710–1745)            | Chaos ignores temporary bonuses; ordinary pairs roll Epic then Rare from its exact chance table. Single-rarity blessings take precedence over Barren's forced Heroic.                                                                     |
 | `TraitData_Chaos.lua:ChaosCommonCurse`; `TraitLogic.lua:HandleTraitExpired` (1328–1335)                | Ordinary expiry reruns `UpgradeAllCommon` when Proper is active, without requiring a new activation. The affected screen's selection precedes use consumption/expiry.                                                                     |
 
-The native optional linked priorities are declared for `BlindChanceBoon`,
-`MassiveKnockupBoon` and `PoseidonStatusBoon` in `TraitData.lua`, each with
-`PriorityChance = 0.25`. Retain this source fact in the catalog, but generation
-checks possibility, not probability: these are optional seed paths, not weighted
-search, a quota, or a required offer. Their narrow justification is that a
+The catalog declares `optionalLinkedPriority: true` for `BlindChanceBoon`,
+`MassiveKnockupBoon` and `PoseidonStatusBoon`. After declaration eligibility,
+generation considers both inserting and skipping that seed; absent/false adds
+no linked-priority path. The native chance remains source evidence in S4, not
+a numeric catalog field. These are optional paths, not weighted search,
+a quota, or a required offer. Their narrow justification is that a
 guaranteed later non-member rarity bucket can exclude the identity from ordinary
 filling while priority insertion still admits it. When those later checks can
-fail, ordinary filling can reproduce the same outcome; the exact 25% adds no
+fail, ordinary filling can reproduce the same outcome; the exact chance adds no
 distinction to validity. The S4 source witness demonstrates the distinguishing
 case. Keep one bounded alternative per applicable provider, not probability
 simulation or trait-name policy in the engine. Profile-dependent first-seen
@@ -488,7 +503,7 @@ Internal delivery pass, not a separately shippable API-only commit:
 3. Preserve the corrected rarity facts from A–D. Prepare exact chance values,
    native roll order, chance-entry presence, declared rarity membership,
    effective source restrictions/Fear and seed/replacement facts. Reuse existing
-   normalized data; add only the proven missing linked-priority probabilities
+   normalized data; add only the proven missing optional linked-priority flag
    and any other independently established declaration fact. Never infer source
    flags from the current proposal's row order or rarity presentation.
 4. Implement S1–S9 from the source contract: seed alternatives, linked priority,
@@ -577,7 +592,7 @@ or helper probe as in-game confirmation.
 | Rule family               | Minimum distinguishing evidence                                                                                                                                                                                                                                                          | Primary owner                                                              |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | S1–S3 seeds               | Original Apollo witness; five vacant cores; later one-seed screen; occupied slot with eligible versus banned provider identity; no eligible cores; unavailable Attack/Special; Hymn with and without a replacement                                                                       | Engine trait-offers/replacement                                            |
-| S4 linked priority        | Guaranteed-Duo Apollo witness: priority insertion permits Dazzling Display where ordinary filling must take both Duos; with non-guaranteed checks ordinary filling can reproduce that offer. Merely offered prerequisite grants no eligibility; catalog owns all three declared chances. | Engine witness; catalog owns declarations                                  |
+| S4 linked priority        | Guaranteed-Duo Apollo witness: priority insertion permits Dazzling Display where ordinary filling must take both Duos; with non-guaranteed checks ordinary filling can reproduce that offer. Merely offered prerequisite grants no eligibility; catalog owns the three optional-priority declarations. | Engine witness; catalog owns declarations                                  |
 | S5–S7 rarity buckets      | Seed-specific versus pooled rarity; later success supersedes tentative Common without consuming it; identity removed across every bucket; depletion alters next draw; guaranteed roll cannot fail; failed empty-Common attempt                                                           | Engine composition                                                         |
 | S8–S9 rescue              | Zero initial replacement roll still permits vacancy rescue; effective Denial on/off/suppressed with bans retained; present-zero versus absent entry; short nonempty and empty terminal screens                                                                                           | Engine composition/Denial                                                  |
 | S10 Trial                 | Source-executed Apollo Trial rescue witness reproduced through real authored acquisitions; with Denial on no Duo rescue; a normal inherited Duo stays individually ineligible; catalog matrix covers the five requirement overrides                                                      | Catalog predicates; engine composition and one acquisition-history contact |

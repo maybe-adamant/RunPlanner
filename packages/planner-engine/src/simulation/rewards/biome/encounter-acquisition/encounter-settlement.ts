@@ -34,6 +34,7 @@ import {
   createTraitHistoryState,
   foldTraitHistoryEvents,
   hasActiveChaosSemanticTag,
+  traitOfferGenerationLegal,
 } from '../../../traits';
 import { findingIdentityKey, ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import { createBiomeRewardFacts } from '../../facts';
@@ -278,9 +279,7 @@ export function applyEncounterSettlementTransition(inputs: {
         return (
           evaluations.length > before[index]! &&
           evaluation !== undefined &&
-          evaluation.assessments.every((assessment) => assessment.legal) &&
-          evaluation.composition.legal &&
-          evaluation.replacementComposition.legal &&
+          traitOfferGenerationLegal(evaluation) &&
           evaluation.targetedAcquisition.legal
         );
       });

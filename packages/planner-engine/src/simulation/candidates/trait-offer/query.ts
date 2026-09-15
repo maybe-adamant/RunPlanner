@@ -24,7 +24,6 @@ import type {
   TraitFindingCode,
   TraitOfferCompositionAssessment,
   TraitOfferCompositionFinding,
-  TraitReplacementCompositionAssessment,
 } from '../../traits/offer-domain';
 import type { CandidateContextUnavailable } from '../availability';
 import { unavailableForTraitOffer } from './availability';
@@ -249,8 +248,8 @@ export interface EvaluatedTraitAcquisitionTargetDomain {
 
 export interface TraitOfferCandidateBranch {
   readonly assessments: readonly TraitAssessment[];
+  readonly generation?: import('../../traits/authoring/initial-composition').InitialOfferSupport;
   readonly composition: TraitOfferCompositionAssessment;
-  readonly replacementComposition?: TraitReplacementCompositionAssessment;
   readonly offerGenerationState?: TraitOfferGenerationState;
   readonly targetedAcquisition?: TraitTargetedAcquisitionAssessment;
   readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
@@ -293,13 +292,7 @@ export interface EvaluatedTraitOfferCandidate {
  * `blocksFocusedOption` instead of reimplementing trait finding policy.
  */
 export interface TraitOfferFocusedOptionEvidence {
-  readonly source:
-    | 'focusedOption'
-    | 'siblingOption'
-    | 'duplicate'
-    | 'firstOfferComposition'
-    | 'replacementComposition'
-    | 'targetedAcquisition';
+  readonly source: 'focusedOption' | 'siblingOption' | 'duplicate' | 'targetedAcquisition';
   readonly blocksFocusedOption: boolean;
   readonly finding: TraitOfferCandidateFinding;
 }
@@ -391,13 +384,13 @@ function duplicateOfferedTraitFindings(
 
 /**
  * Normalizes exact artifact output once for both candidate questions. No
- * focused path reevaluates trait legality or replacement composition.
+ * focused path reevaluates trait legality or whole-screen support.
  */
 function assessTraitOfferCandidate(
   reached: readonly {
     readonly assessments: readonly TraitAssessment[];
+    readonly generation?: import('../../traits/authoring/initial-composition').InitialOfferSupport;
     readonly composition: TraitOfferCompositionAssessment;
-    readonly replacementComposition: TraitReplacementCompositionAssessment;
     readonly offerGenerationState?: TraitOfferGenerationState;
     readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
     readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
@@ -411,11 +404,8 @@ function assessTraitOfferCandidate(
     reached.map((branch) =>
       Object.freeze({
         assessments: branch.assessments,
+        ...(branch.generation === undefined ? {} : { generation: branch.generation }),
         composition: branch.composition,
-        ...(branch.replacementComposition.applies &&
-        (branch.replacementComposition.replacementCount > 0 || !branch.replacementComposition.legal)
-          ? { replacementComposition: branch.replacementComposition }
-          : {}),
         ...(branch.offerGenerationState === undefined
           ? {}
           : { offerGenerationState: branch.offerGenerationState }),
@@ -431,8 +421,8 @@ function assessTraitOfferCandidate(
   const findings = Object.freeze([
     ...branches.flatMap((branch) => [
       ...branch.assessments.flatMap((entry) => entry.findings.map(candidateFinding)),
+      ...(branch.generation?.findings.map(candidateFinding) ?? []),
       ...branch.composition.findings.map(candidateFinding),
-      ...(branch.replacementComposition?.findings.map(candidateFinding) ?? []),
       ...(branch.targetedAcquisition?.findings.map(candidateFinding) ?? []),
     ]),
     ...duplicateFindings,
@@ -460,8 +450,8 @@ function assessTraitOfferCandidate(
       duplicateFindings.length === 0 &&
       branches.some(
         (branch) =>
+          (branch.generation?.legal ?? true) &&
           branch.composition.legal &&
-          (branch.replacementComposition?.legal ?? true) &&
           (branch.targetedAcquisition?.legal ?? true) &&
           branch.assessments.every((entry) => entry.legal),
       ),
@@ -532,25 +522,6 @@ function focusedEvidenceForBranch(
         source: 'duplicate',
         blocksFocusedOption: finding.optionKeys?.includes(optionKey) ?? false,
         finding,
-      }),
-    );
-  }
-  for (const finding of branch.composition.findings) {
-    evidence.push(
-      Object.freeze({
-        source: 'firstOfferComposition',
-        blocksFocusedOption:
-          finding.code === 'missingAttackOrSpecial' || finding.optionKey === optionKey,
-        finding: candidateFinding(finding),
-      }),
-    );
-  }
-  for (const finding of branch.replacementComposition?.findings ?? []) {
-    evidence.push(
-      Object.freeze({
-        source: 'replacementComposition',
-        blocksFocusedOption: branch.assessments[focusIndex]?.replacementTransition !== undefined,
-        finding: candidateFinding(finding),
       }),
     );
   }

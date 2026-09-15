@@ -114,8 +114,8 @@ export function selectedTraitOfferProducts(
             entry.branches.map((trace) =>
               Object.freeze({
                 assessments: trace.assessments,
+                ...(trace.generation === undefined ? {} : { generation: trace.generation }),
                 composition: trace.composition,
-                replacementComposition: trace.replacementComposition,
                 targetedAcquisition: trace.targetedAcquisition,
                 persephoneLevelBonusMaximums: Object.freeze(
                   trace.levelResolutions.map(

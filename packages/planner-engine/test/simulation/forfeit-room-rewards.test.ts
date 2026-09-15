@@ -443,7 +443,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
     );
     expect(withoutForfeit.findings).toContainEqual(
       expect.objectContaining({
-        code: 'missingAttackOrSpecial',
+        code: 'traitOfferGenerationUnavailable',
         origin: createTraitOfferAddress(owner, 'source'),
       }),
     );

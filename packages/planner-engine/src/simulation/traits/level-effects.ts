@@ -235,11 +235,11 @@ export function checkRequirement(
       // pure assessments retain the ordinary, unblocked behavior.
       if (
         (requirement.context === 'devotionNoDuo'
-          ? context.devotionNoDuo
+          ? (context.devotionNoDuo ?? false)
           : requirement.context === 'blockGiftBoons'
-            ? context.blockGiftBoons
+            ? (context.blockGiftBoons ?? false)
             : requirement.context === 'circeRemovableFearVow'
-              ? context.circeRemovableFearVow
+              ? (context.circeRemovableFearVow ?? false)
               : false) === requirement.required
       )
         return undefined;

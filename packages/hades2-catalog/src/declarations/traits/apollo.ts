@@ -120,6 +120,7 @@ export const apolloTraits = [
       Fire: 1,
     },
     usesBoonRarity: true,
+    optionalLinkedPriority: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -304,6 +305,7 @@ export const apolloTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [
@@ -332,6 +334,7 @@ export const apolloTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [
@@ -376,6 +379,7 @@ export const apolloTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [
@@ -410,6 +414,7 @@ export const apolloTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [
@@ -449,6 +454,7 @@ export const apolloTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [
@@ -482,6 +488,7 @@ export const apolloTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [

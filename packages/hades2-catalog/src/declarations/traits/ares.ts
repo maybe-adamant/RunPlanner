@@ -305,6 +305,7 @@ export const aresTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [
@@ -343,6 +344,7 @@ export const aresTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [
@@ -377,6 +379,7 @@ export const aresTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [
@@ -416,6 +419,7 @@ export const aresTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [
@@ -450,6 +454,7 @@ export const aresTraits = [
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
     offerRequirements: [
+      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
       {
         kind: 'all',
         requirements: [

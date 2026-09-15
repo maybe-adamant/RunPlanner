@@ -78,12 +78,6 @@ describe('route trait projection', () => {
         }),
         rollOrder: Object.freeze(['Common', 'Rare', 'Epic', 'Duo', 'Legendary'] as const),
       }),
-      replacementRollChance: 0.1,
-      eligibleReplacementCount: 2,
-      maximumReplacementCount: 1,
-      requiredReplacementCount: 0,
-      shortageRequiredReplacementCount: 0,
-      forcedRollRequiredReplacementCount: 0,
     });
     const branch = (offerGenerationState: TraitOfferGenerationState) =>
       Object.freeze({
@@ -106,7 +100,6 @@ describe('route trait projection', () => {
               Object.freeze({
                 ...baseState,
                 rarity: Object.freeze({ kind: 'fixed' as const, rarity: 'Common' as const }),
-                replacementRollChance: 1,
               }),
             ),
           ],
@@ -129,11 +122,9 @@ describe('route trait projection', () => {
           { label: 'Legendary', value: '10%' },
         ],
       },
-      replacementChance: '10%',
     });
     expect(presentation?.states[1]).toMatchObject({
       rarity: { kind: 'fixed', rarity: 'Common' },
-      replacementChance: '100%',
     });
   });
 
@@ -180,12 +171,10 @@ describe('route trait projection', () => {
         invalidAssessment,
         ...firstTrace.branches[0]!.assessments.slice(1),
       ]),
-      composition: Object.freeze({
-        ...firstTrace.branches[0]!.composition,
+      generation: Object.freeze({
+        applies: true,
         legal: false,
-        findings: Object.freeze([
-          { code: 'nonPriorityTrait' as const, traitKey: selectedTraitKey },
-        ]),
+        findings: Object.freeze([{ code: 'traitOfferGenerationUnavailable' as const }]),
       }),
     });
     const invalidTrace = Object.freeze({
@@ -347,7 +336,7 @@ describe('route trait projection', () => {
     );
   });
 
-  it('presents first-Olympian composition findings without inventing option prerequisites', () => {
+  it('presents row eligibility separately from whole-offer composition findings', () => {
     const offer: AuthoredTraitOfferTraits = {
       kind: 'traits',
       giverKey: 'Apollo',
@@ -370,23 +359,19 @@ describe('route trait projection', () => {
           assessments: [],
           findings: [
             {
-              code: 'nonPriorityTrait' as const,
+              code: 'bannedTrait' as const,
               traitKey: 'ApolloRetaliateBoon',
             },
-            { code: 'missingAttackOrSpecial' as const },
-            { code: 'missingAttackOrSpecial' as const },
+            { code: 'traitOfferGenerationUnavailable' as const },
+            { code: 'traitOfferGenerationUnavailable' as const },
           ],
         },
       },
     });
-    expect(feedback.options[2]?.reasons).toEqual([
-      expect.stringContaining('First Olympian offer needs a priority trait'),
-    ]);
+    expect(feedback.options[2]?.reasons).toEqual([expect.stringContaining('banned')]);
     expect(feedback.options[0]?.reasons).toEqual([]);
-    expect(feedback.contextMessage).toContain('First Olympian offer needs Attack or Special');
-    expect(
-      feedback.contextMessage?.match(/First Olympian offer needs Attack or Special/g),
-    ).toHaveLength(1);
+    expect(feedback.contextMessage).toContain('Trait offer cannot occur here');
+    expect(feedback.contextMessage?.match(/Trait offer cannot occur here/g)).toHaveLength(1);
   });
 
   it('projects an active rarity-floor finding as repairable option copy', () => {

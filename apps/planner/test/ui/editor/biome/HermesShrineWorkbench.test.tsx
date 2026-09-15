@@ -306,7 +306,7 @@ describe('Hermes Shrine workbench', () => {
     const hiddenSource = workspaceProjection(application).interactions.traitOffers.get(
       semanticAddressKey(createTraitOfferAddress(entry, 'hiddenSource')),
     );
-    const hiddenSourceDraft = hiddenSource?.traitsStartingDraft?.();
+    const hiddenSourceDraft = hiddenSource?.traitOfferStartingOutcome?.();
     if (hiddenSource === undefined)
       throw new Error('rushed Mystery Boon hidden-source editor is missing');
     if (hiddenSourceDraft === undefined)
@@ -385,7 +385,7 @@ describe('Hermes Shrine workbench', () => {
     const hiddenSource = workspaceProjection(view.application).interactions.traitOffers.get(
       semanticAddressKey(createTraitOfferAddress(entry, 'hiddenSource')),
     );
-    const hiddenSourceDraft = hiddenSource?.traitsStartingDraft?.();
+    const hiddenSourceDraft = hiddenSource?.traitOfferStartingOutcome?.();
     if (hiddenSource === undefined || hiddenSourceDraft === undefined)
       throw new Error('placed delayed Mystery Boon trait editor is missing');
     act(() =>
@@ -449,7 +449,7 @@ describe('Hermes Shrine workbench', () => {
     const traitEditor = workspaceProjection(view.application).interactions.traitOffers.get(
       semanticAddressKey(createTraitOfferAddress(entry, 'hiddenSource')),
     );
-    const draft = traitEditor?.traitsStartingDraft?.();
+    const draft = traitEditor?.traitOfferStartingOutcome?.();
     if (traitEditor === undefined || draft === undefined)
       throw new Error('final Preboss Mystery delivery trait editor is missing');
     act(() =>

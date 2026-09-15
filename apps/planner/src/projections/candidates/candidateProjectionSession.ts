@@ -24,9 +24,9 @@ export interface CandidateProjectionCore {
   readonly catalog: Catalog;
   readonly assembly: ProjectEvaluationAssembly;
   readonly evaluate: ProjectCandidateSession['evaluate'];
-  readonly traitOfferStartingDraft: ProjectCandidateCoreTraitDrafts['traitOfferStartingDraft'];
-  readonly nextOptionalHighTierTraitOfferDraft: ProjectCandidateCoreTraitDrafts['nextOptionalHighTierTraitOfferDraft'];
-  readonly previousOptionalHighTierTraitOfferDraft: ProjectCandidateCoreTraitDrafts['previousOptionalHighTierTraitOfferDraft'];
+  readonly traitOfferStartingOutcome: ProjectCandidateCoreTraitDrafts['traitOfferStartingOutcome'];
+  readonly appendTraitOfferDraft: ProjectCandidateCoreTraitDrafts['appendTraitOfferDraft'];
+  readonly removeTraitOfferDraft: ProjectCandidateCoreTraitDrafts['removeTraitOfferDraft'];
   readonly chaosOfferDomain: ProjectCandidateCoreTraitDrafts['chaosOfferDomain'];
   readonly anvilResult: (
     owner: import('@run-planner/engine/authored-project').AcquisitionRoleAddress,
@@ -53,9 +53,9 @@ export interface CandidateProjectionCore {
 
 type ProjectCandidateCoreTraitDrafts = Pick<
   import('@run-planner/engine/simulation').ProjectCandidateSession,
-  | 'traitOfferStartingDraft'
-  | 'nextOptionalHighTierTraitOfferDraft'
-  | 'previousOptionalHighTierTraitOfferDraft'
+  | 'traitOfferStartingOutcome'
+  | 'appendTraitOfferDraft'
+  | 'removeTraitOfferDraft'
   | 'chaosOfferDomain'
 >;
 
@@ -184,9 +184,9 @@ export function createCandidateProjectionCore(
         catalog,
         assembly,
         evaluate: evaluator.evaluate,
-        traitOfferStartingDraft: evaluator.traitOfferStartingDraft,
-        nextOptionalHighTierTraitOfferDraft: evaluator.nextOptionalHighTierTraitOfferDraft,
-        previousOptionalHighTierTraitOfferDraft: evaluator.previousOptionalHighTierTraitOfferDraft,
+        traitOfferStartingOutcome: evaluator.traitOfferStartingOutcome,
+        appendTraitOfferDraft: evaluator.appendTraitOfferDraft,
+        removeTraitOfferDraft: evaluator.removeTraitOfferDraft,
         chaosOfferDomain: evaluator.chaosOfferDomain,
         anvilResult: (
           owner: import('@run-planner/engine/authored-project').AcquisitionRoleAddress,

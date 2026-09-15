@@ -290,7 +290,7 @@ describe('trait-offers/bind', () => {
     expect(interaction.value).toBeNull();
     expect(interaction.resetIntent).toBeUndefined();
     expect(interaction.rarityEditable).toBe(false);
-    const draft = interaction.traitsStartingDraft?.();
+    const draft = interaction.traitOfferStartingOutcome?.();
     if (draft?.kind !== 'traits') throw new Error('Gorgon Athena draft is missing');
     expect(draft.options.every((option) => option.rarity === 'Epic')).toBe(true);
 
@@ -339,10 +339,12 @@ describe('trait-offers/bind', () => {
       throw new Error('removed trait offer did not receive an engine evaluation');
     }
     expect(removedCandidate.evaluation.result.findings).toEqual(
-      expect.arrayContaining([expect.objectContaining({ code: 'fullTraitOfferWidthRequired' })]),
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'traitOfferGenerationUnavailable' }),
+      ]),
     );
 
-    expect(interaction.nextOptionalHighTierDraft?.(removed)).toBeUndefined();
+    expect(interaction.appendTraitOfferDraft?.(removed)?.options).toHaveLength(3);
 
     const [fallbackCandidate] = interaction.load({
       kind: 'fallbackGold',
@@ -352,7 +354,9 @@ describe('trait-offers/bind', () => {
       throw new Error('Fallback Gold did not receive an engine evaluation');
     }
     expect(fallbackCandidate.evaluation.result.findings).toEqual(
-      expect.arrayContaining([expect.objectContaining({ code: 'fallbackGoldUnavailable' })]),
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'traitOfferGenerationUnavailable' }),
+      ]),
     );
   });
 

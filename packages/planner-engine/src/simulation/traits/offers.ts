@@ -16,7 +16,6 @@ import type {
   TraitOfferCompositionAssessment,
   TraitOfferCompositionFinding,
   TraitOfferContext,
-  TraitReplacementCompositionAssessment,
 } from './offer-domain';
 import { assessTraitOfferComposition } from './offer-domain';
 import { deriveBoonRarityLedger, type BoonRarityFacts } from './rarity';
@@ -28,8 +27,12 @@ import {
   assessNaturalSelectionTargets,
   assessSelectedTargetedAcquisition,
   assessTraitOffer,
-  assessTraitReplacementComposition,
+  traitOfferGenerationInput,
 } from './authoring/assessment';
+import {
+  assessInitialOfferSupport,
+  type InitialOfferSupport,
+} from './authoring/initial-composition';
 import { resolveTraitOfferOptionLevel, type TraitOfferOptionLevelResolution } from './offer-levels';
 import type {
   TraitTargetedAcquisitionAssessment,
@@ -95,6 +98,37 @@ export function offerGenerationAdjustedTraitOfferContext(
   return offer.kind === 'traits'
     ? offerGenerationAdjustedTraitGiverContext(catalog, history, offer.giverKey, context)
     : context;
+}
+
+/** One complete source-generation context for selected, candidate and draft
+ * construction.  Denial only removes final rescue; it never reconstructs
+ * history bans or duplicates rarity arithmetic at consumers. */
+export function traitOfferGenerationContext(
+  catalog: Catalog,
+  history: TraitHistoryState,
+  giverKey: string,
+  context: TraitOfferContext,
+  arcanaFear?: ArcanaFearState,
+): TraitOfferContext {
+  const { finalRarityRescueDisabled: capturedFinalRescueDisabled, ...unflagged } = context;
+  const adjusted = offerGenerationAdjustedTraitGiverContext(catalog, history, giverKey, {
+    ...unflagged,
+    resolvedProviderKey: giverKey,
+  });
+  const facts = boonRarityFactsForOffer(catalog, history, adjusted, arcanaFear);
+  const denial = catalog.fearVows.byKey.BanUnpickedBoonsShrineUpgrade;
+  const finalRarityRescueDisabled = (arcanaFear?.fear.effectiveRanks[denial?.key ?? ''] ?? 0) > 0;
+  return Object.freeze({
+    ...adjusted,
+    ...(facts === undefined ? {} : { boonRarityFacts: facts }),
+    ...(arcanaFear === undefined
+      ? capturedFinalRescueDisabled === true
+        ? { finalRarityRescueDisabled: true }
+        : {}
+      : finalRarityRescueDisabled
+        ? { finalRarityRescueDisabled: true }
+        : {}),
+  });
 }
 
 /** Shared Arcana and matured-Favor contributions; callers add only their source-legal modifiers. */
@@ -269,8 +303,10 @@ export interface ReachedTraitOfferEvaluation {
   readonly assessments: readonly TraitAssessment[];
   /** Frozen option-level outcomes used by candidate projection and settlement. */
   readonly levelResolutions: readonly TraitOfferOptionLevelResolution[];
+  /** Native staged support for ordinary Olympian/Hermes screens. */
+  readonly generation?: InitialOfferSupport;
+  /** Non-generation screen rules, including Rejected on ordinary god offers. */
   readonly composition: TraitOfferCompositionAssessment;
-  readonly replacementComposition: TraitReplacementCompositionAssessment;
   readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
   /** Spell tree as settled at this offer, before later biome mutations. */
   readonly settledHexTree?: {
@@ -290,12 +326,22 @@ export interface ReachedTraitOfferEvaluation {
 /** The branch-local evidence published for one reached selected offer. */
 export interface TraitOfferBranchAssessment {
   readonly assessments: readonly TraitAssessment[];
+  readonly generation?: InitialOfferSupport;
   readonly composition: TraitOfferCompositionAssessment;
-  readonly replacementComposition: TraitReplacementCompositionAssessment;
   readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
   readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
   readonly effectiveLevels: readonly (number | undefined)[];
   readonly settledHexTree?: ReachedTraitOfferEvaluation['settledHexTree'];
+}
+
+export function traitOfferGenerationLegal(
+  evaluation: Pick<ReachedTraitOfferEvaluation, 'generation' | 'composition' | 'assessments'>,
+): boolean {
+  return (
+    (evaluation.generation?.legal ?? true) &&
+    evaluation.composition.legal &&
+    evaluation.assessments.every((assessment) => assessment.legal)
+  );
 }
 
 /** Execution input retained only after one authored offer is selected. */
@@ -365,20 +411,35 @@ function evaluateReachedTraitOfferWithAssessments(
         : undefined
     )?.options.map((option) => option.rarity) ?? [],
   );
-  const effectiveContext = offerGenerationAdjustedTraitOfferContext(
-    catalog,
-    before,
-    offer,
-    context,
-  );
+  const ordinaryGiver = (() => {
+    if (offer.kind === 'chaos') return false;
+    const giver = catalog.traitGivers.byKey[offer.giverKey];
+    return giver?.providerKind === 'olympian' || giver?.providerKind === 'hermes';
+  })();
+  const effectiveContext = ordinaryGiver
+    ? traitOfferGenerationContext(catalog, before, offer.giverKey, context, arcanaFear)
+    : offerGenerationAdjustedTraitOfferContext(catalog, before, offer, context);
   // Exact one-result sources (for example, a keepsake equip) are direct
   // acquisitions, not a sparse ordinary offer. They retain the normal
   // trait-level assessment and history event path without inheriting the
   // three-choice offer-composition contract.
   const legalityOffer = rarificationBaseOffer ?? offer;
+  const ordinary =
+    legalityOffer.kind !== 'chaos' &&
+    (() => {
+      const giver = catalog.traitGivers.byKey[legalityOffer.giverKey];
+      return giver?.providerKind === 'olympian' || giver?.providerKind === 'hermes';
+    })();
+  const generation =
+    directAcquisition || frozenAcquisition || !ordinary
+      ? undefined
+      : assessInitialOfferSupport({
+          ...traitOfferGenerationInput(catalog, legalityOffer.giverKey, before, effectiveContext),
+          offer: legalityOffer,
+        });
   const baseComposition = directAcquisition
     ? Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) })
-    : assessTraitOfferComposition(catalog, legalityOffer, before);
+    : assessTraitOfferComposition(catalog, legalityOffer);
   const composition = frozenAcquisition
     ? Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) })
     : (() => {
@@ -454,20 +515,6 @@ function evaluateReachedTraitOfferWithAssessments(
               findings: Object.freeze([...baseComposition.findings, ...chaosFindings]),
             });
       })();
-  const replacementComposition = directAcquisition
-    ? Object.freeze({
-        applies: false,
-        legal: true,
-        ordinaryCandidateCount: 0,
-        eligibleReplacementCount: 0,
-        maximumReplacementCount: 0,
-        requiredReplacementCount: 0,
-        shortageRequiredReplacementCount: 0,
-        forcedRollRequiredReplacementCount: 0,
-        replacementCount: 0,
-        findings: Object.freeze([]),
-      })
-    : assessTraitReplacementComposition(catalog, legalityOffer, before, effectiveContext);
   // A frozen source row still acquires its targeted effect at the current
   // frontier, after the primary selection has settled.
   const targetedAcquisition = assessSelectedTargetedAcquisition(catalog, legalityOffer, before);
@@ -520,8 +567,8 @@ function evaluateReachedTraitOfferWithAssessments(
     ...(keepsakes === undefined ? {} : { keepsakes }),
     assessments: resolvedAssessments,
     levelResolutions,
+    ...(generation === undefined ? {} : { generation }),
     composition,
-    replacementComposition,
     targetedAcquisition,
     reached: true,
     chronologicalIndex,
@@ -657,10 +704,7 @@ export function recordReachedTraitOffer(
   readonly ransomAssessment?: RansomAssessment;
 } {
   if (evaluation.offer.kind === 'chaos') {
-    if (
-      !evaluation.composition.legal ||
-      !evaluation.assessments.every((assessment) => assessment.legal)
-    )
+    if (!traitOfferGenerationLegal(evaluation))
       return Object.freeze({ history: evaluation.before });
     const identity = acquisitionIdentity ?? `chaos:${sequence}`;
     const bannedCurseKeys = denialBannedChaosCurseKeys(catalog, evaluation);
@@ -678,10 +722,7 @@ export function recordReachedTraitOffer(
       history: foldTraitHistoryEvents(catalog, [...evaluation.before.events, event]),
     });
   }
-  const valid =
-    evaluation.composition.legal &&
-    evaluation.replacementComposition.legal &&
-    evaluation.assessments.every((assessment) => assessment.legal);
+  const valid = traitOfferGenerationLegal(evaluation);
   if (!valid) return Object.freeze({ history: evaluation.before });
   if (evaluation.offer.kind !== 'traits') return Object.freeze({ history: evaluation.before });
   const selectedOption = evaluation.offer.options[optionIndex(evaluation.offer.selectedOptionKey)];

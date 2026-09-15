@@ -108,7 +108,7 @@ it('requires placement of a duplicated Boon and exposes its fresh trait editor o
   const trait = workspaceProjection(view.application).interactions.traitOffers.get(
     semanticAddressKey(createTraitOfferAddress(gold, 'source')),
   );
-  const draft = trait?.traitsStartingDraft?.();
+  const draft = trait?.traitOfferStartingOutcome?.();
   if (trait === undefined || draft === undefined)
     throw new Error('placed Gold Boon has no supported starting draft');
   act(() =>
@@ -147,7 +147,7 @@ it('leaves a Gold Mystery Boon optional and authors its hidden source only after
         createTraitOfferAddress(createAcquisitionEntryAddress(site, entryKey), 'hiddenSource'),
       ),
     );
-    const draft = trait?.traitsStartingDraft?.();
+    const draft = trait?.traitOfferStartingOutcome?.();
     if (trait === undefined || draft === undefined)
       throw new Error(`${entryKey} has no supported trait draft`);
     act(() =>
