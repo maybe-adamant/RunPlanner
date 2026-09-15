@@ -593,10 +593,11 @@ purchase, the trait remains equipped. The duplicate is created from the
 pre-source-acquisition branch: the paid source identity is known, but its boon
 choice or consumable effect has not yet entered history. Wells use separate
 purchase paths and are not part of this effect. The current planner represents
-the materialized duplicate as the stable
-`echoDoubleShopReward` Shop row. Its complete payload may be authored while
-dormant; selecting `Picked up` separately adds that key to the existing site
-order. No source-keyed child, second order, or pending-effect ledger exists. Pom
+the materialized duplicate as the stable `echoDoubleShopReward` pickup.
+Outcome editing follows explicit placement in the room's action order;
+required versus optional participation follows the native loot/consumable
+split recorded in the reward acquisition audit. No source-keyed child,
+second order, or pending-effect ledger exists. Pom
 duplicates retain the exact `StackOnly` interaction exception: if a stored
 target disappeared before pickup, the final visible Pom options regenerate
 from the pickup frontier.

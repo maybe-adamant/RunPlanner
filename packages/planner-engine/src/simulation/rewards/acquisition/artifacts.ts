@@ -26,7 +26,7 @@ export interface DerivedAcquisitionEntryCandidateCapability {
   readonly fixedReward?: AuthoredRewardState;
   readonly producerLifecycleKey?: string;
   readonly encounterPhaseKey?: string;
-  readonly participation?: 'optional';
+  readonly participation?: 'required' | 'optional';
   readonly retainedSourceMismatch?: boolean;
   readonly eligibleSourceOfferKeys?: readonly string[];
 }

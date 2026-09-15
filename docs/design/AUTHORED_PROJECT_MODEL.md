@@ -505,11 +505,11 @@ deleting unrelated actions. `MoveRoomAction` changes one ranked action's
 position within the complete chronology;
 `ReplaceAcquisitionEntryOffer` edits only a declaration-compatible materialized
 pickup. Neither command may infer entries from room names or rendered rows.
-`EditDerivedShopEntry` atomically materializes a Gold duplicate and applies one
-nested reward, trait, level, or conversion edit without changing
-`roomActions.order`. `SelectDerivedShopEntry` materializes that same pickup;
-participation is a separate Room Action command. Travel uses ordinary Shop
-inventory commands, not this derived-pickup family.
+`PlaceEchoGoldPickup` atomically materializes the source-derived Gold pickup
+with unresolved children and inserts it in `roomActions.order`. Subsequent
+outcome edits use the ordinary acquisition, trait, level, and conversion
+commands; removal retains its payload for later placement. Travel uses
+ordinary Shop inventory commands, not this derived-pickup family.
 
 The engine classifies every structurally active Room Action as required or
 optional from the same action domain consumed by simulation. The semantic

@@ -256,7 +256,6 @@ export {
   applyProjectCommand,
   projectCommandAddress,
   projectCommandAuthoringAddresses,
-  type DerivedShopEntryEditCommand,
   type EncounterOccurrenceCommand,
   type ProjectCommand,
   ProjectCommandContractError,

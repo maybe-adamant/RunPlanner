@@ -6,7 +6,6 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
 
-import { derivedShopPayloadIntent } from './reward-child-command-binding';
 import { workspaceInteractionKey } from '../contract';
 import type { WorkspaceAcquisitionConversionInteraction } from '../contracts/traits';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
@@ -104,14 +103,13 @@ export function bindAcquisitionConversionInteractions(input: {
         Object.freeze({
           ...support,
           intentFor: (value: AcquisitionDisposition) =>
-            derivedShopPayloadIntent(
-              control.derivedShopEntryEdit,
-              Object.freeze({
+            Object.freeze({
+              command: Object.freeze({
                 kind: 'ReplaceAcquisitionDisposition' as const,
                 acquisition: conversion.address,
                 value,
               }),
-            ),
+            }),
           seaStarIntentFor: (procced: boolean) =>
             Object.freeze({
               command: Object.freeze({

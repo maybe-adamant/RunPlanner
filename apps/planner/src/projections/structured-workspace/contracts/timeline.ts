@@ -71,7 +71,10 @@ export interface WorkspaceRoomActionRow {
   readonly placement?: WorkspaceCommandIntent<
     Extract<
       ProjectCommand,
-      { readonly kind: 'PlaceHermesShrineDelivery' | 'PlaceClockedTraitPickup' }
+      {
+        readonly kind:
+          'PlaceHermesShrineDelivery' | 'PlaceClockedTraitPickup' | 'PlaceEchoGoldPickup';
+      }
     >
   >;
   readonly rank: number | null;

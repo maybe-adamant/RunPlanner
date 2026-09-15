@@ -229,11 +229,7 @@ export type WorkspaceProjectionSource = 'authored' | 'canonical' | 'progressive'
 export type WorkspaceStatus = 'blocked' | 'empty' | 'incomplete' | 'invalid' | 'valid';
 
 export type WorkspacePayloadEditIntent<Command extends ProjectCommand> = WorkspaceCommandIntent<
-  | Command
-  | Extract<
-      ProjectCommand,
-      { readonly kind: 'EditDerivedShopEntry' | 'ReplaceAcquisitionDisposition' }
-    >
+  Command | Extract<ProjectCommand, { readonly kind: 'ReplaceAcquisitionDisposition' }>
 >;
 
 export interface WorkspaceInteractionChoice<T> {

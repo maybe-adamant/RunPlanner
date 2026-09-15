@@ -171,12 +171,15 @@ owns when each role occurs. The same concrete loot must not encode whether it
 came from a room reward, a cage, a shop purchase, or a multi-stage Devotion.
 
 Offer payload authorship and game-visible resolution timing are also separate.
-Most payloads are both authored and resolved at offer generation. A producer
-such as Narcissus can author a Blind Box's eventual source before the produced
-pickup is taken. Initial Shop inventory is different: it persists only the
-visible box identity, and a participating purchase creates the acquisition
-entry that owns and resolves the eventual source. An unpurchased Shop Blind Box
-therefore has no dormant source to validate or emit.
+Most payloads are both authored and resolved at offer generation. A Blind Box
+instead resolves its source at acquisition. For optional generated pickups
+such as Narcissus's drops, creation exposes the object, while timeline
+participation activates its acquisition choices: source, trait offer, level
+target and conversion. Their validation and candidates use the pickup's own
+history, not the producer's. Removing a pickup may retain dormant choices for
+reinsertion, but does not keep their findings or editing context active. Initial
+Shop inventory likewise persists only the visible box identity, and a
+participating purchase creates the acquisition entry that owns the eventual source.
 
 Offer identity, acquisition identity, and semantic effect are separate. Big,
 Triple, and self-consumed wrapper variants retain the exact ledger keys written
@@ -976,9 +979,11 @@ equipped one-use Echo trait while folding a World Shop's authored order. Once
 the Shop kernel accepts the first paid non-`SpellDrop` source, Gold consumes
 the exact Echo acquisition and materializes the singleton free duplicate from
 pre-source-acquisition history before that paid entry's acquisition roles run.
-Materialization does not acquire the duplicate: its complete supplemental row
-may remain unpicked and later joins the same authored order at the player's
-chosen position. Pre-kernel rejection leaves Gold armed; invalid nested detail
+Materialization does not acquire the duplicate. A native loot duplicate
+(Boon, Hermes, Hammer, or full Pom) requires pickup; a consumable duplicate,
+including an unopened Mystery Boon, may remain unpicked. Both require explicit
+Timeline placement before authoring their acquisition children. Pre-kernel
+rejection leaves Gold armed; invalid nested detail
 after an accepted paid source does not roll consumption back.
 
 Both paths keep acquisition-time choices with the reached concrete entry.
@@ -987,7 +992,9 @@ fresh hidden source independently; a Gold duplicate of Nectar follows the Shop
 duplicate profile and does not invent the run-progress Pom effect. Missing or
 context-invalid active children remain exact finding-backed repair owners,
 while dormant or not-yet-generated entries publish no acquisition child.
-Ordinary Gold payloads remain frozen after materialization. Pom alone
+Ordinary Gold candidate context is frozen at materialization, even though
+its outcome is authored only after placement. A Mystery Boon's hidden source
+instead uses its actual pickup context. Pom alone
 regenerates its `StackOnly` options at pickup when at least one stored target is
 no longer equipped; if every stored target remains, its materialized options
 stay fixed.

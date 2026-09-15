@@ -8,6 +8,7 @@ import {
   createOccurrenceAddress,
   createKeepsakeEquipResultAddress,
   semanticAddressKey,
+  roomActionKey,
   createPostbossKeepsakeSelectionAddress,
   type BiomeAddress,
   type AcquisitionSiteAddress,
@@ -681,6 +682,14 @@ export function assembleWorkspaceOccurrence(
         );
       }
       const acquisitionMarkers = Object.freeze([
+        ...(roomLocal.kind === 'shop'
+          ? roomLocal.supplementalOffers.flatMap((offer) =>
+              offer.kind === 'echoDoubleShopInvalid' &&
+              roomActionKey(offer.purchase.reference) === row.key
+                ? [offer.purchase.marker]
+                : [],
+            )
+          : []),
         ...(row.traitOffer === undefined ? [] : traitOfferMarkers(row.traitOffer)),
         ...(row.rewardPayload !== undefined &&
         !row.rewardPayload.showOffer &&

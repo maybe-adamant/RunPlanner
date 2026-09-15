@@ -107,7 +107,7 @@ describe('occurrence room facts', () => {
         : undefined;
     if (source === undefined) throw new Error('selected Shop Boon is missing');
     project = applyProjectCommand(project, catalog, {
-      kind: 'SelectDerivedShopEntry',
+      kind: 'PlaceEchoGoldPickup',
       site,
       entryKey: 'echoDoubleShopReward',
       sourceOfferKey: 'Boon',
@@ -122,6 +122,10 @@ describe('occurrence room facts', () => {
               kind: 'echoDoubleShopReward' as const,
               sourceOfferKey: 'Boon',
               rewardTypes: ['RandomLoot'],
+              fixedReward: project.route.biomes
+                .find((biome) => biome.biomeKey === 'F')!
+                .topology!.occurrences.find((room) => room.occurrenceId === shopId)!
+                .acquisitionSites!.roomExit!.pickupEntries!.echoDoubleShopReward!,
               eligibleSourceOfferKeys: ['Minor', 'Boon', 'MajorNonBoon'],
             },
           ],

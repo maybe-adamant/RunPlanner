@@ -1,7 +1,6 @@
 import type { WorkspaceRewardInteraction } from '../contracts/rewards';
 import {
   semanticAddressKey,
-  type DerivedShopEntryEditCommand,
   type ProjectCommand,
   type TraitOfferAddress,
   type LevelResolutionAddress,
@@ -28,36 +27,6 @@ type RewardPayloadCommand = Extract<
 
 type RewardPayloadOwner = Exclude<WorkspaceRewardControl['owner'], { readonly kind: 'shopOffer' }>;
 
-export function derivedShopPayloadIntent<Command extends ProjectCommand>(
-  materialization: WorkspaceRewardControl['derivedShopEntryEdit'],
-  edit: Command,
-): WorkspaceCommandIntent<
-  | Command
-  | DerivedShopEntryEditCommand
-  | Extract<ProjectCommand, { readonly kind: 'ReplaceAcquisitionDisposition' }>
-> {
-  if (materialization === undefined) return Object.freeze({ command: edit });
-  if (
-    edit.kind !== 'ReplaceAcquisitionEntryOffer' &&
-    edit.kind !== 'ReplaceTraitOffer' &&
-    edit.kind !== 'ReplaceGorgonAthenaOffer' &&
-    edit.kind !== 'ReplaceTraitSelection' &&
-    edit.kind !== 'ReplaceConcaveStoneResult' &&
-    edit.kind !== 'ReplaceLevelResolution' &&
-    edit.kind !== 'ReplaceAcquisitionDisposition'
-  )
-    throw new StructuredWorkspaceProjectionContractError(
-      `${edit.kind} cannot edit a derived Shop entry`,
-    );
-  return Object.freeze({
-    command: Object.freeze({
-      kind: 'EditDerivedShopEntry' as const,
-      ...materialization,
-      edit: edit as DerivedShopEntryEditCommand['edit'],
-    }),
-  });
-}
-
 function rewardCommandFor(
   owner: RewardPayloadOwner,
   value: Parameters<WorkspaceRewardInteraction['intentFor']>[0],
@@ -77,20 +46,8 @@ function rewardCommandFor(
 export function rewardIntentFor(
   owner: RewardPayloadOwner,
   value: Parameters<WorkspaceRewardInteraction['intentFor']>[0],
-  materialization: WorkspaceRewardControl['derivedShopEntryEdit'],
-): WorkspaceCommandIntent<
-  | RewardPayloadCommand
-  | DerivedShopEntryEditCommand
-  | Extract<ProjectCommand, { readonly kind: 'ReplaceAcquisitionDisposition' }>
-> {
-  const command = rewardCommandFor(owner, value);
-  if (materialization === undefined) return Object.freeze({ command });
-  if (command.kind !== 'ReplaceAcquisitionEntryOffer') {
-    throw new StructuredWorkspaceProjectionContractError(
-      `${semanticAddressKey(owner.address)} cannot own a derived Shop payload edit`,
-    );
-  }
-  return derivedShopPayloadIntent(materialization, command);
+): WorkspaceCommandIntent<RewardPayloadCommand> {
+  return Object.freeze({ command: rewardCommandFor(owner, value) });
 }
 
 export function traitOfferCommandFor(

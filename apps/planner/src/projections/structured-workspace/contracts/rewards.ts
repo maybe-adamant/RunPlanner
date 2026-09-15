@@ -1,4 +1,4 @@
-import type { AcquisitionSiteAddress, ProjectCommand } from '@run-planner/engine/authored-project';
+import type { ProjectCommand } from '@run-planner/engine/authored-project';
 import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type {
   CountedRewardCandidateOwner,
@@ -51,11 +51,6 @@ interface WorkspaceRewardControlBase {
   readonly traitOffers?: readonly WorkspaceTraitOfferControl[];
   readonly levelResolutions?: readonly WorkspaceLevelResolutionControl[];
   readonly conversions?: readonly WorkspaceAcquisitionConversionControl[];
-  readonly derivedShopEntryEdit?: {
-    readonly site: AcquisitionSiteAddress;
-    readonly entryKey: 'echoDoubleShopReward';
-    readonly sourceOfferKey: string;
-  };
 }
 
 export interface WorkspaceCountedRewardControl extends WorkspaceRewardControlBase {
@@ -98,8 +93,7 @@ type WorkspaceRewardCommandIntent = WorkspaceCommandIntent<
         | 'ReplaceRewardWheelOffer'
         | 'ReplaceShopOfferOption'
         | 'ReplaceAcquisitionEntryOffer'
-        | 'ReplaceAcquisitionDisposition'
-        | 'EditDerivedShopEntry';
+        | 'ReplaceAcquisitionDisposition';
     }
   >
 >;

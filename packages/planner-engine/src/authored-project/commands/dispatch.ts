@@ -2,12 +2,7 @@ import type { Catalog } from '../../catalog-schema';
 import { decodeProjectDocument } from '../codec';
 import type { ProjectDocument } from '../model';
 import { ProjectDocumentContractError } from '../validation';
-import {
-  failCommand,
-  locateBiome,
-  projectCommandAddress,
-  ProjectCommandContractError,
-} from './contract';
+import { locateBiome, projectCommandAddress, ProjectCommandContractError } from './contract';
 import { applyOccurrenceCommand } from './occurrence/dispatch';
 import { applyProjectStateCommand } from './project-state';
 import { applyRoomReplacementCommand } from './room-replacement';
@@ -15,10 +10,7 @@ import { applyRouteDetourCommand } from './route-detours';
 import { applyTopologyCommand } from './topology/dispatch';
 import { applyTraitOfferCommand } from './trait-offer';
 import { applyLevelResolutionCommand } from './level-resolution';
-import {
-  applyAcquisitionSiteCommand,
-  materializeDerivedShopEntry,
-} from './acquisition/acquisition-site';
+import { applyAcquisitionSiteCommand } from './acquisition/acquisition-site';
 import { applyAcquisitionDispositionCommand } from './acquisition/acquisition-conversion';
 import { applySeaStarResultCommand } from './acquisition/sea-star';
 import { applyJudgmentArcanaCommand } from './judgment-arcana';
@@ -27,11 +19,7 @@ import { applySteadyGrowthCommand } from './steady-growth';
 import { applyKeepsakeCommand } from './keepsake';
 import { applyResourcePlacementCommand } from './resources';
 import type { ProjectCommand } from './types';
-import {
-  createAcquisitionEntryAddress,
-  createBiomeAddress,
-  semanticAddressKey,
-} from '../addresses';
+import { createBiomeAddress } from '../addresses';
 import { applyRoomActionCommand } from './room-actions';
 import { reconcileNewRequiredRoomActions } from '../room-actions/defaults';
 import {
@@ -108,28 +96,6 @@ function reconcileResourcePlacementTopology(document: ProjectDocument): ProjectD
     ...document,
     route: Object.freeze({ ...route, resourcePlacements: Object.freeze(next) }),
   });
-}
-
-function derivedPayloadEntryAddress(
-  command: Extract<ProjectCommand, { readonly kind: 'EditDerivedShopEntry' }>['edit'],
-) {
-  switch (command.kind) {
-    case 'ReplaceAcquisitionEntryOffer':
-      return command.entry;
-    case 'ReplaceTraitOffer':
-    case 'ReplaceGorgonAthenaOffer':
-    case 'ReplaceTraitSelection':
-    case 'ReplaceConcaveStoneResult':
-      return command.trait.owner.kind === 'acquisitionEntry' ? command.trait.owner : undefined;
-    case 'ReplaceLevelResolution':
-      return command.levelResolution.owner.kind === 'acquisitionEntry'
-        ? command.levelResolution.owner
-        : undefined;
-    case 'ReplaceAcquisitionDisposition':
-      return command.acquisition.owner.kind === 'acquisitionEntry'
-        ? command.acquisition.owner
-        : undefined;
-  }
 }
 
 function applyUnchecked(
@@ -254,7 +220,7 @@ function applyUnchecked(
       );
     case 'PlaceHermesShrineDelivery':
     case 'PlaceClockedTraitPickup':
-    case 'SelectDerivedShopEntry':
+    case 'PlaceEchoGoldPickup':
     case 'ReplaceAcquisitionEntryOffer':
       return applyAcquisitionSiteCommand(
         document,
@@ -262,18 +228,6 @@ function applyUnchecked(
         locateBiome(document, catalog, command),
         command,
       );
-    case 'EditDerivedShopEntry': {
-      const expectedEntry = createAcquisitionEntryAddress(command.site, command.entryKey);
-      const editedEntry = derivedPayloadEntryAddress(command.edit);
-      if (
-        editedEntry === undefined ||
-        semanticAddressKey(editedEntry) !== semanticAddressKey(expectedEntry)
-      )
-        failCommand(command, 'payload edit must belong to the addressed derived Shop entry');
-      const located = locateBiome(document, catalog, command);
-      const materialized = materializeDerivedShopEntry(document, catalog, located, command);
-      return applyUnchecked(materialized, catalog, command.edit);
-    }
     case 'ReplaceTraitOffer':
     case 'ResetEncounterTraitOffer':
     case 'ReplaceGorgonAthenaOffer':
@@ -398,9 +352,4 @@ export {
   projectCommandAuthoringAddresses,
   ProjectCommandContractError,
 } from './contract';
-export type {
-  DerivedShopEntryEditCommand,
-  EncounterOccurrenceCommand,
-  ProjectCommand,
-  RoomActionCommand,
-} from './types';
+export type { EncounterOccurrenceCommand, ProjectCommand, RoomActionCommand } from './types';

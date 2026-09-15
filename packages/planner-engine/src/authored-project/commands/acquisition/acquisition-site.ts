@@ -3,7 +3,7 @@ import type { ProjectDocument } from '../../model';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from '../contract';
 import { replaceOccurrence, updateOccurrenceTopology } from '../occurrence/mutation';
 import { sameOccurrenceValue } from '../occurrence/leaf-value';
-import type { AcquisitionSiteCommand, DerivedShopEntryEditCommand } from '../types';
+import type { AcquisitionSiteCommand } from '../types';
 import {
   createUnresolvedAcquisitionRewardState,
   createUnresolvedPickupRewardState,
@@ -59,9 +59,8 @@ function shrineDeliverySource(
 function derivedShopEntryValue(
   catalog: Catalog,
   occurrence: import('../../model').RoomOccurrence,
-  entryKey: typeof ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   sourceOfferKey: string,
-  command: AcquisitionSiteCommand | DerivedShopEntryEditCommand,
+  command: AcquisitionSiteCommand,
 ): import('../../model').AuthoredRewardState | null {
   const shop = occurrence.state.kind === 'shop' ? occurrence.state.shop : undefined;
   if (shop === undefined) failCommand(command, 'has no materialized Shop');
@@ -356,7 +355,7 @@ export function applyAcquisitionSiteCommand(
     );
     return removeHermesShrineDeliveryFromOtherHosts(updated, command.entry.entryKey, site.owner);
   }
-  if (command.kind === 'SelectDerivedShopEntry') {
+  if (command.kind === 'PlaceEchoGoldPickup') {
     if (command.site.owner.kind !== 'occurrence' || command.site.pointKey !== 'roomExit')
       failCommand(command, 'is not an authorable Shop acquisition site');
     const topology = requireTopology(located.plan, command);
@@ -370,12 +369,24 @@ export function applyAcquisitionSiteCommand(
     const derivedValue = derivedShopEntryValue(
       catalog,
       occurrence,
-      command.entryKey,
       command.sourceOfferKey,
       command,
     );
+    const reference = Object.freeze({
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'roomExit',
+      entryKey: command.entryKey,
+    });
+    const placed = occurrence.roomActions.order.some(
+      (action) => roomActionKey(action) === roomActionKey(reference),
+    );
     const nextOccurrence = Object.freeze({
       ...occurrence,
+      roomActions: Object.freeze({
+        order: placed
+          ? occurrence.roomActions.order
+          : Object.freeze([...occurrence.roomActions.order, reference]),
+      }),
       acquisitionSites: Object.freeze({
         ...(occurrence.acquisitionSites ?? {}),
         roomExit: Object.freeze({
@@ -600,44 +611,4 @@ export function applyAcquisitionSiteCommand(
     );
   }
   return failCommand(command, 'unknown acquisition-site command');
-}
-
-/** Persist only source-derived facts (or an unresolved leaf) before a nested edit. */
-export function materializeDerivedShopEntry(
-  document: ProjectDocument,
-  catalog: Catalog,
-  located: LocatedBiome,
-  command: DerivedShopEntryEditCommand,
-): ProjectDocument {
-  if (command.site.owner.kind !== 'occurrence' || command.site.pointKey !== 'roomExit')
-    failCommand(command, 'is not an authorable Shop acquisition site');
-  const topology = requireTopology(located.plan, command);
-  const occurrence = requireOccurrence(located.plan, command.site.owner.occurrenceId, command);
-  const profileKey =
-    occurrence.state.kind === 'shop' ? occurrence.state.shop?.profileKey : undefined;
-  if (profileKey === undefined) failCommand(command, 'has no materialized Shop');
-  if (command.entryKey !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY)
-    failCommand(command, 'has an unknown derived Shop entry');
-  const site = occurrence.acquisitionSites?.roomExit;
-  if (site?.pickupEntries?.[command.entryKey] !== undefined) return document;
-  const derivedValue = derivedShopEntryValue(
-    catalog,
-    occurrence,
-    command.entryKey,
-    command.sourceOfferKey,
-    command,
-  );
-  const nextOccurrence = Object.freeze({
-    ...occurrence,
-    acquisitionSites: Object.freeze({
-      ...(occurrence.acquisitionSites ?? {}),
-      roomExit: Object.freeze({
-        pickupEntries: Object.freeze({
-          ...(site?.pickupEntries ?? {}),
-          [command.entryKey]: derivedValue,
-        }),
-      }),
-    }),
-  });
-  return updateOccurrenceTopology(document, located, replaceOccurrence(topology, nextOccurrence));
 }

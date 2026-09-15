@@ -145,19 +145,6 @@ export function bindRewardChildInteractions(input: {
       effectiveLevelResolutionControls.set(workspaceInteractionKey(level.address), level);
   }
 
-  const derivedShopEntryEdits = new Map<
-    string,
-    NonNullable<WorkspaceRewardControl['derivedShopEntryEdit']>
-  >();
-  for (const control of rewardControls.values()) {
-    if (control.derivedShopEntryEdit !== undefined) {
-      derivedShopEntryEdits.set(
-        semanticAddressKey(control.owner.address),
-        control.derivedShopEntryEdit,
-      );
-    }
-  }
-
   const rewards = bindRewardPayloadInteractions({
     candidates,
     rewardControls,
@@ -185,7 +172,6 @@ export function bindRewardChildInteractions(input: {
     catalog,
     candidates,
     traitControls: effectiveTraitControls,
-    derivedShopEntryEdits,
     traitDomain,
   });
   const {
@@ -205,7 +191,6 @@ export function bindRewardChildInteractions(input: {
     steadyGrowthControls: effectiveSteadyGrowthControls,
     transcendentEmbryoControls: effectiveTranscendentEmbryoControls,
     fountainRarityControls: effectiveFountainRarityControls,
-    derivedShopEntryEdits,
     ...(judgmentArcanaControls === undefined ? {} : { judgmentArcanaControls }),
     ...(figurineArcanaControls === undefined ? {} : { figurineArcanaControls }),
     ...(keepsakeSelectionControls === undefined ? {} : { keepsakeSelectionControls }),

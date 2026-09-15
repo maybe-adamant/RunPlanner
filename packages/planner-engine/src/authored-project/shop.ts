@@ -84,6 +84,21 @@ export function echoShopDuplicateOfferMatches(
   );
 }
 
+/** Gold creates loot through CreateLoot (exit-blocking), but its consumable
+ * path does not register a required object. A box's later loot is not the box. */
+export function echoShopDuplicateRequiresPickup(
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+): boolean {
+  const resolution =
+    catalog.rewards.rewardTypes.byKey[offer.rewardType]?.acquisitionRoles.values[0]?.resolution;
+  if (resolution === undefined) return false;
+  return (
+    (resolution.kind === 'fixed' ? resolution.acquisition.kind : resolution.acquisitionKind) ===
+    'loot'
+  );
+}
+
 export function authoredAcquisitionEntry(
   _catalog: Catalog,
   occurrence: RoomOccurrence,

@@ -491,8 +491,8 @@ export type AcquisitionSiteCommand =
       readonly value: ResolvedRewardOffer;
     }
   | {
-      /** Materializes one derived Shop entry; chronology insertion is a separate command. */
-      readonly kind: 'SelectDerivedShopEntry';
+      /** Places Echo's free duplicate with unresolved acquisition details. */
+      readonly kind: 'PlaceEchoGoldPickup';
       readonly site: AcquisitionSiteAddress;
       readonly entryKey: 'echoDoubleShopReward';
       readonly sourceOfferKey: string;
@@ -575,22 +575,6 @@ export type SeaStarResultCommand = {
 };
 
 /** One payload edit whose acquisition-entry default may not be persisted yet. */
-export type DerivedShopEntryPayloadCommand =
-  | Extract<AcquisitionSiteCommand, { readonly kind: 'ReplaceAcquisitionEntryOffer' }>
-  | Exclude<TraitOfferCommand, { readonly kind: 'ResetEncounterTraitOffer' }>
-  | LevelResolutionCommand
-  | AcquisitionDispositionCommand;
-
-/** Atomically materializes one derived Shop entry from its exact source and
- * applies a complete payload edit without changing Shop acquisition chronology. */
-export type DerivedShopEntryEditCommand = {
-  readonly kind: 'EditDerivedShopEntry';
-  readonly site: AcquisitionSiteAddress;
-  readonly entryKey: 'echoDoubleShopReward';
-  readonly sourceOfferKey: string;
-  readonly edit: DerivedShopEntryPayloadCommand;
-};
-
 export type OccurrenceLeafCommand =
   | IncomingRewardCommand
   | LocalRewardCommand
@@ -625,8 +609,7 @@ export type ProjectCommand =
   | TraitOfferCommand
   | LevelResolutionCommand
   | AcquisitionDispositionCommand
-  | SeaStarResultCommand
-  | DerivedShopEntryEditCommand;
+  | SeaStarResultCommand;
 
 export type BiomeOwnedProjectCommand = Exclude<
   ProjectCommand,

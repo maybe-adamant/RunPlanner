@@ -245,6 +245,11 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'generic', message: 'This ordinary Shrine is outside its placement window.' };
     case 'hermesShrineDeliveryPlacementRequired':
       return { kind: 'acquisition', message: 'Place this Shrine delivery at its due room.' };
+    case 'echoGoldPickupPlacementRequired':
+      return {
+        kind: 'acquisition',
+        message: 'Place this required Gold Gold Gold pickup on the Timeline.',
+      };
     case 'hermesShrineInventoryMissing':
     case 'hermesShrineInventoryWrongGroup':
     case 'hermesShrineInventoryDuplicate':

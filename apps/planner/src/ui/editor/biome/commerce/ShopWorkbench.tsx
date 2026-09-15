@@ -38,10 +38,6 @@ export function ShopWorkbench({
     if (proposal?.structurallyAuthorable !== true || actionInteraction === undefined) return;
     executeIntent(actionInteraction.intentFor(proposal.key));
   };
-  const supplementalLabel = (kind: (typeof room.supplementalOffers)[number]['kind']): string =>
-    kind === 'travelDealPlaceholder' || kind === 'travelDealInvalid' || kind === 'travelDealRefill'
-      ? 'Travel Deal'
-      : 'Echo Gold';
   if (!room.materialized) {
     return (
       <section aria-label="Shop inventory and conditions" className="shop-editor">
@@ -87,51 +83,58 @@ export function ShopWorkbench({
             </label>
           </div>
         ))}
-        {room.supplementalOffers.map((offer) =>
-          offer.kind === 'travelDealPlaceholder' || offer.kind === 'echoDoubleShopPlaceholder' ? (
-            <div className="shop-family-offer-placeholder" key={offer.key}>
-              <strong>{supplementalLabel(offer.kind)}</strong>
-              <span>{offer.explanation}</span>
-            </div>
-          ) : offer.kind === 'travelDealInvalid' || offer.kind === 'echoDoubleShopInvalid' ? (
-            <div className="shop-family-offer-row shop-family-offer-invalid" key={offer.key}>
-              <div>
-                <strong>{supplementalLabel(offer.kind)}</strong>
+        {room.supplementalOffers
+          .filter(
+            (offer) =>
+              offer.kind !== 'echoDoubleShopReward' &&
+              offer.kind !== 'echoDoubleShopPlaceholder' &&
+              offer.kind !== 'echoDoubleShopInvalid',
+          )
+          .map((offer) =>
+            offer.kind === 'travelDealPlaceholder' ? (
+              <div className="shop-family-offer-placeholder" key={offer.key}>
+                <strong>Travel Deal</strong>
                 <span>{offer.explanation}</span>
               </div>
-              <label className="shop-family-participation">
-                <input
-                  aria-label={`Purchased ${supplementalLabel(offer.kind)}`}
-                  checked={offer.purchase.purchased}
-                  onChange={() => toggleSupplementalPurchase(offer.purchase)}
-                  type="checkbox"
-                />
-                Purchased
-              </label>
-            </div>
-          ) : 'rewardControl' in offer ? (
-            <div className="shop-family-offer-row" key={offer.key}>
-              <div className="shop-family-item-control">
-                <RewardControlEditor
-                  control={offer.rewardControl}
-                  idPrefix={`shop-${offer.rewardControl.marker.focusKey}`}
-                  interactions={interactions}
-                  label={`${supplementalLabel(offer.kind)} Item`}
-                  showAcquisitionChildren={false}
-                />
+            ) : offer.kind === 'travelDealInvalid' ? (
+              <div className="shop-family-offer-row shop-family-offer-invalid" key={offer.key}>
+                <div>
+                  <strong>Travel Deal</strong>
+                  <span>{offer.explanation}</span>
+                </div>
+                <label className="shop-family-participation">
+                  <input
+                    aria-label="Purchased Travel Deal"
+                    checked={offer.purchase.purchased}
+                    onChange={() => toggleSupplementalPurchase(offer.purchase)}
+                    type="checkbox"
+                  />
+                  Purchased
+                </label>
               </div>
-              <label className="shop-family-participation">
-                <input
-                  aria-label={`Purchased ${supplementalLabel(offer.kind)}`}
-                  checked={offer.purchase.purchased}
-                  onChange={() => toggleSupplementalPurchase(offer.purchase)}
-                  type="checkbox"
-                />
-                Purchased
-              </label>
-            </div>
-          ) : null,
-        )}
+            ) : 'rewardControl' in offer ? (
+              <div className="shop-family-offer-row" key={offer.key}>
+                <div className="shop-family-item-control">
+                  <RewardControlEditor
+                    control={offer.rewardControl}
+                    idPrefix={`shop-${offer.rewardControl.marker.focusKey}`}
+                    interactions={interactions}
+                    label="Travel Deal Item"
+                    showAcquisitionChildren={false}
+                  />
+                </div>
+                <label className="shop-family-participation">
+                  <input
+                    aria-label="Purchased Travel Deal"
+                    checked={offer.purchase.purchased}
+                    onChange={() => toggleSupplementalPurchase(offer.purchase)}
+                    type="checkbox"
+                  />
+                  Purchased
+                </label>
+              </div>
+            ) : null,
+          )}
       </div>
     </section>
   );

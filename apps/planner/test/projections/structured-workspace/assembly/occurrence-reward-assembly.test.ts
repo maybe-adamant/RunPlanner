@@ -415,7 +415,7 @@ describe('structured workspace reward assembly', () => {
     });
   });
 
-  it('projects the active Narcissus reward editor before its independent pickup choice', () => {
+  it('projects an optional Narcissus pickup without activating its acquisition editors', () => {
     const project = createGoldenFGHIProject();
     const occurrence = project.route.biomes
       .find((biome) => biome.biomeKey === 'G')
@@ -428,8 +428,12 @@ describe('structured workspace reward assembly', () => {
     );
     expect(action?.rewardPayload?.control).toMatchObject({
       kind: 'explicitReward',
-      offer: { rewardType: 'StoreRewardRandomStack' },
+      offer: null,
       rewardTypes: ['StoreRewardRandomStack'],
+      offerEditVisibility: 'hidden',
+      traitOffers: [],
+      levelResolutions: [],
+      conversions: [],
     });
   });
 
@@ -478,12 +482,19 @@ describe('structured workspace reward assembly', () => {
       actions?.rows
         .flatMap((row) =>
           row.reference.kind === 'interactAcquisitionEntry'
-            ? [[row.reference.entryKey, row.rewardPayload?.control.offer] as const]
+            ? [
+                [
+                  row.reference.entryKey,
+                  row.rewardPayload?.control.kind === 'explicitReward'
+                    ? row.rewardPayload.control.rewardTypes
+                    : undefined,
+                ] as const,
+              ]
             : [],
         )
         .sort(([left], [right]) => left.localeCompare(right))
-        .map(([, offer]) => offer),
-    ).toEqual([{ rewardType: 'MaxManaDrop' }, { rewardType: 'MemPointsCommonDrop' }]);
+        .map(([, rewardTypes]) => rewardTypes),
+    ).toEqual([['MaxManaDrop'], ['MemPointsCommonDrop']]);
   });
 
   it('projects one picked Narcissus pickup with its fixed type and unresolved payload', () => {

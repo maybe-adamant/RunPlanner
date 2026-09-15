@@ -3,7 +3,6 @@ import type {
   WorkspaceTraitOfferControl,
   WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace/contracts/traits';
-import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import type {
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
@@ -11,9 +10,8 @@ import type {
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
 
-import { derivedShopPayloadIntent, traitOfferCommandFor } from '../reward-child-command-binding';
+import { traitOfferCommandFor } from '../reward-child-command-binding';
 import { StructuredWorkspaceProjectionContractError } from '@planner/projections/structured-workspace/contract';
-import type { WorkspaceRewardControl } from '@planner/projections/structured-workspace/contracts/rewards';
 import { bindChaosOfferInteraction } from './chaos';
 import { bindTraitOfferOptionDomain } from './option-domain';
 
@@ -22,16 +20,11 @@ export function bindTraitOfferInteractions(input: {
   readonly catalog: Catalog;
   readonly candidates: CandidateProjectionSession;
   readonly traitControls: ReadonlyMap<string, WorkspaceTraitOfferControl>;
-  readonly derivedShopEntryEdits: ReadonlyMap<
-    string,
-    NonNullable<WorkspaceRewardControl['derivedShopEntryEdit']>
-  >;
   readonly traitDomain: import('@planner/projections/structured-workspace/contract').StructuredWorkspaceContextualServices['traitDomain'];
 }): ReadonlyMap<string, WorkspaceTraitOfferInteraction> {
-  const { catalog, candidates, traitControls, derivedShopEntryEdits, traitDomain } = input;
+  const { catalog, candidates, traitControls, traitDomain } = input;
   const traitOffers = new Map<string, WorkspaceTraitOfferInteraction>();
   for (const [key, control] of traitControls) {
-    const derivedShopEntryEdit = derivedShopEntryEdits.get(semanticAddressKey(control.rewardOwner));
     const traitChoices = Object.freeze(
       control.giver.traitKeys.map((traitKey) => {
         const trait = catalog.traits.byKey[traitKey];
@@ -70,10 +63,7 @@ export function bindTraitOfferInteractions(input: {
         ...(chaosInteraction === undefined ? {} : { chaos: chaosInteraction }),
         giver: control.giver,
         intentFor: (value: AuthoredTraitOffer) =>
-          derivedShopPayloadIntent(
-            derivedShopEntryEdit,
-            traitOfferCommandFor(control.address, value),
-          ),
+          Object.freeze({ command: traitOfferCommandFor(control.address, value) }),
         key,
         feedbackFor: (value: AuthoredTraitOffer) => {
           const feedback = [...control.feedback];
@@ -128,14 +118,13 @@ export function bindTraitOfferInteractions(input: {
         rejectedBlockDomain,
         traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
         selectedIntent: (selectedOptionKey: AuthoredTraitOfferTraits['selectedOptionKey']) =>
-          derivedShopPayloadIntent(
-            derivedShopEntryEdit,
-            Object.freeze({
+          Object.freeze({
+            command: Object.freeze({
               kind: 'ReplaceTraitSelection' as const,
               selectedOptionKey,
               trait: control.address,
             }),
-          ),
+          }),
         value: control.offer,
         traitsStartingDraft: startingDraft,
         nextOptionalHighTierDraft: (value: AuthoredTraitOfferTraits) =>

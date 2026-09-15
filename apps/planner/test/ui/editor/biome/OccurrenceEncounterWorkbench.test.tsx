@@ -192,7 +192,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     });
   });
 
-  it('authors a Narcissus Blind Box before pickup and acquires it only through undoable order', async () => {
+  it('places a Narcissus Mystery Boon before resolving its source and traits', async () => {
     let project = createCompleteFGProject();
     const occurrence = project.route.biomes
       .find((biome) => biome.biomeKey === 'G')
@@ -264,10 +264,6 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Room Timeline');
     const actionRow = screen.getByText(/^Interact Mystery Boon/).closest('li');
     if (actionRow === null) throw new Error('Narcissus pickup action is missing');
-    const reward = within(actionRow).getByRole('button', { name: 'Reward' });
-    await view.user.click(reward);
-    await view.user.click(await within(await screen.findByRole('listbox')).findByText('Hestia'));
-
     const authoredOccurrence = () =>
       view.application.store
         .getState()
@@ -275,6 +271,22 @@ describe('OccurrenceEncounterWorkbench', () => {
         ?.topology?.occurrences.find(
           (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
         );
+    expect(within(actionRow).queryByRole('button', { name: 'Reward' })).toBeNull();
+    expect(
+      authoredOccurrence()?.acquisitionSites?.[narcissusSite]?.pickupEntries?.mysteryBoon,
+    ).toBeNull();
+    const insert = within(actionRow).getByRole('combobox', {
+      name: 'Insert Interact Mystery Boon',
+    });
+    const insertion = Array.from((insert as HTMLSelectElement).options).find(
+      (option) => option.value !== '' && !option.disabled,
+    );
+    if (insertion === undefined) throw new Error('Narcissus pickup has no legal insertion');
+    await view.user.selectOptions(insert, insertion.value);
+    const placedRow = screen.getByText(/^Interact Mystery Boon/).closest('li');
+    if (placedRow === null) throw new Error('Narcissus pickup action is missing');
+    await view.user.click(within(placedRow).getByRole('button', { name: 'Reward' }));
+    await view.user.click(await within(await screen.findByRole('listbox')).findByText('Hestia'));
     await waitFor(() =>
       expect(
         authoredOccurrence()?.acquisitionSites?.[narcissusSite]?.pickupEntries?.mysteryBoon,
@@ -285,6 +297,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     expect(authoredOccurrence()?.roomActions.order).toEqual([
       { kind: 'interactEncounter', phaseKey: 'Encounter' },
+      { kind: 'interactAcquisitionEntry', siteKey: narcissusSite, entryKey: 'mysteryBoon' },
     ]);
 
     const hiddenSource = workspaceProjection(view.application).interactions.traitOffers.get(
@@ -317,35 +330,109 @@ describe('OccurrenceEncounterWorkbench', () => {
         )
       );
     };
-    expect(hasAcquiredMysteryBoon()).toBe(false);
-
-    const insert = within(actionRow).getByRole('combobox', {
-      name: 'Insert Interact Mystery Boon',
-    });
-    const insertion = Array.from((insert as HTMLSelectElement).options).find(
-      (option) => option.value !== '' && !option.disabled,
-    );
-    if (insertion === undefined) throw new Error('Narcissus pickup has no legal insertion');
-    await view.user.selectOptions(insert, insertion.value);
-    expect(authoredOccurrence()?.roomActions.order).toEqual([
-      { kind: 'interactEncounter', phaseKey: 'Encounter' },
-      { kind: 'interactAcquisitionEntry', siteKey: narcissusSite, entryKey: 'mysteryBoon' },
-    ]);
     expect(hasAcquiredMysteryBoon()).toBe(true);
-
-    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await view.user.click(
+      screen.getByRole('button', {
+        name: 'Remove Interact Mystery Boon from timeline',
+      }),
+    );
     expect(authoredOccurrence()?.roomActions.order).toEqual([
       { kind: 'interactEncounter', phaseKey: 'Encounter' },
     ]);
     expect(hasAcquiredMysteryBoon()).toBe(false);
-    act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
+    const optionalRow = screen.getByText(/^Interact Mystery Boon/).closest('li');
+    if (optionalRow === null) throw new Error('Narcissus optional pickup is missing');
+    expect(within(optionalRow).queryByRole('button', { name: 'Reward' })).toBeNull();
+    expect(
+      workspaceProjection(view.application).interactions.traitOffers.has(
+        semanticAddressKey(createTraitOfferAddress(mysteryBoon, 'hiddenSource')),
+      ),
+    ).toBe(false);
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(authoredOccurrence()?.roomActions.order.at(-1)).toEqual({
       kind: 'interactAcquisitionEntry',
       siteKey: narcissusSite,
       entryKey: 'mysteryBoon',
     });
     expect(hasAcquiredMysteryBoon()).toBe(true);
+    act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
+    expect(hasAcquiredMysteryBoon()).toBe(false);
     expect(screen.getByText('Interact Mystery Boon')).toBeTruthy();
+  });
+
+  it('activates and retires a Narcissus Pom target with its timeline pickup', async () => {
+    let project = createCompleteFGProject();
+    const occurrence = project.route.biomes
+      .find((biome) => biome.biomeKey === 'G')
+      ?.topology?.occurrences.find((room) => room.gameName === 'G_Story01');
+    if (occurrence === undefined) throw new Error('Golden G has no Narcissus story');
+    for (const selectedOptionKey of ['option3', 'option1'] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait: createTraitOfferAddress(
+          createEncounterPhaseAddress(
+            goldenGBiome,
+            { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+            'Encounter',
+          ),
+          'selection',
+        ),
+        value: {
+          kind: 'traits',
+          giverKey: 'Narcissus',
+          options: [
+            { traitKey: 'NarcissusA' },
+            { traitKey: 'NarcissusB' },
+            { traitKey: 'NarcissusF' },
+          ],
+          selectedOptionKey,
+        },
+      });
+    }
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'G',
+      occurrenceById(occurrence.occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    const pickupRow = () => {
+      const row = screen.getByText('Interact Pom Slice').closest('li');
+      if (row === null) throw new Error('Narcissus Pom row is missing');
+      return row;
+    };
+    expect(within(pickupRow()).queryByRole('button', { name: /^Edit Pom:/ })).toBeNull();
+    const insert = within(pickupRow()).getByRole('combobox', { name: 'Insert Interact Pom Slice' });
+    const position = Array.from((insert as HTMLSelectElement).options).find(
+      (option) => option.value !== '' && !option.disabled,
+    );
+    if (position === undefined) throw new Error('Narcissus Pom has no insertion point');
+    await view.user.selectOptions(insert, position.value);
+    await view.user.click(
+      within(pickupRow()).getByRole('button', { name: /^Edit Pom: Choose target/ }),
+    );
+    await view.user.click(screen.getByRole('button', { name: 'Recorded random Pom target' }));
+    const options = within(await screen.findByRole('listbox')).getAllByRole('option');
+    const target = options.find((option) => option.getAttribute('aria-disabled') !== 'true');
+    if (target === undefined) throw new Error('Narcissus Pom has no available target');
+    await view.user.click(target);
+    await view.user.click(screen.getByRole('button', { name: 'Save Pom' }));
+    const authored = view.application.store.getState().projectWorkspace.history!.present;
+    expect(
+      simulateProject(catalog, authored).route.biomes.find((biome) => biome.biomeKey === 'G')
+        ?.findings,
+    ).toEqual([]);
+    await view.user.click(
+      screen.getByRole('button', { name: 'Remove Interact Pom Slice from timeline' }),
+    );
+    expect(within(pickupRow()).queryByRole('button', { name: /^Edit Pom:/ })).toBeNull();
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(view.application.store.getState().projectWorkspace.history!.present).toBe(authored);
+    expect(
+      within(pickupRow()).getByRole('button', {
+        name: /^Edit Pom:.*Pom configuration has no findings/,
+      }),
+    ).toBeTruthy();
   });
 
   it('picks up and Time Piece-converts Psyche as one undoable Narcissus row edit', async () => {
@@ -406,6 +493,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     const psycheRow = screen.getByText(/^Interact Psyche/).closest('li');
     if (!(psycheRow instanceof HTMLElement)) throw new Error('Psyche acquisition row is missing');
     expect(within(psycheRow).queryByRole('button', { name: 'Reward' })).toBeNull();
+    expect(within(psycheRow).queryByLabelText(/Pickup outcome/)).toBeNull();
     const insert = within(psycheRow).getByRole('combobox', {
       name: /^Insert Interact Psyche/,
     });
