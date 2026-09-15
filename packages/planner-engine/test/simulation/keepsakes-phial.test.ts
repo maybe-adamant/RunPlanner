@@ -29,6 +29,7 @@ import {
 import { simulateProjectAssembly } from '../../src/simulation';
 import { candidateArtifactsForProjectEvaluationAssembly } from '../../src/simulation/evaluation/project-evaluation-assembly';
 import { applyFountainUsedTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/fountain-used';
+import { settleNonFinalBossRarityBlocks } from '../../src/simulation/traits/history/transitions';
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import type { HistoryEvent } from '../../src/simulation/history';
@@ -227,6 +228,17 @@ describe('Aromatic Phial catalog and target domains', () => {
         historyWith(equippedTrait('ElementalDamageFloorBoon', 'Apollo')),
       ),
     ).toEqual({ consumptionTargetKeys: [], mutationTargetKeys: [] });
+
+    const loan = historyWith(equippedTrait('BankBoon', 'Dionysus'));
+    expect(assessPhialTraitTargets(catalog, loan)).toEqual({
+      consumptionTargetKeys: ['BankBoon'],
+      mutationTargetKeys: ['BankBoon'],
+    });
+    const paidOutLoan = settleNonFinalBossRarityBlocks(catalog, loan, fountainAction, 2);
+    expect(assessPhialTraitTargets(catalog, paidOutLoan)).toEqual({
+      consumptionTargetKeys: [],
+      mutationTargetKeys: [],
+    });
   });
 });
 

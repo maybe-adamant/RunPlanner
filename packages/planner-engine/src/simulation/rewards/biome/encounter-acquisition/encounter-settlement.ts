@@ -34,6 +34,7 @@ import {
   createTraitHistoryState,
   foldTraitHistoryEvents,
   hasActiveChaosSemanticTag,
+  settleNonFinalBossRarityBlocks,
   traitOfferGenerationLegal,
 } from '../../../traits';
 import { findingIdentityKey, ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
@@ -175,6 +176,30 @@ export function applyEncounterSettlementTransition(inputs: {
           stygianWell: advanceStygianWellBossUses(branch.stygianWell),
         }),
       ),
+    );
+  const nonFinalBossDefeated =
+    event.kind === 'bossDefeated' &&
+    room?.kind === 'authored' &&
+    declaration?.mode.kind === 'authored' &&
+    declaration.mode.templateKey === 'Boss' &&
+    inputs.enteredBiomeCount < inputs.fullRunBiomeCount;
+  if (nonFinalBossDefeated)
+    branches = Object.freeze(
+      branches.map((branch) => {
+        const traitHistory = settleNonFinalBossRarityBlocks(
+          catalog,
+          branch.traitHistory ?? createTraitHistoryState(),
+          event.origin,
+          event.sequence,
+        );
+        return traitHistory === branch.traitHistory
+          ? branch
+          : Object.freeze({
+              ...branch,
+              traitHistory,
+              history: attachTraitHistory(branch.history, traitHistory),
+            });
+      }),
     );
 
   if (
@@ -319,13 +344,7 @@ export function applyEncounterSettlementTransition(inputs: {
     }
   }
 
-  if (
-    event.kind === 'bossDefeated' &&
-    room?.kind === 'authored' &&
-    declaration?.mode.kind === 'authored' &&
-    declaration.mode.templateKey === 'Boss' &&
-    inputs.enteredBiomeCount < inputs.fullRunBiomeCount
-  ) {
+  if (nonFinalBossDefeated) {
     const owner = createJudgmentArcanaAddress(room.origin, event.phaseKey);
     const figurineOwner = createFigurineArcanaAddress(room.origin, event.phaseKey);
     const judgmentBranches = branches.filter(

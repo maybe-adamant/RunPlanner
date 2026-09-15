@@ -219,7 +219,7 @@ export function checkRequirement(
           declaration.rarityDomain.kind === 'ranked' &&
           equipped.rarity !== undefined &&
           nextRarity(catalog, equipped.traitKey, equipped.rarity) !== undefined &&
-          !declaration.blockInRunRarify
+          !isInRunRarityBlocked(catalog, equipped)
         );
       })
         ? undefined
@@ -263,9 +263,10 @@ type TargetedAcquisitionSource = Pick<
   'traitKey' | 'rarity'
 >;
 
-type TargetedAcquisitionTarget = Pick<TargetedAcquisitionSource, 'traitKey' | 'rarity'> & {
-  readonly level?: number;
-};
+type TargetedAcquisitionTarget = Pick<
+  import('../../authored-project/traits/state').EquippedTrait,
+  'traitKey' | 'rarity' | 'level' | 'rarityBlockedInRun'
+>;
 
 function supportsHeroicPromotion(
   catalog: Catalog,
@@ -278,7 +279,7 @@ function supportsHeroicPromotion(
     declaration.rarityDomain.kind !== 'ranked' ||
     target.rarity === undefined ||
     !declaration.rarityDomain.equippedRarities.includes('Heroic') ||
-    declaration.blockInRunRarify ||
+    isInRunRarityBlocked(catalog, target) ||
     !hasEffectiveInRunUpgrade(catalog, target.traitKey, target)
   )
     return false;
@@ -363,7 +364,12 @@ import type { Catalog, TraitDeclaration, TraitRequirementExpression } from '../.
 import type { LevelResolutionAddress } from '../../authored-project/addresses';
 import type { AuthoredLevelResolution } from '../../authored-project/traits/state';
 export type { TraitFindingCode } from '../model';
-import { isPomUpgradeTarget, nextRarity, hasEffectiveInRunUpgrade } from './history/upgrades';
+import {
+  hasEffectiveInRunUpgrade,
+  isInRunRarityBlocked,
+  isPomUpgradeTarget,
+  nextRarity,
+} from './history/upgrades';
 import { foldTraitHistoryEvents } from './history/fold';
 import type { TraitHistoryState, TraitLevelMutationEvent } from './history/model';
 import type { TraitAssessmentFinding, TraitOfferContext } from './offer-domain';

@@ -447,6 +447,11 @@ export function normalizeTraits(
               `${path}.blockOfferIfPreviouslyPicked`,
             ),
       blockInRunRarify: requireBoolean(trait.blockInRunRarify, `${path}.blockInRunRarify`),
+      ...(trait.nonFinalBossRarityBlock === undefined
+        ? {}
+        : requireBoolean(trait.nonFinalBossRarityBlock, `${path}.nonFinalBossRarityBlock`)
+          ? { nonFinalBossRarityBlock: true as const }
+          : fail(`${path}.nonFinalBossRarityBlock`, 'must be true when declared')),
       excludeFromRarityCount: requireBoolean(
         trait.excludeFromRarityCount,
         `${path}.excludeFromRarityCount`,

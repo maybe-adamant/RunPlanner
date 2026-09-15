@@ -9,7 +9,7 @@ import {
   type AuthoredTraitOfferTraits,
   type TraitOptionKey,
 } from '../../authored-project/traits/state';
-import { hasEffectiveInRunUpgrade } from '../traits/history/upgrades';
+import { hasEffectiveInRunUpgrade, isInRunRarityBlocked } from '../traits/history/upgrades';
 import type { TraitHistoryState } from '../traits/history/model';
 import { assessTraitOption } from '../traits/authoring/assessment';
 import {
@@ -47,7 +47,7 @@ export function assessPhialTraitTargets(
       shopGodTrait &&
       declaration.usesBoonRarity === true &&
       equipped.rarity === 'Common' &&
-      !declaration.blockInRunRarify &&
+      !isInRunRarityBlocked(catalog, equipped) &&
       declaration.rarityDomain.kind === 'ranked' &&
       declaration.rarityDomain.equippedRarities.includes(targetRarity);
     if (!eligible) continue;

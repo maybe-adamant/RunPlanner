@@ -32,6 +32,8 @@ import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
+import { settleNonFinalBossRarityBlocks } from '../../src/simulation/traits/history/transitions';
+import { selectedTargetedAcquisitionTargetKeys } from '../../src/simulation/traits/level-effects';
 
 const owner = { kind: 'project' } as SemanticAddress;
 
@@ -421,6 +423,74 @@ describe('Proper Upbringing rarity lifecycle', () => {
           sourceTraitKey: 'BoonDecayBoon',
         };
   }
+
+  it('retains Personal Loan while its non-final boss payout blocks only this equipped instance', () => {
+    let before = acquireLegalTrait(createTraitHistoryState(), 'Dionysus', 'BankBoon', 'Common');
+    before = acquireLegalTrait(before, 'Apollo', 'ApolloWeaponBoon', 'Common');
+    const after = settleNonFinalBossRarityBlocks(catalog, before, owner, before.events.length + 1);
+    expect(after.equippedTraits.BankBoon).toMatchObject({
+      rarity: 'Common',
+      rarityBlockedInRun: true,
+    });
+    expect(after.godBoonRarityCounts.Common).toBe(before.godBoonRarityCounts.Common);
+    expect(after.elementCounts.Water).toBe(before.elementCounts.Water);
+    expect(after.previouslyPickedTraitKeys).toEqual(before.previouslyPickedTraitKeys);
+    expect(foldTraitHistoryEvents(catalog, after.events)).toEqual(after);
+
+    const removed = foldTraitHistoryEvents(catalog, [
+      ...after.events,
+      {
+        kind: 'traitRemoval' as const,
+        owner,
+        acquisitionRole: 'test',
+        sequence: after.events.length + 2,
+        acquisitionPoint: 'test',
+        traitKey: 'BankBoon',
+        match: 'currentTraitKey' as const,
+      },
+      {
+        kind: 'traitOffer' as const,
+        owner,
+        acquisitionRole: 'fresh-bank',
+        sequence: after.events.length + 3,
+        acquisitionPoint: 'test',
+        giverKey: 'Dionysus',
+        options: [{ traitKey: 'BankBoon', rarity: 'Common' as const }],
+        selectedOptionKey: 'option1' as const,
+      },
+    ]);
+    expect(removed.equippedTraits.BankBoon).toMatchObject({ rarity: 'Common' });
+    expect(removed.equippedTraits.BankBoon).not.toHaveProperty('rarityBlockedInRun');
+  });
+
+  it('keeps the paid-out instance out of Bridal fallback targets and Proper floors', () => {
+    const loan = acquireLegalTrait(createTraitHistoryState(), 'Dionysus', 'BankBoon', 'Common');
+    const bridal = { traitKey: 'BoonDecayBoon', rarity: 'Common' } as const;
+    expect(selectedTargetedAcquisitionTargetKeys(catalog, bridal, loan)).toContain('BankBoon');
+    const blockedLoan = settleNonFinalBossRarityBlocks(
+      catalog,
+      loan,
+      owner,
+      loan.events.length + 1,
+    );
+    expect(selectedTargetedAcquisitionTargetKeys(catalog, bridal, blockedLoan)).not.toContain(
+      'BankBoon',
+    );
+
+    const inactive = acquireLegalTrait(twoEachHistory(), 'Dionysus', 'BankBoon', 'Common');
+    const blocked = settleNonFinalBossRarityBlocks(
+      catalog,
+      inactive,
+      owner,
+      inactive.events.length + 1,
+    );
+    const active = acquireLegalTrait(blocked, 'Hera', 'ElementalRarityUpgradeBoon', 'Common');
+    expect(active.properUpbringingActive).toBe(true);
+    expect(active.equippedTraits.BankBoon).toMatchObject({
+      rarity: 'Common',
+      rarityBlockedInRun: true,
+    });
+  });
 
   it('lets Proper Upbringing promote a cooldown-capped Common trait while Pom targeting excludes it', () => {
     const capped = foldTraitHistoryEvents(catalog, [

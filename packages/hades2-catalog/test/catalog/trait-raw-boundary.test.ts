@@ -18,6 +18,19 @@ describe('trait raw declaration boundary', () => {
     };
     expect(() => createCatalog(invalidBoolean)).toThrow(/blockStacking: must be boolean/);
 
+    const invalidBossPayoutBlock = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'BankBoon' ? { ...trait, nonFinalBossRarityBlock: false as never } : trait,
+        ),
+      },
+    };
+    expect(() => createCatalog(invalidBossPayoutBlock)).toThrow(
+      /nonFinalBossRarityBlock: must be true when declared/,
+    );
+
     const emptyRanked = {
       ...declarations,
       traitCatalog: {

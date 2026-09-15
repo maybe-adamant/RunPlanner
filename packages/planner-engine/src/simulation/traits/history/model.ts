@@ -118,6 +118,16 @@ export type TraitRarityMutationEvent =
       readonly resetSteadyGrowthProgress?: never;
     });
 
+/** A non-final boss payout that leaves an equipped trait present but no longer rarifiable. */
+export interface TraitRarityBlockEvent {
+  readonly kind: 'rarityBlock';
+  readonly owner: SemanticAddress;
+  readonly acquisitionRole: 'nonFinalBossPayout';
+  readonly sequence: number;
+  readonly acquisitionPoint: 'bossDefeated';
+  readonly traitKey: string;
+}
+
 /** Concrete non-trait acquisition contribution, retained in the same ordered
  * trait facts ledger so later offer requirements see it. */
 export interface TraitElementContributionEvent {
@@ -249,6 +259,7 @@ export type TraitHistoryEvent =
   | SteadyGrowthProgressEvent
   | PickupProducerProgressEvent
   | TraitRarityMutationEvent
+  | TraitRarityBlockEvent
   | TraitElementContributionEvent
   | DirectTraitGrantEvent
   | TraitRemovalEvent

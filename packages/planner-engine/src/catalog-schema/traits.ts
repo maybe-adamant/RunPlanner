@@ -387,6 +387,8 @@ export interface TraitDeclaration {
   /** Source `BlockOfferIfPreviouslyPicked`; survives later trait removal. */
   readonly blockOfferIfPreviouslyPicked: boolean;
   readonly blockInRunRarify: boolean;
+  /** A qualifying non-final boss payout blocks this equipped instance from later rarification. */
+  readonly nonFinalBossRarityBlock?: true;
   readonly excludeFromRarityCount: boolean;
   readonly rarityFloorEffect?: ProperUpbringingEffect;
   readonly targetedAcquisition?: TargetedTraitAcquisition;

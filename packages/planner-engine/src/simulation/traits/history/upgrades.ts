@@ -57,6 +57,17 @@ export function hasEffectiveInRunUpgrade(
   return maximum === undefined || trait.level <= maximum;
 }
 
+/** Declaration and exact equipped-instance rarity blocks share one consumer predicate. */
+export function isInRunRarityBlocked(
+  catalog: Catalog,
+  trait: Pick<EquippedTrait, 'traitKey' | 'rarityBlockedInRun'>,
+): boolean {
+  return (
+    catalog.traits.byKey[trait.traitKey]?.blockInRunRarify === true ||
+    trait.rarityBlockedInRun === true
+  );
+}
+
 /** The full current-frontier domain shared by Poms and Natural Selection. */
 export function isPomUpgradeTarget(
   catalog: Catalog,
