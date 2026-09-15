@@ -673,6 +673,11 @@ export function settleShopAcquisitionSite(
       derivedEntryFrontiers.push(
         Object.freeze({
           address: createAcquisitionEntryAddress(site, TRAVEL_DEAL_REFILL_ENTRY_KEY),
+          inventoryOwner: createShopOfferAddress(
+            createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+            room.origin.occurrenceId,
+            TRAVEL_DEAL_REFILL_ENTRY_KEY,
+          ),
           kind: 'travelDealPlaceholder' as const,
           branchCohortSize,
           branchesBeforeEntry: Object.freeze([execution.candidate]),
