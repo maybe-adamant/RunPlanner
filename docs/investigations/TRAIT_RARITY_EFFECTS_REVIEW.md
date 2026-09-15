@@ -59,7 +59,7 @@ Rank lists are I / II / III / IV.
 | Gorgon Amulet                           | Rank I/II/III/IV sets a **chance override** Common/Rare/Epic/Heroic = 1. II–IV also ignore temporary rarity bonuses. Other unlimited contributions and a room override still participate. `EncounterPresentation.lua:1428`; `TraitData_Keepsake.lua:2236`.                                      | Uses the shared ledger, then chooses its lowest reachable rarity as the fixed authored Athena result. That deterministic support choice is not a native guarantee of one uniform roll at every rank. Ordinary is missing from this resolver: C2. |
 | Artemis / Athena / Dionysus             | All are `TreatAsGodLootByShops`; ordinary rarity modifiers apply. Artemis uses Common/Rare/Epic; Athena Common/Rare/Epic/Heroic; Dionysus uses the default order intersected with trait support. `NPCData_Artemis/Athena/Dionysus.lua`.                                                         | Shop-aware provider classification and source roll orders exist. Keep these providers in acceptance coverage; Gorgon is not the only NPC rarity contact.                                                                                         |
 | Chaos's own screen                      | `TrialUpgrade`: Rare 40%, Epic 10%, Duo 0%, Legendary 5% item override; ignores temporary bonuses, is not god loot. Nonfixed ordinary pairs roll Epic then Rare. Barren forces Heroic; a blessing with one declared rarity uses it directly. `LootData_Chaos.lua:16,94`; `TraitLogic.lua:1710`. | Pair rarity shape is checked, but exact-context chance feasibility is not: C3. Excellence/Divinity/Favor apply natively; Yarn and Proper's god-only bonus do not. Queen and the Legendary multiplier do not alter the Epic/Rare pair roll.       |
-| Trial of the Gods                       | `GiveLoot` sets `BlockRarities = { Duo = true }`, implemented as a zero chance entry. `EncounterLogic.lua:1686,1692`; `TraitLogic.lua:1782`.                                                                                                                                                    | Planner uses `devotionNoDuo`. Ordinary roll behavior agrees; native final-rescue zero-entry behavior needs the bounded decision in Q1.                                                                                                           |
+| Trial of the Gods                       | `GiveLoot` sets `BlockRarities = { Duo = true }`, implemented as a zero chance entry. `EncounterLogic.lua:1686,1692`; `TraitLogic.lua:1782`.                                                                                                                                                    | Planner uses `devotionNoDuo`. Ordinary roll behavior agrees; Q1 records the accepted declaration-sensitive correction for final rescue.                                                                                                          |
 | Denial / Rejected / pool exhaustion     | Denial removes identities and disables the final rarity-rescue pass. Rejected makes one option unselectable; it does not make that option disappear or reroll its rarity. `TraitLogic.lua:1980`; `UpgradeChoiceLogic.lua`.                                                                      | These change support or selection, not the numeric ledger. Staged composition is already Gate E scope. Do not treat high-tier probability as a mandatory high-tier quota.                                                                        |
 | Infusion / Duo / Legendary declarations | Rarity support, `BlockInRunRarify`, and presentation are distinct. Infusion display can conceal a real Common/Rare/Epic value; some Infusions support Common only.                                                                                                                              | Current explicit internal rarity and Infusion presentation preserve repairability. Mixed-support bucket feasibility belongs to Gate E; no new cosmetic rarity enum is needed.                                                                    |
 
@@ -228,10 +228,14 @@ forced Common normally clears entries. Thus the ordinary “Duo cannot roll”
 statement does not prove “Duo cannot appear in final rescue”. Exact source:
 `TraitLogic.lua:1782,1980–2015`.
 
-The locked initial-offer plan already flags this question. Retain a bounded
-native exhaustion witness or an explicit planner simplification before changing
-the existing hard Trial restriction. No production exception is added by this
-audit.
+The follow-up [bucket investigation](INITIAL_OFFER_BUCKET_RULES.md#s10--trial-eligibility-and-zero-chance-rescue-are-separate)
+resolves the source question: most Duos inherit an explicit Devotion predicate,
+but five override that requirement table. A native-helper execution produced
+Glorious Disaster through the final rescue in an exhausted, non-Denial Apollo Trial.
+The accepted Gate E amendment separates declaration eligibility from Trial's
+zeroed roll through existing context requirements, without a new exception flag
+or inheritance mechanism. This is not a universal Trial-Duo exception, and no
+production behavior has changed as part of the investigation.
 
 ## Reachability disposition: Calling Card and god keepsakes
 
