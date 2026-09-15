@@ -306,8 +306,9 @@ outside the supported route baseline.
 | `SupplyDropBoon`           | Supply Chain        | none                                | no element; retained non-god trait |
 | `UpgradeHammerBoon`        | Latest Model        | one eligible equipped Rank-I Hammer | no element; retained non-god trait |
 
-Ingenious Strike's source requirement names the nine concrete core-god Attack
-traits; Ingenious Flourish analogously names the nine Special traits. Native
+Ingenious Strike's source requirement checks the occupied Attack slot;
+Ingenious Flourish checks the occupied Special slot. The planner represents
+those conditions with the nine concrete core-god traits for each slot. Native
 `IcarusUpgradeBoon` derives the occupied slot target and adds the declaration's
 normal-run `Count = 3`. The same target must remain upgradeable under the
 ordinary Pom predicate. This retains the exact Hephaestus exception: the
