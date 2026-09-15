@@ -116,6 +116,37 @@ offered prerequisite cannot unlock it. These probabilities are absent from the
 current normalized trait declarations; priority identities and prerequisites
 already exist there.
 
+For possibility support, 25% means an optional path; its exact magnitude has no
+further meaning. If later rarity buckets not containing the linked identity can
+all fail, ordinary filling can draw that identity first at its seed-supported
+rarity, then continue with the same remaining pools. The priority path earns its
+keep only where a guaranteed later non-member bucket prevents that substitution.
+
+A bounded Lua probe executed native `SetTraitsOnLoot`, priority/replacement and
+eligible-pool helpers, `HasTraitRequirements`, inherited declarations and
+`GetRarityChances`. Its progressed, non-Trial contact supplied ownership of
+Apollo Attack/Cast, Poseidon Sprint and Hera Gain, leaving Special vacant.
+Dazzling Display, Beach Ball and Sun Worshiper were unowned; the native linked
+requirements admitted both Duos. Heroic Queen and eight held Yarns produced
+Duo 1.04 and Epic 2.05 from native bonus declarations. With the ordinary
+replacement roll failing, the outputs were:
+
+| Linked-priority roll succeeds | Linked-priority roll fails |
+| ----------------------------- | -------------------------- |
+| Nova Flourish · Epic          | Nova Flourish · Epic       |
+| Dazzling Display · Epic       | Beach Ball · Duo           |
+| Beach Ball · Duo              | Sun Worshiper · Duo        |
+
+Without priority insertion, the two ordinary positions must consume both
+guaranteed Duos. Omitting the stage rejects the left-hand valid screen; it does
+not add an invalid screen because the failed-priority path is itself native.
+This is a helper probe, not a complete authored-route or live-game replay.
+Progression/current-state contact predicates were supplied by the harness.
+Yarn stacking is source-supported: no `IncreaseUsesOnStack` on the declaration
+(`TraitData_Store.lua:282–300`); purchase adds separate instances
+(`StoreLogic.lua:1219–1224`), and `GetRarityChances` sums their bonuses
+(`RoomLogic.lua:2163–2166`). The chance is `0.12 + 0.12 + 8 × 0.10`.
+
 ### S5 — Pool and rarity-table construction
 
 Only a screen with fewer than three seeds needs the ordinary eligible pool
