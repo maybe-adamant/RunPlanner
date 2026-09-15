@@ -279,8 +279,11 @@ export type TraitTargetedAcquisitionTransition =
       readonly kind: 'promoteGodTraitToHeroic';
       readonly oldRarity: TraitRarity;
       readonly newRarity: 'Heroic';
-      readonly oldLevel: number;
-      readonly newLevel: number;
+      /** Present only where the selected target already has a modeled level. */
+      readonly levelChange?: {
+        readonly oldLevel: number;
+        readonly newLevel: number;
+      };
     })
   | (TraitTargetedAcquisitionTransitionBase & {
       readonly kind: 'upgradeHammerToRank2';

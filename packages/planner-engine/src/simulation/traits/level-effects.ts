@@ -258,24 +258,50 @@ function traitFor(catalog: Catalog, key: string) {
   return catalog.traits.byKey[key];
 }
 
-function superchargeableGodTraitTargetKeys(
+type TargetedAcquisitionSource = Pick<
+  import('../../authored-project/traits/state').AuthoredTraitOption,
+  'traitKey' | 'rarity'
+>;
+
+type TargetedAcquisitionTarget = Pick<TargetedAcquisitionSource, 'traitKey' | 'rarity'> & {
+  readonly level?: number;
+};
+
+function supportsHeroicPromotion(
   catalog: Catalog,
-  _sourceTraitKey: string,
+  target: TargetedAcquisitionTarget,
+  preferredOnly: boolean,
+): boolean {
+  const declaration = catalog.traits.byKey[target.traitKey];
+  if (
+    declaration === undefined ||
+    declaration.rarityDomain.kind !== 'ranked' ||
+    target.rarity === undefined ||
+    !declaration.rarityDomain.equippedRarities.includes('Heroic') ||
+    declaration.blockInRunRarify ||
+    !hasEffectiveInRunUpgrade(catalog, target.traitKey, target)
+  )
+    return false;
+  if (preferredOnly)
+    return declaration.isCoreGodTrait && !declaration.blockStacking && target.rarity !== 'Heroic';
+  return catalog.traitGivers.values.some(
+    (giver) => giver.shopAwareGodTrait && giver.traitKeys.includes(target.traitKey),
+  );
+}
+
+function promotionTargets(
+  catalog: Catalog,
   history: TraitHistoryState,
+  source: TargetedAcquisitionSource | undefined,
+  preferredOnly: boolean,
 ): readonly string[] {
+  const targets: TargetedAcquisitionTarget[] = Object.values(history.equippedTraits);
+  if (source !== undefined && history.equippedTraits[source.traitKey] === undefined)
+    targets.push(source);
   return Object.freeze(
-    catalog.traits.values.flatMap((declaration) => {
-      const equipped = history.equippedTraits[declaration.key];
-      return equipped !== undefined &&
-        isPomEligibleTrait(catalog, declaration.key) &&
-        declaration.rarityDomain.kind === 'ranked' &&
-        equipped.rarity !== undefined &&
-        nextRarity(catalog, declaration.key, equipped.rarity) !== undefined &&
-        !declaration.blockInRunRarify &&
-        hasEffectiveInRunUpgrade(catalog, declaration.key, equipped)
-        ? [declaration.key]
-        : [];
-    }),
+    targets
+      .filter((target) => supportsHeroicPromotion(catalog, target, preferredOnly))
+      .map((target) => target.traitKey),
   );
 }
 
@@ -305,7 +331,29 @@ export function targetedAcquisitionTargetKeys(
   if (acquisition === undefined) return Object.freeze([]);
   switch (acquisition.kind) {
     case 'promoteGodTraitToHeroic':
-      return superchargeableGodTraitTargetKeys(catalog, sourceTraitKey, history);
+      return promotionTargets(catalog, history, undefined, true);
+    case 'upgradeHammerToRank2':
+      return upgradableHammerTargetKeys(catalog, history);
+  }
+}
+
+/**
+ * Exact selected-effect target domain. Offer eligibility deliberately remains
+ * on targetedAcquisitionTargetKeys; Bridal Glow widens only after its source
+ * is selected and its preferred domain is actually empty.
+ */
+export function selectedTargetedAcquisitionTargetKeys(
+  catalog: Catalog,
+  source: TargetedAcquisitionSource,
+  history: TraitHistoryState,
+): readonly string[] {
+  const acquisition = catalog.traits.byKey[source.traitKey]?.targetedAcquisition;
+  if (acquisition === undefined) return Object.freeze([]);
+  switch (acquisition.kind) {
+    case 'promoteGodTraitToHeroic': {
+      const preferred = promotionTargets(catalog, history, undefined, true);
+      return preferred.length > 0 ? preferred : promotionTargets(catalog, history, source, false);
+    }
     case 'upgradeHammerToRank2':
       return upgradableHammerTargetKeys(catalog, history);
   }
@@ -315,12 +363,7 @@ import type { Catalog, TraitDeclaration, TraitRequirementExpression } from '../.
 import type { LevelResolutionAddress } from '../../authored-project/addresses';
 import type { AuthoredLevelResolution } from '../../authored-project/traits/state';
 export type { TraitFindingCode } from '../model';
-import {
-  isPomUpgradeTarget,
-  nextRarity,
-  isPomEligibleTrait,
-  hasEffectiveInRunUpgrade,
-} from './history/upgrades';
+import { isPomUpgradeTarget, nextRarity, hasEffectiveInRunUpgrade } from './history/upgrades';
 import { foldTraitHistoryEvents } from './history/fold';
 import type { TraitHistoryState, TraitLevelMutationEvent } from './history/model';
 import type { TraitAssessmentFinding, TraitOfferContext } from './offer-domain';

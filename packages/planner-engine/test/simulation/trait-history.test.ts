@@ -5,6 +5,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createDefaultAuthoredHexTree,
+  TRAIT_OPTION_KEYS,
   type AuthoredTraitOffer,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
@@ -382,8 +383,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
         targetTraitKey,
         oldRarity: 'Common',
         newRarity: 'Heroic',
-        oldLevel: 1,
-        newLevel: 2,
+        levelChange: { oldLevel: 1, newLevel: 2 },
       },
     };
   }
@@ -516,8 +516,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
         targetTraitKey: 'ApolloWeaponBoon',
         oldRarity: 'Common',
         newRarity: 'Heroic',
-        oldLevel: 1,
-        newLevel: 2,
+        levelChange: { oldLevel: 1, newLevel: 2 },
       },
     };
     const beforeActivation = foldTraitHistoryEvents(catalog, [
@@ -786,7 +785,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
       ...valid,
       options: valid.options.map((option) =>
         option.rarity === undefined ? option : { ...option, rarity: 'Common' as const },
-      ) as typeof valid.options,
+      ) as unknown as typeof valid.options,
     });
     expect(
       evaluateReachedTraitOffer(
@@ -855,7 +854,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
       ...valid,
       options: valid.options.map((option) =>
         option.rarity === undefined ? option : { ...option, rarity: 'Common' as const },
-      ) as typeof valid.options,
+      ) as unknown as typeof valid.options,
     });
     expect(
       evaluateReachedTraitOffer(catalog, owner, 'q-screen', allCommon, history, context, 1)
@@ -932,7 +931,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
           .replacementTransition?.replacedTraitKey === 'ApolloWeaponBoon',
     );
     if (replacementIndex < 0) throw new Error('expected a Hera Melee replacement row');
-    const selectedOptionKey = `option${replacementIndex + 1}` as const;
+    const selectedOptionKey = TRAIT_OPTION_KEYS[replacementIndex]!;
     const evaluation = evaluateReachedTraitOffer(
       catalog,
       owner,

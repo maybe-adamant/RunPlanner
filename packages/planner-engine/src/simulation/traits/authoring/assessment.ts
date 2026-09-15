@@ -9,7 +9,11 @@ import type {
   TraitTargetedAcquisitionAssessment,
   TraitTargetedAcquisitionTransition,
 } from '../history/model';
-import { targetedAcquisitionTargetKeys, checkRequirement } from '../level-effects';
+import {
+  selectedTargetedAcquisitionTargetKeys,
+  targetedAcquisitionTargetKeys,
+  checkRequirement,
+} from '../level-effects';
 import {
   assessTraitOfferComposition,
   echoLastRunBoonOutcomes,
@@ -468,13 +472,18 @@ export function assessSelectedTargetedAcquisition(
   if (acquisition === undefined) {
     return Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) });
   }
-  const targets = targetedAcquisitionTargetKeys(catalog, option.traitKey, history);
+  const selectedSource = option;
+  const targets = selectedTargetedAcquisitionTargetKeys(catalog, selectedSource, history);
   if (targets.length === 0) {
+    const finding = Object.freeze({
+      code: 'targetedAcquisitionNoEligibleTarget' as const,
+      traitKey: option.traitKey,
+    });
     return Object.freeze({
       applies: true,
-      legal: true,
+      legal: false,
       sourceTraitKey: option.traitKey,
-      findings: Object.freeze([]),
+      findings: Object.freeze([finding]),
     });
   }
   if (option.targetTraitKey === undefined) {
@@ -503,24 +512,32 @@ export function assessSelectedTargetedAcquisition(
       findings: Object.freeze([finding]),
     });
   }
-  const target = history.equippedTraits[option.targetTraitKey];
-  if (target === undefined) {
+  const equippedTarget = history.equippedTraits[option.targetTraitKey];
+  const sourceIsTarget = selectedSource.traitKey === option.targetTraitKey;
+  if (equippedTarget === undefined && !sourceIsTarget) {
     throw new Error(`targeted acquisition target ${option.targetTraitKey} is not equipped`);
   }
   const transition: TraitTargetedAcquisitionTransition =
     acquisition.kind === 'promoteGodTraitToHeroic'
       ? (() => {
-          if (target.rarity === undefined) {
+          const oldRarity = equippedTarget?.rarity ?? selectedSource.rarity;
+          if (oldRarity === undefined) {
             throw new Error(`targeted acquisition target ${option.targetTraitKey} has no rarity`);
           }
+          const levelChange =
+            equippedTarget?.level === undefined
+              ? undefined
+              : Object.freeze({
+                  oldLevel: equippedTarget.level,
+                  newLevel: equippedTarget.level + bridalGlowAddedLevels(option.rarity),
+                });
           return Object.freeze({
             kind: 'promoteGodTraitToHeroic' as const,
             sourceTraitKey: option.traitKey,
             targetTraitKey: option.targetTraitKey,
-            oldRarity: target.rarity,
+            oldRarity,
             newRarity: 'Heroic' as const,
-            oldLevel: target.level ?? 0,
-            newLevel: (target.level ?? 0) + bridalGlowAddedLevels(option.rarity),
+            ...(levelChange === undefined ? {} : { levelChange }),
           });
         })()
       : Object.freeze({

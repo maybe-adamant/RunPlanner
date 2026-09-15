@@ -25,7 +25,7 @@ import {
   removeTraitOfferDraft,
   traitOfferStartingOutcome,
   assessSelectedTargetedAcquisition,
-  targetedAcquisitionTargetKeys,
+  selectedTargetedAcquisitionTargetKeys,
   type TraitOfferBranchAssessment,
   type TraitOfferCandidateContext,
   evaluateReachedLevelResolution,
@@ -379,7 +379,8 @@ export function createTraitOfferCandidateArtifacts(
           primary.targetedAcquisition.legal &&
           primary.assessments[optionIndex(effectiveOffer.selectedOptionKey)]?.legal === true;
         if (!primarySupported) return undefined;
-        const applied = recordReachedTraitOffer(catalog, primary, 0, 'candidate');
+        const sequence = Math.max(0, ...context.before.events.map((event) => event.sequence)) + 1;
+        const applied = recordReachedTraitOffer(catalog, primary, sequence, 'candidate');
         const selected = effectiveOffer.options[optionIndex(effectiveOffer.selectedOptionKey)];
         if (applied.event === undefined || selected === undefined) return undefined;
         const selectedDisposition = catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
@@ -406,7 +407,7 @@ export function createTraitOfferCandidateArtifacts(
           }),
           directTraitSetBranchHistories: Object.freeze([context.before]),
           lifecyclePoint: 'candidate',
-          sequence: 0,
+          sequence,
         });
         if (settledChildren.blockedChild !== undefined) return undefined;
         return Object.freeze({
@@ -663,9 +664,9 @@ export function createTraitOfferCandidateArtifacts(
               )[optionIndex(optionKey)];
               return Object.freeze({
                 sourceSupported: secondary !== undefined || (sourceAssessment?.legal ?? false),
-                targetTraitKeys: targetedAcquisitionTargetKeys(
+                targetTraitKeys: selectedTargetedAcquisitionTargetKeys(
                   catalog,
-                  option.traitKey,
+                  option,
                   secondary?.before ?? context.before,
                 ),
               });
