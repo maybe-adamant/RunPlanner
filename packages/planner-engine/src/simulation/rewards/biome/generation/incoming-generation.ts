@@ -72,6 +72,11 @@ function completeIncomingOfferCandidate(
   candidateBranches: readonly RewardBranchState[],
   candidateFindings: Map<string, FindingRegionEntry>,
 ) {
+  // Only the unchanged envelope retains authored acquisition children. A new
+  // reward's children are authored after selection, not prerequisites for it.
+  if (entry.incoming !== entry.room.incomingReward) {
+    return createRewardProducerCandidateResult(candidateFindings, candidateBranches);
+  }
   let branches = candidateBranches;
   if (
     branches.length > 0 &&

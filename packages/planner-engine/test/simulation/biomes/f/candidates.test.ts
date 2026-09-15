@@ -30,6 +30,7 @@ import {
   createCompleteFTakeoverProject,
   createFOpeningBatch,
   createFProject,
+  createFStart,
   fBiome,
   fCombatId,
   fDecision,
@@ -265,6 +266,88 @@ describe('F candidate support', () => {
       kind: 'takeoverPrebossBatch',
       result: { support: 'impossible', selectedPossible: false },
     });
+  });
+
+  it.each(['missing', 'complete'] as const)(
+    'allows replacing an opening reward with a %s trait offer',
+    (traitState) => {
+      const reward = createIncomingRewardAddress(fBiome, fStartId);
+      const unresolved = applyProjectCommand(createFStart(), catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward,
+        value: { rewardType: 'WeaponUpgrade' },
+      });
+      const project = traitState === 'complete' ? authorLegalTraitOffers(unresolved) : unresolved;
+      const session = candidateSession(project);
+      const boon = {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource' as const, source: 'ZeusUpgrade' },
+      };
+      const results = session.evaluate(
+        [boon, { rewardType: 'HermesUpgrade' }, { rewardType: 'SpellDrop' }].map((value) => ({
+          kind: 'incomingReward' as const,
+          reward,
+          value,
+        })),
+      );
+      expect(results).toEqual([
+        { kind: 'incomingReward', result: { supported: true, findings: [] } },
+        { kind: 'incomingReward', result: { supported: true, findings: [] } },
+        { kind: 'incomingReward', result: { supported: true, findings: [] } },
+      ]);
+      expect(
+        session.evaluate({
+          kind: 'incomingReward',
+          reward,
+          value: { rewardType: 'WeaponUpgrade' },
+        }),
+      ).toMatchObject({
+        kind: 'incomingReward',
+        result: { supported: traitState === 'complete' },
+      });
+      expect(
+        session.evaluate({ kind: 'incomingReward', reward, value: { rewardType: 'StackUpgrade' } }),
+      ).toMatchObject({
+        kind: 'incomingReward',
+        result: {
+          supported: false,
+          findings: [expect.objectContaining({ code: 'rewardBagEntryUnavailable' })],
+        },
+      });
+
+      const replaced = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward,
+        value: boon,
+      });
+      const trait = createTraitOfferAddress(reward, 'source');
+      expect(simulateProject(catalog, replaced).findings).toContainEqual(
+        expect.objectContaining({ code: 'traitOfferMissing', origin: trait }),
+      );
+      const draft = candidateSession(replaced).traitOfferStartingDraft(trait, 'Zeus');
+      expect(draft).toBeDefined();
+      const repaired = applyProjectCommand(replaced, catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait,
+        value: draft!,
+      });
+      expect(simulateProject(catalog, repaired).findings).not.toContainEqual(
+        expect.objectContaining({ code: 'traitOfferMissing', origin: trait }),
+      );
+    },
+  );
+
+  it('replaces a selected ordinary room reward without requiring its new traits', () => {
+    const project = boonPrefixProject();
+    const reward = createIncomingRewardAddress(fBiome, fGenerationOccurrenceId(2, 1));
+    const session = candidateSession(project);
+    expect(
+      session.evaluate({
+        kind: 'incomingReward',
+        reward,
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+      }),
+    ).toEqual({ kind: 'incomingReward', result: { supported: true, findings: [] } });
   });
 
   it('shares terminal empty-decision force support between Door 1 and the takeover batch', () => {
