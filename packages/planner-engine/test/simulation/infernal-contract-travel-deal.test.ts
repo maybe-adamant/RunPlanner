@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   createBiomeAddress,
+  createShopOfferAddress,
   createOccurrenceId,
   createDefaultAuthoredHexTree,
   semanticAddressKey,
@@ -510,9 +511,18 @@ describe('Infernal Contract and Travel Deal chronology', () => {
 
   it('publishes a stable placeholder before a normal purchase and excludes Contract as a trigger', () => {
     const empty = settle({ order: [], travel: true });
+    const inventoryOwner = createShopOfferAddress(
+      biome,
+      empty.canonical.origin.occurrenceId,
+      'travelDealRefill',
+    );
     expect(empty.settlement.derivedEntryFrontiers).toMatchObject([
-      { kind: 'travelDealPlaceholder', address: { entryKey: 'travelDealRefill' } },
+      { kind: 'travelDealPlaceholder', address: { entryKey: 'travelDealRefill' }, inventoryOwner },
     ]);
+    const purchased = settle({ order: ['Boon'], travel: true });
+    expect(purchased.settlement.derivedEntryFrontiers).toContainEqual(
+      expect.objectContaining({ kind: 'travelDealRefill', inventoryOwner }),
+    );
 
     const contractOnly = settle({
       order: ['infernalContractReward'],
