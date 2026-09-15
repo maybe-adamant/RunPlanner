@@ -1,6 +1,23 @@
 import type { Catalog, TraitRarity } from '../../../catalog-schema';
 import type { EquippedTrait } from '../../../authored-project/traits/state';
 
+export function bridalGlowAddedLevels(rarity: TraitRarity | undefined): number {
+  switch (rarity) {
+    case 'Common':
+      return 1;
+    case 'Rare':
+      return 2;
+    case 'Epic':
+      return 3;
+    case 'Heroic':
+      return 4;
+    default:
+      throw new Error(
+        `Bridal Glow requires a ranked source rarity, received ${rarity ?? 'missing'}`,
+      );
+  }
+}
+
 export function isLevelBearingTrait(catalog: Catalog, traitKey: string): boolean {
   const declaration = catalog.traits.byKey[traitKey];
   return (

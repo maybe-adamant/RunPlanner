@@ -128,6 +128,43 @@ function cappedHephaestusHistory() {
   });
 }
 
+function bridalPhialHistory() {
+  const before = historyWith(equippedTrait('ApolloWeaponBoon', 'Apollo'));
+  return foldTraitHistoryEvents(catalog, [
+    ...before.events,
+    {
+      kind: 'traitOffer' as const,
+      owner: fountainAction,
+      acquisitionRole: 'bridal',
+      sequence: 1,
+      giverKey: 'Hera',
+      options: Object.freeze([{ traitKey: 'BoonDecayBoon', rarity: 'Common' }] as const),
+      selectedOptionKey: 'option1' as const,
+      acquisitionPoint: 'test',
+      targetedAcquisitionTransition: {
+        kind: 'promoteGodTraitToHeroic' as const,
+        sourceTraitKey: 'BoonDecayBoon',
+        targetTraitKey: 'ApolloWeaponBoon',
+        oldRarity: 'Common' as const,
+        newRarity: 'Heroic' as const,
+        oldLevel: 1,
+        newLevel: 2,
+      },
+    },
+    {
+      kind: 'levelMutation' as const,
+      owner: fountainAction,
+      acquisitionRole: 'bridal',
+      sequence: 1,
+      acquisitionPoint: 'test',
+      sourceTraitKey: 'BoonDecayBoon',
+      targetTraitKey: 'ApolloWeaponBoon',
+      oldLevel: 1,
+      newLevel: 2,
+    },
+  ]);
+}
+
 function fountainRoom(targetTraitKey: string): CanonicalAuthoredRoom {
   return { fountainRarityResult: { targetTraitKey } } as unknown as CanonicalAuthoredRoom;
 }
@@ -384,6 +421,21 @@ describe('Aromatic Phial fountain lifecycle', () => {
       newRarity: 'Heroic',
     });
     expect(result.findings).toEqual([]);
+  });
+
+  it('credits Bridal Glow’s missing grant when Phial directly promotes its remembered source', () => {
+    const history = bridalPhialHistory();
+    const result = applyFountainUsedTransition(
+      catalog,
+      fountainEvent(2),
+      fountainRoom('BoonDecayBoon'),
+      [fountainBranch(equippedTrait('ApolloWeaponBoon', 'Apollo'), history)],
+    );
+    expect(result.branches[0]?.traitHistory?.equippedTraits.BoonDecayBoon?.rarity).toBe('Heroic');
+    expect(result.branches[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon).toMatchObject({
+      rarity: 'Heroic',
+      level: 5,
+    });
   });
 
   it('consumes with no mutation when the Hephaestus cap empties only the mutation domain', () => {

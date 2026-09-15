@@ -7,9 +7,13 @@ import type {
   ChaosCurseInstance,
   TraitHistoryEvent,
   TraitHistoryState,
-  TraitOfferEvent,
 } from './model';
-import { isLevelBearingTrait, isPomUpgradeTarget, nextRarity } from './upgrades';
+import {
+  bridalGlowAddedLevels,
+  isLevelBearingTrait,
+  isPomUpgradeTarget,
+  nextRarity,
+} from './upgrades';
 
 export function isTraitOfferMutationEvent(event: TraitHistoryEvent): boolean {
   switch (event.kind) {
@@ -143,11 +147,44 @@ function withRarityAndSteadyGrowthCredit(
   return Object.freeze({ ...trait, rarity, steadyGrowthProgress: progress });
 }
 
+function applyRarityMutation(
+  catalog: Catalog,
+  equippedTraits: Record<string, EquippedTrait>,
+  bridalTargetTraitKeyBySource: ReadonlyMap<string, string>,
+  traitKey: string,
+  rarity: TraitRarity,
+  resetSteadyGrowthProgress = false,
+): void {
+  const source = equippedTraits[traitKey];
+  if (source === undefined) return;
+  equippedTraits[traitKey] = withRarityAndSteadyGrowthCredit(
+    catalog,
+    source,
+    rarity,
+    resetSteadyGrowthProgress,
+  );
+
+  const targetTraitKey = bridalTargetTraitKeyBySource.get(traitKey);
+  if (targetTraitKey === undefined || source.rarity === undefined) return;
+  const addedLevels = bridalGlowAddedLevels(rarity) - bridalGlowAddedLevels(source.rarity);
+  const target = equippedTraits[targetTraitKey];
+  if (
+    addedLevels <= 0 ||
+    target?.level === undefined ||
+    catalog.traits.byKey[targetTraitKey]?.blockStacking === true
+  )
+    return;
+  equippedTraits[targetTraitKey] = Object.freeze({
+    ...target,
+    level: target.level + addedLevels,
+  });
+}
+
 function promoteActiveFloorTargets(
   catalog: Catalog,
   equippedTraits: Record<string, EquippedTrait>,
   activeSources: ReadonlySet<string>,
-  events: readonly TraitOfferEvent[],
+  bridalTargetTraitKeyBySource: ReadonlyMap<string, string>,
 ): void {
   if (activeSources.size === 0) return;
   const effects = [...activeSources].flatMap((sourceKey) => {
@@ -157,8 +194,8 @@ function promoteActiveFloorTargets(
       : [{ sourceKey, effect: declaration.rarityFloorEffect }];
   });
   if (effects.length === 0) return;
-  const promotedKeys: string[] = [];
-  for (const [traitKey, equipped] of Object.entries(equippedTraits)) {
+  for (const traitKey of Object.keys(equippedTraits)) {
+    const equipped = equippedTraits[traitKey]!;
     const declaration = catalog.traits.byKey[traitKey];
     if (
       declaration === undefined ||
@@ -173,29 +210,17 @@ function promoteActiveFloorTargets(
       )
     )
       continue;
-    equippedTraits[traitKey] = withRarityAndSteadyGrowthCredit(catalog, equipped, 'Rare');
-    promotedKeys.push(traitKey);
+    applyRarityMutation(catalog, equippedTraits, bridalTargetTraitKeyBySource, traitKey, 'Rare');
   }
   // UpgradeAllCommon assigns its source rarity separately, even if it was Epic.
   for (const { sourceKey, effect } of effects) {
-    equippedTraits[sourceKey] = Object.freeze({
-      ...equippedTraits[sourceKey]!,
-      rarity: effect.minimumRarity,
-    });
-  }
-  for (const event of events) {
-    const transition = event.targetedAcquisitionTransition;
-    if (
-      transition?.kind !== 'promoteGodTraitToHeroic' ||
-      !promotedKeys.includes(transition.sourceTraitKey)
-    )
-      continue;
-    const target = equippedTraits[transition.targetTraitKey];
-    if (target?.level === undefined) continue;
-    equippedTraits[transition.targetTraitKey] = Object.freeze({
-      ...target,
-      level: target.level + 1,
-    });
+    applyRarityMutation(
+      catalog,
+      equippedTraits,
+      bridalTargetTraitKeyBySource,
+      sourceKey,
+      effect.minimumRarity,
+    );
   }
 }
 
@@ -206,6 +231,7 @@ export function foldTraitHistoryEvents(
   const equipped: Record<string, EquippedTrait> = {};
   const bannedTraitKeys = new Set<string>();
   const previouslyPickedTraitKeys = new Set<string>();
+  const bridalTargetTraitKeyBySource = new Map<string, string>();
   const pickupElements: Record<TraitElement, number> = {
     Aether: 0,
     Earth: 0,
@@ -366,9 +392,11 @@ export function foldTraitHistoryEvents(
           (directFountainPromotion ||
             nextRarity(catalog, event.targetTraitKey, event.oldRarity) === event.newRarity)
         )
-          equipped[event.targetTraitKey] = withRarityAndSteadyGrowthCredit(
+          applyRarityMutation(
             catalog,
-            target,
+            equipped,
+            bridalTargetTraitKeyBySource,
+            event.targetTraitKey,
             event.newRarity,
             event.resetSteadyGrowthProgress === true,
           );
@@ -384,8 +412,10 @@ export function foldTraitHistoryEvents(
         if (
           event.match === 'currentTraitKey' ||
           equipped[event.traitKey]?.acquisitionIdentity === event.acquisitionIdentity
-        )
+        ) {
           delete equipped[event.traitKey];
+          bridalTargetTraitKeyBySource.delete(event.traitKey);
+        }
         continue;
       }
       if (event.kind === 'anvilTransformation') {
@@ -394,8 +424,9 @@ export function foldTraitHistoryEvents(
           if (
             removed !== undefined &&
             catalog.traits.byKey[event.removedTraitKey]?.hammerCompatibility !== undefined
-          )
+          ) {
             delete equipped[event.removedTraitKey];
+          }
         }
         for (const traitKey of event.addedTraitKeys) {
           const declaration = catalog.traits.byKey[traitKey];
@@ -475,7 +506,9 @@ export function foldTraitHistoryEvents(
           : equipped[event.replacementTransition.replacedTraitKey]?.level;
       if (event.replacementTransition !== undefined) {
         delete equipped[event.replacementTransition.replacedTraitKey];
+        bridalTargetTraitKeyBySource.delete(event.replacementTransition.replacedTraitKey);
       }
+      bridalTargetTraitKeyBySource.delete(option.traitKey);
       equipped[option.traitKey] = Object.freeze({
         traitKey: option.traitKey,
         giverKey: giver.key,
@@ -502,9 +535,12 @@ export function foldTraitHistoryEvents(
         if (target !== undefined) {
           switch (targeted.kind) {
             case 'promoteGodTraitToHeroic':
-              equipped[targeted.targetTraitKey] = withRarityAndSteadyGrowthCredit(
+              bridalTargetTraitKeyBySource.set(targeted.sourceTraitKey, targeted.targetTraitKey);
+              applyRarityMutation(
                 catalog,
-                target,
+                equipped,
+                bridalTargetTraitKeyBySource,
+                targeted.targetTraitKey,
                 targeted.newRarity,
               );
               break;
@@ -541,9 +577,7 @@ export function foldTraitHistoryEvents(
       catalog,
       equipped,
       ordinaryExpired ? nextActiveSources : newlyActive,
-      ordered
-        .slice(0, index)
-        .filter((event): event is TraitOfferEvent => event.kind === 'traitOffer'),
+      bridalTargetTraitKeyBySource,
     );
     activeSources = nextActiveSources;
   }

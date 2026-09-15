@@ -16,10 +16,12 @@ import {
   foldTraitHistoryEvents,
   isPomUpgradeTarget,
   recordReachedTraitOffer,
+  traitOfferStartingOutcome,
   promoteArcana,
   traitCandidates,
   boonRarityFactsForOffer,
   type TraitHistoryState,
+  type TraitHistoryEvent,
   type TraitOfferEvent,
   type TraitLevelMutationEvent,
 } from '@run-planner/engine/simulation';
@@ -357,6 +359,69 @@ describe('Proper Upbringing rarity lifecycle', () => {
     return acquireLegalTrait(twoEachHistory(), 'Hera', 'ElementalRarityUpgradeBoon', 'Common');
   }
 
+  function bridalAcquisitionEvent(
+    sequence: number,
+    targetTraitKey = 'ApolloWeaponBoon',
+  ): TraitOfferEvent {
+    return {
+      kind: 'traitOffer',
+      owner,
+      acquisitionRole: 'bridal',
+      sequence,
+      giverKey: 'Hera',
+      options: Object.freeze([
+        { traitKey: 'BoonDecayBoon', rarity: 'Common' },
+        { traitKey: 'DamageShareRetaliateBoon', rarity: 'Common' },
+        { traitKey: 'SpawnCastDamageBoon', rarity: 'Common' },
+      ]) as TraitOfferEvent['options'],
+      selectedOptionKey: 'option1',
+      acquisitionPoint: 'test',
+      targetedAcquisitionTransition: {
+        kind: 'promoteGodTraitToHeroic',
+        sourceTraitKey: 'BoonDecayBoon',
+        targetTraitKey,
+        oldRarity: 'Common',
+        newRarity: 'Heroic',
+        oldLevel: 1,
+        newLevel: 2,
+      },
+    };
+  }
+
+  function bridalHistory() {
+    const before = twoEachHistory();
+    const bridal = bridalAcquisitionEvent(before.events.length + 1);
+    return foldTraitHistoryEvents(catalog, [
+      ...before.events,
+      bridal,
+      levelMutation(bridal.sequence, 'ApolloWeaponBoon', 1, 2),
+    ]);
+  }
+
+  function bridalRarityMutation(
+    sequence: number,
+    oldRarity: 'Common' | 'Rare' | 'Epic',
+    newRarity: 'Rare' | 'Epic' | 'Heroic',
+    acquisitionRole: 'steadyGrowth' | 'fountainRarity' = 'steadyGrowth',
+  ): Extract<TraitHistoryEvent, { readonly kind: 'rarityMutation' }> {
+    const mutation = {
+      kind: 'rarityMutation' as const,
+      owner,
+      sequence,
+      targetTraitKey: 'BoonDecayBoon',
+      oldRarity,
+      newRarity,
+    };
+    return acquisitionRole === 'fountainRarity'
+      ? { ...mutation, acquisitionRole, acquisitionPoint: 'fountainUsed' }
+      : {
+          ...mutation,
+          acquisitionRole,
+          acquisitionPoint: 'encounterEndEffectsApplied',
+          sourceTraitKey: 'BoonDecayBoon',
+        };
+  }
+
   it('lets Proper Upbringing promote a cooldown-capped Common trait while Pom targeting excludes it', () => {
     const capped = foldTraitHistoryEvents(catalog, [
       ...twoEachHistory().events,
@@ -471,6 +536,127 @@ describe('Proper Upbringing rarity lifecycle', () => {
     expect(foldTraitHistoryEvents(catalog, active.events)).toEqual(active);
   });
 
+  it('credits exactly the positive Bridal Glow grant delta for sequential and direct rarity mutations', () => {
+    const initial = bridalHistory();
+    const sequential = foldTraitHistoryEvents(catalog, [
+      ...initial.events,
+      bridalRarityMutation(initial.events.length + 1, 'Common', 'Rare'),
+      bridalRarityMutation(initial.events.length + 2, 'Rare', 'Epic'),
+      bridalRarityMutation(initial.events.length + 3, 'Epic', 'Heroic'),
+    ]);
+    expect(sequential.equippedTraits.ApolloWeaponBoon).toMatchObject({
+      rarity: 'Heroic',
+      level: 5,
+    });
+
+    const direct = foldTraitHistoryEvents(catalog, [
+      ...initial.events,
+      bridalRarityMutation(initial.events.length + 1, 'Common', 'Heroic', 'fountainRarity'),
+    ]);
+    expect(direct.equippedTraits.ApolloWeaponBoon).toMatchObject({
+      rarity: 'Heroic',
+      level: 5,
+    });
+    expect(foldTraitHistoryEvents(catalog, direct.events)).toEqual(direct);
+  });
+
+  it('remembers a Concave Stone Bridal Glow target for a later rarity mutation', () => {
+    const before = twoEachHistory();
+    const stone = {
+      ...bridalAcquisitionEvent(before.events.length + 1),
+      kind: 'concaveStoneSecondary' as const,
+      acquisitionRole: 'concaveStoneSecondary' as const,
+    };
+    const history = foldTraitHistoryEvents(catalog, [
+      ...before.events,
+      stone,
+      levelMutation(stone.sequence, 'ApolloWeaponBoon', 1, 2),
+      bridalRarityMutation(stone.sequence + 1, 'Common', 'Heroic', 'fountainRarity'),
+    ]);
+    expect(history.equippedTraits.ApolloWeaponBoon).toMatchObject({ rarity: 'Heroic', level: 5 });
+  });
+
+  it('does not credit rejected, repeated, missing, or replaced Bridal Glow targets', () => {
+    const initial = bridalHistory();
+    const rejected = foldTraitHistoryEvents(catalog, [
+      ...initial.events,
+      bridalRarityMutation(initial.events.length + 1, 'Common', 'Epic'),
+      bridalRarityMutation(initial.events.length + 2, 'Common', 'Heroic', 'fountainRarity'),
+      bridalRarityMutation(initial.events.length + 3, 'Common', 'Heroic', 'fountainRarity'),
+    ]);
+    expect(rejected.equippedTraits.ApolloWeaponBoon?.level).toBe(5);
+
+    const removed = foldTraitHistoryEvents(catalog, [
+      ...initial.events,
+      {
+        kind: 'traitRemoval' as const,
+        owner,
+        acquisitionRole: 'purgingPoolSale',
+        sequence: initial.events.length + 1,
+        acquisitionPoint: 'purgingPoolSale',
+        traitKey: 'ApolloWeaponBoon',
+        match: 'currentTraitKey' as const,
+      },
+      bridalRarityMutation(initial.events.length + 2, 'Common', 'Heroic', 'fountainRarity'),
+    ]);
+    expect(removed.equippedTraits.ApolloWeaponBoon).toBeUndefined();
+
+    const replaced = foldTraitHistoryEvents(catalog, [
+      ...initial.events,
+      {
+        kind: 'traitOffer' as const,
+        owner,
+        acquisitionRole: 'replacement',
+        sequence: initial.events.length + 1,
+        giverKey: 'Hera',
+        options: Object.freeze([
+          { traitKey: 'HeraWeaponBoon', rarity: 'Epic' },
+          { traitKey: 'HeraSpecialBoon', rarity: 'Common' },
+          { traitKey: 'HeraCastBoon', rarity: 'Common' },
+        ]) as TraitOfferEvent['options'],
+        selectedOptionKey: 'option1',
+        acquisitionPoint: 'test',
+        replacementTransition: {
+          slot: 'Melee',
+          replacedTraitKey: 'ApolloWeaponBoon',
+          oldRarity: 'Heroic',
+          newTraitKey: 'HeraWeaponBoon',
+          requiredRarity: 'Epic',
+        },
+      },
+      bridalRarityMutation(initial.events.length + 2, 'Common', 'Heroic', 'fountainRarity'),
+    ]);
+    expect(replaced.equippedTraits.HeraWeaponBoon).toMatchObject({ rarity: 'Epic', level: 2 });
+
+    const targetWithoutLevel = twoEachHistory();
+    const noLevelTarget = foldTraitHistoryEvents(catalog, [
+      ...targetWithoutLevel.events,
+      {
+        kind: 'traitOffer' as const,
+        owner,
+        acquisitionRole: 'nonLevelTarget',
+        sequence: targetWithoutLevel.events.length + 1,
+        giverKey: 'Artemis',
+        options: Object.freeze([
+          { traitKey: 'SupportingFireBoon', rarity: 'Common' },
+          { traitKey: 'CritBonusBoon', rarity: 'Common' },
+          { traitKey: 'DashOmegaBuffBoon', rarity: 'Common' },
+        ]) as TraitOfferEvent['options'],
+        selectedOptionKey: 'option1',
+        acquisitionPoint: 'test',
+      },
+      bridalAcquisitionEvent(targetWithoutLevel.events.length + 2, 'SupportingFireBoon'),
+      bridalRarityMutation(
+        targetWithoutLevel.events.length + 3,
+        'Common',
+        'Heroic',
+        'fountainRarity',
+      ),
+    ]);
+    expect(noLevelTarget.equippedTraits.SupportingFireBoon).toMatchObject({ rarity: 'Heroic' });
+    expect(noLevelTarget.equippedTraits.SupportingFireBoon?.level).toBeUndefined();
+  });
+
   it('offers at one of each base element while inactive and activates at two of each', () => {
     const oneEach = historyFrom([
       { giverKey: 'Hera', traitKey: 'HeraWeaponBoon', rarity: 'Common' as const },
@@ -561,7 +747,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
     expect(history.properUpbringingActive).toBe(true);
   });
 
-  it('rejects fresh Common below the floor but keeps Rare/Epic and fixed domains', () => {
+  it('keeps ordinary rows individually repairable while the screen owns rarity feasibility', () => {
     const history = activeHistory();
     const apolloContext = {
       resolvedProviderKey: 'Apollo',
@@ -571,7 +757,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
     };
     expect(
       assessTraitOption(catalog, 'ApolloManaBoon', history, apolloContext, 'Common').findings,
-    ).toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
+    ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
     expect(
       assessTraitOption(catalog, 'ApolloManaBoon', history, apolloContext, 'Rare').findings,
     ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
@@ -587,13 +773,36 @@ describe('Proper Upbringing rarity lifecycle', () => {
     expect(
       assessTraitOption(catalog, 'HermesCastDiscountBoon', history, hermesContext, 'Common')
         .findings,
-    ).toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
+    ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
     expect(
       assessTraitOption(catalog, 'ElementalDamageBoon', history, {}, 'Common').findings,
     ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
     expect(
       assessTraitOption(catalog, 'AllElementalBoon', history, {}, 'Legendary').findings,
     ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
+    const valid = traitOfferStartingOutcome(catalog, 'Apollo', history, apolloContext);
+    if (valid?.kind !== 'traits') throw new Error('expected a valid Apollo screen');
+    const allCommon = Object.freeze({
+      ...valid,
+      options: valid.options.map((option) =>
+        option.rarity === undefined ? option : { ...option, rarity: 'Common' as const },
+      ) as typeof valid.options,
+    });
+    expect(
+      evaluateReachedTraitOffer(
+        catalog,
+        owner,
+        'proper-screen',
+        allCommon,
+        history,
+        apolloContext,
+        1,
+      ).generation,
+    ).toMatchObject({ legal: false, findings: [{ code: 'traitOfferGenerationUnavailable' }] });
+    expect(
+      evaluateReachedTraitOffer(catalog, owner, 'proper-screen', valid, history, apolloContext, 1)
+        .generation,
+    ).toMatchObject({ legal: true });
   });
 
   it('uses source-aware rarity ledgers for shop-aware NPC trait offers', () => {
@@ -624,7 +833,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
     expect(factsFor('Hades')).toBeUndefined();
   });
 
-  it('applies a Q-style guaranteed Rare check to Proper Upbringing before it activates', () => {
+  it('keeps a Q-style Common row repairable before Proper Upbringing activates', () => {
     const history = twoEachHistory();
     const context = {
       resolvedProviderKey: 'Hera',
@@ -636,10 +845,22 @@ describe('Proper Upbringing rarity lifecycle', () => {
     expect(history.properUpbringingActive).toBeUndefined();
     expect(
       assessTraitOption(catalog, 'ElementalRarityUpgradeBoon', history, context, 'Common').findings,
-    ).toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
+    ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
     expect(
       assessTraitOption(catalog, 'ElementalRarityUpgradeBoon', history, context, 'Rare').findings,
     ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
+    const valid = traitOfferStartingOutcome(catalog, 'Hera', history, context);
+    if (valid?.kind !== 'traits') throw new Error('expected a valid Q-style Hera screen');
+    const allCommon = Object.freeze({
+      ...valid,
+      options: valid.options.map((option) =>
+        option.rarity === undefined ? option : { ...option, rarity: 'Common' as const },
+      ) as typeof valid.options,
+    });
+    expect(
+      evaluateReachedTraitOffer(catalog, owner, 'q-screen', allCommon, history, context, 1)
+        .generation,
+    ).toMatchObject({ legal: false, findings: [{ code: 'traitOfferGenerationUnavailable' }] });
   });
 
   it('derives real active rank-III and Lapis rank-IV Arcana contributions at an offer frontier', () => {
@@ -693,7 +914,42 @@ describe('Proper Upbringing rarity lifecycle', () => {
 
   it('removes only the future floor on deactivation and promotes a Common on reactivation', () => {
     const activated = activeHistory();
-    const deactivated = acquireLegalTrait(activated, 'Hera', 'HeraWeaponBoon', 'Epic');
+    const replacementContext = {
+      limitedSwapUses: 1,
+      replacementRollChance: 1,
+      resolvedProviderKey: 'Hera',
+      boonRarityFacts: boonRarityFactsForOffer(catalog, activated, {
+        resolvedProviderKey: 'Hera',
+        limitedSwapUses: 1,
+        replacementRollChance: 1,
+      })!,
+    };
+    const draft = traitOfferStartingOutcome(catalog, 'Hera', activated, replacementContext);
+    if (draft?.kind !== 'traits') throw new Error('expected a source-valid Hera replacement draft');
+    const replacementIndex = draft.options.findIndex(
+      (option) =>
+        assessTraitOption(catalog, option.traitKey, activated, replacementContext, option.rarity)
+          .replacementTransition?.replacedTraitKey === 'ApolloWeaponBoon',
+    );
+    if (replacementIndex < 0) throw new Error('expected a Hera Melee replacement row');
+    const selectedOptionKey = `option${replacementIndex + 1}` as const;
+    const evaluation = evaluateReachedTraitOffer(
+      catalog,
+      owner,
+      'proper-deactivation',
+      { ...draft, selectedOptionKey },
+      activated,
+      replacementContext,
+      activated.events.length + 1,
+    );
+    const recorded = recordReachedTraitOffer(
+      catalog,
+      evaluation,
+      activated.events.length + 1,
+      'test',
+    );
+    if (recorded.event === undefined) throw new Error('expected a settled Hera replacement');
+    const deactivated = recorded.history;
     expect(deactivated.properUpbringingActive).toBeUndefined();
     expect(deactivated.equippedTraits.HermesWeaponBoon?.rarity).toBe('Rare');
     expect(deactivated.equippedTraits.ElementalRarityUpgradeBoon?.rarity).toBe('Rare');
@@ -702,12 +958,13 @@ describe('Proper Upbringing rarity lifecycle', () => {
     const replacementEvent = deactivated.events.at(-1);
     expect(
       replacementEvent?.kind === 'traitOffer' ? replacementEvent.replacementTransition : undefined,
-    ).toEqual({
+    ).toMatchObject({
       slot: 'Melee',
       replacedTraitKey: 'ApolloWeaponBoon',
       oldRarity: 'Rare',
       newTraitKey: 'HeraWeaponBoon',
       requiredRarity: 'Epic',
+      levelBonus: 2,
     });
     const reactivated = acquireLegalTrait(deactivated, 'Hermes', 'SlowProjectileBoon', 'Common');
     expect(reactivated.properUpbringingActive).toBe(true);
@@ -741,7 +998,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
       },
       'Common',
     );
-    expect(common.findings).toContainEqual(
+    expect(common.findings).not.toContainEqual(
       expect.objectContaining({ code: 'rarityRollUnavailable' }),
     );
   });
