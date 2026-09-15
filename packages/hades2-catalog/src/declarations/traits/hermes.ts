@@ -7,7 +7,8 @@ export const hermesTraits = [
     label: 'Nimble Limbs',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Earth: 1,
     },
@@ -21,7 +22,8 @@ export const hermesTraits = [
     label: 'Racing Thoughts',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Earth: 1,
     },
@@ -35,7 +37,8 @@ export const hermesTraits = [
     label: "Winner's Circle",
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Earth: 1,
     },
@@ -49,7 +52,8 @@ export const hermesTraits = [
     label: 'Nitro Boost',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Fire: 1,
     },
@@ -63,7 +67,8 @@ export const hermesTraits = [
     label: 'Stutter Step',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Earth: 1,
     },
@@ -77,7 +82,8 @@ export const hermesTraits = [
     label: 'Hasty Retreat',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Air: 1,
     },
@@ -91,7 +97,8 @@ export const hermesTraits = [
     label: 'Hard Target',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Air: 1,
     },
@@ -105,7 +112,8 @@ export const hermesTraits = [
     label: 'Quick Buck',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [
       {
         kind: 'offerContext',
         context: 'blockGiftBoons',
@@ -130,7 +138,8 @@ export const hermesTraits = [
     label: 'Mean Streak',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Air: 1,
     },
@@ -144,7 +153,8 @@ export const hermesTraits = [
     label: 'Travel Deal',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Fire: 1,
     },
@@ -163,7 +173,8 @@ export const hermesTraits = [
     label: 'Success Rate',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: [
@@ -205,7 +216,8 @@ export const hermesTraits = [
     label: 'Tall Order',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic'],
-    offerRequirements: [
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [
       {
         kind: 'highestBaseElementCount',
         minimum: 4,
@@ -222,7 +234,8 @@ export const hermesTraits = [
     label: 'Paid Dues',
     freshOfferRarities: ['Legendary'],
     equippedRarities: ['Legendary'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: [

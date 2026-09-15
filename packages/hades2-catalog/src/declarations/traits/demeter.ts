@@ -7,7 +7,8 @@ export const demeterTraits = [
     label: 'Ice Strike',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Water: 1,
     },
@@ -22,7 +23,8 @@ export const demeterTraits = [
     label: 'Ice Flourish',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Water: 1,
     },
@@ -37,7 +39,8 @@ export const demeterTraits = [
     label: 'Arctic Ring',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Water: 1,
     },
@@ -52,7 +55,8 @@ export const demeterTraits = [
     label: 'Frigid Rush',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Water: 1,
     },
@@ -67,7 +71,8 @@ export const demeterTraits = [
     label: 'Tranquil Gain',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Earth: 1,
     },
@@ -82,7 +87,8 @@ export const demeterTraits = [
     label: 'Arctic Gale',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Water: 1,
     },
@@ -96,7 +102,8 @@ export const demeterTraits = [
     label: 'Plentiful Forage',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [
       {
         kind: 'offerContext',
         context: 'blockGiftBoons',
@@ -116,7 +123,8 @@ export const demeterTraits = [
     label: 'Steady Growth',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [
       {
         kind: 'rarifiableTrait',
       },
@@ -138,7 +146,8 @@ export const demeterTraits = [
     label: 'Snow Queen',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Earth: 1,
     },
@@ -152,7 +161,8 @@ export const demeterTraits = [
     label: 'Weed Killer',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: [
@@ -181,7 +191,8 @@ export const demeterTraits = [
     label: 'Local Climate',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: [
@@ -210,7 +221,8 @@ export const demeterTraits = [
     label: 'Cold Storage',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: ['DemeterWeaponBoon', 'DemeterSpecialBoon', 'DemeterCastBoon'],
@@ -229,7 +241,8 @@ export const demeterTraits = [
     label: 'Frosty Veneer',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic'],
-    offerRequirements: [
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [
       {
         kind: 'elementCount',
         element: 'Water',
@@ -247,7 +260,8 @@ export const demeterTraits = [
     label: 'Winter Harvest',
     freshOfferRarities: ['Legendary'],
     equippedRarities: ['Legendary'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -279,8 +293,8 @@ export const demeterTraits = [
     label: 'Hail Storm',
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
-      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
+    eligibilityRequirements: [{ kind: 'offerContext', context: 'devotionNoDuo', required: false }],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -314,8 +328,8 @@ export const demeterTraits = [
     label: 'Cherished Heirloom',
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
-      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
+    eligibilityRequirements: [{ kind: 'offerContext', context: 'devotionNoDuo', required: false }],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -360,7 +374,8 @@ export const demeterTraits = [
     label: 'Natural Selection',
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -414,8 +429,8 @@ export const demeterTraits = [
     label: 'Freezer Burn',
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
-      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
+    eligibilityRequirements: [{ kind: 'offerContext', context: 'devotionNoDuo', required: false }],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -443,8 +458,8 @@ export const demeterTraits = [
     label: 'Cryo Pounder',
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
-      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
+    eligibilityRequirements: [{ kind: 'offerContext', context: 'devotionNoDuo', required: false }],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [

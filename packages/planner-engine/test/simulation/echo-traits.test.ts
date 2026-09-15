@@ -54,6 +54,7 @@ import {
   previousEchoLastRunBoonDraft,
 } from '../../src/simulation/candidates/trait-offer/echo-draft';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
+import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
 import {
   assessTraitOption,
   attachTraitHistory,
@@ -61,6 +62,7 @@ import {
   echoLastRunBoonOutcomes,
   evaluateReachedTraitOffer,
   foldTraitHistoryEvents,
+  recordAspectStartingTrait,
   type TraitHistoryEvent,
 } from '../../src/simulation/traits';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
@@ -830,7 +832,7 @@ describe('Echo Gate A direct choices', () => {
 
 describe('Echo Gate B Boon Boon Boon', () => {
   it('publishes the source-resolved domain, exact equipped rarities, and Common floor', () => {
-    const outcomes = echoLastRunBoonOutcomes(catalog, createTraitHistoryState());
+    const outcomes = echoLastRunBoonOutcomes(catalog, createTraitHistoryState(), {});
     expect([...new Set(outcomes.map((outcome) => outcome.option.giverKey))]).toEqual([
       'Aphrodite',
       'Apollo',
@@ -864,7 +866,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
       ...createTraitHistoryState(),
       properUpbringingActive: true as const,
     });
-    const floored = echoLastRunBoonOutcomes(catalog, floorHistory).find(
+    const floored = echoLastRunBoonOutcomes(catalog, floorHistory, {}).find(
       (outcome) =>
         outcome.option.giverKey === 'Aphrodite' &&
         outcome.option.traitKey === 'AphroditeWeaponBoon' &&
@@ -902,6 +904,29 @@ describe('Echo Gate B Boon Boon Boon', () => {
       ?.find((outcome) => outcome.option.traitKey === 'DeathDefianceRefillBoon');
     expect(firstAthena).toMatchObject({ assessment: { legal: true } });
     expect(secondAthena).toMatchObject({ assessment: { legal: true } });
+    const uninvestedTaskForce = capability
+      ?.echoLastRunBoon(echoBoonOffer(child), 'option1')[0]
+      ?.find((outcome) => outcome.option.traitKey === 'OlympianSpellCountBoon');
+    expect(uninvestedTaskForce).toMatchObject({ assessment: { legal: false } });
+    const settledCapability = createTraitOfferCandidateArtifacts(
+      catalog,
+      new Map([
+        [
+          semanticAddressKey(echoOwner),
+          [
+            Object.freeze({
+              before: history,
+              context: Object.freeze({ resolvedProviderKey: 'Echo', settledSpellDrop: true }),
+            }),
+          ],
+        ],
+      ]),
+    ).at(echoOwner);
+    expect(
+      settledCapability
+        ?.echoLastRunBoon(echoBoonOffer(child), 'option1')[0]
+        ?.find((outcome) => outcome.option.traitKey === 'OlympianSpellCountBoon'),
+    ).toMatchObject({ assessment: { legal: true } });
 
     const onlyAthena = Object.freeze({
       ...history,
@@ -1248,7 +1273,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
         rarity: option.rarity,
         traitKey: option.traitKey,
       });
-      const outcome = echoLastRunBoonOutcomes(catalog, history).find(
+      const outcome = echoLastRunBoonOutcomes(catalog, history, {}).find(
         (candidate) =>
           candidate.option.giverKey === option.giverKey &&
           candidate.option.traitKey === option.traitKey &&
@@ -1278,7 +1303,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
   );
 
   it('retains only current-run BBB replay exclusions after bypassing ordinary prerequisites', () => {
-    const empty = echoLastRunBoonOutcomes(catalog, createTraitHistoryState());
+    const empty = echoLastRunBoonOutcomes(catalog, createTraitHistoryState(), {});
     expect(
       empty.find(
         (outcome) =>
@@ -1294,6 +1319,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     const equipped = echoLastRunBoonOutcomes(
       catalog,
       historyFromTraits([{ giverKey: 'Aphrodite', traitKey: 'WeakPotencyBoon', rarity: 'Common' }]),
+      {},
     ).find((outcome) => outcome.option.traitKey === 'WeakPotencyBoon');
     expect(equipped).toMatchObject({
       assessment: {
@@ -1305,6 +1331,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     const occupied = echoLastRunBoonOutcomes(
       catalog,
       historyFromTraits([{ giverKey: 'Zeus', traitKey: 'ZeusWeaponBoon', rarity: 'Common' }]),
+      {},
     ).find(
       (outcome) =>
         outcome.option.giverKey === 'Aphrodite' &&
@@ -1324,6 +1351,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
         ...createTraitHistoryState(),
         bannedTraitKeys: Object.freeze(['WeakPotencyBoon']),
       }),
+      {},
     ).find((outcome) => outcome.option.traitKey === 'WeakPotencyBoon');
     expect(banned).toMatchObject({
       assessment: {
@@ -1331,6 +1359,50 @@ describe('Echo Gate B Boon Boon Boon', () => {
         findings: expect.arrayContaining([expect.objectContaining({ code: 'bannedTrait' })]),
       },
     });
+  });
+
+  it('bypasses linked groups but retains exact eligibility at its pre-choice context', () => {
+    const outcome = (
+      traitKey: string,
+      history: ReturnType<typeof createTraitHistoryState>,
+      context: Parameters<typeof echoLastRunBoonOutcomes>[2],
+    ) => {
+      const value = echoLastRunBoonOutcomes(catalog, history, context).find(
+        (candidate) => candidate.option.traitKey === traitKey,
+      );
+      expect(value).toBeDefined();
+      return value!;
+    };
+    const empty = createTraitHistoryState();
+
+    expect(outcome('WeakPotencyBoon', empty, {}).assessment.legal).toBe(true);
+    expect(outcome('SprintEchoBoon', empty, { devotionNoDuo: false }).assessment.legal).toBe(true);
+    expect(outcome('SprintEchoBoon', empty, { devotionNoDuo: true }).assessment).toMatchObject({
+      legal: false,
+      findings: expect.arrayContaining([expect.objectContaining({ code: 'offerContext' })]),
+    });
+    expect(outcome('PlantHealthBoon', empty, { blockGiftBoons: true }).assessment.legal).toBe(
+      false,
+    );
+    expect(outcome('OlympianSpellCountBoon', empty, {}).assessment.legal).toBe(false);
+    expect(
+      outcome('OlympianSpellCountBoon', empty, { settledSpellDrop: true }).assessment.legal,
+    ).toBe(true);
+
+    const fireHistory = historyFromTraits([
+      { giverKey: 'Apollo', traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      { giverKey: 'Apollo', traitKey: 'ApolloSprintBoon', rarity: 'Common' },
+    ]);
+    expect(outcome('ElementalRallyBoon', empty, {}).assessment.legal).toBe(false);
+    expect(outcome('ElementalRallyBoon', fireHistory, {}).assessment.legal).toBe(true);
+    expect(outcome('CastProjectileBoon', empty, {}).assessment.legal).toBe(true);
+    expect(
+      outcome(
+        'CastProjectileBoon',
+        historyFromTraits([{ giverKey: 'Zeus', traitKey: 'CastAnywhereBoon', rarity: 'Common' }]),
+        {},
+      ).assessment.legal,
+    ).toBe(false);
   });
 
   it('publishes Bridal Glow targets and retains its missing acquisition detail after the outer trait', () => {
@@ -1720,7 +1792,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     const occupied = historyFromTraits([
       { giverKey: 'Apollo', traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
     ]);
-    const aphroditeWeapon = echoLastRunBoonOutcomes(catalog, occupied).find(
+    const aphroditeWeapon = echoLastRunBoonOutcomes(catalog, occupied, {}).find(
       (outcome) =>
         outcome.option.giverKey === 'Aphrodite' &&
         outcome.option.traitKey === 'AphroditeWeaponBoon' &&
@@ -1777,6 +1849,62 @@ describe('Echo Gate B Boon Boon Boon', () => {
         origin: createEchoLastRunBoonAddress(echoOwner, 'option1'),
       }),
     );
+  });
+
+  it('uses the settled Spell Drop prefix for the reached Echo child without treating a starting Hex as one', () => {
+    const child = echoBoonChild(
+      Object.freeze([{ giverKey: 'Athena', traitKey: 'OlympianSpellCountBoon', rarity: 'Common' }]),
+    );
+    const startingHex = recordAspectStartingTrait(
+      catalog,
+      createTraitHistoryState(),
+      echoOwner.owner,
+      {
+        aspectKey: 'SuitHexAspect',
+      },
+    );
+    const withoutSpellDrop = settleEncounterTraitOffer(
+      catalog,
+      baseBranch(startingHex),
+      echoOwner.owner,
+      echoBoonOffer(child),
+      10,
+      'encounterCompleted',
+    );
+    expect(
+      withoutSpellDrop.branch.traitHistory?.equippedTraits.OlympianSpellCountBoon,
+    ).toBeUndefined();
+    expect(withoutSpellDrop.findingEntries.map((entry) => entry.finding)).toContainEqual(
+      expect.objectContaining({ code: 'echoLastRunBoonOptionUnavailable' }),
+    );
+
+    const branch = baseBranch(startingHex);
+    const withSettledSpellDrop = Object.freeze({
+      ...branch,
+      history: Object.freeze({
+        ...branch.history,
+        useRecord: Object.freeze({ ...branch.history.useRecord, SpellDrop: 1 }),
+      }),
+    });
+    const withSpellDrop = settleEncounterTraitOffer(
+      catalog,
+      withSettledSpellDrop,
+      echoOwner.owner,
+      echoBoonOffer(child),
+      10,
+      'encounterCompleted',
+    );
+    expect(withSpellDrop.findingEntries).toHaveLength(0);
+    expect(withSpellDrop.branch.traitHistory?.equippedTraits.OlympianSpellCountBoon).toMatchObject({
+      giverKey: 'Athena',
+      rarity: 'Common',
+    });
+    const selected = selectedTraitOfferProducts([withSpellDrop.branch], [], catalog);
+    expect(
+      selected.candidateContexts.get(semanticAddressKey(echoOwner))?.[0]?.context,
+    ).toMatchObject({
+      settledSpellDrop: true,
+    });
   });
 
   it('retains a valid selection with an invalid unselected row before any nested mutation', () => {

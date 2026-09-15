@@ -373,7 +373,10 @@ export interface TraitDeclaration {
   readonly key: string;
   readonly label: string;
   readonly rarityDomain: TraitRarityDomain;
-  readonly offerRequirements: readonly TraitRequirementExpression[];
+  /** Current-state and offer-context predicates used by every offer source. */
+  readonly eligibilityRequirements: readonly TraitRequirementExpression[];
+  /** Native boon prerequisite groups used by ordinary generation only. */
+  readonly linkedBoonRequirements: readonly TraitRequirementExpression[];
   readonly equipmentSlot?: TraitEquipmentSlot;
   readonly elementContributions: Readonly<Partial<Record<TraitElement, number>>>;
   readonly usesBoonRarity: boolean;

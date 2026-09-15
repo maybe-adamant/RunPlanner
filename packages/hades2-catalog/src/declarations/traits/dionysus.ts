@@ -16,7 +16,8 @@ export const dionysusTraits = [
     ...variableDionysusTrait,
     key: 'CastLobBoon',
     label: 'Tipsy Shot',
-    offerRequirements: [
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [
       {
         kind: 'notEquippedTrait',
         traitKeys: [
@@ -32,43 +33,50 @@ export const dionysusTraits = [
     ...variableDionysusTrait,
     key: 'HiddenMaxHealthBoon',
     label: 'Worry Free',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
   {
     ...variableDionysusTrait,
     key: 'FirstHangoverBoon',
     label: 'Drunken Stupor',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
   {
     ...variableDionysusTrait,
     key: 'CombatEncounterHealBoon',
     label: 'Bounce Back',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
   {
     ...variableDionysusTrait,
     key: 'PowerDrinkBoon',
     label: 'Bottomless Drink',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
   {
     ...variableDionysusTrait,
     key: 'FogDamageBonusBoon',
     label: 'Happy Haze',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
   {
     ...variableDionysusTrait,
     key: 'BankBoon',
     label: 'Personal Loan',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
   {
     ...variableDionysusTrait,
     key: 'RandomBaseDamageBoon',
     label: 'Reckless Abandon',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
 ] as const satisfies readonly RawTraitDeclaration[];
 

@@ -4,7 +4,8 @@ export const lobWeaponUpgradeTraits = [
   {
     key: 'LobAmmoTrait',
     label: 'Bolstered Array',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -18,7 +19,8 @@ export const lobWeaponUpgradeTraits = [
   {
     key: 'LobAmmoMagnetismTrait',
     label: 'Fetching Array',
-    offerRequirements: [
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [
       {
         kind: 'notEquippedTrait',
         traitKeys: ['LobPulseAmmoTrait'],
@@ -37,7 +39,8 @@ export const lobWeaponUpgradeTraits = [
   {
     key: 'LobRushArmorTrait',
     label: 'Melting Break',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -56,7 +59,8 @@ export const lobWeaponUpgradeTraits = [
   {
     key: 'LobSpreadShotTrait',
     label: 'Wide Grin',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -70,7 +74,8 @@ export const lobWeaponUpgradeTraits = [
   {
     key: 'LobSpecialSpeedTrait',
     label: 'Rapid Driver',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -89,7 +94,8 @@ export const lobWeaponUpgradeTraits = [
   {
     key: 'LobSturdySpecialTrait',
     label: 'Colossus Driver',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -108,7 +114,8 @@ export const lobWeaponUpgradeTraits = [
   {
     key: 'LobOneSideTrait',
     label: 'Mega Driver',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -122,7 +129,8 @@ export const lobWeaponUpgradeTraits = [
   {
     key: 'LobInOutSpecialExTrait',
     label: 'Twisting Crash',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -141,7 +149,8 @@ export const lobWeaponUpgradeTraits = [
   {
     key: 'LobStraightShotTrait',
     label: 'Boosted Ignition',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -155,7 +164,8 @@ export const lobWeaponUpgradeTraits = [
   {
     key: 'LobPulseAmmoTrait',
     label: 'Volatile Array',
-    offerRequirements: [
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [
       {
         kind: 'notEquippedTrait',
         traitKeys: ['LobAmmoMagnetismTrait'],
@@ -174,7 +184,8 @@ export const lobWeaponUpgradeTraits = [
   {
     key: 'LobPulseAmmoCollectTrait',
     label: 'Possessed Array',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -188,7 +199,8 @@ export const lobWeaponUpgradeTraits = [
   {
     key: 'LobGrowthTrait',
     label: 'Looming Ignition',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -202,7 +214,8 @@ export const lobWeaponUpgradeTraits = [
   {
     key: 'LobGunOverheatTrait',
     label: 'Venerated Relic',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -216,7 +229,8 @@ export const lobWeaponUpgradeTraits = [
   {
     key: 'LobGunBounceTrait',
     label: 'Leering Glance',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -230,7 +244,8 @@ export const lobWeaponUpgradeTraits = [
   {
     key: 'LobGunSpecialBounceTrait',
     label: 'Runic Driver',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -244,7 +259,8 @@ export const lobWeaponUpgradeTraits = [
   {
     key: 'LobGunAttackRangeTrait',
     label: 'Garmr Gaze',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -258,7 +274,8 @@ export const lobWeaponUpgradeTraits = [
   {
     key: 'LobGunAttackDoublerTrait',
     label: 'Helheim Charge',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,

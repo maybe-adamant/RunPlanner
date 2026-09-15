@@ -7,7 +7,8 @@ export const aresTraits = [
     label: 'Vicious Strike',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Earth: 1,
     },
@@ -22,7 +23,8 @@ export const aresTraits = [
     label: 'Vicious Flourish',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Earth: 1,
     },
@@ -37,7 +39,8 @@ export const aresTraits = [
     label: 'Sword Ring',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Earth: 1,
     },
@@ -52,7 +55,8 @@ export const aresTraits = [
     label: 'Stabbing Rush',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Earth: 1,
     },
@@ -67,7 +71,8 @@ export const aresTraits = [
     label: 'Grisly Gain',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Earth: 1,
     },
@@ -82,7 +87,8 @@ export const aresTraits = [
     label: 'Meat Grinder',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: [
@@ -111,7 +117,8 @@ export const aresTraits = [
     label: 'Profuse Bleeding',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: ['AresWeaponBoon', 'AresSpecialBoon', 'AresManaBoon', 'BloodDropRevengeBoon'],
@@ -130,7 +137,8 @@ export const aresTraits = [
     label: 'Grievous Blow',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: ['AresWeaponBoon', 'AresSpecialBoon'],
@@ -149,7 +157,8 @@ export const aresTraits = [
     label: 'Visceral Impact',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Earth: 1,
     },
@@ -163,7 +172,8 @@ export const aresTraits = [
     label: 'Mutual Destruction',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Earth: 1,
     },
@@ -177,7 +187,8 @@ export const aresTraits = [
     label: 'Blood Spree',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Earth: 1,
     },
@@ -191,7 +202,8 @@ export const aresTraits = [
     label: 'Cut Above',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Earth: 1,
     },
@@ -205,7 +217,8 @@ export const aresTraits = [
     label: 'Rallying Cry',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic'],
-    offerRequirements: [
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [
       {
         kind: 'elementCount',
         element: 'Earth',
@@ -223,7 +236,8 @@ export const aresTraits = [
     label: 'Sanguinary Savor',
     freshOfferRarities: ['Legendary'],
     equippedRarities: ['Legendary'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -261,7 +275,18 @@ export const aresTraits = [
     label: 'Hostile Environment',
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
+    eligibilityRequirements: [
+      {
+        kind: 'notEquippedTrait',
+        traitKeys: [
+          'CastProjectileBoon',
+          'CastAnywhereBoon',
+          'HadesCastProjectileBoon',
+          'CastLobBoon',
+        ],
+      },
+    ],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -281,15 +306,6 @@ export const aresTraits = [
           },
         ],
       },
-      {
-        kind: 'notEquippedTrait',
-        traitKeys: [
-          'CastProjectileBoon',
-          'CastAnywhereBoon',
-          'HadesCastProjectileBoon',
-          'CastLobBoon',
-        ],
-      },
     ],
     elementContributions: {
       Aether: 1,
@@ -304,8 +320,8 @@ export const aresTraits = [
     label: 'Heinous Affront',
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
-      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
+    eligibilityRequirements: [{ kind: 'offerContext', context: 'devotionNoDuo', required: false }],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -343,8 +359,8 @@ export const aresTraits = [
     label: 'Universal Donor',
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
-      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
+    eligibilityRequirements: [{ kind: 'offerContext', context: 'devotionNoDuo', required: false }],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -378,8 +394,8 @@ export const aresTraits = [
     label: 'Coffin Nail',
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
-      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
+    eligibilityRequirements: [{ kind: 'offerContext', context: 'devotionNoDuo', required: false }],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -418,8 +434,8 @@ export const aresTraits = [
     label: 'Arterial Spray',
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
-      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
+    eligibilityRequirements: [{ kind: 'offerContext', context: 'devotionNoDuo', required: false }],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -453,8 +469,8 @@ export const aresTraits = [
     label: 'Fourth Degree',
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
-      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
+    eligibilityRequirements: [{ kind: 'offerContext', context: 'devotionNoDuo', required: false }],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [

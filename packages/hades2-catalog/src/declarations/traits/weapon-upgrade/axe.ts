@@ -4,7 +4,8 @@ export const axeWeaponUpgradeTraits = [
   {
     key: 'AxeSpinSpeedTrait',
     label: 'Furious Whirlwind',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -23,7 +24,8 @@ export const axeWeaponUpgradeTraits = [
   {
     key: 'AxeChargedSpecialTrait',
     label: 'Sudden Cleaver',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -42,7 +44,8 @@ export const axeWeaponUpgradeTraits = [
   {
     key: 'AxeAttackRecoveryTrait',
     label: 'Rapid Hack',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -61,7 +64,8 @@ export const axeWeaponUpgradeTraits = [
   {
     key: 'AxeMassiveThirdStrikeTrait',
     label: "Executioner's Chop",
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -75,7 +79,8 @@ export const axeWeaponUpgradeTraits = [
   {
     key: 'AxeThirdStrikeTrait',
     label: 'Hell Splitter',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -89,7 +94,8 @@ export const axeWeaponUpgradeTraits = [
   {
     key: 'AxeRangedWhirlwindTrait',
     label: 'Seething Marauder',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -108,7 +114,8 @@ export const axeWeaponUpgradeTraits = [
   {
     key: 'AxeFreeSpinTrait',
     label: 'Psychic Whirlwind',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -127,7 +134,8 @@ export const axeWeaponUpgradeTraits = [
   {
     key: 'AxeArmorTrait',
     label: 'Melting Shredder',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -146,7 +154,8 @@ export const axeWeaponUpgradeTraits = [
   {
     key: 'AxeBlockEmpowerTrait',
     label: 'Siege Shredder',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -165,7 +174,8 @@ export const axeWeaponUpgradeTraits = [
   {
     key: 'AxeSecondStageTrait',
     label: 'Giga Cleaver',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -184,7 +194,8 @@ export const axeWeaponUpgradeTraits = [
   {
     key: 'AxeDashAttackTrait',
     label: 'Dashing Heave',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -203,7 +214,8 @@ export const axeWeaponUpgradeTraits = [
   {
     key: 'AxeSturdyTrait',
     label: 'Colossus Slash',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -222,7 +234,8 @@ export const axeWeaponUpgradeTraits = [
   {
     key: 'AxeRallyFrenzyTrait',
     label: 'Iron Core',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -236,7 +249,8 @@ export const axeWeaponUpgradeTraits = [
   {
     key: 'AxeRallyFirstStrikeTrait',
     label: 'Heaven Splitter',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,

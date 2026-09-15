@@ -7,7 +7,8 @@ export const hestiaTraits = [
     label: 'Flame Strike',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Fire: 1,
     },
@@ -22,7 +23,8 @@ export const hestiaTraits = [
     label: 'Flame Flourish',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Fire: 1,
     },
@@ -37,7 +39,8 @@ export const hestiaTraits = [
     label: 'Smolder Ring',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Fire: 1,
     },
@@ -52,7 +55,8 @@ export const hestiaTraits = [
     label: 'Heat Rush',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Fire: 1,
     },
@@ -67,7 +71,8 @@ export const hestiaTraits = [
     label: 'Cardio Gain',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Fire: 1,
     },
@@ -82,7 +87,8 @@ export const hestiaTraits = [
     label: 'Highly Flammable',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: ['HestiaWeaponBoon', 'HestiaSpecialBoon', 'HestiaCastBoon'],
@@ -101,7 +107,8 @@ export const hestiaTraits = [
     label: 'Glowing Coal',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [
       {
         kind: 'notEquippedTrait',
         traitKeys: ['HadesCastProjectileBoon', 'CastAnywhereBoon', 'CastLobBoon', 'SelfCastBoon'],
@@ -120,7 +127,8 @@ export const hestiaTraits = [
     label: 'Controlled Burn',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Fire: 1,
     },
@@ -134,7 +142,8 @@ export const hestiaTraits = [
     label: 'Flash Fry',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Fire: 1,
     },
@@ -148,7 +157,8 @@ export const hestiaTraits = [
     label: 'Hot Pot',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: ['HestiaWeaponBoon', 'HestiaSpecialBoon', 'HestiaCastBoon'],
@@ -167,7 +177,8 @@ export const hestiaTraits = [
     label: 'Pyro Technique',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: ['HestiaWeaponBoon', 'HestiaSpecialBoon', 'HestiaCastBoon'],
@@ -186,7 +197,8 @@ export const hestiaTraits = [
     label: 'Snuffed Candle',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Fire: 1,
     },
@@ -200,7 +212,8 @@ export const hestiaTraits = [
     label: 'Slow Cooker',
     freshOfferRarities: ['Common'],
     equippedRarities: ['Common'],
-    offerRequirements: [
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [
       {
         kind: 'elementCount',
         element: 'Fire',
@@ -218,7 +231,8 @@ export const hestiaTraits = [
     label: 'Fire Away',
     freshOfferRarities: ['Legendary'],
     equippedRarities: ['Legendary'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -250,8 +264,8 @@ export const hestiaTraits = [
     label: 'Thermal Dynamics',
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
-      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
+    eligibilityRequirements: [{ kind: 'offerContext', context: 'devotionNoDuo', required: false }],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -279,8 +293,8 @@ export const hestiaTraits = [
     label: 'Scalding Vapor',
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
-      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
+    eligibilityRequirements: [{ kind: 'offerContext', context: 'devotionNoDuo', required: false }],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [

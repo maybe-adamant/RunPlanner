@@ -7,7 +7,8 @@ export const apolloTraits = [
     label: 'Nova Strike',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Air: 1,
     },
@@ -22,7 +23,8 @@ export const apolloTraits = [
     label: 'Nova Flourish',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Air: 1,
     },
@@ -37,7 +39,8 @@ export const apolloTraits = [
     label: 'Solar Ring',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Fire: 1,
     },
@@ -52,7 +55,8 @@ export const apolloTraits = [
     label: 'Blinding Rush',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Fire: 1,
     },
@@ -67,7 +71,8 @@ export const apolloTraits = [
     label: 'Lucid Gain',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Air: 1,
     },
@@ -82,7 +87,8 @@ export const apolloTraits = [
     label: 'Light Smite',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Fire: 1,
     },
@@ -96,7 +102,8 @@ export const apolloTraits = [
     label: 'Perfect Image',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Air: 1,
     },
@@ -110,7 +117,8 @@ export const apolloTraits = [
     label: 'Dazzling Display',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: ['ApolloWeaponBoon'],
@@ -130,7 +138,8 @@ export const apolloTraits = [
     label: 'Back Burner',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: ['ApolloCastBoon', 'ApolloSprintBoon', 'ApolloRetaliateBoon', 'BlindChanceBoon'],
@@ -149,7 +158,8 @@ export const apolloTraits = [
     label: 'Prominence Flare',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: [
@@ -178,7 +188,8 @@ export const apolloTraits = [
     label: 'Super Nova',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Air: 1,
     },
@@ -192,7 +203,8 @@ export const apolloTraits = [
     label: 'Extra Dose',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: [
@@ -221,7 +233,8 @@ export const apolloTraits = [
     label: 'Self Healing',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic'],
-    offerRequirements: [
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [
       {
         kind: 'elementCount',
         element: 'Fire',
@@ -239,7 +252,8 @@ export const apolloTraits = [
     label: 'Exceptional Talent',
     freshOfferRarities: ['Legendary'],
     equippedRarities: ['Legendary'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -276,7 +290,8 @@ export const apolloTraits = [
     label: 'Glorious Disaster',
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -304,8 +319,8 @@ export const apolloTraits = [
     label: 'Sun Worshiper',
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
-      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
+    eligibilityRequirements: [{ kind: 'offerContext', context: 'devotionNoDuo', required: false }],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -333,8 +348,8 @@ export const apolloTraits = [
     label: 'Beach Ball',
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
-      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
+    eligibilityRequirements: [{ kind: 'offerContext', context: 'devotionNoDuo', required: false }],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -378,8 +393,8 @@ export const apolloTraits = [
     label: 'Tropical Cyclone',
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
-      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
+    eligibilityRequirements: [{ kind: 'offerContext', context: 'devotionNoDuo', required: false }],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -413,8 +428,8 @@ export const apolloTraits = [
     label: 'Warm Breeze',
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
-      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
+    eligibilityRequirements: [{ kind: 'offerContext', context: 'devotionNoDuo', required: false }],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -453,8 +468,8 @@ export const apolloTraits = [
     label: 'Rude Awakening',
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
-      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
+    eligibilityRequirements: [{ kind: 'offerContext', context: 'devotionNoDuo', required: false }],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -487,8 +502,8 @@ export const apolloTraits = [
     label: 'Cutting Edge',
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
-      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
+    eligibilityRequirements: [{ kind: 'offerContext', context: 'devotionNoDuo', required: false }],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [

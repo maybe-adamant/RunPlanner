@@ -4,7 +4,8 @@ export const suitWeaponUpgradeTraits = [
   {
     key: 'SuitArmorTrait',
     label: 'Melting Cross',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -18,7 +19,8 @@ export const suitWeaponUpgradeTraits = [
   {
     key: 'SuitAttackSpeedTrait',
     label: 'Rapid Frame',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -32,7 +34,8 @@ export const suitWeaponUpgradeTraits = [
   {
     key: 'SuitAttackSizeTrait',
     label: 'Reaper Frame',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -46,7 +49,8 @@ export const suitWeaponUpgradeTraits = [
   {
     key: 'SuitAttackRangeTrait',
     label: 'Siege Frame',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -60,7 +64,8 @@ export const suitWeaponUpgradeTraits = [
   {
     key: 'SuitFullChargeTrait',
     label: 'World Collider',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -74,7 +79,8 @@ export const suitWeaponUpgradeTraits = [
   {
     key: 'SuitDashAttackTrait',
     label: 'Exhaust Riser',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -88,7 +94,8 @@ export const suitWeaponUpgradeTraits = [
   {
     key: 'SuitSpecialJumpTrait',
     label: 'Shimmering Rockets',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -102,7 +109,8 @@ export const suitWeaponUpgradeTraits = [
   {
     key: 'SuitSpecialStartUpTrait',
     label: 'Furious Rockets',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -116,7 +124,8 @@ export const suitWeaponUpgradeTraits = [
   {
     key: 'SuitSpecialAutoTrait',
     label: 'Launcher Frame',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -130,7 +139,8 @@ export const suitWeaponUpgradeTraits = [
   {
     key: 'SuitSpecialBlockTrait',
     label: 'Counter Barrage',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -144,7 +154,8 @@ export const suitWeaponUpgradeTraits = [
   {
     key: 'SuitSpecialDiscountTrait',
     label: 'Sudden Salvo',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -158,7 +169,8 @@ export const suitWeaponUpgradeTraits = [
   {
     key: 'SuitSpecialConsecutiveHitTrait',
     label: 'Ripper Rockets',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -172,7 +184,8 @@ export const suitWeaponUpgradeTraits = [
   {
     key: 'SuitComboForwardRocketTrait',
     label: 'Elephant Rockets',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -186,7 +199,8 @@ export const suitWeaponUpgradeTraits = [
   {
     key: 'SuitComboBlockBuffTrait',
     label: 'Counter Supreme',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -200,7 +214,8 @@ export const suitWeaponUpgradeTraits = [
   {
     key: 'SuitComboDoubleSpecialTrait',
     label: 'Awakened Rockets',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -214,7 +229,8 @@ export const suitWeaponUpgradeTraits = [
   {
     key: 'SuitComboDashAttackTrait',
     label: 'Mooncrest Riser',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -228,7 +244,8 @@ export const suitWeaponUpgradeTraits = [
   {
     key: 'SuitPowershotTrait',
     label: 'Chakra Collider',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,

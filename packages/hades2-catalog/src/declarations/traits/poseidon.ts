@@ -7,7 +7,8 @@ export const poseidonTraits = [
     label: 'Wave Strike',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Water: 1,
     },
@@ -22,7 +23,8 @@ export const poseidonTraits = [
     label: 'Wave Flourish',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Water: 1,
     },
@@ -37,7 +39,8 @@ export const poseidonTraits = [
     label: 'Tidal Ring',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Water: 1,
     },
@@ -52,7 +55,8 @@ export const poseidonTraits = [
     label: 'Breaker Rush',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Water: 1,
     },
@@ -67,7 +71,8 @@ export const poseidonTraits = [
     label: 'Flood Gain',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Water: 1,
     },
@@ -82,7 +87,8 @@ export const poseidonTraits = [
     label: 'Hydraulic Might',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Water: 1,
     },
@@ -96,7 +102,8 @@ export const poseidonTraits = [
     label: 'Buried Treasure',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [
       {
         kind: 'offerContext',
         context: 'blockGiftBoons',
@@ -129,7 +136,8 @@ export const poseidonTraits = [
     label: 'High Surf',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Water: 1,
     },
@@ -144,7 +152,8 @@ export const poseidonTraits = [
     selectedDisposition: { kind: 'seaStar' },
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Water: 1,
     },
@@ -158,7 +167,8 @@ export const poseidonTraits = [
     label: 'Slippery Slope',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: ['PoseidonWeaponBoon', 'PoseidonSpecialBoon'],
@@ -178,7 +188,8 @@ export const poseidonTraits = [
     label: 'Geyser Spout',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: [
@@ -207,7 +218,8 @@ export const poseidonTraits = [
     label: 'Ocean Swell',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {
       Water: 1,
     },
@@ -221,7 +233,8 @@ export const poseidonTraits = [
     label: 'Water Fitness',
     freshOfferRarities: ['Common'],
     equippedRarities: ['Common'],
-    offerRequirements: [
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [
       {
         kind: 'elementCount',
         element: 'Water',
@@ -239,7 +252,8 @@ export const poseidonTraits = [
     label: 'King Tide',
     freshOfferRarities: ['Legendary'],
     equippedRarities: ['Legendary'],
-    offerRequirements: [
+    eligibilityRequirements: [],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [
@@ -276,8 +290,8 @@ export const poseidonTraits = [
     label: 'Killer Current',
     freshOfferRarities: ['Duo'],
     equippedRarities: ['Duo'],
-    offerRequirements: [
-      { kind: 'offerContext', context: 'devotionNoDuo', required: false },
+    eligibilityRequirements: [{ kind: 'offerContext', context: 'devotionNoDuo', required: false }],
+    linkedBoonRequirements: [
       {
         kind: 'all',
         requirements: [

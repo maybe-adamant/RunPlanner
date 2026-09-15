@@ -716,7 +716,7 @@ export function createTraitOfferCandidateArtifacts(
               if (option === undefined) return [];
               const disposition = catalog.traits.byKey[option.traitKey]?.selectedDisposition;
               if (disposition?.kind !== 'echo' || disposition.effect !== 'lastRunBoon') return [];
-              return [echoLastRunBoonOutcomes(catalog, context.before)];
+              return [echoLastRunBoonOutcomes(catalog, context.before, context.context)];
             }),
           ),
         allTogetherSet: (

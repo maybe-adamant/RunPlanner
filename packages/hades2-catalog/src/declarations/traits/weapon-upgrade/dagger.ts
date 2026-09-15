@@ -4,7 +4,8 @@ export const daggerWeaponUpgradeTraits = [
   {
     key: 'DaggerBlinkAoETrait',
     label: 'Sweeping Ambush',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -23,7 +24,8 @@ export const daggerWeaponUpgradeTraits = [
   {
     key: 'DaggerSpecialJumpTrait',
     label: 'Dancing Knives',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -42,7 +44,8 @@ export const daggerWeaponUpgradeTraits = [
   {
     key: 'DaggerSpecialLineTrait',
     label: 'Sureshot Flurry',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -61,7 +64,8 @@ export const daggerWeaponUpgradeTraits = [
   {
     key: 'DaggerRapidAttackTrait',
     label: 'Rapid Onslaught',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -80,7 +84,8 @@ export const daggerWeaponUpgradeTraits = [
   {
     key: 'DaggerSpecialConsecutiveTrait',
     label: 'Melting Sickle',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -99,7 +104,8 @@ export const daggerWeaponUpgradeTraits = [
   {
     key: 'DaggerBackstabTrait',
     label: 'Skulking Onslaught',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -118,7 +124,8 @@ export const daggerWeaponUpgradeTraits = [
   {
     key: 'DaggerSpecialReturnTrait',
     label: 'Reaper Knives',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -137,7 +144,8 @@ export const daggerWeaponUpgradeTraits = [
   {
     key: 'DaggerSpecialFanTrait',
     label: 'Hidden Knives',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -156,7 +164,8 @@ export const daggerWeaponUpgradeTraits = [
   {
     key: 'DaggerAttackFinisherTrait',
     label: 'Final Slice',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -175,7 +184,8 @@ export const daggerWeaponUpgradeTraits = [
   {
     key: 'DaggerFinalHitTrait',
     label: 'Wicked Onslaught',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -194,7 +204,8 @@ export const daggerWeaponUpgradeTraits = [
   {
     key: 'DaggerChargeStageSkipTrait',
     label: 'Sudden Flurry',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -213,7 +224,8 @@ export const daggerWeaponUpgradeTraits = [
   {
     key: 'DaggerDashAttackTripleTrait',
     label: 'Trick Knives',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -227,7 +239,8 @@ export const daggerWeaponUpgradeTraits = [
   {
     key: 'DaggerTripleBuffTrait',
     label: 'Phantom Brand',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -241,7 +254,8 @@ export const daggerWeaponUpgradeTraits = [
   {
     key: 'DaggerTripleRepeatWomboTrait',
     label: 'Banshee Brand',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,
@@ -255,7 +269,8 @@ export const daggerWeaponUpgradeTraits = [
   {
     key: 'DaggerTripleHomingSpecialTrait',
     label: 'Sinister Pinion',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     elementContributions: {},
     usesBoonRarity: false,
     blockStacking: false,

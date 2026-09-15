@@ -5,7 +5,7 @@ import type { BoonRarityFacts } from './rarity';
 import type { TraitFindingCode } from '../model';
 import type { TraitHistoryState, TraitReplacementTransition } from './history/model';
 import { optionIndex, traitOfferSupportsExhaustion } from '../../authored-project/traits/state';
-import { targetedAcquisitionTargetKeys } from './level-effects';
+import { checkRequirement, targetedAcquisitionTargetKeys } from './level-effects';
 import { resolveTraitOfferOptionLevel } from './offer-levels';
 
 export type { TraitFindingCode } from '../model';
@@ -64,6 +64,7 @@ function assessEchoLastRunBoonOption(
   catalog: Catalog,
   traitKey: string,
   history: TraitHistoryState,
+  context: TraitOfferContext,
 ): TraitAssessment {
   const trait = catalog.traits.byKey[traitKey];
   if (trait === undefined)
@@ -90,6 +91,10 @@ function assessEchoLastRunBoonOption(
     targetedAcquisitionTargetKeys(catalog, traitKey, history).length === 0
   )
     findings.push({ code: 'targetedAcquisitionNoEligibleTarget', traitKey });
+  for (const requirement of trait.eligibilityRequirements) {
+    const failure = checkRequirement(catalog, requirement, trait, history, context);
+    if (failure !== undefined) findings.push({ ...failure, traitKey });
+  }
   return Object.freeze({ legal: findings.length === 0, findings: Object.freeze(findings) });
 }
 
@@ -97,6 +102,7 @@ function assessEchoLastRunBoonOption(
 export function echoLastRunBoonOutcomes(
   catalog: Catalog,
   history: TraitHistoryState,
+  context: TraitOfferContext,
 ): readonly EchoLastRunBoonOutcome[] {
   return Object.freeze(
     catalog.echoLastRunBoon.variants.values.flatMap((variant) => {
@@ -122,7 +128,7 @@ export function echoLastRunBoonOutcomes(
           effectiveRarity,
           ...(effectiveLevel === undefined ? {} : { effectiveLevel }),
           targetTraitKeys: targetedAcquisitionTargetKeys(catalog, variant.traitKey, history),
-          assessment: assessEchoLastRunBoonOption(catalog, variant.traitKey, history),
+          assessment: assessEchoLastRunBoonOption(catalog, variant.traitKey, history, context),
         });
       });
     }),

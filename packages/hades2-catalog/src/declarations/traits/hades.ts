@@ -15,13 +15,15 @@ export const hadesTraits = [
     ...raritylessHadesTrait,
     key: 'HadesLifestealBoon',
     label: 'Life Tax',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
   {
     ...raritylessHadesTrait,
     key: 'HadesCastProjectileBoon',
     label: 'Howling Soul',
-    offerRequirements: [
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [
       {
         kind: 'notEquippedTrait',
         traitKeys: ['CastProjectileBoon', 'CastAnywhereBoon', 'CastLobBoon', 'SelfCastBoon'],
@@ -32,37 +34,43 @@ export const hadesTraits = [
     ...raritylessHadesTrait,
     key: 'HadesPreDamageBoon',
     label: 'Old Grudge',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
   {
     ...raritylessHadesTrait,
     key: 'HadesChronosDebuffBoon',
     label: 'Deep Dissent',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
   {
     ...raritylessHadesTrait,
     key: 'HadesDashSweepBoon',
     label: 'Gigaros Dash',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
   {
     ...raritylessHadesTrait,
     key: 'HadesDeathDefianceDamageBoon',
     label: 'Last Gasp',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
   {
     ...raritylessHadesTrait,
     key: 'HadesManaUrnBoon',
     label: 'Cinerary Circle',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
   {
     ...raritylessHadesTrait,
     key: 'HadesInvisibilityRetaliateBoon',
     label: 'Unseen Ire',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
 ] as const satisfies readonly RawTraitDeclaration[];
 

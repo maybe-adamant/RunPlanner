@@ -920,6 +920,7 @@ function encounterTraitContext(
     ...(recreation === undefined ? {} : { echoLastRewardRecreation: recreation }),
     ...(freshRarityOverride === undefined ? {} : { freshRarityOverride }),
     currentKeepsakeKey: branch.keepsakes.currentKey,
+    settledSpellDrop: (branch.history.useRecord.SpellDrop ?? 0) > 0,
   });
 }
 
@@ -1099,7 +1100,12 @@ export function settleEncounterTraitOffer(
         );
         return applied;
       };
-      const childAssessment = assessEchoBoonChild(catalog, preChoiceTraitHistory, child);
+      const childAssessment = assessEchoBoonChild(
+        catalog,
+        preChoiceTraitHistory,
+        traitContext,
+        child,
+      );
       if (childAssessment.kind === 'rejected')
         return reject(childAssessment.rejection.code, childAssessment.rejection.detail);
       const { offer: nestedOffer, outcome, lootHistorySource } = childAssessment;

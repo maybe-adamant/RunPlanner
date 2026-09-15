@@ -489,7 +489,7 @@ export function traitGiverUsesOfferContext(
   const giver = catalog.traitGivers.byKey[giverKey];
   return (
     giver?.traitKeys.some((traitKey) =>
-      catalog.traits.byKey[traitKey]?.offerRequirements.some((requirement) =>
+      catalog.traits.byKey[traitKey]?.eligibilityRequirements.some((requirement) =>
         requirementUsesContext(requirement, context),
       ),
     ) ?? false

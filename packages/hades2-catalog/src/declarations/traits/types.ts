@@ -18,7 +18,8 @@ export interface RawTraitDeclaration {
   readonly rarityDomain?: 'none';
   readonly freshOfferRarities?: readonly TraitRarity[];
   readonly equippedRarities?: readonly TraitRarity[];
-  readonly offerRequirements: readonly TraitRequirementExpression[];
+  readonly eligibilityRequirements: readonly TraitRequirementExpression[];
+  readonly linkedBoonRequirements: readonly TraitRequirementExpression[];
   readonly equipmentSlot?: TraitDeclaration['equipmentSlot'];
   readonly elementContributions: TraitDeclaration['elementContributions'];
   readonly usesBoonRarity: boolean;

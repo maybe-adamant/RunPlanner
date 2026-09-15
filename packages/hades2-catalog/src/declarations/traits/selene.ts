@@ -2,7 +2,8 @@ import type { RawTraitDeclaration, RawTraitGiverDeclaration } from './types';
 
 const raritylessSpell = {
   rarityDomain: 'none',
-  offerRequirements: [],
+  linkedBoonRequirements: [],
+  eligibilityRequirements: [],
   equipmentSlot: 'Spell',
   elementContributions: {},
   usesBoonRarity: false,

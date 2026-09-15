@@ -15,7 +15,7 @@ import {
   type AuthoredTraitOfferTraits,
 } from '../../../authored-project/traits/state';
 import { echoLastRunBoonOutcomes } from '../../traits';
-import type { EchoLastRunBoonOutcome } from '../../traits/offer-domain';
+import type { EchoLastRunBoonOutcome, TraitOfferContext } from '../../traits/offer-domain';
 
 type EchoBoonChildAssessment =
   | { readonly kind: 'rejected'; readonly rejection: EncounterChildRejection }
@@ -30,6 +30,7 @@ type EchoBoonChildAssessment =
 export function assessEchoBoonChild(
   catalog: Catalog,
   history: TraitHistoryState,
+  context: TraitOfferContext,
   child: AuthoredEchoLastRunBoonOffer | undefined,
 ): EchoBoonChildAssessment {
   const reject = (
@@ -44,7 +45,7 @@ export function assessEchoBoonChild(
   const selectedChildIndex = optionIndex(child.selectedOptionKey);
   const selectedChild = child.options[selectedChildIndex];
   if (selectedChild === undefined) return reject('echoLastRunBoonMissing');
-  const outcomes = echoLastRunBoonOutcomes(catalog, history);
+  const outcomes = echoLastRunBoonOutcomes(catalog, history, context);
   let outcome: EchoLastRunBoonOutcome | undefined;
   for (const [index, childOption] of child.options.entries()) {
     const rowOutcome = outcomes.find(

@@ -14,7 +14,8 @@ export const narcissusTraits = [
     ...raritylessNpcTrait,
     key: 'NarcissusA',
     label: 'Verdure Sampler',
-    offerRequirements: [{ kind: 'upgradableTrait' }],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [{ kind: 'upgradableTrait' }],
     selectedDisposition: {
       kind: 'producePickups',
       producerLifecycleKey: 'NarcissusPickup',
@@ -25,7 +26,8 @@ export const narcissusTraits = [
     ...raritylessNpcTrait,
     key: 'NarcissusB',
     label: 'Heartfelt Condolences',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     selectedDisposition: {
       kind: 'producePickups',
       producerLifecycleKey: 'NarcissusPickup',
@@ -36,7 +38,8 @@ export const narcissusTraits = [
     ...raritylessNpcTrait,
     key: 'NarcissusC',
     label: 'Precious Metals',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     selectedDisposition: {
       kind: 'producePickups',
       producerLifecycleKey: 'NarcissusPickup',
@@ -47,7 +50,8 @@ export const narcissusTraits = [
     ...raritylessNpcTrait,
     key: 'NarcissusD',
     label: 'Mystic Secrets',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     selectedDisposition: {
       kind: 'producePickups',
       producerLifecycleKey: 'NarcissusPickup',
@@ -61,7 +65,8 @@ export const narcissusTraits = [
     ...raritylessNpcTrait,
     key: 'NarcissusE',
     label: 'Ancestral Offering',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     selectedDisposition: {
       kind: 'producePickups',
       producerLifecycleKey: 'NarcissusPickup',
@@ -75,14 +80,16 @@ export const narcissusTraits = [
     ...raritylessNpcTrait,
     key: 'NarcissusF',
     label: "Fates' Trimmings",
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     selectedDisposition: { kind: 'equip' },
   },
   {
     ...raritylessNpcTrait,
     key: 'NarcissusG',
     label: 'Heavenly Splendor',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     selectedDisposition: {
       kind: 'producePickups',
       producerLifecycleKey: 'NarcissusPickup',
@@ -96,7 +103,8 @@ export const narcissusTraits = [
     ...raritylessNpcTrait,
     key: 'NarcissusH',
     label: 'Life Savings',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     selectedDisposition: {
       kind: 'producePickups',
       producerLifecycleKey: 'NarcissusPickup',
@@ -107,7 +115,8 @@ export const narcissusTraits = [
     ...raritylessNpcTrait,
     key: 'NarcissusI',
     label: 'Mixed Blessings',
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     selectedDisposition: {
       kind: 'producePickups',
       producerLifecycleKey: 'NarcissusPickup',

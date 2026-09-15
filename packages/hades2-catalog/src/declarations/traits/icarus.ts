@@ -15,7 +15,8 @@ export const icarusTraits = [
     key: 'FocusAttackDamageTrait',
     label: 'Ingenious Strike',
     ...raritylessNpcTrait,
-    offerRequirements: [
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: [
@@ -41,7 +42,8 @@ export const icarusTraits = [
     key: 'FocusSpecialDamageTrait',
     label: 'Ingenious Flourish',
     ...raritylessNpcTrait,
-    offerRequirements: [
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [
       {
         kind: 'anyEquippedTrait',
         traitKeys: [
@@ -67,31 +69,36 @@ export const icarusTraits = [
     key: 'OmegaExplodeBoon',
     label: 'Explosive Intent',
     ...raritylessNpcTrait,
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
   {
     key: 'CastHazardBoon',
     label: 'Hazard Boom',
     ...raritylessNpcTrait,
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
   {
     key: 'BreakInvincibleArmorBoon',
     label: 'Protective Coating',
     ...raritylessNpcTrait,
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
   {
     key: 'BreakExplosiveArmorBoon',
     label: 'Volatile Coating',
     ...raritylessNpcTrait,
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
   },
   {
     key: 'SupplyDropBoon',
     label: 'Supply Chain',
     ...raritylessNpcTrait,
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     selectedDisposition: {
       kind: 'producePickups',
       producerLifecycleKey: 'GeneratedTraitPickup',
@@ -106,7 +113,8 @@ export const icarusTraits = [
     key: 'UpgradeHammerBoon',
     label: 'Latest Model',
     ...raritylessNpcTrait,
-    offerRequirements: [],
+    linkedBoonRequirements: [],
+    eligibilityRequirements: [],
     targetedAcquisition: {
       kind: 'upgradeHammerToRank2',
       target: 'upgradableHammer',
