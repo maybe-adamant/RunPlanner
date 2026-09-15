@@ -14,7 +14,10 @@ import {
   gorgonSourceRarityOverride,
 } from '../../../keepsakes/encounter-effects';
 import { deriveBoonRarityLedger } from '../../../traits/rarity';
-import { boonRarityFactsForOffer } from '../../../traits/offers';
+import {
+  boonRarityFactsForOffer,
+  offerGenerationAdjustedTraitGiverContext,
+} from '../../../traits/offers';
 import { createTraitHistoryState } from '../../../traits';
 import { selectedEncounterAuthoringProfileKey } from '../../../../authored-project/room-state/encounter-envelope';
 import type { RewardBranchState } from '../../branch-primitives';
@@ -37,9 +40,11 @@ export function resolveGorgonCandidateRarity(inputs: {
   const sourceOverride = gorgonSourceRarityOverride(inputs.rarityLevel);
   const suppressTemporaryBoonRarity = inputs.rarityLevel > 1;
   const rarities = inputs.branches.map((branch) => {
-    const facts = boonRarityFactsForOffer(
+    const history = branch.traitHistory ?? createTraitHistoryState();
+    const context = offerGenerationAdjustedTraitGiverContext(
       inputs.catalog,
-      branch.traitHistory ?? createTraitHistoryState(),
+      history,
+      inputs.providerKey,
       {
         resolvedProviderKey: inputs.providerKey,
         boonRarityItemOverride: sourceOverride,
@@ -52,12 +57,15 @@ export function resolveGorgonCandidateRarity(inputs: {
             ? {}
             : { temporaryBoonRarityUses: branch.stygianWell.yarnUses }),
       },
-      branch.arcanaFear,
     );
-    return facts === undefined
-      ? undefined
-      : deriveBoonRarityLedger(facts, ['Common', 'Rare', 'Epic', 'Heroic'])
-          .possibleFreshRarities[0];
+    const facts = boonRarityFactsForOffer(inputs.catalog, history, context, branch.arcanaFear);
+    return (
+      context.freshRarityOverride ??
+      (facts === undefined
+        ? undefined
+        : deriveBoonRarityLedger(facts, ['Common', 'Rare', 'Epic', 'Heroic'])
+            .possibleFreshRarities[0])
+    );
   });
   const first = rarities[0];
   if (rarities.some((rarity) => rarity !== first))

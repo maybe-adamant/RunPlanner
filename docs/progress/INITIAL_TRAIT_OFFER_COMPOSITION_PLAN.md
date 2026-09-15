@@ -9,11 +9,12 @@ commit is `034082eb`. The accompanying
 [trait eligibility investigation](../investigations/TRAIT_ELIGIBILITY_GAME_PARITY_REVIEW.md)
 owns the original composition witnesses.
 
-Gate A is implemented, independently reviewed and committed. Preserve that
-work. The revised order is A replacement rarity → B forced-rarity precedence
+Gate A is implemented, independently reviewed and committed (`e92454d1`). Gate B
+is implemented, independently reviewed and committed; Gate C is next.
+The revised order is A replacement rarity → B forced-rarity precedence
 → C Chaos pair rarity → D Ordinary expiry → E ordinary screen composition
-→ F closure. Commit the amended execution contract before further
-implementation; no new gate is implemented by this amendment.
+→ F closure. The amended execution contract was committed as `e023b3d9` before
+Gate B implementation.
 
 Correct ordinary initial boon screens so that complete-offer validation,
 candidate support and editor draft construction agree with the supported native
@@ -274,6 +275,12 @@ Existing `boon-rarity.test.ts`, `trait-offers.test.ts` and
 `trait-offer-focused-candidates.test.ts` cover arithmetic and consumer contacts.
 
 ### B — Correct forced-rarity precedence
+
+Status: implemented, independently reviewed and committed. The review's
+Yarn witness gap was corrected and verified. All 117 tests across the five
+focused Chaos, Gorgon, rarity, candidate and replacement files pass, along with
+engine typechecking, scoped ESLint, formatting and diff checks. Full repository
+and performance verification remain in Gate F.
 
 Deliver C1/C2 from the rarity investigation: establish Ordinary before numeric
 facts are built or consumed, align Gorgon's resolver, and preserve Yarn until

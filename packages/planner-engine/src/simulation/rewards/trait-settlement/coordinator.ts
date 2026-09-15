@@ -31,6 +31,7 @@ import {
   isAspectSpellDropDormant,
   recordReachedTraitOffer,
   traitOfferCompositionDomains,
+  offerGenerationAdjustedTraitGiverContext,
   type TraitHistoryState,
 } from '../../traits';
 import type { EchoLastRunBoonOutcome, TraitOfferContext } from '../../traits/offer-domain';
@@ -941,15 +942,20 @@ function withBoonRarityFacts(
   branch: RewardBranchState,
   context: TraitOfferContext,
 ): TraitOfferContext {
-  const facts = boonRarityFactsForOffer(
-    catalog,
-    branch.traitHistory ?? createTraitHistoryState(),
-    context,
-    branch.arcanaFear,
-  );
-  if (facts === undefined) return context;
+  const history = branch.traitHistory ?? createTraitHistoryState();
+  const adjusted =
+    context.resolvedProviderKey === undefined
+      ? context
+      : offerGenerationAdjustedTraitGiverContext(
+          catalog,
+          history,
+          context.resolvedProviderKey,
+          context,
+        );
+  const facts = boonRarityFactsForOffer(catalog, history, adjusted, branch.arcanaFear);
+  if (facts === undefined) return adjusted;
   return Object.freeze({
-    ...context,
+    ...adjusted,
     boonRarityFacts: facts,
   });
 }
