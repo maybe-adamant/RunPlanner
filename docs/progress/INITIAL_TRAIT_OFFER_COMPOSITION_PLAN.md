@@ -11,9 +11,11 @@ owns the original composition witnesses.
 
 Gate A is implemented, independently reviewed and committed (`e92454d1`). Gate B
 is implemented, independently reviewed and committed (`23d7adff`). Gate C is
-implemented, independently reviewed and committed; Gate D is next.
+implemented, independently reviewed and committed (`a5333e65`). Gate D is
+complete and independently reviewed, including the user-approved NPC
+screen-consumption correction. Gate E is next.
 The revised order is A replacement rarity → B forced-rarity precedence
-→ C Chaos pair rarity → D Ordinary expiry → E ordinary screen composition
+→ C Chaos pair rarity → D Ordinary consumption/expiry → E ordinary screen composition
 → F closure. The amended execution contract was committed as `e023b3d9` before
 Gate B implementation.
 
@@ -39,6 +41,8 @@ Included:
 - Ordinary's precedence over chance facts, including Gorgon and Yarn's
   application/consumption boundary;
 - exact-context rarity feasibility for the existing selected Chaos pair;
+- Ordinary/Rejected screen consumption and restriction support for ranked NPC
+  gods, matching their existing rarity-effect scope;
 - active Proper Upbringing's native recheck when Ordinary expires;
 - initial priority/replacement seeding, fresh rarity-pool filling and vacancy
   rescue, including their effects on short screens and Fallback Gold;
@@ -59,8 +63,8 @@ Also excluded: rerolls; new save-progression inputs; Death Defiance or precise
 God Sent investment modeling; Chaos-pair, NPC, Hammer or Spell Drop composition
 redesign; Concave Stone lifecycle; targeted-trait payload changes; executor
 hooks, DAG policy or acquisition timing; general UI redesign. Gorgon retains
-its current fixed-rarity authoring simplification; only its forced-rarity
-precedence changes. Calling Card/god-keepsake precedence is not a defect in a
+its current fixed-rarity authoring simplification and participates in the shared
+Athena source rules. Calling Card/god-keepsake precedence is not a defect in a
 reachable slotted-keepsake state and receives no correction.
 
 The accepted exhaustion policy is to retire the universal exhaustion
@@ -152,8 +156,15 @@ Any missing source declaration belongs in the normalized catalog, not React.
 
 ### Ordinary expiry and Proper recheck
 
-Extend the existing Chaos expiration/history transition at its current
-screen-use clock. When Ordinary expires and Proper is active, reuse the
+Align the existing screen-use clock with the qualifying sources already
+affected by Ordinary: Olympian, Hermes, Artemis, Athena (including Gorgon) and
+Dionysus. Keep Hades and non-god story screens exempt. Ordinary and Rejected
+share this clock, so their source qualification, Rejected's restriction and
+its authoring domain must remain consistent. Reuse existing normalized source
+facts; do not add Gorgon-specific consumption or broaden NPC offer composition.
+
+Extend the existing Chaos expiration/history transition. When Ordinary expires
+and Proper is active, reuse the
 declaration-owned Common-to-Rare promotion pass, including its established
 target exclusions and source-rarity assignment. Do not promote Common boons
 after every acquisition, add a new timeline action or move the expiry to room
@@ -318,13 +329,32 @@ rarity domain reaches authoring. Reproduce Common Chaos with rank-IV Excellence
 being accepted before correction. Replace unconditional dynamic C/R/E support
 where used; retain C/R/E as a structural domain, not a probability assertion.
 
-### D — Apply Proper's recheck at Ordinary expiry
+### D — Align Ordinary screen consumption and expiry
+
+Status: implemented and independently reviewed as one combined slice with no
+actionable findings. All 102 focused Chaos, trait-history, Gorgon and trait-offer
+candidate tests pass, plus the 18 existing Concave Stone tests. Engine
+typechecking, scoped ESLint, formatting and diff checks pass. The independent
+reviewer reran all 29 Chaos tests. Red witnesses reproduced both the missing
+final-boon promotion and the NPC consumption/Rejected gaps before correction.
+Full verification remains in Gate F.
+
+Native Artemis, Athena and Dionysus screens qualify through
+`TreatAsGodLootByShops` (`NPCData_Artemis.lua:1850`, `NPCData_Athena.lua:26`,
+`NPCData_Dionysus.lua:28`; `UpgradeChoiceLogic.lua:1124–1133`). Align consumption
+with the existing rarity-effect scope. Preserve Hades's explicit ForceCommon
+and restricted-choice exemptions. Because Ordinary and Rejected share the
+screen clock, use the same qualifying-source rule for Rejected validation and
+candidate/editor support; never start consuming an unapplied restriction.
+Prove these NPC screens consume one use after a valid settlement, can trigger
+Proper's expiry recheck, and do not consume on an invalid offer or an additional
+Concave Stone acquisition. Retain a Gorgon source contact and Hades/non-god
+exemption witnesses. No new clock, persisted field or generic effect framework.
 
 Deliver C4 through existing history settlement. Establish a failing lifecycle
 witness first: acquire and activate Proper, acquire Ordinary, settle affected
 Common offers, expire the curse, and observe the promoted inventory before
-the next action. This is currently source-traced, not an already-passing
-product witness. Do not seed a hand-invented active-Proper flag to prove the
+the next action. Do not seed a hand-invented active-Proper flag to prove the
 entire lifecycle.
 
 Primary tests: `test/simulation/chaos-traits.test.ts`, reusing existing trait

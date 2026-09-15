@@ -19,6 +19,7 @@ import {
   foldTraitHistoryEvents,
   recordReachedTraitOffer,
   attachTraitHistory,
+  traitCandidates,
 } from '../../src/simulation/traits';
 import { simulateProject } from '../../src/simulation';
 import { evaluateCallingCardOffer } from '../../src/simulation/keepsakes/reward-effects';
@@ -123,7 +124,234 @@ function branchWithHistory(history: ReturnType<typeof createTraitHistoryState>) 
   });
 }
 
+function rankedNpcGodOffer(giverKey: 'Artemis' | 'Athena' | 'Dionysus') {
+  const options =
+    giverKey === 'Artemis'
+      ? [
+          { traitKey: 'SupportingFireBoon', rarity: 'Common' as const },
+          { traitKey: 'CritBonusBoon', rarity: 'Common' as const },
+          { traitKey: 'DashOmegaBuffBoon', rarity: 'Common' as const },
+        ]
+      : giverKey === 'Athena'
+        ? [
+            { traitKey: 'InvulnerabilityDashBoon', rarity: 'Common' as const },
+            { traitKey: 'RetaliateInvulnerabilityBoon', rarity: 'Common' as const },
+            { traitKey: 'FocusLastStandBoon', rarity: 'Common' as const },
+          ]
+        : [
+            { traitKey: 'HiddenMaxHealthBoon', rarity: 'Common' as const },
+            { traitKey: 'FirstHangoverBoon', rarity: 'Common' as const },
+            { traitKey: 'CombatEncounterHealBoon', rarity: 'Common' as const },
+          ];
+  return Object.freeze({
+    kind: 'traits' as const,
+    giverKey,
+    selectedOptionKey: 'option1' as const,
+    rarificationActions: Object.freeze([]),
+    options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
+  });
+}
+
+function acquireLegalTrait(
+  before: ReturnType<typeof createTraitHistoryState>,
+  giverKey: string,
+  traitKey: string,
+  rarity: AuthoredTraitOfferTraits['options'][number]['rarity'],
+) {
+  const selected = traitCandidates(catalog, giverKey, before).find(
+    (candidate) =>
+      candidate.available && candidate.traitKey === traitKey && candidate.rarity === rarity,
+  );
+  const alternatives = traitCandidates(catalog, giverKey, before).filter(
+    (candidate) => candidate.available && candidate.traitKey !== traitKey,
+  );
+  const first = alternatives[0];
+  const second = alternatives.find((candidate) => candidate.traitKey !== first?.traitKey);
+  if (selected === undefined || first === undefined || second === undefined)
+    throw new Error(`Missing legal ${giverKey}/${traitKey}/${rarity ?? 'untyped'} offer`);
+  const sequence = before.events.length + 1;
+  const evaluation = evaluateReachedTraitOffer(
+    catalog,
+    rewardOwner,
+    `proper-${sequence}`,
+    Object.freeze({
+      kind: 'traits' as const,
+      giverKey,
+      options: Object.freeze([
+        Object.freeze({ traitKey: selected.traitKey, rarity: selected.rarity }),
+        Object.freeze({ traitKey: first.traitKey, rarity: first.rarity }),
+        Object.freeze({ traitKey: second.traitKey, rarity: second.rarity }),
+      ]) as AuthoredTraitOfferTraits['options'],
+      selectedOptionKey: 'option1' as const,
+      rarificationActions: Object.freeze([]),
+    }),
+    before,
+    {},
+    sequence,
+  );
+  const applied = recordReachedTraitOffer(catalog, evaluation, sequence, 'test');
+  if (applied.event === undefined) throw new Error(`Illegal ${giverKey}/${traitKey} acquisition`);
+  return applied.history;
+}
+
+function historyWithActiveProper() {
+  let history = createTraitHistoryState();
+  for (const [giverKey, traitKey] of [
+    ['Apollo', 'ApolloWeaponBoon'],
+    ['Hermes', 'HermesWeaponBoon'],
+    ['Hermes', 'HermesSpecialBoon'],
+    ['Hermes', 'DodgeChanceBoon'],
+    ['Hermes', 'SprintShieldBoon'],
+    ['Hermes', 'RestockBoon'],
+    ['Poseidon', 'DoubleRewardBoon'],
+    ['Poseidon', 'FocusDamageShaveBoon'],
+    ['Poseidon', 'ElementalHealthBoon'],
+  ] as const)
+    history = acquireLegalTrait(history, giverKey, traitKey, 'Common');
+  return acquireLegalTrait(history, 'Hera', 'ElementalRarityUpgradeBoon', 'Common');
+}
+
+function historyWithInactiveProper() {
+  let history = createTraitHistoryState();
+  for (const [giverKey, traitKey] of [
+    ['Hera', 'HeraWeaponBoon'],
+    ['Hera', 'HeraCastBoon'],
+    ['Hera', 'HeraSprintBoon'],
+    ['Hera', 'HeraManaBoon'],
+  ] as const)
+    history = acquireLegalTrait(history, giverKey, traitKey, 'Common');
+  return acquireLegalTrait(history, 'Hera', 'ElementalRarityUpgradeBoon', 'Common');
+}
+
 describe('Chaos paired-trait history', () => {
+  it('rechecks active Proper when Ordinary expires after its final affected settled screen', () => {
+    const activeProper = historyWithActiveProper();
+    expect(activeProper.properUpbringingActive).toBe(true);
+    const ordinarySequence = activeProper.events.length + 1;
+    const ordinary = settleEncounterTraitOffer(
+      catalog,
+      branchWithHistory(activeProper),
+      rewardOwner,
+      chaos('ChaosCommonCurse', 'ChaosWeaponBlessing'),
+      ordinarySequence,
+      'reward',
+      undefined,
+      'self',
+    );
+    const first = settleEncounterTraitOffer(
+      catalog,
+      ordinary.branch,
+      rewardOwner,
+      Object.freeze({
+        kind: 'traits' as const,
+        giverKey: 'Zeus',
+        selectedOptionKey: 'option1' as const,
+        rarificationActions: Object.freeze([]),
+        options: Object.freeze([
+          { traitKey: 'ZeusSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ZeusCastBoon', rarity: 'Common' },
+          { traitKey: 'ZeusSprintBoon', rarity: 'Common' },
+        ]) as AuthoredTraitOfferTraits['options'],
+      }),
+      ordinarySequence + 1,
+      'reward',
+      undefined,
+      'self',
+    );
+    expect(first.branch.traitHistory?.equippedTraits.ZeusSpecialBoon?.rarity).toBe('Common');
+    expect(first.branch.traitHistory?.activeChaosCurses).toMatchObject([
+      { semanticTag: 'Ordinary', remaining: 1 },
+    ]);
+    const expired = settleEncounterTraitOffer(
+      catalog,
+      first.branch,
+      rewardOwner,
+      Object.freeze({
+        kind: 'traits' as const,
+        giverKey: 'Hermes',
+        selectedOptionKey: 'option1' as const,
+        rarificationActions: Object.freeze([]),
+        options: Object.freeze([
+          { traitKey: 'HermesCastDiscountBoon', rarity: 'Common' },
+          { traitKey: 'SorcerySpeedBoon', rarity: 'Common' },
+          { traitKey: 'SlowProjectileBoon', rarity: 'Common' },
+        ]) as AuthoredTraitOfferTraits['options'],
+      }),
+      ordinarySequence + 2,
+      'reward',
+      undefined,
+      'self',
+    );
+    expect(expired.branch.traitHistory?.activeChaosCurses).toEqual([]);
+    expect(expired.branch.traitHistory?.equippedTraits.ZeusSpecialBoon?.rarity).toBe('Rare');
+    expect(expired.branch.traitHistory?.equippedTraits.HermesCastDiscountBoon?.rarity).toBe('Rare');
+    expect(expired.branch.traitHistory?.equippedTraits.ElementalHealthBoon?.rarity).toBe('Common');
+    expect(
+      expired.branch.traitHistory?.events.find(
+        (event) =>
+          event.kind === 'traitOffer' &&
+          event.giverKey === 'Hermes' &&
+          event.options[0]?.traitKey === 'HermesCastDiscountBoon',
+      ),
+    ).toMatchObject({
+      options: [
+        expect.objectContaining({ traitKey: 'HermesCastDiscountBoon', rarity: 'Common' }),
+        expect.anything(),
+        expect.anything(),
+      ],
+    });
+  });
+
+  it('does not promote Common traits when Ordinary expires while Proper is inactive', () => {
+    const inactiveProper = historyWithInactiveProper();
+    expect(inactiveProper.properUpbringingActive).toBeUndefined();
+    const curseSequence = inactiveProper.events.length + 1;
+    const cursed = recordReachedTraitOffer(
+      catalog,
+      evaluateReachedTraitOffer(
+        catalog,
+        rewardOwner,
+        'inactive-ordinary',
+        chaos('ChaosCommonCurse', 'ChaosWeaponBlessing'),
+        inactiveProper,
+        {},
+        curseSequence,
+      ),
+      curseSequence,
+      'test',
+    ).history;
+    const traitSequence = curseSequence + 1;
+    const withCommon = recordReachedTraitOffer(
+      catalog,
+      evaluateReachedTraitOffer(
+        catalog,
+        rewardOwner,
+        'inactive-common',
+        Object.freeze({
+          kind: 'traits' as const,
+          giverKey: 'Hermes',
+          selectedOptionKey: 'option1' as const,
+          rarificationActions: Object.freeze([]),
+          options: Object.freeze([
+            { traitKey: 'HermesCastDiscountBoon', rarity: 'Common' },
+            { traitKey: 'SorcerySpeedBoon', rarity: 'Common' },
+            { traitKey: 'SlowProjectileBoon', rarity: 'Common' },
+          ]) as AuthoredTraitOfferTraits['options'],
+        }),
+        cursed,
+        {},
+        traitSequence,
+      ),
+      traitSequence,
+      'test',
+    ).history;
+    const firstClock = advanceChaosClock(catalog, withCommon, traitSequence, 'godBoonScreens');
+    const expired = advanceChaosClock(catalog, firstClock, traitSequence + 1, 'godBoonScreens');
+    expect(expired.activeChaosCurses).toEqual([]);
+    expect(expired.properUpbringingActive).toBeUndefined();
+    expect(expired.equippedTraits.HermesCastDiscountBoon?.rarity).toBe('Common');
+  });
+
   it('bans only distinct unselected curses under Denial and blocks those curses later', () => {
     const offer = Object.freeze({
       ...chaos('ChaosNoMoneyCurse'),
@@ -990,6 +1218,25 @@ describe('Chaos paired-trait history', () => {
       },
     ]);
     expect(capability?.chaosOfferRules({ ...offer, giverKey: 'SpellDrop' })).toEqual([]);
+    const artemisOffer: AuthoredTraitOfferTraits = Object.freeze({
+      ...offer,
+      giverKey: 'Artemis',
+      options: Object.freeze([
+        { traitKey: 'SupportingFireBoon', rarity: 'Common' },
+        { traitKey: 'CritBonusBoon', rarity: 'Common' },
+      ]) as AuthoredTraitOfferTraits['options'],
+    });
+    expect(
+      evaluateReachedTraitOffer(catalog, owner, 'self', artemisOffer, history, {}, 0).composition
+        .findings,
+    ).toContainEqual({ code: 'chaosRejectedBlockMissing' });
+    expect(capability?.chaosOfferRules(artemisOffer)).toEqual([
+      {
+        rejectedBlockRequired: true,
+        rejectedBlockableOptionKeys: ['option1'],
+        rejectedBlockNeedsRepair: true,
+      },
+    ]);
   });
 
   it('keeps Rejected’s blocked identity visible to Denial as an unselected trait, not a replacement row', () => {
@@ -1146,6 +1393,155 @@ describe('Chaos paired-trait history', () => {
     expect(fallback.branch.traitHistory?.activeChaosCurses.map((curse) => curse.remaining)).toEqual(
       [1, 1],
     );
+  });
+
+  it('consumes Ordinary after each ranked NPC god screen', () => {
+    for (const giverKey of ['Artemis', 'Athena', 'Dionysus'] as const) {
+      const settled = settleEncounterTraitOffer(
+        catalog,
+        branchWithHistory(pairHistory(chaos('ChaosCommonCurse'))),
+        rewardOwner,
+        rankedNpcGodOffer(giverKey),
+        2,
+        'encounterCompleted',
+      );
+      expect(settled.branch.traitHistory?.activeChaosCurses).toMatchObject([
+        { semanticTag: 'Ordinary', remaining: 1 },
+      ]);
+    }
+  });
+
+  it('shares Rejected’s selected validation, candidate repair, and screen use across ranked NPCs', () => {
+    const active = foldTraitHistoryEvents(catalog, [
+      ...pairHistory(chaos('ChaosCommonCurse')).events,
+      Object.freeze({
+        kind: 'chaosPair' as const,
+        owner,
+        acquisitionRole: 'self',
+        sequence: 2,
+        acquisitionPoint: 'reward',
+        acquisitionIdentity: 'chaos:rejected-npc',
+        offer: chaos('ChaosRestrictBoonCurse'),
+      }),
+    ]);
+    const invalid = settleEncounterTraitOffer(
+      catalog,
+      branchWithHistory(active),
+      rewardOwner,
+      rankedNpcGodOffer('Artemis'),
+      3,
+      'encounterCompleted',
+    );
+    expect(invalid.branch.traitHistory?.activeChaosCurses).toMatchObject([
+      { semanticTag: 'Ordinary', remaining: 2 },
+      { semanticTag: 'Rejected', remaining: 2 },
+    ]);
+    expect(invalid.branch.traitEvaluations?.at(-1)?.composition.findings).toContainEqual({
+      code: 'chaosRejectedBlockMissing',
+    });
+    const settled = settleEncounterTraitOffer(
+      catalog,
+      branchWithHistory(active),
+      rewardOwner,
+      Object.freeze({ ...rankedNpcGodOffer('Artemis'), rejectedOptionKey: 'option2' as const }),
+      3,
+      'encounterCompleted',
+    );
+    expect(settled.branch.traitHistory?.activeChaosCurses).toMatchObject([
+      { semanticTag: 'Ordinary', remaining: 1 },
+      { semanticTag: 'Rejected', remaining: 1 },
+    ]);
+    expect(settled.branch.traitHistory?.equippedTraits.SupportingFireBoon).toBeDefined();
+  });
+
+  it('rechecks active Proper after the final ranked NPC god screen expires Ordinary', () => {
+    const activeProper = historyWithActiveProper();
+    const ordinarySequence = activeProper.events.length + 1;
+    const ordinary = settleEncounterTraitOffer(
+      catalog,
+      branchWithHistory(activeProper),
+      rewardOwner,
+      chaos('ChaosCommonCurse', 'ChaosWeaponBlessing'),
+      ordinarySequence,
+      'reward',
+      undefined,
+      'self',
+    );
+    const first = settleEncounterTraitOffer(
+      catalog,
+      ordinary.branch,
+      rewardOwner,
+      rankedNpcGodOffer('Artemis'),
+      ordinarySequence + 1,
+      'reward',
+      undefined,
+      'self',
+    );
+    const expired = settleEncounterTraitOffer(
+      catalog,
+      first.branch,
+      rewardOwner,
+      rankedNpcGodOffer('Athena'),
+      ordinarySequence + 2,
+      'reward',
+      undefined,
+      'gorgonAthena',
+    );
+    expect(expired.branch.traitHistory?.activeChaosCurses).toEqual([]);
+    expect(expired.branch.traitHistory?.equippedTraits.SupportingFireBoon?.rarity).toBe('Rare');
+    expect(expired.branch.traitHistory?.equippedTraits.InvulnerabilityDashBoon?.rarity).toBe(
+      'Rare',
+    );
+  });
+
+  it('does not consume Ordinary for rarityless Hades or other story screens', () => {
+    const offers = [
+      {
+        selectedTraitKey: 'HadesLifestealBoon',
+        offer: Object.freeze({
+          kind: 'traits' as const,
+          giverKey: 'Hades',
+          selectedOptionKey: 'option1' as const,
+          rarificationActions: Object.freeze([]),
+          options: Object.freeze([
+            { traitKey: 'HadesLifestealBoon' },
+            { traitKey: 'HadesPreDamageBoon' },
+            { traitKey: 'HadesChronosDebuffBoon' },
+          ]) as AuthoredTraitOfferTraits['options'],
+        }),
+      },
+      {
+        selectedTraitKey: 'NarcissusB',
+        offer: Object.freeze({
+          kind: 'traits' as const,
+          giverKey: 'Narcissus',
+          selectedOptionKey: 'option1' as const,
+          rarificationActions: Object.freeze([]),
+          options: Object.freeze([
+            { traitKey: 'NarcissusB' },
+            { traitKey: 'NarcissusC' },
+            { traitKey: 'NarcissusD' },
+          ]) as AuthoredTraitOfferTraits['options'],
+        }),
+      },
+    ] as const;
+    for (const { offer, selectedTraitKey } of offers) {
+      const settled = settleEncounterTraitOffer(
+        catalog,
+        branchWithHistory(pairHistory(chaos('ChaosCommonCurse'))),
+        rewardOwner,
+        offer,
+        2,
+        'encounterCompleted',
+      );
+      expect(settled.branch.traitHistory?.activeChaosCurses).toMatchObject([
+        { semanticTag: 'Ordinary', remaining: 2 },
+      ]);
+      expect(
+        settled.branch.traitHistory?.equippedTraits[selectedTraitKey],
+        `${offer.giverKey} selected trait should settle`,
+      ).toBeDefined();
+    }
   });
 
   it('settles a TrialUpgrade-shaped self child through the shared acquisition path and starts its clock there', () => {

@@ -28,6 +28,7 @@ import {
   echoPomGreatestLevelTraitKeys,
   evaluateReachedEchoLastRunBoonOffer,
   evaluateReachedTraitOffer,
+  isChaosGodScreenGiver,
   isAspectSpellDropDormant,
   recordReachedTraitOffer,
   traitOfferCompositionDomains,
@@ -106,22 +107,13 @@ interface EchoLastRunBoonSettlement {
   readonly outcome: EchoLastRunBoonOutcome;
 }
 
-function isEligibleChaosGodScreen(
-  catalog: Catalog,
-  offer: AuthoredTraitOffer | undefined,
-): boolean {
-  if (offer === undefined) return false;
-  const provider = catalog.traitGivers.byKey[offer.giverKey]?.providerKind;
-  return provider === 'olympian' || provider === 'hermes';
-}
-
 function consumeChaosGodScreen(
   catalog: Catalog,
   branch: RewardBranchState,
   sequence: number,
   offer: AuthoredTraitOffer | undefined,
 ): RewardBranchState {
-  if (!isEligibleChaosGodScreen(catalog, offer)) return branch;
+  if (offer === undefined || !isChaosGodScreenGiver(catalog, offer.giverKey)) return branch;
   const before = branch.traitHistory ?? createTraitHistoryState();
   const traitHistory = advanceChaosClock(catalog, before, sequence, 'godBoonScreens');
   return traitHistory === before

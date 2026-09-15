@@ -50,6 +50,11 @@ function boonRarityProviderForGiver(
   return giver.providerKind === 'olympian' || giver.shopAwareGodTrait ? 'olympian' : undefined;
 }
 
+/** Whether this giver's source screen is affected by Chaos Ordinary and Rejected. */
+export function isChaosGodScreenGiver(catalog: Catalog, giverKey: string): boolean {
+  return boonRarityProviderForGiver(catalog.traitGivers.byKey[giverKey]) !== undefined;
+}
+
 /** Resolves offer-generation overrides at one source-screen frontier.
  * Authored rows stay untouched: stale non-Common fresh rows are assessed as
  * invalid, while exact promoted replacement rows remain legal. */
@@ -420,8 +425,7 @@ function evaluateReachedTraitOfferWithAssessments(
             : baseComposition;
         }
         if (offer.kind !== 'traits') return baseComposition;
-        const provider = catalog.traitGivers.byKey[offer.giverKey]?.providerKind;
-        if (provider !== 'olympian' && provider !== 'hermes') return baseComposition;
+        if (!isChaosGodScreenGiver(catalog, offer.giverKey)) return baseComposition;
         const chaosFindings: TraitOfferCompositionFinding[] = [];
         if (hasActiveChaosSemanticTag(before, 'Rejected')) {
           const blocked = offer.rejectedOptionKey;
