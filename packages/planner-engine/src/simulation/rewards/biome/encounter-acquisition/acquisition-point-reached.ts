@@ -699,6 +699,7 @@ export function applyAcquisitionPointReachedTransition(
         ...(row?.owner === undefined ? {} : { timelineOwner: row.owner }),
         historySequence: event.sequence,
         facts: (history, _names, branch) => factsAt(acquisitionView, history, branch),
+        traitContext: inputs.routeLoadout,
         findingChronology: chronology,
         authoredSeaStarDuplicateSiteKeys,
       });

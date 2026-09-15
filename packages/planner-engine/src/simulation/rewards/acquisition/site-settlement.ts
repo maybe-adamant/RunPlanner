@@ -799,6 +799,7 @@ export function settlePickupAcquisitionSite(
         participation: 'mandatory',
         historySequence: request.historySequence,
         facts: request.facts,
+        ...(request.traitContext === undefined ? {} : { traitContext: request.traitContext }),
         ...(request.atomicRegion === undefined ? {} : { atomicRegion: request.atomicRegion }),
         ...(request.findingChronology === undefined
           ? {}
