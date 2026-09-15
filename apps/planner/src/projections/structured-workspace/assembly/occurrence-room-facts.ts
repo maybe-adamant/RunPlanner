@@ -651,9 +651,13 @@ function roomLocalForOccurrence(
       );
       const slots = [
         ...profile.slots.values,
-        ...(room.infernalContractReward === undefined
-          ? []
-          : [{ key: 'infernalContractReward', label: 'Contract' }]),
+        ...(controls.some(
+          (control) =>
+            control.owner.address.kind === 'shopOffer' &&
+            control.owner.address.offerKey === 'infernalContractReward',
+        )
+          ? [{ key: 'infernalContractReward', label: 'Contract' }]
+          : []),
       ];
       const offers = slots.map((slot) => {
         if (shop.offers[slot.key] === undefined) {

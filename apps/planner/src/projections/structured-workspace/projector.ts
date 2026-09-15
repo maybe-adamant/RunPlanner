@@ -27,6 +27,7 @@ import {
   zagreusContractCandidateForProjectEvaluationAssembly,
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   traitOfferCandidateForProjectEvaluationAssembly,
+  isShopOfferActiveForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -336,6 +337,7 @@ export function createStructuredWorkspaceProjection(
             throw error;
           }
         },
+        (offer) => isShopOfferActiveForProjectEvaluationAssembly(assembly, offer),
       );
       const routeSource = sources.route;
       const authoredRoute =

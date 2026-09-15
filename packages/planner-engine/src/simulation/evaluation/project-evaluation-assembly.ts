@@ -10,6 +10,7 @@ import {
   type NemesisRandomEventAddress,
   type OccurrenceAddress,
   type TraitOfferAddress,
+  type ShopOfferAddress,
 } from '../../authored-project/addresses';
 import { hermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shrine-delivery';
 import type { ProjectCommand } from '../../authored-project/commands/types';
@@ -209,6 +210,18 @@ export function traitOfferCandidateForProjectEvaluationAssembly(
   return candidateArtifactsForProjectEvaluationAssembly(assembly)
     .biomeAt(createBiomeAddress(address.routeKey, address.biomeKey))
     ?.traitOffers.at(address);
+}
+
+/** Whether this inventory owner has a reached, active generation frontier. */
+export function isShopOfferActiveForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  offer: ShopOfferAddress,
+): boolean {
+  return (
+    candidateArtifactsForProjectEvaluationAssembly(assembly)
+      .biomeAt(createBiomeAddress(offer.routeKey, offer.biomeKey))
+      ?.rewardProducers.at(offer) !== undefined
+  );
 }
 
 /** Exact Pool generation capability retained when progressive assessment clamps its reward view. */

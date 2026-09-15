@@ -26,6 +26,42 @@ import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/struct
 const preboss = createOccurrenceId('golden-g-preboss-shop');
 const inventory = createShopOfferAddress(goldenGBiome, preboss, 'infernalContractReward');
 
+it('hides inactive Contract inventory unless its stale purchase needs removal', () => {
+  let project = createCompleteFGProject();
+  const absent = projectStructuredWorkspaceFixture(project);
+  expect(absent.workspace.interactions.shopOffers.has(semanticAddressKey(inventory))).toBe(false);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: inventory,
+    value: { rewardType: 'BlindBoxLoot' },
+  });
+  const dormant = projectStructuredWorkspaceFixture(project);
+  expect(dormant.workspace.interactions.shopOffers.has(semanticAddressKey(inventory))).toBe(false);
+  expect(dormant.evaluation.route.findings).toEqual([]);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopPurchaseParticipation',
+    offer: inventory,
+    purchased: true,
+  });
+  const stale = projectStructuredWorkspaceFixture(project);
+  const entry = createAcquisitionEntryAddress(
+    createAcquisitionSiteAddress(createOccurrenceAddress(goldenGBiome, preboss), 'roomExit'),
+    'infernalContractReward',
+  );
+  expect(stale.evaluation.findings).toContainEqual(
+    expect.objectContaining({ code: 'shopPurchaseUnavailable', origin: entry }),
+  );
+  expect(stale.workspace.focusByOwner.has(semanticAddressKey(entry))).toBe(true);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopPurchaseParticipation',
+    offer: inventory,
+    purchased: false,
+  });
+  const removed = projectStructuredWorkspaceFixture(project);
+  expect(removed.workspace.interactions.shopOffers.has(semanticAddressKey(inventory))).toBe(false);
+  expect(removed.evaluation.route.findings).toEqual([]);
+});
+
 function createContractShopProject(withHex = false) {
   const midshop = goldenGOccurrenceId(5, 1);
   const returned = goldenGOccurrenceId(7, 1);

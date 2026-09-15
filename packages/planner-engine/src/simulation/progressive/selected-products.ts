@@ -405,14 +405,15 @@ export function retainBlockedRegionProducts(
             ]);
           },
         });
-  // Dynamic inventory can be the repair frontier before any acquisition exists.
-  // Retain its reached generation descriptor along with the Shop candidate below.
+  // Retain reached dynamic inventory when either it or an acquisition child
+  // needs repair. Missing child authorship does not undo inventory generation.
+  const rewardOwner = ancestors.rewardOwner;
   const blockedShopSite =
-    blockedAt.kind === 'shopOffer' && blockedAt.offerKey === 'travelDealRefill'
+    rewardOwner?.kind === 'shopOffer' && rewardOwner.offerKey === 'travelDealRefill'
       ? createAcquisitionSiteAddress(
           createOccurrenceAddress(
-            createBiomeAddress(blockedAt.routeKey, blockedAt.biomeKey),
-            blockedAt.occurrenceId,
+            createBiomeAddress(rewardOwner.routeKey, rewardOwner.biomeKey),
+            rewardOwner.occurrenceId,
           ),
           'roomExit',
         )
@@ -445,7 +446,6 @@ export function retainBlockedRegionProducts(
                 ]);
           },
         });
-  const rewardOwner = ancestors.rewardOwner;
   const rewardCapability =
     rewardOwner === undefined
       ? undefined

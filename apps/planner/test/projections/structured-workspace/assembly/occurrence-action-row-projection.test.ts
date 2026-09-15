@@ -851,28 +851,6 @@ describe('structured workspace actions assembly', () => {
     ).toBe(false);
   });
 
-  it('projects the Contract slot as initial inventory with an Overview repair owner', () => {
-    const shopId = createOccurrenceId('golden-f-preboss-shop');
-    const project = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
-    const address = createShopOfferAddress(goldenFBiome, shopId, 'infernalContractReward');
-    const result = assemble(project, 'Underworld', 'F', shopId);
-    expect(result.assembly.node.room.roomLocal).toMatchObject({
-      kind: 'shop',
-      offers: expect.arrayContaining([
-        expect.objectContaining({
-          key: 'infernalContractReward',
-          rewardControl: expect.objectContaining({
-            offer: null,
-            owner: { kind: 'shopOffer', address },
-          }),
-        }),
-      ]),
-    });
-    expect(result.markers.destinations().get(semanticAddressKey(address))).toMatchObject({
-      focusAddress: address,
-    });
-  });
-
   it('projects a Gold duplicate ordered after its Travel refill source', () => {
     const shopId = createOccurrenceId('golden-f-preboss-shop');
     let base = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');

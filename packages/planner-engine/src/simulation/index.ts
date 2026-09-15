@@ -412,6 +412,7 @@ export {
   keepsakeEquipResultCandidateForProjectEvaluationAssembly,
   levelResolutionCandidateForProjectEvaluationAssembly,
   traitOfferCandidateForProjectEvaluationAssembly,
+  isShopOfferActiveForProjectEvaluationAssembly,
   purgingPoolCandidateForProjectEvaluationAssembly,
   hermesShrineCandidateForProjectEvaluationAssembly,
   stygianWellCandidateForProjectEvaluationAssembly,

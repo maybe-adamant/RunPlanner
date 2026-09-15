@@ -1,5 +1,6 @@
 import {
   createOccurrenceAddress,
+  createShopOfferAddress,
   semanticAddressKey,
   type AuthoredBiomePlan,
   selectedExitContinuation,
@@ -17,6 +18,7 @@ import type { WorkspaceBiomeSource } from '../source-index';
 export interface WorkspaceOccurrenceAssemblyFact {
   readonly authoredAdditionalExitKeys: readonly string[];
   readonly detailsActive: boolean;
+  readonly contractOfferActive?: boolean;
   readonly chaosPlacement?: ChaosCandidateCapability;
   readonly chaosGateForced: boolean;
   readonly zagreusContractPlacement?: ZagreusContractCandidateCapability;
@@ -92,6 +94,11 @@ export function createWorkspaceBiomeOccurrenceAssemblyFacts(
           (occurrence.additionalExits ?? []).map((additional) => additional.key),
         ),
         detailsActive: active.has(occurrence.occurrenceId),
+        contractOfferActive:
+          occurrence.state.kind === 'shop' &&
+          source.isActiveShopOffer(
+            createShopOfferAddress(source.biome, occurrence.occurrenceId, 'infernalContractReward'),
+          ),
         ...(chaosPlacement === undefined ? {} : { chaosPlacement }),
         ...(zagreusContractPlacement === undefined ? {} : { zagreusContractPlacement }),
         chaosGateForced: source.chaosGateForced(occurrenceAddress),

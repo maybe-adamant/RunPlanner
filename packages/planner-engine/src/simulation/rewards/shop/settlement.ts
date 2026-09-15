@@ -282,6 +282,7 @@ export function settleShopAcquisitionSite(
       if (entryKey === INFERNAL_CONTRACT_ENTRY_KEY) {
         const descriptor = declaration.infernalContractReward;
         if (descriptor === undefined || execution.contractOffer === undefined) {
+          entryPurchaseFailureRecorded = true;
           addRewardFinding(
             findings,
             rewardFinding(

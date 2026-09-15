@@ -57,7 +57,6 @@ describe('occurrence room facts', () => {
       ['Boon', 'Offer 1'],
       ['MajorNonBoon', 'Offer 2'],
       ['Minor', 'Offer 3'],
-      ['infernalContractReward', 'Contract'],
     ]);
     expect(
       selected.node.room.roomLocal.offers.every(
@@ -168,7 +167,7 @@ describe('occurrence room facts', () => {
       result.occurrenceInteractionRequirements.filter(
         (requirement) => requirement.kind === 'shopPurchaseParticipation',
       ),
-    ).toHaveLength(4);
+    ).toHaveLength(3);
     expect(projected.markers.destinations().get(semanticAddressKey(duplicate))).toMatchObject({
       ownerAddress: duplicate,
       focusAddress: {

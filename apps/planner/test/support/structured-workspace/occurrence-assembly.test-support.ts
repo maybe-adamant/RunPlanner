@@ -36,6 +36,7 @@ import {
   chaosCandidateForProjectEvaluationAssembly,
   simulateProjectAssembly,
   traitOfferCandidateForProjectEvaluationAssembly,
+  isShopOfferActiveForProjectEvaluationAssembly,
   zagreusContractCandidateForProjectEvaluationAssembly,
   type GorgonPhaseCandidateSupport,
 } from '@run-planner/engine/simulation';
@@ -99,6 +100,7 @@ function biomeSource(
     (address) => acquisitionConversionCandidateForProjectEvaluationAssembly(assembly, address),
     (address) => chaosCandidateForProjectEvaluationAssembly(assembly, address),
     (address) => zagreusContractCandidateForProjectEvaluationAssembly(assembly, address),
+    (address) => isShopOfferActiveForProjectEvaluationAssembly(assembly, address),
   ).route?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
   if (source === undefined) throw new Error(`${routeKey}/${biomeKey} source is missing`);
   return source;
