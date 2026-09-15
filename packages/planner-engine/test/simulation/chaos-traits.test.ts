@@ -450,13 +450,18 @@ describe('Chaos paired-trait history', () => {
         { traitKey: 'ZeusCastBoon', rarity: 'Common' },
       ]) as AuthoredTraitOfferTraits['options'],
     });
+    const staleFacts = boonRarityFactsForOffer(catalog, createTraitHistoryState(), {
+      resolvedProviderKey: 'Zeus',
+    });
+    if (staleFacts === undefined) throw new Error('Zeus must own a rarity ledger');
+    const staleContext = Object.freeze({ limitedSwapUses: 1, boonRarityFacts: staleFacts });
     const mixed = evaluateReachedTraitOffer(
       catalog,
       owner,
       'self',
       replacement,
       ordinaryWithOccupiedSlot,
-      { limitedSwapUses: 1 },
+      staleContext,
       0,
     );
     expect(mixed.assessments.every((assessment) => assessment.legal)).toBe(true);
@@ -467,6 +472,7 @@ describe('Chaos paired-trait history', () => {
     });
     expect(mixed.replacementComposition.legal).toBe(true);
     expect(mixed.context.replacementRollChance).toBe(1);
+    expect(mixed.context.boonRarityFacts).toBeUndefined();
 
     const address = createTraitOfferAddress(rewardOwner, 'ordinary-replacement');
     const capability = createTraitOfferCandidateArtifacts(
@@ -477,7 +483,7 @@ describe('Chaos paired-trait history', () => {
           Object.freeze([
             Object.freeze({
               before: ordinaryWithOccupiedSlot,
-              context: Object.freeze({ limitedSwapUses: 1 }),
+              context: staleContext,
             }),
           ]),
         ],
@@ -529,6 +535,130 @@ describe('Chaos paired-trait history', () => {
       true,
     );
     expect(card.invalidActions).toEqual([0]);
+  });
+
+  it('resolves Ordinary before room, Proper, and Yarn facts, then consumes Yarn on the next unforced screen', () => {
+    const ordinary = pairHistory(chaos('ChaosCommonCurse', 'ChaosElementalBlessing'));
+    const proper = Object.freeze({
+      ...ordinary,
+      equippedTraits: Object.freeze({
+        ElementalRarityUpgradeBoon: {
+          traitKey: 'ElementalRarityUpgradeBoon',
+          giverKey: 'Hera',
+          providerKind: 'olympian' as const,
+          rarity: 'Common' as const,
+          level: 1,
+          sourceRole: 'test',
+        },
+      }),
+      properUpbringingActive: true as const,
+    });
+    const source = initializeTestRewardBranches()[0]!;
+    const withYarn = Object.freeze({
+      ...source,
+      history: attachTraitHistory(source.history, proper),
+      traitHistory: proper,
+      stygianWell: Object.freeze({ ...source.stygianWell, yarnUses: 1 }),
+    });
+    const zeus: AuthoredTraitOfferTraits = Object.freeze({
+      kind: 'traits',
+      giverKey: 'Zeus',
+      selectedOptionKey: 'option1',
+      rarificationActions: Object.freeze([]),
+      options: Object.freeze([
+        { traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ZeusSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ZeusCastBoon', rarity: 'Common' },
+      ]) as AuthoredTraitOfferTraits['options'],
+    });
+    const first = settleEncounterTraitOffer(
+      catalog,
+      withYarn,
+      rewardOwner,
+      zeus,
+      2,
+      'reward',
+      undefined,
+      'selection',
+      undefined,
+      { boonRarityRoomOverride: { Rare: 1 } },
+    );
+    expect(first.findingEntries).not.toContainEqual(
+      expect.objectContaining({
+        finding: expect.objectContaining({ code: 'rarityRollUnavailable' }),
+      }),
+    );
+    expect(first.branch.stygianWell.yarnUses).toBe(1);
+    expect(first.branch.traitEvaluations?.at(-1)?.context).toMatchObject({
+      freshRarityOverride: 'Common',
+    });
+    expect(first.branch.traitEvaluations?.at(-1)?.context.boonRarityFacts).toBeUndefined();
+    expect(
+      first.branch.traitEvaluations?.at(-1)?.assessments.every((assessment) => assessment.legal),
+    ).toBe(true);
+
+    const second = settleEncounterTraitOffer(
+      catalog,
+      first.branch,
+      rewardOwner,
+      Object.freeze({
+        kind: 'traits',
+        giverKey: 'Hermes',
+        selectedOptionKey: 'option1',
+        rarificationActions: Object.freeze([]),
+        options: Object.freeze([
+          { traitKey: 'HermesWeaponBoon', rarity: 'Common' },
+          { traitKey: 'HermesSpecialBoon', rarity: 'Common' },
+          { traitKey: 'HermesCastDiscountBoon', rarity: 'Common' },
+        ]) as AuthoredTraitOfferTraits['options'],
+      }),
+      3,
+      'reward',
+    );
+    expect(second.branch.stygianWell.yarnUses).toBe(1);
+    expect(second.branch.traitHistory?.activeChaosCurses).toEqual([]);
+    const secondEvaluation = second.branch.traitEvaluations?.at(-1);
+    if (secondEvaluation === undefined) throw new Error('Hermes screen did not settle');
+    expect(secondEvaluation.assessments.every((assessment) => assessment.legal)).toBe(true);
+    expect(secondEvaluation.composition.legal).toBe(true);
+    expect(secondEvaluation.replacementComposition.legal).toBe(true);
+    expect(secondEvaluation.targetedAcquisition.legal).toBe(true);
+    expect(second.branch.traitHistory?.equippedTraits.HermesWeaponBoon).toMatchObject({
+      rarity: 'Common',
+    });
+
+    const third = settleEncounterTraitOffer(
+      catalog,
+      second.branch,
+      rewardOwner,
+      Object.freeze({
+        kind: 'traits',
+        giverKey: 'Demeter',
+        selectedOptionKey: 'option1',
+        rarificationActions: Object.freeze([]),
+        options: Object.freeze([
+          { traitKey: 'DemeterWeaponBoon', rarity: 'Rare' },
+          { traitKey: 'DemeterSpecialBoon', rarity: 'Rare' },
+          { traitKey: 'DemeterCastBoon', rarity: 'Rare' },
+        ]) as AuthoredTraitOfferTraits['options'],
+      }),
+      4,
+      'reward',
+    );
+    expect(third.branch.stygianWell.yarnUses).toBe(0);
+    const thirdEvaluation = third.branch.traitEvaluations?.at(-1);
+    if (thirdEvaluation === undefined) throw new Error('Demeter screen did not settle');
+    expect(thirdEvaluation.context.freshRarityOverride).toBeUndefined();
+    expect(thirdEvaluation.context.boonRarityFacts?.contributions).toContainEqual({
+      additive: { Rare: 1, Epic: 0.25, Duo: 0.1, Legendary: 0.1 },
+    });
+    expect(thirdEvaluation.assessments.every((assessment) => assessment.legal)).toBe(true);
+    expect(thirdEvaluation.composition.legal).toBe(true);
+    expect(thirdEvaluation.replacementComposition.legal).toBe(true);
+    expect(thirdEvaluation.targetedAcquisition.legal).toBe(true);
+    expect(third.branch.traitHistory?.equippedTraits.DemeterWeaponBoon).toMatchObject({
+      rarity: 'Rare',
+    });
   });
 
   it('gives pending Hymn precedence over Ordinary regardless of their acquisition order', () => {

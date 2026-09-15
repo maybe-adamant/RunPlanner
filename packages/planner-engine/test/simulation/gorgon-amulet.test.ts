@@ -228,6 +228,37 @@ describe('Gorgon Amulet lifecycle', () => {
     },
   );
 
+  it('lets Ordinary force Common before the rank-III Gorgon source ledger', () => {
+    const branch = initializeTestRewardBranches()[0]!;
+    const ordinary = Object.freeze({
+      ...createTraitHistoryState(),
+      activeChaosCurses: Object.freeze([
+        {
+          acquisitionIdentity: 'ordinary',
+          owner: createBiomeAddress('Underworld', 'G'),
+          curseKey: 'ChaosCommonCurse',
+          duration: 2,
+          remaining: 2,
+          clock: 'godBoonScreens' as const,
+          semanticTag: 'Ordinary' as const,
+          curseValues: Object.freeze({}),
+          blessingKey: 'ChaosElementalBlessing',
+          rarity: 'Common' as const,
+          blessingValues: Object.freeze({}),
+        },
+      ]),
+    });
+    expect(
+      resolveGorgonCandidateRarity({
+        catalog,
+        branches: [Object.freeze({ ...branch, traitHistory: ordinary })],
+        providerKey: 'Athena',
+        rarityLevel: 3,
+        roomOverride: undefined,
+      }),
+    ).toBe('Common');
+  });
+
   it('lets room precedence replace the Gorgon source while permanent rarity still raises rank I', () => {
     const branch = initializeTestRewardBranches()[0]!;
     const history = branch.traitHistory ?? createTraitHistoryState();

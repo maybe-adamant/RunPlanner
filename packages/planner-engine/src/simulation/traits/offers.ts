@@ -69,11 +69,16 @@ export function offerGenerationAdjustedTraitGiverContext(
       : ordinary
         ? 0
         : (context.replacementRollChance ?? catalog.boonReplacementChance);
-  return Object.freeze({
+  // Native ForceCommon bypasses GetRarityChances entirely. Any facts captured
+  // before this source decision therefore describe a different screen and must
+  // not cross the forced-rarity frontier.
+  const adjusted = {
     ...context,
     replacementRollChance,
     ...(ordinary ? { freshRarityOverride: 'Common' as const } : {}),
-  });
+  };
+  if (ordinary) delete adjusted.boonRarityFacts;
+  return Object.freeze(adjusted);
 }
 
 export function offerGenerationAdjustedTraitOfferContext(
@@ -94,14 +99,14 @@ export function boonRarityFactsForOffer(
   context: TraitOfferContext,
   arcanaFear?: ArcanaFearState,
 ): BoonRarityFacts | undefined {
+  if (context.freshRarityOverride !== undefined) return undefined;
   if (context.boonRarityFacts !== undefined) return context.boonRarityFacts;
   const giver =
     context.resolvedProviderKey === undefined
       ? undefined
       : catalog.traitGivers.byKey[context.resolvedProviderKey];
   const provider = boonRarityProviderForGiver(giver);
-  if (giver === undefined || provider === undefined || context.freshRarityOverride !== undefined)
-    return undefined;
+  if (giver === undefined || provider === undefined) return undefined;
   const barrenActive = hasActiveChaosSemanticTag(history, 'Barren');
   const arcana =
     arcanaFear?.arcana.active.flatMap((active) => {
