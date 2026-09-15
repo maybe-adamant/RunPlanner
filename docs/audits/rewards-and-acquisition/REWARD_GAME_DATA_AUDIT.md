@@ -670,11 +670,14 @@ history rather than the branch after applying that paid reward. Pom loot alone
 has a later conditional regeneration contact: `CreateBoonLootButtons` reruns
 `SetTraitsOnLoot` when any stored `StackOnly` target disappeared before
 interaction.
-Blind Box resolves its hidden loot on interaction in the game. The planner may
-instead fully author that result on the derived Gold row, provided the later
-site order stores only chronology. The stable `echoDoubleShopReward` payload
-may therefore be edited before pickup and remains separate from its order
-membership. The Shop kernel's accepted paid removal consumes Gold and freezes
+Blind Box resolves its hidden loot on interaction in the game. Gold's
+`CreateLoot` branch registers a required room object (`RoomLogic.lua`,
+`CreateLoot`); its `CreateConsumableItem` branch does not (`InteractLogic.lua`).
+Thus duplicated boons, Hermes, hammers, and full Poms require pickup, while
+consumables—including unopened Blind Boxes—remain optional. The planner
+requires Timeline placement before editing the stable `echoDoubleShopReward`
+payload, using pickup context for its hidden source. The Shop kernel's
+accepted paid removal consumes Gold and freezes
 the pre-source-acquisition materialization even when later nested source detail
 is invalid; rejection before that checkpoint leaves the trait armed. Ordinary
 payloads remain frozen, while Pom regenerates only under the audited

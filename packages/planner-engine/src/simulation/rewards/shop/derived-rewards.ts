@@ -9,6 +9,7 @@ import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   echoShopDuplicateOffer,
   echoShopDuplicateOfferMatches,
+  echoShopDuplicateRequiresPickup,
 } from '../../../authored-project/shop';
 import {
   findShopIndexedGenerationWitnesses,
@@ -146,6 +147,8 @@ export function materializeShopGold(input: {
   readonly branch: RewardBranchState;
   readonly pendingGold?: import('../../../authored-project/traits/state').EquippedTrait | undefined;
   readonly existingMaterialization?: PendingShopGoldMaterialization | undefined;
+  readonly pickupPlaced: boolean;
+  readonly authoredOffer?: ResolvedRewardOffer | undefined;
   readonly sourceOffer: PendingShopPaidOffer;
   readonly roleBindings: PendingShopGoldMaterialization['roleBindings'];
   readonly profile: ShopProfileDeclaration;
@@ -234,7 +237,7 @@ export function materializeShopGold(input: {
       ? undefined
       : createUnresolvedShopAcquisitionRewardState(catalog, duplicateOffer, profile.key);
   const roleFrontiers: AcquisitionRoleFrontier[] = [];
-  if (fixedReward !== undefined) {
+  if (fixedReward !== undefined && input.pickupPlaced) {
     const source = Object.freeze({
       origin: address,
       offer: fixedReward.offer,
@@ -277,6 +280,13 @@ export function materializeShopGold(input: {
       Object.freeze({
         address,
         kind: 'echoDoubleShopReward' as const,
+        retainedSourceMismatch:
+          input.pickupPlaced &&
+          input.authoredOffer !== undefined &&
+          !echoShopDuplicateOfferMatches(catalog, sourceOffer.offer, input.authoredOffer),
+        participation: echoShopDuplicateRequiresPickup(catalog, sourceOffer.offer)
+          ? ('required' as const)
+          : ('optional' as const),
         branchCohortSize,
         sourceOfferKey: sourceOffer.offerKey,
         rewardTypes: Object.freeze([sourceOffer.offer.rewardType]),
@@ -284,11 +294,19 @@ export function materializeShopGold(input: {
         ...(roleFrontiers.length === 0 ? {} : { roleFrontiers: Object.freeze(roleFrontiers) }),
         eligibleSourceOfferKeys,
         branchesBeforeEntry,
-        evaluateOffer: (candidateOffer: ResolvedRewardOffer) =>
-          Object.freeze({
-            findings: Object.freeze([]),
-            supported: echoShopDuplicateOfferMatches(catalog, sourceOffer.offer, candidateOffer),
-          }),
+        ...(input.pickupPlaced && fixedReward !== undefined
+          ? {
+              evaluateOffer: (candidateOffer: ResolvedRewardOffer) =>
+                Object.freeze({
+                  findings: Object.freeze([]),
+                  supported: echoShopDuplicateOfferMatches(
+                    catalog,
+                    sourceOffer.offer,
+                    candidateOffer,
+                  ),
+                }),
+            }
+          : {}),
       }),
     ]),
   });

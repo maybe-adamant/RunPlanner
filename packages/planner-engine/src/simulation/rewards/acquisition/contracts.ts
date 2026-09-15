@@ -86,10 +86,10 @@ export interface DerivedAcquisitionEntryFrontier {
   readonly producerLifecycleKey?: string;
   /** Exact encounter end that matured a cross-occurrence Shrine delivery. */
   readonly encounterPhaseKey?: string;
-  readonly participation?: 'optional';
+  readonly participation?: 'required' | 'optional';
   /** The retained authored identity disagrees with this exact derived source. */
   readonly retainedSourceMismatch?: boolean;
-  /** Candidate support for editing the exact derived reward before participation is selected. */
+  /** Candidate support at this entry's engine-owned authoring frontier. */
   readonly roleFrontiers?: readonly AcquisitionRoleFrontier[];
   /** Paid entries that can source a first-eligible derived child in this Shop. */
   readonly eligibleSourceOfferKeys?: readonly string[];

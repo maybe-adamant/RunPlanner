@@ -156,8 +156,7 @@ function commandContractAddress(
     case 'ReplaceShopOfferOption':
     case 'ReplaceAnvilResult':
       return command.offer;
-    case 'SelectDerivedShopEntry':
-    case 'EditDerivedShopEntry':
+    case 'PlaceEchoGoldPickup':
       return command.site;
     case 'PlaceHermesShrineDelivery':
     case 'PlaceClockedTraitPickup':

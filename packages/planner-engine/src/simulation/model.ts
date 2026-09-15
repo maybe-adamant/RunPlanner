@@ -82,6 +82,7 @@ export type RewardGenerationFindingCode =
   | 'hermesShrineInventoryDuplicate'
   | 'hermesShrineInventoryRequirement'
   | 'hermesShrineDeliveryPlacementRequired'
+  | 'echoGoldPickupPlacementRequired'
   | 'hermesShrineTravelDealRefillMissing'
   | 'hermesShrineTravelDealRefillUnavailable';
 
@@ -203,6 +204,7 @@ export function isRequiredMissingInputFinding(
     case 'fieldsSpatialPointMissing':
     case 'chaosRejectedBlockMissing':
     case 'hermesShrineDeliveryPlacementRequired':
+    case 'echoGoldPickupPlacementRequired':
     case 'rewardMissing':
     case 'traitOfferMissing':
     case 'allTogetherResultMissing':

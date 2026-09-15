@@ -519,6 +519,11 @@ const findingCopy = {
     title: 'Shrine delivery needs placement',
     description: 'Place this delivered Shrine reward at its due room before authoring its pickup.',
   },
+  echoGoldPickupPlacementRequired: {
+    title: 'Echo Gold pickup needs placement',
+    description:
+      'Place this required Echo Gold pickup on the timeline before authoring its outcome.',
+  },
   hermesShrineTravelDealRefillMissing: {
     title: 'Travel Deal refill missing',
     description: 'Choose the required fourth Shrine offer.',

@@ -40,8 +40,7 @@ export function bindRewardPayloadInteractions(input: {
       Object.freeze({
         authoredRewardTypes: rewardTypes,
         choiceLabel: input.rewardPicker.choiceLabel,
-        intentFor: (offer: ResolvedRewardOffer) =>
-          rewardIntentFor(owner, offer, control.derivedShopEntryEdit),
+        intentFor: (offer: ResolvedRewardOffer) => rewardIntentFor(owner, offer),
         key,
         load: () =>
           input.candidates.rewardDomain(control.owner, rewardTypes, control.offer ?? undefined),

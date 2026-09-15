@@ -1,11 +1,9 @@
 import {
   catalog,
   applyProjectHistoryCommand,
-  createAcquisitionRoleAddress,
   createShopOfferAddress,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
-  createLevelResolutionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createTraitOfferAddress,
@@ -39,7 +37,52 @@ import {
 } from './shop-trait-purchase-support';
 import type { TraitOfferEvent } from './shop-trait-purchase-support';
 
-describe('Echo Gate D Gold Gold Gold', () => {
+describe('Gold Gold Gold Shop pickups', () => {
+  it.each([
+    {
+      name: 'Boon',
+      slot: 'Boon',
+      reward: shopBoonReward('ApolloUpgrade', 'ApolloWeaponBoon'),
+      required: true,
+    },
+    { name: 'Pom', slot: 'Minor', reward: shopPomReward('ApolloWeaponBoon'), required: true },
+    {
+      name: 'Mystery Boon',
+      slot: 'Boon',
+      reward: blindBoxReward(
+        'ApolloUpgrade',
+        ['ApolloManaBoon', 'ApolloSpecialBoon', 'ApolloCastBoon'],
+        'option1',
+      ),
+      required: false,
+    },
+  ])(
+    'requires placement of native loot, not unopened consumables: $name',
+    ({ slot, reward, required }) => {
+      const result = echoGoldShop([slot], {
+        rewardOverrides: { [slot]: reward },
+        withPomTarget: slot === 'Minor',
+        completeAfterOrder: true,
+      });
+      const capability = result.settlement.derivedEntryFrontiers?.find(
+        (entry) => entry.kind === 'echoDoubleShopReward',
+      );
+      expect(capability?.participation).toBe(required ? 'required' : 'optional');
+      expect(capability?.roleFrontiers).toBeUndefined();
+      const findings = [...result.findings.values()].map((emission) => emission.finding);
+      expect(findings).toEqual(
+        required
+          ? [
+              expect.objectContaining({
+                code: 'echoGoldPickupPlacementRequired',
+                origin: capability!.address,
+              }),
+            ]
+          : [],
+      );
+    },
+  );
+
   it('applies and consumes Well Yarn and Hymn on a paid World Shop Boon screen', () => {
     const reward = shopBoonReward('HeraUpgrade', 'HeraWeaponBoon');
     const initial = initializeTestRewardBranches()[0]!;
@@ -402,7 +445,11 @@ describe('Echo Gate D Gold Gold Gold', () => {
       ['Boon', 'Apollo'],
       [result.duplicateKey, 'Hestia'],
     ]);
-    expect(result.settlement.derivedEntryFrontiers?.[0]).toMatchObject({
+    expect(
+      result.settlement.derivedEntryFrontiers?.find(
+        (entry) => entry.kind === 'echoDoubleShopReward',
+      ),
+    ).toMatchObject({
       sourceOfferKey: 'Boon',
       rewardTypes: ['BlindBoxLoot'],
     });
@@ -545,14 +592,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
       (entry) => entry.kind === 'echoDoubleShopReward',
     );
     expect(conversionFrontier).toBeDefined();
-    expect(conversionFrontier?.roleFrontiers).toEqual([
-      expect.objectContaining({
-        address: expect.objectContaining({
-          owner: conversionFrontier?.address,
-          acquisitionRole: 'self',
-        }),
-      }),
-    ]);
+    expect(conversionFrontier?.roleFrontiers).toBeUndefined();
   });
 
   it('keeps a Gold Blind Box source unresolved until its fresh hidden source is authored', () => {
@@ -576,7 +616,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
     expect(frontier?.roleFrontiers).toBeUndefined();
   });
 
-  it('atomically persists a dormant Gold boon edit without selecting its chronology', () => {
+  it('places an unresolved Gold pickup before its ordinary outcome edits and preserves Undo', () => {
     const project = createGoldenFGHIProject();
     const shopOccurrenceId = createOccurrenceId('golden-f-preboss-shop');
     const site = createAcquisitionSiteAddress(
@@ -584,123 +624,46 @@ describe('Echo Gate D Gold Gold Gold', () => {
       'roomExit',
     );
     const duplicate = createAcquisitionEntryAddress(site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY);
-    const shopOccurrence = project.route.biomes
-      .find((candidate) => candidate.biomeKey === 'F')
-      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopOccurrenceId);
-    const source =
-      shopOccurrence?.state.kind === 'shop' ? shopOccurrence.state.shop?.offers.Boon : undefined;
-    if (source === undefined || source.reward === null) throw new Error('missing Shop source');
-    const edited = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
-      kind: 'EditDerivedShopEntry',
+    const occurrence = (document: typeof project) =>
+      document.route.biomes
+        .find((biome) => biome.biomeKey === 'F')!
+        .topology!.occurrences.find((room) => room.occurrenceId === shopOccurrenceId)!;
+    const placed = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
+      kind: 'PlaceEchoGoldPickup',
       site,
       entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
       sourceOfferKey: 'Boon',
-      edit: {
-        kind: 'ReplaceTraitOffer',
-        trait: createTraitOfferAddress(duplicate, 'source'),
-        value: {
-          kind: 'traits',
-          giverKey: 'Apollo',
-          options: [
-            { traitKey: 'ApolloManaBoon', rarity: 'Common' },
-            { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
-            { traitKey: 'ApolloCastBoon', rarity: 'Common' },
-          ],
-          selectedOptionKey: 'option2',
-        },
-      },
     });
-    const occurrence = (document: typeof project) =>
-      document.route.biomes
-        .find((candidate) => candidate.biomeKey === 'F')
-        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopOccurrenceId);
-
-    expect(occurrence(edited.present)?.acquisitionSites?.roomExit).toMatchObject({
-      pickupEntries: {
-        echoDoubleShopReward: {
-          offer: { rewardType: 'RandomLoot' },
-          traitOffersByAcquisitionRole: {
-            source: { selectedOptionKey: 'option2' },
-          },
-        },
+    expect(
+      occurrence(placed.present).acquisitionSites?.roomExit?.pickupEntries?.[
+        ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
+      ],
+    ).toMatchObject({ traitOffersByAcquisitionRole: { source: null } });
+    expect(occurrence(placed.present).roomActions.order).toContainEqual({
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'roomExit',
+      entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+    });
+    const edited = applyProjectHistoryCommand(placed, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(duplicate, 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloManaBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option2',
       },
     });
     expect(
       decodeProjectDocument(JSON.parse(encodeProjectDocument(edited.present)), catalog),
     ).toEqual(edited.present);
-    const undone = undoProjectHistory(edited);
-    expect(
-      occurrence(undone.present)?.acquisitionSites?.roomExit?.pickupEntries?.[
-        ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
-      ],
-    ).toBeUndefined();
-    expect(
-      occurrence(undone.present)?.acquisitionSites?.roomExit?.pickupEntries?.infernalContractReward,
-    ).toBeUndefined();
-    expect(redoProjectHistory(undone).present).toEqual(edited.present);
-  });
-
-  it('atomically persists dormant Gold Pom and Time Piece edits before pickup', () => {
-    const project = createGoldenFGHIProject();
-    const shopOccurrenceId = createOccurrenceId('golden-f-preboss-shop');
-    const site = createAcquisitionSiteAddress(
-      createOccurrenceAddress(goldenFBiome, shopOccurrenceId),
-      'roomExit',
-    );
-    const duplicate = createAcquisitionEntryAddress(site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY);
-    const occurrence = (document: typeof project) =>
-      document.route.biomes
-        .find((candidate) => candidate.biomeKey === 'F')
-        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopOccurrenceId);
-
-    const pomSource = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
-      kind: 'ReplaceShopOffer',
-      offer: createShopOfferAddress(goldenFBiome, shopOccurrenceId, 'Minor'),
-      value: { rewardType: 'StackUpgrade' },
-    });
-    const pom = applyProjectHistoryCommand(pomSource, catalog, {
-      kind: 'EditDerivedShopEntry',
-      site,
-      entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
-      sourceOfferKey: 'Minor',
-      edit: {
-        kind: 'ReplaceLevelResolution',
-        levelResolution: createLevelResolutionAddress(duplicate, 'self'),
-        value: {
-          kind: 'choice',
-          offeredTraitKeys: ['ApolloSpecialBoon'],
-          selectedTraitKey: 'ApolloSpecialBoon',
-        },
-      },
-    });
-    expect(occurrence(pom.present)?.acquisitionSites?.roomExit).toMatchObject({
-      pickupEntries: {
-        echoDoubleShopReward: {
-          levelResolutionsByAcquisitionRole: {
-            self: { selectedTraitKey: 'ApolloSpecialBoon' },
-          },
-        },
-      },
-    });
-
-    const converted = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
-      kind: 'EditDerivedShopEntry',
-      site,
-      entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
-      sourceOfferKey: 'Minor',
-      edit: {
-        kind: 'ReplaceAcquisitionDisposition',
-        acquisition: createAcquisitionRoleAddress(duplicate, 'self'),
-        value: { kind: 'timePiece' },
-      },
-    });
-    expect(occurrence(converted.present)?.acquisitionSites?.roomExit).toMatchObject({
-      pickupEntries: {
-        echoDoubleShopReward: { dispositionByAcquisitionRole: { self: { kind: 'timePiece' } } },
-      },
-    });
-    expect(undoProjectHistory(converted).present).toEqual(project);
-    expect(redoProjectHistory(undoProjectHistory(converted)).present).toEqual(converted.present);
+    expect(undoProjectHistory(edited).present).toEqual(placed.present);
+    expect(undoProjectHistory(placed).present).toEqual(project);
+    expect(redoProjectHistory(undoProjectHistory(edited)).present).toEqual(edited.present);
   });
 
   it('round-trips an independently resolved hidden source on a derived Blind Box', () => {
@@ -731,7 +694,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
         : undefined;
     if (blindBox === undefined) throw new Error('missing Blind Box source');
     history = applyProjectHistoryCommand(history, catalog, {
-      kind: 'SelectDerivedShopEntry',
+      kind: 'PlaceEchoGoldPickup',
       site: entry.site,
       entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
       sourceOfferKey: 'Boon',
@@ -793,7 +756,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
       },
     });
     history = applyProjectHistoryCommand(history, catalog, {
-      kind: 'SelectDerivedShopEntry',
+      kind: 'PlaceEchoGoldPickup',
       site,
       entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
       sourceOfferKey: 'travelDealRefill',

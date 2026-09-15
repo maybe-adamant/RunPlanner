@@ -13,6 +13,7 @@ import { rewardSourceResolvesAtAcquisition } from '../../../authored-project/acq
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   echoShopDuplicateOfferMatches,
+  echoShopDuplicateRequiresPickup,
   INFERNAL_CONTRACT_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '../../../authored-project/shop';
@@ -100,6 +101,12 @@ export function settleShopAcquisitionSite(
             row.reference.entryKey === offerKey),
     )?.owner;
   const roleFrontiers: AcquisitionRoleFrontier[] = [];
+  const goldPickupPlaced = room.roomActions.order.some(
+    (reference) =>
+      reference.kind === 'interactAcquisitionEntry' &&
+      reference.siteKey === 'roomExit' &&
+      reference.entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+  );
   const derivedEntryFrontiers: DerivedAcquisitionEntryFrontier[] = [];
   let entryPurchaseFailureRecorded = false;
   const traitChildSettlements: ReachedTraitChildCheckpoint[] = [];
@@ -276,6 +283,14 @@ export function settleShopAcquisitionSite(
   };
 
   for (const entryKey of order) {
+    // Hidden sources belong to the actual duplicate pickup, not its creation.
+    if (entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY) {
+      for (let index = derivedEntryFrontiers.length - 1; index >= 0; index -= 1) {
+        const frontier = derivedEntryFrontiers[index]!;
+        if (frontier.kind === 'echoDoubleShopReward' && frontier.fixedReward === undefined)
+          derivedEntryFrontiers.splice(index, 1);
+      }
+    }
     const agreementBranches = Object.freeze(executions.map(({ candidate }) => candidate));
     const survivors: ShopExecution[] = [];
     for (const execution of executions) {
@@ -380,6 +395,9 @@ export function settleShopAcquisitionSite(
             branch: refillExecution.candidate,
             pendingGold: refillExecution.goldActiveAtEntry,
             existingMaterialization: refillExecution.goldMaterialization,
+            pickupPlaced: goldPickupPlaced,
+            authoredOffer:
+              room.acquisitionSites.roomExit?.entries[ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY]?.offer,
             sourceOffer: refillOffer,
             roleBindings: bindings,
             profile,
@@ -431,6 +449,63 @@ export function settleShopAcquisitionSite(
           );
           continue;
         }
+        if (rewardSourceResolvesAtAcquisition(catalog, materialization.sourceOffer.offer)) {
+          const settled = settleAcquisitionResolvedReward(
+            catalog,
+            Object.freeze([execution.candidate]),
+            {
+              siteOwner: room.origin,
+              pointKey: 'roomExit',
+              entryKey,
+              visibleOffer: materialization.sourceOffer.offer,
+              reward: child,
+              producerLifecycleKey: profile.key,
+              producerKind: 'shop',
+              instanceProvenance: 'free',
+              blocksSeaStarDuplication: true,
+              roleBindings: materialization.roleBindings,
+              ...(materialization.sourceOffer.traitContext === undefined
+                ? {}
+                : { traitContext: materialization.sourceOffer.traitContext }),
+              historySequence,
+              branchCohortSize,
+              ...(actionOwnerForOffer(entryKey) === undefined
+                ? {}
+                : { timelineOwner: actionOwnerForOffer(entryKey)! }),
+            },
+            context.facts,
+            ownerRegion(room.origin),
+            context.findingChronology,
+          );
+          mergeRewardFindingEmissions(findings, settled.findingEmissions);
+          roleFrontiers.push(...(settled.roleFrontiers ?? []));
+          traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
+          derivedEntryFrontiers.push(
+            ...(settled.derivedEntryFrontiers ?? []).map((frontier) =>
+              Object.freeze({
+                ...frontier,
+                kind: 'echoDoubleShopReward' as const,
+                sourceOfferKey: materialization.sourceOfferKey,
+                eligibleSourceOfferKeys: eligibleGoldSourceOfferKeys(),
+                participation: 'optional' as const,
+                retainedSourceMismatch:
+                  child !== null &&
+                  !echoShopDuplicateOfferMatches(
+                    catalog,
+                    materialization.sourceOffer.offer,
+                    child.offer,
+                  ),
+              }),
+            ),
+          );
+          if (settled.branches.length === 1) {
+            execution.candidate = settled.branches[0]!;
+            survivors.push(execution);
+          } else if (settled.findingEmissions.length > 0) {
+            entryPurchaseFailureRecorded = true;
+          }
+          continue;
+        }
         if (child === null) {
           addRewardFinding(
             findings,
@@ -464,7 +539,7 @@ export function settleShopAcquisitionSite(
         const sourceTargetDisappeared = materialization.sourcePomEligibleTraitKeys.some(
           (traitKey) => currentTraits.equippedTraits[traitKey] === undefined,
         );
-        const duplicateActionOwner = actionOwnerForOffer(materialization.sourceOfferKey);
+        const duplicateActionOwner = actionOwnerForOffer(entryKey);
         const settled = settleOwnedAcquisitionSite(
           catalog,
           Object.freeze([execution.candidate]),
@@ -569,6 +644,9 @@ export function settleShopAcquisitionSite(
         branch: execution.candidate,
         pendingGold: execution.goldActiveAtEntry,
         existingMaterialization: execution.goldMaterialization,
+        pickupPlaced: goldPickupPlaced,
+        authoredOffer:
+          room.acquisitionSites.roomExit?.entries[ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY]?.offer,
         sourceOffer: paidOffer,
         roleBindings: bindings,
         profile,
@@ -670,6 +748,23 @@ export function settleShopAcquisitionSite(
   }
 
   for (const execution of executions) {
+    if (
+      (context.completeAfterOrder === true || context.order === undefined) &&
+      !goldPickupPlaced &&
+      execution.goldMaterialization !== undefined &&
+      echoShopDuplicateRequiresPickup(catalog, execution.goldMaterialization.sourceOffer.offer)
+    ) {
+      addRewardFinding(
+        findings,
+        rewardFinding(
+          'echoGoldPickupPlacementRequired',
+          createAcquisitionEntryAddress(site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY),
+          {},
+        ),
+        ownerRegion(room.origin),
+        context.findingChronology ?? historyChronology(historySequence),
+      );
+    }
     if (execution.travelActiveAtEntry && execution.travelRefill === undefined) {
       derivedEntryFrontiers.push(
         Object.freeze({

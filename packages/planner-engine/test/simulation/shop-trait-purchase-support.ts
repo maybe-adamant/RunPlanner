@@ -471,6 +471,7 @@ export function echoGoldShop(
     readonly withPomTarget?: boolean;
     readonly roomGameName?: 'F_Shop01' | 'I_PreBoss02';
     readonly enteredBiomes?: number;
+    readonly completeAfterOrder?: boolean;
   } = {},
 ) {
   const room = catalog.rooms.byKey[options.roomGameName ?? 'F_Shop01'];
@@ -758,6 +759,7 @@ export function echoGoldShop(
     declaration: room,
     historySequence: 3,
     order: authoredOrder,
+    completeAfterOrder: options.completeAfterOrder ?? false,
     facts,
     fail: (detail) => {
       throw new Error(detail);

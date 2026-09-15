@@ -354,8 +354,13 @@ export function settleAuthoredAcquisitionSite(
           findingChronology,
         );
       }
-      const pickupEntries =
-        onlyEntry === undefined || onlyEntry.entryKey.length === 0
+      const pickupEntries = activationOnly
+        ? Object.freeze(
+            Object.fromEntries(
+              Object.entries(selectedSite.entries).filter(([key]) => requiredEntryKeys.has(key)),
+            ),
+          )
+        : onlyEntry === undefined || onlyEntry.entryKey.length === 0
           ? selectedSite.entries
           : Object.freeze({
               [onlyEntry.entryKey]: selectedSite.entries[onlyEntry.entryKey] ?? null,
@@ -413,7 +418,10 @@ export function settleAuthoredAcquisitionSite(
         acquisitionRoleFrontiers.push(...(settled.roleFrontiers ?? []));
         traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
       }
-      for (const frontier of activationOnly ? (settled.pickupEntryFrontiers ?? []) : []) {
+      // Optional pickups use their action's history, not the producer's.
+      // Required pickups retain their activation-time repair contacts.
+      for (const frontier of settled.pickupEntryFrontiers ?? []) {
+        if (!activationOnly && requiredEntryKeys.has(frontier.address.entryKey)) continue;
         const entryKey = semanticAddressKey(frontier.address);
         producerFrontiers.push(
           Object.freeze({
@@ -426,10 +434,8 @@ export function settleAuthoredAcquisitionSite(
               if (semanticAddressKey(owner) !== entryKey) {
                 return contractFail('pickup reward frontier received a foreign owner');
               }
-              // A pickup producer fixes its reward identity. Candidate editing
-              // resolves only its declaration-compatible payload at this
-              // exact site frontier; pickup order independently decides
-              // whether the completed entry is acquired.
+              // The producer fixes the object identity; its source is chosen
+              // using the history at this exact acquisition frontier.
               const fixedRewardType = echoReplay
                 ? agreedReplay?.offer.rewardType
                 : (frontier.reward?.offer.rewardType ??
@@ -489,7 +495,9 @@ export function settleAuthoredAcquisitionSite(
                 findings: Object.freeze(
                   candidateSettlement.findingEmissions.map((entry) => entry.finding),
                 ),
-                supported: candidateSettlement.branches.length > 0,
+                supported:
+                  candidateSettlement.branches.length > 0 ||
+                  (candidateSettlement.traitChildSettlements?.length ?? 0) > 0,
               });
             },
           }),

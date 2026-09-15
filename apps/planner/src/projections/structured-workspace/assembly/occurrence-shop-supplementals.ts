@@ -64,7 +64,7 @@ function derivedRewardSupplementalOffer(
           key: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
           label: 'Gold Gold Gold duplicate',
           explanation:
-            'This selected duplicate has no active eligible paid source. Clear Purchased here to repair the Shop.',
+            'This duplicate has no active eligible paid source. Remove its pickup from the Timeline.',
           purchase,
         })
       : Object.freeze({
@@ -116,6 +116,7 @@ function derivedRewardSupplementalOffer(
   const materialized = gold
     ? Object.hasOwn(context.pickupEntries, entryKey)
     : travelInventory !== undefined;
+  const retainedSourceMismatch = capability.retainedSourceMismatch === true;
   const address = createAcquisitionEntryAddress(context.acquisitionSite, entryKey);
   const projectedReward = rewardControl(
     context.input,
@@ -130,16 +131,12 @@ function derivedRewardSupplementalOffer(
           ),
         },
     undefined,
-    authored?.offer ?? null,
-    authored,
+    gold && !selected ? null : (authored?.offer ?? null),
+    gold && !selected ? null : authored,
     capability.rewardTypes,
-    materialized || !gold
-      ? undefined
-      : Object.freeze({
-          site: context.acquisitionSite,
-          entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
-          sourceOfferKey: capability.sourceOfferKey,
-        }),
+    retainedSourceMismatch,
+    undefined,
+    gold && (!selected || (capability.fixedReward !== undefined && !retainedSourceMismatch)),
   ) as WorkspaceExplicitRewardControl;
   const purchase = supplementalPurchase(context, entryKey);
 

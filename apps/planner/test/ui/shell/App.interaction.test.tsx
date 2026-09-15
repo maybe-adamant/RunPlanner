@@ -13,7 +13,6 @@ import {
   createExitSelectionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
-  createRoomActionAddress,
   createOccurrenceId,
   createProjectDocument,
   createRouteAddress,
@@ -23,7 +22,6 @@ import {
   createShopOfferAddress,
   semanticAddressKey,
   seaStarDuplicateSiteKey,
-  roomActionKey,
   decodeProjectDocument,
   encodeProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -1566,7 +1564,7 @@ describe('planner history interaction', () => {
     ).toBe(false);
   });
 
-  it('opens an exact Gold payload finding at the derived Shop inventory row', async () => {
+  it('opens an exact Gold payload finding at its Timeline pickup', async () => {
     const application = createApplication();
     const shop = createOccurrenceAddress(
       { kind: 'biome', routeKey: 'Underworld', biomeKey: 'H' },
@@ -1593,27 +1591,10 @@ describe('planner history interaction', () => {
     if (derived?.sourceOfferKey === undefined) throw new Error('Gold source offer is missing');
     application.store.dispatch(
       authoredProjectCommandDispatched({
-        kind: 'SelectDerivedShopEntry',
+        kind: 'PlaceEchoGoldPickup',
         site,
         entryKey: 'echoDoubleShopReward',
         sourceOfferKey: derived.sourceOfferKey,
-      }),
-    );
-    const goldReference = {
-      kind: 'interactAcquisitionEntry' as const,
-      siteKey: 'roomExit',
-      entryKey: 'echoDoubleShopReward',
-    };
-    application.store.dispatch(
-      authoredProjectCommandDispatched({
-        kind: 'InsertRoomAction',
-        action: createRoomActionAddress(
-          { kind: 'biome', routeKey: 'Underworld', biomeKey: 'H' },
-          shop.occurrenceId,
-          roomActionKey(goldReference),
-        ),
-        reference: goldReference,
-        index: 1,
       }),
     );
     application.store.dispatch(
@@ -1660,7 +1641,7 @@ describe('planner history interaction', () => {
     );
     expect(actionRow?.getAttribute('data-has-findings')).toBe('true');
     expect(document.activeElement).toBe(actionRow);
-    expect(actionRow?.textContent).toContain('Gold Gold Gold duplicate of Offer 3');
+    expect(actionRow?.closest('li')?.textContent).toContain('Gold Gold Gold');
     expect(actionRow?.getAttribute('aria-description')).toContain('Shop purchase is unavailable');
   });
 

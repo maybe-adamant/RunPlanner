@@ -410,7 +410,11 @@ export function RoomActionsWorkbench({
                   onClick={() => executeIntent(placement)}
                   type="button"
                 >
-                  {row.participation === 'required' ? 'Place required delivery' : 'Take pickup'}
+                  {row.participation === 'required'
+                    ? placement.command.kind === 'PlaceHermesShrineDelivery'
+                      ? 'Place required delivery'
+                      : 'Place required pickup'
+                    : 'Take pickup'}
                 </button>
               )}
               {renderRowTrailingContent?.(row)}

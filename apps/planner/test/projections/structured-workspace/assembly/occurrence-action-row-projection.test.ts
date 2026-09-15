@@ -931,6 +931,7 @@ describe('structured workspace actions assembly', () => {
               kind: 'echoDoubleShopReward' as const,
               sourceOfferKey: 'travelDealRefill',
               rewardTypes: ['RandomLoot'],
+              fixedReward: source,
               eligibleSourceOfferKeys: ['travelDealRefill'],
             },
           ],
@@ -947,7 +948,7 @@ describe('structured workspace actions assembly', () => {
       result.roomActions?.rows
         .filter((row) => row.rank !== null)
         .map((row) => row.participationOwnedByOverview),
-    ).toEqual([true, true, true]);
+    ).toEqual([true, true, false]);
     expect(
       result.roomActions?.rows
         .filter((row) => row.rank !== null)

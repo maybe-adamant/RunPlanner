@@ -485,7 +485,8 @@ export function evaluateBiomeRewardChronology(
           ),
           reachableBranchCount: combined.length,
           acquisitionHorizon:
-            first.kind === 'travelDealRefill' || first.kind === 'echoDoubleShopReward'
+            first.kind === 'travelDealRefill' ||
+            (first.kind === 'echoDoubleShopReward' && first.fixedReward !== undefined)
               ? ('generationOnly' as const)
               : ('ownEnteredLifecycle' as const),
           owners: Object.freeze([first.inventoryOwner ?? first.address]),

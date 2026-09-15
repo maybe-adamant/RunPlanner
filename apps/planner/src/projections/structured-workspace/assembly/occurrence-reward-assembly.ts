@@ -114,7 +114,7 @@ export type WorkspaceDerivedAcquisitionEntry = {
   readonly fixedReward?: AuthoredRewardState;
   readonly producerLifecycleKey?: string;
   readonly encounterPhaseKey?: string;
-  readonly participation?: 'optional';
+  readonly participation?: 'required' | 'optional';
   readonly retainedSourceMismatch?: boolean;
   readonly eligibleSourceOfferKeys?: readonly string[];
 };
@@ -358,7 +358,6 @@ export function rewardControl(
   offer: ResolvedRewardOffer | null,
   authoredReward: AuthoredRewardState | null,
   explicitRewardTypes: readonly string[] = Object.freeze(offer === null ? [] : [offer.rewardType]),
-  derivedShopEntryEdit?: WorkspaceRewardControl['derivedShopEntryEdit'],
   retainedSourceMismatch = false,
   fixedOfferEdit?: WorkspaceRewardControl['fixedOfferEdit'],
   suppressOfferPicker = false,
@@ -432,7 +431,6 @@ export function rewardControl(
             ? Object.freeze([])
             : conversionControls(input, owner, authoredReward),
         rewardTypes: Object.freeze([...explicitRewardTypes]),
-        ...(derivedShopEntryEdit === undefined ? {} : { derivedShopEntryEdit }),
       })
     : Object.freeze({
         kind: 'countedReward' as const,
@@ -459,7 +457,6 @@ export function rewardControl(
           authoredReward === null
             ? Object.freeze([])
             : conversionControls(input, owner, authoredReward),
-        ...(derivedShopEntryEdit === undefined ? {} : { derivedShopEntryEdit }),
       });
 }
 
@@ -696,7 +693,6 @@ export function controlsForOccurrence(
             offer,
             reward,
             Object.freeze(fixedRewardType === undefined ? [] : [fixedRewardType]),
-            undefined,
             false,
             undefined,
             rewardType?.payloadDomain === undefined,

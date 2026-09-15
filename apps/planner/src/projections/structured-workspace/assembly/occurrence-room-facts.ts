@@ -169,18 +169,26 @@ export function assembleOccurrenceRewardLocal(
                     ? Object.freeze([])
                     : Object.freeze([pickup.rewardType]));
                 const entry = createAcquisitionEntryAddress(site, key);
+                const dormantPickup =
+                  pickup !== undefined &&
+                  !pickup.required &&
+                  !input.occurrence.roomActions.order.some(
+                    (reference) =>
+                      reference.kind === 'interactAcquisitionEntry' &&
+                      reference.siteKey === siteKey &&
+                      reference.entryKey === key,
+                  );
                 return [
                   rewardControl(
                     input,
                     { kind: 'acquisitionEntry' as const, address: entry },
                     undefined,
-                    reward?.offer ?? null,
-                    reward,
+                    dormantPickup ? null : (reward?.offer ?? null),
+                    dormantPickup ? null : reward,
                     rewardTypes,
-                    undefined,
                     capability?.retainedSourceMismatch === true,
                     fixedOfferEdit,
-                    structuralEchoKeys.has(key),
+                    structuralEchoKeys.has(key) || dormantPickup,
                   ) as WorkspaceExplicitRewardControl,
                 ];
               });
@@ -217,7 +225,6 @@ export function assembleOccurrenceRewardLocal(
                   reward?.offer ?? null,
                   reward,
                   capability.rewardTypes ?? Object.freeze([]),
-                  undefined,
                   capability.retainedSourceMismatch === true,
                 ) as WorkspaceExplicitRewardControl,
               ];

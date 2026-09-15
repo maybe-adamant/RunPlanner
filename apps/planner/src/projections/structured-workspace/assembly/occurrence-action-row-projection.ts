@@ -13,6 +13,7 @@ import {
   roomActionKey,
   semanticAddressKey,
   type RoomOccurrence,
+  type RoomActionReference,
   type RoomRunStateCheckpointAddress,
   type SemanticAddress,
   type FountainRarityOutcomeAddress,
@@ -99,7 +100,18 @@ function roomActionsForOccurrence(
   )
     return undefined;
   const owner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
-  const presentedRows = roster.rows;
+  const goldCapability = input
+    .derivedAcquisitionEntries?.(createAcquisitionSiteAddress(owner, 'roomExit'))
+    .find((entry) => entry.kind === 'echoDoubleShopReward');
+  const isGoldPickup = (reference: RoomActionReference) =>
+    reference.kind === 'interactAcquisitionEntry' &&
+    reference.siteKey === 'roomExit' &&
+    reference.entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY;
+  const goldNeedsPlacement =
+    goldCapability !== undefined && !input.occurrence.roomActions.order.some(isGoldPickup);
+  const presentedRows = roster.rows.filter(
+    (row) => !goldNeedsPlacement || !isGoldPickup(row.reference),
+  );
   const presentedActionKeys = new Set(presentedRows.map((row) => row.key));
   const proposals = roster.proposals
     .filter((proposal) => presentedActionKeys.has(roomActionKey(proposal.reference)))
@@ -205,8 +217,7 @@ function roomActionsForOccurrence(
         row.reference.kind === 'sellPurgingPoolTrait' ||
         (roomLocal.kind === 'shop' &&
           row.reference.kind === 'interactAcquisitionEntry' &&
-          (row.reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY ||
-            row.reference.entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY));
+          row.reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY);
       const fountainRarity = (() => {
         if (row.reference.kind !== 'useFountain' || input.fountainRarityAssessment === undefined) {
           return undefined;
@@ -324,7 +335,9 @@ function roomActionsForOccurrence(
         marker: input.markerDestinations.marker(address),
         proposalKeys: Object.freeze(proposalKeysByAction.get(row.key) ?? []),
         reference: row.reference,
-        participation: row.participation,
+        participation: isGoldPickup(row.reference)
+          ? (goldCapability?.participation ?? row.participation)
+          : row.participation,
         participationOwnedByOverview,
         rank: row.rank,
         ...(row.stale || artificerOutput === undefined
@@ -525,10 +538,72 @@ function roomActionsForOccurrence(
       ];
     }),
   );
+  const goldPickupRows =
+    goldNeedsPlacement && goldCapability?.sourceOfferKey !== undefined
+      ? (() => {
+          const reference = Object.freeze({
+            kind: 'interactAcquisitionEntry' as const,
+            siteKey: 'roomExit',
+            entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+          });
+          const actionAddress = createRoomActionAddress(
+            input.biome,
+            input.occurrence.occurrenceId,
+            roomActionKey(reference),
+          );
+          const required = goldCapability.participation === 'required';
+          const control = controlAt(goldCapability.address);
+          return [
+            Object.freeze({
+              address: actionAddress,
+              issues: Object.freeze(required ? ['This required action has not been placed.'] : []),
+              key: roomActionKey(reference),
+              label: occurrenceActionLabel(
+                input.catalog,
+                reference,
+                roomLocal,
+                encounterPhases,
+                controlAt(goldCapability.address),
+                input.occurrence,
+                input.occurrence.purgingPool?.traitKeyBySlot,
+              ),
+              marker: input.markerDestinations.marker(actionAddress),
+              proposalKeys: Object.freeze([]),
+              reference,
+              participation: required ? ('required' as const) : ('optional' as const),
+              participationOwnedByOverview: false,
+              ...(control === undefined
+                ? {}
+                : {
+                    rewardPayload: Object.freeze({
+                      control,
+                      inlineLevelResolutions: Object.freeze([]),
+                      inlineTraitOffers: Object.freeze([]),
+                      showOffer: false,
+                    }),
+                  }),
+              placement: Object.freeze({
+                command: Object.freeze({
+                  kind: 'PlaceEchoGoldPickup' as const,
+                  site: goldCapability.address.site,
+                  entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+                  sourceOfferKey: goldCapability.sourceOfferKey,
+                }),
+                focus: Object.freeze({ owner: actionAddress, timing: 'after' as const }),
+              }),
+              rank: null,
+              stale: false,
+              window: Object.freeze({ kind: 'postOutgoing' as const }),
+              executable: false,
+            }),
+          ];
+        })()
+      : [];
   const allProjectedRows = Object.freeze([
     ...projectedRows,
     ...dueShrineRows,
     ...clockedTraitPickupRows,
+    ...goldPickupRows,
   ]);
   const unrankedOrStaleRows = Object.freeze(
     lifecycleTimeline.repairRows.flatMap(({ key }) => {
@@ -536,7 +611,9 @@ function roomActionsForOccurrence(
       if (projected === undefined) {
         throw new Error(`Room action timeline repair row ${key} has no projected row`);
       }
-      return projected === undefined ? [] : [projected];
+      return projected === undefined || goldPickupRows.some((row) => row.key === key)
+        ? []
+        : [projected];
     }),
   );
   const optionalRows = Object.freeze([
@@ -548,6 +625,7 @@ function roomActionsForOccurrence(
         !row.participationOwnedByOverview,
     ),
     ...clockedTraitPickupRows,
+    ...goldPickupRows.filter((row) => row.participation === 'optional'),
   ]);
   const optionalKeys = new Set(optionalRows.map((row) => row.key));
   const repairRows = Object.freeze([
@@ -555,6 +633,7 @@ function roomActionsForOccurrence(
       (row) => !optionalKeys.has(row.key) && (!row.participationOwnedByOverview || row.stale),
     ),
     ...dueShrineRows,
+    ...goldPickupRows.filter((row) => row.participation === 'required'),
   ]);
   const steadyGrowthOutcomes = (input.steadyGrowthOutcomes ?? []).filter(
     (outcome) => semanticAddressKey(outcome.address.owner) === semanticAddressKey(owner),

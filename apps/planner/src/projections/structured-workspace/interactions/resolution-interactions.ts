@@ -22,10 +22,7 @@ import type {
   ContextualPickerProjectionService,
 } from '@planner/projections/contextual/contextualPicker';
 
-import {
-  derivedShopPayloadIntent,
-  levelResolutionCommandFor,
-} from './reward-child-command-binding';
+import { levelResolutionCommandFor } from './reward-child-command-binding';
 import type {
   WorkspaceKeepsakeEquipResultInteraction,
   WorkspaceKeepsakeEquipResultDomain,
@@ -41,8 +38,6 @@ import type {
   WorkspaceFountainRarityControl,
   WorkspaceFountainRarityInteraction,
 } from '../contracts/timeline';
-import type { WorkspaceRewardControl } from '../contracts/rewards';
-import { semanticAddressKey } from '@run-planner/engine/authored-project';
 
 function projectKeepsakeSelectionPicker(
   contextualPicker: ContextualPickerProjectionService,
@@ -107,10 +102,6 @@ export function bindResolutionInteractions(input: {
   readonly steadyGrowthControls: ReadonlyMap<string, WorkspaceSteadyGrowthControl>;
   readonly transcendentEmbryoControls: ReadonlyMap<string, WorkspaceTranscendentEmbryoControl>;
   readonly fountainRarityControls: ReadonlyMap<string, WorkspaceFountainRarityControl>;
-  readonly derivedShopEntryEdits: ReadonlyMap<
-    string,
-    NonNullable<WorkspaceRewardControl['derivedShopEntryEdit']>
-  >;
   readonly judgmentArcanaControls?: ReadonlyMap<
     string,
     { readonly address: JudgmentArcanaAddress; readonly value: readonly string[] }
@@ -151,7 +142,6 @@ export function bindResolutionInteractions(input: {
     steadyGrowthControls: effectiveSteadyGrowthControls,
     transcendentEmbryoControls,
     fountainRarityControls,
-    derivedShopEntryEdits,
     judgmentArcanaControls,
     figurineArcanaControls,
     keepsakeSelectionControls,
@@ -164,10 +154,7 @@ export function bindResolutionInteractions(input: {
       Object.freeze({
         acquisitionRoleLabel: control.acquisitionRoleLabel,
         intentFor: (value: AuthoredLevelResolution) =>
-          derivedShopPayloadIntent(
-            derivedShopEntryEdits.get(semanticAddressKey(control.rewardOwner)),
-            levelResolutionCommandFor(control.address, value),
-          ),
+          Object.freeze({ command: levelResolutionCommandFor(control.address, value) }),
         key,
         levelCount: control.levelCount,
         load: (value = control.value) => candidates.levelResolution(control.address, value),

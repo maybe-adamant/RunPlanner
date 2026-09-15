@@ -47,7 +47,9 @@ export function workspaceLocalDetailMarkers(
           ...rewardControlMarkers(offer.rewardControl),
         ]),
         ...roomLocal.supplementalOffers.flatMap((offer) =>
-          !('purchase' in offer)
+          !('purchase' in offer) ||
+          offer.kind === 'echoDoubleShopReward' ||
+          offer.kind === 'echoDoubleShopInvalid'
             ? []
             : [
                 offer.purchase.marker,
@@ -125,6 +127,11 @@ export function workspaceOccurrenceOwnedMarkers(
       ...(control.levelResolutions ?? []).map((resolution) => resolution.marker),
     ]),
     ...workspaceLocalDetailMarkers(room.roomLocal),
+    ...(room.roomLocal.kind === 'shop'
+      ? room.roomLocal.supplementalOffers.flatMap((offer) =>
+          offer.kind === 'echoDoubleShopInvalid' ? [offer.purchase.marker] : [],
+        )
+      : []),
     ...(room.roomActions?.rows.map((row) => row.marker) ?? []),
     ...(room.roomActions?.rows.flatMap((row) =>
       row.fountainRarity === undefined ? [] : [row.fountainRarity.marker],

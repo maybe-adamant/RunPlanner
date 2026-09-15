@@ -156,11 +156,6 @@ describe('Narcissus pickup producer', () => {
       'NarcissusF',
     ]);
     const ashes = pickupEntry(project, 'ashes');
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceManualArcanaSelection',
-      route: createRouteAddress('Underworld'),
-      arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],
-    });
     project = authorTestArtificerReplacement(
       project,
       catalog,
@@ -179,7 +174,19 @@ describe('Narcissus pickup producer', () => {
     );
     const replacementSite = artificerAcquisitionSite(occurrence, ashes);
     const replacementKey = artificerReplacementEntryKey(ashes, 'self');
+    expect(evaluatedG(project).findings).toEqual([]);
     project = replacePickupActions(project, ashes.site, ['ashes']);
+    expect(evaluatedG(project).findings).toContainEqual(
+      expect.objectContaining({
+        code: 'artificerConversionUnavailable',
+        origin: createAcquisitionRoleAddress(ashes, 'self'),
+      }),
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route: createRouteAddress('Underworld'),
+      arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],
+    });
     project = replacePickupActions(project, replacementSite, [replacementKey]);
     const branch = evaluatedG(project).rewards.branches[0];
     const replacement = createAcquisitionEntryAddress(replacementSite, replacementKey);
@@ -190,6 +197,11 @@ describe('Narcissus pickup producer', () => {
       }),
     );
     expect(branch?.events).toContainEqual(
+      expect.objectContaining({ kind: 'concreteAcquisition', origin: replacement }),
+    );
+    project = replacePickupActions(project, ashes.site, []);
+    expect(evaluatedG(project).findings).toEqual([]);
+    expect(evaluatedG(project).rewards.branches[0]?.events).not.toContainEqual(
       expect.objectContaining({ kind: 'concreteAcquisition', origin: replacement }),
     );
   });
@@ -256,6 +268,26 @@ describe('Narcissus pickup producer', () => {
             acquisition: expect.objectContaining({ gameName: acquisitionGameName }),
           }),
           settlement: expect.objectContaining({ entry: expect.objectContaining({ entryKey }) }),
+        }),
+      );
+
+      convertedProject = replacePickupActions(convertedProject, entry.site, []);
+      expect(
+        evaluatedG(convertedProject).rewards.branches[0]?.keepsakes.timePiece?.remainingCharges,
+      ).toBe(4);
+      convertedProject = applyProjectCommand(convertedProject, catalog, {
+        kind: 'ReplaceStartingKeepsake',
+        selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+        keepsakeKey: 'ManaOverTimeRefundKeepsake',
+      });
+      const retained = narcissusOccurrence(convertedProject).acquisitionSites;
+      expect(evaluatedG(convertedProject).findings).toEqual([]);
+      convertedProject = replacePickupActions(convertedProject, entry.site, [entryKey]);
+      expect(narcissusOccurrence(convertedProject).acquisitionSites).toEqual(retained);
+      expect(evaluatedG(convertedProject).findings).toContainEqual(
+        expect.objectContaining({
+          code: 'timePieceConversionUnavailable',
+          origin: createAcquisitionRoleAddress(entry, 'self'),
         }),
       );
     },
@@ -1145,7 +1177,7 @@ describe('Narcissus pickup producer', () => {
       session.evaluate({ kind: 'acquisitionEntryOffer', entry, value: replacement }),
     ).toMatchObject({
       kind: 'acquisitionEntryOffer',
-      result: { supported: false },
+      result: { supported: true },
     });
     let applied = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',
@@ -1186,8 +1218,65 @@ describe('Narcissus pickup producer', () => {
     ).toMatchObject({ kind: 'acquisitionEntryOffer', result: { supported: false } });
   });
 
-  it('publishes an active unpicked payload frontier without acquiring or blocking its candidate', () => {
-    const project = selectNarcissus(createCompleteFGProject(), [
+  it('resolves Pom targets only while the pickup participates and retains stale targets for repair', () => {
+    let project = selectNarcissus(
+      selectNarcissus(createCompleteFGProject(), ['NarcissusF', 'NarcissusB', 'NarcissusC']),
+      ['NarcissusA', 'NarcissusB', 'NarcissusC'],
+    );
+    const entry = pickupEntry(project, 'pom');
+    const resolution = createLevelResolutionAddress(entry, 'self');
+    const optional = simulateProjectAssembly(catalog, project);
+    expect(
+      optional.evaluation.route.biomes.find((biome) => biome.biomeKey === 'G')?.findings,
+    ).toEqual([]);
+    expect(
+      levelResolutionCandidateForProjectEvaluationAssembly(optional, resolution),
+    ).toBeUndefined();
+
+    project = replacePickupActions(project, entry.site, ['pom']);
+    const picked = simulateProjectAssembly(catalog, project);
+    expect(picked.evaluation.findings).toContainEqual(
+      expect.objectContaining({ code: 'missingPomTarget', origin: resolution }),
+    );
+    const candidate = levelResolutionCandidateForProjectEvaluationAssembly(picked, resolution);
+    const target = candidate?.branches[0]?.eligibleTargetTraitKeys[0];
+    if (target === undefined) throw new Error('Narcissus Pom has no repair target');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLevelResolution',
+      levelResolution: resolution,
+      value: { kind: 'random', targetTraitKey: target },
+    });
+    expect(evaluatedG(project).findings).toEqual([]);
+    const retained = narcissusOccurrence(project).acquisitionSites;
+    project = replacePickupActions(project, entry.site, []);
+    expect(narcissusOccurrence(project).acquisitionSites).toEqual(retained);
+    const removed = simulateProjectAssembly(catalog, project);
+    expect(
+      removed.evaluation.route.biomes.find((biome) => biome.biomeKey === 'G')?.findings,
+    ).toEqual([]);
+    expect(
+      levelResolutionCandidateForProjectEvaluationAssembly(removed, resolution),
+    ).toBeUndefined();
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLevelResolution',
+      levelResolution: resolution,
+      value: { kind: 'random', targetTraitKey: 'NarcissusA' },
+    });
+    expect(evaluatedG(project).findings).toEqual([]);
+    project = replacePickupActions(project, entry.site, ['pom']);
+    const stale = simulateProjectAssembly(catalog, project);
+    expect(stale.evaluation.findings).toContainEqual(
+      expect.objectContaining({ code: 'pomTargetUnavailable', origin: resolution }),
+    );
+    expect(
+      levelResolutionCandidateForProjectEvaluationAssembly(stale, resolution)?.branches[0]
+        ?.eligibleTargetTraitKeys,
+    ).toContain(target);
+  });
+
+  it('resolves an optional Mystery Boon only while its pickup participates', () => {
+    let project = selectNarcissus(createCompleteFGProject(), [
       'NarcissusI',
       'NarcissusB',
       'NarcissusC',
@@ -1201,9 +1290,7 @@ describe('Narcissus pickup producer', () => {
     });
     const assembly = simulateProjectAssembly(catalog, project);
     const evaluated = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'G');
-    expect(evaluated?.findings).toContainEqual(
-      expect.objectContaining({ code: 'rewardMissing', origin: entry }),
-    );
+    expect(evaluated?.findings).toEqual([]);
     const session = createPreparedProjectCandidateSession(catalog, assembly);
     expect(
       session.evaluate({
@@ -1214,7 +1301,7 @@ describe('Narcissus pickup producer', () => {
           payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
         },
       }),
-    ).toMatchObject({ kind: 'acquisitionEntryOffer', result: { supported: true } });
+    ).toMatchObject({ kind: 'unavailable' });
     expect(
       evaluated !== undefined &&
         'rewards' in evaluated &&
@@ -1226,6 +1313,36 @@ describe('Narcissus pickup producer', () => {
           ),
         ),
     ).toBe(false);
+
+    project = replacePickupActions(project, entry.site, ['mysteryBoon']);
+    expect(simulateProject(catalog, project).findings).toContainEqual(
+      expect.objectContaining({ code: 'rewardMissing', origin: entry }),
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry,
+      value: {
+        rewardType: 'BlindBoxLoot',
+        payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+      },
+    });
+    expect(simulateProject(catalog, project).findings).toContainEqual(
+      expect.objectContaining({
+        code: 'traitOfferMissing',
+        origin: createTraitOfferAddress(entry, 'hiddenSource'),
+      }),
+    );
+    const authored = narcissusOccurrence(project).acquisitionSites;
+    project = replacePickupActions(project, entry.site, []);
+    expect(narcissusOccurrence(project).acquisitionSites).toEqual(authored);
+    expect(evaluatedG(project).findings).toEqual([]);
+    project = replacePickupActions(project, entry.site, ['mysteryBoon']);
+    expect(simulateProject(catalog, project).findings).toContainEqual(
+      expect.objectContaining({
+        code: 'traitOfferMissing',
+        origin: createTraitOfferAddress(entry, 'hiddenSource'),
+      }),
+    );
   });
 
   it('locates a selected pickup producer across every encounter phase', () => {
