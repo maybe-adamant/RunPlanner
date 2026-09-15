@@ -215,7 +215,7 @@ describe('candidate projection', () => {
       expect.objectContaining({
         evaluation: expect.objectContaining({
           result: expect.objectContaining({
-            evidence: { kind: 'requirementsExcluded' },
+            evidence: expect.objectContaining({ kind: 'requirementsExcluded' }),
             support: 'impossible',
           }),
         }),

@@ -256,7 +256,12 @@ generation and avoids guessing over unknown same-batch peers.
 
 An `eligibilityRequirement` reason retains the failed normalized requirement
 and its concrete evidence so contextual explanations do not depend on a coarse
-reason code alone.
+reason code alone. Encounter candidates likewise retain failed preparation
+requirements with actual depths, encounter counts and spacing, reward identity,
+and room tags. The picker presents every distinct failed condition without
+reevaluating it. Alternative native definitions remain alternatives within one
+authoring profile; a supported variant produces no exclusion for that profile.
+Phase activation and consumed Gorgon exclusions retain their distinct reasons.
 
 A counter-range failure identifies at least:
 

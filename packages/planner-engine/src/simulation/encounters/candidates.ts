@@ -161,6 +161,21 @@ export function evaluateEncounterCandidatesInternal(
                           (key) => key !== naturalEncounterKey,
                         ),
                       ),
+                      exclusions: Object.freeze([
+                        ...candidate.exclusions,
+                        ...(naturalEncounterKey !== undefined &&
+                        (candidate.candidateEncounterKeys.includes(naturalEncounterKey) ||
+                          candidate.exclusions.some(
+                            (entry) => entry.encounterKey === naturalEncounterKey,
+                          ))
+                          ? [
+                              Object.freeze({
+                                encounterKey: naturalEncounterKey,
+                                kind: 'gorgonConsumed' as const,
+                              }),
+                            ]
+                          : []),
+                      ]),
                       selectedPossible:
                         candidate.selectedEncounterKey === naturalEncounterKey
                           ? false

@@ -359,6 +359,7 @@ export function bindOccurrenceLocalInteractions(
                 key,
                 load: () =>
                   (model ??= projectEncounterPicker(
+                    catalog,
                     contextualPicker,
                     phase.candidateChoices,
                     phase.selectedEncounterKey,

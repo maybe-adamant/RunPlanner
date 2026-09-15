@@ -909,6 +909,12 @@ describe('Gorgon Amulet lifecycle', () => {
       encounterPhaseCandidateSupportForProjectEvaluationAssembly(assembly, phase)
         ?.candidateEncounterKeys,
     ).not.toContain('AthenaCombatP');
+    expect(
+      encounterPhaseCandidateSupportForProjectEvaluationAssembly(assembly, phase)?.exclusions,
+    ).toContainEqual({
+      kind: 'gorgonConsumed',
+      encounterKey: 'AthenaCombatP',
+    });
   });
 
   it('publishes exact reached Gorgon support through final project assembly', () => {

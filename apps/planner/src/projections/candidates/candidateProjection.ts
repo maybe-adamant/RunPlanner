@@ -13,6 +13,8 @@ import {
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
   type ChaosOfferDomain,
+  type EncounterRequirementEvidence,
+  type EncounterCandidateExclusion,
 } from '@run-planner/engine/simulation';
 import {
   type AcquisitionEntryAddress,
@@ -95,14 +97,19 @@ export interface EncounterCandidateProjectionEvaluation {
   readonly result: {
     /**
      * Presentation can distinguish missing assessment from a reached phase
-     * that is inactive or absent from the engine support set. The latter is a
-     * generic support-set exclusion, not application evidence of one exact
-     * requirement. React never reevaluates an encounter requirement.
+     * that is inactive or excluded by exact engine evidence.
+     * React never reevaluates an encounter requirement.
      */
     readonly evidence:
       | { readonly kind: 'coverageUnavailable' }
-      | { readonly kind: 'inactiveSlot' }
-      | { readonly kind: 'requirementsExcluded' }
+      | {
+          readonly kind: 'inactiveSlot';
+          readonly requirement?: EncounterRequirementEvidence;
+        }
+      | {
+          readonly kind: 'requirementsExcluded';
+          readonly exclusions: readonly EncounterCandidateExclusion[];
+        }
       | { readonly kind: 'supported' };
     readonly support: CandidateSupport;
   };

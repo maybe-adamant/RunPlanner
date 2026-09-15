@@ -174,6 +174,15 @@ function encounterPhasesFor(
     const candidateKeys = support?.candidateEncounterKeys ?? [];
     const projected = Object.freeze(
       encounterKeys.map((encounterKey) => {
+        const exclusions =
+          support?.exclusions.filter((entry) => entry.encounterKey === encounterKey) ?? [];
+        if (
+          support?.activationSatisfied &&
+          !candidateKeys.includes(encounterKey) &&
+          exclusions.length === 0
+        ) {
+          throw new Error(`Encounter ${encounterKey} is excluded without engine evidence`);
+        }
         const result =
           support === undefined
             ? Object.freeze({
@@ -182,7 +191,12 @@ function encounterPhasesFor(
               })
             : !support.activationSatisfied
               ? Object.freeze({
-                  evidence: Object.freeze({ kind: 'inactiveSlot' as const }),
+                  evidence: Object.freeze({
+                    kind: 'inactiveSlot' as const,
+                    ...(support.activationFailure === undefined
+                      ? {}
+                      : { requirement: support.activationFailure }),
+                  }),
                   support: 'impossible' as const,
                 })
               : candidateKeys.includes(encounterKey)
@@ -192,7 +206,10 @@ function encounterPhasesFor(
                       'forced' | 'possible',
                   })
                 : Object.freeze({
-                    evidence: Object.freeze({ kind: 'requirementsExcluded' as const }),
+                    evidence: Object.freeze({
+                      kind: 'requirementsExcluded' as const,
+                      exclusions: Object.freeze(exclusions),
+                    }),
                     support: 'impossible' as const,
                   });
         return Object.freeze({
