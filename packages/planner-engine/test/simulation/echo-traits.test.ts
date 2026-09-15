@@ -63,6 +63,7 @@ import {
   evaluateReachedTraitOffer,
   foldTraitHistoryEvents,
   recordAspectStartingTrait,
+  settleFountainRarityMutation,
   type TraitHistoryEvent,
 } from '../../src/simulation/traits';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
@@ -1576,7 +1577,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
             {
               giverKey: 'Hera',
               traitKey: 'BoonDecayBoon',
-              rarity: 'Heroic',
+              rarity: 'Common',
               targetTraitKey: 'HephaestusWeaponBoon',
             },
           ]),
@@ -1587,7 +1588,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     );
     expect(result.branch.traitHistory?.equippedTraits.BoonDecayBoon).toMatchObject({
       giverKey: 'Hera',
-      rarity: 'Heroic',
+      rarity: 'Common',
     });
     expect(result.branch.traitHistory?.events.at(-2)).toMatchObject({
       kind: 'traitOffer',
@@ -1597,6 +1598,18 @@ describe('Echo Gate B Boon Boon Boon', () => {
       },
     });
     expect(result.branch.traitHistory?.equippedTraits.HephaestusWeaponBoon).toMatchObject({
+      rarity: 'Heroic',
+      level: 2,
+    });
+    const promoted = settleFountainRarityMutation(
+      catalog,
+      result.branch.traitHistory!,
+      echoOwner.owner,
+      11,
+      'BoonDecayBoon',
+    );
+    expect(promoted.legal).toBe(true);
+    expect(promoted.history.equippedTraits.HephaestusWeaponBoon).toMatchObject({
       rarity: 'Heroic',
       level: 5,
     });

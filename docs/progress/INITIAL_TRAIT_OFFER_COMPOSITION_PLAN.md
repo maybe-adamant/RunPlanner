@@ -39,11 +39,21 @@ Gate F is implemented and independently reviewed with no actionable findings,
 from the completed
 [BBB requirement-origin matrix](../investigations/TRAIT_ELIGIBILITY_GAME_PARITY_REVIEW.md#bbb-requirement-origin-matrix)
 and the user-approved declaration shape. Its implementation baseline is
-`afc808ca`. Gate G's rarity-credit, sale,
+`afc808ca`; implementation is committed as `dc4e807b`. Gate G's rarity-credit, sale,
 acquisition-fallback and Personal Loan payout contracts are specified below.
 Unusual non-Pom level behavior is explicitly deferred to an in-game probe after
 G.2, not a prerequisite for implementing the confirmed target domain.
-Gate G has not started.
+G.1 is implemented and independently reviewed with no actionable findings.
+G.2 and G.3 have not started.
+
+G.1 verification: the six focused history, level-effect, Phial, Echo, Stone
+and Pool files pass (137 tests), including the independent review rerun.
+Workspace/fixture typechecks, changed-TypeScript ESLint, changed-file Prettier
+and `git diff --check` pass. Four stale ordinary-rarity assertions were first
+reproduced at `dc4e807b`, then aligned to row eligibility versus complete-screen
+validation while retaining invalid-screen rejection. The real Pool witness
+sells Bridal after a Phial promotion and preserves its target's credited state.
+No authored-schema, execution-protocol or fixture changes were needed.
 
 F verification: all six required focused files pass (115 tests); the complete
 catalog lane passes (33 files, 263 tests). Workspace/fixture typechecks,
@@ -892,9 +902,9 @@ Primary verification stays in engine `test/simulation/trait-history.test.ts`:
 - Folding the same history remains deterministic, and no promotion awards
   the initial grant a second time.
 
-These are acceptance requirements, not claims of implemented or tested behavior.
-Use the G.2/G.3 acceptance alongside these tests for the gate's independent
-review; broad repository/performance closure remains H.
+G.1 has passed these acceptance checks and independent review as recorded above.
+G.2 and G.3 retain their own implementation and review boundaries; broad
+repository/performance closure remains H.
 
 #### G.2 — Acquisition fallback and bounded non-Pom level probe
 

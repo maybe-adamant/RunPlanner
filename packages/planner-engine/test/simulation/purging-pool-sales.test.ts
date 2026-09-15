@@ -4,9 +4,12 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createFountainRarityOutcomeAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRoomActionAddress,
+  createTraitOfferAddress,
   roomActionKey,
   type ProjectCommand,
   type ProjectDocument,
@@ -18,6 +21,8 @@ import {
 import {
   createCompleteFGProject,
   createGoldenFGHProject,
+  goldenFBiome,
+  goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
 
 const biome = createBiomeAddress('Underworld', 'F');
@@ -172,6 +177,75 @@ describe('Purging Pool sales', () => {
         ),
       ).toBe(true);
     }
+  });
+
+  it('removes a credited Bridal Glow at the real Pool without removing its target gains', () => {
+    const postbossId = createOccurrenceId('golden-f-preboss-shop:postboss');
+    let initial = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(6, 1)),
+        'source',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'Hera',
+        options: Object.freeze([
+          { traitKey: 'BoonDecayBoon', rarity: 'Common', targetTraitKey: 'ApolloWeaponBoon' },
+          { traitKey: 'HeraSprintBoon', rarity: 'Common' },
+          { traitKey: 'HeraManaBoon', rarity: 'Common' },
+        ]),
+        selectedOptionKey: 'option1',
+      },
+    });
+    initial = applyProjectCommand(initial, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: {
+        kind: 'keepsakeSelection',
+        routeKey: 'Underworld',
+        biomeKey: 'routeStart',
+        owner: 'routeStart',
+      },
+      keepsakeKey: 'FountainRarityKeepsake',
+    });
+    const fountain = createRoomActionAddress(
+      goldenFBiome,
+      postbossId,
+      roomActionKey({ kind: 'useFountain' }),
+    );
+    initial = applyProjectCommand(initial, catalog, {
+      kind: 'ReplaceFountainRarityTarget',
+      outcome: createFountainRarityOutcomeAddress(fountain),
+      targetTraitKey: 'BoonDecayBoon',
+    });
+    initial = applyProjectCommand(initial, catalog, {
+      kind: 'MoveRoomAction',
+      action: fountain,
+      toIndex: 0,
+    });
+    const credited = fRewards(initial).branches[0]?.traitHistory;
+    expect(credited?.equippedTraits.BoonDecayBoon).toMatchObject({ rarity: 'Heroic' });
+    expect(credited?.equippedTraits.ApolloWeaponBoon).toMatchObject({ rarity: 'Heroic', level: 6 });
+    const creditedTarget = credited?.equippedTraits.ApolloWeaponBoon;
+    if (creditedTarget === undefined) throw new Error('missing credited Bridal Glow target');
+
+    const configured = withPoolSlots(initial, [
+      'BoonDecayBoon',
+      'ApolloWeaponBoon',
+      'ZeusSpecialBoon',
+    ]);
+    const sold = fRewards(sell(configured, 'left'));
+    expect(sold.findings).not.toContainEqual(
+      expect.objectContaining({ code: 'purgingPoolSaleUnavailable' }),
+    );
+    expect(sold.branches.length).toBeGreaterThan(0);
+    expect(
+      sold.branches.every(
+        (branch) => branch.traitHistory?.equippedTraits.BoonDecayBoon === undefined,
+      ),
+    ).toBe(true);
+    for (const branch of sold.branches)
+      expect(branch.traitHistory?.equippedTraits.ApolloWeaponBoon).toEqual(creditedTarget);
   });
 
   it('retains a stale sale and reports it without removing a different trait', () => {

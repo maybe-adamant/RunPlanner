@@ -346,7 +346,26 @@ describe('Supply Chain lifecycle', () => {
       undefined,
       'selection',
     );
-    const before = steadySettlement.branch.traitHistory!;
+    const bridalSettlement = settleEncounterTraitOffer(
+      catalog,
+      steadySettlement.branch,
+      traitOrigin,
+      Object.freeze({
+        kind: 'traits',
+        giverKey: 'Hera',
+        options: Object.freeze([
+          { traitKey: 'BoonDecayBoon', rarity: 'Common', targetTraitKey: 'ApolloWeaponBoon' },
+          { traitKey: 'HeraSpecialBoon', rarity: 'Common' },
+          { traitKey: 'HeraCastBoon', rarity: 'Common' },
+        ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
+        selectedOptionKey: 'option1',
+      }),
+      4,
+      'encounterCompleted',
+      undefined,
+      'selection',
+    );
+    const before = bridalSettlement.branch.traitHistory!;
     const supply = before.equippedTraits.SupplyDropBoon!;
     const steady = before.equippedTraits.BoonGrowthBoon!;
     expect(before.equippedTraits.ApolloWeaponBoon).toBeDefined();
@@ -379,9 +398,9 @@ describe('Supply Chain lifecycle', () => {
       },
     ]);
     const branch = Object.freeze({
-      ...steadySettlement.branch,
+      ...bridalSettlement.branch,
       traitHistory: progressed,
-      history: attachTraitHistory(steadySettlement.branch.history, progressed),
+      history: attachTraitHistory(bridalSettlement.branch.history, progressed),
       pendingHermesShrineDeliveries: Object.freeze({
         delivery: Object.freeze({
           sourceKey: 'delivery',
@@ -397,7 +416,7 @@ describe('Supply Chain lifecycle', () => {
       origin: occurrence,
       occurrenceId: occurrence.occurrenceId,
       gameName: 'F_Opening01',
-      encounters: { steadyGrowthTargetByPhase: { Encounter: 'ApolloWeaponBoon' } },
+      encounters: { steadyGrowthTargetByPhase: { Encounter: 'BoonDecayBoon' } },
       encounterPhases: [{ slotKey: 'Encounter', advancesHermesShrineDeliveryUses: true }],
     } as unknown as CanonicalAuthoredRoom;
     const transition = applyEncounterEndEffectsTransition(
@@ -421,7 +440,8 @@ describe('Supply Chain lifecycle', () => {
     expect(
       pickup?.branchesBeforeEntry[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon,
     ).toMatchObject({
-      rarity: 'Rare',
+      rarity: 'Heroic',
+      level: 3,
     });
     const delivery = transition.derivedAcquisitionEntryFrontiers.find(
       (frontier) => frontier.kind === 'hermesShrineDelivery',
@@ -429,7 +449,8 @@ describe('Supply Chain lifecycle', () => {
     expect(
       delivery?.branchesBeforeEntry[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon,
     ).toMatchObject({
-      rarity: 'Rare',
+      rarity: 'Heroic',
+      level: 3,
     });
   });
 

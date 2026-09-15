@@ -2,18 +2,14 @@ import type { Catalog, TraitOrdinaryBoonSlot, TraitRarity } from '../../../catal
 import type { AuthoredTraitOffer, EquippedTrait } from '../../../authored-project/traits/state';
 import { boonRarityRollUnavailable } from '../rarity';
 import { optionIndex } from '../../../authored-project/traits/state';
-import { isPomUpgradeTarget, nextRarity } from '../history/upgrades';
+import { bridalGlowAddedLevels, isPomUpgradeTarget, nextRarity } from '../history/upgrades';
 import type {
   TraitHistoryState,
   TraitReplacementTransition,
   TraitTargetedAcquisitionAssessment,
   TraitTargetedAcquisitionTransition,
 } from '../history/model';
-import {
-  targetedAcquisitionTargetKeys,
-  checkRequirement,
-  bridalGlowAddedLevels,
-} from '../level-effects';
+import { targetedAcquisitionTargetKeys, checkRequirement } from '../level-effects';
 import {
   assessTraitOfferComposition,
   echoLastRunBoonOutcomes,
