@@ -96,6 +96,11 @@ export function ChaosTraitOfferEditor({
   };
   const selectedOperands = domain.selectedCurseOperands;
   const blessingOperands = domain.blessingOperands[value.blessingKey] ?? [];
+  // A saved source-impossible rarity remains visible for repair alongside the
+  // exact legal domain supplied by the engine.
+  const rarityOptions = domain.rarities.includes(value.rarity)
+    ? domain.rarities
+    : [value.rarity, ...domain.rarities];
   const updateSelectedCurseValue = (operand: ChaosNumericOperand, nextValue: number): void => {
     onUpdate(
       Object.freeze({
@@ -222,8 +227,12 @@ export function ChaosTraitOfferEditor({
                 }
                 value={value.rarity}
               >
-                {domain.rarities.map((rarity) => (
-                  <option key={rarity} value={rarity}>
+                {rarityOptions.map((rarity) => (
+                  <option
+                    disabled={rarity === value.rarity && !domain.rarities.includes(rarity)}
+                    key={rarity}
+                    value={rarity}
+                  >
                     {rarity}
                   </option>
                 ))}

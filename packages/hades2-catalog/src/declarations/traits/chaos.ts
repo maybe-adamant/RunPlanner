@@ -4,6 +4,13 @@ import type {
   ChaosCurseDeclaration,
 } from '@run-planner/engine/catalog-schema';
 
+/** TrialUpgrade uses the standard god-boon base with this sparse source override. */
+export const chaosRarity = Object.freeze({
+  itemOverride: Object.freeze({ Rare: 0.4, Epic: 0.1, Duo: 0, Legendary: 0.05 }),
+  // The native tests Epic before Rare; the ledger consumes checks low-to-high.
+  rollOrder: Object.freeze(['Common', 'Rare', 'Epic'] as const),
+});
+
 const duration = (
   minimum: number,
   maximum: number,

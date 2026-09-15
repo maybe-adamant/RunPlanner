@@ -394,6 +394,194 @@ describe('Chaos paired-trait history', () => {
     expect(recordReachedTraitOffer(catalog, evaluation, 1, 'reward').history).toBe(
       evaluation.before,
     );
+    const mature = historyWithMaturedCreation();
+    expect(
+      evaluateReachedTraitOffer(catalog, rewardOwner, 'self', defiance, mature, {}, 2).assessments,
+    ).toEqual([{ legal: true, findings: [] }]);
+    expect(
+      evaluateReachedTraitOffer(
+        catalog,
+        rewardOwner,
+        'self',
+        chaos('ChaosMetaUpgradeCurse', 'ChaosElementalBlessing', 'Heroic'),
+        mature,
+        {},
+        2,
+      ).assessments,
+    ).toEqual([{ legal: true, findings: [] }]);
+  });
+
+  it('rejects Common Chaos pairs and exposes the same repair rarities when rank-IV Excellence guarantees Rare', () => {
+    const arcana = createTestArcanaFearState();
+    const rankIVExcellence = Object.freeze({
+      ...arcana,
+      arcana: Object.freeze({
+        ...arcana.arcana,
+        active: Object.freeze([
+          Object.freeze({
+            key: 'RarityBoost',
+            origin: 'manual' as const,
+            rarity: 'Heroic' as const,
+          }),
+        ]),
+      }),
+    });
+    const common = chaos('ChaosNoMoneyCurse', 'ChaosElementalBlessing', 'Common');
+    const selected = evaluateReachedTraitOffer(
+      catalog,
+      rewardOwner,
+      'self',
+      common,
+      createTraitHistoryState(),
+      {},
+      1,
+      rankIVExcellence,
+    );
+    expect(selected.assessments.some((assessment) => !assessment.legal)).toBe(true);
+    expect(recordReachedTraitOffer(catalog, selected, 1, 'reward').history).toBe(selected.before);
+
+    const address = createTraitOfferAddress(rewardOwner, 'chaos-rarity');
+    const capability = createTraitOfferCandidateArtifacts(
+      catalog,
+      new Map([
+        [
+          semanticAddressKey(address),
+          Object.freeze([
+            Object.freeze({
+              before: createTraitHistoryState(),
+              context: Object.freeze({}),
+              arcanaFear: rankIVExcellence,
+            }),
+          ]),
+        ],
+      ]),
+    ).at(address);
+    const domain = capability?.chaosOfferDomain(common)[0];
+    expect(domain?.rarities).toEqual(['Rare', 'Epic']);
+    expect(capability?.evaluateOffer(common)[0]?.assessments).toContainEqual(
+      expect.objectContaining({ legal: false }),
+    );
+    const rare = chaos('ChaosNoMoneyCurse', 'ChaosElementalBlessing', 'Rare');
+    expect(capability?.evaluateOffer(rare)[0]?.assessments).toEqual([
+      { legal: true, findings: [] },
+    ]);
+    expect(
+      recordReachedTraitOffer(
+        catalog,
+        evaluateReachedTraitOffer(
+          catalog,
+          rewardOwner,
+          'self',
+          rare,
+          createTraitHistoryState(),
+          {},
+          1,
+          rankIVExcellence,
+        ),
+        1,
+        'reward',
+      ).history.events,
+    ).toHaveLength(1);
+    const source = initializeTestRewardBranches()[0]!;
+    const impossible = settleEncounterTraitOffer(
+      catalog,
+      Object.freeze({ ...source, arcanaFear: rankIVExcellence }),
+      rewardOwner,
+      common,
+      1,
+      'reward',
+      undefined,
+      'self',
+    );
+    expect(impossible.findingEntries).toContainEqual(
+      expect.objectContaining({
+        finding: expect.objectContaining({
+          code: 'rarityRollUnavailable',
+          origin: createTraitOfferAddress(rewardOwner, 'self'),
+        }),
+      }),
+    );
+    expect(impossible.branch.traitHistory?.events).toEqual([]);
+  });
+
+  it('uses the Trial source override before item facts, while excluding Proper and Yarn', () => {
+    const common = chaos('ChaosNoMoneyCurse', 'ChaosElementalBlessing', 'Common');
+    const bare = createTraitHistoryState();
+    expect(
+      evaluateReachedTraitOffer(catalog, rewardOwner, 'self', common, bare, {}, 1).assessments,
+    ).toEqual([{ legal: true, findings: [] }]);
+    expect(
+      evaluateReachedTraitOffer(
+        catalog,
+        rewardOwner,
+        'self',
+        common,
+        bare,
+        { boonRarityRoomOverride: { Rare: 1 } },
+        1,
+      ).assessments,
+    ).toContainEqual(
+      expect.objectContaining({
+        legal: false,
+        findings: [
+          { code: 'rarityRollUnavailable', traitKey: 'ChaosElementalBlessing', detail: 'Common' },
+        ],
+      }),
+    );
+    const proper = Object.freeze({
+      ...bare,
+      equippedTraits: Object.freeze({
+        ElementalRarityUpgradeBoon: {
+          traitKey: 'ElementalRarityUpgradeBoon',
+          giverKey: 'Hera',
+          providerKind: 'olympian' as const,
+          rarity: 'Common' as const,
+          level: 1,
+          sourceRole: 'test',
+        },
+      }),
+      properUpbringingActive: true as const,
+    });
+    expect(
+      evaluateReachedTraitOffer(
+        catalog,
+        rewardOwner,
+        'self',
+        common,
+        proper,
+        { temporaryBoonRarityUses: 1 },
+        1,
+      ).assessments,
+    ).toEqual([{ legal: true, findings: [] }]);
+  });
+
+  it('suppresses Excellence for an active Barren curse while retaining the normal source domain', () => {
+    const arcana = createTestArcanaFearState();
+    const rankIVExcellence = Object.freeze({
+      ...arcana,
+      arcana: Object.freeze({
+        ...arcana.arcana,
+        active: Object.freeze([
+          Object.freeze({
+            key: 'RarityBoost',
+            origin: 'manual' as const,
+            rarity: 'Heroic' as const,
+          }),
+        ]),
+      }),
+    });
+    expect(
+      evaluateReachedTraitOffer(
+        catalog,
+        rewardOwner,
+        'self',
+        chaos('ChaosNoMoneyCurse', 'ChaosElementalBlessing', 'Common'),
+        historyWithActiveBarren(),
+        {},
+        6,
+        rankIVExcellence,
+      ).assessments,
+    ).toEqual([{ legal: true, findings: [] }]);
   });
 
   it('forces only fresh Ordinary rows to Common and makes Rejected rows unavailable to select or Rarify', () => {
@@ -961,9 +1149,13 @@ describe('Chaos paired-trait history', () => {
   });
 
   it('settles a TrialUpgrade-shaped self child through the shared acquisition path and starts its clock there', () => {
+    const source = initializeTestRewardBranches()[0]!;
     const settled = settleEncounterTraitOffer(
       catalog,
-      branchWithHistory(createTraitHistoryState()),
+      Object.freeze({
+        ...source,
+        stygianWell: Object.freeze({ ...source.stygianWell, yarnUses: 1 }),
+      }),
       rewardOwner,
       chaos('ChaosNoMoneyCurse', 'ChaosElementalBlessing'),
       7,
@@ -974,6 +1166,8 @@ describe('Chaos paired-trait history', () => {
     expect(settled.branch.traitHistory?.activeChaosCurses).toMatchObject([
       { curseKey: 'ChaosNoMoneyCurse', remaining: 3 },
     ]);
+    expect(settled.branch.stygianWell.yarnUses).toBe(1);
+    expect(settled.branch.traitEvaluations?.at(-1)?.context.boonRarityFacts).toBeUndefined();
   });
 
   it('advances an encounter-clocked curse once at the terminal P end-effects checkpoint for normal and Fig Leaf execution', () => {

@@ -258,4 +258,32 @@ describe('ChaosTraitOfferEditor', () => {
     expect(current.blessingValues).toEqual({ damageBonus: 0.35 });
     expect(updates.length).toBeGreaterThan(0);
   });
+
+  it('retains a saved source-impossible rarity as disabled while allowing a legal repair', async () => {
+    const user = userEvent.setup();
+    const value = offer();
+    const updates: AuthoredChaosTraitOffer[] = [];
+    const narrowed: WorkspaceChaosOfferInteraction = Object.freeze({
+      ...interaction(),
+      domainFor: (current: AuthoredChaosTraitOffer) =>
+        Object.freeze({ ...domainFor(current), rarities: ['Rare', 'Epic'] as const }),
+    });
+    render(
+      <ChaosTraitOfferEditor
+        interaction={narrowed}
+        onUpdate={updates.push.bind(updates)}
+        value={value}
+      />,
+    );
+    const select = screen.getByRole('combobox', { name: 'Chaos blessing rarity' });
+    expect((select as HTMLSelectElement).value).toBe('Common');
+    expect(Array.from((select as HTMLSelectElement).options, (option) => option.value)).toEqual([
+      'Common',
+      'Rare',
+      'Epic',
+    ]);
+    expect((select as HTMLSelectElement).options[0]?.disabled).toBe(true);
+    await user.selectOptions(select, 'Rare');
+    expect(updates.at(-1)?.rarity).toBe('Rare');
+  });
 });

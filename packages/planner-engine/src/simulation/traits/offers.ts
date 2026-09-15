@@ -19,7 +19,7 @@ import type {
   TraitReplacementCompositionAssessment,
 } from './offer-domain';
 import { assessTraitOfferComposition } from './offer-domain';
-import { type BoonRarityFacts } from './rarity';
+import { deriveBoonRarityLedger, type BoonRarityFacts } from './rarity';
 import { optionIndex } from '../../authored-project/traits/state';
 import { assessRansom } from './history/transitions';
 import { foldTraitHistoryEvents } from './history/fold';
@@ -92,6 +92,106 @@ export function offerGenerationAdjustedTraitOfferContext(
     : context;
 }
 
+/** Shared Arcana and matured-Favor contributions; callers add only their source-legal modifiers. */
+function arcanaAndFavorBoonRarityContributions(
+  catalog: Catalog,
+  history: TraitHistoryState,
+  arcanaFear?: ArcanaFearState,
+): readonly import('../../catalog-schema').BoonRarityContribution[] {
+  const barrenActive = hasActiveChaosSemanticTag(history, 'Barren');
+  const arcana =
+    arcanaFear?.arcana.active.flatMap((active) => {
+      const table = catalog.arcanaCards.byKey[active.key]?.boonRarityContributions;
+      // Barren suppresses every currently declared rarity contribution, not a
+      // hand-maintained card-name list. The Arcana state itself is untouched,
+      // so the independently-derived ledger restores it on maturation.
+      if (barrenActive && table !== undefined) return [];
+      if (table === undefined) return [];
+      const rarity = active.rarity;
+      return rarity === 'Common' || rarity === 'Rare' || rarity === 'Epic' || rarity === 'Heroic'
+        ? [table[rarity]]
+        : [];
+    }) ?? [];
+  const favor = history.maturedChaosBlessings.flatMap((blessing) => {
+    if (catalog.chaos.blessings.byKey[blessing.blessingKey]?.semanticTag !== 'Favor') return [];
+    const rare = blessing.blessingValues.rareBonus;
+    return typeof rare === 'number'
+      ? [
+          Object.freeze({
+            additive: Object.freeze({ Rare: rare, Epic: 0.1, Duo: 0.1, Legendary: 0.1 }),
+          }),
+        ]
+      : [];
+  });
+  return Object.freeze([...arcana, ...favor]);
+}
+
+function chaosPairRarityFacts(
+  catalog: Catalog,
+  history: TraitHistoryState,
+  context: TraitOfferContext,
+  arcanaFear?: ArcanaFearState,
+): BoonRarityFacts {
+  return Object.freeze({
+    providerBase: catalog.boonRarityBases.olympian,
+    rollOrder: catalog.chaos.rarity.rollOrder,
+    ...(context.boonRarityRoomOverride === undefined
+      ? {}
+      : { roomOverride: context.boonRarityRoomOverride }),
+    itemOverride: catalog.chaos.rarity.itemOverride,
+    contributions: arcanaAndFavorBoonRarityContributions(catalog, history, arcanaFear),
+  });
+}
+
+/** Exact selected Chaos-pair rarity domain. Fixed outcomes bypass the source roll. */
+export function chaosPairRarities(
+  catalog: Catalog,
+  history: TraitHistoryState,
+  context: TraitOfferContext,
+  arcanaFear: ArcanaFearState | undefined,
+  curse: import('../../catalog-schema').ChaosCurseDeclaration | undefined,
+  blessing: import('../../catalog-schema').ChaosBlessingDeclaration | undefined,
+): readonly TraitRarity[] {
+  if (blessing?.fixedRarity === 'Legendary') return Object.freeze(['Legendary']);
+  if (curse?.semanticTag === 'Barren') return Object.freeze(['Heroic']);
+  if (curse === undefined || blessing === undefined) return Object.freeze([]);
+  return deriveBoonRarityLedger(chaosPairRarityFacts(catalog, history, context, arcanaFear), [
+    'Common',
+    'Rare',
+    'Epic',
+  ]).possibleFreshRarities;
+}
+
+/** Validates the selected blessing against the same exact Chaos source domain candidates expose. */
+export function assessChaosPairRarity(
+  catalog: Catalog,
+  history: TraitHistoryState,
+  offer: Extract<AuthoredTraitOffer, { readonly kind: 'chaos' }>,
+  context: TraitOfferContext,
+  arcanaFear?: ArcanaFearState,
+): TraitAssessment {
+  const curse =
+    catalog.chaos.curses.byKey[
+      offer.curseOptions[optionIndex(offer.selectedOptionKey)]?.curseKey ?? ''
+    ];
+  const blessing = catalog.chaos.blessings.byKey[offer.blessingKey];
+  const legal = chaosPairRarities(catalog, history, context, arcanaFear, curse, blessing).includes(
+    offer.rarity,
+  );
+  return Object.freeze({
+    legal,
+    findings: legal
+      ? Object.freeze([])
+      : Object.freeze([
+          Object.freeze({
+            code: 'rarityRollUnavailable' as const,
+            traitKey: offer.blessingKey,
+            detail: offer.rarity,
+          }),
+        ]),
+  });
+}
+
 /** One branch-aware adapter from existing offer facts to the numeric ledger input. */
 export function boonRarityFactsForOffer(
   catalog: Catalog,
@@ -107,20 +207,7 @@ export function boonRarityFactsForOffer(
       : catalog.traitGivers.byKey[context.resolvedProviderKey];
   const provider = boonRarityProviderForGiver(giver);
   if (giver === undefined || provider === undefined) return undefined;
-  const barrenActive = hasActiveChaosSemanticTag(history, 'Barren');
-  const arcana =
-    arcanaFear?.arcana.active.flatMap((active) => {
-      const table = catalog.arcanaCards.byKey[active.key]?.boonRarityContributions;
-      // Barren suppresses every currently declared rarity contribution, not a
-      // hand-maintained card-name list. The Arcana state itself is untouched,
-      // so the independently-derived ledger restores it on maturation.
-      if (barrenActive && table !== undefined) return [];
-      if (table === undefined) return [];
-      const rarity = active.rarity;
-      return rarity === 'Common' || rarity === 'Rare' || rarity === 'Epic' || rarity === 'Heroic'
-        ? [table[rarity]]
-        : [];
-    }) ?? [];
+  const arcanaAndFavor = arcanaAndFavorBoonRarityContributions(catalog, history, arcanaFear);
   const traits =
     history.properUpbringingActive !== true
       ? []
@@ -129,17 +216,6 @@ export function boonRarityFactsForOffer(
             catalog.traits.byKey[equipped.traitKey]?.rarityFloorEffect?.boonRarityContribution;
           return contribution === undefined ? [] : [contribution];
         });
-  const favor = history.maturedChaosBlessings.flatMap((blessing) => {
-    if (catalog.chaos.blessings.byKey[blessing.blessingKey]?.semanticTag !== 'Favor') return [];
-    const rare = blessing.blessingValues.rareBonus;
-    return typeof rare === 'number'
-      ? [
-          Object.freeze({
-            additive: Object.freeze({ Rare: rare, Epic: 0.1, Duo: 0.1, Legendary: 0.1 }),
-          }),
-        ]
-      : [];
-  });
   return Object.freeze({
     providerBase: catalog.boonRarityBases[provider],
     rollOrder: giver.boonRarityRollOrder ?? catalog.boonRarityRollOrder,
@@ -150,9 +226,8 @@ export function boonRarityFactsForOffer(
       ? {}
       : { itemOverride: context.boonRarityItemOverride }),
     contributions: Object.freeze([
-      ...arcana,
+      ...arcanaAndFavor,
       ...traits,
-      ...favor,
       ...Array.from(
         {
           length: context.suppressTemporaryBoonRarity ? 0 : (context.temporaryBoonRarityUses ?? 0),
@@ -394,7 +469,12 @@ function evaluateReachedTraitOfferWithAssessments(
   const targetedAcquisition = assessSelectedTargetedAcquisition(catalog, legalityOffer, before);
   const rawAssessments = frozenAcquisition
     ? Object.freeze([])
-    : (assessments ?? assessTraitOffer(catalog, legalityOffer, before, effectiveContext));
+    : (assessments ??
+      (legalityOffer.kind === 'chaos'
+        ? Object.freeze([
+            assessChaosPairRarity(catalog, before, legalityOffer, effectiveContext, arcanaFear),
+          ])
+        : assessTraitOffer(catalog, legalityOffer, before, effectiveContext)));
   const levelResolutions =
     frozenLevelResolutions ??
     (offer.kind !== 'traits'
@@ -573,7 +653,11 @@ export function recordReachedTraitOffer(
   readonly ransomAssessment?: RansomAssessment;
 } {
   if (evaluation.offer.kind === 'chaos') {
-    if (!evaluation.composition.legal) return Object.freeze({ history: evaluation.before });
+    if (
+      !evaluation.composition.legal ||
+      !evaluation.assessments.every((assessment) => assessment.legal)
+    )
+      return Object.freeze({ history: evaluation.before });
     const identity = acquisitionIdentity ?? `chaos:${sequence}`;
     const bannedCurseKeys = denialBannedChaosCurseKeys(catalog, evaluation);
     const event: ChaosPairEvent = Object.freeze({

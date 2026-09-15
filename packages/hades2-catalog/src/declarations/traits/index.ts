@@ -24,7 +24,7 @@ import { echoGiver, echoTraits } from './echo';
 import { infernalContractTraits } from './infernal-contract';
 import { seleneGiver, seleneTraits } from './selene';
 import { hexes } from './hexes';
-import { chaosBlessings, chaosCurses, chaosGiver, chaosTraits } from './chaos';
+import { chaosBlessings, chaosCurses, chaosGiver, chaosRarity, chaosTraits } from './chaos';
 
 const weapons = [
   {
@@ -277,5 +277,5 @@ export const traitCatalogInput: RawTraitCatalogInput = {
     'TimeSlowDemeterTalent',
     'TransformAphroditeTalent',
   ],
-  chaos: { curses: chaosCurses, blessings: chaosBlessings },
+  chaos: { curses: chaosCurses, blessings: chaosBlessings, rarity: chaosRarity },
 };

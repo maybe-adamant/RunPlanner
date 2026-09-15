@@ -8,6 +8,7 @@ import type {
 import { createCollection, requireArray, requireNonEmpty, requireObject } from '../common';
 import { fail } from '../errors';
 import type { RawTraitCatalogInput } from '../../declarations/traits/types';
+import { normalizeBoonRarityRollOrder } from './offer-catalog';
 
 const ELEMENTS = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
 const CHAOS_CLOCKS = ['encounters', 'locations', 'godBoonScreens'] as const;
@@ -257,7 +258,45 @@ function normalizeChaosDerivedOutcome(raw: unknown, path: string) {
   }
 }
 
+function normalizeChaosRarity(raw: unknown): ChaosTraitCatalog['rarity'] {
+  const value = requireObject(raw, 'chaos.rarity');
+  if (
+    Object.keys(value).length !== 2 ||
+    value.itemOverride === undefined ||
+    value.rollOrder === undefined
+  )
+    fail('chaos.rarity', 'requires exactly itemOverride and rollOrder');
+  const itemOverride = requireObject(value.itemOverride, 'chaos.rarity.itemOverride');
+  if (
+    Object.keys(itemOverride).length !== 4 ||
+    !['Rare', 'Epic', 'Duo', 'Legendary'].every((key) => key in itemOverride) ||
+    Object.values(itemOverride).some(
+      (chance) => typeof chance !== 'number' || !Number.isFinite(chance),
+    )
+  )
+    fail('chaos.rarity.itemOverride', 'requires finite supported boon rarity checks');
+  const rollOrder = normalizeBoonRarityRollOrder(value.rollOrder, 'chaos.rarity.rollOrder');
+  if (
+    rollOrder.length !== 3 ||
+    !rollOrder.includes('Rare') ||
+    !rollOrder.includes('Epic') ||
+    rollOrder.indexOf('Rare') > rollOrder.indexOf('Epic')
+  )
+    fail('chaos.rarity.rollOrder', 'requires exact Common, Rare, Epic ledger order');
+  return Object.freeze({
+    itemOverride: Object.freeze({ ...itemOverride }),
+    rollOrder,
+  });
+}
+
 export function normalizeChaos(input: RawTraitCatalogInput['chaos']): ChaosTraitCatalog {
+  if (
+    Object.keys(input).length !== 3 ||
+    input.curses === undefined ||
+    input.blessings === undefined ||
+    input.rarity === undefined
+  )
+    fail('chaos', 'requires exactly curses, blessings, and rarity');
   const curses = requireArray(input.curses, 'chaos.curses');
   const blessings = requireArray(input.blessings, 'chaos.blessings');
   if (curses.length !== 17 || blessings.length !== 16)
@@ -431,5 +470,6 @@ export function normalizeChaos(input: RawTraitCatalogInput['chaos']): ChaosTrait
       'chaos.blessings',
       (blessing) => blessing.key,
     ),
+    rarity: normalizeChaosRarity(input.rarity),
   });
 }

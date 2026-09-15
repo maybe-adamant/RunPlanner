@@ -10,7 +10,8 @@ commit is `034082eb`. The accompanying
 owns the original composition witnesses.
 
 Gate A is implemented, independently reviewed and committed (`e92454d1`). Gate B
-is implemented, independently reviewed and committed; Gate C is next.
+is implemented, independently reviewed and committed (`23d7adff`). Gate C is
+implemented, independently reviewed and committed; Gate D is next.
 The revised order is A replacement rarity → B forced-rarity precedence
 → C Chaos pair rarity → D Ordinary expiry → E ordinary screen composition
 → F closure. The amended execution contract was committed as `e023b3d9` before
@@ -296,6 +297,14 @@ Common Zeus/Yarn and rank-III Gorgon failures before correction. Delete the
 superseded conflicting context path, not the shared ledger.
 
 ### C — Validate Chaos screen rarity at its exact source
+
+Status: implemented, independently reviewed with no actionable findings and
+committed. All 37 tests across the focused Chaos simulation, catalog
+schema, declaration and editor files pass. Engine, catalog and planner
+typechecks, scoped ESLint, formatting and diff checks pass. The witnesses cover
+selected/candidate agreement, invalid-pair history exclusion and exact finding
+ownership, retained Yarn, and a visible invalid rarity with a legal editor
+repair. Full repository and performance verification remain in Gate F.
 
 Deliver C3: source-backed chance support for the selected pair, aligned across
 validation and existing Chaos rarity candidates. Keep static decoding,
