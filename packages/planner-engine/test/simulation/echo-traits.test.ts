@@ -1563,6 +1563,27 @@ describe('Echo Gate B Boon Boon Boon', () => {
     });
   });
 
+  it('keeps fallback-only Bridal Glow targets out of BBB availability', () => {
+    const history = historyFromTraits([
+      { giverKey: 'Hephaestus', traitKey: 'HephaestusWeaponBoon', rarity: 'Heroic' },
+    ]);
+    const outcome = echoLastRunBoonOutcomes(catalog, history, {}).find(
+      (candidate) =>
+        candidate.option.giverKey === 'Hera' &&
+        candidate.option.traitKey === 'BoonDecayBoon' &&
+        candidate.option.rarity === 'Common',
+    );
+    expect(outcome).toMatchObject({
+      targetTraitKeys: [],
+      assessment: {
+        legal: false,
+        findings: expect.arrayContaining([
+          expect.objectContaining({ code: 'targetedAcquisitionNoEligibleTarget' }),
+        ]),
+      },
+    });
+  });
+
   it('reuses Bridal Glow acquisition semantics for the selected Echo outcome', () => {
     const history = historyFromTraits([
       { giverKey: 'Hephaestus', traitKey: 'HephaestusWeaponBoon', rarity: 'Common' },

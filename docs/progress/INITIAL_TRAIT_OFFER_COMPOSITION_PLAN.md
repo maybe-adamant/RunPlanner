@@ -41,16 +41,28 @@ from the completed
 and the user-approved declaration shape. Its implementation baseline is
 `afc808ca`; implementation is committed as `dc4e807b`. Gate G's rarity-credit, sale,
 acquisition-fallback and Personal Loan payout contracts are specified below.
-Unusual non-Pom level behavior is explicitly deferred to an in-game probe after
-G.2, not a prerequisite for implementing the confirmed target domain.
-G.1 is implemented and independently reviewed with no actionable findings.
-G.2 and G.3 have not started.
+The user confirmed Bridal self-targeting and a Hermes target reaching level 2
+in game, and accepted G.2 without extending non-Pom level bookkeeping.
+G.1 is implemented, independently reviewed with no actionable findings, and
+committed as `a0f01090`. G.2 is implemented and independently reviewed; its one
+coverage finding is remediated. G.3 has not started.
+
+G.2 verification: eight focused engine files pass (242 tests); after review,
+three affected files pass again (116 tests), including the new base-Common /
+effective-Heroic Bridal credit witness. Workspace/fixture typechecks,
+changed-TypeScript ESLint, changed-file Prettier and `git diff --check` pass.
+The real Stone witness covers post-primary fallback candidates, stale-target
+repair and source-self settlement without a fabricated level mutation. No
+authored-schema, execution-protocol, application or fixture changes are needed.
+The accepted non-Pom level omission remains explicit; broad closure remains H.
 
 G.1 verification: the six focused history, level-effect, Phial, Echo, Stone
 and Pool files pass (137 tests), including the independent review rerun.
-Workspace/fixture typechecks, changed-TypeScript ESLint, changed-file Prettier
-and `git diff --check` pass. Four stale ordinary-rarity assertions were first
-reproduced at `dc4e807b`, then aligned to row eligibility versus complete-screen
+Changed-TypeScript ESLint, changed-file Prettier and `git diff --check` pass.
+The originally reported typecheck pass missed tuple typing errors in G.1's
+new test cases; G.2 corrects those and passes workspace/fixture typechecks.
+Four stale ordinary-rarity assertions were first reproduced at `dc4e807b`,
+then aligned to row eligibility versus complete-screen
 validation while retaining invalid-screen rejection. The real Pool witness
 sells Bridal after a Phial promotion and preserves its target's credited state.
 No authored-schema, execution-protocol or fixture changes were needed.
@@ -996,14 +1008,13 @@ focused-candidate tests, with representative carrier/application contacts:
   deltas. Existing normal-target level and G.1 credit witnesses stay intact.
   Publication carries the selected fallback target without a format change.
 
-The post-G.2 probe inspects native `StackNum`, displayed level and actual effect
-before/after Bridal for representative Hermes, Artemis, Athena and Dionysus
-targets, with an ordinary Pom target and an explicitly nonstackable target as
-controls. Include any normal-god non-Pom case whose behavior is uncertain and
-subsequent source-rarity credit where applicable. Record source-supported
-versus observed outcomes; amend the level contract only after the user reviews
-the results. An unresolved probe may remain explicitly deferred at H, while
-the implemented eligibility/rarity contract can pass review independently.
+The user's post-G.2 live probe confirmed self-targeting and a Hermes Stutter
+Step target reaching level 2. The user explicitly accepted keeping the current
+implementation without non-Pom level bookkeeping. The room-exit log confirms
+the Hermes target's Heroic rarity; it does not read its level. Other providers'
+stack/effect behavior has not been live-verified. This is an accepted bounded
+omission, not evidence that non-Pom targets have no native levels, and no
+further probe blocks the remaining gates.
 
 #### G.3 — Personal Loan payout-time rarity eligibility
 
@@ -1081,7 +1092,7 @@ source disposition. Integrate G's agreed source-independent Bridal rarity
 credit, sale preservation, acquisition-only target fallback and Personal Loan
 payout-time rarity block into their owning settlement/history contracts and
 source evidence. Bridal's ordinary and BBB offer eligibility remains unchanged;
-only the non-Pom level extension awaits the bounded probe. Replace obsolete
+the non-Pom level extension remains an accepted omission after the user's probe. Replace obsolete
 explanations rather than appending fix narratives. Delete
 this plan and the bucket-rule investigation. Retire the delivered parts of the
 original eligibility and rarity investigations, promoting source evidence into

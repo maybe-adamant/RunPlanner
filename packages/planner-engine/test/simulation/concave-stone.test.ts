@@ -213,6 +213,80 @@ describe('Concave Stone declaration and source ledger', () => {
 });
 
 describe('Concave Stone trait settlement', () => {
+  it('exposes and settles Bridal Glow fallback after the primary replacement exhausts preferred targets', () => {
+    const before = foldTraitHistoryEvents(catalog, [
+      {
+        kind: 'traitOffer',
+        owner: origin,
+        acquisitionRole: 'prior',
+        sequence: 1,
+        acquisitionPoint: 'prior',
+        giverKey: 'Apollo',
+        options: [{ traitKey: 'ApolloWeaponBoon', rarity: 'Epic' }],
+        selectedOptionKey: 'option1',
+      },
+    ]);
+    const value: AuthoredTraitOfferTraits = {
+      kind: 'traits',
+      giverKey: 'Hera',
+      selectedOptionKey: 'option1',
+      options: [
+        { traitKey: 'HeraWeaponBoon', rarity: 'Heroic' },
+        { traitKey: 'BoonDecayBoon', rarity: 'Common', targetTraitKey: 'BoonDecayBoon' },
+        { traitKey: 'HeraSprintBoon', rarity: 'Common' },
+      ],
+      concaveStoneResult: { kind: 'proc', optionKey: 'option2' },
+    };
+    const capability = createTraitOfferCandidateArtifacts(
+      catalog,
+      new Map([
+        [
+          semanticAddressKey(trait),
+          [{ before, context: {}, keepsakes: branchWithStone('Common', before).keepsakes }],
+        ],
+      ]),
+    ).at(trait)!;
+    expect(capability.targetedAcquisitionTargets(value, 'option2')).toEqual([
+      { sourceSupported: true, targetTraitKeys: ['HeraWeaponBoon', 'BoonDecayBoon'] },
+    ]);
+    const stale = settle(
+      {
+        ...value,
+        options: [
+          value.options[0]!,
+          { ...value.options[1]!, targetTraitKey: 'ApolloWeaponBoon' },
+          value.options[2]!,
+        ],
+      },
+      'Common',
+      {},
+      before,
+    );
+    expect(stale.findingEntries).toContainEqual(
+      expect.objectContaining({
+        finding: expect.objectContaining({ code: 'targetedAcquisitionTargetUnavailable' }),
+      }),
+    );
+    const settled = settle(value, 'Common', {}, before);
+    expect(settled.findingEntries).toEqual([]);
+    expect(settled.branch.traitHistory?.equippedTraits.HeraWeaponBoon).toMatchObject({
+      rarity: 'Heroic',
+      level: 1,
+    });
+    expect(settled.branch.traitHistory?.equippedTraits.BoonDecayBoon).toMatchObject({
+      rarity: 'Heroic',
+    });
+    expect(settled.branch.traitHistory?.equippedTraits.BoonDecayBoon).not.toHaveProperty('level');
+    const secondary = settled.branch.traitHistory?.events.at(-1);
+    if (secondary?.kind !== 'concaveStoneSecondary')
+      throw new Error('expected the frozen Bridal Glow acquisition');
+    expect(secondary).toMatchObject({
+      kind: 'concaveStoneSecondary',
+      targetedAcquisitionTransition: { targetTraitKey: 'BoonDecayBoon' },
+    });
+    expect(secondary.targetedAcquisitionTransition).not.toHaveProperty('levelChange');
+  });
+
   it('repairs and settles All Together carried by the residual option', () => {
     const before = foldTraitHistoryEvents(
       catalog,

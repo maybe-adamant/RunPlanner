@@ -32,6 +32,7 @@ import { describe, expect, it } from 'vitest';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { createSteadyGrowthCandidateArtifacts } from '../../src/simulation/candidates/steady-growth';
 import { evaluateNaturalSelectionResultCandidate } from '../../src/simulation/candidates/trait-offer/query';
+import { selectedTargetedAcquisitionTargetKeys } from '../../src/simulation/traits/level-effects';
 
 const owner = { kind: 'project' } as SemanticAddress;
 const naturalSelectionSlots = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana'] as const;
@@ -555,7 +556,7 @@ describe('Boon Growth and Boon Decay target predicates', () => {
     expect(findingCode('BoonDecayBoon', history)).toBe('targetedAcquisitionNoEligibleTarget');
   });
 
-  it('rejects Heroic-only histories because no supported next rarity exists', () => {
+  it('keeps fallback-only Heroic histories out of ordinary Bridal Glow offers', () => {
     const history = historyWith('Demeter', 'DemeterWeaponBoon', 'Heroic');
     expect(findingCode('BoonGrowthBoon', history)).toBe('rarifiableTarget');
     expect(findingCode('BoonDecayBoon', history)).toBe('targetedAcquisitionNoEligibleTarget');
@@ -594,6 +595,66 @@ describe('Boon Growth and Boon Decay target predicates', () => {
     expect(targetedAcquisitionTargetKeys(catalog, 'BoonDecayBoon', history)).toEqual([
       'DemeterWeaponBoon',
     ]);
+  });
+
+  it('uses the broader selected-effect domain only after the preferred domain is empty', () => {
+    const preferred = historyFrom([
+      { giverKey: 'Demeter', traitKey: 'DemeterWeaponBoon', rarity: 'Epic' },
+      { giverKey: 'Artemis', traitKey: 'SupportingFireBoon', rarity: 'Heroic' },
+    ]);
+    expect(targetedAcquisitionTargetKeys(catalog, 'BoonDecayBoon', preferred)).toEqual([
+      'DemeterWeaponBoon',
+    ]);
+    expect(
+      selectedTargetedAcquisitionTargetKeys(
+        catalog,
+        { traitKey: 'BoonDecayBoon', rarity: 'Common' },
+        preferred,
+      ),
+    ).toEqual(['DemeterWeaponBoon']);
+
+    const fallbackOnly = historyFrom([
+      { giverKey: 'Artemis', traitKey: 'SupportingFireBoon', rarity: 'Heroic' },
+    ]);
+    expect(targetedAcquisitionTargetKeys(catalog, 'BoonDecayBoon', fallbackOnly)).toEqual([]);
+    expect(
+      selectedTargetedAcquisitionTargetKeys(
+        catalog,
+        { traitKey: 'BoonDecayBoon', rarity: 'Common' },
+        fallbackOnly,
+      ),
+    ).toEqual(['SupportingFireBoon', 'BoonDecayBoon']);
+    expect(findingCode('BoonDecayBoon', fallbackOnly)).toBe('targetedAcquisitionNoEligibleTarget');
+  });
+
+  it('retains only supported unblocked uncapped fallback targets, including the selected source', () => {
+    const source = { traitKey: 'BoonDecayBoon', rarity: 'Epic' as const };
+    expect(
+      selectedTargetedAcquisitionTargetKeys(
+        catalog,
+        source,
+        historyFrom([{ giverKey: 'Demeter', traitKey: 'ElementalDamageCapBoon', rarity: 'Rare' }]),
+      ),
+    ).toEqual(['BoonDecayBoon']);
+    const capped = historyFrom([
+      { giverKey: 'Hephaestus', traitKey: 'HephaestusWeaponBoon', rarity: 'Heroic' },
+    ]);
+    const cappedWeapon = capped.equippedTraits.HephaestusWeaponBoon;
+    if (cappedWeapon === undefined) throw new Error('missing Hephaestus weapon');
+    const atCap = foldTraitHistoryEvents(catalog, [
+      ...capped.events,
+      levelMutation(capped.events.length + 1, cappedWeapon.traitKey, cappedWeapon.level!, 4),
+    ]);
+    expect(selectedTargetedAcquisitionTargetKeys(catalog, source, atCap)).toEqual([
+      'BoonDecayBoon',
+    ]);
+    expect(
+      selectedTargetedAcquisitionTargetKeys(
+        catalog,
+        source,
+        historyFrom([{ giverKey: 'Hades', traitKey: 'HadesLifestealBoon' }]),
+      ),
+    ).toEqual(['BoonDecayBoon']);
   });
 
   it('requires one exact selected target and promotes only that target to Heroic', () => {
@@ -671,7 +732,9 @@ describe('Boon Growth and Boon Decay target predicates', () => {
       selectedOptionKey: 'option1',
     };
     const assessment = assessSelectedTargetedAcquisition(catalog, offer, before);
-    expect(assessment.transition).toMatchObject({ oldLevel: 1, newLevel: 1 + added });
+    expect(assessment.transition).toMatchObject({
+      levelChange: { oldLevel: 1, newLevel: 1 + added },
+    });
     if (rarity === 'Heroic') return;
     const reached = evaluateReachedTraitOffer(
       catalog,
@@ -693,5 +756,68 @@ describe('Boon Growth and Boon Decay target predicates', () => {
       rarity: 'Heroic',
       level: 1 + added,
     });
+  });
+
+  it('uses Calling Card’s effective Bridal Glow rarity for its recorded target credit', () => {
+    const before = historyWith('Demeter', 'DemeterWeaponBoon', 'Common');
+    const baseOffer: AuthoredTraitOffer = {
+      kind: 'traits',
+      giverKey: 'Hera',
+      options: Object.freeze([
+        { traitKey: 'BoonDecayBoon', rarity: 'Common', targetTraitKey: 'DemeterWeaponBoon' },
+        { traitKey: 'HeraSpecialBoon', rarity: 'Common' },
+        { traitKey: 'HeraCastBoon', rarity: 'Common' },
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
+      selectedOptionKey: 'option1',
+    };
+    const effectiveOffer: AuthoredTraitOffer = Object.freeze({
+      ...baseOffer,
+      options: Object.freeze([
+        { ...baseOffer.options[0], rarity: 'Heroic' as const },
+        baseOffer.options[1],
+        baseOffer.options[2],
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
+    });
+    const reached = evaluateReachedTraitOffer(
+      catalog,
+      owner,
+      'calling-card-bridal',
+      effectiveOffer,
+      before,
+      { resolvedProviderKey: 'Hera' },
+      before.events.length,
+      undefined,
+      false,
+      undefined,
+      baseOffer,
+    );
+    const recorded = recordReachedTraitOffer(catalog, reached, before.events.length + 1, 'test');
+    expect(recorded.event?.targetedAcquisitionTransition).toMatchObject({
+      levelChange: { oldLevel: 1, newLevel: 5 },
+    });
+    expect(recorded.history.equippedTraits.DemeterWeaponBoon).toMatchObject({
+      rarity: 'Heroic',
+      level: 5,
+    });
+  });
+
+  it('allows Bridal Glow to select itself only through its selected-effect fallback', () => {
+    const offer: AuthoredTraitOffer = {
+      kind: 'traits',
+      giverKey: 'Hera',
+      options: Object.freeze([
+        { traitKey: 'BoonDecayBoon', rarity: 'Epic', targetTraitKey: 'BoonDecayBoon' },
+        { traitKey: 'HeraSpecialBoon', rarity: 'Common' },
+        { traitKey: 'HeraCastBoon', rarity: 'Common' },
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
+      selectedOptionKey: 'option1',
+    };
+    const assessment = assessSelectedTargetedAcquisition(catalog, offer, createTraitHistoryState());
+    expect(assessment).toMatchObject({
+      legal: true,
+      targetTraitKey: 'BoonDecayBoon',
+      transition: { kind: 'promoteGodTraitToHeroic', oldRarity: 'Epic' },
+    });
+    expect(assessment.transition).not.toHaveProperty('levelChange');
   });
 });

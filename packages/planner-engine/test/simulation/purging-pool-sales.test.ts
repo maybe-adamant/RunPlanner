@@ -190,11 +190,11 @@ describe('Purging Pool sales', () => {
       value: {
         kind: 'traits',
         giverKey: 'Hera',
-        options: Object.freeze([
+        options: [
           { traitKey: 'BoonDecayBoon', rarity: 'Common', targetTraitKey: 'ApolloWeaponBoon' },
           { traitKey: 'HeraSprintBoon', rarity: 'Common' },
           { traitKey: 'HeraManaBoon', rarity: 'Common' },
-        ]),
+        ] as const,
         selectedOptionKey: 'option1',
       },
     });

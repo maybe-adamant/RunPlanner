@@ -515,9 +515,6 @@ function evaluateReachedTraitOfferWithAssessments(
               findings: Object.freeze([...baseComposition.findings, ...chaosFindings]),
             });
       })();
-  // A frozen source row still acquires its targeted effect at the current
-  // frontier, after the primary selection has settled.
-  const targetedAcquisition = assessSelectedTargetedAcquisition(catalog, legalityOffer, before);
   const rawAssessments = frozenAcquisition
     ? Object.freeze([])
     : (assessments ??
@@ -542,6 +539,10 @@ function evaluateReachedTraitOfferWithAssessments(
             }),
           ),
         ));
+  // A frozen source row still acquires its targeted effect at the current
+  // frontier, after the primary selection has settled. Its resolver sees the
+  // selected effective source (including Calling Card), not the base roll.
+  const targetedAcquisition = assessSelectedTargetedAcquisition(catalog, offer, before);
   const resolvedAssessments = frozenAcquisition
     ? Object.freeze([])
     : Object.freeze(
@@ -782,7 +783,7 @@ export function recordReachedTraitOffer(
   }) as TraitOfferEvent | import('./history/model').ConcaveStoneSecondaryEvent;
   const transition = evaluation.targetedAcquisition.transition;
   const mutation: TraitLevelMutationEvent | undefined =
-    transition?.kind === 'promoteGodTraitToHeroic'
+    transition?.kind === 'promoteGodTraitToHeroic' && transition.levelChange !== undefined
       ? Object.freeze({
           kind: 'levelMutation',
           owner: evaluation.address,
@@ -791,8 +792,8 @@ export function recordReachedTraitOffer(
           acquisitionPoint,
           sourceTraitKey: transition.sourceTraitKey,
           targetTraitKey: transition.targetTraitKey,
-          oldLevel: transition.oldLevel,
-          newLevel: transition.newLevel,
+          oldLevel: transition.levelChange.oldLevel,
+          newLevel: transition.levelChange.newLevel,
         })
       : undefined;
   const immediate: TraitHistoryEvent[] = [event, ...(mutation === undefined ? [] : [mutation])];

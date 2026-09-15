@@ -147,8 +147,7 @@ function bridalPhialHistory() {
         targetTraitKey: 'ApolloWeaponBoon',
         oldRarity: 'Common' as const,
         newRarity: 'Heroic' as const,
-        oldLevel: 1,
-        newLevel: 2,
+        levelChange: { oldLevel: 1, newLevel: 2 },
       },
     },
     {
