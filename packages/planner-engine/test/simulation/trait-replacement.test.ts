@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   assessTraitOption,
+  boonRarityFactsForOffer,
   assessTraitOfferComposition,
   assessTraitOfferDomainComposition,
   assessTraitReplacementComposition,
@@ -346,6 +347,74 @@ describe('derived Olympian trait replacement', () => {
       traitKey: 'ApolloSpecialBoon',
       detail: 'Rare',
     });
+  });
+
+  it('preserves promoted rarity when fresh Epic is guaranteed', () => {
+    const before = history([['Zeus', 'ZeusWeaponBoon', 'Common']]);
+    const facts = boonRarityFactsForOffer(catalog, before, {
+      resolvedProviderKey: 'Apollo',
+      boonRarityRoomOverride: catalog.rooms.byKey.Q_MiniBoss02!.boonRarityOverride!,
+      temporaryBoonRarityUses: 1,
+    })!;
+    const context = {
+      resolvedProviderKey: 'Apollo',
+      boonRarityFacts: {
+        ...facts,
+        contributions: [
+          ...facts.contributions,
+          catalog.arcanaCards.byKey.EpicRarityBoost!.boonRarityContributions!.Rare,
+        ],
+      },
+    };
+    const replacement = assessTraitOption(catalog, 'ApolloWeaponBoon', before, context, 'Rare');
+    expect(replacement).toMatchObject({
+      legal: true,
+      findings: [],
+      replacementTransition: {
+        replacedTraitKey: 'ZeusWeaponBoon',
+        oldRarity: 'Common',
+        requiredRarity: 'Rare',
+      },
+    });
+
+    const candidates = traitCandidates(catalog, 'Apollo', before, context);
+    expect(
+      candidates.filter(
+        (candidate) => candidate.traitKey === 'ApolloWeaponBoon' && candidate.available,
+      ),
+    ).toEqual([expect.objectContaining({ rarity: 'Rare', assessment: replacement })]);
+    expect(
+      assessTraitOption(catalog, 'ApolloWeaponBoon', before, context, 'Epic').findings,
+    ).toContainEqual({
+      code: 'replacementRarityMismatch',
+      traitKey: 'ApolloWeaponBoon',
+      detail: 'Rare:Epic',
+    });
+    expect(
+      assessTraitOption(catalog, 'ApolloSpecialBoon', before, context, 'Rare').findings,
+    ).toContainEqual({
+      code: 'rarityRollUnavailable',
+      traitKey: 'ApolloSpecialBoon',
+      detail: 'Rare',
+    });
+
+    const evaluation = evaluateReachedTraitOffer(
+      catalog,
+      owner,
+      'source',
+      offer('Apollo', [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Rare' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Epic' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Epic' },
+      ]),
+      before,
+      context,
+      1,
+    );
+    const applied = recordReachedTraitOffer(catalog, evaluation, 2, 'test');
+    expect(applied.event?.replacementTransition?.requiredRarity).toBe('Rare');
+    expect(applied.history.equippedTraits.ZeusWeaponBoon).toBeUndefined();
+    expect(applied.history.equippedTraits.ApolloWeaponBoon?.rarity).toBe('Rare');
   });
 
   it('rejects Heroic occupants and wrong promoted rarity', () => {
