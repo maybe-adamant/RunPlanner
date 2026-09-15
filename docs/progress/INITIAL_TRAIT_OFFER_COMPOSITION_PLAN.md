@@ -9,7 +9,7 @@ commit is `034082eb`. The accompanying
 [trait eligibility investigation](../investigations/TRAIT_ELIGIBILITY_GAME_PARITY_REVIEW.md)
 owns the original composition witnesses.
 
-Gate A is implemented, independently reviewed and uncommitted. Preserve that
+Gate A is implemented, independently reviewed and committed. Preserve that
 work. The revised order is A replacement rarity → B forced-rarity precedence
 → C Chaos pair rarity → D Ordinary expiry → E ordinary screen composition
 → F closure. Commit the amended execution contract before further
@@ -262,7 +262,7 @@ The focused starting points for the added rarity work are:
 Status: implemented and independently reviewed with no findings. The new
 regression failed before the fix; all 98 tests in the four owning/contact files
 below pass after it. Workspace/fixture typechecking and focused ESLint pass.
-Full closure verification remains in Gate F. Implementation is not yet committed.
+Full closure verification remains in Gate F. Implementation is committed.
 
 Deliver the focused individual-assessment fix, its candidate contact, and
 source/authority corrections specific to replacement rarity. No new composition

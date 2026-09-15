@@ -278,19 +278,6 @@ export function assessTraitOptionAgainstRarityDomain(
     findings.push({ code: 'wrongHammerLoadout', traitKey });
   let replacementTransition: TraitReplacementTransition | undefined;
   if (
-    context.boonRarityFacts !== undefined &&
-    rarity !== undefined &&
-    trait.usesBoonRarity &&
-    trait.rarityDomain.kind === 'ranked' &&
-    trait.rarityDomain.freshOfferRarities.includes(rarity) &&
-    boonRarityRollUnavailable(
-      context.boonRarityFacts,
-      rarity,
-      supportedRarities ?? trait.rarityDomain.freshOfferRarities,
-    )
-  )
-    findings.push({ code: 'rarityRollUnavailable', traitKey, detail: rarity });
-  if (
     trait.selectedDisposition.kind === 'echo' &&
     trait.selectedDisposition.effect === 'lastRunBoon' &&
     !echoLastRunBoonOutcomes(catalog, history).some((outcome) => outcome.assessment.legal)
@@ -365,6 +352,21 @@ export function assessTraitOptionAgainstRarityDomain(
       detail: trait.equipmentSlot,
     });
   }
+  // A replacement's explicit promoted rarity is not drawn from the fresh table.
+  if (
+    replacementTransition === undefined &&
+    context.boonRarityFacts !== undefined &&
+    rarity !== undefined &&
+    trait.usesBoonRarity &&
+    trait.rarityDomain.kind === 'ranked' &&
+    trait.rarityDomain.freshOfferRarities.includes(rarity) &&
+    boonRarityRollUnavailable(
+      context.boonRarityFacts,
+      rarity,
+      supportedRarities ?? trait.rarityDomain.freshOfferRarities,
+    )
+  )
+    findings.push({ code: 'rarityRollUnavailable', traitKey, detail: rarity });
   // A source override is the exact rarity for fresh rows, not an offer-wide
   // rewrite. Legal replacements retain their explicit promoted rarity even
   // when the fresh table is overridden (for example, Ordinary at Common).

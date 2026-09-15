@@ -96,7 +96,9 @@ pre-offer domain before cardinality is considered.
 - requires a supported next rarity;
 - retains the candidate's ordinary requirements and banned-trait exclusion;
   and
-- carries the exact promoted rarity derived from the displaced trait.
+- carries the exact promoted rarity derived from the displaced trait, not a
+  fresh rarity roll. `SetTraitsOnLoot` preserves that assigned rarity even when
+  the fresh table guarantees a higher rarity.
 
 The source may seed at most one normal replacement while a sufficiently large
 ordinary domain remains. Its later exchange-fill pass may use replacement
