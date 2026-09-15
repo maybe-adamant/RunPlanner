@@ -1,6 +1,11 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
+  artificerAcquisitionSite,
+  artificerReplacementEntryKey,
+  createAcquisitionEntryAddress,
   createIncomingRewardAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createTraitOfferAddress,
   semanticAddressKey,
@@ -18,13 +23,17 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import {
+  authorTestArtificerReplacement,
+  createFConversionFrontierProject,
   createGoldenFGHIProject,
   goldenFBiome,
+  goldenFOccurrenceId,
   goldenFStartId,
 } from '@run-planner/test-fixtures/underworld';
 
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import type { TraitOfferCandidateContext } from '../../src/simulation/traits';
+import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits/state';
 import {
   evaluateTraitAcquisitionTargetDomain,
   evaluateTraitOfferCandidate,
@@ -92,6 +101,93 @@ function reachedContext(before = createTraitHistoryState()): TraitOfferCandidate
 }
 
 describe('focused trait offer candidates', () => {
+  it('retains weapon and aspect eligibility when an Artificer hammer reaches its later pickup', () => {
+    const fixture = createFConversionFrontierProject('MetaCardPointsCommonDrop');
+    const authored = authorTestArtificerReplacement(
+      applyProjectCommand(fixture.project, catalog, {
+        kind: 'ReplaceRouteLoadout',
+        route: { kind: 'route', routeKey: 'Underworld' },
+        weaponKey: 'WeaponLob',
+        aspectKey: 'LobImpulseAspect',
+      }),
+      catalog,
+      fixture.acquisition,
+      createUnresolvedAcquisitionRewardState(
+        catalog,
+        { rewardType: 'WeaponUpgrade' },
+        {
+          kind: 'producerLifecycle',
+          key: 'RoomReward',
+        },
+      ),
+    );
+    const site = artificerAcquisitionSite(
+      createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
+      fixture.acquisition.owner,
+    );
+    const trait = createTraitOfferAddress(
+      createAcquisitionEntryAddress(
+        site,
+        artificerReplacementEntryKey(fixture.acquisition.owner, 'self'),
+      ),
+      'self',
+    );
+    const session = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, authored),
+    );
+    const draft = session.traitOfferStartingDraft(trait, 'WeaponUpgrade');
+    expect(draft).toBeDefined();
+    if (draft === undefined) throw new Error('Artificer hammer draft is missing');
+    for (const option of draft.options) {
+      expect(catalog.traits.byKey[option.traitKey]?.hammerCompatibility).toMatchObject({
+        weaponKey: 'WeaponLob',
+        aspectKeys: expect.arrayContaining(['LobImpulseAspect']),
+      });
+    }
+    for (const traitKey of ['StaffDoubleAttackTrait', 'LobGunOverheatTrait']) {
+      const value: AuthoredTraitOffer = {
+        ...draft,
+        options: [{ traitKey }, draft.options[1]!, draft.options[2]!],
+      };
+      const candidate = session.evaluate({
+        kind: 'traitOfferFocusedOption',
+        trait,
+        value,
+        optionKey: 'option1',
+      });
+      expect(candidate).toMatchObject({
+        kind: 'traitOfferFocusedOption',
+        result: {
+          supported: false,
+          evidence: expect.arrayContaining([
+            expect.objectContaining({ finding: { code: 'wrongHammerLoadout', traitKey } }),
+          ]),
+        },
+      });
+      const invalid = applyProjectCommand(authored, catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait,
+        value,
+      });
+      expect(simulateProject(catalog, invalid).findings).toContainEqual(
+        expect.objectContaining({
+          origin: trait,
+          code: 'wrongHammerLoadout',
+          evidence: expect.objectContaining({ traitKey }),
+        }),
+      );
+    }
+    const selected = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: draft,
+    });
+    expect(simulateProject(catalog, selected).findings).not.toContainEqual(
+      expect.objectContaining({ origin: trait }),
+    );
+  });
+
   it('publishes branch-aware targets without combining support and pins a stale target', () => {
     const targetDomain = evaluateTraitAcquisitionTargetDomain(
       catalog,
