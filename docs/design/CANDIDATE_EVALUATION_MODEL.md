@@ -433,7 +433,9 @@ and invokes the existing reward authorities:
 
 - a changed offer identity receives the same fresh unresolved acquisition
   children as its semantic replacement command; only the unchanged offer keeps
-  its currently authored descendants;
+  its currently authored descendants. Incoming-reward alternatives stop at
+  generation support; their new children are authored after selection. Only
+  the unchanged incoming offer replays its retained acquisition descendants;
 - sequential producers include the effects and peer exclusions of earlier
   siblings;
 - jointly unordered producers reevaluate the complete sibling group and every
@@ -473,7 +475,8 @@ Each candidate family has an explicit semantic horizon:
 | Room target                   | Target generation support                                     |
 | Takeover Preboss batch        | Source pre-generation support across all physical exits       |
 | Batch reward store            | Pre-generation store support                                  |
-| Incoming or local reward      | Offer generation and its own entered acquisition lifecycle    |
+| Incoming reward               | Generation; retained acquisition only for the unchanged offer |
+| Local reward                  | Offer generation and its own entered acquisition lifecycle    |
 | Sequential sibling reward     | Earlier sibling generation plus the addressed offer           |
 | Joint unordered rewards       | Complete atomic sibling generation region                     |
 | Shop offer                    | Complete joint inventory generation                           |

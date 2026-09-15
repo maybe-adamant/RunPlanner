@@ -263,7 +263,7 @@ describe('Biome inspector controls', () => {
     expect(authoredStart()).toBe('F_Opening01');
   });
 
-  it('edits a selectable F entry reward beside identity and undoes exactly once', async () => {
+  it('selects and replaces an F entry reward beside identity with one undo per edit', async () => {
     const occurrenceId = createOccurrenceId('start-entry-reward');
     const started = applyProjectCommand(emptyProject('Underworld', 1), catalog, {
       biome: goldenFBiome,
@@ -289,6 +289,27 @@ describe('Biome inspector controls', () => {
       kind: 'counted',
       reward: { offer: { rewardType: 'WeaponUpgrade' } },
     });
+    await view.user.click(within(identity).getByLabelText('Reward'));
+    await view.user.click(within(await screen.findByRole('listbox')).getByText('Boon'));
+    await view.user.click(within(await screen.findByRole('listbox')).getByText('Zeus'));
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      historyBefore + 2,
+    );
+    expect(
+      view.application.store.getState().projectWorkspace.history!.present.route?.biomes[0]?.topology
+        ?.occurrences[0]?.state,
+    ).toMatchObject({
+      kind: 'counted',
+      reward: {
+        offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+        traitOffersByAcquisitionRole: { source: null },
+      },
+    });
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(
+      view.application.store.getState().projectWorkspace.history!.present.route?.biomes[0]?.topology
+        ?.occurrences[0]?.state,
+    ).toMatchObject({ kind: 'counted', reward: { offer: { rewardType: 'WeaponUpgrade' } } });
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(
       view.application.store.getState().projectWorkspace.history!.present.route?.biomes[0]?.topology
