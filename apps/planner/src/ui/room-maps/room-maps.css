@@ -1,0 +1,124 @@
+.room-map-dialog-backdrop {
+  width: min(1080px, calc(100vw - 32px));
+  max-width: none;
+  max-height: min(900px, calc(100vh - 32px));
+  padding: 0;
+  border: 1px solid #4b4c58;
+  border-radius: 12px;
+  color: #f2ede5;
+  background: #171820;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 62%);
+}
+
+.room-map-dialog-backdrop::backdrop {
+  background: rgb(0 0 0 / 62%);
+}
+
+.room-map-dialog {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: min(900px, calc(100vh - 32px));
+  padding: 18px;
+}
+
+.room-map-dialog-heading,
+.room-map-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.room-map-dialog-heading {
+  margin-bottom: 14px;
+}
+
+.room-map-dialog-heading h2 {
+  margin: 2px 0 0;
+  font-size: 1.2rem;
+}
+
+.room-map-game-name {
+  margin: 3px 0 0;
+  color: #afa9a0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+}
+
+.room-map-viewport {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.room-map-controls {
+  justify-content: flex-start;
+}
+
+.room-map-zoom {
+  display: inline-flex;
+  min-width: 4.5rem;
+  justify-content: center;
+  color: #d7d2ca;
+  font-variant-numeric: tabular-nums;
+}
+
+.room-map-scroll {
+  height: min(650px, calc(100vh - 250px));
+  min-height: 240px;
+  overflow: auto;
+  border: 1px solid #363742;
+  border-radius: 8px;
+  background: #101116;
+}
+
+.room-map-scroll:focus-visible {
+  outline: 2px solid #e2b971;
+  outline-offset: 2px;
+}
+
+.room-map-image-stage {
+  display: flex;
+  width: max-content;
+  height: max-content;
+  min-width: 100%;
+  min-height: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+.room-map-image {
+  display: block;
+  flex: 0 0 auto;
+  max-width: none;
+  height: auto;
+}
+
+.room-map-load-error {
+  margin: 0;
+  color: #efb1b1;
+}
+
+/* Additional exits keep their existing choice/name control beside map viewing. */
+.additional-exit-map-control,
+.additional-exit-room-reference {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.additional-exit-map-control > .field-control-inline {
+  width: auto;
+  max-width: 100%;
+  flex: 0 1 auto;
+  grid-template-columns: max-content minmax(0, 10rem);
+}
+
+.additional-exit-room-reference > .additional-exit-room-state {
+  margin: 0;
+}

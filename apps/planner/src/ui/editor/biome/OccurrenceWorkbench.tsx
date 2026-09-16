@@ -11,6 +11,7 @@ import {
   type WorkspaceRunStateLauncher,
 } from '@planner/projections/structured-workspace';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { RunStateLauncher } from './RunStateSheet';
 import { AnomalyClearedControl } from './room-features/AnomalyControls';
 import { RoomActionsWorkbench } from './OccurrenceRoomActions';
@@ -169,6 +170,7 @@ export function OccurrenceWorkbench({
       <header className="room-card-heading">
         <h3 aria-label={heading}>{heading}</h3>
         <div className="owner-markers">
+          <RoomMapLauncher gameName={room.gameName} hostId={roomIdentity} title={room.label} />
           {runState === undefined ? null : <RunStateLauncher launcher={runState} />}
         </div>
       </header>

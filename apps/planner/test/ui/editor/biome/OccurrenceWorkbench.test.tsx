@@ -62,6 +62,32 @@ afterEach(() => {
 });
 
 describe('OccurrenceWorkbench', () => {
+  it('opens its static room map without changing authored history or navigation', async () => {
+    const occurrenceId = goldenFOccurrenceId(1, 1);
+    const view = renderOccurrenceWorkbench(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'F',
+      occurrenceById(occurrenceId),
+    );
+    const node = workspaceBiome(view.application, 'Underworld', 'F').nodes.find(
+      (candidate): candidate is WorkspaceOccurrenceWorkbenchNode =>
+        candidate.kind === 'occurrenceWorkbench' && candidate.room.occurrenceId === occurrenceId,
+    );
+    if (node === undefined) throw new Error('ordinary entered occurrence is missing');
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
+    const focusBefore = view.application.store.getState().editorSession.focusedSemanticOwner;
+
+    await view.user.click(screen.getByRole('button', { name: `View map for ${node.room.label}` }));
+
+    expect(screen.getByRole('heading', { name: `${node.room.label} map` })).toBeTruthy();
+    expect(screen.getByText(node.room.gameName)).toBeTruthy();
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      historyBefore,
+    );
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBe(focusBefore);
+  });
+
   it('presents an incoming ordinary room identity read-only under its target-owned door control', () => {
     const occurrenceId = goldenFOccurrenceId(1, 1);
     const view = renderOccurrenceWorkbench(

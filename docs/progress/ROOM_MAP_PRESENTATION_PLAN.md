@@ -1,7 +1,16 @@
 # Room Maps and Editing References
 
-Status: locked after independent review and user approval; Gate A is next.
+Status: Gate A implemented and independently reviewed; Gate B is next.
 Base: `fa766878`.
+
+Gate A verification: 59 focused viewer/asset/workbench tests passed, followed by
+41 affected tests after review remediation. Planner typecheck, scoped ESLint,
+format checks and production web build passed. Browser checks covered real
+images, a placeholder, Fit/zoom/scroll, Close/Escape/focus, narrow layout and
+additional-exit controls; the production preview loaded a packaged image.
+All 107 copied screenshots are byte-identical to their sources; the remaining
+154 declared rooms have placeholders. Native Tauri loading was not exercised.
+Gates B/C and the complete phase-closure gate remain pending.
 
 ## Objective
 

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-labelledby="title description">
+  <title id="title">Map not available yet</title>
+  <desc id="description">A room map placeholder.</desc>
+  <rect width="1200" height="675" fill="#171821"/>
+  <rect x="42" y="42" width="1116" height="591" fill="none" stroke="#8e759e" stroke-width="4"/>
+  <path d="M208 462 430 244l145 136 169-158 246 240" fill="none" stroke="#ad96bd" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="600" y="548" fill="#f2ede5" font-family="system-ui, sans-serif" font-size="42" text-anchor="middle">Map not available yet</text>
+</svg>

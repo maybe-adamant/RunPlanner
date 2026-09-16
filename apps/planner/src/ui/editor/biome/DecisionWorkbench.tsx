@@ -21,6 +21,7 @@ import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { CandidateSelect } from './CandidateSelect';
 import { AnomalyRoomControl, RevertAnomalyAction } from './room-features/AnomalyControls';
 import { ChaosMapWorkbench } from './room-features/AdditionalExitControls';
@@ -209,6 +210,11 @@ function TargetRow({
           </div>
           <div className="owner-markers">
             <span className="neutral-status">{roomStatus(target)}</span>
+            <RoomMapLauncher
+              gameName={door.room.gameName}
+              hostId={target.marker.focusKey}
+              title={door.room.label}
+            />
           </div>
         </div>
         {node.targetInteraction !== 'replaceable' ||
@@ -367,9 +373,16 @@ function ZagreusContractExit({
             <h4>Zagreus contract</h4>
           </div>
         </div>
-        <p className="fixed-room-state additional-exit-room-state">
-          Room: {control.door.room.label}
-        </p>
+        <div className="additional-exit-room-reference">
+          <p className="fixed-room-state additional-exit-room-state">
+            Room: {control.door.room.label}
+          </p>
+          <RoomMapLauncher
+            gameName={control.door.room.gameName}
+            hostId={workspaceInteractionKey(control.owner)}
+            title={control.door.room.label}
+          />
+        </div>
       </div>
     </article>
   );

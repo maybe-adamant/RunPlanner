@@ -889,6 +889,46 @@ describe('DecisionWorkbench', () => {
     );
   });
 
+  it('inspects an unpicked target map without selecting its exit or changing navigation', async () => {
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision: createExitDecisionAddress(pBiome, {
+        kind: 'occurrence',
+        occurrenceId: pOccurrenceId('P_Combat03', 1, 1),
+      }),
+    });
+    const owner = createExitDecisionAddress(pBiome, {
+      kind: 'occurrence',
+      occurrenceId: pOccurrenceIds.intro,
+    });
+    const view = renderDecisionWorkbench(project, 'Surface', 'P', subjectForOwner(owner));
+    const node = workspaceBiome(view.application, 'Surface', 'P').nodes.find(
+      (candidate): candidate is DecisionWorkbenchNode =>
+        (candidate.kind === 'ordinaryBatch' ||
+          candidate.kind === 'mixedBatch' ||
+          candidate.kind === 'takeoverBatch') &&
+        semanticAddressKey(candidate.owner) === semanticAddressKey(owner),
+    );
+    if (node === undefined) throw new Error('P Decision 1 is missing');
+    const target = node.targets.find((candidate) => !candidate.selected);
+    if (target === undefined) throw new Error('P Decision 1 has no unpicked target');
+    const card = screen.getByRole('article', { name: `${target.room.label} room offer` });
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
+    const focusBefore = view.application.store.getState().editorSession.focusedSemanticOwner;
+
+    await view.user.click(
+      within(card).getByRole('button', { name: `View map for ${target.room.label}` }),
+    );
+
+    expect(screen.getByRole('heading', { name: `${target.room.label} map` })).toBeTruthy();
+    expect(screen.getByText(target.room.gameName)).toBeTruthy();
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      historyBefore,
+    );
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBe(focusBefore);
+    expect((within(card).getByRole('radio') as HTMLInputElement).checked).toBe(false);
+  });
+
   it('authors terminal Preboss through the empty decision Door 1 picker', async () => {
     const owner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
