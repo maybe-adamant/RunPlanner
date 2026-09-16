@@ -92,6 +92,9 @@ describe('encounter envelope catalog', () => {
       'IcarusCombatO',
       'MiniBossCharybdis',
       'MiniBossCaptain',
+      'DevotionTestF',
+      'DevotionTestG',
+      'DevotionTestI',
       'DevotionTestO',
       'BossEris01',
       'BossEris02',
@@ -329,12 +332,17 @@ describe('encounter envelope catalog', () => {
     });
     expect(catalog.encounterDefinitions.byKey).not.toHaveProperty('Story_Chronos_01');
     expect(catalog.encounterSets.byKey.IEncountersDefault).toMatchObject({
-      encounterDefinitionKeys: ['GeneratedI', 'GeneratedI_GoalReward', 'NemesisCombatI'],
+      encounterDefinitionKeys: [
+        'GeneratedI',
+        'GeneratedI_GoalReward',
+        'DevotionTestI',
+        'NemesisCombatI',
+      ],
       defaultAuthoringProfileKey: 'GeneratedI',
       authoringProfiles: [
         {
           key: 'GeneratedI',
-          encounterDefinitionKeys: ['GeneratedI', 'GeneratedI_GoalReward'],
+          encounterDefinitionKeys: ['GeneratedI', 'GeneratedI_GoalReward', 'DevotionTestI'],
         },
         { key: 'NemesisCombatI', encounterDefinitionKeys: ['NemesisCombatI'] },
       ],
@@ -356,6 +364,7 @@ describe('encounter envelope catalog', () => {
     expect(catalog.encounterSets.byKey.NEncountersSubRoomHeavy).toBeUndefined();
     expect(catalog.encounterSets.byKey.FEncountersDefault?.encounterDefinitionKeys).toEqual([
       'GeneratedF',
+      'DevotionTestF',
       'ArtemisCombatF',
       'ArachneCombatF',
       'NemesisCombatF',
@@ -363,6 +372,7 @@ describe('encounter envelope catalog', () => {
     ]);
     expect(catalog.encounterSets.byKey.GEncountersDefault?.encounterDefinitionKeys).toEqual([
       'GeneratedG',
+      'DevotionTestG',
       'ArtemisCombatG',
       'ArachneCombatG',
       'NemesisCombatG',
