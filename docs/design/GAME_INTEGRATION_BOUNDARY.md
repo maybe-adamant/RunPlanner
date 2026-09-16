@@ -217,6 +217,11 @@ not become an adapter-local semantic comparison: durable modeled results are
 checked only by the sparse named room-exit conformance facts selected by the
 planner. Simulation-neutral health, Magick, Gold, Armor, healing, and
 meta-progression results intentionally have no blocking completion proof.
+Arachne's eight dresses and Icarus's Protective/Volatile Coating remain in
+planner history but are excluded from trait presence and absence checks at
+both room exit and postboss admission: native armor depletion can remove them,
+and their survival is not a prerequisite for modeled outcomes. This is not a
+blanket exclusion of armor-related boons, keepsakes, or other NPC traits.
 The executor trusts planner eligibility and does not preflight exact trait rows
 through `IsTraitEligible`, duo requirements, replacement constraints, or a
 second offer-legality policy before forcing them.
