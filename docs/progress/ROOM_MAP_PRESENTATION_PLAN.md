@@ -172,9 +172,9 @@ viewer geometry and do not change control placement when replaced later.
 Hub cards gain no thumbnails, extra detail rows or separate Map column. Preserve
 the four-column normal board and compact roster when the reference is closed;
 when it is open the existing container-responsive rules may reduce columns.
-The Hub reference is sticky within its editing surface, not fixed to the app;
-it scrolls normally when stacked above controls. Zoomed-image scrolling remains
-available inside the image viewport. The side-room table keeps its full width.
+The Fields and Hub references are sticky within their editing surfaces, not fixed
+to the app; they scroll normally when stacked above controls. Zoomed-image
+scrolling remains available inside the image viewport. The side-room table keeps its full width.
 Map buttons are separate from membership labels, row reorder grips and rewards,
 so pointer, touch and keyboard activation cannot trigger those interactions.
 

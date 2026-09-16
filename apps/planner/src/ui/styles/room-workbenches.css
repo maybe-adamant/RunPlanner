@@ -120,6 +120,19 @@
   min-width: 0;
 }
 
+@container fields-layout (width > 64rem) {
+  .fields-layout-reference-layout > .room-map-reference {
+    position: sticky;
+    top: 12px;
+    align-self: start;
+  }
+
+  .fields-layout-reference-layout > .room-map-reference > .room-map-viewport > .room-map-scroll {
+    min-height: 0;
+    max-height: max(8rem, calc(100dvh - 22rem));
+  }
+}
+
 .fields-layout-controls .local-reward-heading.fields-layout-heading,
 .fields-layout-controls .fields-layout-row {
   grid-template-columns: minmax(6rem, 0.8fr) minmax(0, 1.2fr);
