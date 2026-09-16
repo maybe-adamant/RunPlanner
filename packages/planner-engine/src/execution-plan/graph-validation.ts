@@ -43,8 +43,11 @@ export function validateExecutionGraph(
     if (referenced.kind === 'FieldsEncounter') {
       if (target.cageRewards === undefined)
         invalid(`${label} must carry cageRewards for a FieldsEncounter target`);
-      if (target.cageRewards?.length !== referenced.overview.fields?.cagePoints.length)
-        invalid(`${label}.cageRewards must match the Fields target cagePoints length`);
+      const cageCount = referenced.overview.encounterPhases.filter((phase) =>
+        /^Cage\d+$/.test(phase.slotKey),
+      ).length;
+      if (target.cageRewards?.length !== cageCount)
+        invalid(`${label}.cageRewards must match the Fields target cage encounter count`);
     } else if (target.cageRewards !== undefined) {
       invalid(`${label}.cageRewards is only valid for a FieldsEncounter target`);
     }
@@ -104,6 +107,12 @@ export function validateExecutionGraph(
 
   for (const occurrence of graph.occurrences) continuations(occurrence);
   for (const occurrence of graph.occurrences) {
+    if (
+      selected.has(occurrence.id) &&
+      occurrence.kind === 'FieldsEncounter' &&
+      occurrence.overview.fields === undefined
+    )
+      invalid(`${occurrence.id}.overview.fields is required for a selected Fields encounter`);
     if (occurrence.resumeBoundary === undefined) continue;
     if (occurrence.resumeBoundary !== 'postbossEntry')
       invalid(`${occurrence.id} has an unsupported resume boundary`);

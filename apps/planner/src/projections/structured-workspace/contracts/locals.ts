@@ -117,6 +117,7 @@ export interface WorkspaceNemesisEventDomain {
 export interface WorkspaceNemesisFeatureInteraction {
   readonly key: string;
   readonly owner: EncounterPhaseAddress;
+  readonly disabledReason?: string;
   readonly intent: WorkspaceCommandIntent<
     Extract<
       ProjectCommand,

@@ -619,7 +619,7 @@ function executionPurgingPool(
 }
 
 function executionFieldsLayout(room: CanonicalAuthoredRoom): ExecutionFieldsLayout | undefined {
-  if (room.encounterEnvelopeKey !== 'FieldsEncounter') return undefined;
+  if (!room.entered || room.encounterEnvelopeKey !== 'FieldsEncounter') return undefined;
   const entryPair: CanonicalFieldsEntryPair | undefined = room.fieldsEntryPair;
   const spatial = room.fieldsSpatial;
   if (entryPair === undefined || spatial === undefined)
@@ -656,13 +656,16 @@ function executionFieldsLayout(room: CanonicalAuthoredRoom): ExecutionFieldsLayo
       ),
     });
   });
+  const nemesisPointId = room.encounterPhases.some(
+    (phase) => phase.encounterKey === 'NemesisRandomEvent',
+  )
+    ? spatial.nemesisPointId
+    : undefined;
   return Object.freeze({
     entryPair: Object.freeze({ ...entryPair }),
     cagePoints: Object.freeze(cagePoints.map((point) => Object.freeze(point))),
     optionalRewards: Object.freeze(optionalRewards),
-    ...(spatial.nemesisPointId === null || spatial.nemesisPointId === undefined
-      ? {}
-      : { nemesisPointId: spatial.nemesisPointId }),
+    ...(nemesisPointId === null || nemesisPointId === undefined ? {} : { nemesisPointId }),
   });
 }
 

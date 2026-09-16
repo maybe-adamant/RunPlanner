@@ -1,6 +1,8 @@
 import type { Catalog } from '../../catalog-schema';
-import type { OccurrenceAddress } from '../../authored-project/addresses';
+import { createRoomFeatureAddress, type OccurrenceAddress } from '../../authored-project/addresses';
 import type { RoomOccurrence } from '../../authored-project/model';
+import type { CanonicalAuthoredRoom } from '../materialization';
+import type { SemanticFinding } from '../model';
 
 /**
  * Declaration-owned Fields count bounds for an occurrence. The physical bound
@@ -36,4 +38,30 @@ export function fieldsOptionalRewardCountSupport(
     ),
     reservesNemesisPosition,
   });
+}
+
+export function fieldsOptionalRewardCountFindings(
+  catalog: Catalog,
+  room: CanonicalAuthoredRoom,
+): readonly SemanticFinding[] {
+  const support = fieldsOptionalRewardCountSupport(catalog, room, room.origin);
+  if (
+    room.fieldsOptionalRewardCount === undefined ||
+    support?.reservesNemesisPosition !== true ||
+    room.fieldsOptionalRewardCount <= support.effectiveMaximum
+  )
+    return Object.freeze([]);
+  return Object.freeze([
+    Object.freeze({
+      code: 'fieldsOptionalCapacityUnavailable',
+      severity: 'error',
+      phase: 'roomGeneration',
+      origin: createRoomFeatureAddress(room.origin, { kind: 'fieldsOptionalRewardCount' }),
+      evidence: Object.freeze({
+        physicalCapacity: support.physicalMaximum,
+        effectiveCapacity: support.effectiveMaximum,
+        selectedCount: room.fieldsOptionalRewardCount,
+      }),
+    }),
+  ]);
 }

@@ -52,6 +52,7 @@ import {
   type ProgressiveBiomeSelectedProducts,
 } from './finding-location';
 import type { BiomeGenerationValidation } from './products';
+import { batchTargetGenerationFinishedBeforeBlock } from './prefix';
 
 function nemesisEventAtInteractionAction(
   blockedAt: SemanticAddress,
@@ -86,12 +87,13 @@ export function retainBlockedRegionProducts(
   selectedArtifacts: BiomeCandidateArtifacts,
   selectedTraitChildSettlements: TraitChildSettlementCheckpoints,
   ancestors: BlockedAncestorChain,
-  blockedAt: SemanticAddress,
+  block: LocatedFinding,
   blockedRegionKey: string,
   selectedFindingRegions: readonly FindingRegionEntry[],
   frontierSettlementOwner: OccurrenceAddress | undefined,
   retainedOrdinaryBatches: readonly OrdinaryBatchGenerationAssessment[],
 ): { readonly rewards: BiomeRewardSimulation; readonly artifacts: BiomeCandidateArtifacts } {
+  const blockedAt = block.finding.origin;
   const blockedTraitAt: TraitOfferAddress | undefined =
     blockedAt.kind === 'traitOffer'
       ? blockedAt
@@ -540,26 +542,32 @@ export function retainBlockedRegionProducts(
             return Object.freeze({ findings: Object.freeze([]), supported });
           },
         });
-  const rewardProducers: RewardProducerCandidateArtifacts =
-    rewardCapability === undefined && blockedDerivedProducerCapability === undefined
-      ? retainedArtifacts.rewardProducers
-      : Object.freeze({
-          at: (owner: RewardProducerOwnerAddress) => {
-            if (
-              rewardOwner !== undefined &&
-              rewardCapability !== undefined &&
-              semanticAddressKey(owner) === semanticAddressKey(rewardOwner)
-            )
-              return rewardCapability;
-            if (
-              blockedDerivedAcquisitionAt !== undefined &&
-              blockedDerivedProducerCapability !== undefined &&
-              semanticAddressKey(owner) === semanticAddressKey(blockedDerivedAcquisitionAt)
-            )
-              return blockedDerivedProducerCapability;
-            return retainedArtifacts.rewardProducers.at(owner);
-          },
-        });
+  const rewardProducers: RewardProducerCandidateArtifacts = Object.freeze({
+    at: (owner: RewardProducerOwnerAddress) => {
+      if (
+        rewardOwner !== undefined &&
+        rewardCapability !== undefined &&
+        semanticAddressKey(owner) === semanticAddressKey(rewardOwner)
+      )
+        return rewardCapability;
+      if (
+        blockedDerivedAcquisitionAt !== undefined &&
+        blockedDerivedProducerCapability !== undefined &&
+        semanticAddressKey(owner) === semanticAddressKey(blockedDerivedAcquisitionAt)
+      )
+        return blockedDerivedProducerCapability;
+      const retained = retainedArtifacts.rewardProducers.at(owner);
+      if (retained !== undefined) return retained;
+      const captured = selectedArtifacts.rewardProducers.at(owner);
+      const generatedAt = captured?.generationHistorySequence;
+      return generatedAt !== undefined &&
+        block.historySequence !== undefined &&
+        (generatedAt < block.historySequence ||
+          (generatedAt === block.historySequence && block.historyBoundary !== 'before'))
+        ? captured
+        : undefined;
+    },
+  });
   const roomLifecycles =
     shipCapability === undefined
       ? retainedArtifacts.roomLifecycles
@@ -712,42 +720,6 @@ function ordinaryBatchDecisionIndex(
     return authoredPrefix.decisions.length;
   }
   return Number.MAX_SAFE_INTEGER;
-}
-
-function targetGenerationCompletionSequence(
-  selected: ProgressiveBiomeSelectedProducts['history'],
-  target: TargetAddress,
-): number | undefined {
-  return selected.rooms
-    .flatMap((room) => room.targetGenerations)
-    .find(
-      (generation) => semanticAddressKey(generation.targetOrigin) === semanticAddressKey(target),
-    )?.after.sequence;
-}
-
-function batchTargetGenerationFinishedBeforeBlock(
-  selected: ProgressiveBiomeSelectedProducts['history'],
-  unsupported: LocatedFinding,
-  batch: OrdinaryBatchGenerationAssessment,
-): boolean {
-  if (batch.targets.length === 0) return false;
-  const chronologyUnavailableFallback =
-    unsupported.historySequence === undefined &&
-    unsupported.aggregate !== 'generation' &&
-    (unsupported.targetIndex !== undefined || unsupported.additionalIndex !== undefined);
-  let completedAt = -1;
-  for (const target of batch.targets) {
-    const sequence = targetGenerationCompletionSequence(selected, target.origin);
-    if (sequence === undefined) return chronologyUnavailableFallback;
-    completedAt = Math.max(completedAt, sequence);
-  }
-  if (unsupported.historySequence === undefined) {
-    return chronologyUnavailableFallback;
-  }
-  return (
-    unsupported.historySequence > completedAt ||
-    (unsupported.historySequence === completedAt && unsupported.historyBoundary === 'after')
-  );
 }
 
 /**

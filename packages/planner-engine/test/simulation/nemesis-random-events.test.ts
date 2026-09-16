@@ -357,7 +357,18 @@ describe('Nemesis random events', () => {
     expect(
       f.rewards.branches.some((branch) =>
         branch.events.some(
-          (event) => semanticAddressKey(event.origin) === semanticAddressKey(incoming),
+          (event) =>
+            event.kind === 'rewardOffered' &&
+            semanticAddressKey(event.origin) === semanticAddressKey(incoming),
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      f.rewards.branches.some((branch) =>
+        branch.events.some(
+          (event) =>
+            event.kind === 'concreteAcquisition' &&
+            semanticAddressKey(event.origin) === semanticAddressKey(incoming),
         ),
       ),
     ).toBe(false);

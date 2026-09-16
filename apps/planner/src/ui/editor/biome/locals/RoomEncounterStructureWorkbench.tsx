@@ -30,9 +30,15 @@ export function RoomEncounterStructureWorkbench({
           feature.interactionKey,
         );
         return (
-          <label className="room-feature-presence-row" key={feature.interactionKey}>
+          <label
+            className="room-feature-presence-row"
+            key={feature.interactionKey}
+            title={interaction.disabledReason}
+          >
             <input
+              aria-description={interaction.disabledReason}
               checked={feature.action === 'remove'}
+              disabled={interaction.disabledReason !== undefined}
               onChange={() => executeIntent(interaction.intent)}
               type="checkbox"
             />

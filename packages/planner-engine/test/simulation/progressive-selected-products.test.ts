@@ -181,11 +181,19 @@ describe('progressive selected and blocked products', () => {
         room.origin.kind === 'occurrence' && room.origin.occurrenceId === 'golden-h-combat09',
     );
     expect(sourceHistory).toBeDefined();
-    expect(sourceHistory?.targetGenerations).toHaveLength(0);
+    expect(sourceHistory?.targetGenerations).toHaveLength(2);
     expect(
       blocked.history.events.some(
         (event) =>
           event.kind === 'roomCreated' &&
+          event.origin.kind === 'occurrence' &&
+          event.origin.occurrenceId === 'golden-h-miniboss01',
+      ),
+    ).toBe(true);
+    expect(
+      blocked.history.events.some(
+        (event) =>
+          event.kind === 'roomEntered' &&
           event.origin.kind === 'occurrence' &&
           event.origin.occurrenceId === 'golden-h-miniboss01',
       ),
@@ -790,6 +798,7 @@ describe('progressive selected and blocked products', () => {
     expect(prefixProducer).toBeDefined();
     expect(normalProducer).not.toBe(prefixProducer);
     expect(Object.keys(normalProducer ?? {})).toEqual([
+      'generationHistorySequence',
       'acquisitionHorizon',
       'evaluateOffer',
       'resolvedStoreKey',

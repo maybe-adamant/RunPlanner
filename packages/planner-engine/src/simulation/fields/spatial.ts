@@ -1,15 +1,14 @@
 import {
   createFieldsSpatialAddress,
-  createRoomFeatureAddress,
   type FieldsSpatialTarget,
 } from '../../authored-project/addresses';
 import type { Catalog, FieldsSpatialDeclaration } from '../../catalog-schema';
-import { fieldsOptionalRewardCountSupport } from './optional-count';
 import type { CanonicalAuthoredRoom } from '../materialization';
 import type { SemanticFinding } from '../model';
 
 interface FieldsSpatialPointAssessment {
   readonly active: boolean;
+  readonly assignable: boolean;
   readonly findings: readonly SemanticFinding[];
   readonly selectedPossible: boolean;
   readonly supportPointIds: readonly number[];
@@ -217,6 +216,7 @@ export function assessFieldsSpatialPoint(
   }
   return Object.freeze({
     active,
+    assignable: pointId === null || (domain.includes(pointId) && !excluded.has(pointId)),
     findings: Object.freeze(findings),
     selectedPossible: !active || (pointId !== null && supportPointIds.includes(pointId)),
     supportPointIds,
@@ -227,29 +227,11 @@ export function fieldsSpatialFindings(
   catalog: Catalog,
   room: CanonicalAuthoredRoom,
 ): readonly SemanticFinding[] {
-  const spatialFindings = activeFieldsSpatialTargets(catalog, room).flatMap(
-    (target) =>
-      assessFieldsSpatialPoint(catalog, room, target, selectedPoint(room, target))?.findings ?? [],
+  return Object.freeze(
+    activeFieldsSpatialTargets(catalog, room).flatMap(
+      (target) =>
+        assessFieldsSpatialPoint(catalog, room, target, selectedPoint(room, target))?.findings ??
+        [],
+    ),
   );
-  const support = fieldsOptionalRewardCountSupport(catalog, room, room.origin);
-  if (
-    room.fieldsOptionalRewardCount !== undefined &&
-    support?.reservesNemesisPosition === true &&
-    room.fieldsOptionalRewardCount > support.effectiveMaximum
-  ) {
-    spatialFindings.push(
-      Object.freeze({
-        code: 'fieldsOptionalCapacityUnavailable',
-        severity: 'error',
-        phase: 'roomGeneration',
-        origin: createRoomFeatureAddress(room.origin, { kind: 'fieldsOptionalRewardCount' }),
-        evidence: Object.freeze({
-          physicalCapacity: support.physicalMaximum,
-          effectiveCapacity: support.effectiveMaximum,
-          selectedCount: room.fieldsOptionalRewardCount,
-        }),
-      }),
-    );
-  }
-  return Object.freeze(spatialFindings);
 }

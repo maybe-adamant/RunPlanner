@@ -566,6 +566,95 @@ describe('OccurrenceRoomFeatures', () => {
     expect(choice.getAttribute('aria-disabled')).toBe('true');
   });
 
+  it('disables adding Nemesis after an earlier encounter and explains why', async () => {
+    const earlierId = createOccurrenceId('golden-h-combat09');
+    const phase = createEncounterPhaseAddress(
+      goldenHBiome,
+      { kind: 'occurrence', occurrenceId: earlierId },
+      'Cage01',
+    );
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisCombatH',
+    });
+    expect(simulateProject(catalog, project).findings).toEqual([]);
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'H',
+      occurrenceById(createOccurrenceId('golden-h-combat05')),
+    );
+    const checkbox = screen.getByRole('checkbox', { name: 'Nemesis Event' }) as HTMLInputElement;
+    expect(checkbox.checked).toBe(false);
+    expect(checkbox.disabled).toBe(true);
+    expect(checkbox.getAttribute('aria-description')).toContain('already occurred this run');
+    const before = view.application.store.getState().projectWorkspace.history!.present;
+
+    await view.user.click(checkbox);
+
+    expect(view.application.store.getState().projectWorkspace.history!.present).toBe(before);
+
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'SelectEncounter',
+          phase: createEncounterPhaseAddress(
+            goldenHBiome,
+            {
+              kind: 'occurrence',
+              occurrenceId: createOccurrenceId('golden-h-combat05'),
+            },
+            'Passive',
+          ),
+          encounterKey: 'NemesisRandomEvent',
+        }),
+      ),
+    );
+    const retained = screen.getByRole('checkbox', { name: 'Nemesis Event' }) as HTMLInputElement;
+    expect(retained.checked).toBe(true);
+    expect(retained.disabled).toBe(false);
+
+    await view.user.click(retained);
+
+    const removed = screen.getByRole('checkbox', { name: 'Nemesis Event' }) as HTMLInputElement;
+    expect(removed.checked).toBe(false);
+    expect(removed.disabled).toBe(true);
+  });
+
+  it('allows adding Nemesis despite an authored encounter on an unvisited alternative', async () => {
+    const laterId = createOccurrenceId('golden-h-combat04');
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase: createEncounterPhaseAddress(
+        goldenHBiome,
+        { kind: 'occurrence', occurrenceId: laterId },
+        'Passive',
+      ),
+      encounterKey: 'NemesisRandomEvent',
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'H',
+      occurrenceById(createOccurrenceId('golden-h-combat05')),
+    );
+    const checkbox = () =>
+      screen.getByRole('checkbox', { name: 'Nemesis Event' }) as HTMLInputElement;
+    expect(checkbox().checked).toBe(false);
+    expect(checkbox().disabled).toBe(false);
+
+    await view.user.click(checkbox());
+
+    expect(checkbox().checked).toBe(true);
+    expect(checkbox().disabled).toBe(false);
+
+    await view.user.click(checkbox());
+
+    expect(checkbox().checked).toBe(false);
+    expect(checkbox().disabled).toBe(false);
+  });
+
   it('uses one H feature control and preserves an over-cap count through repair and Undo', async () => {
     const occurrenceId = createOccurrenceId('golden-h-combat05');
     const occurrence = createOccurrenceAddress(goldenHBiome, occurrenceId);

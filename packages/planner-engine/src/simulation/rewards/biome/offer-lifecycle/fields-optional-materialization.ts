@@ -13,6 +13,7 @@ import type {
   CanonicalFieldsOptionalReward,
 } from '../../../materialization';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
+import { fieldsSpatialFindings } from '../../../fields/spatial';
 import { settleOwnedAcquisitionSite } from '../../acquisition/site-settlement';
 import type { RewardBranchState } from '../../branch-primitives';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
@@ -297,6 +298,14 @@ export function materializeFieldsOptionalOfferPoint(
     }
     branches = Object.freeze([]);
   }
+  if (branches.length > 0)
+    for (const finding of fieldsSpatialFindings(catalog, room))
+      addRewardFinding(
+        findings,
+        finding,
+        ownerRegion(room.origin),
+        historyFindingChronology(event.sequence),
+      );
   return Object.freeze({
     branches,
     findings: Object.freeze([...findings.values()]),

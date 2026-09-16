@@ -3,7 +3,9 @@
 import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import {
   applyProjectCommand,
+  createEncounterPhaseAddress,
   createFieldsSpatialAddress,
+  createNemesisRandomEventAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   type ProjectDocument,
@@ -22,6 +24,7 @@ import {
   goldenFStartId,
   goldenHBiome,
   loadNemesisFieldsCheckpoint,
+  replaceNemesisRandomEventInteraction,
 } from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNProject,
@@ -151,13 +154,14 @@ describe('OccurrenceWorkbench', () => {
     ]);
     openRoomTab('Room Layout');
     const layout = screen.getByRole('region', { name: 'Fields Layout' });
-    expect(within(layout).getByRole('heading', { name: 'Entry' })).toBeTruthy();
+    expect(within(layout).getByRole('heading', { name: 'Position' })).toBeTruthy();
+    expect(within(layout).getByText('Entry')).toBeTruthy();
     expect(within(layout).getByRole('heading', { name: 'Cage placements' })).toBeTruthy();
     expect(within(layout).getByRole('heading', { name: 'Optional pickups' })).toBeTruthy();
     expect(within(layout).queryByRole('heading', { name: 'Nemesis' })).toBeNull();
-    expect(within(layout).getByRole('option', { name: 'Entry 1' })).toBeTruthy();
-    expect(within(layout).getAllByRole('option', { name: 'Cage Point 1' })).not.toHaveLength(0);
-    expect(within(layout).getAllByRole('option', { name: 'Optional Point 1' })).not.toHaveLength(0);
+    expect(within(layout).getByRole('radio', { name: 'Entry 1' })).toBeTruthy();
+    expect(within(layout).getAllByRole('radio', { name: 'Cage Point 1' })).not.toHaveLength(0);
+    expect(within(layout).getAllByRole('radio', { name: 'Optional Point 1' })).not.toHaveLength(0);
     expect(layout.textContent).not.toMatch(/\b\d{5,}\b/);
 
     openRoomTab('Room Timeline');
@@ -186,20 +190,17 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(occurrenceId),
     );
     openRoomTab('Room Layout');
-    const point = within(screen.getByRole('region', { name: 'Fields Layout' })).getAllByLabelText(
-      'Point',
-    )[0];
-    if (!(point instanceof HTMLSelectElement)) throw new Error('entry point picker is missing');
-    const alternate = within(point).getByRole('option', { name: 'Entry 2' });
+    const point = screen.getByRole('radiogroup', { name: 'Entry position' });
+    const alternate = within(point).getByRole('radio', { name: 'Entry 2' });
 
-    await view.user.selectOptions(point, alternate);
+    await view.user.click(alternate);
 
-    expect((alternate as HTMLOptionElement).selected).toBe(true);
+    expect((alternate as HTMLInputElement).checked).toBe(true);
   });
 
   it('shows a missing active placement finding on its exact Layout row', () => {
     const occurrenceId = createOccurrenceId('golden-h-combat05');
-    const project = applyProjectCommand(loadNemesisFieldsCheckpoint(), catalog, {
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplaceFieldsSpatialPoint',
       spatial: createFieldsSpatialAddress(createOccurrenceAddress(goldenHBiome, occurrenceId), {
         kind: 'cage',
@@ -213,8 +214,92 @@ describe('OccurrenceWorkbench', () => {
     if (!(row instanceof HTMLElement)) throw new Error('Cage 1 Layout row is missing');
 
     expect(
-      within(row).getByRole('combobox', { name: 'Point' }).getAttribute('data-has-findings'),
+      within(row)
+        .getByRole('radiogroup', { name: 'Cage 1 position' })
+        .getAttribute('data-has-findings'),
     ).toBe('true');
+  });
+
+  it.each([
+    ['cage', 'Cage', [621502, 622508]],
+    ['optional', 'Optional', [572849, 622840]],
+  ] as const)(
+    'reverses two %s placements through a repairable conflict',
+    async (kind, label, points) => {
+      const occurrenceId = createOccurrenceId('golden-h-combat02');
+      const occurrence = createOccurrenceAddress(goldenHBiome, occurrenceId);
+      let project = createGoldenFGHIProject();
+      for (const [index, pointId] of points.entries())
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceFieldsSpatialPoint',
+          spatial: createFieldsSpatialAddress(occurrence, { kind, slotKey: `${kind}${index + 1}` }),
+          pointId,
+        });
+      const view = renderOccurrenceWorkbench(
+        project,
+        'Underworld',
+        'H',
+        occurrenceById(occurrenceId),
+      );
+      openRoomTab('Room Layout');
+      const group = (index: number) =>
+        screen.getByRole('radiogroup', { name: `${label} ${index} position` });
+      const point = (row: number, index: number) =>
+        within(group(row)).getByRole('radio', {
+          name: `${label} Point ${index}`,
+        }) as HTMLInputElement;
+
+      await view.user.click(point(1, 2));
+
+      expect(point(1, 2).checked).toBe(true);
+      expect(point(2, 2).checked).toBe(true);
+      expect(group(1).getAttribute('data-has-findings')).toBe('true');
+      expect(group(2).getAttribute('data-has-findings')).toBe('true');
+
+      await view.user.click(point(2, 1));
+
+      expect(point(1, 2).checked).toBe(true);
+      expect(point(2, 1).checked).toBe(true);
+      expect(group(1).getAttribute('data-has-findings')).toBe('false');
+      expect(group(2).getAttribute('data-has-findings')).toBe('false');
+    },
+  );
+
+  it('keeps the Nemesis source-excluded position disabled', async () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat04');
+    const phase = createEncounterPhaseAddress(
+      goldenHBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Passive',
+    );
+    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisRandomEvent',
+    });
+    project = replaceNemesisRandomEventInteraction(
+      project,
+      createNemesisRandomEventAddress(phase),
+      { kind: 'freeItem' },
+      { rewardType: 'ArmorBoost' },
+    );
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'H',
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Layout');
+    const group = screen.getByRole('radiogroup', { name: 'Nemesis position' });
+    const excluded = within(group).getByRole('radio', {
+      name: 'Optional Point 4',
+    }) as HTMLInputElement;
+
+    await view.user.click(excluded);
+
+    expect(excluded.disabled).toBe(true);
+    expect(excluded.checked).toBe(false);
+    expect(within(group).getAllByRole('radio')).toHaveLength(7);
   });
 
   it('adds the active Nemesis placement to Layout without moving its Overview authoring', () => {
@@ -233,7 +318,7 @@ describe('OccurrenceWorkbench', () => {
     openRoomTab('Room Layout');
     const layout = screen.getByRole('region', { name: 'Fields Layout' });
     expect(within(layout).getByRole('heading', { name: 'Nemesis' })).toBeTruthy();
-    expect(within(layout).getAllByRole('option', { name: 'Optional Point 1' })).not.toHaveLength(0);
+    expect(within(layout).getAllByRole('radio', { name: 'Optional Point 1' })).not.toHaveLength(0);
     expect(overview.getAttribute('aria-selected')).toBe('false');
   });
 
