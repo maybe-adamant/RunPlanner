@@ -23,6 +23,7 @@
 }
 
 .room-map-dialog-heading,
+.room-map-toolbar,
 .room-map-controls {
   display: flex;
   align-items: center;
@@ -51,11 +52,24 @@
   min-height: 0;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+}
+
+.room-map-toolbar {
+  flex-wrap: wrap;
+  min-height: 32px;
+}
+
+.room-map-toolbar h4 {
+  margin: 0;
+  color: #f2ede5;
+  font-size: 0.9rem;
 }
 
 .room-map-controls {
   justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .room-map-zoom {
@@ -100,6 +114,27 @@
 .room-map-load-error {
   margin: 0;
   color: #efb1b1;
+}
+
+.room-map-reference,
+.room-map-reference-reopen {
+  min-width: 0;
+}
+
+.room-map-reference {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+}
+
+.room-map-reference > .room-map-viewport,
+.room-map-reference > .room-map-viewport > .room-map-scroll {
+  min-width: 0;
+}
+
+.room-map-reference > .room-map-viewport > .room-map-scroll {
+  height: min(30rem, 52vh);
+  min-height: 14rem;
 }
 
 /* Additional exits keep their existing choice/name control beside map viewing. */

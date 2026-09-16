@@ -99,10 +99,39 @@
 .fields-layout-editor {
   display: grid;
   gap: 12px;
+  container: fields-layout / inline-size;
   padding: 12px 14px;
   border: 1px solid #34353e;
   border-radius: 10px;
   background: rgb(10 11 14 / 35%);
+}
+
+.fields-layout-reference-layout {
+  display: grid;
+  grid-template-columns: minmax(20rem, 3fr) minmax(0, 7fr);
+  gap: 12px;
+  min-width: 0;
+}
+
+.fields-layout-controls {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.fields-layout-controls .local-reward-heading.fields-layout-heading,
+.fields-layout-controls .fields-layout-row {
+  grid-template-columns: minmax(6rem, 0.8fr) minmax(0, 1.2fr);
+}
+
+.fields-layout-reference-layout:has(.room-map-reference-reopen) {
+  display: flex;
+  flex-direction: column;
+}
+
+.fields-layout-reference-layout > .room-map-reference-reopen {
+  order: -1;
 }
 
 .fields-layout-group {
@@ -128,6 +157,8 @@
 }
 
 .fields-layout-heading {
+  min-height: 32px;
+  margin-bottom: 0;
   padding: 0 8px;
 }
 
@@ -189,12 +220,22 @@
 }
 
 @media (max-width: 700px) {
-  .local-reward-heading.fields-layout-heading {
+  .fields-layout-controls .local-reward-heading.fields-layout-heading {
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .fields-layout-row {
+  .fields-layout-controls .fields-layout-row {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container fields-layout (max-width: 64rem) {
+  .fields-layout-reference-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fields-layout-reference-layout > .room-map-reference {
+    order: -1;
   }
 }
 

@@ -1,6 +1,6 @@
 # Room Maps and Editing References
 
-Status: Gate A implemented and independently reviewed; Gate B is next.
+Status: Gates A/B implemented and independently reviewed; Gate C is next.
 Base: `fa766878`.
 
 Gate A verification: 59 focused viewer/asset/workbench tests passed, followed by
@@ -10,7 +10,13 @@ images, a placeholder, Fit/zoom/scroll, Close/Escape/focus, narrow layout and
 additional-exit controls; the production preview loaded a packaged image.
 All 107 copied screenshots are byte-identical to their sources; the remaining
 154 declared rooms have placeholders. Native Tauri loading was not exercised.
-Gates B/C and the complete phase-closure gate remain pending.
+
+Gate B verification: 26 focused asset/viewer/Fields tests, planner typecheck,
+scoped ESLint, formatting and production build checks passed. Independent review found no
+actionable issues. Browser checks covered the 70/30 wide layout, stacked narrow
+layouts, a placeholder and a tall-image sizing probe, placement edits/Undo with
+retained zoom, and Expand/Escape/focus. Gate C and the complete phase-closure
+gate remain pending.
 
 ## Objective
 
@@ -141,7 +147,11 @@ editing reference. Their titles must make the shown room unmistakable.
 
 Reference layout uses the available container width, not just viewport width:
 map and controls side by side only when both have useful space; otherwise map
-above controls. Keep the viewport bounded so a tall image does not create an
+above controls. Fields puts compact placement controls on the left (roughly 30%)
+and the map on the right (roughly 70%), with a minimum usable control width rather
+than a forced ratio at narrow sizes. Both share one outer panel and aligned
+headers; the inline map combines its heading and viewer actions in one toolbar.
+Keep the viewport bounded so a tall image does not create an
 unbounded page. Existing controls retain their natural width and scroll behavior;
 opening the map must not put the rail or unrelated panels into a new scrollport.
 Closed map panes restore the existing layout. Placeholder images use the same
