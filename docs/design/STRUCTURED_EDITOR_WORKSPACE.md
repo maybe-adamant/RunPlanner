@@ -223,6 +223,31 @@ Finding navigation selects the owning route and biome, preserves the semantic
 finding owner, and brings its projected visible authoring point into view. The
 inspector never searches for a rendered room label or decision number.
 
+### Static Room Maps
+
+Room maps are application-owned reference images keyed by the declared game
+room name. Inspection is available from room headings, authored outgoing
+targets, Hub cards/visits and side-room rows, including unpicked, closed and
+ungenerated destinations. Viewing a map never edits participation, changes
+semantic focus, adds history or requires complete authoring. The route rail
+remains the navigation to room details.
+
+One image viewport serves inspection dialogs and inline editing references.
+Fields Layout keeps placement controls on the left and a larger reference on
+the right. Hub Overview and Timeline share a top-right map toggle; individual
+main/side-room dialogs remain independent of that Hub reference. Side-room
+tables retain their full editing width. Inline references are sticky only
+beside controls and stack above them in normal flow when space is narrow.
+Images fit a bounded viewport with optional zoom and scrolling; Close/Escape
+returns focus to the invoking control when it still exists.
+
+Visibility and zoom belong to the local host, not the authored project. Edits
+within that host preserve the reference; changing its room image resets Fit,
+and changing the host cannot inherit another room's open reference. Images,
+including placeholders and baked-in annotations, are replaceable static assets,
+not previews generated from room contents or live spatial-authoring controls.
+See the [asset replacement note](../../apps/planner/src/ui/room-maps/README.md).
+
 ### Encounter Phase Products
 
 Each structurally active pool-backed encounter phase is a first-class
