@@ -171,6 +171,8 @@ export function bindRewardChildInteractions(input: {
   const traitOffers = bindTraitOfferInteractions({
     catalog,
     candidates,
+    showPersephoneBonus:
+      catalog.aspects.byKey[project.route.loadout.aspectKey]?.traitOfferLevelBonus !== undefined,
     traitControls: effectiveTraitControls,
     traitDomain,
   });

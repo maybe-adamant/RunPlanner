@@ -842,6 +842,49 @@ describe('ordinary offer shell', () => {
     application.dispose();
   });
 
+  it.each([false, true])(
+    'renders bonus rows from the equipped aspect without candidate feedback (Persephone: %s)',
+    (persephoneEquipped) => {
+      const application = createApplication();
+      const project = createGoldenFGHIProject();
+      application.store.dispatch(
+        authoredProjectReplaced({
+          ...project,
+          route: {
+            ...project.route,
+            loadout: {
+              ...project.route.loadout,
+              ...(persephoneEquipped
+                ? { weaponKey: 'WeaponLob', aspectKey: 'LobImpulseAspect' }
+                : {}),
+            },
+          },
+        }),
+      );
+      const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+      const base = [...workspace.interactions.traitOffers.values()].find(
+        (candidate) => candidate.value?.kind === 'traits',
+      )!;
+      const interaction = { ...base, load: () => [] };
+      render(
+        <Provider store={application.store}>
+          <TraitOfferEditor
+            address={interaction.owner}
+            interactions={{
+              ...workspace.interactions,
+              traitOffers: new Map([[interaction.key, interaction]]),
+            }}
+          />
+        </Provider>,
+      );
+
+      expect(screen.queryAllByText('Persephone Bonus')).toHaveLength(persephoneEquipped ? 3 : 0);
+      expect(screen.queryAllByText('N/A')).toHaveLength(persephoneEquipped ? 3 : 0);
+      expect(screen.queryByRole('combobox', { name: /Persephone level bonus/ })).toBeNull();
+      application.dispose();
+    },
+  );
+
   it('authors a bounded Persephone contribution and preserves the complete offer', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
@@ -855,6 +898,7 @@ describe('ordinary offer shell', () => {
     const value = base.value;
     const interaction = Object.freeze({
       ...base,
+      showPersephoneBonus: true,
       load: (draft: AuthoredTraitOffer = value) =>
         Object.freeze([
           Object.freeze({
@@ -904,6 +948,9 @@ describe('ordinary offer shell', () => {
     const summaries = screen.getAllByLabelText('Effective trait values');
     expect(summaries).toHaveLength(3);
     expect(summaries[1]?.querySelectorAll('dd')[1]?.textContent).toBe('—');
+    expect(screen.getAllByText('Persephone Bonus')).toHaveLength(3);
+    expect(screen.getAllByText('N/A')).toHaveLength(2);
+    expect(screen.getAllByRole('combobox', { name: /Persephone level bonus/ })).toHaveLength(1);
     const bonus = screen.getByRole('combobox', { name: 'option1 Persephone level bonus' });
     expect((bonus as HTMLSelectElement).value).toBe('0');
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
@@ -959,6 +1006,7 @@ describe('ordinary offer shell', () => {
     const interaction = Object.freeze({
       ...base,
       value,
+      showPersephoneBonus: true,
       load: (draft: AuthoredTraitOffer = value) =>
         Object.freeze([
           Object.freeze({

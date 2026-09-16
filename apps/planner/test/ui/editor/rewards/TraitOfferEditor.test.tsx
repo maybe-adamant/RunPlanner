@@ -1400,6 +1400,7 @@ describe('trait offer editor entry and dialog', () => {
       Object.freeze({
         ...base,
         value,
+        showPersephoneBonus: true,
         load: (draft: AuthoredTraitOffer = value) =>
           Object.freeze([
             Object.freeze({
@@ -1570,6 +1571,7 @@ describe('trait offer editor entry and dialog', () => {
               ...base,
               choices,
               load,
+              showPersephoneBonus: true,
               value: persistedValue,
             }),
           ],
