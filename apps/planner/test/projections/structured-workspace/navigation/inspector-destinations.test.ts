@@ -6,6 +6,7 @@ import {
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
   createEncounterPhaseAddress,
+  createNemesisRandomEventAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createHubDecisionAddress,
@@ -597,6 +598,54 @@ describe('workspace inspector destinations', () => {
       inspectorSubject: { kind: 'node', nodeKey: workbench.key },
       nodeKey: workbench.key,
       roomTab: 'overview',
+    });
+  });
+
+  it('routes Nemesis family findings to Encounter and interaction detail to its action', () => {
+    const occurrenceId = createOccurrenceId('golden-f-b5-e1');
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Encounter',
+    );
+    const event = createNemesisRandomEventAddress(phase);
+    let document = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisRandomEvent',
+    });
+    const missingFamily = assembly(document).evaluation.findings.find(
+      (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(event),
+    );
+    if (missingFamily === undefined) throw new Error('missing Nemesis family finding');
+    const familyWorkspace = project(document);
+    const f = biome(familyWorkspace, 'F');
+    const workbench = occurrenceWorkbenchFor(f, occurrenceId);
+    expect(destination(familyWorkspace, missingFamily.origin)).toMatchObject({
+      focusAddress: phase,
+      inspectorSubject: { kind: 'node', nodeKey: workbench.key },
+      roomTab: 'actions',
+    });
+
+    document = applyProjectCommand(document, catalog, {
+      kind: 'SelectNemesisRandomEventFamily',
+      event,
+      family: 'traitTrade',
+    });
+    const action = createRoomActionAddress(
+      goldenFBiome,
+      occurrenceId,
+      roomActionKey({ kind: 'interactEncounter', phaseKey: 'Encounter' }),
+    );
+    const missingDetail = assembly(document).evaluation.findings.find(
+      (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(action),
+    );
+    if (missingDetail === undefined) throw new Error('missing Nemesis interaction-detail finding');
+    const detailWorkspace = project(document);
+    expect(destination(detailWorkspace, missingDetail.origin)).toMatchObject({
+      focusAddress: action,
+      inspectorSubject: { kind: 'node', nodeKey: workbench.key },
+      roomTab: 'actions',
     });
   });
 

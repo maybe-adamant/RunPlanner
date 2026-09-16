@@ -306,12 +306,14 @@ export {
 } from './history';
 export {
   PROJECT_DOCUMENT_SCHEMA_VERSION,
+  NEMESIS_RANDOM_EVENT_FAMILIES,
   type AuthoredBiomePlan,
   type AuthoredBiomeState,
   type AuthoredFieldValue,
   type AuthoredRoomState,
   type AuthoredRewardState,
   type AuthoredAnvilResult,
+  type AuthoredNemesisRandomEventKind,
   type AuthoredNemesisRandomEventOutcome,
   type AcquisitionDisposition,
   type TraitOffersByAcquisitionRole,

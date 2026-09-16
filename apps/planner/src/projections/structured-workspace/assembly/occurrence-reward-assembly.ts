@@ -1004,12 +1004,10 @@ export function activeEncounterPhasesForOwner(
             : domain.slotKey,
         marker: input.markerDestinations.marker(address),
         timelineAnchor:
-          selectedDefinition.key === 'NemesisRandomEvent'
-            ? 'action'
-            : fieldsPassive ||
-                (customizable && !isCombatBearingEncounterPhaseKind(selectedDefinition.kind))
-              ? 'roomEntered'
-              : 'encounterStart',
+          fieldsPassive ||
+          (customizable && !isCombatBearingEncounterPhaseKind(selectedDefinition.kind))
+            ? 'roomEntered'
+            : 'encounterStart',
         ...(figLeafSupport !== undefined || authoredFigLeafSkip
           ? {
               figLeaf: Object.freeze({
@@ -1030,7 +1028,6 @@ export function activeEncounterPhasesForOwner(
               }),
             }),
         ...(gorgonAthena === undefined ? {} : { gorgonAthena }),
-        resettable: domain.selectedEncounterKey !== domain.defaultEncounterKey,
         selectedEncounter: Object.freeze({
           key: selectedDefinition.key,
           label: selectedDefinition.label,

@@ -706,9 +706,13 @@ Quick Buck, Buried Treasure, equipping Narcissus acquisition, or selected
 Nemesis random-event result activates its
 declaration-owned entries at its declared pickup window; source selection alone
 does not. Sea Star adds one later source-scoped entry after an eligible normal
-free pickup. A Nemesis interaction is required and every active event result
-entry depends on it; accepted trades are required while free-item and contest
-results retain ordinary optional participation. The source action and generated
+free pickup. Nemesis event-family selection configures the encounter separately
+from its required interaction. Concrete offer and response detail is authored
+at that interaction and assessed against its exact incoming inventory, including
+any earlier Fields pickups. Missing family belongs to the event; missing or
+invalid interaction detail belongs to the interaction action. Every active result
+entry depends on that action; accepted trades are required while free-item and
+contest results retain ordinary optional participation. The source action and generated
 action remain in the occurrence's one ordered Room Action roster, so a
 generated result can affect later rooms without regenerating the current
 outgoing batch. Direct Shop purchase actions remain atomic and do not emit any

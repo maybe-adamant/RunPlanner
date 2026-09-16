@@ -61,6 +61,20 @@ describe('Room action layout', () => {
     expect(block(timelineStyles, '.room-action-inline-editors:empty')).toContain('display: none;');
   });
 
+  it('keeps Nemesis sentences wrapping with fixed-width pickers and intact response labels', () => {
+    expect(block(timelineStyles, '.nemesis-interaction-controls')).toContain('flex-wrap: wrap;');
+    const field = block(timelineStyles, '.nemesis-interaction-controls > .field-control-inline');
+    expect(field).toContain('width: 13rem;');
+    expect(field).toContain('max-width: 100%;');
+    expect(field).toContain('grid-template-columns: minmax(0, 1fr);');
+    expect(block(timelineStyles, '.nemesis-response-control')).toContain('display: inline-flex;');
+    expect(block(timelineStyles, '.nemesis-response-control')).toContain('white-space: nowrap;');
+    expect(block(timelineStyles, '.nemesis-fixed-reward')).toContain('min-height: 36px;');
+    expect(block(timelineStyles, ".room-action-row[data-inline-layout='sentence']")).toContain(
+      'grid-template-columns: minmax(0, 1fr) auto;',
+    );
+  });
+
   it('allows scheduled, fountain, and keepsake target groups to reflow', () => {
     expect(block(timelineStyles, '.room-action-row > .room-action-identity')).toContain(
       'flex-wrap: wrap;',

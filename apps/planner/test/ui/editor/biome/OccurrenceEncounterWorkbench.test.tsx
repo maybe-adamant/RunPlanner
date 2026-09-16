@@ -701,9 +701,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     if (node === undefined) throw new Error('F occurrence workbench is missing');
 
     expect(node.room.encounterPhases).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ address: phase, customizable: true, resettable: false }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ address: phase, customizable: true })]),
     );
     expect(workspaceProjection(view.application).focusByOwner.has(semanticAddressKey(phase))).toBe(
       true,
@@ -715,7 +713,6 @@ describe('OccurrenceEncounterWorkbench', () => {
     ).toBe(true);
     openRoomTab('Room Timeline');
     expect(screen.getByLabelText('Encounter encounter phase')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Reset to default' })).toBeNull();
   });
 
   it('keeps the P entrance encounter picker available after selecting Empty', async () => {
@@ -925,7 +922,6 @@ describe('OccurrenceEncounterWorkbench', () => {
         screen.getAllByText(/Requires biome encounter depth 2–5; currently \d+\./),
       ).not.toHaveLength(0);
     });
-    expect(within(phase).queryByRole('button', { name: 'Reset to default' })).toBeNull();
     expect(
       workspaceProjection(view.application).interactions.encounterPhases.has(
         semanticAddressKey(phaseAddress),

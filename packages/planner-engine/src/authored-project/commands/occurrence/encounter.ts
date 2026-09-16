@@ -1,6 +1,11 @@
 import type { Catalog, EncounterSlotBinding, RoomDeclaration } from '../../../catalog-schema';
 import type { EncounterPhaseAddress } from '../../addresses';
-import type { ProjectDocument, RoomEncounterState } from '../../model';
+import type {
+  AuthoredNemesisRandomEventKind,
+  AuthoredNemesisRandomEventOutcome,
+  ProjectDocument,
+  RoomEncounterState,
+} from '../../model';
 import {
   encounterAuthoringProfiles,
   encounterBindingsBySlot,
@@ -17,26 +22,27 @@ import { replaceOccurrence, updateOccurrenceTopology } from './mutation';
 import { createUnresolvedPickupRewardState } from '../../traits/state';
 import { nemesisGeneratedPickupSiteKey } from '../../acquisition/pickup-producers';
 import { sameOccurrenceValue } from './leaf-value';
-import type { EncounterOccurrenceCommand } from '../types';
+import type { EncounterOccurrenceCommand, NemesisRandomEventInteraction } from '../types';
 
-function validateNemesisOutcomeCommand(
+function validateNemesisInteraction(
   catalog: Catalog,
   command: Extract<
     EncounterOccurrenceCommand,
-    { readonly kind: 'ReplaceNemesisRandomEventOutcome' }
+    { readonly kind: 'ReplaceNemesisRandomEventInteraction' }
   >,
 ): void {
   const policy = catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent;
   if (policy === undefined) failCommand(command, 'catalog has no Nemesis random-event policy');
-  if (command.value === null) {
-    if (command.reward !== null) failCommand(command, 'an unresolved event has no result reward');
-    return;
-  }
-  if (command.reward === null)
-    failCommand(command, 'a concrete event outcome requires its concrete result reward');
-  const rewardType = command.reward.rewardType;
-  const outcome = command.value;
-  switch (outcome.kind) {
+  if (
+    command.value.kind === 'traitTrade' &&
+    command.value.traitKey !== null &&
+    catalog.traits.byKey[command.value.traitKey] === undefined
+  )
+    failCommand(command, 'trait trade target is not a catalog trait');
+  const reward = nemesisInteractionReward(catalog, command);
+  if (reward === null) return;
+  const rewardType = reward.rewardType;
+  switch (command.value.kind) {
     case 'freeItem':
       if (!(policy.freeItem.resultRewardTypes as readonly string[]).includes(rewardType))
         failCommand(command, 'free item result is outside its declared pool');
@@ -62,7 +68,7 @@ function validateNemesisOutcomeCommand(
         failCommand(command, 'trait trade must produce fixed Triple Gold');
       return;
     case 'damageContest':
-      if (outcome.result === 'failure') {
+      if (command.value.result === 'failure') {
         if (rewardType !== policy.damageContest.failureResultRewardType)
           failCommand(command, 'contest failure must produce fixed Consolation');
       } else if (
@@ -71,6 +77,43 @@ function validateNemesisOutcomeCommand(
         failCommand(command, 'contest success result is outside its declared pool');
       return;
   }
+}
+
+function defaultNemesisOutcome(
+  family: AuthoredNemesisRandomEventKind,
+): AuthoredNemesisRandomEventOutcome {
+  switch (family) {
+    case 'freeItem':
+      return Object.freeze({ kind: family });
+    case 'goldTrade':
+    case 'damageTrade':
+      return Object.freeze({ kind: family, response: 'decline' });
+    case 'traitTrade':
+      return Object.freeze({ kind: family, traitKey: null, response: 'decline' });
+    case 'damageContest':
+      return Object.freeze({ kind: family, result: 'failure' });
+  }
+}
+
+function interactionOutcome(
+  value: NemesisRandomEventInteraction,
+): AuthoredNemesisRandomEventOutcome {
+  const { reward: _reward, ...outcome } = value;
+  void _reward;
+  return Object.freeze(outcome) as AuthoredNemesisRandomEventOutcome;
+}
+
+function fixedNemesisReward(
+  catalog: Catalog,
+  outcome: AuthoredNemesisRandomEventOutcome,
+): import('../../../reward-kernel/model').ResolvedRewardOffer | null {
+  const policy = catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent;
+  if (policy === undefined) return null;
+  if (outcome.kind === 'traitTrade')
+    return Object.freeze({ rewardType: policy.traitTrade.fixedResultRewardType });
+  if (outcome.kind === 'damageContest' && outcome.result === 'failure')
+    return Object.freeze({ rewardType: policy.damageContest.failureResultRewardType });
+  return null;
 }
 
 function selectableBinding(
@@ -111,14 +154,18 @@ function updatedSelections(
 ): RoomEncounterState {
   if (
     command.kind === 'ReplaceFigLeafSkip' ||
-    command.kind === 'ReplaceNemesisRandomEventOutcome' ||
+    command.kind === 'ReplaceNemesisRandomEventInteraction' ||
     command.kind === 'ReplaceGorgonDeathDefianceCondition'
   )
     return current;
   const binding = selectableBinding(catalog, room, phase, command);
   const set = encounterSetForBinding(catalog, binding, room.gameName);
   const encounterKey =
-    command.kind === 'ResetEncounter' ? set.defaultAuthoringProfileKey : command.encounterKey;
+    command.kind === 'ResetEncounter'
+      ? set.defaultAuthoringProfileKey
+      : command.kind === 'SelectNemesisRandomEventFamily'
+        ? 'NemesisRandomEvent'
+        : command.encounterKey;
   if (!encounterAuthoringProfiles(set).some((profile) => profile.key === encounterKey)) {
     failCommand(command, `${encounterKey} is not available from ${set.key}`);
   }
@@ -172,7 +219,11 @@ function updatedNemesisRandomEvent(
   phase: EncounterPhaseAddress,
   command: EncounterOccurrenceCommand,
 ): RoomEncounterState {
-  if (command.kind !== 'ReplaceNemesisRandomEventOutcome') return current;
+  if (
+    command.kind !== 'SelectNemesisRandomEventFamily' &&
+    command.kind !== 'ReplaceNemesisRandomEventInteraction'
+  )
+    return current;
   if (command.event.encounter.phaseKey !== phase.phaseKey)
     failCommand(command, 'event owner must match its encounter phase');
   const binding = selectableBinding(catalog, room, phase, command);
@@ -182,14 +233,61 @@ function updatedNemesisRandomEvent(
   const selected = current.encounterKeyByPhase[phase.phaseKey];
   if (selected !== 'NemesisRandomEvent')
     failCommand(command, `${phase.phaseKey} has not selected NemesisRandomEvent`);
-  validateNemesisOutcomeCommand(catalog, command);
+  const currentOutcome = current.nemesisRandomEventByPhase?.[phase.phaseKey];
+  if (
+    command.kind === 'SelectNemesisRandomEventFamily' &&
+    currentOutcome !== null &&
+    currentOutcome !== undefined &&
+    currentOutcome.kind === command.family
+  )
+    return current;
+  const outcome =
+    command.kind === 'SelectNemesisRandomEventFamily'
+      ? defaultNemesisOutcome(command.family)
+      : (() => {
+          if (currentOutcome === null || currentOutcome === undefined)
+            failCommand(command, 'select a Nemesis event family before editing its interaction');
+          if (currentOutcome.kind !== command.value.kind)
+            failCommand(command, 'Nemesis interaction cannot change its selected family');
+          validateNemesisInteraction(catalog, command);
+          return interactionOutcome(command.value);
+        })();
   return Object.freeze({
     ...current,
     nemesisRandomEventByPhase: Object.freeze({
       ...(current.nemesisRandomEventByPhase ?? {}),
-      [phase.phaseKey]: command.value,
+      [phase.phaseKey]: outcome,
     }),
   });
+}
+
+function nemesisInteractionReward(
+  catalog: Catalog,
+  command: Extract<
+    EncounterOccurrenceCommand,
+    { readonly kind: 'SelectNemesisRandomEventFamily' | 'ReplaceNemesisRandomEventInteraction' }
+  >,
+): import('../../../reward-kernel/model').ResolvedRewardOffer | null {
+  if (command.kind === 'SelectNemesisRandomEventFamily')
+    return fixedNemesisReward(catalog, defaultNemesisOutcome(command.family));
+  const fixed = fixedNemesisReward(catalog, command.value);
+  if (fixed !== null) return fixed;
+  if (
+    command.value.kind === 'damageContest' &&
+    command.value.result === 'success' &&
+    command.value.reward?.rewardType ===
+      catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent?.damageContest
+        .failureResultRewardType
+  )
+    return null;
+  return command.value.reward;
+}
+
+function hasActiveNemesisPickup(
+  outcome: AuthoredNemesisRandomEventOutcome,
+  reward: import('../../../reward-kernel/model').ResolvedRewardOffer | null,
+): boolean {
+  return reward !== null && !('response' in outcome && outcome.response === 'decline');
 }
 
 function updatedGorgonResult(
@@ -253,7 +351,10 @@ function replaceTopLevel(
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
   const phase =
-    command.kind === 'ReplaceNemesisRandomEventOutcome' ? command.event.encounter : command.phase;
+    command.kind === 'SelectNemesisRandomEventFamily' ||
+    command.kind === 'ReplaceNemesisRandomEventInteraction'
+      ? command.event.encounter
+      : command.phase;
   const occurrence = requireOccurrence(located.plan, phase.owner.occurrenceId, command);
   const room = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
   const encounters = updatedSelections(catalog, room, occurrence.encounters, phase, command);
@@ -262,30 +363,35 @@ function replaceTopLevel(
   const withNemesis = updatedNemesisRandomEvent(catalog, room, withGorgon, phase, command);
   if (withNemesis === occurrence.encounters) return document;
   const withEventSite =
-    command.kind !== 'ReplaceNemesisRandomEventOutcome'
+    (command.kind !== 'SelectNemesisRandomEventFamily' &&
+      command.kind !== 'ReplaceNemesisRandomEventInteraction') ||
+    (command.kind === 'SelectNemesisRandomEventFamily' &&
+      occurrence.encounters.nemesisRandomEventByPhase?.[phase.phaseKey]?.kind === command.family)
       ? occurrence
       : (() => {
           const siteKey = nemesisGeneratedPickupSiteKey(phase.phaseKey);
           const prior = occurrence.acquisitionSites?.[siteKey]?.pickupEntries?.result;
+          const rewardOffer = nemesisInteractionReward(catalog, command);
+          const outcome = withNemesis.nemesisRandomEventByPhase?.[phase.phaseKey];
           const sameOffer =
             prior !== undefined &&
             prior !== null &&
-            command.reward !== null &&
-            sameOccurrenceValue(prior.offer, command.reward);
+            rewardOffer !== null &&
+            sameOccurrenceValue(prior.offer, rewardOffer);
           const reward =
-            command.value !== null && command.reward !== null
+            rewardOffer !== null
               ? sameOffer
                 ? prior
-                : createUnresolvedPickupRewardState(catalog, command.reward, 'NemesisEventPickup')
+                : createUnresolvedPickupRewardState(catalog, rewardOffer, 'NemesisEventPickup')
               : null;
-          const declined =
-            command.value !== null &&
-            'response' in command.value &&
-            command.value.response === 'decline';
+          const pickupActive =
+            outcome !== undefined &&
+            outcome !== null &&
+            hasActiveNemesisPickup(outcome, rewardOffer);
           return Object.freeze({
             ...occurrence,
-            // Keep the offered reward's details, but retract its now-inactive pickup.
-            ...(declined
+            // Keep compatible offered detail, but retract an inactive or replaced pickup.
+            ...(!pickupActive
               ? {
                   roomActions: Object.freeze({
                     order: Object.freeze(
@@ -299,10 +405,14 @@ function replaceTopLevel(
                   }),
                 }
               : {}),
-            acquisitionSites: Object.freeze({
-              ...(occurrence.acquisitionSites ?? {}),
-              [siteKey]: Object.freeze({ pickupEntries: Object.freeze({ result: reward }) }),
-            }),
+            ...(reward === null && prior === undefined
+              ? {}
+              : {
+                  acquisitionSites: Object.freeze({
+                    ...(occurrence.acquisitionSites ?? {}),
+                    [siteKey]: Object.freeze({ pickupEntries: Object.freeze({ result: reward }) }),
+                  }),
+                }),
           });
         })();
   const suppressesIncomingReward = Object.values(withNemesis.encounterKeyByPhase).some(

@@ -7,10 +7,12 @@ import {
   createJudgmentArcanaAddress,
   createFigurineArcanaAddress,
   createNemesisRandomEventAddress,
+  createRoomActionAddress,
   createTraitOfferAddress,
   semanticAddressKey,
   type SemanticAddress,
 } from '../../../../authored-project/addresses';
+import { roomActionKey } from '../../../../authored-project/room-actions/key';
 import { materializeGorgonAthenaOffer } from '../../../../authored-project/traits/state';
 import { selectedEncounterAuthoringProfileKey } from '../../../../authored-project/room-state/encounter-envelope';
 import type { RouteLoadout } from '../../../../authored-project/model';
@@ -736,6 +738,11 @@ export function applyEncounterSettlementTransition(inputs: {
     );
     const policy = catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent;
     if (policy !== undefined) {
+      const interactionOwner = createRoomActionAddress(
+        createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+        room.occurrenceId,
+        roomActionKey({ kind: 'interactEncounter', phaseKey: event.phaseKey }),
+      );
       const assessments = Object.freeze(
         branches.map((branch) => {
           const facts = createBiomeRewardFacts(
@@ -833,10 +840,13 @@ export function applyEncounterSettlementTransition(inputs: {
         room.acquisitionSites?.[`nemesisGenerated:${encodeURIComponent(event.phaseKey)}`]?.entries
           .result;
       const rewardType = result?.offer.rewardType;
+      const familyMissing = outcome === null || outcome === undefined;
+      const interactionMissing =
+        !familyMissing &&
+        (rewardType === undefined || (outcome.kind === 'traitTrade' && outcome.traitKey === null));
       const legal =
-        outcome !== null &&
-        outcome !== undefined &&
-        rewardType !== undefined &&
+        !familyMissing &&
+        !interactionMissing &&
         assessments.every((assessment) => {
           switch (outcome.kind) {
             case 'freeItem':
@@ -852,16 +862,17 @@ export function applyEncounterSettlementTransition(inputs: {
             case 'traitTrade':
               return (
                 rewardType === policy.traitTrade.fixedResultRewardType &&
+                outcome.traitKey !== null &&
                 assessment.traitTradeTraitKeys.includes(outcome.traitKey)
               );
           }
         });
-      if (outcome === null || outcome === undefined || !legal) {
+      if (familyMissing || interactionMissing || !legal) {
         const finding = rewardFinding(
-          outcome === null || outcome === undefined
+          familyMissing || interactionMissing
             ? 'nemesisOutcomeMissing'
             : 'nemesisOutcomeUnavailable',
-          owner,
+          familyMissing ? owner : interactionOwner,
           outcome === null || outcome === undefined ? {} : { kind: outcome.kind },
         );
         findings.set(
@@ -873,7 +884,9 @@ export function applyEncounterSettlementTransition(inputs: {
           }),
         );
       } else {
-        if (outcome.kind === 'traitTrade' && outcome.response === 'accept')
+        const removedTraitKey =
+          outcome.kind === 'traitTrade' && outcome.response === 'accept' ? outcome.traitKey : null;
+        if (removedTraitKey !== null)
           branches = Object.freeze(
             branches.map((branch) => {
               const before = branch.traitHistory ?? createTraitHistoryState();
@@ -889,7 +902,7 @@ export function applyEncounterSettlementTransition(inputs: {
                   acquisitionRole: 'nemesisTraitTrade',
                   sequence: event.sequence,
                   acquisitionPoint: 'encounterInteraction',
-                  traitKey: outcome.traitKey,
+                  traitKey: removedTraitKey,
                   match: 'currentTraitKey' as const,
                 }),
               ]);

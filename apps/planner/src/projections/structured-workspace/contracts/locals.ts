@@ -1,4 +1,5 @@
 import type {
+  AuthoredNemesisRandomEventKind,
   AuthoredNemesisRandomEventOutcome,
   EncounterPhaseAddress,
   FieldsSpatialAddress,
@@ -76,45 +77,40 @@ export interface WorkspaceEncounterInteraction {
    * picker model rather than exposing raw encounter evidence to React.
    */
   readonly load: () => ContextualPickerModel<string>;
+  readonly nemesisEvent?: WorkspaceNemesisEventSelection;
   readonly owner: EncounterPhaseAddress;
-  readonly resetIntent: WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ResetEncounter' }>
-  >;
   readonly selected: string;
 }
 
-export interface WorkspaceNemesisEventInteraction {
-  readonly intentFor: (
-    value: AuthoredNemesisRandomEventOutcome | null,
-    reward: ResolvedRewardOffer | null,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceNemesisRandomEventOutcome' }>
-  >;
-  readonly key: string;
+export interface WorkspaceNemesisEventSelection {
   readonly owner: NemesisRandomEventAddress;
-  readonly load: () => WorkspaceNemesisEventDomain | undefined;
-  readonly reward: ResolvedRewardOffer | null;
-  /** Player-facing catalog label for a persisted or candidate result identity. */
-  readonly rewardLabelFor: (rewardType: string) => string;
-  readonly value: AuthoredNemesisRandomEventOutcome | null;
+  readonly familyPicker: ContextualPickerModel<AuthoredNemesisRandomEventKind>;
+  readonly familyIntentFor: (
+    family: AuthoredNemesisRandomEventKind,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'SelectNemesisRandomEventFamily' }>
+  >;
 }
 
-/** Application adaptation of the engine's branch-correlated Nemesis capability. */
+export interface WorkspaceNemesisEventInteraction extends WorkspaceNemesisEventSelection {
+  readonly detailIntentFor: (
+    value: AuthoredNemesisRandomEventOutcome & { readonly reward: ResolvedRewardOffer | null },
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceNemesisRandomEventInteraction' }>
+  >;
+  readonly key: string;
+  readonly load: () => WorkspaceNemesisEventDomain | undefined;
+  readonly reward: ResolvedRewardOffer | null;
+  readonly value: AuthoredNemesisRandomEventOutcome | null;
+  readonly fixedResultLabel?: string;
+  readonly selectedRewardLabel?: string;
+  readonly selectedTraitLabel?: string;
+}
+
+/** One concrete family-owned editor domain at the exact Nemesis interaction. */
 export interface WorkspaceNemesisEventDomain {
-  readonly familyKeys: readonly AuthoredNemesisRandomEventOutcome['kind'][];
-  readonly goldTradeResponses: readonly ('accept' | 'decline')[];
-  readonly damageTradeResponses: readonly ('accept' | 'decline')[];
-  readonly traitTradeResponses: readonly ('accept' | 'decline')[];
-  readonly damageContestResults: readonly ('success' | 'failure')[];
-  readonly freeItemRewardTypes: readonly string[];
-  readonly goldTradeRewardTypes: readonly string[];
-  readonly damageTradeRewardTypes: readonly string[];
-  readonly traitTradeTraitKeys: readonly string[];
-  /** Application-owned identity model for the trait-trade target. */
-  readonly traitTradePicker: (selected?: string) => ContextualPickerModel<string>;
-  readonly damageContestSuccessRewardTypes: readonly string[];
-  readonly traitTradeRewardType: string;
-  readonly damageContestFailureRewardType: string;
+  readonly rewardPicker?: ContextualPickerModel<string>;
+  readonly traitPicker?: ContextualPickerModel<string>;
 }
 
 /** Complete application-owned mapping for H's binary Passive-slot feature. */
@@ -246,7 +242,7 @@ export interface WorkspaceEncounterPhase {
   readonly label: string;
   readonly marker: WorkspaceMarker;
   /** Application-owned placement for the phase editor in the room timeline. */
-  readonly timelineAnchor: 'roomEntered' | 'encounterStart' | 'action';
+  readonly timelineAnchor: 'roomEntered' | 'encounterStart';
   readonly figLeaf?: {
     readonly interactionKey: string;
     readonly selected: boolean;
@@ -260,8 +256,6 @@ export interface WorkspaceEncounterPhase {
     readonly supported: boolean;
   };
   readonly gorgonAthena?: WorkspaceTraitOfferControl;
-  /** A reset is useful only after the authored selection diverges from its static default. */
-  readonly resettable: boolean;
   readonly selectedEncounter: {
     readonly key: string;
     readonly label: string;

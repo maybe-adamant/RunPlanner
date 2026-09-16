@@ -20,6 +20,7 @@ import type { WorkspaceRunStateLauncher } from './run-state';
 import type { WorkspaceLevelResolutionControl, WorkspaceTraitOfferControl } from './traits';
 import type { WorkspaceRewardControl } from './rewards';
 import type { WorkspaceEncounterPhase, WorkspaceRewardWheelDescriptor } from './locals';
+import type { NemesisRandomEventAddress } from '@run-planner/engine/authored-project';
 import type { WorkspaceCommandIntent, WorkspaceInteractionChoice } from '../contract';
 
 /** Atomic exact-set authoring at one reached Boss-defeated occurrence seam. */
@@ -175,8 +176,11 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly presentation: 'row' | 'fieldsCageAnchor';
       /** Engine-owned phase grouping for multi-encounter room workbenches. */
       readonly phaseKey?: string;
-      /** Exact projected encounter child placed on this action row. */
-      readonly supplement?: { readonly kind: 'encounter'; readonly phase: WorkspaceEncounterPhase };
+      /** Exact family-specific Nemesis interaction placed on its required action row. */
+      readonly supplement?: {
+        readonly kind: 'nemesisInteraction';
+        readonly owner: NemesisRandomEventAddress;
+      };
     }
   | {
       readonly kind: 'automaticEffect';

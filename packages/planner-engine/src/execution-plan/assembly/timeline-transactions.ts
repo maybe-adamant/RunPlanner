@@ -533,6 +533,11 @@ export function executionTimelineTransactions(
           'executionCoverageMissing',
           `unresolved Nemesis event ${owner}:${phaseKey}`,
         );
+      if (nemesis?.kind === 'traitTrade' && nemesis.traitKey === null)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `unresolved Nemesis trait trade ${owner}:${phaseKey}`,
+        );
       const nemesisFreeItem =
         nemesis?.kind === 'freeItem'
           ? room.acquisitionSites[nemesisGeneratedPickupSiteKey(phaseKey)]?.entries.result
@@ -563,7 +568,13 @@ export function executionTimelineTransactions(
                         kind: 'freeItem' as const,
                         itemGameName: nemesisFreeItem!.offer.rewardType,
                       })
-                    : nemesis,
+                    : nemesis.kind === 'traitTrade'
+                      ? Object.freeze({
+                          kind: 'traitTrade' as const,
+                          traitKey: nemesis.traitKey!,
+                          response: nemesis.response,
+                        })
+                      : nemesis,
               }),
             }),
         window: windowFor(semanticAddressKey(timeline.action.owner)),

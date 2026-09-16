@@ -194,9 +194,9 @@ function projectRoomLifecycleTimeline(
     if (action.kind !== 'action' || action.action.reference.kind !== 'interactEncounter')
       return undefined;
     const phase = encounterByPhase.get(action.action.reference.phaseKey);
-    return phase?.timelineAnchor === 'action'
-      ? Object.freeze({ kind: 'encounter' as const, phase })
-      : undefined;
+    return phase?.nemesisEvent === undefined
+      ? undefined
+      : Object.freeze({ kind: 'nemesisInteraction' as const, owner: phase.nemesisEvent.owner });
   };
   const entries: WorkspaceRoomLifecycleTimelineEntry[] = [];
   for (const entry of timeline.entries) {

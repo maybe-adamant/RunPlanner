@@ -574,6 +574,9 @@ function nemesisPickupProducers(
   return Object.entries(occurrence.encounters.nemesisRandomEventByPhase ?? {}).flatMap(
     ([phaseKey, outcome]) => {
       if (outcome === undefined || outcome === null) return [];
+      const result =
+        occurrence.acquisitionSites?.[nemesisGeneratedPickupSiteKey(phaseKey)]?.pickupEntries
+          ?.result;
       const declined = 'response' in outcome && outcome.response === 'decline';
       const policy = catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent;
       if (policy === undefined) return [];
@@ -603,6 +606,8 @@ function nemesisPickupProducers(
           sourceNormal:
             occurrence.encounters.encounterKeyByPhase[phaseKey] === 'NemesisRandomEvent' &&
             !declined &&
+            result !== undefined &&
+            result !== null &&
             actions.has(roomActionKey({ kind: 'interactEncounter', phaseKey })),
           siteKey: nemesisGeneratedPickupSiteKey(phaseKey),
           pickups: Object.freeze([Object.freeze({ key: 'result', required })]),

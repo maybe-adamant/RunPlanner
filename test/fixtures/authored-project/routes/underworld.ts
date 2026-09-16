@@ -15,6 +15,8 @@ import {
   createOccurrenceId,
   createRoomActionAddress,
   roomActionKey,
+  type AuthoredNemesisRandomEventOutcome,
+  type NemesisRandomEventAddress,
   createRouteStartKeepsakeSelectionAddress,
   createRouteAddress,
   createShopOfferAddress,
@@ -51,6 +53,25 @@ export interface GoldenGProjectOptions {
 
 export function goldenFOccurrenceId(batchIndex: number, exitIndex: number): OccurrenceId {
   return createOccurrenceId(`golden-f-b${batchIndex}-e${exitIndex}`);
+}
+
+/** Test fixture convenience for the two-step phase-family and interaction contract. */
+export function replaceNemesisRandomEventInteraction(
+  project: ProjectDocument,
+  event: NemesisRandomEventAddress,
+  value: AuthoredNemesisRandomEventOutcome,
+  reward: ResolvedRewardOffer | null,
+): ProjectDocument {
+  const selected = applyProjectCommand(project, catalog, {
+    kind: 'SelectNemesisRandomEventFamily',
+    event,
+    family: value.kind,
+  });
+  return applyProjectCommand(selected, catalog, {
+    kind: 'ReplaceNemesisRandomEventInteraction',
+    event,
+    value: Object.freeze({ ...value, reward }),
+  });
 }
 
 export function goldenGOccurrenceId(batchIndex: number, exitIndex: number): OccurrenceId {

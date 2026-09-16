@@ -8,6 +8,7 @@ import {
   createEncounterPhaseAddress,
   createNemesisRandomEventAddress,
   createOccurrenceAddress,
+  createRoomActionAddress,
   roomActionKey,
   semanticAddressKey,
   createOccurrenceId,
@@ -41,12 +42,22 @@ import {
 import {
   renderDecisionWorkbench,
   renderOccurrenceWorkbench,
+  workspaceProjection,
 } from '@planner-test/support/biome-workbench';
 
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
+
+async function chooseNemesisEvent(
+  user: ReturnType<typeof renderOccurrenceWorkbench>['user'],
+  label: string,
+): Promise<void> {
+  await user.click(screen.getByRole('button', { name: 'Encounter' }));
+  await user.click(await screen.findByRole('option', { name: /^Nemesis event/ }));
+  await user.click(await screen.findByRole('option', { name: label }));
+}
 
 describe('OccurrenceRoomFeatures', () => {
   it('splits Anomaly room outcome from door map and revert controls as exact commands', async () => {
@@ -130,7 +141,7 @@ describe('OccurrenceRoomFeatures', () => {
     expect(screen.getByLabelText('Room')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Restore Combat 01' })).toBeTruthy();
   });
-  it('edits a selected Nemesis event through the engine-published family and result controls', async () => {
+  it('authors a Gold trade immediately from Event through its action-row interaction and Undo', async () => {
     const occurrenceId = goldenFOccurrenceId(5, 1);
     const phase = createEncounterPhaseAddress(
       goldenFBiome,
@@ -150,7 +161,7 @@ describe('OccurrenceRoomFeatures', () => {
     );
     openRoomTab('Room Timeline');
     expect(screen.getByRole('button', { name: 'Encounter' })).toBeTruthy();
-    const family = screen.getByRole('combobox', { name: 'Nemesis family' });
+    const family = screen.getByRole('button', { name: 'Encounter' });
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     const eventOwner = createNemesisRandomEventAddress(phase);
     const finding = simulateProject(catalog, project).findings.find(
@@ -159,42 +170,20 @@ describe('OccurrenceRoomFeatures', () => {
     if (finding === undefined) throw new Error('missing Nemesis outcome finding');
     act(() =>
       view.application.store.dispatch(
-        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+        findingSelected({
+          key: semanticFindingKey(finding),
+          origin: finding.origin,
+          focusAddress: workspaceProjection(view.application).focusByOwner.get(
+            semanticAddressKey(finding.origin),
+          )!.focusAddress,
+        }),
       ),
     );
-    const eventEditor = screen.getByRole('region', { name: 'Nemesis event' });
-    await waitFor(() => expect(eventEditor.contains(document.activeElement)).toBe(true));
+    await waitFor(() => expect(family.contains(document.activeElement)).toBe(true));
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );
-    expect(screen.getByText('Choose an event family.')).toBeTruthy();
-    expect((screen.getByRole('button', { name: 'Save event' }) as HTMLButtonElement).disabled).toBe(
-      true,
-    );
-
-    await view.user.click(family);
-    await waitFor(() =>
-      expect(within(family).getByRole('option', { name: 'Gold trade' })).toBeTruthy(),
-    );
-    await view.user.selectOptions(family, 'goldTrade');
-    const response = screen.getByRole('combobox', { name: 'Nemesis response' });
-    expect(within(response).getByRole('option', { name: 'Accept' })).toBeTruthy();
-    const reward = screen.getByRole('combobox', { name: 'Nemesis reward' });
-    expect(within(reward).getByRole('option', { name: 'Max Health' })).toBeTruthy();
-    expect(within(reward).queryByRole('option', { name: 'MaxHealthDrop' })).toBeNull();
-    expect(screen.getByText('Generated result: Max Health.')).toBeTruthy();
-    expect((screen.getByRole('button', { name: 'Save event' }) as HTMLButtonElement).disabled).toBe(
-      false,
-    );
-    expect(
-      screen.getByRole('button', { name: 'Save event' }).classList.contains('primary-action'),
-    ).toBe(true);
-
-    await view.user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect((family as HTMLSelectElement).value).toBe('');
-
-    await view.user.selectOptions(family, 'goldTrade');
-    await view.user.click(screen.getByRole('button', { name: 'Save event' }));
+    await chooseNemesisEvent(view.user, 'Gold trade');
     const authoredEvent = () =>
       view.application.store
         .getState()
@@ -203,87 +192,89 @@ describe('OccurrenceRoomFeatures', () => {
     await waitFor(() =>
       expect(authoredEvent()?.encounters.nemesisRandomEventByPhase?.Encounter).toEqual({
         kind: 'goldTrade',
+        response: 'decline',
+      }),
+    );
+    const actionOwner = createRoomActionAddress(
+      goldenFBiome,
+      occurrenceId,
+      roomActionKey({ kind: 'interactEncounter', phaseKey: 'Encounter' }),
+    );
+    const missingDetail = simulateProject(
+      catalog,
+      view.application.store.getState().projectWorkspace.history!.present,
+    ).findings.find(
+      (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(actionOwner),
+    );
+    if (missingDetail === undefined) throw new Error('missing Nemesis interaction-detail finding');
+    act(() =>
+      view.application.store.dispatch(
+        findingSelected({ key: semanticFindingKey(missingDetail), origin: missingDetail.origin }),
+      ),
+    );
+    const actionRow = [...document.querySelectorAll<HTMLElement>('[data-room-action-key]')].find(
+      (row) =>
+        row.dataset.roomActionKey ===
+        roomActionKey({ kind: 'interactEncounter', phaseKey: 'Encounter' }),
+    );
+    if (actionRow === undefined) throw new Error('Nemesis interaction row is missing');
+    expect(within(actionRow).getByText('Nemesis offers to take Gold to give')).toBeTruthy();
+    await waitFor(() => expect(actionRow.dataset.selectedFinding).toBe('true'));
+    expect(family.dataset.selectedFinding).toBe('false');
+    await view.user.click(within(actionRow).getByRole('button', { name: 'Reward' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Max Health' }));
+    await waitFor(() =>
+      expect(
+        authoredEvent()?.acquisitionSites?.['nemesisGenerated:Encounter']?.pickupEntries?.result
+          ?.offer.rewardType,
+      ).toBeTruthy(),
+    );
+    expect(within(actionRow).getByRole('button', { name: 'Reward' }).textContent).toContain(
+      'Max Health',
+    );
+    const accept = screen.getByRole('checkbox', { name: 'Accept' });
+    expect(accept.closest('.nemesis-interaction-controls')).toBeTruthy();
+    expect(
+      within(actionRow).getByRole('button', { name: 'Reward' }).compareDocumentPosition(accept) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect((accept as HTMLInputElement).checked).toBe(false);
+    await view.user.click(accept);
+    await waitFor(() =>
+      expect(authoredEvent()?.encounters.nemesisRandomEventByPhase?.Encounter).toEqual({
+        kind: 'goldTrade',
         response: 'accept',
       }),
     );
-    await waitFor(() =>
-      expect((screen.getByRole('button', { name: 'Saved' }) as HTMLButtonElement).disabled).toBe(
-        true,
-      ),
-    );
-    const savedReward = screen.getByRole('combobox', { name: 'Nemesis reward' });
-    expect(within(savedReward).queryByRole('option', { name: 'Max Magick' })).toBeNull();
-    await view.user.click(savedReward);
-    await waitFor(() =>
-      expect(within(savedReward).getByRole('option', { name: 'Max Magick' })).toBeTruthy(),
-    );
-    expect(
-      authoredEvent()?.acquisitionSites?.['nemesisGenerated:Encounter']?.pickupEntries?.result
-        ?.offer.rewardType,
-    ).toBeTruthy();
-    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
-      historyBefore + 1,
-    );
-    const requiredActionKey = roomActionKey({
+    const generatedAction = roomActionKey({
       kind: 'interactAcquisitionEntry',
       siteKey: 'nemesisGenerated:Encounter',
       entryKey: 'result',
     });
-    const requiredRow = [...document.querySelectorAll<HTMLElement>('[data-room-action-key]')].find(
-      (row) => row.dataset.roomActionKey === requiredActionKey,
+    await waitFor(() =>
+      expect(
+        [...document.querySelectorAll<HTMLElement>('[data-room-action-key]')].some(
+          (row) => row.dataset.roomActionKey === generatedAction,
+        ),
+      ).toBe(true),
     );
-    if (requiredRow === undefined) throw new Error('required Nemesis result row is missing');
-    expect(
-      (
-        within(requiredRow).getByRole('button', {
-          name: /Remove .* from timeline/,
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
-
+    expect(view.application.store.getState().projectWorkspace.history!.past.length).toBeGreaterThan(
+      historyBefore,
+    );
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>
-      expect(authoredEvent()?.encounters.nemesisRandomEventByPhase?.Encounter).toBeNull(),
+      expect((screen.getByRole('checkbox', { name: 'Accept' }) as HTMLInputElement).checked).toBe(
+        false,
+      ),
     );
-    expect(authoredEvent()?.acquisitionSites?.['nemesisGenerated:Encounter']).toBeUndefined();
-
-    const restoredFamily = screen.getByRole('combobox', { name: 'Nemesis family' });
-    await view.user.click(restoredFamily);
-    await waitFor(() =>
-      expect(within(restoredFamily).getByRole('option', { name: 'Gold trade' })).toBeTruthy(),
-    );
-    await view.user.selectOptions(restoredFamily, 'goldTrade');
-    await view.user.selectOptions(
-      screen.getByRole('combobox', { name: 'Nemesis response' }),
-      'decline',
-    );
-    expect(screen.getByRole('button', { name: 'Save event' })).toBeTruthy();
-    await view.user.click(screen.getByRole('button', { name: 'Save event' }));
-    await waitFor(() =>
-      expect(authoredEvent()?.encounters.nemesisRandomEventByPhase?.Encounter).toEqual({
-        kind: 'goldTrade',
-        response: 'decline',
-      }),
-    );
-    await screen.findByRole('button', { name: 'Saved' });
-    const savedResponse = screen.getByRole('combobox', { name: 'Nemesis response' });
-    expect(within(savedResponse).queryByRole('option', { name: 'Accept' })).toBeNull();
-    await view.user.click(savedResponse);
-    await waitFor(() =>
-      expect(within(savedResponse).getByRole('option', { name: 'Accept' })).toBeTruthy(),
-    );
-    expect(
-      authoredEvent()?.acquisitionSites?.['nemesisGenerated:Encounter']?.pickupEntries?.result
-        ?.offer.rewardType,
-    ).toBeTruthy();
     expect(
       [...document.querySelectorAll<HTMLElement>('[data-room-action-key]')].some(
-        (row) => row.dataset.roomActionKey === requiredActionKey,
+        (row) => row.dataset.roomActionKey === generatedAction,
       ),
     ).toBe(false);
   });
 
-  it('keeps the encounter picker available after settling a Nemesis event', async () => {
+  it('selects a Nemesis family atomically and returns to combat through the same picker', async () => {
     const occurrenceId = goldenFOccurrenceId(5, 1);
     const view = renderOccurrenceWorkbench(
       createGoldenFGHIProject(),
@@ -299,20 +290,23 @@ describe('OccurrenceRoomFeatures', () => {
         ?.encounters.encounterKeyByPhase.Encounter;
 
     openRoomTab('Room Timeline');
+    const history = () => view.application.store.getState().projectWorkspace.history!;
+    const before = history().present;
+    const pastCount = history().past.length;
     const encounter = screen.getByRole('button', { name: 'Encounter' });
+    const initialLabel = encounter.querySelector('span')!.textContent!;
     await view.user.click(encounter);
     const nemesis = await screen.findByRole('option', { name: 'Nemesis event' });
     expect(nemesis.getAttribute('aria-disabled')).not.toBe('true');
     await view.user.click(nemesis);
+    expect(await screen.findByRole('option', { name: 'Gold trade' })).toBeTruthy();
+    expect(history().present).toBe(before);
+    await view.user.keyboard('{Escape}');
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(history().present).toBe(before);
+    expect(history().past).toHaveLength(pastCount);
+    await chooseNemesisEvent(view.user, 'Gold trade');
     await waitFor(() => expect(authoredEncounter()).toBe('NemesisRandomEvent'));
-
-    const family = screen.getByRole('combobox', { name: 'Nemesis family' });
-    await view.user.click(family);
-    await waitFor(() =>
-      expect(within(family).getByRole('option', { name: 'Gold trade' })).toBeTruthy(),
-    );
-    await view.user.selectOptions(family, 'goldTrade');
-    await view.user.click(screen.getByRole('button', { name: 'Save event' }));
     await waitFor(() =>
       expect(
         view.application.store
@@ -320,19 +314,25 @@ describe('OccurrenceRoomFeatures', () => {
           .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
           ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
           ?.encounters.nemesisRandomEventByPhase?.Encounter,
-      ).toEqual({ kind: 'goldTrade', response: 'accept' }),
+      ).toEqual({ kind: 'goldTrade', response: 'decline' }),
     );
 
     const retainedPicker = screen.getByRole('button', { name: 'Encounter' });
-    expect(retainedPicker.textContent).toContain('Nemesis event');
-    await view.user.click(retainedPicker);
-    const standard = await screen.findByRole('option', { name: 'Combat' });
-    expect(standard.getAttribute('aria-disabled')).not.toBe('true');
-    await view.user.click(standard);
-    await waitFor(() => expect(authoredEncounter()).not.toBe('NemesisRandomEvent'));
+    expect(retainedPicker.textContent).toContain('Nemesis event · Gold trade');
+    expect(history().past).toHaveLength(pastCount + 1);
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(history().present).toBe(before);
+    await chooseNemesisEvent(view.user, 'Free item');
+    await view.user.click(screen.getByRole('button', { name: 'Encounter' }));
+    await view.user.click(within(await screen.findByRole('listbox')).getByText(initialLabel));
+    expect(authoredEncounter()).toBe(
+      before.route.biomes[0]!.topology!.occurrences.find(
+        (candidate) => candidate.occurrenceId === occurrenceId,
+      )!.encounters.encounterKeyByPhase.Encounter,
+    );
   });
 
-  it('edits a Nemesis trait trade target through the contextual picker', async () => {
+  it('keeps free and boon-trade detail on the Nemesis action row', async () => {
     const occurrenceId = goldenFOccurrenceId(5, 1);
     const phase = createEncounterPhaseAddress(
       goldenFBiome,
@@ -358,27 +358,51 @@ describe('OccurrenceRoomFeatures', () => {
     if (finding === undefined) throw new Error('missing Nemesis outcome finding');
     act(() =>
       view.application.store.dispatch(
-        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+        findingSelected({
+          key: semanticFindingKey(finding),
+          origin: finding.origin,
+          focusAddress: workspaceProjection(view.application).focusByOwner.get(
+            semanticAddressKey(finding.origin),
+          )!.focusAddress,
+        }),
       ),
     );
-    const eventEditor = await screen.findByRole('region', { name: 'Nemesis event' });
-    await waitFor(() => expect(eventEditor.contains(document.activeElement)).toBe(true));
-
-    const family = screen.getByRole('combobox', { name: 'Nemesis family' });
-    await view.user.click(family);
-    await waitFor(() =>
-      expect(within(family).getByRole('option', { name: 'Trait trade' })).toBeTruthy(),
+    const family = screen.getByRole('button', { name: 'Encounter' });
+    await waitFor(() => expect(family.contains(document.activeElement)).toBe(true));
+    await chooseNemesisEvent(view.user, 'Free item');
+    const freeAction = [...document.querySelectorAll<HTMLElement>('[data-room-action-key]')].find(
+      (row) =>
+        row.dataset.roomActionKey ===
+        roomActionKey({ kind: 'interactEncounter', phaseKey: 'Encounter' }),
     );
-    await view.user.selectOptions(family, 'traitTrade');
-    const trait = await screen.findByRole('button', { name: 'Nemesis trait' });
+    if (freeAction === undefined) throw new Error('Free-item interaction action is missing');
+    expect(within(freeAction).getByText('Interact with Nemesis to get')).toBeTruthy();
+    expect(within(freeAction).getByRole('button', { name: 'Reward' })).toBeTruthy();
+    expect(within(freeAction).queryByRole('checkbox')).toBeNull();
+    await chooseNemesisEvent(view.user, 'Boon trade');
+    const trait = await screen.findByRole('button', { name: 'Boon offered' });
+    expect(within(freeAction).getByText('Nemesis offers to take')).toBeTruthy();
+    const fixedReward = within(freeAction).getByText('to give Triple Gold');
+    expect(
+      within(freeAction)
+        .getByRole('checkbox', { name: 'Accept' })
+        .closest('.nemesis-interaction-controls'),
+    ).toBeTruthy();
+    expect(
+      trait.compareDocumentPosition(fixedReward) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      fixedReward.compareDocumentPosition(
+        within(freeAction).getByRole('checkbox', { name: 'Accept' }),
+      ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     await view.user.click(trait);
     const listbox = await screen.findByRole('listbox');
     const firstChoice = within(listbox).getAllByRole('option')[0];
     if (firstChoice === undefined) throw new Error('Nemesis trait choices are missing');
     await view.user.click(firstChoice);
-    expect(trait.textContent).not.toContain('Choose a trait');
+    expect(trait.textContent).not.toContain('Choose a boon');
 
-    await view.user.click(screen.getByRole('button', { name: 'Save event' }));
     await waitFor(() =>
       expect(
         view.application.store
@@ -388,6 +412,73 @@ describe('OccurrenceRoomFeatures', () => {
           ?.encounters.nemesisRandomEventByPhase?.Encounter?.kind,
       ).toBe('traitTrade'),
     );
+    await chooseNemesisEvent(view.user, 'Damage trade');
+    expect(within(freeAction).getByText('Nemesis offers to hit you to give')).toBeTruthy();
+    expect(
+      within(freeAction)
+        .getByRole('checkbox', { name: 'Accept' })
+        .closest('.nemesis-interaction-controls'),
+    ).toBeTruthy();
+    expect(
+      within(freeAction)
+        .getByRole('button', { name: 'Reward' })
+        .compareDocumentPosition(within(freeAction).getByRole('checkbox', { name: 'Accept' })) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('switches the leading contest result between a selectable reward and fixed consolation', async () => {
+    const occurrenceId = goldenFOccurrenceId(5, 1);
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Encounter',
+    );
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisRandomEvent',
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    await chooseNemesisEvent(view.user, 'Damage contest');
+    const phrase = screen.getByText('at Nemesis’s damage challenge →');
+    const sentence = phrase.parentElement!;
+    const result = within(sentence).getByRole('combobox', { name: 'Contest result' });
+    expect((result as HTMLSelectElement).value).toBe('failure');
+    expect(result.compareDocumentPosition(phrase) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(sentence).getByText('Red Onion')).toBeTruthy();
+    const authoredOccurrence = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'F')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
+    const reward = () =>
+      authoredOccurrence()?.acquisitionSites?.['nemesisGenerated:Encounter']?.pickupEntries?.result;
+    expect(reward()?.offer.rewardType).toBe('RoomRewardConsolationPrize');
+
+    await view.user.selectOptions(result, 'success');
+    await waitFor(() => expect(reward()).toBeNull());
+    expect(
+      result.compareDocumentPosition(within(sentence).getByRole('button', { name: 'Reward' })) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(authoredOccurrence()?.encounters.nemesisRandomEventByPhase?.Encounter).toEqual({
+      kind: 'damageContest',
+      result: 'success',
+    });
+    await view.user.click(screen.getByRole('button', { name: 'Reward' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Max Health' }));
+    expect(reward()?.offer.rewardType).toBe('MaxHealthDrop');
+
+    await view.user.selectOptions(result, 'failure');
+    await waitFor(() => expect(reward()?.offer.rewardType).toBe('RoomRewardConsolationPrize'));
+    expect(screen.queryByRole('button', { name: 'Reward' })).toBeNull();
   });
 
   it('keeps an unreached Well domain visible as unassessed', async () => {
@@ -516,13 +607,21 @@ describe('OccurrenceRoomFeatures', () => {
     await view.user.selectOptions(count, '3');
     await waitFor(() => expect(authoredFields()?.state).toMatchObject({ optionalRewardCount: 3 }));
     openRoomTab('Room Timeline');
+    const beforeEvent = view.application.store.getState().projectWorkspace.history!.present;
+    await view.user.click(screen.getByRole('button', { name: 'Event' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Damage contest' }));
+    expect(authoredFields()?.encounters.nemesisRandomEventByPhase?.Passive).toEqual({
+      kind: 'damageContest',
+      result: 'failure',
+    });
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(view.application.store.getState().projectWorkspace.history!.present).toBe(beforeEvent);
     const eventActionKey = roomActionKey({ kind: 'interactEncounter', phaseKey: 'Passive' });
     const eventRow = [...document.querySelectorAll<HTMLElement>('[data-room-action-key]')].find(
       (row) => row.dataset.roomActionKey === eventActionKey,
     );
     if (eventRow === undefined) throw new Error('Nemesis interaction row is missing');
-    expect(within(eventRow).getByRole('region', { name: 'Nemesis event' })).toBeTruthy();
-    expect(screen.getAllByRole('region', { name: 'Nemesis event' })).toHaveLength(1);
+    expect(within(eventRow).getByRole('button', { name: 'Reward' })).toBeTruthy();
     const optionalActionKey = roomActionKey({
       kind: 'interactAcquisitionEntry',
       siteKey: 'nemesisGenerated:Passive',

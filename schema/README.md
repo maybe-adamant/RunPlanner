@@ -1,5 +1,16 @@
 # Project schema boundary
 
+Schema 84 allows a Nemesis event family to be saved before its interaction's
+concrete boon or reward has been selected.
+
+```bash
+npm run schema:migrate-83-to-84 -- path/to/schema-83-project.runplanner.json
+```
+
+Existing complete events already have the same representation. The migration
+preserves their outcomes, generated pickups, and action order without edits,
+and writes a sibling file without overwriting the source.
+
 Schema 83 separates World Shop Travel Deal inventory from Mystery acquisition.
 
 ```bash
@@ -88,7 +99,7 @@ output. It has no route-selection, in-place, or target-version mode.
 
 The schema-72 splitter's pure transformation is exported from
 `schema/split-project-72-to-73.js` for checkpoint conversion. The source value
-is never mutated. The production decoder accepts schema 83 only; stale
+is never mutated. The production decoder accepts schema 84 only; stale
 documents are not migrated implicitly in the application.
 
 Migrate a schema-74 document with:

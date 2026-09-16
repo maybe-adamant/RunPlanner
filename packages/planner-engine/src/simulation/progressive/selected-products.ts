@@ -1,6 +1,8 @@
 import {
   createAcquisitionSiteAddress,
   createBiomeAddress,
+  createEncounterPhaseAddress,
+  createNemesisRandomEventAddress,
   createOccurrenceAddress,
   semanticAddressKey,
   type AcquisitionEntryAddress,
@@ -51,6 +53,31 @@ import {
 } from './finding-location';
 import type { BiomeGenerationValidation } from './products';
 
+function nemesisEventAtInteractionAction(
+  blockedAt: SemanticAddress,
+): NemesisRandomEventAddress | undefined {
+  if (blockedAt.kind !== 'roomAction') return undefined;
+  try {
+    const parsed: unknown = JSON.parse(blockedAt.actionKey);
+    if (
+      !Array.isArray(parsed) ||
+      parsed.length !== 2 ||
+      parsed[0] !== 'interactEncounter' ||
+      typeof parsed[1] !== 'string'
+    )
+      return undefined;
+    return createNemesisRandomEventAddress(
+      createEncounterPhaseAddress(
+        createBiomeAddress(blockedAt.routeKey, blockedAt.biomeKey),
+        { kind: 'occurrence', occurrenceId: blockedAt.occurrenceId },
+        parsed[1],
+      ),
+    );
+  } catch {
+    return undefined;
+  }
+}
+
 export function retainBlockedRegionProducts(
   retainedRewards: BiomeRewardSimulation,
   retainedArtifacts: BiomeCandidateArtifacts,
@@ -86,7 +113,9 @@ export function retainBlockedRegionProducts(
   const blockedFigurineAt: FigurineArcanaAddress | undefined =
     blockedAt.kind === 'figurineArcana' ? blockedAt : undefined;
   const blockedNemesisAt: NemesisRandomEventAddress | undefined =
-    blockedAt.kind === 'nemesisRandomEvent' ? blockedAt : undefined;
+    blockedAt.kind === 'nemesisRandomEvent'
+      ? blockedAt
+      : nemesisEventAtInteractionAction(blockedAt);
   const blockedKeepsakeAt: KeepsakeSelectionAddress | undefined =
     blockedAt.kind === 'keepsakeSelection' ? blockedAt : undefined;
   const blockedKeepsakeEquipResultAt: KeepsakeEquipResultAddress | undefined =

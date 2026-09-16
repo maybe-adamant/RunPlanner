@@ -509,12 +509,16 @@ export type EncounterOccurrenceCommand =
       readonly phase: EncounterPhaseAddress;
     }
   | {
-      /** Complete replacement of the phase-local random-event realization. */
-      readonly kind: 'ReplaceNemesisRandomEventOutcome';
+      /** Selects Nemesis and its phase-owned family without settling the interaction. */
+      readonly kind: 'SelectNemesisRandomEventFamily';
       readonly event: NemesisRandomEventAddress;
-      readonly value: import('../model').AuthoredNemesisRandomEventOutcome | null;
-      /** The sole concrete result identity, persisted only at its generated entry. */
-      readonly reward: ResolvedRewardOffer | null;
+      readonly family: import('../model').AuthoredNemesisRandomEventKind;
+    }
+  | {
+      /** Edits concrete interaction detail for the already-selected event family. */
+      readonly kind: 'ReplaceNemesisRandomEventInteraction';
+      readonly event: NemesisRandomEventAddress;
+      readonly value: NemesisRandomEventInteraction;
     }
   | {
       readonly kind: 'ReplaceFigLeafSkip';
@@ -526,6 +530,12 @@ export type EncounterOccurrenceCommand =
       readonly phase: EncounterPhaseAddress;
       readonly value: boolean;
     };
+
+/** Interaction payload is family-tagged so it cannot be applied across event families. */
+export type NemesisRandomEventInteraction = import('../model').AuthoredNemesisRandomEventOutcome & {
+  /** Variable reward detail; fixed family results are normalized by the command. */
+  readonly reward: ResolvedRewardOffer | null;
+};
 
 export type TraitOfferCommand =
   | {

@@ -295,39 +295,62 @@
   white-space: nowrap;
 }
 
-.encounter-phase-settings > .nemesis-event-editor {
+.nemesis-interaction-controls {
+  display: flex;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  align-items: center;
   min-width: 0;
-  flex: 1 1 100%;
+  max-width: 100%;
+  gap: 8px;
 }
 
-.nemesis-event-editor {
-  display: grid;
-  gap: 10px;
-  padding: 10px;
-  border: 1px solid #3a3b45;
-  border-radius: 8px;
-  background: rgb(255 255 255 / 2%);
+.nemesis-interaction-controls > .field-control-inline {
+  flex: 0 1 13rem;
+  width: 13rem;
+  min-width: 0;
+  max-width: 100%;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
 }
 
-.nemesis-event-editor > .local-reward-heading,
-.nemesis-event-editor > .fixed-room-state {
+.nemesis-interaction-controls .contextual-picker-trigger > :first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nemesis-contest-result {
+  flex: 0 0 auto;
+  width: auto;
+  max-width: 100%;
+}
+
+.nemesis-fixed-reward {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+}
+
+.nemesis-interaction-hint {
   margin: 0;
+  color: #aaa7af;
+  font-size: 0.88rem;
 }
 
-.nemesis-event-fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
-  align-items: end;
-  gap: 8px 12px;
+.nemesis-response-control {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 36px;
+  gap: 7px;
+  margin-inline-start: 16px;
+  white-space: nowrap;
 }
 
-.nemesis-event-fields > .field-control,
-.nemesis-event-fields > .contextual-picker {
-  min-width: 0;
-}
-
-.nemesis-event-editor > .hub-rank-actions {
-  justify-content: flex-end;
+.nemesis-response-control > input {
+  margin: 0;
 }
 
 .encounter-phase-settings > .gorgon-condition-control input {
@@ -794,6 +817,14 @@
 .room-action-row > .room-action-identity {
   min-width: 0;
   flex-wrap: wrap;
+}
+
+.room-action-row[data-inline-layout='sentence'] {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.room-action-row[data-inline-layout='sentence'] > .room-action-identity {
+  align-items: flex-start;
 }
 
 .room-action-identity > strong {
@@ -1437,6 +1468,7 @@
 
 .visually-hidden,
 .room-keepsake-control[data-label-hidden='true'] > .contextual-picker > label,
+.nemesis-interaction-controls > .contextual-picker > label,
 .room-action-inline-reward .contextual-picker > label {
   position: absolute;
   width: 1px;

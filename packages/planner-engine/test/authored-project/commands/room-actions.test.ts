@@ -43,6 +43,7 @@ import {
 } from '@run-planner/engine/simulation';
 import {
   createCompleteFGProject,
+  replaceNemesisRandomEventInteraction,
   createGoldenFGHProject,
   createUnderworldFWellCheckpoint,
   goldenFBiome,
@@ -145,12 +146,12 @@ describe('room-action commands', () => {
       phase,
       encounterKey: 'NemesisRandomEvent',
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceNemesisRandomEventOutcome',
-      event: createNemesisRandomEventAddress(phase),
-      value: { kind: 'freeItem' },
-      reward: { rewardType: 'ArmorBoost' },
-    });
+    project = replaceNemesisRandomEventInteraction(
+      project,
+      createNemesisRandomEventAddress(phase),
+      { kind: 'freeItem' },
+      { rewardType: 'ArmorBoost' },
+    );
     const eventOccurrence = project.route?.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === goldenFOccurrenceId(5, 1),
     );

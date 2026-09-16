@@ -19,6 +19,7 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
+  replaceNemesisRandomEventInteraction,
   createGoldenFGHProject,
   goldenFBiome,
   goldenFOccurrenceId,
@@ -128,12 +129,12 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
       phase,
       encounterKey: 'NemesisRandomEvent',
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceNemesisRandomEventOutcome',
-      event: createNemesisRandomEventAddress(phase),
-      value: { kind: 'freeItem' },
-      reward: { rewardType: 'ArmorBoost' },
-    });
+    project = replaceNemesisRandomEventInteraction(
+      project,
+      createNemesisRandomEventAddress(phase),
+      { kind: 'freeItem' },
+      { rewardType: 'ArmorBoost' },
+    );
     const direct = encoded(project);
     const encounters = occurrence(direct, 'F', goldenFOccurrenceId(5, 1)).encounters as JsonRecord;
     expect((encounters.nemesisRandomEventByPhase as JsonRecord).Encounter).toEqual({

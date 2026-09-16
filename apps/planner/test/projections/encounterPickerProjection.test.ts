@@ -35,6 +35,23 @@ function candidate(
 }
 
 describe('encounter picker projection', () => {
+  it('allows reopening an invalid selected Nemesis family without enabling an unavailable new encounter', () => {
+    const picker = createContextualPickerProjection(createContextualOptionResolver(catalog));
+    const choices = [{ label: 'Nemesis event', value: 'NemesisRandomEvent' }];
+    const candidates = [candidate('NemesisRandomEvent', 'impossible', { kind: 'inactiveSlot' })];
+    const selected = projectEncounterPicker(
+      catalog,
+      picker,
+      choices,
+      'NemesisRandomEvent',
+      candidates,
+    );
+    expect(selected.selected).toMatchObject({ state: 'impossible', disabled: false });
+    expect(selected.sections[0]!.items[0]).toBe(selected.selected);
+    const unselected = projectEncounterPicker(catalog, picker, choices, 'GeneratedF', candidates);
+    expect(unselected.sections[0]!.items[0]).toMatchObject({ state: 'impossible', disabled: true });
+  });
+
   it('retains declaration labels and ordering while separating coverage, activation, and requirements evidence', () => {
     const picker = createContextualPickerProjection(createContextualOptionResolver(catalog));
     const model = projectEncounterPicker(

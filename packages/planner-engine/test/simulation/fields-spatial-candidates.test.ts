@@ -17,6 +17,7 @@ import {
   createGoldenFGHProject,
   goldenHBiome,
   loadNemesisFieldsCheckpoint,
+  replaceNemesisRandomEventInteraction,
 } from '@run-planner/test-fixtures/underworld';
 
 const occurrenceId = createOccurrenceId('golden-h-combat05');
@@ -177,12 +178,12 @@ describe('Fields spatial candidates', () => {
       phase: passive,
       encounterKey: 'NemesisRandomEvent',
     });
-    unoccupiedCombat04Project = applyProjectCommand(unoccupiedCombat04Project, catalog, {
-      kind: 'ReplaceNemesisRandomEventOutcome',
-      event: createNemesisRandomEventAddress(passive),
-      value: { kind: 'freeItem' },
-      reward: { rewardType: 'ArmorBoost' },
-    });
+    unoccupiedCombat04Project = replaceNemesisRandomEventInteraction(
+      unoccupiedCombat04Project,
+      createNemesisRandomEventAddress(passive),
+      { kind: 'freeItem' },
+      { rewardType: 'ArmorBoost' },
+    );
     const sourceEligible = evaluate(
       unoccupiedCombat04Project,
       { kind: 'nemesis' },
@@ -201,12 +202,12 @@ describe('Fields spatial candidates', () => {
       phase: passive,
       encounterKey: 'NemesisRandomEvent',
     });
-    combat04Project = applyProjectCommand(combat04Project, catalog, {
-      kind: 'ReplaceNemesisRandomEventOutcome',
-      event: createNemesisRandomEventAddress(passive),
-      value: { kind: 'freeItem' },
-      reward: { rewardType: 'ArmorBoost' },
-    });
+    combat04Project = replaceNemesisRandomEventInteraction(
+      combat04Project,
+      createNemesisRandomEventAddress(passive),
+      { kind: 'freeItem' },
+      { rewardType: 'ArmorBoost' },
+    );
     const excluded = evaluate(combat04Project, { kind: 'nemesis' }, 572886, combat04);
     expect(excluded).toMatchObject({
       kind: 'fieldsSpatialPoint',

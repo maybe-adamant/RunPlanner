@@ -825,7 +825,7 @@ export function assembleRoomActionDomain(options: {
           options.occurrence,
           reference.phaseKey,
         );
-        if (attachment?.kind !== 'localReward') return true;
+        if (attachment?.kind !== 'localReward') return reference.kind === 'interactGorgon';
         if (reference.phaseKey === cageReference.phaseKey) return false;
         const sourceReference = frozen({
           kind: 'completeFieldsCage' as const,
