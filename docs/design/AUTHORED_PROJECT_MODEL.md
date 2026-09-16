@@ -637,7 +637,8 @@ Natural Selection uses the same selected-trait outcome owner and persists one
 nonempty ordered `naturalSelectionTargets` sequence of one to eight known trait
 keys on the selected option. The sequence is the complete successful
 round-robin allocation, not eight independent Pom choices. Bridal Glow likewise
-persists its exact promoted-trait target on the carrying option. Concave Stone's
+persists its exact acquisition target on the carrying option; its selected-effect
+fallback may retain an already-Heroic target. Concave Stone's
 chosen residual option and Echo Boon Boon Boon's selected nested option reuse
 these same option-owned All Together, Natural Selection, and Bridal Glow
 outcomes. An authored Stone proc makes the residual option's children active

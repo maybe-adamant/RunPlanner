@@ -1,181 +1,149 @@
-# Boon Rarity Ledger Game-Data Audit
+# Boon Rarity Sources and Mutations
 
-## Status and scope
+## Scope and evidence
 
-This is an implementation-free source audit of the chance ledger that decides
-which boon rarities can appear. It covers:
+This audit separates fresh-screen chance construction, in-menu Rarification,
+direct grants and later equipped mutation. It records the supported source
+facts and chosen planner simplifications, not an implementation chronology.
 
-- ordinary Olympian and Hermes base values;
-- Excellence, The Queen, and Divinity;
-- miniboss room overrides in F through Q;
-- the exact interaction between a miniboss room and a delayed Shrine of Hermes
-  delivery;
-- Proper Upbringing's activation and future-offer effect;
-- pool-wide rarity-bucket selection for Infusions and other mixed rarity
-  domains;
-- the Artemis, Athena, and Dionysus NPC providers that participate in the same
-  god-loot rarity bonuses;
-- Gorgon Amulet's Athena source override and temporary-bonus suppression;
-- Yarn of Ariadne's one-off rarity boost and consumption boundary; and
-- direct boon and Hermes offers in the I and Q World Shops.
+Primary contacts in the installed scripts, checked on 2026-09-15:
 
-The evidence was checked on 2026-08-22 and the expanded offer-pool evidence was
-rechecked on 2026-09-10 against the installed Hades II scripts:
+- `HeroData.lua:170–188`, `RoomLogic.lua:IsRarityForcedCommon/GetRarityChances`
+  and `TraitLogic.lua:SetTraitsOnLoot`: bases, overrides and ordered checks;
+- `TraitData_MetaUpgrade.lua`, `TraitData_Chaos.lua`,
+  `TraitData_Elementals.lua`, `TraitData_Store.lua`: bonus declarations;
+- `RoomDataF/G/H/I/N/O/P/Q.lua`: miniboss profiles;
+- `NPCData_Artemis/Athena/Dionysus.lua`, `EncounterPresentation.lua:1428`
+  and `TraitData_Keepsake.lua`: provider order and Gorgon source context;
+- `UpgradeChoiceLogic.lua`, `TraitLogic.lua`, `PowersLogic.lua` and
+  `EventLogic.lua`: screen closure, direct grants and mutation contacts;
+- `SurfaceShopLogic.lua`, `StoreLogic.lua`, `StoreData.lua`: delivery and
+  exact store-item context.
 
-- `HeroData.lua`, `TraitData.lua`, `RoomLogic.lua`, and `TraitLogic.lua` for the
-  base tables, modifier precedence, and sequential rarity checks;
-- `TraitData_MetaUpgrade.lua` and `MetaUpgradeData.lua` for Arcana effects and
-  ranks;
-- `RoomDataF/G/H/I/N/O/P/Q.lua` for miniboss overrides;
-- `TraitData_Elementals.lua`, `TraitLogic.lua`, and `UpgradeChoiceLogic.lua` for
-  Proper Upbringing;
-- `NPCData_Artemis.lua`, `NPCData_Athena.lua`, and `NPCData_Dionysus.lua` for
-  shop-aware NPC rarity participation and provider roll order;
-- `KeepsakeData.lua` and `EncounterPresentation.lua` for Gorgon Amulet's
-  rank-scaled Athena source override;
-- `StoreData.lua`, `TraitData_Store.lua`, `StoreLogic.lua`,
-  `UpgradeChoiceLogic.lua`, `RequirementsData.lua`, and `RoomDataI/Q.lua` for
-  Yarn of Ariadne and the I/Q World Shops; and
-- `SurfaceShopLogic.lua` and `TraitLogic.lua` for delayed Shrine deliveries.
+[Initial offer construction](TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md)
+owns seeding, bucket depletion and rescue. [Trait pools](TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md)
+owns declaration membership and upgrade target predicates.
+[Run-impacting effects](RUN_IMPACTING_TRAIT_EFFECTS_GAME_DATA_AUDIT.md)
+owns Bridal's retained target and Personal Loan's payout lifecycle.
 
-This audit does not ask the planner to reproduce random rolls or exact offer
-probabilities. Its target is the smaller deterministic question needed by the
-editor: given an exact reached history and reward source, which authored
-rarities are possible, and which are impossible?
+## Chance arithmetic is not a probability distribution
 
-Chaos rarity effects are a future consumer of this ledger. Their declarations
-and maturation remain owned by the separate
-[Chaos trait audit](CHAOS_TRAIT_GAME_DATA_AUDIT.md).
+| Provider          | Rare | Epic |  Duo | Legendary |
+| ----------------- | ---: | ---: | ---: | --------: |
+| Ordinary Olympian | 0.10 | 0.05 | 0.12 |      0.10 |
+| Hermes            | 0.06 | 0.03 | 0.00 |      0.01 |
 
-## The source is an ordered chance ledger, not a distribution
+Common starts as the default. Ordinary checks run Common → Rare → Epic →
+Duo → Legendary; later successes overwrite earlier results. Heroic is not a
+fresh ordinary roll. These values do not sum to one and must not be normalized.
 
-`GetRarityChances` builds one table of independent chance checks. It begins
-from the provider's base table, applies one contextual override, adds active
-`RarityBonus` values, and finally applies active
-`MultiplicativeRarityBonus` values.
+For one roll over a supported domain, a non-Common tier needs positive chance
+and all later applicable checks must be able to fail. Common requires every
+applicable later check to be able to fail. A value at or above one guarantees
+its check; a value at or below zero cannot win the random pass. Bucket rescue
+has different rules, including present-zero support; this arithmetic alone
+does not decide complete-screen legality.
 
-For an ordinary Olympian boon, the base table is:
+Priority seeds roll against their own declared rarity support. Remaining
+positions roll against the eligible pool's nonempty buckets. A guaranteed
+later bucket can exclude a Common-only identity at one position but become
+empty after earlier selections. Thus per-trait roll feasibility cannot replace
+whole-screen construction.
 
-| Check     | Base value |
-| --------- | ---------: |
-| Rare      |       0.10 |
-| Epic      |       0.05 |
-| Duo       |       0.12 |
-| Legendary |       0.10 |
+## Source precedence
 
-Hermes uses a distinct base table:
+Forced Common is resolved before the normal ledger. When active it clears
+the table, prevents ordinary replacement seeding and avoids marking the
+screen as temporarily rarity-boosted. Hymn and replacement vacancy rescue
+retain their distinct construction rules.
 
-| Check     | Base value |
-| --------- | ---------: |
-| Rare      |       0.06 |
-| Epic      |       0.03 |
-| Duo       |       0.00 |
-| Legendary |       0.01 |
+Otherwise the source is:
 
-Common has no chance entry. A candidate begins at Common and remains Common if
-no supported later check replaces it. Heroic is not in
-`BoonRarityRollOrder`; it is never an ordinary fresh roll.
+1. provider base;
+2. current-room sparse override, unless ignored; otherwise the loot/item
+   sparse override;
+3. all applicable additive contributions;
+4. all applicable multiplicative contributions.
 
-The live roll order is:
+Missing override entries retain the provider base; zero is an explicit value.
+Room and item overrides are alternatives, not cumulative layers. Values remain
+unclamped. God-only bonuses accept `GodLoot` or `TreatAsGodLootByShops`,
+including Hermes and the shop-aware field NPCs, but not Chaos.
 
-```text
-Common -> Rare -> Epic -> Duo -> Legendary
-```
+The apparent miniboss exemption in `IsRarityForcedCommon` requires
+`Hero.BoonData.AllowRarityOverride`. That field is absent from the declaration
+and no installed script enables it. The similarly named StackData field is
+unrelated: miniboss and boosted-item overrides do not bypass Ordinary.
 
-Each supported non-Common check is independent. A successful later check
-overwrites an earlier result. These values therefore do **not** sum to 100%,
-and normalizing them into one probability distribution would change the game
-rule.
+## Chance-source matrix
 
-For planner possibility analysis:
+Rank lists are I / II / III / IV. Numeric additions precede multipliers.
 
-- a supported non-Common rarity is possible when its chance is greater than
-  zero and every later supported check can fail;
-- Common is possible only when every supported non-Common check can fail;
-- a chance at or above `1` is guaranteed, so it makes Common and any earlier
-  supported result impossible unless a later check succeeds; and
-- the trait's own declared rarity support remains authoritative. A positive
-  Duo check does not make an ordinary scalable trait a Duo trait.
+| Source                              | Declared contribution or override                                         | Applicability and consumption                                                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Excellence                          | Rare +30/40/50/60%; Legendary ×1.30/1.40/1.50/1.60                        | Active Arcana; native processed-value rounding applies. Rare also affects Chaos.                                                  |
+| The Queen                           | Duo +6/8/10/12%                                                           | Active Arcana; cannot manufacture Duo identities in providers without them.                                                       |
+| Divinity                            | Epic +5/10/15/20%                                                         | Active Arcana; also affects Chaos.                                                                                                |
+| Barren                              | Disables active Arcana; paired nonfixed blessing is Heroic                | Arcana suppression and paired rarity assignment are separate effects.                                                             |
+| Favor                               | Rare +40–50% / +54–67% / +67–84% / +80–100%; Epic/Duo/Legendary +10% each | Matured or directly granted blessing; no GodLootOnly restriction. Magnitude is authored.                                          |
+| Yarn of Ariadne                     | Rare +100%, Epic +25%, Duo +10%, Legendary +10%                           | One use, eligible god/shop-aware screen; ignored temporary bonuses and forced Common do not spend it.                             |
+| Proper Upbringing                   | Rare +100% while activated                                                | God-only contribution; separate equipped promotion below. Higher checks still run.                                                |
+| Ordinary                            | Forced fresh Common, not a negative bonus                                 | Qualifying god/shop-aware screens, including Artemis/Athena/Dionysus and Gorgon. Their qualifying use consumes its limited count. |
+| Miniboss room                       | Sparse override in the room matrix below                                  | Applies to loot generated there, including delayed deliveries.                                                                    |
+| Boosted Boon / upgraded shop Hermes | Rare 90%, Epic 25%, Legendary 10%; Duo retains base                       | Exact generated item, not a blanket shop/biome bonus. Room override still wins.                                                   |
+| Gorgon                              | Sparse Common/Rare/Epic/Heroic = 1 by rank                                | II–IV ignore temporary bonuses; room override and permanent contributions remain. Ordinary still wins.                            |
+| Trial                               | Duo chance written as zero                                                | Not equivalent to removing declarations or removing that chance key.                                                              |
+| Denial / Rejected                   | No numeric contribution                                                   | Denial bans identities and disables final rescue; Rejected blocks selection of a displayed row, not generation.                   |
 
-`IsRarityForcedCommon` is a separate earlier guard. When it succeeds, the game
-clears the chance table and does not apply the ledger.
+Sources: `TraitData_MetaUpgrade.lua:810,855,894`;
+`TraitData_Chaos.lua:172,1007,1160`; `TraitData_Store.lua:280`;
+`TraitData_Elementals.lua:118`; `StoreLogic.lua:166,194,212`;
+`TraitData_Keepsake.lua:2236`; `EncounterLogic.lua:1686,1692`.
 
-The rarity check is not always evaluated independently against each proposed
-trait. `SetTraitsOnLoot` first handles any already-chosen priority identities:
-each such identity rolls rarity against its own supported domain. For the
-remaining fill positions, it builds one bucket per rarity from every currently
-eligible trait, rolls only among nonempty buckets in the provider's declared
-order, selects one trait from the winning bucket, and then removes that trait
-identity from every bucket before filling the next position. Consequently,
-whether one exact non-priority trait/rarity pair is possible can depend on the
-other eligible traits and on the identities already placed in earlier offer
-positions.
+### Yarn consumption
 
-This distinction matters for declarations that support different rarity
-domains. A Common-only trait cannot win while a guaranteed later nonempty
-bucket remains. It can become possible after earlier positions exhaust that
-bucket. A trait supporting Common, Rare, and Epic can participate in whichever
-of those buckets the reached ledger makes possible. Duo and Legendary remain
-later independent checks over their own nonempty buckets; they are not delayed
-until ordinary scalable traits are exhausted.
+Purchasing Yarn installs a limited-use rarity trait. The next eligible screen
+that includes it in `GetRarityChances` is marked `RarityBoosted`; closing
+that screen consumes the limited bonus
+(`TraitLogic.lua:1778`, `UpgradeChoiceLogic.lua:1127`).
+It boosts the generated screen, not just its selected row. Forced Common,
+Chaos and Gorgon II–IV do not consume an ignored bonus. Rank-I Gorgon and
+other qualifying NPC screens use the same applicability rule.
 
-After the rarity-sensitive and replacement fills, a separate final pass may
-fill remaining positions from identities that failed the first rarity roll.
-Vow of Denial disables that pass. The offer feasibility model must therefore
-compose the sequential bucket state with the existing Denial/exhaustion rule;
-it must not turn the first-pass bucket calculation into a universal ban.
+### Shop-aware NPCs and Gorgon
 
-## Override and modifier precedence
+Artemis, Athena and Dionysus use the ordinary base, with their own roll orders:
+Artemis Common/Rare/Epic; Athena Common/Rare/Epic/Heroic; Dionysus the default
+order intersected with its declared support. God-only bonuses and Ordinary
+apply. Hades has the shop-aware flag but remains player-rarityless in the
+planner; its traits block in-run rarification.
 
-The exact source order is:
+Native Gorgon does not assign one final rarity to all three rows.
+`RarityLevelBonus` becomes a source override; rank I retains ordinary
+Common/Rare/Epic possibilities, II guarantees at least Rare, III Epic, IV
+Heroic before other applicable context. A room override can replace that
+source override. II–IV suppress temporary bonuses, not permanent ones.
 
-```text
-provider base
-  -> current-room override, if present and not ignored
-     otherwise loot/item override, if present
-  -> additive active rarity bonuses
-  -> multiplicative active rarity bonuses
-```
+The planner deliberately keeps Gorgon authoring as three trait identities.
+It resolves the real forced/source context, then uses the lowest reachable
+Athena rarity for all three rows. This omits legal random mixtures at lower
+ranks while retaining a legal deterministic realization. Ordinary can make
+that realization Common; the editor does not maintain a competing Gorgon
+rarity policy.
 
-Room and loot overrides are alternatives, not layers. A current-room
-`BoonRaritiesOverride` wins over a loot object's own override. Each override is
-sparse: a missing key falls back to the current provider base rather than
-becoming zero.
+### Chaos pair rarity
 
-Additive and multiplicative bonuses may restrict themselves to one provider or
-to god loot. The source's `GodLootOnly` check accepts either `GodLoot` or
-`TreatAsGodLootByShops`. Hermes declares `GodLoot = false` but
-`TreatAsGodLootByShops = true`, so god-loot-only rarity effects such as Proper
-Upbringing do apply to Hermes.
+`TrialUpgrade` supplies Rare 40%, Epic 10%, Duo 0%, Legendary 5%
+(`LootData_Chaos.lua:16,94`). It ignores temporary rarity bonuses and is not
+god loot. Nonfixed pairs test Epic, then Rare (`TraitLogic.lua:1710`);
+Barren assigns Heroic, and a blessing with one declared rarity uses it directly.
 
-The source does not clamp the assembled values before `RandomChance`. For
-possibility analysis, values at or above one are therefore guaranteed and
-values at or below zero are impossible.
-
-## Arcana effects
-
-Arcana cards are installed as traits at their resolved active rank. Ordinary
-permanent ranks I through III correspond to Common, Rare, and Epic. Circe's
-Lapis effect can temporarily produce the Heroic rank-IV values already
-declared by the same cards.
-
-The three rarity cards contribute:
-
-| Card       | Rank I                          | Rank II                         | Rank III                        | Rank IV                         |
-| ---------- | ------------------------------- | ------------------------------- | ------------------------------- | ------------------------------- |
-| Excellence | Rare `+0.30`; Legendary `x1.30` | Rare `+0.40`; Legendary `x1.40` | Rare `+0.50`; Legendary `x1.50` | Rare `+0.60`; Legendary `x1.60` |
-| The Queen  | Duo `+0.06`                     | Duo `+0.08`                     | Duo `+0.10`                     | Duo `+0.12`                     |
-| Divinity   | Epic `+0.05`                    | Epic `+0.10`                    | Epic `+0.15`                    | Epic `+0.20`                    |
-
-The displayed values above include `GetProcessedValue`'s two-decimal
-normalization. Excellence's Legendary value is a true multiplier: it is
-applied after all additive Legendary bonuses, including future modeled
-sources. The other entries are additive.
-
-The cards change feasibility only when their assembled value crosses the
-zero/guaranteed boundaries for an exact supported rarity. They must still be
-retained numerically, rather than collapsed immediately to a minimum rarity,
-because later effects can add to or multiply the same checks.
+Excellence, Divinity and Favor affect exact-context pair feasibility. Yarn and
+Proper's god-only bonus do not; Queen and the Legendary multiplier do not
+change the Epic/Rare pair roll. For example rank-IV Excellence makes Rare
+0.40 + 0.60 = 1, so an ordinary Common pair cannot survive unless a different
+source rule applies. The specialized pair model consumes these facts without
+becoming an ordinary three-bucket editor. Embryo is a direct grant, not this roll.
 
 ## Miniboss room profiles
 
@@ -225,150 +193,83 @@ materialized, not the earlier Shrine purchase room.
 
 ## Proper Upbringing
 
-Proper Upbringing (`ElementalRarityUpgradeBoon`) may be offered at one Fire,
-Earth, Air, and Water. Its effect activates at two of each base element.
+Proper's offer threshold is one of each base element; activation needs two of
+each. `UpgradeAllCommon` (`TraitLogic.lua:2629–2668`) upgrades equipped Common
+shop-classified god traits to Rare unless in-run rarification is blocked,
+then separately assigns Proper itself Rare, even if acquired Epic.
+It installs the GodLootOnly Rare +1 bonus for future screens.
 
-On the inactive-to-active transition, `UpgradeAllCommon`:
+Deactivation removes the future bonus, not completed mutations. Reactivation
+repeats the pass. Ordinary's expiry explicitly reruns it when Proper is
+already active (`TraitData_Chaos.lua:1007`, `TraitLogic.lua:1328`); a Common
+acquisition during Ordinary is not automatically corrected before that seam.
+Authored offer rarity remains evidence distinct from equipped rarity.
 
-- upgrades each unique equipped Common god trait to Rare when it satisfies the
-  source's shop god-trait classification and is not blocked from in-run
-  rarification;
-- separately assigns its own equipped rarity to Rare, even when offered as
-  Epic (`TraitLogic.lua:2668`); and
-- installs a `GodLootOnly` additive rarity bonus with `Rare = 1`.
+A screen's residual acquisition can observe the primary selection's new
+activation: Concave Stone may acquire its frozen Common alternative as Rare
+(`UpgradeChoiceLogic.lua:1002–1023`). This is not a fresh screen or a second
+Yarn use. The same distinction applies to direct replay grants.
 
-The source adds one to the Rare check; it does not replace the existing Rare
-value with exactly one. Since the assembled value is then at least one for
-eligible Olympian and Hermes loot, the Rare check is guaranteed. Higher
-supported checks still run later and may overwrite Rare. The resulting
-planner-facing rule is a Rare-or-higher floor for fresh scalable god traits,
-but the underlying source fact is a numeric `+1` ledger contribution.
+### Infusions
 
-The activation pass also upgrades already equipped eligible Common traits.
-Deactivation removes only the future-offer bonus; all applied rarity changes
-persist. The fold retains authored offer rarity as separate evidence.
-Reactivation repeats the pass. Echo's second
-choice receives a special selection-time upgrade if the first selected choice
-activated Proper Upbringing after the second choice had already been generated
-as Common.
+All ten ordinary Infusions inherit the Infusion presentation and equal
+per-tier effect multipliers. Six retain internal Common/Rare/Epic support;
+`ElementalDamageBoon`, `ElementalBaseDamageBoon`, `ElementalDodgeBoon` and
+`ElementalHealthBoon` narrow it to Common only. Internal rarity remains a
+generation fact even when the frame reads Infusion.
 
-The planner represents Proper Upbringing through its declaration's exact
-numeric contribution in the general offer-local ledger rather than a separate
-minimum-rarity floor. Room/item overrides, Arcana, and future modifiers can
-therefore compose without another authority.
+Those four can be excluded by a guaranteed later bucket until it is depleted;
+final rescue is a separate construction path. Infusions are excluded from
+GodBoonRarities, so they do not add a Common count for Uncommon Grace. Hubris
+uses its elemental-trait rule rather than hidden internal rarity. Presentation
+does not warrant normalizing authored values or removing their repair controls.
 
-The ten ordinary Infusion declarations inherit `UnityTrait`. Their internal
-rarity buckets still participate in this fill algorithm even though the game
-presents every result as `Infusion`, gives each inherited tier the same
-multiplier, blocks later rarification, and excludes the trait from
-`GodBoonRarities`. Four children narrow their bucket membership to Common:
-`ElementalDamageBoon`, `ElementalBaseDamageBoon`, `ElementalDodgeBoon`, and
-`ElementalHealthBoon`. While Proper Upbringing guarantees Rare and any eligible
-Rare-capable identity remains, those four cannot occupy that position. They may
-become possible after earlier positions exhaust the remaining Rare bucket.
-Infusions never add a Common count that disables Uncommon Grace, and Vow of
-Hubris continues to treat them through its elemental-trait rule rather than
-their hidden internal rarity.
+## Rarity mutation and direct-grant matrix
 
-## Shop-aware NPC boon providers
+These contacts do not add inputs to the fresh-screen ledger.
 
-Artemis's field NPC, Athena, and Dionysus declare
-`TreatAsGodLootByShops = true`. `GetRarityChances` uses ordinary `BoonData` as
-the default provider table for each of them, and `GodLootOnly` contributions
-such as Proper Upbringing therefore apply to their offers. The planner's
-provider-kind label must not exclude these sources from the rarity ledger once
-their normalized giver declares the equivalent shop-aware god-trait fact.
+| Contact                                            | Native effect                                                                                             | Planner boundary                                                                                                                   |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Core replacement                                   | Exact next rarity; transferred level plus exchange bonus                                                  | Derived transition at the same pre-offer state, not a fresh roll.                                                                  |
+| Calling Card                                       | One-step menu Rarification through Heroic; 2/4/6/8 uses                                                   | Ordered actions and Fated/charge guards.                                                                                           |
+| Nine god keepsakes                                 | Provider-specific one-use Rarification; ranks I/II/III cap source at Common/Rare/Epic                     | Same action contract; Cherished reconstructs the nested use, not provider priority.                                                |
+| Aromatic Phial                                     | Fountain use promotes an eligible Common boon to Rare/Epic/Heroic                                         | Separate consume/effective-target domains preserve cooldown limits.                                                                |
+| Proper activation / reactivation / Ordinary expiry | Equipped Common promotion and source assignment                                                           | History transition, not authored-offer rewrite.                                                                                    |
+| Bridal Glow                                        | Heroic target outcome plus +1/+2/+3/+4 levels by source rarity; later credit of positive grant difference | Preferred-only offer eligibility, acquisition-only fallback and remembered target; effect audit owns details and non-Pom omission. |
+| Steady Growth                                      | Every 6/5/4/3 qualifying encounters, one eligible target advances a rarity                                | Native clock event; upgrading Growth preserves remaining time bounded by new interval.                                             |
+| Concave Stone                                      | Acquires a residual row; can observe a newly activated Proper                                             | Frozen screen with selected-effect continuation, not regeneration.                                                                 |
+| Boon Boon Boon                                     | Replays prior rarity, not level; active Proper can promote Common grant                                   | Authored stand-in for prior-run cache; replay-specific eligibility, no fresh roll.                                                 |
+| All Together                                       | Direct Common infusion grants                                                                             | No new screen/chance test for each child.                                                                                          |
+| Embryo                                             | Direct Common/Rare/Epic/Heroic Chaos blessing by keepsake rank                                            | Replaces on its native eight-encounter clock; Favor then contributes normally.                                                     |
+| Cherished / Gift Gift Gift                         | Rank or effect-source reconstruction                                                                      | Indirectly changes future keepsake outcomes; not an extra rarity bonus.                                                            |
+| Circe Lapis                                        | Active manually equipped Arcana rank promotion, native counts 2/2/3/5                                     | Rarityless NPC baseline selects up to two cards for Heroic promotion.                                                              |
+| Judgment / Figurine                                | Activate Arcana                                                                                           | Contributions become live through existing Arcana state; Barren still suppresses.                                                  |
+| Latest Model                                       | Permanent hammer becomes native Legendary                                                                 | Hammer Rank II, independent of boon rarity.                                                                                        |
+| Experimental Hammer / Anvil                        | Direct hammer grants/removal                                                                              | Hammer acquisition/rank state, not a rarity roll.                                                                                  |
+| Personal Loan payout                               | Retains trait and sets runtime rarity block                                                               | Later rarity mutations respect the equipped-instance block; original rarity still counts.                                          |
 
-Their source-owned roll orders still constrain the buckets that can run.
-Artemis declares Common/Rare/Epic; Athena declares
-Common/Rare/Epic/Heroic; Dionysus uses the ordinary default order intersected
-with its traits' Common/Rare/Epic support. Hades also carries the shop-aware
-source flag, but its modeled traits are player-rarityless and therefore do not
-create a rarity-authoring surface.
+Source contacts: `UpgradeChoiceLogic.lua:1203`;
+`TraitData_Keepsake.lua:77,2338`; `InteractLogic.lua:741`;
+`TraitLogic.lua:2703,2823–2857,2967–3033`; `EventLogic.lua:1363,1580`;
+`PowersLogic.lua:3688,4869`; `CombatLogic.lua:3953–3966`.
 
-The practical chronology consequence is exact: a Common Dionysus Worry Free
-authored while Proper Upbringing is active is invalid at that Dionysus offer.
-If retained anyway, its Common rarity count can later make Hera's Uncommon
-Grace appear unavailable, but that later symptom must not replace the finding
-at the earlier invalid acquisition.
+Calling Card and a slotted god keepsake are not competing usable sources:
+equipping a god keepsake makes the run Unfated, clears Calling Card uses and
+prevents re-equipping it (`KeepsakeLogic.lua:833,1222–1235`).
+Unslotted Echo effects retain their separate source lifecycle.
 
-## Gorgon Amulet's Athena source
+## Adjacent effects and bounded exclusions
 
-Gorgon Amulet does not assign one final rarity to all three Athena options.
-Its rank supplies `RarityLevelBonus = 1/2/3/4`; Athena presentation converts
-that level into a sparse source `BoonRaritiesOverride` at
-Common/Rare/Epic/Heroic respectively. The ordinary override rules then apply:
-a room override wins over this source override, missing keys fall back to the
-ordinary provider base, and permanent rarity contributions are added
-afterwards.
+Natural Selection, Ransoms, Poms, Pom Slices, Jeweled Pom and Persephone change
+levels, not this chance ledger. Uncommon Grace, Hubris and cooldown saturation
+consume internal rarity facts; Hex node rarity belongs to the talent layout.
+Mystery boxes and Sea Star create or resolve sources whose later screens use
+their normal context. Outer NPC cosmetic tiers are not player rarity.
 
-Athena's roll order is Common -> Rare -> Epic -> Heroic. Therefore rank I
-retains ordinary Common/Rare/Epic possibilities, rank II guarantees at least
-Rare while still permitting Epic, rank III guarantees Epic, and rank IV
-guarantees Heroic. Each option is rolled separately, so a rank-I or rank-II
-three-option offer may contain different internal rarities.
-
-When `RarityLevelBonus > 1`, the source also sets
-`IgnoreTempRarityBonus = true`. Rank II through IV therefore ignore Yarn and
-other limited temporary contributions while retaining permanent Arcana and
-Proper Upbringing contributions. Rank I does not suppress temporary bonuses.
-The planner must carry these as source facts into the same offer-local ledger.
-
-The selected planner simplification keeps the authored Gorgon child as three
-trait identities rather than adding three hidden rarity choices to the editor.
-After composing the real source override and active contributions, the engine
-chooses the lowest reachable Athena rarity as one deterministic legal
-realization and applies it to the three forced rows. This deliberately omits
-other random rank-I/rank-II mixtures while preserving a game-legal screen,
-keeping the current Gorgon authoring surface stable, and allowing Proper
-Upbringing or a rank-I temporary bonus to raise the realized floor. The
-simplification belongs only to Gorgon realization; ordinary trait offers retain
-their exact authored rarities.
-
-## Yarn of Ariadne
-
-Yarn of Ariadne is the Stygian Well item `TemporaryBoonRarityTrait`; the broader
-Well pool is recorded in the
-[Room Features audit](../room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md). The Well sells Yarn for
-70 gold. Its declaration is a `GodLootOnly` additive rarity contribution with
-one remaining use:
-
-| Check     | Added value |
-| --------- | ----------: |
-| Rare      |       +1.00 |
-| Epic      |       +0.25 |
-| Duo       |       +0.10 |
-| Legendary |       +0.10 |
-
-The values compose with the exact provider base, room or item override, Arcana,
-Proper Upbringing, and any other active rarity contribution. Rare is therefore
-guaranteed for a scalable god trait while Yarn applies, but later supported
-Epic, Duo, or Legendary checks may still overwrite it. The boost applies to the
-whole generated offer, not only to the option ultimately selected.
-
-Yarn is eligible for Olympian and Hermes offers. Hermes is accepted by the
-`GodLootOnly` condition through `TreatAsGodLootByShops`, as with Proper
-Upbringing.
-
-The exact one-use lifecycle is:
-
-1. purchasing Yarn installs `TemporaryBoonRarityTrait` with
-   `RemainingUses = 1`;
-2. the next eligible God Boon constructed without
-   `IgnoreTempRarityBonus` includes Yarn in `GetRarityChances` and marks that
-   offer as rarity-boosted; and
-3. when that boon choice screen closes, `UseHeroTraitsWithValue` consumes the
-   first limited-use `RarityBonus` and removes the expired trait.
-
-An offer that ignores temporary rarity bonuses does not receive or consume
-Yarn. The planner should therefore model Yarn as a chronological, one-off
-ledger contribution consumed by the next eligible boon offer—not as a
-permanent floor and not as a bonus attached to the selected trait.
-
-Schema 59 implements Stygian Well purchase and Yarn's one-use rarity-ledger
-contribution. The Well action installs the derived use, and the existing
-offer-local rarity frontier consumes it without creating a separate rarity
-authority.
+Premium Service calls `UpgradeAspect` (`TraitLogic.lua:2801`); its numeric
+aspect-rank mutation is not modeled here. This is a bounded aspect/combat-model
+omission, not evidence of another boon-rarity modifier. Profile progression,
+tutorial forcing and rerolls remain outside the initial-offer baseline.
 
 ## I and Q World Shops
 
@@ -429,85 +330,14 @@ the rarity context.
 
 ## Planner disposition
 
-The cohesive model is one engine-owned rarity-chance ledger at an exact
-trait-offer frontier. Its inputs are:
+The catalog owns provider bases and orders, sparse source overrides, declared
+rarity support, bonus profiles and effect descriptors. Simulation resolves
+the exact source, active effects and history before producing offer facts.
+Ordinary generation uses those facts in its staged bucket solver; specialized
+providers use their own source contract. The editor consumes results.
 
-1. the provider base (`BoonData` or `HermesData`) and provider roll order;
-2. the exact current room override, otherwise the exact reward/shop-item
-   override;
-3. active additive effects, including the resolved ranks of Excellence, The
-   Queen, Divinity, Proper Upbringing, and an unconsumed Yarn of Ariadne; and
-4. active multiplicative effects; and
-5. the nonempty rarity buckets formed from the complete eligible trait pool at
-   each sequential offer position.
-
-For priority identities, the engine intersects that numeric ledger with the
-identity's declared rarity support. For the remaining offer positions, it
-derives the nonempty pool buckets, consumes authored identities in order, and
-returns the possible identity/rarity rows at that position. Candidate
-evaluation turns an impossible retained authored rarity into the generic
-`rarityRollUnavailable` finding while preserving the existing structural
-`freshRarityUnavailable` distinction. It does not simulate or persist RNG
-outcomes.
-
-Ownership consequences:
-
-- the catalog owns base tables, sparse room/item overrides, Arcana rank
-  contributions, Proper's exact contribution, and declaration rarity support;
-- chronological simulation owns active Arcana, Proper Upbringing, the reached
-  room, dynamic biome count, and the exact reward source at the offer frontier;
-- candidate evaluation owns the possible/impossible rarity result; and
-- React renders that result without recomputing chance arithmetic.
-
-Miniboss overrides are normalized on the exact F-Q room declarations, and I/Q
-boosted rarity is normalized on the exact generated Shop option entries. Room
-context wins over item context; sparse missing keys fall back to the provider
-base; additive contributions precede multiplicative contributions; and no
-ledger is persisted.
-
-Proper Upbringing's promotion of already equipped Common traits remains a
-separate chronological transition. The general ledger consumes its active
-declaration-owned `Rare +1` contribution for future Olympian and Hermes offers
-and replaces only the old special-case future-offer floor. Run State exposes
-only the existing active-Proper fact; it does not show a global ledger or
-chance percentages.
-
-The implementation should preserve these exact contacts:
-
-- ordinary versus Hermes bases;
-- all four Arcana ranks, including Circe Lapis rank IV;
-- every miniboss profile and the delivered-Hermes-in-miniboss edge;
-- Proper Upbringing activation, deactivation, reactivation, and already-owned
-  Common promotion;
-- Yarn's exact additive values, Hermes eligibility, next-eligible-offer
-  consumption, and temporary-bonus exclusion;
-- ordinary versus boosted World Shop boon items and always-boosted
-  second-half World Shop Hermes; and
-- Common-only and scalable Infusions under a guaranteed Rare check, including
-  later-position bucket exhaustion;
-- shop-aware Artemis, Athena, and Dionysus offers under Proper Upbringing;
-- Gorgon ranks I through IV, room/source precedence, and temporary-bonus
-  suppression; and
-- dynamic `EnteredBiomes` first-/second-half selection.
-
-Schema 59 implements Yarn's declaration, purchase, remaining-use state, and
-next-eligible-offer consumption through the same offer-local facts; it adds no
-second rarity authority. Chaos Favor/Ordinary likewise remain future consumers;
-this slice adds no forced-Common or Heroic-fresh-roll behavior.
-
-## Explicit non-goals
-
-This audit does not require:
-
-- normalized rarity probabilities or deterministic RNG replay;
-- authored random seeds;
-- UI percentages;
-- provider-unrelated NPC choice systems with explicitly authored rarity;
-- Chaos curse/blessing implementation;
-- Stygian Well authoring or interaction implementation;
-- Transcendent Embryo or Cherished Heirloom behavior; or
-- a general interpreter for arbitrary trait effect tables.
-
-Future Chaos Favor and Ordinary can consume the same ledger only after their
-separate audit settles their exact additive/forced-common semantics. They must
-not cause this foundational slice to speculate about Chaos authoring state.
+Fresh support, exact replacements, post-menu effective rarity and later
+equipped mutation remain separate products. Declaration and equipped-instance
+rarity blocks compose at in-run target predicates; neither removes a retained
+trait from rarity counts. No global persisted chance table, inferred UI floor
+or second eligibility engine is needed.

@@ -443,9 +443,17 @@ describe('selected resource success legality', () => {
       );
     expect(hostOffers(withResource)).toEqual(hostOffers(withoutResource));
     expect(withoutResource.findings.map((finding) => finding.code)).not.toContain(
-      'rarityRollUnavailable',
+      'traitOfferGenerationUnavailable',
     );
-    expect(withResource.findings.map((finding) => finding.code)).toContain('rarityRollUnavailable');
+    const resourceFinding = withResource.findings.find(
+      (finding) => finding.code === 'traitOfferGenerationUnavailable',
+    );
+    if (resourceFinding === undefined) throw new Error('resource offer finding is missing');
+    expect(resourceFinding.origin).toMatchObject({
+      kind: 'traitOffer',
+      acquisitionRole: 'self',
+      owner: { kind: 'incomingReward', occurrenceId: 'possibility-b4-e1' },
+    });
 
     // The real selected placement emits at the room-exit boundary. That makes
     // the fourth matching element visible only to the following room's offer.
@@ -475,8 +483,8 @@ describe('selected resource success legality', () => {
           boonRarityFacts: nextRoomFacts!,
         },
         'Common',
-      ).findings,
-    ).toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
+      ).legal,
+    ).toBe(true);
     expect(
       assessTraitOption(
         catalog,

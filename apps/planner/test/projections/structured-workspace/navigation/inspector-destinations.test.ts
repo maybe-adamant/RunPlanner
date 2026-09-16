@@ -279,7 +279,25 @@ function staleTravelDealShopProject(): {
     'roomExit',
   );
   const entry = createAcquisitionEntryAddress(site, 'travelDealRefill');
+  const blockerIncoming = createIncomingRewardAddress(
+    goldenGBiome,
+    createOccurrenceId('golden-g-b7-e1'),
+  );
   let document = applyProjectCommand(createCompleteFGProject(), catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(blockerIncoming, 'source'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Hestia',
+      options: [
+        { traitKey: 'HestiaWeaponBoon', rarity: 'Rare' },
+        { traitKey: 'CastProjectileBoon', rarity: 'Common' },
+        { traitKey: 'FireballManaSpecialBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  document = applyProjectCommand(document, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: incoming,
     value: { rewardType: 'HermesUpgrade' },

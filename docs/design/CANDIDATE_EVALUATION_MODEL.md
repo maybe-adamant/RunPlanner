@@ -566,197 +566,129 @@ horizons, and cache behavior without changing evaluation semantics.
 
 ### Trait offer candidate boundary
 
-Trait-offer candidates use the same project-bound session as reward and Shop
-interactions. Selected assessment and alternative capability are separate
-products of the same reached reward walk:
+Selected assessment and alternative capability are separate products of the
+same reached reward walk:
 
 - `BiomeRewardSimulation.selectedTraitOffers` publishes data-only
-  `SelectedTraitOfferAssessment` values addressed by exact
-  `TraitOfferAddress`. Each value contains the selected authored offer,
-  acquisition role, chronological index, and branch-grouped option,
-  composition, and replacement-composition assessments. It does not contain
-  pre-offer trait histories or resolved giver contexts.
-- `BiomeCandidateArtifacts.traitOffers.at(address)` returns only opaque
-  `evaluateOffer(value)`, `traitsStartingDraft(giverKey)`,
-  `nextTraitOptionDraft(value)`, and
-  `targetedAcquisitionTargets(value, optionKey)` capabilities. Their private
-  branch-local inputs are the exact pre-offer `TraitHistoryState` and resolved
-  `TraitOfferContext` captured before the selected offer was processed and
-  before equivalent post-state branches could merge. The two draft
-  capabilities construct supported offer shapes; they do not expose the
-  composition domains to the application.
+  `SelectedTraitOfferAssessment` values at exact `TraitOfferAddress` owners,
+  with branch-correlated option, generation and selected-effect assessments.
+- `BiomeCandidateArtifacts.traitOffers.at(address)` returns opaque operations
+  over the captured pre-offer history and source context: complete assessment,
+  starting outcome, structural append/removal and selected child queries.
 
-A query names one exact address and passes one complete proposed outcome to
-that capability. The engine assesses every materialized option, or the
-mutually exclusive Fallback Gold outcome, against every retained branch-local
-context and returns branch-grouped evidence. The application may present the
-selected assessment, but it cannot use that data-only product to assess a
-replacement. Provider membership and trait-local rarity shape remain
-structural command/codec checks.
+The capability captures each branch before selected settlement or equivalent
+post-state merging. Neither the histories nor generation domains escape to
+React. A query supplies a complete proposed outcome, and optionally the exact
+focused option or child selector. Data-only selected findings cannot assess a
+replacement. Provider membership and authored rarity shape remain structural
+command/codec responsibilities.
 
-The selected assessment is published once at biome reward ownership and only
-through the first blocking region. The blocking trait offer retains both its
-complete selected finding group and its exact alternative capability; later
-offers publish neither. Public reward branches carry reachable reward state,
-trait history, and events downstream, but do not carry diagnostic trait-offer
-assessment traces or candidate contexts.
+Publication stops at the first blocking region. The blocking offer retains
+its complete finding group and exact repair capability; later unreached offers
+do not acquire speculative contexts. Public downstream history carries state
+and events, not private candidate inputs or diagnostic offer traces.
 
-Chaos uses one specialized trait-offer domain on that same prepared capability.
-It supplies three independently legal curse/requirement columns and, after an
-option is selected, only that pair's declaration-owned curse operands,
-blessing domain, shared-rarity domain, and blessing operands. Catalog-owned
-defaults are part of the domain so a local editor draft can become complete
-without React deriving ranges or starting values. The two unselected blessings
-remain game-generated and are not candidate, authored, or UI state.
+#### Individual repair and complete-screen support
 
-The complete evaluated trait-offer result also carries branch-correlated Chaos
-screen rules only for ordinary Olympian and Hermes trait offers. The application
-projects Rejected's required/repair status and intersects the branch-local
-blockable row keys; it does not derive the active curse, provider applicability,
-or row domain. A blocked row remains in the complete offer but cannot be
-selected or Rarified. This is a narrow ordinary-offer projection beside the
-specialized Chaos domain, not a second candidate session or application-side
-replay.
+The focused query assesses the proposed row's declaration/current-state
+eligibility, concrete rarity shape, exact replacement and duplicate identity.
+It does not use whole-screen generation failure to disable that row.
+Unrelated sibling failures do not poison repair; a duplicate blocks its actual
+participants. A missing selected target is a following compound edit, not a
+reason to make the parent identity unselectable.
 
-A normal `SpellDrop` is one such fixed-three, rarityless trait-offer
-capability. The engine exposes its exact self-child capability and candidates;
-the application does not duplicate the eight-spell pool or inspect loadout
-identity. Aspect of Selene instead owns its complete Sky Fall tree in
-`loadout.aspectHexTree`; its later concrete Spell Drop settles the
-three-point Path screen without a trait-offer child, so it publishes neither a
-trait-offer candidate capability nor a missing-child finding.
+Complete assessment separately asks whether the ordinary initial screen is
+constructible and whether its selected acquisition detail is valid. The engine
+uses the exact reached source, provider, chance ledger, trait history and
+Denial state in its staged generation solver. A constructibility failure is
+owned by the complete offer (`traitOfferGenerationUnavailable`), not invented
+as a prerequisite on each row. Declaration-invalid rarity remains a distinct
+structural or individual failure. Specialized provider rarity checks retain
+their own contracts.
 
-The returned findings cover prerequisite, negative predicate, context,
-element, rarity-count, targeted-acquisition source and exact-target,
-occupied-slot, wrong-loadout, and acquired-Hammer exclusion rules. For an
-occupied Olympian slot, the same product may carry one exact derived
-replacement transition and its promoted rarity; Heroic is emitted only for
-Epic-to-Heroic replacement and never as a fresh candidate. Replacement
-candidates remain limited to
-`priorityTraitKeys`, and waive only occupied-slot failure. Candidate evaluation
-does not equip a sibling option, rewrite trait history, or persist counters.
-React receives only the bound interaction projection and cannot recreate this
-policy.
+A replacement candidate supplies its exact occupied slot, prior identity and
+promoted rarity. It waives only occupied-slot failure and is not tested as a
+fresh random rarity. Siblings are never equipped during candidate evaluation.
+All evidence for support must agree within one retained branch; one branch's
+eligibility cannot borrow another's generation or selected-effect result.
 
-The target-domain query is a sibling view of that exact offer capability. It
-enumerates a declaration-owned targeted option's legal exact targets per
-retained branch and never unions support into a target that exists in no single
-history. A targeted source with no eligible target is unavailable. Only the
-selected targeted option requires an authored `targetTraitKey`; a missing or
-stale selected target blocks the complete offer while remaining pinned and
-repairable in the application picker. Target enumeration and selected-target
-validation share the engine predicate, including god-trait superchargeability
-and Hammer Rank-II capability.
+The [reward model](REWARD_MODEL.md#trait-bearing-reward-leaves) owns settlement;
+the [construction audit](../audits/traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md)
+owns the source stages. The application must not reproduce either.
 
-The same project-bound candidate session exposes the three run-impacting
-trait products. Natural Selection's capability evaluates the next position of
-one ordered one-to-eight target sequence against the complete pre-acquisition
-frontier, including round completion and cooldown-capped target removal; it
-does not expose eight independent Pom domains. A selected Ransom exposes only a
-data-only current-frontier assessment—removed keys, distinct count, level
-bonus, buffed targets, and resulting history—because no authored random result
-exists. Steady Growth exposes reached threshold owners and an opaque rarity
-target capability. An empty target domain is a legal no-op; a reached nonempty
-domain requires a target and retains a missing or stale value for repair.
+#### Draft operations
 
-These products are branch-local and engine-owned. The application cannot
-recalculate provider membership, round-robin eligibility, encounter progress,
-rarity targets, or Ransom totals.
+Ordinary draft operations share the prepared capability:
 
-For each fresh Olympian or Hermes option, the captured pre-acquisition context
-also retains the exact reached room, generated reward/Shop-item witness,
-active Arcana ranks, and active-Proper fact needed to derive the offer-local
-boon-rarity ledger. The engine intersects that immutable ledger with the
-trait's declared fresh-rarity support before composing the offer. A retained
-fresh value whose exact check is impossible receives the generic
-`rarityRollUnavailable` finding; a value never supported by the declaration
-continues to use `freshRarityUnavailable`. This is the sole fresh-rarity
-feasibility policy; Proper Upbringing contributes through the same numeric
-ledger as every other active offer source.
+- Start over returns one engine-supported initial traits-or-Gold outcome.
+- Append adds an unused individually eligible identity, subject to the
+  three-row structural bound. It may produce a composition-invalid draft.
+- Remove deletes the trailing row and retains valid prefix selection/detail.
+  Removing the last row returns the existing `fallbackGold` outcome.
+- Append from Gold is the inverse structural transition. Gold has no separate
+  activation rule in the editor.
 
-The same branch-local result filters optional Duo/Legendary members in `H`.
-Positive or guaranteed high-tier checks make those variants possible but never
-mandatory, and support from another retained history branch is never unioned
-into the current offer. Replacement candidates continue to use their exact
-next rarity and existing shortage composition. The application consumes these
-findings through the ordinary trait-offer interaction and does not inspect
-rarity arithmetic, Proper Upbringing, room names, Shop profiles, or recount
-elements.
+Complete assessment still controls Save support. Invalid cardinality is
+repairable; it is not a reason to hide the controls that repair it. Ordinary
+draft construction and assessment live together in
+`simulation/traits/authoring/`; the generation authority supplies starting
+outcomes without becoming a UI domain.
 
-For a first Olympian contact, the candidate product also carries
-branch-grouped complete-offer composition assessments. Non-priority options are
-unavailable with a composition-context finding; missing Attack/Special is one
-offer-level finding rather than a fabricated prerequisite. Branch evidence is
-not flattened before support is decided, so one branch's valid first offer
-cannot hide another branch's invalid composition.
+BBB drafts instead consume the evaluated mixed-provider replay domain in
+`simulation/candidates/trait-offer/echo-draft.ts`. They retain sparse rows,
+selected payloads, distinct identities and trailing append/removal. Replay
+eligibility keeps current-state requirements but bypasses linked boon
+prerequisites. Shared presentation does not imply ordinary generation.
 
-Replacement composition is a sibling branch-local product. It reports the
-distinct legal ordinary-key count, the maximum replacement count, and an
-offer-level excess finding. Option assessments and composition must succeed in
-one branch; evidence from separate branch histories is never combined.
+#### Selected child context
 
-Trait editing uses two projections of that one assessment authority:
+Target enumeration and selected-target validation use the same exact
+acquisition state, including earlier primary acquisition for a Stone residual.
+Only active selected effects require complete detail; retained incomplete
+siblings are not erased.
 
-- a complete-offer query evaluates every materialized authored option or the
-  Fallback Gold outcome and remains the authority for consolidated feedback
-  and whether the complete draft is supported for Save; selected simulation
-  remains the acquisition and history authority;
-- a focused-option query receives the same complete proposal plus one
-  `TraitOptionKey` and asks whether the concrete value in that position is
-  supported while every materialized sibling remains fixed.
+Source availability and acquisition targets are distinct when the game makes
+them so. Bridal's ordinary/BBB offer availability remains preferred-only;
+selected acquisition uses its broader fallback only after the preferred pool
+is empty. Missing/stale targets remain pinned and repairable. Latest Model
+uses its declaration-owned Hammer Rank-II domain. These products do not union
+targets from incompatible histories.
 
-Focused support attributes option-local findings to their exact position.
-Unrelated sibling prerequisite, rarity, context, loadout, and priority
-failures do not disable the focused repair. A duplicate blocks every position
-containing that trait; missing Attack/Special blocks a focused proposal that
-still leaves the complete first offer without either core slot; replacement
-composition blocks a focused replacement participant but does not poison an
-ordinary focused option solely because siblings exceed the replacement limit.
-One retained branch satisfying every focused requirement is sufficient, and
-all required evidence must succeed in that same branch.
+Natural Selection exposes the next step of an ordered one-to-eight allocation,
+including round completion and capped-target removal, not eight independent
+Pom domains. Ransoms expose a data-only assessment of removed identities and
+level changes because no authored random result exists. Steady Growth exposes
+the exact reached automatic owner and rarity-target capability: an empty
+domain is a legal no-op; a nonempty domain requires a repairable target.
 
-Offer-shape editing remains behind that exact prepared context. The candidate
-session exposes one engine-constructed starting trait draft for returning from
-Fallback Gold and one engine-constructed append result for adding the next
-materialized position. Removing a trailing position is structural, but its
-result still passes through complete-offer assessment. React never derives the
-ordinary/high-tier/replacement partition, mandatory exhaustion fill, or a
-Fallback Gold availability rule.
+#### Specialized offers
 
-Ordinary draft construction lives in `simulation/traits/authoring/drafts.ts`
-and consumes assessment policy from its sibling `assessment.ts`. Assessment
-owns the composition-domain identity cache with its producer; prefix-dependent
-fresh variants remain uncached. The captured capability retains branch-local
-contexts and selects drafts without exposing those histories to the editor.
+Chaos has its specialized prepared domain: three independently legal
+curse/requirement columns, then the selected pair's operands, blessing,
+shared-rarity support and declaration-owned defaults. Unselected blessings
+remain native-generated, not authored state. Exact-context Chaos chance
+support does not turn it into ordinary bucket composition.
 
-BBB transient drafts instead live in
-`simulation/candidates/trait-offer/echo-draft.ts`. They consume the already
-evaluated mixed-provider domain, preserve sparse rows and selected child
-payloads, and own distinct-trait filtering and trailing append/removal. Query
-evaluation remains separate from these draft operations. Sharing editor
-presentation does not make BBB and ordinary draft construction one algorithm.
+Qualifying god/shop-aware screen assessments also expose applicable Chaos rules.
+Rejected's blockable rows and required/repair state are engine products; the
+blocked row remains displayed but cannot be selected or Rarified. React does
+not infer provider applicability or active curse state.
 
-An unreached offer normally returns unavailable contextual coverage. Closed
-authored invariants do not disappear with that coverage: duplicate sibling
-traits remain an evaluated focused impossibility, using the same duplicate
-authority as complete-offer evaluation. The candidate-session result type
-therefore retains the explicit unavailable variant for unique unreached
-proposals rather than claiming that every focused query was assessed.
+A normal Spell Drop owns a fixed-three rarityless self-child capability.
+Aspect of Selene instead owns the starting tree in loadout; later concrete
+Spell Drops settle Path points without a false trait-offer child.
 
-The established boundary provides:
+#### Contact and caching
 
-- one project/evaluation-bound candidate session;
-- one prepared context per contacted semantic owner;
-- domain-shaped room and reward evaluation;
-- scoped room-local and Hub region replay;
-- first-blocking publication with no generic selected-path recovery replay;
-- exact-address trait artifacts distinct from biome-level selected assessment;
-- structured-workspace ownership of lazy React candidate contact;
-- declaration-owned interaction domains for every live candidate family;
-- one React-side activation adapter and no render-time evaluation authority;
-- one production candidate-session factory shared by runtime and tests;
-- no scalar compatibility API or alternate test evaluation harness;
-- measured removal of ordinary reward-domain biome replay.
+The application lazily invokes exact capabilities; it never inspects chance
+arithmetic, god membership, lifecycle counters or retained trait history.
+Results are project/evaluation-bound. Reuse may memoize complete explicit
+products, never supply missing semantic context.
+
+An unreached unique proposal returns unavailable contextual coverage. Structural
+duplicate detection still applies without that coverage; it must not claim
+that the complete unreached offer was evaluated. There is no alternate replay
+or per-component candidate policy.
 
 ## Non-Goals
 

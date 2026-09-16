@@ -1130,59 +1130,63 @@ complete replacement values. Simulation validates:
 
 ### Trait-bearing reward leaves
 
-Trait authoring is additive to reward identity. Every in-scope acquisition role
-may own one `AuthoredTraitOffer` child. Its closed outcome is either one to
-three distinct materialized trait options with one selected option, or
-mutually exclusive Fallback Gold with no option-local child. An exact encounter
-phase may own the same child when its selected Encounter Definition declares a
-`traitOfferProducer`. The reward kernel resolves reward providers from the
-concrete acquisition role (including payload-source, fixed, Devotion
-chosen/spurned, and purchased Shop roles); encounter providers resolve from
-their declaration. Neither path switches on a room, Shop, component, or
-rendered trait name. An unpicked room, unentered side-room occurrence, unselected
-encounter definition or wheel result, or unpurchased Shop option owns no
-reached trait event.
+Every in-scope acquisition role may own one `AuthoredTraitOffer` child.
+Its closed outcome is one to three distinct trait options with a selected key,
+or mutually exclusive Fallback Gold. A selected Encounter Definition can
+declare the same product through its exact `traitOfferProducer` phase.
+Providers resolve from declaration-owned acquisition roles, not room names or
+presentation. Dormant, unpicked and unpurchased sources produce no reached
+trait event.
 
-At the role's declared lifecycle point, the kernel first applies the existing
-exact loot/use projection and then evaluates every materialized alternative
-against one pre-selection equipped-trait snapshot. A reached invalid offer
-remains in the trace and receives semantic findings, but its selected option
-does not enter equipped state. A valid trait outcome folds only its selected
-trait; valid Fallback Gold publishes its reached evaluation but emits no trait
-event or modeled acquisition. Devotion's chosen role therefore equips before
-combat and its spurned role observes that state after combat; Shop purchases
-fold at their exact positions in the occurrence's `roomActions.order`.
+At the declared lifecycle point, the kernel applies the exact loot/use
+projection and captures one pre-selection history per retained branch.
+Validation separates three products:
 
-The first reached Olympian offer is a complete-offer composition point when
-the pre-offer `ordinaryBoonSlots` projection is empty. Its three alternatives
-must be distinct priority/core traits and include Attack (`Melee`) or Special
-(`Secondary`). Composition findings are owned by the offer address, with one
-finding for each non-priority option and one aggregate missing-Attack/Special
-finding. Hermes, Hammer, dormant, unpicked, and unpurchased roles do not
-consume this first-offer rule. An invalid first offer does not fold its
-selection, so a later reached Olympian can still satisfy the rule. Replacement
-is a sibling composition product: each legal replacement carries its exact
-slot, prior trait, old rarity, new trait, and promoted rarity, while ordinary
-availability counts distinct legal fresh trait keys from the same pre-offer
-branch. Replacement waives only occupied-slot failure; all other requirements
-remain authoritative. The shared composition resolver combines shortage capacity
-with the effective replacement roll: zero removes the ordinary roll, positive
-support permits one ordinary replacement, and one requires an eligible
-replacement. Shortage filling remains independent of that roll. Sacrificial
-Hymn's pending use takes precedence over Ordinary's zero-roll override, without
-making acquisition order a second policy. Replacement transfers the displaced
-trait's folded level plus the transition's level bonus, including into a
-non-Pom-eligible replacement.
+| Product                      | Question                                                                                                                |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Individual option assessment | Does this identity and concrete rarity satisfy its declaration, current-state requirements and exact replacement rules? |
+| Complete-screen generation   | Can these distinct alternatives coexist as an initial screen through the provider's construction stages?                |
+| Selected acquisition         | Are the selected child results complete and legal, and what history transitions follow?                                 |
 
-For Olympian and Hermes offers, one engine-owned composition domain separates
-dependable ordinary/infusion candidates, optional Duo/Legendary candidates,
-and exact slot-replacement transitions. Three or more dependable ordinary
-candidates require three materialized options and permit at most one
-replacement. With one or two dependable ordinary candidates, all must appear;
-optional high-tier outcomes may appear and replacements fill every remaining
-position they can. With none, optional high-tier outcomes and replacements may
-still materialize; if neither does, the only supported outcome is Fallback
-Gold. Denial does not select another composition algorithm.
+An invalid reached offer keeps its trace, semantic owner and repair capability;
+it does not fold the selected trait. A valid offer folds only its selection
+and any explicitly selected carrier effects. Valid Gold records the reached
+offer but no trait acquisition. Devotion's chosen offer precedes combat and
+the spurned offer observes the resulting state afterward. Shop acquisitions
+settle at their authored timeline positions.
+
+#### Ordinary initial-screen support
+
+Olympian/Hermes generation consumes the exact source-rarity context and an
+unchanged pre-offer history. Its staged possibility model covers replacement
+or core seeding, optional linked-priority insertion, seed rarity, finite
+ordinary bucket draws, replacement vacancy rescue and—only when effective
+Denial is off—final rarity rescue. Empty terminal output means Gold. Short
+screens must also be terminally reachable; no ordinary/high-tier count quota
+stands in for construction.
+
+A selected identity is removed from every generation bucket, but is never
+equipped while assembling alternatives. Provider-eligible priority state
+decides core seeding, not a persisted first-offer flag or a generic occupied
+slot count. Present-zero and absent rarity chances remain distinct for rescue.
+The [construction audit](../audits/traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md)
+owns the full source sequence and Trial inheritance exception matrix.
+
+Replacement carries exact old identity, slot, promoted rarity and transferred
+level; it waives occupied-slot failure, not other eligibility. Its explicit
+rarity is not retested as a fresh roll. Hymn can seed despite Ordinary and
+credits every replacement alternative when used. Complete-screen support and
+selected effects must succeed within the same history branch; evidence is
+never assembled from incompatible branches.
+
+Picker candidates use individual assessment. A row may be selectable while
+the current complete screen has a generation finding. This is intentional:
+the user can repair siblings and cardinality without a circular lock.
+[Candidate evaluation](CANDIDATE_EVALUATION_MODEL.md#trait-offer-candidate-boundary)
+owns that query contract. Echo replay, Chaos pairs, NPCs, Hammers and Spells
+retain their separate provider algorithms.
+
+#### Fear and reward settlement
 
 After a valid participating Olympian or Hermes trait selection, effective Vow
 of Denial records up to two exact unselected materialized keys on that same
@@ -1210,59 +1214,56 @@ Artificer conversion, or Echo last-reward recreation. The Arcana/Fear ledger
 retains only the per-biome consumed flag needed by later settlement and Run
 State.
 
-The equipped-trait ledger is the sole authority for trait-derived facts:
-ordinary boon-slot occupancy, element totals and highest base-element count,
-god-boon rarity counts, and `upgradableTraitCount`. Boon Growth's rarifiable
-target and Boon Decay's superchargeable target are distinct predicates over
-that ledger and are not aliases or persisted shadow counters. Those three
-upgradeability products use the core-god declaration fact, excluding Hermes
-and field-NPC traits while leaving their independent boon-rarity facts intact.
-NPC/Story effect-backed choices remain outside this persistent trait lifecycle unless
-their declaration owns one of the engine's closed acquisition transitions.
-Unmodeled numeric combat-value curves and other undeclared mutations and
-providers remain deferred. Pom eligibility, level mutations, and the narrow
-Bridal Glow Hephaestus cooldown limits are explicit normalized products.
+#### Equipped state and acquired effects
 
-Proper Upbringing is the declaration-owned rarity-floor lifecycle. Its
-normalized declaration supplies a `Common`-to-`Rare` floor that activates when
-the equipped ledger reaches its declaration-owned base-element minimums.
-The existing trait-history fold applies activation to eligible Common targets
-and the source's own equipped rarity, leaving excluded targets unchanged.
-Authored offers remain unchanged evidence. Deactivation removes only the
-future-offer floor; applied rarity changes persist. Reactivation repeats the
-pass. The [source audit](../audits/traits/BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md#proper-upbringing)
-records the distinction between target promotion and source assignment.
+Trait history owns slot occupancy, elements, boon-rarity counts, levels and
+upgrade target predicates. Upgradable count, Steady Growth eligibility and
+Bridal Glow offer eligibility are distinct queries, not one generic counter.
+Their core-god classification differs from broader shop-aware rarity counting.
 
-The empty-slot test is always derived from this ledger at the reached offer
-boundary; no persisted first-offer marker or replacement counter exists.
+Source-rarity resolution precedes ledger construction and limited-bonus
+consumption. Forced Common suppresses ignored contributions instead of
+coexisting with a guaranteed-Rare ledger. Specialized NPC/Gorgon and Chaos
+contacts use the same applicable source facts, with their declared orders and
+direct-grant distinctions.
+[The rarity audit](../audits/traits/BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md)
+owns exact contributions, overrides and exclusions.
 
-Encounter-owned offers use the selected active encounter phase as their exact
-owner and fold at `encounterCompleted`, before any encounter-local reward at
-that same completion point. Their alternative-definition offers persist
-sparsely and remain dormant until selected. Provider rarity authorship remains
-catalog-owned: Artemis and Athena expose selectable ranked rarity, while
-Icarus and Hammers omit rarity entirely.
+Proper's activation, reactivation and active-source recheck at Ordinary expiry
+are history transitions. They mutate equipped state without rewriting authored
+offer rarity. Deactivation removes the future-screen bonus, not completed
+promotions.
 
-Targeted acquisitions form a closed transition set. Bridal Glow equips its
-source and promotes one exact eligible equipped god trait to `Heroic`. Latest
-Model equips its rarityless source and upgrades one exact eligible equipped,
-source-capable Rank-I Hammer to Rank II. The exact outcome is authored as the
-selected option's `targetTraitKey`; unselected or dormant options may retain an
-incomplete target, while a selected targeted option must pass the same engine
-predicate used to enumerate its target domain. Hammer rank is independent of
-rarity. No generic trait-effect interpreter, provider switch, or second NPC
-acquisition ledger is introduced.
+Targeted acquisitions are a closed set. Bridal's offer availability requires
+a preferred superchargeable target; after acquisition its target domain may
+widen only when that preferred pool is empty. A missing or stale chosen target
+does not activate fallback. Stone's residual sees state after the primary
+acquisition. Bridal remembers its recipient so any later source-rarity
+increase credits only the positive change in its level grant; removing Bridal
+does not undo prior benefits. Latest Model instead upgrades a source-capable
+permanent Hammer to Rank II. These contracts do not create a generic effect
+interpreter or a second acquisition ledger.
 
-`pendingSpellDrop` is a derived Shrine-delivery reservation keyed to a
-non-rushed purchased Shrine offer. It blocks later Spell Drop generation until
-ordinary acquisition/use history makes the reservation redundant; it is not
-persisted and must not be inferred from the equipped Spell slot. Shrine
-inventory, delayed delivery, and required pickup settlement use the ordinary
-offer and acquisition authorities. Other unmodeled Talent/Surface-Shop details
-remain outside this contract.
+A retained trait may also carry a derived in-run rarity block. Personal Loan's
+non-final boss payout sets that block without removing its identity, element,
+rarity or Common-count contribution. The boss transition precedes subsequent
+encounter-end target capture and is independent of Arcana activation. A fresh
+acquisition does not inherit an earlier instance's block. Level eligibility
+and fresh-offer rarity are not aliases of in-run rarifiability.
+[Effect evidence](../audits/traits/RUN_IMPACTING_TRAIT_EFFECTS_GAME_DATA_AUDIT.md)
+owns Bridal's non-Pom-level omission and Loan's exact native contacts.
 
-The editor only renders normalized domains and simulation results. It does not
-recompute reward legality.
+Encounter-owned offers settle at their declared phase contact; alternative
+definitions remain dormant. Provider authorship stays catalog-owned: ranked
+Artemis/Athena are not rarityless Icarus or Hammer choices.
+
+`pendingSpellDrop` is a derived reservation from a non-rushed purchased Shrine
+offer. It blocks later Spell Drop generation until concrete acquisition makes
+it redundant; it is not inferred from the equipped Spell slot. Inventory,
+delivery and required pickup use the ordinary acquisition authorities.
+
+The editor renders these products and dispatches semantic commands. It does
+not recompute rarity arithmetic, reward legality or acquired effects.
 
 ## Biome-Owned Reward Structures
 

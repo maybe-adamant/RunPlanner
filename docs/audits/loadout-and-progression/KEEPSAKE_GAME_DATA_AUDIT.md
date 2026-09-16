@@ -743,16 +743,18 @@ Athena then publishes her ordinary three-option trait offer. The chronological
 keepsake rank supplies a rarity-level bonus of `1/2/3/4`, which Athena converts
 into a sparse Common/Rare/Epic/Heroic source override. That override enters the
 ordinary rarity ledger before permanent bonuses; ranks II through IV suppress
-temporary bonuses. Rank I retains ordinary Common/Rare/Epic possibilities,
+temporary bonuses. Without forced Common or a replacing room override,
+rank I retains ordinary Common/Rare/Epic possibilities,
 rank II guarantees at least Rare while retaining Epic, rank III guarantees
 Epic, and rank IV guarantees Heroic. Each option rolls separately, so the
 game can produce mixed rank-I/rank-II rows. The planner deliberately retains
 its identity-only Gorgon child and forces the lowest reachable rarity across
 all three rows as one legal deterministic realization; it does not claim to
 enumerate every random mixture. The offer otherwise reuses Athena's existing
-trait prerequisites and selection lifecycle. The detailed rarity evidence,
-precedence rules, and planner simplification live in the boon-rarity ledger
-audit.
+trait prerequisites and selection lifecycle. Ordinary takes precedence over
+this source override and the screen consumes its qualifying curse use. The
+[rarity audit](../traits/BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md#shop-aware-npcs-and-gorgon)
+owns full source precedence and the deterministic planner simplification.
 
 Gorgon Amulet is not permanent. If it is replaced before finding an eligible
 encounter, its pending appearance is lost. After Athena appears, the exhausted

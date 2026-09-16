@@ -146,7 +146,11 @@ function settleOrdinaryBoon(
             giverKey: 'Apollo',
             options: Object.freeze([
               { traitKey, rarity: 'Common' as const },
-              { traitKey: 'ApolloSpecialBoon', rarity: 'Common' as const },
+              {
+                traitKey:
+                  traitKey === 'ApolloWeaponBoon' ? 'ApolloSpecialBoon' : 'ApolloWeaponBoon',
+                rarity: 'Common' as const,
+              },
               { traitKey: 'ApolloCastBoon', rarity: 'Common' as const },
             ] as const),
             selectedOptionKey: 'option1' as const,

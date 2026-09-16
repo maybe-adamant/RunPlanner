@@ -1884,8 +1884,8 @@
                             "giverKey": "Demeter",
                             "options": [
                               {
-                                "traitKey": "SlowExAttackBoon",
-                                "rarity": "Common"
+                                "traitKey": "DemeterCastBoon",
+                                "rarity": "Rare"
                               },
                               {
                                 "traitKey": "PlantHealthBoon",
