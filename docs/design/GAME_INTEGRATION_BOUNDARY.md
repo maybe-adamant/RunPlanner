@@ -362,7 +362,10 @@ configuration tree, rejects links and non-regular files, enforces the existing
 persists `ActivePlanSlot` (defaulting to Slot 1), displays the selected slot's
 bounded status, and loads and freezes that one slot only at the next new-run
 or eligible Postboss admission. Changing the setting cannot hot-swap a live
-session.
+session. The read-only inspector separates the selected slot's plan preview
+from the frozen session's loadout, room progress, admission, and failure
+information. It reports existing execution status without adding conformance
+checks or revalidating player state during rendering.
 
 Postboss recovery is a fresh admission, not restoration of serialized executor
 state. It is attempted once when a new game process attaches to an existing run
@@ -387,5 +390,4 @@ checkpoint.
 
 Dream Dive route ordering, Postboss selection, and phase differences remain
 deferred pending their own source audit and authored-route product. Automatic
-diagnostic import and game-module UI beyond the fixed status surface are also
-deferred.
+diagnostic import remains deferred.
