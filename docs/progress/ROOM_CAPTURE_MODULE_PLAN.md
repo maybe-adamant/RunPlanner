@@ -1,7 +1,38 @@
 # Internal Room Capture Mod
 
-Status: Locked; Gate A implementation is next.
+Status: Gate A complete; Gate B is next.
 Planning base: `d6afab94` in RunPlanner-main.
+Locked plan commit: `ee999384`.
+
+## Delivery State
+
+Gate A is committed as `5c177ae` in the standalone repository. With user
+approval, its `src/` was fast-copy deployed to `h2-dev` on 2026-09-16 and
+verified byte-for-byte. No other package was deployed or enabled/disabled.
+The fallback window currently exposes concrete F/G combat, shop, and postboss
+rooms. Native run/room loading is retained; the capture encounter is completed
+Empty, shop examples are supplied before native stock spawning, and ordinary
+reward examples are added after presentation. Camera framing and HUD ownership
+have explicit stop/disable cleanup, including a native load already in flight.
+
+Independent review found HUD ownership and disable-during-load issues; both
+were corrected. Lua syntax, focused capture/lifecycle tests, and the real
+ModpackLib boot/UI workflow pass: room selection, deferred Load, repeated Load,
+rendered status, zoom/pan/reset, and HUD cleanup. Native presentation/setup
+failures report Error and release capture framing. The boot harness reports its
+expected missing native config-path warning. A suspended/resumed coroutine
+witness covers deferred disable through scene setup and cleanup; it is not
+evidence of native rendering.
+
+The user confirmed the capture workflow works in-game, then separately
+confirmed the extended 10% minimum zoom works. This closes Gate A's native
+acceptance; it does not establish coverage for specialized rooms. Zoom remains
+adjustable in 5% steps up to 150%. The focused checks passed after that change;
+closure changes only record acceptance and were not a reason to rerun them.
+
+Gate B adds Fields and Hub placement coverage using this same loader/camera.
+Gates B–D have not started. No planner implementation, modpack wiring, executor,
+or Lib changes were made.
 
 ## Outcome and Bounds
 
