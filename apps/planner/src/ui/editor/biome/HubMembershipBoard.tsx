@@ -16,6 +16,7 @@ import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 
 export type HubMembershipInput = 'keyboard' | 'pointer';
 export type HubMembershipSourceRegion = 'closed' | 'open';
@@ -242,6 +243,12 @@ export function ClosedHubRoomOption({
         <div className="hub-roster-identity">
           <div className="hub-slot-heading">
             <h3>{slot.label}</h3>
+            <RoomMapLauncher
+              gameName={slot.gameName}
+              hostId={slot.marker.focusKey}
+              label="Map"
+              title={slot.label}
+            />
             <MarkerAssessment marker={slot.marker} />
           </div>
         </div>

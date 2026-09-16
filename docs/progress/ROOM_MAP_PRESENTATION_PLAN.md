@@ -1,6 +1,6 @@
 # Room Maps and Editing References
 
-Status: Gates A/B implemented and independently reviewed; Gate C is next.
+Status: Gates A/B/C implemented and independently reviewed; Gate D closure is next.
 Base: `fa766878`.
 
 Gate A verification: 59 focused viewer/asset/workbench tests passed, followed by
@@ -15,15 +15,25 @@ Gate B verification: 26 focused asset/viewer/Fields tests, planner typecheck,
 scoped ESLint, formatting and production build checks passed. Independent review found no
 actionable issues. Browser checks covered the 70/30 wide layout, stacked narrow
 layouts, a placeholder and a tall-image sizing probe, placement edits/Undo with
-retained zoom, and Expand/Escape/focus. Gate C and the complete phase-closure
-gate remain pending.
+retained zoom, and Expand/Escape/focus.
+
+Gate C verification: 52 focused tests and planner typecheck passed, followed by
+20 affected tests after review and presentation corrections. Side generation,
+destination inspection and Undo remain covered. Scoped ESLint/format checks and
+production web build passed. Browser checks covered the annotated Hub asset,
+closed four-column board, open responsive board/Timeline, a sticky Hub reference
+at bottom rows and short window heights, separate main/side room dialogs,
+full-width side-room controls, focus return, Exit/return visibility and unpinned
+map-first narrow stacking. The source PNG is byte-identical to its packaged
+copy. Gate D's complete phase-closure gate remains pending; native Tauri execution
+was not exercised.
 
 ## Objective
 
 Make room screenshots useful while choosing rooms and configuring spatially
-relevant authoring. Ordinary rooms get an inspection viewer; Fields Layout,
-the Ephyra Hub, and Ephyra side-room setup can keep a reference image visible
-while the existing controls remain usable.
+relevant authoring. Ordinary and side rooms get inspection viewers; Fields
+Layout and the Ephyra Hub can keep a reference image visible while the existing
+controls remain usable.
 
 Maps are static presentation assets. Later screenshots, merged images and
 annotations replace those assets without changing application behavior,
@@ -55,8 +65,8 @@ Current contacts:
   `HubMembershipBoard.tsx`, `HubRoomCards.tsx` and `HubVisitTimeline.tsx` render
   the fixed 26-room board and compact visit roster.
 - `locals/LocalVisitWorkbench.tsx` owns the side-room table inside a main room's
-  Overview. The parent room image locates the exits; a side-room image shows
-  the destination. They must not be substituted for one another.
+  Overview and destination map actions. Main-room inspection stays in the room
+  heading; it does not add a second reference pane to the side-room table.
 - `assembly/hub-assembly.ts` already reads fixed main and side room declarations,
   but `WorkspaceHubSlot` and the ungenerated `WorkspaceLocalVisitSlot` branch
   omit a directly usable room game name. Carry the existing identity into these
@@ -70,6 +80,9 @@ The user supplied and authorized use of assets under
 `/mnt/c/Users/Mohammed Ayyat/Desktop/Hades`. The `Maps` folder currently contains
 111 WebP files, approximately 22.9 MiB, covering Erebus, Oceanus, Fields and
 Tartarus. This is an ingestion source only, never a runtime filesystem path.
+The user also supplied an annotated Ephyra Hub PNG (`Maps/Ephyra/Hub.png`),
+which replaces the `N_Hub` placeholder unchanged for Gate C. Main and side-room
+images remain individual placeholders; the Hub overview is not their substitute.
 Surface and other missing room images initially use placeholders. Some images
 contain incidental enemies/props: they are room references, not a preview of
 the exact generated contents of the plan.
@@ -137,12 +150,11 @@ resizable window manager, new browser window or popout Tauri window.
 | Ordinary room inspector, including fixed/start, story, shop, boss, side and ship rooms | View Map in the existing room heading beside utilities; opens inspection without changing tabs or navigation.                                                              |
 | Outgoing physical target with a chosen room, picked or unpicked                        | Compact map action beside that target's room control/label; previews the target without selecting its exit. No invented action before a room identity exists.              |
 | Fields Room Layout                                                                     | Reference map visible with the current Entry/Cage/Optional/Nemesis controls; closable and reopenable. No new Map tab. Other Fields tabs retain ordinary inspection.        |
-| Hub Overview and Timeline                                                              | Hub Map in the Hub header opens the Hub's static overview reference. Both tabs share that optional reference while their normal controls remain available.                 |
+| Hub Overview and Timeline                                                              | Hub Map at the top right opens the Hub's static reference. Both tabs share it; in side-by-side layout it stays visible while the board scrolls.                            |
 | Hub main-room cards, including closed/unvisited cards, and Timeline rows               | Compact per-room map action beside the name opens inspection of that fixed main room. It does not replace the Hub reference, navigate the rail or alter membership/visits. |
-| Main-room Overview side-room section                                                   | Show Room Map toggles a reference to the parent main room, adjacent to the side-room table; optional and closed initially.                                                 |
 | Side-room table row, generated or not                                                  | Compact map action beside the side-room name opens inspection of the declared destination. It never generates or visits the side room.                                     |
 
-Per-room Hub/side inspection dialogs are distinct from the persistent parent/Hub
+Per-room Hub/side inspection dialogs are distinct from the persistent Hub
 editing reference. Their titles must make the shown room unmistakable.
 
 Reference layout uses the available container width, not just viewport width:
@@ -160,6 +172,9 @@ viewer geometry and do not change control placement when replaced later.
 Hub cards gain no thumbnails, extra detail rows or separate Map column. Preserve
 the four-column normal board and compact roster when the reference is closed;
 when it is open the existing container-responsive rules may reduce columns.
+The Hub reference is sticky within its editing surface, not fixed to the app;
+it scrolls normally when stacked above controls. Zoomed-image scrolling remains
+available inside the image viewport. The side-room table keeps its full width.
 Map buttons are separate from membership labels, row reorder grips and rewards,
 so pointer, touch and keyboard activation cannot trigger those interactions.
 
@@ -234,7 +249,7 @@ Primary acceptance:
 
 Carry missing declaration identities through the application descriptors, add
 the Hub reference across Overview/Timeline, add per-main-room inspection actions,
-and add parent references/destination inspection to the side-room section.
+and add destination inspection to the full-width side-room section.
 Keep the rail as room-detail navigation and preserve the current compact board.
 
 Primary acceptance:
@@ -244,13 +259,14 @@ Primary acceptance:
   identity without generating, opening, visiting or navigating to it.
 - Hub Map survives Overview/Timeline switching; a per-room inspection dialog
   leaves that Hub reference and the roster/membership state intact.
-- The main-room reference and a side destination display different correct
-  identities. Side generation/order/reward edits use the unchanged controls and
-  preserve the parent reference.
+- Main-room heading inspection and side-row inspection display their own correct
+  identities. Side generation/order/reward edits use the unchanged controls;
+  viewing generated or ungenerated destinations does not edit them.
 - Representative Hub interaction tests protect checkbox, drag/reorder, reward
   and finding contacts. Do not replicate the engine's full Hub policy matrix.
 - Visual review covers the four-column closed-pane board, open-pane responsive
-  layout, compact Timeline, side-room table, and narrow stacked presentation.
+  layout, sticky map while editing bottom rows, compact Timeline, full-width
+  side-room table, and narrow stacked presentation without pinned overlays.
 
 ### D — Independent review and closure
 

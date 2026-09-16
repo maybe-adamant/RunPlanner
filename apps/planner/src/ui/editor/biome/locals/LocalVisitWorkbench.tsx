@@ -12,6 +12,7 @@ import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
+import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { CandidateSelect } from '../CandidateSelect';
 import { DoorRewardEditor } from '../DoorRewardEditor';
 function LocalVisitOrderSelect({
@@ -85,7 +86,17 @@ function LocalVisitSlotRow({
   return (
     <tr className="ephyra-side-grid-row">
       <td className="ephyra-side-priority">{slot.availabilityRank}</td>
-      <th scope="row">{slot.label}</th>
+      <th scope="row">
+        <div className="ephyra-side-room-identity">
+          <span>{slot.label}</span>
+          <RoomMapLauncher
+            gameName={slot.gameName}
+            hostId={slot.marker.focusKey}
+            label="Map"
+            title={slot.label}
+          />
+        </div>
+      </th>
       <td>
         <CandidateSelect
           id={`local-${slot.marker.focusKey}-generation`}

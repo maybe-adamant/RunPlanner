@@ -13,6 +13,7 @@ import {
 import { useAppSelector } from '@planner/state/store';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import { RoomMapReferencePane } from '@planner/ui/room-maps/RoomMapReferencePane';
 import { HubCompletionHandoff } from './HubCompletionHandoff';
 import {
   ClosedHubRoomOption,
@@ -99,6 +100,9 @@ export function HubDecisionWorkbench({
     hubIdentity,
     requested: requestedTab,
   });
+  const hubMapLauncher = useRef<HTMLButtonElement>(null);
+  const [mapState, setMapState] = useState({ hubIdentity, visible: false });
+  const mapVisible = mapState.hubIdentity === hubIdentity ? mapState.visible : false;
   const activeTab =
     tabState.hubIdentity === hubIdentity &&
     tabState.requested === requestedTab &&
@@ -171,6 +175,18 @@ export function HubDecisionWorkbench({
           <span className="neutral-status">
             {authoredVisitCount} of {node.requiredVisitCount} planned
           </span>
+          {activeTab === 'exit' ? null : (
+            <button
+              aria-expanded={mapVisible}
+              aria-label="Toggle Hub map reference"
+              className="quiet-action action-compact hub-map-toggle"
+              onClick={() => setMapState({ hubIdentity, visible: !mapVisible })}
+              ref={hubMapLauncher}
+              type="button"
+            >
+              Hub Map
+            </button>
+          )}
         </div>
       </header>
       <nav
@@ -203,61 +219,74 @@ export function HubDecisionWorkbench({
         id={`${titleId}-tabpanel`}
         role="tabpanel"
       >
-        {activeTab === 'overview' ? (
-          <section className="hub-board" aria-label="Hub room participation">
-            <header className="hub-board-heading">
-              <div className="owner-markers">
-                <h4>Open rooms</h4>
-                <MarkerAssessment marker={node.openSet} />
-              </div>
-              <p>Open or close the rooms available on this Hub board.</p>
-            </header>
-            <div
-              {...openSetTarget}
-              aria-label="Hub room set"
-              className="hub-overview-room-grid"
-              ref={(element) => {
-                overviewOpenMembershipRegion.current = element;
-                openSetTarget.ref(element);
-              }}
-              role="group"
-              tabIndex={-1}
-            >
-              {node.slots.map((slot) =>
-                slot.open ? (
-                  <OpenHubRoomCard
-                    dropAfter={undefined}
-                    dropBefore={undefined}
-                    focusedRewardOwnerKey={focusedOwnerKey}
-                    interactions={interactions}
-                    key={slot.hubSlotKey}
-                    onMembershipTransition={continueKeyboardMembershipAfterTransition}
-                    pointerDragging={false}
-                    ranking={ranking}
-                    requiredVisitCount={node.requiredVisitCount}
-                    showOrder={false}
-                    slot={slot}
-                    visitOrderInteraction={visitOrderInteraction}
-                  />
-                ) : (
-                  <ClosedHubRoomOption
-                    interactions={interactions}
-                    key={slot.hubSlotKey}
-                    onMembershipTransition={continueKeyboardMembershipAfterTransition}
-                    slot={slot}
-                  />
-                ),
+        {activeTab === 'exit' ? null : (
+          <div className="hub-map-layout" data-map-visible={mapVisible || undefined}>
+            <div className="hub-map-controls">
+              {activeTab === 'overview' ? (
+                <section className="hub-board" aria-label="Hub room participation">
+                  <header className="hub-board-heading">
+                    <div className="owner-markers">
+                      <h4>Open rooms</h4>
+                      <MarkerAssessment marker={node.openSet} />
+                    </div>
+                    <p>Open or close the rooms available on this Hub board.</p>
+                  </header>
+                  <div
+                    {...openSetTarget}
+                    aria-label="Hub room set"
+                    className="hub-overview-room-grid"
+                    ref={(element) => {
+                      overviewOpenMembershipRegion.current = element;
+                      openSetTarget.ref(element);
+                    }}
+                    role="group"
+                    tabIndex={-1}
+                  >
+                    {node.slots.map((slot) =>
+                      slot.open ? (
+                        <OpenHubRoomCard
+                          dropAfter={undefined}
+                          dropBefore={undefined}
+                          focusedRewardOwnerKey={focusedOwnerKey}
+                          interactions={interactions}
+                          key={slot.hubSlotKey}
+                          onMembershipTransition={continueKeyboardMembershipAfterTransition}
+                          pointerDragging={false}
+                          ranking={ranking}
+                          requiredVisitCount={node.requiredVisitCount}
+                          showOrder={false}
+                          slot={slot}
+                          visitOrderInteraction={visitOrderInteraction}
+                        />
+                      ) : (
+                        <ClosedHubRoomOption
+                          interactions={interactions}
+                          key={slot.hubSlotKey}
+                          onMembershipTransition={continueKeyboardMembershipAfterTransition}
+                          slot={slot}
+                        />
+                      ),
+                    )}
+                  </div>
+                </section>
+              ) : (
+                <HubVisitTimeline
+                  focusedRewardOwnerKey={focusedOwnerKey}
+                  interactions={interactions}
+                  node={node}
+                />
               )}
             </div>
-          </section>
-        ) : null}
-        {activeTab === 'timeline' ? (
-          <HubVisitTimeline
-            focusedRewardOwnerKey={focusedOwnerKey}
-            interactions={interactions}
-            node={node}
-          />
-        ) : null}
+            <RoomMapReferencePane
+              gameName={node.gameName}
+              hostId={hubIdentity}
+              onVisibleChange={(visible) => setMapState({ hubIdentity, visible })}
+              title="Ephyra Hub"
+              visibilityLauncherRef={hubMapLauncher}
+              visible={mapVisible}
+            />
+          </div>
+        )}
         {activeTab === 'exit' ? (
           <section className="hub-board" aria-label="Hub exit">
             <HubCompletionHandoff interaction={handoff} node={node} />

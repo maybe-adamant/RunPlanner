@@ -96,11 +96,18 @@ describe('RoomMapReferencePane', () => {
     );
     expect(screen.getByRole('complementary', { name: 'Combat 03 map reference' })).toBeTruthy();
     expect(screen.getByText('100%')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
+    expect(screen.getByRole('dialog')).toBeTruthy();
 
     view.rerender(
       <RoomMapReferencePane gameName="H_Combat04" hostId="occurrence-b" title="Combat 04" />,
     );
+    expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.queryByRole('complementary', { name: 'Combat 04 map reference' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Show map reference for Combat 04' })).toBeTruthy();
+    const reopen = screen.getByRole('button', { name: 'Show map reference for Combat 04' });
+    fireEvent.click(reopen);
+    expect(screen.getByRole('complementary', { name: 'Combat 04 map reference' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
+    expect(screen.getByRole('heading', { name: 'Combat 04 map' })).toBeTruthy();
   });
 });

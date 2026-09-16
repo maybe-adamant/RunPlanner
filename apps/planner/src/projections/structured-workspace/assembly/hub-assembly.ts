@@ -263,6 +263,7 @@ function projectHubNode(
           availabilityRank: slot.availabilityRank,
           entered: enteredOrdinal >= 0,
           enteredOrdinal: enteredOrdinal < 0 ? null : enteredOrdinal + 1,
+          gameName: slot.roomGameName,
           key: slot.slotKey,
           label: requireWorkspaceRoom(catalog, localOccurrence.gameName).label,
           marker: markerDestinations.marker(address),
@@ -444,6 +445,7 @@ function projectHubNode(
       // moves it out of the exact visit order.
       canClose: target !== undefined && !visitOrder.includes(slot.slotKey),
       canOpen: target === undefined && targets.size < descriptor.openCount.max,
+      gameName: slot.roomGameName,
       hubSlotKey: slot.slotKey,
       label: slotRoom.label,
       marker: slotMarker,
@@ -529,6 +531,7 @@ function projectHubNode(
     kind: 'hubDecision' as const,
     key: `hub:${semanticAddressKey(owner)}`,
     hubKey: descriptor.hubKey,
+    gameName: descriptor.terminal.roomGameName,
     marker: hubMarker,
     openSet: markerDestinations.marker(createHubOpenSetAddress(biome, descriptor.hubKey)),
     openSlotCount: Object.freeze({

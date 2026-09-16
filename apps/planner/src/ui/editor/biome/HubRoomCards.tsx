@@ -11,6 +11,7 @@ import {
   type WorkspaceMarker,
 } from '@planner/projections/structured-workspace';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { DoorRewardEditor } from './DoorRewardEditor';
 import {
   HubSlotMembershipControl,
@@ -77,6 +78,12 @@ export function OpenHubRoomCard({
   const roomHeading = (
     <div className="hub-slot-heading">
       <h3>{slot.label}</h3>
+      <RoomMapLauncher
+        gameName={slot.gameName}
+        hostId={slot.marker.focusKey}
+        label="Map"
+        title={slot.label}
+      />
       {visitMarker === undefined ? null : <MarkerAssessment marker={visitMarker} />}
       {showSlotAssessment ? <MarkerAssessment marker={slot.marker} /> : null}
     </div>
