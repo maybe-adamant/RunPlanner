@@ -19,9 +19,18 @@ describe('room selector projection', () => {
     expect(roomPickerCandidateLabel('G', room('G_Combat02'))).toBe('Combat 02 (3 Doors)');
     expect(roomPickerCandidateLabel('I', room('I_Combat01'))).toBe('Combat 01 (2 Doors)');
 
-    expect(roomPickerCandidateLabel('H', room('H_Combat02'))).toBe('Combat 02');
+    expect(roomPickerCandidateLabel('H', room('H_MiniBoss01'))).toBe(room('H_MiniBoss01').label);
     expect(roomPickerCandidateLabel('Q', room('Q_Combat03'))).toBe('Combat 03');
     expect(roomPickerCandidateLabel('F', room('F_MiniBoss01'))).toBe('Root-Stalker');
+  });
+
+  it.each([
+    ['H_Combat09', 'Combat 09 (2 Slots)'],
+    ['H_Combat03', 'Combat 03 (3 Slots)'],
+    ['H_Combat04', 'Combat 04 (4 Slots)'],
+    ['H_Combat01', 'Combat 01 (5 Slots)'],
+  ])('shows %s declared cage capacity in its picker label', (gameName, label) => {
+    expect(roomPickerCandidateLabel('H', room(gameName))).toBe(label);
   });
 
   it.each([

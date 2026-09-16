@@ -352,7 +352,11 @@ describe('structured workspace interaction binding', () => {
       .sections.flatMap((section) => section.items)
       .find((item) => item.value.gameName === 'H_Combat02');
     if (ordinary === undefined) throw new Error('H eligible ordinary Door 1 choice is missing');
-    expect(ordinary).toMatchObject({ disabled: true, label: 'Combat 02', state: 'possible' });
+    expect(ordinary).toMatchObject({
+      disabled: true,
+      label: 'Combat 02 (3 Slots)',
+      state: 'possible',
+    });
     expect(() => interaction.intentFor('H_Combat02')).toThrow(/not currently authorable/);
     expect(allocations).toBe(0);
   });

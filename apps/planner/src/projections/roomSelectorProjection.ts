@@ -70,8 +70,15 @@ export function olympusExitTypeLabel(
   return undefined;
 }
 
-/** Picker-only physical exit summaries; canonical room labels remain unchanged. */
+/** Picker-only room layout summaries; canonical room labels remain unchanged. */
 export function roomPickerCandidateLabel(biomeKey: string, room: RoomDeclaration): string {
+  if (biomeKey === 'H' && room.kind === 'Combat') {
+    const cages = room.localChildren.find(
+      (child) =>
+        child.kind === 'boundedRewardSlots' && child.offerRewardCapability === 'fieldsCages',
+    );
+    if (cages?.kind === 'boundedRewardSlots') return `${room.label} (${cages.rawCapacity} Slots)`;
+  }
   if (biomeKey === 'P') {
     const indoorCount = room.exits.filter(
       (exit) => olympusExitTypeLabel(exit.type) === 'Indoor',
