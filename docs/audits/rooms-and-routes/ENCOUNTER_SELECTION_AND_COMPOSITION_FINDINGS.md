@@ -785,13 +785,20 @@ scalar wager outcome remains deferred.
 - One route-wide Nemesis occurrence rule covers clean combat and ordinary
   random events. The shared six-room field-NPC spacing rule also applies.
 - The Planner authors the realized family and request or result rather than
-  simulating profile history, text-line selection, or RNG. Free item and
-  contest persist the selected item; Gold and damage trades persist only their
-  accept/decline response; trait trade persists the selected eligible trait and
-  response. Accept means the source cost was paid and the player survived. The
+  simulating profile history, text-line selection, or RNG. The family can remain
+  configured while the interaction's concrete offer is unresolved. Free item,
+  contest, Gold trade and damage trade retain the offered item in the generated
+  pickup entry; trades additionally retain their accept/decline response.
+  Trait trade retains the offered trait and response, with a fixed Gold result.
+  Accept means the source cost was paid and the player survived. The
   exact rolled Gold price, damage amount, scalar affordability, health, death,
   contest threshold, and the 2,000-damage presentation tier remain outside
   simulation.
+- Known source/model discrepancy: boon-trade candidates currently restrict
+  equipped traits to Olympian givers with rarity. Native `IsGodTrait` with
+  `ForShop = true` also admits other shop-aware god givers, represented by the
+  catalog's `shopAwareGodTrait` predicate. Both prefer Common candidates when
+  available; broadening that candidate filter remains a focused follow-up.
 - Event-generated rewards use the ordinary acquisition and pickup semantics
   for their concrete declarations. Requiredness comes from the event family,
   trait trade reuses ordinary trait removal, and pickup alternatives remain

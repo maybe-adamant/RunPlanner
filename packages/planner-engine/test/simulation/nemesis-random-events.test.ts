@@ -31,6 +31,7 @@ import {
   goldenFBiome,
   goldenFOccurrenceId,
   goldenHBiome,
+  replaceNemesisRandomEventInteraction,
 } from '@run-planner/test-fixtures/underworld';
 
 const nemesisRandomEventFamilies = [
@@ -155,12 +156,12 @@ describe('Nemesis random events', () => {
           break;
       }
       if (rewardType === '') throw new Error(`missing result for ${family}`);
-      project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceNemesisRandomEventOutcome',
-        event: createNemesisRandomEventAddress(phase),
+      project = replaceNemesisRandomEventInteraction(
+        project,
+        createNemesisRandomEventAddress(phase),
         value,
-        reward: { rewardType },
-      });
+        { rewardType },
+      );
       if (optional) project = insertOptionalResult(project);
 
       const evaluated = simulateProjectAssembly(catalog, project).evaluation;
@@ -197,12 +198,12 @@ describe('Nemesis random events', () => {
 
   it('publishes Nemesis free-item result at the event address without a Shop action', () => {
     let project = selectEvent();
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceNemesisRandomEventOutcome',
-      event: createNemesisRandomEventAddress(phase),
-      value: { kind: 'freeItem' },
-      reward: { rewardType: 'LastStandDrop' },
-    });
+    project = replaceNemesisRandomEventInteraction(
+      project,
+      createNemesisRandomEventAddress(phase),
+      { kind: 'freeItem' },
+      { rewardType: 'LastStandDrop' },
+    );
     project = insertOptionalResult(project);
     const evaluation = simulateProjectAssembly(catalog, project).evaluation;
     const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'F');
@@ -212,12 +213,12 @@ describe('Nemesis random events', () => {
 
   it('reuses Time Piece and Sea Star capability while forbidding Artificer on the event result', () => {
     let project = selectEvent();
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceNemesisRandomEventOutcome',
-      event: createNemesisRandomEventAddress(phase),
-      value: { kind: 'freeItem' },
-      reward: { rewardType: 'ArmorBoost' },
-    });
+    project = replaceNemesisRandomEventInteraction(
+      project,
+      createNemesisRandomEventAddress(phase),
+      { kind: 'freeItem' },
+      { rewardType: 'ArmorBoost' },
+    );
     const source = createAcquisitionRoleAddress(
       createAcquisitionEntryAddress(
         createAcquisitionSiteAddress(
@@ -373,12 +374,12 @@ describe('Nemesis random events', () => {
       phase,
       encounterKey: 'NemesisRandomEvent',
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceNemesisRandomEventOutcome',
-      event: createNemesisRandomEventAddress(phase),
-      value: { kind: 'traitTrade', traitKey: unavailableTrait, response: 'accept' },
-      reward: { rewardType: 'RoomMoneyTripleDrop' },
-    });
+    project = replaceNemesisRandomEventInteraction(
+      project,
+      createNemesisRandomEventAddress(phase),
+      { kind: 'traitTrade', traitKey: unavailableTrait, response: 'accept' },
+      { rewardType: 'RoomMoneyTripleDrop' },
+    );
     const evaluation = simulateProjectAssembly(catalog, project).evaluation;
     expect(evaluation.findings).toContainEqual(
       expect.objectContaining({ code: 'nemesisOutcomeUnavailable' }),
@@ -396,6 +397,30 @@ describe('Nemesis random events', () => {
     ).toBe(false);
   });
 
+  it('reports unresolved interaction detail at the required action after family selection', () => {
+    let project = selectEvent();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectNemesisRandomEventFamily',
+      event: createNemesisRandomEventAddress(phase),
+      family: 'freeItem',
+    });
+    const interaction = createRoomActionAddress(
+      goldenFBiome,
+      goldenFOccurrenceId(5, 1),
+      roomActionKey({ kind: 'interactEncounter', phaseKey: 'Encounter' }),
+    );
+    const assembly = simulateProjectAssembly(catalog, project);
+    expect(assembly.evaluation.findings).toContainEqual(
+      expect.objectContaining({ code: 'nemesisOutcomeMissing', origin: interaction }),
+    );
+    expect(
+      nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
+        assembly,
+        createNemesisRandomEventAddress(phase),
+      )?.branches.length,
+    ).toBeGreaterThan(0);
+  });
+
   it('retains a declined trade result without activating its pickup or trait removal', () => {
     let project = createGoldenFGHIProject();
     project = applyProjectCommand(project, catalog, {
@@ -403,12 +428,12 @@ describe('Nemesis random events', () => {
       phase,
       encounterKey: 'NemesisRandomEvent',
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceNemesisRandomEventOutcome',
-      event: createNemesisRandomEventAddress(phase),
-      value: { kind: 'goldTrade', response: 'decline' },
-      reward: { rewardType: 'MaxHealthDrop' },
-    });
+    project = replaceNemesisRandomEventInteraction(
+      project,
+      createNemesisRandomEventAddress(phase),
+      { kind: 'goldTrade', response: 'decline' },
+      { rewardType: 'MaxHealthDrop' },
+    );
     const occurrence = project.route?.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === goldenFOccurrenceId(5, 1),
     );
@@ -423,6 +448,87 @@ describe('Nemesis random events', () => {
     expect(simulateProjectAssembly(catalog, project).evaluation.findings).not.toContainEqual(
       expect.objectContaining({ code: 'nemesisOutcomeUnavailable' }),
     );
+  });
+
+  it('uses the inventory at the Nemesis interaction before, between, and after Fields cages', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat05');
+    const owner = createOccurrenceAddress(goldenHBiome, occurrenceId);
+    const passive = createEncounterPhaseAddress(
+      goldenHBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Passive',
+    );
+    const event = createNemesisRandomEventAddress(passive);
+    const action = createRoomActionAddress(
+      goldenHBiome,
+      occurrenceId,
+      roomActionKey({ kind: 'interactEncounter', phaseKey: 'Passive' }),
+    );
+    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase: passive,
+      encounterKey: 'NemesisRandomEvent',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFieldsSpatialPoint',
+      spatial: createFieldsSpatialAddress(owner, { kind: 'nemesis' }),
+      pointId: 623602,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectNemesisRandomEventFamily',
+      event,
+      family: 'traitTrade',
+    });
+
+    // The real route acquires Hestia from Cage03, then Apollo from Cage02.
+    for (const [toIndex, hasHestia, hasApollo] of [
+      [0, false, false],
+      [2, true, false],
+      [4, true, true],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'MoveRoomAction',
+        action,
+        toIndex,
+      });
+      const assembly = simulateProjectAssembly(catalog, project);
+      const support = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
+        assembly,
+        event,
+      );
+      if (support === undefined) throw new Error('missing interaction-time Nemesis candidates');
+      expect(support.branches.length).toBeGreaterThan(0);
+      for (const branch of support.branches) {
+        expect(branch.traitTradeTraitKeys.includes('BurnExplodeBoon')).toBe(hasHestia);
+        expect(branch.traitTradeTraitKeys.includes('ApolloRetaliateBoon')).toBe(hasApollo);
+      }
+      expect(assembly.evaluation.findings).toContainEqual(
+        expect.objectContaining({ code: 'nemesisOutcomeMissing', origin: action }),
+      );
+    }
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceNemesisRandomEventInteraction',
+      event,
+      value: {
+        kind: 'traitTrade',
+        traitKey: 'ApolloRetaliateBoon',
+        response: 'decline',
+        reward: null,
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'MoveRoomAction',
+      action,
+      toIndex: 0,
+    });
+    const moved = simulateProjectAssembly(catalog, project);
+    expect(moved.evaluation.findings).toContainEqual(
+      expect.objectContaining({ code: 'nemesisOutcomeUnavailable', origin: action }),
+    );
+    const repair = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(moved, event);
+    expect(repair?.branches[0]?.traitTradeTraitKeys.length).toBeGreaterThan(0);
+    expect(repair?.branches[0]?.traitTradeTraitKeys).not.toContain('ApolloRetaliateBoon');
   });
 
   it('places the H event beside four optionals when the room has spare physical capacity', () => {
@@ -449,12 +555,12 @@ describe('Nemesis random events', () => {
       phase: passive,
       encounterKey: 'NemesisRandomEvent',
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceNemesisRandomEventOutcome',
-      event: createNemesisRandomEventAddress(passive),
-      value: { kind: 'freeItem' },
-      reward: { rewardType: 'ArmorBoost' },
-    });
+    project = replaceNemesisRandomEventInteraction(
+      project,
+      createNemesisRandomEventAddress(passive),
+      { kind: 'freeItem' },
+      { rewardType: 'ArmorBoost' },
+    );
     const selected = project.route.biomes
       .find((biome) => biome.biomeKey === 'H')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);

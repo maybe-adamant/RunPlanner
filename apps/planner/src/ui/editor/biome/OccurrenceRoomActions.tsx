@@ -30,6 +30,7 @@ import { LifecycleBoundaryRow } from './RoomLifecycleBoundaryRow';
 import { RoomActionAcquisitionRow } from './RoomActionAcquisitionRow';
 import { RoomActionInlineEditors } from './RoomActionInlineEditors';
 import { RoomActionOrderingControls } from './RoomActionOrderingControls';
+import { NemesisInteractionEditor } from './NemesisEventEditor';
 interface PendingRoomActionPointerDrag {
   readonly actionKey: string;
   readonly handle: HTMLElement;
@@ -267,9 +268,12 @@ export function RoomActionsWorkbench({
     >['supplement'],
   ): ReactNode => {
     if (supplement === undefined) return null;
-    return supplement.kind === 'encounter'
-      ? (renderEncounterPhase?.(supplement.phase) ?? null)
-      : (renderRewardWheel?.(supplement.wheel) ?? null);
+    if (supplement.kind === 'encounter') return renderEncounterPhase?.(supplement.phase) ?? null;
+    if (supplement.kind === 'rewardWheel') return renderRewardWheel?.(supplement.wheel) ?? null;
+    const interaction = interactions.nemesisEvents.get(workspaceInteractionKey(supplement.owner));
+    return interaction === undefined ? null : (
+      <NemesisInteractionEditor interaction={interaction} />
+    );
   };
   const dropState = (target: RoomActionDropTarget) => {
     if (!sameRoomActionDropTarget(pointerDrag?.target, target)) return undefined;
@@ -310,6 +314,10 @@ export function RoomActionsWorkbench({
     >['supplement'],
   ) => {
     if (actions === undefined) return null;
+    const nemesisInteraction =
+      supplement?.kind === 'nemesisInteraction'
+        ? interactions.nemesisEvents.get(workspaceInteractionKey(supplement.owner))
+        : undefined;
     const proposals = row.proposalKeys.flatMap((key) => {
       const proposal = actions.proposals.find((candidate) => candidate.key === key);
       return proposal === undefined ? [] : [proposal];
@@ -352,11 +360,13 @@ export function RoomActionsWorkbench({
           }
           data-in-order={row.rank === null ? 'false' : 'true'}
           data-inline-layout={
-            row.reference.kind === 'interactKeepsakeRack' || row.fountainRarity !== undefined
-              ? 'compact'
-              : inlineMysteryBoonOffer
-                ? 'mystery-boon'
-                : undefined
+            nemesisInteraction !== undefined
+              ? 'sentence'
+              : row.reference.kind === 'interactKeepsakeRack' || row.fountainRarity !== undefined
+                ? 'compact'
+                : inlineMysteryBoonOffer
+                  ? 'mystery-boon'
+                  : undefined
           }
           data-room-action-key={row.key}
           {...findingTarget(row.address)}
@@ -377,7 +387,11 @@ export function RoomActionsWorkbench({
             <span aria-hidden="true" className="hub-roster-rank">
               {row.rank ?? '—'}
             </span>
-            <strong>{row.label}</strong>
+            {nemesisInteraction === undefined ? (
+              <strong>{row.label}</strong>
+            ) : (
+              <NemesisInteractionEditor interaction={nemesisInteraction} />
+            )}
             {row.stale ? <span className="neutral-status">stale</span> : null}
             {row.rank === null && row.participation === 'required' ? (
               <span className="neutral-status">required</span>
@@ -391,6 +405,7 @@ export function RoomActionsWorkbench({
                 interactions={interactions}
                 row={row}
               />
+              {nemesisInteraction === undefined ? renderSupplement(supplement) : null}
             </div>
             <div className="room-action-ordering">
               {placement === undefined ? (
@@ -432,7 +447,6 @@ export function RoomActionsWorkbench({
             interactions={interactions}
             row={row}
           />
-          {renderSupplement(supplement)}
         </li>
         {row.rank === null ? null : checkpointRows(row.rank, checkpoints)}
       </Fragment>

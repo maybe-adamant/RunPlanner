@@ -10,6 +10,7 @@ import {
   createUnderworldFPoolCheckpoint,
   createUnderworldFWellCheckpoint,
   goldenFBiome,
+  replaceNemesisRandomEventInteraction,
   goldenFStartId,
   goldenGBiome,
   goldenHBiome,
@@ -336,12 +337,12 @@ function nemesisFreeItemProject() {
     phase,
     encounterKey: 'NemesisRandomEvent',
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceNemesisRandomEventOutcome',
-    event: createNemesisRandomEventAddress(phase),
-    value: { kind: 'freeItem' },
-    reward: { rewardType: 'EmptyMaxHealthDrop' },
-  });
+  project = replaceNemesisRandomEventInteraction(
+    project,
+    createNemesisRandomEventAddress(phase),
+    { kind: 'freeItem' },
+    { rewardType: 'EmptyMaxHealthDrop' },
+  );
   return fOnlyProject(authorLegalTraitOffers(project));
 }
 

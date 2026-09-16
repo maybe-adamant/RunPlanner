@@ -7,7 +7,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits/state';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 83 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 84 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -240,13 +240,26 @@ export interface AuthoredGorgonPhaseResult {
 }
 
 /** Closed, phase-local realization of the single Nemesis random-event encounter. */
+export type AuthoredNemesisRandomEventKind =
+  'freeItem' | 'goldTrade' | 'damageTrade' | 'traitTrade' | 'damageContest';
+
+/** Closed declaration-independent family domain for phase configuration. */
+export const NEMESIS_RANDOM_EVENT_FAMILIES = Object.freeze([
+  'freeItem',
+  'goldTrade',
+  'damageTrade',
+  'traitTrade',
+  'damageContest',
+] as const satisfies readonly AuthoredNemesisRandomEventKind[]);
+
 export type AuthoredNemesisRandomEventOutcome =
   | { readonly kind: 'freeItem' }
   | { readonly kind: 'goldTrade'; readonly response: 'accept' | 'decline' }
   | { readonly kind: 'damageTrade'; readonly response: 'accept' | 'decline' }
   | {
       readonly kind: 'traitTrade';
-      readonly traitKey: string;
+      /** The family may be selected before its interaction-time boon is chosen. */
+      readonly traitKey: string | null;
       readonly response: 'accept' | 'decline';
     }
   | { readonly kind: 'damageContest'; readonly result: 'success' | 'failure' };

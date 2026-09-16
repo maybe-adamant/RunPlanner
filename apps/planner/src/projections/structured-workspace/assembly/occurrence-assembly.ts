@@ -613,6 +613,9 @@ export function assembleWorkspaceOccurrence(
     );
   }
   for (const phase of encounterPhases) {
+    if (phase.customizable && phase.nemesisEvent !== undefined) {
+      input.markerDestinations.redirectTo(phase.nemesisEvent.marker, phase.marker, node.key);
+    }
     input.markerDestinations.setRoomTab(
       [
         phase.marker,

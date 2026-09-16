@@ -1,12 +1,6 @@
 import type { Catalog } from '../../../catalog-schema';
 import type { AuthoredNemesisRandomEventOutcome } from '../../model';
-import {
-  expectExactKeys,
-  expectNonBlankString,
-  expectRecord,
-  expectString,
-  failProjectDocument,
-} from '../../validation';
+import { expectExactKeys, expectRecord, expectString, failProjectDocument } from '../../validation';
 
 export function decodeNemesisRandomEventOutcome(
   value: unknown,
@@ -33,8 +27,9 @@ export function decodeNemesisRandomEventOutcome(
       });
     case 'traitTrade': {
       expectExactKeys(record, ['kind', 'traitKey', 'response'], path);
-      const traitKey = expectNonBlankString(record.traitKey, `${path}.traitKey`);
-      if (catalog.traits.byKey[traitKey] === undefined)
+      const traitKey =
+        record.traitKey === null ? null : expectString(record.traitKey, `${path}.traitKey`);
+      if (traitKey !== null && catalog.traits.byKey[traitKey] === undefined)
         failProjectDocument(`${path}.traitKey`, 'unknown trait');
       return Object.freeze({
         kind,

@@ -508,11 +508,10 @@ export function decodeRoomOccurrence(input: {
     }
     if (nemesisPolicy === undefined)
       failProjectDocument(sitePath, 'catalog has no Nemesis event policy');
-    if (result === undefined || result === null)
-      failProjectDocument(
-        sitePath,
-        'a concrete Nemesis outcome must own exactly one concrete result reward',
-      );
+    // A selected family may retain unresolved interaction-time detail.  The
+    // required encounter action owns that repair frontier; no generated pickup
+    // exists until a concrete result has been authored.
+    if (result === undefined || result === null) continue;
     const rewardType = result.offer.rewardType;
     const valid =
       outcome.kind === 'freeItem'

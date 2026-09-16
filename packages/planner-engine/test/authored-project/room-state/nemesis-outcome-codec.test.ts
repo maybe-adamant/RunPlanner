@@ -19,5 +19,12 @@ describe('Nemesis outcome decoder', () => {
     expect(() =>
       decodeNemesisRandomEventOutcome({ kind: 'goldTrade', response: 'later' }, catalog, '$.event'),
     ).toThrow('$.event.response: must be accept or decline');
+    expect(
+      decodeNemesisRandomEventOutcome(
+        { kind: 'traitTrade', traitKey: null, response: 'decline' },
+        catalog,
+        '$.event',
+      ),
+    ).toEqual({ kind: 'traitTrade', traitKey: null, response: 'decline' });
   });
 });

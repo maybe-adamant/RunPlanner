@@ -31,10 +31,16 @@ import {
 } from '@planner-test/support/structured-workspace/occurrence-assembly.test-support';
 import {
   clockedTraitGeneratedPickupEntryKey,
+  createNemesisRandomEventAddress,
+  createRoomActionAddress,
   createShopOfferAddress,
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '@run-planner/engine/authored-project';
+import {
+  goldenFOccurrenceId,
+  replaceNemesisRandomEventInteraction,
+} from '@run-planner/test-fixtures/underworld';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { occurrenceActionLabel } from '@planner/projections/structured-workspace/assembly/occurrence-action-label';
 import type { WorkspaceExplicitRewardControl } from '@planner/projections/structured-workspace/contracts/rewards';
@@ -248,6 +254,70 @@ describe('timeline action labels', () => {
 });
 
 describe('structured workspace actions assembly', () => {
+  it.each([
+    [{ kind: 'freeItem' }, { rewardType: 'ArmorBoost' }, 'Interact Armor'],
+    [{ kind: 'damageContest', result: 'success' }, { rewardType: 'StackUpgrade' }, 'Interact Pom'],
+    [
+      { kind: 'damageContest', result: 'failure' },
+      { rewardType: 'RoomRewardConsolationPrize' },
+      'Interact Red Onion',
+    ],
+  ] as const)(
+    'names an optional Nemesis pickup before and after placement: %s',
+    (value, reward, label) => {
+      const occurrenceId = goldenFOccurrenceId(5, 1);
+      const phase = createEncounterPhaseAddress(
+        goldenFBiome,
+        { kind: 'occurrence', occurrenceId },
+        'Encounter',
+      );
+      const selected = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+        kind: 'SelectEncounter',
+        phase,
+        encounterKey: 'NemesisRandomEvent',
+      });
+      const project = replaceNemesisRandomEventInteraction(
+        selected,
+        createNemesisRandomEventAddress(phase),
+        value,
+        reward,
+      );
+      const reference = {
+        kind: 'interactAcquisitionEntry' as const,
+        siteKey: 'nemesisGenerated:Encounter',
+        entryKey: 'result',
+      };
+      const key = roomActionKey(reference);
+      const actions = assemble(project, 'Underworld', 'F', occurrenceId).assembly.node.room
+        .roomActions;
+      const optional = actions?.optionalRows.find((row) => row.key === key);
+      expect(optional).toMatchObject({ label, participation: 'optional', rank: null });
+      expect(optional?.rewardPayload?.control.offer).toBeNull();
+      expect(optional?.rewardPayload?.inlineLevelResolutions).toEqual([]);
+      const insertion = actions?.proposals.find(
+        (proposal) =>
+          proposal.kind === 'insert' &&
+          roomActionKey(proposal.reference) === key &&
+          proposal.structurallyAuthorable,
+      );
+      if (insertion?.toIndex === undefined) throw new Error('Optional pickup insertion is missing');
+      const placed = applyProjectCommand(project, catalog, {
+        kind: 'InsertRoomAction',
+        action: createRoomActionAddress(goldenFBiome, occurrenceId, key),
+        reference,
+        index: insertion.toIndex,
+      });
+      const row = assemble(
+        placed,
+        'Underworld',
+        'F',
+        occurrenceId,
+      ).assembly.node.room.roomActions?.rows.find((candidate) => candidate.key === key);
+      expect(row?.label).toBe(label);
+      expect(row?.rewardPayload?.control.offer).toEqual(reward);
+    },
+  );
+
   it('projects two matured clocked trait pickups through the existing optional-action surface', () => {
     const owner = createOccurrenceAddress(goldenFBiome, goldenFStartId);
     const site = createAcquisitionSiteAddress(owner, 'roomExit');

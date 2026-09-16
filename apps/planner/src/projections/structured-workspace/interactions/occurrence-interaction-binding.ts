@@ -1,8 +1,12 @@
 import {
   createBiomeAddress,
+  createNemesisRandomEventAddress,
   createRoomActionAddress,
+  NEMESIS_RANDOM_EVENT_FAMILIES,
   roomActionKey,
   semanticAddressKey,
+  type AuthoredNemesisRandomEventKind,
+  type AuthoredNemesisRandomEventOutcome,
   type OccurrenceId,
   type SideRoomGeneration,
 } from '@run-planner/engine/authored-project';
@@ -111,52 +115,90 @@ function intersectNemesisBranchValues(
   );
 }
 
+function nemesisFamilyLabel(family: AuthoredNemesisRandomEventKind): string {
+  switch (family) {
+    case 'freeItem':
+      return 'Free item';
+    case 'goldTrade':
+      return 'Gold trade';
+    case 'damageTrade':
+      return 'Damage trade';
+    case 'traitTrade':
+      return 'Boon trade';
+    case 'damageContest':
+      return 'Damage contest';
+  }
+}
+
 function projectNemesisEventDomain(
   catalog: import('@run-planner/engine/catalog-schema').Catalog,
   support: NemesisRandomEventCandidateSupport | undefined,
+  value: AuthoredNemesisRandomEventOutcome,
+  reward: ResolvedRewardOffer | null,
 ): WorkspaceNemesisEventDomain | undefined {
   if (support === undefined) return undefined;
-  return Object.freeze({
-    familyKeys: support.familyKeys,
-    goldTradeResponses: support.goldTradeResponses,
-    damageTradeResponses: support.damageTradeResponses,
-    traitTradeResponses: support.traitTradeResponses,
-    damageContestResults: support.damageContestResults,
-    freeItemRewardTypes: intersectNemesisBranchValues(
-      support,
-      (branch) => branch.freeItemRewardTypes,
-    ),
-    goldTradeRewardTypes: intersectNemesisBranchValues(
-      support,
-      (branch) => branch.goldTradeRewardTypes,
-    ),
-    damageTradeRewardTypes: intersectNemesisBranchValues(
-      support,
-      (branch) => branch.damageTradeRewardTypes,
-    ),
-    traitTradeTraitKeys: intersectNemesisBranchValues(
-      support,
-      (branch) => branch.traitTradeTraitKeys,
-    ),
-    traitTradePicker: (selected?: string) =>
-      projectStableIdentityPicker({
-        assessment: 'assessed',
-        choices: intersectNemesisBranchValues(support, (branch) => branch.traitTradeTraitKeys).map(
-          (traitKey) => ({
-            label: catalog.traits.byKey[traitKey]?.label ?? traitKey,
-            value: traitKey,
-          }),
+  const rewardPicker = (rewardTypes: readonly string[]) =>
+    projectStableIdentityPicker({
+      assessment: 'assessed',
+      choices: rewardTypes.map((rewardType) => ({
+        label: catalog.rewards.rewardTypes.byKey[rewardType]?.label ?? 'Unknown reward',
+        value: rewardType,
+      })),
+      selected: reward?.rewardType,
+      selectedLabel:
+        reward === null
+          ? undefined
+          : (catalog.rewards.rewardTypes.byKey[reward.rewardType]?.label ?? 'Unknown reward'),
+    });
+  switch (value.kind) {
+    case 'freeItem':
+      return Object.freeze({
+        rewardPicker: rewardPicker(
+          intersectNemesisBranchValues(support, (branch) => branch.freeItemRewardTypes),
         ),
-        selected,
-        selectedLabel: selected === undefined ? undefined : catalog.traits.byKey[selected]?.label,
-      }),
-    damageContestSuccessRewardTypes: intersectNemesisBranchValues(
-      support,
-      (branch) => branch.damageContestSuccessRewardTypes,
-    ),
-    traitTradeRewardType: support.traitTradeRewardType,
-    damageContestFailureRewardType: support.damageContestFailureRewardType,
-  });
+      });
+    case 'goldTrade':
+      return Object.freeze({
+        rewardPicker: rewardPicker(
+          intersectNemesisBranchValues(support, (branch) => branch.goldTradeRewardTypes),
+        ),
+      });
+    case 'damageTrade':
+      return Object.freeze({
+        rewardPicker: rewardPicker(
+          intersectNemesisBranchValues(support, (branch) => branch.damageTradeRewardTypes),
+        ),
+      });
+    case 'traitTrade':
+      return Object.freeze({
+        traitPicker: projectStableIdentityPicker({
+          assessment: 'assessed',
+          choices: intersectNemesisBranchValues(
+            support,
+            (branch) => branch.traitTradeTraitKeys,
+          ).map((traitKey) => ({
+            label: catalog.traits.byKey[traitKey]?.label ?? 'Unknown boon',
+            value: traitKey,
+          })),
+          selected: value.traitKey ?? undefined,
+          selectedLabel:
+            value.traitKey === null
+              ? undefined
+              : (catalog.traits.byKey[value.traitKey]?.label ?? 'Unknown boon'),
+        }),
+      });
+    case 'damageContest':
+      return value.result === 'failure'
+        ? Object.freeze({})
+        : Object.freeze({
+            rewardPicker: rewardPicker(
+              intersectNemesisBranchValues(
+                support,
+                (branch) => branch.damageContestSuccessRewardTypes,
+              ),
+            ),
+          });
+  }
 }
 
 export function bindOccurrenceLocalInteractions(
@@ -338,6 +380,27 @@ export function bindOccurrenceLocalInteractions(
         for (const phase of requirement.phases) {
           const key = semanticAddressKey(phase.owner);
           const encounterKeys = Object.freeze(phase.candidateChoices.map((choice) => choice.value));
+          const nemesisSelection = encounterKeys.includes('NemesisRandomEvent')
+            ? Object.freeze({
+                owner: createNemesisRandomEventAddress(phase.owner),
+                familyPicker: projectStableIdentityPicker({
+                  choices: NEMESIS_RANDOM_EVENT_FAMILIES.map((family) => ({
+                    label: nemesisFamilyLabel(family),
+                    value: family,
+                  })),
+                  selected: phase.nemesisEvent?.value?.kind,
+                  selectedLabel: undefined,
+                }),
+                familyIntentFor: (family: AuthoredNemesisRandomEventKind) =>
+                  Object.freeze({
+                    command: Object.freeze({
+                      kind: 'SelectNemesisRandomEventFamily' as const,
+                      event: createNemesisRandomEventAddress(phase.owner),
+                      family,
+                    }),
+                  }),
+              })
+            : undefined;
           if (phase.selectionEnabled && encounterKeys.length > 1 && encounterPhases.has(key)) {
             throw new StructuredWorkspaceProjectionContractError(
               `${key} has multiple bound encounter phase interactions`,
@@ -366,9 +429,7 @@ export function bindOccurrenceLocalInteractions(
                     candidates.encounterPhases(phase.owner, encounterKeys),
                   )),
                 owner: phase.owner,
-                resetIntent: Object.freeze({
-                  command: Object.freeze({ kind: 'ResetEncounter' as const, phase: phase.owner }),
-                }),
+                ...(nemesisSelection === undefined ? {} : { nemesisEvent: nemesisSelection }),
                 selected: phase.selectedEncounterKey,
               }),
             );
@@ -414,37 +475,71 @@ export function bindOccurrenceLocalInteractions(
           if (phase.nemesisEvent !== undefined) {
             const event = phase.nemesisEvent;
             const key = semanticAddressKey(event.owner);
+            if (nemesisSelection === undefined) {
+              throw new StructuredWorkspaceProjectionContractError(
+                `${key} has a Nemesis event outside its encounter domain`,
+              );
+            }
             nemesisEvents.set(
               key,
               Object.freeze({
                 key,
-                owner: event.owner,
+                ...nemesisSelection,
                 reward: event.reward,
-                rewardLabelFor: (rewardType: string) =>
-                  catalog.rewards.rewardTypes.byKey[rewardType]?.label ?? 'Unknown reward',
                 value: event.value,
-                load: () =>
-                  projectNemesisEventDomain(
-                    catalog,
-                    nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
-                      assembly,
-                      event.owner,
-                    ),
-                  ),
-                intentFor: (
-                  value:
-                    | import('@run-planner/engine/authored-project').AuthoredNemesisRandomEventOutcome
-                    | null,
-                  reward: ResolvedRewardOffer | null,
+                ...(() => {
+                  const policy =
+                    catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent;
+                  const rewardType =
+                    event.value?.kind === 'traitTrade'
+                      ? policy?.traitTrade.fixedResultRewardType
+                      : event.value?.kind === 'damageContest' && event.value.result === 'failure'
+                        ? policy?.damageContest.failureResultRewardType
+                        : undefined;
+                  return rewardType === undefined
+                    ? {}
+                    : {
+                        fixedResultLabel:
+                          catalog.rewards.rewardTypes.byKey[rewardType]?.label ?? 'Unknown reward',
+                      };
+                })(),
+                ...(event.reward === null
+                  ? {}
+                  : {
+                      selectedRewardLabel:
+                        catalog.rewards.rewardTypes.byKey[event.reward.rewardType]?.label ??
+                        'Unknown reward',
+                    }),
+                ...(event.value?.kind !== 'traitTrade' || event.value.traitKey === null
+                  ? {}
+                  : {
+                      selectedTraitLabel:
+                        catalog.traits.byKey[event.value.traitKey]?.label ?? 'Unknown boon',
+                    }),
+                detailIntentFor: (
+                  value: AuthoredNemesisRandomEventOutcome & {
+                    readonly reward: ResolvedRewardOffer | null;
+                  },
                 ) =>
                   Object.freeze({
                     command: Object.freeze({
-                      kind: 'ReplaceNemesisRandomEventOutcome' as const,
+                      kind: 'ReplaceNemesisRandomEventInteraction' as const,
                       event: event.owner,
                       value,
-                      reward,
                     }),
                   }),
+                load: () =>
+                  event.value === null
+                    ? undefined
+                    : projectNemesisEventDomain(
+                        catalog,
+                        nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
+                          assembly,
+                          event.owner,
+                        ),
+                        event.value,
+                        event.reward,
+                      ),
               }),
             );
           }

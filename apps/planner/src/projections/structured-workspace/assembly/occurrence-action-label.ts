@@ -89,7 +89,7 @@ export function occurrenceActionLabel(
   rewardControl: WorkspaceRewardControl | undefined,
   occurrence: Pick<
     import('@run-planner/engine/authored-project').RoomOccurrence,
-    'hermesShrine' | 'stygianWell'
+    'hermesShrine' | 'stygianWell' | 'acquisitionSites'
   >,
   purgingPoolTraitKeyBySlot?: Readonly<Record<'left' | 'middle' | 'right', string | null>>,
 ): string {
@@ -206,10 +206,15 @@ export function occurrenceActionLabel(
         (rewardControl?.kind === 'explicitReward' && rewardControl.rewardTypes.length === 1
           ? rewardControl.rewardTypes[0]
           : undefined);
+      const authoredOffer =
+        occurrence.acquisitionSites?.[reference.siteKey]?.pickupEntries?.[reference.entryKey]
+          ?.offer;
       const explicitRewardLabel =
-        explicitRewardType === undefined
-          ? undefined
-          : timelineRewardName(catalog, explicitRewardType);
+        authoredOffer !== undefined
+          ? timelineRewardLabel(catalog, authoredOffer)
+          : explicitRewardType === undefined
+            ? undefined
+            : timelineRewardName(catalog, explicitRewardType);
       const entryLabel =
         parseArtificerReplacementEntryKey(reference.entryKey) !== undefined
           ? 'Artificer reward'

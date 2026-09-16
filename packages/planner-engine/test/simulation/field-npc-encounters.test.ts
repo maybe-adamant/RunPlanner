@@ -63,6 +63,7 @@ import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   createGoldenFGHProject,
+  replaceNemesisRandomEventInteraction,
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
@@ -1286,15 +1287,11 @@ describe('field NPC encounter requirements', () => {
     expect(support(withNemesis, nemesisG)?.candidateEncounterKeys).not.toContain('NemesisCombatG');
     expect(support(withNemesis, nemesisI)?.candidateEncounterKeys).not.toContain('NemesisCombatI');
 
-    const withRandomEvent = applyProjectCommand(
+    const withRandomEvent = replaceNemesisRandomEventInteraction(
       select(initial, nemesisF, 'NemesisRandomEvent'),
-      catalog,
-      {
-        kind: 'ReplaceNemesisRandomEventOutcome',
-        event: createNemesisRandomEventAddress(nemesisF),
-        value: { kind: 'freeItem' },
-        reward: { rewardType: 'ArmorBoost' },
-      },
+      createNemesisRandomEventAddress(nemesisF),
+      { kind: 'freeItem' },
+      { rewardType: 'ArmorBoost' },
     );
     expect(support(withRandomEvent, followingArtemis)?.candidateEncounterKeys).not.toContain(
       'NemesisRandomEvent',

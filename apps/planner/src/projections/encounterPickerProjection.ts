@@ -152,7 +152,7 @@ export function projectEncounterPicker(
   candidates: readonly CandidateOptionProjection<string, EncounterCandidateProjectionEvaluation>[],
 ): ContextualPickerModel<string> {
   const labels = new Map(choices.map((choice) => [choice.value, choice.label]));
-  return contextualPicker.project(
+  const model = contextualPicker.project(
     candidates,
     (candidate) => {
       const label = labels.get(candidate.value);
@@ -175,4 +175,20 @@ export function projectEncounterPicker(
     },
     (encounterKey) => encounterKey,
   );
+  if (selectedEncounterKey !== 'NemesisRandomEvent' || model.selected?.disabled !== true)
+    return model;
+  // Reopening this selected branch edits its family; it does not select an
+  // unavailable encounter. Keep its invalidity visible without blocking repair.
+  const selected = Object.freeze({ ...model.selected, disabled: false });
+  return Object.freeze({
+    selected,
+    sections: Object.freeze(
+      model.sections.map((section) =>
+        Object.freeze({
+          ...section,
+          items: Object.freeze(section.items.map((item) => (item.selected ? selected : item))),
+        }),
+      ),
+    ),
+  });
 }

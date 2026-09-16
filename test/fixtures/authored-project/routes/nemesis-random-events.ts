@@ -19,7 +19,12 @@ import {
   type NemesisRandomEventBranchAssessment,
 } from '@run-planner/engine/simulation';
 
-import { goldenFBiome, goldenFOccurrenceId, goldenHBiome } from './underworld';
+import {
+  goldenFBiome,
+  goldenFOccurrenceId,
+  goldenHBiome,
+  replaceNemesisRandomEventInteraction,
+} from './underworld';
 import {
   loadUnderworldFGHCheckpoint,
   loadUnderworldFGHICheckpoint,
@@ -105,12 +110,12 @@ export function createNemesisTraitTradeCheckpoint(): ProjectDocument {
   );
   let project = selectedNemesis(loadUnderworldFGHICheckpoint(), phase);
   const traitKey = sharedCandidate(candidateBranches(project, phase), 'traitTradeTraitKeys');
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceNemesisRandomEventOutcome',
-    event: createNemesisRandomEventAddress(phase),
-    value: { kind: 'traitTrade', traitKey, response: 'accept' },
-    reward: { rewardType: 'RoomMoneyTripleDrop' },
-  });
+  project = replaceNemesisRandomEventInteraction(
+    project,
+    createNemesisRandomEventAddress(phase),
+    { kind: 'traitTrade', traitKey, response: 'accept' },
+    { rewardType: 'RoomMoneyTripleDrop' },
+  );
   return project;
 }
 
@@ -138,12 +143,12 @@ export function createNemesisFieldsCheckpoint(): ProjectDocument {
   // frontier, so H is not reached by simulation yet. Reuse the exact F reached
   // event candidate domain for this declaration-owned free-item pool.
   const rewardType = reachedFreeItemRewardType();
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceNemesisRandomEventOutcome',
-    event: createNemesisRandomEventAddress(passive),
-    value: { kind: 'freeItem' },
-    reward: { rewardType },
-  });
+  project = replaceNemesisRandomEventInteraction(
+    project,
+    createNemesisRandomEventAddress(passive),
+    { kind: 'freeItem' },
+    { rewardType },
+  );
   const selected = project.route.biomes
     .find((biome) => biome.biomeKey === 'H')
     ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
@@ -170,12 +175,12 @@ export function createNemesisPomCheckpoint(): ProjectDocument {
   );
   if (rewardType === undefined)
     throw new Error('Nemesis Gold trade has no Pom or Hammer candidate');
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceNemesisRandomEventOutcome',
-    event: createNemesisRandomEventAddress(phase),
-    value: { kind: 'goldTrade', response: 'accept' },
-    reward: { rewardType },
-  });
+  project = replaceNemesisRandomEventInteraction(
+    project,
+    createNemesisRandomEventAddress(phase),
+    { kind: 'goldTrade', response: 'accept' },
+    { rewardType },
+  );
   return project;
 }
 

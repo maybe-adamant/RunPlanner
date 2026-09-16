@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import type { AuthoredNemesisRandomEventKind } from '@run-planner/engine/authored-project';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -10,7 +12,7 @@ import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwne
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
-import { NemesisEventEditor } from '../NemesisEventEditor';
+import { NemesisEventSelector } from '../NemesisEventEditor';
 
 const emptyEncounterPicker: import('@planner/projections/contextual/contextualPicker').ContextualPickerModel<string> =
   Object.freeze({ sections: Object.freeze([]) });
@@ -25,32 +27,56 @@ export function CustomizableEncounterPhaseControl({
   const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const candidates = useWorkspaceInteraction(interaction);
+  const [selection, setSelection] = useState<{
+    readonly interaction: WorkspaceEncounterInteraction;
+    readonly step: 'encounter' | 'event';
+  }>();
+  const step = selection?.interaction === interaction ? selection.step : undefined;
+  const event = interaction.nemesisEvent;
+  const selectedFamily =
+    phase.nemesisEvent === undefined ? undefined : event?.familyPicker.selected;
   return (
-    <>
-      <ContextualPicker
-        findingTarget={findingTarget(phase.address)}
-        id={semanticOwnerControlElementId(phase.address)}
-        label="Encounter"
-        layout="inline"
-        loading={candidates.pending}
-        model={candidates.result ?? emptyEncounterPicker}
-        onOpenChange={(open) => {
-          if (open) candidates.activate();
-        }}
-        onSelect={(encounterKey) => executeIntent(interaction.intentFor(encounterKey))}
-        placeholder="Choose an encounter"
-        triggerLabel={phase.selectedEncounter.label}
-      />
-      {phase.resettable ? (
-        <button
-          className="quiet-action action-compact"
-          onClick={() => executeIntent(interaction.resetIntent)}
-          type="button"
-        >
-          Reset to default
-        </button>
-      ) : null}
-    </>
+    <ContextualPicker
+      cancelLabel="Cancel"
+      choiceLabel={step === 'event' ? 'Nemesis event' : 'Encounter'}
+      closeOnSelect={false}
+      findingTarget={findingTarget(phase.address)}
+      id={semanticOwnerControlElementId(phase.address)}
+      label="Encounter"
+      layout="inline"
+      loading={step === 'encounter' && candidates.pending}
+      model={
+        step === 'event' && event !== undefined
+          ? event.familyPicker
+          : (candidates.result ?? emptyEncounterPicker)
+      }
+      onOpenChange={(open) => {
+        if (open) {
+          candidates.activate();
+          setSelection({ interaction, step: 'encounter' });
+        } else {
+          setSelection(undefined);
+        }
+      }}
+      onSelect={(value) => {
+        if (step === 'event' && event !== undefined) {
+          executeIntent(event.familyIntentFor(value as AuthoredNemesisRandomEventKind));
+        } else if (value === 'NemesisRandomEvent' && event !== undefined) {
+          setSelection({ interaction, step: 'event' });
+          return;
+        } else {
+          executeIntent(interaction.intentFor(value));
+        }
+        setSelection(undefined);
+      }}
+      open={step !== undefined}
+      placeholder="Choose an encounter"
+      triggerLabel={
+        selectedFamily === undefined
+          ? phase.selectedEncounter.label
+          : `${phase.selectedEncounter.label} · ${selectedFamily.label}`
+      }
+    />
   );
 }
 
@@ -102,7 +128,7 @@ export function EncounterPhaseControl({
   const ariaLabel = phase.label.endsWith('encounter')
     ? `${phase.label} phase`
     : `${phase.label} encounter phase`;
-  const nemesisEditor =
+  const nemesisEventSelector =
     phase.nemesisEvent === undefined
       ? null
       : (() => {
@@ -110,10 +136,7 @@ export function EncounterPhaseControl({
             workspaceInteractionKey(phase.nemesisEvent.owner),
           );
           return interaction === undefined ? null : (
-            <NemesisEventEditor
-              interaction={interaction}
-              key={`${interaction.key}:${JSON.stringify(interaction.value)}`}
-            />
+            <NemesisEventSelector interaction={interaction} />
           );
         })();
   if (!phase.customizable) {
@@ -132,7 +155,7 @@ export function EncounterPhaseControl({
           <p className="fixed-room-state">Encounter: {phase.selectedEncounter.label}</p>
           {figLeafControl}
           {gorgonControl}
-          {nemesisEditor}
+          {nemesisEventSelector}
         </div>
       </section>
     );
@@ -150,7 +173,6 @@ export function EncounterPhaseControl({
         <CustomizableEncounterPhaseControl interaction={interaction} phase={phase} />
         {figLeafControl}
         {gorgonControl}
-        {nemesisEditor}
       </div>
     </section>
   );
