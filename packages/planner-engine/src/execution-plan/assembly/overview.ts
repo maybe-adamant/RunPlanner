@@ -685,6 +685,14 @@ export function assembleExecutionOverview(
   const fields = executionFieldsLayout(room);
   const additional = executionAdditionalExits(batch);
   const biomeAddress = createBiomeAddress(room.origin.routeKey, room.origin.biomeKey);
+  const recordedPhases = new Map(
+    biome.history.events.flatMap((event) =>
+      event.kind === 'encounterRecorded' &&
+      semanticAddressKey(event.origin) === semanticAddressKey(room.origin)
+        ? [[event.phaseKey, event] as const]
+        : [],
+    ),
+  );
   return Object.freeze({
     ...(incomingReward === undefined ? {} : { incomingReward }),
     ...(room.effectNeutralRequiredReward ? { effectNeutralRequiredReward: true as const } : {}),
@@ -694,6 +702,12 @@ export function assembleExecutionOverview(
     encounterPhases: Object.freeze(
       room.encounterPhases.map((phase) =>
         (() => {
+          const recorded = recordedPhases.get(phase.slotKey);
+          if (room.entered && recorded === undefined)
+            throw new CompilerError(
+              'executionCoverageMissing',
+              `${room.gameName} lacks recorded encounter ${phase.slotKey}`,
+            );
           const phaseAddress = createEncounterPhaseAddress(
             biomeAddress,
             { kind: 'occurrence', occurrenceId: room.occurrenceId },
@@ -706,8 +720,8 @@ export function assembleExecutionOverview(
           );
           return Object.freeze({
             slotKey: phase.slotKey,
-            encounterKey: phase.encounterKey,
-            kind: phase.kind,
+            encounterKey: recorded?.encounterKey ?? phase.encounterKey,
+            kind: recorded?.phaseKind ?? phase.kind,
             ...(figLeaf === undefined ? {} : { figLeafSkip: figLeaf.selected }),
           });
         })(),

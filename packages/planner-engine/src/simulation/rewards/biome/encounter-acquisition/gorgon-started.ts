@@ -19,7 +19,6 @@ import {
   offerGenerationAdjustedTraitGiverContext,
 } from '../../../traits/offers';
 import { createTraitHistoryState } from '../../../traits';
-import { selectedEncounterAuthoringProfileKey } from '../../../../authored-project/room-state/encounter-envelope';
 import type { RewardBranchState } from '../../branch-primitives';
 import type { GorgonPhaseCandidateSupport } from '../../model';
 
@@ -93,13 +92,7 @@ export function applyGorgonStartedTransition(inputs: {
     });
   const status = attestGorgonBranchState(inputs.branches);
   const rarityLevel = attestPendingGorgonRarityLevel(inputs.branches);
-  const selectedEncounterKey = selectedEncounterAuthoringProfileKey(
-    catalog,
-    declaration,
-    room.encounters,
-    event.phaseKey,
-    semanticAddressKey(event.origin),
-  );
+  const definition = catalog.encounterDefinitions.byKey[event.encounterKey]!;
   const effect = catalog.keepsakes.values.find(
     (keepsake) => keepsake.effect?.kind === 'gorgonAmulet',
   )?.effect;
@@ -114,9 +107,8 @@ export function applyGorgonStartedTransition(inputs: {
     effect?.kind === 'gorgonAmulet' &&
     view.preparation.ledgers.counters.biomeDepthCache >= effect.minimumBiomeDepth &&
     declaration.blocksGorgon === false &&
-    phase.blocksGorgon === false &&
-    selectedEncounterKey !== undefined &&
-    catalog.encounterDefinitions.byKey[selectedEncounterKey]?.hostsGorgon === true &&
+    definition.blocksGorgon === false &&
+    definition.hostsGorgon === true &&
     event.execution === 'normal';
   const sourceOverride =
     rarityLevel === undefined ? undefined : gorgonSourceRarityOverride(rarityLevel);
@@ -146,7 +138,7 @@ export function applyGorgonStartedTransition(inputs: {
   if (
     status === 'pending' &&
     effect?.kind === 'gorgonAmulet' &&
-    selectedEncounterKey === effect.naturalEncounterKey
+    event.encounterKey === effect.naturalEncounterKey
   )
     return Object.freeze({
       branches: Object.freeze(
@@ -163,10 +155,7 @@ export function applyGorgonStartedTransition(inputs: {
     minimumBiomeDepth:
       effect?.kind === 'gorgonAmulet' ? effect.minimumBiomeDepth : Number.POSITIVE_INFINITY,
     roomBlocked: declaration.blocksGorgon === true,
-    encounterBlocked:
-      phase.blocksGorgon === true ||
-      selectedEncounterKey === undefined ||
-      catalog.encounterDefinitions.byKey[selectedEncounterKey]?.hostsGorgon !== true,
+    encounterBlocked: definition.blocksGorgon === true || definition.hostsGorgon !== true,
     figLeafSkipped: event.execution === 'skippedByFigLeaf',
     athenaTriggerConditionMet:
       room.encounters.gorgonResultByPhase?.[event.phaseKey]?.athenaTriggerConditionMet === true,

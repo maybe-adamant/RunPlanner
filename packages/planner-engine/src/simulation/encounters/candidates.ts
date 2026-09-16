@@ -240,16 +240,14 @@ export function evaluateEncounterCandidatesInternal(
     ]),
   );
   const gorgonSupport = new Map<string, GorgonPhaseCandidateSupport>();
-  for (const [key, support] of entries) {
+  for (const key of entries.keys()) {
     const exact = privateGorgon.get(key);
     if (exact === undefined) continue;
     gorgonSupport.set(
       key,
       Object.freeze({
         origin: exact.origin,
-        supported:
-          catalog.encounterDefinitions.byKey[support.selectedEncounterKey]?.hostsGorgon === true &&
-          exact.supported,
+        supported: exact.supported,
         ...(exact.rarity === undefined ? {} : { rarity: exact.rarity }),
       }),
     );

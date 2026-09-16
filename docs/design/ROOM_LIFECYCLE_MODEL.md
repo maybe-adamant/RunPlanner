@@ -525,10 +525,14 @@ observable distinction that the closed vocabulary cannot represent correctly.
 
 `prepareRoom` resolves an active room's Envelope slots from the
 post-predecessor-commit checkpoint. A fixed binding supplies its exact
-definition; a pool-backed binding supplies the room instance's exact authored
-definition. For each valid active slot, preparation appends an
+definition; a pool-backed binding resolves the room instance's authored profile
+to its one eligible concrete definition. Ordinary Combat can therefore retain
+its authored identity while resolving a reward-owned Trial or an I goal variant.
+For each valid active slot, preparation appends an
 `encounterRecorded` event before entry. The event carries the definition key,
 envelope key, stable slot key, and exact room-instance origin.
+Encounter effects and execution publication consume that concrete identity,
+not the preliminary authored profile.
 
 A later slot in the same room evaluates against the preceding recorded prefix.
 It can therefore observe exact earlier encounter identities, while encounter

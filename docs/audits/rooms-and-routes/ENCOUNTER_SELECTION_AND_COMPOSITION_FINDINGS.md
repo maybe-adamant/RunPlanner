@@ -101,7 +101,14 @@ picked `nextRoom`:
 
 Initial rooms and other direct `CreateRoom` callers can choose immediately when
 they do not use `SkipChooseEncounter`. Reward-owned special setup such as
-Devotion is another distinct path.
+Devotion is another distinct path: `RewardLogic.SetupRoomReward` directly calls
+`SetupEncounter` with the room's `DevotionEncounters` choice and records that
+replacement. F/G/I declare `DevotionTestF/G/I`; I's small rooms use the same
+`DevotionTestI`, not a small variant. `BaseDevotion` blocks Gorgon and disables
+encounter skipping. The planner retains the ordinary Combat authoring profile
+and resolves its Trial definition from the incoming reward; the recorded
+definition is the execution identity. O's dedicated Trial room binds
+`DevotionTestO` directly.
 
 ### ChooseEncounter
 

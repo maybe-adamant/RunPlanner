@@ -41,6 +41,7 @@ export function applyEncounterStartedTransition(
   if (room !== undefined) {
     const phase = room.encounterPhases.find((candidate) => candidate.slotKey === event.phaseKey);
     if (phase !== undefined) {
+      const definition = catalog.encounterDefinitions.byKey[event.encounterKey]!;
       const origin = createEncounterPhaseAddress(
         createBiomeAddress(event.origin.routeKey, event.origin.biomeKey),
         { kind: 'occurrence', occurrenceId: room.occurrenceId },
@@ -56,7 +57,7 @@ export function applyEncounterStartedTransition(
       const figLeaf = attestFigLeafBranchState(next);
       const assessment = assessFigLeafSkip({
         selected: phase.figLeafSkip,
-        canEncounterSkip: phase.canEncounterSkip,
+        canEncounterSkip: definition.canEncounterSkip === true,
         biomeStart: isBiomeStart,
         blockedByEnvelope,
         nonLeadingCascadePhase,
@@ -86,7 +87,7 @@ export function applyEncounterStartedTransition(
         );
       }
       if (
-        phase.canEncounterSkip &&
+        definition.canEncounterSkip === true &&
         !isBiomeStart &&
         !blockedByEnvelope &&
         !nonLeadingCascadePhase &&

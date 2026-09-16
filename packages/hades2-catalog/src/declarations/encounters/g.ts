@@ -17,6 +17,18 @@ export const gEncounterDefinitions = [
     countsEncounterDepth: true,
     hostsGorgon: true,
     canEncounterSkip: true,
+    requirements: { kind: 'currentRoomRewardExcludes', rewardTypes: ['Devotion'] },
+  },
+  {
+    key: 'DevotionTestG',
+    label: 'Devotion combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    blocksGorgon: true,
+    requirements: {
+      kind: 'not',
+      requirement: { kind: 'currentRoomRewardExcludes', rewardTypes: ['Devotion'] },
+    },
   },
   {
     key: 'ArtemisCombatG',
@@ -160,11 +172,19 @@ export const gEncounterSets = [
     key: 'GEncountersDefault',
     encounterDefinitionKeys: [
       'GeneratedG',
+      'DevotionTestG',
       'ArtemisCombatG',
       'ArachneCombatG',
       'NemesisCombatG',
       'NemesisRandomEvent',
     ],
     defaultAuthoringProfileKey: 'GeneratedG',
+    authoringProfiles: [
+      { key: 'GeneratedG', encounterDefinitionKeys: ['GeneratedG', 'DevotionTestG'] },
+      { key: 'ArtemisCombatG', encounterDefinitionKeys: ['ArtemisCombatG'] },
+      { key: 'ArachneCombatG', encounterDefinitionKeys: ['ArachneCombatG'] },
+      { key: 'NemesisCombatG', encounterDefinitionKeys: ['NemesisCombatG'] },
+      { key: 'NemesisRandomEvent', encounterDefinitionKeys: ['NemesisRandomEvent'] },
+    ],
   },
 ] as const satisfies readonly RawEncounterSetDeclaration[];

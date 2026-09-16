@@ -24,6 +24,18 @@ export const fEncounterDefinitions = [
     countsEncounterDepth: true,
     hostsGorgon: true,
     canEncounterSkip: true,
+    requirements: { kind: 'currentRoomRewardExcludes', rewardTypes: ['Devotion'] },
+  },
+  {
+    key: 'DevotionTestF',
+    label: 'Devotion combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    blocksGorgon: true,
+    requirements: {
+      kind: 'not',
+      requirement: { kind: 'currentRoomRewardExcludes', rewardTypes: ['Devotion'] },
+    },
   },
   {
     key: 'ArtemisCombatF',
@@ -317,11 +329,19 @@ export const fEncounterSets = [
     key: 'FEncountersDefault',
     encounterDefinitionKeys: [
       'GeneratedF',
+      'DevotionTestF',
       'ArtemisCombatF',
       'ArachneCombatF',
       'NemesisCombatF',
       'NemesisRandomEvent',
     ],
     defaultAuthoringProfileKey: 'GeneratedF',
+    authoringProfiles: [
+      { key: 'GeneratedF', encounterDefinitionKeys: ['GeneratedF', 'DevotionTestF'] },
+      { key: 'ArtemisCombatF', encounterDefinitionKeys: ['ArtemisCombatF'] },
+      { key: 'ArachneCombatF', encounterDefinitionKeys: ['ArachneCombatF'] },
+      { key: 'NemesisCombatF', encounterDefinitionKeys: ['NemesisCombatF'] },
+      { key: 'NemesisRandomEvent', encounterDefinitionKeys: ['NemesisRandomEvent'] },
+    ],
   },
 ] as const satisfies readonly RawEncounterSetDeclaration[];

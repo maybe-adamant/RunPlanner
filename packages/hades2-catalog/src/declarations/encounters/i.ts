@@ -18,7 +18,13 @@ export const iEncounterDefinitions = [
     countsEncounterDepth: true,
     hostsGorgon: true,
     canEncounterSkip: true,
-    requirements: excludesClockworkGoal,
+    requirements: {
+      kind: 'all',
+      requirements: [
+        excludesClockworkGoal,
+        { kind: 'currentRoomRewardExcludes', rewardTypes: ['Devotion'] },
+      ],
+    },
   },
   {
     key: 'GeneratedI_GoalReward',
@@ -36,7 +42,13 @@ export const iEncounterDefinitions = [
     countsEncounterDepth: true,
     hostsGorgon: true,
     canEncounterSkip: true,
-    requirements: excludesClockworkGoal,
+    requirements: {
+      kind: 'all',
+      requirements: [
+        excludesClockworkGoal,
+        { kind: 'currentRoomRewardExcludes', rewardTypes: ['Devotion'] },
+      ],
+    },
   },
   {
     key: 'GeneratedI_Small_GoalReward',
@@ -46,6 +58,17 @@ export const iEncounterDefinitions = [
     hostsGorgon: true,
     canEncounterSkip: true,
     requirements: { kind: 'not', requirement: excludesClockworkGoal },
+  },
+  {
+    key: 'DevotionTestI',
+    label: 'Devotion combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    blocksGorgon: true,
+    requirements: {
+      kind: 'not',
+      requirement: { kind: 'currentRoomRewardExcludes', rewardTypes: ['Devotion'] },
+    },
   },
   {
     key: 'NemesisCombatI',
@@ -113,24 +136,38 @@ export const iEncounterDefinitions = [
 export const iEncounterSets = [
   {
     key: 'IEncountersDefault',
-    encounterDefinitionKeys: ['GeneratedI', 'GeneratedI_GoalReward', 'NemesisCombatI'],
+    encounterDefinitionKeys: [
+      'GeneratedI',
+      'GeneratedI_GoalReward',
+      'DevotionTestI',
+      'NemesisCombatI',
+    ],
     defaultAuthoringProfileKey: 'GeneratedI',
     authoringProfiles: [
       {
         key: 'GeneratedI',
-        encounterDefinitionKeys: ['GeneratedI', 'GeneratedI_GoalReward'],
+        encounterDefinitionKeys: ['GeneratedI', 'GeneratedI_GoalReward', 'DevotionTestI'],
       },
       { key: 'NemesisCombatI', encounterDefinitionKeys: ['NemesisCombatI'] },
     ],
   },
   {
     key: 'IEncountersSmaller',
-    encounterDefinitionKeys: ['GeneratedI_Small', 'GeneratedI_Small_GoalReward', 'NemesisCombatI'],
+    encounterDefinitionKeys: [
+      'GeneratedI_Small',
+      'GeneratedI_Small_GoalReward',
+      'DevotionTestI',
+      'NemesisCombatI',
+    ],
     defaultAuthoringProfileKey: 'GeneratedI_Small',
     authoringProfiles: [
       {
         key: 'GeneratedI_Small',
-        encounterDefinitionKeys: ['GeneratedI_Small', 'GeneratedI_Small_GoalReward'],
+        encounterDefinitionKeys: [
+          'GeneratedI_Small',
+          'GeneratedI_Small_GoalReward',
+          'DevotionTestI',
+        ],
       },
       { key: 'NemesisCombatI', encounterDefinitionKeys: ['NemesisCombatI'] },
     ],
