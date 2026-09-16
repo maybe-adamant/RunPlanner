@@ -46,7 +46,7 @@ describe('Q Miniboss rarity repair product loop', () => {
           giverKey: 'Ares',
           options: [
             { traitKey: 'RendBloodDropBoon', rarity: 'Common' },
-            { traitKey: 'AresStatusDoubleDamageBoon', rarity: 'Rare' },
+            { traitKey: 'AresWeaponBoon', rarity: 'Rare' },
             { traitKey: 'BloodDropRevengeBoon', rarity: 'Rare' },
           ],
           selectedOptionKey: 'option1',
@@ -59,7 +59,7 @@ describe('Q Miniboss rarity repair product loop', () => {
       expect(
         currentWorkspace.assembly.evaluation.findings.some(
           (finding) =>
-            finding.code === 'rarityRollUnavailable' &&
+            finding.code === 'traitOfferGenerationUnavailable' &&
             semanticAddressKey(finding.origin) === semanticAddressKey(qMinibossTrait),
         ),
       ).toBe(true);
@@ -72,9 +72,10 @@ describe('Q Miniboss rarity repair product loop', () => {
       if (launcher === null) throw new Error('Q Miniboss trait launcher is missing');
       await view.user.click(launcher);
       const dialog = await screen.findByRole('dialog');
-      expect(within(dialog).getAllByText(/fresh boon rarity cannot occur/).length).toBeGreaterThan(
-        0,
-      );
+      expect(await within(dialog).findByText(/Trait offer cannot occur here/)).toBeDefined();
+      expect(
+        within(dialog).getByRole('button', { name: 'Save trait offer' }).hasAttribute('disabled'),
+      ).toBe(true);
       await view.user.click(within(dialog).getByLabelText('option1 rarity'));
       const rare = screen
         .getAllByText('Rare')
@@ -94,7 +95,7 @@ describe('Q Miniboss rarity repair product loop', () => {
         expect(
           currentFindings(application).some(
             (finding) =>
-              finding.code === 'rarityRollUnavailable' &&
+              finding.code === 'traitOfferGenerationUnavailable' &&
               semanticAddressKey(finding.origin) === semanticAddressKey(qMinibossTrait),
           ),
         ).toBe(true),

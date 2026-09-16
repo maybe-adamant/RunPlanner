@@ -67,8 +67,7 @@ Positive dependency notation is:
 
 The exact trait key joins the giver inventory to the dependency graph. The
 positive graph records only positive equipped-trait prerequisites. Later
-sections separately record the other legality axes needed by the first
-implementation slice. Neither inventory records:
+sections separately record the other legality axes. Neither inventory records:
 
 - the ordinary rule that an already-owned trait is not offered again;
 - occupied-slot replacement and incompatible cast or Hammer traits;
@@ -90,8 +89,8 @@ boon rarity.
 
 ### Priority-upgrade closure
 
-The source `GetPriorityTraits`/`PriorityUpgrades` surface is closed for the
-first Olympian offer rule. Each ordinary Olympian declares exactly five core
+The source `GetPriorityTraits`/`PriorityUpgrades` surface supplies initial
+core and replacement candidates. Each ordinary Olympian declares exactly five core
 keys, in Weapon/Attack, Special, Cast, Sprint, and Mana order:
 
 | Giver      | Priority keys                                                                                                       |
@@ -107,45 +106,24 @@ keys, in Weapon/Attack, Special, Cast, Sprint, and Mana order:
 | Zeus       | `ZeusWeaponBoon`, `ZeusSpecialBoon`, `ZeusCastBoon`, `ZeusSprintBoon`, `ZeusManaBoon`                               |
 
 Hermes and `WeaponUpgrade` (Hammer) declare an explicitly empty priority set.
-Normalization verifies membership, uniqueness, and coverage of the five
-ordinary slots. Olympian defaults use priority keys only and include Melee or
-Secondary. The first-offer guarantee is a support simplification: a first reached
-Olympian offer while all ordinary slots are empty needs three distinct priority traits
-and Attack (`Melee`) or Special (`Secondary`). Replacement,
-weighted probability, and `PriorityChance` remain deferred rather than being
-inferred from this guarantee.
+Normalization verifies membership, uniqueness and coverage of the five ordinary
+slots. Olympian defaults use priority keys and include Attack or Special;
+actual core seeding depends on provider-eligible state, not a global first-offer
+flag.
 
-## Original In-Scope Offer Shape
+## Offer Shape and Rarity Domains
 
-This section records the original first-slice baseline; it is not the complete
-game offer-composition contract. The source-backed exhaustion, replacement,
-Fallback Gold, and Fear-pressure rules are audited separately in
-[`TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md`](TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md).
+The [initial-screen audit](TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md)
+owns generation, optional linked-priority support, replacement rescue, Denial
+and Gold. Olympian/Hermes screens contain up to three distinct alternatives
+against one pre-selection state; only the selection is equipped. Short or
+empty outcomes must be reachable after native fill stages.
 
-`ScreenData.UpgradeChoice.MaxChoices` is three. `CalcNumLootChoices` can reduce
-an ordinary god screen by one when an acquired effect supplies
-`RestrictBoonChoices`; no trait in this audit's first Olympian, Hermes, and
-Hammer implementation slice supplies that effect. The original supported
-baseline therefore authored exactly three distinct options and one selected
-option. That was a delivery constraint, not evidence that every reachable game
-offer materializes three trait choices.
-
-The three options are alternatives against the same pre-selection state.
-`SetTraitsOnLoot` removes a selected trait from every rarity table before
-filling the next position; option order does not equip earlier options. Only
-the final player selection enters equipped trait state.
-
-Ordinary Olympian and Hermes providers roll rarity. Under the progressed
-baseline, ordinary scalable traits can be freshly offered as `Common`, `Rare`,
-or `Epic`; `LegendaryTrait` and `SynergyTrait` members instead expose their
-sole `Legendary` or `Duo` rarity. `Heroic` is not a fresh-offer rarity, but it
-is the next in-run rarity after `Epic` and therefore belongs to equipped-trait
-state and rarity-derived eligibility. `WeaponUpgrade` declares
-`ForceCommon = true`, but the planner does not model that as a player rarity:
-Hammer options have no rarity domain and require no authored rarity choice.
-Their source Legendary levels are separately retained as the exact Rank-II
-capability used by Icarus's Latest Model; this remains Hammer state rather than
-player-facing boon rarity.
+Scalable ordinary traits declare Common/Rare/Epic; fixed Legendary and Duo
+members keep their own tier. Heroic is not an ordinary fresh roll, but exact
+replacement and in-run promotion can reach it. Gorgon's source-specific Heroic
+is separate. `WeaponUpgrade` uses internal ForceCommon without player rarity;
+its native Legendary upgrade is represented as Hammer Rank II.
 
 ## Giver Pool Inventory
 
@@ -398,8 +376,10 @@ or intentionally deferred by the planner are:
   `TransformAphroditeTalent`, `LeapHephaestusTalent`, `LaserApolloTalent`,
   `SummonHeraTalent`, `TimeSlowDemeterTalent`, `PotionPoseidonTalent`, or
   `MoonBeamAresTalent` in the hero trait dictionary. The nine talent keys stay
-  deferred operands, so this option remains candidate-ineligible until that
-  dependency is modeled.
+  native operands. The planner uses the accepted settled concrete Spell Drop
+  prefix; a starting Hex alone is not that evidence. The
+  [volatile eligibility audit](../rewards-and-acquisition/VOLATILE_OFFER_ELIGIBILITY_GAME_DATA_AUDIT.md)
+  owns this bounded approximation.
 
 `RetaliateInvulnerabilityBoon`, `FocusLastStandBoon`, `InvulnerabilityCastBoon`,
 and `ManaSpearBoon` declare no additional offer requirement in the installed
@@ -513,15 +493,15 @@ The planner can support Boon Boon Boon without pretending to know the previous
 run. The authored approximation is one to three source-resolved
 `{giver, trait, rarity}` outcomes from the source-valid Echo domain that remain
 legal under Echo's replay-specific current-run exclusions, followed by one direct selection. A
-row also retains only the declaration-owned selected-acquisition detail needed
-to settle that exact trait. In the current participating union this adds an
-optional target solely for `BoonDecayBoon`; its acquisition chooses one exact
-eligible core-god/superchargeable target. Only the three Hephaestus targets
-carry the additional cooldown and level restrictions. `KeepsakeLevelBoon`
-needs no additional row field and reuses its current-keepsake transition when
-selected. This is explicitly a user-authored stand-in for the unknown prior-run
-cache; it is not evidence those traits appeared in a previous run and it must
-not force all three options through a fictional Echo giver.
+row retains the same selected-acquisition payload as an ordinary acquisition,
+including All Together, Natural Selection and Bridal Glow when applicable.
+Bridal availability still requires a preferred target at offer time; its
+selected target query may use acquisition fallback after the source is
+equipped. Carrier choice does not truncate the nested effect.
+`KeepsakeLevelBoon` reuses the current-keepsake transition without a new row
+field. These rows stand in for the unknown prior-run cache; they are not
+evidence those traits appeared in a previous run or members of a fictional
+Echo giver.
 
 Every authored row is revalidated against the same pre-Echo frontier before
 the selected row settles. A condition-bearing nested trait remains the exact
@@ -603,7 +583,7 @@ duplicates retain the exact `StackOnly` interaction exception: if a stored
 target disappeared before pickup, the final visible Pom options regenerate
 from the pickup frontier.
 
-The schema-35 keepsake model owns the current identity at Echo acquisition,
+The keepsake model owns the current identity at Echo acquisition,
 ordered later replacements, supported rank-I profiles, and a biome-start
 transition. Gift Gift Gift therefore participates in the complete eight-choice Echo
 provider. Its captured key belongs to the equipped Echo trait and never follows
@@ -763,28 +743,25 @@ The source cast-family pool also carries four-way negative predicates:
 - `SelfCastBoon` excludes `CastProjectileBoon`, `CastAnywhereBoon`,
   `HadesCastProjectileBoon`, and `CastLobBoon`.
 
-The deferred `CastLobBoon` declaration carries the reciprocal exclusion list
-(`CastProjectileBoon`, `CastAnywhereBoon`, `HadesCastProjectileBoon`, and
-`SelfCastBoon`); its provider remains outside this persistent slice.
-
-`HadesCastProjectileBoon` and `CastLobBoon` are deferred operand keys only;
-they do not receive placeholder declarations in this slice.
+`CastLobBoon` and `HadesCastProjectileBoon` carry reciprocal exclusions for the
+other four members. All five are modeled declarations. These negative
+current-state conditions remain eligibility requirements, not linked boon
+prerequisites that Echo replay bypasses.
 
 ## Offer-Context Restrictions
 
 Some offer restrictions belong to the room or reward that produced the choice,
 not to equipped trait history. The normalized catalog has two such rules.
 
-### Devotion blocks Duo traits
+### Devotion rarity blocking and declaration eligibility
 
-Both initial Devotion choices are created with `BlockRarities = { Duo = true
-}`. The spurned god's post-combat reward repeats the same block. The
-`SynergyTrait` requirement independently checks that the current room's
-`ChosenRewardType` is not `Devotion`.
-
-Therefore all three authored alternatives in either Devotion role must reject
-traits whose sole rarity is `Duo`. This is one reward-context rule, not a
-provider-pool mutation and not a copied negative condition on every Duo trait.
+Both initial choices and the spurned reward set `BlockRarities.Duo`, writing
+a zero Duo chance. Most Duos also inherit a Devotion exclusion in
+`SynergyTrait.GameStateRequirements`; five replace that table.
+The [construction audit](TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md#trial-of-the-gods)
+owns the exact list and non-Denial final-rescue contact. Room context, resolved
+declaration requirements and generation support remain distinct; there is no
+blanket identity ban based solely on Duo rarity.
 
 ### `BlockGiftBoons` rooms
 
@@ -875,41 +852,11 @@ fresh authored choice.
 
 ### Proper Upbringing lifecycle
 
-`ElementalRarityUpgradeBoon` (Proper Upbringing) has two distinct element
-thresholds:
-
-- it may be offered at `Fire >= 1`, `Earth >= 1`, `Air >= 1`, and
-  `Water >= 1`; and
-- its equipped effect is active only at `Fire >= 2`, `Earth >= 2`,
-  `Air >= 2`, and `Water >= 2`.
-
-Crossing the activation threshold from inactive to active calls
-`UpgradeAllCommon`. That operation visits the equipped collection once per
-unique trait key and upgrades a trait from Common to Rare only when it:
-
-- satisfies the game's god-trait classification with `ForShop = true`;
-- does not declare `BlockInRunRarify`; and
-- is currently Common.
-
-The same activation installs a `GodLootOnly` rarity bonus with `Rare = 1`.
-Because rarity rolls continue through higher valid rarities, this is a Rare
-floor for later scalable god-loot choices rather than a command to make every
-choice exactly Rare. It applies to ordinary Olympian and Hermes loot in the
-currently modeled provider set when the proposed trait actually supports Rare.
-It does not turn fixed-Common infusion traits, Hammer traits, fixed Legendary
-traits, or fixed Duo traits into Rare choices.
-
-Falling below the activation threshold removes the future-offer rarity bonus.
-It does not downgrade traits already promoted to Rare. If the effect later
-reactivates, `UpgradeAllCommon` runs again and promotes newly present eligible
-Common traits. A trait acquisition or replacement that supplies the final
-required element participates in the activation check after it enters equipped
-state, so that newly selected trait is included when eligible.
-
-The same fold includes the source's own rarity assignment, while preserving
-its authored offer and exclusion flags. See the
-[rarity ledger audit](BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md#proper-upbringing)
-for that native assignment and its persistence after deactivation.
+Proper's offer threshold is one of each base element; activation requires two
+of each. The [rarity audit](BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md#proper-upbringing)
+owns active contributions, equipped Common promotion, source assignment,
+reactivation and the Ordinary-expiry recheck. Declaration or equipped-instance
+rarity blocks apply without removing a trait from rarity counts.
 
 ### Three related upgradeability contracts
 
@@ -923,20 +870,17 @@ The source has three similar but distinct queries:
 2. `RequiredUpgradeableGodTraits`, used by `BoonGrowthBoon`, calls
    `UpgradableGodTraitCountAtLeast(1)`. That query requires a unique persistent
    core god trait whose concrete rarity has a supported next in-run rarity
-   and that does not declare `BlockInRunRarify`. It uses the same plain
+   and that is not blocked from in-run rarification. It uses the same plain
    `IsGodTrait` classification.
 3. `HasSuperchargeableBoon`, used by `BoonDecayBoon`, applies the same
-   next-rarity and `BlockInRunRarify` tests and additionally rejects
+   next-rarity and in-run rarity-block tests and additionally rejects
    `BlockStacking` traits. It also uses plain `IsGodTrait` and has a special
    minimum-cooldown branch for Hephaestus Weapon, Special, and Sprint boons.
 
-These must not collapse into one generic counter. The first implementation
-slice models the first count exactly and evaluates the latter two predicates
-from equipped traits plus declaration facts. Because every freshly authored
-ordinary rarity has a next step through `Heroic`, Boon Decay will ordinarily
-succeed when at least one equipped non-`BlockStacking` god trait exists. The
-explicit next-rarity test is still retained so an all-`Heroic` ledger is
-correctly ineligible when later work can create it.
+These are distinct derived queries. Rarity blocking combines declaration facts
+with the equipped-instance block set by Personal Loan's non-final boss payout.
+An all-Heroic inventory fails preferred next-rarity queries; Bridal's broader
+acquisition fallback is not its offer-eligibility predicate.
 
 This is deliberately separate from whether a provider rolls variable rarity.
 In the supported normal-run model, the nine core gods are the only
@@ -1009,17 +953,14 @@ a valid no-op rather than an ineligible pickup or missing-target finding.
 `StackUpgradeLegal`; its implementation therefore uses the same random target
 and `+1` mutation while preserving the wrapper acquisition identity.
 
-On acquisition, `AddTraitData` first retains Bridal Glow itself, then
-`HeraSuperchargeBoon` calls `AddRarityToTraits` with `NumTraits = 1`,
-`TargetRarity = 4`, `MaxRarity = 3`, and `StackEligibleOnly = true`. The game
-therefore chooses exactly one eligible equipped target and promotes it to
-Heroic. It records that target on Bridal Glow as `UpgradedTraitName`; the
-source boon remains equipped with its own rarity and Water element.
-
-Bridal Glow also grants the chosen target levels according to its own rarity:
-Common `+1`, Rare `+2`, Epic `+3`, and Heroic `+4`. If Bridal Glow is later
-rarified, `CreditMissingStacks` grants its retained target only the difference
-between the old and new rarity grants, provided that target remains equipped.
+Bridal Glow retains its source before resolving a target. Its preferred
+acquisition pool is the superchargeable core-god domain. Only when that pool is
+empty does it widen to rarity-eligible shop-aware traits, including already
+Heroic and non-Pom traits and Bridal itself. Its remembered recipient and later
+rarity credit are recorded in the
+[effect audit](RUN_IMPACTING_TRAIT_EFFECTS_GAME_DATA_AUDIT.md#bridal-glow).
+Native non-Pom levels are possible; the planner's omission of those levels is
+explicit there, not evidence that they cannot occur.
 
 For Hephaestus Weapon, Special, and Sprint, `HasSuperchargeableBoon` additionally
 requires the target's current `UnmodifiedCooldown` to be strictly greater than
@@ -1034,22 +975,68 @@ limits:
 
 Each cell is the highest still-effective level at that rarity. Pom and Natural
 Selection use these caps for level-up eligibility, including the Heroic cells.
-Bridal Glow and Steady Growth also consult the same caps when selecting a
-rarity-promotion target, but their separate next-rarity requirement excludes a
-Heroic target. These limits are a narrow offer-legality mapping; they do not
+Steady Growth and Bridal's preferred pool also require an available next
+rarity. Bridal's acquisition fallback relaxes that requirement but retains the
+cooldown cap. These limits are a narrow offer-legality mapping; they do not
 require the planner to simulate combat cooldown values.
 
 ### Other direct condition dispositions
 
-| Source condition                                   | Normalized disposition                                                                                                          |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| already equipped                                   | modeled from exact equipped keys                                                                                                |
-| `BlockOfferIfPreviouslyPicked`                     | declaration-owned for Bridal Glow, Buried Treasure, and Cherished Heirloom; prior selected-offer history survives later removal |
-| `PlantHealthBoon` shovel, bounty, and dream checks | collapsed by the progressed, non-bounty, non-dream baseline; `BlockGiftBoons` remains modeled                                   |
-| `WeaponUpgradeBoon` progression gate               | collapsed by the progressed baseline                                                                                            |
-| `UnityTrait` progression and narrative gates       | collapsed by the progressed baseline; element thresholds remain modeled                                                         |
-| mechanical activation/effect requirements          | deferred because this slice models offer legality, not trait effects                                                            |
-| Hephaestus cooldown/level exception in Boon Decay  | exact rarity/level limits above; no general combat-cooldown simulation is implied                                               |
+| Source condition                                   | Normalized disposition                                                                                                                    |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| already equipped                                   | modeled from exact equipped keys                                                                                                          |
+| `BlockOfferIfPreviouslyPicked`                     | declaration-owned for Bridal Glow, Buried Treasure, and Cherished Heirloom; prior selected-offer history survives later removal           |
+| `PlantHealthBoon` shovel, bounty, and dream checks | collapsed by the progressed, non-bounty, non-dream baseline; `BlockGiftBoons` remains modeled                                             |
+| `WeaponUpgradeBoon` progression gate               | collapsed by the progressed baseline                                                                                                      |
+| `UnityTrait` progression and narrative gates       | collapsed by the progressed baseline; element thresholds remain modeled                                                                   |
+| mechanical activation/effect requirements          | retained by the owning selected-effect or lifecycle contract when they change modeled state; combat-only values remain outside simulation |
+| Hephaestus cooldown/level exception in Boon Decay  | exact rarity/level limits above; no general combat-cooldown simulation is implied                                                         |
+
+## Requirement Origins and Echo Replay
+
+The normalized declaration separates `eligibilityRequirements` from
+`linkedBoonRequirements`. Ordinary generation evaluates both. BBB calls the
+current-state eligibility path without the linked boon graph
+(`EventLogic.lua:1604–1618`, `RunLogic.lua:57–134`), while retaining
+ownership, bans, slot occupancy, giver membership and replay exclusions.
+Trait-key operands alone do not identify a linked requirement.
+
+| Declaration category   | All traits | In BBB union | BBB treatment                                       |
+| ---------------------- | ---------: | -----------: | --------------------------------------------------- |
+| Linked only            |         41 |           41 | Bypass linked groups                                |
+| Linked and eligibility |         34 |           34 | Retain eligibility                                  |
+| Eligibility only       |         28 |           19 | Retain eligibility                                  |
+| Empty collections      |        316 |          107 | Separate ownership/effect exclusions still apply    |
+| Total                  |        419 |          201 | 103 declarations with expressions; 75 linked owners |
+
+The 75 linked groups were compared with `TraitData.lua:121–658`; their exact
+AND/OR grouping is retained in the graph below. Of the 34 mixed owners, 32
+retain inherited Devotion eligibility. `CastAnywhereBoon` and `SelfCastBoon`
+instead retain cast-family exclusions. The five Duo requirement-table overrides
+are source facts, not BBB bypass flags.
+
+The 19 eligibility-only owners inside BBB are:
+
+| Owners                                                          | Retained current-state condition                                                              |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Ten Infusions                                                   | Exact element offer thresholds, including Proper's offer rather than activation threshold     |
+| `SorceryCritBoon`                                               | Native seven-Hex identity list, `TraitData_Artemis.lua:502`                                   |
+| `OlympianSpellCountBoon`                                        | Native nine invested talents, `TraitData_Athena.lua:505`; accepted concrete Spell Drop prefix |
+| `CommonGlobalDamageBoon`                                        | Zero Common god-boon count                                                                    |
+| `BoonGrowthBoon`                                                | Existing rarifiable-trait predicate                                                           |
+| `PlantHealthBoon`, `RoomRewardBonusBoon`, `MoneyMultiplierBoon` | Gift-block context                                                                            |
+| `CastProjectileBoon`, `CastLobBoon`                             | Cast-family exclusions                                                                        |
+
+The nine eligibility-only owners outside BBB are Icarus Attack/Special,
+Circe's Hex/Grasp/removable-Fear choices, `NarcissusA`, Hades Cast and the
+mutually exclusive Skull Hammer pair. Icarus's trait lists approximate occupied
+slots; Circe/Artemis Hex lists are native identity conditions. Neither becomes
+linked merely by mentioning equipped keys. Volatile conditions retain the
+[existing disposition](../rewards-and-acquisition/VOLATILE_OFFER_ELIGIBILITY_GAME_DATA_AUDIT.md).
+
+Optional linked-priority metadata controls generation, not replay eligibility.
+BBB still bypasses ordinary screen composition, replacement and menu
+Rarification; direct acquisition retains the chosen trait's effect.
 
 ## Positive Equipped-Trait Dependency Graph
 
@@ -1172,129 +1159,29 @@ the preceding rows come from `TraitRequirements`.
 | `FireballRendBoon`           | `all(any(AresCore); any(FireballManaSpecialBoon, CastProjectileBoon))`                                                                                                                                                                                                   |
 | `BloodManaBurstBoon`         | `all(any(AresBloodDrop); any(AphroditeCore))`                                                                                                                                                                                                                            |
 
-## Audit Conclusions
+## Catalog Disposition
 
-1. The nine ordinary Olympians share one stable pool shape: 22 unique traits
-   per giver, with core, secondary, elemental, legendary, and Duo entries in
-   one declaration-owned domain.
-2. Hermes is a separate 13-trait giver. Only `LuckyBoon` and
-   `TimeStopLastStandBoon` have positive equipped-trait prerequisites.
-3. Artemis and Athena each add one direct spell-state dependency outside the
-   central `TraitRequirements` table. Icarus's Ingenious Strike and Ingenious
-   Flourish require the occupied Attack and Special slots respectively; Latest
-   Model requires one exact eligible Hammer target.
-4. The audited Story-room pools contain no positive equipped-trait
-   prerequisites, but several entries are effect-backed choices rather than
-   simple persistent inventory additions.
-5. Daedalus traits have no positive equipped-trait prerequisites. Their legal
-   domain is still loadout- and exclusion-dependent: 48 of the 92 pooled traits
-   explicitly restrict compatible aspects, while the other 44 have no aspect
-   condition. One mutual equipped-trait exclusion pair applies to the Argent
-   Skull. Route-level weapon and aspect selection and exact equipped traits are
-   therefore necessary inputs before producing a legal Hammer offer pool.
-6. Devotion's no-Duo rule and the declaration-owned `BlockGiftBoons` room fact
-   are offer-context inputs. They do not belong in giver membership or copied
-   per-trait room-name checks.
-7. Exact equipped trait keys and rarities are the canonical state from which
-   element counts, base-element maximum, god-boon rarity counts, and the three
-   distinct upgradeability predicates derive. Persisted shadow counters would
-   create a second authority.
-8. `Heroic` is excluded from fresh ordinary offer authorship but retained in
-   the equipped rarity universe so next-rarity eligibility has a truthful
-   boundary. It remains Pom-levelable but cannot be selected by Bridal Glow.
-9. Loot/use history remains independently meaningful. This inventory supports
-   an additive trait event ledger and folded equipped-trait state; it does not
-   justify replacing the existing exact loot ledgers.
-10. The closure inventory contains 23 givers, 427 giver-to-trait memberships,
-    419 unique included trait declarations, and 76 in-scope traits with
-    positive equipped-trait prerequisites. Those memberships comprise 335
-    memberships across 22 non-Hammer givers plus 92 `WeaponUpgrade`
-    memberships. The broader source graph contains 77 such owners after
-    retaining the remaining deferred Athena talent-state rows.
+The provider inventory contains 23 givers, 427 memberships and 419 distinct
+trait declarations: 335 memberships across 22 non-Hammer givers and 92 Hammer
+memberships, with defaults for 24 weapon/aspect pairs. Spell Drop's eight-trait
+pool and Chaos's 33-identity paired pool retain their specialist audits.
 
-## Olympian Replacement Source Closure
+Normalization preserves membership, priority sets, requirement origin/grouping,
+fresh/equipped rarity domains, slots, elements, loadout restrictions, exact
+exclusions and selected-effect descriptors. It does not persist a live eligible
+pool, generation bucket, banned set, target count or equipped rarity block.
 
-The installed `UpgradeChoiceLogic.lua` and `TraitLogic.lua` replacement paths
-retain the following possibility semantics. A normal replacement is drawn only
-from an Olympian giver's normalized `PriorityUpgrades` (`priorityTraitKeys`),
-must be a new trait whose ordinary slot is occupied by a different equipped
-trait, and keeps every ordinary requirement and offer-context predicate. The
-occupant may belong to another god. Its supported rarity advances exactly
-`Common -> Rare -> Epic -> Heroic`; a Heroic occupant has no replacement.
-Replacement identity is therefore a derived transition from the pre-offer
-equipped ledger and authored option rarity, not a persisted offer field.
+Core-god, shop-aware rarity and Pom eligibility are separate classifications.
+The equipped ledger derives slot/element/rarity facts; ordinary generation and
+BBB replay consume their own declared requirement collections. Negative
+cast/Hammer exclusions and source context remain independent of the positive
+graph. Its Artemis/Athena spell-state rows are explicit current-state
+conditions, not linked prerequisites to bypass.
 
-The game seeds at most one normal replacement and fills additional positions
-with replacements only after the ordinary pool is exhausted. A selected
-replacement transfers the displaced trait's exact level to the new trait and
-then adds the derived `ExchangeLevelBonus`. The supported neutral route has no
-modeled source for that bonus, so its value is zero and replacement preserves
-the old level exactly. The planner retains the possibility boundary without
-the source's 10 percent roll, progression gates, force flags, counters, or an
-authored level-transfer field. For an exact pre-offer branch, ordinary availability is
-the count of distinct legal trait keys with at least one legal fresh rarity;
-the maximum replacement count is `ordinaryCandidateCount >= 2 ? 1 : 3 -
-ordinaryCandidateCount`. Replacement alternatives remain independent against
-the same pre-offer state.
-
-## Normalized Source-Closure Fields
-
-The supported trait-offer catalog consumes the following declaration facts
-from the installed scripts. These are normalized without
-moving any lifecycle, authored-state, or simulation policy into declarations:
-
-| Normalized fact               | Source authority and closure result                                                                                                                                                                                                                                                                                                                                                    |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| trait labels                  | English `TraitText.en.sjson` `DisplayName` for every included Olympian, Hermes, field-NPC, and Hammer key                                                                                                                                                                                                                                                                              |
-| fresh/equipped rarity domains | player-facing boon rarity only: ordinary scalable offers are `Common/Rare/Epic`, equipped state retains `Heroic`, and Legendary/Duo retain their sole rarity; Hammers and the audited rarityless NPC providers use `none`, while their independent Hammer rank or internal NPC scaling stays separate                                                                                  |
-| ordinary boon slots           | direct `Slot` declarations, limited to `Melee`, `Secondary`, `Ranged`, `Rush`, and `Mana`                                                                                                                                                                                                                                                                                              |
-| element contributions         | inherited `AirBoon`, `FireBoon`, `EarthBoon`, `WaterBoon`, and `AetherBoon` facts plus direct multi-element declarations; base elements are `Earth`, `Air`, `Fire`, and `Water`                                                                                                                                                                                                        |
-| god-trait/rareness flags      | the core-god versus broader boon-rarity distinction plus inherited `LegendaryTrait`, `SynergyTrait`, and `UnityTrait` facts, including `BlockStacking`, `BlockInRunRarify`, and `ExcludeFromRarityCount`; Hammer traits belong to neither trait classification                                                                                                                         |
-| self-exclusion                | no included trait declares a distinct `RequiredFalseTrait`; the optional field remains absent rather than being invented                                                                                                                                                                                                                                                               |
-| offer requirements            | all 76 in-scope positive dependency rows are retained as exact game-key operands (aliases are expanded from `LinkedTraitData`); the broader source graph has 77 owners including the remaining deferred Athena talent-state rows; Hammer and cast-family `HasNone` predicates are explicit negative requirements                                                                       |
-| element thresholds            | all ten audited infusion thresholds are represented: `ElementalUnifiedBoon`, `ElementalRarityUpgradeBoon`, `ElementalDamageBoon`, `ElementalOlympianDamageBoon`, `ElementalBaseDamageBoon`, `ElementalRallyBoon`, `ElementalDamageFloorBoon`, `ElementalDodgeBoon`, `ElementalDamageCapBoon`, and `ElementalHealthBoon`                                                                |
-| rarity-derived predicates     | `CommonGlobalDamageBoon` requires zero derived Common god-boon count; `BoonGrowthBoon` and `BoonDecayBoon` retain distinct rarifiable and superchargeable predicates                                                                                                                                                                                                                   |
-| Pom/level facts               | the plain core-god plus non-`BlockStacking` target domain, visible `+1`/`+2`/`+3` Pom surfaces, exact random `+1` target, folded equipped level, replacement transfer, Natural Selection's ordered eight-level allocation, Ransom level mutations, Bridal Glow's rarity-scaled grant and missing-stack adjustment, Steady Growth rarity targets, and the four-rarity Hephaestus limits |
-| offer context                 | `devotionNoDuo` blocks `Duo` rarity; `blockGiftBoons` consumes the room-owned `BlockGiftBoons` flag for `PlantHealthBoon`, `RoomRewardBonusBoon`, and `MoneyMultiplierBoon`; no trait names a room                                                                                                                                                                                     |
-
-The current normalized inventory has six weapons, 24 weapon/aspect pairs, 23
-givers, 427 giver-to-trait memberships, and 419 unique included trait
-declarations. Those memberships comprise 335 across 22 non-Hammer givers plus
-92 `WeaponUpgrade` memberships, with one loadout-keyed Hammer default triple
-for each of the 24 pairs. SpellDrop is an eight-trait production provider and
-Chaos is a 33-identity paired provider; their detailed spell and
-curse/blessing effects remain in the separate audits. The nine Athena talent
-operands remain exact deferred keys only. Artemis, Athena, and Icarus are the
-modeled field-NPC providers;
-Arachne, Medea, Hades, Dionysus, Narcissus, and Circe are modeled Story
-providers. Narcissus's nine choices remain effect-backed rather than persistent
-inventory. Circe's nine rarityless choices are production catalog entries;
-its Red, Lapis, and Black Night target behavior is owned by the Arcana/Fear
-simulation contract. Echo's complete eight-choice inventory is production
-catalog data. All eight outer identities are player-rarityless and their
-direct, replay, pending-Shop, and captured-keepsake dispositions are implemented
-through their owning authorities. Other source
-predicates retain the dispositions above or the previously recorded
-progressed-baseline and mechanical-effect deferrals. Newly discovered
-predicates are explicitly listed above rather than covered by a no-unlisted
-claim.
-
-## Implemented Offer Disposition
-
-Schema 38 retains this audit's giver membership, requirements, rarity domains,
-priority sets, and exact replacement targets. The earlier fixed-triple text is
-historical baseline only: Olympian and Hermes outcomes now support one to three
-materialized traits or Fallback Gold according to the source-backed exhaustion
-contract in
-[`TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md`](TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md).
-The catalog adds only the exact ten-giver Denial participation fact; ordinary,
-high-tier, replacement, banned, and fallback membership remain derived from
-the progressive engine state rather than copied into these declarations.
-
-All Together's Legendary outer offer uses the same ordinary Hera eligibility
-authority. Its selected result is the closed four-pair direct-grant product
-recorded above; every non-exhausted child enters rarityless trait history and
-does not mutate god-pool history. Travel Deal remains an ordinary ranked Hermes
-offer whose declaration alone owns the one-restock Shop effect and four
-discount facts. Infernal Contract remains a fixed rarityless acquisition rather
-than a selectable giver membership.
+Initial-screen construction and Fear pressure belong to the
+[composition audit](TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md), source
+arithmetic to the [rarity audit](BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md), and
+acquired effects to their owning audits. All Together's children are direct
+Common grants, Travel Deal is an ordinary ranked Hermes trait with a separate
+refill effect, and Infernal Contract is a fixed rarityless acquisition rather
+than an invented giver.

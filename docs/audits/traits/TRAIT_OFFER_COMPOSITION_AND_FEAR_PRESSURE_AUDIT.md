@@ -1,222 +1,178 @@
-# Trait Offer Composition and Fear Pressure Audit
+# Initial Trait Offers and Fear Pressure
 
-## Status
+## Scope and source ownership
 
-Locked source-fact audit against the installed Hades II scripts on 2026-08-12,
-with the accepted schema-22 planner disposition recorded below.
-The giver inventories, trait requirements, rarity domains, and replacement
-target rules remain owned by
-[`TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md`](TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md).
-This document owns the narrower questions that the original three-option
-baseline did not answer:
+This audit owns ordinary initial Olympian/Hermes screen construction, Denial's
+bans and exhaustion effect, and Forfeit's reward substitution. The supported
+baseline is a progressed run with three generation positions. Rerolls,
+first-run overrides, profile-first-seen priorities and debug requirement
+stripping are outside the planner model.
 
-1. how an Olympian or Hermes offer is filled when fewer than three dependable
-   fresh traits remain;
-2. when Duo, Legendary, replacement, and fallback outcomes participate;
-3. how Vow of Denial changes later offer eligibility; and
-4. where Vow of Forfeit intercepts a Boon or Hermes reward.
+Related authorities:
 
-This is evidence and modeling disposition, not an implementation plan. It does
-not prescribe persisted schema, commands, findings, candidate products, or UI
-layout.
+- [Trait pools and dependencies](TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md): provider
+  membership, current-state eligibility, linked prerequisites and replacement
+  candidates.
+- [Rarity effects](BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md): source overrides,
+  chance arithmetic and later equipped mutations.
+- [Reward model](../../design/REWARD_MODEL.md#trait-bearing-reward-leaves):
+  planner assessment and chronological settlement.
 
-## Sources
+The source anchors below refer to the installed scripts audited on 2026-09-15.
+They establish possibility, not exact probability or RNG replay. The planner
+treats chances at or below zero as unable to succeed and at or above one as
+guaranteed. Native `RandomChance` uses `rng:Random() <= chance`
+(`RandomLogic.lua:120–125`); the Lua snapshot alone does not establish the
+native RNG's endpoint behavior.
 
-Primary executable evidence:
+## One pre-offer state, distinct eligibility questions
 
-- `TraitLogic.lua`: `SetTraitsOnLoot`, `CalcNumLootChoices`, and
-  `GetTotalLootChoices`;
-- `UpgradeChoiceLogic.lua`: `GetPriorityTraits`, `GetReplacementTraits`,
-  `GetEligibleUpgrades`, `CreateBoonLootButtons`, and
-  `HandleUpgradeChoiceSelection`;
-- `RunLogic.lua`: `IsTraitEligible` and `EndBiomeRecords`;
-- `LootData.lua` and `LootData_Hermes.lua`;
-- `TraitData.lua`: `LegendaryTrait`, `SynergyTrait`, `UnityTrait`, and
-  `FallbackGold`;
-- `RewardLogic.lua`: the `Boon` and `HermesUpgrade` room-reward spawn paths;
-- `ShrineLogic.lua`: `ShrineUpgradeExtractValues`, `GetNumShrineUpgrades`, and
-  `CheckBoonSkipShrineUpgrade`;
-- `MetaUpgradeData.lua`: `BoonSkipShrineUpgrade` and
-  `BanUnpickedBoonsShrineUpgrade`;
-- `RoomLogic.lua`: `UseShipWheel`, which installs the picked Ship reward as the
-  active encounter's room-reward override;
-- `EncounterSets.lua`: `EncounterEventsShipsCombat`, which materializes that
-  picked reward through `SpawnRoomReward` after combat;
-- `StoreLogic.lua` and `EncounterLogic.lua` for Shop and Devotion acquisition
-  paths; and
-- English `TraitText.en.sjson` for the player-facing Vow descriptions.
+`IsTraitEligible` (`RunLogic.lua:98–134`) checks declaration existence,
+`MaxAmount`, elemental/shared conditions, prior-picked exclusions, bans and
+`GameStateRequirements`. Callers separately check ownership, occupied slots
+and linked boon requirements.
 
-The audit uses the same progressed, ordinary-run baseline as the existing
-trait audit. Probability values are evidence about optional versus dependable
-offer participation; the planner still models positive-probability support
-rather than RNG replay.
+`HasTraitRequirements` (`RunLogic.lua:57–96`) accepts a successful declared
+requirement family: `OneOf`, at least two `TwoOf` members, or one member from
+each `OneFromEachSet` group. Alternative families are not implicitly ANDed.
 
-## Offer-Pool Terms
+All generation stages read the same pre-selection hero state. Offering an
+identity does not equip it, satisfy another row's prerequisite or mutate a
+replacement slot. Individually selectable rows are not themselves proof that
+a complete screen can be generated.
 
-For one exact giver and pre-offer trait history, this audit separates three
-domains. All three domains already apply the giver, equipped-state,
-offer-context, uniqueness, and banned-trait requirements appropriate to the
-candidate.
+## Native construction sequence
 
-### Ordinary pool — `O`
+| Stage                 | Native contact                                               | Rule                                                                                                                                                                                        |
+| --------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Source                | `TraitLogic.lua:1765–1784`                                   | Resolve forced Common or the chance ledger, then apply blocked-rarity values.                                                                                                               |
+| Replacement seed      | `TraitLogic.lua:1790–1806`; `UpgradeChoiceLogic.lua:795–821` | Active Hymn attempts one swap first. Otherwise the normal progressed replacement roll may seed one unless forced Common. No result falls through to core seeding.                           |
+| Core seeds            | `UpgradeChoiceLogic.lua:739–792`                             | Use the provider-eligible priority set and its owned/occupied state, as detailed below.                                                                                                     |
+| Linked-priority seeds | `UpgradeChoiceLogic.lua:855–875`; `TraitLogic.lua:1816–1825` | Eligible unowned linked-priority identities may enter remaining seed positions.                                                                                                             |
+| Buckets               | `TraitLogic.lua:1858–1888`                                   | Build identity sets for every declared rarity from seeds and eligible ordinary entries. Declaration membership differs from roll support.                                                   |
+| Seed rarity           | `TraitLogic.lua:1898–1918`                                   | Preserve explicit replacement rarity. Other seeds roll against their own rarity support. Remove each seeded identity from all buckets.                                                      |
+| Ordinary fill         | `TraitLogic.lua:1920–1947`                                   | Make the remaining number of draw attempts. A Common candidate can be overwritten by each later successful nonempty rarity bucket. Remove only the final chosen identity from every bucket. |
+| Replacement rescue    | `TraitLogic.lua:1949–1961`                                   | Fill actual vacancies from remaining replacement candidates, without another replacement roll or forced-Common guard.                                                                       |
+| Rarity rescue         | `TraitLogic.lua:1963–1993`                                   | Only with effective Denial off, fill vacancies from surviving rarity buckets without random rolls.                                                                                          |
+| Empty result          | `UpgradeChoiceLogic.lua:149–150`                             | Only an empty generated list becomes Fallback Gold. A short nonempty list is not supplemented with Gold.                                                                                    |
 
-`O` contains legal fresh traits that can occupy the Common rarity table. This
-includes:
+### Core seeding
 
-- scalable ordinary traits with a fresh `Common` rarity; and
-- infusion/Unity traits, whose declaration includes Common even though the
-  player-facing frame is Infusion.
+Let U be provider-priority identities that pass declaration eligibility and
+are unowned with vacant slots. Let H mean at least one _eligible provider
+priority identity_ is already owned or has an occupied slot. Let A be
+Attack/Special members of U.
 
-It excludes Duo-only and Legendary-only traits. It also excludes replacement
-transitions: a replacement is derived from an occupied core slot rather than
-a second fresh copy of the same declaration.
+| State                                      | Seeds                                                |
+| ------------------------------------------ | ---------------------------------------------------- |
+| H, U nonempty                              | Exactly one member of U; no Attack/Special guarantee |
+| H, U empty                                 | None                                                 |
+| Not H, at most three members of U          | All members of U                                     |
+| Not H, more than three members, A nonempty | Three distinct members including at least one of A   |
+| Not H, more than three members, A empty    | Any three distinct members                           |
 
-`SetTraitsOnLoot` initializes a vacant position from the Common table before
-rarity rolls. A non-empty `O` therefore supplies a dependable option for that
-position.
+H is not a generic “a core slot is occupied” flag. An ineligible provider
+identity cannot set it merely because its slot is occupied. Hermes has no
+priority or weapon list (`LootData_Hermes.lua:57–58`).
 
-### Optional high-tier pool — `H`
+### Linked-priority support
 
-`H` contains legal traits whose fresh domain is only `Duo` or `Legendary`.
-Eligibility admits them to the appropriate rarity table, but it does not force
-their rarity roll to succeed. They may occupy a position; they are not a
-dependable source with which to prove that the offer must contain three
-traits.
+| Identity             | Linked prerequisites                 | Source              |
+| -------------------- | ------------------------------------ | ------------------- |
+| `BlindChanceBoon`    | Apollo Attack                        | `TraitData.lua:143` |
+| `MassiveKnockupBoon` | Hephaestus Attack, Special or Sprint | `TraitData.lua:178` |
+| `PoseidonStatusBoon` | Poseidon Attack or Special           | `TraitData.lua:223` |
 
-Devotion blocks Duo rarity before this composition runs. Room-owned
-`BlockGiftBoons` and all ordinary trait requirements likewise reduce the exact
-pre-offer domain before cardinality is considered.
+Each native chance is 0.25. The normalized fact is simply
+`optionalLinkedPriority: true`: both insertion and non-insertion are possible.
+Existing linked prerequisites still apply; the chance is not a new condition.
 
-### Replacement pool — `R`
+This stage matters when a guaranteed later rarity bucket would otherwise
+prevent the identity from occupying an ordinary-fill position. A native-helper
+probe with Apollo Attack/Cast, Poseidon Sprint and Hera Gain owned, Epic 2.05
+and Duo 1.04 produced:
 
-`R` contains legal core-slot replacement transitions. Each transition:
+- successful priority insertion: Nova Flourish, Dazzling Display, Beach Ball;
+- failed priority insertion: Nova Flourish, Beach Ball, Sun Worshiper.
 
-- comes from the giver's `PriorityUpgrades`;
-- targets an occupied ordinary slot containing a different trait;
-- requires a supported next rarity;
-- retains the candidate's ordinary requirements and banned-trait exclusion;
-  and
-- carries the exact promoted rarity derived from the displaced trait, not a
-  fresh rarity roll. `SetTraitsOnLoot` preserves that assigned rarity even when
-  the fresh table guarantees a higher rarity.
+Without this optional path the first screen would be falsely rejected. These
+were native-helper results using rank-IV Queen and eight source-supported
+Yarn instances, not live-game or complete-route witnesses. Exact nonzero
+optional probability does not otherwise change the planner's support question.
 
-The source may seed at most one normal replacement while a sufficiently large
-ordinary domain remains. Its later exchange-fill pass may use replacement
-transitions for every still-vacant position after the fresh/high-tier pass.
-Each replacement alternative is assessed against the same pre-offer equipped
-state; unselected options do not mutate slots.
+### Rarity buckets and depletion
 
-## General Offer-Composition Contract
+Bucket membership uses `RarityLevels[key] ~= nil`, not a positive chance.
+Missing rarity declarations default to Common-only; an explicitly empty table
+has no members. The provider's ordered checks, not numeric rarity rank, decide
+which winning bucket supersedes another. Ordinary order is Common, Rare, Epic,
+Duo, Legendary; Heroic is not a fresh ordinary roll.
 
-`ScreenData.UpgradeChoice.MaxChoices` declares a fixed three-position offer
-envelope. Three is a constant for the supported Olympian/Hermes surface, not a
-cardinality derived from the active Vows. The concrete offer is composed
-against one immutable pre-selection state; only the selected option changes
-equipped-trait history.
+Ordinary filling has a finite number of attempts, not a loop until three
+successes. An attempt may produce nothing if Common is empty and all applicable
+checks fail. An overwritten tentative choice is not consumed. Guaranteed
+checks must succeed when their buckets are nonempty, while an empty bucket
+cannot win even at a guaranteed chance. Depletion changes later possibilities.
 
-The fixed envelope and the number of materialized trait choices are separate
-facts. Exhaustion may leave only one or two trait choices in that envelope, or
-may put Fallback Gold in its first position and close the other two. Denial
-does not change the envelope width to `3 - 2`; its value of two is the maximum
-number of other positions banned after the player selects one.
+A Common-only infusion can become available after earlier positions exhaust
+a guaranteed Rare/Epic bucket. Counting it as a dependable Common row while
+that bucket remains would admit an impossible screen.
 
-The following rules state the game-language support boundary independently of
-why a pool became small. Vow of Denial is one way to reach these pressure
-points quickly, but the domains and exhaustion behavior are general.
+### Replacement semantics
 
-### At least three ordinary candidates
+The helper draws from provider priority identities: an unowned eligible trait,
+an occupied slot with a different trait, and an available next rarity for that
+occupant. Promotion is Common → Rare → Epic → Heroic; Heroic has no successor.
+Explicit promoted rarity survives even if the fresh chance table guarantees
+another tier.
 
-When `|O| >= 3`:
+Normal generation seeds at most one replacement. Vacancy rescue may add more;
+there is no quota inferred from the total number of ordinary candidates.
+Only selection replaces the occupant. Its folded level transfers to the new
+trait, including non-Pom replacements, before the exchange level bonus.
 
-- the offer contains exactly three trait options;
-- an actual option may instead be a legal Duo, Legendary, or replacement
-  outcome; and
-- the normal maximum of one replacement remains in force.
+Hymn takes precedence over the normal roll and forced Common. When it seeds a
+swap, every replacement alternative on that screen—including vacancy
+rescues—receives its +2 level benefit. Closing the screen consumes the pending
+use once, not once per alternative (`UpgradeChoiceLogic.lua:320–331,1134–1142`).
+Without a seeded swap, the failed attempt does not spend that use.
 
-The three authored options need not be the first three members of `O`.
-`O` establishes dependable cardinality, while all concrete options still need
-their own exact legality witness.
+### Final rescue, Denial and zero-valued entries
 
-### One or two ordinary candidates
+Effective Denial disables the final rarity rescue; it does not merely make
+exhaustion arrive sooner. With Denial off, each rescue position starts from
+Common and the last nonempty rarity bucket with a present truthy chance entry
+wins, without calling `RandomChance`. Lua numeric zero is truthy.
 
-When `0 < |O| < 3`:
+Ordinary `GetRarityChances` creates zero entries for rarity keys
+(`RoomLogic.lua:2140–2143`). Forced Common clears the table; `BlockRarities`
+can subsequently reinsert a zero-valued entry. Absent and present-zero remain
+different. Short or empty screens are supported only after all applicable
+stages can terminate there.
 
-- every member of `O` must appear;
-- zero or more actually rolled members of `H` may occupy remaining positions;
-- after those optional high-tier outcomes, legal replacements fill as many
-  remaining positions as possible; and
-- the exhaustion replacement fill is no longer limited to one replacement.
+### Trial of the Gods
 
-If the replacement domain cannot fill every vacant position, only one or two
-trait choices materialize inside the fixed three-position envelope. Fallback
-Gold does not coexist with those traits: the presence of a dependable ordinary
-option prevents the whole-offer fallback outcome.
+Trial's `BlockRarities = { Duo = true }` writes a zero Duo chance. Most Duos
+also inherit `SynergyTrait.GameStateRequirements`, which excludes Devotion
+(`TraitData.lua:869–875`), so they never enter Trial buckets.
 
-### No ordinary candidates
+Five Duos replace that inherited requirement table:
 
-When `|O| == 0`:
+| Identity                    | Own table                |
+| --------------------------- | ------------------------ |
+| `ApolloSecondStageCastBoon` | `TraitData_Duo.lua:527`  |
+| `GoodStuffBoon`             | `TraitData_Duo.lua:757`  |
+| `SuperSacrificeBoonHera`    | `TraitData_Duo.lua:965`  |
+| `SuperSacrificeBoonZeus`    | `TraitData_Duo.lua:1004` |
+| `SelfCastBoon`              | `TraitData_Duo.lua:1297` |
 
-- members of `H` may appear when their optional rolls succeed;
-- legal replacements then fill the remaining positions and may occupy more
-  than one position; and
-- if neither an optional high-tier trait nor a replacement materializes, the
-  offer becomes Fallback Gold.
-
-If `R` is empty, an eligible `H` does not by itself exclude Fallback Gold:
-the high-tier roll may fail. The supported authored outcomes are therefore
-either one-to-three actual high-tier traits or the whole-offer fallback. If a
-high-tier trait does materialize, Fallback Gold is not displayed beside it.
-
-### Fallback Gold is a whole-offer outcome
-
-`CreateBoonLootButtons` inserts `FallbackGold` only when the generated option
-list is empty. Its trait declaration immediately grants consumables rather
-than leaving an equipped boon.
-
-For modeling purposes, Fallback Gold is therefore mutually exclusive with a
-trait-option list:
-
-- choosing Fallback Gold as the first outcome closes the remaining option
-  positions;
-- it does not have a trait rarity choice merely because the source declaration
-  uses `Rarity = "Common"` to drive the generic boon screen; and
-- it does not enter equipped-trait history or the banned-trait set as a boon.
-
-This distinction prevents a consumable fallback from becoming a fake trait
-declaration solely to reuse a three-slot UI.
-
-## Literal Source Branch at Exhaustion
-
-There is one executable detail that conflicts with the clean universal
-interpretation above and must not be hidden.
-
-After the initial rarity-sensitive fill and replacement fill,
-`SetTraitsOnLoot` contains a final pass labelled “Fill empty spots with any
-traits that failed the rarity check the first time around.” The pass is guarded
-by:
-
-```lua
-local numBans = MetaUpgradeData.BanUnpickedBoonsShrineUpgrade.ChangeValue
-if numBans <= 0 then
-  -- fill remaining positions from the surviving rarity tables
-end
-```
-
-`ShrineUpgradeExtractValues` sets that `ChangeValue` to two while Denial is
-active and to zero while inactive or suppressed. In the installed source,
-Denial therefore does more than merely make exhaustion arrive sooner: it also
-skips this final forced rarity-table fill at the exhaustion boundary.
-
-The player-facing Vow description mentions only the permanent loss of
-unselected blessings. The agreed planner interpretation is that reduced
-cardinality and Fallback Gold are universal exhaustion behavior, while Denial
-only accelerates exhaustion by banning traits. That interpretation is cleaner
-and matches the observed game-language model, but it is not a literal
-translation of the source guard above.
-
-The schema-22 planner resolves this discrepancy in favor of the universal
-exhaustion contract. Production has one composition algorithm; the source
-guard remains evidence rather than an unexplained Denial conditional.
+`DeepInheritData` (`RunData.lua:1390–1417`) does not merge these child tables.
+Their own current-state and linked requirements remain, but not the inherited
+Devotion exclusion. With Denial off, they can survive the final zero-chance
+rescue. A native-helper probe produced Glorious Disaster this way. This does
+not permit all Duos in Trials, bypass prerequisites, or enable a normal Duo
+roll. Catalog requirements preserve the resolved source facts; the engine
+needs no five-trait exception switch.
 
 ## Vow of Denial
 
@@ -228,9 +184,13 @@ loot inherits `BaseLoot`, and `HermesUpgrade` also inherits it.
 
 Stack/Pom and Weapon/Hammer loot explicitly disable the flag. Field-NPC and
 Story choice surfaces do not inherit this eligible BaseLoot contract. The
-supported Denial domain is therefore Olympian and Hermes trait offers,
+ordinary-screen Denial domain is therefore Olympian and Hermes trait offers,
 including those reached through a Shop or Devotion rather than only room-door
 rewards.
+
+Chaos has its own transforming-screen Denial contact: unselected curses, not
+blessings, are banned. The [Chaos audit](CHAOS_TRAIT_GAME_DATA_AUDIT.md#denial-bans-unselected-curses-not-blessings)
+owns that separate provider rule.
 
 ### Selection effect
 
@@ -253,53 +213,6 @@ different Apollo trait or an analogous trait from another giver.
 
 Denial does **not** remove an already equipped trait. It changes future offer
 eligibility only after a concrete displayed option is left unselected.
-
-### Biome coverage and accepted settlement timing
-
-The planner preserves observable outcomes, not every native spawn callback.
-Required-reward acquisition settlement remains sufficient unless an earlier
-decision changes a modeled outcome. Fields' coexisting cages need earlier
-consumption because pickup order is independent of spawn order. This is one
-Forfeit policy with different lifecycle contacts, not one policy per biome.
-
-| Biome / surface | Native reward path                                                                                                                                    | Accepted planner contact                                                                                                                                 |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| F               | Opening and ordinary encounters call SpawnRoomReward.                                                                                                 | Shared required-reward settlement.                                                                                                                       |
-| G               | Ordinary incoming rewards, including qualifying rewards after detours.                                                                                | Shared settlement; door generation does not consume.                                                                                                     |
-| H combat cages  | All active cage objects spawn in list order during room setup.                                                                                        | Selected room entry fixes the Onion and consumes the use; pickup reuses that outcome.                                                                    |
-| H minibosses    | One locked reward spawns before combat and unlocks afterward.                                                                                         | Shared required-reward settlement. No observable modeled counterexample justifies separate pre-combat machinery.                                         |
-| H other rooms   | Ordinary incoming rewards qualify; FieldsOptionalRewards contains no natural Boon/Hermes.                                                             | Shared incoming settlement; optional Artificer replacements use conversion settlement.                                                                   |
-| I               | TartarusRewards includes Boon; ClockworkGoal does not qualify.                                                                                        | Shared reward settlement, not goal completion.                                                                                                           |
-| N               | Hub generates offers; entered rooms spawn rewards. Side-room stores have no natural Boon/Hermes.                                                      | Shared settlement in visit order, not board order. Restores do not replay consumption or reset the use. Side-room Artificer remains separately eligible. |
-| O ships         | Selected wheel reward spawns after combat. WaitForNextEncounterReady waits for required objects and reward screens before continuing.                 | Picked reward settlement only; unpicked previews do not consume. No separate spawn phase is needed.                                                      |
-| O other rooms   | Ordinary incoming reward path; empty intro does not qualify.                                                                                          | Shared settlement.                                                                                                                                       |
-| P               | GeneratedP_PreCombat overrides the reward to Empty; rewarded combat supplies the incoming reward. HeraclesCombatP can replace the encounter sequence. | One incoming reward settlement, not one opportunity per phase.                                                                                           |
-| Q               | Qualifying ordinary rewards use SpawnRoomReward; shop purchases and boss drops do not qualify merely by being rewards.                                | Shared incoming settlement; purchases remain separate.                                                                                                   |
-
-Source anchors: `EncounterSets.lua:446–490` (ordinary, H miniboss and Ship
-sequences); `RoomLogic.lua:1368` (WaitForNextEncounterReady), `:1466` (wheel
-reward override), `:5758` (SpawnRewardCagesMiniboss);
-`EncounterData_MiniBoss.lua:260,331` (both H bindings);
-`EncounterData_Generated.lua:1182` (P preliminary Empty reward);
-`EncounterData_Heracles.lua:168` (Heracles P). Catalog stores mirror the
-nonqualifying N side-room and H optional reward domains. Fountain rewards
-also spawn early through HealthRestore start events in EncounterData_Unique;
-early spawn alone does not warrant another planner timing mechanism.
-
-Artificer's required replacement uses existing settlement. In Fields,
-converting an optional minor reward into a boon before collecting the cage
-Onion cannot produce a second Onion: entry has already consumed Forfeit.
-The later cage pickup does not consume again. Merely tagging the cage while
-leaving the counter available would be incorrect. Additional timing machinery
-requires a concrete legal interleaving that changes the modeled outcome.
-
-Coverage owners: `forfeit-room-rewards.test.ts` covers ordinary Boon/Hermes,
-Fields ownership/reordered pickup and picked/unpicked Ship rewards;
-`biomes/h/materialization.test.ts` covers the provider contact;
-`artificer.test.ts` covers conversion, shared consumption, Devotion exclusion,
-Time Piece and Sea Star; `arcana-fear.test.ts` covers effective use, suppression
-and reset. Other biome rows are source/declaration/shared-path inspection,
-not claims of dedicated active-Forfeit fixtures for each biome.
 
 ### Suppression by Circe
 
@@ -392,53 +305,60 @@ Black Night may disable Forfeit. The comparison uses the effective rank from
 rewards. A skip already consumed earlier in the biome remains historical; no
 trait offer is restored retroactively.
 
-## Stable Source Facts
+### Biome coverage and accepted settlement timing
 
-1. Banned trait keys are an input to ordinary trait eligibility, not a second
-   post-composition validator.
-2. Ordinary/infusion traits, optional Duo/Legendary traits, and replacement
-   transitions have different cardinality roles and must not be flattened into
-   one undifferentiated candidate count.
-3. The supported Olympian/Hermes offer envelope has a constant width of three;
-   Denial does not reduce that configured width. Exhaustion can still
-   materialize fewer than three trait choices inside it.
-4. Replacement overflow is general exhaustion behavior. It can fill multiple
-   positions only after the dependable fresh domain has fallen below three.
-5. Fallback Gold is created only for an empty generated offer and is not an
-   equipped trait.
-6. Denial records only actual displayed, unselected Olympian/Hermes traits and
-   preserves prior bans if Circe later disables the Vow.
-7. Forfeit is one qualifying `SpawnRoomReward` Boon/Hermes substitution per
-   biome. This includes the picked reward from a Thessaly Ship wheel and an
-   Artificer-selected `RunProgress` replacement, but not Shop or Devotion
-   offers merely because they use the same giver.
-8. Forfeit prevents the trait-offer lifecycle from starting; Denial acts only
-   after a real trait option is selected.
-9. The Forfeit result is a required `RoomRewardConsolationPrize`; it retains
-   the converted source's duplication capability when produced by Artificer.
+The planner preserves observable outcomes, not every native spawn callback.
+Required-reward acquisition settlement remains sufficient unless an earlier
+decision changes a modeled outcome. Fields' coexisting cages need earlier
+consumption because pickup order is independent of spawn order. This is one
+Forfeit policy with different lifecycle contacts, not one policy per biome.
 
-## Planner Disposition
+| Biome / surface | Native reward path                                                                                                                                    | Accepted planner contact                                                                                                                                 |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F               | Opening and ordinary encounters call SpawnRoomReward.                                                                                                 | Shared required-reward settlement.                                                                                                                       |
+| G               | Ordinary incoming rewards, including qualifying rewards after detours.                                                                                | Shared settlement; door generation does not consume.                                                                                                     |
+| H combat cages  | All active cage objects spawn in list order during room setup.                                                                                        | Selected room entry fixes the Onion and consumes the use; pickup reuses that outcome.                                                                    |
+| H minibosses    | One locked reward spawns before combat and unlocks afterward.                                                                                         | Shared required-reward settlement. No observable modeled counterexample justifies separate pre-combat machinery.                                         |
+| H other rooms   | Ordinary incoming rewards qualify; FieldsOptionalRewards contains no natural Boon/Hermes.                                                             | Shared incoming settlement; optional Artificer replacements use conversion settlement.                                                                   |
+| I               | TartarusRewards includes Boon; ClockworkGoal does not qualify.                                                                                        | Shared reward settlement, not goal completion.                                                                                                           |
+| N               | Hub generates offers; entered rooms spawn rewards. Side-room stores have no natural Boon/Hermes.                                                      | Shared settlement in visit order, not board order. Restores do not replay consumption or reset the use. Side-room Artificer remains separately eligible. |
+| O ships         | Selected wheel reward spawns after combat. WaitForNextEncounterReady waits for required objects and reward screens before continuing.                 | Picked reward settlement only; unpicked previews do not consume. No separate spawn phase is needed.                                                      |
+| O other rooms   | Ordinary incoming reward path; empty intro does not qualify.                                                                                          | Shared settlement.                                                                                                                                       |
+| P               | GeneratedP_PreCombat overrides the reward to Empty; rewarded combat supplies the incoming reward. HeraclesCombatP can replace the encounter sequence. | One incoming reward settlement, not one opportunity per phase.                                                                                           |
+| Q               | Qualifying ordinary rewards use SpawnRoomReward; shop purchases and boss drops do not qualify merely by being rewards.                                | Shared incoming settlement; purchases remain separate.                                                                                                   |
 
-1. Schema 22 implements the universal exhaustion contract above. Olympian and
-   Hermes outcomes persist one to three materialized traits or mutually
-   exclusive Fallback Gold, while declaration defaults and nonparticipating
-   providers retain their complete triples.
-2. One engine-owned ordinary/high-tier/replacement domain drives selected
-   assessment, progressive candidates, findings, deterministic add/return
-   drafts, and Fallback Gold. Denial adds exact unselected bans to the normal
-   trait-history fold and does not select a separate composition algorithm.
-3. Schema 22 originally simplified Forfeit to an acquisition veto at the
-   ordinary authored-room boundary. That implementation is now a recorded
-   discrepancy: it omits the concrete Red Onion, its Time Piece and Sea Star
-   interactions, and the Artificer replacement contact. The accepted
-   correction retains the original Boon/Hermes offer and bag evidence, records
-   biome-local usage, and materializes the fixed
-   `RoomRewardConsolationPrize` through ordinary acquisition settlement while
-   keeping the trait lifecycle dormant. The same transition applies to a
-   picked Thessaly Ship-wheel reward and an Artificer-generated Boon/Hermes
-   replacement. It does not become a generic trait-giver predicate or make the
-   Red Onion an authorable door reward.
-4. `CalcNumLootChoices` supports a separate acquired effect that reduces a god
-   screen from three choices to two. No currently modeled trait supplies that
-   effect, so it remains outside production rather than being conflated with
-   exhaustion cardinality.
+Source anchors: `EncounterSets.lua:446–490` (ordinary, H miniboss and Ship
+sequences); `RoomLogic.lua:1368` (WaitForNextEncounterReady), `:1466` (wheel
+reward override), `:5758` (SpawnRewardCagesMiniboss);
+`EncounterData_MiniBoss.lua:260,331` (both H bindings);
+`EncounterData_Generated.lua:1182` (P preliminary Empty reward);
+`EncounterData_Heracles.lua:168` (Heracles P). Catalog stores mirror the
+nonqualifying N side-room and H optional reward domains. Fountain rewards
+also spawn early through HealthRestore start events in EncounterData_Unique;
+early spawn alone does not warrant another planner timing mechanism.
+
+Artificer's required replacement uses existing settlement. In Fields,
+converting an optional minor reward into a boon before collecting the cage
+Onion cannot produce a second Onion: entry has already consumed Forfeit.
+The later cage pickup does not consume again. Merely tagging the cage while
+leaving the counter available would be incorrect. Additional timing machinery
+requires a concrete legal interleaving that changes the modeled outcome.
+
+## Planner disposition
+
+The engine asks whether a complete authored initial screen has one supported
+construction path against one exact pre-offer branch. It does not combine
+evidence from different histories or require a particular random seed. Row
+eligibility, generation feasibility and selected acquisition effects are
+separate questions.
+
+Olympian/Hermes outcomes contain one to three distinct traits or mutually
+exclusive Fallback Gold. Empty and short outcomes obey terminal-stage rules,
+not ordinary/high-tier/replacement count quotas. Other provider families, Echo
+replay and later rerolls do not inherit this algorithm.
+
+Denial records actual unselected keys; Forfeit substitutes a concrete required
+Onion before the affected trait lifecycle begins. Original reward/bag evidence
+remains intact. Neither effect changes the initial generation envelope.
+The separate native `RestrictBoonChoices` effect has no currently modeled
+supplier and is not conflated with exhaustion.

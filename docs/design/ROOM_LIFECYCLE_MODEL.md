@@ -564,6 +564,13 @@ parent restore. The same ordered history therefore supports ordinary rooms,
 O/P/H multi-phase rooms, and N side-room occurrences without a second
 encounter engine.
 
+A qualifying non-final `bossDefeated` contact folds Personal Loan's retained
+rarity block before subsequent encounter-end effects capture their target
+domains. It does not depend on Judgment, Figurine or other Arcana outcomes.
+Final bosses and encounters without this contact—including Zagreus Contract—
+do not apply that payout transition. The trait remains equipped; this is not
+an extra timeline action.
+
 Steady Growth consumes this existing `encounterEndEffectsApplied` seam. Each
 qualifying emitted event advances every equipped Steady Growth acquisition
 once; source-declared skipped subrooms do not advance it. A reached threshold

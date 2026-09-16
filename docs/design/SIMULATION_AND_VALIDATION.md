@@ -259,7 +259,8 @@ Denial history. Shared predicates derive slots, elements, rarity counts and
 upgradeability from the same ledger.
 
 Within-sequence order matters. Trait folding applies element derivation and
-newly activated rarity-floor promotion after the whole sequence group.
+rarity-floor promotion for newly activated or explicitly rechecked sources
+after the whole sequence group.
 Those local helpers are not independent handlers that may run in arbitrary
 order. Source-time target generation and application against current history
 also remain distinct.

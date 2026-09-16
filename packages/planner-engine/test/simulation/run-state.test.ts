@@ -670,9 +670,16 @@ describe('decision run-state snapshots', () => {
     expect(
       Math.max(...settledShopAcquisitions.map((event) => event.historySequence)),
     ).toBeLessThanOrEqual(exit?.historySequence ?? -1);
-    expect(exit?.traits.upgradableTraitCount).toBeGreaterThan(
-      generation?.traits.upgradableTraitCount ?? -1,
-    );
+    expect(generation?.traits.equippedTraits.AresSpecialBoon).toMatchObject({
+      rarity: 'Common',
+      sourceRole: 'source',
+    });
+    expect(exit?.traits.equippedTraits.AresSpecialBoon).toBeUndefined();
+    expect(generation?.traits.equippedTraits.ApolloSpecialBoon).toBeUndefined();
+    expect(exit?.traits.equippedTraits.ApolloSpecialBoon).toMatchObject({
+      rarity: 'Rare',
+      sourceRole: 'source',
+    });
   });
 
   it('publishes unavailable outer decisions from an incomplete clamped prefix', () => {

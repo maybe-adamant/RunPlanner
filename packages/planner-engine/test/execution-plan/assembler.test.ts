@@ -304,7 +304,7 @@ function automaticOutcomeProject() {
       giverKey: 'Demeter',
       options: [
         { traitKey: 'BoonGrowthBoon', rarity: 'Epic' },
-        { traitKey: 'ReserveManaHitShieldBoon', rarity: 'Epic' },
+        { traitKey: 'DemeterManaBoon', rarity: 'Epic' },
         { traitKey: 'PlantHealthBoon', rarity: 'Epic' },
       ],
       selectedOptionKey: 'option1',

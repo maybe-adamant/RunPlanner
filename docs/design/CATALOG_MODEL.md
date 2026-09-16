@@ -229,10 +229,25 @@ equivalent instances.
 
 ## Traits, Loadout and Supported Effects
 
-Trait declarations are giver-neutral facts: prerequisites, fresh/equipped
+Trait declarations are giver-neutral facts: requirement origins, fresh/equipped
 rarity domains, slot, elements, core-god and boon-rarity classification,
 stacking/rarify flags, rarity-count exclusions, targeted effects and
 weapon/aspect compatibility.
+
+Requirements retain their source origin in two coherent collections:
+`eligibilityRequirements` for current-state/context conditions, and
+`linkedBoonRequirements` for the native positive boon graph. Ordinary offers
+use both; Echo replay retains eligibility but bypasses linked prerequisites.
+A predicate referring to a trait is not necessarily linked: Hex state,
+elemental conditions and cast exclusions retain their actual source ownership.
+Keep each Boolean group intact rather than attaching bypass flags to individual
+operands.
+
+`optionalLinkedPriority` declares a separate optional initial-generation path.
+Its boolean support is sufficient; the exact nonzero native probability belongs
+in source evidence. Personal Loan's `nonFinalBossRarityBlock` is a lifecycle
+descriptor, not a declaration-wide permanent rarity ban; the equipped-instance
+block is derived by simulation.
 
 Givers own ordered membership, priority sets, rarity policy and complete
 defaults for their supported loadouts. Rarity policies are selectable, fixed

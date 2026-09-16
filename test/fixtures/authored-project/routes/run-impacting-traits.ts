@@ -103,7 +103,7 @@ const poseidonRarePassiveOffer = traitOffer({
   giverKey: 'Poseidon',
   options: Object.freeze([
     { traitKey: 'EncounterStartOffenseBuffBoon', rarity: 'Rare' as const },
-    { traitKey: 'FocusDamageShaveBoon', rarity: 'Rare' as const },
+    { traitKey: 'PoseidonSpecialBoon', rarity: 'Rare' as const },
     { traitKey: 'PoseidonStatusBoon', rarity: 'Rare' as const },
   ]),
   selectedOptionKey: 'option1' as const,
@@ -136,7 +136,7 @@ const steadyGrowthOffer = traitOffer({
   giverKey: 'Demeter',
   options: Object.freeze([
     { traitKey: 'BoonGrowthBoon', rarity: 'Epic' as const },
-    { traitKey: 'ReserveManaHitShieldBoon', rarity: 'Epic' as const },
+    { traitKey: 'DemeterManaBoon', rarity: 'Epic' as const },
     { traitKey: 'PlantHealthBoon', rarity: 'Epic' as const },
   ]),
   selectedOptionKey: 'option1' as const,
@@ -147,7 +147,7 @@ const naturalPrerequisiteOffer = traitOffer({
   giverKey: 'Demeter',
   options: Object.freeze([
     { traitKey: 'PlantHealthBoon', rarity: 'Common' as const },
-    { traitKey: 'ReserveManaHitShieldBoon', rarity: 'Common' as const },
+    { traitKey: 'DemeterManaBoon', rarity: 'Common' as const },
     { traitKey: 'CastNovaBoon', rarity: 'Common' as const },
   ]),
   selectedOptionKey: 'option1' as const,

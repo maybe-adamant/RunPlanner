@@ -535,7 +535,7 @@
                           "rarity": "Common"
                         },
                         {
-                          "traitKey": "ReserveManaHitShieldBoon",
+                          "traitKey": "DemeterManaBoon",
                           "rarity": "Common"
                         },
                         {
@@ -1021,7 +1021,7 @@
                           "rarity": "Rare"
                         },
                         {
-                          "traitKey": "FocusDamageShaveBoon",
+                          "traitKey": "PoseidonSpecialBoon",
                           "rarity": "Rare"
                         },
                         {

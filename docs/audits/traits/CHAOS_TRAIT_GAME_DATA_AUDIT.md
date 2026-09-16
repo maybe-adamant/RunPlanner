@@ -73,6 +73,12 @@ unless the blessing's single fixed rarity takes precedence. The exact rarity
 belongs to the selected pair because it controls benefit values and, for
 Barren, the special pairing rule.
 
+Nonfixed pair rarity must also be possible under the exact reached source
+context, not just belong to Common/Rare/Epic. The
+[rarity audit](BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md#chaos-pair-rarity) owns its
+Epic/Rare checks, applicable unlimited bonuses and temporary/god-only exclusions.
+Fixed Legendary, Barren and direct Embryo grants retain their separate rules.
+
 At selection, the game equips the curse. `UpgradeChoiceLogic` stores the
 processed blessing under that curse's `OnExpire.TraitData`. The blessing is not
 yet an equipped trait and must not contribute elements, satisfy trait
@@ -360,14 +366,14 @@ Five source effects intersect current planner authority:
 1. **Creation** changes the equipped element ledger and therefore Infusion and
    Chant eligibility after maturation.
 2. **Ordinary** replaces the fresh rarity table with Common for the next
-   counted Olympian offers. A legitimate replacement row retains its explicit
+   qualifying god/shop-aware screens. A legitimate replacement row retains its explicit
    one-step promoted rarity; Ordinary does not rewrite the completed screen.
    `HeroData.BoonData.ReplaceChance` is `0.1`, but its source branch requires
    `not lootData.ForceCommon`, making that roll impossible while Ordinary is
    active. `ForceSwaps` is checked earlier, so Sacrificial Hymn still forces one
    eligible replacement. The later shortage-fill replacement pass is
    independent of both checks.
-3. **Rejected** keeps three generated Olympian identities but makes one exact
+3. **Rejected** retains the generated screen identities but makes one exact
    option unselectable. The authored trait-offer contract must retain that
    blocked option because it is still seen and can be consumed by Vow of
    Denial's unpicked-trait ban.
@@ -376,15 +382,21 @@ Five source effects intersect current planner authority:
    unavailable and Judgment does not trigger while Barren is active; this does
    not authorize a new matrix of unrelated Arcana effects.
 5. **Favor** contributes its exact processed rarity bonuses to the ordered
-   rarity-chance ledger. Common is suppressed only when the folded Rare chance
-   is guaranteed.
+   rarity-chance ledger. Guaranteed later checks can suppress Common; complete
+   support still depends on the provider's generation and rescue stages.
 
-Ordinary and Rejected apply to eligible Olympian and Hermes source screens:
-the source checks `GodLoot or TreatAsGodLootByShops` and consumes the curse use
-when that screen closes. A structurally valid fallback-Gold result therefore
+Ordinary and Rejected apply to qualifying god/shop-aware screens, including
+Olympian, Hermes, Artemis, Athena (also Gorgon) and Dionysus. The source checks
+`GodLoot or TreatAsGodLootByShops` and consumes the curse use when the screen
+closes. A supported fallback-Gold result therefore
 still consumes one use of the active curse even though it equips no god trait.
 This is screen-resolution chronology, not a narrower count of successfully
 equipped Olympian boons.
+
+Ordinary expiry reruns active Proper Upbringing's equipped upgrade pass before
+later actions. It neither spends an ignored Yarn bonus nor rewrites the
+authored offer; the [rarity audit](BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md#proper-upbringing)
+owns the complete source precedence and mutation contract.
 
 All other curse and benefit effects remain selected/matured trait history. The
 traits themselves remain fully modeled catalog/authored identities with exact
@@ -429,7 +441,7 @@ history. The five consequences named above are active in their owning existing a
 Creation adds elements on maturation; Ordinary constrains fresh god-offer
 rarity and makes the ordinary replacement roll impossible while replacement
 rows forced by Hymn or offer shortage retain their promoted rarity; Rejected
-retains the blocked third option and Vow of Denial contact;
+retains the blocked option and Vow of Denial contact;
 Barren temporarily suppresses Arcana consequences including Artificer and
 Judgment; and Favor contributes to the offer-local rarity ledger. Separately,
 Denial folds the two exact unselected Chaos curse identities into later curse

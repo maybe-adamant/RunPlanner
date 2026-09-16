@@ -511,8 +511,9 @@ lazy query boundary wherever a real candidate query exists.
 
 Each materialized trait-option card uses that same contextual-picker
 vocabulary for its trait and, when the giver's catalog policy is selectable,
-rarity. Olympian and Hermes outcomes may contain one to three cards; the other
-supported givers retain their declaration-owned three-card shape.
+rarity. Olympian and Hermes drafts allow zero to three cards; zero is the existing
+Fallback Gold outcome, not an empty persisted trait list. Other supported
+givers retain their declaration-owned shape.
 The application prepares declaration- and schema-compatible concrete
 `{ traitKey, rarity }` variants and evaluates them lazily through the exact
 trait-offer interaction. React passes the complete local outcome and focused
@@ -539,17 +540,20 @@ rarityless NPCs and Hammers expose no rarity control or label. Heroic remains
 hidden as a fresh technical probe and appears only for a retained authored
 value or an engine-supported Epic-to-Heroic replacement.
 
-The same modal renders engine-backed shape controls for exhausted Olympian and
-Hermes offers. Add, Remove, and supported Fallback Gold are one compact,
-consistently styled action row outside the option grid, and
-exist only when the engine exposes a next or previous optional Duo/Legendary
-draft under the `O/H/R` exhaustion contract. Removal still requires the shorter
-complete offer to pass candidate assessment. Returning from Fallback Gold
-consumes an exact engine-produced starting draft, and selecting Fallback Gold
-itself is visible only when that whole-offer outcome is supported. Fallback
-Gold renders no option-local rarity, target, Circe, or Death Defiance control.
-The application never counts ordinary, high-tier, or replacement candidates to
-decide which control is available.
+Add option and Remove last option form one compact action row outside the grid.
+For ordinary Olympian/Hermes drafts they are always present and obey structural
+limits: Add is disabled at three rows or when no unused individually eligible
+identity remains; Remove is disabled at zero. Removing the last row means
+Fallback Gold, and adding from Gold restores one row. There is no separate
+Gold button. A short or Gold draft may be invalid; complete-offer feedback
+explains why while the repair controls remain usable.
+
+The focused picker does not filter by whole-screen composition. Individual
+eligibility and duplicate identity still apply; the generation finding belongs
+to the complete draft. Save requires that complete assessment and active child
+detail to succeed. Start over requests an engine-supported initial outcome
+instead of having React fill buckets or silently repair retained authorship.
+Gold renders no option-local rarity, target, Circe or Death Defiance controls.
 
 Echo's Boon Boon Boon uses the same trait form, option rows and selected-payload
 editors with a distinct typed binding. Its provider-per-row identity and cached

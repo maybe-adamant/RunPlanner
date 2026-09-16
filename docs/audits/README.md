@@ -50,12 +50,12 @@ reader-facing taxonomy, not a package or runtime boundary.
 ### Traits
 
 - [All Together and Shop traits](traits/ALL_TOGETHER_AND_SHOP_TRAITS_GAME_DATA_AUDIT.md) — All Together, Infernal Contract, Travel Deal, and shop-trait acquisition facts.
-- [Boon rarity ledger](traits/BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md) — Boon rarity availability, weights, and rarity-transition declarations.
+- [Boon rarity sources and mutations](traits/BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md) — Chance arithmetic, source precedence, provider-specific contacts and direct versus later rarity changes.
 - [Chaos traits](traits/CHAOS_TRAIT_GAME_DATA_AUDIT.md) — Chaos trait declarations, effects, and offer constraints.
 - [Persephone, Premium Service, and offered levels](traits/PERSEPHONE_PREMIUM_EFFECTIVE_LEVEL_AUDIT.md) — Aspect-owned starting levels, Premium chronology, Jeweled Pom composition, and replacement precedence.
 - [Run-impacting trait effects](traits/RUN_IMPACTING_TRAIT_EFFECTS_GAME_DATA_AUDIT.md) — Trait effects that change modeled run state or timeline outcomes.
 - [Selene spells](traits/SELENE_SPELL_GAME_DATA_AUDIT.md) — Spell and Hex declarations, drops, and equipment facts.
-- [Trait offer composition and Fear pressure](traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md) — Offer composition, pressure, and Fear-related source rules.
+- [Initial trait offers and Fear pressure](traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md) — Native seeding, bucket draws, rescue, Denial and Forfeit.
 - [Trait offer pools and dependencies](traits/TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md) — Provider pools, dependencies, fallback relationships, and offer eligibility.
 
 ### Loadout and progression

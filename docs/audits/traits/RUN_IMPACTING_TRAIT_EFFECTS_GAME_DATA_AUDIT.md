@@ -2,30 +2,33 @@
 
 ## Status and scope
 
-This is a source audit for seven trait identities. The source facts below remain
-authoritative; the Planner now reproduces the bounded effects described here:
+This audit owns the source effects and bounded planner coverage of:
 
 - Natural Selection (`GoodStuffBoon`);
 - Queen's Ransom (`SuperSacrificeBoonHera`);
 - King's Ransom (`SuperSacrificeBoonZeus`);
 - Steady Growth (`BoonGrowthBoon`);
+- Bridal Glow (`BoonDecayBoon`);
+- Personal Loan (`BankBoon`);
 - Sea Star (`DoubleRewardBoon`);
 - the bounded Buried Treasure (`RoomRewardBonusBoon`) contact needed to assess
   Artificer and Sea Star interaction; and
 - the bounded Quick Buck (`MoneyMultiplierBoon`) generated-pickup contact.
 
-The evidence was checked on 2026-08-23 against Steam content build `24556151`.
-Primary sources are:
+The source baseline was checked on 2026-08-23, with Bridal and Personal Loan
+rechecked against the installed scripts on 2026-09-15. Primary sources are:
 
 - `TraitData_Duo.lua`, `TraitData_Demeter.lua`, `TraitData_Hermes.lua`, and
-  `TraitData_Poseidon.lua`;
+  `TraitData_Poseidon.lua`, `TraitData_Hera.lua` and `TraitData_Dionysus.lua`;
 - `TraitLogic.lua`, especially `DistributeLevels`, `SacrificeAllBoon`,
   `CheckChamberTraits`, and `AddRarityToTraits`;
 - `RoomLogic.lua`, especially `EndEncounterEffects`, `CreateLoot`, and
   `GiveRandomConsumables`;
 - `UpgradeChoiceLogic.lua` and `InteractLogic.lua`, which own Sea Star's loot
   and consumable branches;
-- `GiftLogic.lua`, which owns Artificer replacement; and
+- `GiftLogic.lua`, which owns Artificer replacement;
+- `CombatLogic.lua`, `PowersLogic.lua` and `SellTraitLogic.lua` for Loan payout,
+  Bridal acquisition/credit and sale; and
 - `LootData.lua`, `LootData_Apollo.lua`, `LootData_Hera.lua`,
   `LootData_Zeus.lua`, and `ConsumableData.lua`.
 
@@ -45,6 +48,87 @@ sequence.
 | Sea Star          | may preserve or recreate one exact eligible reward for a second acquisition                                      | duplicate or no duplicate at each eligible pickup                    |
 | Buried Treasure   | immediately spawns a fixed normally optional pickup set                                                          | no Artificer-eligible result; later pickup interactions still matter |
 | Quick Buck        | immediately spawns one normally optional `RoomMoneyDrop`                                                         | no acquisition-time randomness                                       |
+| Bridal Glow       | Heroic target outcome and rarity-scaled level grant; later credit to remembered recipient                        | preferred or acquisition-fallback target                             |
+| Personal Loan     | non-final boss payout retains the trait but blocks further in-run rarification                                   | none                                                                 |
+
+## Bridal Glow
+
+### Offer eligibility and acquisition are different searches
+
+`TraitData_Hera.lua:2001–2017` requires `HasSuperchargeableBoon`.
+The ordinary and Boon Boon Boon offer domains retain that preferred-only
+condition. A fallback-only inventory does not make Bridal offerable.
+
+After the source is equipped, `HeraSuperchargeBoon`
+(`TraitLogic.lua:2823–2835`) first asks for a permanent, stackable,
+non-Heroic core-god target supporting Heroic. Declaration and runtime rarity
+blocks and the Hephaestus cooldown limits apply. Only if that pool is empty
+does a second search relax the stackable and below-Heroic restrictions and
+admit the broader shop-aware rarity domain
+(`TraitLogic.lua:2978–3000`). The remaining blocks and caps still apply.
+Bridal was equipped before either search, so it can participate in the fallback
+when the preferred pool is genuinely empty.
+
+This protects a changed state between generation and acquisition. For example,
+a primary choice can replace the only preferred target with a Heroic boon
+before Concave Stone acquires the frozen Bridal alternative. The selected
+effect may now use that Heroic target. A missing or stale authored selection
+does not cause fallback while preferred candidates remain.
+
+### Level award, rarity credit and removal
+
+The chosen target receives Bridal's rarity-scaled grant: Common +1, Rare +2,
+Epic +3, Heroic +4. `UpgradedTraitName` remembers that exact recipient.
+A later increase of Bridal's own rarity invokes `CreditMissingStacks`,
+crediting only the positive difference in grant values when the recipient is
+still equipped and stackable (`TraitLogic.lua:2838–2857`; callers
+`:2664–2665,3032–3033`). It does not select a new recipient, repeat the
+initial award or accumulate debt for a missing target.
+
+The planner applies this through the shared equipped-rarity transition,
+regardless of whether Proper, Growth, Phial or another supported source
+caused it. Removing or selling Bridal removes only its source trait; completed
+recipient benefits remain. There is no declared reversal expiration action,
+and sale uses ordinary `RemoveWeaponTrait` (`SellTraitLogic.lua:327–328`).
+
+### Accepted non-Pom level omission
+
+Native explicit stacking checks `BlockStacking`, not the ordinary Pom target
+domain. Live testing confirmed both Bridal self-targeting and Hermes Stutter
+Step reaching level 2. A non-Pom target is therefore not necessarily incapable
+of displaying a level.
+
+The planner accepts the wider fallback target and preserves its known rarity
+outcome, but does not add level bookkeeping for normally non-Pom recipients.
+Later Bridal credit requires a modeled recipient level as well as the native
+ownership/stackability guards. This is an accepted omission, not a claim that
+the game awarded zero levels. The room-exit log alone verifies the modeled
+rarity, not unmodeled levels.
+
+## Personal Loan
+
+`BankBoon` acquisition banks the current money with its declared positive
+return (`PowersLogic.lua:1716–1723`, `TraitData_Dionysus.lua:494–545`).
+At a qualifying non-final boss payout, the game pays and clears `StoredGold`
+and sets that instance's `BlockInRunRarify = true`
+(`CombatLogic.lua:3953–3966`). It does not remove the trait.
+
+Identity, rarity, Water, acquisition history and rarity-count contribution
+remain. The count ignores the rarity block (`TraitLogic.lua:669–670`), so a
+Common expired Loan still prevents Uncommon Grace. This is retained expired
+state, not a trait removal or a declaration-wide ban.
+
+The planner folds the block at its existing non-final `bossDefeated` contact,
+before later encounter-end Steady Growth captures targets. Judgment/Figurine
+activation and Barren do not govern that contact. Final bosses and ordinary
+encounter completion do not apply it; Zagreus Contract has no
+`bossDefeated` event. Gold balances and payout amounts remain unmodeled.
+
+In-run target checks combine the declaration and equipped-instance blocks:
+Proper, Growth, Phial and Bridal respect both. Fresh offers still use
+declaration rarity support; removal and a fresh acquisition do not transfer the
+old instance's block. The block does not make a level target ineligible merely
+because rarity can no longer change.
 
 ## Natural Selection
 
@@ -434,24 +518,24 @@ isolated Quick Buck action. The Dream Dive boss teleport edge remains recorded b
 
 ## Current Planner boundary
 
-The catalog declares all seven trait identities and their offer requirements,
+The catalog declares these trait identities and their offer requirements,
 and ordinary selected-trait history records their acquisition. The Planner
 also owns reusable primitives for trait levels, rarity replacement, provider
 membership, encounter-end-effect events, Artificer, Time Piece, and required
 versus optional room actions.
 
-The run-impacting trait delivery now reproduces the three implemented effects
-in this audit: Natural Selection, the two Ransoms, and Steady Growth. Natural
-Selection persists one legal ordered allocation and folds its
-level mutations; Ransoms derive current provider-indexed removals and the
-`4 x removedCount` level gain; and Steady Growth derives its acquisition-
-identity clock from qualifying `encounterEndEffectsApplied` checkpoints and
-settles one authored rarity target at each reached threshold. The three
-declaration-owned `BlockOfferIfPreviouslyPicked` traits retain selected-offer
-history after removal, matching the source guard without adding a mutable
-picked ledger. The shared Hephaestus rarity/level limits are declaration facts
-consumed by Pom-derived and in-run rarity-target paths, while Proper Upbringing
-keeps its source-specific Common-to-Rare behavior.
+Natural Selection persists an ordered allocation and folds level mutations.
+Ransoms derive current provider-indexed removals and their level grant.
+Steady Growth derives its acquisition-identity clock and exact automatic target.
+Bridal owns its selected recipient and later rarity credit; Loan owns retained
+rarity blocking at boss payout. These use ordinary trait history and lifecycle
+contacts, not parallel effect ledgers.
+
+The declaration-owned `BlockOfferIfPreviouslyPicked` traits retain selected
+history after removal. Shared Hephaestus rarity/level limits remain declaration
+facts for Pom and in-run target predicates; Proper keeps its source-specific
+Common-to-Rare behavior. Detailed fresh-screen arithmetic lives in the
+[rarity audit](BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md).
 
 Sea Star publishes one authored duplicate-or-not result only at an eligible
 normal free acquisition frontier. A retained consumable/resource duplicate is
