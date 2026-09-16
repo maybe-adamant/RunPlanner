@@ -111,6 +111,15 @@ describe('structured workspace Hub assembly', () => {
           });
 
     expect(assembly.node.slots).toHaveLength(kit.descriptor.slots.length);
+    expect(assembly.node.gameName).toBe(kit.descriptor.terminal.roomGameName);
+    expect(assembly.node.slots.map((slot) => slot.gameName)).toEqual(
+      kit.descriptor.slots.map((slot) => slot.roomGameName),
+    );
+    expect(
+      assembly.node.slots
+        .flatMap((slot) => slot.localVisit?.slots ?? [])
+        .every((slot) => catalog.rooms.byKey[slot.gameName] !== undefined),
+    ).toBe(true);
     expect(assembly.node.openSlotCount).toEqual({ current: 9, min: 9, max: 10 });
     expect(assembly.node.visits).toHaveLength(kit.descriptor.requiredVisits);
     expect(assembly.workbenches).toHaveLength(

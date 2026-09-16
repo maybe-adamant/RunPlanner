@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 
 import { RoomMapDialog } from './RoomMapDialog';
 import { roomMapAssetFor } from './roomMapAssets';
@@ -8,12 +8,19 @@ import { RoomMapViewport } from './RoomMapViewport';
 export function RoomMapReferencePane({
   gameName,
   hostId,
+  onVisibleChange,
   title,
+  visibilityLauncherRef,
+  visible,
 }: {
   readonly gameName: string;
   /** A new containing workbench never inherits an earlier room reference. */
   readonly hostId: string;
+  readonly onVisibleChange?: (visible: boolean) => void;
   readonly title: string;
+  readonly visibilityLauncherRef?: RefObject<HTMLButtonElement | null>;
+  /** An owning workbench may retain reference visibility across its local views. */
+  readonly visible?: boolean;
 }) {
   const expandRef = useRef<HTMLButtonElement>(null);
   const reopenRef = useRef<HTMLButtonElement>(null);
@@ -27,24 +34,43 @@ export function RoomMapReferencePane({
     referenceState.hostId === hostId
       ? referenceState
       : { expanded: false, focusReopen: false, hostId, visible: false };
-  const closeDialog = useCallback(
-    () => setReferenceState((current) => ({ ...current, expanded: false })),
-    [],
-  );
+  const referenceVisible = visible ?? currentState.visible;
+  const setReferenceVisible = (nextVisible: boolean, focusLauncher = false): void => {
+    setReferenceState((current) => {
+      const active =
+        current.hostId === hostId
+          ? current
+          : { expanded: false, focusReopen: false, hostId, visible: false };
+      return {
+        ...active,
+        expanded: nextVisible ? active.expanded : false,
+        focusReopen: focusLauncher,
+        visible: nextVisible,
+      };
+    });
+    onVisibleChange?.(nextVisible);
+    if (!nextVisible && focusLauncher) visibilityLauncherRef?.current?.focus();
+  };
+  const closeDialog = useCallback(() => {
+    setReferenceState((current) =>
+      current.hostId === hostId
+        ? { ...current, expanded: false }
+        : { expanded: false, focusReopen: false, hostId, visible: false },
+    );
+  }, [hostId]);
 
   useEffect(() => {
-    if (!currentState.visible && currentState.focusReopen) reopenRef.current?.focus();
-  }, [currentState.focusReopen, currentState.visible]);
+    if (!referenceVisible && currentState.focusReopen) reopenRef.current?.focus();
+  }, [currentState.focusReopen, referenceVisible]);
 
-  if (!currentState.visible) {
+  if (!referenceVisible) {
+    if (visible !== undefined) return null;
     return (
       <div className="room-map-reference-reopen">
         <button
           aria-label={`Show map reference for ${title}`}
           className="quiet-action action-compact"
-          onClick={() =>
-            setReferenceState({ expanded: false, focusReopen: false, hostId, visible: true })
-          }
+          onClick={() => setReferenceVisible(true)}
           ref={reopenRef}
           type="button"
         >
@@ -65,7 +91,13 @@ export function RoomMapReferencePane({
           <>
             <button
               className="quiet-action action-compact"
-              onClick={() => setReferenceState((current) => ({ ...current, expanded: true }))}
+              onClick={() =>
+                setReferenceState((current) =>
+                  current.hostId === hostId
+                    ? { ...current, expanded: true }
+                    : { expanded: true, focusReopen: false, hostId, visible: false },
+                )
+              }
               ref={expandRef}
               type="button"
             >
@@ -74,13 +106,7 @@ export function RoomMapReferencePane({
             <button
               aria-label="Close room map reference"
               className="quiet-action action-compact"
-              onClick={() =>
-                setReferenceState((current) => ({
-                  ...current,
-                  focusReopen: true,
-                  visible: false,
-                }))
-              }
+              onClick={() => setReferenceVisible(false, true)}
               type="button"
             >
               Close

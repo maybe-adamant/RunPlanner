@@ -13,6 +13,10 @@ describe('room map assets', () => {
   });
 
   it('keeps exact source matches and deliberate placeholders distinct', () => {
+    expect(roomMapAssetFor('N_Hub')).toMatchObject({
+      gameName: 'N_Hub',
+      isPlaceholder: false,
+    });
     expect(roomMapAssetFor('F_Combat01')).toMatchObject({
       gameName: 'F_Combat01',
       isPlaceholder: false,
@@ -23,6 +27,14 @@ describe('room map assets', () => {
     });
     expect(roomMapAssetFor('H_Combat05')).toMatchObject({
       gameName: 'H_Combat05',
+      isPlaceholder: true,
+    });
+    expect(roomMapAssetFor('N_Combat01')).toMatchObject({
+      gameName: 'N_Combat01',
+      isPlaceholder: true,
+    });
+    expect(roomMapAssetFor('N_Sub01')).toMatchObject({
+      gameName: 'N_Sub01',
       isPlaceholder: true,
     });
   });

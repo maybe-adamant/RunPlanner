@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import {
   applyProjectCommand,
   createEncounterPhaseAddress,
@@ -17,6 +17,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { WorkspaceOccurrenceWorkbenchNode } from '@planner/projections/structured-workspace';
 
 import { OccurrenceWorkbench } from '@planner/ui/editor/biome/OccurrenceWorkbench';
+import { roomMapAssetFor } from '@planner/ui/room-maps/roomMapAssets';
 import {
   authoredProjectCommandDispatched,
   authoredProjectUndoRequested,
@@ -494,8 +495,8 @@ describe('OccurrenceWorkbench', () => {
     );
   });
 
-  it('keeps N side-room generation in Overview and encounter actions in Timeline', () => {
-    renderStaticOccurrenceWorkbench(
+  it('keeps N side-room generation and destination inspection separate from the main room map', async () => {
+    const view = renderOccurrenceWorkbench(
       loadSurfaceNOPQProject(),
       'Surface',
       'N',
@@ -504,6 +505,36 @@ describe('OccurrenceWorkbench', () => {
     const sideRooms = screen.getByLabelText('Ephyra side rooms');
     expect(sideRooms).toBeTruthy();
     expect(screen.queryByRole('tab', { name: 'Side Rooms' })).toBeNull();
+    await view.user.click(screen.getByRole('button', { name: 'View map for Combat 05' }));
+    const parentMap = screen.getByRole('img', { name: 'Map of Combat 05' });
+    expect(parentMap.getAttribute('src')).toBe(roomMapAssetFor('N_Combat05')?.src);
+    expect(screen.getByText('N_Combat05')).toBeTruthy();
+    await view.user.click(screen.getByRole('button', { name: 'Close map' }));
+    const generation = screen.getByLabelText('Side Room 03 generation');
+    expect((generation as HTMLSelectElement).value).toBe('generated');
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
+
+    await view.user.selectOptions(generation, 'notGenerated');
+    await waitFor(() =>
+      expect((screen.getByLabelText('Side Room 03 generation') as HTMLSelectElement).value).toBe(
+        'notGenerated',
+      ),
+    );
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      historyBefore + 1,
+    );
+    await view.user.click(screen.getByRole('button', { name: 'View map for Side Room 03' }));
+    expect(screen.getByText('N_Sub03')).toBeTruthy();
+    await view.user.click(screen.getByRole('button', { name: 'Close map' }));
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      historyBefore + 1,
+    );
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await waitFor(() =>
+      expect((screen.getByLabelText('Side Room 03 generation') as HTMLSelectElement).value).toBe(
+        'generated',
+      ),
+    );
     openRoomTab('Room Timeline');
     const nActions = screen.getByRole('region', { name: 'Room Timeline' });
     expect(nActions).toBeTruthy();

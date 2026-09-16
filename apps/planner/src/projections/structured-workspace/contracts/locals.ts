@@ -280,6 +280,8 @@ interface WorkspaceLocalVisitSlotBase {
   readonly availabilityRank: number;
   readonly entered: boolean;
   readonly enteredOrdinal: number | null;
+  /** Fixed side-room declaration identity, including ungenerated slots. */
+  readonly gameName: string;
   readonly occurrenceId: OccurrenceId;
   readonly order: WorkspaceLocalVisitOrderControl;
   readonly key: string;

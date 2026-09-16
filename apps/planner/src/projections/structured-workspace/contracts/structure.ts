@@ -198,6 +198,8 @@ export interface WorkspaceMixedBatchNode extends WorkspaceBatchNodeBase {
 export interface WorkspaceHubSlot {
   readonly canClose: boolean;
   readonly canOpen: boolean;
+  /** Fixed declaration identity, retained even while the slot is closed. */
+  readonly gameName: string;
   readonly hubSlotKey: string;
   readonly label: string;
   readonly marker: WorkspaceMarker;
@@ -228,6 +230,8 @@ export interface WorkspaceHubDecisionNode {
   readonly kind: 'hubDecision';
   readonly key: string;
   readonly hubKey: string;
+  /** The static Hub terminal declaration used by the optional board reference. */
+  readonly gameName: string;
   readonly marker: WorkspaceMarker;
   readonly openSet: WorkspaceMarker;
   readonly openSlotCount: { readonly current: number; readonly min: number; readonly max: number };

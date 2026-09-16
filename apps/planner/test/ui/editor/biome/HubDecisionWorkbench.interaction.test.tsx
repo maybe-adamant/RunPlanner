@@ -18,6 +18,11 @@ describe('HubDecisionWorkbench interaction', () => {
     expect(screen.queryByRole('button', { name: 'Move Combat 01 later' })).toBeNull();
     expect(screen.getAllByLabelText('Reward').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Open this room to edit its reward.')).toHaveLength(17);
+    const hubMap = screen.getByRole('button', { name: 'Toggle Hub map reference' });
+    fireEvent.click(hubMap);
+    expect(screen.getByRole('complementary', { name: 'Ephyra Hub map reference' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+    expect(screen.getByText('125%')).toBeTruthy();
 
     fireEvent.keyDown(overview, { key: 'ArrowRight' });
     expect(timeline.getAttribute('aria-selected')).toBe('true');
@@ -27,6 +32,8 @@ describe('HubDecisionWorkbench interaction', () => {
     expect(screen.getByLabelText('Combat 01 reward preview').textContent).toContain(
       'Big Max Health',
     );
+    expect(screen.getByRole('complementary', { name: 'Ephyra Hub map reference' })).toBeTruthy();
+    expect(screen.getByText('125%')).toBeTruthy();
 
     fireEvent.keyDown(timeline, { key: 'End' });
     expect(exit.getAttribute('aria-selected')).toBe('true');
@@ -36,5 +43,11 @@ describe('HubDecisionWorkbench interaction', () => {
       true,
     );
     expect(screen.queryByRole('button', { name: 'Move Combat 01 later' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Toggle Hub map reference' })).toBeNull();
+
+    fireEvent.keyDown(exit, { key: 'Home' });
+    expect(overview.getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Toggle Hub map reference' })).toBeTruthy();
+    expect(screen.getByRole('complementary', { name: 'Ephyra Hub map reference' })).toBeTruthy();
   });
 });

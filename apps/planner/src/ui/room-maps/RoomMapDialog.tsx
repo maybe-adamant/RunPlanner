@@ -93,11 +93,14 @@ export function RoomMapDialog({
 export function RoomMapLauncher({
   gameName,
   hostId,
+  label = 'View Map',
   title,
 }: {
   readonly gameName: string;
   /** Changes of the containing owner close an inherited inspection dialog. */
   readonly hostId: string;
+  /** Dense room identities keep the accessible action name while using a short label. */
+  readonly label?: string;
   readonly title: string;
 }) {
   const launcherRef = useRef<HTMLButtonElement>(null);
@@ -121,7 +124,7 @@ export function RoomMapLauncher({
         ref={launcherRef}
         type="button"
       >
-        View Map
+        {label}
       </button>
       {open ? (
         <RoomMapDialog

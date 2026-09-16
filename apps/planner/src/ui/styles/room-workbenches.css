@@ -546,6 +546,36 @@
   container-type: inline-size;
 }
 
+.hub-map-layout,
+.hub-map-controls {
+  min-width: 0;
+}
+
+.hub-map-controls {
+  container-type: inline-size;
+}
+
+.hub-map-layout[data-map-visible='true'] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(20rem, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+
+.hub-map-layout[data-map-visible='true'] > .room-map-reference {
+  position: sticky;
+  top: 12px;
+  margin-top: 16px;
+}
+
+@container (min-width: 64rem) {
+  .hub-map-layout > .room-map-reference > .room-map-viewport > .room-map-scroll {
+    /* Leave space for the app chrome and the board's trailing action. */
+    min-height: 0;
+    max-height: max(8rem, calc(100dvh - 22rem));
+  }
+}
+
 .hub-board {
   margin-top: 16px;
   border: 1px solid #3a3b45;
@@ -756,6 +786,7 @@
 
 .hub-slot-heading h3 {
   margin: 0;
+  margin-right: auto;
   color: #f2ede5;
   font-size: 0.96rem;
   overflow-wrap: anywhere;
@@ -763,6 +794,11 @@
 
 .hub-slot-heading > .owner-markers {
   min-width: 0;
+}
+
+.hub-slot-heading .room-map-launcher {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .hub-roster-primary {
@@ -1322,6 +1358,18 @@
   font-size: 1rem;
 }
 
+@container (max-width: 64rem) {
+  .hub-map-layout[data-map-visible='true'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hub-map-layout[data-map-visible='true'] > .room-map-reference {
+    position: static;
+    margin-top: 0;
+    order: -1;
+  }
+}
+
 @container (max-width: 760px) {
   .hub-overview-room-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1413,6 +1461,24 @@
 .ephyra-side-editor {
   padding-top: 12px;
   border-top: 1px solid #353640;
+}
+
+.ephyra-side-room-identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.ephyra-side-room-identity > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ephyra-side-room-identity .room-map-launcher {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .ephyra-side-grid-scroll {

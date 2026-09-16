@@ -35,6 +35,17 @@ describe('HubRoomCards', () => {
     expect(closedCard.querySelector('[data-assessment]')).toBeNull();
     expect(closedCard.querySelector('.room-kind')).toBeNull();
     expect(within(closedCard).getByText('Open this room to edit its reward.')).toBeTruthy();
+    const historyBeforeMap =
+      view.application.store.getState().projectWorkspace.history!.past.length;
+    await view.user.click(
+      within(closedCard).getByRole('button', { name: 'View map for Combat 04' }),
+    );
+    expect(screen.getByRole('heading', { name: 'Combat 04 map' })).toBeTruthy();
+    expect(screen.getByText('N_Combat04')).toBeTruthy();
+    await view.user.click(screen.getByRole('button', { name: 'Close map' }));
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      historyBeforeMap,
+    );
 
     await view.user.pointer({ keys: '[MouseLeft]', target: open });
     await waitFor(() =>
@@ -48,6 +59,11 @@ describe('HubRoomCards', () => {
     const openedCard = screen.getByRole('article', { name: 'Combat 04 Hub room' });
     expect(overviewSlotOrder()).toEqual(slotOrderBefore);
     expect(openedCard.querySelector('.room-kind')).toBeNull();
+    await view.user.click(
+      within(openedCard).getByRole('button', { name: 'View map for Combat 04' }),
+    );
+    expect(screen.getByRole('heading', { name: 'Combat 04 map' })).toBeTruthy();
+    await view.user.click(screen.getByRole('button', { name: 'Close map' }));
     expect(within(openedCard).getByLabelText('Reward')).toBeTruthy();
     expect(within(openedCard).queryByText('Open this room to edit its reward.')).toBeNull();
     expect(within(openedCard).queryByText(/Closing this slot removes/)).toBeNull();
