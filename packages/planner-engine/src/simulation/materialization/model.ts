@@ -36,7 +36,7 @@ import type {
 import type { TraitOfferContext } from '../traits/offer-domain';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { ShopOptionEntry } from '../../reward-kernel/model';
-import type { ResolvedEncounterPhase } from '../encounters';
+import type { MaterializedEncounterPhase } from '../encounters/model';
 import type { StygianWellGenerationKey } from '../../authored-project/model';
 
 type StygianWellEffect = NonNullable<ShopOptionEntry['stygianWell']>['effect'];
@@ -172,7 +172,13 @@ export interface CanonicalAuthoredRoom {
   };
   readonly encounters: RoomEncounterState;
   readonly encounterEnvelopeKey: string;
-  readonly encounterPhases: readonly ResolvedEncounterPhase[];
+  readonly encounterPhases: readonly MaterializedEncounterPhase[];
+  /** Exact known structural identities for unentered execution projection; no lifecycle behaviour. */
+  readonly structuralEncounterIdentities?: readonly {
+    readonly slotKey: string;
+    readonly encounterKey: string;
+    readonly kind: import('../../catalog-schema').EncounterPhaseKind;
+  }[];
   /** Native Encounter carriers intentionally omitted from simulated phases. */
   readonly unmodeledEncounterKeys?: readonly string[];
   readonly lifecycleProfileKey: string;
@@ -270,7 +276,7 @@ export interface CanonicalHubRoom {
   readonly origin: HubRoomAddress;
   readonly gameName: string;
   readonly encounterEnvelopeKey: string;
-  readonly encounterPhases: readonly ResolvedEncounterPhase[];
+  readonly encounterPhases: readonly MaterializedEncounterPhase[];
   /** Native Encounter carriers intentionally omitted from simulated phases. */
   readonly unmodeledEncounterKeys?: readonly string[];
   readonly lifecycleProfileKey: string;

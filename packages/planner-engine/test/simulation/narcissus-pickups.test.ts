@@ -1344,42 +1344,4 @@ describe('Narcissus pickup producer', () => {
       }),
     );
   });
-
-  it('locates a selected pickup producer across every encounter phase', () => {
-    const project = selectNarcissus(createGoldenFGHIProject(), [
-      'NarcissusI',
-      'NarcissusB',
-      'NarcissusC',
-    ]);
-    const occurrence = narcissusOccurrence(project);
-    const selected = occurrence.encounters.traitOffersByPhase?.Encounter?.Story_Narcissus_01;
-    if (selected === undefined) throw new Error('Narcissus encounter offer is missing');
-    expect(
-      selectedPickupProducers(
-        catalog,
-        goldenGBiome,
-        Object.freeze({
-          ...occurrence,
-          encounters: Object.freeze({
-            ...occurrence.encounters,
-            traitOffersByPhase: Object.freeze({
-              Other: Object.freeze({
-                unrelated: Object.freeze({
-                  kind: 'traits',
-                  giverKey: 'Apollo',
-                  options: [
-                    { traitKey: 'ApolloWeaponBoon', rarity: 'Common' as const },
-                    { traitKey: 'ApolloSpecialBoon', rarity: 'Common' as const },
-                    { traitKey: 'ApolloCastBoon', rarity: 'Common' as const },
-                  ] as const,
-                  selectedOptionKey: 'option1' as const,
-                }),
-              }),
-              ...(occurrence.encounters.traitOffersByPhase ?? {}),
-            }),
-          }),
-        }),
-      ).find((producer) => producer.traitKey === 'NarcissusI'),
-    ).toMatchObject({ traitKey: 'NarcissusI', producerLifecycleKey: 'NarcissusPickup' });
-  });
 });

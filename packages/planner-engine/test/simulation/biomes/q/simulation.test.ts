@@ -83,8 +83,8 @@ describe('Q simulation', () => {
     ]);
     const tail = batches[5]?.targets[0]?.room;
     const eye = batches[5]?.targets[1]?.room;
-    expect(tail?.encounterPhases[0]?.countsEncounterDepth).toBe(true);
-    expect(eye?.encounterPhases[0]?.countsEncounterDepth).toBe(false);
+    expect(tail?.encounterPhases[0]?.authoredChoiceKey).toBe('BossTyphonTail01');
+    expect(eye?.encounterPhases[0]?.authoredChoiceKey).toBe('BossTyphonEye01');
     expect(tail?.incomingReward?.resolvedStoreKey).toBe('TyphonBossRewards');
     expect(eye?.incomingReward?.resolvedStoreKey).toBe('TyphonBossRewards');
   });

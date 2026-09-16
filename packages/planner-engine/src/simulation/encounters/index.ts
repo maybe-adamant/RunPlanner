@@ -1,8 +1,13 @@
 export {
   alwaysActiveEncounterSlotKeys,
+  encounterResolutionContext,
   EncounterResolutionContractError,
-  resolveEncounterPhases,
+  materializeEncounterPhases,
+  resolveEncounterAuthoringProfile,
+  resolveMaterializedEncounterPhase,
+  resolveMaterializedEncounterPhases,
 } from './resolve';
+export type { EncounterResolutionContext, EncounterResolutionRoomFacts } from './resolve';
 export type { ResolvedEncounterPhase } from './model';
 export type {
   EncounterCandidateExclusion,

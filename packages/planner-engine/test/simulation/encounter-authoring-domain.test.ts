@@ -17,15 +17,63 @@ import {
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { prepareRoomEncounterPhases } from '../../src/simulation/encounters/preparation';
+import {
+  encounterResolutionContext,
+  materializeEncounterPhases,
+  resolveEncounterAuthoringProfile,
+  resolveMaterializedEncounterPhase,
+} from '../../src/simulation/encounters/resolve';
 import { describe, expect, it } from 'vitest';
 
 import {
   createGoldenFGHIProject,
+  goldenFOccurrenceId,
   goldenHBiome,
   goldenIBiome,
 } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPQProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+
+describe('encounter choice identity context', () => {
+  it('distinguishes known reward, explicit no reward, and unavailable authorship', () => {
+    const fCombat = catalog.encounterSets.byKey.FEncountersDefault!.authoringProfiles.find(
+      (profile) => profile.key === 'GeneratedF',
+    );
+    const iCombat = catalog.encounterSets.byKey.IEncountersDefault!.authoringProfiles.find(
+      (profile) => profile.key === 'GeneratedI',
+    );
+    if (fCombat === undefined || iCombat === undefined)
+      throw new Error('Combat choices are missing');
+    expect(
+      resolveEncounterAuthoringProfile(fCombat, { kind: 'knownReward', rewardType: 'Devotion' }),
+    ).toBe('DevotionTestF');
+    expect(resolveEncounterAuthoringProfile(fCombat, { kind: 'noReward' })).toBe('GeneratedF');
+    expect(resolveEncounterAuthoringProfile(fCombat, { kind: 'unavailable' })).toBeUndefined();
+    expect(
+      resolveEncounterAuthoringProfile(iCombat, {
+        kind: 'knownReward',
+        rewardType: 'ClockworkGoal',
+      }),
+    ).toBe('GeneratedI_GoalReward');
+  });
+
+  it('retains a contextual choice while incoming reward authorship is unavailable', () => {
+    const project = createGoldenFGHIProject();
+    const value = occurrence(project, 'Underworld', 'F', goldenFOccurrenceId(5, 1));
+    const room = roomFor(value);
+    const retained = materializeEncounterPhases(
+      catalog,
+      room,
+      value.encounters,
+      ['Encounter'],
+      room.gameName,
+    );
+    const context = encounterResolutionContext({ unresolvedIncomingReward: {} }, room);
+    expect(context).toEqual({ kind: 'unavailable' });
+    expect(retained).toMatchObject([{ authoredChoiceKey: 'GeneratedF' }]);
+    expect(resolveMaterializedEncounterPhase(catalog, room, retained[0]!, context)).toBeUndefined();
+  });
+});
 
 function occurrence(
   project: ProjectDocument,

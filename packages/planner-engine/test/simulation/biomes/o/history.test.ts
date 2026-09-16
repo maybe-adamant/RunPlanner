@@ -39,8 +39,8 @@ describe('O canonical materialization and lifecycle', () => {
       gameName: 'O_Combat04',
       encounterEnvelopeKey: 'ShipEncounter',
       encounterPhases: [
-        { slotKey: 'Intro', encounterKey: 'GeneratedO_Intro01' },
-        { slotKey: 'Combat1', encounterKey: 'GeneratedO' },
+        { slotKey: 'Intro', authoredChoiceKey: 'GeneratedO_Intro01' },
+        { slotKey: 'Combat1', authoredChoiceKey: 'GeneratedO' },
       ],
       rewardWheels: [{ wheelKey: 'wheel1', storeKey: 'RunProgress', offers: [{ picked: true }] }],
     });

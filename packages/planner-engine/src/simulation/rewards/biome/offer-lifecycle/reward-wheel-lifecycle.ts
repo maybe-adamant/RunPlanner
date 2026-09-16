@@ -9,6 +9,10 @@ import type {
   ProgressiveRoomHistoryViews,
 } from '../../../history';
 import type { ResolvedEncounterPhase } from '../../../encounters';
+import {
+  encounterResolutionContext,
+  resolveMaterializedEncounterPhase,
+} from '../../../encounters/resolve';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import {
   materializeShipCombatState,
@@ -116,6 +120,7 @@ function projectDormantWheelView(
 }
 
 export function wheelLifecycleViews(
+  catalog: Catalog,
   lifecycle: RewardLifecycleReferences,
   room: CanonicalAuthoredRoom,
   roomView: ProgressiveRoomHistoryViews,
@@ -143,9 +148,19 @@ export function wheelLifecycleViews(
       acquisitionSequence: acquisitionEvent.sequence,
     });
   }
-  const phase = room.encounterPhases.find(
+  const materializedPhase = room.encounterPhases.find(
     (candidate) => candidate.slotKey === wheel.encounterPhaseKey,
   );
+  const declaration = catalog.rooms.byKey[room.gameName];
+  const phase =
+    declaration === undefined || materializedPhase === undefined
+      ? undefined
+      : resolveMaterializedEncounterPhase(
+          catalog,
+          declaration,
+          materializedPhase,
+          encounterResolutionContext(room, declaration),
+        );
   const generation =
     roomView.preOutgoing ?? roomView.offerPoints?.at(-1)?.acquisitionAfter ?? roomView.entry;
   if (phase === undefined || generation === undefined)
@@ -195,7 +210,7 @@ export function prepareShipLifecycleCandidateContext(
     return rewardStoreHistorySupport(
       layout,
       room.origin.biomeKey,
-      wheelLifecycleViews(lifecycle, room, roomView, wheel).generation,
+      wheelLifecycleViews(catalog, lifecycle, room, roomView, wheel).generation,
     ).supportStoreKeys;
   };
   const evaluateState = (state: ShipCombatState, stopAfterPickedWheelGeneration?: string) => {
@@ -222,7 +237,7 @@ export function prepareShipLifecycleCandidateContext(
     let candidateBranches = branchesBeforeFirstWheel;
     for (const wheel of ship.rewardWheels) {
       if (candidateBranches.length === 0) break;
-      const lifecycleView = wheelLifecycleViews(lifecycle, candidateRoom, roomView, wheel);
+      const lifecycleView = wheelLifecycleViews(catalog, lifecycle, candidateRoom, roomView, wheel);
       const binding = rewardWheelBinding(catalog, declaration, wheel);
       candidateBranches = processOfferGenerationCohort(
         candidateBranches,

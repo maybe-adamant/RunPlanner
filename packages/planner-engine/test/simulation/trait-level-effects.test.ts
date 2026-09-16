@@ -417,7 +417,14 @@ describe('Supply Chain lifecycle', () => {
       occurrenceId: occurrence.occurrenceId,
       gameName: 'F_Opening01',
       encounters: { steadyGrowthTargetByPhase: { Encounter: 'BoonDecayBoon' } },
-      encounterPhases: [{ slotKey: 'Encounter', advancesHermesShrineDeliveryUses: true }],
+      encounterPhases: [
+        {
+          slotKey: 'Encounter',
+          envelopeKey: 'SingleEncounter',
+          authoredChoiceKey: 'OpeningGeneratedF',
+          figLeafSkip: false,
+        },
+      ],
     } as unknown as CanonicalAuthoredRoom;
     const transition = applyEncounterEndEffectsTransition(
       catalog,
@@ -476,7 +483,14 @@ describe('Supply Chain lifecycle', () => {
       occurrenceId: occurrence.occurrenceId,
       gameName: 'F_Opening01',
       encounters: {},
-      encounterPhases: [{ slotKey: 'Encounter', advancesHermesShrineDeliveryUses: true }],
+      encounterPhases: [
+        {
+          slotKey: 'Encounter',
+          envelopeKey: 'SingleEncounter',
+          authoredChoiceKey: 'OpeningGeneratedF',
+          figLeafSkip: false,
+        },
+      ],
     } as unknown as CanonicalAuthoredRoom;
     const figLeafEnd = Object.freeze({
       kind: 'encounterEndEffectsApplied' as const,
@@ -500,7 +514,18 @@ describe('Supply Chain lifecycle', () => {
     const suppressed = applyEncounterEndEffectsTransition(
       catalog,
       Object.freeze({ ...figLeafEnd, sequence: 2, operationIndex: 2 }),
-      { ...room, gameName: 'N_Sub01' } as unknown as CanonicalAuthoredRoom,
+      {
+        ...room,
+        gameName: 'N_Sub01',
+        encounterPhases: [
+          {
+            slotKey: 'Encounter',
+            envelopeKey: 'SingleEncounter',
+            authoredChoiceKey: 'GeneratedNSubRoom',
+            figLeafSkip: false,
+          },
+        ],
+      } as unknown as CanonicalAuthoredRoom,
       [branch],
     );
     expect(suppressed.branches[0]?.pendingHermesShrineDeliveries.delivery).toMatchObject({
@@ -550,7 +575,26 @@ describe('Supply Chain lifecycle', () => {
       occurrenceId: occurrence.occurrenceId,
       gameName: 'O_Combat01',
       encounters: {},
-      encounterPhases: [{ slotKey: 'Intro' }, { slotKey: 'Combat1' }, { slotKey: 'Combat2' }],
+      encounterPhases: [
+        {
+          slotKey: 'Intro',
+          envelopeKey: 'ShipEncounter',
+          authoredChoiceKey: 'GeneratedO_Intro01',
+          figLeafSkip: false,
+        },
+        {
+          slotKey: 'Combat1',
+          envelopeKey: 'ShipEncounter',
+          authoredChoiceKey: 'GeneratedO',
+          figLeafSkip: false,
+        },
+        {
+          slotKey: 'Combat2',
+          envelopeKey: 'ShipEncounter',
+          authoredChoiceKey: 'GeneratedO',
+          figLeafSkip: false,
+        },
+      ],
     } as unknown as CanonicalAuthoredRoom;
     let oBranches = branches;
     const oProgress: number[] = [];
@@ -580,7 +624,14 @@ describe('Supply Chain lifecycle', () => {
     const skippedRoom = {
       ...oRoom,
       gameName: 'N_Sub01',
-      encounterPhases: [{ slotKey: 'Encounter' }],
+      encounterPhases: [
+        {
+          slotKey: 'Encounter',
+          envelopeKey: 'SingleEncounter',
+          authoredChoiceKey: 'GeneratedNSubRoom',
+          figLeafSkip: false,
+        },
+      ],
     } as unknown as CanonicalAuthoredRoom;
     const skipped = applyEncounterEndEffectsTransition(
       catalog,

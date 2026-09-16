@@ -1,13 +1,18 @@
 import { catalog } from '@run-planner/hades2-catalog';
+import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   createOccurrenceId,
   createProjectDocument,
   semanticAddressKey,
+  type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
+import {
+  createGoldenFGHIProject,
+  loadNemesisFieldsCheckpoint,
+} from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { createCandidateSessionFactory } from '@planner/projections/candidates/candidateProjection';
 import { createContextualOptionResolver } from '@planner/projections/contextual/contextualOptions';
@@ -122,6 +127,88 @@ const workspaceNodeKinds: Readonly<Record<WorkspaceNode['kind'], true>> = Object
 });
 
 describe('unified structured workspace projection facade', () => {
+  it('projects the Fields Nemesis spatial control from an aliased direct choice', () => {
+    const passiveSet = catalog.encounterSets.byKey.HEncountersPassive!;
+    const aliasSet = Object.freeze({
+      ...passiveSet,
+      authoringProfiles: Object.freeze(
+        passiveSet.authoringProfiles.map((profile) =>
+          profile.key === 'NemesisRandomEvent'
+            ? Object.freeze({ ...profile, key: 'NemesisChoice' })
+            : profile,
+        ),
+      ),
+    });
+    const aliasCatalog = Object.freeze({
+      ...catalog,
+      encounterSets: Object.freeze({
+        values: Object.freeze(
+          catalog.encounterSets.values.map((set) => (set.key === passiveSet.key ? aliasSet : set)),
+        ),
+        byKey: Object.freeze({ ...catalog.encounterSets.byKey, [passiveSet.key]: aliasSet }),
+      }),
+    }) as Catalog;
+    const occurrenceId = createOccurrenceId('golden-h-combat05');
+    const checkpoint = loadNemesisFieldsCheckpoint();
+    const project = {
+      ...checkpoint,
+      route: Object.freeze({
+        ...checkpoint.route,
+        biomes: Object.freeze(
+          checkpoint.route.biomes.map((biome) =>
+            biome.biomeKey !== 'H' || biome.topology === undefined || biome.topology === null
+              ? biome
+              : Object.freeze({
+                  ...biome,
+                  topology: Object.freeze({
+                    ...biome.topology,
+                    occurrences: Object.freeze(
+                      biome.topology.occurrences.map((occurrence) =>
+                        occurrence.occurrenceId !== occurrenceId
+                          ? occurrence
+                          : Object.freeze({
+                              ...occurrence,
+                              encounters: Object.freeze({
+                                ...occurrence.encounters,
+                                encounterKeyByPhase: Object.freeze({
+                                  ...occurrence.encounters.encounterKeyByPhase,
+                                  Passive: 'NemesisChoice',
+                                }),
+                              }),
+                            }),
+                      ),
+                    ),
+                  }),
+                }),
+          ),
+        ),
+      }),
+    } as ProjectDocument;
+    const contextualPicker = createContextualPickerProjection(
+      createContextualOptionResolver(aliasCatalog),
+    );
+    const aliasProjection = createStructuredWorkspaceProjection(
+      aliasCatalog,
+      {
+        candidateSessions: createCandidateSessionFactory(aliasCatalog),
+        contextualPicker,
+        rewardPicker: createRewardPickerProjection(aliasCatalog, contextualPicker),
+        traitDomain: createTraitDomainProjection(aliasCatalog, contextualPicker),
+      },
+      () => createOccurrenceId('structured-workspace-alias-start'),
+    );
+    const workspace = aliasProjection.project(simulateProjectAssembly(aliasCatalog, project));
+    const h = biome(workspace, 'H');
+    const node = h.nodes.find(
+      (candidate): candidate is Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }> =>
+        candidate.kind === 'occurrenceWorkbench' && candidate.room.occurrenceId === occurrenceId,
+    );
+    if (node?.room.roomLocal.kind !== 'fields') throw new Error('Fields workspace is missing');
+    expect(node.room.roomLocal.spatial).toContainEqual(
+      expect.objectContaining({ target: { kind: 'nemesis' } }),
+    );
+  });
+
   it('assembles one frozen public workspace envelope across every supported biome family', () => {
     const { underworld, surface } = representativeWorkspacePair();
 

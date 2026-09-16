@@ -17,7 +17,7 @@ import { createDefaultAuthoredHexTree, normalizeAuthoredHexTree } from '../trait
 import { reconcileSelectedPickupProducerState } from '../acquisition/pickup-producers';
 import { createBiomeAddress, type TraitOfferAddress } from '../addresses';
 import type { ProjectDocument, RoomOccurrence, AuthoredRewardState } from '../model';
-import { selectedEncounterAuthoringProfileKey } from '../room-state/encounter-envelope';
+import { directEncounterDefinitionKeyForSlot } from '../room-state/encounter-envelope';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { sameOccurrenceValue } from './occurrence/leaf-value';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence/mutation';
@@ -379,7 +379,7 @@ export function applyTraitOfferCommand(
     const phaseGorgon = isGorgon ? currentEncounters.gorgonResultByPhase?.[phaseKey] : undefined;
     const phaseOffersValue = currentEncounters.traitOffersByPhase?.[phaseKey];
     const phaseOffers = phaseOffersValue;
-    const encounterKey = selectedEncounterAuthoringProfileKey(
+    const encounterKey = directEncounterDefinitionKeyForSlot(
       catalog,
       encounterRoom,
       currentEncounters,
@@ -427,9 +427,10 @@ export function applyTraitOfferCommand(
     } else {
       if (command.kind === 'ReplaceGorgonAthenaOffer')
         failCommand(command, 'Gorgon Athena decisions require a Gorgon phase owner');
-      const existing = phaseOffers?.[encounterKey];
+      const existing = phaseOffers?.[encounterKey ?? ''];
       if (existing === undefined) failCommand(command, `no trait offer at phase ${phaseKey}`);
-      const expectedProducer = catalog.encounterDefinitions.byKey[encounterKey]?.traitOfferProducer;
+      const expectedProducer =
+        catalog.encounterDefinitions.byKey[encounterKey ?? '']?.traitOfferProducer;
       if (expectedProducer === undefined)
         failCommand(command, `encounter ${encounterKey} has no trait offer producer`);
       if (existing !== null && existing.giverKey !== expectedProducer.giverKey)
@@ -449,7 +450,7 @@ export function applyTraitOfferCommand(
         ...currentEncounters,
         traitOffersByPhase: Object.freeze({
           ...(currentEncounters.traitOffersByPhase ?? {}),
-          [phaseKey]: Object.freeze({ ...(phaseOffers ?? {}), [encounterKey]: value }),
+          [phaseKey]: Object.freeze({ ...(phaseOffers ?? {}), [encounterKey!]: value }),
         }),
       });
     }

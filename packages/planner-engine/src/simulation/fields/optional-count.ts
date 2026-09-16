@@ -1,6 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import { createRoomFeatureAddress, type OccurrenceAddress } from '../../authored-project/addresses';
 import type { RoomOccurrence } from '../../authored-project/model';
+import { directEncounterDefinitionKeyForSlot } from '../../authored-project/room-state/encounter-envelope';
 import type { CanonicalAuthoredRoom } from '../materialization';
 import type { SemanticFinding } from '../model';
 
@@ -24,11 +25,18 @@ export function fieldsOptionalRewardCountSupport(
   const room = catalog.rooms.byKey[occurrence.gameName];
   const logicalMaximum = room?.fieldsOptionalRewards?.optionalRewardCapacity;
   const pointCount = room?.fieldsSpatial?.optionalPointIds.length;
-  if (logicalMaximum === undefined || pointCount === undefined) return undefined;
+  if (room === undefined || logicalMaximum === undefined || pointCount === undefined)
+    return undefined;
   const physicalMaximum = pointCount;
   const ordinaryMaximum = Math.min(4, logicalMaximum, physicalMaximum);
   const reservesNemesisPosition =
-    occurrence.encounters.encounterKeyByPhase.Passive === 'NemesisRandomEvent';
+    directEncounterDefinitionKeyForSlot(
+      catalog,
+      room,
+      occurrence.encounters,
+      'Passive',
+      occurrence.gameName,
+    ) === 'NemesisRandomEvent';
   return Object.freeze({
     occurrence: origin,
     physicalMaximum,

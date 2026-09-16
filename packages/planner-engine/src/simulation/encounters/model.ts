@@ -1,6 +1,18 @@
 import type { EncounterPhaseKind, EncounterSlotRewardAttachment } from '../../catalog-schema';
 
 /**
+ * Retained materialization for one active envelope slot. It deliberately
+ * carries authored choice identity rather than copied definition behaviour.
+ */
+export interface MaterializedEncounterPhase {
+  readonly slotKey: string;
+  readonly envelopeKey: string;
+  readonly authoredChoiceKey: string;
+  readonly figLeafSkip: boolean;
+  readonly rewardAttachment?: EncounterSlotRewardAttachment;
+}
+
+/**
  * One structurally active envelope position resolved to its concrete authored
  * or direct declaration identity. The envelope owns the stable slot; the
  * definition owns every effective encounter behavior.

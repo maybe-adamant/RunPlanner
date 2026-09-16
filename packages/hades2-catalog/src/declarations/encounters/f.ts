@@ -24,7 +24,6 @@ export const fEncounterDefinitions = [
     countsEncounterDepth: true,
     hostsGorgon: true,
     canEncounterSkip: true,
-    requirements: { kind: 'currentRoomRewardExcludes', rewardTypes: ['Devotion'] },
   },
   {
     key: 'DevotionTestF',
@@ -32,10 +31,6 @@ export const fEncounterDefinitions = [
     kind: 'combat',
     countsEncounterDepth: true,
     blocksGorgon: true,
-    requirements: {
-      kind: 'not',
-      requirement: { kind: 'currentRoomRewardExcludes', rewardTypes: ['Devotion'] },
-    },
   },
   {
     key: 'ArtemisCombatF',
@@ -337,7 +332,16 @@ export const fEncounterSets = [
     ],
     defaultAuthoringProfileKey: 'GeneratedF',
     authoringProfiles: [
-      { key: 'GeneratedF', encounterDefinitionKeys: ['GeneratedF', 'DevotionTestF'] },
+      {
+        key: 'GeneratedF',
+        label: 'Combat',
+        encounterDefinitionKeys: ['GeneratedF', 'DevotionTestF'],
+        resolution: {
+          kind: 'rewardContext',
+          defaultEncounterDefinitionKey: 'GeneratedF',
+          encounterDefinitionKeyByRewardType: { Devotion: 'DevotionTestF' },
+        },
+      },
       { key: 'ArtemisCombatF', encounterDefinitionKeys: ['ArtemisCombatF'] },
       { key: 'ArachneCombatF', encounterDefinitionKeys: ['ArachneCombatF'] },
       { key: 'NemesisCombatF', encounterDefinitionKeys: ['NemesisCombatF'] },

@@ -57,7 +57,8 @@ export type EncounterCandidateExclusion =
         readonly evaluation: EncounterRequirementEvidence;
       }[];
     }
-  | { readonly encounterKey: string; readonly kind: 'gorgonConsumed' };
+  | { readonly encounterKey: string; readonly kind: 'gorgonConsumed' }
+  | { readonly encounterKey: string; readonly kind: 'resolutionUnavailable' };
 
 export function encounterRequirementEvidence(
   requirement: RequirementExpression,

@@ -5,6 +5,7 @@ import { failProjectDocument } from '../validation';
 import {
   encounterAuthoringProfiles,
   encounterBindingsBySlot,
+  directEncounterDefinitionKeyForSlot,
   encounterSetForBinding,
 } from './encounter-envelope';
 
@@ -77,8 +78,17 @@ export function reconcileRoomEncounterState(
   }
   const traitOffersByPhase: Record<string, Record<string, AuthoredTraitOffer | null>> = {};
   for (const binding of replacementBindings.values()) {
-    const selected =
-      binding.kind === 'fixed' ? binding.encounterDefinitionKey : selections[binding.slotKey];
+    const selected = directEncounterDefinitionKeyForSlot(
+      catalog,
+      replacementRoom,
+      Object.freeze({
+        encounterKeyByPhase: Object.freeze(selections),
+        figLeafSkipByPhase: Object.freeze(figLeafSkipByPhase),
+        gorgonResultByPhase: Object.freeze(gorgonResultByPhase),
+      }),
+      binding.slotKey,
+      `rooms.${replacementRoom.gameName}.encounters.${binding.slotKey}`,
+    );
     const legalKeys = new Set(
       binding.kind === 'fixed'
         ? [binding.encounterDefinitionKey]

@@ -82,6 +82,7 @@ export function validateEncounterDefinitionClosure(input: {
 export function validateEncounterSetClosure(
   sets: CatalogCollection<EncounterSet>,
   definitions: CatalogCollection<EncounterDefinition>,
+  rewards: RewardKernelCatalog,
 ): void {
   sets.values.forEach((set, setIndex) => {
     set.encounterDefinitionKeys.forEach((definitionKey, definitionIndex) => {
@@ -90,6 +91,16 @@ export function validateEncounterSetClosure(
           `encounterSets[${setIndex}].encounterDefinitionKeys[${definitionIndex}]`,
           `unknown encounter definition ${definitionKey}`,
         );
+    });
+    set.authoringProfiles.forEach((profile, profileIndex) => {
+      if (profile.resolution.kind !== 'rewardContext') return;
+      Object.keys(profile.resolution.encounterDefinitionKeyByRewardType).forEach((rewardType) => {
+        if (rewards.rewardTypes.byKey[rewardType] === undefined)
+          fail(
+            `encounterSets[${setIndex}].authoringProfiles[${profileIndex}].resolution.encounterDefinitionKeyByRewardType.${rewardType}`,
+            `unknown reward type ${rewardType}`,
+          );
+      });
     });
   });
 }

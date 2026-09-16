@@ -3,7 +3,7 @@ import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { RoomOccurrence } from '../model';
 import {
   encounterEnvelopeSlots,
-  selectedEncounterAuthoringProfileKey,
+  directEncounterDefinitionKeyForSlot,
 } from '../room-state/encounter-envelope';
 import { semanticAddressKey } from '../addresses';
 import { parseArtificerReplacementEntryKey } from '../acquisition/artificer';
@@ -190,7 +190,7 @@ export function activeRoomActionReferences(
   }
   for (const phase of envelopeSlots) {
     if (activeEncounterSlots !== undefined && !activeEncounterSlots.has(phase.key)) continue;
-    const key = selectedEncounterAuthoringProfileKey(
+    const key = directEncounterDefinitionKeyForSlot(
       catalog,
       room,
       occurrence.encounters,

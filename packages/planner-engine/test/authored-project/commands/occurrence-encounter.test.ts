@@ -6,6 +6,7 @@ import {
   applyProjectCommand,
   applyProjectHistoryCommand,
   activeRoomActionReferences,
+  activeSelectedPickupProducers,
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
@@ -22,6 +23,8 @@ import {
   createOccurrenceId,
   createTraitOfferAddress,
   createProjectHistory,
+  decodeProjectDocument,
+  encodeProjectDocument,
   redoProjectHistory,
   undoProjectHistory,
   type ProjectDocument,
@@ -514,6 +517,122 @@ describe('authored encounter occurrence commands', () => {
     const resetState = occurrence(resetEncounter, 'F', goldenFOccurrenceId(5, 1)).encounters;
     expect(resetState.encounterKeyByPhase.Encounter).toBe('ArtemisCombatF');
     expect(resetState.traitOffersByPhase?.Encounter?.ArtemisCombatF).toBeNull();
+  });
+
+  it('keeps an alias authored choice separate from its direct NPC definition across commands and codecs', () => {
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+      'Encounter',
+    );
+    const nativeProject = authorLegalTraitOffers(
+      applyProjectCommand(createCompleteFGProject(), catalog, {
+        kind: 'SelectEncounter',
+        phase,
+        encounterKey: 'ArtemisCombatF',
+      }),
+    );
+    const nativeOffer = occurrence(nativeProject, 'F', goldenFOccurrenceId(5, 1)).encounters
+      .traitOffersByPhase?.Encounter?.ArtemisCombatF;
+    if (nativeOffer === undefined || nativeOffer === null) throw new Error('missing Artemis offer');
+
+    const fSet = catalog.encounterSets.byKey.FEncountersDefault!;
+    const aliasSet = Object.freeze({
+      ...fSet,
+      authoringProfiles: Object.freeze(
+        fSet.authoringProfiles.map((profile) =>
+          profile.key === 'ArtemisCombatF'
+            ? Object.freeze({ ...profile, key: 'ArtemisChoice' })
+            : profile,
+        ),
+      ),
+    });
+    const aliasCatalog = Object.freeze({
+      ...catalog,
+      encounterSets: Object.freeze({
+        values: Object.freeze(
+          catalog.encounterSets.values.map((set) => (set.key === fSet.key ? aliasSet : set)),
+        ),
+        byKey: Object.freeze({ ...catalog.encounterSets.byKey, [fSet.key]: aliasSet }),
+      }),
+    }) as Catalog;
+
+    const selected = applyProjectCommand(createCompleteFGProject(), aliasCatalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'ArtemisChoice',
+    });
+    const withOffer = applyProjectCommand(selected, aliasCatalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(phase, 'selection'),
+      value: nativeOffer,
+    });
+    expect(
+      occurrence(withOffer, 'F', goldenFOccurrenceId(5, 1)).encounters.encounterKeyByPhase
+        .Encounter,
+    ).toBe('ArtemisChoice');
+    expect(
+      occurrence(withOffer, 'F', goldenFOccurrenceId(5, 1)).encounters.traitOffersByPhase?.Encounter
+        ?.ArtemisCombatF,
+    ).toEqual(nativeOffer);
+    expect(
+      decodeProjectDocument(JSON.parse(encodeProjectDocument(withOffer)), aliasCatalog),
+    ).toEqual(withOffer);
+  });
+
+  it('uses a direct Nemesis alias for its family, suppression, and pickup producer', () => {
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+      'Encounter',
+    );
+    const fSet = catalog.encounterSets.byKey.FEncountersDefault!;
+    const aliasSet = Object.freeze({
+      ...fSet,
+      authoringProfiles: Object.freeze(
+        fSet.authoringProfiles.map((profile) =>
+          profile.key === 'NemesisRandomEvent'
+            ? Object.freeze({ ...profile, key: 'NemesisChoice' })
+            : profile,
+        ),
+      ),
+    });
+    const aliasCatalog = Object.freeze({
+      ...catalog,
+      encounterSets: Object.freeze({
+        values: Object.freeze(
+          catalog.encounterSets.values.map((set) => (set.key === fSet.key ? aliasSet : set)),
+        ),
+        byKey: Object.freeze({ ...catalog.encounterSets.byKey, [fSet.key]: aliasSet }),
+      }),
+    }) as Catalog;
+    const event = createNemesisRandomEventAddress(phase);
+    const accepted = applyProjectCommand(
+      applyProjectCommand(createCompleteFGProject(), aliasCatalog, {
+        kind: 'SelectNemesisRandomEventFamily',
+        event,
+        family: 'goldTrade',
+      }),
+      aliasCatalog,
+      {
+        kind: 'ReplaceNemesisRandomEventInteraction',
+        event,
+        value: { kind: 'goldTrade', response: 'accept', reward: { rewardType: 'MaxHealthDrop' } },
+      },
+    );
+    const selected = occurrence(accepted, 'F', goldenFOccurrenceId(5, 1));
+    expect(selected.encounters.encounterKeyByPhase.Encounter).toBe('NemesisChoice');
+    expect(selected.roomActions.order).not.toContainEqual({
+      kind: 'interactIncomingReward',
+      producerPoint: 'reward',
+      acquisitionRole: 'source',
+    });
+    expect(activeSelectedPickupProducers(aliasCatalog, goldenFBiome, selected)).toContainEqual(
+      expect.objectContaining({
+        producerLifecycleKey: 'NemesisEventPickup',
+        siteKey: 'nemesisGenerated:Encounter',
+      }),
+    );
   });
 
   it('applies a valid top-level selection, resets it, and records one atomic history edit', () => {

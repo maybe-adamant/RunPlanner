@@ -90,10 +90,11 @@ describe('authored pickup producers', () => {
   it('retracts only a removed Supply Chain source’s later clocked action and retains its payload', () => {
     const sourceId = createOccurrenceId('supply-source');
     const hostId = createOccurrenceId('supply-host');
+    const sourceBiome = createBiomeAddress('Surface', 'O');
     const sourceOwner = createEncounterPhaseAddress(
-      biome,
+      sourceBiome,
       { kind: 'occurrence', occurrenceId: sourceId },
-      'Encounter',
+      'Combat1',
     );
     const sourceIdentity = semanticAddressKey(createTraitOfferAddress(sourceOwner, 'selection'));
     const entryKey = clockedTraitGeneratedPickupEntryKey(sourceIdentity, 'pomSlice1');
@@ -116,18 +117,18 @@ describe('authored pickup producers', () => {
     };
     const source = {
       occurrenceId: sourceId,
-      gameName: 'N_Opening01',
+      gameName: 'O_Combat01',
       state: { kind: 'none' },
       encounters: {
-        encounterKeyByPhase: { Encounter: 'Icarus' },
-        traitOffersByPhase: { Encounter: { Icarus: supplyOffer } },
+        encounterKeyByPhase: { Intro: 'GeneratedO_Intro01', Combat1: 'IcarusCombatO' },
+        traitOffersByPhase: { Combat1: { IcarusCombatO: supplyOffer } },
       },
-      roomActions: { order: [{ kind: 'interactEncounter', phaseKey: 'Encounter' }] },
+      roomActions: { order: [{ kind: 'interactEncounter', phaseKey: 'Combat1' }] },
       additionalExits: [],
     } as unknown as RoomOccurrence;
     const host = {
       occurrenceId: hostId,
-      gameName: 'N_Opening01',
+      gameName: 'O_Combat01',
       state: { kind: 'none' },
       encounters: {},
       roomActions: {
@@ -163,15 +164,18 @@ describe('authored pickup producers', () => {
     const previous = {
       route: {
         routeKey: 'Surface',
-        biomes: [{ biomeKey: 'N', topology: { occurrences: [source, host] } }],
+        biomes: [{ biomeKey: 'O', topology: { occurrences: [source, host] } }],
       },
     } as unknown as ProjectDocument;
     expect(retractInactiveClockedTraitPickupActions(catalog, previous, previous)).toBe(previous);
     const replacedSource = {
       ...source,
       encounters: {
+        encounterKeyByPhase: source.encounters.encounterKeyByPhase,
         traitOffersByPhase: {
-          Encounter: { Icarus: { ...supplyOffer, selectedOptionKey: 'option2' as const } },
+          Combat1: {
+            IcarusCombatO: { ...supplyOffer, selectedOptionKey: 'option2' as const },
+          },
         },
       },
     } as unknown as RoomOccurrence;

@@ -22,7 +22,11 @@ import type { HistoryStateView } from '../history/model';
 import type { CanonicalAuthoredRoom } from '../materialization';
 import type { SemanticFinding } from '../model';
 import type { ResolvedEncounterPhase } from './model';
-import { resolvedEncounterPhaseForDefinition } from './resolve';
+import {
+  encounterResolutionContext,
+  resolveEncounterAuthoringProfile,
+  resolveMaterializedEncounterPhase,
+} from './resolve';
 import {
   encounterRequirementEvidence,
   type EncounterCandidateExclusion,
@@ -83,11 +87,6 @@ function roomsEntered(view: HistoryStateView): Readonly<Record<string, number>> 
   return Object.freeze(counts);
 }
 
-function effectiveCurrentRoomRewardType(room: EncounterAuthoringRoom): string | undefined {
-  if (room.kind === 'authored' && room.clockworkReward === 'goal') return 'ClockworkGoal';
-  return room.incomingReward?.offer.rewardType;
-}
-
 function enteredBiomeCount(catalog: Catalog, room: EncounterAuthoringRoom): number {
   const route = catalog.routes.byKey[room.origin.routeKey];
   const index = route?.biomeKeys.indexOf(room.origin.biomeKey) ?? -1;
@@ -132,7 +131,10 @@ function requirementContext(
       useRecord: Object.freeze({}),
     }),
     currentRoomShopOptionNames: new Set<string>(),
-    currentRoomRewardType: effectiveCurrentRoomRewardType(room),
+    currentRoomRewardType: (() => {
+      const resolution = encounterResolutionContext(room, declaration);
+      return resolution.kind === 'knownReward' ? resolution.rewardType : undefined;
+    })(),
     currentRoomStructuralTags: declaration.structuralTags,
     rewardLookups: Object.freeze({}),
     runDepthCache: view.ledgers.counters.roomHistoryOrdinal + 1,
@@ -292,8 +294,15 @@ export function prepareRoomEncounterPhases(
       pendingSpellDrop,
       allSpellInvested,
     );
+    const resolution = encounterResolutionContext(room, declaration);
     if (binding.kind === 'fixed') {
-      if (phase.encounterKey !== binding.encounterDefinitionKey) {
+      const resolvedPhase = resolveMaterializedEncounterPhase(
+        catalog,
+        declaration,
+        phase,
+        resolution,
+      );
+      if (resolvedPhase === undefined) {
         throw new Error(`${room.gameName}.${phase.slotKey} lost fixed encounter identity`);
       }
       if (!activationSatisfied) {
@@ -303,14 +312,14 @@ export function prepareRoomEncounterPhases(
         continue;
       }
       if (prefixValid) {
-        validPrefix.push(phase);
+        validPrefix.push(resolvedPhase);
         preparation = projectEncounterRecordPreparation(
           preparation,
           room.origin,
           room.gameName,
-          phase,
+          resolvedPhase,
         );
-        if (phase.sequenceEffect?.kind === 'terminateSuffix') suffixTerminated = true;
+        if (resolvedPhase.sequenceEffect?.kind === 'terminateSuffix') suffixTerminated = true;
       }
       continue;
     }
@@ -325,57 +334,63 @@ export function prepareRoomEncounterPhases(
       allSpellInvested,
     );
     const profiles = encounterAuthoringProfiles(set);
-    const eligibleDefinitionsByProfile = new Map(
+    const resolvedDefinitionsByProfile = new Map(
       profiles.map((profile) => [
         profile.key,
-        profile.encounterDefinitionKeys.filter((key) => {
-          const definition = catalog.encounterDefinitions.byKey[key];
-          if (definition === undefined) {
-            throw new Error(`${set.key} lost encounter ${key}`);
-          }
-          return (
-            definition.requirements === undefined ||
-            evaluateRequirement(definition.requirements, context)
-          );
-        }),
+        resolveEncounterAuthoringProfile(profile, resolution),
       ]),
     );
     const candidateEncounterKeys = Object.freeze(
       profiles
-        .filter((profile) => (eligibleDefinitionsByProfile.get(profile.key)?.length ?? 0) > 0)
+        .filter((profile) => {
+          const key = resolvedDefinitionsByProfile.get(profile.key);
+          const definition =
+            key === undefined ? undefined : catalog.encounterDefinitions.byKey[key];
+          if (key !== undefined && definition === undefined)
+            throw new Error(`${set.key} lost encounter ${key}`);
+          return (
+            definition !== undefined &&
+            (definition.requirements === undefined ||
+              evaluateRequirement(definition.requirements, context))
+          );
+        })
         .map((profile) => profile.key),
     );
     const exclusions: readonly EncounterCandidateExclusion[] = Object.freeze(
       profiles
         .filter((profile) => !candidateEncounterKeys.includes(profile.key))
-        .map((profile) =>
-          Object.freeze({
+        .map((profile) => {
+          const key = resolvedDefinitionsByProfile.get(profile.key);
+          if (key === undefined)
+            return Object.freeze({
+              encounterKey: profile.key,
+              kind: 'resolutionUnavailable' as const,
+            });
+          const requirement = catalog.encounterDefinitions.byKey[key]?.requirements;
+          if (requirement === undefined) throw new Error(`${key} excluded without requirements`);
+          return Object.freeze({
             encounterKey: profile.key,
             kind: 'requirements' as const,
-            definitions: Object.freeze(
-              profile.encounterDefinitionKeys.map((key) => {
-                const requirement = catalog.encounterDefinitions.byKey[key]!.requirements;
-                if (requirement === undefined)
-                  throw new Error(`${key} excluded without requirements`);
-                return Object.freeze({
-                  encounterDefinitionKey: key,
-                  evaluation: encounterRequirementEvidence(requirement, context),
-                });
+            definitions: Object.freeze([
+              Object.freeze({
+                encounterDefinitionKey: key,
+                evaluation: encounterRequirementEvidence(requirement, context),
               }),
-            ),
-          }),
-        ),
+            ]),
+          });
+        }),
     );
     const support: EncounterPhaseCandidateSupport = Object.freeze({
       origin,
-      selectedEncounterKey: phase.encounterKey,
+      selectedEncounterKey: phase.authoredChoiceKey,
       candidateEncounterKeys,
       exclusions,
       activationSatisfied,
       ...(!activationSatisfied && slot.activationRequirement !== undefined
         ? { activationFailure: encounterRequirementEvidence(slot.activationRequirement, context) }
         : {}),
-      selectedPossible: activationSatisfied && candidateEncounterKeys.includes(phase.encounterKey),
+      selectedPossible:
+        activationSatisfied && candidateEncounterKeys.includes(phase.authoredChoiceKey),
       active: true,
     });
     candidates.push(support);
@@ -392,17 +407,14 @@ export function prepareRoomEncounterPhases(
       continue;
     }
     if (prefixValid) {
-      const eligibleSelectedDefinitions = eligibleDefinitionsByProfile.get(phase.encounterKey);
-      if (eligibleSelectedDefinitions?.length !== 1) {
-        throw new Error(
-          `${set.key}.${phase.encounterKey} resolved ${eligibleSelectedDefinitions?.length ?? 0} exact encounters`,
-        );
-      }
-      const resolvedPhase = resolvedEncounterPhaseForDefinition(
+      const resolvedPhase = resolveMaterializedEncounterPhase(
         catalog,
+        declaration,
         phase,
-        eligibleSelectedDefinitions[0]!,
+        resolution,
       );
+      if (resolvedPhase === undefined)
+        throw new Error(`${set.key}.${phase.authoredChoiceKey} lacks resolution`);
       validPrefix.push(resolvedPhase);
       preparation = projectEncounterRecordPreparation(
         preparation,

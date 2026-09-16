@@ -17,6 +17,7 @@ import {
   semanticAddressKey,
   createFieldsSpatialAddress,
   createRoomFeatureAddress,
+  directEncounterDefinitionKeyForSlot,
   type FieldsSpatialTarget,
 } from '@run-planner/engine/authored-project';
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
@@ -58,9 +59,16 @@ export function assembleOccurrenceRewardLocal(
 ): WorkspaceOccurrenceRewardLocalAssembly {
   const address = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
   const baseRewardControls = controlsForOccurrence(input, room);
-  const hasRetainedNemesisEvent = Object.values(
-    input.occurrence.encounters.encounterKeyByPhase,
-  ).some((encounterKey) => encounterKey === 'NemesisRandomEvent');
+  const hasRetainedNemesisEvent = Object.keys(input.occurrence.encounters.encounterKeyByPhase).some(
+    (slotKey) =>
+      directEncounterDefinitionKeyForSlot(
+        input.catalog,
+        room,
+        input.occurrence.encounters,
+        slotKey,
+        room.gameName,
+      ) === 'NemesisRandomEvent',
+  );
   const encounterPhases =
     input.facts.detailsActive || hasRetainedNemesisEvent
       ? activeEncounterPhasesForOwner(
@@ -500,7 +508,16 @@ function roomLocalForOccurrence(
             spatialDeclaration.optionalPointIds,
           ),
         ),
-        ...(Object.values(occurrence.encounters.encounterKeyByPhase).includes('NemesisRandomEvent')
+        ...(Object.keys(occurrence.encounters.encounterKeyByPhase).some(
+          (slotKey) =>
+            directEncounterDefinitionKeyForSlot(
+              input.catalog,
+              room,
+              occurrence.encounters,
+              slotKey,
+              room.gameName,
+            ) === 'NemesisRandomEvent',
+        )
           ? [
               spatialControl(
                 { kind: 'nemesis' },

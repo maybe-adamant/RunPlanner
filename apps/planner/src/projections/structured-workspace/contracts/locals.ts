@@ -83,6 +83,8 @@ export interface WorkspaceEncounterInteraction {
 }
 
 export interface WorkspaceNemesisEventSelection {
+  /** Persisted authored choice key that selects the native Nemesis event. */
+  readonly encounterKey: string;
   readonly owner: NemesisRandomEventAddress;
   readonly familyPicker: ContextualPickerModel<AuthoredNemesisRandomEventKind>;
   readonly familyIntentFor: (
@@ -229,7 +231,10 @@ export interface WorkspaceLocalVisitOrderControl {
  */
 export interface WorkspaceEncounterPhase {
   readonly address: EncounterPhaseAddress;
-  readonly candidateChoices: readonly WorkspaceInteractionChoice<string>[];
+  readonly candidateChoices: readonly (WorkspaceInteractionChoice<string> & {
+    /** Exact native identity for a directly mapped encounter choice. */
+    readonly nativeEncounterDefinitionKey?: string;
+  })[];
   /**
    * Declaration-owned selector affordance. Singleton pools remain semantic
    * phase owners, but cannot create a meaningful encounter selection UI.

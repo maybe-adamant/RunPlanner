@@ -523,16 +523,32 @@ observable distinction that the closed vocabulary cannot represent correctly.
 
 ### Concrete Encounter Preparation
 
-`prepareRoom` resolves an active room's Envelope slots from the
-post-predecessor-commit checkpoint. A fixed binding supplies its exact
-definition; a pool-backed binding resolves the room instance's authored profile
-to its one eligible concrete definition. Ordinary Combat can therefore retain
-its authored identity while resolving a reward-owned Trial or an I goal variant.
-For each valid active slot, preparation appends an
-`encounterRecorded` event before entry. The event carries the definition key,
-envelope key, stable slot key, and exact room-instance origin.
-Encounter effects and execution publication consume that concrete identity,
-not the preliminary authored profile.
+Retained encounter phases describe active Envelope slots and authored choices,
+not provisional native behavior. A catalog choice declares its invariant
+structural kind and either a direct definition or an explicit reward-context
+mapping. The room's slot binding selects that mapping; labels never select
+native definitions. Combat can keep its authored identity while resolving a
+reward-owned Trial or an I goal variant.
+Each visible choice has one concrete meaning within a room, phase and known
+context. Distinct available choices must have distinguishable friendly labels;
+labels may repeat in different rooms or phases.
+
+`prepareRoom` resolves identity and then assesses that definition at the
+post-predecessor-commit checkpoint. Eligibility never selects another identity.
+The identity context distinguishes known reward type, known no-reward, and
+unavailable authorship; a Clockwork goal disposition takes precedence over the
+incoming reward. Missing contextual authorship does not select ordinary Combat.
+Direct bindings need no reward context. Structural traversal uses the same
+identity resolver without claiming eligibility, and never borrows behavior from
+a choice's namesake or first possible definition. Materialization publishes known
+structural identities for unentered rooms so execution translation needs no
+separate resolution policy.
+
+Only a resolved phase carries effective encounter behavior. For each valid
+active slot, preparation appends an `encounterRecorded` event before entry.
+The event carries the definition key, envelope key, stable slot key, and exact
+room-instance origin. Encounter effects and execution publication consume that
+concrete identity, not the authored choice.
 
 A later slot in the same room evaluates against the preceding recorded prefix.
 It can therefore observe exact earlier encounter identities, while encounter

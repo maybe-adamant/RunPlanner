@@ -88,13 +88,7 @@ export function encounterAuthoringProfileForKey(
 export function encounterAuthoringProfiles(
   set: EncounterSet,
 ): readonly EncounterAuthoringProfile[] {
-  return (
-    set.authoringProfiles ??
-    set.encounterDefinitionKeys.map((encounterKey) => ({
-      key: encounterKey,
-      encounterDefinitionKeys: [encounterKey],
-    }))
-  );
+  return set.authoringProfiles;
 }
 
 export function encounterDefinitionForKey(
@@ -112,7 +106,7 @@ export function encounterDefinitionForKey(
 export function selectedEncounterAuthoringProfileKey(
   catalog: Catalog,
   room: RoomDeclaration,
-  encounters: RoomEncounterState,
+  encounters: Pick<RoomEncounterState, 'encounterKeyByPhase'>,
   slotKey: string,
   path: string,
 ): string {
@@ -133,8 +127,35 @@ export function selectedEncounterAuthoringProfileKey(
   }
   const set = encounterSetForBinding(catalog, binding, path);
   encounterAuthoringProfileForKey(set, encounterKey, path);
-  encounterDefinitionForKey(catalog, encounterKey, path);
   return encounterKey;
+}
+
+/**
+ * Declaration-owned authored metadata may inspect a direct choice only. A
+ * contextual choice has no truthful definition until reward authorship exists.
+ */
+export function directEncounterDefinitionKeyForSlot(
+  catalog: Catalog,
+  room: RoomDeclaration,
+  encounters: Pick<RoomEncounterState, 'encounterKeyByPhase'>,
+  slotKey: string,
+  path: string,
+): string | undefined {
+  const binding = encounterBindingsBySlot(catalog, room, path).get(slotKey);
+  if (binding === undefined)
+    failProjectDocument(path, `${room.gameName} has no encounter slot ${slotKey}`);
+  if (binding.kind === 'fixed') return binding.encounterDefinitionKey;
+  const choiceKey = encounters.encounterKeyByPhase[slotKey];
+  if (choiceKey === undefined)
+    failProjectDocument(path, `${slotKey} has no authored encounter selection`);
+  const profile = encounterAuthoringProfileForKey(
+    encounterSetForBinding(catalog, binding, path),
+    choiceKey,
+    path,
+  );
+  return profile.resolution.kind === 'direct'
+    ? profile.resolution.encounterDefinitionKey
+    : undefined;
 }
 
 export function createDefaultRoomEncounterState(
@@ -167,11 +188,6 @@ export function createDefaultRoomEncounterState(
         `${set.defaultAuthoringProfileKey} is not a member of ${set.key}`,
       );
     }
-    encounterDefinitionForKey(
-      catalog,
-      set.defaultAuthoringProfileKey,
-      `${path}.${binding.slotKey}`,
-    );
     values[binding.slotKey] = set.defaultAuthoringProfileKey;
     if (
       set.encounterDefinitionKeys.some(
@@ -196,11 +212,26 @@ export function createDefaultRoomEncounterState(
   }
   const traitOffersByPhase: Record<string, Record<string, AuthoredTraitOffer | null>> = {};
   for (const binding of bindings.values()) {
-    const encounterKey =
-      binding.kind === 'fixed' ? binding.encounterDefinitionKey : values[binding.slotKey];
-    if (encounterKey === undefined) continue;
-    if (catalog.encounterDefinitions.byKey[encounterKey]?.traitOfferProducer !== undefined)
-      traitOffersByPhase[binding.slotKey] = { [encounterKey]: null };
+    const definitionKey =
+      binding.kind === 'fixed'
+        ? binding.encounterDefinitionKey
+        : (() => {
+            const choiceKey = values[binding.slotKey];
+            if (choiceKey === undefined) return undefined;
+            const profile = encounterAuthoringProfileForKey(
+              encounterSetForBinding(catalog, binding, `${path}.${binding.slotKey}`),
+              choiceKey,
+              `${path}.${binding.slotKey}`,
+            );
+            return profile.resolution.kind === 'direct'
+              ? profile.resolution.encounterDefinitionKey
+              : undefined;
+          })();
+    if (
+      definitionKey !== undefined &&
+      catalog.encounterDefinitions.byKey[definitionKey]?.traitOfferProducer !== undefined
+    )
+      traitOffersByPhase[binding.slotKey] = { [definitionKey]: null };
   }
   return Object.freeze({
     encounterKeyByPhase: Object.freeze(values),

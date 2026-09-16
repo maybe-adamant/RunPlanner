@@ -1747,10 +1747,10 @@ describe('H Fields materialization', () => {
       lifecycleProfileKey: 'FieldsCombatRoom',
       encounterEnvelopeKey: 'FieldsEncounter',
       encounterPhases: [
-        { slotKey: 'Passive', encounterKey: 'GeneratedH_Passive' },
-        { slotKey: 'Cage01', encounterKey: 'GeneratedH' },
-        { slotKey: 'Cage02', encounterKey: 'GeneratedH' },
-        { slotKey: 'Cage03', encounterKey: 'GeneratedH' },
+        { slotKey: 'Passive', authoredChoiceKey: 'GeneratedH_Passive' },
+        { slotKey: 'Cage01', authoredChoiceKey: 'GeneratedH' },
+        { slotKey: 'Cage02', authoredChoiceKey: 'GeneratedH' },
+        { slotKey: 'Cage03', authoredChoiceKey: 'GeneratedH' },
       ],
     });
     expect(maxCombat?.unresolvedLocalRewards?.map((reward) => reward.slotKey)).toEqual([

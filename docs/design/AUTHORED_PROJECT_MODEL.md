@@ -675,14 +675,20 @@ semantic `ReplaceSteadyGrowthTarget` command owns one exact phase/contact and
 preserves retained invalid known keys for repair. Progress and threshold
 settlement are derived from trait history.
 
-### Concrete Encounter Selections
+### Encounter Choices and Concrete Identity
 
-`RoomOccurrence.encounters.encounterKeyByPhase` persists the exact normalized
-Encounter Definition key for every pool-backed potential slot of that room's
-envelope. A generated N side room is an ordinary referenced occurrence and
-keeps the same map on that occurrence. The parent-sourced local-visit decision
-owns only generation and visit topology. The map does not store an Encounter
-Set key, category sentinel, NPC family, or rendered phase ordinal.
+`RoomOccurrence.encounters.encounterKeyByPhase` persists a catalog-declared
+authoring choice key for every pool-backed potential slot of that room's
+envelope. Each choice has a friendly label and an explicit mapping to a concrete
+Encounter Definition. Most map directly; contextual choices such as Combat map
+from the room's reward context. Existing choice keys may also be native
+definition names, but that spelling does not make them resolved identities.
+Fixed slots are bound directly by the Room Declaration and persist no choice.
+
+A generated N side room is an ordinary referenced occurrence and keeps the same
+map on that occurrence. The parent-sourced local-visit decision owns only
+generation and visit topology. The map does not store an Encounter Set key,
+free-form category, NPC family, or rendered phase ordinal.
 
 Potential selections remain with their owning room through unpick/repick,
 side-room generation and entry-order changes, optional-slot trimming, Undo,
@@ -696,17 +702,25 @@ occurrence and downstream state atomically.
 
 An active retained selection may become context-invalid after a different
 semantic edit. It remains persisted and repairable; the authored model never
-falls back to another definition. `SelectEncounter` accepts an exact member of
-the phase's declared Encounter Set at one structurally addressable occurrence
+falls back to another choice. `SelectEncounter` accepts a declared authoring
+choice from the phase's Encounter Set at one structurally addressable occurrence
 including a dormant or context-invalid selection.
 `ResetEncounter` restores the set's static declared default even when that
 default is dormant or currently invalid; it is a reset, not an automatic
 repair.
 
+Concrete identity resolution belongs to the engine's encounter resolver, not
+the command or editor. A reward edit may change the resolved definition behind
+Combat without changing the persisted choice. The resolver maps identity
+independently of eligibility; an unavailable selected NPC receives a finding
+rather than being replaced by Combat. The room lifecycle authority owns the
+resolved product and its exact chronological assessment.
+
 An Encounter Definition may additionally declare one `traitOfferProducer`.
 The owning room occurrence then persists its complete offer outcome
-sparsely at `encounters.traitOffersByPhase[phaseKey][encounterKey]`. A trait
-outcome contains one to three materialized options and a selected key that
+sparsely at `encounters.traitOffersByPhase[phaseKey][encounterKey]`, keyed by
+the native definition rather than its authoring choice. A trait outcome
+contains one to three materialized options and a selected key that
 addresses one of them; a `fallbackGold` outcome instead owns only the giver
 and has no selected key or option-local children. Declaration defaults remain
 complete three-option trait outcomes. Selecting that encounter installs its
