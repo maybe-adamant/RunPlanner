@@ -13,6 +13,7 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
+import { RoomMapReferencePane } from '@planner/ui/room-maps/RoomMapReferencePane';
 
 export function FieldsWorkbench({
   interactions,
@@ -142,11 +143,17 @@ function FieldsSpatialRow({
 
 /** Physical H Fields placement only; reward and feature authoring stays in its owning tabs. */
 export function FieldsLayoutWorkbench({
+  gameName,
+  hostId,
   interactions,
   room,
+  title,
 }: {
+  readonly gameName: string;
+  readonly hostId: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'fields' }>;
+  readonly title: string;
 }) {
   const contextFor = (control: WorkspaceFieldsSpatialControl): string | undefined => {
     const target = control.target;
@@ -175,31 +182,36 @@ export function FieldsLayoutWorkbench({
   };
   return (
     <section aria-label="Fields Layout" className="fields-layout-editor">
-      <div className="local-reward-heading fields-layout-heading">
-        <h4>Fields Layout</h4>
-        <h4>Position</h4>
+      <div className="fields-layout-reference-layout">
+        <div className="fields-layout-controls">
+          <div className="local-reward-heading fields-layout-heading">
+            <h4>Fields Layout</h4>
+            <h4>Position</h4>
+          </div>
+          {entry === undefined ? null : (
+            <FieldsSpatialRow control={entry} interactions={interactions} />
+          )}
+          {cages.length === 0 ? null : (
+            <div className="fields-layout-group">
+              <h5>Cage placements</h5>
+              {cages.map(renderSpatialRow)}
+            </div>
+          )}
+          {optional.length === 0 ? null : (
+            <div className="fields-layout-group">
+              <h5>Optional pickups</h5>
+              {optional.map(renderSpatialRow)}
+            </div>
+          )}
+          {nemesis === undefined ? null : (
+            <div className="fields-layout-group">
+              <h5>Nemesis</h5>
+              <FieldsSpatialRow control={nemesis} interactions={interactions} />
+            </div>
+          )}
+        </div>
+        <RoomMapReferencePane gameName={gameName} hostId={hostId} title={title} />
       </div>
-      {entry === undefined ? null : (
-        <FieldsSpatialRow control={entry} interactions={interactions} />
-      )}
-      {cages.length === 0 ? null : (
-        <div className="fields-layout-group">
-          <h5>Cage placements</h5>
-          {cages.map(renderSpatialRow)}
-        </div>
-      )}
-      {optional.length === 0 ? null : (
-        <div className="fields-layout-group">
-          <h5>Optional pickups</h5>
-          {optional.map(renderSpatialRow)}
-        </div>
-      )}
-      {nemesis === undefined ? null : (
-        <div className="fields-layout-group">
-          <h5>Nemesis</h5>
-          <FieldsSpatialRow control={nemesis} interactions={interactions} />
-        </div>
-      )}
     </section>
   );
 }

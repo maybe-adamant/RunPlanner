@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
+import { RoomMapReferencePane } from '@planner/ui/room-maps/RoomMapReferencePane';
 import { roomMapAssetFor } from '@planner/ui/room-maps/roomMapAssets';
 
 afterEach(cleanup);
@@ -56,5 +57,50 @@ describe('RoomMapLauncher', () => {
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(document.activeElement).toBe(launcher);
+  });
+});
+
+describe('RoomMapReferencePane', () => {
+  it('keeps the non-modal reference while inspecting it in the shared dialog', () => {
+    render(<RoomMapReferencePane gameName="F_Combat01" hostId="occurrence-a" title="Combat 01" />);
+
+    expect(screen.getByRole('complementary', { name: 'Combat 01 map reference' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+    expect(screen.getByText('125%')).toBeTruthy();
+
+    const expand = screen.getByRole('button', { name: 'Expand' });
+    fireEvent.click(expand);
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Close map' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(expand);
+    expect(screen.getByText('125%')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close room map reference' }));
+    expect(screen.queryByRole('complementary', { name: 'Combat 01 map reference' })).toBeNull();
+    const reopen = screen.getByRole('button', { name: 'Show map reference for Combat 01' });
+    expect(document.activeElement).toBe(reopen);
+    fireEvent.click(reopen);
+    expect(screen.getByRole('complementary', { name: 'Combat 01 map reference' })).toBeTruthy();
+  });
+
+  it('resets the image for a replacement and closes inherited references for a new host', () => {
+    const view = render(
+      <RoomMapReferencePane gameName="H_Combat02" hostId="occurrence-a" title="Combat 02" />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+    expect(screen.getByText('125%')).toBeTruthy();
+    view.rerender(
+      <RoomMapReferencePane gameName="H_Combat03" hostId="occurrence-a" title="Combat 03" />,
+    );
+    expect(screen.getByRole('complementary', { name: 'Combat 03 map reference' })).toBeTruthy();
+    expect(screen.getByText('100%')).toBeTruthy();
+
+    view.rerender(
+      <RoomMapReferencePane gameName="H_Combat04" hostId="occurrence-b" title="Combat 04" />,
+    );
+    expect(screen.queryByRole('complementary', { name: 'Combat 04 map reference' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Show map reference for Combat 04' })).toBeTruthy();
   });
 });

@@ -214,7 +214,13 @@ export function OccurrenceWorkbench({
             {renderDirectRoomWorkbench('overview')}
           </div>
         ) : activeTab === 'layout' && room.workbench.kind === 'fields' ? (
-          <FieldsLayoutWorkbench interactions={interactions} room={room.workbench.fields} />
+          <FieldsLayoutWorkbench
+            gameName={room.gameName}
+            hostId={roomIdentity}
+            interactions={interactions}
+            room={room.workbench.fields}
+            title={room.label}
+          />
         ) : activeTab === 'doors' ? (
           (doors ?? <p className="fixed-room-state">No outgoing doors for this room.</p>)
         ) : activeTab === 'shipInactiveRepair' && room.workbench.kind === 'ship' ? (

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, within } from '@testing-library/react';
 import {
   applyProjectCommand,
   createEncounterPhaseAddress,
@@ -17,6 +17,10 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { WorkspaceOccurrenceWorkbenchNode } from '@planner/projections/structured-workspace';
 
 import { OccurrenceWorkbench } from '@planner/ui/editor/biome/OccurrenceWorkbench';
+import {
+  authoredProjectCommandDispatched,
+  authoredProjectUndoRequested,
+} from '@planner/state/projectWorkspaceSlice';
 
 import {
   createGoldenFGHIProject,
@@ -222,6 +226,50 @@ describe('OccurrenceWorkbench', () => {
     await view.user.click(alternate);
 
     expect((alternate as HTMLInputElement).checked).toBe(true);
+  });
+
+  it('keeps the H Fields reference open across position edits and resets it for room replacement', async () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const view = renderOccurrenceWorkbench(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'H',
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Layout');
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
+    const reference = screen.getByRole('complementary', { name: 'Combat 02 map reference' });
+    const point = screen.getByRole('radiogroup', { name: 'Entry position' });
+    const alternate = within(point).getByRole('radio', { name: 'Entry 2' });
+
+    expect(within(reference).getByText('100%')).toBeTruthy();
+    await view.user.click(within(reference).getByRole('button', { name: 'Zoom in' }));
+    await view.user.click(alternate);
+
+    expect((alternate as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByRole('complementary', { name: 'Combat 02 map reference' })).toBeTruthy();
+    expect(within(screen.getByRole('complementary')).getByText('125%')).toBeTruthy();
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      historyBefore + 1,
+    );
+
+    await act(async () => {
+      view.application.store.dispatch(authoredProjectUndoRequested());
+    });
+    expect((screen.getByRole('radio', { name: 'Entry 1' }) as HTMLInputElement).checked).toBe(true);
+    expect(within(screen.getByRole('complementary')).getByText('125%')).toBeTruthy();
+
+    await act(async () => {
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceOccurrenceRoom',
+          occurrence: createOccurrenceAddress(goldenHBiome, occurrenceId),
+          gameName: 'H_Combat03',
+        }),
+      );
+    });
+    expect(screen.getByRole('complementary', { name: 'Combat 03 map reference' })).toBeTruthy();
+    expect(within(screen.getByRole('complementary')).getByText('100%')).toBeTruthy();
   });
 
   it('shows a missing active placement finding on its exact Layout row', () => {
