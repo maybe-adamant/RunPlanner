@@ -278,8 +278,27 @@ function replaceTopLevel(
                 ? prior
                 : createUnresolvedPickupRewardState(catalog, command.reward, 'NemesisEventPickup')
               : null;
+          const declined =
+            command.value !== null &&
+            'response' in command.value &&
+            command.value.response === 'decline';
           return Object.freeze({
             ...occurrence,
+            // Keep the offered reward's details, but retract its now-inactive pickup.
+            ...(declined
+              ? {
+                  roomActions: Object.freeze({
+                    order: Object.freeze(
+                      occurrence.roomActions.order.filter(
+                        (reference) =>
+                          reference.kind !== 'interactAcquisitionEntry' ||
+                          reference.siteKey !== siteKey ||
+                          reference.entryKey !== 'result',
+                      ),
+                    ),
+                  }),
+                }
+              : {}),
             acquisitionSites: Object.freeze({
               ...(occurrence.acquisitionSites ?? {}),
               [siteKey]: Object.freeze({ pickupEntries: Object.freeze({ result: reward }) }),

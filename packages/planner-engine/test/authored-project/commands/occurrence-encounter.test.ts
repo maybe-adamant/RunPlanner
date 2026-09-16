@@ -166,13 +166,29 @@ describe('authored encounter occurrence commands', () => {
       phaseKey: 'Encounter',
     });
 
-    const declined = applyProjectCommand(selected, catalog, {
+    const accepted = applyProjectCommand(selected, catalog, {
+      kind: 'ReplaceNemesisRandomEventOutcome',
+      event,
+      value: { kind: 'goldTrade', response: 'accept' },
+      reward: { rewardType: 'MaxHealthDrop' },
+    });
+    expect(occurrence(accepted, 'F', goldenFOccurrenceId(5, 1)).roomActions.order).toContainEqual({
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'nemesisGenerated:Encounter',
+      entryKey: 'result',
+    });
+    const declined = applyProjectCommand(accepted, catalog, {
       kind: 'ReplaceNemesisRandomEventOutcome',
       event,
       value: { kind: 'goldTrade', response: 'decline' },
       reward: { rewardType: 'MaxHealthDrop' },
     });
     const declinedOccurrence = occurrence(declined, 'F', goldenFOccurrenceId(5, 1));
+    expect(declinedOccurrence.roomActions.order).not.toContainEqual({
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'nemesisGenerated:Encounter',
+      entryKey: 'result',
+    });
     expect(
       declinedOccurrence.acquisitionSites?.['nemesisGenerated:Encounter']?.pickupEntries?.result
         ?.offer,
