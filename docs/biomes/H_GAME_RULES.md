@@ -33,7 +33,12 @@ rechecked on 2026-08-15; source details remain in the focused audit.
   Only active logical slots consume points. Active cage assignments are unique
   within the cage-point family; active optional rewards and active Nemesis are
   unique within their shared optional-point family. Dormant assignments remain
-  stable without reserving a point.
+  stable without reserving a point. Cage and optional reward identities resolve
+  before placement validation; incomplete layout never withholds their
+  definition or replacement candidates. Occupied points remain assignable for
+  manual rearrangement: duplicates are repairable findings, not selection locks,
+  and assigning a point never moves or clears another assignment. Declaration
+  exclusions still restrict which points a placement can use.
 - `H_PreBoss01` is an atomic takeover Preboss. For a two-door predecessor it
   creates a Shop occurrence on the first exit and a counted free-reward
   occurrence on the second. Its batch has no ordinary batch reward store, so

@@ -119,6 +119,10 @@ unpicked offers, lifecycle ordering, semantic owner addresses, selected
 acquisitions versus mere offers, canonical Run State checkpoints, and catalog
 compatibility information.
 
+Fields door targets carry cage rewards even when unpicked. Physical entry,
+cage and optional-reward placements are entered-room facts: they are required
+only for selected Fields occurrences, not for their unpicked door alternatives.
+
 Commands fall into three execution dispositions:
 
 | Disposition | Examples                                                                | Contract                                                                  |

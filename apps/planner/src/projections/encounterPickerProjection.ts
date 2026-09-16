@@ -95,7 +95,7 @@ function requirementMessages(
   }
 }
 
-function explanationFor(
+export function encounterCandidateExplanation(
   catalog: Catalog,
   evaluation: EncounterCandidateProjectionEvaluation,
 ): { readonly kind: 'encounter'; readonly message: string } | undefined {
@@ -166,7 +166,7 @@ export function projectEncounterPicker(
           `Encounter picker received a non-encounter candidate for ${candidate.value}`,
         );
       }
-      const explanation = explanationFor(catalog, candidate.evaluation);
+      const explanation = encounterCandidateExplanation(catalog, candidate.evaluation);
       return Object.freeze({
         label,
         selected: candidate.value === selectedEncounterKey,

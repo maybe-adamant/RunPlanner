@@ -29,6 +29,8 @@ export interface FieldsSpatialPointCandidateSupport {
   readonly spatial: FieldsSpatialAddress;
   readonly target: FieldsSpatialTarget;
   readonly pointId: number | null;
+  /** Legal placement domain; occupied points remain assignable for explicit repair. */
+  readonly assignable: boolean;
   /** Declaration points still available after active sibling assignments. */
   readonly supportPointIds: readonly number[];
   readonly selectedPossible: boolean;
@@ -118,6 +120,7 @@ export function evaluateFieldsSpatialPointCandidate(
       spatial: query.spatial,
       target: query.spatial.target,
       pointId: query.pointId,
+      assignable: assessment.assignable,
       supportPointIds: assessment.supportPointIds,
       selectedPossible: assessment.selectedPossible,
       findings: assessment.findings,

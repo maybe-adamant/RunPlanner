@@ -56,7 +56,7 @@ export function clampSelectedProducts(
     selectedProducts.findingRegions,
     unsupported.regionKey,
   );
-  const clamped = clampPrefix(authoredPrefix, unsupported);
+  const clamped = clampPrefix(authoredPrefix, unsupported, selectedProducts.history);
   if (clamped.entryRoom === undefined) return null;
   const executionPrefix = clamped as MaterializedBiomePrefix & {
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
@@ -86,7 +86,7 @@ export function clampSelectedProducts(
     selectedProducts.candidateArtifacts,
     selectedProducts.traitChildSettlementCheckpoints,
     ancestors,
-    unsupported.finding.origin,
+    unsupported,
     unsupported.regionKey,
     selectedProducts.findingRegions,
     authoredPrefix.frontier?.kind === 'exitDecision' &&

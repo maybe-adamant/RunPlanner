@@ -14,12 +14,14 @@ export function candidateSelectState(
 
 /**
  * UI controls retain an invalid selected value for repair, but cannot introduce
- * a new declaration-impossible value. Context-unavailable values remain
- * visible: their explanation belongs to the picker rather than this generic
- * affordance rule.
+ * a new declaration-impossible value. Layout permits engine-approved conflict
+ * edits without treating the conflicting placement as valid. Context-unavailable
+ * values remain visible: their explanation belongs to the picker rather than
+ * this generic affordance rule.
  */
 export function candidateMayBeAuthored(
   option: CandidateOptionProjection<unknown, CandidateProjectionEvaluation> | undefined,
 ): boolean {
+  if (option?.evaluation.kind === 'fieldsSpatialPoint') return option.evaluation.result.assignable;
   return option !== undefined && candidateSupport(option) !== 'impossible';
 }

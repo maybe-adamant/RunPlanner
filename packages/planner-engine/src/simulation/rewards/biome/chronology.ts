@@ -27,6 +27,7 @@ import type { HistoryStateView } from '../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../materialization';
 import type { CanonicalDecision } from '../../materialization/model';
 import { findingIdentityKey, ownerRegion, type FindingRegionEntry } from '../../finding-regions';
+import { fieldsOptionalRewardCountFindings } from '../../fields/optional-count';
 import type {
   RewardBranch,
   BiomeRewardSimulation,
@@ -1308,9 +1309,24 @@ export function evaluateBiomeRewardChronology(
         if (entered.hermesShrineDeliveryPlacementRequired) break historyEvents;
         break;
       }
-      case 'roomPrepared':
+      case 'roomPrepared': {
+        const room = rooms.get(semanticAddressKey(event.origin));
+        if (room?.kind === 'authored')
+          for (const finding of fieldsOptionalRewardCountFindings(catalog, room))
+            addRewardFinding(
+              findings,
+              finding,
+              ownerRegion(room.origin),
+              rewardFindingChronologyForRoom(
+                snapshot,
+                room.origin,
+                event.sequence,
+                'localRoomLifecycle',
+              ),
+            );
         branches = applyRoomPreparedTransition(event, branches);
         break;
+      }
       case 'keepsakeRackUsed': {
         const room = rooms.get(semanticAddressKey(event.origin));
         const transition = applyKeepsakeRackUsedTransition(

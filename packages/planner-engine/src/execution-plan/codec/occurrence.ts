@@ -251,11 +251,11 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
           return Object.freeze({ kind });
         });
   const parsedOverview = overview(record.overview, `${label}.overview`);
-  const isFieldsEncounter = record.kind === 'FieldsEncounter';
   const hasFieldsLayout = parsedOverview.fields !== undefined;
-  if (isFieldsEncounter !== hasFieldsLayout)
-    fail(`${label}.overview.fields is required exactly for H Fields encounters`);
-  if (hasFieldsLayout && record.biomeKey !== 'H')
+  if (
+    (record.kind === 'FieldsEncounter' && record.biomeKey !== 'H') ||
+    (hasFieldsLayout && record.kind !== 'FieldsEncounter')
+  )
     fail(`${label}.overview.fields is only valid for H Fields encounters`);
   if (parsedOverview.fields !== undefined)
     validateFieldsCageSlots(

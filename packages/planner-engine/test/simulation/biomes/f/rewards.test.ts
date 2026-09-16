@@ -1291,7 +1291,7 @@ describe('F reward-history simulation', () => {
     ]);
   });
 
-  it('retains the blocked Shop acquisition-order repair while withholding its suffix', () => {
+  it('retains generated Shop exit rewards while a later purchase needs repair', () => {
     const batches = [
       {
         targets: ['F_Combat02'],
@@ -1429,7 +1429,11 @@ describe('F reward-history simulation', () => {
     project = authorLegalTraitOffers(project);
     const assembly = simulateProjectAssembly(catalog, project);
     const evaluated = assembly.evaluation.route?.biomes[0];
-    if (evaluated?.authoring !== 'incomplete' || evaluated.validity !== 'invalid') {
+    if (
+      evaluated?.authoring !== 'incomplete' ||
+      evaluated.validity !== 'invalid' ||
+      !('history' in evaluated)
+    ) {
       throw new Error('invalid Shop purchase fixture did not produce a blocked evaluation');
     }
     const blockedPurchase = createAcquisitionEntryAddress(
@@ -1442,9 +1446,17 @@ describe('F reward-history simulation', () => {
       session.evaluate({
         kind: 'incomingReward',
         reward: createIncomingRewardAddress(biome, fGenerationOccurrenceId(6, 1)),
-        value: { rewardType: 'MaxHealthDrop' },
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
       }),
-    ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
+    ).toMatchObject({ kind: 'incomingReward', result: { supported: true } });
+    expect(
+      evaluated.history.events.some(
+        (event) =>
+          event.kind === 'roomEntered' &&
+          event.origin.kind === 'occurrence' &&
+          event.origin.occurrenceId === fGenerationOccurrenceId(6, 1),
+      ),
+    ).toBe(false);
   });
 
   it('emits Devotion chosen and spurned acquisitions at their declared ordered points', () => {

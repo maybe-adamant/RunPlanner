@@ -37,6 +37,8 @@ export type RewardProducerOwnerAddress =
   | AcquisitionEntryAddress;
 
 export interface RewardProducerCandidateCapability {
+  /** Reached generation contact, when backed by a captured producer frontier. */
+  readonly generationHistorySequence?: number;
   /** The farthest lifecycle point candidate evaluation is allowed to model. */
   readonly acquisitionHorizon: 'generationOnly' | 'ownEnteredLifecycle';
   readonly resolvedStoreKey?: string;
@@ -89,6 +91,7 @@ export function createRewardProducerCandidateArtifacts(
     privateFrontiers.set(
       key,
       Object.freeze({
+        generationHistorySequence: frontier.generationHistorySequence,
         acquisitionHorizon: frontier.acquisitionHorizon,
         evaluateOffer: frontier.evaluateOffer,
         ...(frontier.evaluateShopOption === undefined

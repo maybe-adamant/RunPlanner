@@ -1,4 +1,4 @@
-import { semanticAddressKey } from '../../authored-project/addresses';
+import { semanticAddressKey, type TargetAddress } from '../../authored-project/addresses';
 import type {
   CanonicalAdditionalContinuation,
   CanonicalDecision,
@@ -15,7 +15,35 @@ import {
   locateFinding,
   type HubVisitFindingLocation,
   type LocatedFinding,
+  type ProgressiveBiomeSelectedProducts,
 } from './finding-location';
+
+export function batchTargetGenerationFinishedBeforeBlock(
+  history: ProgressiveBiomeSelectedProducts['history'],
+  located: LocatedFinding,
+  batch: { readonly targets: readonly { readonly origin: TargetAddress }[] },
+): boolean {
+  if (batch.targets.length === 0) return false;
+  const chronologyUnavailableFallback =
+    located.historySequence === undefined &&
+    located.aggregate !== 'generation' &&
+    (located.targetIndex !== undefined || located.additionalIndex !== undefined);
+  const generations = history.rooms.flatMap((room) => room.targetGenerations);
+  let completedAt = -1;
+  for (const target of batch.targets) {
+    const sequence = generations.find(
+      (generation) =>
+        semanticAddressKey(generation.targetOrigin) === semanticAddressKey(target.origin),
+    )?.after.sequence;
+    if (sequence === undefined) return chronologyUnavailableFallback;
+    completedAt = Math.max(completedAt, sequence);
+  }
+  if (located.historySequence === undefined) return chronologyUnavailableFallback;
+  return (
+    located.historySequence > completedAt ||
+    (located.historySequence === completedAt && located.historyBoundary === 'after')
+  );
+}
 
 export function hubVisitFrontier(
   visit: CanonicalHubVisit,
@@ -101,6 +129,7 @@ export function exitFrontier(
 export function clampPrefix(
   prefix: MaterializedBiomePrefix,
   located: LocatedFinding,
+  history?: ProgressiveBiomeSelectedProducts['history'],
 ): MaterializedBiomePrefix {
   // Automatic Boss Arcana findings occur only after the terminal Boss
   // encounter. The authored prefix is already the exact pre-completion state;
@@ -198,8 +227,15 @@ export function clampPrefix(
       frontier: exitFrontier(decision),
     });
   }
-  const retainedTargets =
-    located.targetIndex === undefined
+  // A room-local blocker cannot erase the incoming batch's completed generation.
+  // Keep its targets at the exit frontier without entering their lifecycles.
+  const completedGeneration =
+    history !== undefined &&
+    located.historySequence !== undefined &&
+    batchTargetGenerationFinishedBeforeBlock(history, located, decision);
+  const retainedTargets = completedGeneration
+    ? decision.targets
+    : located.targetIndex === undefined
       ? Object.freeze([])
       : located.finding.code === 'rewardMissing'
         ? decision.targets

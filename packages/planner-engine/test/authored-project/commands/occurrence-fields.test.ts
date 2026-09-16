@@ -282,13 +282,6 @@ describe('authored Fields occurrence payload commands', () => {
     const overCapacityFindings = simulateProjectAssembly(catalog, project).evaluation.findings;
     expect(overCapacityFindings).toContainEqual(
       expect.objectContaining({
-        code: 'fieldsSpatialPointMissing',
-        origin: createFieldsSpatialAddress(occurrence, { kind: 'nemesis' }),
-        evidence: expect.objectContaining({ supportPointIds: [] }),
-      }),
-    );
-    expect(overCapacityFindings).toContainEqual(
-      expect.objectContaining({
         code: 'fieldsOptionalCapacityUnavailable',
         origin: createRoomFeatureAddress(occurrence, { kind: 'fieldsOptionalRewardCount' }),
       }),

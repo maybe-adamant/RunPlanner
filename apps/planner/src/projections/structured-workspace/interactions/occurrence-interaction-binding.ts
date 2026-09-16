@@ -19,7 +19,10 @@ import {
 } from '@run-planner/engine/simulation';
 import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
-import { projectEncounterPicker } from '@planner/projections/encounterPickerProjection';
+import {
+  encounterCandidateExplanation,
+  projectEncounterPicker,
+} from '@planner/projections/encounterPickerProjection';
 import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 
 import {
@@ -545,11 +548,19 @@ export function bindOccurrenceLocalInteractions(
           }
           if (phase.nemesisFeature !== undefined) {
             const key = workspaceInteractionKey(phase.owner);
+            // This projects already-evaluated encounter support, without replaying candidates.
+            const candidate = candidates.encounterPhases(phase.owner, [
+              phase.nemesisFeature.encounterKey,
+            ])[0]!;
+            const disabledReason = phase.nemesisFeature.selected
+              ? undefined
+              : encounterCandidateExplanation(catalog, candidate.evaluation)?.message;
             nemesisFeatures.set(
               key,
               Object.freeze({
                 key,
                 owner: phase.owner,
+                ...(disabledReason === undefined ? {} : { disabledReason }),
                 intent: Object.freeze({
                   command: phase.nemesisFeature.selected
                     ? Object.freeze({ kind: 'ResetEncounter' as const, phase: phase.owner })

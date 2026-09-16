@@ -10,8 +10,9 @@ import { useAppDispatch } from '@planner/state/store';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
+import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
-import { CandidateSelect } from '../CandidateSelect';
 
 export function FieldsWorkbench({
   interactions,
@@ -84,10 +85,13 @@ function FieldsSpatialRow({
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
   const executeIntent = useCommandIntent();
+  const findingTarget = useFindingTarget();
   const interaction = requireWorkspaceInteraction(
     interactions.fieldsSpatialPoints,
     control.interactionKey,
   );
+  const candidates = useWorkspaceInteraction(interaction);
+  const id = semanticOwnerControlElementId(control.address);
   return (
     <div className="fields-layout-row">
       <div className="fields-layout-context">
@@ -96,12 +100,42 @@ function FieldsSpatialRow({
           <span className="fields-layout-context-detail">{context}</span>
         )}
       </div>
-      <CandidateSelect
-        id={semanticOwnerControlElementId(control.address)}
-        interaction={interaction}
-        label="Point"
-        onReplace={(pointId) => executeIntent(interaction.intentFor(pointId))}
-      />
+      <div
+        {...findingTarget(control.address)}
+        aria-label={`${control.label} position`}
+        aria-busy={candidates.pending || undefined}
+        className="fields-layout-positions"
+        onFocus={candidates.activate}
+        onPointerDown={candidates.activate}
+        role="radiogroup"
+        tabIndex={-1}
+      >
+        {interaction.choices
+          .filter((choice) => choice.value !== null)
+          .map((choice, index) => {
+            const option = candidates.result?.find((candidate) => candidate.value === choice.value);
+            return (
+              <label className="fields-layout-position" key={choice.value}>
+                <input
+                  aria-label={choice.label}
+                  checked={interaction.selected === choice.value}
+                  disabled={option !== undefined && !candidateMayBeAuthored(option)}
+                  name={id}
+                  onChange={() => {
+                    const assessed = candidates
+                      .activate()
+                      ?.find((candidate) => candidate.value === choice.value);
+                    if (candidateMayBeAuthored(assessed))
+                      executeIntent(interaction.intentFor(choice.value));
+                  }}
+                  type="radio"
+                  value={choice.value ?? ''}
+                />
+                <span>{index + 1}</span>
+              </label>
+            );
+          })}
+      </div>
     </div>
   );
 }
@@ -141,14 +175,12 @@ export function FieldsLayoutWorkbench({
   };
   return (
     <section aria-label="Fields Layout" className="fields-layout-editor">
-      <div className="local-reward-heading">
+      <div className="local-reward-heading fields-layout-heading">
         <h4>Fields Layout</h4>
+        <h4>Position</h4>
       </div>
       {entry === undefined ? null : (
-        <div className="fields-layout-group">
-          <h5>Entry</h5>
-          <FieldsSpatialRow control={entry} interactions={interactions} />
-        </div>
+        <FieldsSpatialRow control={entry} interactions={interactions} />
       )}
       {cages.length === 0 ? null : (
         <div className="fields-layout-group">
