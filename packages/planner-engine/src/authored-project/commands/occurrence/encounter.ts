@@ -9,6 +9,7 @@ import type {
 import {
   encounterAuthoringProfiles,
   encounterBindingsBySlot,
+  directEncounterDefinitionKeyForSlot,
   encounterSetForBinding,
 } from '../../room-state/encounter-envelope';
 import {
@@ -164,7 +165,16 @@ function updatedSelections(
     command.kind === 'ResetEncounter'
       ? set.defaultAuthoringProfileKey
       : command.kind === 'SelectNemesisRandomEventFamily'
-        ? 'NemesisRandomEvent'
+        ? (() => {
+            const profile = encounterAuthoringProfiles(set).find(
+              (candidate) =>
+                candidate.resolution.kind === 'direct' &&
+                candidate.resolution.encounterDefinitionKey === 'NemesisRandomEvent',
+            );
+            if (profile === undefined)
+              failCommand(command, `${phase.phaseKey} does not expose NemesisRandomEvent`);
+            return profile.key;
+          })()
         : command.encounterKey;
   if (!encounterAuthoringProfiles(set).some((profile) => profile.key === encounterKey)) {
     failCommand(command, `${encounterKey} is not available from ${set.key}`);
@@ -172,14 +182,28 @@ function updatedSelections(
   const selectionUnchanged = current.encounterKeyByPhase[phase.phaseKey] === encounterKey;
   const priorOffers = current.traitOffersByPhase ?? {};
   const phaseOffers = { ...(priorOffers[phase.phaseKey] ?? {}) };
-  const producer = catalog.encounterDefinitions.byKey[encounterKey]?.traitOfferProducer;
+  const selectedWithChoice = Object.freeze({
+    ...current,
+    encounterKeyByPhase: Object.freeze({
+      ...current.encounterKeyByPhase,
+      [phase.phaseKey]: encounterKey,
+    }),
+  });
+  const nativeEncounterKey = directEncounterDefinitionKeyForSlot(
+    catalog,
+    room,
+    selectedWithChoice,
+    phase.phaseKey,
+    room.gameName,
+  );
+  const producer = catalog.encounterDefinitions.byKey[nativeEncounterKey ?? '']?.traitOfferProducer;
   if (selectionUnchanged && command.kind !== 'ResetEncounter') return current;
   if (selectionUnchanged && producer === undefined) return current;
   if (
     producer !== undefined &&
-    (command.kind === 'ResetEncounter' || phaseOffers[encounterKey] === undefined)
+    (command.kind === 'ResetEncounter' || phaseOffers[nativeEncounterKey!] === undefined)
   ) {
-    phaseOffers[encounterKey] = null;
+    phaseOffers[nativeEncounterKey!] = null;
   }
   const traitOffersByPhase =
     Object.keys(phaseOffers).length === 0
@@ -193,7 +217,7 @@ function updatedSelections(
   }
   const priorNemesis = current.nemesisRandomEventByPhase ?? {};
   const nemesisRandomEventByPhase =
-    encounterKey === 'NemesisRandomEvent' &&
+    nativeEncounterKey === 'NemesisRandomEvent' &&
     (command.kind === 'ResetEncounter' || priorNemesis[phase.phaseKey] === undefined)
       ? Object.freeze({
           ...priorNemesis,
@@ -230,7 +254,13 @@ function updatedNemesisRandomEvent(
   const set = encounterSetForBinding(catalog, binding, room.gameName);
   if (!set.encounterDefinitionKeys.includes('NemesisRandomEvent'))
     failCommand(command, `${phase.phaseKey} does not support NemesisRandomEvent`);
-  const selected = current.encounterKeyByPhase[phase.phaseKey];
+  const selected = directEncounterDefinitionKeyForSlot(
+    catalog,
+    room,
+    current,
+    phase.phaseKey,
+    room.gameName,
+  );
   if (selected !== 'NemesisRandomEvent')
     failCommand(command, `${phase.phaseKey} has not selected NemesisRandomEvent`);
   const currentOutcome = current.nemesisRandomEventByPhase?.[phase.phaseKey];
@@ -415,10 +445,20 @@ function replaceTopLevel(
                 }),
           });
         })();
-  const suppressesIncomingReward = Object.values(withNemesis.encounterKeyByPhase).some(
-    (encounterKey) =>
-      catalog.encounterDefinitions.byKey[encounterKey]?.suppressesIncomingReward === true,
-  );
+  const suppressesIncomingReward = [
+    ...encounterBindingsBySlot(catalog, room, room.gameName).keys(),
+  ].some((slotKey) => {
+    const encounterKey = directEncounterDefinitionKeyForSlot(
+      catalog,
+      room,
+      withNemesis,
+      slotKey,
+      room.gameName,
+    );
+    return (
+      catalog.encounterDefinitions.byKey[encounterKey ?? '']?.suppressesIncomingReward === true
+    );
+  });
   // F/G's draw remains authored, but the selected event disables its producer
   // lifecycle entirely. Remove the now-stale interaction from persisted room
   // chronology; selecting another encounter lets normal action reconciliation

@@ -8,6 +8,10 @@ import {
 import type { HistoryEvent } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { assessFigLeafSkip } from '../../../encounters';
+import {
+  encounterResolutionContext,
+  resolveMaterializedEncounterPhases,
+} from '../../../encounters/resolve';
 import { attestFigLeafBranchState, consumeFigLeafUse } from '../../../keepsakes/encounter-effects';
 import { advanceRewardBranches } from '../../branch-lifecycle';
 import type { RewardBranchState } from '../../branch-primitives';
@@ -42,6 +46,16 @@ export function applyEncounterStartedTransition(
     const phase = room.encounterPhases.find((candidate) => candidate.slotKey === event.phaseKey);
     if (phase !== undefined) {
       const definition = catalog.encounterDefinitions.byKey[event.encounterKey]!;
+      const declaration = catalog.rooms.byKey[room.gameName];
+      const resolvedEnvelope =
+        declaration === undefined
+          ? []
+          : resolveMaterializedEncounterPhases(
+              catalog,
+              declaration,
+              room.encounterPhases,
+              encounterResolutionContext(room, declaration),
+            );
       const origin = createEncounterPhaseAddress(
         createBiomeAddress(event.origin.routeKey, event.origin.biomeKey),
         { kind: 'occurrence', occurrenceId: room.occurrenceId },
@@ -50,9 +64,9 @@ export function applyEncounterStartedTransition(
       const isBiomeStart =
         snapshot.entryRoom !== undefined &&
         semanticAddressKey(snapshot.entryRoom.origin) === semanticAddressKey(event.origin);
-      const blockedByEnvelope = room.encounterPhases.some((candidate) => candidate.blocksFigLeaf);
+      const blockedByEnvelope = resolvedEnvelope.some((candidate) => candidate.blocksFigLeaf);
       const nonLeadingCascadePhase =
-        phase.skipEndEncounterEffects === true &&
+        definition.skipEndEncounterEffects === true &&
         room.encounterPhases[0]?.slotKey !== phase.slotKey;
       const figLeaf = attestFigLeafBranchState(next);
       const assessment = assessFigLeafSkip({

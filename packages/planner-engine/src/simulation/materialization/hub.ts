@@ -1,6 +1,6 @@
 import type { Catalog, HubDecisionDescriptor, RoomDeclaration } from '../../catalog-schema';
 import { createDefaultRoomEncounterState } from '../../authored-project/room-state/encounter-envelope';
-import { alwaysActiveEncounterSlotKeys, resolveEncounterPhases } from '../encounters/resolve';
+import { alwaysActiveEncounterSlotKeys, materializeEncounterPhases } from '../encounters/resolve';
 import {
   createHubDecisionAddress,
   createHubOpenSetAddress,
@@ -59,7 +59,7 @@ function requireOccurrence(
 }
 
 function fixedEncounterPhases(catalog: Catalog, room: RoomDeclaration) {
-  return resolveEncounterPhases(
+  return materializeEncounterPhases(
     catalog,
     room,
     createDefaultRoomEncounterState(catalog, room, `${room.gameName}.encounters`),

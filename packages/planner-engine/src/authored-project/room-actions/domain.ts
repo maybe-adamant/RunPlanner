@@ -37,6 +37,10 @@ import { rewardSourceResolvesAtAcquisition } from '../acquisition/reward-state';
 import type { RoomActionReference, RoomOccurrence } from '../model';
 import {
   encounterEnvelopeSlots,
+  encounterAuthoringProfileForKey,
+  encounterBindingsBySlot,
+  directEncounterDefinitionKeyForSlot,
+  encounterSetForBinding,
   selectedEncounterAuthoringProfileKey,
 } from '../room-state/encounter-envelope';
 import { activeRoomActionReferences, roomActionKey } from './state';
@@ -432,9 +436,20 @@ function baseContribution(
         reference.phaseKey,
         occurrence.gameName,
       );
-      const phaseIsCombatBearing = isCombatBearingEncounterPhaseKind(
-        catalog.encounterDefinitions.byKey[encounterKey]?.kind ?? 'nonCombat',
+      const binding = encounterBindingsBySlot(catalog, declaration, occurrence.gameName).get(
+        reference.phaseKey,
       );
+      const phaseKind =
+        binding?.kind === 'fixed'
+          ? catalog.encounterDefinitions.byKey[binding.encounterDefinitionKey]?.kind
+          : binding?.kind === 'set' && encounterKey !== undefined
+            ? encounterAuthoringProfileForKey(
+                encounterSetForBinding(catalog, binding, occurrence.gameName),
+                encounterKey,
+                occurrence.gameName,
+              ).kind
+            : undefined;
+      const phaseIsCombatBearing = isCombatBearingEncounterPhaseKind(phaseKind ?? 'nonCombat');
       const dependencies: RoomActionDependency[] = [
         ...(cage === undefined ? [] : [frozen({ kind: 'afterAction' as const, action: cage })]),
         ...(lifecycleProfileKey === 'FieldsCombatRoom' && attachment === undefined
@@ -642,7 +657,7 @@ export function assembleRoomActionDomain(options: {
               declaration,
               declaration.gameName,
             ).some((slot) => {
-              const selected = selectedEncounterAuthoringProfileKey(
+              const selected = directEncounterDefinitionKeyForSlot(
                 options.catalog,
                 declaration,
                 options.occurrence.encounters,

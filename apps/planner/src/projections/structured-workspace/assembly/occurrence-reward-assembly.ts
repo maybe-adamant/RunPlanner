@@ -792,8 +792,8 @@ export function activeEncounterPhasesForOwner(
     const customizable = domain.declaredEncounterKeys.length > 1 && !fieldsPassive;
     const fixedHasTraitOffer =
       fixedPhase &&
-      input.catalog.encounterDefinitions.byKey[domain.selectedEncounterKey]?.traitOfferProducer !==
-        undefined;
+      input.catalog.encounterDefinitions.byKey[domain.selectedEncounterDefinitionKey ?? '']
+        ?.traitOfferProducer !== undefined;
     if (
       fixedPhase &&
       figLeafSupport === undefined &&
@@ -805,25 +805,23 @@ export function activeEncounterPhasesForOwner(
     )
       continue;
     const candidateChoices = Object.freeze(
-      domain.declaredEncounterKeys.map((encounterKey) => {
-        const definition = input.catalog.encounterDefinitions.byKey[encounterKey];
-        if (definition === undefined) {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${semanticAddressKey(address)} has no encounter definition ${encounterKey}`,
-          );
-        }
-        return Object.freeze({ label: definition.label, value: definition.key });
-      }),
+      domain.choices.map((choice) =>
+        Object.freeze({
+          label: choice.label,
+          value: choice.key,
+          ...(choice.directEncounterDefinitionKey === undefined
+            ? {}
+            : { nativeEncounterDefinitionKey: choice.directEncounterDefinitionKey }),
+        }),
+      ),
     );
     const selectedDefinition =
-      input.catalog.encounterDefinitions.byKey[domain.selectedEncounterKey];
-    if (selectedDefinition === undefined) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${semanticAddressKey(address)} has no selected encounter definition ${domain.selectedEncounterKey}`,
-      );
-    }
+      input.catalog.encounterDefinitions.byKey[domain.selectedEncounterDefinitionKey ?? ''];
+    const selectedChoice = domain.choices.find(
+      (choice) => choice.key === domain.selectedEncounterKey,
+    )!;
     const nemesisEvent =
-      selectedDefinition.key === 'NemesisRandomEvent'
+      selectedDefinition?.key === 'NemesisRandomEvent'
         ? Object.freeze({
             owner: createNemesisRandomEventAddress(address),
             marker: input.markerDestinations.marker(createNemesisRandomEventAddress(address)),
@@ -833,10 +831,10 @@ export function activeEncounterPhasesForOwner(
             value: encounters.nemesisRandomEventByPhase?.[domain.slotKey] ?? null,
           })
         : undefined;
-    const producer = selectedDefinition.traitOfferProducer;
+    const producer = selectedDefinition?.traitOfferProducer;
     const authoredTraitOffer =
       input.facts.detailsActive && producer !== undefined
-        ? encounters.traitOffersByPhase?.[domain.slotKey]?.[selectedDefinition.key]
+        ? encounters.traitOffersByPhase?.[domain.slotKey]?.[selectedDefinition!.key]
         : undefined;
     const gorgonPhaseAddress = createGorgonPhaseAddress(address);
     const gorgonAthenaOffer =
@@ -940,7 +938,7 @@ export function activeEncounterPhasesForOwner(
                       site,
                       echoLastRewardPickupEntryKey(
                         domain.slotKey,
-                        selectedDefinition.key,
+                        selectedDefinition!.key,
                         authoredTraitOffer.selectedOptionKey,
                       ),
                     );
@@ -1005,7 +1003,9 @@ export function activeEncounterPhasesForOwner(
         marker: input.markerDestinations.marker(address),
         timelineAnchor:
           fieldsPassive ||
-          (customizable && !isCombatBearingEncounterPhaseKind(selectedDefinition.kind))
+          (customizable &&
+            selectedDefinition !== undefined &&
+            !isCombatBearingEncounterPhaseKind(selectedDefinition.kind))
             ? 'roomEntered'
             : 'encounterStart',
         ...(figLeafSupport !== undefined || authoredFigLeafSkip
@@ -1029,14 +1029,19 @@ export function activeEncounterPhasesForOwner(
             }),
         ...(gorgonAthena === undefined ? {} : { gorgonAthena }),
         selectedEncounter: Object.freeze({
-          key: selectedDefinition.key,
-          label: selectedDefinition.label,
+          key: selectedChoice.key,
+          label: selectedChoice.label,
         }),
-        ...(fieldsPassive && domain.declaredEncounterKeys.includes('NemesisRandomEvent')
+        ...(fieldsPassive &&
+        domain.choices.some(
+          (choice) => choice.directEncounterDefinitionKey === 'NemesisRandomEvent',
+        )
           ? {
               nemesisFeature: Object.freeze({
-                encounterKey: 'NemesisRandomEvent',
-                selected: selectedDefinition.key === 'NemesisRandomEvent',
+                encounterKey: domain.choices.find(
+                  (choice) => choice.directEncounterDefinitionKey === 'NemesisRandomEvent',
+                )!.key,
+                selected: selectedDefinition?.key === 'NemesisRandomEvent',
               }),
             }
           : {}),

@@ -1,6 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import type { EnteredRewardStoreHistoryPolicy } from '../../reward-kernel/bindings';
 import type { RoomLifecycleExecutionInput } from '../lifecycle';
+import type { ResolvedEncounterPhase } from '../encounters/model';
 import { scopeRoomActionRoster } from '../room-actions';
 import type {
   CanonicalAuthoredRoom,
@@ -48,7 +49,7 @@ function enteredStoreKey(
 export function createRoomLifecycleInput(
   catalog: Catalog,
   room: CanonicalLifecycleRoom,
-  encounterPhases = room.encounterPhases,
+  encounterPhases: readonly ResolvedEncounterPhase[],
 ): RoomLifecycleExecutionInput {
   const declaration = catalog.rooms.byKey[room.gameName];
   if (declaration === undefined) {

@@ -5,11 +5,6 @@ import {
   supportedFieldNpcEncounterKeys,
 } from './shared';
 
-const excludesClockworkGoal = {
-  kind: 'currentRoomRewardExcludes',
-  rewardTypes: ['ClockworkGoal'],
-} as const;
-
 export const iEncounterDefinitions = [
   {
     key: 'GeneratedI',
@@ -18,13 +13,6 @@ export const iEncounterDefinitions = [
     countsEncounterDepth: true,
     hostsGorgon: true,
     canEncounterSkip: true,
-    requirements: {
-      kind: 'all',
-      requirements: [
-        excludesClockworkGoal,
-        { kind: 'currentRoomRewardExcludes', rewardTypes: ['Devotion'] },
-      ],
-    },
   },
   {
     key: 'GeneratedI_GoalReward',
@@ -33,7 +21,6 @@ export const iEncounterDefinitions = [
     countsEncounterDepth: true,
     hostsGorgon: true,
     canEncounterSkip: true,
-    requirements: { kind: 'not', requirement: excludesClockworkGoal },
   },
   {
     key: 'GeneratedI_Small',
@@ -42,13 +29,6 @@ export const iEncounterDefinitions = [
     countsEncounterDepth: true,
     hostsGorgon: true,
     canEncounterSkip: true,
-    requirements: {
-      kind: 'all',
-      requirements: [
-        excludesClockworkGoal,
-        { kind: 'currentRoomRewardExcludes', rewardTypes: ['Devotion'] },
-      ],
-    },
   },
   {
     key: 'GeneratedI_Small_GoalReward',
@@ -57,7 +37,6 @@ export const iEncounterDefinitions = [
     countsEncounterDepth: true,
     hostsGorgon: true,
     canEncounterSkip: true,
-    requirements: { kind: 'not', requirement: excludesClockworkGoal },
   },
   {
     key: 'DevotionTestI',
@@ -65,10 +44,6 @@ export const iEncounterDefinitions = [
     kind: 'combat',
     countsEncounterDepth: true,
     blocksGorgon: true,
-    requirements: {
-      kind: 'not',
-      requirement: { kind: 'currentRoomRewardExcludes', rewardTypes: ['Devotion'] },
-    },
   },
   {
     key: 'NemesisCombatI',
@@ -146,7 +121,16 @@ export const iEncounterSets = [
     authoringProfiles: [
       {
         key: 'GeneratedI',
+        label: 'Combat',
         encounterDefinitionKeys: ['GeneratedI', 'GeneratedI_GoalReward', 'DevotionTestI'],
+        resolution: {
+          kind: 'rewardContext',
+          defaultEncounterDefinitionKey: 'GeneratedI',
+          encounterDefinitionKeyByRewardType: {
+            ClockworkGoal: 'GeneratedI_GoalReward',
+            Devotion: 'DevotionTestI',
+          },
+        },
       },
       { key: 'NemesisCombatI', encounterDefinitionKeys: ['NemesisCombatI'] },
     ],
@@ -168,6 +152,15 @@ export const iEncounterSets = [
           'GeneratedI_Small_GoalReward',
           'DevotionTestI',
         ],
+        label: 'Combat',
+        resolution: {
+          kind: 'rewardContext',
+          defaultEncounterDefinitionKey: 'GeneratedI_Small',
+          encounterDefinitionKeyByRewardType: {
+            ClockworkGoal: 'GeneratedI_Small_GoalReward',
+            Devotion: 'DevotionTestI',
+          },
+        },
       },
       { key: 'NemesisCombatI', encounterDefinitionKeys: ['NemesisCombatI'] },
     ],

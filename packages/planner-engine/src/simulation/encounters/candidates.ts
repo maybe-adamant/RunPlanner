@@ -20,7 +20,7 @@ import {
   type EncounterPhaseSequenceStatus,
   type PreparedEncounterPhases,
 } from './preparation';
-import type { ResolvedEncounterPhase } from './model';
+import type { MaterializedEncounterPhase } from './model';
 import type { Catalog } from '../../catalog-schema';
 import type { FigLeafPhaseCandidateSupport } from '../rewards/model';
 import { assessGorgonCandidate } from '../keepsakes/encounter-effects';
@@ -63,7 +63,7 @@ export function createEmptyEncounterCandidateArtifacts(): EncounterCandidateArti
  * identity and predecessor checkpoint stay private to the encounter layer.
  */
 export interface EncounterRoomCandidateCapability {
-  readonly prepare: (phases: readonly ResolvedEncounterPhase[]) => PreparedEncounterPhases;
+  readonly prepare: (phases: readonly MaterializedEncounterPhase[]) => PreparedEncounterPhases;
 }
 
 export interface EncounterCandidateEvaluation {
@@ -194,7 +194,7 @@ export function evaluateEncounterCandidatesInternal(
       roomsByOwner.set(
         roomKey,
         Object.freeze({
-          prepare: (phases: readonly ResolvedEncounterPhase[]): PreparedEncounterPhases =>
+          prepare: (phases: readonly MaterializedEncounterPhase[]): PreparedEncounterPhases =>
             prepareRoomEncounterPhases(
               catalog,
               Object.freeze({ ...room, encounterPhases: phases }),

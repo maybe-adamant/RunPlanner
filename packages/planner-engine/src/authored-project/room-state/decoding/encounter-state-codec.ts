@@ -17,7 +17,7 @@ import {
 import {
   encounterAuthoringProfileForKey,
   encounterBindingsBySlot,
-  encounterDefinitionForKey,
+  directEncounterDefinitionKeyForSlot,
   encounterSetForBinding,
 } from '../encounter-envelope';
 import {
@@ -72,7 +72,6 @@ export function decodeRoomEncounterState(
     }
     const set = encounterSetForBinding(catalog, binding, `${path}.encounterKeyByPhase.${slotKey}`);
     encounterAuthoringProfileForKey(set, encounterKey, `${path}.encounterKeyByPhase.${slotKey}`);
-    encounterDefinitionForKey(catalog, encounterKey, `${path}.encounterKeyByPhase.${slotKey}`);
     encounterKeyByPhase[slotKey] = encounterKey;
   }
   const rawSkips = expectRecord(state.figLeafSkipByPhase, `${path}.figLeafSkipByPhase`);
@@ -279,10 +278,13 @@ export function decodeRoomEncounterState(
     }
   }
   for (const binding of bindings.values()) {
-    const encounterKey =
-      binding.kind === 'fixed'
-        ? binding.encounterDefinitionKey
-        : encounterKeyByPhase[binding.slotKey];
+    const encounterKey = directEncounterDefinitionKeyForSlot(
+      catalog,
+      room,
+      { encounterKeyByPhase },
+      binding.slotKey,
+      path,
+    );
     if (
       encounterKey !== undefined &&
       catalog.encounterDefinitions.byKey[encounterKey]?.traitOfferProducer !== undefined &&
@@ -326,7 +328,14 @@ export function decodeRoomEncounterState(
             );
     }
   }
-  for (const [phaseKey, encounterKey] of Object.entries(encounterKeyByPhase)) {
+  for (const [phaseKey] of Object.entries(encounterKeyByPhase)) {
+    const encounterKey = directEncounterDefinitionKeyForSlot(
+      catalog,
+      room,
+      { encounterKeyByPhase },
+      phaseKey,
+      path,
+    );
     if (encounterKey === 'NemesisRandomEvent' && nemesisRandomEventByPhase[phaseKey] === undefined)
       failProjectDocument(
         `${path}.nemesisRandomEventByPhase.${phaseKey}`,

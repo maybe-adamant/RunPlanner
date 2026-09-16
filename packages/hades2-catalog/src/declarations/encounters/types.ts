@@ -125,6 +125,14 @@ export interface RawEncounterSetDeclaration {
   readonly authoringProfiles?: readonly {
     readonly key: string;
     readonly encounterDefinitionKeys: readonly string[];
+    readonly label?: string;
+    readonly resolution?:
+      | { readonly kind: 'direct'; readonly encounterDefinitionKey: string }
+      | {
+          readonly kind: 'rewardContext';
+          readonly defaultEncounterDefinitionKey: string;
+          readonly encounterDefinitionKeyByRewardType: Readonly<Record<string, string>>;
+        };
   }[];
 }
 

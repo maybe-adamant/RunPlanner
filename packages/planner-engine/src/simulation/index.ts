@@ -250,6 +250,10 @@ export {
   type EncounterPhaseAuthoringDomain,
   type EncounterPhaseAuthoringOwner,
   type EncounterPhaseAuthoringRoomOptions,
+  encounterResolutionContext,
+  resolveEncounterAuthoringProfile,
+  type EncounterResolutionContext,
+  type EncounterResolutionRoomFacts,
   type ResolvedEncounterPhase,
 } from './encounters';
 export {

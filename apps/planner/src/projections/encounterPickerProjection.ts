@@ -117,6 +117,8 @@ export function encounterCandidateExplanation(
       const messages = evaluation.result.evidence.exclusions.map((exclusion) => {
         if (exclusion.kind === 'gorgonConsumed')
           return 'Athena has already appeared through Gorgon Amulet.';
+        if (exclusion.kind === 'resolutionUnavailable')
+          return 'The room reward must be authored before this encounter can resolve.';
         const alternatives = [
           ...new Set(
             exclusion.definitions.map((definition) =>

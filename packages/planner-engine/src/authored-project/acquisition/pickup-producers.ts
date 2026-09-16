@@ -26,6 +26,7 @@ import {
 } from '../addresses';
 import { acquisitionSiteFromStorageKey } from './artificer';
 import { roomActionKey } from '../room-actions/key';
+import { directEncounterDefinitionKeyForSlot } from '../room-state/encounter-envelope';
 import {
   createSelectedPickupEntries,
   materializeGorgonAthenaOffer,
@@ -504,7 +505,14 @@ function traitPickupOffers(
         sourceAction: Object.freeze({ kind: 'interactEncounter', phaseKey }),
         sourceNormal: actionKeys.has(roomActionKey({ kind: 'interactEncounter', phaseKey })),
         selectedEncounterSource:
-          occurrence.encounters.encounterKeyByPhase?.[phaseKey] === encounterKey,
+          room !== undefined &&
+          directEncounterDefinitionKeyForSlot(
+            catalog,
+            room,
+            occurrence.encounters,
+            phaseKey,
+            room.gameName,
+          ) === encounterKey,
         sourceIsStory,
         offer,
       });
@@ -604,7 +612,19 @@ function nemesisPickupProducers(
           ),
           sourceAction: Object.freeze({ kind: 'interactEncounter' as const, phaseKey }),
           sourceNormal:
-            occurrence.encounters.encounterKeyByPhase[phaseKey] === 'NemesisRandomEvent' &&
+            (() => {
+              const room = catalog.rooms.byKey[occurrence.gameName];
+              return (
+                room !== undefined &&
+                directEncounterDefinitionKeyForSlot(
+                  catalog,
+                  room,
+                  occurrence.encounters,
+                  phaseKey,
+                  room.gameName,
+                ) === 'NemesisRandomEvent'
+              );
+            })() &&
             !declined &&
             result !== undefined &&
             result !== null &&

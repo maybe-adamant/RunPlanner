@@ -11,7 +11,13 @@ import { assembleRoomActionDomain } from '../../../authored-project/room-actions
 import { scheduleRequiredRoomActions } from '../../../authored-project/room-actions/defaults';
 import { roomActionKey } from '../../../authored-project/room-actions/state';
 import type { ShopOptionEntry } from '../../../reward-kernel/model';
-import { alwaysActiveEncounterSlotKeys, resolveEncounterPhases } from '../../encounters/resolve';
+import {
+  alwaysActiveEncounterSlotKeys,
+  resolveMaterializedEncounterPhase,
+  materializeEncounterPhases,
+} from '../../encounters/resolve';
+import { encounterResolutionContext } from '../../encounters/resolve';
+import { directEncounterDefinitionKeyForSlot } from '../../../authored-project/room-state/encounter-envelope';
 import { extendedWellItemKeys } from '../../commerce/stygian-well';
 import { assembleRoomActionRoster, assembleRoomLifecycleTimeline } from '../../room-actions';
 import type { CanonicalAuthoredRoom } from '../model';
@@ -79,7 +85,7 @@ export function materializeAuthoredRoom(
   )(context);
   const selectedEncounterPhases =
     leaf.encounterPhases ??
-    resolveEncounterPhases(
+    materializeEncounterPhases(
       context.catalog,
       context.room,
       context.occurrence.encounters,
@@ -117,11 +123,19 @@ export function materializeAuthoredRoom(
   // Anomaly and the Nemesis event are both evaluated acquisition dispositions:
   // the authored incoming draw remains intact, but its lifecycle producer is
   // disabled while the selected encounter owns the room's required contact.
-  const suppressesIncomingReward = selectedEncounterPhases.some(
-    (phase) =>
-      context.catalog.encounterDefinitions.byKey[phase.encounterKey]?.suppressesIncomingReward ===
-      true,
-  );
+  const suppressesIncomingReward = selectedEncounterPhases.some((phase) => {
+    const definitionKey = directEncounterDefinitionKeyForSlot(
+      context.catalog,
+      context.room,
+      context.occurrence.encounters,
+      phase.slotKey,
+      context.room.gameName,
+    );
+    return (
+      context.catalog.encounterDefinitions.byKey[definitionKey ?? '']?.suppressesIncomingReward ===
+      true
+    );
+  });
   const incomingReward =
     leaf.incomingReward === undefined || !suppressesIncomingReward
       ? leaf.incomingReward
@@ -265,6 +279,24 @@ export function materializeAuthoredRoom(
     ...(pickupProducers.length === 0 ? {} : { pickupProducers }),
     ...(clockworkReward === undefined ? {} : { clockworkReward }),
   }) as Omit<CanonicalAuthoredRoom, 'roomActionRoster' | 'roomLifecycleTimeline'>;
+  const structuralEncounterIdentities = base.encounterPhases.flatMap((phase) => {
+    const resolutionContext = encounterResolutionContext(base, context.room);
+    const resolved = resolveMaterializedEncounterPhase(
+      context.catalog,
+      context.room,
+      phase,
+      resolutionContext,
+    );
+    return resolved === undefined
+      ? []
+      : [
+          Object.freeze({
+            slotKey: phase.slotKey,
+            encounterKey: resolved.encounterKey,
+            kind: resolved.kind,
+          }),
+        ];
+  });
   const roomActionDomain = assembleRoomActionDomain({
     catalog: context.catalog,
     biome: context.biome,
@@ -313,6 +345,9 @@ export function materializeAuthoredRoom(
   });
   return Object.freeze({
     ...base,
+    ...(structuralEncounterIdentities.length === 0
+      ? {}
+      : { structuralEncounterIdentities: Object.freeze(structuralEncounterIdentities) }),
     roomActionRoster,
     roomLifecycleTimeline,
   });

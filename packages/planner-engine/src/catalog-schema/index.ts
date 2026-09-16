@@ -421,10 +421,23 @@ export interface EncounterDefinition {
   };
 }
 
-/** One authored encounter choice backed by one or more contextual game definitions. */
+/** Closed concrete identity mapping for one persisted authored encounter choice. */
+export type EncounterChoiceResolution =
+  | { readonly kind: 'direct'; readonly encounterDefinitionKey: string }
+  | {
+      readonly kind: 'rewardContext';
+      readonly defaultEncounterDefinitionKey: string;
+      readonly encounterDefinitionKeyByRewardType: Readonly<Record<string, string>>;
+    };
+
+/** One persisted friendly encounter choice and its closed concrete mapping. */
 export interface EncounterAuthoringProfile {
   readonly key: string;
+  readonly label: string;
+  /** Declaration-invariant structural phase kind, never a guessed identity. */
+  readonly kind: EncounterPhaseKind;
   readonly encounterDefinitionKeys: readonly string[];
+  readonly resolution: EncounterChoiceResolution;
 }
 
 /** Exact game support plus the smaller authored choice domain for one selectable slot. */
@@ -432,7 +445,7 @@ export interface EncounterSet {
   readonly key: string;
   readonly encounterDefinitionKeys: readonly string[];
   readonly defaultAuthoringProfileKey: string;
-  readonly authoringProfiles?: readonly EncounterAuthoringProfile[];
+  readonly authoringProfiles: readonly EncounterAuthoringProfile[];
 }
 
 /** Complete room-declaration binding for one stable envelope slot. */

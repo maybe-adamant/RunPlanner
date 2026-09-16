@@ -23,7 +23,14 @@ export interface EncounterPhaseAuthoringDomain {
   readonly origin: EncounterPhaseAddress;
   readonly slotKey: string;
   readonly selectedEncounterKey: string;
+  readonly selectedEncounterDefinitionKey?: string;
+  readonly selectedEncounterKind: import('../../catalog-schema').EncounterPhaseKind;
   readonly declaredEncounterKeys: readonly string[];
+  readonly choices: readonly {
+    readonly key: string;
+    readonly label: string;
+    readonly directEncounterDefinitionKey?: string;
+  }[];
   readonly defaultEncounterKey: string;
 }
 
@@ -109,12 +116,14 @@ export function encounterPhaseAuthoringDomainForRoom(
     if (selectedEncounterKey === undefined) {
       throw new Error(`${room.gameName}.${binding.slotKey} has no authored encounter selection`);
     }
+    const profiles =
+      binding.kind === 'fixed'
+        ? []
+        : encounterAuthoringProfiles(encounterSetForBinding(catalog, binding, room.gameName));
     const declaredEncounterKeys =
       binding.kind === 'fixed'
         ? [binding.encounterDefinitionKey]
-        : encounterAuthoringProfiles(encounterSetForBinding(catalog, binding, room.gameName)).map(
-            (profile) => profile.key,
-          );
+        : profiles.map((profile) => profile.key);
     if (!declaredEncounterKeys.includes(selectedEncounterKey)) {
       throw new Error(
         `${room.gameName}.${binding.slotKey} selected ${selectedEncounterKey} outside its declaration`,
@@ -125,7 +134,40 @@ export function encounterPhaseAuthoringDomainForRoom(
         origin: createEncounterPhaseAddress(biome, owner, binding.slotKey),
         slotKey: binding.slotKey,
         selectedEncounterKey,
+        ...(binding.kind === 'fixed'
+          ? { selectedEncounterDefinitionKey: binding.encounterDefinitionKey }
+          : (() => {
+              const profile = profiles.find((candidate) => candidate.key === selectedEncounterKey)!;
+              return profile.resolution.kind === 'direct'
+                ? { selectedEncounterDefinitionKey: profile.resolution.encounterDefinitionKey }
+                : {};
+            })()),
+        selectedEncounterKind:
+          binding.kind === 'fixed'
+            ? catalog.encounterDefinitions.byKey[binding.encounterDefinitionKey]!.kind
+            : profiles.find((candidate) => candidate.key === selectedEncounterKey)!.kind,
         declaredEncounterKeys: Object.freeze([...declaredEncounterKeys]),
+        choices: Object.freeze(
+          binding.kind === 'fixed'
+            ? [
+                Object.freeze({
+                  key: binding.encounterDefinitionKey,
+                  label:
+                    catalog.encounterDefinitions.byKey[binding.encounterDefinitionKey]?.label ??
+                    binding.encounterDefinitionKey,
+                  directEncounterDefinitionKey: binding.encounterDefinitionKey,
+                }),
+              ]
+            : profiles.map((profile) =>
+                Object.freeze({
+                  key: profile.key,
+                  label: profile.label,
+                  ...(profile.resolution.kind === 'direct'
+                    ? { directEncounterDefinitionKey: profile.resolution.encounterDefinitionKey }
+                    : {}),
+                }),
+              ),
+        ),
         defaultEncounterKey:
           binding.kind === 'fixed'
             ? binding.encounterDefinitionKey

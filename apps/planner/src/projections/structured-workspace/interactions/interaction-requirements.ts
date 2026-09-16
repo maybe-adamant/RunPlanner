@@ -24,7 +24,7 @@ import {
 } from '@run-planner/engine/authored-project';
 
 import type { WorkspaceInteractionChoice, WorkspaceFeatureAssessment } from '../contract';
-import type { WorkspaceLocalVisitOrderControl } from '../contracts/locals';
+import type { WorkspaceEncounterPhase, WorkspaceLocalVisitOrderControl } from '../contracts/locals';
 import type { WorkspaceRoomActionProposal } from '../contracts/timeline';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 
@@ -70,7 +70,7 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly kind: 'encounterPhases';
       readonly owner: OccurrenceAddress;
       readonly phases: readonly {
-        readonly candidateChoices: readonly WorkspaceInteractionChoice<string>[];
+        readonly candidateChoices: WorkspaceEncounterPhase['candidateChoices'];
         readonly owner: EncounterPhaseAddress;
         readonly selectedEncounterKey: string;
         readonly selectionEnabled: boolean;

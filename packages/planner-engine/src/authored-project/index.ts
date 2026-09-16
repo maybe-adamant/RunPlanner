@@ -27,6 +27,7 @@ export {
   seaStarDuplicateSourceIsActive,
 } from './acquisition/sea-star';
 export { activeRoomActionReferences } from './room-actions/state';
+export { directEncounterDefinitionKeyForSlot } from './room-state/encounter-envelope';
 export {
   authoredAcquisitionSources,
   authoredAcquisitionSourceAt,

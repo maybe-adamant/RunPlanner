@@ -39,21 +39,13 @@ import {
 
 function shrinePhase(
   slotKey: string,
-  advancesHermesShrineDeliveryUses = true,
+  authoredChoiceKey: string,
+  envelopeKey = 'SingleEncounter',
 ): CanonicalAuthoredRoom['encounterPhases'][number] {
   return {
     slotKey,
-    envelopeKey: 'TestEnvelope',
-    encounterKey: 'GeneratedN',
-    label: 'Test encounter',
-    kind: 'combat',
-    countsEncounterDepth: true,
-    advancesHermesShrineDeliveryUses,
-    canEncounterSkip: false,
-    blocksFigLeaf: false,
-    blocksGorgon: false,
-    hostsGorgon: false,
-    skipEndEncounterEffects: false,
+    envelopeKey,
+    authoredChoiceKey,
     figLeafSkip: false,
   };
 }
@@ -376,7 +368,7 @@ describe('Hermes Shrine delivery placement', () => {
       gameName: 'O_Combat04',
       lifecycleProfileKey: 'StandardRewardRoom',
       encounters: { steadyGrowthTargetByPhase: {} },
-      encounterPhases: [shrinePhase('Encounter')],
+      encounterPhases: [shrinePhase('Combat1', 'GeneratedO', 'ShipEncounter')],
     } as unknown as CanonicalAuthoredRoom;
     const transition = applyEncounterEndEffectsTransition(
       catalog,
@@ -385,7 +377,7 @@ describe('Hermes Shrine delivery placement', () => {
         sequence: 2,
         operationIndex: 0,
         origin: host,
-        phaseKey: 'Encounter',
+        phaseKey: 'Combat1',
         execution: 'normal',
         figLeafSkipOwner: false,
       },
@@ -405,7 +397,7 @@ describe('Hermes Shrine delivery placement', () => {
       expect.objectContaining({
         kind: 'hermesShrineDelivery',
         address: expect.objectContaining({ kind: 'acquisitionEntry', entryKey }),
-        encounterPhaseKey: 'Encounter',
+        encounterPhaseKey: 'Combat1',
       }),
     );
   });
@@ -441,7 +433,12 @@ describe('Hermes Shrine delivery placement', () => {
         gameName,
         lifecycleProfileKey,
         encounters: { steadyGrowthTargetByPhase: {} },
-        encounterPhases: [shrinePhase('Encounter')],
+        encounterPhases: [
+          shrinePhase(
+            'Encounter',
+            gameName === 'N_Sub10' ? 'GeneratedNSubRoom' : 'GeneratedN_Bigger',
+          ),
+        ],
       }) as unknown as CanonicalAuthoredRoom;
     const endEffects = (origin: typeof source, sequence: number) => ({
       kind: 'encounterEndEffectsApplied' as const,
@@ -468,7 +465,7 @@ describe('Hermes Shrine delivery placement', () => {
     const firstMainEncounter = applyEncounterEndEffectsTransition(
       catalog,
       endEffects(host, 2),
-      roomFor('N_Hub', 'EphyraHub'),
+      roomFor('N_Combat01', 'EphyraCombat'),
       sideRoom.branches,
     );
     expect(firstMainEncounter.branches[0]?.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
@@ -479,7 +476,7 @@ describe('Hermes Shrine delivery placement', () => {
     const dueMainEncounter = applyEncounterEndEffectsTransition(
       catalog,
       endEffects(host, 3),
-      roomFor('N_Hub', 'EphyraHub'),
+      roomFor('N_Combat01', 'EphyraCombat'),
       firstMainEncounter.branches,
     );
     expect(dueMainEncounter.branches[0]?.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
@@ -530,7 +527,7 @@ describe('Hermes Shrine delivery placement', () => {
       gameName: 'O_Combat04',
       lifecycleProfileKey: 'StandardRewardRoom',
       encounters: { steadyGrowthTargetByPhase: {} },
-      encounterPhases: [shrinePhase('Combat1')],
+      encounterPhases: [shrinePhase('Combat1', 'GeneratedO', 'ShipEncounter')],
       acquisitionSites: {
         hermesShrineDelivery: {
           entries: { [entryKey]: defaultHermesShrineDeliveryReward(catalog, 'HealBigDrop') },

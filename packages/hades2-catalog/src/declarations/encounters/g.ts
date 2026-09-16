@@ -17,7 +17,6 @@ export const gEncounterDefinitions = [
     countsEncounterDepth: true,
     hostsGorgon: true,
     canEncounterSkip: true,
-    requirements: { kind: 'currentRoomRewardExcludes', rewardTypes: ['Devotion'] },
   },
   {
     key: 'DevotionTestG',
@@ -25,10 +24,6 @@ export const gEncounterDefinitions = [
     kind: 'combat',
     countsEncounterDepth: true,
     blocksGorgon: true,
-    requirements: {
-      kind: 'not',
-      requirement: { kind: 'currentRoomRewardExcludes', rewardTypes: ['Devotion'] },
-    },
   },
   {
     key: 'ArtemisCombatG',
@@ -180,7 +175,16 @@ export const gEncounterSets = [
     ],
     defaultAuthoringProfileKey: 'GeneratedG',
     authoringProfiles: [
-      { key: 'GeneratedG', encounterDefinitionKeys: ['GeneratedG', 'DevotionTestG'] },
+      {
+        key: 'GeneratedG',
+        label: 'Combat',
+        encounterDefinitionKeys: ['GeneratedG', 'DevotionTestG'],
+        resolution: {
+          kind: 'rewardContext',
+          defaultEncounterDefinitionKey: 'GeneratedG',
+          encounterDefinitionKeyByRewardType: { Devotion: 'DevotionTestG' },
+        },
+      },
       { key: 'ArtemisCombatG', encounterDefinitionKeys: ['ArtemisCombatG'] },
       { key: 'ArachneCombatG', encounterDefinitionKeys: ['ArachneCombatG'] },
       { key: 'NemesisCombatG', encounterDefinitionKeys: ['NemesisCombatG'] },

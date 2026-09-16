@@ -10,6 +10,10 @@ import {
   type EncounterAuthoringRoom,
   type PreparedEncounterPhases,
 } from '../encounters/preparation';
+import {
+  encounterResolutionContext,
+  resolveMaterializedEncounterPhases,
+} from '../encounters/resolve';
 import type { CanonicalFixedRoomLink } from '../materialization';
 import { foldHistoryEvents } from './fold';
 import { foldBiomeHistoryPrefixEvents } from './fold';
@@ -296,7 +300,18 @@ export function appendRoomLifecycle(
           },
         )
       : undefined;
-  const encounterPhases = encounterPreparation?.validPrefix ?? room.encounterPhases;
+  const declaration = catalog.rooms.byKey[room.gameName];
+  if (declaration === undefined) fail(`unknown canonical room ${room.gameName}`);
+  const encounterPhases =
+    encounterPreparation?.validPrefix ??
+    resolveMaterializedEncounterPhases(
+      catalog,
+      declaration,
+      room.encounterPhases,
+      room.kind === 'authored'
+        ? encounterResolutionContext(room, declaration)
+        : Object.freeze({ kind: 'noReward' as const }),
+    );
   const effectiveEncounterPhases = writer.resolveFigLeafEncounterPhases(room, encounterPhases);
   if (encounterPreparation !== undefined && !encounterPreparation.valid) {
     const prefix = executeEncounterRecordPrefix(

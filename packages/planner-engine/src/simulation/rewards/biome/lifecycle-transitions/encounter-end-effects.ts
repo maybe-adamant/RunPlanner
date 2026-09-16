@@ -1,5 +1,9 @@
 import type { Catalog } from '../../../../catalog-schema';
 import {
+  encounterResolutionContext,
+  resolveMaterializedEncounterPhase,
+} from '../../../encounters/resolve';
+import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createSteadyGrowthOutcomeAddress,
@@ -429,7 +433,16 @@ export function applyEncounterEndEffectsTransition(
     next = pickupAdvance.branches;
   }
   const deliveryPlacementFindings: LifecycleFinding[] = [];
-  const encounterPhase = room?.encounterPhases?.find((phase) => phase.slotKey === event.phaseKey);
+  const materializedPhase = room?.encounterPhases.find((phase) => phase.slotKey === event.phaseKey);
+  const encounterPhase =
+    declaration === undefined || room === undefined || materializedPhase === undefined
+      ? undefined
+      : resolveMaterializedEncounterPhase(
+          catalog,
+          declaration,
+          materializedPhase,
+          encounterResolutionContext(room, declaration),
+        );
   if (
     event.origin.kind === 'occurrence' &&
     declaration?.advancesHermesShrineDeliveryUses === true &&

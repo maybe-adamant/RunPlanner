@@ -283,6 +283,19 @@ function historyProbeCatalog(): Catalog {
   const probeSet = Object.freeze<EncounterSet>({
     ...defaultSet,
     encounterDefinitionKeys: Object.freeze(['GeneratedO', 'PreviousRoomProbe']),
+    authoringProfiles: Object.freeze([
+      defaultSet.authoringProfiles.find((profile) => profile.key === 'GeneratedO')!,
+      Object.freeze({
+        key: 'PreviousRoomProbe',
+        label: 'Previous room probe',
+        kind: 'combat',
+        encounterDefinitionKeys: Object.freeze(['PreviousRoomProbe']),
+        resolution: Object.freeze({
+          kind: 'direct' as const,
+          encounterDefinitionKey: 'PreviousRoomProbe',
+        }),
+      }),
+    ]),
   });
   const encounterDefinitions = replaceCollectionEntry(
     catalog.encounterDefinitions,
@@ -437,6 +450,19 @@ function sideRoomFieldNpcCatalog(): Catalog {
   const sideRoomSet = Object.freeze({
     ...set,
     encounterDefinitionKeys: Object.freeze([...set.encounterDefinitionKeys, definition.key]),
+    authoringProfiles: Object.freeze([
+      ...set.authoringProfiles,
+      Object.freeze({
+        key: definition.key,
+        label: definition.label,
+        kind: definition.kind,
+        encounterDefinitionKeys: Object.freeze([definition.key]),
+        resolution: Object.freeze({
+          kind: 'direct' as const,
+          encounterDefinitionKey: definition.key,
+        }),
+      }),
+    ]),
   });
   return Object.freeze({
     ...catalog,

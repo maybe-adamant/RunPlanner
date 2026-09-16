@@ -61,7 +61,7 @@ export function CustomizableEncounterPhaseControl({
       onSelect={(value) => {
         if (step === 'event' && event !== undefined) {
           executeIntent(event.familyIntentFor(value as AuthoredNemesisRandomEventKind));
-        } else if (value === 'NemesisRandomEvent' && event !== undefined) {
+        } else if (value === event?.encounterKey && event !== undefined) {
           setSelection({ interaction, step: 'event' });
           return;
         } else {

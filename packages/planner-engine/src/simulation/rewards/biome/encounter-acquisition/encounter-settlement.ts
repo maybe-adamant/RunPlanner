@@ -1,4 +1,9 @@
 import type { Catalog } from '../../../../catalog-schema';
+import {
+  encounterResolutionContext,
+  resolveMaterializedEncounterPhase,
+} from '../../../encounters/resolve';
+import { directEncounterDefinitionKeyForSlot } from '../../../../authored-project/room-state/encounter-envelope';
 import { evaluateRequirement } from '../../../../requirements';
 import {
   createBiomeAddress,
@@ -14,7 +19,6 @@ import {
 } from '../../../../authored-project/addresses';
 import { roomActionKey } from '../../../../authored-project/room-actions/key';
 import { materializeGorgonAthenaOffer } from '../../../../authored-project/traits/state';
-import { selectedEncounterAuthoringProfileKey } from '../../../../authored-project/room-state/encounter-envelope';
 import type { RouteLoadout } from '../../../../authored-project/model';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../../materialization';
@@ -227,8 +231,17 @@ export function applyEncounterSettlementTransition(inputs: {
       result?.athenaOffer == null || inputs.gorgonCandidate?.rarity === undefined
         ? undefined
         : materializeGorgonAthenaOffer(catalog, result.athenaOffer, inputs.gorgonCandidate.rarity);
+    const resolvedPhase =
+      phase === undefined
+        ? undefined
+        : resolveMaterializedEncounterPhase(
+            catalog,
+            declaration,
+            phase,
+            encounterResolutionContext(room, declaration),
+          );
     const eligible =
-      phase?.blocksGorgon !== true &&
+      resolvedPhase?.blocksGorgon !== true &&
       declaration.blocksGorgon !== true &&
       !inputs.gorgonPhaseBlocked;
     const gorgonTraitContext = Object.freeze({
@@ -715,7 +728,7 @@ export function applyEncounterSettlementTransition(inputs: {
       gorgonEvaluationBlocked,
       ...(blockGorgonPhaseKey === undefined ? {} : { blockGorgonPhaseKey }),
     });
-  const encounterKey = selectedEncounterAuthoringProfileKey(
+  const encounterKey = directEncounterDefinitionKeyForSlot(
     catalog,
     declaration,
     room.encounters,

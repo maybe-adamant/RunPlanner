@@ -383,27 +383,32 @@ export function bindOccurrenceLocalInteractions(
         for (const phase of requirement.phases) {
           const key = semanticAddressKey(phase.owner);
           const encounterKeys = Object.freeze(phase.candidateChoices.map((choice) => choice.value));
-          const nemesisSelection = encounterKeys.includes('NemesisRandomEvent')
-            ? Object.freeze({
-                owner: createNemesisRandomEventAddress(phase.owner),
-                familyPicker: projectStableIdentityPicker({
-                  choices: NEMESIS_RANDOM_EVENT_FAMILIES.map((family) => ({
-                    label: nemesisFamilyLabel(family),
-                    value: family,
-                  })),
-                  selected: phase.nemesisEvent?.value?.kind,
-                  selectedLabel: undefined,
-                }),
-                familyIntentFor: (family: AuthoredNemesisRandomEventKind) =>
-                  Object.freeze({
-                    command: Object.freeze({
-                      kind: 'SelectNemesisRandomEventFamily' as const,
-                      event: createNemesisRandomEventAddress(phase.owner),
-                      family,
-                    }),
+          const nemesisChoice = phase.candidateChoices.find(
+            (choice) => choice.nativeEncounterDefinitionKey === 'NemesisRandomEvent',
+          );
+          const nemesisSelection =
+            nemesisChoice === undefined
+              ? undefined
+              : Object.freeze({
+                  encounterKey: nemesisChoice.value,
+                  owner: createNemesisRandomEventAddress(phase.owner),
+                  familyPicker: projectStableIdentityPicker({
+                    choices: NEMESIS_RANDOM_EVENT_FAMILIES.map((family) => ({
+                      label: nemesisFamilyLabel(family),
+                      value: family,
+                    })),
+                    selected: phase.nemesisEvent?.value?.kind,
+                    selectedLabel: undefined,
                   }),
-              })
-            : undefined;
+                  familyIntentFor: (family: AuthoredNemesisRandomEventKind) =>
+                    Object.freeze({
+                      command: Object.freeze({
+                        kind: 'SelectNemesisRandomEventFamily' as const,
+                        event: createNemesisRandomEventAddress(phase.owner),
+                        family,
+                      }),
+                    }),
+                });
           if (phase.selectionEnabled && encounterKeys.length > 1 && encounterPhases.has(key)) {
             throw new StructuredWorkspaceProjectionContractError(
               `${key} has multiple bound encounter phase interactions`,

@@ -1,4 +1,5 @@
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema';
+import { directEncounterDefinitionKeyForSlot } from '../../authored-project/room-state/encounter-envelope';
 import type { RequirementEvaluationContext } from '../../requirements/evaluator';
 import type { RewardHistoryState } from '../../reward-kernel';
 import {
@@ -575,6 +576,7 @@ export function normalPhysicalExitsForSource(
  * Anomaly map from accidentally entering G's ordinary candidate pool.
  */
 function anomalyTakeoverCandidateSupport(
+  catalog: Catalog,
   layout: BiomeLayout,
   source: CanonicalGenerationSource,
   targetOrigin: CanonicalTarget['origin'],
@@ -588,8 +590,20 @@ function anomalyTakeoverCandidateSupport(
     !descriptor.replaceableTargetRoomGameNames.includes(rememberedTargetGameName)
   )
     return undefined;
+  const sourceDeclaration = catalog.rooms.byKey[source.gameName];
   const excludedEncounterKeys = source.encounterPhases
-    .map((phase) => phase.encounterKey)
+    .map((phase) =>
+      source.kind === 'authored' && sourceDeclaration !== undefined
+        ? directEncounterDefinitionKeyForSlot(
+            catalog,
+            sourceDeclaration,
+            source.encounters,
+            phase.slotKey,
+            source.gameName,
+          )
+        : undefined,
+    )
+    .filter((key): key is string => key !== undefined)
     .filter((key) => descriptor.source.excludedSourceEncounterGameNames.includes(key));
   const priorEnteredReplacementCount = before.ledgers.roomAppearances.filter((appearance) =>
     descriptor.replacementRoomGameNames.includes(appearance.gameName),
@@ -621,6 +635,7 @@ function anomalyTakeoverCandidateSupport(
 }
 
 function anomalyReplacementEligibility(
+  catalog: Catalog,
   layout: BiomeLayout,
   source: CanonicalGenerationSource,
   target: CanonicalTarget,
@@ -640,6 +655,7 @@ function anomalyReplacementEligibility(
     );
   }
   const support = anomalyTakeoverCandidateSupport(
+    catalog,
     layout,
     source,
     target.origin,
@@ -714,6 +730,7 @@ export function evaluateTargetSlots(
     const rememberedGameName =
       target.room.anomalyReplacement?.replacedRoomGameName ?? target.room.gameName;
     const anomalyTakeover = anomalyTakeoverCandidateSupport(
+      catalog,
       layout,
       source,
       target.origin,
@@ -728,7 +745,7 @@ export function evaluateTargetSlots(
         ...(anomalyTakeover === undefined ? {} : { anomaly: anomalyTakeover }),
       }),
     );
-    const anomaly = anomalyReplacementEligibility(layout, source, target, before);
+    const anomaly = anomalyReplacementEligibility(catalog, layout, source, target, before);
     if (anomaly?.selectedPossible !== false) {
       result.findings.forEach((value) => appendFinding(findings, findingRegions, value));
       return view.after;

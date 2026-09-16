@@ -65,8 +65,8 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     rewards,
     encounters: encounterDefinitions,
   });
-  const encounterSets = normalizeEncounterSets(input.encounterSets);
-  validateEncounterSetClosure(encounterSets, encounterDefinitions);
+  const encounterSets = normalizeEncounterSets(input.encounterSets, encounterDefinitions);
+  validateEncounterSetClosure(encounterSets, encounterDefinitions, rewards);
   validateNemesisRandomEventContract(encounterDefinitions, encounterSets, rewards);
   const roomLifecycleProfiles = normalizeRoomLifecycleProfiles(
     input.roomLifecycleProfiles,

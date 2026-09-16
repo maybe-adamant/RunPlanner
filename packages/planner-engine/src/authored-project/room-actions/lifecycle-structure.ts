@@ -6,6 +6,9 @@ import {
 import type { RoomOccurrence } from '../model';
 import {
   encounterEnvelopeSlots,
+  encounterAuthoringProfileForKey,
+  encounterSetForBinding,
+  encounterBindingsBySlot,
   selectedEncounterAuthoringProfileKey,
 } from '../room-state/encounter-envelope';
 
@@ -90,7 +93,21 @@ export function assembleRoomLifecycleStructure(options: {
       slot.key,
       options.occurrence.gameName,
     );
-    const encounter = options.catalog.encounterDefinitions.byKey[encounterKey];
+    const binding = encounterBindingsBySlot(
+      options.catalog,
+      options.declaration,
+      options.occurrence.gameName,
+    ).get(slot.key);
+    const encounter =
+      binding?.kind === 'fixed'
+        ? options.catalog.encounterDefinitions.byKey[binding.encounterDefinitionKey]
+        : binding?.kind === 'set' && encounterKey !== undefined
+          ? encounterAuthoringProfileForKey(
+              encounterSetForBinding(options.catalog, binding, options.occurrence.gameName),
+              encounterKey,
+              options.occurrence.gameName,
+            )
+          : undefined;
     return (
       options.occurrence.state.kind === 'shipCombat' ||
       (encounter !== undefined && isCombatBearingEncounterPhaseKind(encounter.kind))

@@ -1,11 +1,167 @@
 import { CatalogContractError, createCatalog } from '@run-planner/hades2-catalog';
 import { declarations } from '@run-planner/hades2-catalog/test-support';
+import {
+  resolveEncounterAuthoringProfile,
+  type EncounterResolutionContext,
+} from '@run-planner/engine/simulation';
+import type { EncounterAuthoringProfile } from '@run-planner/engine/catalog-schema';
 import { cloneCatalogInput } from './support/catalog-input';
 import { describe, expect, it } from 'vitest';
 
 const input = cloneCatalogInput;
 
+function visibleChoiceKeys(
+  profiles: readonly EncounterAuthoringProfile[],
+  context: EncounterResolutionContext,
+): readonly string[] {
+  const choiceKeyByLabel = new Map<string, string>();
+  for (const profile of profiles) {
+    if (resolveEncounterAuthoringProfile(profile, context) === undefined) continue;
+    const previous = choiceKeyByLabel.get(profile.label);
+    if (previous !== undefined && previous !== profile.key) {
+      throw new Error(
+        `indistinguishable visible encounter choices ${previous} and ${profile.key} for ${profile.label}`,
+      );
+    }
+    choiceKeyByLabel.set(profile.label, profile.key);
+  }
+  return Object.freeze([...choiceKeyByLabel.values()]);
+}
+
 describe('encounter envelope catalog', () => {
+  it('normalizes closed authored choice mappings without treating a choice key as a definition', () => {
+    const built = createCatalog(declarations);
+    const profile = (setKey: string, choiceKey: string) =>
+      built.encounterSets.byKey[setKey]!.authoringProfiles.find(
+        (candidate) => candidate.key === choiceKey,
+      );
+    expect(profile('FEncountersDefault', 'GeneratedF')).toMatchObject({
+      label: 'Combat',
+      kind: 'combat',
+      resolution: {
+        kind: 'rewardContext',
+        defaultEncounterDefinitionKey: 'GeneratedF',
+        encounterDefinitionKeyByRewardType: { Devotion: 'DevotionTestF' },
+      },
+    });
+    expect(profile('GEncountersDefault', 'GeneratedG')?.resolution).toMatchObject({
+      defaultEncounterDefinitionKey: 'GeneratedG',
+      encounterDefinitionKeyByRewardType: { Devotion: 'DevotionTestG' },
+    });
+    expect(profile('IEncountersDefault', 'GeneratedI')?.resolution).toMatchObject({
+      defaultEncounterDefinitionKey: 'GeneratedI',
+      encounterDefinitionKeyByRewardType: {
+        ClockworkGoal: 'GeneratedI_GoalReward',
+        Devotion: 'DevotionTestI',
+      },
+    });
+    expect(profile('IEncountersSmaller', 'GeneratedI_Small')?.resolution).toMatchObject({
+      defaultEncounterDefinitionKey: 'GeneratedI_Small',
+      encounterDefinitionKeyByRewardType: {
+        ClockworkGoal: 'GeneratedI_Small_GoalReward',
+        Devotion: 'DevotionTestI',
+      },
+    });
+
+    const malformed = input();
+    const f = malformed.encounterSets.find((set) => set.key === 'FEncountersDefault');
+    if (f?.authoringProfiles === undefined) throw new Error('F authored choices are missing');
+    (f.authoringProfiles[0] as { resolution?: unknown }).resolution = {
+      kind: 'rewardContext',
+      encounterDefinitionKeyByRewardType: { Devotion: 'DevotionTestF' },
+    };
+    expect(() => createCatalog(malformed)).toThrow(CatalogContractError);
+  });
+
+  it('resolves every bound authored choice once per room slot and reward context', () => {
+    const built = createCatalog(declarations);
+    const noReward = { kind: 'noReward' } as const;
+    const profilesFor = (setKey: string) => built.encounterSets.byKey[setKey]!.authoringProfiles;
+    const choiceFor = (setKey: string, choiceKey: string) => {
+      const profile = profilesFor(setKey).find((candidate) => candidate.key === choiceKey);
+      if (profile === undefined) throw new Error(`missing ${setKey}.${choiceKey}`);
+      return profile;
+    };
+
+    expect(
+      resolveEncounterAuthoringProfile(choiceFor('FEncountersDefault', 'GeneratedF'), noReward),
+    ).toBe('GeneratedF');
+    expect(
+      resolveEncounterAuthoringProfile(choiceFor('FEncountersDefault', 'GeneratedF'), {
+        kind: 'knownReward',
+        rewardType: 'Devotion',
+      }),
+    ).toBe('DevotionTestF');
+    expect(
+      resolveEncounterAuthoringProfile(choiceFor('GEncountersDefault', 'GeneratedG'), {
+        kind: 'knownReward',
+        rewardType: 'Devotion',
+      }),
+    ).toBe('DevotionTestG');
+    expect(
+      resolveEncounterAuthoringProfile(choiceFor('IEncountersDefault', 'GeneratedI'), {
+        kind: 'knownReward',
+        rewardType: 'ClockworkGoal',
+      }),
+    ).toBe('GeneratedI_GoalReward');
+    expect(
+      resolveEncounterAuthoringProfile(choiceFor('IEncountersSmaller', 'GeneratedI_Small'), {
+        kind: 'knownReward',
+        rewardType: 'ClockworkGoal',
+      }),
+    ).toBe('GeneratedI_Small_GoalReward');
+    expect(
+      resolveEncounterAuthoringProfile(choiceFor('IEncountersDefault', 'GeneratedI'), {
+        kind: 'knownReward',
+        rewardType: 'Devotion',
+      }),
+    ).toBe('DevotionTestI');
+
+    for (const room of built.rooms.values) {
+      for (const binding of room.encounterSlotBindings) {
+        if (binding.kind !== 'set') continue;
+        const profiles = profilesFor(binding.encounterSetKey);
+        const rewardTypes = new Set<string>();
+        for (const profile of profiles) {
+          if (profile.resolution.kind !== 'rewardContext') continue;
+          for (const rewardType of Object.keys(
+            profile.resolution.encounterDefinitionKeyByRewardType,
+          )) {
+            rewardTypes.add(rewardType);
+          }
+        }
+        const contexts: readonly EncounterResolutionContext[] = [
+          noReward,
+          ...[...rewardTypes].map((rewardType) => ({ kind: 'knownReward', rewardType }) as const),
+        ];
+        for (const context of contexts) {
+          const visible = visibleChoiceKeys(profiles, context);
+          expect(new Set(visible).size, `${room.gameName}.${binding.slotKey}`).toBe(visible.length);
+          for (const profile of profiles) {
+            const definitionKey = resolveEncounterAuthoringProfile(profile, context);
+            expect(
+              definitionKey,
+              `${room.gameName}.${binding.slotKey}.${profile.key}`,
+            ).toBeDefined();
+            expect(profile.encounterDefinitionKeys).toContain(definitionKey);
+          }
+        }
+      }
+    }
+
+    const fProfiles = profilesFor('FEncountersDefault');
+    const artemis = choiceFor('FEncountersDefault', 'ArtemisCombatF');
+    expect(() =>
+      visibleChoiceKeys(
+        Object.freeze([
+          ...fProfiles,
+          Object.freeze({ ...artemis, key: 'AliasArtemis', label: 'Combat' }),
+        ]),
+        noReward,
+      ),
+    ).toThrow('indistinguishable visible encounter choices');
+  });
+
   it('binds the H Bridge Echo story to its provider and NPC presentation', () => {
     const built = createCatalog(declarations);
     expect(built.encounterDefinitions.byKey.Story_Echo_01).toMatchObject({

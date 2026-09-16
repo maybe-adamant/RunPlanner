@@ -618,7 +618,10 @@ function executionPurgingPool(
   });
 }
 
-function executionFieldsLayout(room: CanonicalAuthoredRoom): ExecutionFieldsLayout | undefined {
+function executionFieldsLayout(
+  room: CanonicalAuthoredRoom,
+  recordedEncounterKeys: ReadonlyMap<string, string>,
+): ExecutionFieldsLayout | undefined {
   if (!room.entered || room.encounterEnvelopeKey !== 'FieldsEncounter') return undefined;
   const entryPair: CanonicalFieldsEntryPair | undefined = room.fieldsEntryPair;
   const spatial = room.fieldsSpatial;
@@ -656,9 +659,7 @@ function executionFieldsLayout(room: CanonicalAuthoredRoom): ExecutionFieldsLayo
       ),
     });
   });
-  const nemesisPointId = room.encounterPhases.some(
-    (phase) => phase.encounterKey === 'NemesisRandomEvent',
-  )
+  const nemesisPointId = [...recordedEncounterKeys.values()].includes('NemesisRandomEvent')
     ? spatial.nemesisPointId
     : undefined;
   return Object.freeze({
@@ -682,7 +683,6 @@ export function assembleExecutionOverview(
   const rewardWheels = executionRewardWheels(room);
   const stygianWell = executionStygianWell(room);
   const purgingPool = executionPurgingPool(room);
-  const fields = executionFieldsLayout(room);
   const additional = executionAdditionalExits(batch);
   const biomeAddress = createBiomeAddress(room.origin.routeKey, room.origin.biomeKey);
   const recordedPhases = new Map(
@@ -692,6 +692,13 @@ export function assembleExecutionOverview(
         ? [[event.phaseKey, event] as const]
         : [],
     ),
+  );
+  const fields = executionFieldsLayout(
+    room,
+    new Map([...recordedPhases].map(([slotKey, event]) => [slotKey, event.encounterKey])),
+  );
+  const structuralIdentities = new Map(
+    (room.structuralEncounterIdentities ?? []).map((phase) => [phase.slotKey, phase]),
   );
   return Object.freeze({
     ...(incomingReward === undefined ? {} : { incomingReward }),
@@ -720,8 +727,24 @@ export function assembleExecutionOverview(
           );
           return Object.freeze({
             slotKey: phase.slotKey,
-            encounterKey: recorded?.encounterKey ?? phase.encounterKey,
-            kind: recorded?.phaseKind ?? phase.kind,
+            encounterKey:
+              recorded?.encounterKey ??
+              structuralIdentities.get(phase.slotKey)?.encounterKey ??
+              (() => {
+                throw new CompilerError(
+                  'executionCoverageMissing',
+                  `${room.gameName} lacks resolved encounter ${phase.slotKey}`,
+                );
+              })(),
+            kind:
+              recorded?.phaseKind ??
+              structuralIdentities.get(phase.slotKey)?.kind ??
+              (() => {
+                throw new CompilerError(
+                  'executionCoverageMissing',
+                  `${room.gameName} lacks resolved encounter kind ${phase.slotKey}`,
+                );
+              })(),
             ...(figLeaf === undefined ? {} : { figLeafSkip: figLeaf.selected }),
           });
         })(),

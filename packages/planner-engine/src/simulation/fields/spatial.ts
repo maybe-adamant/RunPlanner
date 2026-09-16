@@ -3,6 +3,7 @@ import {
   type FieldsSpatialTarget,
 } from '../../authored-project/addresses';
 import type { Catalog, FieldsSpatialDeclaration } from '../../catalog-schema';
+import { directEncounterDefinitionKeyForSlot } from '../../authored-project/room-state/encounter-envelope';
 import type { CanonicalAuthoredRoom } from '../materialization';
 import type { SemanticFinding } from '../model';
 
@@ -75,7 +76,16 @@ function targetActive(
         activeSlots(room, roomDeclaration.fieldsOptionalRewards.key, true).has(target.slotKey)
       );
     case 'nemesis':
-      return room.encounterPhases.some((phase) => phase.encounterKey === 'NemesisRandomEvent');
+      return room.encounterPhases.some(
+        (phase) =>
+          directEncounterDefinitionKeyForSlot(
+            catalog,
+            roomDeclaration,
+            room.encounters,
+            phase.slotKey,
+            room.gameName,
+          ) === 'NemesisRandomEvent',
+      );
   }
 }
 
@@ -124,7 +134,16 @@ function activeFieldsSpatialTargets(
     ...(roomDeclaration.fieldsOptionalRewards?.slotKeys ?? [])
       .filter((slotKey) => activeOptionals.has(slotKey))
       .map((slotKey) => Object.freeze({ kind: 'optional' as const, slotKey })),
-    ...(room.encounterPhases.some((phase) => phase.encounterKey === 'NemesisRandomEvent')
+    ...(room.encounterPhases.some(
+      (phase) =>
+        directEncounterDefinitionKeyForSlot(
+          catalog,
+          roomDeclaration,
+          room.encounters,
+          phase.slotKey,
+          room.gameName,
+        ) === 'NemesisRandomEvent',
+    )
       ? [Object.freeze({ kind: 'nemesis' as const })]
       : []),
   ]);

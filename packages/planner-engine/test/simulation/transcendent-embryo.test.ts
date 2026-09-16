@@ -131,6 +131,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
           Encounter: embryoOutcome('ChaosWeaponBlessing'),
         },
       },
+      encounterPhases: [],
     } as unknown as CanonicalAuthoredRoom;
     const end = (sequence: number) =>
       Object.freeze({
@@ -520,7 +521,11 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
           operationIndex: sequence,
           sequence,
         },
-        { gameName: 'RoomOpening01', encounters: {} } as unknown as CanonicalAuthoredRoom,
+        {
+          gameName: 'RoomOpening01',
+          encounters: {},
+          encounterPhases: [],
+        } as unknown as CanonicalAuthoredRoom,
         laterBranches,
       );
       expect(later.findings).toHaveLength(0);

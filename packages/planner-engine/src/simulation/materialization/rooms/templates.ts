@@ -15,8 +15,8 @@ import type {
 } from '../../../authored-project/model';
 import type { Catalog, RoomDeclaration, RoomTemplateKey } from '../../../catalog-schema';
 import { encounterEnvelopeSlots } from '../../../authored-project/room-state/encounter-envelope';
-import { resolveEncounterPhases } from '../../encounters/resolve';
-import type { ResolvedEncounterPhase } from '../../encounters/model';
+import { materializeEncounterPhases } from '../../encounters/resolve';
+import type { MaterializedEncounterPhase } from '../../encounters/model';
 import type {
   CanonicalAuthoredRoom,
   CanonicalFieldsOptionalReward,
@@ -75,7 +75,7 @@ export interface AuthoredRoomMaterializationContext {
 export interface MaterializedRoomLeaf {
   readonly lifecycleProfileKey: string;
   readonly activeEncounterSlotKeys?: readonly string[];
-  readonly encounterPhases?: readonly ResolvedEncounterPhase[];
+  readonly encounterPhases?: readonly MaterializedEncounterPhase[];
   readonly incomingReward?: CanonicalResolvedIncomingReward;
   readonly unresolvedIncomingReward?: CanonicalAuthoredRoom['unresolvedIncomingReward'];
   readonly localRewards?: readonly CanonicalLocalReward[];
@@ -90,7 +90,7 @@ export interface MaterializedRoomLeaf {
 }
 
 export interface MaterializedShipCombatState {
-  readonly encounterPhases: readonly ResolvedEncounterPhase[];
+  readonly encounterPhases: readonly MaterializedEncounterPhase[];
   readonly rewardWheels: readonly CanonicalRewardWheel[];
 }
 
@@ -478,7 +478,7 @@ export function materializeShipCombatState(
   const activeSlotKeys = Object.freeze(
     state.encounterCount === 2 ? ['Intro', 'Combat1'] : ['Intro', 'Combat1', 'Combat2'],
   );
-  const encounterPhases = resolveEncounterPhases(
+  const encounterPhases = materializeEncounterPhases(
     catalog,
     room,
     occurrence.encounters,
