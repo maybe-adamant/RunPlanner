@@ -37,6 +37,7 @@ export function TraitOfferOption<TraitValue>({
   selectedDisabled,
   selectedLabel,
   selectedName,
+  showPersephoneBonus = false,
   spellSlot,
   traitAriaLabel,
   persephoneAriaLabel,
@@ -68,6 +69,7 @@ export function TraitOfferOption<TraitValue>({
   readonly selectedDisabled: boolean;
   readonly selectedLabel: string;
   readonly selectedName: string;
+  readonly showPersephoneBonus?: boolean;
   readonly spellSlot?: { readonly bonus: number; readonly moonglow: string };
   readonly traitAriaLabel: string;
   readonly persephoneAriaLabel?: string;
@@ -168,23 +170,29 @@ export function TraitOfferOption<TraitValue>({
           <dd>{effectiveLevel ?? <span aria-label="Not applicable">—</span>}</dd>
         </dl>
       )}
-      {persephoneLevelBonusMaximum === undefined ||
-      onPersephoneLevelBonusChange === undefined ? null : (
-        <label className="field-control field-control-inline">
-          <span>Persephone bonus</span>
-          <select
-            aria-label={persephoneAriaLabel ?? `${legend} Persephone level bonus`}
-            id={`${controlId}-persephone-level-bonus`}
-            onChange={(event) => onPersephoneLevelBonusChange(Number(event.target.value))}
-            value={persephoneLevelBonus ?? 0}
-          >
-            {Array.from({ length: persephoneLevelBonusMaximum + 1 }, (_, bonus) => (
-              <option key={bonus} value={bonus}>
-                +{bonus}
-              </option>
-            ))}
-          </select>
-        </label>
+      {!showPersephoneBonus ? null : (
+        <dl className="trait-option-effective-summary trait-option-persephone-bonus">
+          <dt>Persephone Bonus</dt>
+          <dd>
+            {persephoneLevelBonusMaximum === undefined ||
+            onPersephoneLevelBonusChange === undefined ? (
+              <span aria-label="Not applicable">N/A</span>
+            ) : (
+              <select
+                aria-label={persephoneAriaLabel ?? `${legend} Persephone level bonus`}
+                id={`${controlId}-persephone-level-bonus`}
+                onChange={(event) => onPersephoneLevelBonusChange(Number(event.target.value))}
+                value={persephoneLevelBonus ?? 0}
+              >
+                {Array.from({ length: persephoneLevelBonusMaximum + 1 }, (_, bonus) => (
+                  <option key={bonus} value={bonus}>
+                    +{bonus}
+                  </option>
+                ))}
+              </select>
+            )}
+          </dd>
+        </dl>
       )}
       <label className="trait-option-selected">
         <input

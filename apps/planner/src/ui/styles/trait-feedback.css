@@ -311,6 +311,11 @@
   text-align: right;
 }
 
+.trait-option-persephone-bonus {
+  align-items: center;
+  min-height: 36px;
+}
+
 .trait-offer-ordinary-option > .trait-option-selected {
   align-items: center;
   display: flex;

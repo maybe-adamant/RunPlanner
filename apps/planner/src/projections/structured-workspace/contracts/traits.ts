@@ -438,6 +438,7 @@ export interface WorkspaceTraitOfferInteraction {
     value?: AuthoredTraitOffer,
   ) => readonly CandidateOptionProjection<AuthoredTraitOffer>[];
   readonly owner: TraitOfferAddress;
+  readonly showPersephoneBonus: boolean;
   readonly rarityEditable: boolean;
   /** Declaration-backed editability for the currently selected trait's rarity. */
   readonly rarityEditableFor: (traitKey: string) => boolean;

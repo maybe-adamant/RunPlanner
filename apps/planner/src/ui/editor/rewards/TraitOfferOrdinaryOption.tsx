@@ -149,6 +149,7 @@ export function TraitOfferOrdinaryOption({
         if (open) controller.activate(loadable);
       }}
       persephoneAriaLabel={`${optionKey} Persephone level bonus`}
+      showPersephoneBonus={interaction.showPersephoneBonus}
       {...(option.persephoneLevelBonus === undefined
         ? {}
         : { persephoneLevelBonus: option.persephoneLevelBonus })}
