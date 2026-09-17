@@ -45,6 +45,7 @@ export interface WorkspaceFieldsCageOutcomeInteraction extends WorkspaceCandidat
 }
 
 export interface WorkspaceLocalVisitGenerationInteraction extends WorkspaceCandidateInteraction<SideRoomGeneration> {
+  readonly disabledReason?: string;
   readonly intentFor: (
     generation: SideRoomGeneration,
   ) => WorkspaceCommandIntent<

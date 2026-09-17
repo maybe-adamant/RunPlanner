@@ -63,6 +63,7 @@ export type WorkspaceOccurrenceInteractionRequirement =
         readonly address: LocalVisitSlotAddress;
         readonly order: WorkspaceLocalVisitOrderControl;
         readonly generation: SideRoomGeneration;
+        readonly entered: boolean;
       }[];
     }
   | {

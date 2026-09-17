@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   candidateSupport,
   presentCandidateLabel,
@@ -13,8 +14,81 @@ import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentati
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
-import { CandidateSelect } from '../CandidateSelect';
 import { DoorRewardEditor } from '../DoorRewardEditor';
+
+function LocalVisitGenerationCheckbox({
+  interactions,
+  slot,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly slot: WorkspaceLocalVisitDecision['slots'][number];
+}) {
+  const findingTarget = useFindingTarget();
+  const executeIntent = useCommandIntent();
+  const interaction = requireWorkspaceInteraction(
+    interactions.localVisitGenerations,
+    workspaceInteractionKey(slot.address),
+  );
+  const candidates = useWorkspaceInteraction(interaction);
+  const nextGeneration = slot.generation === 'generated' ? 'notGenerated' : 'generated';
+  const candidate = candidates.result?.find((option) => option.value === slot.generation);
+  const disabled = interaction.disabledReason !== undefined;
+  const [hintOpen, setHintOpen] = useState(false);
+  const hintId = `local-${slot.marker.focusKey}-generation-hint`;
+  const target = findingTarget(slot.address, `local-${slot.marker.focusKey}-generation`);
+  return (
+    <div
+      aria-describedby={disabled ? hintId : undefined}
+      aria-disabled={disabled || undefined}
+      aria-label={`${slot.label} generation control`}
+      className="ephyra-side-generation-control"
+      inert={target.inert}
+      onBlur={(event) => {
+        if (!event.currentTarget.matches(':hover')) setHintOpen(false);
+      }}
+      onFocus={() => setHintOpen(true)}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && hintOpen) {
+          setHintOpen(false);
+          event.stopPropagation();
+        }
+      }}
+      onMouseEnter={() => setHintOpen(true)}
+      onMouseLeave={(event) => {
+        if (!event.currentTarget.contains(document.activeElement)) setHintOpen(false);
+      }}
+      role="group"
+      tabIndex={disabled ? 0 : undefined}
+    >
+      <label>
+        <input
+          {...target}
+          aria-busy={candidates.pending || undefined}
+          aria-describedby={disabled ? hintId : undefined}
+          aria-label={`${slot.label} generation`}
+          checked={slot.generation === 'generated'}
+          data-candidate-support={candidateSupport(candidate)}
+          disabled={disabled}
+          onChange={() => {
+            if (!disabled) executeIntent(interaction.intentFor(nextGeneration));
+          }}
+          onFocus={candidates.activate}
+          onPointerDown={candidates.activate}
+          type="checkbox"
+        />
+        <span aria-hidden="true" className="ephyra-side-compact-label">
+          Generated
+        </span>
+      </label>
+      {disabled ? (
+        <span className="ephyra-side-generation-hint" hidden={!hintOpen} id={hintId} role="tooltip">
+          {interaction.disabledReason}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 function LocalVisitOrderSelect({
   interactions,
   slot,
@@ -44,9 +118,13 @@ function LocalVisitOrderSelect({
   return (
     <label className="field-control ephyra-side-entry-order">
       <span className="visually-hidden">{slot.label} visit order</span>
+      <span aria-hidden="true" className="ephyra-side-compact-label">
+        Visit
+      </span>
       <select
         aria-busy={candidates.pending || undefined}
         data-candidate-support={candidateSupport(selectedCandidate)}
+        disabled={slot.generation !== 'generated'}
         onChange={(event) => replace(event.target.value)}
         onFocus={candidates.activate}
         onPointerDown={candidates.activate}
@@ -78,15 +156,13 @@ function LocalVisitSlotRow({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly slot: WorkspaceLocalVisitDecision['slots'][number];
 }) {
-  const executeIntent = useCommandIntent();
-  const generation = requireWorkspaceInteraction(
-    interactions.localVisitGenerations,
-    workspaceInteractionKey(slot.address),
-  );
   return (
     <tr className="ephyra-side-grid-row">
-      <td className="ephyra-side-priority">{slot.availabilityRank}</td>
-      <th scope="row">
+      <td className="ephyra-side-priority">
+        <span className="ephyra-side-compact-label">Priority</span>
+        <span>{slot.availabilityRank}</span>
+      </td>
+      <th className="ephyra-side-room" scope="row">
         <div className="ephyra-side-room-identity">
           <span>{slot.label}</span>
           <RoomMapLauncher
@@ -97,25 +173,25 @@ function LocalVisitSlotRow({
           />
         </div>
       </th>
-      <td>
-        <CandidateSelect
-          id={`local-${slot.marker.focusKey}-generation`}
-          interaction={generation}
-          label={`${slot.label} generation`}
-          onReplace={(value) => executeIntent(generation.intentFor(value))}
-        />
-      </td>
-      <td className="ephyra-side-visit-order">
-        <LocalVisitOrderSelect interactions={interactions} slot={slot} />
+      <td className="ephyra-side-generation">
+        <LocalVisitGenerationCheckbox interactions={interactions} slot={slot} />
       </td>
       <td className="ephyra-side-reward-cell">
-        {slot.generation !== 'generated' ? null : (
+        <span aria-hidden="true" className="ephyra-side-compact-label">
+          Reward
+        </span>
+        {slot.generation !== 'generated' ? (
+          <span className="ephyra-side-unavailable">Not generated</span>
+        ) : (
           <DoorRewardEditor
             door={slot.door}
             idPrefix={`local-door-${slot.marker.focusKey}`}
             interactions={interactions}
           />
         )}
+      </td>
+      <td className="ephyra-side-visit-order">
+        <LocalVisitOrderSelect interactions={interactions} slot={slot} />
       </td>
     </tr>
   );
@@ -150,25 +226,23 @@ export function LocalVisitWorkbench({
           </span>
         </h4>
       )}
-      <div className="ephyra-side-grid-scroll">
-        <table {...findingTarget(localVisit.order)} tabIndex={-1} className="ephyra-side-grid">
-          <caption className="visually-hidden">Ephyra side-room generation and visit order</caption>
-          <thead>
-            <tr>
-              <th scope="col">Priority</th>
-              <th scope="col">Room</th>
-              <th scope="col">Generated</th>
-              <th scope="col">Visit order</th>
-              <th scope="col">Door reward</th>
-            </tr>
-          </thead>
-          <tbody>
-            {localVisit.slots.map((slot) => (
-              <LocalVisitSlotRow interactions={interactions} key={slot.key} slot={slot} />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <table {...findingTarget(localVisit.order)} tabIndex={-1} className="ephyra-side-grid">
+        <caption className="visually-hidden">Ephyra side-room generation and visit order</caption>
+        <thead>
+          <tr>
+            <th scope="col">Priority</th>
+            <th scope="col">Room</th>
+            <th scope="col">Generated</th>
+            <th scope="col">Reward</th>
+            <th scope="col">Visit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {localVisit.slots.map((slot) => (
+            <LocalVisitSlotRow interactions={interactions} key={slot.key} slot={slot} />
+          ))}
+        </tbody>
+      </table>
     </section>
   );
 }

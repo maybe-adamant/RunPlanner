@@ -473,11 +473,6 @@
   border: 0;
 }
 
-.ephyra-side-grid .encounter-editor {
-  margin-top: 8px;
-  padding-top: 8px;
-}
-
 .ship-phase-list {
   display: grid;
   gap: 8px;
@@ -1239,6 +1234,8 @@
 }
 
 .ephyra-side-editor {
+  container: ephyra-side / inline-size;
+  min-width: 0;
   padding-top: 12px;
   border-top: 1px solid #353640;
 }
@@ -1247,7 +1244,7 @@
   display: flex;
   min-width: 0;
   align-items: center;
-  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
@@ -1261,19 +1258,34 @@
   white-space: nowrap;
 }
 
-.ephyra-side-grid-scroll {
-  overflow-x: auto;
+.ephyra-side-grid {
+  display: block;
+  width: 100%;
+  min-width: 0;
 }
 
-.ephyra-side-grid {
-  width: 100%;
-  min-width: 620px;
-  border-collapse: separate;
-  border-spacing: 0 7px;
+.ephyra-side-grid thead {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.ephyra-side-grid tbody {
+  display: grid;
+  gap: 7px;
+}
+
+.ephyra-side-grid tr {
+  display: grid;
+  grid-template-columns: 3.8rem minmax(9rem, 1fr) 5.5rem minmax(0, 1.3fr) 9rem;
+  grid-template-areas: 'priority room generated reward visit';
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
 }
 
 .ephyra-side-grid thead th {
-  padding: 0 10px 3px;
+  min-width: 0;
+  padding: 0;
   color: #aaa7af;
   font-size: 0.72rem;
   font-weight: 700;
@@ -1282,53 +1294,119 @@
   text-transform: uppercase;
 }
 
-.ephyra-side-grid tbody th,
-.ephyra-side-grid tbody td {
-  padding: 8px;
-  border-top: 1px solid #373842;
-  border-bottom: 1px solid #373842;
-  vertical-align: top;
+.ephyra-side-grid-row {
+  border: 1px solid #34353e;
+  border-radius: 8px;
   background: rgb(255 255 255 / 2%);
 }
 
-.ephyra-side-grid tbody tr > :first-child {
-  border-left: 1px solid #373842;
-  border-radius: 9px 0 0 9px;
+.ephyra-side-grid tbody th,
+.ephyra-side-grid tbody td {
+  min-width: 0;
+  padding: 0;
 }
 
-.ephyra-side-grid tbody th {
-  width: 22%;
+.ephyra-side-room {
+  grid-area: room;
   text-align: left;
-  vertical-align: middle;
 }
 
-.ephyra-side-grid tbody td:last-child {
-  border-right: 1px solid #373842;
-  border-radius: 0 9px 9px 0;
+.ephyra-side-generation {
+  grid-area: generated;
 }
 
-.ephyra-side-reward {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid rgb(68 69 80 / 65%);
+.ephyra-side-generation-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
 }
 
-.ephyra-side-grid tbody td.ephyra-side-priority {
-  width: 6%;
+.ephyra-side-generation-control > label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ephyra-side-generation-control[aria-disabled='true'] > label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.ephyra-side-generation-hint {
+  position: absolute;
+  z-index: 10;
+  right: 0;
+  bottom: 100%;
+  width: 16rem;
+  max-width: calc(100vw - 32px);
+  padding: 8px 10px;
+  border: 1px solid #42434d;
+  border-radius: 8px;
+  color: #f2ede5;
+  background: #202128;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 30%);
+  font-size: 0.8rem;
+}
+
+.ephyra-side-generation-control input {
+  margin: 0;
+  accent-color: #a98dcc;
+}
+
+.ephyra-side-priority {
+  grid-area: priority;
+  display: grid;
   color: #d5c897;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   text-align: center;
-  vertical-align: middle;
+}
+
+.ephyra-side-grid thead th:first-child,
+.ephyra-side-grid thead th:nth-child(3) {
+  text-align: center;
 }
 
 .ephyra-side-visit-order {
-  width: 7rem;
+  grid-area: visit;
 }
 
-.ephyra-side-grid .field-control.ephyra-side-entry-order {
-  width: 7rem;
-  min-width: 7rem;
+.ephyra-side-reward-cell {
+  grid-area: reward;
+}
+
+.ephyra-side-grid .ephyra-side-compact-label {
+  display: none;
+  color: #aaa7af;
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.ephyra-side-unavailable {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  color: #88858e;
+  font-size: 0.8rem;
+}
+
+.ephyra-side-grid .field-control,
+.ephyra-side-grid .field-control select {
+  width: 100%;
+  min-width: 0;
+}
+
+.ephyra-side-grid .field-control select:disabled {
+  opacity: 0.6;
+}
+
+.ephyra-side-entry-order select {
+  padding-right: 9px;
 }
 
 .ephyra-side-reward-cell .field-control-inline {
@@ -1348,21 +1426,36 @@
   white-space: nowrap;
 }
 
-.ephyra-side-grid .biome-candidate-select > span,
-.ephyra-side-entry-order > .visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
+@container ephyra-side (max-width: 680px) {
+  .ephyra-side-grid thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
 
-.ephyra-side-grid .field-control {
-  min-width: 120px;
+  .ephyra-side-grid tr {
+    grid-template-columns: 3.8rem minmax(0, 1fr) 9rem;
+    grid-template-areas:
+      'priority room generated'
+      'reward reward visit';
+    row-gap: 8px;
+    padding: 8px;
+  }
+
+  .ephyra-side-grid .ephyra-side-compact-label {
+    display: block;
+  }
+
+  .ephyra-side-reward-cell {
+    display: grid;
+    gap: 5px;
+  }
+
+  .ephyra-side-generation-control {
+    justify-content: flex-start;
+  }
 }
 
 .purchase-control {
