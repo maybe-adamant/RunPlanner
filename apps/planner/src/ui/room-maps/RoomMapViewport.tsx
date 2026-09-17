@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type PointerEvent,
+  type ReactNode,
+} from 'react';
 
 import type { RoomMapAsset } from './roomMapAssets';
 
@@ -18,6 +25,18 @@ export function RoomMapViewport({
   readonly toolbarActions?: ReactNode;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const panRef = useRef<
+    | {
+        readonly pointerId: number;
+        readonly x: number;
+        readonly y: number;
+        readonly left: number;
+        readonly top: number;
+      }
+    | undefined
+  >(undefined);
+  const zoomCenterRef = useRef<{ readonly x: number; readonly y: number } | undefined>(undefined);
+  const [panning, setPanning] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
   const [imageSize, setImageSize] = useState<{ readonly height: number; readonly width: number }>();
   const [viewportSize, setViewportSize] = useState<{
@@ -45,22 +64,102 @@ export function RoomMapViewport({
     viewportSize.height === 0
       ? undefined
       : Math.min(viewportSize.width / imageSize.width, viewportSize.height / imageSize.height);
-  const displayedImageStyle =
+  const displayedImageSize =
     fittedScale === undefined || imageSize === undefined
       ? undefined
       : {
-          height: `${Math.round(imageSize.height * fittedScale * (zoom / 100))}px`,
-          width: `${Math.round(imageSize.width * fittedScale * (zoom / 100))}px`,
+          height: Math.round(imageSize.height * fittedScale * (zoom / 100)),
+          width: Math.round(imageSize.width * fittedScale * (zoom / 100)),
         };
+  const canPan =
+    displayedImageSize !== undefined &&
+    viewportSize !== undefined &&
+    (displayedImageSize.width > viewportSize.width ||
+      displayedImageSize.height > viewportSize.height);
 
-  const fit = () => {
-    setZoom(100);
+  const changeZoom = (next: number) => {
     const scroll = scrollRef.current;
-    if (scroll === undefined || scroll === null) return;
-    if (typeof scroll.scrollTo === 'function') {
-      scroll.scrollTo({ left: 0, top: 0 });
+    zoomCenterRef.current =
+      scroll === null || displayedImageSize === undefined
+        ? { x: 0.5, y: 0.5 }
+        : {
+            x:
+              (scroll.scrollLeft + Math.min(scroll.clientWidth, displayedImageSize.width) / 2) /
+              displayedImageSize.width,
+            y:
+              (scroll.scrollTop + Math.min(scroll.clientHeight, displayedImageSize.height) / 2) /
+              displayedImageSize.height,
+          };
+    setZoom(next);
+  };
+
+  const displayedWidth = displayedImageSize?.width;
+  const displayedHeight = displayedImageSize?.height;
+  useLayoutEffect(() => {
+    const scroll = scrollRef.current;
+    const center = zoomCenterRef.current;
+    if (
+      scroll === null ||
+      center === undefined ||
+      displayedWidth === undefined ||
+      displayedHeight === undefined
+    )
+      return;
+    // A newly visible scrollbar can change the fit size during this zoom.
+    if (viewportSize?.width !== scroll.clientWidth || viewportSize.height !== scroll.clientHeight) {
+      setViewportSize({ width: scroll.clientWidth, height: scroll.clientHeight });
       return;
     }
+    scroll.scrollLeft = Math.max(0, center.x * displayedWidth - scroll.clientWidth / 2);
+    scroll.scrollTop = Math.max(0, center.y * displayedHeight - scroll.clientHeight / 2);
+    zoomCenterRef.current = undefined;
+  }, [displayedWidth, displayedHeight, viewportSize]);
+
+  const startPan = (event: PointerEvent<HTMLDivElement>) => {
+    const scroll = scrollRef.current;
+    if (
+      !canPan ||
+      scroll === null ||
+      event.button !== 0 ||
+      event.pointerType === 'touch' ||
+      panRef.current !== undefined
+    )
+      return;
+    event.preventDefault();
+    scroll.focus({ preventScroll: true });
+    event.currentTarget.setPointerCapture(event.pointerId);
+    panRef.current = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      left: scroll.scrollLeft,
+      top: scroll.scrollTop,
+    };
+    setPanning(true);
+  };
+
+  const movePan = (event: PointerEvent<HTMLDivElement>) => {
+    const scroll = scrollRef.current;
+    const pan = panRef.current;
+    if (scroll === null || pan === undefined || pan.pointerId !== event.pointerId) return;
+    scroll.scrollLeft = pan.left + pan.x - event.clientX;
+    scroll.scrollTop = pan.top + pan.y - event.clientY;
+  };
+
+  const endPan = (event: PointerEvent<HTMLDivElement>) => {
+    if (panRef.current?.pointerId !== event.pointerId) return;
+    panRef.current = undefined;
+    setPanning(false);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  const fit = () => {
+    zoomCenterRef.current = undefined;
+    setZoom(100);
+    const scroll = scrollRef.current;
+    if (scroll === null) return;
     scroll.scrollLeft = 0;
     scroll.scrollTop = 0;
   };
@@ -85,7 +184,7 @@ export function RoomMapViewport({
             aria-label="Zoom out"
             className="quiet-action action-compact"
             disabled={zoom <= minimumZoom}
-            onClick={() => setZoom((current) => Math.max(minimumZoom, current - zoomStep))}
+            onClick={() => changeZoom(Math.max(minimumZoom, zoom - zoomStep))}
             type="button"
           >
             −
@@ -97,7 +196,7 @@ export function RoomMapViewport({
             aria-label="Zoom in"
             className="quiet-action action-compact"
             disabled={zoom >= maximumZoom}
-            onClick={() => setZoom((current) => Math.min(maximumZoom, current + zoomStep))}
+            onClick={() => changeZoom(Math.min(maximumZoom, zoom + zoomStep))}
             type="button"
           >
             +
@@ -105,11 +204,27 @@ export function RoomMapViewport({
           {toolbarActions}
         </div>
       </header>
-      <div className="room-map-scroll" ref={scrollRef} tabIndex={0}>
-        <div className="room-map-image-stage">
+      <div
+        aria-label={`Pan map of ${title}`}
+        className="room-map-scroll"
+        ref={scrollRef}
+        role="region"
+        tabIndex={0}
+      >
+        <div
+          className="room-map-image-stage"
+          data-pannable={canPan || undefined}
+          data-panning={panning || undefined}
+          onLostPointerCapture={endPan}
+          onPointerCancel={endPan}
+          onPointerDown={startPan}
+          onPointerMove={movePan}
+          onPointerUp={endPan}
+        >
           <img
             alt={`Map of ${title}`}
             className="room-map-image"
+            draggable={false}
             onError={() => setImageFailed(true)}
             onLoad={(event) => {
               setImageSize({
@@ -118,7 +233,7 @@ export function RoomMapViewport({
               });
             }}
             src={asset.src}
-            {...(displayedImageStyle === undefined ? {} : { style: displayedImageStyle })}
+            {...(displayedImageSize === undefined ? {} : { style: displayedImageSize })}
           />
         </div>
       </div>
