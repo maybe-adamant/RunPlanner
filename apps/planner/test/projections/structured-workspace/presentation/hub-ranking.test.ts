@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   dropHubBoardRoom,
   moveHubBoardRoom,
+  replaceHubBoardVisit,
   reconcileHubBoardRanking,
 } from '@planner/projections/structured-workspace/presentation/hub-ranking';
 
@@ -61,7 +62,7 @@ describe('Hub ranked-board presentation', () => {
     ]);
   });
 
-  it('appends an incomplete cross-boundary move at the next dense position', () => {
+  it('does not let a tail arrow stand in for an explicit append', () => {
     const ranking = reconcileHubBoardRanking({
       authoredVisitOrder: ['combat01', 'combat02'],
       declarationOpenSlotKeys: ['combat01', 'combat02', 'combat03', 'combat05'],
@@ -71,16 +72,10 @@ describe('Hub ranked-board presentation', () => {
       slotKey: 'combat03',
     });
 
-    expect(result?.proposedVisitOrder).toEqual(['combat01', 'combat02', 'combat03']);
-    expect(result?.ranking.rankedSlotKeys).toEqual([
-      'combat01',
-      'combat02',
-      'combat03',
-      'combat05',
-    ]);
+    expect(result).toBeUndefined();
   });
 
-  it('replaces the sixth visit with the first tail room through one full proposal', () => {
+  it('replaces one named full-prefix visit through one complete proposal', () => {
     const ranking = reconcileHubBoardRanking({
       authoredVisitOrder: ['combat01', 'combat02', 'combat03', 'combat05', 'combat09', 'combat10'],
       declarationOpenSlotKeys: [
@@ -94,10 +89,7 @@ describe('Hub ranked-board presentation', () => {
         'combat23',
       ],
     });
-    const result = moveHubBoardRoom(ranking, 6, {
-      kind: 'moveEarlier',
-      slotKey: 'combat11',
-    });
+    const result = replaceHubBoardVisit(ranking, 6, 'combat11', 'combat10');
 
     expect(result?.proposedVisitOrder).toEqual([
       'combat01',
@@ -119,7 +111,7 @@ describe('Hub ranked-board presentation', () => {
     ]);
   });
 
-  it('removes a full-prefix visit by promoting the first tail room', () => {
+  it('removes a full-prefix visit without promoting a tail room', () => {
     const ranking = reconcileHubBoardRanking({
       authoredVisitOrder: ['combat01', 'combat02', 'combat03', 'combat05', 'combat09', 'combat10'],
       declarationOpenSlotKeys: [
@@ -144,7 +136,6 @@ describe('Hub ranked-board presentation', () => {
       'combat05',
       'combat09',
       'combat10',
-      'combat11',
     ]);
     expect(result?.ranking.rankedSlotKeys).toEqual([
       'combat01',
@@ -152,8 +143,8 @@ describe('Hub ranked-board presentation', () => {
       'combat05',
       'combat09',
       'combat10',
-      'combat11',
       'combat03',
+      'combat11',
       'combat23',
     ]);
   });
@@ -200,7 +191,7 @@ describe('Hub ranked-board presentation', () => {
     ]);
   });
 
-  it('adds a remaining room to a full prefix by moving the prior final visit to the tail', () => {
+  it('requires named replacement instead of adding to a full prefix', () => {
     const ranking = reconcileHubBoardRanking({
       authoredVisitOrder: ['combat01', 'combat02', 'combat03', 'combat05', 'combat09', 'combat10'],
       declarationOpenSlotKeys: [
@@ -219,15 +210,7 @@ describe('Hub ranked-board presentation', () => {
       slotKey: 'combat23',
     });
 
-    expect(result?.proposedVisitOrder).toEqual([
-      'combat01',
-      'combat02',
-      'combat03',
-      'combat05',
-      'combat09',
-      'combat23',
-    ]);
-    expect(result?.ranking.tailSlotKeys).toEqual(['combat10', 'combat11']);
+    expect(result).toBeUndefined();
   });
 
   it('reorders a full authored prefix through a slot drop', () => {
@@ -288,7 +271,7 @@ describe('Hub ranked-board presentation', () => {
     ]);
   });
 
-  it('inserts a tail room into a full prefix and displaces its final member', () => {
+  it('rejects a tail-to-prefix drop even when the prefix is full', () => {
     const ranking = reconcileHubBoardRanking({
       authoredVisitOrder: ['combat01', 'combat02', 'combat03'],
       declarationOpenSlotKeys: ['combat01', 'combat02', 'combat03', 'combat05', 'combat09'],
@@ -299,17 +282,10 @@ describe('Hub ranked-board presentation', () => {
       slotKey: 'combat02',
     });
 
-    expect(result?.proposedVisitOrder).toEqual(['combat01', 'combat09', 'combat02']);
-    expect(result?.ranking.rankedSlotKeys).toEqual([
-      'combat01',
-      'combat09',
-      'combat02',
-      'combat03',
-      'combat05',
-    ]);
+    expect(result).toBeUndefined();
   });
 
-  it('shortens a partial prefix when a prefix room moves into the tail', () => {
+  it('rejects a prefix-to-tail drop instead of treating it as removal', () => {
     const ranking = reconcileHubBoardRanking({
       authoredVisitOrder: ['combat01', 'combat02', 'combat03'],
       declarationOpenSlotKeys: ['combat01', 'combat02', 'combat03', 'combat05', 'combat09'],
@@ -320,17 +296,10 @@ describe('Hub ranked-board presentation', () => {
       slotKey: 'combat05',
     });
 
-    expect(result?.proposedVisitOrder).toEqual(['combat01', 'combat03']);
-    expect(result?.ranking.rankedSlotKeys).toEqual([
-      'combat01',
-      'combat03',
-      'combat05',
-      'combat02',
-      'combat09',
-    ]);
+    expect(result).toBeUndefined();
   });
 
-  it('promotes the first tail room when a full-prefix room drops after a tail room', () => {
+  it('rejects a full-prefix drop into the tail instead of promoting it', () => {
     const ranking = reconcileHubBoardRanking({
       authoredVisitOrder: ['combat01', 'combat02', 'combat03', 'combat05', 'combat09', 'combat10'],
       declarationOpenSlotKeys: [
@@ -350,24 +319,7 @@ describe('Hub ranked-board presentation', () => {
       slotKey: 'combat11',
     });
 
-    expect(result?.proposedVisitOrder).toEqual([
-      'combat01',
-      'combat02',
-      'combat05',
-      'combat09',
-      'combat10',
-      'combat11',
-    ]);
-    expect(result?.ranking.rankedSlotKeys).toEqual([
-      'combat01',
-      'combat02',
-      'combat05',
-      'combat09',
-      'combat10',
-      'combat11',
-      'combat03',
-      'combat23',
-    ]);
+    expect(result).toBeUndefined();
   });
 
   it('rejects same, unknown, and partial direct tail-to-prefix drops', () => {

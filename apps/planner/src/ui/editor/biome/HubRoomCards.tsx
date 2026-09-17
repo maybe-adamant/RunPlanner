@@ -31,11 +31,16 @@ export function OpenHubRoomCard({
   pointerDragging,
   ranking,
   requiredVisitCount,
+  sequenceLocked = false,
+  slotsByKey,
   visitOrderInteraction,
   visitMarker,
   slot,
   showMembership = true,
   showOrder = true,
+  activeReplacementSlotKey,
+  replacementOpen = false,
+  onReplacementOpenChange,
 }: {
   readonly dropAfter: HubRosterDropState | undefined;
   readonly dropBefore: HubRosterDropState | undefined;
@@ -54,11 +59,16 @@ export function OpenHubRoomCard({
   readonly pointerDragging: boolean;
   readonly ranking: HubBoardRanking;
   readonly requiredVisitCount: number;
+  readonly sequenceLocked?: boolean;
+  readonly slotsByKey: ReadonlyMap<string, WorkspaceHubSlot>;
   readonly slot: WorkspaceHubSlot;
   readonly visitMarker?: WorkspaceMarker;
   readonly visitOrderInteraction: WorkspaceHubVisitOrderInteraction;
   readonly showMembership?: boolean;
   readonly showOrder?: boolean;
+  readonly activeReplacementSlotKey?: string | undefined;
+  readonly replacementOpen?: boolean;
+  readonly onReplacementOpenChange?: (open: boolean) => void;
 }) {
   const findingTarget = useFindingTarget();
   const visitTarget =
@@ -132,7 +142,9 @@ export function OpenHubRoomCard({
             data-hub-roster-drag-handle
             data-hub-roster-region="drag-handle"
             data-dragging={pointerDragging || undefined}
-            onPointerDown={(event) => onPointerDragStarted(event, slot.hubSlotKey)}
+            onPointerDown={(event) => {
+              if (!sequenceLocked) onPointerDragStarted(event, slot.hubSlotKey);
+            }}
           >
             ⠿
           </span>
@@ -172,11 +184,16 @@ export function OpenHubRoomCard({
         )}
         {!showOrder || onRankMove === undefined ? null : (
           <HubRoomOrderControls
+            activeReplacementSlotKey={activeReplacementSlotKey}
             interaction={visitOrderInteraction}
             onApplied={onRankMove}
             ranking={ranking}
             requiredVisitCount={requiredVisitCount}
             slot={slot}
+            slotsByKey={slotsByKey}
+            locked={sequenceLocked}
+            {...(onReplacementOpenChange === undefined ? {} : { onReplacementOpenChange })}
+            replacementOpen={replacementOpen}
           />
         )}
       </div>

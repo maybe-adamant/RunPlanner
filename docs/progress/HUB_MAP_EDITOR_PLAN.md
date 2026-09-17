@@ -4,7 +4,19 @@
 
 Status: Gate A is complete and user-approved, including the follow-up panel,
 opening-popover, and Hub-entry readiness/finding-navigation corrections.
-Independent review and focused validation passed. Gates B and C have not started.
+Independent review and focused validation passed. Gate A is committed as
+`41915681`. Gate B's user-requested revision is implemented: direct destination
+menus replace the Map strip, visited marker fill is explicit, and sequence
+editing uses Hub-wide readiness. The five focused suites passed (45 tests),
+along with planner type checking and touched-file lint/format checks. Browser
+checks cover an incomplete first room, later-visit moves in both directions,
+removal, Undo, List agreement, locked pre-Hub edits, and narrow popup focus.
+Independent revision review passed after a keyboard-focus correction, verified
+in the existing UI witness and native browser. The user-approved checkpoint also
+includes one-step Reset visits, its toolbar placement, and foreground click-through
+visit badges. Follow-up focused tests, static checks, and browser checks passed.
+Timeline List retirement is the next separately scoped change; Gate C's complete
+repository gate and documentation closure have not started.
 
 Planning base: `7d42d084` (`feat(planner): support dragging zoomed room maps`).
 The unrelated Room Capture progress document is outside this change.
@@ -109,21 +121,27 @@ change those unrelated consumers or globally change their semantics.
 - Show annotations for open rooms only, including open but unvisited rooms.
   Closed-room annotations disappear; the underlying map does not change shape.
 - Keep room identity inside the circle. Show `Visit 1`, etc. as a distinct badge,
-  never replace room 12's identity with its chronological rank.
-- A compact strip shows the authored prefix and the next empty visit position:
-  `1 · Combat 12 → 2 · Story → [+ Next visit]`. Capacity comes from the existing
-  workspace product (currently six), not a second limit declaration.
+  never replace room 12's identity with its chronological rank. Visited markers
+  are solid; unvisited markers are translucent, not disabled. Category color
+  retains its existing meaning. The Map has no separate sequence strip.
+  Capacity comes from the existing workspace product (currently six), not a
+  second limit declaration.
 - Clicking an unvisited room appends it at the next position when space remains.
   At capacity, it opens an explicit chooser naming each visit to replace. Merely
   opening/canceling that chooser changes nothing. Replacement keeps that visit's
   position and returns the displaced room to the unvisited open set.
-- Clicking a visited marker opens Move earlier, Move later, and Remove from
-  visits. Movement stays within the authored prefix; its endpoints disable the
-  unavailable direction. Removal shortens the prefix and compacts later visits,
-  without closing the room or promoting any unvisited room.
-- The strip supports reordering existing visits with drag and keyboard actions.
-  Moving C first in `A → B → C` yields `C → A → B`, not a duplicate rank. Selecting
-  a strip entry highlights its door; it does not navigate the rail.
+- A Timeline-only Reset visits button in the right-aligned view toolbar, before
+  List | Map and with a subtle red border, clears the sequence with one undoable
+  empty-prefix proposal. It preserves open rooms
+  and their rewards, uses existing engine-owned handoff cleanup, and requires
+  no confirmation. Disable it when empty or when Hub editing is locked. The
+  author can then click unvisited markers to rebuild the sequence in order.
+- Clicking a visited marker opens Remove visit and Move to each other position
+  in the authored prefix. Moving C first in `A → B → C` yields `C → A → B`:
+  intervening visits shift, not swap. No gaps or duplicate ranks are introduced.
+  Removal shortens the prefix and compacts later visits without closing the
+  room or promoting any unvisited room. Both marker menus support keyboard
+  activation and never navigate the rail.
 - Keep the List layout, but give equivalent named Hub actions the same explicit
   append/remove/reorder/replace behavior. At capacity, adding a remaining room
   requires choosing the replaced visit in either view. Do not retain a hidden
@@ -148,12 +166,16 @@ change those unrelated consumers or globally change their semantics.
 - Apply readiness at every activation root: marker, badge, keyboard action and
   popover control. Viewing, panning and switching views remain available while
   authoring is locked. Never use missing evaluation to hide retained authorship.
+  Visit-order editing uses the Hub-decision interaction's readiness in both
+  views, not the readiness of each visited occurrence. Incomplete room content
+  cannot prevent rearranging the Hub sequence; an incomplete prerequisite before
+  the Hub still locks its edits. Exact visit finding targets remain distinct.
 - Use accessible buttons and existing popover primitives. One active popover,
   collision-aware positioning, keyboard access and Escape/focus return suffice;
   no persistent per-door popup machinery or collision-solving framework.
 - Background drag pans; marker/control interaction does not start a viewport
   drag. A drag or canceled pointer sequence must never open a room or append a
-  visit. Reordering the strip and panning the image have separate gesture owners.
+  visit. List roster dragging remains separate from Map panning.
 - Edits preserve map position. If a selected door disappears through Undo/close,
   discard only that transient selection and return focus to an existing local
   control. Mode/tab changes close obsolete popovers without changing authorship.
@@ -229,8 +251,8 @@ Visually verify dense clusters and marker alignment at Fit and zoom.
 
 ### B — Map Timeline and explicit shared Hub sequence actions
 
-Deliver the open-only layer, visit badges, compact strip, append/reorder/remove,
-and explicit full-sequence replacement. Adapt List actions to the same Hub
+Deliver the open-only layer, visit badges, direct position menus,
+append/reorder/remove, and explicit full-sequence replacement. Adapt List actions to the same Hub
 proposals. Keep generic ranked-prefix behavior for room actions unchanged; share
 only applicable ordering and drag primitives, not implicit tail substitutions.
 Finish mode/finding/focus continuity across both tabs.
@@ -246,7 +268,10 @@ prefix does not substitute a tail room; explicit replacement names and replaces
 the chosen visit only; cancellation does not edit; closed rooms cannot be visited;
 List and Map display the same result after switching/Undo. Use an existing
 completed-Hub fixture to verify removal's real engine handoff cleanup and Undo
-without recreating that policy in an application helper.
+without recreating that policy in an application helper. A real incomplete
+first-visit fixture must still allow editing later visits through the Hub-owned
+sequence interaction, while the later room's interior remains locked. Preserve
+the witness that an incomplete pre-Hub prerequisite locks sequence edits.
 
 ### C — Product review and closure
 
@@ -257,7 +282,7 @@ or duplicated engine policy matrix for this presentation work.
 
 Perform real-browser checks at desktop and narrow widths: nearest marker pairs,
 long reward labels, edge popovers, keyboard/Escape, pan versus click, zoomed hit
-testing, strip wrapping and pointer cancellation. Verify Fields and ordinary
+testing, destination menus and pointer cancellation. Verify Fields and ordinary
 map dialogs remain usable. User visual review is part of acceptance; don't
 claim it from jsdom dimensions alone.
 
