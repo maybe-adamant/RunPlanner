@@ -264,6 +264,11 @@ export type AuthoredNemesisRandomEventOutcome =
     }
   | { readonly kind: 'damageContest'; readonly result: 'success' | 'failure' };
 
+/** Sparse explicit encounter decisions. Omission is the declaration's native Default. */
+export type AuthoredEncounterCustomization =
+  | { readonly kind: 'single'; readonly choiceKey: string }
+  | { readonly kind: 'orderedPrefix'; readonly choiceKeys: readonly string[] };
+
 export type SideRoomGeneration = 'generated' | 'notGenerated';
 
 /**
@@ -295,6 +300,10 @@ export interface RoomEncounterState {
   /** Sparse phase-owned event detail; null is unresolved. */
   readonly nemesisRandomEventByPhase?: Readonly<
     Record<string, AuthoredNemesisRandomEventOutcome | null>
+  >;
+  /** Sparse explicit decisions keyed by stable phase and declaration decision key. */
+  readonly customizationByPhase?: Readonly<
+    Record<string, Readonly<Record<string, AuthoredEncounterCustomization>>>
   >;
 }
 

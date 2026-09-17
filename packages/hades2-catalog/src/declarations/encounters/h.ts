@@ -104,6 +104,50 @@ export const hEncounterDefinitions = [
     kind: 'boss',
     countsEncounterDepth: false,
     blocksGorgon: true,
+    customization: [
+      {
+        key: 'howl',
+        label: 'Howl summons',
+        selection: {
+          kind: 'single',
+          choices: [
+            {
+              key: 'smallShades',
+              label: 'Small corrupted shades',
+              nativeId: 'InfestedCerberusHowlSummonShadeSmall',
+            },
+            {
+              key: 'mediumShades',
+              label: 'Medium corrupted shades',
+              nativeId: 'InfestedCerberusHowlSummonShadeMedium',
+            },
+            {
+              key: 'largeShades',
+              label: 'Large corrupted shades',
+              nativeId: 'InfestedCerberusHowlSummonShadeLarge',
+            },
+          ],
+        },
+      },
+      {
+        key: 'burrow',
+        label: 'Burrow intermission',
+        selection: {
+          kind: 'single',
+          choices: [
+            { key: 'lamias', label: 'Elite Lamias', nativeId: 'CerberusSpawns01' },
+            { key: 'lycaons', label: 'Elite Lycaons', nativeId: 'CerberusSpawns02' },
+            { key: 'mourners', label: 'Elite Mourners', nativeId: 'CerberusSpawns03' },
+            { key: 'holehearts', label: 'Elite Holehearts', nativeId: 'CerberusSpawns04' },
+            {
+              key: 'blightShadesAndFog',
+              label: 'Elite Blight-Shades and fog',
+              nativeId: 'CerberusSpawns05',
+            },
+          ],
+        },
+      },
+    ],
   },
   {
     key: 'BossInfestedCerberus02',
@@ -111,6 +155,49 @@ export const hEncounterDefinitions = [
     kind: 'boss',
     countsEncounterDepth: false,
     blocksGorgon: true,
+    customization: [
+      {
+        key: 'howl',
+        label: 'Howl summons',
+        selection: {
+          kind: 'single',
+          choices: [
+            {
+              key: 'smallShades',
+              label: 'Elite small corrupted shades',
+              nativeId: 'InfestedCerberusHowlSummonShadeSmallElite',
+            },
+            {
+              key: 'mediumShades',
+              label: 'Elite medium corrupted shades',
+              nativeId: 'InfestedCerberusHowlSummonShadeMediumElite',
+            },
+            {
+              key: 'largeShades',
+              label: 'Elite large corrupted shades',
+              nativeId: 'InfestedCerberusHowlSummonShadeLargeElite',
+            },
+          ],
+        },
+      },
+      {
+        key: 'burrow',
+        label: 'Burrow intermission',
+        selection: {
+          kind: 'single',
+          choices: [
+            { key: 'burnFlingers', label: 'Elite Burn-Flingers', nativeId: 'CerberusEMSpawns01' },
+            { key: 'waveMakers', label: 'Elite Wave-Makers', nativeId: 'CerberusEMSpawns02' },
+            {
+              key: 'infernoBombers',
+              label: 'Elite Inferno-Bombers',
+              nativeId: 'CerberusEMSpawns03',
+            },
+            { key: 'slamDancers', label: 'Elite Slam-Dancers', nativeId: 'CerberusEMSpawns04' },
+          ],
+        },
+      },
+    ],
   },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 

@@ -8,6 +8,11 @@ import {
   directEncounterDefinitionKeyForSlot,
   encounterSetForBinding,
 } from './encounter-envelope';
+import {
+  customizationDecisionOwned,
+  customizationValueKnown,
+  encounterCustomizationDeclarations,
+} from './encounter-customization';
 
 export function reconcileRoomEncounterState(
   catalog: Catalog,
@@ -77,6 +82,10 @@ export function reconcileRoomEncounterState(
           });
   }
   const traitOffersByPhase: Record<string, Record<string, AuthoredTraitOffer | null>> = {};
+  const customizationByPhase: Record<
+    string,
+    Record<string, import('../model').AuthoredEncounterCustomization>
+  > = {};
   for (const binding of replacementBindings.values()) {
     const selected = directEncounterDefinitionKeyForSlot(
       catalog,
@@ -120,6 +129,20 @@ export function reconcileRoomEncounterState(
       phaseOffers[selected] = null;
     if (Object.keys(phaseOffers).length > 0) traitOffersByPhase[binding.slotKey] = phaseOffers;
   }
+  for (const binding of replacementBindings.values()) {
+    const prior = previous.customizationByPhase?.[binding.slotKey];
+    if (prior === undefined) continue;
+    const declarations = encounterCustomizationDeclarations(catalog, replacementRoom, binding);
+    const retained: Record<string, import('../model').AuthoredEncounterCustomization> = {};
+    for (const [decisionKey, value] of Object.entries(prior)) {
+      if (
+        customizationDecisionOwned(declarations.active, decisionKey) &&
+        customizationValueKnown(declarations.structural, decisionKey, value)
+      )
+        retained[decisionKey] = value;
+    }
+    if (Object.keys(retained).length > 0) customizationByPhase[binding.slotKey] = retained;
+  }
   return Object.freeze({
     encounterKeyByPhase: Object.freeze(selections),
     figLeafSkipByPhase: Object.freeze(figLeafSkipByPhase),
@@ -127,5 +150,8 @@ export function reconcileRoomEncounterState(
     ...(Object.keys(traitOffersByPhase).length === 0
       ? {}
       : { traitOffersByPhase: Object.freeze(traitOffersByPhase) }),
+    ...(Object.keys(customizationByPhase).length === 0
+      ? {}
+      : { customizationByPhase: Object.freeze(customizationByPhase) }),
   });
 }

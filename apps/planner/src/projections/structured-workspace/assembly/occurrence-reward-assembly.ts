@@ -784,26 +784,37 @@ export function activeEncounterPhasesForOwner(
         : authoredGorgonResult;
     const retainedGorgon =
       gorgonResult?.athenaTriggerConditionMet === true || gorgonResult?.athenaOffer !== undefined;
-    const fixedPhase = domain.declaredEncounterKeys.length === 1;
     const fieldsPassive =
       room.mode.kind === 'authored' &&
       room.mode.templateKey === 'FieldsCombat' &&
       domain.slotKey === 'Passive';
     const customizable = domain.declaredEncounterKeys.length > 1 && !fieldsPassive;
-    const fixedHasTraitOffer =
-      fixedPhase &&
-      input.catalog.encounterDefinitions.byKey[domain.selectedEncounterDefinitionKey ?? '']
-        ?.traitOfferProducer !== undefined;
-    if (
-      fixedPhase &&
-      figLeafSupport === undefined &&
-      !authoredFigLeafSkip &&
-      !fixedHasTraitOffer &&
-      !gorgonSupported &&
-      !retainedGorgon &&
-      !fieldsPassive
-    )
-      continue;
+    const selectedDefinition =
+      input.catalog.encounterDefinitions.byKey[domain.selectedEncounterDefinitionKey ?? ''];
+    const customization =
+      domain.customization === undefined
+        ? undefined
+        : Object.freeze(
+            domain.customization.map((decision) => {
+              return Object.freeze({
+                key: decision.key,
+                label: decision.label,
+                selection: Object.freeze({
+                  ...decision.selection,
+                  choices: Object.freeze(
+                    decision.selection.choices.map((choice) =>
+                      Object.freeze({ key: choice.key, label: choice.label }),
+                    ),
+                  ),
+                }),
+                valueSupported: decision.valueSupported,
+                ...(decision.value === undefined ? {} : { value: decision.value }),
+                ...(decision.retainedChoiceLabels === undefined
+                  ? {}
+                  : { retainedChoiceLabels: decision.retainedChoiceLabels }),
+              });
+            }),
+          );
     const candidateChoices = Object.freeze(
       domain.choices.map((choice) =>
         Object.freeze({
@@ -815,8 +826,6 @@ export function activeEncounterPhasesForOwner(
         }),
       ),
     );
-    const selectedDefinition =
-      input.catalog.encounterDefinitions.byKey[domain.selectedEncounterDefinitionKey ?? ''];
     const selectedChoice = domain.choices.find(
       (choice) => choice.key === domain.selectedEncounterKey,
     )!;
@@ -992,6 +1001,7 @@ export function activeEncounterPhasesForOwner(
         address,
         candidateChoices,
         customizable,
+        ...(customization === undefined ? {} : { customization }),
         label:
           room.encounterEnvelopeKey === 'PEncounter'
             ? domain.slotKey === 'Intro'

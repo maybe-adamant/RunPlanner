@@ -16,7 +16,8 @@ function encounterPhaseInteractionRequirement(
       phase.nemesisFeature !== undefined ||
       phase.nemesisEvent !== undefined ||
       phase.figLeaf !== undefined ||
-      phase.gorgonCondition !== undefined,
+      phase.gorgonCondition !== undefined ||
+      phase.customization !== undefined,
   );
   if (interactivePhases.length === 0) return undefined;
   return Object.freeze({
@@ -29,6 +30,7 @@ function encounterPhaseInteractionRequirement(
           owner: phase.address,
           selectedEncounterKey: phase.selectedEncounter.key,
           selectionEnabled: phase.customizable,
+          ...(phase.customization === undefined ? {} : { customization: phase.customization }),
           ...(phase.nemesisFeature === undefined ? {} : { nemesisFeature: phase.nemesisFeature }),
           ...(phase.nemesisEvent === undefined ? {} : { nemesisEvent: phase.nemesisEvent }),
           ...(phase.figLeaf === undefined

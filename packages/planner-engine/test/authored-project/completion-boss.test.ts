@@ -5,6 +5,7 @@ import {
   applyProjectCommand,
   applyProjectHistoryCommand,
   createBiomeAddress,
+  createEncounterPhaseAddress,
   createExitDecisionAddress,
   createOccurrenceId,
   createProjectDocument,
@@ -74,6 +75,55 @@ describe('completion Boss variants', () => {
     });
     const lowered = undoProjectHistory(raised);
     expect(lowered.present).toBe(initial);
+  });
+
+  it('retains a same-family Rival customization through a normal variant and project round-trip', () => {
+    let project = applyProjectCommand(loadUnderworldFGProject(), catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      vowKey: 'BossDifficultyShrineUpgrade',
+      rank: 2,
+    });
+    const rival = project
+      .route!.biomes.find((biome) => biome.biomeKey === 'G')!
+      .topology!.occurrences.find((occurrence) => occurrence.gameName === 'G_Boss02');
+    if (rival === undefined) throw new Error('rank-two Scylla Boss occurrence is missing');
+    const phase = createEncounterPhaseAddress(
+      createBiomeAddress('Underworld', 'G'),
+      { kind: 'occurrence', occurrenceId: rival.occurrenceId },
+      'Encounter',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase,
+      decisionKey: 'featuredPerformer',
+      value: { kind: 'single', choiceKey: 'charybdis' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      vowKey: 'BossDifficultyShrineUpgrade',
+      rank: 1,
+    });
+
+    const normal = project
+      .route!.biomes.find((biome) => biome.biomeKey === 'G')!
+      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === rival.occurrenceId);
+    expect(normal).toMatchObject({ gameName: 'G_Boss01' });
+    expect(normal?.encounters.customizationByPhase).toEqual({
+      Encounter: { featuredPerformer: { kind: 'single', choiceKey: 'charybdis' } },
+    });
+
+    const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
+    expect(decoded).toEqual(project);
+    expect(() =>
+      applyProjectCommand(decoded, catalog, {
+        kind: 'ReplaceEncounterCustomization',
+        phase,
+        decisionKey: 'hecateInterlude',
+        value: { kind: 'single', choiceKey: 'sorceress' },
+      }),
+    ).toThrow(/not a declared customization/);
   });
 
   it('keeps the route-selected Tartarus Preboss out of alternative selection', () => {

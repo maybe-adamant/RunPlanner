@@ -316,6 +316,7 @@ export {
   type AuthoredAnvilResult,
   type AuthoredNemesisRandomEventKind,
   type AuthoredNemesisRandomEventOutcome,
+  type AuthoredEncounterCustomization,
   type AcquisitionDisposition,
   type TraitOffersByAcquisitionRole,
   type AuthoredRoutePlan,

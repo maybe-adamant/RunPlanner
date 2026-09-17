@@ -13,6 +13,7 @@ export type {
 } from './contracts/features';
 export type {
   WorkspaceEncounterInteraction,
+  WorkspaceEncounterCustomizationInteraction,
   WorkspaceEncounterPhase,
   WorkspaceFieldsCageDescriptor,
   WorkspaceFieldsCageOutcomeInteraction,
@@ -128,6 +129,7 @@ import type {
   WorkspaceZagreusSpawnInteraction,
 } from './contracts/features';
 import type {
+  WorkspaceEncounterCustomizationInteraction,
   WorkspaceEncounterInteraction,
   WorkspaceEncounterPhase,
   WorkspaceFieldsCageOutcomeInteraction,
@@ -320,6 +322,7 @@ export interface WorkspaceInteractionCatalog {
   readonly zagreusSpawns: ReadonlyMap<string, WorkspaceZagreusSpawnInteraction>;
   readonly batchRewardStores: ReadonlyMap<string, WorkspaceBatchRewardStoreInteraction>;
   readonly encounterPhases: ReadonlyMap<string, WorkspaceEncounterInteraction>;
+  readonly encounterCustomizations: ReadonlyMap<string, WorkspaceEncounterCustomizationInteraction>;
   readonly nemesisEvents: ReadonlyMap<string, WorkspaceNemesisEventInteraction>;
   readonly nemesisFeatures: ReadonlyMap<string, WorkspaceNemesisFeatureInteraction>;
   readonly figLeafSkips: ReadonlyMap<string, WorkspaceFigLeafInteraction>;

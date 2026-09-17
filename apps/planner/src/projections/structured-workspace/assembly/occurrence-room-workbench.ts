@@ -16,23 +16,6 @@ import type {
 } from '../contracts/timeline';
 import type { WorkspaceRoomFeature } from '../contracts/features';
 
-function presentedEncounterPhases(
-  encounterPhases: readonly WorkspaceEncounterPhase[],
-): readonly WorkspaceEncounterPhase[] {
-  return Object.freeze(
-    encounterPhases.filter(
-      (phase) =>
-        phase.address.phaseKey === 'Passive' ||
-        phase.customizable ||
-        phase.marker.findingCount > 0 ||
-        phase.traitOffer !== undefined ||
-        phase.figLeaf !== undefined ||
-        phase.gorgonCondition !== undefined ||
-        phase.gorgonAthena !== undefined,
-    ),
-  );
-}
-
 function shipWorkbenchPresentation(
   encounterPhases: readonly WorkspaceEncounterPhase[],
   features: readonly WorkspaceRoomFeature[],
@@ -189,18 +172,17 @@ export function roomWorkbenchPresentation(
   roomLocal: WorkspaceRoomLocal,
   roomActions: WorkspaceRoomActions | undefined,
 ): WorkspaceRoomWorkbenchPresentation {
-  const presented = presentedEncounterPhases(encounterPhases);
   switch (roomLocal.kind) {
     case 'fields':
       return Object.freeze({
-        encounterPhases: presented,
+        encounterPhases,
         features,
         fields: roomLocal,
         kind: 'fields' as const,
         ...(roomActions === undefined ? {} : { roomActions }),
       });
     case 'ship':
-      return shipWorkbenchPresentation(presented, features, roomLocal, roomActions);
+      return shipWorkbenchPresentation(encounterPhases, features, roomLocal, roomActions);
     case 'shop':
       return Object.freeze({
         features,
@@ -212,7 +194,7 @@ export function roomWorkbenchPresentation(
     case 'fixed':
     case 'incomingReward':
       return Object.freeze({
-        encounterPhases: presented,
+        encounterPhases,
         features,
         kind: 'standard' as const,
         ...(roomActions === undefined ? {} : { roomActions }),

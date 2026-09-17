@@ -75,6 +75,7 @@ export type WorkspaceOccurrenceInteractionRequirement =
         readonly owner: EncounterPhaseAddress;
         readonly selectedEncounterKey: string;
         readonly selectionEnabled: boolean;
+        readonly customization?: WorkspaceEncounterPhase['customization'];
         readonly nemesisFeature?: {
           readonly encounterKey: string;
           readonly selected: boolean;

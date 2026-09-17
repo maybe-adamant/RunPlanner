@@ -127,6 +127,32 @@ export const oEncounterDefinitions = [
     kind: 'boss',
     countsEncounterDepth: false,
     blocksGorgon: true,
+    customization: [
+      {
+        key: 'earlySummons',
+        label: 'Early summons',
+        selection: {
+          kind: 'orderedPrefix',
+          choices: [
+            { key: 'harpy', label: 'Harpy Talon', nativeId: 'ErisSummon01' },
+            { key: 'drunk', label: 'Boozer', nativeId: 'ErisSummon02' },
+          ],
+          maximumLength: 2,
+        },
+      },
+      {
+        key: 'lateSummons',
+        label: 'Late summons',
+        selection: {
+          kind: 'orderedPrefix',
+          choices: [
+            { key: 'stickler', label: 'Stickler', nativeId: 'ErisSummon03' },
+            { key: 'swab', label: 'Anchor', nativeId: 'ErisSummon04' },
+          ],
+          maximumLength: 2,
+        },
+      },
+    ],
   },
   {
     key: 'BossEris02',
@@ -134,6 +160,36 @@ export const oEncounterDefinitions = [
     kind: 'boss',
     countsEncounterDepth: false,
     blocksGorgon: true,
+    customization: [
+      {
+        key: 'earlySummons',
+        label: 'Early summons',
+        selection: {
+          kind: 'orderedPrefix',
+          choices: [
+            { key: 'harpy', label: 'Elite Harpy Talon', nativeId: 'ErisEMSummonHarpy' },
+            { key: 'swab', label: 'Elite Anchor', nativeId: 'ErisEMSummonSwab' },
+            { key: 'jellyfish', label: 'Hellifishie', nativeId: 'ErisEMSummonJellyfish' },
+            { key: 'turtle', label: 'Shellback', nativeId: 'ErisEMSummonTurtle' },
+          ],
+          maximumLength: 2,
+        },
+      },
+      {
+        key: 'lateSummons',
+        label: 'Late summons',
+        selection: {
+          kind: 'orderedPrefix',
+          choices: [
+            { key: 'fishmanRanged', label: 'Hippo', nativeId: 'ErisEMSummonFishmanRanged' },
+            { key: 'fishmanMelee', label: 'Lurker', nativeId: 'ErisEMSummonFishmanMelee' },
+            { key: 'fishSwarmer', label: 'Pinhead', nativeId: 'ErisEMSummonFishSwarmer' },
+            { key: 'automaton', label: 'Automaton', nativeId: 'ErisEMSummonAutomaton' },
+          ],
+          maximumLength: 2,
+        },
+      },
+    ],
   },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 

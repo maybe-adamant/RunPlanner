@@ -632,6 +632,7 @@ export function applyOccurrenceCommand(
     case 'SelectNemesisRandomEventFamily':
     case 'ReplaceNemesisRandomEventInteraction':
     case 'ReplaceFigLeafSkip':
+    case 'ReplaceEncounterCustomization':
     case 'ReplaceGorgonDeathDefianceCondition':
       return applyEncounterOccurrenceCommand(document, catalog, located, command);
   }

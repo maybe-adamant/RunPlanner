@@ -1,4 +1,5 @@
 import type {
+  AuthoredEncounterCustomization,
   AuthoredNemesisRandomEventKind,
   AuthoredNemesisRandomEventOutcome,
   EncounterPhaseAddress,
@@ -81,6 +82,18 @@ export interface WorkspaceEncounterInteraction {
   readonly nemesisEvent?: WorkspaceNemesisEventSelection;
   readonly owner: EncounterPhaseAddress;
   readonly selected: string;
+}
+
+/** One declared encounter decision bound to its exact phase owner. */
+export interface WorkspaceEncounterCustomizationInteraction {
+  readonly intentFor: (
+    decisionKey: string,
+    value: AuthoredEncounterCustomization | null,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceEncounterCustomization' }>
+  >;
+  readonly key: string;
+  readonly owner: EncounterPhaseAddress;
 }
 
 export interface WorkspaceNemesisEventSelection {
@@ -241,6 +254,24 @@ export interface WorkspaceEncounterPhase {
    * phase owners, but cannot create a meaningful encounter selection UI.
    */
   readonly customizable: boolean;
+  /** Concrete encounter-owned behavior decisions; absent means no customization capability. */
+  readonly customization?: readonly {
+    readonly key: string;
+    readonly label: string;
+    readonly selection:
+      | {
+          readonly kind: 'single';
+          readonly choices: readonly { readonly key: string; readonly label: string }[];
+        }
+      | {
+          readonly kind: 'orderedPrefix';
+          readonly choices: readonly { readonly key: string; readonly label: string }[];
+          readonly maximumLength: 2;
+        };
+    readonly value?: AuthoredEncounterCustomization;
+    readonly valueSupported: boolean;
+    readonly retainedChoiceLabels?: readonly { readonly key: string; readonly label: string }[];
+  }[];
   /** H Passive selection is presented by the room-feature control, not a second picker. */
   readonly nemesisFeature?: {
     readonly encounterKey: string;

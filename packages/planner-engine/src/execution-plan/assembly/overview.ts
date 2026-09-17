@@ -670,6 +670,72 @@ function executionFieldsLayout(
   });
 }
 
+type ResolvedEncounterCustomization = NonNullable<
+  NonNullable<CanonicalAuthoredRoom['structuralEncounterIdentities']>[number]['customization']
+>;
+
+function executionEncounterCustomization(
+  customization: ResolvedEncounterCustomization | undefined,
+  room: CanonicalAuthoredRoom,
+  slotKey: string,
+): ExecutionOverview['encounterPhases'][number]['customization'] | undefined {
+  if (customization === undefined) return undefined;
+  const published: NonNullable<
+    ExecutionOverview['encounterPhases'][number]['customization']
+  >[number][] = [];
+  for (const decision of customization) {
+    const value = decision.value;
+    if (value === undefined) continue;
+    if (!decision.valueSupported) {
+      throw new CompilerError(
+        'executionCoverageMissing',
+        `${room.gameName}.${slotKey}.${decision.key} is not valid for its resolved encounter`,
+      );
+    }
+    if (decision.selection.kind !== value.kind)
+      throw new CompilerError(
+        'executionCoverageMissing',
+        `${room.gameName}.${slotKey}.${decision.key} lost its declared selection shape`,
+      );
+    if (value.kind === 'single') {
+      const choice = decision.selection.choices.find(
+        (candidate) => candidate.key === value.choiceKey,
+      );
+      if (choice === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName}.${slotKey}.${decision.key} lost its declared choice`,
+        );
+      published.push(
+        Object.freeze({
+          decisionKey: decision.key,
+          kind: 'single',
+          choiceKey: choice.key,
+          nativeId: choice.nativeId,
+        }),
+      );
+      continue;
+    }
+    const choices = value.choiceKeys.map((choiceKey) => {
+      const choice = decision.selection.choices.find((candidate) => candidate.key === choiceKey);
+      if (choice === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName}.${slotKey}.${decision.key} lost its declared choice`,
+        );
+      return Object.freeze({ choiceKey: choice.key, nativeId: choice.nativeId });
+    });
+    published.push(
+      Object.freeze({
+        decisionKey: decision.key,
+        kind: 'orderedPrefix',
+        choices: Object.freeze(choices),
+      }),
+    );
+  }
+  return published.length === 0 ? undefined : Object.freeze(published);
+}
+
 /** Assemble the complete room-entry realization facts for one occurrence. */
 export function assembleExecutionOverview(
   room: CanonicalAuthoredRoom,
@@ -725,11 +791,17 @@ export function assembleExecutionOverview(
               candidate.supported &&
               semanticAddressKey(candidate.origin) === semanticAddressKey(phaseAddress),
           );
+          const structural = structuralIdentities.get(phase.slotKey);
+          const customization = executionEncounterCustomization(
+            structural?.customization,
+            room,
+            phase.slotKey,
+          );
           return Object.freeze({
             slotKey: phase.slotKey,
             encounterKey:
               recorded?.encounterKey ??
-              structuralIdentities.get(phase.slotKey)?.encounterKey ??
+              structural?.encounterKey ??
               (() => {
                 throw new CompilerError(
                   'executionCoverageMissing',
@@ -738,7 +810,7 @@ export function assembleExecutionOverview(
               })(),
             kind:
               recorded?.phaseKind ??
-              structuralIdentities.get(phase.slotKey)?.kind ??
+              structural?.kind ??
               (() => {
                 throw new CompilerError(
                   'executionCoverageMissing',
@@ -746,6 +818,7 @@ export function assembleExecutionOverview(
                 );
               })(),
             ...(figLeaf === undefined ? {} : { figLeafSkip: figLeaf.selected }),
+            ...(customization === undefined ? {} : { customization }),
           });
         })(),
       ),

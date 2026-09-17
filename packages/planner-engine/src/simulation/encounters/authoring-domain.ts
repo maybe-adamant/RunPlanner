@@ -1,5 +1,8 @@
 import type { Catalog, EncounterEnvelopeSlot, RoomDeclaration } from '../../catalog-schema';
-import type { RoomEncounterState } from '../../authored-project/model';
+import type {
+  AuthoredEncounterCustomization,
+  RoomEncounterState,
+} from '../../authored-project/model';
 import {
   createEncounterPhaseAddress,
   type EncounterPhaseAddress,
@@ -32,6 +35,15 @@ export interface EncounterPhaseAuthoringDomain {
     readonly directEncounterDefinitionKey?: string;
   }[];
   readonly defaultEncounterKey: string;
+  /** Concrete declaration domain for the current direct encounter identity. */
+  readonly customization?: readonly {
+    readonly key: string;
+    readonly label: string;
+    readonly selection: import('../../catalog-schema').EncounterCustomizationDecision['selection'];
+    readonly value?: AuthoredEncounterCustomization;
+    readonly valueSupported: boolean;
+    readonly retainedChoiceLabels?: readonly { readonly key: string; readonly label: string }[];
+  }[];
 }
 
 export type EncounterPhaseAuthoringOwner = EncounterPhaseAddress['owner'];
@@ -129,19 +141,69 @@ export function encounterPhaseAuthoringDomainForRoom(
         `${room.gameName}.${binding.slotKey} selected ${selectedEncounterKey} outside its declaration`,
       );
     }
+    const selectedEncounterDefinitionKey =
+      binding.kind === 'fixed'
+        ? binding.encounterDefinitionKey
+        : profiles.find((candidate) => candidate.key === selectedEncounterKey)!.resolution.kind ===
+            'direct'
+          ? (
+              profiles.find((candidate) => candidate.key === selectedEncounterKey)!
+                .resolution as Extract<
+                (typeof profiles)[number]['resolution'],
+                { readonly kind: 'direct' }
+              >
+            ).encounterDefinitionKey
+          : undefined;
+    const definition =
+      selectedEncounterDefinitionKey === undefined
+        ? undefined
+        : catalog.encounterDefinitions.byKey[selectedEncounterDefinitionKey];
+    const customization =
+      definition?.customization === undefined
+        ? undefined
+        : Object.freeze(
+            definition.customization.map((decision) => {
+              const value = encounters.customizationByPhase?.[binding.slotKey]?.[decision.key];
+              const valueSupported =
+                value === undefined ||
+                (value.kind === decision.selection.kind &&
+                  (value.kind === 'single'
+                    ? decision.selection.choices.some((choice) => choice.key === value.choiceKey)
+                    : decision.selection.kind === 'orderedPrefix' &&
+                      value.choiceKeys.length <= decision.selection.maximumLength &&
+                      new Set(value.choiceKeys).size === value.choiceKeys.length &&
+                      value.choiceKeys.every((choiceKey) =>
+                        decision.selection.choices.some((choice) => choice.key === choiceKey),
+                      )));
+              const retainedChoiceLabels =
+                value === undefined
+                  ? []
+                  : (value.kind === 'single' ? [value.choiceKey] : value.choiceKeys).flatMap(
+                      (choiceKey) => {
+                        const choice = catalog.encounterDefinitions.values
+                          .flatMap((candidate) => candidate.customization ?? [])
+                          .filter((candidate) => candidate.key === decision.key)
+                          .flatMap((candidate) => candidate.selection.choices)
+                          .find((candidate) => candidate.key === choiceKey);
+                        return choice === undefined
+                          ? []
+                          : [Object.freeze({ key: choiceKey, label: choice.label })];
+                      },
+                    );
+              return Object.freeze({
+                ...decision,
+                valueSupported,
+                ...(value === undefined ? {} : { value }),
+                ...(retainedChoiceLabels.length === 0 ? {} : { retainedChoiceLabels }),
+              });
+            }),
+          );
     domains.push(
       Object.freeze({
         origin: createEncounterPhaseAddress(biome, owner, binding.slotKey),
         slotKey: binding.slotKey,
         selectedEncounterKey,
-        ...(binding.kind === 'fixed'
-          ? { selectedEncounterDefinitionKey: binding.encounterDefinitionKey }
-          : (() => {
-              const profile = profiles.find((candidate) => candidate.key === selectedEncounterKey)!;
-              return profile.resolution.kind === 'direct'
-                ? { selectedEncounterDefinitionKey: profile.resolution.encounterDefinitionKey }
-                : {};
-            })()),
+        ...(selectedEncounterDefinitionKey === undefined ? {} : { selectedEncounterDefinitionKey }),
         selectedEncounterKind:
           binding.kind === 'fixed'
             ? catalog.encounterDefinitions.byKey[binding.encounterDefinitionKey]!.kind
@@ -172,6 +234,7 @@ export function encounterPhaseAuthoringDomainForRoom(
           binding.kind === 'fixed'
             ? binding.encounterDefinitionKey
             : encounterSetForBinding(catalog, binding, room.gameName).defaultAuthoringProfileKey,
+        ...(customization === undefined ? {} : { customization }),
       }),
     );
   }

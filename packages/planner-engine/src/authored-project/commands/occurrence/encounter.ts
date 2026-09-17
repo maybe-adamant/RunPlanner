@@ -1,6 +1,7 @@
 import type { Catalog, EncounterSlotBinding, RoomDeclaration } from '../../../catalog-schema';
 import type { EncounterPhaseAddress } from '../../addresses';
 import type {
+  AuthoredEncounterCustomization,
   AuthoredNemesisRandomEventKind,
   AuthoredNemesisRandomEventOutcome,
   ProjectDocument,
@@ -12,6 +13,11 @@ import {
   directEncounterDefinitionKeyForSlot,
   encounterSetForBinding,
 } from '../../room-state/encounter-envelope';
+import {
+  customizationDecisionOwned,
+  customizationValueKnown,
+  encounterCustomizationDeclarations,
+} from '../../room-state/encounter-customization';
 import {
   failCommand,
   requireOccurrence,
@@ -155,6 +161,7 @@ function updatedSelections(
 ): RoomEncounterState {
   if (
     command.kind === 'ReplaceFigLeafSkip' ||
+    command.kind === 'ReplaceEncounterCustomization' ||
     command.kind === 'ReplaceNemesisRandomEventInteraction' ||
     command.kind === 'ReplaceGorgonDeathDefianceCondition'
   )
@@ -233,6 +240,9 @@ function updatedSelections(
     gorgonResultByPhase: Object.freeze(gorgonResultByPhase),
     ...(traitOffersByPhase === undefined ? {} : { traitOffersByPhase }),
     ...(nemesisRandomEventByPhase === undefined ? {} : { nemesisRandomEventByPhase }),
+    ...(current.customizationByPhase === undefined
+      ? {}
+      : { customizationByPhase: current.customizationByPhase }),
   });
 }
 
@@ -373,6 +383,47 @@ function updatedFigLeafSkip(
   });
 }
 
+function updatedCustomization(
+  catalog: Catalog,
+  room: RoomDeclaration,
+  current: RoomEncounterState,
+  phase: EncounterPhaseAddress,
+  command: EncounterOccurrenceCommand,
+): RoomEncounterState {
+  if (command.kind !== 'ReplaceEncounterCustomization') return current;
+  const binding = encounterBindingsBySlot(catalog, room, room.gameName).get(phase.phaseKey);
+  if (binding === undefined)
+    failCommand(command, `${room.gameName} has no encounter phase ${phase.phaseKey}`);
+  const declarations = encounterCustomizationDeclarations(catalog, room, binding);
+  if (!customizationDecisionOwned(declarations.active, command.decisionKey))
+    failCommand(
+      command,
+      `${phase.phaseKey}.${command.decisionKey} is not a declared customization`,
+    );
+  const value = command.value;
+  if (
+    value !== null &&
+    !customizationValueKnown(declarations.structural, command.decisionKey, value)
+  )
+    failCommand(
+      command,
+      `${phase.phaseKey}.${command.decisionKey} is outside its declaration domain`,
+    );
+  const prior = current.customizationByPhase ?? {};
+  const phaseValues = { ...(prior[phase.phaseKey] ?? {}) };
+  if (value === null) delete phaseValues[command.decisionKey];
+  else phaseValues[command.decisionKey] = Object.freeze(value) as AuthoredEncounterCustomization;
+  const next = { ...prior };
+  if (Object.keys(phaseValues).length === 0) delete next[phase.phaseKey];
+  else next[phase.phaseKey] = Object.freeze(phaseValues);
+  const { customizationByPhase: priorCustomization, ...withoutCustomization } = current;
+  if (Object.keys(next).length === 0 && priorCustomization === undefined) return current;
+  return Object.freeze({
+    ...withoutCustomization,
+    ...(Object.keys(next).length === 0 ? {} : { customizationByPhase: Object.freeze(next) }),
+  });
+}
+
 function replaceTopLevel(
   document: ProjectDocument,
   catalog: Catalog,
@@ -389,7 +440,8 @@ function replaceTopLevel(
   const room = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
   const encounters = updatedSelections(catalog, room, occurrence.encounters, phase, command);
   const withFigLeaf = updatedFigLeafSkip(catalog, room, encounters, phase, command);
-  const withGorgon = updatedGorgonResult(catalog, room, withFigLeaf, phase, command);
+  const withCustomization = updatedCustomization(catalog, room, withFigLeaf, phase, command);
+  const withGorgon = updatedGorgonResult(catalog, room, withCustomization, phase, command);
   const withNemesis = updatedNemesisRandomEvent(catalog, room, withGorgon, phase, command);
   if (withNemesis === occurrence.encounters) return document;
   const withEventSite =

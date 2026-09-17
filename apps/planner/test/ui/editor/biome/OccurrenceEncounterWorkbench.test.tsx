@@ -22,7 +22,7 @@ import {
   roomActionKey,
 } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
-import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceOccurrenceWorkbenchNode } from '@planner/projections/structured-workspace';
@@ -89,6 +89,181 @@ afterEach(() => {
 });
 
 describe('OccurrenceEncounterWorkbench', () => {
+  it('edits a fixed Scylla phase in place and retains a now-invalid choice for finding repair', async () => {
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      vowKey: 'BossDifficultyShrineUpgrade',
+      rank: 2,
+    });
+    const boss = project.route.biomes
+      .find((biome) => biome.biomeKey === 'G')
+      ?.topology?.occurrences.find((occurrence) => occurrence.gameName === 'G_Boss02');
+    if (boss === undefined) throw new Error('rank-two Scylla Boss occurrence is missing');
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'G',
+      occurrenceById(boss.occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    const summary = screen.getByText('Scylla');
+    const control = summary.closest('.encounter-phase-control');
+    if (!(control instanceof HTMLElement)) throw new Error('Scylla encounter control is missing');
+    expect(within(control).getByText('Encounter', { selector: 'span' })).toBeTruthy();
+    expect(within(control).queryByRole('button', { name: 'Encounter' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Customize' })).toBeNull();
+    expect(document.querySelector('dialog.trait-offer-dialog-backdrop')).toBeNull();
+    await view.user.click(within(control).getByRole('button', { name: 'Customize encounter' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    expect(within(dialog).getByRole('heading', { level: 2, name: 'Customize' })).toBeTruthy();
+    await view.user.selectOptions(
+      within(dialog).getByRole('combobox', { name: 'Featured performer' }),
+      'charybdis',
+    );
+    await waitFor(() => {
+      const occurrence = view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'G')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === boss.occurrenceId);
+      expect(occurrence?.encounters.customizationByPhase?.Encounter?.featuredPerformer).toEqual({
+        kind: 'single',
+        choiceKey: 'charybdis',
+      });
+    });
+    await view.user.click(
+      within(dialog).getByRole('button', { name: 'Close encounter customization' }),
+    );
+    expect(screen.queryByRole('dialog', { name: 'Customize' })).toBeNull();
+    expect(dialog.isConnected).toBe(false);
+    await view.user.click(within(control).getByRole('button', { name: 'Customize encounter' }));
+    const reopened = await screen.findByRole('dialog', { name: 'Customize' });
+    fireEvent(reopened, new Event('cancel', { cancelable: true }));
+    expect(reopened.isConnected).toBe(false);
+    view.application.store.dispatch(authoredProjectUndoRequested());
+    view.application.store.dispatch(authoredProjectRedoRequested());
+  });
+
+  it('routes a reached retained Scylla finding to the manual popup trigger', async () => {
+    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      vowKey: 'BossDifficultyShrineUpgrade',
+      rank: 2,
+    });
+    const boss = project.route.biomes
+      .find((biome) => biome.biomeKey === 'G')
+      ?.topology?.occurrences.find((occurrence) => occurrence.gameName === 'G_Boss02');
+    if (boss === undefined) throw new Error('rank-two Scylla Boss occurrence is missing');
+    const phase = createEncounterPhaseAddress(
+      goldenGBiome,
+      { kind: 'occurrence', occurrenceId: boss.occurrenceId },
+      'Encounter',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase,
+      decisionKey: 'featuredPerformer',
+      value: { kind: 'single', choiceKey: 'charybdis' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      vowKey: 'BossDifficultyShrineUpgrade',
+      rank: 1,
+    });
+    const finding = simulateProject(catalog, project).findings.find(
+      (candidate) =>
+        candidate.code === 'encounterCustomizationUnavailable' &&
+        semanticAddressKey(candidate.origin) === semanticAddressKey(phase),
+    );
+    if (finding === undefined) throw new Error('retained Scylla customization finding is missing');
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'G',
+      occurrenceById(boss.occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    const trigger = screen.getByRole('button', { name: 'Customize encounter' });
+    act(() =>
+      view.application.store.dispatch(
+        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+      ),
+    );
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+    expect(trigger.dataset.hasFindings).toBe('true');
+    expect(screen.queryByRole('dialog', { name: 'Customize' })).toBeNull();
+    expect(document.querySelector('dialog.trait-offer-dialog-backdrop')).toBeNull();
+    await view.user.click(trigger);
+    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    const performer = within(dialog).getByRole('combobox', { name: 'Featured performer' });
+    expect(
+      (
+        within(performer).getByRole('option', {
+          name: 'Charybdis (unavailable)',
+        }) as HTMLOptionElement
+      ).disabled,
+    ).toBe(true);
+    await view.user.selectOptions(performer, '');
+    await waitFor(() => {
+      const occurrence = view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'G')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === boss.occurrenceId);
+      expect(occurrence?.encounters.customizationByPhase).toBeUndefined();
+    });
+  });
+
+  it('authors an Eris ordered prefix without discarding its second choice on first-choice edits', async () => {
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Surface' },
+      vowKey: 'BossDifficultyShrineUpgrade',
+      rank: 2,
+    });
+    const boss = project.route.biomes
+      .find((biome) => biome.biomeKey === 'O')
+      ?.topology?.occurrences.find((occurrence) => occurrence.gameName === 'O_Boss02');
+    if (boss === undefined) throw new Error('Rival Eris Boss occurrence is missing');
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Surface',
+      'O',
+      occurrenceById(boss.occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    for (const name of ['Early summons', 'Late summons']) {
+      const group = within(dialog).getByRole('region', { name });
+      expect(within(group).getByRole('heading', { level: 3, name })).toBeTruthy();
+      expect(within(group).getAllByRole('combobox')).toHaveLength(2);
+    }
+    await view.user.selectOptions(
+      within(dialog).getByRole('combobox', { name: 'Early summons use 1' }),
+      'harpy',
+    );
+    await view.user.selectOptions(
+      within(dialog).getByRole('combobox', { name: 'Early summons use 2' }),
+      'swab',
+    );
+    await view.user.selectOptions(
+      within(dialog).getByRole('combobox', { name: 'Early summons use 1' }),
+      'jellyfish',
+    );
+    await waitFor(() => {
+      const occurrence = view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'O')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === boss.occurrenceId);
+      expect(occurrence?.encounters.customizationByPhase?.Encounter?.earlySummons).toEqual({
+        kind: 'orderedPrefix',
+        choiceKeys: ['jellyfish', 'swab'],
+      });
+    });
+  });
+
   it('renders the additive Gorgon condition and Athena child for a pending phase', async () => {
     const occurrenceId = pOccurrenceId('P_Combat12', 8, 1);
     const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {

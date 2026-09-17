@@ -152,6 +152,20 @@ export const gEncounterDefinitions = [
     kind: 'boss',
     countsEncounterDepth: false,
     blocksGorgon: true,
+    customization: [
+      {
+        key: 'featuredPerformer',
+        label: 'Featured performer',
+        selection: {
+          kind: 'single',
+          choices: [
+            { key: 'scylla', label: 'Scylla', nativeId: 'Scylla' },
+            { key: 'roxy', label: 'Roxy', nativeId: 'Drummer' },
+            { key: 'jetty', label: 'Jetty', nativeId: 'Keytarist' },
+          ],
+        },
+      },
+    ],
   },
   {
     key: 'BossScylla02',
@@ -159,6 +173,21 @@ export const gEncounterDefinitions = [
     kind: 'boss',
     countsEncounterDepth: false,
     blocksGorgon: true,
+    customization: [
+      {
+        key: 'featuredPerformer',
+        label: 'Featured performer',
+        selection: {
+          kind: 'single',
+          choices: [
+            { key: 'scylla', label: 'Scylla', nativeId: 'Scylla' },
+            { key: 'roxy', label: 'Roxy', nativeId: 'Drummer' },
+            { key: 'jetty', label: 'Jetty', nativeId: 'Keytarist' },
+            { key: 'charybdis', label: 'Charybdis', nativeId: 'Charybdis' },
+          ],
+        },
+      },
+    ],
   },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 

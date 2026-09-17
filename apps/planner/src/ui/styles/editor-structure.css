@@ -198,7 +198,8 @@ select {
   background: #202128;
 }
 
-.contextual-picker-trigger {
+.contextual-picker-trigger,
+.encounter-fixed-value {
   display: flex;
   width: 100%;
   min-height: 36px;
@@ -211,6 +212,9 @@ select {
   color: #f2ede5;
   background: #202128;
   text-align: left;
+}
+
+.contextual-picker-trigger {
   cursor: pointer;
 }
 

@@ -309,6 +309,23 @@ export const fEncounterDefinitions = [
     kind: 'boss',
     countsEncounterDepth: false,
     blocksGorgon: true,
+    customization: [
+      {
+        key: 'interlude',
+        label: 'Interlude pattern',
+        selection: {
+          kind: 'single',
+          choices: [
+            { key: 'largeMeteors', label: 'Large meteors', nativeId: 'HecateMeteorShower' },
+            { key: 'smallMeteors', label: 'Small meteors', nativeId: 'HecateMeteorSmallShower' },
+            { key: 'rings', label: 'Rings', nativeId: 'HecateRangedTorchesRingPhase' },
+            { key: 'spirals', label: 'Spirals', nativeId: 'HecateRangedTorchesSpiralsPhase' },
+            { key: 'laser', label: 'Laser', nativeId: 'HecateLaser' },
+            { key: 'cones', label: 'Cones', nativeId: 'HecateRangedTorchesConePhase' },
+          ],
+        },
+      },
+    ],
   },
   {
     key: 'BossHecate02',
@@ -316,6 +333,23 @@ export const fEncounterDefinitions = [
     kind: 'boss',
     countsEncounterDepth: false,
     blocksGorgon: true,
+    customization: [
+      {
+        key: 'interlude',
+        label: 'Interlude pattern',
+        selection: {
+          kind: 'single',
+          choices: [
+            { key: 'largeMeteors', label: 'Large meteors', nativeId: 'HecateMeteorShower_EM' },
+            { key: 'smallMeteors', label: 'Small meteors', nativeId: 'HecateMeteorSmallShower_EM' },
+            { key: 'rings', label: 'Rings', nativeId: 'HecateRangedTorchesRingPhase_EM' },
+            { key: 'spirals', label: 'Spirals', nativeId: 'HecateRangedTorchesSpiralsPhase_EM' },
+            { key: 'laser', label: 'Laser', nativeId: 'HecateLaser_EM' },
+            { key: 'cones', label: 'Cones', nativeId: 'HecateRangedTorchesConePhase_EM' },
+          ],
+        },
+      },
+    ],
   },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 

@@ -1,4 +1,6 @@
 import type { EncounterPhaseKind, EncounterSlotRewardAttachment } from '../../catalog-schema';
+import type { AuthoredEncounterCustomization } from '../../authored-project/model';
+import type { EncounterCustomizationDecision } from '../../catalog-schema';
 
 /**
  * Retained materialization for one active envelope slot. It deliberately
@@ -9,6 +11,7 @@ export interface MaterializedEncounterPhase {
   readonly envelopeKey: string;
   readonly authoredChoiceKey: string;
   readonly figLeafSkip: boolean;
+  readonly customizationByDecision?: Readonly<Record<string, AuthoredEncounterCustomization>>;
   readonly rewardAttachment?: EncounterSlotRewardAttachment;
 }
 
@@ -32,6 +35,11 @@ export interface ResolvedEncounterPhase {
   readonly skipEndEncounterEffects: boolean;
   /** Persisted phase-local positive disposition, when authored. */
   readonly figLeafSkip: boolean;
+  /** Concrete declaration domain and sparse authored value for this exact resolved encounter. */
+  readonly customization?: readonly (EncounterCustomizationDecision & {
+    readonly value?: AuthoredEncounterCustomization;
+    readonly valueSupported: boolean;
+  })[];
   readonly sequenceEffect?: { readonly kind: 'terminateSuffix' };
   readonly rewardAttachment?: EncounterSlotRewardAttachment;
 }

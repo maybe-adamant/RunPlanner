@@ -118,6 +118,10 @@ const findingCopy = {
     title: 'Encounter cannot occur here',
     description: 'The selected encounter is unavailable when this room begins.',
   },
+  encounterCustomizationUnavailable: {
+    title: 'Encounter customization needs repair',
+    description: 'Choose a result available for this encounter variant, or restore Default.',
+  },
   encounterSlotActivationUnavailable: {
     title: 'Encounter phase is not active',
     description: 'The selected room setup does not activate this encounter phase.',

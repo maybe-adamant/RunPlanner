@@ -103,6 +103,79 @@ export function normalizeEncounterDefinitions(
               );
               return Object.freeze({ kind: 'traitOffer' as const, giverKey });
             })();
+      const customization =
+        raw.customization === undefined
+          ? undefined
+          : Object.freeze(
+              raw.customization.map((decision, decisionIndex) => {
+                const decisionPath = `${path}.customization[${decisionIndex}]`;
+                const key = requireNonEmpty(decision.key, `${decisionPath}.key`);
+                const label = requireNonEmpty(decision.label, `${decisionPath}.label`);
+                const choices = (
+                  values: readonly {
+                    readonly key: string;
+                    readonly label: string;
+                    readonly nativeId: string;
+                  }[],
+                  field: string,
+                ) =>
+                  Object.freeze(
+                    values.map((choice, index) => {
+                      const choicePath = `${decisionPath}.selection.${field}[${index}]`;
+                      return Object.freeze({
+                        key: requireNonEmpty(choice.key, `${choicePath}.key`),
+                        label: requireNonEmpty(choice.label, `${choicePath}.label`),
+                        nativeId: requireNonEmpty(choice.nativeId, `${choicePath}.nativeId`),
+                      });
+                    }),
+                  );
+                const unique = <T extends { readonly key: string; readonly nativeId: string }>(
+                  values: readonly T[],
+                  field: string,
+                ): readonly T[] => {
+                  if (
+                    values.length === 0 ||
+                    new Set(values.map((choice) => choice.key)).size !== values.length ||
+                    new Set(values.map((choice) => choice.nativeId)).size !== values.length
+                  )
+                    fail(
+                      `${decisionPath}.selection.${field}`,
+                      'must contain distinct non-empty choices',
+                    );
+                  return values;
+                };
+                switch (decision.selection.kind) {
+                  case 'single':
+                    return Object.freeze({
+                      key,
+                      label,
+                      selection: Object.freeze({
+                        kind: 'single' as const,
+                        choices: unique(choices(decision.selection.choices, 'choices'), 'choices'),
+                      }),
+                    });
+                  case 'orderedPrefix':
+                    if (decision.selection.maximumLength !== 2)
+                      fail(`${decisionPath}.selection.maximumLength`, 'must be two');
+                    return Object.freeze({
+                      key,
+                      label,
+                      selection: Object.freeze({
+                        kind: 'orderedPrefix' as const,
+                        choices: unique(choices(decision.selection.choices, 'choices'), 'choices'),
+                        maximumLength: 2 as const,
+                      }),
+                    });
+                  default:
+                    return fail(`${decisionPath}.selection.kind`, 'is unsupported');
+                }
+              }),
+            );
+      if (
+        customization !== undefined &&
+        new Set(customization.map((decision) => decision.key)).size !== customization.length
+      )
+        fail(`${path}.customization`, 'must contain distinct decision keys');
       if (raw.requiresInteraction !== undefined && typeof raw.requiresInteraction !== 'boolean')
         fail(`${path}.requiresInteraction`, 'must be boolean');
       if (
@@ -369,6 +442,7 @@ export function normalizeEncounterDefinitions(
           : { sequenceEffect: Object.freeze({ kind: 'terminateSuffix' as const }) }),
         ...(npcPresentationKey === undefined ? {} : { npcPresentationKey }),
         ...(traitOfferProducer === undefined ? {} : { traitOfferProducer }),
+        ...(customization === undefined ? {} : { customization }),
         ...(nemesisRandomEvent === undefined ? {} : { nemesisRandomEvent }),
       });
     }),

@@ -378,22 +378,83 @@
   gap: 8px;
 }
 
-.encounter-phase-settings > .contextual-picker,
-.encounter-phase-settings > .fixed-room-state {
+.encounter-phase-settings > .field-control-inline {
   min-width: min(100%, 22rem);
   flex: 1 1 22rem;
 }
 
-.encounter-phase-settings > .fixed-room-state {
-  margin: 0;
-}
-
-.encounter-phase-settings > .field-control {
+.encounter-phase-settings > .field-control:not(.field-control-inline) {
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
   gap: 7px;
   white-space: nowrap;
+}
+
+.trait-offer-dialog.encounter-customization-dialog {
+  max-width: 36rem;
+}
+
+.encounter-customization-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.encounter-customization-header > h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.encounter-customization-fields {
+  display: grid;
+  gap: 16px;
+}
+
+.encounter-customization-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.encounter-customization-row > span {
+  color: var(--muted);
+}
+
+.encounter-customization-row > select {
+  min-width: 0;
+}
+
+.encounter-customization-group {
+  display: grid;
+  gap: 10px;
+}
+
+.encounter-customization-group > h3 {
+  margin: 0;
+  color: #c8b8d8;
+  font-size: 0.95rem;
+}
+
+.encounter-customization-group + .encounter-customization-group {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.encounter-customization-repair {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.88rem;
+}
+
+.encounter-customization-row > .encounter-customization-repair {
+  grid-column: 2;
+  color: var(--danger);
 }
 
 .nemesis-interaction-controls {
@@ -461,16 +522,6 @@
 .encounter-phase-settings > .gorgon-condition-control {
   justify-content: flex-end;
   margin-left: auto;
-}
-
-.encounter-phase-control[data-read-only='true'] {
-  background: rgb(255 255 255 / 2%);
-}
-
-.encounter-phase-control[data-read-only='true'] .fixed-room-state {
-  margin: 0;
-  padding: 0;
-  border: 0;
 }
 
 .ship-phase-list {

@@ -221,6 +221,11 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'trait', message: 'This trait offer cannot occur at the current frontier.' };
     case 'unsupportedSparseTraitOffer':
       return { kind: 'trait', message: 'This provider needs three choices.' };
+    case 'encounterCustomizationUnavailable':
+      return {
+        kind: 'generic',
+        message: 'Repair this encounter customization or restore Default.',
+      };
     case 'fieldsSpatialPointMissing':
       return { kind: 'generic', message: 'Choose a physical point for this active Fields item.' };
     case 'fieldsSpatialPointUnavailable':
