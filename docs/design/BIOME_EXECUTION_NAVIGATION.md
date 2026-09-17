@@ -30,7 +30,9 @@ Navigation owns:
 - the exact Room Occurrence currently being entered;
 - its incoming reward;
 - the complete normal and additional exit set;
-- each exit's target room and visible reward; and
+- each exit's target room and visible reward;
+- protecting the selected continuation from native exit blocking while leaving
+  unpicked exits under native control; and
 - reporting the entered occurrence back to the route session.
 
 Room features, encounters, pickups, purchases, and other timeline actions are
@@ -78,7 +80,7 @@ baseline rather than separate F adapters.
 
 ### G-specific earned hook: Anomaly
 
-Anomaly is the one proven G navigation exception. Merely returning the planned
+Anomaly requires a dedicated navigation contact. Merely returning the planned
 `B_CombatXX` Room declaration would skip native Anomaly entry presentation and
 setup. The adapter therefore enters the native `ChooseNextRoomData` Anomaly
 branch while supplying the planner-selected replacement and hidden G return.
