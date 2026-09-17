@@ -13,6 +13,7 @@ export type {
 } from './composition';
 export {
   projectEncounterRecordPreparation,
+  projectOfferedExitCount,
   projectBiomeEncounterKeyCounts,
   projectPreviousRoomEncounterKeys,
   projectRoomPreparationCheckpoint,

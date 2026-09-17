@@ -286,6 +286,7 @@ export function applyRoomEnteredTransition(
                   room.hermesShrine,
                   createRewardFacts({
                     catalog,
+                    sourceOrigin: room.origin,
                     currentRoom: room,
                     sourceDeclaration: declaration,
                     view: entry,
