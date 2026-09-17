@@ -260,12 +260,47 @@ export function HubDecisionWorkbench({
     <section
       {...hubTargetProps}
       tabIndex={-1}
-      className="hub-decision-workbench"
+      className="room-card hub-decision-workbench"
       aria-label="Ephyra Hub"
     >
-      <header className="decision-heading hub-decision-heading">
-        <div className="owner-markers">
-          <h3 id={`${titleId}-title`}>Ephyra Hub</h3>
+      <header className="room-card-heading">
+        <h3 id={`${titleId}-title`}>Ephyra Hub</h3>
+        <div className="hub-board-status">
+          <span className="neutral-status">
+            {node.openSlotCount.current} open · {node.openSlotCount.min}–{node.openSlotCount.max}{' '}
+            required
+          </span>
+          <span className="neutral-status">
+            {authoredVisitCount} of {node.requiredVisitCount} planned
+          </span>
+        </div>
+      </header>
+      <div className="room-workbench-tab-row">
+        <nav
+          aria-label="Hub workbench"
+          className="room-workbench-tabs"
+          onKeyDown={onTabKeyDown}
+          ref={tabList}
+          role="tablist"
+        >
+          {hubWorkbenchTabs.map((tab) => (
+            <button
+              aria-controls={`${titleId}-tabpanel`}
+              aria-selected={activeTab === tab.key}
+              className="room-workbench-tab"
+              data-hub-workbench-tab={tab.key}
+              id={`${titleId}-tab-${tab.key}`}
+              key={tab.key}
+              onClick={() => activateTab(tab.key)}
+              role="tab"
+              tabIndex={activeTab === tab.key ? 0 : -1}
+              type="button"
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+        <div className="room-workbench-tab-utility owner-markers">
           {node.runState === undefined ? null : <RunStateLauncher launcher={node.runState} />}
           <button
             className="danger-action action-compact"
@@ -277,40 +312,7 @@ export function HubDecisionWorkbench({
             Remove Hub
           </button>
         </div>
-        <div className="hub-board-status">
-          <span className="neutral-status">
-            {node.openSlotCount.current} open · {node.openSlotCount.min}–{node.openSlotCount.max}{' '}
-            required
-          </span>
-          <span className="neutral-status">
-            {authoredVisitCount} of {node.requiredVisitCount} planned
-          </span>
-        </div>
-      </header>
-      <nav
-        aria-label="Hub workbench"
-        className="room-workbench-tabs"
-        onKeyDown={onTabKeyDown}
-        ref={tabList}
-        role="tablist"
-      >
-        {hubWorkbenchTabs.map((tab) => (
-          <button
-            aria-controls={`${titleId}-tabpanel`}
-            aria-selected={activeTab === tab.key}
-            className="room-workbench-tab"
-            data-hub-workbench-tab={tab.key}
-            id={`${titleId}-tab-${tab.key}`}
-            key={tab.key}
-            onClick={() => activateTab(tab.key)}
-            role="tab"
-            tabIndex={activeTab === tab.key ? 0 : -1}
-            type="button"
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
+      </div>
       <section
         aria-labelledby={`${titleId}-tab-${activeTab}`}
         className="hub-workbench-tab-panel"

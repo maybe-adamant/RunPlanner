@@ -77,7 +77,16 @@ describe('HubDecisionWorkbench interaction', () => {
     const timeline = screen.getByRole('tab', { name: 'Hub Timeline' });
     const exit = screen.getByRole('tab', { name: 'Hub Exit' });
     const removal = screen.getByRole('button', { name: 'Remove Hub' });
-    expect(removal.closest('.decision-heading')).not.toBeNull();
+    const hubPanel = screen.getByRole('region', { name: 'Ephyra Hub' });
+    expect(hubPanel.classList.contains('room-card')).toBe(true);
+    expect(
+      screen.getByRole('heading', { name: 'Ephyra Hub' }).closest('.room-card-heading')
+        ?.parentElement,
+    ).toBe(hubPanel);
+    expect(removal.closest('.room-workbench-tab-row')).toBe(
+      overview.closest('.room-workbench-tab-row'),
+    );
+    expect(removal.closest('[role="tablist"]')).toBeNull();
     const panel = screen.getByRole('region', { name: 'Hub room participation' });
     const viewSwitcher = screen.getByRole('group', { name: 'Hub Overview view' });
     expect(viewSwitcher.closest('.hub-board')).toBe(panel);
