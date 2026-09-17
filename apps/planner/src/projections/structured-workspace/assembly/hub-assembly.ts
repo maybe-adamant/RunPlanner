@@ -328,6 +328,7 @@ function projectHubNode(
             Object.freeze({
               address: slot.address,
               generation: slot.generation,
+              entered: slot.entered,
               order: slot.order,
             }),
           ),

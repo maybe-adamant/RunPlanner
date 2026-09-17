@@ -27,6 +27,8 @@ before exporting the final image; never use one half as the complete map.
 shared by read-only inspection and both interactive Hub maps. When replacing
 this image, align those coordinates to the new capture rather than baking labels
 into it. Individual main and side rooms keep their own images.
+Main-room side-door annotations are baked into their images: cyan circles identify
+the destination side-room number, not door priority or visit order.
 
 After a swap, run the asset test and check the viewer:
 

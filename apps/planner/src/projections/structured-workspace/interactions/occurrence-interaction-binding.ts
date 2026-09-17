@@ -980,6 +980,9 @@ export function bindOccurrenceLocalInteractions(
                 slot.generation,
                 () => candidates.localVisitGenerations(slot.address, generationValues),
               ),
+              ...(slot.entered
+                ? { disabledReason: 'Set Visit to “Not visited” before disabling generation.' }
+                : {}),
               intentFor: (generation: SideRoomGeneration) =>
                 Object.freeze({
                   command: Object.freeze({

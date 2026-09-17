@@ -4,6 +4,13 @@
   scroll-margin-block: 35vh;
 }
 
+/* Native checkboxes need an outer stroke; their native fill can hide inset shadows. */
+input[type='checkbox'][data-semantic-owner][data-has-findings='true'] {
+  box-shadow: none;
+  outline: 2px solid #da7373;
+  outline-offset: 2px;
+}
+
 /* Route findings recolor the existing grouped surface instead of adding another stroke. */
 .route-overview[data-semantic-owner][data-has-findings='true'] {
   box-shadow: none;

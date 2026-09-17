@@ -745,9 +745,8 @@ describe('BiomeWorkspace', () => {
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(inspector.querySelector('.biome-inspector-heading')).toBeNull();
     expect(within(inspector).getAllByRole('button', { name: 'Reward' })).toHaveLength(2);
-    await view.user.selectOptions(
-      within(inspector).getByLabelText('Side Room 03 generation'),
-      'notGenerated',
+    await view.user.click(
+      within(inspector).getByRole('checkbox', { name: 'Side Room 03 generation' }),
     );
     const localVisit = view.application.store
       .getState()
