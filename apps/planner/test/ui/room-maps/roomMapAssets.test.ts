@@ -17,4 +17,13 @@ describe('room map assets', () => {
       roomMapAssets.filter((asset) => asset.isPlaceholder).map((asset) => asset.gameName),
     ).toEqual([]);
   });
+
+  it('groups maps by biome with shared special rooms and G anomalies', () => {
+    for (const asset of roomMapAssets) {
+      const prefix = asset.gameName.split('_')[0];
+      const folder =
+        prefix === 'B' ? 'G/Anomaly' : prefix === 'Chaos' || prefix === 'C' ? 'Special' : prefix;
+      expect(asset.src).toContain(`/assets/${folder}/${asset.gameName}.`);
+    }
+  });
 });
