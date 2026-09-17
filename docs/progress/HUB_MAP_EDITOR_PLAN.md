@@ -2,29 +2,18 @@
 
 ## Status and objective
 
-Status: Gate A is complete and user-approved, including the follow-up panel,
-opening-popover, and Hub-entry readiness/finding-navigation corrections.
-Independent review and focused validation passed. Gate A is committed as
-`41915681`. Gate B's user-requested revision is implemented: direct destination
-menus replace the Map strip, visited marker fill is explicit, and sequence
-editing uses Hub-wide readiness. The five focused suites passed (45 tests),
-along with planner type checking and touched-file lint/format checks. Browser
-checks cover an incomplete first room, later-visit moves in both directions,
-removal, Undo, List agreement, locked pre-Hub edits, and narrow popup focus.
-Independent revision review passed after a keyboard-focus correction, verified
-in the existing UI witness and native browser. The user-approved checkpoint also
-includes one-step Reset visits, its toolbar placement, and foreground click-through
-visit badges. Follow-up focused tests, static checks, and browser checks passed.
-Timeline List retirement is the next separately scoped change; Gate C's complete
-repository gate and documentation closure have not started.
+Status: Gate A is committed as `41915681`; Gate B's independently reviewed map
+ordering checkpoint is `1e15ce01`. Panel polish is committed as `532d4d85`.
+Focused tests, static checks, and browser checks passed for those checkpoints.
+Gate B.2 below is locked for the user-approved Timeline List retirement.
+Gate C's complete repository gate and documentation closure have not started.
 
 Planning base: `7d42d084` (`feat(planner): support dragging zoomed room maps`).
 The unrelated Room Capture progress document is outside this change.
 
-Give Ephyra Hub Overview and Timeline two interchangeable presentations:
-the existing List editor and a map-first editor. They edit the same Hub through
-the same application interactions. The map replaces the competing side-by-side
-reference, not the List editor or the engine's ordered visit model.
+Give Ephyra Hub Overview interchangeable List and Map presentations, and make
+Timeline a single map-based sequence editor. Both consume the same application
+interactions and engine-owned ordered visit model.
 
 ## Scope and authorities
 
@@ -84,15 +73,16 @@ change those unrelated consumers or globally change their semantics.
 
 ### Two views, one source
 
-- Overview and Timeline expose `List | Map`; List is the initial view. Hub Exit
-  retains its existing presentation and has no view switch.
-- Remember each tab's view choice locally for the current Hub host. View,
+- Overview exposes `List | Map`, initially List. Timeline is map-only; Hub Exit
+  retains its existing presentation. Neither has a view switch.
+- Remember Overview's view choice locally for the current Hub host. View,
   selected marker, popover, drag, zoom and pan are not authored state or Undo
   entries. Changing the project/Hub host cannot retain stale marker selections.
-- List retains its compact layout and controls, with no inline Hub map. Map
+- Overview List retains its compact layout and controls, with no inline Hub map. Map
   gets the available workbench width, not a second full editor beside it.
-- Both views share a panel shell, with `List | Map` at its top right and the
-  List heading or Map zoom controls at the left. The Hub uses the standard room
+- Overview views share a panel shell, with `List | Map` at its top right and the
+  List heading or Map zoom controls at the left. Timeline puts zoom controls on
+  the left and Reset visits on the right. The Hub uses the standard room
   panel and heading with right-aligned status counts. `Run State` and `Remove Hub`
   sit to the right of the Hub tabs, outside the tablist, across all views.
 - Switching views preserves authored values immediately; there is no map draft,
@@ -131,8 +121,8 @@ change those unrelated consumers or globally change their semantics.
   At capacity, it opens an explicit chooser naming each visit to replace. Merely
   opening/canceling that chooser changes nothing. Replacement keeps that visit's
   position and returns the displaced room to the unvisited open set.
-- A Timeline-only Reset visits button in the right-aligned view toolbar, before
-  List | Map and with a subtle red border, clears the sequence with one undoable
+- A Timeline-only Reset visits button on the right of the map toolbar, with a
+  subtle red border, clears the sequence with one undoable
   empty-prefix proposal. It preserves open rooms
   and their rewards, uses existing engine-owned handoff cleanup, and requires
   no confirmation. Disable it when empty or when Hub editing is locked. The
@@ -143,11 +133,9 @@ change those unrelated consumers or globally change their semantics.
   Removal shortens the prefix and compacts later visits without closing the
   room or promoting any unvisited room. Both marker menus support keyboard
   activation and never navigate the rail.
-- Keep the List layout, but give equivalent named Hub actions the same explicit
-  append/remove/reorder/replace behavior. At capacity, adding a remaining room
-  requires choosing the replaced visit in either view. Do not retain a hidden
-  drag or arrow route that silently substitutes another room. List tail-only
-  presentation ordering may remain; it cannot choose the replacement implicitly.
+- The map is the sole Timeline editor. Remove the List roster, drag/arrow path,
+  and transient unvisited-tail ordering; no hidden editor or alternate route
+  may silently substitute another room.
 - Produce one complete visit-order proposal through the existing bound candidate
   interaction and `ReplaceHubVisitOrder`. These are sequence edits, not a new
   validator. Respect candidate/readiness outcomes rather than promising every
@@ -156,10 +144,12 @@ change those unrelated consumers or globally change their semantics.
 
 ### Findings and interaction continuity
 
-- List remains the canonical repair destination. An explicit finding navigation
-  selects its existing Hub tab, switches that tab to List, and focuses its exact
-  existing control. Repeating the same finding request must also work.
-- Ordinary edits must not repeatedly force List merely because an old finding
+- Overview List remains its canonical repair destination. Timeline finding
+  navigation stays on the map: authored visit owners bind their corresponding
+  marker, and the next missing visit owner binds the existing planned-count
+  status. These are exact semantic targets, not a generic tab fallback. Finding
+  navigation must focus and border that same target, including repeated requests.
+- Ordinary edits must not repeatedly force Overview List merely because an old finding
   remains selected. Preserve rail selection and existing destination ownership.
 - Map markers may reflect existing repair-target feedback, but must not register
   competing canonical targets or invent finding routing. Mount only the active
@@ -167,8 +157,8 @@ change those unrelated consumers or globally change their semantics.
 - Apply readiness at every activation root: marker, badge, keyboard action and
   popover control. Viewing, panning and switching views remain available while
   authoring is locked. Never use missing evaluation to hide retained authorship.
-  Visit-order editing uses the Hub-decision interaction's readiness in both
-  views, not the readiness of each visited occurrence. Incomplete room content
+  Visit-order editing uses the Hub-decision interaction's readiness,
+  not the readiness of each visited occurrence. Incomplete room content
   cannot prevent rearranging the Hub sequence; an incomplete prerequisite before
   the Hub still locks its edits. Exact visit finding targets remain distinct.
 - Use accessible buttons and existing popover primitives. One active popover,
@@ -176,7 +166,7 @@ change those unrelated consumers or globally change their semantics.
   no persistent per-door popup machinery or collision-solving framework.
 - Background drag pans; marker/control interaction does not start a viewport
   drag. A drag or canceled pointer sequence must never open a room or append a
-  visit. List roster dragging remains separate from Map panning.
+  visit. Retain unrelated room-action drag behavior unchanged.
 - Edits preserve map position. If a selected door disappears through Undo/close,
   discard only that transient selection and return focus to an existing local
   control. Mode/tab changes close obsolete popovers without changing authorship.
@@ -274,11 +264,50 @@ first-visit fixture must still allow editing later visits through the Hub-owned
 sequence interaction, while the later room's interior remains locked. Preserve
 the witness that an incomplete pre-Hub prerequisite locks sequence edits.
 
+### B.2 — Retire Timeline List
+
+Base: `532d4d85`. Application-only simplification of the accepted Map behavior.
+No new engine product, command, schema, eligibility policy, or map library.
+
+Deliver Timeline directly as Map; retain Overview's List/Map choice and its
+finding navigation. Preserve Reset, append, exact-position moves, removal,
+explicit replacement, Undo, pre-Hub readiness, keyboard/Escape, and pan/zoom.
+Reordering can invalidate room contents; those findings remain owned by the
+room editor. Do not claim that all route contents remain valid after reordering.
+
+The existing `hubVisitOrderIncomplete` finding still needs a repair destination.
+Bind the next missing visit's exact marker to the existing planned-count status,
+focusable on navigation, and bind authored visit markers to their map buttons.
+Keep the inherited Hub readiness owner so room-local incompleteness cannot
+lock sequence edits. Preserve the rail/tab destinations; no duplicate IDs,
+hidden List, hidden editor targets, new status language, or second finding path.
+
+Expected deletions: `HubVisitTimeline.tsx`, Timeline-only pieces of
+`HubVisitRanking.tsx` and `HubRoomCards.tsx`, roster drag/scroll/focus state,
+Timeline view-switch state, roster-only CSS and test support. Move the live
+replacement chooser beside its Map consumer if its old module becomes obsolete.
+Prune dead Hub-only helpers without changing generic RankedPrefix behavior used
+by room actions. Overview room cards remain compact membership/reward cards.
+
+Primary tests: retain Map workflows from `HubVisitRanking.test.tsx` under their
+live owner; migrate List consumer contacts in `BiomeWorkspace.test.tsx`,
+`HubDecisionWorkbench.interaction.test.tsx`, and `HubRoomCards.test.tsx`.
+Retire List-only UI/drag/layout tests; preserve relevant semantic proposal tests
+and shared room-action tests. Add a real incomplete-prefix finding-navigation
+witness proving exact count focus/border and continued room selection. Preserve
+the existing missing-first-room and locked-pre-Hub witnesses.
+
+One executor owns implementation and affected tests; a fresh read-only reviewer
+checks finding repair, deletion completeness, keyboard support, Overview and
+room-action isolation. Main session owns browser checks at desktop/narrow
+widths and broader related-test verification. Do not run full Gate C closure or
+commit implementation until requested.
+
 ### C — Product review and closure
 
 Keep one representative real application workflow using existing Surface
 checkpoints: Overview membership/reward edits → Timeline append/reorder/replace
-→ switch views → finding repair → Undo/Redo. Add no large new execution fixture
+→ finding repair → Undo/Redo, plus Overview view switching. Add no large new execution fixture
 or duplicated engine policy matrix for this presentation work.
 
 Perform real-browser checks at desktop and narrow widths: nearest marker pairs,
@@ -305,7 +334,7 @@ commit before any user-requested inspection.
 Retire the old Hub side-reference layout/toggle, flattened Hub runtime reference,
 and superseded Hub-only implicit promotion/eviction paths. Update their owning
 tests, retaining the generic tests that still describe room-action behavior.
-Keep List controls, exact repair targets, other rooms' static inspection assets,
+Keep Overview List controls, exact repair targets, other rooms' static inspection assets,
 and shared references used by Fields.
 
 Non-goals: independent numeric ranks, conflict-tolerant rank persistence, a new
