@@ -14,21 +14,22 @@ describe('HubDecisionWorkbench interaction', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Remove Hub' })).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: 'Reset Board' })).toHaveProperty('disabled', true);
+    fireEvent.click(screen.getByRole('button', { name: 'Details →' }));
+    expect(
+      screen.getByRole('group', { name: 'Hub room set' }).querySelector('.hub-owner-assessment'),
+    ).toBeNull();
     expect(screen.queryByRole('button', { name: 'Reset visits' })).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
     expect(screen.getByRole('button', { name: 'Reset visits' })).toHaveProperty('disabled', true);
-    expect(screen.getByRole('button', { name: 'Move Combat 02 earlier' })).toHaveProperty(
+    expect(screen.getByRole('button', { name: 'Combat 02: Visit 3.' })).not.toHaveProperty(
       'disabled',
       true,
     );
-    expect(
-      screen.getByRole('button', { name: 'Choose a visit for Combat 01 to replace' }),
-    ).toHaveProperty('disabled', true);
-    fireEvent.click(screen.getByRole('button', { name: 'Map' }));
     expect(screen.getByRole('button', { name: 'Fit' })).toBeTruthy();
   });
 
-  it('resets only the finding-requested view to List and retains that reset across later requests', () => {
+  it('resets only the finding-requested Overview view to List and keeps Timeline map-only', () => {
     const view = renderStaticHubDecisionWorkbench(
       loadSurfaceNCompleteHubFrontierProject(),
       'Surface',
@@ -38,36 +39,23 @@ describe('HubDecisionWorkbench interaction', () => {
         initialTab: 'overview',
       },
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Map' }));
+    expect(screen.getByRole('group', { name: 'Hub room set' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Map' }));
+    view.rerenderHub({ findingNavigationRevision: 1, initialTab: 'overview' });
+    expect(screen.getByRole('region', { name: 'Ephyra Hub map' })).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Map' }));
+    expect(screen.getByRole('region', { name: 'Ephyra Hub timeline map' })).toBeTruthy();
 
     view.rerenderHub({ findingNavigationRevision: 2, initialTab: 'timeline' });
-    expect(
-      within(screen.getByRole('group', { name: 'Hub Timeline view' }))
-        .getByRole('button', { name: 'List' })
-        .getAttribute('aria-pressed'),
-    ).toBe('true');
+    expect(screen.getByRole('region', { name: 'Ephyra Hub timeline map' })).toBeTruthy();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Hub Overview' }));
-    expect(
-      within(screen.getByRole('group', { name: 'Hub Overview view' }))
-        .getByRole('button', { name: 'Map' })
-        .getAttribute('aria-pressed'),
-    ).toBe('true');
+    expect(screen.getByRole('region', { name: 'Ephyra Hub map' })).toBeTruthy();
 
     view.rerenderHub({ findingNavigationRevision: 3, initialTab: 'overview' });
-    expect(
-      within(screen.getByRole('group', { name: 'Hub Overview view' }))
-        .getByRole('button', { name: 'List' })
-        .getAttribute('aria-pressed'),
-    ).toBe('true');
+    expect(screen.getByRole('group', { name: 'Hub room set' })).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
-    expect(
-      within(screen.getByRole('group', { name: 'Hub Timeline view' }))
-        .getByRole('button', { name: 'List' })
-        .getAttribute('aria-pressed'),
-    ).toBe('true');
+    expect(screen.getByRole('region', { name: 'Ephyra Hub timeline map' })).toBeTruthy();
   });
 
   it('separates participation, visit/reward editing, and the completed exit into occurrence-style tabs', () => {
@@ -88,22 +76,37 @@ describe('HubDecisionWorkbench interaction', () => {
     );
     expect(removal.closest('[role="tablist"]')).toBeNull();
     const panel = screen.getByRole('region', { name: 'Hub room participation' });
-    const viewSwitcher = screen.getByRole('group', { name: 'Hub Overview view' });
-    expect(viewSwitcher.closest('.hub-board')).toBe(panel);
-    expect(viewSwitcher.closest('header')).not.toBeNull();
+    expect(screen.getByRole('region', { name: 'Ephyra Hub map' })).toBeTruthy();
+    const details = screen.getByRole('button', { name: 'Details →' });
+    expect(details.closest('.room-map-canvas')).toBeTruthy();
+    expect(details.parentElement).toBe(
+      screen.getByRole('button', { name: 'Reset Board' }).parentElement,
+    );
+    expect(panel.querySelector('.room-map-toolbar')).toBeNull();
+    fireEvent.click(details);
+    const back = screen.getByRole('button', { name: 'Back to Map' });
+    expect(back.closest('header')).toBeTruthy();
+    expect(document.activeElement).toBe(back);
     expect(overview.getAttribute('aria-selected')).toBe('true');
     expect(screen.getByRole('checkbox', { name: 'Combat 01 open' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Move Combat 01 later' })).toBeNull();
     expect(screen.getAllByLabelText('Reward').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Open this room to edit its reward.')).toHaveLength(17);
-    fireEvent.click(screen.getByRole('button', { name: 'Map' }));
+    fireEvent.click(back);
     expect(screen.getByRole('region', { name: 'Hub room participation' })).toBe(panel);
-    const mapViewSwitcher = screen.getByRole('group', { name: 'Hub Overview view' });
-    expect(mapViewSwitcher.closest('.hub-board')).toBe(panel);
-    expect(mapViewSwitcher.closest('header')).toBe(
-      screen.getByRole('button', { name: 'Fit' }).closest('header'),
-    );
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Details →' }));
+    expect(screen.getByRole('button', { name: 'Fit' }).closest('.room-map-canvas')).not.toBeNull();
     expect(screen.getAllByRole('button', { name: /Opened|Closed/ })).toHaveLength(26);
+    const healthMarker = screen.getByRole('button', {
+      name: 'Combat 01: Opened. Edit reward or close room.',
+    });
+    expect(healthMarker.getAttribute('aria-description')).toBe('Reward: Big Max Health');
+    expect(
+      decodeURIComponent(healthMarker.querySelector('img')?.getAttribute('src') ?? ''),
+    ).toContain('Max Health.webp');
+    const closedMarker = screen.getByRole('button', { name: 'Combat 04: Closed. Open room.' });
+    expect(within(closedMarker).getByText('Closed')).toBeTruthy();
+    expect(closedMarker.querySelector('img')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
     expect(screen.getByText('125%')).toBeTruthy();
 
@@ -111,14 +114,19 @@ describe('HubDecisionWorkbench interaction', () => {
     expect(timeline.getAttribute('aria-selected')).toBe('true');
     expect(screen.getByRole('button', { name: 'Remove Hub' })).toBe(removal);
     expect(screen.queryByRole('checkbox', { name: 'Combat 01 open' })).toBeNull();
-    expect(
-      screen.getByRole('button', { name: 'Choose a visit for Combat 01 to replace' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Combat 05: Visit 1.' })).toBeTruthy();
     expect(screen.queryByLabelText('Reward')).toBeNull();
-    expect(screen.getByLabelText('Combat 01 reward preview').textContent).toContain(
-      'Big Max Health',
+    expect(screen.getByLabelText('Ephyra Hub timeline map controls')).toBeTruthy();
+    const timelinePanel = screen.getByRole('region', { name: 'Ephyra Hub timeline map' });
+    expect(timelinePanel.classList.contains('hub-board')).toBe(true);
+    expect(screen.getByRole('button', { name: 'Fit' }).closest('.hub-board')).toBe(timelinePanel);
+    expect(screen.getByRole('button', { name: 'Reset visits' }).closest('.hub-board')).toBe(
+      timelinePanel,
     );
-    expect(screen.queryByLabelText('Ephyra Hub room map controls')).toBeNull();
+    expect(timelinePanel.querySelector('.room-map-toolbar')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Reset visits' }).closest('.room-map-canvas')).toBe(
+      screen.getByRole('button', { name: 'Fit' }).closest('.room-map-canvas'),
+    );
 
     fireEvent.keyDown(timeline, { key: 'End' });
     expect(exit.getAttribute('aria-selected')).toBe('true');
@@ -128,14 +136,11 @@ describe('HubDecisionWorkbench interaction', () => {
       'disabled',
       true,
     );
-    expect(
-      screen.queryByRole('button', { name: 'Choose a visit for Combat 01 to replace' }),
-    ).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Map' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Combat 05: Visit 1.' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Details →' })).toBeNull();
 
     fireEvent.keyDown(exit, { key: 'Home' });
     expect(overview.getAttribute('aria-selected')).toBe('true');
-    expect(screen.getByRole('button', { name: 'Map' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Map' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('region', { name: 'Ephyra Hub map' })).toBeTruthy();
   });
 });

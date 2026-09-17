@@ -276,7 +276,6 @@ export function ClosedHubRoomOption({
               label="Map"
               title={slot.label}
             />
-            <MarkerAssessment marker={slot.marker} />
           </div>
         </div>
         <HubSlotMembershipControl

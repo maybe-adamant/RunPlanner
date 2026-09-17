@@ -101,6 +101,7 @@ function commandContractAddress(
     case 'RemoveGeneratedChaos':
       return command.additional;
     case 'RemoveHubDecision':
+    case 'ResetHubBoard':
       return command.hub;
     case 'OpenHubSlot':
     case 'CloseHubSlot':

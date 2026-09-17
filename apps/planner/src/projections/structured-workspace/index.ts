@@ -5,12 +5,8 @@
  */
 export { requireWorkspaceInteraction, workspaceInteractionKey } from './contract';
 export {
-  dropHubBoardRoom,
   dropRankedPrefixItem,
-  moveHubBoardRoom,
   moveRankedPrefixItem,
-  replaceHubBoardVisit,
-  reconcileHubBoardRanking,
   reconcileRankedPrefix,
 } from './presentation/hub-ranking';
 export type {
@@ -148,10 +144,6 @@ export type {
   WorkspaceHexTreeInteraction,
 } from './contracts/traits';
 export type {
-  HubBoardDropTarget,
-  HubBoardMove,
-  HubBoardMoveResult,
-  HubBoardRanking,
   RankedPrefix,
   RankedPrefixDropTarget,
   RankedPrefixMove,

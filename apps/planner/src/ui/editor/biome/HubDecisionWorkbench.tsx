@@ -2,7 +2,6 @@ import { type KeyboardEvent as ReactKeyboardEvent, useLayoutEffect, useRef, useS
 
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import {
-  reconcileHubBoardRanking,
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceAuthoringFrontier,
@@ -23,7 +22,6 @@ import {
   type HubMembershipTransition,
 } from './HubMembershipBoard';
 import { OpenHubRoomCard } from './HubRoomCards';
-import { HubVisitTimeline } from './HubVisitTimeline';
 import { HubMapOverview } from './hub-map/HubMapOverview';
 import { HubMapTimeline } from './hub-map/HubMapTimeline';
 import { RunStateLauncher } from './RunStateSheet';
@@ -80,22 +78,17 @@ export function HubDecisionWorkbench({
     throw new Error('The completed Hub frontier must expose its fixed Preboss handoff.');
   }
   const titleId = `hub-${domId(node.marker.focusKey)}`;
-  // Overview is declaration ordered; it needs only the current authored rank
-  // for the room-card marker. Timeline-owned transient tail order stays in
-  // HubVisitTimeline.
   const visitOrderInteraction = requireWorkspaceInteraction(
     interactions.hubVisitOrders,
     workspaceInteractionKey(node.owner),
   );
   const resetVisitOrder = visitOrderInteraction.proposalFor([]);
   const resetCandidates = useWorkspaceInteraction(resetVisitOrder);
-  const ranking = reconcileHubBoardRanking({
-    authoredVisitOrder: visitOrderInteraction.selectedHubSlotKeys,
-    declarationOpenSlotKeys: node.slots.filter((slot) => slot.open).map((slot) => slot.hubSlotKey),
-    retainedTailSlotKeys: Object.freeze([]),
-  });
   const authoredVisitCount = visitOrderInteraction.selectedHubSlotKeys.length;
-  const slotsByKey = new Map(node.slots.map((slot) => [slot.hubSlotKey, slot] as const));
+  const nextVisit = node.visits[authoredVisitCount];
+  if (authoredVisitCount < node.requiredVisitCount && nextVisit === undefined) {
+    throw new Error('An incomplete Hub visit order must expose its next visit marker.');
+  }
   const continueKeyboardMembershipAfterTransition = (transition: HubMembershipTransition): void => {
     if (transition.input !== 'keyboard') return;
     pendingMembershipFocus.current = Object.freeze({ ...transition, beforeSlots: node.slots });
@@ -104,10 +97,16 @@ export function HubDecisionWorkbench({
     interactions.topologyRemovals,
     workspaceInteractionKey(node.owner),
   );
+  const resetBoard = requireWorkspaceInteraction(
+    interactions.hubBoardResets,
+    workspaceInteractionKey(node.owner),
+  );
   const focusedOwnerKey = focusedOwner === null ? undefined : semanticAddressKey(focusedOwner);
   const overviewOpenMembershipRegion = useRef<HTMLDivElement>(null);
   const tabList = useRef<HTMLElement>(null);
   const requestedTab = initialTab ?? 'overview';
+  const initialOverviewView =
+    findingNavigationRevision !== undefined && requestedTab === 'overview' ? 'list' : 'map';
   const hubIdentity = semanticAddressKey(node.owner);
   const [tabState, setTabState] = useState({
     active: requestedTab,
@@ -119,19 +118,16 @@ export function HubDecisionWorkbench({
     readonly handledFindingNavigationRevision: number | undefined;
     readonly hubIdentity: string;
     readonly overview: 'list' | 'map';
-    readonly timeline: 'list' | 'map';
   }>({
     handledFindingNavigationRevision: findingNavigationRevision,
     hubIdentity,
-    overview: 'list',
-    timeline: 'list',
+    overview: initialOverviewView,
   });
   if (viewState.hubIdentity !== hubIdentity) {
     setViewState({
       handledFindingNavigationRevision: findingNavigationRevision,
       hubIdentity,
-      overview: 'list',
-      timeline: 'list',
+      overview: initialOverviewView,
     });
   } else if (
     findingNavigationRevision !== undefined &&
@@ -141,23 +137,33 @@ export function HubDecisionWorkbench({
       ...viewState,
       handledFindingNavigationRevision: findingNavigationRevision,
       ...(requestedTab === 'overview' ? { overview: 'list' as const } : {}),
-      ...(requestedTab === 'timeline' ? { timeline: 'list' as const } : {}),
     });
   }
-  // A finding destination is canonical in List. Its navigation revision is
-  // intentionally distinct from ordinary publication, which preserves Map.
-  const overviewView = viewState.hubIdentity === hubIdentity ? viewState.overview : 'list';
-  const setOverviewView = (overview: 'list' | 'map'): void =>
+  // Overview findings are canonical in List. Ordinary publication preserves
+  // its chosen Map view; Timeline is always its map surface.
+  const overviewView =
+    viewState.hubIdentity === hubIdentity ? viewState.overview : initialOverviewView;
+  const overviewNavigation = useRef<HTMLButtonElement>(null);
+  const pendingOverviewFocus = useRef(false);
+  const setOverviewView = (overview: 'list' | 'map'): void => {
+    pendingOverviewFocus.current = true;
     setViewState({ ...viewState, overview });
-  const timelineView = viewState.hubIdentity === hubIdentity ? viewState.timeline : 'list';
-  const setTimelineView = (timeline: 'list' | 'map'): void =>
-    setViewState({ ...viewState, timeline });
+  };
+  useLayoutEffect(() => {
+    if (!pendingOverviewFocus.current) return;
+    pendingOverviewFocus.current = false;
+    overviewNavigation.current?.focus({ preventScroll: true });
+  }, [overviewView]);
   const activeTab =
     tabState.hubIdentity === hubIdentity &&
     tabState.requested === requestedTab &&
     tabState.findingNavigationRevision === findingNavigationRevision
       ? tabState.active
       : requestedTab;
+  const nextVisitTarget =
+    activeTab !== 'timeline' || nextVisit === undefined
+      ? undefined
+      : findingTarget(nextVisit.marker.address, undefined, node.owner);
   const setActiveTab = (tab: WorkspaceHubTab): void =>
     setTabState({ active: tab, findingNavigationRevision, hubIdentity, requested: requestedTab });
   const pendingMembershipFocus = useRef<PendingHubMembershipFocus | undefined>(undefined);
@@ -203,57 +209,46 @@ export function HubDecisionWorkbench({
     const tab = hubWorkbenchTabs[next];
     if (tab !== undefined) activateTab(tab.key);
   };
-  const overviewViewSwitcher = (
-    <div aria-label="Hub Overview view" className="hub-view-switch" role="group">
-      {(['list', 'map'] as const).map((view) => (
-        <button
-          aria-pressed={overviewView === view}
-          className="quiet-action action-compact"
-          key={view}
-          onClick={() => setOverviewView(view)}
-          type="button"
-        >
-          {view === 'list' ? 'List' : 'Map'}
-        </button>
-      ))}
-    </div>
+  const overviewNavigationControl = (
+    <button
+      className="quiet-action action-compact"
+      onClick={() => setOverviewView(overviewView === 'map' ? 'list' : 'map')}
+      ref={overviewNavigation}
+      type="button"
+    >
+      {overviewView === 'map' ? 'Details →' : 'Back to Map'}
+    </button>
   );
-  const timelineToolbarActions = (
-    <div className="hub-timeline-toolbar-actions">
-      <button
-        aria-busy={resetCandidates.pending || undefined}
-        className="danger-action action-compact"
-        disabled={
-          hubTarget.inert ||
-          authoredVisitCount === 0 ||
-          resetCandidates.pending ||
-          (resetCandidates.result !== undefined &&
-            !candidateMayBeAuthored(resetCandidates.result[0]))
-        }
-        onClick={() => {
-          const options = resetCandidates.result ?? resetCandidates.activate();
-          if (candidateMayBeAuthored(options?.[0])) executeIntent(resetVisitOrder.intent());
-        }}
-        onFocus={() => resetCandidates.activate()}
-        onPointerDown={() => resetCandidates.activate()}
-        type="button"
-      >
-        Reset visits
-      </button>
-      <div aria-label="Hub Timeline view" className="hub-view-switch" role="group">
-        {(['list', 'map'] as const).map((view) => (
-          <button
-            aria-pressed={timelineView === view}
-            className="quiet-action action-compact"
-            key={view}
-            onClick={() => setTimelineView(view)}
-            type="button"
-          >
-            {view === 'list' ? 'List' : 'Map'}
-          </button>
-        ))}
-      </div>
-    </div>
+  const resetVisitsControl = (
+    <button
+      aria-busy={resetCandidates.pending || undefined}
+      className="danger-action action-compact"
+      disabled={
+        hubTarget.inert ||
+        authoredVisitCount === 0 ||
+        resetCandidates.pending ||
+        (resetCandidates.result !== undefined && !candidateMayBeAuthored(resetCandidates.result[0]))
+      }
+      onClick={() => {
+        const options = resetCandidates.result ?? resetCandidates.activate();
+        if (candidateMayBeAuthored(options?.[0])) executeIntent(resetVisitOrder.intent());
+      }}
+      onFocus={() => resetCandidates.activate()}
+      onPointerDown={() => resetCandidates.activate()}
+      type="button"
+    >
+      Reset visits
+    </button>
+  );
+  const resetBoardControl = (
+    <button
+      className="danger-action action-compact"
+      disabled={hubTarget.inert || node.openSlotCount.current === 0}
+      onClick={() => executeIntent(resetBoard.intent)}
+      type="button"
+    >
+      Reset Board
+    </button>
   );
 
   return (
@@ -270,7 +265,11 @@ export function HubDecisionWorkbench({
             {node.openSlotCount.current} open · {node.openSlotCount.min}–{node.openSlotCount.max}{' '}
             required
           </span>
-          <span className="neutral-status">
+          <span
+            {...nextVisitTarget}
+            className="neutral-status"
+            tabIndex={nextVisitTarget === undefined ? undefined : -1}
+          >
             {authoredVisitCount} of {node.requiredVisitCount} planned
           </span>
         </div>
@@ -328,7 +327,8 @@ export function HubDecisionWorkbench({
                     hubIdentity={hubIdentity}
                     interactions={interactions}
                     node={node}
-                    viewSwitcher={overviewViewSwitcher}
+                    resetBoardControl={resetBoardControl}
+                    detailsControl={overviewNavigationControl}
                   />
                 ) : (
                   <>
@@ -338,7 +338,10 @@ export function HubDecisionWorkbench({
                           <h4>Open rooms</h4>
                           <MarkerAssessment marker={node.openSet} />
                         </div>
-                        {overviewViewSwitcher}
+                        <div className="hub-board-heading-actions">
+                          {overviewNavigationControl}
+                          {resetBoardControl}
+                        </div>
                       </div>
                       <p>Open or close the rooms available on this Hub board.</p>
                     </header>
@@ -356,19 +359,11 @@ export function HubDecisionWorkbench({
                       {node.slots.map((slot) =>
                         slot.open ? (
                           <OpenHubRoomCard
-                            dropAfter={undefined}
-                            dropBefore={undefined}
                             focusedRewardOwnerKey={focusedOwnerKey}
                             interactions={interactions}
                             key={slot.hubSlotKey}
                             onMembershipTransition={continueKeyboardMembershipAfterTransition}
-                            pointerDragging={false}
-                            ranking={ranking}
-                            requiredVisitCount={node.requiredVisitCount}
-                            showOrder={false}
                             slot={slot}
-                            slotsByKey={slotsByKey}
-                            visitOrderInteraction={visitOrderInteraction}
                           />
                         ) : (
                           <ClosedHubRoomOption
@@ -383,19 +378,13 @@ export function HubDecisionWorkbench({
                   </>
                 )}
               </section>
-            ) : timelineView === 'map' ? (
+            ) : (
               <HubMapTimeline
                 hubIdentity={hubIdentity}
                 interactions={interactions}
+                locked={hubTarget.inert}
                 node={node}
-                toolbarActions={timelineToolbarActions}
-              />
-            ) : (
-              <HubVisitTimeline
-                focusedRewardOwnerKey={focusedOwnerKey}
-                interactions={interactions}
-                node={node}
-                toolbarActions={timelineToolbarActions}
+                resetVisitsControl={resetVisitsControl}
               />
             )}
           </div>

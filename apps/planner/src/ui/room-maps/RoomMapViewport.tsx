@@ -20,6 +20,8 @@ export function RoomMapViewport({
   toolbarTitle,
   toolbarActions,
   toolbarEnd,
+  controlsPlacement = 'toolbar',
+  viewportOverlay,
 }: {
   readonly asset: RoomMapAsset | undefined;
   /** Drawn in the displayed-image coordinate space, never the scrollport. */
@@ -28,6 +30,9 @@ export function RoomMapViewport({
   readonly toolbarTitle?: string;
   readonly toolbarActions?: ReactNode;
   readonly toolbarEnd?: ReactNode;
+  readonly controlsPlacement?: 'toolbar' | 'overlay';
+  /** Fixed beside overlaid controls, outside the image's pan/zoom space. */
+  readonly viewportOverlay?: ReactNode;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const panRef = useRef<
@@ -179,77 +184,96 @@ export function RoomMapViewport({
     );
   }
 
-  return (
-    <section aria-label={`${title} map viewport`} className="room-map-viewport">
-      <header className="room-map-toolbar">
-        {toolbarTitle === undefined ? null : <h4>{toolbarTitle}</h4>}
-        <div className="room-map-controls">
-          <button className="quiet-action action-compact" onClick={fit} type="button">
-            Fit
-          </button>
-          <button
-            aria-label="Zoom out"
-            className="quiet-action action-compact"
-            disabled={zoom <= minimumZoom}
-            onClick={() => changeZoom(Math.max(minimumZoom, zoom - zoomStep))}
-            type="button"
-          >
-            −
-          </button>
-          <output aria-live="polite" className="room-map-zoom">
-            {zoom}%
-          </output>
-          <button
-            aria-label="Zoom in"
-            className="quiet-action action-compact"
-            disabled={zoom >= maximumZoom}
-            onClick={() => changeZoom(Math.min(maximumZoom, zoom + zoomStep))}
-            type="button"
-          >
-            +
-          </button>
-          {toolbarActions}
-        </div>
-        {toolbarEnd}
-      </header>
+  const controls = (
+    <div className="room-map-controls">
+      <button className="quiet-action action-compact" onClick={fit} type="button">
+        Fit
+      </button>
+      <button
+        aria-label="Zoom out"
+        className="quiet-action action-compact"
+        disabled={zoom <= minimumZoom}
+        onClick={() => changeZoom(Math.max(minimumZoom, zoom - zoomStep))}
+        type="button"
+      >
+        −
+      </button>
+      <output aria-live="polite" className="room-map-zoom">
+        {zoom}%
+      </output>
+      <button
+        aria-label="Zoom in"
+        className="quiet-action action-compact"
+        disabled={zoom >= maximumZoom}
+        onClick={() => changeZoom(Math.min(maximumZoom, zoom + zoomStep))}
+        type="button"
+      >
+        +
+      </button>
+      {toolbarActions}
+    </div>
+  );
+  const map = (
+    <div
+      aria-label={`Pan map of ${title}`}
+      className="room-map-scroll"
+      ref={scrollRef}
+      role="region"
+      tabIndex={0}
+    >
       <div
-        aria-label={`Pan map of ${title}`}
-        className="room-map-scroll"
-        ref={scrollRef}
-        role="region"
-        tabIndex={0}
+        className="room-map-image-stage"
+        data-pannable={canPan || undefined}
+        data-panning={panning || undefined}
+        onLostPointerCapture={endPan}
+        onPointerCancel={endPan}
+        onPointerDown={startPan}
+        onPointerMove={movePan}
+        onPointerUp={endPan}
       >
         <div
-          className="room-map-image-stage"
-          data-pannable={canPan || undefined}
-          data-panning={panning || undefined}
-          onLostPointerCapture={endPan}
-          onPointerCancel={endPan}
-          onPointerDown={startPan}
-          onPointerMove={movePan}
-          onPointerUp={endPan}
+          className="room-map-image-frame"
+          {...(displayedImageSize === undefined ? {} : { style: displayedImageSize })}
         >
-          <div
-            className="room-map-image-frame"
-            {...(displayedImageSize === undefined ? {} : { style: displayedImageSize })}
-          >
-            <img
-              alt={`Map of ${title}`}
-              className="room-map-image"
-              draggable={false}
-              onError={() => setImageFailed(true)}
-              onLoad={(event) => {
-                setImageSize({
-                  height: event.currentTarget.naturalHeight,
-                  width: event.currentTarget.naturalWidth,
-                });
-              }}
-              src={asset.src}
-            />
-            {overlay}
-          </div>
+          <img
+            alt={`Map of ${title}`}
+            className="room-map-image"
+            draggable={false}
+            onError={() => setImageFailed(true)}
+            onLoad={(event) => {
+              setImageSize({
+                height: event.currentTarget.naturalHeight,
+                width: event.currentTarget.naturalWidth,
+              });
+            }}
+            src={asset.src}
+          />
+          {overlay}
         </div>
       </div>
+    </div>
+  );
+
+  return (
+    <section aria-label={`${title} map viewport`} className="room-map-viewport">
+      {controlsPlacement === 'toolbar' || toolbarTitle !== undefined || toolbarEnd !== undefined ? (
+        <header className="room-map-toolbar">
+          {toolbarTitle === undefined ? null : <h4>{toolbarTitle}</h4>}
+          {controlsPlacement === 'toolbar' ? controls : null}
+          {toolbarEnd}
+        </header>
+      ) : null}
+      {controlsPlacement === 'overlay' ? (
+        <div className="room-map-canvas">
+          <div className="room-map-viewport-overlay">
+            {controls}
+            {viewportOverlay}
+          </div>
+          {map}
+        </div>
+      ) : (
+        map
+      )}
       {imageFailed ? (
         <p className="room-map-load-error" role="status">
           Unable to load this map image.

@@ -55,6 +55,55 @@
   gap: 12px;
 }
 
+.room-map-canvas {
+  position: relative;
+  min-width: 0;
+}
+
+.room-map-viewport-overlay {
+  position: absolute;
+  z-index: 4;
+  inset: 12px 12px auto;
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.room-map-viewport-overlay > * {
+  pointer-events: auto;
+}
+
+.room-map-viewport-overlay > .room-map-controls {
+  padding: 6px;
+  border: 1px solid #344352;
+  border-radius: 6px;
+  background: rgb(17 25 35 / 92%);
+}
+
+.hub-map-corner-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.hub-map-corner-actions > .hub-map-legend {
+  position: static;
+  font-size: 0.8rem;
+}
+
+.hub-map-board-actions {
+  display: grid;
+  gap: 6px;
+}
+
+.hub-map-corner-actions .danger-action,
+.hub-map-board-actions .quiet-action {
+  background: rgb(17 25 35 / 92%);
+}
+
 .room-map-toolbar {
   flex-wrap: wrap;
   min-height: 32px;
@@ -148,13 +197,15 @@
 }
 
 .hub-map-marker {
+  --hub-marker-color: #d8bf85;
+  --hub-marker-opacity: 100%;
   z-index: 1;
   min-height: 0;
   padding: 0;
   border: 2px solid #101923;
   border-radius: 50%;
   color: #101923;
-  background: #d8bf85;
+  background: color-mix(in srgb, var(--hub-marker-color) var(--hub-marker-opacity), transparent);
   box-shadow: 0 2px 8px rgb(0 0 0 / 48%);
   font-size: clamp(7px, 1.1vw, 15px);
   font-weight: 800;
@@ -163,23 +214,23 @@
 }
 
 .hub-map-marker[data-open='false'] {
-  opacity: 0.64;
+  --hub-marker-opacity: 64%;
 }
 
 .hub-map-marker[data-category='Perfect'] {
-  background: #43ddeb;
+  --hub-marker-color: #43ddeb;
 }
 
 .hub-map-marker[data-category='Good'] {
-  background: #76e69a;
+  --hub-marker-color: #76e69a;
 }
 
 .hub-map-marker[data-category='Bad'] {
-  background: #f26868;
+  --hub-marker-color: #f26868;
 }
 
 .hub-map-marker[data-category='Special'] {
-  background: #facc45;
+  --hub-marker-color: #facc45;
 }
 
 .hub-map-marker[data-open='true'] {
@@ -193,6 +244,10 @@
   cursor: not-allowed;
 }
 
+.hub-timeline-map-marker[aria-disabled='true']:not(:disabled) {
+  cursor: default;
+}
+
 .hub-map-marker:focus-visible {
   z-index: 2;
   outline: 3px solid #fff4c7;
@@ -204,6 +259,25 @@
   margin-top: 3px;
   font-size: clamp(6px, 0.7vw, 10px);
   font-weight: 600;
+}
+
+.hub-map-marker-content {
+  position: absolute;
+  inset: 10%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2%;
+  pointer-events: none;
+}
+
+.hub-map-reward-icon {
+  width: 65%;
+  height: 65%;
+  min-height: 0;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 75%));
 }
 
 .hub-map-visit-badge-anchor {
@@ -230,11 +304,7 @@
 }
 
 .hub-timeline-map-marker[data-visited='false'] {
-  opacity: 0.56;
-}
-
-.hub-timeline-map-marker[data-visited='true'] {
-  opacity: 1;
+  --hub-marker-opacity: 56%;
 }
 
 .hub-map-legend {

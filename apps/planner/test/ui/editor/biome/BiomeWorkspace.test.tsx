@@ -362,6 +362,60 @@ describe('BiomeWorkspace', () => {
     );
   });
 
+  it('binds an incomplete Hub visit finding to its next Timeline count and repairs it from the map', async () => {
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceHubVisitOrder',
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      hubSlotKeys: ['combat05', 'miniBoss01'],
+    });
+    const view = renderWorkspace(project, 'Surface', 'N');
+    const findingForNextVisit = () => {
+      const finding = view.application.store
+        .getState()
+        .projectWorkspace.assembly!.evaluation.findings.find(
+          (candidate) => candidate.code === 'hubVisitOrderIncomplete',
+        );
+      if (finding === undefined) throw new Error('incomplete Hub visit finding is missing');
+      return finding;
+    };
+    const initialFinding = findingForNextVisit();
+    expect(semanticAddressKey(initialFinding.origin)).toBe(
+      semanticAddressKey(createHubVisitAddress(nBiome, 'hub', 3)),
+    );
+
+    act(() =>
+      view.application.store.dispatch(
+        findingSelected({ key: semanticFindingKey(initialFinding), origin: initialFinding.origin }),
+      ),
+    );
+    expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    const count = screen.getByText('2 of 6 planned');
+    expect(count.getAttribute('data-semantic-owner')).toBe(
+      semanticAddressKey(createHubVisitAddress(nBiome, 'hub', 3)),
+    );
+    expect(count.getAttribute('data-selected-finding')).toBe('true');
+    await waitFor(() => expect(document.activeElement).toBe(count));
+    await view.user.click(screen.getByRole('button', { name: 'Combat 01: Unvisited. Add visit.' }));
+    await waitFor(() => expect(screen.getByText('3 of 6 planned')).toBeTruthy());
+
+    const repeatedFinding = findingForNextVisit();
+    act(() =>
+      view.application.store.dispatch(
+        findingSelected({
+          key: semanticFindingKey(repeatedFinding),
+          origin: repeatedFinding.origin,
+        }),
+      ),
+    );
+    const nextCount = screen.getByText('3 of 6 planned');
+    expect(nextCount.getAttribute('data-semantic-owner')).toBe(
+      semanticAddressKey(createHubVisitAddress(nBiome, 'hub', 4)),
+    );
+    await waitFor(() => expect(document.activeElement).toBe(nextCount));
+  });
+
   it('returns an Overview finding from Map to its canonical List presentation', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     const projection = workspaceProjection(view.application);
@@ -378,11 +432,12 @@ describe('BiomeWorkspace', () => {
     } as const;
 
     act(() => view.application.store.dispatch(findingSelected(selection)));
-    await view.user.click(screen.getByRole('button', { name: 'Map' }));
-    expect(screen.getByRole('button', { name: 'Map' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('group', { name: 'Hub room set' })).toBeTruthy();
+    await view.user.click(screen.getByRole('button', { name: 'Back to Map' }));
+    expect(screen.getByRole('region', { name: 'Ephyra Hub map' })).toBeTruthy();
 
     act(() => view.application.store.dispatch(findingSelected(selection)));
-    expect(screen.getByRole('button', { name: 'List' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('group', { name: 'Hub room set' })).toBeTruthy();
   });
   it('opens an available Run State sheet without changing inspector selection or authored history, and restores launcher focus on close', async () => {
     const evaluationEvents: string[] = [];
@@ -610,12 +665,11 @@ describe('BiomeWorkspace', () => {
     ).toContain(firstVisit.mainReward.label);
     await view.user.click(hubRailButton());
     await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
-    const hubCard = screen.getByRole('article', {
-      name: `${firstVisit.node.room.label} Hub room`,
-    });
-    expect(hubCard.querySelector('.hub-timeline-reward-preview')?.textContent).toContain(
-      firstVisit.mainReward.label,
-    );
+    expect(
+      screen.getByRole('button', {
+        name: `${firstVisit.node.room.label}: Visit 1.`,
+      }),
+    ).toBeTruthy();
   });
 
   it('uses a selected decision rail stop to open its continuation occurrence stage', async () => {
@@ -670,10 +724,7 @@ describe('BiomeWorkspace', () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     await view.user.click(hubRailButton());
     await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
-    const boardCard = screen.getByRole('article', { name: 'Combat 02 Hub room' });
-    expect(within(boardCard).getByLabelText('Combat 02 reward preview').textContent).toContain(
-      'Big Max Magick',
-    );
+    expect(screen.getByRole('button', { name: 'Combat 02: Visit 3.' })).toBeTruthy();
 
     const visit = screen.getByRole('button', { name: /Visit 3 · Combat 02/ });
     act(() => visit.focus());

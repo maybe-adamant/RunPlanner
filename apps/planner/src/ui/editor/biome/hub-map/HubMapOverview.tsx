@@ -22,12 +22,15 @@ import { RoomMapViewport } from '@planner/ui/room-maps/RoomMapViewport';
 import { roomMapAssetFor } from '@planner/ui/room-maps/roomMapAssets';
 import { DoorRewardEditor } from '../DoorRewardEditor';
 import { useHubSlotMembership } from '../HubMembershipBoard';
+import { HubMapMarkerContent } from './HubMapMarkerContent';
+import { hubMapReward } from './hubMapReward';
 
 interface HubMapOverviewProps {
   readonly hubIdentity: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly node: WorkspaceHubDecisionNode;
-  readonly viewSwitcher: ReactNode;
+  readonly resetBoardControl: ReactNode;
+  readonly detailsControl: ReactNode;
 }
 
 interface HubMapMarkerProps {
@@ -62,6 +65,7 @@ function HubMapMarker({
     slot,
   });
   const open = slot.open;
+  const reward = hubMapReward(slot);
   // An open marker launches the existing reward surface. Its separate Close
   // action may be unavailable without making that surface unreachable.
   const disabled = open ? false : membership.disabled;
@@ -97,6 +101,7 @@ function HubMapMarker({
       <Popover.Anchor asChild>
         <button
           aria-busy={membership.pending || undefined}
+          aria-description={open ? `Reward: ${reward.summary}` : undefined}
           aria-label={
             open
               ? `${slot.label}: Opened. Edit reward or close room.`
@@ -127,10 +132,10 @@ function HubMapMarker({
           }}
           ref={marker}
           style={{ left: `${(x / 2560) * 100}%`, top: `${(y / 1440) * 100}%` }}
+          title={open ? `${slot.label}: ${reward.summary}` : `${slot.label}: Closed`}
           type="button"
         >
-          <span aria-hidden="true">{annotation.mapLabel}</span>
-          <span className="hub-map-marker-status">{open ? 'Opened' : 'Closed'}</span>
+          <HubMapMarkerContent label={annotation.mapLabel} open={open} reward={reward} />
         </button>
       </Popover.Anchor>
       {open ? (
@@ -198,7 +203,6 @@ function HubMapMarkerLayer({
   }, [selectedSlot?.open, selectedSlotKey]);
   return (
     <div aria-label="Ephyra Hub room map controls" className="hub-map-marker-layer">
-      <HubMapQualityLegend />
       {hubMapAnnotations.map((annotation) => {
         const slot = node.slots.find((candidate) => candidate.hubSlotKey === annotation.hubSlotKey);
         if (slot === undefined || slot.gameName !== annotation.gameName) {
@@ -227,16 +231,26 @@ export function HubMapOverview({
   hubIdentity,
   interactions,
   node,
-  viewSwitcher,
+  resetBoardControl,
+  detailsControl,
 }: HubMapOverviewProps) {
   return (
     <section aria-label="Ephyra Hub map" className="hub-map-overview">
       <RoomMapViewport
         asset={roomMapAssetFor(node.gameName)}
+        controlsPlacement="overlay"
         key={hubIdentity}
         overlay={<HubMapMarkerLayer interactions={interactions} node={node} />}
         title="Ephyra Hub"
-        toolbarEnd={viewSwitcher}
+        viewportOverlay={
+          <div className="hub-map-corner-actions">
+            <div className="hub-map-board-actions">
+              {resetBoardControl}
+              {detailsControl}
+            </div>
+            <HubMapQualityLegend />
+          </div>
+        }
       />
     </section>
   );

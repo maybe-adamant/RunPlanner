@@ -418,6 +418,11 @@ ordered visits, side-room policy, restores, and the dedicated completed-Hub
 handoff. An open slot creates one occurrence; its room identity is not
 replaceable. Open unvisited slots remain real offered leaves.
 
+`ResetHubBoard` retains the Hub decision and its source while atomically clearing
+its open slots, visits, owned main/side rooms, and completed-Hub handoff subtree.
+Unlike `RemoveHubDecision`, it does not restore the preceding terminal envelope.
+Resetting an empty board is a no-op; Undo restores all cleared contents together.
+
 The completed-Hub batch is permitted only after the declared open-set and
 six-visit predicate holds. Its source is `{ kind: 'hubDecision', decisionKey: 'hub' }`, not
 a rendered visit index or synthetic completion source.

@@ -30,7 +30,7 @@ import {
   simulateProject,
 } from '@run-planner/engine/simulation';
 
-import { createCompleteNProject } from '../support/complete-n-project';
+import { createCompleteNProject, createEnteredNLocalProject } from '../support/complete-n-project';
 import {
   fBiome,
   fProject,
@@ -52,6 +52,67 @@ function startedNTopology(project: ReturnType<typeof nProject>) {
 }
 
 describe('authored-project commands and topology', () => {
+  it('resets a Hub board with its main, side and handoff rooms as one reversible edit', () => {
+    const project = createEnteredNLocalProject();
+    const before = startedNTopology(project);
+    const hub = before.decisions.find((decision) => decision.kind === 'hub');
+    if (hub?.kind !== 'hub') throw new Error('N Hub decision is required');
+    const command = {
+      kind: 'ResetHubBoard' as const,
+      hub: createHubDecisionAddress(nBiome, hub.hubKey),
+    };
+    const history = applyProjectHistoryCommand(createProjectHistory(project), catalog, command);
+    const reset = startedNTopology(history.present);
+
+    expect(reset.decisions.find((decision) => decision.kind === 'hub')).toEqual({
+      ...hub,
+      openTargets: [],
+      visitOrder: [],
+    });
+    const preservedRooms = before.occurrences.filter((room) =>
+      ['N_Opening01', 'N_PreHub01'].includes(room.gameName),
+    );
+    expect(preservedRooms).toHaveLength(2);
+    expect(reset.occurrences).toEqual(preservedRooms);
+    expect(reset.fixedRoomLinks).toEqual([]);
+    expect(reset.decisions.filter((decision) => decision.kind !== 'hub')).toEqual(
+      before.decisions.filter(
+        (decision) =>
+          decision.kind === 'exit' &&
+          decision.source.kind === 'occurrence' &&
+          decision.source.occurrenceId === before.startOccurrenceId,
+      ),
+    );
+    expect(history.past).toEqual([project]);
+    expect(applyProjectHistoryCommand(history, catalog, command)).toBe(history);
+    expect(undoProjectHistory(history).present).toBe(project);
+    expect(redoProjectHistory(undoProjectHistory(history)).present).toBe(history.present);
+  });
+
+  it('resets an incomplete Hub board without requiring a completed visit sequence', () => {
+    const partial = applyProjectCommand(createCompleteNProject(), catalog, {
+      kind: 'ReplaceHubVisitOrder',
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      hubSlotKeys: ['combat01'],
+    });
+    const reset = applyProjectCommand(partial, catalog, {
+      kind: 'ResetHubBoard',
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+    });
+    expect(
+      startedNTopology(reset).decisions.find((decision) => decision.kind === 'hub'),
+    ).toMatchObject({
+      openTargets: [],
+      visitOrder: [],
+    });
+    expect(() =>
+      applyProjectCommand(partial, catalog, {
+        kind: 'ResetHubBoard',
+        hub: createHubDecisionAddress(nBiome, 'unknown-hub'),
+      }),
+    ).toThrow(ProjectCommandContractError);
+  });
+
   it('rejects a Surface-addressed biome command against an Underworld document without mutation', () => {
     const project = fProject();
     const encodedBefore = encodeProjectDocument(project);

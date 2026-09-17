@@ -15,10 +15,15 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function renderMap(width = 1000, height = 800) {
+function renderMap(
+  width = 1000,
+  height = 800,
+  controlsPlacement: 'toolbar' | 'overlay' = 'toolbar',
+) {
   render(
     <RoomMapViewport
       asset={{ gameName: 'H_Combat04', src: '/map.webp', isPlaceholder: false }}
+      controlsPlacement={controlsPlacement}
       title="Combat 04"
     />,
   );
@@ -47,6 +52,25 @@ function renderMap(width = 1000, height = 800) {
 const pointer = { pointerId: 1, pointerType: 'mouse', button: 0, clientX: 300, clientY: 260 };
 
 describe('RoomMapViewport', () => {
+  it('keeps overlaid zoom controls outside the scrolling image and its pan gesture', () => {
+    const { scroll, image, capture } = renderMap(1000, 800, 'overlay');
+    const zoom = screen.getByRole('button', { name: 'Zoom in' });
+    const canvas = zoom.closest('.room-map-canvas');
+    expect(canvas).not.toBeNull();
+    expect(canvas?.contains(scroll)).toBe(true);
+    expect(scroll.contains(zoom)).toBe(false);
+    fireEvent.click(zoom);
+    expect(screen.getByText('125%')).toBeTruthy();
+    fireEvent.pointerDown(zoom, pointer);
+    fireEvent.pointerMove(zoom, { ...pointer, clientX: 100 });
+    fireEvent.pointerUp(zoom, pointer);
+    expect(capture).not.toHaveBeenCalled();
+    expect(image.parentElement?.style.width).toBe('625px');
+    fireEvent.click(screen.getByRole('button', { name: 'Fit' }));
+    expect([scroll.scrollLeft, scroll.scrollTop]).toEqual([0, 0]);
+    expect(image.parentElement?.style.width).toBe('500px');
+  });
+
   it('drags the zoomed map using pointer capture while retaining native input paths', () => {
     const { scroll, stage, image, capture } = renderMap();
     expect(image.getAttribute('draggable')).toBe('false');
