@@ -13,6 +13,8 @@ import {
 import { useAppSelector } from '@planner/state/store';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
+import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { HubCompletionHandoff } from './HubCompletionHandoff';
 import {
   ClosedHubRoomOption,
@@ -23,6 +25,7 @@ import {
 import { OpenHubRoomCard } from './HubRoomCards';
 import { HubVisitTimeline } from './HubVisitTimeline';
 import { HubMapOverview } from './hub-map/HubMapOverview';
+import { HubMapTimeline } from './hub-map/HubMapTimeline';
 import { RunStateLauncher } from './RunStateSheet';
 
 interface HubDecisionWorkbenchProps {
@@ -57,6 +60,15 @@ export function HubDecisionWorkbench({
   node,
 }: HubDecisionWorkbenchProps) {
   const findingTarget = useFindingTarget();
+  const hubTarget = findingTarget(node.owner);
+  const hubTargetProps = {
+    'aria-description': hubTarget['aria-description'],
+    'data-has-findings': hubTarget['data-has-findings'],
+    'data-selected-finding': hubTarget['data-selected-finding'],
+    'data-semantic-owner': hubTarget['data-semantic-owner'],
+    id: hubTarget.id,
+    ref: hubTarget.ref,
+  };
   const openSetTarget = findingTarget(node.openSet.address);
   const executeIntent = useCommandIntent();
   const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
@@ -75,12 +87,15 @@ export function HubDecisionWorkbench({
     interactions.hubVisitOrders,
     workspaceInteractionKey(node.owner),
   );
+  const resetVisitOrder = visitOrderInteraction.proposalFor([]);
+  const resetCandidates = useWorkspaceInteraction(resetVisitOrder);
   const ranking = reconcileHubBoardRanking({
     authoredVisitOrder: visitOrderInteraction.selectedHubSlotKeys,
     declarationOpenSlotKeys: node.slots.filter((slot) => slot.open).map((slot) => slot.hubSlotKey),
     retainedTailSlotKeys: Object.freeze([]),
   });
   const authoredVisitCount = visitOrderInteraction.selectedHubSlotKeys.length;
+  const slotsByKey = new Map(node.slots.map((slot) => [slot.hubSlotKey, slot] as const));
   const continueKeyboardMembershipAfterTransition = (transition: HubMembershipTransition): void => {
     if (transition.input !== 'keyboard') return;
     pendingMembershipFocus.current = Object.freeze({ ...transition, beforeSlots: node.slots });
@@ -100,24 +115,43 @@ export function HubDecisionWorkbench({
     hubIdentity,
     requested: requestedTab,
   });
-  const [overviewViewState, setOverviewViewState] = useState<{
-    readonly findingNavigationRevision: number | undefined;
+  const [viewState, setViewState] = useState<{
+    readonly handledFindingNavigationRevision: number | undefined;
     readonly hubIdentity: string;
-    readonly view: 'list' | 'map';
+    readonly overview: 'list' | 'map';
+    readonly timeline: 'list' | 'map';
   }>({
-    findingNavigationRevision,
+    handledFindingNavigationRevision: findingNavigationRevision,
     hubIdentity,
-    view: 'list' as const,
+    overview: 'list',
+    timeline: 'list',
   });
+  if (viewState.hubIdentity !== hubIdentity) {
+    setViewState({
+      handledFindingNavigationRevision: findingNavigationRevision,
+      hubIdentity,
+      overview: 'list',
+      timeline: 'list',
+    });
+  } else if (
+    findingNavigationRevision !== undefined &&
+    viewState.handledFindingNavigationRevision !== findingNavigationRevision
+  ) {
+    setViewState({
+      ...viewState,
+      handledFindingNavigationRevision: findingNavigationRevision,
+      ...(requestedTab === 'overview' ? { overview: 'list' as const } : {}),
+      ...(requestedTab === 'timeline' ? { timeline: 'list' as const } : {}),
+    });
+  }
   // A finding destination is canonical in List. Its navigation revision is
   // intentionally distinct from ordinary publication, which preserves Map.
-  const overviewView =
-    overviewViewState.hubIdentity === hubIdentity &&
-    overviewViewState.findingNavigationRevision === findingNavigationRevision
-      ? overviewViewState.view
-      : 'list';
-  const setOverviewView = (view: 'list' | 'map'): void =>
-    setOverviewViewState({ findingNavigationRevision, hubIdentity, view });
+  const overviewView = viewState.hubIdentity === hubIdentity ? viewState.overview : 'list';
+  const setOverviewView = (overview: 'list' | 'map'): void =>
+    setViewState({ ...viewState, overview });
+  const timelineView = viewState.hubIdentity === hubIdentity ? viewState.timeline : 'list';
+  const setTimelineView = (timeline: 'list' | 'map'): void =>
+    setViewState({ ...viewState, timeline });
   const activeTab =
     tabState.hubIdentity === hubIdentity &&
     tabState.requested === requestedTab &&
@@ -184,10 +218,47 @@ export function HubDecisionWorkbench({
       ))}
     </div>
   );
+  const timelineToolbarActions = (
+    <div className="hub-timeline-toolbar-actions">
+      <button
+        aria-busy={resetCandidates.pending || undefined}
+        className="danger-action action-compact"
+        disabled={
+          hubTarget.inert ||
+          authoredVisitCount === 0 ||
+          resetCandidates.pending ||
+          (resetCandidates.result !== undefined &&
+            !candidateMayBeAuthored(resetCandidates.result[0]))
+        }
+        onClick={() => {
+          const options = resetCandidates.result ?? resetCandidates.activate();
+          if (candidateMayBeAuthored(options?.[0])) executeIntent(resetVisitOrder.intent());
+        }}
+        onFocus={() => resetCandidates.activate()}
+        onPointerDown={() => resetCandidates.activate()}
+        type="button"
+      >
+        Reset visits
+      </button>
+      <div aria-label="Hub Timeline view" className="hub-view-switch" role="group">
+        {(['list', 'map'] as const).map((view) => (
+          <button
+            aria-pressed={timelineView === view}
+            className="quiet-action action-compact"
+            key={view}
+            onClick={() => setTimelineView(view)}
+            type="button"
+          >
+            {view === 'list' ? 'List' : 'Map'}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <section
-      {...findingTarget(node.owner)}
+      {...hubTargetProps}
       tabIndex={-1}
       className="hub-decision-workbench"
       aria-label="Ephyra Hub"
@@ -199,6 +270,7 @@ export function HubDecisionWorkbench({
           <button
             className="danger-action action-compact"
             data-command={removal.intent.command.kind}
+            disabled={hubTarget.inert}
             onClick={() => executeIntent(removal.intent)}
             type="button"
           >
@@ -293,6 +365,7 @@ export function HubDecisionWorkbench({
                             requiredVisitCount={node.requiredVisitCount}
                             showOrder={false}
                             slot={slot}
+                            slotsByKey={slotsByKey}
                             visitOrderInteraction={visitOrderInteraction}
                           />
                         ) : (
@@ -308,11 +381,19 @@ export function HubDecisionWorkbench({
                   </>
                 )}
               </section>
+            ) : timelineView === 'map' ? (
+              <HubMapTimeline
+                hubIdentity={hubIdentity}
+                interactions={interactions}
+                node={node}
+                toolbarActions={timelineToolbarActions}
+              />
             ) : (
               <HubVisitTimeline
                 focusedRewardOwnerKey={focusedOwnerKey}
                 interactions={interactions}
                 node={node}
+                toolbarActions={timelineToolbarActions}
               />
             )}
           </div>

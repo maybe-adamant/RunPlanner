@@ -1,12 +1,75 @@
 // @vitest-environment jsdom
 
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { loadSurfaceNCompleteHubFrontierProject } from '@run-planner/test-fixtures/surface';
+import { withRetainedHubBehindMissingLink } from '@planner-test/support/hub-workbench';
 import { renderStaticHubDecisionWorkbench } from '@planner-test/support/biome-workbench';
 
 describe('HubDecisionWorkbench interaction', () => {
+  it('locks destructive Hub removal without locking map viewing when the retained Hub is unavailable', () => {
+    renderStaticHubDecisionWorkbench(
+      withRetainedHubBehindMissingLink(loadSurfaceNCompleteHubFrontierProject()),
+    );
+
+    expect(screen.getByRole('button', { name: 'Remove Hub' })).toHaveProperty('disabled', true);
+    expect(screen.queryByRole('button', { name: 'Reset visits' })).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
+    expect(screen.getByRole('button', { name: 'Reset visits' })).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: 'Move Combat 02 earlier' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(
+      screen.getByRole('button', { name: 'Choose a visit for Combat 01 to replace' }),
+    ).toHaveProperty('disabled', true);
+    fireEvent.click(screen.getByRole('button', { name: 'Map' }));
+    expect(screen.getByRole('button', { name: 'Fit' })).toBeTruthy();
+  });
+
+  it('resets only the finding-requested view to List and retains that reset across later requests', () => {
+    const view = renderStaticHubDecisionWorkbench(
+      loadSurfaceNCompleteHubFrontierProject(),
+      'Surface',
+      'N',
+      {
+        findingNavigationRevision: 1,
+        initialTab: 'overview',
+      },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Map' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Map' }));
+
+    view.rerenderHub({ findingNavigationRevision: 2, initialTab: 'timeline' });
+    expect(
+      within(screen.getByRole('group', { name: 'Hub Timeline view' }))
+        .getByRole('button', { name: 'List' })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Hub Overview' }));
+    expect(
+      within(screen.getByRole('group', { name: 'Hub Overview view' }))
+        .getByRole('button', { name: 'Map' })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
+
+    view.rerenderHub({ findingNavigationRevision: 3, initialTab: 'overview' });
+    expect(
+      within(screen.getByRole('group', { name: 'Hub Overview view' }))
+        .getByRole('button', { name: 'List' })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
+    fireEvent.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
+    expect(
+      within(screen.getByRole('group', { name: 'Hub Timeline view' }))
+        .getByRole('button', { name: 'List' })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
+  });
+
   it('separates participation, visit/reward editing, and the completed exit into occurrence-style tabs', () => {
     renderStaticHubDecisionWorkbench(loadSurfaceNCompleteHubFrontierProject());
 
@@ -39,7 +102,9 @@ describe('HubDecisionWorkbench interaction', () => {
     expect(timeline.getAttribute('aria-selected')).toBe('true');
     expect(screen.getByRole('button', { name: 'Remove Hub' })).toBe(removal);
     expect(screen.queryByRole('checkbox', { name: 'Combat 01 open' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Move Combat 01 later' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Choose a visit for Combat 01 to replace' }),
+    ).toBeTruthy();
     expect(screen.queryByLabelText('Reward')).toBeNull();
     expect(screen.getByLabelText('Combat 01 reward preview').textContent).toContain(
       'Big Max Health',
@@ -54,7 +119,9 @@ describe('HubDecisionWorkbench interaction', () => {
       'disabled',
       true,
     );
-    expect(screen.queryByRole('button', { name: 'Move Combat 01 later' })).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Choose a visit for Combat 01 to replace' }),
+    ).toBeNull();
     expect(screen.queryByRole('button', { name: 'Map' })).toBeNull();
 
     fireEvent.keyDown(exit, { key: 'Home' });

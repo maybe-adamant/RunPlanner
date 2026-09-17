@@ -9,6 +9,7 @@ export {
   dropRankedPrefixItem,
   moveHubBoardRoom,
   moveRankedPrefixItem,
+  replaceHubBoardVisit,
   reconcileHubBoardRanking,
   reconcileRankedPrefix,
 } from './presentation/hub-ranking';

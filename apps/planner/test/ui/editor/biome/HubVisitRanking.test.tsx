@@ -4,6 +4,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createHubDecisionAddress,
+  createHubSlotAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
   semanticAddressKey,
@@ -29,6 +30,7 @@ import {
   hubNextVisitTarget,
   hubRoster,
   hubTailSlotKeys,
+  invalidTenDoorHubProject,
   nHubState,
   representativeHubProject,
   replaceBrowserProperty,
@@ -224,7 +226,7 @@ describe('HubVisitRanking', () => {
     const project = twoVisitHubProject();
     const view = renderHubDecisionWorkbench(project);
     const add = within(hubCard('combat01')).getByRole('button', {
-      name: 'Add Combat 01 to visited rooms',
+      name: 'Add Combat 01 as visit 3',
     });
 
     await view.user.click(add);
@@ -249,10 +251,332 @@ describe('HubVisitRanking', () => {
     await waitFor(() =>
       expect(document.activeElement).toBe(
         within(hubCard('combat01')).getByRole('button', {
-          name: 'Add Combat 01 to visited rooms',
+          name: 'Add Combat 01 as visit 3',
         }),
       ),
     );
+  });
+
+  it('uses the Timeline map for direct append and named full-prefix replacement', async () => {
+    const partial = renderHubDecisionWorkbench(twoVisitHubProject());
+    selectHubTab('Hub Timeline');
+    const timelineView = screen.getByRole('group', { name: 'Hub Timeline view' });
+    await partial.user.click(within(timelineView).getByRole('button', { name: 'Map' }));
+    const append = screen.getByRole('button', {
+      name: 'Combat 01: not visited. Edit visit order.',
+    });
+    await partial.user.click(append);
+    await waitFor(() =>
+      expect(nHubState(partial.application).decision.visitOrder).toEqual([
+        'combat05',
+        'miniBoss01',
+        'combat01',
+      ]),
+    );
+    expect(screen.getByRole('button', { name: 'Combat 01: Visit 3. Edit visit order.' })).toBe(
+      append,
+    );
+    expect(screen.getByText('Visit 3')).toBeTruthy();
+    partial.unmount();
+
+    const full = renderHubDecisionWorkbench(loadSurfaceNCompleteHubFrontierProject());
+    selectHubTab('Hub Timeline');
+    await full.user.click(
+      within(screen.getByRole('group', { name: 'Hub Timeline view' })).getByRole('button', {
+        name: 'Map',
+      }),
+    );
+    await full.user.click(
+      screen.getByRole('button', { name: 'Combat 01: not visited. Edit visit order.' }),
+    );
+    expect(
+      screen.getByRole('dialog', { name: 'Choose visit to replace with Combat 01' }),
+    ).toBeTruthy();
+    await full.user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(nHubState(full.application).decision.visitOrder).toEqual([
+      'combat05',
+      'miniBoss01',
+      'combat02',
+      'combat11',
+      'combat23',
+      'combat09',
+    ]);
+
+    await full.user.click(
+      screen.getByRole('button', { name: 'Combat 05: Visit 1. Edit visit order.' }),
+    );
+    await full.user.click(
+      screen.getByRole('button', { name: 'Combat 02: Visit 3. Edit visit order.' }),
+    );
+    const secondMapChooser = screen.getByRole('dialog', {
+      name: 'Edit Combat 02 visit order',
+    });
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(secondMapChooser).getByRole('button', { name: 'Close' }),
+      ),
+    );
+  });
+
+  it('moves a visited Map room to an exact position by shifting the intervening visits', async () => {
+    const view = renderHubDecisionWorkbench(loadSurfaceNCompleteHubFrontierProject());
+    selectHubTab('Hub Timeline');
+    await view.user.click(
+      within(screen.getByRole('group', { name: 'Hub Timeline view' })).getByRole('button', {
+        name: 'Map',
+      }),
+    );
+    await view.user.click(
+      screen.getByRole('button', { name: 'Combat 11: Visit 4. Edit visit order.' }),
+    );
+    await view.user.click(
+      within(screen.getByRole('dialog', { name: 'Edit Combat 11 visit order' })).getByRole(
+        'button',
+        { name: 'Move to 1' },
+      ),
+    );
+    await waitFor(() =>
+      expect(nHubState(view.application).decision.visitOrder).toEqual([
+        'combat11',
+        'combat05',
+        'miniBoss01',
+        'combat02',
+        'combat23',
+        'combat09',
+      ]),
+    );
+    const reorderedChooser = screen.getByRole('dialog', { name: 'Edit Combat 11 visit order' });
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(reorderedChooser).getByRole('button', { name: 'Close' }),
+      ),
+    );
+    await view.user.click(within(reorderedChooser).getByRole('button', { name: 'Move to 4' }));
+    await waitFor(() =>
+      expect(nHubState(view.application).decision.visitOrder).toEqual([
+        'combat05',
+        'miniBoss01',
+        'combat02',
+        'combat11',
+        'combat23',
+        'combat09',
+      ]),
+    );
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(screen.getByRole('dialog', { name: 'Edit Combat 11 visit order' })).getByRole(
+          'button',
+          { name: 'Close' },
+        ),
+      ),
+    );
+  });
+
+  it('keeps later Map sequence controls ready when the first visited room has an unresolved child', async () => {
+    const incompleteFirstVisit = applyProjectCommand(
+      loadSurfaceNCompleteHubFrontierProject(),
+      catalog,
+      {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat05')),
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+      },
+    );
+    const view = renderHubDecisionWorkbench(incompleteFirstVisit);
+    selectHubTab('Hub Timeline');
+    expect(
+      screen.getByRole('button', { name: 'Move Combat 11 earlier' }).getAttribute('disabled'),
+    ).toBeNull();
+    await view.user.click(
+      within(screen.getByRole('group', { name: 'Hub Timeline view' })).getByRole('button', {
+        name: 'Map',
+      }),
+    );
+    const laterMarker = screen.getByRole('button', {
+      name: 'Combat 11: Visit 4. Edit visit order.',
+    });
+    expect(laterMarker.getAttribute('disabled')).toBeNull();
+    await view.user.click(laterMarker);
+    await view.user.click(
+      within(screen.getByRole('dialog', { name: 'Edit Combat 11 visit order' })).getByRole(
+        'button',
+        { name: 'Move to 1' },
+      ),
+    );
+    await waitFor(() =>
+      expect(nHubState(view.application).decision.visitOrder.slice(0, 4)).toEqual([
+        'combat11',
+        'combat05',
+        'miniBoss01',
+        'combat02',
+      ]),
+    );
+  });
+
+  it('resets visits in one undoable edit and rebuilds the order by clicking map rooms', async () => {
+    const view = renderHubDecisionWorkbench(loadSurfaceNCompleteHubFrontierProject());
+    expect(screen.queryByRole('button', { name: 'Reset visits' })).toBeNull();
+    selectHubTab('Hub Exit');
+    await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
+    await waitFor(() =>
+      expect(
+        nHubState(view.application).topology.decisions.some(
+          (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
+        ),
+      ).toBe(true),
+    );
+    expect(screen.queryByRole('button', { name: 'Reset visits' })).toBeNull();
+    const before = nHubState(view.application);
+    const openRooms = before.topology.occurrences.filter((room) =>
+      before.decision.openTargets.some((target) => target.occurrenceId === room.occurrenceId),
+    );
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
+    selectHubTab('Hub Timeline');
+    await view.user.click(
+      within(screen.getByRole('group', { name: 'Hub Timeline view' })).getByRole('button', {
+        name: 'Map',
+      }),
+    );
+    await view.user.click(screen.getByRole('button', { name: 'Reset visits' }));
+    await waitFor(() => expect(nHubState(view.application).decision.visitOrder).toEqual([]));
+    const after = nHubState(view.application);
+    expect(after.decision.openTargets).toEqual(before.decision.openTargets);
+    for (const room of openRooms) {
+      expect(
+        after.topology.occurrences.find((item) => item.occurrenceId === room.occurrenceId),
+      ).toEqual(room);
+    }
+    expect(
+      after.topology.decisions.some(
+        (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
+      ),
+    ).toBe(false);
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      historyBefore + 1,
+    );
+    expect(screen.getByRole('button', { name: 'Reset visits' })).toHaveProperty('disabled', true);
+
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await waitFor(() =>
+      expect(nHubState(view.application).decision.visitOrder).toEqual(before.decision.visitOrder),
+    );
+    expect(nHubState(view.application).topology).toEqual(before.topology);
+    await view.user.click(
+      within(screen.getByRole('group', { name: 'Hub Timeline view' })).getByRole('button', {
+        name: 'List',
+      }),
+    );
+    await view.user.click(screen.getByRole('button', { name: 'Reset visits' }));
+    await waitFor(() => expect(nHubState(view.application).decision.visitOrder).toEqual([]));
+    await view.user.click(
+      within(screen.getByRole('group', { name: 'Hub Timeline view' })).getByRole('button', {
+        name: 'Map',
+      }),
+    );
+    for (const room of ['Combat 11', 'Combat 02', 'Combat 05', 'Combat 23']) {
+      await view.user.click(
+        screen.getByRole('button', { name: `${room}: not visited. Edit visit order.` }),
+      );
+    }
+    await waitFor(() =>
+      expect(nHubState(view.application).decision.visitOrder).toEqual([
+        'combat11',
+        'combat02',
+        'combat05',
+        'combat23',
+      ]),
+    );
+  });
+
+  it('removes a completed Map visit through engine handoff cleanup and Undo restores it', async () => {
+    const view = renderHubDecisionWorkbench(loadSurfaceNCompleteHubFrontierProject());
+    selectHubTab('Hub Exit');
+    await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
+    await waitFor(() =>
+      expect(
+        nHubState(view.application).topology.decisions.some(
+          (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
+        ),
+      ).toBe(true),
+    );
+
+    selectHubTab('Hub Timeline');
+    await view.user.click(
+      within(screen.getByRole('group', { name: 'Hub Timeline view' })).getByRole('button', {
+        name: 'Map',
+      }),
+    );
+    await view.user.click(
+      screen.getByRole('button', { name: 'Combat 09: Visit 6. Edit visit order.' }),
+    );
+    await view.user.click(
+      within(screen.getByRole('dialog', { name: 'Edit Combat 09 visit order' })).getByRole(
+        'button',
+        { name: 'Remove visit' },
+      ),
+    );
+    await waitFor(() => expect(nHubState(view.application).decision.visitOrder).toHaveLength(5));
+    expect(screen.queryByRole('dialog', { name: 'Edit Combat 09 visit order' })).toBeNull();
+    expect(
+      nHubState(view.application).topology.decisions.some(
+        (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
+      ),
+    ).toBe(false);
+
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await waitFor(() => expect(nHubState(view.application).decision.visitOrder).toHaveLength(6));
+    expect(
+      nHubState(view.application).topology.decisions.some(
+        (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
+      ),
+    ).toBe(true);
+  });
+
+  it('clears a vanished Timeline marker selection before Undo makes its slot reappear', async () => {
+    const view = renderHubDecisionWorkbench(invalidTenDoorHubProject);
+    selectHubTab('Hub Timeline');
+    await view.user.click(
+      within(screen.getByRole('group', { name: 'Hub Timeline view' })).getByRole('button', {
+        name: 'Map',
+      }),
+    );
+    await view.user.click(
+      screen.getByRole('button', { name: 'Combat 01: not visited. Edit visit order.' }),
+    );
+    expect(
+      screen.getByRole('dialog', { name: 'Choose visit to replace with Combat 01' }),
+    ).toBeTruthy();
+
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'CloseHubSlot',
+          slot: createHubSlotAddress(nBiome, 'hub', 'combat01'),
+        }),
+      ),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('button', { name: 'Combat 01: not visited. Edit visit order.' }),
+      ).toBeNull(),
+    );
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(screen.getByRole('group', { name: 'Hub Timeline view' })).getByRole('button', {
+          name: 'Map',
+        }),
+      ),
+    );
+
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Combat 01: not visited. Edit visit order.' }),
+      ).toBeTruthy(),
+    );
+    expect(
+      screen.queryByRole('dialog', { name: 'Choose visit to replace with Combat 01' }),
+    ).toBeNull();
   });
 
   it('keeps a keyboard tail-only move out of semantic history and command dispatch', async () => {
@@ -272,7 +596,7 @@ describe('HubVisitRanking', () => {
     }
 
     const moveLater = within(hubCard('combat01')).getByRole('button', {
-      name: 'Move Combat 01 later',
+      name: 'Move Combat 01 later among remaining rooms',
     });
     act(() => moveLater.focus());
     await view.user.keyboard('{Enter}');
@@ -288,15 +612,26 @@ describe('HubVisitRanking', () => {
     ).toHaveLength(0);
   });
 
-  it('moves a room across the cutoff with one full order and preserves focus', async () => {
+  it('names the full-prefix visit before replacing it', async () => {
     const project = loadSurfaceNCompleteHubFrontierProject();
     const view = renderHubDecisionWorkbench(project);
     selectHubTab('Hub Timeline');
-    const dispatch = vi.spyOn(view.application.store, 'dispatch');
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
-    const moved = screen.getByRole('button', { name: 'Move Combat 01 into visit 6' });
+    const moved = screen.getByRole('button', { name: 'Choose a visit for Combat 01 to replace' });
 
     await view.user.click(moved);
+    expect(
+      screen.getByRole('dialog', { name: 'Choose visit to replace with Combat 01' }),
+    ).toBeTruthy();
+    expect(nHubState(view.application).decision.visitOrder).toEqual([
+      'combat05',
+      'miniBoss01',
+      'combat02',
+      'combat11',
+      'combat23',
+      'combat09',
+    ]);
+    await view.user.click(screen.getByRole('button', { name: 'Visit 6: Combat 09' }));
 
     await waitFor(() =>
       expect(nHubState(view.application).decision.visitOrder).toEqual([
@@ -311,25 +646,43 @@ describe('HubVisitRanking', () => {
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
-    expect(
-      dispatch.mock.calls.map(([action]) => action).filter(authoredProjectCommandDispatched.match),
-    ).toContainEqual(
-      authoredProjectCommandDispatched({
-        hub: createHubDecisionAddress(nBiome, 'hub'),
-        hubSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'combat01'],
-        kind: 'ReplaceHubVisitOrder',
-      }),
-    );
     const movedCard = screen.getByRole('article', { name: 'Combat 01 Hub room' });
     expect(movedCard.dataset.visitPosition).toBe('6');
     await waitFor(() =>
       expect(document.activeElement).toBe(
-        movedCard.querySelector('[data-hub-rank-action="moveEarlier"]'),
+        movedCard.querySelector('[data-hub-rank-action="removeFromVisits"]'),
       ),
     );
   });
 
-  it('publishes a complete Hub order when a remaining room drops into the full prefix', async () => {
+  it('keeps the newly opened List replacement chooser active when switching rooms', async () => {
+    const view = renderHubDecisionWorkbench(loadSurfaceNCompleteHubFrontierProject());
+    selectHubTab('Hub Timeline');
+
+    await view.user.click(
+      screen.getByRole('button', { name: 'Choose a visit for Combat 01 to replace' }),
+    );
+    expect(
+      screen.getByRole('dialog', { name: 'Choose visit to replace with Combat 01' }),
+    ).toBeTruthy();
+
+    const secondTrigger = screen.getByRole('button', {
+      name: 'Choose a visit for Combat 03 to replace',
+    });
+    await view.user.click(secondTrigger);
+
+    expect(
+      screen.queryByRole('dialog', { name: 'Choose visit to replace with Combat 01' }),
+    ).toBeNull();
+    const chooser = screen.getByRole('dialog', { name: 'Choose visit to replace with Combat 03' });
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(chooser).getByRole('button', { name: 'Visit 1: Combat 05' }),
+      ),
+    );
+  });
+
+  it('does not publish when a remaining room drops into the full prefix', async () => {
     const project = loadSurfaceNCompleteHubFrontierProject();
     const view = renderHubDecisionWorkbench(project);
     selectHubTab('Hub Timeline');
@@ -358,29 +711,21 @@ describe('HubVisitRanking', () => {
       pointerType: 'mouse',
     });
 
-    await waitFor(() =>
-      expect(nHubState(view.application).decision.visitOrder).toEqual([
-        'combat01',
-        'combat05',
-        'miniBoss01',
-        'combat02',
-        'combat11',
-        'combat23',
-      ]),
-    );
-    expect(hubCard('combat01').dataset.visitPosition).toBe('1');
+    expect(nHubState(view.application).decision.visitOrder).toEqual([
+      'combat05',
+      'miniBoss01',
+      'combat02',
+      'combat11',
+      'combat23',
+      'combat09',
+    ]);
+    expect(hubCard('combat01').dataset.visitPosition).toBeUndefined();
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
-      historyBefore + 1,
+      historyBefore,
     );
     expect(
       dispatch.mock.calls.map(([action]) => action).filter(authoredProjectCommandDispatched.match),
-    ).toContainEqual(
-      authoredProjectCommandDispatched({
-        hub: createHubDecisionAddress(nBiome, 'hub'),
-        hubSlotKeys: ['combat01', 'combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23'],
-        kind: 'ReplaceHubVisitOrder',
-      }),
-    );
+    ).toHaveLength(0);
     expect(board.dataset.dragging).toBeUndefined();
     expect(document.querySelector('.hub-roster-drag-preview')).toBeNull();
   });
@@ -552,18 +897,16 @@ describe('HubVisitRanking', () => {
       pointerType: 'mouse',
     });
 
-    await waitFor(() =>
-      expect(nHubState(view.application).decision.visitOrder).toEqual([
-        'combat01',
-        'combat05',
-        'miniBoss01',
-        'combat02',
-        'combat11',
-        'combat23',
-      ]),
-    );
+    expect(nHubState(view.application).decision.visitOrder).toEqual([
+      'combat05',
+      'miniBoss01',
+      'combat02',
+      'combat11',
+      'combat23',
+      'combat09',
+    ]);
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
-      historyBefore + 1,
+      historyBefore,
     );
   });
 

@@ -1,8 +1,11 @@
 /* eslint-disable react-refresh/only-export-components */
 
+import * as Popover from '@radix-ui/react-popover';
+
 import {
   dropHubBoardRoom,
   moveHubBoardRoom,
+  replaceHubBoardVisit,
   type HubBoardDropTarget,
   type HubBoardMove,
   type HubBoardMoveResult,
@@ -151,6 +154,7 @@ function HubRankAction({
   result,
   symbol,
   slotLabel,
+  locked = false,
 }: {
   readonly action: HubBoardMove;
   readonly actionLabel: string;
@@ -164,6 +168,7 @@ function HubRankAction({
   readonly result: HubBoardMoveResult | undefined;
   readonly symbol: string;
   readonly slotLabel: string;
+  readonly locked?: boolean;
 }) {
   const executeIntent = useCommandIntent();
   const proposal =
@@ -175,6 +180,7 @@ function HubRankAction({
   const state = candidates.observe(proposal);
   const candidate = state.result?.[0];
   const disabled =
+    locked ||
     result === undefined ||
     state.pending ||
     (candidate !== undefined && !candidateMayBeAuthored(candidate));
@@ -222,12 +228,15 @@ function HubRankAction({
   );
 }
 
-export function HubRoomOrderControls({
+export function HubReplacementChoices({
   interaction,
   onApplied,
   ranking,
   requiredVisitCount,
   slot,
+  slotsByKey,
+  onComplete,
+  locked = false,
 }: {
   readonly interaction: WorkspaceHubVisitOrderInteraction;
   readonly onApplied: (
@@ -238,6 +247,164 @@ export function HubRoomOrderControls({
   readonly ranking: HubBoardRanking;
   readonly requiredVisitCount: number;
   readonly slot: WorkspaceHubSlot;
+  readonly slotsByKey: ReadonlyMap<string, WorkspaceHubSlot>;
+  readonly onComplete?: () => void;
+  readonly locked?: boolean;
+}) {
+  const executeIntent = useCommandIntent();
+  const candidates =
+    useWorkspaceInteractionController<
+      ReturnType<ReturnType<WorkspaceHubVisitOrderInteraction['proposalFor']>['load']>
+    >();
+  const selectReplacement = (replacedSlotKey: string): void => {
+    const result = replaceHubBoardVisit(
+      ranking,
+      requiredVisitCount,
+      slot.hubSlotKey,
+      replacedSlotKey,
+    );
+    if (result?.proposedVisitOrder === undefined) return;
+    const proposal = interaction.proposalFor(result.proposedVisitOrder);
+    const options = candidates.activate(proposal);
+    if (!candidateMayBeAuthored(options?.[0])) return;
+    onApplied(
+      result,
+      `${slot.label} replaces ${slotsByKey.get(replacedSlotKey)?.label ?? 'that room'} as visit ${
+        ranking.authoredVisitOrder.indexOf(replacedSlotKey) + 1
+      }.`,
+      Object.freeze({ kind: 'addToVisits', slotKey: slot.hubSlotKey }),
+    );
+    executeIntent(proposal.intent());
+    onComplete?.();
+  };
+
+  return (
+    <div aria-label={`Choose visit to replace with ${slot.label}`} className="hub-replacement-menu">
+      <p>Replace which visit with {slot.label}?</p>
+      <div className="hub-replacement-options">
+        {ranking.authoredVisitOrder.map((replacedSlotKey, index) => (
+          <button
+            disabled={locked}
+            key={replacedSlotKey}
+            onClick={() => selectReplacement(replacedSlotKey)}
+            type="button"
+          >
+            Visit {index + 1}: {slotsByKey.get(replacedSlotKey)?.label ?? replacedSlotKey}
+          </button>
+        ))}
+      </div>
+      <button
+        className="quiet-action action-compact"
+        onClick={() => {
+          onComplete?.();
+        }}
+        type="button"
+      >
+        Cancel
+      </button>
+    </div>
+  );
+}
+
+function HubReplacementChooser({
+  activeReplacementSlotKey,
+  interaction,
+  onApplied,
+  onOpenChange,
+  open,
+  ranking,
+  requiredVisitCount,
+  slot,
+  slotsByKey,
+  locked = false,
+}: {
+  readonly activeReplacementSlotKey: string | undefined;
+  readonly interaction: WorkspaceHubVisitOrderInteraction;
+  readonly onApplied: (
+    result: HubBoardMoveResult,
+    announcement: string,
+    action: HubBoardMove,
+  ) => void;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly open: boolean;
+  readonly ranking: HubBoardRanking;
+  readonly requiredVisitCount: number;
+  readonly slot: WorkspaceHubSlot;
+  readonly slotsByKey: ReadonlyMap<string, WorkspaceHubSlot>;
+  readonly locked?: boolean;
+}) {
+  return (
+    <Popover.Root onOpenChange={onOpenChange} open={open}>
+      <Popover.Trigger asChild>
+        <button
+          aria-label={`Choose a visit for ${slot.label} to replace`}
+          className="quiet-action hub-rank-action"
+          data-hub-rank-action="chooseReplacement"
+          disabled={locked}
+          type="button"
+        >
+          <span aria-hidden="true">Replace</span>
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          aria-label={`Choose visit to replace with ${slot.label}`}
+          className="hub-replacement-popover"
+          collisionPadding={12}
+          onCloseAutoFocus={(event) => {
+            // Switching to another controlled chooser has already moved focus
+            // into its content. Do not let this closing Popover take it back.
+            if (
+              activeReplacementSlotKey !== undefined &&
+              activeReplacementSlotKey !== slot.hubSlotKey
+            ) {
+              event.preventDefault();
+            }
+          }}
+          sideOffset={6}
+        >
+          <HubReplacementChoices
+            interaction={interaction}
+            locked={locked}
+            onApplied={onApplied}
+            onComplete={() => onOpenChange(false)}
+            ranking={ranking}
+            requiredVisitCount={requiredVisitCount}
+            slot={slot}
+            slotsByKey={slotsByKey}
+          />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
+export function HubRoomOrderControls({
+  activeReplacementSlotKey,
+  interaction,
+  onApplied,
+  ranking,
+  requiredVisitCount,
+  slot,
+  slotsByKey,
+  locked = false,
+  replacementOpen = false,
+  onReplacementOpenChange,
+}: {
+  readonly activeReplacementSlotKey?: string | undefined;
+  readonly interaction: WorkspaceHubVisitOrderInteraction;
+  readonly onApplied: (
+    result: HubBoardMoveResult,
+    announcement: string,
+    action: HubBoardMove,
+  ) => void;
+  readonly ranking: HubBoardRanking;
+  readonly requiredVisitCount: number;
+  readonly slot: WorkspaceHubSlot;
+  readonly slotsByKey: ReadonlyMap<string, WorkspaceHubSlot>;
+  readonly locked?: boolean;
+  readonly replacementOpen?: boolean;
+  readonly onReplacementOpenChange?: (open: boolean) => void;
 }) {
   const visitPosition = ranking.authoredVisitOrder.indexOf(slot.hubSlotKey);
   const tailPosition = ranking.tailSlotKeys.indexOf(slot.hubSlotKey);
@@ -252,26 +419,9 @@ export function HubRoomOrderControls({
       requiredVisitCount,
       Object.freeze({ kind, slotKey: slot.hubSlotKey }),
     );
-  const downKind: HubBoardMove['kind'] =
-    visitPosition !== -1 &&
-    visitPosition === authoredVisitCount - 1 &&
-    authoredVisitCount < requiredVisitCount
-      ? 'removeFromVisits'
-      : 'moveLater';
   const visitMembershipKind: HubBoardMove['kind'] =
     visitPosition === -1 ? 'addToVisits' : 'removeFromVisits';
-  const earlierLabel =
-    visitPosition === -1 && tailPosition === 0
-      ? authoredVisitCount < requiredVisitCount
-        ? `Add ${slot.label} as visit ${authoredVisitCount + 1}`
-        : `Move ${slot.label} into visit ${requiredVisitCount}`
-      : `Move ${slot.label} earlier`;
-  const laterLabel =
-    downKind === 'removeFromVisits'
-      ? `Remove ${slot.label} from visit order`
-      : visitPosition === requiredVisitCount - 1 && authoredVisitCount === requiredVisitCount
-        ? `Move ${slot.label} into remaining rooms`
-        : `Move ${slot.label} later`;
+  const full = authoredVisitCount === requiredVisitCount;
 
   return (
     <div
@@ -281,40 +431,74 @@ export function HubRoomOrderControls({
       data-hub-roster-region="reorder-controls"
       role="group"
     >
-      <HubRankAction
-        action={Object.freeze({ kind: visitMembershipKind, slotKey: slot.hubSlotKey })}
-        actionLabel={
-          visitPosition === -1
-            ? `Add ${slot.label} to visited rooms`
-            : `Remove ${slot.label} from visited rooms`
-        }
-        interaction={interaction}
-        onApplied={onApplied}
-        requiredVisitCount={requiredVisitCount}
-        result={proposal(visitMembershipKind)}
-        symbol={visitPosition === -1 ? '+ Visit' : '− Visit'}
-        slotLabel={slot.label}
-      />
-      <HubRankAction
-        action={Object.freeze({ kind: 'moveEarlier', slotKey: slot.hubSlotKey })}
-        actionLabel={earlierLabel}
-        interaction={interaction}
-        onApplied={onApplied}
-        requiredVisitCount={requiredVisitCount}
-        result={proposal('moveEarlier')}
-        symbol="↑"
-        slotLabel={slot.label}
-      />
-      <HubRankAction
-        action={Object.freeze({ kind: downKind, slotKey: slot.hubSlotKey })}
-        actionLabel={laterLabel}
-        interaction={interaction}
-        onApplied={onApplied}
-        requiredVisitCount={requiredVisitCount}
-        result={proposal(downKind)}
-        symbol="↓"
-        slotLabel={slot.label}
-      />
+      {visitPosition === -1 && full ? (
+        <HubReplacementChooser
+          activeReplacementSlotKey={activeReplacementSlotKey}
+          interaction={interaction}
+          onApplied={onApplied}
+          onOpenChange={onReplacementOpenChange ?? (() => undefined)}
+          open={replacementOpen}
+          ranking={ranking}
+          requiredVisitCount={requiredVisitCount}
+          slot={slot}
+          slotsByKey={slotsByKey}
+          locked={locked}
+        />
+      ) : (
+        <HubRankAction
+          action={Object.freeze({ kind: visitMembershipKind, slotKey: slot.hubSlotKey })}
+          actionLabel={
+            visitPosition === -1
+              ? `Add ${slot.label} as visit ${authoredVisitCount + 1}`
+              : `Remove ${slot.label} from visited rooms`
+          }
+          interaction={interaction}
+          onApplied={onApplied}
+          requiredVisitCount={requiredVisitCount}
+          result={proposal(visitMembershipKind)}
+          symbol={visitPosition === -1 ? '+ Visit' : '− Visit'}
+          slotLabel={slot.label}
+          locked={locked}
+        />
+      )}
+      {visitPosition === -1 ? (
+        <HubRankAction
+          action={Object.freeze({ kind: 'moveLater', slotKey: slot.hubSlotKey })}
+          actionLabel={`Move ${slot.label} later among remaining rooms`}
+          interaction={interaction}
+          onApplied={onApplied}
+          requiredVisitCount={requiredVisitCount}
+          result={proposal('moveLater')}
+          symbol="↓"
+          slotLabel={slot.label}
+          locked={locked}
+        />
+      ) : (
+        <>
+          <HubRankAction
+            action={Object.freeze({ kind: 'moveEarlier', slotKey: slot.hubSlotKey })}
+            actionLabel={`Move ${slot.label} earlier`}
+            interaction={interaction}
+            onApplied={onApplied}
+            requiredVisitCount={requiredVisitCount}
+            result={proposal('moveEarlier')}
+            symbol="↑"
+            slotLabel={slot.label}
+            locked={locked}
+          />
+          <HubRankAction
+            action={Object.freeze({ kind: 'moveLater', slotKey: slot.hubSlotKey })}
+            actionLabel={`Move ${slot.label} later`}
+            interaction={interaction}
+            onApplied={onApplied}
+            requiredVisitCount={requiredVisitCount}
+            result={proposal('moveLater')}
+            symbol="↓"
+            slotLabel={slot.label}
+            locked={locked}
+          />
+        </>
+      )}
     </div>
   );
 }

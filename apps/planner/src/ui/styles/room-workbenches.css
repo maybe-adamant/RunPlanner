@@ -582,6 +582,15 @@
   background: rgb(226 185 113 / 14%);
 }
 
+.hub-timeline-toolbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-left: auto;
+}
+
 .hub-map-overview {
   padding: 12px;
 }
@@ -885,6 +894,47 @@
   flex-wrap: nowrap;
   gap: 4px;
   margin: 0;
+}
+
+.hub-replacement-popover {
+  z-index: 40;
+  width: min(19rem, calc(100vw - 36px));
+}
+
+.hub-replacement-menu {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #5b5c68;
+  border-radius: 8px;
+  color: #f2ede5;
+  background: #20212a;
+  box-shadow: 0 12px 28px rgb(0 0 0 / 40%);
+}
+
+.hub-replacement-menu p {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.hub-replacement-options {
+  display: grid;
+  gap: 5px;
+}
+
+.hub-replacement-options button {
+  padding: 6px 8px;
+  border: 1px solid #4b4c58;
+  border-radius: 6px;
+  color: #ebe6dc;
+  background: rgb(255 255 255 / 4%);
+  text-align: start;
+}
+
+.hub-replacement-options button:hover,
+.hub-replacement-options button:focus-visible {
+  border-color: #e2b971;
+  background: rgb(226 185 113 / 12%);
 }
 
 .room-action-position-control {

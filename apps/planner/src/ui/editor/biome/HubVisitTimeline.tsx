@@ -1,4 +1,10 @@
-import { type PointerEvent as ReactPointerEvent, useLayoutEffect, useRef, useState } from 'react';
+import {
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   dropHubBoardRoom,
@@ -15,6 +21,7 @@ import {
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { OpenHubRoomCard } from './HubRoomCards';
 import {
   HubNextVisitTarget,
@@ -46,13 +53,17 @@ export function HubVisitTimeline({
   focusedRewardOwnerKey,
   interactions,
   node,
+  toolbarActions,
 }: {
   readonly focusedRewardOwnerKey: string | undefined;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly node: WorkspaceHubDecisionNode;
+  readonly toolbarActions: ReactNode;
 }) {
   const executeIntent = useCommandIntent();
   const timelineRegion = useRef<HTMLDivElement>(null);
+  const findingTarget = useFindingTarget();
+  const sequenceLocked = findingTarget(node.owner).inert;
   const openSlots = node.slots.filter((slot) => slot.open);
   const visitOrderInteraction = requireWorkspaceInteraction(
     interactions.hubVisitOrders,
@@ -64,6 +75,7 @@ export function HubVisitTimeline({
     Object.freeze([]),
   );
   const [rankAnnouncement, setRankAnnouncement] = useState('');
+  const [replacementSlotKey, setReplacementSlotKey] = useState<string | undefined>();
   const ranking = reconcileHubBoardRanking({
     authoredVisitOrder,
     declarationOpenSlotKeys,
@@ -167,6 +179,7 @@ export function HubVisitTimeline({
   };
   const beginPointerDrag = (event: ReactPointerEvent<HTMLSpanElement>, slotKey: string): void => {
     if (
+      sequenceLocked ||
       event.button !== 0 ||
       !event.isPrimary ||
       pendingPointerDrag.current !== undefined ||
@@ -289,7 +302,10 @@ export function HubVisitTimeline({
   return (
     <section className="hub-board" aria-label="Hub visit timeline">
       <header className="hub-board-heading">
-        <h4>Hub visit order</h4>
+        <div className="hub-board-heading-row">
+          <h4>Hub visit order</h4>
+          {toolbarActions}
+        </div>
       </header>
       <p aria-live="polite" className="visually-hidden">
         {rankAnnouncement}
@@ -326,6 +342,7 @@ export function HubVisitTimeline({
                   Object.freeze({ kind: 'beforeSlot', slotKey: slot.hubSlotKey }),
                 )}
                 focusedRewardOwnerKey={focusedRewardOwnerKey}
+                activeReplacementSlotKey={replacementSlotKey}
                 interactions={interactions}
                 key={slot.hubSlotKey}
                 onPointerDragStarted={beginPointerDrag}
@@ -333,8 +350,16 @@ export function HubVisitTimeline({
                 pointerDragging={pointerDrag?.slotKey === slot.hubSlotKey}
                 ranking={ranking}
                 requiredVisitCount={node.requiredVisitCount}
+                sequenceLocked={sequenceLocked}
+                onReplacementOpenChange={(open) =>
+                  setReplacementSlotKey((current) =>
+                    open ? slot.hubSlotKey : current === slot.hubSlotKey ? undefined : current,
+                  )
+                }
+                replacementOpen={replacementSlotKey === slot.hubSlotKey}
                 showMembership={false}
                 slot={slot}
+                slotsByKey={slotsByKey}
                 visitMarker={visit.marker}
                 visitOrderInteraction={visitOrderInteraction}
               />
@@ -369,6 +394,7 @@ export function HubVisitTimeline({
                 Object.freeze({ kind: 'beforeSlot', slotKey: slot.hubSlotKey }),
               )}
               focusedRewardOwnerKey={focusedRewardOwnerKey}
+              activeReplacementSlotKey={replacementSlotKey}
               interactions={interactions}
               key={slot.hubSlotKey}
               onPointerDragStarted={beginPointerDrag}
@@ -376,8 +402,16 @@ export function HubVisitTimeline({
               pointerDragging={pointerDrag?.slotKey === slot.hubSlotKey}
               ranking={ranking}
               requiredVisitCount={node.requiredVisitCount}
+              sequenceLocked={sequenceLocked}
+              onReplacementOpenChange={(open) =>
+                setReplacementSlotKey((current) =>
+                  open ? slot.hubSlotKey : current === slot.hubSlotKey ? undefined : current,
+                )
+              }
+              replacementOpen={replacementSlotKey === slot.hubSlotKey}
               showMembership={false}
               slot={slot}
+              slotsByKey={slotsByKey}
               visitOrderInteraction={visitOrderInteraction}
             />
           ))}

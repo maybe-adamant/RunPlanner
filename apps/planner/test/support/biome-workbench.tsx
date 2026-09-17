@@ -11,6 +11,7 @@ import type {
   StructuredWorkspaceProjection,
   WorkspaceAuthoringFrontier,
   WorkspaceBiome,
+  WorkspaceHubTab,
   WorkspaceMixedBatchNode,
   WorkspaceOccurrenceWorkbenchNode,
   WorkspaceOrdinaryBatchNode,
@@ -234,25 +235,38 @@ export function renderStaticHubDecisionWorkbench(
   project: ProjectDocument,
   routeKey = 'Surface',
   biomeKey = 'N',
+  options: {
+    readonly findingNavigationRevision?: number;
+    readonly initialTab?: WorkspaceHubTab;
+  } = {},
 ) {
   const { store, workspace } = staticWorkspaceFixture(project);
   const biome = staticBiome(workspace, routeKey, biomeKey);
   const node = biome.nodes.find((candidate) => candidate.kind === 'hubDecision');
   if (node?.kind !== 'hubDecision') throw new Error('Hub decision workbench is missing');
-  return render(
+  const workbench = (next: typeof options) => (
     <Provider store={store}>
       <FindingTargetScope
         authoringReadiness={workspace.authoringReadiness}
         findings={workspace.findingsByRepairTarget}
       >
         <HubDecisionWorkbench
+          {...(next.findingNavigationRevision === undefined
+            ? {}
+            : { findingNavigationRevision: next.findingNavigationRevision })}
           frontier={biome.frontier}
+          {...(next.initialTab === undefined ? {} : { initialTab: next.initialTab })}
           interactions={workspace.interactions}
           node={node}
         />
       </FindingTargetScope>
-    </Provider>,
+    </Provider>
   );
+  const view = render(workbench(options));
+  return {
+    ...view,
+    rerenderHub: (next: typeof options) => view.rerender(workbench(next)),
+  };
 }
 
 export function renderOccurrenceWorkbench(
