@@ -123,6 +123,14 @@ Fields door targets carry cage rewards even when unpicked. Physical entry,
 cage and optional-reward placements are entered-room facts: they are required
 only for selected Fields occurrences, not for their unpicked door alternatives.
 
+Encounter customization travels inside the matching `overview.encounterPhases`
+record, despite being authored on the application's Timeline. Adapters consume
+the existing native encounter binding and resolved operands; they do not search
+for a matching Boss elsewhere in the room. Omitted decisions remain native.
+Explicit decisions steer reached behavior without adding required attacks,
+transactions or conformance facts. The [encounter audit](../audits/game-execution-contacts/NPCS_ENCOUNTERS_AND_AUTOMATICS.md#boss-decisions)
+owns the supported native contacts and narrowly agreed progression overrides.
+
 Commands fall into three execution dispositions:
 
 | Disposition | Examples                                                                | Contract                                                                  |
@@ -376,9 +384,11 @@ from the frozen session's loadout, room progress, admission, and failure
 information. It reports existing execution status without adding conformance
 checks or revalidating player state during rendering.
 
-Postboss recovery is a fresh admission, not restoration of serialized executor
-state. It is attempted once when a new game process attaches to an existing run
-at a selected occurrence marked `resumeBoundary: "postbossEntry"`. The executor
+Runtime execution state is process-local, never native-save-backed, and resets
+explicitly at new-run admission. Postboss recovery is a fresh admission, not
+restoration of serialized executor state. It is attempted once when a new game
+process attaches to an existing run at a selected occurrence marked
+`resumeBoundary: "postbossEntry"`. The executor
 adopts the already-restored native room, compares the existing bounded
 conformance families plus weapon/aspect identity, and constructs fresh route
 and room coordinators at that occurrence. A mismatch makes execution passive;

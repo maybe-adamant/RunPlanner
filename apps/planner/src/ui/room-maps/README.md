@@ -35,6 +35,10 @@ into it. Individual main and side rooms keep their own images.
 Main-room side-door annotations are baked into their images: cyan circles identify
 the destination side-room number, not door priority or visit order.
 
+Hub reward icons are separate transparent editor assets, mapped from structured
+reward identity. They are not room-map files and do not participate in room
+asset discovery or declaration coverage.
+
 After a swap, run the asset test and check the viewer:
 
 ```sh

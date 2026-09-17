@@ -1,8 +1,13 @@
 # Encounter-Owned Boss Customization
 
-Status: Gate A implemented and independently reviewed; the user accepted its
-functionality and requested the included Timeline/dialog polish. Runtime
-adapters B–D and integrated closure E remain pending. No deployment yet.
+Status: Gate A committed (planner `88f21ef5`, game module `9f0851a`); the user
+accepted its functionality and included Timeline/dialog polish. A.1 is committed
+as planner `86219630`. Gate B is committed in the game module
+(`86319cb`) after functional and module-split reviews passed. Gate C is committed
+in the game module (`130acce`) after independent review. Gate D is committed in
+the game module (`91a1c69`) after independent review. Gate E's automated checks,
+independent review and documentation consolidation are complete; Boss live
+acceptance remains pending. No deployment yet.
 
 Implementation bases: planner `5ad66aa1`, game module `c3e241e`. Unrelated Room
 Capture edits are preserved.
@@ -102,6 +107,9 @@ Preserve these distinctions:
 - Hecate has two interludes but one selected pattern. Transition two's Polymorph
   stays native. Some patterns have prior-clear requirements in
   `WeaponData_Hecate.lua`; Rival variants inherit their base declarations.
+  `IsEnemyWeaponEligible` rechecks those top-level requirements during attack
+  selection, so explicit progression override must also cover the selected
+  interlude weapon there while preserving its other native eligibility checks.
 - Scylla overrides its random selection with Jetty on the first normal fight
   and Charybdis on the first Rival fight. Steering only the random draw is
   insufficient for the agreed explicit-choice policy.
@@ -150,9 +158,11 @@ no second choice leaves the remaining use native. A second choice cannot exist
 behind a Default first choice.
 
 Positions mean successive actual uses of that selector, not health phases or
-AI-data reads. Native weapon history determines the next use and enforces
-one-use variants. Repeated input queries must not consume a selection; no
-parallel attack clock or authored-use counter is introduced.
+AI-data reads. Count concrete summon weapons already recorded in native history
+from that resolved selector's pool; selector/grenade bookkeeping does not consume
+a choice. Native eligibility still enforces one-use variants. Repeated input
+queries must not consume a selection; no parallel attack clock or authored-use
+counter is introduced.
 
 ### Encounter-local persistence and repair
 
@@ -270,6 +280,9 @@ Use encounter-owned adapters under `room/timeline/encounters`. Obtain the
 published phase through the existing binding between native encounter objects
 and planner phases; do not introduce another room cursor or recover identity
 from an authored-order scan. Any new access capability must stay narrow.
+Keep each encounter's hooks in its own module (`hecate`, `scylla`, `cerberus`,
+`eris`); the encounter hook composition only attaches them. Do not introduce a
+shared customization implementation before a concrete shared policy warrants it.
 
 | Adapter              | Required intervention and preserved native behavior                                                                                                                                                                           |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -360,12 +373,22 @@ feature; do not deploy/release until their adapters are implemented.
 
 ### A.1 — Same-map Rival encounter correction
 
+Delivered: the normal/Rival rank matrix passes through full and prefix
+materialization, stable topology, save/load, Undo/Redo, real route publication,
+and authored-first projection behind an incomplete loadout. Independent review
+reported no actionable findings. Verification: 630 focused catalog/engine/app
+tests, a separate 116-test publication/UI bundle, package/fixture typechecks,
+changed-source ESLint and diff checks passed. All checked-in execution products
+remain unchanged. A read-only probe exercised the existing game-module hook
+with native `ChooseEncounter`/`SetupEncounter` for all four concrete identities;
+no executor change or in-game validation is claimed.
+
 Locked prerequisite before runtime adapters: `I_Boss01` and `P_Boss01` retain
 their physical map but must resolve respectively to `BossChronos02` at Rivals
 rank 4 and `BossPrometheus02` at rank 3 or higher. Native RoomDataI/RoomDataP
 declare both legal encounters; EncounterData_Boss gates them with
 `BossDifficultyActive` (`ShrineLogic.IsBossDifficultyShrineUpgradeActive`).
-The current fixed-normal catalog bindings bypass that selection when published.
+Fixed bindings therefore resolve the selected identity before publication.
 
 - Declare both concrete encounters and the Rival alternative on each owning
   fixed binding. Keep them fixed, not a user-selectable encounter pool.
@@ -390,6 +413,17 @@ The current fixed-normal catalog bindings bypass that selection when published.
 
 ### B — Hecate and Scylla realization
 
+Committed as game module `86319cb`, in separate `encounters/hecate.lua` and
+`encounters/scylla.lua` adapters, with boss-owned tests and explicit composition.
+Independent functional and final module-split reviews found no actionable issues.
+The full Lua suite passed 516 tests before the ownership split; afterward,
+Hecate's five and Scylla's four focused tests, Luacheck and diff checks passed.
+An isolated probe ran the actual native transition/eligibility/spotlight
+functions for 12 Hecate choices and 14 Scylla selection/first-fight cases,
+including Default and retained native eligibility. Presentation primitives
+were stubbed and Rival inherited top-level weapon inputs were prepared for the
+isolated probe; this is not live-game acceptance.
+
 Implement their selection adapters. Prove normal/Rival domains, explicit
 progression override versus native Default, Hecate's one selection/two
 transitions, and Scylla's first-fight branches with one native application.
@@ -397,6 +431,15 @@ Cover correct phase binding, pass-through, native errors and shared-data
 immutability. Independent review, then a focused game-module commit.
 
 ### C — Cerberus realization
+
+Committed as game module `130acce`, in `encounters/cerberus.lua`, with independent
+burrow-stage and resolved howl-weapon input adapters. The full Lua suite passed 523 tests;
+Luacheck and diff checks passed. Actual native-function probes covered five
+normal and four Rival burrow choices and all six howl choices, Default,
+Rival override precedence, spawning before transition, unchanged health
+thresholds/timeouts/re-entry, and native howl readiness/use limits. Engine and
+presentation primitives were stubbed; live acceptance remains pending.
+Independent review found no actionable issues.
 
 Implement both howl and burrow decisions independently. Prove four reachable
 Rival wave choices, local stage override precedence, spawn-before-transition
@@ -406,6 +449,18 @@ game-module commit.
 
 ### D — Eris realization
 
+Committed as game module `91a1c69`, in `encounters/eris.lua`, with one post-native
+weapon-data adapter.
+The full Lua suite passed 528 tests; Luacheck and diff checks passed. An actual
+native AI-loop/getter/eligibility probe passed 12 cases across all four selector
+domains and zero/one/two-choice prefixes, including Rival grenade chains,
+repeated reads around selector history insertion, native tails and use limits.
+Concrete child declarations were used without full inherited game setup, and
+attack/movement primitives were stubbed; this is not live-game acceptance.
+A composition probe also checked that the Eris/Cerberus wrappers each steer
+only their own encounter and invoke the underlying getter once. Independent
+review found no actionable issues.
+
 Implement early/late prefixes for normal and Rival paths. Prove zero/one/two
 choices, distinctness, native tail, repeated AI-data reads, actual-use history,
 skipped uses and unchanged Automaton sub-selection. Independent review, then
@@ -413,25 +468,35 @@ a focused game-module commit.
 
 ### E — Integrated verification and consolidated closure
 
-- After narrow tests/review stabilize, run planner `npm run test` and
-  `npm run check`, and game-module `lua tests/all.lua` / `luacheck src/`.
-  Record truthful results; do not repeat full suites just for review evidence.
-- Use representative Underworld and Surface publication witnesses rather than
-  one fixture per option. Inspect fixture diffs and verify mirrored bytes.
-- Live-test explicit/Default normal and Rival choices, Hecate reuse, Charybdis,
-  both Cerberus decisions, and Eris partial/skipped uses. Save-progression
-  branches not reproducible on the available save need source-based harness
-  evidence, clearly distinguished from live acceptance.
-- Consolidate overdue closure for delivered pending plans, including Hub
-  editor after B.2 and postboss resynchronization. The user confirms postboss
-  resync already passed in-game. Inventory remaining acceptance for every
-  pending plan, reconcile status with evidence and retire completed plans.
-  Do not declare genuinely unfinished work complete merely to delete its plan.
-- Promote source facts into the owning encounter audit and update the
-  feature-to-hook matrix. Integrate encounter-local ownership into the smallest
-  relevant design sections; no per-fix narratives or duplicated evidence.
-- Delete this temporary plan at closure. Retire completed investigations and
-  pending plans in the same closure change; preserve unresolved work explicitly.
+Automated verification completed on 2026-09-17:
+
+- Planner `npm run check` passed, including `npm run test`: 3,208 correctness
+  tests, 22 fixture checks, 18 performance-tool tests, all eight relative
+  performance comparisons, typechecks, lint, formatting and production build.
+  The build retains its nonblocking bundle-size warning.
+- The initial broad run found three stale synthetic encounter fixtures. They
+  now supply declared retained identity instead of copied behavior; all 43
+  focused tests and the subsequent full check passed without relaxing production
+  validation.
+- The game module passed all 528 Lua tests and Luacheck (99 source files).
+  All 13 execution fixture pairs remain byte-identical with no fixture churn.
+- Representative Underworld and Surface publication witnesses passed in the
+  full suite. Independent closure review found no actionable issues.
+
+Documentation consolidation is complete. Encounter ownership, declared editor
+capability, native decisions and hook rationale now live in the existing design
+and source-audit authorities. The Hub and postboss plans were retired after
+checking current code/tests and the user's existing live acceptance. Room
+Capture retains its separate uncommitted utility work and final review; its
+plan remains, with only formatting normalized during this check.
+
+Remaining acceptance is in-game: explicit/Default normal and Rival choices,
+Hecate's second-transition reuse, Charybdis, both Cerberus decisions, and Eris
+partial/skipped uses. Save-progression branches not reproducible on the available
+save have the bounded native-function harness evidence recorded above, not a
+claim of live verification. Remove this temporary plan once that acceptance is
+complete. Do not repeat the full repository gate merely for documentation
+retirement if implementation is unchanged.
 
 ## Review criteria
 
