@@ -1000,7 +1000,12 @@ export const pRooms = [
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [
-      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BossPrometheus01' },
+      {
+        slotKey: 'Encounter',
+        kind: 'fixed',
+        encounterDefinitionKey: 'BossPrometheus01',
+        rivalsEncounterDefinitionKey: 'BossPrometheus02',
+      },
     ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },

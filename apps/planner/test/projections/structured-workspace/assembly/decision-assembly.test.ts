@@ -80,6 +80,7 @@ function decisionKit(source: WorkspaceBiomeSource) {
       throw new Error(`${input.occurrence.occurrenceId} occurrence facts are missing`);
     }
     return assembleWorkspaceOccurrence({
+      configuredRivalsRank: source.configuredRivalsRank,
       biome: source.biome,
       catalog,
       encounterPhaseStatus: source.encounterPhaseStatus,

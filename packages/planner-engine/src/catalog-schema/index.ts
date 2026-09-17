@@ -486,6 +486,7 @@ export type EncounterSlotBinding =
       readonly slotKey: string;
       readonly kind: 'fixed';
       readonly encounterDefinitionKey: string;
+      readonly rivalsEncounterDefinitionKey?: string;
     };
 
 export type RoomLifecycleEffectKind =

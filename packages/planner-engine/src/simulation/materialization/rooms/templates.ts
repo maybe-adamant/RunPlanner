@@ -70,6 +70,7 @@ export interface AuthoredRoomMaterializationContext {
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly lifecycleProfileKey?: string;
   readonly loadout?: RouteWeaponAspectLoadout;
+  readonly configuredRivalsRank?: number;
 }
 
 export interface MaterializedRoomLeaf {

@@ -106,6 +106,13 @@ export const iEncounterDefinitions = [
     countsEncounterDepth: false,
     blocksGorgon: true,
   },
+  {
+    key: 'BossChronos02',
+    label: 'Chronos',
+    kind: 'boss',
+    countsEncounterDepth: false,
+    blocksGorgon: true,
+  },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 
 export const iEncounterSets = [

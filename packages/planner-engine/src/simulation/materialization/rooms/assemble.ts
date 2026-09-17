@@ -92,6 +92,12 @@ export function materializeAuthoredRoom(
       leaf.activeEncounterSlotKeys ??
         alwaysActiveEncounterSlotKeys(context.catalog, context.room, context.room.gameName),
       context.room.gameName,
+      context.configuredRivalsRank === undefined
+        ? undefined
+        : {
+            biome: context.biome,
+            configuredRivalsRank: context.configuredRivalsRank,
+          },
     );
   const clockworkReward = leaf.clockworkReward ?? context.clockworkReward;
   requireLifecycleSelection(context.catalog, context.room, leaf, context.room.encounterEnvelopeKey);
@@ -294,7 +300,9 @@ export function materializeAuthoredRoom(
             slotKey: phase.slotKey,
             encounterKey: resolved.encounterKey,
             kind: resolved.kind,
-            ...(resolved.customization === undefined ? {} : { customization: resolved.customization }),
+            ...(resolved.customization === undefined
+              ? {}
+              : { customization: resolved.customization }),
           }),
         ];
   });

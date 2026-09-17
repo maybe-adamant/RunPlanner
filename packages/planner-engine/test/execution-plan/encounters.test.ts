@@ -22,6 +22,28 @@ import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 
 describe('resolved execution encounters', () => {
+  it.each([
+    ['Underworld', 4, 'I_Boss01', 'BossChronos02', createGoldenFGHIProject],
+    ['Surface', 3, 'P_Boss01', 'BossPrometheus02', loadSurfaceNOPQProject],
+  ] as const)(
+    'publishes %s same-map Rival Boss identity',
+    (routeKey, rank, gameName, encounterKey, build) => {
+      const project = applyProjectCommand(build(), catalog, {
+        kind: 'ReplaceFearVowRank',
+        route: { kind: 'route', routeKey },
+        vowKey: 'BossDifficultyShrineUpgrade',
+        rank,
+      });
+      const plan = compileExecutionPlan({
+        product: assembleExecutionProduct({ assembly: simulateProjectAssembly(catalog, project) }),
+      });
+      expect(
+        plan.occurrences.find((occurrence) => occurrence.gameName === gameName)?.overview
+          .encounterPhases,
+      ).toEqual([{ slotKey: 'Encounter', encounterKey, kind: 'boss' }]);
+    },
+  );
+
   it('strictly decodes closed bounded execution customization values', () => {
     expect(() =>
       decodeExecutionOverview(

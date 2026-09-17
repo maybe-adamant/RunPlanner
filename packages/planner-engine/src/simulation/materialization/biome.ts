@@ -48,6 +48,7 @@ import {
 import { materializeHubDecision } from './hub';
 import { materializeAuthoredRoom } from './rooms/assemble';
 import type {
+  BiomeMaterializationLoadout,
   CanonicalAuthoredRoom,
   CanonicalAdditionalContinuation,
   CanonicalBatch,
@@ -67,18 +68,23 @@ function fail(detail: string): never {
   throw new BiomeMaterializationContractError(detail);
 }
 
-function requireLoadout(context: RouteWeaponAspectLoadout): RouteWeaponAspectLoadout {
+function requireLoadout(context: BiomeMaterializationLoadout): BiomeMaterializationLoadout {
   if (
     context === null ||
     typeof context !== 'object' ||
     typeof context.weaponKey !== 'string' ||
     context.weaponKey.length === 0 ||
     typeof context.aspectKey !== 'string' ||
-    context.aspectKey.length === 0
+    context.aspectKey.length === 0 ||
+    context.fearRanks === undefined
   ) {
     fail('public biome materialization requires a route weapon and aspect loadout');
   }
-  return Object.freeze({ weaponKey: context.weaponKey, aspectKey: context.aspectKey });
+  return Object.freeze({
+    weaponKey: context.weaponKey,
+    aspectKey: context.aspectKey,
+    fearRanks: context.fearRanks,
+  });
 }
 
 function sourceAddress(source: ExitDecisionSource): ExitDecisionSourceAddress {
@@ -210,7 +216,7 @@ function fixedRoomSuccessor(
   topology: BiomeTopology,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   source: CanonicalAuthoredRoom,
-  loadout: RouteWeaponAspectLoadout,
+  loadout: BiomeMaterializationLoadout,
 ): CanonicalFixedRoomLink | undefined {
   const link = topology.fixedRoomLinks.find(
     (candidate) => candidate.sourceOccurrenceId === source.occurrenceId,
@@ -229,6 +235,7 @@ function fixedRoomSuccessor(
       ? { batchStoreKey: source.incomingReward.resolvedStoreKey }
       : {}),
     loadout,
+    configuredRivalsRank: loadout.fearRanks.BossDifficultyShrineUpgrade ?? 0,
   });
   return Object.freeze({ kind: 'fixedRoomLink', source, target });
 }
@@ -240,7 +247,7 @@ function fixedRoomChain(
   topology: BiomeTopology,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   source: CanonicalAuthoredRoom,
-  loadout: RouteWeaponAspectLoadout,
+  loadout: BiomeMaterializationLoadout,
 ): readonly CanonicalFixedRoomLink[] {
   const links: CanonicalFixedRoomLink[] = [];
   let current = source;
@@ -429,7 +436,7 @@ export function materializeBiomePrefix(
   catalog: Catalog,
   biome: BiomeAddress,
   plan: AuthoredBiomePlan,
-  loadout: RouteWeaponAspectLoadout,
+  loadout: BiomeMaterializationLoadout,
 ): MaterializedBiomePrefix | null {
   loadout = requireLoadout(loadout);
   const layout = requireLayout(catalog, biome);
@@ -670,7 +677,7 @@ export function materializeBiome(
   catalog: Catalog,
   biome: BiomeAddress,
   completeness: CompleteBiomeCompletenessResult,
-  loadout: RouteWeaponAspectLoadout,
+  loadout: BiomeMaterializationLoadout,
   echoKeepsakeReplayResults?: Pick<
     import('../../authored-project/model').AuthoredKeepsakeEquipResults,
     'experimentalHammer' | 'transcendentEmbryo'

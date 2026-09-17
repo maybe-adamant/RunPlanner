@@ -166,6 +166,7 @@ function offerRewardRewards(
 
 /** Exact authored/evaluated inputs for one room-local workspace product. */
 export interface WorkspaceOccurrenceAssemblyInput {
+  readonly configuredRivalsRank: number;
   /** Closed declaration-owned map domain for an Anomaly replacement in this biome. */
   readonly anomalyReplacementRoomGameNames?: readonly string[];
   readonly biome: BiomeAddress;
@@ -274,6 +275,7 @@ export function assembleWorkspaceOccurrence(
     input.roomPicker === undefined ? Object.freeze([]) : Object.freeze([input.roomPicker]);
   const rewardLocal = assembleOccurrenceRewardLocal(
     {
+      configuredRivalsRank: input.configuredRivalsRank,
       biome: input.biome,
       catalog: input.catalog,
       encounterPhaseStatus: input.encounterPhaseStatus,

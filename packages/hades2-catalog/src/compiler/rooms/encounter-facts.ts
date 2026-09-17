@@ -51,7 +51,18 @@ function normalizeEncounterSlotBindings(
           `unknown encounter definition ${encounterDefinitionKey}`,
         );
       }
-      return Object.freeze({ slotKey, kind: 'fixed', encounterDefinitionKey });
+      const rivalsEncounterDefinitionKey = raw.rivalsEncounterDefinitionKey;
+      if (
+        rivalsEncounterDefinitionKey !== undefined &&
+        definitions.byKey[rivalsEncounterDefinitionKey] === undefined
+      )
+        fail(`${bindingPath}.rivalsEncounterDefinitionKey`, 'unknown encounter definition');
+      return Object.freeze({
+        slotKey,
+        kind: 'fixed',
+        encounterDefinitionKey,
+        ...(rivalsEncounterDefinitionKey === undefined ? {} : { rivalsEncounterDefinitionKey }),
+      });
     }
     fail(`${bindingPath}.kind`, `unknown encounter slot binding ${String(receivedKind)}`);
   });

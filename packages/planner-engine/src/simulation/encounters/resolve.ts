@@ -1,10 +1,12 @@
 import type { Catalog, EncounterAuthoringProfile, RoomDeclaration } from '../../catalog-schema';
 import type { RoomEncounterState } from '../../authored-project/model';
+import type { BiomeAddress } from '../../authored-project/addresses';
 import {
   encounterEnvelopeSlots,
   encounterAuthoringProfileForKey,
   encounterBindingsBySlot,
   selectedEncounterAuthoringProfileKey,
+  fixedEncounterDefinitionKey,
 } from '../../authored-project/room-state/encounter-envelope';
 import type { MaterializedEncounterPhase, ResolvedEncounterPhase } from './model';
 
@@ -119,9 +121,9 @@ export function resolveEncounterAuthoringProfile(
 }
 
 /**
- * Materializes a declaration-owned active slot prefix as retained authored
- * choices. Concrete identity and eligibility are intentionally deferred to
- * the exact preparation checkpoint, so no contextual default is guessed here.
+ * Materializes the active slot prefix. Fixed identity uses declared loadout
+ * context here; selectable profiles retain their authored choice for reward
+ * resolution and eligibility at the exact preparation checkpoint.
  */
 export function materializeEncounterPhases(
   catalog: Catalog,
@@ -129,6 +131,7 @@ export function materializeEncounterPhases(
   encounters: RoomEncounterState,
   activeSlotKeys: readonly string[],
   path: string,
+  rivalsContext?: { readonly biome: BiomeAddress; readonly configuredRivalsRank: number },
 ): readonly MaterializedEncounterPhase[] {
   const slots = encounterEnvelopeSlots(catalog, room, path);
   const slotByKey = new Map(slots.map((slot) => [slot.key, slot]));
@@ -147,13 +150,16 @@ export function materializeEncounterPhases(
     activeSlotKeys.map((slotKey) => {
       const slot = slotByKey.get(slotKey);
       if (slot === undefined) return fail(`${room.gameName} has no encounter slot ${slotKey}`);
-      const encounterKey = selectedEncounterAuthoringProfileKey(
+      let encounterKey = selectedEncounterAuthoringProfileKey(
         catalog,
         room,
         encounters,
         slotKey,
         path,
       );
+      const binding = encounterBindingsBySlot(catalog, room, path).get(slotKey)!;
+      if (binding.kind === 'fixed')
+        encounterKey = fixedEncounterDefinitionKey(catalog, binding, rivalsContext);
       return Object.freeze({
         slotKey,
         envelopeKey: room.encounterEnvelopeKey,
@@ -176,9 +182,18 @@ export function resolveMaterializedEncounterPhase(
 ): ResolvedEncounterPhase | undefined {
   const binding = encounterBindingsBySlot(catalog, room, room.gameName).get(phase.slotKey);
   if (binding === undefined) return fail(`${room.gameName} lost binding ${phase.slotKey}`);
+  if (
+    binding.kind === 'fixed' &&
+    phase.authoredChoiceKey !== binding.encounterDefinitionKey &&
+    phase.authoredChoiceKey !== binding.rivalsEncounterDefinitionKey
+  ) {
+    return fail(
+      `${room.gameName}.${phase.slotKey} has invalid fixed identity ${phase.authoredChoiceKey}`,
+    );
+  }
   const definitionKey =
     binding.kind === 'fixed'
-      ? binding.encounterDefinitionKey
+      ? phase.authoredChoiceKey
       : (() => {
           const profile = encounterAuthoringProfileForKey(
             catalog.encounterSets.byKey[binding.encounterSetKey] ??

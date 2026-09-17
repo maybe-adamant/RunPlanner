@@ -425,13 +425,7 @@ function fixedTerminatingIntro(room: CanonicalAuthoredRoom): CanonicalAuthoredRo
     encounterPhases: Object.freeze([
       Object.freeze({
         ...intro,
-        countsEncounterDepth: definition.countsEncounterDepth,
-        encounterKey: definition.key,
-        kind: definition.kind,
-        label: definition.label,
-        ...(definition.sequenceEffect === undefined
-          ? {}
-          : { sequenceEffect: definition.sequenceEffect }),
+        authoredChoiceKey: definition.key,
       }),
       ...room.encounterPhases.slice(1),
     ]),

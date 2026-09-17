@@ -6,10 +6,10 @@ const normalizedBiomeSnapshotHashes = [
   ['F', '9270ac9c9a51f08a'],
   ['G', '492d2247723c2053'],
   ['H', 'b55b4bd98ada0433'],
-  ['I', '4cf0c83b345e981e'],
+  ['I', '66c82c2a6a5a57df'],
   ['N', 'b030ecd6c523d8da'],
   ['O', 'aca798f9148c604b'],
-  ['P', 'ae838d1e2be0cf52'],
+  ['P', '127cd77ec0c74e8d'],
   ['Q', '6624765edd6b8b0a'],
 ] as const;
 
@@ -23,6 +23,12 @@ function normalizedBiomeSnapshot(biomeKey: string) {
       if (binding.kind === 'fixed') {
         if (!encounterDefinitionKeys.includes(binding.encounterDefinitionKey)) {
           encounterDefinitionKeys.push(binding.encounterDefinitionKey);
+        }
+        if (
+          binding.rivalsEncounterDefinitionKey !== undefined &&
+          !encounterDefinitionKeys.includes(binding.rivalsEncounterDefinitionKey)
+        ) {
+          encounterDefinitionKeys.push(binding.rivalsEncounterDefinitionKey);
         }
         continue;
       }

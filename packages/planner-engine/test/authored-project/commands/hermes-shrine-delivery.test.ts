@@ -436,7 +436,7 @@ describe('Hermes Shrine delivery placement', () => {
         encounterPhases: [
           shrinePhase(
             'Encounter',
-            gameName === 'N_Sub10' ? 'GeneratedNSubRoom' : 'GeneratedN_Bigger',
+            gameName === 'N_Sub10' ? 'GeneratedNSubRoom_Bigger' : 'GeneratedN_Bigger',
           ),
         ],
       }) as unknown as CanonicalAuthoredRoom;

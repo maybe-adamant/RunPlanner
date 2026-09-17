@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createFieldsSpatialAddress,
   createOccurrenceAddress,
+  createRouteStartKeepsakeSelectionAddress,
 } from '@run-planner/engine/authored-project';
 import {
   applyProjectCommand,
@@ -22,6 +23,38 @@ import { loadNemesisFieldsCheckpoint } from '@run-planner/test-fixtures/checkpoi
 import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 
 describe('structured workspace composer assembly', () => {
+  it.each([
+    ['Underworld', 'I', 'I_Boss01', 'BossChronos02', 4, createGoldenFGHIProject],
+    ['Surface', 'P', 'P_Boss01', 'BossPrometheus02', 3, loadSurfaceNOPQProject],
+  ] as const)(
+    'projects the %s fixed Rival encounter from authored loadout without an evaluated room',
+    (routeKey, biomeKey, gameName, encounterKey, rank, build) => {
+      let project = applyProjectCommand(build(), catalog, {
+        kind: 'ReplaceFearVowRank',
+        route: { kind: 'route', routeKey },
+        vowKey: 'BossDifficultyShrineUpgrade',
+        rank,
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceStartingKeepsake',
+        selection: createRouteStartKeepsakeSelectionAddress(routeKey),
+        keepsakeKey: 'RandomBlessingKeepsake',
+      });
+      const boss = project.route.biomes
+        .find((biome) => biome.biomeKey === biomeKey)!
+        .topology!.occurrences.find((occurrence) => occurrence.gameName === gameName)!;
+      const { assembly, source } = assemble(project, routeKey, biomeKey, boss.occurrenceId);
+      expect(source.evaluation).toBeUndefined();
+      expect(assembly.node.room.encounterPhases).toMatchObject([
+        {
+          selectedEncounter: { key: encounterKey },
+          customizable: false,
+          candidateChoices: [{ value: encounterKey, nativeEncounterDefinitionKey: encounterKey }],
+        },
+      ]);
+    },
+  );
+
   it('does not need evaluation entry to preserve authored room-local controls', () => {
     const { assembly } = assemble(
       loadSurfaceNOPQProject(),
