@@ -53,6 +53,7 @@ describe('F takeover materialization', () => {
       materializeBiome(catalog, fBiome, incomplete as never, {
         weaponKey: 'Staff',
         aspectKey: 'BaseStaffAspect',
+        fearRanks: {},
       }),
     ).toThrowError(
       new BiomeMaterializationContractError('biome materialization requires completeness'),

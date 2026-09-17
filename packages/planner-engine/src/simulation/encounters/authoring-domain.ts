@@ -13,6 +13,7 @@ import {
   encounterBindingsBySlot,
   encounterEnvelopeSlots,
   encounterSetForBinding,
+  fixedEncounterDefinitionKey,
 } from '../../authored-project/room-state/encounter-envelope';
 
 /**
@@ -53,6 +54,7 @@ export type EncounterPhaseAuthoringOwner = EncounterPhaseAddress['owner'];
  * structural facts, not contextual candidate eligibility.
  */
 export interface EncounterPhaseAuthoringRoomOptions {
+  readonly configuredRivalsRank?: number;
   readonly shipEncounterCount?: 2 | 3;
   readonly fieldsCageRewardCount?: number;
   /** Include singleton phases so a consumer can project phase-local controls. */
@@ -123,7 +125,13 @@ export function encounterPhaseAuthoringDomainForRoom(
     if (slot === undefined || !templateSlotActive(room, slot, options)) continue;
     const selectedEncounterKey =
       binding.kind === 'fixed'
-        ? binding.encounterDefinitionKey
+        ? fixedEncounterDefinitionKey(
+            catalog,
+            binding,
+            options.configuredRivalsRank === undefined
+              ? undefined
+              : { biome, configuredRivalsRank: options.configuredRivalsRank },
+          )
         : encounters.encounterKeyByPhase[binding.slotKey];
     if (selectedEncounterKey === undefined) {
       throw new Error(`${room.gameName}.${binding.slotKey} has no authored encounter selection`);
@@ -133,9 +141,7 @@ export function encounterPhaseAuthoringDomainForRoom(
         ? []
         : encounterAuthoringProfiles(encounterSetForBinding(catalog, binding, room.gameName));
     const declaredEncounterKeys =
-      binding.kind === 'fixed'
-        ? [binding.encounterDefinitionKey]
-        : profiles.map((profile) => profile.key);
+      binding.kind === 'fixed' ? [selectedEncounterKey] : profiles.map((profile) => profile.key);
     if (!declaredEncounterKeys.includes(selectedEncounterKey)) {
       throw new Error(
         `${room.gameName}.${binding.slotKey} selected ${selectedEncounterKey} outside its declaration`,
@@ -143,7 +149,7 @@ export function encounterPhaseAuthoringDomainForRoom(
     }
     const selectedEncounterDefinitionKey =
       binding.kind === 'fixed'
-        ? binding.encounterDefinitionKey
+        ? selectedEncounterKey
         : profiles.find((candidate) => candidate.key === selectedEncounterKey)!.resolution.kind ===
             'direct'
           ? (
@@ -206,18 +212,16 @@ export function encounterPhaseAuthoringDomainForRoom(
         ...(selectedEncounterDefinitionKey === undefined ? {} : { selectedEncounterDefinitionKey }),
         selectedEncounterKind:
           binding.kind === 'fixed'
-            ? catalog.encounterDefinitions.byKey[binding.encounterDefinitionKey]!.kind
+            ? definition!.kind
             : profiles.find((candidate) => candidate.key === selectedEncounterKey)!.kind,
         declaredEncounterKeys: Object.freeze([...declaredEncounterKeys]),
         choices: Object.freeze(
           binding.kind === 'fixed'
             ? [
                 Object.freeze({
-                  key: binding.encounterDefinitionKey,
-                  label:
-                    catalog.encounterDefinitions.byKey[binding.encounterDefinitionKey]?.label ??
-                    binding.encounterDefinitionKey,
-                  directEncounterDefinitionKey: binding.encounterDefinitionKey,
+                  key: selectedEncounterKey,
+                  label: definition!.label,
+                  directEncounterDefinitionKey: selectedEncounterKey,
                 }),
               ]
             : profiles.map((profile) =>
@@ -232,7 +236,7 @@ export function encounterPhaseAuthoringDomainForRoom(
         ),
         defaultEncounterKey:
           binding.kind === 'fixed'
-            ? binding.encounterDefinitionKey
+            ? selectedEncounterKey
             : encounterSetForBinding(catalog, binding, room.gameName).defaultAuthoringProfileKey,
         ...(customization === undefined ? {} : { customization }),
       }),

@@ -492,6 +492,7 @@ export function assembleWorkspaceBiomeSemantics(
     const evaluatedRoom =
       request.evaluatedRoom ?? source.blockedOccurrenceRoom(request.occurrence.occurrenceId);
     const assembly = assembleWorkspaceOccurrence({
+      configuredRivalsRank: source.configuredRivalsRank,
       ...(anomalyReplacementRoomGameNames === undefined ? {} : { anomalyReplacementRoomGameNames }),
       biome,
       catalog,

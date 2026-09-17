@@ -174,4 +174,5 @@ export type RawEncounterSlotBinding =
       readonly slotKey: string;
       readonly kind: 'fixed';
       readonly encounterDefinitionKey: string;
+      readonly rivalsEncounterDefinitionKey?: string;
     };

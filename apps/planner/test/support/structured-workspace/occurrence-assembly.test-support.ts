@@ -169,6 +169,7 @@ export function assemble(
     routeKey,
   });
   const assembly = assembleWorkspaceOccurrence({
+    configuredRivalsRank: source.configuredRivalsRank,
     biome: source.biome,
     catalog,
     encounterPhaseStatus: source.encounterPhaseStatus,

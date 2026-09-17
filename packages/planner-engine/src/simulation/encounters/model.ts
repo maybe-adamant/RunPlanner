@@ -4,7 +4,8 @@ import type { EncounterCustomizationDecision } from '../../catalog-schema';
 
 /**
  * Retained materialization for one active envelope slot. It deliberately
- * carries authored choice identity rather than copied definition behaviour.
+ * carries the authored profile for selectable slots, or the resolved fixed
+ * identity for fixed slots, rather than copied definition behaviour.
  */
 export interface MaterializedEncounterPhase {
   readonly slotKey: string;

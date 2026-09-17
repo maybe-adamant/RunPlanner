@@ -15,17 +15,83 @@ import {
   encodeProjectDocument,
   resolveCompletionBoss,
   undoProjectHistory,
+  redoProjectHistory,
 } from '@run-planner/engine/authored-project';
-import { loadUnderworldFGProject } from '@run-planner/test-fixtures/underworld';
+import {
+  loadUnderworldFGProject,
+  createGoldenFGHIProject,
+} from '@run-planner/test-fixtures/underworld';
+import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
+import {
+  evaluateBiomeCompleteness,
+  materializeBiome,
+  materializeBiomePrefix,
+} from '@run-planner/engine/simulation';
 
 describe('completion Boss variants', () => {
+  it.each([
+    ['Underworld', 'I', 'I_Boss01', 'BossChronos', 4, createGoldenFGHIProject],
+    ['Surface', 'P', 'P_Boss01', 'BossPrometheus', 3, loadSurfaceNOPQProject],
+  ] as const)(
+    'resolves %s same-map fixed Boss encounters across Rivals edits',
+    (routeKey, biomeKey, gameName, encounter, threshold, build) => {
+      const initial = build();
+      const original = initial.route.biomes.find((candidate) => candidate.biomeKey === biomeKey)!;
+      const boss = original.topology!.occurrences.find(
+        (occurrence) => occurrence.gameName === gameName,
+      )!;
+      const biome = createBiomeAddress(routeKey, biomeKey);
+      let project = initial;
+      for (const rank of [0, 1, 2, 3, 4, 0]) {
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceFearVowRank',
+          route: { kind: 'route', routeKey },
+          vowKey: 'BossDifficultyShrineUpgrade',
+          rank,
+        });
+        const plan = project.route.biomes.find((candidate) => candidate.biomeKey === biomeKey)!;
+        expect(plan.topology!.fixedRoomLinks).toEqual(original.topology!.fixedRoomLinks);
+        expect(
+          plan.topology!.occurrences.find(
+            (occurrence) => occurrence.occurrenceId === boss.occurrenceId,
+          ),
+        ).toMatchObject({
+          gameName,
+          encounters: { encounterKeyByPhase: {} },
+        });
+        const completeness = evaluateBiomeCompleteness(catalog, biome, plan);
+        if (completeness.completion !== 'complete') throw new Error('fixture biome is incomplete');
+        const full = materializeBiome(catalog, biome, completeness, project.route.loadout);
+        const prefix = materializeBiomePrefix(catalog, biome, plan, project.route.loadout);
+        const expected = `${encounter}${rank >= threshold ? '02' : '01'}`;
+        for (const snapshot of [full, prefix]) {
+          expect(
+            snapshot?.fixedRoomLinks?.find((link) => link.target.occurrenceId === boss.occurrenceId)
+              ?.target.encounterPhases,
+          ).toMatchObject([{ slotKey: 'Encounter', authoredChoiceKey: expected }]);
+        }
+        expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+          project,
+        );
+      }
+      const history = applyProjectHistoryCommand(createProjectHistory(initial), catalog, {
+        kind: 'ReplaceFearVowRank',
+        route: { kind: 'route', routeKey },
+        vowKey: 'BossDifficultyShrineUpgrade',
+        rank: threshold,
+      });
+      expect(undoProjectHistory(history).present).toBe(initial);
+      expect(redoProjectHistory(undoProjectHistory(history)).present).toEqual(history.present);
+    },
+  );
+
   it.each([
     [0, ['F_Boss01', 'G_Boss01', 'H_Boss01', 'I_Boss01']],
     [1, ['F_Boss02', 'G_Boss01', 'H_Boss01', 'I_Boss01']],
     [2, ['F_Boss02', 'G_Boss02', 'H_Boss01', 'I_Boss01']],
     [3, ['F_Boss02', 'G_Boss02', 'H_Boss02', 'I_Boss01']],
     [4, ['F_Boss02', 'G_Boss02', 'H_Boss02', 'I_Boss01']],
-  ] as const)('resolves rank %s against route position and single-variant I', (rank, expected) => {
+  ] as const)('resolves rank %s against route position and the shared I map', (rank, expected) => {
     expect(
       ['F', 'G', 'H', 'I'].map(
         (biome) => resolveCompletionBoss(catalog, 'Underworld', biome, rank).gameName,
@@ -37,8 +103,8 @@ describe('completion Boss variants', () => {
     const unseeded = loadUnderworldFGProject();
     const initialFTopology = unseeded.route!.biomes[0]!.topology!;
     const initialBoss = initialFTopology.occurrences.find((room) => room.gameName === 'F_Boss01')!;
-    // Pickaxe is declaration-supported by both F Boss variants. Bosses have no mutable local
-    // authored leaf beyond their fixed encounter declaration, so do not fabricate one here.
+    // Pickaxe is declaration-supported by both F Boss variants and stays attached
+    // to the same occurrence when the physical map changes.
     const initial = applyProjectCommand(unseeded, catalog, {
       kind: 'ReplaceResourcePlacement',
       route: { kind: 'route', routeKey: 'Underworld' },

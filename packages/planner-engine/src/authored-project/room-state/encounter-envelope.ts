@@ -10,6 +10,26 @@ import type {
 import type { RoomEncounterState } from '../model';
 import type { AuthoredTraitOffer } from '../traits/state';
 import { failProjectDocument } from '../validation';
+import type { BiomeAddress } from '../addresses';
+import { rivalsActiveForBiome } from '../completion-boss';
+
+export function fixedEncounterDefinitionKey(
+  catalog: Catalog,
+  binding: Extract<EncounterSlotBinding, { readonly kind: 'fixed' }>,
+  context?: { readonly biome: BiomeAddress; readonly configuredRivalsRank: number },
+): string {
+  if (binding.rivalsEncounterDefinitionKey === undefined) return binding.encounterDefinitionKey;
+  if (context === undefined)
+    throw new Error(`${binding.encounterDefinitionKey} requires Rivals context`);
+  return rivalsActiveForBiome(
+    catalog,
+    context.biome.routeKey,
+    context.biome.biomeKey,
+    context.configuredRivalsRank,
+  )
+    ? binding.rivalsEncounterDefinitionKey
+    : binding.encounterDefinitionKey;
+}
 
 function requireEnvelope(catalog: Catalog, room: RoomDeclaration, path: string) {
   const envelope = catalog.encounterEnvelopes.byKey[room.encounterEnvelopeKey];

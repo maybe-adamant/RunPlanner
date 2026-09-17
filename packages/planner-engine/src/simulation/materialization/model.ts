@@ -29,6 +29,7 @@ import type {
   RoomActionState,
   RoomEncounterState,
   FieldsSpatialState,
+  RouteLoadout,
 } from '../../authored-project/model';
 import type { EncounterCustomizationDecision } from '../../catalog-schema';
 import type {
@@ -42,6 +43,11 @@ import type { MaterializedEncounterPhase } from '../encounters/model';
 import type { StygianWellGenerationKey } from '../../authored-project/model';
 
 type StygianWellEffect = NonNullable<ShopOptionEntry['stygianWell']>['effect'];
+
+export type BiomeMaterializationLoadout = Pick<
+  RouteLoadout,
+  'weaponKey' | 'aspectKey' | 'fearRanks'
+>;
 
 export interface CanonicalResolvedIncomingReward {
   readonly origin: IncomingRewardAddress | LocalRewardAddress;

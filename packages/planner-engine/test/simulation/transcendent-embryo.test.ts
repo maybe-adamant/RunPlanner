@@ -233,7 +233,14 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
           Encounter: embryoOutcome('ChaosWeaponBlessing'),
         },
       },
-      encounterPhases: [{ slotKey: 'Encounter', advancesHermesShrineDeliveryUses: true }],
+      encounterPhases: [
+        {
+          slotKey: 'Encounter',
+          envelopeKey: 'SingleEncounter',
+          authoredChoiceKey: 'OpeningGeneratedF',
+          figLeafSkip: false,
+        },
+      ],
     } as unknown as CanonicalAuthoredRoom;
     const transition = applyEncounterEndEffectsTransition(
       catalog,

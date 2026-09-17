@@ -120,6 +120,7 @@ export type WorkspaceDerivedAcquisitionEntry = {
 };
 
 export interface WorkspaceOccurrenceRewardAssemblyInput {
+  readonly configuredRivalsRank: number;
   readonly biome: BiomeAddress;
   readonly catalog: Catalog;
   readonly encounterPhaseStatus: (
@@ -769,7 +770,7 @@ export function activeEncounterPhasesForOwner(
     room,
     owner,
     encounters,
-    { ...options, includeFixedPhases: true },
+    { ...options, includeFixedPhases: true, configuredRivalsRank: input.configuredRivalsRank },
   )) {
     const address = domain.origin;
     if (input.encounterPhaseStatus(address)?.kind === 'dormantSuffix') continue;
