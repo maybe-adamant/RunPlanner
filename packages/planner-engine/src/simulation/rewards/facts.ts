@@ -7,7 +7,7 @@ import {
   type RewardKernelFacts,
 } from '../../reward-kernel';
 import type { HistoryStateView, RoomCreationSource } from '../history';
-import { projectRecentEncounterEnvelopeSlots } from '../history';
+import { projectOfferedExitCount, projectRecentEncounterEnvelopeSlots } from '../history';
 import type { CanonicalLifecycleRoom } from '../history/lifecycleInput';
 import type { HermesShrineCandidateContext } from '../commerce/hermes-shrine';
 import type { RewardBranchState } from './branch-primitives';
@@ -106,6 +106,7 @@ export function createdPeerGameNames(
 
 interface RewardFactsOptions {
   readonly catalog: Catalog;
+  readonly sourceOrigin: CanonicalLifecycleRoom['origin'];
   readonly currentRoom: CanonicalLifecycleRoom | undefined;
   readonly sourceDeclaration: RoomDeclaration;
   readonly view: HistoryStateView;
@@ -122,6 +123,7 @@ interface RewardFactsOptions {
 
 export function createRewardFacts({
   catalog,
+  sourceOrigin,
   currentRoom,
   sourceDeclaration,
   view,
@@ -171,7 +173,7 @@ export function createRewardFacts({
       history.lastDevotionDepth === undefined ? {} : { Devotion: history.lastDevotionDepth },
     ),
     recentEncounterEnvelopeSlots: staticFacts.recentEncounterEnvelopeSlots,
-    offeredExitCount: sourceDeclaration.exits.length,
+    offeredExitCount: projectOfferedExitCount(view, sourceOrigin, sourceDeclaration.exits.length),
     currentBatchRoomGameNames,
     clockwork: hasClockwork
       ? {
@@ -205,6 +207,7 @@ export function createBiomeRewardFacts(
 ): RewardKernelFacts {
   return createRewardFacts({
     catalog,
+    sourceOrigin: source.origin,
     currentRoom,
     sourceDeclaration,
     view,

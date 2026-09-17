@@ -8,6 +8,23 @@ export interface RecentEncounterEnvelopeSlotFact {
   readonly slotKeys: readonly string[];
 }
 
+/** Offered doors include created additional exits, without widening the normal batch. */
+export function projectOfferedExitCount(
+  view: HistoryStateView,
+  origin: RoomHistoryOrigin,
+  normalExitCount: number,
+): number {
+  const originKey = semanticAddressKey(origin);
+  return (
+    normalExitCount +
+    view.ledgers.roomCreations.filter(
+      (creation) =>
+        creation.source === 'additionalExit' &&
+        semanticAddressKey(creation.parentOrigin) === originKey,
+    ).length
+  );
+}
+
 function encounterKeyCounts(
   encounters: readonly EncounterHistoryEntry[],
 ): Readonly<Record<string, number>> {

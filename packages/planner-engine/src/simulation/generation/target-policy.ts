@@ -20,7 +20,7 @@ import type {
   ProgressiveRoomHistoryViews,
   TargetGenerationView,
 } from '../history';
-import { projectRecentEncounterEnvelopeSlots } from '../history';
+import { projectOfferedExitCount, projectRecentEncounterEnvelopeSlots } from '../history';
 import type { RoomHistoryOrigin } from '../lifecycle';
 import type {
   CanonicalAuthoredRoom,
@@ -258,7 +258,7 @@ function projectRoomGenerationRequirementContext(
     runDepthCache: view.ledgers.counters.roomHistoryOrdinal + 1,
     lastEventRunDepthCaches: Object.freeze({}),
     recentEncounterEnvelopeSlots: projectRecentEncounterEnvelopeSlots(view),
-    offeredExitCount: sourceDeclaration.exits.length,
+    offeredExitCount: projectOfferedExitCount(view, source.origin, sourceDeclaration.exits.length),
     currentBatchRoomGameNames: priorPeerGameNames(view, source.origin),
     clockwork: hasClockwork
       ? {

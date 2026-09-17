@@ -14,6 +14,7 @@ import { evaluateRequirement, type RequirementEvaluationContext } from '../../re
 import {
   projectBiomeEncounterKeyCounts,
   projectEncounterRecordPreparation,
+  projectOfferedExitCount,
   projectPreviousRoomEncounterKeys,
   projectRecentEncounterEnvelopeSlots,
   projectRouteEncounterKeyCounts,
@@ -149,7 +150,7 @@ function requirementContext(
       ),
       previousRoomEncounterKeys: projectPreviousRoomEncounterKeys(view, room.origin),
     }),
-    offeredExitCount: declaration.exits.length,
+    offeredExitCount: projectOfferedExitCount(view, room.origin, declaration.exits.length),
     currentBatchRoomGameNames: Object.freeze([]),
     clockwork: hasClockwork
       ? {
