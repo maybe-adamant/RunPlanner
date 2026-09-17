@@ -15,14 +15,19 @@ const zoomStep = 25;
 
 export function RoomMapViewport({
   asset,
+  overlay,
   title,
   toolbarTitle,
   toolbarActions,
+  toolbarEnd,
 }: {
   readonly asset: RoomMapAsset | undefined;
+  /** Drawn in the displayed-image coordinate space, never the scrollport. */
+  readonly overlay?: ReactNode;
   readonly title: string;
   readonly toolbarTitle?: string;
   readonly toolbarActions?: ReactNode;
+  readonly toolbarEnd?: ReactNode;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const panRef = useRef<
@@ -122,6 +127,8 @@ export function RoomMapViewport({
       scroll === null ||
       event.button !== 0 ||
       event.pointerType === 'touch' ||
+      (event.target instanceof Element &&
+        event.target.closest('[data-room-map-overlay-control]')) ||
       panRef.current !== undefined
     )
       return;
@@ -203,6 +210,7 @@ export function RoomMapViewport({
           </button>
           {toolbarActions}
         </div>
+        {toolbarEnd}
       </header>
       <div
         aria-label={`Pan map of ${title}`}
@@ -221,20 +229,25 @@ export function RoomMapViewport({
           onPointerMove={movePan}
           onPointerUp={endPan}
         >
-          <img
-            alt={`Map of ${title}`}
-            className="room-map-image"
-            draggable={false}
-            onError={() => setImageFailed(true)}
-            onLoad={(event) => {
-              setImageSize({
-                height: event.currentTarget.naturalHeight,
-                width: event.currentTarget.naturalWidth,
-              });
-            }}
-            src={asset.src}
+          <div
+            className="room-map-image-frame"
             {...(displayedImageSize === undefined ? {} : { style: displayedImageSize })}
-          />
+          >
+            <img
+              alt={`Map of ${title}`}
+              className="room-map-image"
+              draggable={false}
+              onError={() => setImageFailed(true)}
+              onLoad={(event) => {
+                setImageSize({
+                  height: event.currentTarget.naturalHeight,
+                  width: event.currentTarget.naturalWidth,
+                });
+              }}
+              src={asset.src}
+            />
+            {overlay}
+          </div>
         </div>
       </div>
       {imageFailed ? (

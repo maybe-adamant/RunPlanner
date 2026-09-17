@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 
 import { RoomMapDialog } from './RoomMapDialog';
+import { roomMapOverlayFor } from './HubMapAnnotations';
 import { roomMapAssetFor } from './roomMapAssets';
 import { RoomMapViewport } from './RoomMapViewport';
 
@@ -85,6 +86,7 @@ export function RoomMapReferencePane({
       <RoomMapViewport
         asset={roomMapAssetFor(gameName)}
         key={gameName}
+        overlay={roomMapOverlayFor(gameName)}
         title={title}
         toolbarTitle="Room Map"
         toolbarActions={

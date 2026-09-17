@@ -312,6 +312,7 @@ function authoringFrontier(
   const frontier = completeness.frontier;
   switch (frontier.kind) {
     case 'exitDecision': {
+      if (source.exitDecision(frontier.source) !== undefined) return null;
       const predecessorNodeKey =
         frontier.source.kind === 'occurrence'
           ? `occurrence:${semanticAddressKey(
@@ -326,10 +327,6 @@ function authoringFrontier(
         ...(predecessorNodeKey === undefined ? {} : { predecessorNodeKey }),
       });
     }
-    case 'hubDecision':
-      // The Hub terminal replaces its exact decision envelope, so this
-      // impossible legacy-shaped frontier has no workspace presentation.
-      return null;
     case 'hubVisit':
       return Object.freeze({
         kind: 'hubVisit' as const,
@@ -684,7 +681,9 @@ export function assembleWorkspaceBiomeSemantics(
       const sourceNodeKey = `occurrence:${semanticAddressKey(
         createOccurrenceAddress(biome, sourceOccurrence.occurrenceId),
       )}`;
-      markerDestinations.redirect(workspaceDecisionOwnedMarkers(provisional.batch), sourceNodeKey);
+      const doorMarkers = workspaceDecisionOwnedMarkers(provisional.batch);
+      markerDestinations.redirect(doorMarkers, sourceNodeKey);
+      markerDestinations.setRoomTab(doorMarkers, 'doors');
       resolvedFrontier = Object.freeze({
         ...frontierSeed,
         provisionalBatch: provisional.batch,

@@ -989,7 +989,7 @@ describe('workspace inspector destinations', () => {
     }
   });
 
-  it('routes the terminal Hub owner to its persisted PreHub decision before the board exists', () => {
+  it('routes a missing Hub continuation to its current outgoing decision', () => {
     const terminal = project(loadSurfaceNEntryFrontierProject());
     const n = biome(terminal, 'N');
     const owner = createExitDecisionAddress(nBiome, {
@@ -1005,10 +1005,10 @@ describe('workspace inspector destinations', () => {
       throw new Error('terminal N Hub decision is missing');
     }
     expect(n.nodes.some((node) => node.kind === 'hubDecision')).toBe(false);
-    const hub = createHubDecisionAddress(nBiome, 'hub');
-    const hubDestination = destination(terminal, hub);
-    expect(hubDestination.inspectorSubject).toEqual({ kind: 'node', nodeKey: batch.key });
-    expect(hubDestination.selectedRailKey).toBeUndefined();
+    expect(destination(terminal, owner).inspectorSubject).toEqual({
+      kind: 'node',
+      nodeKey: batch.key,
+    });
   });
 
   it('binds Hub board, visit, handoff, and fixed-stage presentation without React ownership scans', () => {

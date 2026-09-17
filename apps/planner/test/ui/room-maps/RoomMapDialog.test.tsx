@@ -46,6 +46,17 @@ describe('RoomMapLauncher', () => {
     expect(screen.getByText('100%')).toBeTruthy();
   });
 
+  it('keeps the Hub quality categories visible beside its live readonly annotations', () => {
+    render(<RoomMapLauncher gameName="N_Hub" hostId="hub-a" title="Ephyra Hub" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'View map for Ephyra Hub' }));
+    const legend = screen.getByLabelText('Hub room quality legend');
+    expect(legend.textContent).toContain('Perfect');
+    expect(legend.textContent).toContain('Good');
+    expect(legend.textContent).toContain('Bad');
+    expect(legend.textContent).toContain('Special');
+  });
+
   it('closes with Close or Escape and returns focus to its launcher', () => {
     render(<RoomMapLauncher gameName="F_Combat01" hostId="occurrence-a" title="Combat 01" />);
     const launcher = screen.getByRole('button', { name: 'View map for Combat 01' });

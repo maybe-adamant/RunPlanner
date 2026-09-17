@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 
 import { roomMapAssetFor } from './roomMapAssets';
+import { roomMapOverlayFor } from './HubMapAnnotations';
 import { RoomMapViewport } from './RoomMapViewport';
 
 export function RoomMapDialog({
@@ -83,7 +84,12 @@ export function RoomMapDialog({
             Close
           </button>
         </header>
-        <RoomMapViewport asset={roomMapAssetFor(gameName)} key={gameName} title={title} />
+        <RoomMapViewport
+          asset={roomMapAssetFor(gameName)}
+          key={gameName}
+          overlay={roomMapOverlayFor(gameName)}
+          title={title}
+        />
       </section>
     </dialog>
   );

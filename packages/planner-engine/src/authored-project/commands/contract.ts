@@ -188,12 +188,7 @@ function commandContractAddress(
 export function projectCommandAddress(
   command: ProjectCommand,
 ): SemanticAddress | AcquisitionSiteAddress {
-  // Replacing the terminal batch authors the Hub decision itself. Command
-  // contract failures still belong to the batch being replaced, while
-  // chronological readiness belongs to the newly authored Hub region.
   switch (command.kind) {
-    case 'ReplaceWithHubDecision':
-      return command.hub;
     case 'ReplaceFieldsOptionalRewardCount':
       return createRoomFeatureAddress(command.occurrence, { kind: 'fieldsOptionalRewardCount' });
     case 'AddStygianWell':

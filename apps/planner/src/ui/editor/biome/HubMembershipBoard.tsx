@@ -58,16 +58,20 @@ export function membershipControlIn(
   return control === null || control?.disabled ? undefined : control;
 }
 
-function HubSlotMembership({
-  interaction,
+export function useHubSlotMembership({
+  interactions,
   onMembershipTransition,
   slot,
 }: {
-  readonly interaction: WorkspaceHubSlotInteraction;
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly onMembershipTransition: (transition: HubMembershipTransition) => void;
   readonly slot: WorkspaceHubSlot;
 }) {
   const findingTarget = useFindingTarget();
+  const interaction = requireWorkspaceInteraction(
+    interactions.hubSlots,
+    workspaceInteractionKey(slot.marker.address),
+  );
   if (slot.open !== interaction.selected)
     throw new Error('A Hub slot interaction must match its projected membership state.');
   if (interaction.selected && slot.canClose && interaction.close === undefined)
@@ -87,7 +91,6 @@ function HubSlotMembership({
   if (interactionIdentity.interaction !== interaction)
     setInteractionIdentity(Object.freeze({ interaction, version: interactionVersion }));
   const attemptRef = useRef<OpeningAttemptRecord | undefined>(undefined);
-  const membershipInput = useRef<HubMembershipInput>('keyboard');
   const [attemptRecord, setAttemptRecord] = useState<OpeningAttemptRecord | undefined>(undefined);
   const beginAttempt = (): WorkspaceHubSlotOpeningAttempt => {
     if (interaction.selected)
@@ -131,66 +134,94 @@ function HubSlotMembership({
     structurallyDisabled ||
     (interaction.selected && interaction.close === undefined) ||
     (candidate !== undefined && !candidateMayBeAuthored(candidate));
+  const target = findingTarget(slot.marker.address);
+  const activate = (input: HubMembershipInput): void => {
+    if (disabled || target.inert) return;
+    const transition = Object.freeze({
+      input,
+      slotKey: slot.hubSlotKey,
+      source: slot.open ? 'open' : 'closed',
+    });
+    if (!slot.open) {
+      const attempt = beginAttempt();
+      const options = candidateState.result ?? candidates.activate(attempt);
+      const option = options?.find((candidate) => candidate.value);
+      if (candidateMayBeAuthored(option)) {
+        onMembershipTransition(transition);
+        executeIntent(attempt.intentFor(true));
+      }
+      return;
+    }
+    if (!interaction.selected || interaction.close === undefined) return;
+    const options = candidateState.result ?? candidates.activate(interaction.close);
+    const option = options?.find((candidate) => !candidate.value);
+    if (candidateMayBeAuthored(option)) {
+      onMembershipTransition(transition);
+      executeIntent(interaction.close.intentFor(false));
+    }
+  };
+  const prepare = (): void => {
+    if (disabled || target.inert) return;
+    if (interaction.selected) {
+      if (interaction.close !== undefined) candidates.activate(interaction.close);
+      return;
+    }
+    candidates.activate(beginAttempt());
+  };
+  return {
+    activate,
+    cancelAttempt,
+    candidateSupport: candidateSupport(candidate),
+    disabled: disabled || target.inert,
+    openingAttemptActive: activeAttempt !== undefined,
+    pending: candidateState.pending,
+    prepare,
+    target,
+  };
+}
+
+function HubSlotMembership({
+  interactions,
+  onMembershipTransition,
+  slot,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly onMembershipTransition: (transition: HubMembershipTransition) => void;
+  readonly slot: WorkspaceHubSlot;
+}) {
+  const [membershipInput, setMembershipInput] = useState<HubMembershipInput>('keyboard');
+  const membership = useHubSlotMembership({ interactions, onMembershipTransition, slot });
   return (
     <div className="hub-membership-action">
       <label
         className="hub-membership-control"
-        data-candidate-support={candidateSupport(candidate)}
-        data-opening-attempt={activeAttempt === undefined ? undefined : 'active'}
+        data-candidate-support={membership.candidateSupport}
+        data-opening-attempt={membership.openingAttemptActive ? 'active' : undefined}
         onPointerDown={() => {
-          membershipInput.current = 'pointer';
-          if (disabled) return;
-          if (interaction.selected) {
-            if (interaction.close !== undefined) candidates.activate(interaction.close);
-            return;
-          }
-          candidates.activate(beginAttempt());
+          setMembershipInput('pointer');
+          membership.prepare();
         }}
       >
         <input
-          {...findingTarget(slot.marker.address)}
-          aria-busy={candidateState.pending || undefined}
+          {...membership.target}
+          aria-busy={membership.pending || undefined}
           aria-label={`${slot.label} open`}
           checked={slot.open}
-          disabled={disabled}
+          disabled={membership.disabled}
           onBlur={() => {
-            if (!interaction.selected) cancelAttempt();
+            if (!slot.open) membership.cancelAttempt();
           }}
-          onChange={(event) => {
-            const open = event.target.checked;
-            const input = membershipInput.current;
-            membershipInput.current = 'keyboard';
-            const transition = Object.freeze({
-              input,
-              slotKey: slot.hubSlotKey,
-              source: slot.open ? 'open' : 'closed',
-            });
-            if (open) {
-              const attempt = beginAttempt();
-              const options = candidateState.result ?? candidates.activate(attempt);
-              const option = options?.find((candidate) => candidate.value);
-              if (candidateMayBeAuthored(option)) {
-                onMembershipTransition(transition);
-                executeIntent(attempt.intentFor(true));
-              }
-              return;
-            }
-            if (!interaction.selected || interaction.close === undefined) return;
-            const options = candidateState.result ?? candidates.activate(interaction.close);
-            const option = options?.find((candidate) => !candidate.value);
-            if (candidateMayBeAuthored(option)) {
-              onMembershipTransition(transition);
-              executeIntent(interaction.close.intentFor(false));
-            }
+          onChange={() => {
+            membership.activate(membershipInput);
+            setMembershipInput('keyboard');
           }}
           onFocus={() => {
-            if (interaction.selected && interaction.close !== undefined)
-              candidates.activate(interaction.close);
+            if (slot.open) membership.prepare();
           }}
           onKeyDown={(event) => {
             if (event.key === ' ' || event.key === 'Enter' || event.key === 'Spacebar')
-              membershipInput.current = 'keyboard';
-            if (event.key === 'Escape' && !interaction.selected) cancelAttempt();
+              setMembershipInput('keyboard');
+            if (event.key === 'Escape' && !slot.open) membership.cancelAttempt();
           }}
           type="checkbox"
         />
@@ -209,13 +240,9 @@ export function HubSlotMembershipControl({
   readonly onMembershipTransition: (transition: HubMembershipTransition) => void;
   readonly slot: WorkspaceHubSlot;
 }) {
-  const interaction = requireWorkspaceInteraction(
-    interactions.hubSlots,
-    workspaceInteractionKey(slot.marker.address),
-  );
   return (
     <HubSlotMembership
-      interaction={interaction}
+      interactions={interactions}
       onMembershipTransition={onMembershipTransition}
       slot={slot}
     />

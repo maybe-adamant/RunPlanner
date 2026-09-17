@@ -4,9 +4,11 @@ import { catalog } from '@run-planner/hades2-catalog';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   applyProjectCommand,
+  createAdditionalExitAddress,
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createExitDecisionAddress,
+  createExitSelectionAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
   createHubVisitAddress,
@@ -178,6 +180,77 @@ function withoutWorkspaceEntry({ entry, ...biome }: WorkspaceBiome): Omit<Worksp
 }
 
 describe('BiomeWorkspace', () => {
+  it.each([
+    { entry: 'Pre-Hub', persistence: 'authored' },
+    { entry: 'Pre-Hub', persistence: 'uncommitted' },
+    { entry: 'Chaos', persistence: 'authored' },
+    { entry: 'Chaos', persistence: 'uncommitted' },
+  ])(
+    'repairs the $persistence $entry continuation finding through Room Doors to the Hub',
+    async ({ entry, persistence }) => {
+      const occurrenceId =
+        entry === 'Chaos' ? createOccurrenceId('biome-workspace-hub-chaos') : nOccurrenceIds.preHub;
+      const owner = createExitDecisionAddress(nBiome, { kind: 'occurrence', occurrenceId });
+      let project = applyProjectCommand(loadSurfaceNEntryFrontierResolvedProject(), catalog, {
+        kind: 'RemoveExitDecision',
+        decision: createExitDecisionAddress(nBiome, {
+          kind: 'occurrence',
+          occurrenceId: nOccurrenceIds.preHub,
+        }),
+      });
+      if (entry === 'Chaos') {
+        project = applyProjectCommand(project, catalog, {
+          kind: 'AddChaos',
+          additional: createAdditionalExitAddress(nBiome, nOccurrenceIds.opening, 'chaos'),
+          occurrenceId,
+        });
+        project = applyProjectCommand(project, catalog, {
+          kind: 'SetExitSelection',
+          selection: createExitSelectionAddress(nBiome, {
+            kind: 'occurrence',
+            occurrenceId: nOccurrenceIds.opening,
+          }),
+          value: { kind: 'additional', additionalExitKey: 'chaos' },
+        });
+        project = authorLegalTraitOffers(project);
+      }
+      if (persistence === 'authored') {
+        project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision: owner });
+      }
+      const view = renderWorkspace(project, 'Surface', 'N');
+      const finding = view.application.store
+        .getState()
+        .projectWorkspace.assembly!.evaluation.findings.find(
+          (candidate) =>
+            candidate.code === 'continuationMissing' &&
+            semanticAddressKey(candidate.origin) === semanticAddressKey(owner),
+        );
+      if (finding === undefined) throw new Error('Hub continuation finding is missing');
+      act(() =>
+        view.application.store.dispatch(
+          semanticOwnerFocused(createOccurrenceAddress(nBiome, occurrenceId)),
+        ),
+      );
+      await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
+      act(() =>
+        view.application.store.dispatch(
+          findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+        ),
+      );
+      expect(screen.getByRole('tab', { name: 'Room Doors' }).getAttribute('aria-selected')).toBe(
+        'true',
+      );
+      const room = screen.getByRole('button', { name: 'Door 1 room' });
+      expect(room.hasAttribute('inert')).toBe(false);
+      expect(room.getAttribute('aria-disabled')).not.toBe('true');
+      await view.user.click(room);
+      const hub = within(screen.getByRole('listbox')).getByRole('option', { name: /Ephyra Hub/ });
+      expect(hub.getAttribute('aria-disabled')).not.toBe('true');
+      await view.user.click(hub);
+      expect(screen.getByRole('region', { name: 'Ephyra Hub' })).toBeTruthy();
+    },
+  );
+
   it('uses the finding origin for its complete destination instead of redirected focus metadata', () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
@@ -287,6 +360,29 @@ describe('BiomeWorkspace', () => {
     expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
       'true',
     );
+  });
+
+  it('returns an Overview finding from Map to its canonical List presentation', async () => {
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
+    const projection = workspaceProjection(view.application);
+    const destination = [...projection.focusByOwner.values()].find(
+      (candidate) => candidate.hubTab === 'overview',
+    );
+    if (destination === undefined) throw new Error('a Hub Overview destination is missing');
+    const selection = {
+      focusAddress: destination.focusAddress,
+      key: 'hub-overview-finding',
+      origin: destination.ownerAddress,
+      traitDialogTarget: destination.traitDialogTarget ?? null,
+      levelResolutionDialogTarget: destination.levelResolutionDialogTarget ?? null,
+    } as const;
+
+    act(() => view.application.store.dispatch(findingSelected(selection)));
+    await view.user.click(screen.getByRole('button', { name: 'Map' }));
+    expect(screen.getByRole('button', { name: 'Map' }).getAttribute('aria-pressed')).toBe('true');
+
+    act(() => view.application.store.dispatch(findingSelected(selection)));
+    expect(screen.getByRole('button', { name: 'List' }).getAttribute('aria-pressed')).toBe('true');
   });
   it('opens an available Run State sheet without changing inspector selection or authored history, and restores launcher focus on close', async () => {
     const evaluationEvents: string[] = [];
