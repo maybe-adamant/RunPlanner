@@ -102,6 +102,15 @@
   min-height: 100%;
   align-items: center;
   justify-content: center;
+  user-select: none;
+}
+
+.room-map-image-stage[data-pannable] {
+  cursor: grab;
+}
+
+.room-map-image-stage[data-panning] {
+  cursor: grabbing;
 }
 
 .room-map-image {
