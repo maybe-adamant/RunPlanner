@@ -505,15 +505,21 @@ describe('chronological authoring horizon', () => {
 
   it('keeps the Hub structural frontier editable while locking each later stage', () => {
     const hub = createHubDecisionAddress(nBiome, 'hub');
+    const entry = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: nOccurrenceIds.preHub,
+    });
     const uncreated = simulateProjectAssembly(catalog, loadSurfaceNEntryFrontierResolvedProject());
     expect(uncreated.evaluation.authoringHorizon).toMatchObject({
       kind: 'incomplete',
-      blockedAfter: hub,
+      blockedAfter: entry,
     });
-    expect(authoringReadinessAt(uncreated, hub)).toBe('editable');
-    expect(authoringReadinessAt(uncreated, createHubOpenSetAddress(nBiome, 'hub'))).toBe(
-      'editable',
-    );
+    expect(authoringReadinessAt(uncreated, entry)).toBe('editable');
+    expect(
+      authoringReadinessAt(uncreated, createTargetAddress(nBiome, entry.source, 'exit1')),
+    ).toBe('editable');
+    expect(authoringReadinessAt(uncreated, hub)).toBe('locked');
+    expect(authoringReadinessAt(uncreated, createHubOpenSetAddress(nBiome, 'hub'))).toBe('locked');
 
     const incompleteVisits = simulateProjectAssembly(
       catalog,

@@ -370,7 +370,7 @@ export function evaluateBiomeCompleteness(
 
     const terminal = hubTerminalTakeoverForSource(catalog, layout, topology, source);
     if (terminal !== undefined && isExactTerminalTakeoverEnvelope(decision)) {
-      const origin = createHubDecisionAddress(biome, terminal.hubKey);
+      const origin = createExitDecisionAddress(biome, sourceAddress(source));
       return incomplete([
         ...findings,
         finding('continuationMissing', origin, { hubKey: terminal.hubKey }),

@@ -29,8 +29,9 @@ function renderMap(width = 1000, height = 800) {
   });
   fireEvent.load(image);
   const scroll = screen.getByRole('region', { name: 'Pan map of Combat 04' });
-  const stage = image.parentElement;
-  if (stage === null) throw new Error('Map stage is missing');
+  const frame = image.parentElement;
+  const stage = frame?.parentElement;
+  if (stage === null || stage === undefined) throw new Error('Map stage is missing');
   let capturedPointer: number | undefined;
   const capture = vi.spyOn(stage, 'setPointerCapture').mockImplementation((id) => {
     capturedPointer = id;
@@ -39,7 +40,8 @@ function renderMap(width = 1000, height = 800) {
   vi.spyOn(stage, 'releasePointerCapture').mockImplementation(() => {
     capturedPointer = undefined;
   });
-  return { scroll, stage, image, capture };
+  if (frame === null) throw new Error('Map image frame is missing');
+  return { scroll, stage, image, frame, capture };
 }
 
 const pointer = { pointerId: 1, pointerType: 'mouse', button: 0, clientX: 300, clientY: 260 };
@@ -114,18 +116,18 @@ describe('RoomMapViewport', () => {
   });
 
   it('preserves the center when zooming reveals a scrollbar that changes the fit size', () => {
-    const { scroll, image } = renderMap(600, 800);
+    const { scroll, frame } = renderMap(600, 800);
     fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
     fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
     expect([scroll.scrollLeft, scroll.scrollTop]).toEqual([0, 100]);
     Object.defineProperty(scroll, 'clientHeight', {
       configurable: true,
-      get: () => (Number.parseFloat(image.style.width) > 500 ? 385 : 400),
+      get: () => (Number.parseFloat(frame.style.width) > 500 ? 385 : 400),
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
-    expect(image.style.width).toBe('505px');
-    expect(image.style.height).toBe('674px');
+    expect(frame.style.width).toBe('505px');
+    expect(frame.style.height).toBe('674px');
     expect([scroll.scrollLeft, scroll.scrollTop]).toEqual([2.5, 144.5]);
   });
 });

@@ -13,7 +13,6 @@ import {
 import { useAppSelector } from '@planner/state/store';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { RoomMapReferencePane } from '@planner/ui/room-maps/RoomMapReferencePane';
 import { HubCompletionHandoff } from './HubCompletionHandoff';
 import {
   ClosedHubRoomOption,
@@ -23,6 +22,7 @@ import {
 } from './HubMembershipBoard';
 import { OpenHubRoomCard } from './HubRoomCards';
 import { HubVisitTimeline } from './HubVisitTimeline';
+import { HubMapOverview } from './hub-map/HubMapOverview';
 import { RunStateLauncher } from './RunStateSheet';
 
 interface HubDecisionWorkbenchProps {
@@ -100,9 +100,24 @@ export function HubDecisionWorkbench({
     hubIdentity,
     requested: requestedTab,
   });
-  const hubMapLauncher = useRef<HTMLButtonElement>(null);
-  const [mapState, setMapState] = useState({ hubIdentity, visible: false });
-  const mapVisible = mapState.hubIdentity === hubIdentity ? mapState.visible : false;
+  const [overviewViewState, setOverviewViewState] = useState<{
+    readonly findingNavigationRevision: number | undefined;
+    readonly hubIdentity: string;
+    readonly view: 'list' | 'map';
+  }>({
+    findingNavigationRevision,
+    hubIdentity,
+    view: 'list' as const,
+  });
+  // A finding destination is canonical in List. Its navigation revision is
+  // intentionally distinct from ordinary publication, which preserves Map.
+  const overviewView =
+    overviewViewState.hubIdentity === hubIdentity &&
+    overviewViewState.findingNavigationRevision === findingNavigationRevision
+      ? overviewViewState.view
+      : 'list';
+  const setOverviewView = (view: 'list' | 'map'): void =>
+    setOverviewViewState({ findingNavigationRevision, hubIdentity, view });
   const activeTab =
     tabState.hubIdentity === hubIdentity &&
     tabState.requested === requestedTab &&
@@ -154,6 +169,21 @@ export function HubDecisionWorkbench({
     const tab = hubWorkbenchTabs[next];
     if (tab !== undefined) activateTab(tab.key);
   };
+  const overviewViewSwitcher = (
+    <div aria-label="Hub Overview view" className="hub-view-switch" role="group">
+      {(['list', 'map'] as const).map((view) => (
+        <button
+          aria-pressed={overviewView === view}
+          className="quiet-action action-compact"
+          key={view}
+          onClick={() => setOverviewView(view)}
+          type="button"
+        >
+          {view === 'list' ? 'List' : 'Map'}
+        </button>
+      ))}
+    </div>
+  );
 
   return (
     <section
@@ -162,10 +192,18 @@ export function HubDecisionWorkbench({
       className="hub-decision-workbench"
       aria-label="Ephyra Hub"
     >
-      <header className="decision-heading">
+      <header className="decision-heading hub-decision-heading">
         <div className="owner-markers">
           <h3 id={`${titleId}-title`}>Ephyra Hub</h3>
           {node.runState === undefined ? null : <RunStateLauncher launcher={node.runState} />}
+          <button
+            className="danger-action action-compact"
+            data-command={removal.intent.command.kind}
+            onClick={() => executeIntent(removal.intent)}
+            type="button"
+          >
+            Remove Hub
+          </button>
         </div>
         <div className="hub-board-status">
           <span className="neutral-status">
@@ -175,18 +213,6 @@ export function HubDecisionWorkbench({
           <span className="neutral-status">
             {authoredVisitCount} of {node.requiredVisitCount} planned
           </span>
-          {activeTab === 'exit' ? null : (
-            <button
-              aria-expanded={mapVisible}
-              aria-label="Toggle Hub map reference"
-              className="quiet-action action-compact hub-map-toggle"
-              onClick={() => setMapState({ hubIdentity, visible: !mapVisible })}
-              ref={hubMapLauncher}
-              type="button"
-            >
-              Hub Map
-            </button>
-          )}
         </div>
       </header>
       <nav
@@ -220,71 +246,75 @@ export function HubDecisionWorkbench({
         role="tabpanel"
       >
         {activeTab === 'exit' ? null : (
-          <div className="hub-map-layout" data-map-visible={mapVisible || undefined}>
-            <div className="hub-map-controls">
-              {activeTab === 'overview' ? (
-                <section className="hub-board" aria-label="Hub room participation">
-                  <header className="hub-board-heading">
-                    <div className="owner-markers">
-                      <h4>Open rooms</h4>
-                      <MarkerAssessment marker={node.openSet} />
+          <div className="hub-workbench-view">
+            {activeTab === 'overview' ? (
+              <section className="hub-board" aria-label="Hub room participation">
+                {overviewView === 'map' ? (
+                  <HubMapOverview
+                    hubIdentity={hubIdentity}
+                    interactions={interactions}
+                    node={node}
+                    viewSwitcher={overviewViewSwitcher}
+                  />
+                ) : (
+                  <>
+                    <header className="hub-board-heading">
+                      <div className="hub-board-heading-row">
+                        <div className="owner-markers">
+                          <h4>Open rooms</h4>
+                          <MarkerAssessment marker={node.openSet} />
+                        </div>
+                        {overviewViewSwitcher}
+                      </div>
+                      <p>Open or close the rooms available on this Hub board.</p>
+                    </header>
+                    <div
+                      {...openSetTarget}
+                      aria-label="Hub room set"
+                      className="hub-overview-room-grid"
+                      ref={(element) => {
+                        overviewOpenMembershipRegion.current = element;
+                        openSetTarget.ref(element);
+                      }}
+                      role="group"
+                      tabIndex={-1}
+                    >
+                      {node.slots.map((slot) =>
+                        slot.open ? (
+                          <OpenHubRoomCard
+                            dropAfter={undefined}
+                            dropBefore={undefined}
+                            focusedRewardOwnerKey={focusedOwnerKey}
+                            interactions={interactions}
+                            key={slot.hubSlotKey}
+                            onMembershipTransition={continueKeyboardMembershipAfterTransition}
+                            pointerDragging={false}
+                            ranking={ranking}
+                            requiredVisitCount={node.requiredVisitCount}
+                            showOrder={false}
+                            slot={slot}
+                            visitOrderInteraction={visitOrderInteraction}
+                          />
+                        ) : (
+                          <ClosedHubRoomOption
+                            interactions={interactions}
+                            key={slot.hubSlotKey}
+                            onMembershipTransition={continueKeyboardMembershipAfterTransition}
+                            slot={slot}
+                          />
+                        ),
+                      )}
                     </div>
-                    <p>Open or close the rooms available on this Hub board.</p>
-                  </header>
-                  <div
-                    {...openSetTarget}
-                    aria-label="Hub room set"
-                    className="hub-overview-room-grid"
-                    ref={(element) => {
-                      overviewOpenMembershipRegion.current = element;
-                      openSetTarget.ref(element);
-                    }}
-                    role="group"
-                    tabIndex={-1}
-                  >
-                    {node.slots.map((slot) =>
-                      slot.open ? (
-                        <OpenHubRoomCard
-                          dropAfter={undefined}
-                          dropBefore={undefined}
-                          focusedRewardOwnerKey={focusedOwnerKey}
-                          interactions={interactions}
-                          key={slot.hubSlotKey}
-                          onMembershipTransition={continueKeyboardMembershipAfterTransition}
-                          pointerDragging={false}
-                          ranking={ranking}
-                          requiredVisitCount={node.requiredVisitCount}
-                          showOrder={false}
-                          slot={slot}
-                          visitOrderInteraction={visitOrderInteraction}
-                        />
-                      ) : (
-                        <ClosedHubRoomOption
-                          interactions={interactions}
-                          key={slot.hubSlotKey}
-                          onMembershipTransition={continueKeyboardMembershipAfterTransition}
-                          slot={slot}
-                        />
-                      ),
-                    )}
-                  </div>
-                </section>
-              ) : (
-                <HubVisitTimeline
-                  focusedRewardOwnerKey={focusedOwnerKey}
-                  interactions={interactions}
-                  node={node}
-                />
-              )}
-            </div>
-            <RoomMapReferencePane
-              gameName={node.gameName}
-              hostId={hubIdentity}
-              onVisibleChange={(visible) => setMapState({ hubIdentity, visible })}
-              title="Ephyra Hub"
-              visibilityLauncherRef={hubMapLauncher}
-              visible={mapVisible}
-            />
+                  </>
+                )}
+              </section>
+            ) : (
+              <HubVisitTimeline
+                focusedRewardOwnerKey={focusedOwnerKey}
+                interactions={interactions}
+                node={node}
+              />
+            )}
           </div>
         )}
         {activeTab === 'exit' ? (
@@ -293,16 +323,6 @@ export function HubDecisionWorkbench({
           </section>
         ) : null}
       </section>
-      <div className="workbench-action-row">
-        <button
-          className="danger-action"
-          data-command={removal.intent.command.kind}
-          onClick={() => executeIntent(removal.intent)}
-          type="button"
-        >
-          Remove Hub
-        </button>
-      </div>
     </section>
   );
 }

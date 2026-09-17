@@ -2,9 +2,9 @@
 
 ## Status and objective
 
-Status: locked for implementation after user approval and independent plan
-review. The user-supplied recapture and its replacement annotations are prepared.
-Gate A is next; Gates B and C follow after its review.
+Status: Gate A is complete and user-approved, including the follow-up panel,
+opening-popover, and Hub-entry readiness/finding-navigation corrections.
+Independent review and focused validation passed. Gates B and C have not started.
 
 Planning base: `7d42d084` (`feat(planner): support dragging zoomed room maps`).
 The unrelated Room Capture progress document is outside this change.
@@ -79,6 +79,9 @@ change those unrelated consumers or globally change their semantics.
   entries. Changing the project/Hub host cannot retain stale marker selections.
 - List retains its compact layout and controls, with no inline Hub map. Map
   gets the available workbench width, not a second full editor beside it.
+- Both views share a panel shell, with `List | Map` at its top right and the
+  List heading or Map zoom controls at the left. `Remove Hub` lives in the
+  shared Hub header, left of the right-aligned status counts, across all tabs.
 - Switching views preserves authored values immediately; there is no map draft,
   Apply/Save button, independent route cache, or synchronization command.
 - A loaded plan renders its actual open set and visits; only genuinely closed
@@ -89,7 +92,8 @@ change those unrelated consumers or globally change their semantics.
 - Show every declared door at its fixed annotation position. Closed doors are
   subdued and explicitly identified as closed; color alone is insufficient.
 - Clicking a closed door attempts to open it using the existing bound membership
-  interaction. It does not schedule a visit or navigate to the room.
+  interaction and shows its reward editor as soon as that opening is published.
+  It does not schedule a visit or navigate to the room.
 - An open door has a compact `Opened`/reward badge. Clicking that badge (or the
   open marker) exposes the existing reward control, not another reward picker
   implementation. Show missing authored reward state honestly.
@@ -257,8 +261,8 @@ testing, strip wrapping and pointer cancellation. Verify Fields and ordinary
 map dialogs remain usable. User visual review is part of acceptance; don't
 claim it from jsdom dimensions alone.
 
-After focused tests and independent review stabilize, run `npm run test` and
-`npm run check` once for closure. Record truthful results in the closure commit.
+After focused tests and independent review stabilize, run `npm run check` once
+for closure; it includes `npm run test`. Record truthful results in the closure commit.
 Revise the owning Hub/static-map sections of `STRUCTURED_EDITOR_WORKSPACE.md`
 and the asset note to describe the resulting model; do not append a bug diary
 or duplicate it across documents. Delete this temporary plan at closure.

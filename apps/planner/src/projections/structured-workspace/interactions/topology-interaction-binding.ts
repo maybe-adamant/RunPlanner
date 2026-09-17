@@ -536,7 +536,7 @@ export function bindTopologyInteractions(input: {
           },
           key,
           kind: 'decisionEntryRoom' as const,
-          readinessOwner: control.hub?.decision ?? control.address,
+          readinessOwner: control.decisionOwner,
           load(): ContextualPickerModel<RoomDeclaration> {
             if (model !== undefined) return model;
             const projected = contextualPicker.project(
