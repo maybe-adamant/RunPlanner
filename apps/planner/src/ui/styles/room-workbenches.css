@@ -559,10 +559,6 @@
   container-type: inline-size;
 }
 
-.hub-decision-heading {
-  align-items: center;
-}
-
 .hub-workbench-view,
 .hub-map-overview {
   min-width: 0;

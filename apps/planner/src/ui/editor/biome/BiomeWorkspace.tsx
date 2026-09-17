@@ -462,9 +462,10 @@ export function BiomeWorkspace({
     outgoingDecisionCandidate?.kind === 'takeoverBatch'
       ? outgoingDecisionCandidate
       : undefined;
-  const rendersOccurrenceWorkbench =
+  const rendersTitledWorkbench =
     sourceOccurrence !== undefined ||
-    (subject?.kind === 'node' && subject.node.kind === 'occurrenceWorkbench');
+    (subject?.kind === 'node' &&
+      (subject.node.kind === 'occurrenceWorkbench' || subject.node.kind === 'hubDecision'));
 
   return (
     <div className="biome-workspace">
@@ -504,7 +505,7 @@ export function BiomeWorkspace({
         />
       </section>
       <aside aria-label="Details" className="biome-inspector">
-        {rendersOccurrenceWorkbench ? null : (
+        {rendersTitledWorkbench ? null : (
           <header className="biome-inspector-heading">
             <p className="eyebrow">Details</p>
             <h2>{inspectorTitle}</h2>

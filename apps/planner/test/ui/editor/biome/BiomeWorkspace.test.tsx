@@ -509,12 +509,17 @@ describe('BiomeWorkspace', () => {
     expect(within(await screen.findByRole('listbox')).getAllByRole('option')).toHaveLength(3);
   });
 
-  it('uses one concise player-facing name for the Hub rail stop', () => {
-    renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
+  it('uses concise Hub headings without a redundant Details header', async () => {
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
 
     expect(screen.getByRole('button', { name: 'Hub, 6 of 6 visits, Evaluated' })).toBe(
       hubRailButton(),
     );
+    await view.user.click(hubRailButton());
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
+    expect(within(inspector).getByRole('heading', { name: 'Ephyra Hub' })).toBeTruthy();
+    expect(within(inspector).queryByText('Details')).toBeNull();
+    expect(inspector.querySelector('.biome-inspector-heading')).toBeNull();
   });
 
   it('keeps node assessment beside its title without redundant structural kickers', () => {

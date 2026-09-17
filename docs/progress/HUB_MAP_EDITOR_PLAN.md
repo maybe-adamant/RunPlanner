@@ -92,8 +92,9 @@ change those unrelated consumers or globally change their semantics.
 - List retains its compact layout and controls, with no inline Hub map. Map
   gets the available workbench width, not a second full editor beside it.
 - Both views share a panel shell, with `List | Map` at its top right and the
-  List heading or Map zoom controls at the left. `Remove Hub` lives in the
-  shared Hub header, left of the right-aligned status counts, across all tabs.
+  List heading or Map zoom controls at the left. The Hub uses the standard room
+  panel and heading with right-aligned status counts. `Run State` and `Remove Hub`
+  sit to the right of the Hub tabs, outside the tablist, across all views.
 - Switching views preserves authored values immediately; there is no map draft,
   Apply/Save button, independent route cache, or synchronization command.
 - A loaded plan renders its actual open set and visits; only genuinely closed
