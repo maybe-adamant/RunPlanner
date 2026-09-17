@@ -4,7 +4,7 @@ export interface RoomMapAsset {
   readonly src: string;
 }
 
-const assetModules = import.meta.glob<string>('./assets/*.{avif,jpeg,jpg,png,svg,webp}', {
+const assetModules = import.meta.glob<string>('./assets/**/*.{avif,jpeg,jpg,png,svg,webp}', {
   eager: true,
   import: 'default',
   query: '?url',

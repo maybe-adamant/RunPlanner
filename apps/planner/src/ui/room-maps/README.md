@@ -4,6 +4,11 @@
 `roomMapAssets.ts` through Vite. Browser and desktop builds package the same
 files; no game installation, external asset folder or network service is needed.
 
+Maps are grouped into `F/`, `G/`, `H/`, `I/`, `N/`, `O/`, `P/`, and `Q/` biome
+folders. `G/Anomaly/` contains the `B_Combat` maps; `Special/` contains the shared
+`Chaos` and `C_Boss` maps. Asset discovery is recursive and room identity comes
+from the filename, not its folder.
+
 To replace a map, retain its game-name basename (for example `H_Combat02`).
 Supported extensions are `avif`, `jpeg`, `jpg`, `png`, `svg` and `webp`; SVG is
 reserved for placeholders. When replacing a placeholder with a screenshot,
