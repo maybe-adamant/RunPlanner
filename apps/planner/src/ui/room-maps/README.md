@@ -11,11 +11,19 @@ remove the old SVG so there is exactly one asset for that room. Image dimensions
 may change: the shared viewport fits the replacement automatically. No authored
 plan, schema or engine change is needed.
 
-Annotations belong in the image itself. `N_Hub.png` is the annotated board;
-individual main and side rooms keep their own images or placeholders. Fields
-positions still require in-game annotation work. `H_Combat01` and `H_Combat05`
-remain placeholders until their split source captures are supplied as combined
-images; neither half is silently used as the complete map.
+Export new screenshots as WebP at quality 90, preserving their source resolution.
+Keep original PNG captures outside the repository, and do not re-encode existing
+WebPs unless replacing them from a source image. For example:
+
+```sh
+convert source.png -quality 90 -define webp:method=6 -define webp:lossless=false RoomName.webp
+```
+
+Annotations belong in the image itself. `N_Hub.webp` is the annotated board;
+individual main and side rooms keep their own images. Fields labels identify
+Entry, Cage, and Optional positions. Stitch split captures and verify the full
+room's markers before exporting the final image; never use one half as the
+complete map.
 
 After a swap, run the asset test and check the viewer:
 

@@ -27,13 +27,15 @@ describe('RoomMapLauncher', () => {
     expect(screen.getByText('Unable to load this map image.')).toBeTruthy();
   });
 
-  it('uses the room-named placeholder and resets when the displayed room changes', () => {
+  it('uses the room-named image and resets when the displayed room changes', () => {
     const view = render(
       <RoomMapLauncher gameName="H_Combat01" hostId="occurrence-a" title="Combat 01" />,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'View map for Combat 01' }));
-    expect(roomMapAssetFor('H_Combat01')?.isPlaceholder).toBe(true);
+    expect(screen.getByRole('img', { name: 'Map of Combat 01' }).getAttribute('src')).toBe(
+      roomMapAssetFor('H_Combat01')?.src,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
     expect(screen.getByText('125%')).toBeTruthy();
 
